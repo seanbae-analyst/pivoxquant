@@ -374,6 +374,29 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
   .grid3,.metrics-grid,.score-rings{grid-template-columns:1fr;}
   .heatmap{grid-template-columns:repeat(2,1fr);}
 }
+/* ── AI Chat ───────────────────────────────────────────── */
+.ai-fab{position:fixed;bottom:24px;right:24px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;cursor:pointer;z-index:180;display:none;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 20px rgba(99,102,241,.4);transition:transform .2s;}
+.ai-fab:hover{transform:scale(1.1);}
+.ai-panel{position:fixed;bottom:90px;right:24px;width:400px;max-height:560px;background:var(--surface);border:1px solid var(--border2);border-radius:16px;z-index:180;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.5);overflow:hidden;}
+.ai-panel.open{display:flex;}
+.ai-panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.08));}
+.ai-panel-hdr span{font-weight:700;font-size:14px;letter-spacing:.5px;}
+.ai-panel-hdr button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;}
+.ai-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:200px;max-height:380px;}
+.ai-msg{padding:10px 14px;border-radius:12px;font-size:12px;line-height:1.6;max-width:88%;word-wrap:break-word;white-space:pre-wrap;}
+.ai-msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
+.ai-msg.bot{align-self:flex-start;background:var(--surface2,#1e2030);color:var(--fg);border-bottom-left-radius:4px;border:1px solid var(--border);}
+.ai-msg.bot.typing::after{content:'●●●';animation:aidots 1s infinite;}
+@keyframes aidots{0%,100%{opacity:.3}50%{opacity:1}}
+.ai-input-row{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border);}
+.ai-input-row input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--fg);font-size:12px;outline:none;}
+.ai-input-row input:focus{border-color:var(--blue);}
+.ai-input-row button{background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:700;}
+/* ── AI Insight Cards ─────────────────────────────────── */
+.ai-card{background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.04));border:1px solid rgba(99,102,241,.25);border-radius:12px;padding:16px;margin-top:12px;}
+.ai-card-badge{display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:6px;letter-spacing:.5px;margin-bottom:8px;}
+.ai-card-text{font-size:12px;line-height:1.7;color:var(--fg);}
+.ai-card-loading{color:var(--muted);font-size:11px;font-style:italic;}
 </style>
 </head>
 <body>
@@ -465,6 +488,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
         <div class="scard"><div class="slabel">Avg Quant Score</div><div class="sval" id="s-score">—</div><div class="ssub neutral">Portfolio quality</div></div>
       </div>
       <div id="analytics-section"></div>
+      <div id="ai-coaching-wrap" style="display:none;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><button class="btn-ghost" onclick="loadAICoaching()" id="ai-coach-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:11px;cursor:pointer;">🤖 AI Portfolio Coach</button></div><div id="ai-coaching"></div></div>
       <div class="sh">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           <div class="sh-title">Positions</div>
@@ -540,6 +564,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
           <div class="sigs-list" id="d-sigs"></div>
         </div>
         <div id="d-rec"></div>
+        <div id="d-ai-commentary"></div>
       </div>
       <div class="dtab" id="dtab-1">
         <div class="metrics-grid" id="d-metrics"></div>
@@ -551,7 +576,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 
     <!-- ═══ ALERTS ═══ -->
     <div class="view" id="view-alerts">
-      <div class="sh"><div class="sh-title">🔔 Alert Center</div><button class="btn-ghost" onclick="markRead()">Mark all read</button></div>
+      <div class="sh"><div class="sh-title">🔔 Alert Center</div><div style="display:flex;gap:8px;"><button class="btn-ghost" onclick="markRead()">Mark all read</button><button class="btn-ghost" onclick="clearAlerts()" style="color:var(--red);">Clear all</button></div></div>
       <div id="alerts-wrap"><div class="loader"><span class="spin"></span>Loading...</div></div>
     </div>
 
@@ -743,8 +768,8 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
         <label class="flabel">US Capital (USD $)</label>
         <div class="cost-wrap">
           <span class="cost-prefix usd">$</span>
-          <input class="finput" type="text" id="cap-usd" placeholder="50,000"
-            oninput="fmtCommaInput(this)" inputmode="numeric">
+          <input class="finput" type="text" id="cap-usd" placeholder="50,000.00"
+            oninput="fmtCapInput(this,'usd')" inputmode="decimal">
         </div>
       </div>
       <div>
@@ -752,7 +777,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
         <div class="cost-wrap">
           <span class="cost-prefix krw">₩</span>
           <input class="finput" type="text" id="cap-krw" placeholder="10,000,000"
-            oninput="fmtCommaInput(this)" inputmode="numeric">
+            oninput="fmtCapInput(this,'krw')" inputmode="numeric">
         </div>
       </div>
     </div>
@@ -784,7 +809,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('r-pw').addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
   document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
   // 5-min auto price refresh
-  setInterval(() => { if(user) refreshPrices(true); }, 5 * 60 * 1000);
+  setInterval(() => { if(user) _silentPriceRefresh(); }, 5 * 60 * 1000);
 });
 
 // ── Browser notification helpers ──────────────────────────
@@ -859,6 +884,7 @@ function onLogin() {
   document.getElementById('u-name').textContent  = user.name || user.email;
   document.getElementById('hero-name').textContent = user.name || user.email.split('@')[0];
   requestNotifPerm();
+  checkAIStatus();
   loadDashboard(); loadAlertBadge();
 }
 function showErr(msg) {
@@ -1248,6 +1274,7 @@ async function showDetail(ticker, origin) {
   renderDetailSignals(d);
   renderDetailFundamentals(d);
   loadDetailNews(ticker);
+  if(aiAvailable) loadAICommentary(d);
 }
 
 function renderDetailSignals(d) {
@@ -1368,6 +1395,12 @@ async function markRead() {
   document.getElementById('alert-badge').classList.remove('show');
   loadAlerts();
 }
+async function clearAlerts() {
+  if(!confirm('Delete all alerts?')) return;
+  await api('POST','/api/alerts/clear');
+  document.getElementById('alert-badge').classList.remove('show');
+  loadAlerts();
+}
 
 // ═══════════════════════════════════════════════════════════
 //  MORNING BRIEF
@@ -1403,7 +1436,9 @@ async function loadMorningBrief() {
           <span>${s.source}</span>
           <span style="color:${s.sentiment==='bullish'?'var(--green)':s.sentiment==='bearish'?'var(--red)':'var(--muted)'};">${s.sentiment==='bullish'?'🟢 Bullish':s.sentiment==='bearish'?'🔴 Bearish':'⚪ Neutral'}</span>
         </div>
-      </div>`).join('')}</div>`;
+      </div>`).join('')}</div>
+    <div id="brief-ai-summary"></div>`;
+  if(aiAvailable) loadAIMorningSummary({stories: d.stories, market_mood: d.market_mood, gs_view: gs});
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1841,7 +1876,7 @@ function openCapModal() {
     const krw = user.available_capital_krw || 0;
     const usdEl = document.getElementById('cap-usd');
     const krwEl = document.getElementById('cap-krw');
-    usdEl.value = usd > 0 ? usd.toLocaleString('en-US') : '';
+    usdEl.value = usd > 0 ? usd.toLocaleString('en-US', {minimumFractionDigits: usd%1!==0?2:0, maximumFractionDigits:2}) : '';
     usdEl.dataset.raw = String(usd);
     krwEl.value = krw > 0 ? krw.toLocaleString('en-US') : '';
     krwEl.dataset.raw = String(krw);
@@ -1850,7 +1885,7 @@ function openCapModal() {
 }
 async function saveCap() {
   const usdRaw = document.getElementById('cap-usd').value.replace(/,/g,'');
-  const krwRaw = document.getElementById('cap-krw').value.replace(/,/g,'');
+  const krwRaw = document.getElementById('cap-krw').value.replace(/,/g,'').replace(/\./g,'');
   const capUsd = parseFloat(usdRaw) || 0;
   const capKrw = parseFloat(krwRaw) || 0;
   if(capUsd < 0 || capKrw < 0) return alert('Capital must be 0 or positive.');
@@ -1889,6 +1924,29 @@ function fmtCommaInput(el) {
   const raw   = el.value.replace(/[^0-9]/g, '');
   el.dataset.raw = raw;
   el.value = raw ? Number(raw).toLocaleString('en-US') : '';
+}
+function fmtCapInput(el, cur) {
+  if(cur === 'usd') {
+    // Allow digits and one decimal point, up to 2 decimal places
+    let v = el.value.replace(/[^0-9.]/g, '');
+    const parts = v.split('.');
+    if(parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+    if(parts.length === 2 && parts[1].length > 2) v = parts[0] + '.' + parts[1].slice(0,2);
+    const num = parseFloat(v);
+    el.dataset.raw = v;
+    if(!v || isNaN(num)) { el.value = ''; return; }
+    if(v.endsWith('.') || (parts.length===2 && parts[1].length < 2 && parts[1] !== '')) {
+      // User is still typing decimals — format integer part only
+      el.value = Number(parts[0]).toLocaleString('en-US') + '.' + (parts[1]||'');
+    } else {
+      el.value = num.toLocaleString('en-US', {minimumFractionDigits: v.includes('.')?2:0, maximumFractionDigits:2});
+    }
+  } else {
+    // KRW: integers only
+    const raw = el.value.replace(/[^0-9]/g, '');
+    el.dataset.raw = raw;
+    el.value = raw ? Number(raw).toLocaleString('en-US') : '';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2128,6 +2186,7 @@ function renderDiscover() {
   if(_discFilter === 'us')  rows = rows.filter(r => !r.is_korean);
   if(_discFilter === 'kr')  rows = rows.filter(r => r.is_korean);
   if(_discFilter === 'buy') rows = rows.filter(r => r.signal === 'BUY');
+  rows.sort((a, b) => (b.score || 0) - (a.score || 0));
   if(!rows.length) {
     wrap.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">No stocks match this filter</div></div>';
     return;
@@ -2254,6 +2313,149 @@ function _applyDragOrder(grid) {
     if(c) grid.appendChild(c);
   });
 }
+
+// ═══════════════════════════════════════════════════════════
+//  AI FEATURES
+// ═══════════════════════════════════════════════════════════
+let aiAvailable = false;
+let aiChatHistory = [];
+
+async function checkAIStatus() {
+  try {
+    const r = await fetch('/api/ai/status');
+    const d = await r.json();
+    aiAvailable = d.available;
+    if(aiAvailable) {
+      document.getElementById('ai-fab').style.display = 'flex';
+      const cw = document.getElementById('ai-coaching-wrap');
+      if(cw) cw.style.display = 'block';
+    }
+  } catch(e) {}
+}
+
+function toggleAIChat() {
+  const p = document.getElementById('ai-panel');
+  p.classList.toggle('open');
+  if(p.classList.contains('open')) {
+    setTimeout(() => document.getElementById('ai-input').focus(), 100);
+  }
+}
+
+function appendAIMsg(role, text) {
+  const msgs = document.getElementById('ai-msgs');
+  const d = document.createElement('div');
+  d.className = 'ai-msg ' + (role === 'user' ? 'user' : 'bot');
+  d.textContent = text;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d;
+}
+
+let _aiSending = false;
+async function sendAIChat() {
+  if(_aiSending) return;
+  const input = document.getElementById('ai-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  _aiSending = true;
+  input.value = '';
+
+  appendAIMsg('user', msg);
+  const botEl = appendAIMsg('bot', '');
+  botEl.classList.add('typing');
+
+  try {
+    const resp = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: msg, history: aiChatHistory.slice(-10)})
+    });
+
+    botEl.classList.remove('typing');
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let fullText = '';
+
+    while(true) {
+      const {done, value} = await reader.read();
+      if(done) break;
+      const chunk = decoder.decode(value);
+      for(const line of chunk.split('\n')) {
+        if(line.startsWith('data: ')) {
+          try {
+            const d = JSON.parse(line.slice(6));
+            if(d.text) { fullText += d.text; botEl.textContent = fullText; }
+            if(d.error) { botEl.textContent = d.error; }
+          } catch(e) {}
+        }
+      }
+      document.getElementById('ai-msgs').scrollTop = document.getElementById('ai-msgs').scrollHeight;
+    }
+    aiChatHistory.push({role:'user', content:msg});
+    aiChatHistory.push({role:'assistant', content:fullText});
+  } catch(e) {
+    botEl.classList.remove('typing');
+    botEl.textContent = 'Error: ' + e.message;
+  } finally {
+    _aiSending = false;
+  }
+}
+
+async function loadAICommentary(data) {
+  const el = document.getElementById('d-ai-commentary');
+  if(!el || !aiAvailable) return;
+  el.innerHTML = '<div class="ai-card"><div class="ai-card-badge">AI INSIGHT</div><div class="ai-card-loading">Generating AI analysis...</div></div>';
+  try {
+    const r = await api('POST', '/api/ai/commentary', data);
+    if(r.commentary) {
+      const text = dLang === 'kr' ? (r.commentary_kr || r.commentary) : r.commentary;
+      el.innerHTML = `<div class="ai-card"><div class="ai-card-badge">AI INSIGHT</div><div class="ai-card-text">${text}</div></div>`;
+    } else { el.innerHTML = ''; }
+  } catch(e) { el.innerHTML = ''; }
+}
+
+async function loadAIMorningSummary(briefData) {
+  const el = document.getElementById('brief-ai-summary');
+  if(!el || !aiAvailable) return;
+  el.innerHTML = '<div class="ai-card"><div class="ai-card-badge">AI SUMMARY</div><div class="ai-card-loading">Summarizing market...</div></div>';
+  try {
+    const r = await api('POST', '/api/ai/morning-summary', briefData);
+    if(r.summary) {
+      const text = dLang === 'kr' ? (r.summary_kr || r.summary) : r.summary;
+      el.innerHTML = `<div class="ai-card"><div class="ai-card-badge">AI MARKET SUMMARY</div><div class="ai-card-text">${text}</div></div>`;
+    } else { el.innerHTML = ''; }
+  } catch(e) { el.innerHTML = ''; }
+}
+
+async function loadAICoaching() {
+  const el = document.getElementById('ai-coaching');
+  if(!el || !aiAvailable) return;
+  el.innerHTML = '<div class="ai-card"><div class="ai-card-badge">AI COACHING</div><div class="ai-card-loading">Analyzing your portfolio...</div></div>';
+  try {
+    const r = await api('POST', '/api/ai/coaching');
+    if(r.insight) {
+      const text = dLang === 'kr' ? (r.insight_kr || r.insight) : r.insight;
+      el.innerHTML = `<div class="ai-card"><div class="ai-card-badge">AI PORTFOLIO COACH</div><div class="ai-card-text">${text}</div></div>`;
+    } else { el.innerHTML = ''; }
+  } catch(e) { el.innerHTML = ''; }
+}
 </script>
+
+<!-- AI Chat FAB + Panel -->
+<button class="ai-fab" id="ai-fab" onclick="toggleAIChat()">🤖</button>
+<div class="ai-panel" id="ai-panel">
+  <div class="ai-panel-hdr">
+    <span>🤖 StockPilot AI</span>
+    <button onclick="toggleAIChat()">✕</button>
+  </div>
+  <div class="ai-msgs" id="ai-msgs">
+    <div class="ai-msg bot">Hi! Ask me anything about your portfolio or stocks 🚀</div>
+  </div>
+  <div class="ai-input-row">
+    <input id="ai-input" placeholder="Ask about your portfolio..." onkeydown="if(event.key==='Enter'&&!event.isComposing)sendAIChat()">
+    <button onclick="sendAIChat()">→</button>
+  </div>
+</div>
+
 </body>
 </html>
