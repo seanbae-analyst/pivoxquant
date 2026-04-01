@@ -5,6 +5,9 @@ Supports US + Korean equities. Zero AI API cost.
 """
 
 import os, json, logging, time
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), override=True)
+
 from datetime import datetime, timedelta
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -18,6 +21,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from engine import QuantEngine
 from data_fetcher import DataFetcher
+from ai_service import AIService
 
 # ── Setup ──────────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +38,7 @@ lm      = LoginManager(app)
 lm.login_view = "index"
 engine  = QuantEngine()
 fetcher = DataFetcher()
+ai      = AIService()
 
 # ── Models ─────────────────────────────────────────────────────────────────────
 
@@ -650,8 +655,12 @@ def get_trades():
 @app.route("/api/alerts")
 @api_auth
 def get_alerts():
+    # Auto-delete alerts older than 7 days
+    cutoff = datetime.utcnow() - timedelta(days=7)
+    Alert.query.filter(Alert.user_id == current_user.id, Alert.created_at < cutoff).delete()
+    db.session.commit()
     alerts = (Alert.query.filter_by(user_id=current_user.id)
-              .order_by(Alert.created_at.desc()).limit(60).all())
+              .order_by(Alert.created_at.desc()).limit(20).all())
     return jsonify({
         "alerts": [_al(a) for a in alerts],
         "unread": sum(1 for a in alerts if not a.is_read),
@@ -663,6 +672,97 @@ def mark_read():
     Alert.query.filter_by(user_id=current_user.id, is_read=False).update({"is_read": True})
     db.session.commit()
     return jsonify({"ok": True})
+
+@app.route("/api/alerts/clear", methods=["POST"])
+@api_auth
+def clear_alerts():
+    Alert.query.filter_by(user_id=current_user.id).delete()
+    db.session.commit()
+    return jsonify({"ok": True})
+
+# ── AI Endpoints ──────────────────────────────────────────────────────────────
+
+@app.route("/api/ai/status")
+def ai_status():
+    return jsonify({"available": ai.available})
+
+@app.route("/api/ai/chat", methods=["POST"])
+@api_auth
+def ai_chat():
+    if not ai.available:
+        return jsonify({"error": "AI not configured"}), 503
+    d = request.get_json() or {}
+    message = (d.get("message") or "").strip()
+    history = d.get("history") or []
+    if not message:
+        return jsonify({"error": "Message required"}), 400
+
+    positions = Position.query.filter_by(user_id=current_user.id).all()
+    sig_cache = {}
+    for p in positions:
+        c = db.session.get(SignalCache, p.ticker)
+        if c and c.data_json:
+            sig_cache[p.ticker] = json.loads(c.data_json)
+
+    try:
+        macro = fetcher.get_macro_data()
+    except Exception:
+        macro = {}
+
+    context = ai.build_portfolio_context(current_user, positions, sig_cache, macro)
+
+    from flask import Response
+    def generate():
+        try:
+            for chunk in ai.chat_stream(message, history, context):
+                yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+@app.route("/api/ai/commentary", methods=["POST"])
+@api_auth
+def ai_commentary():
+    if not ai.available:
+        return jsonify({"error": "AI not configured"}), 503
+    d = request.get_json() or {}
+    result = ai.generate_commentary(d)
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "Failed to generate commentary"}), 500
+
+@app.route("/api/ai/morning-summary", methods=["POST"])
+@api_auth
+def ai_morning_summary():
+    if not ai.available:
+        return jsonify({"error": "AI not configured"}), 503
+    d = request.get_json() or {}
+    result = ai.generate_morning_summary(d)
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "Failed to generate summary"}), 500
+
+@app.route("/api/ai/coaching", methods=["POST"])
+@api_auth
+def ai_coaching():
+    if not ai.available:
+        return jsonify({"error": "AI not configured"}), 503
+    positions = Position.query.filter_by(user_id=current_user.id).all()
+    if not positions:
+        return jsonify({"insight": "Add some positions first to get AI coaching!", "insight_kr": "AI 코칭을 받으려면 먼저 포지션을 추가하세요!"})
+    sig_cache = {}
+    for p in positions:
+        c = db.session.get(SignalCache, p.ticker)
+        if c and c.data_json:
+            sig_cache[p.ticker] = json.loads(c.data_json)
+    context = ai.build_portfolio_context(current_user, positions, sig_cache)
+    result = ai.generate_coaching(context)
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "Failed to generate coaching"}), 500
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
