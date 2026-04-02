@@ -474,7 +474,12 @@ def get_signals():
 @api_auth
 def signal_detail(ticker):
     r = engine.analyze(ticker.upper(), current_user.available_capital, getattr(current_user, "available_capital_krw", 0.0) or 0.0)
-    if not r: return jsonify({"error": f"Analysis failed for '{ticker}'. Check the ticker symbol."}), 404
+    if not r:
+        # Fallback: return cached data if available
+        cached = db.session.get(SignalCache, ticker.upper())
+        if cached and cached.data_json:
+            return jsonify(json.loads(cached.data_json))
+        return jsonify({"error": f"Analysis failed for '{ticker}'. Check the ticker symbol."}), 404
     _save_cache(ticker.upper(), r)
     return jsonify(r)
 
@@ -546,7 +551,11 @@ def scan():
     ticker = ((request.get_json() or {}).get("ticker") or "").strip().upper()
     if not ticker: return jsonify({"error": "Ticker required"}), 400
     r = engine.analyze(ticker, current_user.available_capital, getattr(current_user, "available_capital_krw", 0.0) or 0.0)
-    if not r: return jsonify({"error": f"Analysis failed for '{ticker}'"}), 404
+    if not r:
+        cached = db.session.get(SignalCache, ticker)
+        if cached and cached.data_json:
+            return jsonify(json.loads(cached.data_json))
+        return jsonify({"error": f"Analysis failed for '{ticker}'"}), 404
     return jsonify(r)
 
 # ── Market Data ────────────────────────────────────────────────────────────────
