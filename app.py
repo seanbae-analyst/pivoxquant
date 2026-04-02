@@ -179,9 +179,10 @@ def get_portfolio():
     for p in positions:
         cached = SignalCache.query.get(p.ticker)
         sd     = json.loads(cached.data_json) if cached and cached.data_json else {}
+        is_kr  = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
         cur_px = sd.get("price", p.avg_cost)
         pnl    = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
-        cur    = sd.get("currency", "USD")
+        cur    = sd.get("currency", "KRW" if is_kr else "USD")
         out.append({
             "id":            p.id,
             "ticker":        p.ticker,
@@ -199,7 +200,7 @@ def get_portfolio():
             "name":           sd.get("name", p.ticker),
             "sector":         sd.get("sector", "Unknown"),
             "currency":       cur,
-            "is_korean":      sd.get("is_korean", False),
+            "is_korean":      sd.get("is_korean", is_kr),
             "sell_pct":       sd.get("sell_pct", 0),
             "sell_timing":    sd.get("sell_timing", ""),
             "capital_needed": sd.get("capital_needed"),
@@ -865,6 +866,26 @@ with app.app_context():
             _conn.commit()
         except Exception:
             pass  # Column already exists
+
+    # Auto-populate signal cache on startup if empty
+    try:
+        positions = Position.query.all()
+        tickers = list(set(p.ticker for p in positions))
+        cached = set(c.ticker for c in SignalCache.query.all())
+        missing = [t for t in tickers if t not in cached]
+        if missing:
+            logger.info(f"Populating signal cache for {len(missing)} tickers on startup...")
+            for ticker in missing:
+                try:
+                    r = engine.analyze(ticker, 10000)
+                    if r:
+                        _save_cache(ticker, r)
+                        logger.info(f"  Cached: {ticker}")
+                except Exception as e:
+                    logger.error(f"  Failed to cache {ticker}: {e}")
+            logger.info("Startup cache population complete.")
+    except Exception as e:
+        logger.error(f"Startup cache error: {e}")
 
 sched = BackgroundScheduler(timezone="UTC")
 sched.add_job(_scheduled_refresh, "interval", minutes=15, id="refresh")
