@@ -535,8 +535,8 @@ header{
 .analytics-title{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;}
 .analytics-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
 .am{text-align:center;}
-.am-lbl{font-size:9px;color:var(--muted);margin-bottom:3px;}
-.am-val{font-size:16px;font-weight:600;}
+.am-lbl{font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500;}
+.am-val{font-size:22px;font-weight:700;}
 
 /* CURRENCY PREFIX INPUT */
 .cost-wrap{position:relative;}
