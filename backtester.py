@@ -18,13 +18,26 @@ class Backtester:
 
     @staticmethod
     def run(ticker, period="1y", initial_capital=10000,
-            buy_threshold=65, sell_threshold=30,
+            buy_threshold=None, sell_threshold=None,
             tp_pct=20, sl_pct=8):
         """
         Run backtest on a single ticker using StockPilot quant scoring.
-        Returns daily portfolio values + trade log.
+        Adaptive thresholds based on stock type.
         """
         try:
+            # Adaptive thresholds
+            is_korean = ticker.upper().endswith('.KS') or ticker.upper().endswith('.KQ')
+            is_etf = ticker.upper() in ('TSLL','ETHU','SPY','QQQ','TLT','GLD','USO')
+            if buy_threshold is None:
+                if is_korean:
+                    buy_threshold = 45
+                elif is_etf:
+                    buy_threshold = 58
+                else:
+                    buy_threshold = 62
+            if sell_threshold is None:
+                sell_threshold = 28 if is_korean else 30
+
             h = yf.Ticker(ticker).history(period=period)
             if h.empty or len(h) < 60:
                 return None
@@ -51,7 +64,7 @@ class Backtester:
                 vol_w = volumes[:i+1]
 
                 # Calculate quant score
-                score = Backtester._calc_score(window, high_w, low_w, vol_w)
+                score = Backtester._calc_score(window, high_w, low_w, vol_w, is_korean)
                 daily_scores.append({"date": dates[i], "score": round(score, 1)})
 
                 # Portfolio value
@@ -162,9 +175,10 @@ class Backtester:
             return None
 
     @staticmethod
-    def _calc_score(closes, highs, lows, volumes):
-        """Calculate simplified quant score for backtesting."""
+    def _calc_score(closes, highs, lows, volumes, is_korean=False):
+        """Calculate simplified quant score for backtesting. Adaptive for KR/US."""
         score = 50.0
+        regime_weight = 0.5 if is_korean else 1.0  # Korean: less regime penalty
 
         # RSI
         if len(closes) >= 15:
@@ -178,8 +192,10 @@ class Backtester:
                 rsi = 100 - 100 / (1 + rs)
             else:
                 rsi = 100
-            if rsi < 30: score += 15
-            elif rsi < 45: score += 8
+            rsi_boost = 1.3 if is_korean else 1.0  # Korean: more RSI weight
+            if rsi < 30: score += 15 * rsi_boost
+            elif rsi < 45: score += 8 * rsi_boost
+            elif rsi < 55 and is_korean: score += 5  # Korean: neutral RSI still positive
             elif rsi > 70: score -= 15
 
         # Mean Reversion
@@ -205,16 +221,16 @@ class Backtester:
             vr = VolatilityRegime.analyze(closes)
             if vr:
                 if vr["regime"] == "LOW_VOL": score += 5
-                elif vr["regime"] == "HIGH_VOL": score -= 8
-                elif vr["regime"] == "CRISIS": score -= 15
+                elif vr["regime"] == "HIGH_VOL": score -= 8 * regime_weight
+                elif vr["regime"] == "CRISIS": score -= 15 * regime_weight
         except: pass
 
         # Regime Switching
         try:
             rs = RegimeSwitching.analyze(closes)
             if rs:
-                if rs["regime"] == "BULL": score += 10
-                elif rs["regime"] == "BEAR": score -= 10
+                if rs["regime"] == "BULL": score += 10 * regime_weight
+                elif rs["regime"] == "BEAR": score -= 10 * regime_weight
         except: pass
 
         return max(0, min(100, score))
