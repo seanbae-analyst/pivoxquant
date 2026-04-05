@@ -8,6 +8,13 @@ import os, json, logging, time
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), override=True)
 
+import sentry_sdk
+sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_DSN", "https://***SENTRY_DSN_REMOVED***@o4511165934141440.ingest.us.sentry.io/4511165940826112"),
+    traces_sample_rate=0.2,
+    send_default_pii=False,
+)
+
 from datetime import datetime, timedelta
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -22,6 +29,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from engine import QuantEngine
 from data_fetcher import DataFetcher
 from ai_service import AIService
+from daytrade_service import DayTradeService
+from realtime_service import RealtimeService
+from autotrader import AutoTrader
 
 # ── Setup ──────────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +52,9 @@ lm.login_view = "index"
 engine  = QuantEngine()
 fetcher = DataFetcher()
 ai      = AIService()
+daytrade = DayTradeService()
+realtime = RealtimeService()
+trader   = None  # Initialized after models are defined
 
 # ── Models ─────────────────────────────────────────────────────────────────────
 
@@ -108,6 +121,17 @@ class TradeHistory(db.Model):
     pnl_pct         = db.Column(db.Float, default=0.0)
     currency        = db.Column(db.String(5), default="USD")
     traded_at       = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Watchlist(db.Model):
+    __tablename__ = "watchlist"
+    id       = db.Column(db.Integer, primary_key=True)
+    user_id  = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    ticker   = db.Column(db.String(20), nullable=False)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+# Initialize AutoTrader with DB models
+trader = AutoTrader(db=db, Position=Position, TradeHistory=TradeHistory)
 
 # ── Auth helpers ───────────────────────────────────────────────────────────────
 
@@ -558,6 +582,371 @@ def scan():
         return jsonify({"error": f"Analysis failed for '{ticker}'"}), 404
     return jsonify(r)
 
+# ── Real-time Price Stream ─────────────────────────────────────────────────────
+
+@app.route("/api/realtime/stream")
+@api_auth
+def realtime_stream():
+    """SSE stream: pushes portfolio position prices every 5 seconds via Alpaca+KIS."""
+    positions = Position.query.filter_by(user_id=current_user.id).all()
+    tickers = [p.ticker for p in positions]
+    if not tickers:
+        return jsonify({"error": "No positions"}), 400
+
+    from flask import Response
+    def generate():
+        while True:
+            try:
+                prices = realtime.get_prices_batch(tickers)
+                yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            time.sleep(5)
+
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+@app.route("/api/realtime/price/<ticker>")
+@api_auth
+def realtime_single(ticker):
+    """Get real-time price for a single ticker."""
+    p = realtime.get_price(ticker.upper())
+    if p:
+        return jsonify(p)
+    return jsonify({"error": f"No price for {ticker}"}), 404
+
+@app.route("/api/realtime/status")
+def realtime_status():
+    return jsonify({
+        "alpaca": realtime.alpaca_available,
+        "kis": realtime.kis_available,
+        "sources": {
+            "us": "alpaca" if realtime.alpaca_available else "yfinance",
+            "kr": "kis" if realtime.kis_available else "yfinance",
+        }
+    })
+
+# ── Earnings Calendar ──────────────────────────────────────────────────────────
+
+@app.route("/api/earnings")
+@api_auth
+def earnings_calendar():
+    """Get upcoming earnings dates for portfolio positions."""
+    import yfinance as yf
+    positions = Position.query.filter_by(user_id=current_user.id).all()
+    earnings = []
+    for p in positions:
+        try:
+            stock = yf.Ticker(p.ticker)
+            cal = stock.calendar
+            if cal is not None and not cal.empty if hasattr(cal, 'empty') else cal:
+                # calendar can be dict or DataFrame
+                if isinstance(cal, dict):
+                    ed = cal.get("Earnings Date")
+                    if ed:
+                        dates = ed if isinstance(ed, list) else [ed]
+                        for d in dates:
+                            ds = str(d)[:10] if d else None
+                            if ds:
+                                c = db.session.get(SignalCache, p.ticker)
+                                sd = json.loads(c.data_json) if c and c.data_json else {}
+                                earnings.append({
+                                    "ticker": p.ticker,
+                                    "name": sd.get("name", p.ticker),
+                                    "date": ds,
+                                    "signal": sd.get("signal", "—"),
+                                    "score": sd.get("score", 0),
+                                })
+                                break
+                else:
+                    # DataFrame format
+                    if "Earnings Date" in cal.index:
+                        ed = cal.loc["Earnings Date"]
+                        ds = str(ed.iloc[0])[:10] if len(ed) else None
+                        if ds:
+                            c = db.session.get(SignalCache, p.ticker)
+                            sd = json.loads(c.data_json) if c and c.data_json else {}
+                            earnings.append({
+                                "ticker": p.ticker,
+                                "name": sd.get("name", p.ticker),
+                                "date": ds,
+                                "signal": sd.get("signal", "—"),
+                                "score": sd.get("score", 0),
+                            })
+        except Exception:
+            pass
+    earnings.sort(key=lambda x: x.get("date", "9999"))
+    return jsonify({"earnings": earnings})
+
+# ── Peer Comparison ────────────────────────────────────────────────────────────
+
+@app.route("/api/peers/<ticker>")
+@api_auth
+def peer_comparison(ticker):
+    """Find peers in the same sector and rank by quant score."""
+    ticker = ticker.strip().upper()
+    if ticker.isdigit() and len(ticker) == 6:
+        ticker += ".KS"
+    # Get target sector from cache
+    c = db.session.get(SignalCache, ticker)
+    if not c or not c.data_json:
+        return jsonify({"error": "Analyze this stock first"}), 404
+    target = json.loads(c.data_json)
+    sector = target.get("sector", "Unknown")
+    if sector in ("Unknown", "ETF"):
+        return jsonify({"peers": [], "sector": sector, "message": "No sector peers available"})
+
+    # Find peers from DISCOVER_POOL + user positions with same sector
+    all_cached = SignalCache.query.all()
+    peers = []
+    for sc in all_cached:
+        try:
+            sd = json.loads(sc.data_json) if sc.data_json else {}
+            if sd.get("sector") == sector:
+                peers.append({
+                    "ticker": sc.ticker,
+                    "name": sd.get("name", sc.ticker),
+                    "score": sd.get("score", 0),
+                    "signal": sd.get("signal", "—"),
+                    "price": sd.get("price", 0),
+                    "price_display": sd.get("price_display", "—"),
+                    "change_pct": sd.get("change_pct", 0),
+                    "pe_ratio": sd.get("snapshot", {}).get("pe_ratio"),
+                    "is_target": sc.ticker == ticker,
+                })
+        except Exception:
+            pass
+
+    peers.sort(key=lambda x: -x.get("score", 0))
+    # Find rank
+    rank = next((i+1 for i, p in enumerate(peers) if p["is_target"]), 0)
+
+    return jsonify({"peers": peers[:10], "sector": sector, "rank": rank, "total": len(peers)})
+
+# ── Company Profile ────────────────────────────────────────────────────────────
+
+@app.route("/api/profile/<ticker>")
+@api_auth
+def company_profile(ticker):
+    ticker = ticker.strip().upper()
+    if ticker.isdigit() and len(ticker) == 6:
+        ticker += ".KS"
+    try:
+        import yfinance as yf
+        stock = yf.Ticker(ticker)
+        try:
+            info = stock.info
+        except Exception:
+            info = {}
+        return jsonify({
+            "ticker": ticker,
+            "name": info.get("shortName") or info.get("longName") or ticker,
+            "summary": info.get("longBusinessSummary") or "",
+            "sector": info.get("sector") or "",
+            "industry": info.get("industry") or "",
+            "website": info.get("website") or "",
+            "employees": info.get("fullTimeEmployees"),
+            "country": info.get("country") or "",
+            "market_cap": info.get("marketCap"),
+            "currency": "KRW" if ticker.endswith(".KS") or ticker.endswith(".KQ") else "USD",
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ── Dividend Data ──────────────────────────────────────────────────────────────
+
+@app.route("/api/dividend/<ticker>")
+@api_auth
+def dividend_data(ticker):
+    ticker = ticker.strip().upper()
+    if ticker.isdigit() and len(ticker) == 6:
+        ticker += ".KS"
+    try:
+        import yfinance as yf
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        div_yield = info.get("dividendYield")
+        div_rate = info.get("dividendRate")
+        ex_date = info.get("exDividendDate")
+        payout = info.get("payoutRatio")
+        five_yr = info.get("fiveYearAvgDividendYield")
+
+        if not div_yield and not div_rate:
+            return jsonify({"has_dividend": False, "ticker": ticker})
+
+        return jsonify({
+            "has_dividend": True,
+            "ticker": ticker,
+            "dividend_yield": round(div_yield * 100, 2) if div_yield else None,
+            "dividend_rate": round(div_rate, 2) if div_rate else None,
+            "ex_dividend_date": ex_date,
+            "payout_ratio": round(payout * 100, 1) if payout else None,
+            "five_yr_avg_yield": round(five_yr, 2) if five_yr else None,
+        })
+    except Exception as e:
+        return jsonify({"has_dividend": False, "error": str(e)})
+
+# ── Portfolio History ──────────────────────────────────────────────────────────
+
+@app.route("/api/portfolio/history")
+@api_auth
+def portfolio_history():
+    """Approximate portfolio value over time."""
+    positions = Position.query.filter_by(user_id=current_user.id).all()
+    if not positions:
+        return jsonify({"data": []})
+    import yfinance as yf
+    import pandas as pd
+
+    period = request.args.get("period", "5d")
+    if period not in ("5d", "1mo", "3mo"):
+        period = "5d"
+    all_values = {}
+    for p in positions:
+        try:
+            h = yf.Ticker(p.ticker).history(period=period)
+            if h.empty: continue
+            for date, row in h.iterrows():
+                ds = date.strftime("%Y-%m-%d")
+                if ds not in all_values:
+                    all_values[ds] = 0
+                all_values[ds] += float(row["Close"]) * p.shares
+        except Exception:
+            pass
+
+    if not all_values:
+        return jsonify({"data": []})
+
+    # Add today's real-time value
+    try:
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        rt_prices = realtime.get_prices_batch([p.ticker for p in positions])
+        today_val = 0
+        for p in positions:
+            if p.ticker in rt_prices:
+                today_val += rt_prices[p.ticker]["price"] * p.shares
+            elif today in all_values:
+                pass  # already have from yfinance
+        if today_val > 0:
+            all_values[today] = today_val
+    except Exception:
+        pass
+
+    # Sort by date
+    data = [{"date": k, "value": round(v, 2)} for k, v in sorted(all_values.items())]
+    return jsonify({"data": data})
+
+# ── Chart Data ─────────────────────────────────────────────────────────────────
+
+@app.route("/api/chart/<ticker>")
+@api_auth
+def chart_data(ticker):
+    """Return price history for charting. Uses Alpaca (US) or yfinance fallback."""
+    period = request.args.get("period", "6mo")
+    if period not in ("1mo", "3mo", "6mo", "1y", "2y", "1d", "5d"):
+        period = "6mo"
+    ticker = ticker.strip().upper()
+    if ticker.isdigit() and len(ticker) == 6:
+        ticker += ".KS"
+    is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
+
+    # Try Alpaca for US stocks (intraday periods)
+    if not is_kr and realtime.alpaca_available and period in ("1d", "5d"):
+        try:
+            from alpaca.data.requests import StockBarsRequest
+            from alpaca.data.timeframe import TimeFrame
+            tf = TimeFrame.Minute if period == "1d" else TimeFrame(5, "Min")
+            days = 1 if period == "1d" else 5
+            start = datetime.utcnow() - timedelta(days=days)
+            req = StockBarsRequest(symbol_or_symbols=ticker, timeframe=tf, start=start, limit=500)
+            bars = realtime.alpaca_client.get_stock_bars(req)
+            data = []
+            for bar in bars[ticker]:
+                data.append({
+                    "date": bar.timestamp.strftime("%Y-%m-%d %H:%M"),
+                    "close": round(float(bar.close), 2),
+                    "volume": int(bar.volume),
+                })
+            if data:
+                return jsonify({"ticker": ticker, "period": period, "data": data, "source": "alpaca"})
+        except Exception as e:
+            logger.warning(f"Alpaca chart failed {ticker}: {e}")
+
+    # Fallback: yfinance (all periods, all markets)
+    try:
+        import yfinance as yf
+        h = yf.Ticker(ticker).history(period=period)
+        if h.empty:
+            return jsonify({"error": "No data"}), 404
+        data = []
+        for date, row in h.iterrows():
+            data.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "close": round(float(row["Close"]), 2),
+                "volume": int(row["Volume"]),
+            })
+        return jsonify({"ticker": ticker, "period": period, "data": data, "source": "yfinance"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ── Market Status ──────────────────────────────────────────────────────────────
+
+@app.route("/api/market/status")
+def market_status():
+    """Returns current open/closed/pre-market status for US and KR markets."""
+    from zoneinfo import ZoneInfo
+    now_utc = datetime.utcnow().replace(tzinfo=ZoneInfo("UTC"))
+
+    # US Market holidays 2026 (NYSE closed)
+    US_HOLIDAYS = {
+        "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03",  # New Year, MLK, Presidents, Good Friday
+        "2026-05-25", "2026-07-03", "2026-09-07", "2026-11-26", "2026-12-25",  # Memorial, July 4th, Labor, Thanksgiving, Christmas
+    }
+    # KR Market holidays 2026 (KRX closed)
+    KR_HOLIDAYS = {
+        "2026-01-01", "2026-01-28", "2026-01-29", "2026-01-30",  # New Year, Seollal
+        "2026-03-01", "2026-05-05", "2026-05-24", "2026-06-06",  # Independence, Children, Buddha, Memorial
+        "2026-08-15", "2026-09-24", "2026-09-25", "2026-09-26",  # Liberation, Chuseok
+        "2026-10-03", "2026-10-09", "2026-12-25",  # National Foundation, Hangul, Christmas
+    }
+
+    # US Market (NYSE/NASDAQ) — ET timezone
+    # 9:30 AM ET = 570 min, 4:00 PM ET = 960 min
+    et = now_utc.astimezone(ZoneInfo("America/New_York"))
+    us_min = et.hour * 60 + et.minute
+    us_date = et.strftime("%Y-%m-%d")
+
+    if et.weekday() >= 5 or us_date in US_HOLIDAYS:
+        us_status = "CLOSED"
+        us_label = "Holiday" if us_date in US_HOLIDAYS else "Weekend"
+    elif 570 <= us_min < 960:
+        us_status, us_label = "OPEN", "Market Open"
+    elif 240 <= us_min < 570:
+        us_status, us_label = "PRE_MARKET", "Pre-Market"
+    elif 960 <= us_min < 1200:
+        us_status, us_label = "AFTER_HOURS", "After Hours"
+    else:
+        us_status, us_label = "CLOSED", "Closed"
+
+    # KR Market (KRX) — KST timezone
+    # 9:00 AM KST = 540 min, 3:30 PM KST = 930 min
+    kst = now_utc.astimezone(ZoneInfo("Asia/Seoul"))
+    kr_min = kst.hour * 60 + kst.minute
+    kr_date = kst.strftime("%Y-%m-%d")
+
+    if kst.weekday() >= 5 or kr_date in KR_HOLIDAYS:
+        kr_status = "CLOSED"
+        kr_label = "Holiday" if kr_date in KR_HOLIDAYS else "Weekend"
+    elif 540 <= kr_min < 930:
+        kr_status, kr_label = "OPEN", "Market Open"
+    else:
+        kr_status, kr_label = "CLOSED", "Closed"
+
+    return jsonify({
+        "us": {"status": us_status, "label": us_label, "time": et.strftime("%H:%M ET")},
+        "kr": {"status": kr_status, "label": kr_label, "time": kst.strftime("%H:%M KST")},
+    })
+
 # ── Market Data ────────────────────────────────────────────────────────────────
 
 @app.route("/api/lookup/<ticker>")
@@ -574,26 +963,31 @@ _macro_cache: dict = {"data": None, "ts": 0.0}
 @app.route("/api/prices")
 @api_auth
 def get_prices_fast():
-    """Fast batch price update — uses fast_info, much quicker than full analysis."""
+    """Real-time batch price update — Alpaca (US) + KIS (KR) + yfinance fallback."""
     positions = Position.query.filter_by(user_id=current_user.id).all()
     tickers   = [p.ticker for p in positions]
     if not tickers:
         return jsonify({"prices": {}})
-    prices = fetcher.get_prices_batch(tickers)
-    # Update cached signal data with fresh prices only
+
+    # Use real-time service (Alpaca + KIS) with yfinance fallback
+    prices = realtime.get_prices_batch(tickers)
+
+    # Update cached signal data with fresh prices
     for ticker, pdata in prices.items():
         c = db.session.get(SignalCache, ticker)
         if c and c.data_json:
             try:
                 sd = json.loads(c.data_json)
                 sd["price"]         = pdata["price"]
-                sd["price_display"] = pdata["price_display"]
+                sd["price_display"] = pdata.get("price_display", sd.get("price_display"))
+                if pdata.get("change_pct") is not None:
+                    sd["change_pct"] = pdata["change_pct"]
                 c.data_json  = json.dumps(sd, ensure_ascii=False)
                 c.updated_at = datetime.utcnow()
             except Exception:
                 pass
     db.session.commit()
-    return jsonify({"prices": prices, "updated_at": datetime.utcnow().isoformat()})
+    return jsonify({"prices": prices, "updated_at": datetime.utcnow().isoformat(), "sources": {t: p.get("source","?") for t,p in prices.items()}})
 
 @app.route("/api/morning-brief")
 def morning_brief():
@@ -652,6 +1046,23 @@ def price_alert_check():
                            "price": price, "target": sl, "shares": p.shares,
                            "proceeds": round(p.shares * price),
                            "message": f"🛑 {name} 손절가 도달! {cur}{round(price):,} ≤ {cur}{round(sl):,} — {p.shares}주 손절 권고"})
+
+    # Save TP/SL alerts to DB so they appear in Alert Center
+    for a in alerts:
+        # Check for duplicate (same ticker + type within 4 hours)
+        recent = (Alert.query.filter_by(user_id=current_user.id, ticker=a["ticker"])
+                  .filter(Alert.message.contains(a["type"]))
+                  .filter(Alert.created_at > datetime.utcnow() - timedelta(hours=4))
+                  .first())
+        if not recent:
+            sig = "SELL" if a["type"] == "STOP_LOSS" else "BUY"
+            db.session.add(Alert(
+                user_id=current_user.id, ticker=a["ticker"],
+                message=a["message"], signal=sig, score=0
+            ))
+    if alerts:
+        db.session.commit()
+
     return jsonify({"alerts": alerts})
 
 @app.route("/api/trades")
@@ -690,6 +1101,239 @@ def mark_read():
 @api_auth
 def clear_alerts():
     Alert.query.filter_by(user_id=current_user.id).delete()
+    db.session.commit()
+    return jsonify({"ok": True})
+
+# ── Day Trade ──────────────────────────────────────────────────────────────────
+
+@app.route("/api/daytrade/status")
+def daytrade_status():
+    return jsonify({"available": daytrade.available})
+
+@app.route("/api/daytrade/scan")
+@api_auth
+def daytrade_scan():
+    if not daytrade.available:
+        return jsonify({"error": "Day trade not configured (Alpaca API key missing)"}), 503
+    results = daytrade.scan_momentum()
+    return jsonify({"results": results, "count": len(results)})
+
+@app.route("/api/daytrade/analyze/<ticker>")
+@api_auth
+def daytrade_analyze(ticker):
+    if not daytrade.available:
+        return jsonify({"error": "Day trade not configured"}), 503
+    r = daytrade.analyze_short_term(ticker)
+    if not r:
+        return jsonify({"error": f"No intraday data for {ticker}"}), 404
+    return jsonify(r)
+
+@app.route("/api/daytrade/chart/<ticker>")
+@api_auth
+def daytrade_chart(ticker):
+    if not daytrade.available:
+        return jsonify({"error": "Day trade not configured"}), 503
+    tf = request.args.get("tf", "5Min")
+    limit = int(request.args.get("limit", "100"))
+    bars = daytrade.get_intraday_bars(ticker, tf, limit)
+    return jsonify({"ticker": ticker.upper(), "timeframe": tf, "bars": bars})
+
+@app.route("/api/daytrade/prices")
+@api_auth
+def daytrade_prices():
+    """Get latest prices for all day trade symbols."""
+    if not daytrade.available:
+        return jsonify({"error": "Day trade not configured"}), 503
+    prices = daytrade.get_latest_prices()
+    return jsonify({"prices": prices})
+
+@app.route("/api/daytrade/stream")
+@api_auth
+def daytrade_stream():
+    """SSE stream that pushes price updates every 5 seconds."""
+    if not daytrade.available:
+        return jsonify({"error": "Day trade not configured"}), 503
+
+    from flask import Response
+    def generate():
+        while True:
+            try:
+                prices = daytrade.get_latest_prices()
+                yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            time.sleep(5)
+
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+# ── Backtest ──────────────────────────────────────────────────────────────────
+
+@app.route("/api/backtest/<ticker>")
+@api_auth
+def run_backtest(ticker):
+    from backtester import Backtester
+    period = request.args.get("period", "1y")
+    capital = float(request.args.get("capital", "10000"))
+    result = Backtester.run(ticker.upper(), period=period, initial_capital=capital)
+    if result:
+        return jsonify(result)
+    return jsonify({"error": f"Backtest failed for {ticker}"}), 500
+
+# ── VIX Strategy ──────────────────────────────────────────────────────────────
+
+@app.route("/api/vix-strategy")
+@api_auth
+def vix_strategy():
+    from quant_models import VIXStrategy
+    result = VIXStrategy.analyze()
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "VIX data unavailable"}), 500
+
+# ── Cross-Asset Momentum ──────────────────────────────────────────────────────
+
+@app.route("/api/cross-asset")
+@api_auth
+def cross_asset():
+    from quant_models import CrossAssetMomentum
+    result = CrossAssetMomentum.analyze()
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "Insufficient data"}), 500
+
+# ── Auto Trading ──────────────────────────────────────────────────────────────
+
+@app.route("/api/autotrade/status")
+@api_auth
+def autotrade_status():
+    return jsonify(trader.get_status())
+
+@app.route("/api/autotrade/start", methods=["POST"])
+@api_auth
+def autotrade_start():
+    trader._user_id = current_user.id
+    return jsonify(trader.start())
+
+@app.route("/api/autotrade/stop", methods=["POST"])
+@api_auth
+def autotrade_stop():
+    return jsonify(trader.stop())
+
+@app.route("/api/autotrade/sell-all", methods=["POST"])
+@api_auth
+def autotrade_sell_all():
+    return jsonify(trader.force_sell_all())
+
+# ── AI Analysis (SWOT, Competitor, Sector Trend) ──────────────────────────────
+
+@app.route("/api/ai/swot", methods=["POST"])
+@api_auth
+def ai_swot():
+    if not ai.available:
+        return jsonify({"error": "AI not configured"}), 503
+    d = request.get_json() or {}
+    result = ai.generate_swot(d)
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "Failed to generate SWOT"}), 500
+
+@app.route("/api/ai/competitor", methods=["POST"])
+@api_auth
+def ai_competitor():
+    if not ai.available:
+        return jsonify({"error": "AI not configured"}), 503
+    d = request.get_json() or {}
+    ticker = d.get("ticker", "")
+    # Get peers
+    peers = []
+    all_cached = SignalCache.query.all()
+    target_sector = d.get("sector", d.get("snapshot", {}).get("sector", ""))
+    for sc in all_cached:
+        try:
+            sd = json.loads(sc.data_json) if sc.data_json else {}
+            if sd.get("sector") == target_sector and sc.ticker != ticker:
+                peers.append(sd)
+        except Exception:
+            pass
+    result = ai.generate_competitor_analysis(d, peers[:8])
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "Failed to generate competitor analysis"}), 500
+
+@app.route("/api/ai/sector-trend", methods=["POST"])
+@api_auth
+def ai_sector_trend():
+    if not ai.available:
+        return jsonify({"error": "AI not configured"}), 503
+    d = request.get_json() or {}
+    sector = d.get("sector", "")
+    stocks = []
+    all_cached = SignalCache.query.all()
+    for sc in all_cached:
+        try:
+            sd = json.loads(sc.data_json) if sc.data_json else {}
+            if sd.get("sector") == sector:
+                stocks.append(sd)
+        except Exception:
+            pass
+    result = ai.generate_sector_trend(sector, stocks[:10])
+    if result:
+        return jsonify(result)
+    return jsonify({"error": "Failed to generate sector trend"}), 500
+
+# ── Watchlist ──────────────────────────────────────────────────────────────────
+
+@app.route("/api/watchlist")
+@api_auth
+def get_watchlist():
+    items = Watchlist.query.filter_by(user_id=current_user.id).all()
+    tickers = [w.ticker for w in items]
+    # Get current prices + signals from cache
+    out = []
+    for w in items:
+        c = db.session.get(SignalCache, w.ticker)
+        sd = json.loads(c.data_json) if c and c.data_json else {}
+        is_kr = w.ticker.upper().endswith(".KS") or w.ticker.upper().endswith(".KQ")
+        out.append({
+            "id": w.id, "ticker": w.ticker,
+            "name": sd.get("name", w.ticker),
+            "price": sd.get("price", 0),
+            "price_display": sd.get("price_display", "—"),
+            "change_pct": sd.get("change_pct", 0),
+            "signal": sd.get("signal", "—"),
+            "score": sd.get("score", 0),
+            "currency": sd.get("currency", "KRW" if is_kr else "USD"),
+            "is_korean": sd.get("is_korean", is_kr),
+        })
+    return jsonify({"watchlist": out})
+
+@app.route("/api/watchlist", methods=["POST"])
+@api_auth
+def add_watchlist():
+    d = request.get_json() or {}
+    ticker = (d.get("ticker") or "").strip().upper()
+    if not ticker:
+        return jsonify({"error": "Ticker required"}), 400
+    if ticker.isdigit() and len(ticker) == 6:
+        ticker += ".KS"
+    # Check duplicate
+    existing = Watchlist.query.filter_by(user_id=current_user.id, ticker=ticker).first()
+    if existing:
+        return jsonify({"error": "Already in watchlist"}), 409
+    db.session.add(Watchlist(user_id=current_user.id, ticker=ticker))
+    db.session.commit()
+    # Cache signal if not already cached
+    _cache_ticker(ticker, current_user.available_capital)
+    return jsonify({"ok": True, "ticker": ticker})
+
+@app.route("/api/watchlist/<int:wid>", methods=["DELETE"])
+@api_auth
+def remove_watchlist(wid):
+    w = db.session.get(Watchlist, wid)
+    if not w or w.user_id != current_user.id:
+        return jsonify({"error": "Not found"}), 404
+    db.session.delete(w)
     db.session.commit()
     return jsonify({"ok": True})
 
@@ -819,6 +1463,22 @@ def _cache_ticker(ticker: str, capital: float):
 def _maybe_alert(user_id: int, r: dict):
     sig = r.get("signal")
     if sig not in ("BUY", "SELL"): return
+
+    # Only alert during market hours
+    from zoneinfo import ZoneInfo
+    now_utc = datetime.utcnow().replace(tzinfo=ZoneInfo("UTC"))
+    is_kr = r.get("is_korean", False)
+    if is_kr:
+        kst = now_utc.astimezone(ZoneInfo("Asia/Seoul"))
+        kr_min = kst.hour * 60 + kst.minute
+        if kst.weekday() >= 5 or not (540 <= kr_min < 930):
+            return  # KR market closed
+    else:
+        et = now_utc.astimezone(ZoneInfo("America/New_York"))
+        us_min = et.hour * 60 + et.minute
+        if et.weekday() >= 5 or not (570 <= us_min < 960):
+            return  # US market closed
+
     ticker = r["ticker"]
     name   = r.get("name", ticker)
     score  = r.get("score", 0)

@@ -74,6 +74,16 @@ WS_FEEDS = [
 
 class DataFetcher:
 
+    @staticmethod
+    def _safe(v, dp=2):
+        """Convert to float, return 0 if NaN/Inf."""
+        import math
+        try:
+            f = float(v)
+            return round(f, dp) if not math.isnan(f) and not math.isinf(f) else 0
+        except (TypeError, ValueError):
+            return 0
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     @staticmethod
@@ -99,12 +109,26 @@ class DataFetcher:
         ticker = ticker.strip().upper()
         if not ticker:
             return None
+        # Auto-append .KS for Korean stock codes (6-digit numbers without suffix)
+        if ticker.isdigit() and len(ticker) == 6:
+            ticker = ticker + ".KS"
         try:
             stock = yf.Ticker(ticker)
             fi    = stock.fast_info
             price = fi.last_price
             if not price or price <= 0:
-                return None
+                # Try .KQ (KOSDAQ) if .KS failed
+                if ticker.endswith(".KS"):
+                    ticker_kq = ticker.replace(".KS", ".KQ")
+                    stock = yf.Ticker(ticker_kq)
+                    fi = stock.fast_info
+                    price = fi.last_price
+                    if price and price > 0:
+                        ticker = ticker_kq
+                    else:
+                        return None
+                else:
+                    return None
 
             curr = self.currency(ticker)
 
@@ -292,8 +316,8 @@ class DataFetcher:
                 if len(h) >= 2:
                     chg = (h["Close"].iloc[-1] - h["Close"].iloc[-2]) / h["Close"].iloc[-2] * 100
                     macro[key] = {
-                        "price":      round(float(h["Close"].iloc[-1]), 2),
-                        "change_pct": round(float(chg), 2),
+                        "price":      self._safe(h["Close"].iloc[-1]),
+                        "change_pct": self._safe(chg),
                     }
             except Exception:
                 pass
@@ -331,8 +355,8 @@ class DataFetcher:
                 if len(h) >= 2:
                     chg = (h["Close"].iloc[-1] - h["Close"].iloc[-2]) / h["Close"].iloc[-2] * 100
                     macro[key] = {
-                        "price":      round(float(h["Close"].iloc[-1]), 2),
-                        "change_pct": round(float(chg), 2),
+                        "price":      self._safe(h["Close"].iloc[-1]),
+                        "change_pct": self._safe(chg),
                         "name":       name,
                     }
             except Exception:
@@ -363,8 +387,8 @@ class DataFetcher:
             if len(h) >= 2:
                 chg = (h["Close"].iloc[-1] - h["Close"].iloc[-2]) / h["Close"].iloc[-2] * 100
                 macro["btc"] = {
-                    "price":      round(float(h["Close"].iloc[-1]), 0),
-                    "change_pct": round(float(chg), 2),
+                    "price":      self._safe(h["Close"].iloc[-1], 0),
+                    "change_pct": self._safe(chg),
                 }
         except Exception:
             pass
@@ -375,13 +399,13 @@ class DataFetcher:
             h_long  = yf.Ticker("^TNX").history(period="5d")   # 10Y
             h_30    = yf.Ticker("^TYX").history(period="5d")   # 30Y
             if not h_short.empty and not h_long.empty:
-                s = float(h_short["Close"].iloc[-1])
-                l = float(h_long["Close"].iloc[-1])
+                s = self._safe(h_short["Close"].iloc[-1])
+                l = self._safe(h_long["Close"].iloc[-1])
                 spread = round(l - s, 2)
                 macro["yield_curve"] = {
-                    "t3m":     round(s, 2),
-                    "t10y":    round(l, 2),
-                    "t30y":    round(float(h_30["Close"].iloc[-1]), 2) if not h_30.empty else None,
+                    "t3m":     s,
+                    "t10y":    l,
+                    "t30y":    self._safe(h_30["Close"].iloc[-1]) if not h_30.empty else None,
                     "spread":  spread,
                     "inverted": spread < 0,
                 }
@@ -494,6 +518,9 @@ class DataFetcher:
 
     def get_stock_snapshot(self, ticker: str) -> dict | None:
         try:
+            # Auto-append .KS for Korean stock codes
+            if ticker.strip().isdigit() and len(ticker.strip()) == 6:
+                ticker = ticker.strip() + ".KS"
             stock = yf.Ticker(ticker)
 
             # 1-min intraday (prepost) — most reliable current price
@@ -512,7 +539,10 @@ class DataFetcher:
             if hist.empty or len(hist) < 20:
                 return None
 
-            info = stock.info
+            try:
+                info = stock.info
+            except Exception:
+                info = {}
             prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else cur
             chg  = (cur - prev) / prev * 100
             curr = self.currency(ticker)

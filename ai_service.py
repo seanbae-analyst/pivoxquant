@@ -108,6 +108,69 @@ class AIService:
             lines.append(f"Take Profit: {data['take_profit']}, Stop Loss: {data.get('stop_loss', '?')}")
         return "\n".join(lines)
 
+    # ── Bilingual Parser ────────────────────────────────────────
+
+    @staticmethod
+    def _parse_bilingual(text):
+        """Parse AI response into English and Korean parts. Handles multiple formats."""
+        import re
+        text = text.strip()
+        en = kr = text
+
+        # Method 1: [EN] / [KR] markers
+        if "[EN]" in text and "[KR]" in text:
+            try:
+                parts = text.split("[KR]", 1)
+                en = parts[0].replace("[EN]", "").strip()
+                kr = parts[1].strip() if len(parts) > 1 else ""
+                kr = kr.replace("[EN]", "").replace("[KR]", "").strip()
+                en = en.replace("[EN]", "").replace("[KR]", "").strip()
+                if en and kr:
+                    return en, kr
+            except Exception:
+                pass
+
+        # Method 2: --- separator
+        if "---" in text:
+            parts = text.split("---", 1)
+            p0 = parts[0].strip()
+            p1 = parts[1].strip() if len(parts) > 1 else ""
+            if p0 and p1:
+                return p0, p1
+
+        # Method 3: Korean/한국어/KR header
+        m = re.split(r'\n\s*(?:Korean|한국어|KR|Korean Version|한국어 버전)[:\s]*\n', text, flags=re.IGNORECASE)
+        if len(m) >= 2:
+            en = re.sub(r'^(?:English|영어|EN|English Version|영어 버전)[:\s]*\n?', '', m[0], flags=re.IGNORECASE).strip()
+            kr = m[1].strip()
+            if en and kr:
+                return en, kr
+
+        # Method 4: Detect Korean characters — split where Korean starts
+        # Find first Korean character block
+        has_korean = bool(re.search(r'[\uac00-\ud7af]', text))
+        if has_korean:
+            # Find the boundary where Korean paragraph starts
+            lines = text.split('\n')
+            en_lines = []
+            kr_lines = []
+            found_kr = False
+            for line in lines:
+                kr_chars = len(re.findall(r'[\uac00-\ud7af]', line))
+                total_chars = len(line.strip())
+                if not found_kr and total_chars > 0 and kr_chars / max(total_chars, 1) > 0.3:
+                    found_kr = True
+                if found_kr:
+                    kr_lines.append(line)
+                else:
+                    en_lines.append(line)
+            en_text = '\n'.join(en_lines).strip()
+            kr_text = '\n'.join(kr_lines).strip()
+            if en_text and kr_text:
+                return en_text, kr_text
+
+        return en, kr
+
     # ── Chat (Streaming) ─────────────────────────────────────────
 
     def chat_stream(self, message, history, context):
@@ -123,7 +186,7 @@ class AIService:
 
             with self.client.messages.stream(
                 model=MODEL,
-                max_tokens=800,
+                max_tokens=4000,
                 system=SYSTEM_PROMPT + "\n\n" + context,
                 messages=messages,
             ) as stream:
@@ -143,21 +206,26 @@ class AIService:
             context = self.build_analysis_context(analysis_data)
             resp = self.client.messages.create(
                 model=MODEL,
-                max_tokens=300,
+                max_tokens=4000,
                 system=SYSTEM_PROMPT,
                 messages=[{
                     "role": "user",
-                    "content": f"""Based on this analysis data, write a beginner-friendly explanation in 3-4 sentences.
-First write in English, then write the Korean version after "---".
+                    "content": f"""Based on this analysis data, write a beginner-friendly explanation.
 Focus on: what the numbers mean, whether it's a good time to buy/sell, and one key risk.
+
+IMPORTANT: You MUST write BOTH English AND Korean versions. Do NOT skip Korean.
+Use these EXACT markers:
+
+[EN]
+(Write 3-4 complete sentences in English)
+[KR]
+(Write 3-4 complete sentences in Korean. Translate EVERYTHING fully. Do not cut off mid-sentence.)
 
 {context}"""
                 }],
             )
             text = resp.content[0].text
-            parts = text.split("---")
-            en = parts[0].strip()
-            kr = parts[1].strip() if len(parts) > 1 else en
+            en, kr = self._parse_bilingual(text)
             return {"commentary": en, "commentary_kr": kr}
         except Exception as e:
             logger.error(f"Commentary error: {e}")
@@ -177,12 +245,18 @@ Focus on: what the numbers mean, whether it's a good time to buy/sell, and one k
 
             resp = self.client.messages.create(
                 model=MODEL,
-                max_tokens=200,
+                max_tokens=4000,
                 system=SYSTEM_PROMPT,
                 messages=[{
                     "role": "user",
                     "content": f"""Summarize today's market in 2-3 sentences for a beginner investor.
-First English, then Korean after "---".
+
+You MUST respond in this EXACT format:
+
+[EN]
+(2-3 sentences in English)
+[KR]
+(2-3 sentences in Korean, fully translated)
 
 Market Mood: {mood}
 GS View: {gs.get('bias', 'Neutral')} / Risk: {gs.get('risk_level', 'Moderate')}
@@ -191,9 +265,7 @@ Top Headlines:
                 }],
             )
             text = resp.content[0].text
-            parts = text.split("---")
-            en = parts[0].strip()
-            kr = parts[1].strip() if len(parts) > 1 else en
+            en, kr = self._parse_bilingual(text)
             return {"summary": en, "summary_kr": kr}
         except Exception as e:
             logger.error(f"Morning summary error: {e}")
@@ -206,22 +278,152 @@ Top Headlines:
         try:
             resp = self.client.messages.create(
                 model=MODEL,
-                max_tokens=200,
+                max_tokens=4000,
                 system=SYSTEM_PROMPT,
                 messages=[{
                     "role": "user",
                     "content": f"""Look at this portfolio and give ONE specific, actionable insight in 2-3 sentences.
 Focus on: concentration risk, sector balance, or positions that need attention.
-First English, then Korean after "---".
+
+IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean. Do NOT cut off mid-sentence.
+
+[EN]
+(Write 2-3 complete sentences in English)
+[KR]
+(Write 2-3 complete sentences in Korean. Translate EVERYTHING fully to the end.)
 
 {portfolio_context}"""
                 }],
             )
             text = resp.content[0].text
-            parts = text.split("---")
-            en = parts[0].strip()
-            kr = parts[1].strip() if len(parts) > 1 else en
+            en, kr = self._parse_bilingual(text)
             return {"insight": en, "insight_kr": kr}
         except Exception as e:
             logger.error(f"Coaching error: {e}")
+            return None
+
+    def generate_swot(self, analysis_data):
+        """Generate SWOT analysis for a stock."""
+        if not self.available:
+            return None
+        try:
+            context = self.build_analysis_context(analysis_data)
+            resp = self.client.messages.create(
+                model=MODEL,
+                max_tokens=4000,
+                system=SYSTEM_PROMPT,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Run a SWOT analysis for this stock based on the data provided.
+
+Make it actionable, not generic:
+- STRENGTHS: What advantages does this company have that are hard to replicate?
+- WEAKNESSES: What are the key risks or disadvantages?
+- OPPORTUNITIES: What market trends could benefit this company?
+- THREATS: What specific risks could hurt this company in the next 1-2 years?
+
+End with: "Bottom line: [one sentence investment thesis]"
+
+IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
+[EN]
+(Full SWOT in English - use bullet points)
+[KR]
+(Full SWOT in Korean - fully translated, complete)
+
+{context}"""
+                }],
+            )
+            text = resp.content[0].text
+            en, kr = self._parse_bilingual(text)
+            return {"swot": en, "swot_kr": kr}
+        except Exception as e:
+            logger.error(f"SWOT error: {e}")
+            return None
+
+    def generate_competitor_analysis(self, analysis_data, peers_data):
+        """Generate competitor positioning analysis."""
+        if not self.available:
+            return None
+        try:
+            context = self.build_analysis_context(analysis_data)
+            peers_text = "\n".join(
+                f"- {p.get('name','?')} ({p.get('ticker','?')}): Score {p.get('score',0)}, Signal {p.get('signal','?')}, Price {p.get('price_display','?')}"
+                for p in (peers_data or [])[:8]
+            )
+            resp = self.client.messages.create(
+                model=MODEL,
+                max_tokens=4000,
+                system=SYSTEM_PROMPT,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Analyze the competitive positioning of these companies in the same sector based on the quant data provided.
+
+Cover:
+- How does the main stock compare to peers in terms of score and signal?
+- Which peer looks like the best opportunity based on the data?
+- What's the biggest risk in this sector right now?
+- One actionable insight for an investor
+
+Keep it concise. 2-3 sentences per point.
+
+IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
+[EN]
+(Analysis in English)
+[KR]
+(Analysis in Korean - fully translated)
+
+Main stock:
+{context}
+
+Peers in same sector:
+{peers_text}"""
+                }],
+            )
+            text = resp.content[0].text
+            en, kr = self._parse_bilingual(text)
+            return {"analysis": en, "analysis_kr": kr}
+        except Exception as e:
+            logger.error(f"Competitor analysis error: {e}")
+            return None
+
+    def generate_sector_trend(self, sector, stocks_in_sector):
+        """Generate sector trend report."""
+        if not self.available:
+            return None
+        try:
+            stocks_text = "\n".join(
+                f"- {s.get('name','?')} ({s.get('ticker','?')}): Score {s.get('score',0)}, Change {s.get('change_pct',0):+.1f}%"
+                for s in (stocks_in_sector or [])[:10]
+            )
+            resp = self.client.messages.create(
+                model=MODEL,
+                max_tokens=4000,
+                system=SYSTEM_PROMPT,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Create a brief trend report for the {sector} sector based on the stock data provided.
+
+Cover:
+1. Top 3 trends in this sector right now
+2. One risk most investors aren't watching
+3. Which stock in this sector looks best positioned based on the scores
+4. Your prediction for the next 6 months
+
+Be specific. Use the data provided.
+
+IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
+[EN]
+(Report in English)
+[KR]
+(Report in Korean - fully translated)
+
+Stocks in {sector}:
+{stocks_text}"""
+                }],
+            )
+            text = resp.content[0].text
+            en, kr = self._parse_bilingual(text)
+            return {"trend": en, "trend_kr": kr, "sector": sector}
+        except Exception as e:
+            logger.error(f"Sector trend error: {e}")
             return None
