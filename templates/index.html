@@ -1001,6 +1001,7 @@ function dashSort(f) {
 
 function _renderDash(positions, f) {
   let rows = [...positions];
+  if(f === 'all') rows.sort((a,b) => (b.market_value||0) - (a.market_value||0));
   if(f === 'us')  rows = rows.filter(p => !p.is_korean).sort((a,b) => b.market_value - a.market_value);
   if(f === 'kr')  rows = rows.filter(p =>  p.is_korean).sort((a,b) => b.market_value - a.market_value);
   if(f === 'buy') rows = rows.filter(p => p.signal === 'BUY').sort((a,b) => (b.rec_investment||0) - (a.rec_investment||0));
