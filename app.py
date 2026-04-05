@@ -635,8 +635,18 @@ def earnings_calendar():
     import yfinance as yf
     positions = Position.query.filter_by(user_id=current_user.id).all()
     earnings = []
+    # Suppress yfinance 404 errors for ETFs
+    import logging as _logging
+    _yf_logger = _logging.getLogger('yfinance')
+    _prev_level = _yf_logger.level
+    _yf_logger.setLevel(_logging.CRITICAL)
+
     for p in positions:
         try:
+            # Skip ETFs (no earnings)
+            is_etf = p.ticker in ('TSLL','ETHU','SPY','QQQ','TLT','GLD','USO','UUP') or 'ETF' in (p.ticker or '')
+            if is_etf:
+                continue
             stock = yf.Ticker(p.ticker)
             cal = stock.calendar
             if cal is not None and not cal.empty if hasattr(cal, 'empty') else cal:
@@ -675,6 +685,7 @@ def earnings_calendar():
                             })
         except Exception:
             pass
+    _yf_logger.setLevel(_prev_level)  # Restore logger
     earnings.sort(key=lambda x: x.get("date", "9999"))
     return jsonify({"earnings": earnings})
 
