@@ -16,6 +16,7 @@ import pandas as pd
 import yfinance as yf
 import logging
 from data_fetcher import DataFetcher
+from quant_models import MeanReversion, MomentumBreakout, VolatilityRegime, RegimeSwitching, MLSignal
 
 logger = logging.getLogger(__name__)
 _fetcher = DataFetcher()
@@ -63,7 +64,16 @@ class QuantEngine:
         fund_score, fund_sigs = self._fundamental(snapshot)
         news_score, news_sigs = _fetcher.score_news_sentiment(ticker)
 
-        composite = round(tech_score * 0.50 + fund_score * 0.30 + news_score * 0.20, 1)
+        # ── Advanced Quant Models (40% weight) ──
+        quant_score, quant_sigs = self._quant_models(hist)
+
+        # New composite: Tech 25% + Fund 15% + News 10% + Quant 50%
+        composite = round(
+            tech_score * 0.25 +
+            fund_score * 0.15 +
+            news_score * 0.10 +
+            quant_score * 0.50, 1
+        )
         signal = (
             "BUY"  if composite >= self.BUY_THRESH  else
             "SELL" if composite <  self.SELL_THRESH else
@@ -72,7 +82,7 @@ class QuantEngine:
 
         rec_inv, rec_sh, rec_timing = self._size(composite, price, capital, signal)
         reason_en, reason_kr        = self._reason(signal, composite, tech_score,
-                                                    fund_score, news_score)
+                                                    fund_score, news_score, quant_score)
 
         needs_capital  = (signal == "BUY" and rec_sh == 0 and rec_timing in ("NO_CAPITAL", "INSUFFICIENT"))
         capital_needed = None
@@ -123,6 +133,7 @@ class QuantEngine:
             "tech_score":      round(tech_score, 1),
             "fund_score":      round(fund_score, 1),
             "news_score":      round(news_score, 1),
+            "quant_score":     round(quant_score, 1),
             "rec_investment":  round(rec_inv, 2),
             "rec_shares":      rec_sh,
             "rec_timing":      "" if needs_capital else rec_timing,
@@ -136,7 +147,7 @@ class QuantEngine:
             "stop_loss":       round(price * (1 + sl_pct / 100), dp),
             "priority":        priority,
             "capital_gap":     capital_gap,
-            "signals":         tech_sigs + fund_sigs + news_sigs,
+            "signals":         tech_sigs + fund_sigs + news_sigs + quant_sigs,
             "reason":          reason_en,
             "reason_kr":       reason_kr,
             "snapshot":        snapshot,
@@ -401,17 +412,18 @@ class QuantEngine:
 
     # ── Reason Builder ────────────────────────────────────────────────────────
 
-    def _reason(self, sig: str, score: float, tech: float, fund: float, news: float):
-        dom = max([("Technical", tech), ("Fundamental", fund), ("News Sentiment", news)],
+    def _reason(self, sig: str, score: float, tech: float, fund: float, news: float, quant: float = 50.0):
+        dom = max([("Technical", tech), ("Fundamental", fund), ("News Sentiment", news), ("Quant Models", quant)],
                   key=lambda x: x[1])
         dom_kr = {"Technical": "기술적 분석", "Fundamental": "기본적 분석",
-                  "News Sentiment": "뉴스 센티멘트"}[dom[0]]
-        en = (f"Composite score {score:.0f}/100. Primary driver: {dom[0]} ({dom[1]:.0f} pts). "
-              + {"BUY":  "Quant model detects favorable entry. Scale in with defined risk.",
+                  "News Sentiment": "뉴스 센티멘트", "Quant Models": "퀀트 모델"}[dom[0]]
+        weights = "Tech 25% + Fund 15% + News 10% + Quant 50%"
+        en = (f"Composite score {score:.0f}/100 ({weights}). Primary driver: {dom[0]} ({dom[1]:.0f} pts). "
+              + {"BUY":  "Multi-factor quant model detects favorable entry. Scale in with defined risk.",
                  "HOLD": "Hold current position. Await stronger signal before adding.",
                  "SELL": "Quant model flags deteriorating conditions. Consider reducing or exiting position."}.get(sig, ""))
-        kr = (f"종합 점수 {score:.0f}/100. 주요 동인: {dom_kr} ({dom[1]:.0f}점). "
-              + {"BUY":  "퀀트 모델이 매수 기회 감지. 분할 매수 권장.",
+        kr = (f"종합 점수 {score:.0f}/100 ({weights}). 주요 동인: {dom_kr} ({dom[1]:.0f}점). "
+              + {"BUY":  "멀티팩터 퀀트 모델이 매수 기회 감지. 분할 매수 권장.",
                  "HOLD": "현 포지션 유지. 추가 진입 시그널 대기.",
                  "SELL": "퀀트 모델이 약세 신호 감지. 포지션 축소 또는 청산 고려."}.get(sig, ""))
         return en, kr
@@ -487,3 +499,139 @@ class QuantEngine:
         mid = p.rolling(n).mean()
         std = p.rolling(n).std()
         return mid + k * std, mid, mid - k * std
+
+    # ── Advanced Quant Models ────────────────────────────────────────────────────
+
+    def _quant_models(self, hist: pd.DataFrame) -> tuple[float, list[dict]]:
+        """Run Mean Reversion + Momentum Breakout + Volatility Regime models."""
+        sigs = []
+        score = 50.0
+        close = hist["Close"].astype(float).values
+        high = hist["High"].astype(float).values
+        low = hist["Low"].astype(float).values
+        vol = hist["Volume"].astype(float).values
+
+        # 1. Mean Reversion (10% → maps to 0-100)
+        try:
+            mr = MeanReversion.analyze(close)
+            if mr:
+                mr_score = mr["score"]
+                z = mr["z_score"]
+                if z < -2:
+                    score += 20
+                    sigs.append({"type": "bullish",
+                                 "msg": f"Mean Reversion: Price {abs(z):.1f}σ below mean — strong bounce expected",
+                                 "msg_kr": f"평균회귀: 가격이 평균보다 {abs(z):.1f}σ 아래 — 강한 반등 예상"})
+                elif z < -1:
+                    score += 10
+                    sigs.append({"type": "bullish",
+                                 "msg": f"Mean Reversion: Price {abs(z):.1f}σ below mean",
+                                 "msg_kr": f"평균회귀: 가격이 평균보다 {abs(z):.1f}σ 아래"})
+                elif z > 2:
+                    score -= 20
+                    sigs.append({"type": "bearish",
+                                 "msg": f"Mean Reversion: Price {z:.1f}σ above mean — pullback risk",
+                                 "msg_kr": f"평균회귀: 가격이 평균보다 {z:.1f}σ 위 — 조정 위험"})
+                elif z > 1:
+                    score -= 10
+                    sigs.append({"type": "bearish",
+                                 "msg": f"Mean Reversion: Price {z:.1f}σ above mean — extended",
+                                 "msg_kr": f"평균회귀: 가격이 평균보다 {z:.1f}σ 위 — 과확장"})
+        except Exception:
+            pass
+
+        # 2. Momentum Breakout (10%)
+        try:
+            mb = MomentumBreakout.analyze(close, high, low, vol)
+            if mb:
+                if mb["signal"] == "BUY":
+                    score += 20
+                    for s in mb.get("signals", []):
+                        sigs.append(s)
+                elif mb["signal"] == "SELL":
+                    score -= 20
+                    for s in mb.get("signals", []):
+                        sigs.append(s)
+                elif mb.get("signals"):
+                    for s in mb["signals"]:
+                        sigs.append(s)
+        except Exception:
+            pass
+
+        # 3. Volatility Regime (10%)
+        try:
+            vr = VolatilityRegime.analyze(close)
+            if vr:
+                regime = vr["regime"]
+                if regime == "LOW_VOL":
+                    score += 8
+                    sigs.append({"type": "bullish",
+                                 "msg": f"Volatility: Low ({vr['current_vol']:.0f}%) — favorable for entries",
+                                 "msg_kr": f"변동성: 저 ({vr['current_vol']:.0f}%) — 진입에 유리"})
+                elif regime == "HIGH_VOL":
+                    score -= 10
+                    sigs.append({"type": "bearish",
+                                 "msg": f"Volatility: High ({vr['current_vol']:.0f}%) — reduce exposure",
+                                 "msg_kr": f"변동성: 고 ({vr['current_vol']:.0f}%) — 노출 축소 권고"})
+                elif regime == "CRISIS":
+                    score -= 20
+                    sigs.append({"type": "bearish",
+                                 "msg": f"Volatility: CRISIS ({vr['current_vol']:.0f}%) — cash is king",
+                                 "msg_kr": f"변동성: 위기 ({vr['current_vol']:.0f}%) — 현금 보유 권고"})
+        except Exception:
+            pass
+
+        # 4. Regime Switching (10%)
+        try:
+            rs = RegimeSwitching.analyze(close)
+            if rs:
+                regime = rs["regime"]
+                if regime in ("BULL",):
+                    score += 15
+                    sigs.append({"type": "bullish",
+                                 "msg": f"Regime: {rs['label']} (Sharpe {rs['sharpe_20d']:.1f}) — momentum favors longs",
+                                 "msg_kr": f"시장체제: {rs['label_kr']} (샤프 {rs['sharpe_20d']:.1f}) — 매수 유리"})
+                elif regime == "MILD_BULL":
+                    score += 8
+                    sigs.append({"type": "bullish",
+                                 "msg": f"Regime: {rs['label']} — cautiously bullish",
+                                 "msg_kr": f"시장체제: {rs['label_kr']} — 조심스러운 강세"})
+                elif regime in ("BEAR",):
+                    score -= 15
+                    sigs.append({"type": "bearish",
+                                 "msg": f"Regime: {rs['label']} (Sharpe {rs['sharpe_20d']:.1f}) — avoid new longs",
+                                 "msg_kr": f"시장체제: {rs['label_kr']} (샤프 {rs['sharpe_20d']:.1f}) — 신규 매수 회피"})
+                elif regime == "MILD_BEAR":
+                    score -= 8
+                    sigs.append({"type": "bearish",
+                                 "msg": f"Regime: {rs['label']} — defensive positioning",
+                                 "msg_kr": f"시장체제: {rs['label_kr']} — 방어적 포지션"})
+                if rs.get("shifting"):
+                    sigs.append({"type": "neutral",
+                                 "msg": f"Regime Shift: {rs['shift_direction']}",
+                                 "msg_kr": f"체제 전환: {rs['shift_kr']}"})
+        except Exception:
+            pass
+
+        # 5. ML Signal
+        try:
+            ml = MLSignal.generate(close, high, low, vol)
+            if ml:
+                if ml["signal"] == "BULLISH":
+                    score += min(12, ml["confidence"] / 100 * 12)
+                    sigs.append({"type": "bullish",
+                                 "msg": f"ML Signal: BULLISH — {ml['votes_up']}↑ vs {ml['votes_down']}↓ votes (↑{ml['prob_up']:.0f}% confidence {ml['confidence']:.0f}%)",
+                                 "msg_kr": f"ML 시그널: 강세 — {ml['votes_up']}↑ vs {ml['votes_down']}↓ 투표 (상승 {ml['prob_up']:.0f}% 신뢰도 {ml['confidence']:.0f}%)"})
+                elif ml["signal"] == "BEARISH":
+                    score -= min(12, ml["confidence"] / 100 * 12)
+                    sigs.append({"type": "bearish",
+                                 "msg": f"ML Signal: BEARISH — {ml['votes_up']}↑ vs {ml['votes_down']}↓ votes (↓{ml['prob_down']:.0f}% confidence {ml['confidence']:.0f}%)",
+                                 "msg_kr": f"ML 시그널: 약세 — {ml['votes_up']}↑ vs {ml['votes_down']}↓ 투표 (하락 {ml['prob_down']:.0f}% 신뢰도 {ml['confidence']:.0f}%)"})
+                else:
+                    sigs.append({"type": "neutral",
+                                 "msg": f"ML Signal: NEUTRAL — {ml['votes_up']}↑ vs {ml['votes_down']}↓ votes (confidence {ml['confidence']:.0f}%)",
+                                 "msg_kr": f"ML 시그널: 중립 — {ml['votes_up']}↑ vs {ml['votes_down']}↓ 투표 (신뢰도 {ml['confidence']:.0f}%)"})
+        except Exception:
+            pass
+
+        return max(0.0, min(100.0, score)), sigs
