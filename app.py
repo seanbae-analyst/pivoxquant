@@ -13,14 +13,19 @@ import sentry_sdk
 def _sentry_filter(event, hint):
     """Filter out noisy yfinance errors (weekend/holiday data gaps)."""
     msg = str(event.get("logentry", {}).get("message", "")) + str(hint.get("log_record", {}) if hint else "")
-    noise = ["possibly delisted", "No price data found", "currentTradingPeriod", "No fundamentals data", "quoteSummary"]
-    if any(n in msg for n in noise):
+    noise = ["possibly delisted", "No price data found", "currentTradingPeriod", "No fundamentals data", "quoteSummary", "Expecting value", "Failed to get ticker", "Snapshot failed", "HTTP Error 404", "yfinance", "No data found"]
+    all_text = msg + str(event.get("message", "")) + str(event.get("exception", {}).get("values", [{}])[0].get("value", "") if event.get("exception") else "")
+    if any(n in all_text for n in noise):
         return None  # Don't send to Sentry
     exc = hint.get("exc_info")
     if exc:
         exc_msg = str(exc[1]) if exc[1] else ""
         if any(n in exc_msg for n in noise):
             return None
+    # Also filter by logger name
+    logger_name = str(event.get("logger", ""))
+    if logger_name in ("yfinance", "data_fetcher"):
+        return None
     return event
 
 sentry_sdk.init(
