@@ -9,10 +9,25 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), override=True)
 
 import sentry_sdk
+
+def _sentry_filter(event, hint):
+    """Filter out noisy yfinance errors (weekend/holiday data gaps)."""
+    msg = str(event.get("logentry", {}).get("message", "")) + str(hint.get("log_record", {}) if hint else "")
+    noise = ["possibly delisted", "No price data found", "currentTradingPeriod", "No fundamentals data", "quoteSummary"]
+    if any(n in msg for n in noise):
+        return None  # Don't send to Sentry
+    exc = hint.get("exc_info")
+    if exc:
+        exc_msg = str(exc[1]) if exc[1] else ""
+        if any(n in exc_msg for n in noise):
+            return None
+    return event
+
 sentry_sdk.init(
     dsn=os.environ.get("SENTRY_DSN", "https://***SENTRY_DSN_REMOVED***@o4511165934141440.ingest.us.sentry.io/4511165940826112"),
     traces_sample_rate=0.2,
     send_default_pii=False,
+    before_send=_sentry_filter,
 )
 
 from datetime import datetime, timedelta
