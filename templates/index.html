@@ -895,12 +895,14 @@ function showView(v) {
   const n = document.getElementById('nav-'+v); if(n) n.classList.add('active');
   _currentView = v;
 
-  // Toggle sidebar: hide on home, show on other views
+  // Toggle panels: hide on home, show on other views
   const app = document.querySelector('.app');
   if(v === 'home') {
     app.classList.add('home-mode');
+    document.body.classList.add('home-active');
   } else {
     app.classList.remove('home-mode');
+    document.body.classList.remove('home-active');
   }
 
   // Scroll to top
@@ -980,6 +982,7 @@ async function loadDashboard() {
   document.getElementById('s-score').textContent = avgs.toFixed(0);
 
   window._positions = positions;
+  updateCmdList(); updateCmdWatchlist();
   loadAnalytics();
   // Auto-refresh prices on every dashboard load
   _silentPriceRefresh();
@@ -2582,6 +2585,98 @@ function showDetailCards() {
     const el = document.getElementById('dtab-'+i);
     if(el) el.style.display = 'none';
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COMMAND CENTER PANELS
+// ═══════════════════════════════════════════════════════════
+function updateCmdList() {
+  const el = document.getElementById('cmd-list');
+  if(!el || !window._positions) return;
+  const sorted = [...window._positions].sort((a,b) => (b.market_value||0) - (a.market_value||0));
+  el.innerHTML = sorted.map(p => {
+    const isKr = p.currency==='KRW';
+    const cur = isKr?'₩':'$';
+    const pFmt = isKr ? Math.round(p.current_price).toLocaleString() : p.current_price.toFixed(2);
+    const chg = p.pnl_pct||0;
+    const cc = chg>=0?'var(--green)':'var(--red)';
+    // Korean: name big, ticker small. US: ticker big, name small
+    const topText = isKr ? p.name : p.ticker.replace('.KS','').replace('.KQ','');
+    const bottomText = isKr ? p.ticker.replace('.KS','').replace('.KQ','') : p.name;
+    return `<div class="lp-item" onclick="showDetail('${p.ticker}','dashboard')" data-t="${p.ticker}">
+      <div><div style="font-size:13px;font-weight:600;">${topText}</div><div style="font-size:9px;color:var(--muted);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${bottomText}</div></div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;font-weight:600;">${cur}${pFmt}</div>
+        <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+          <span style="font-size:10px;color:${cc};">${chg>=0?'+':''}${chg.toFixed(1)}%</span>
+          <span style="font-size:8px;padding:1px 4px;border-radius:3px;font-weight:600;${p.signal==='BUY'?'background:rgba(0,214,143,.12);color:var(--green);':p.signal==='SELL'?'background:rgba(255,71,87,.12);color:var(--red);':'background:rgba(255,184,77,.08);color:var(--amber);'}">${p.signal||'—'}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function updateCmdWatchlist() {
+  const el = document.getElementById('cmd-watchlist');
+  if(!el) return;
+  fetch('/api/watchlist').then(r=>r.json()).then(d=>{
+    const items=d.watchlist||[];
+    if(!items.length){el.innerHTML='<div style="color:var(--muted);font-size:10px;padding:8px 14px;">Empty</div>';return;}
+    el.innerHTML=items.map(w=>{
+      const cc=(w.change_pct||0)>=0?'var(--green)':'var(--red)';
+      return `<div class="lp-item" onclick="showDetail('${w.ticker}','watchlist')" data-t="${w.ticker}">
+        <div><div style="font-size:12px;font-weight:600;font-family:'DM Mono',monospace;">${w.ticker.replace('.KS','').replace('.KQ','')}</div><div style="font-size:9px;color:var(--muted);">${w.name}</div></div>
+        <div style="text-align:right;"><div style="font-size:11px;font-weight:600;">${w.price_display}</div><div style="font-size:10px;color:${cc};">${(w.change_pct||0)>=0?'+':''}${(w.change_pct||0).toFixed(1)}%</div></div>
+      </div>`;
+    }).join('');
+  }).catch(()=>{});
+}
+function cmdFilter(q) {
+  document.querySelectorAll('#cmd-list .lp-item, #cmd-watchlist .lp-item').forEach(el=>{
+    const t=el.dataset.t||'';
+    el.style.display=t.toLowerCase().includes(q.toLowerCase())?'flex':'none';
+  });
+}
+function cmdRTab(tab,btn) {
+  document.querySelectorAll('.cmd-rtab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  ['chat','alerts','trades'].forEach(t=>{
+    const el=document.getElementById('cmd-'+t);
+    if(el) el.style.display=t===tab?(t==='chat'?'flex':'block'):'none';
+  });
+  if(tab==='alerts') cmdLoadAlerts();
+  if(tab==='trades') cmdLoadTrades();
+}
+async function cmdAISend() {
+  const input=document.getElementById('cmd-ai-in');
+  const msg=input.value.trim();
+  if(!msg||_aiSending) return;
+  input.value='';_aiSending=true;
+  const msgs=document.getElementById('cmd-ai-msgs');
+  msgs.innerHTML+=`<div style="padding:8px;background:var(--accent);color:#fff;border-radius:8px;margin-bottom:6px;max-width:85%;align-self:flex-end;font-size:12px;">${msg}</div>`;
+  const bot=document.createElement('div');
+  bot.style.cssText='padding:8px;background:var(--card);border-radius:8px;margin-bottom:6px;max-width:85%;font-size:12px;color:var(--text-secondary,#c9d6e8);';
+  bot.textContent='...';msgs.appendChild(bot);msgs.scrollTop=msgs.scrollHeight;
+  try{
+    const resp=await fetch('/api/ai/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,history:aiChatHistory.slice(-10)})});
+    const reader=resp.body.getReader();const decoder=new TextDecoder();let full='';
+    while(true){const{done,value}=await reader.read();if(done)break;for(const line of decoder.decode(value).split('\n')){if(line.startsWith('data: ')){try{const d=JSON.parse(line.slice(6));if(d.text){full+=d.text;bot.textContent=full;}}catch(e){}}};msgs.scrollTop=msgs.scrollHeight;}
+    aiChatHistory.push({role:'user',content:msg});aiChatHistory.push({role:'assistant',content:full});
+  }catch(e){bot.textContent='Error';}
+  _aiSending=false;
+}
+async function cmdLoadAlerts() {
+  try{const r=await fetch('/api/alerts');const d=await r.json();const el=document.getElementById('cmd-alerts');
+  const alerts=d.alerts||[];
+  el.innerHTML=!alerts.length?'<div style="color:var(--muted);padding:12px;text-align:center;">No alerts</div>':
+  alerts.slice(0,20).map(a=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);"><div style="color:${a.signal==='BUY'?'var(--green)':'var(--red)'};font-weight:600;font-size:11px;">${a.signal||''} ${a.ticker||''}</div><div style="color:var(--muted);font-size:10px;margin-top:2px;">${(a.message||'').slice(0,60)}</div></div>`).join('');
+  }catch(e){}
+}
+async function cmdLoadTrades() {
+  try{const r=await fetch('/api/trades');const d=await r.json();const el=document.getElementById('cmd-trades');
+  const trades=d.trades||[];
+  el.innerHTML=!trades.length?'<div style="color:var(--muted);padding:12px;text-align:center;">No trades</div>':
+  trades.slice(0,20).map(t=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);"><div style="display:flex;justify-content:space-between;"><span style="color:${t.action==='BUY'?'var(--accent)':'var(--green)'};font-weight:600;font-size:11px;">${t.action} ${t.ticker}</span><span style="color:var(--muted);font-size:10px;">${(t.traded_at||'').slice(0,10)}</span></div></div>`).join('');
+  }catch(e){}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -4295,6 +4390,40 @@ function switchCoachLang(lang) {
   <div class="mobile-nav-item" onclick="showView('scan')"><span>🔍</span>Scan</div>
   <div class="mobile-nav-item" onclick="showView('discover')"><span>🔭</span>Discover</div>
   <div class="mobile-nav-item" onclick="showView('overview')"><span>🌐</span>Market</div>
+</div>
+
+<!-- LEFT PANEL (fixed position, outside app) -->
+<div class="cmd-left" id="cmd-left">
+  <div style="padding:12px 14px 8px;display:flex;align-items:center;justify-content:space-between;">
+    <span style="font-size:13px;font-weight:700;">Positions</span>
+    <button onclick="openAddModal()" style="width:24px;height:24px;border-radius:6px;background:var(--accent);color:#fff;border:none;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+  </div>
+  <div style="padding:0 14px 8px;">
+    <input id="cmd-search" placeholder="Search..." oninput="cmdFilter(this.value)" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;outline:none;font-family:inherit;">
+  </div>
+  <div id="cmd-list" style="flex:1;overflow-y:auto;"></div>
+  <div style="padding:8px 14px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;border-top:1px solid var(--border);">Watchlist</div>
+  <div id="cmd-watchlist" style="overflow-y:auto;max-height:200px;"></div>
+</div>
+
+<!-- RIGHT PANEL (fixed position, outside app) -->
+<div class="cmd-right" id="cmd-right">
+  <div style="display:flex;border-bottom:1px solid var(--border);">
+    <button class="cmd-rtab active" onclick="cmdRTab('chat',this)">🤖 AI</button>
+    <button class="cmd-rtab" onclick="cmdRTab('alerts',this)">🔔</button>
+    <button class="cmd-rtab" onclick="cmdRTab('trades',this)">📋</button>
+  </div>
+  <div id="cmd-chat" style="display:flex;flex-direction:column;height:calc(100% - 40px);">
+    <div id="cmd-ai-msgs" style="flex:1;overflow-y:auto;padding:10px;font-size:12px;">
+      <div style="padding:8px;background:var(--card);border-radius:8px;color:var(--muted2);margin-bottom:6px;">Ask me anything 🚀</div>
+    </div>
+    <div style="padding:8px;border-top:1px solid var(--border);display:flex;gap:6px;">
+      <input id="cmd-ai-in" placeholder="Ask..." style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:11px;outline:none;font-family:inherit;" onkeydown="if(event.key==='Enter'&&!event.isComposing)cmdAISend()">
+      <button onclick="cmdAISend()" style="background:var(--accent);border:none;color:#fff;border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:700;">→</button>
+    </div>
+  </div>
+  <div id="cmd-alerts" style="display:none;overflow-y:auto;padding:10px;height:calc(100% - 40px);font-size:11px;"></div>
+  <div id="cmd-trades" style="display:none;overflow-y:auto;padding:10px;height:calc(100% - 40px);font-size:11px;"></div>
 </div>
 
 <!-- AI Chat FAB + Panel -->
