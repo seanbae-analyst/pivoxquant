@@ -3171,8 +3171,8 @@ function loadSectorPie() {
   const sorted = Object.entries(sectors).sort((a,b)=>b[1]-a[1]);
   const colors = ['#6366f1','#22c55e','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#14b8a6','#f97316','#64748b'];
 
-  // Draw pie
-  const cx = 120, cy = 140, r = 100;
+  // Draw pie — centered
+  const cx = W/2, cy = 110, r = 90;
   let angle = -Math.PI/2;
   sorted.forEach(([name, val], i) => {
     const slice = (val/total) * Math.PI * 2;
@@ -3185,20 +3185,32 @@ function loadSectorPie() {
   });
 
   // Inner circle (donut)
-  ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2);
-  ctx.fillStyle = '#1a1d2e'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy,50,0,Math.PI*2);
+  ctx.fillStyle = '#171e2a'; ctx.fill();
 
-  // Legend
-  const lx = 250;
+  // Center text
+  ctx.fillStyle = '#e6edf3'; ctx.font = 'bold 14px Inter,Helvetica';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${sorted.length}`, cx, cy - 4);
+  ctx.fillStyle = '#7d8da1'; ctx.font = '10px Inter,Helvetica';
+  ctx.fillText('sectors', cx, cy + 12);
+  ctx.textAlign = 'left';
+
+  // Legend — horizontal at bottom
+  const legendY = 215;
+  const colW = W / Math.min(sorted.length, 4);
   sorted.forEach(([name, val], i) => {
-    if(i > 6) return;
-    const ly = 20 + i * 32;
+    if(i > 7) return;
+    const row = Math.floor(i / 4);
+    const col = i % 4;
+    const lx = col * colW + 8;
+    const ly = legendY + row * 28;
     ctx.fillStyle = colors[i%colors.length];
-    ctx.fillRect(lx, ly, 12, 12);
-    ctx.fillStyle = '#e2e8f0'; ctx.font = '13px Helvetica';
-    ctx.fillText(`${name}`, lx+16, ly+10);
-    ctx.fillStyle = '#94a3b8'; ctx.font = '12px monospace';
-    ctx.fillText(`${(val/total*100).toFixed(1)}%`, lx+16, ly+24);
+    ctx.fillRect(lx, ly, 10, 10);
+    ctx.fillStyle = '#e6edf3'; ctx.font = '11px Helvetica';
+    ctx.fillText(`${name}`, lx+14, ly+9);
+    ctx.fillStyle = '#7d8da1'; ctx.font = '10px monospace';
+    ctx.fillText(`${(val/total*100).toFixed(0)}%`, lx+14, ly+21);
   });
 }
 
