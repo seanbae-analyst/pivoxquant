@@ -64,25 +64,58 @@ class QuantEngine:
         fund_score, fund_sigs = self._fundamental(snapshot)
         news_score, news_sigs = _fetcher.score_news_sentiment(ticker)
 
-        # ── Advanced Quant Models (40% weight) ──
+        # ── Advanced Quant Models ──
         quant_score, quant_sigs = self._quant_models(hist)
 
-        # New composite: Tech 25% + Fund 15% + News 10% + Quant 50%
+        # ── Adaptive Weights + Thresholds ──
+        sector = snapshot.get("sector", "Unknown")
+        market_cap = snapshot.get("market_cap") or 0
+        is_etf = sector == "ETF" or "ETF" in (snapshot.get("name",""))
+
+        # Determine stock type for adaptive scoring
+        if is_etf:
+            # ETF: technical only, no fundamentals
+            w_tech, w_fund, w_news, w_quant = 0.50, 0.05, 0.05, 0.40
+            buy_thresh, sell_thresh = 60, 30
+        elif is_korean:
+            # Korean stocks: higher fundamental weight, lower quant (regime less reliable)
+            w_tech, w_fund, w_news, w_quant = 0.30, 0.30, 0.10, 0.30
+            buy_thresh, sell_thresh = 58, 28
+        elif market_cap and market_cap > 100e9:
+            # Large cap US: balanced
+            w_tech, w_fund, w_news, w_quant = 0.25, 0.15, 0.10, 0.50
+            buy_thresh, sell_thresh = 65, 30
+        elif market_cap and market_cap < 10e9:
+            # Small cap US: momentum + quant heavy
+            w_tech, w_fund, w_news, w_quant = 0.30, 0.10, 0.10, 0.50
+            buy_thresh, sell_thresh = 62, 30
+        else:
+            # Default
+            w_tech, w_fund, w_news, w_quant = 0.25, 0.15, 0.10, 0.50
+            buy_thresh, sell_thresh = 65, 30
+
+        # Market regime adjustment: in strong bull, lower threshold
+        if quant_score >= 70:
+            buy_thresh -= 5  # Bull market: easier to buy
+        elif quant_score <= 30:
+            buy_thresh += 5  # Bear market: harder to buy
+
         composite = round(
-            tech_score * 0.25 +
-            fund_score * 0.15 +
-            news_score * 0.10 +
-            quant_score * 0.50, 1
+            tech_score * w_tech +
+            fund_score * w_fund +
+            news_score * w_news +
+            quant_score * w_quant, 1
         )
         signal = (
-            "BUY"  if composite >= self.BUY_THRESH  else
-            "SELL" if composite <  self.SELL_THRESH else
+            "BUY"  if composite >= buy_thresh  else
+            "SELL" if composite <  sell_thresh else
             "HOLD"
         )
 
         rec_inv, rec_sh, rec_timing = self._size(composite, price, capital, signal)
+        weights_str = f"Tech {int(w_tech*100)}% + Fund {int(w_fund*100)}% + News {int(w_news*100)}% + Quant {int(w_quant*100)}%"
         reason_en, reason_kr        = self._reason(signal, composite, tech_score,
-                                                    fund_score, news_score, quant_score)
+                                                    fund_score, news_score, quant_score, weights_str)
 
         needs_capital  = (signal == "BUY" and rec_sh == 0 and rec_timing in ("NO_CAPITAL", "INSUFFICIENT"))
         capital_needed = None
@@ -412,12 +445,13 @@ class QuantEngine:
 
     # ── Reason Builder ────────────────────────────────────────────────────────
 
-    def _reason(self, sig: str, score: float, tech: float, fund: float, news: float, quant: float = 50.0):
+    def _reason(self, sig: str, score: float, tech: float, fund: float, news: float, quant: float = 50.0, weights: str = ""):
         dom = max([("Technical", tech), ("Fundamental", fund), ("News Sentiment", news), ("Quant Models", quant)],
                   key=lambda x: x[1])
         dom_kr = {"Technical": "기술적 분석", "Fundamental": "기본적 분석",
                   "News Sentiment": "뉴스 센티멘트", "Quant Models": "퀀트 모델"}[dom[0]]
-        weights = "Tech 25% + Fund 15% + News 10% + Quant 50%"
+        if not weights:
+            weights = "Adaptive"
         en = (f"Composite score {score:.0f}/100 ({weights}). Primary driver: {dom[0]} ({dom[1]:.0f} pts). "
               + {"BUY":  "Multi-factor quant model detects favorable entry. Scale in with defined risk.",
                  "HOLD": "Hold current position. Await stronger signal before adding.",
