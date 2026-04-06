@@ -3473,10 +3473,10 @@ async function loadCrossAsset() {
   const chartsEl = document.getElementById('ca-charts');
   const badgeEl = document.getElementById('ca-regime-badge');
 
-  macroEl.innerHTML = '<div class="loader"><span class="spin"></span>Analyzing global assets...</div>';
-  heatEl.innerHTML = '';
-  rankEl.innerHTML = '';
-  chartsEl.innerHTML = '';
+  if(macroEl) macroEl.innerHTML = '<div class="loader"><span class="spin"></span>Analyzing global assets...</div>';
+  if(heatEl) heatEl.innerHTML = '';
+  if(rankEl) rankEl.innerHTML = '';
+  if(chartsEl) chartsEl.innerHTML = '';
 
   try {
     const r = await fetch('/api/cross-asset'); const d = await r.json();
@@ -3534,26 +3534,20 @@ async function loadCrossAsset() {
       </div>`;
     }).join('');
 
-    // TradingView Mini Charts
-    const tvSymbols = ['SPY','QQQ','TLT','GLD','USO','BTCUSD'];
-    chartsEl.innerHTML = tvSymbols.map(sym => `
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;height:200px;">
-        <div class="tradingview-widget-container">
-          <div id="tv-mini-${sym}"></div>
-        </div>
-      </div>`).join('');
-
-    // Load TradingView mini widgets
-    const tvScript = document.createElement('script');
-    tvScript.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
-    tvScript.async = true;
-    // Use simple iframe approach instead
-    tvSymbols.forEach(sym => {
-      const container = document.getElementById('tv-mini-'+sym);
-      if(container) {
-        container.innerHTML = `<iframe src="https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22${sym}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A200%2C%22dateRange%22%3A%221M%22%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%7D" style="width:100%;height:200px;border:none;"></iframe>`;
-      }
-    });
+    // TradingView Mini Charts (only if container exists)
+    if(chartsEl) {
+      const tvSymbols = ['SPY','QQQ','TLT','GLD','USO','BTCUSD'];
+      chartsEl.innerHTML = tvSymbols.map(sym => `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;height:200px;">
+          <div class="tradingview-widget-container"><div id="tv-mini-${sym}"></div></div>
+        </div>`).join('');
+      tvSymbols.forEach(sym => {
+        const container = document.getElementById('tv-mini-'+sym);
+        if(container) {
+          container.innerHTML = `<iframe src="https://s.tradingview.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22${sym}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A200%2C%22dateRange%22%3A%221M%22%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%7D" style="width:100%;height:200px;border:none;"></iframe>`;
+        }
+      });
+    }
 
     // Momentum Ranking Bar
     const maxRet = Math.max(...ranking.map(a => Math.abs(a.return_1m||0)), 1);

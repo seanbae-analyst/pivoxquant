@@ -60,7 +60,7 @@ body{
   -moz-osx-font-smoothing:grayscale;
   letter-spacing:-0.011em;
   position:relative;
-  overflow-x:hidden;
+  overflow:hidden;
 }
 
 /* ── Animated gradient background ──────────────────────── */
@@ -170,7 +170,7 @@ header{
 .nav-icon{font-size:16px;width:20px;text-align:center;}
 .nbadge{margin-left:auto;background:var(--red);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;display:none;font-weight:600;}
 .nbadge.show{display:block;}
-.main{flex:1;padding:var(--sp-xl);overflow-x:hidden;max-width:calc(100vw - 230px);}
+.main{flex:1;padding:var(--sp-xl);overflow-x:hidden;overflow-y:auto;max-width:calc(100vw - 230px);height:calc(100vh - 60px);}
 .view{display:none;}.view.active{display:block;}
 
 /* ── HERO ────────────────────────────────────────────────── */
