@@ -251,8 +251,11 @@ def get_portfolio():
             "capital_gap":    sd.get("capital_gap"),
             "take_profit":    sd.get("take_profit"),
             "stop_loss":      sd.get("stop_loss"),
-            "tp_pct":         sd.get("tp_pct", 20),
-            "sl_pct":         sd.get("sl_pct", -8),
+            "tp_pct":         sd.get("tp_pct", 0),
+            "sl_pct":         sd.get("sl_pct", 0),
+            "regime_profile": sd.get("regime_profile", ""),
+            "regime_label":   sd.get("regime_label", ""),
+            "regime_label_kr":sd.get("regime_label_kr", ""),
             "priority":       sd.get("priority", 0),
         })
     total_usd = sum(p["market_value"] for p in out if p["currency"] == "USD")
@@ -782,7 +785,8 @@ def company_profile(ticker):
             "currency": "KRW" if ticker.endswith(".KS") or ticker.endswith(".KQ") else "USD",
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Profile error {ticker}: {e}")
+        return jsonify({"error": "Unable to fetch company profile"}), 500
 
 # ── Dividend Data ──────────────────────────────────────────────────────────────
 
@@ -815,7 +819,8 @@ def dividend_data(ticker):
             "five_yr_avg_yield": round(five_yr, 2) if five_yr else None,
         })
     except Exception as e:
-        return jsonify({"has_dividend": False, "error": str(e)})
+        logger.error(f"Dividend error {ticker}: {e}")
+        return jsonify({"has_dividend": False, "error": "Unable to fetch dividend data"})
 
 # ── Portfolio History ──────────────────────────────────────────────────────────
 
@@ -918,7 +923,8 @@ def chart_data(ticker):
             })
         return jsonify({"ticker": ticker, "period": period, "data": data, "source": "yfinance"})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.error(f"Chart error {ticker}: {e}")
+        return jsonify({"error": "Unable to fetch chart data"}), 500
 
 # ── Market Status ──────────────────────────────────────────────────────────────
 
@@ -1144,14 +1150,158 @@ def daytrade_status():
 @app.route("/api/daytrade/scan")
 @api_auth
 def daytrade_scan():
-    if not daytrade.available:
+    results = []
+
+    # US stocks (Alpaca) — works when US market is open
+    if daytrade.available:
+        try:
+            us_results = daytrade.scan_momentum() or []
+            results.extend(us_results)
+        except Exception as e:
+            logger.warning(f"US scan error: {e}")
+
+    # Korean stocks (KIS) — works when KR market is open
+    try:
+        from kis_service import KISService
+        kis = KISService()
+        if kis.available:
+            # Get held Korean tickers from portfolio
+            held_kr = set()
+            try:
+                positions = Position.query.filter_by(user_id=current_user.id).all()
+                for p in positions:
+                    t = p.ticker.replace(".KS", "").replace(".KQ", "")
+                    if t.isdigit() and len(t) == 6:
+                        held_kr.add(t)
+            except Exception:
+                pass
+            kr_results = kis.scan_momentum(held_tickers=held_kr) or []
+            results.extend(kr_results)
+    except Exception as e:
+        logger.warning(f"KR scan error: {e}")
+
+    if not results and not daytrade.available:
         return jsonify({"error": "Day trade not configured (Alpaca API key missing)"}), 503
-    results = daytrade.scan_momentum()
+
+    # Sort by score descending
+    results.sort(key=lambda x: x.get("score", 0), reverse=True)
     return jsonify({"results": results, "count": len(results)})
 
 @app.route("/api/daytrade/analyze/<ticker>")
 @api_auth
 def daytrade_analyze(ticker):
+    # Korean stock: KIS intraday analysis (day trade only)
+    if ticker.isdigit() and len(ticker) == 6:
+        try:
+            from kis_service import KISService
+            import numpy as np
+            kis = KISService()
+            if not kis.available:
+                return jsonify({"error": "KIS not configured"}), 503
+
+            price_data = kis.get_current_price(ticker)
+            if not price_data or price_data["price"] == 0:
+                return jsonify({"error": f"No price data for {ticker}"}), 404
+
+            bars = kis.get_intraday_bars(ticker)
+
+            score = 50.0
+            signals = []
+            rsi_val = None
+            vol_ratio = None
+            price = price_data["price"]
+            chg = price_data["change_pct"]
+            high = price_data.get("high", 0)
+            low = price_data.get("low", 0)
+            opn = price_data.get("open", 0)
+
+            # Price momentum
+            if chg > 5: score += 20; signals.append({"type":"bullish","msg":f"Surging +{chg:.1f}%","msg_kr":f"급등 +{chg:.1f}%"})
+            elif chg > 3: score += 15; signals.append({"type":"bullish","msg":f"Strong rally +{chg:.1f}%","msg_kr":f"강한 상승 +{chg:.1f}%"})
+            elif chg > 1: score += 8; signals.append({"type":"bullish","msg":f"Up +{chg:.1f}%","msg_kr":f"상승 +{chg:.1f}%"})
+            elif chg < -5: score -= 20; signals.append({"type":"bearish","msg":f"Crashing {chg:.1f}%","msg_kr":f"급락 {chg:.1f}%"})
+            elif chg < -3: score -= 15; signals.append({"type":"bearish","msg":f"Sharp drop {chg:.1f}%","msg_kr":f"강한 하락 {chg:.1f}%"})
+            elif chg < -1: score -= 8; signals.append({"type":"bearish","msg":f"Down {chg:.1f}%","msg_kr":f"하락 {chg:.1f}%"})
+
+            # Intraday position
+            if high > low > 0:
+                pos_r = (price - low) / (high - low)
+                if pos_r > 0.85: score -= 5; signals.append({"type":"bearish","msg":f"Near intraday high ({pos_r*100:.0f}%)","msg_kr":f"장중 고점 근접 ({pos_r*100:.0f}%)"})
+                elif pos_r < 0.15: score += 5; signals.append({"type":"bullish","msg":f"Near intraday low ({pos_r*100:.0f}%)","msg_kr":f"장중 저점 근접 ({pos_r*100:.0f}%)"})
+
+            # Bars analysis
+            if bars and len(bars) > 5:
+                closes = [b["close"] for b in bars if b["close"] > 0]
+                volumes = [b["volume"] for b in bars if b["volume"] > 0]
+
+                if len(closes) >= 14:
+                    rsi_val = KISService._calc_rsi(np.array(closes), 14)
+                    if rsi_val is not None:
+                        if rsi_val < 25: score += 18; signals.append({"type":"bullish","msg":f"RSI extreme oversold ({rsi_val:.0f})","msg_kr":f"RSI 극과매도 ({rsi_val:.0f})"})
+                        elif rsi_val < 35: score += 12; signals.append({"type":"bullish","msg":f"RSI oversold ({rsi_val:.0f})","msg_kr":f"RSI 과매도 ({rsi_val:.0f})"})
+                        elif rsi_val > 80: score -= 18; signals.append({"type":"bearish","msg":f"RSI extreme overbought ({rsi_val:.0f})","msg_kr":f"RSI 극과매수 ({rsi_val:.0f})"})
+                        elif rsi_val > 70: score -= 12; signals.append({"type":"bearish","msg":f"RSI overbought ({rsi_val:.0f})","msg_kr":f"RSI 과매수 ({rsi_val:.0f})"})
+
+                if len(volumes) > 3:
+                    avg_v = np.mean(volumes[:-1])
+                    if avg_v > 0:
+                        vol_ratio = round(volumes[-1] / avg_v, 1)
+                        if vol_ratio >= 5: score += 15; signals.append({"type":"bullish","msg":f"Volume explosion {vol_ratio}x","msg_kr":f"거래량 폭발 {vol_ratio}배"})
+                        elif vol_ratio >= 3: score += 10; signals.append({"type":"bullish","msg":f"Volume surge {vol_ratio}x","msg_kr":f"거래량 급증 {vol_ratio}배"})
+
+                if len(closes) >= 20:
+                    ma5 = np.mean(closes[-5:]); ma20 = np.mean(closes[-20:])
+                    if ma5 > ma20 and closes[-1] > ma5: score += 8; signals.append({"type":"bullish","msg":"Short MA > Long MA — uptrend","msg_kr":"단기MA > 중기MA — 상승"})
+                    elif ma5 < ma20 and closes[-1] < ma5: score -= 8; signals.append({"type":"bearish","msg":"Short MA < Long MA — downtrend","msg_kr":"단기MA < 중기MA — 하락"})
+
+                if len(closes) >= 6:
+                    rc = (closes[-1] - closes[-5]) / closes[-5] * 100
+                    if rc > 1.5: signals.append({"type":"bullish","msg":f"Last 5 bars rising +{rc:.1f}%","msg_kr":f"직전 5봉 상승 +{rc:.1f}%"})
+                    elif rc < -1.5: signals.append({"type":"bearish","msg":f"Last 5 bars falling {rc:.1f}%","msg_kr":f"직전 5봉 하락 {rc:.1f}%"})
+
+            # Gap
+            if opn > 0:
+                gap = (price - opn) / opn * 100
+                if gap > 3: signals.append({"type":"bullish","msg":f"Gap up +{gap:.1f}%","msg_kr":f"갭 상승 +{gap:.1f}%"})
+                elif gap < -3: signals.append({"type":"bearish","msg":f"Gap down {gap:.1f}%","msg_kr":f"갭 하락 {gap:.1f}%"})
+
+            score = max(0, min(100, score))
+            signal = "BUY" if score >= 65 else "SELL" if score < 30 else "HOLD"
+
+            # TP/SL based on intraday range
+            atr = (high - low) if high > low else price * 0.02
+            tp_price = round(price + atr * 0.7)   # Day trade: tight TP
+            sl_price = round(price - atr * 0.5)   # Day trade: tight SL
+            tp_pct = round((tp_price - price) / price * 100, 2)
+            sl_pct = round((sl_price - price) / price * 100, 2)
+            trail_pct = round(atr / price * 100, 2)
+
+            return jsonify({
+                "ticker": ticker,
+                "name": price_data["name"],
+                "price": price,
+                "change_pct": chg,
+                "score": round(score, 1),
+                "signal": signal,
+                "signals": signals,
+                "rsi": round(rsi_val, 1) if rsi_val else None,
+                "vwap": None,
+                "vol_ratio": vol_ratio,
+                "take_profit": tp_price,
+                "stop_loss": sl_price,
+                "tp_pct": tp_pct,
+                "sl_pct": sl_pct,
+                "trailing_stop_pct": trail_pct,
+                "atr": round(atr),
+                "currency": "KRW",
+                "is_korean": True,
+                "regime_profile": "",
+            })
+        except Exception as e:
+            logger.warning(f"KR daytrade error {ticker}: {e}")
+        return jsonify({"error": f"No data for {ticker}"}), 404
+
+    # US stock: use Alpaca
     if not daytrade.available:
         return jsonify({"error": "Day trade not configured"}), 503
     r = daytrade.analyze_short_term(ticker)
@@ -1162,6 +1312,9 @@ def daytrade_analyze(ticker):
 @app.route("/api/daytrade/chart/<ticker>")
 @api_auth
 def daytrade_chart(ticker):
+    # Korean stock codes → no Alpaca chart data
+    if ticker.isdigit() and len(ticker) == 6:
+        return jsonify({"ticker": ticker, "timeframe": "1Min", "bars": [], "note": "Korean stocks use KIS"})
     if not daytrade.available:
         return jsonify({"error": "Day trade not configured"}), 503
     tf = request.args.get("tf", "5Min")
@@ -1189,11 +1342,29 @@ def daytrade_stream():
     def generate():
         while True:
             try:
-                prices = daytrade.get_latest_prices()
+                prices = {}
+                # US prices (Alpaca)
+                if daytrade.available:
+                    try:
+                        prices.update(daytrade.get_latest_prices() or {})
+                    except Exception:
+                        pass
+                # KR prices (KIS)
+                try:
+                    from kis_service import KISService
+                    kis = KISService()
+                    if kis.available:
+                        for code in ['005930','000660','035420','005380','006400','051910']:
+                            p = kis.get_current_price(code)
+                            if p:
+                                prices[code] = {"price": p["price"], "change_pct": p["change_pct"]}
+                            time.sleep(0.55)
+                except Exception:
+                    pass
                 yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
             except Exception as e:
                 yield f"data: {json.dumps({'error': str(e)})}\n\n"
-            time.sleep(5)
+            time.sleep(10)
 
     return Response(generate(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -1224,12 +1395,20 @@ def vix_strategy():
 
 # ── Cross-Asset Momentum ──────────────────────────────────────────────────────
 
+_ca_cache = {"data": None, "ts": 0}
+
 @app.route("/api/cross-asset")
 @api_auth
 def cross_asset():
+    import time as _time
+    now = _time.time()
+    if _ca_cache["data"] and now - _ca_cache["ts"] < 300:  # 5-min cache
+        return jsonify(_ca_cache["data"])
     from quant_models import CrossAssetMomentum
     result = CrossAssetMomentum.analyze()
     if result:
+        _ca_cache["data"] = result
+        _ca_cache["ts"] = now
         return jsonify(result)
     return jsonify({"error": "Insufficient data"}), 500
 
@@ -1588,7 +1767,7 @@ with app.app_context():
         logger.error(f"Startup cache error: {e}")
 
 sched = BackgroundScheduler(timezone="UTC")
-sched.add_job(_scheduled_refresh, "interval", minutes=15, id="refresh")
+sched.add_job(_scheduled_refresh, "interval", minutes=3, id="refresh")
 sched.start()
 
 if __name__ == "__main__":
