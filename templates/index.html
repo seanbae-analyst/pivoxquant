@@ -513,10 +513,10 @@
 
       <!-- Account Stats -->
       <div class="grid4" id="at-stats">
-        <div class="scard"><div class="slabel">Equity</div><div class="sval" id="at-equity">—</div></div>
+        <div class="scard"><div class="slabel">Equity (US · KR)</div><div class="sval" id="at-equity">—</div></div>
         <div class="scard"><div class="slabel">Daily P&L</div><div class="sval" id="at-pnl">—</div></div>
         <div class="scard"><div class="slabel">Trades Today</div><div class="sval" id="at-trades">0</div></div>
-        <div class="scard"><div class="slabel">Positions</div><div class="sval" id="at-positions">0/5</div></div>
+        <div class="scard"><div class="slabel">Positions (US/KR)</div><div class="sval" id="at-positions">0/0</div></div>
       </div>
 
       <!-- Active Positions -->
@@ -533,12 +533,15 @@
       <div style="margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;">📋 Trading Rules</div>
         <div style="font-size:11px;color:var(--muted);line-height:1.8;">
-          • Buy: Momentum score 65+ (RSI < 70)<br>
-          • Sell: Take profit +20% / Stop loss -8% / Trailing stop -5%<br>
-          • Max 5 positions / Max 10 trades per day<br>
+          <strong>🇺🇸 US (Alpaca Paper)</strong><br>
+          • Buy: Score 65+ / Sell: TP +20% · SL -8% · Trail -5%<br>
+          <strong>🇰🇷 KR (KIS Paper)</strong><br>
+          • Buy: Score 65+ / Sell: TP +8% · SL -5% · Trail -3%<br>
+          <strong>Shared Rules</strong><br>
+          • Max 5 positions per market / 10 trades per day<br>
           • Daily loss limit: -5% → auto-stop<br>
           • Per position: max 30% of capital<br>
-          • ⚠ This is PAPER TRADING — no real money
+          • ⚠ PAPER TRADING — no real money
         </div>
       </div>
     </div>
@@ -3601,16 +3604,22 @@ async function refreshAutoTradeStatus() {
       btn.style.background = '';
     }
 
-    // Account stats
+    // Account stats (US + KR combined)
     const acc = d.account || {};
-    document.getElementById('at-equity').textContent = acc.equity ? '$'+acc.equity.toLocaleString('en-US',{maximumFractionDigits:0}) : '—';
+    const usEquity = acc.equity || 0;
+    const krEquity = d.kr_equity || 0;
+    document.getElementById('at-equity').innerHTML = usEquity
+      ? `$${usEquity.toLocaleString('en-US',{maximumFractionDigits:0})}<span style="font-size:12px;color:var(--muted);margin-left:6px;">₩${krEquity.toLocaleString()}</span>`
+      : (krEquity ? `₩${krEquity.toLocaleString()}` : '—');
     const pnlEl = document.getElementById('at-pnl');
-    if(acc.daily_pnl !== undefined) {
-      pnlEl.textContent = (acc.daily_pnl>=0?'+':'')+'$'+acc.daily_pnl.toFixed(2);
-      pnlEl.className = 'sval '+(acc.daily_pnl>=0?'up':'down');
+    const totalPnl = (acc.daily_pnl||0);
+    const krPnl = d.kr_daily_pnl||0;
+    if(totalPnl || krPnl) {
+      pnlEl.innerHTML = `${totalPnl>=0?'+':''}$${totalPnl.toFixed(0)}<span style="font-size:12px;color:var(--muted);margin-left:6px;">${krPnl>=0?'+':''}₩${krPnl.toLocaleString()}</span>`;
+      pnlEl.className = 'sval '+((totalPnl+krPnl)>=0?'up':'down');
     }
     document.getElementById('at-trades').textContent = d.trades_today || 0;
-    document.getElementById('at-positions').textContent = d.positions+'/'+d.max_positions;
+    document.getElementById('at-positions').textContent = `${d.positions_us||0}/${d.positions_kr||0}`;
 
     // Active positions
     const posList = document.getElementById('at-positions-list');
@@ -3619,14 +3628,20 @@ async function refreshAutoTradeStatus() {
       posList.innerHTML = '<div style="color:var(--muted);padding:16px;text-align:center;">No active positions</div>';
     } else {
       posList.innerHTML = positions.map(p => {
-        const pnl = ((p.peak_price||p.entry_price) - p.entry_price) / p.entry_price * 100;
+        const isKR = p.is_korean || p.currency === 'KRW';
+        const cur = isKR ? '₩' : '$';
+        const flag = isKR ? '🇰🇷' : '🇺🇸';
+        const name = p.name || p.symbol;
+        const pFmt = v => isKR ? Math.round(v).toLocaleString() : Number(v).toFixed(2);
         return `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
           <div>
-            <span style="font-weight:600;font-size:14px;">${p.symbol}</span>
-            <span style="color:var(--muted);font-size:11px;margin-left:8px;">${p.shares} shares @ $${p.entry_price}</span>
+            <span style="font-size:10px;">${flag}</span>
+            <span style="font-weight:600;font-size:14px;">${name}</span>
+            <span style="color:var(--muted);font-size:11px;margin-left:8px;">${p.shares} shares @ ${cur}${pFmt(p.entry_price)}</span>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:10px;color:var(--muted);">TP: $${p.tp_price} / SL: $${p.sl_price}</div>
+            <div style="font-size:10px;color:var(--muted);">TP: ${cur}${pFmt(p.tp_price||0)} / SL: ${cur}${pFmt(p.sl_price||0)}</div>
+            ${p.score?`<div style="font-size:10px;color:${p.score>=65?'var(--green)':'var(--amber)'};">Score: ${Math.round(p.score)}</div>`:''}
           </div>
         </div>`;
       }).join('');
