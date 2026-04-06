@@ -171,8 +171,9 @@ class AutoTrader:
                 if self.available:
                     try:
                         clock = self.api.get_clock()
+                        # Paper trading: also active in pre/post market (extended hours)
+                        us_active = True
                         if clock.is_open:
-                            us_active = True
                             acc = self.api.get_account()
                             daily_pnl_pct = (float(acc.equity) - self._initial_equity) / self._initial_equity * 100
                             if daily_pnl_pct <= -self.MAX_DAILY_LOSS_PCT:
@@ -180,6 +181,16 @@ class AutoTrader:
                                 us_active = False
                             elif len(self._trades_today) < self.MAX_DAILY_TRADES:
                                 self._check_exits()
+                                if len(self._positions) < self.MAX_POSITIONS:
+                                    self._scan_for_entries()
+                        else:
+                            # Pre/post market: scan + check exits (extended hours trading)
+                            if len(self._trades_today) < self.MAX_DAILY_TRADES:
+                                if self._positions:
+                                    try:
+                                        self._check_exits()
+                                    except Exception:
+                                        pass
                                 if len(self._positions) < self.MAX_POSITIONS:
                                     self._scan_for_entries()
                     except Exception as e:
@@ -191,11 +202,22 @@ class AutoTrader:
                         now = datetime.now()
                         hour, minute = now.hour, now.minute
                         kr_time = hour * 100 + minute
-                        if 900 <= kr_time <= 1530 and now.weekday() < 5:
-                            kr_active = True
+                        kr_market_open = 900 <= kr_time <= 1530 and now.weekday() < 5
+                        # Paper trading: always active (use last prices when closed)
+                        kr_active = True
+                        if kr_market_open:
                             self._check_kr_exits()
                             if len(self._kr_positions) < self.MAX_POSITIONS:
                                 self._scan_kr_entries()
+                        elif not self._kr_positions:
+                            # Market closed + no positions: scan once to populate
+                            if not hasattr(self, '_kr_initial_scan_done'):
+                                self._log("🇰🇷 KR market closed — running initial scan with last prices", "info")
+                                self._scan_kr_entries()
+                                self._kr_initial_scan_done = True
+                        else:
+                            # Market closed but holding positions: check exits with cached prices
+                            self._check_kr_exits()
                     except Exception as e:
                         self._log(f"KR loop error: {e}", "error")
 
@@ -282,6 +304,7 @@ class AutoTrader:
                     qty=shares,
                     side=OrderSide.BUY,
                     time_in_force=TimeInForce.DAY,
+                    extended_hours=True,
                 )
             )
 
@@ -405,6 +428,7 @@ class AutoTrader:
                     qty=shares,
                     side=OrderSide.SELL,
                     time_in_force=TimeInForce.DAY,
+                    extended_hours=True,
                 )
             )
 
