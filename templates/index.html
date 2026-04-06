@@ -2087,8 +2087,45 @@ async function saveCap() {
 async function _silentPriceRefresh() {
   try {
     const r = await fetch('/api/prices');
-    if(r.ok) checkPriceAlerts();
+    if(!r.ok) return;
+    const d = await r.json();
+    const prices = d.prices || {};
+    // Update window._positions with fresh prices
+    if(window._positions && Object.keys(prices).length) {
+      window._positions.forEach(p => {
+        const fresh = prices[p.ticker];
+        if(fresh && fresh.price) {
+          p.current_price = fresh.price;
+          p.price = fresh.price;
+          p.market_value = fresh.price * p.shares;
+          p.pnl_pct = p.avg_cost ? round2((fresh.price - p.avg_cost) / p.avg_cost * 100) : 0;
+          if(fresh.change_pct != null) p.change_pct = fresh.change_pct;
+        }
+      });
+      // Re-render if on dashboard
+      if(_currentView === 'dashboard') {
+        _renderDash(window._positions, document.querySelector('.pc-btn.active[id^="dash-f-"]')?.id?.replace('dash-f-','') || 'all');
+        _updateSummaryCards(window._positions);
+      }
+    }
+    checkPriceAlerts();
   } catch(_) {}
+}
+function round2(v) { return Math.round(v * 100) / 100; }
+function _updateSummaryCards(positions) {
+  const usd = positions.filter(p => !p.is_korean);
+  const krw = positions.filter(p => p.is_korean);
+  const totalUSD = usd.reduce((s,p) => s + (p.market_value||0), 0);
+  const totalKRW = krw.reduce((s,p) => s + (p.market_value||0), 0);
+  const totalVal = totalUSD + totalKRW / (_usdkrw||1380);
+  const el = document.getElementById('s-total');
+  if(el) el.textContent = '$' + totalVal.toLocaleString('en-US', {maximumFractionDigits:0});
+  const pnlEl = document.getElementById('s-pnl');
+  if(pnlEl && positions.length) {
+    const avgPnl = positions.reduce((s,p) => s + (p.pnl_pct||0), 0) / positions.length;
+    pnlEl.textContent = (avgPnl >= 0 ? '+' : '') + avgPnl.toFixed(1) + '%';
+    pnlEl.className = 'ssub ' + (avgPnl >= 0 ? 'up' : 'down');
+  }
 }
 async function refreshAll() {
   const btn = document.getElementById('refresh-btn');
