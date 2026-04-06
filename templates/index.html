@@ -68,16 +68,14 @@
   <div class="sidebar">
     <div class="sb-section">Portfolio</div>
     <div class="nav active" id="nav-dashboard" onclick="showView('dashboard')"><span class="nav-icon">📊</span>Dashboard</div>
-    <div class="nav" id="nav-daytrade" onclick="showView('daytrade')" style="display:none;"><span class="nav-icon">⚡</span>Day Trade</div>
     <div class="nav" id="nav-alerts" onclick="showView('alerts')"><span class="nav-icon">🔔</span>Alerts<span class="nbadge" id="alert-badge">0</span></div>
     <div class="nav" id="nav-trades" onclick="showView('trades')"><span class="nav-icon">📋</span>Trade History</div>
-    <div class="sb-section">Market Intelligence</div>
+    <div class="sb-section">Market</div>
+    <div class="nav" id="nav-market" onclick="showView('market')"><span class="nav-icon">🌐</span>Market</div>
     <div class="nav" id="nav-morning" onclick="showView('morning')"><span class="nav-icon">📰</span>Morning Brief</div>
-    <div class="nav" id="nav-overview" onclick="showView('overview')"><span class="nav-icon">🌐</span>Market Overview</div>
-    <div class="nav" id="nav-sectors" onclick="showView('sectors')"><span class="nav-icon">🏭</span>Sector Heatmap</div>
-    <div class="nav" id="nav-scan" onclick="showView('scan')"><span class="nav-icon">🔍</span>Stock Scanner</div>
-    <div class="nav" id="nav-discover" onclick="showView('discover')"><span class="nav-icon">🔭</span>Discover</div>
     <div class="nav" id="nav-watchlist" onclick="showView('watchlist')"><span class="nav-icon">⭐</span>Watchlist</div>
+    <div class="sb-section">Trading</div>
+    <div class="nav" id="nav-autotrade" onclick="showView('autotrade')"><span class="nav-icon">🤖</span>Auto Trade</div>
     <div class="sb-section">Education</div>
     <div class="nav" id="nav-glossary" onclick="showView('glossary')"><span class="nav-icon">📚</span>GS Glossary</div>
   </div>
@@ -87,44 +85,32 @@
     <!-- ═══ HOME ═══ -->
     <div class="view active" id="view-home">
       <div class="home-header">
-        <div class="home-greeting" id="home-greeting">Welcome back 👋</div>
-        <div class="home-sub">Your quant trading command center</div>
+        <div class="home-greeting" id="home-greeting">Welcome back</div>
+        <div class="home-sub">Quantitative Portfolio Intelligence</div>
       </div>
       <div class="home-grid">
         <div class="home-card home-card-portfolio" onclick="showView('dashboard')">
           <div class="home-card-icon">📊</div>
           <div class="home-card-title">Portfolio</div>
-          <div class="home-card-desc">P&L, positions, analytics</div>
+          <div class="home-card-desc">Real-time P&L · Quant signals · Position analytics</div>
           <div class="home-card-arrow">→</div>
         </div>
-        <div class="home-card home-card-daytrade" onclick="showView('daytrade')">
-          <div class="home-card-icon">⚡</div>
-          <div class="home-card-title">Day Trade</div>
-          <div class="home-card-desc">Real-time momentum scanner</div>
+        <div class="home-card home-card-market" onclick="showView('market')">
+          <div class="home-card-icon">🌐</div>
+          <div class="home-card-title">Market</div>
+          <div class="home-card-desc">Macro overview · Intraday scanner · Stock analysis</div>
           <div class="home-card-arrow">→</div>
         </div>
-        <div class="home-card" onclick="showView('autotrade')" style="border-left:3px solid #00e5a0;">
+        <div class="home-card home-card-autotrade" onclick="showView('autotrade')">
           <div class="home-card-icon">🤖</div>
           <div class="home-card-title">Auto Trade</div>
-          <div class="home-card-desc">AI-powered paper trading bot</div>
-          <div class="home-card-arrow">→</div>
-        </div>
-        <div class="home-card home-card-scanner" onclick="showView('scan')">
-          <div class="home-card-icon">🔍</div>
-          <div class="home-card-title">Scanner & Discover</div>
-          <div class="home-card-desc">Analyze tickers + scan 70 stocks</div>
-          <div class="home-card-arrow">→</div>
-        </div>
-        <div class="home-card home-card-market" onclick="showView('overview')">
-          <div class="home-card-icon">🌐</div>
-          <div class="home-card-title">Market & Macro</div>
-          <div class="home-card-desc">Indices, cross-asset, rates, FX</div>
+          <div class="home-card-desc">Alpaca paper trading bot · Autonomous execution</div>
           <div class="home-card-arrow">→</div>
         </div>
         <div class="home-card home-card-brief" onclick="showView('morning')">
           <div class="home-card-icon">📰</div>
           <div class="home-card-title">Morning Brief</div>
-          <div class="home-card-desc">Wall Street news & themes</div>
+          <div class="home-card-desc">Wall Street headlines · Market themes · Sector moves</div>
           <div class="home-card-arrow">→</div>
         </div>
       </div>
@@ -375,70 +361,132 @@
       <div id="brief-wrap"><div class="loader"><span class="spin"></span>Fetching Wall Street news...</div></div>
     </div>
 
-    <!-- ═══ MARKET OVERVIEW ═══ -->
-    <div class="view" id="view-overview">
+    <!-- ═══ MARKET (Unified) ═══ -->
+    <div class="view" id="view-market">
       <button class="back-btn" onclick="goHome()">← Home</button>
-      <div id="overview-wrap"><div class="loader"><span class="spin"></span>Loading macro data...</div></div>
-
-      <!-- Cross-Asset Momentum (merged) -->
-      <div style="margin-top:var(--sp-xl);padding-top:var(--sp-lg);border-top:1px solid var(--border);">
-        <div class="sh">
-          <div class="sh-title">🧬 Cross-Asset Momentum</div>
-          <div id="ca-regime-badge" style="font-size:12px;padding:5px 14px;border-radius:20px;font-weight:600;"></div>
+      <div class="market-header">
+        <div class="sh-title" style="font-size:20px;letter-spacing:-.02em;">Market</div>
+        <div class="market-tabs">
+          <button class="market-tab active" id="mtab-overview" onclick="switchMarketTab('overview')">Overview</button>
+          <button class="market-tab" id="mtab-intraday" onclick="switchMarketTab('intraday')">Intraday</button>
+          <button class="market-tab" id="mtab-scanner" onclick="switchMarketTab('scanner')">Scanner</button>
         </div>
-        <div id="ca-macro" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-xl);margin-bottom:var(--sp-lg);"></div>
-        <div id="ca-heatmap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-sm);margin-bottom:var(--sp-xl);"></div>
-        <div style="font-size:14px;font-weight:600;margin-bottom:var(--sp-md);">Momentum Ranking (1M)</div>
-        <div id="ca-ranking" style="margin-bottom:var(--sp-xl);"></div>
       </div>
 
-      <!-- VIX Strategy -->
-      <div style="margin-top:var(--sp-xl);padding-top:var(--sp-lg);border-top:1px solid var(--border);">
-        <div class="sh"><div class="sh-title">🎯 VIX Strategy — Position Sizing</div></div>
-        <div id="vix-strategy-wrap"><div class="loader"><span class="spin"></span>Loading VIX data...</div></div>
+      <!-- TAB: Overview -->
+      <div class="market-panel active" id="mpanel-overview">
+        <div id="overview-wrap"><div class="loader"><span class="spin"></span>Loading macro data...</div></div>
+        <!-- Cross-Asset Momentum -->
+        <div style="margin-top:var(--sp-xl);padding-top:var(--sp-lg);border-top:1px solid var(--border);">
+          <div class="sh">
+            <div class="sh-title">Cross-Asset Momentum</div>
+            <div id="ca-regime-badge" style="font-size:12px;padding:5px 14px;border-radius:20px;font-weight:600;"></div>
+          </div>
+          <div id="ca-macro" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-xl);margin-bottom:var(--sp-lg);"></div>
+          <div id="ca-heatmap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-sm);margin-bottom:var(--sp-xl);"></div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:var(--sp-md);">Momentum Ranking (1M)</div>
+          <div id="ca-ranking" style="margin-bottom:var(--sp-xl);"></div>
+        </div>
+        <!-- VIX Strategy -->
+        <div style="margin-top:var(--sp-xl);padding-top:var(--sp-lg);border-top:1px solid var(--border);">
+          <div class="sh"><div class="sh-title">VIX Strategy — Position Sizing</div></div>
+          <div id="vix-strategy-wrap"><div class="loader"><span class="spin"></span>Loading VIX data...</div></div>
+        </div>
+        <!-- Sector Heatmap -->
+        <div style="margin-top:var(--sp-xl);padding-top:var(--sp-lg);border-top:1px solid var(--border);">
+          <div class="sh"><div class="sh-title">Sector Performance (1D)</div></div>
+          <div id="market-heatmap-wrap"><div class="loader"><span class="spin"></span>Loading sectors...</div></div>
+        </div>
       </div>
 
-      <!-- Sector Heatmap (merged) -->
-      <div style="margin-top:var(--sp-xl);padding-top:var(--sp-lg);border-top:1px solid var(--border);">
-        <div class="sh"><div class="sh-title">🏭 Sector Performance (1D)</div></div>
-        <div id="market-heatmap-wrap"><div class="loader"><span class="spin"></span>Loading sectors...</div></div>
-      </div>
-    </div>
-
-    <!-- ═══ SECTOR HEATMAP ═══ -->
-    <div class="view" id="view-sectors">
-      <button class="back-btn" onclick="goHome()">← Home</button>
-      <div class="sh-title" style="margin-bottom:14px;">🏭 Sector Performance (1D)</div>
-      <div id="heatmap-wrap"><div class="loader"><span class="spin"></span>Loading sectors...</div></div>
-    </div>
-
-    <!-- ═══ SCANNER ═══ -->
-    <div class="view" id="view-scan">
-      <button class="back-btn" onclick="goHome()">← Home</button>
-      <div class="sh-title" style="margin-bottom:14px;">🔍 Scanner & Discover</div>
-      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">US stocks: AAPL, TSLA, NVDA &nbsp;|&nbsp; Korean stocks: 005930.KS (Samsung), 035420.KS (NAVER), 000660.KS (SK Hynix)</div>
-      <div class="scan-row">
-        <input class="scan-in" type="text" id="scan-in" placeholder="Enter ticker (e.g. NVDA or 005930.KS)" onkeydown="if(event.key==='Enter')doScan()">
-        <button class="scan-btn" id="scan-btn" onclick="doScan()">Analyze</button>
-      </div>
-      <div id="scan-result"></div>
-      <div id="scan-ai-insight-wrap"></div>
-
-      <!-- Discover Section (merged) -->
-      <div style="margin-top:var(--sp-xl);padding-top:var(--sp-lg);border-top:1px solid var(--border);">
-        <div class="sh">
-          <div class="sh-title">🔭 Discover — Auto-Scan 70 Stocks</div>
+      <!-- TAB: Intraday (Day Trade) -->
+      <div class="market-panel" id="mpanel-intraday">
+        <div class="sh" style="margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="sh-title" style="font-size:16px;">Intraday Scanner</span>
+            <span id="dt-live-dot" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--green);"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;"></span> LIVE</span>
+          </div>
           <div style="display:flex;gap:6px;align-items:center;">
-            <button class="pc-btn active" id="disc-filter-all" onclick="discFilter('all')">All</button>
-            <button class="pc-btn" id="disc-filter-us" onclick="discFilter('us')">🇺🇸 US</button>
-            <button class="pc-btn" id="disc-filter-kr" onclick="discFilter('kr')">🇰🇷 KR</button>
-            <button class="pc-btn" id="disc-filter-buy" onclick="discFilter('buy')">BUY Only</button>
-            <button class="pc-btn" id="disc-filter-gem" onclick="discFilter('gem')" style="color:var(--purple);">💎 Hidden Gem</button>
-            <button class="btn-primary" id="disc-scan-btn" onclick="runDiscover(true)" style="padding:6px 14px;font-size:11px;">🔄 Run Scan</button>
+            <button class="btn" id="dt-scan-btn" onclick="runDayScan()" style="padding:6px 14px;font-size:11px;">Scan</button>
+            <button class="pc-btn active" id="dt-lang-en" onclick="setDTLang('en')" style="font-size:9px;padding:2px 8px;">EN</button>
+            <button class="pc-btn" id="dt-lang-kr" onclick="setDTLang('kr')" style="font-size:9px;padding:2px 8px;">KR</button>
           </div>
         </div>
-        <div id="disc-status" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
-        <div id="disc-wrap"></div>
+        <!-- Active Trades -->
+        <div id="dt-active-section" style="margin-bottom:20px;display:none;">
+          <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">My Active Trades</div>
+          <div id="dt-active-trades"></div>
+        </div>
+        <!-- Day Trade Stats -->
+        <div id="dt-stats-section" style="margin-bottom:16px;display:none;">
+          <div style="display:flex;gap:10px;" id="dt-stats"></div>
+        </div>
+        <!-- Top 5 -->
+        <div id="dt-top5-section" style="margin-bottom:20px;">
+          <div style="font-size:12px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Today's Top 5</div>
+          <div id="dt-top5" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;"></div>
+        </div>
+        <!-- All Stocks -->
+        <div id="dt-all-section">
+          <div onclick="document.getElementById('dt-all-list').style.display=document.getElementById('dt-all-list').style.display==='none'?'block':'none';this.querySelector('.chevron').textContent=document.getElementById('dt-all-list').style.display==='none'?'▸':'▾'" style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            All Stocks <span class="chevron" style="font-size:10px;">▾</span>
+          </div>
+          <div id="dt-all-list"></div>
+        </div>
+        <!-- Detail Modal -->
+        <div id="dt-detail" style="display:none;margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div>
+              <span id="dt-ticker" style="font-size:20px;font-weight:700;"></span>
+              <span id="dt-price" style="font-size:16px;margin-left:8px;"></span>
+              <span id="dt-change" style="font-size:12px;margin-left:6px;"></span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="pc-btn" id="dt-buy-btn" style="color:var(--green);border-color:rgba(34,197,94,.3);font-size:11px;padding:5px 14px;font-weight:600;" onclick="dtQuickBuy()">Buy & Track</button>
+              <button class="pc-btn" id="dt-analyze-btn" style="font-size:11px;padding:5px 14px;" onclick="dtFullAnalyze()">Full Analysis</button>
+              <button class="pc-btn" onclick="document.getElementById('dt-detail').style.display='none'" style="font-size:11px;padding:5px 8px;">✕</button>
+            </div>
+          </div>
+          <div id="dt-action" style="padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:14px;font-weight:600;"></div>
+          <div id="dt-indicators" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;"></div>
+          <div id="dt-tpsl" style="margin-bottom:12px;"></div>
+          <div id="dt-signals" style="max-height:120px;overflow-y:auto;"></div>
+          <div id="dt-chart-wrap" style="display:none;margin-top:12px;">
+            <div id="dt-chart-btns" style="display:flex;gap:4px;margin-bottom:6px;">
+              <button class="pc-btn active" onclick="loadDTChart('1Min',this)">1M</button>
+              <button class="pc-btn" onclick="loadDTChart('5Min',this)">5M</button>
+            </div>
+            <canvas id="dt-chart" width="800" height="250" style="width:100%;background:var(--surface);border-radius:10px;border:1px solid var(--border);"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Scanner (ticker analysis + 70-stock discover) -->
+      <div class="market-panel" id="mpanel-scanner">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">US: AAPL, TSLA, NVDA &nbsp;|&nbsp; KR: 005930.KS (Samsung), 035420.KS (NAVER), 000660.KS (SK Hynix)</div>
+        <div class="scan-row">
+          <input class="scan-in" type="text" id="scan-in" placeholder="Enter ticker (e.g. NVDA or 005930.KS)" onkeydown="if(event.key==='Enter')doScan()">
+          <button class="scan-btn" id="scan-btn" onclick="doScan()">Analyze</button>
+        </div>
+        <div id="scan-result"></div>
+        <div id="scan-ai-insight-wrap"></div>
+
+        <!-- Discover section (integrated) -->
+        <div style="margin-top:var(--sp-xl);padding-top:var(--sp-lg);border-top:1px solid var(--border);">
+          <div class="sh" style="margin-bottom:14px;">
+            <div class="sh-title" style="font-size:16px;">Auto-Scan 70 Stocks</div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="pc-btn active" id="disc-filter-all" onclick="discFilter('all')">All</button>
+              <button class="pc-btn" id="disc-filter-us" onclick="discFilter('us')">US</button>
+              <button class="pc-btn" id="disc-filter-kr" onclick="discFilter('kr')">KR</button>
+              <button class="pc-btn" id="disc-filter-buy" onclick="discFilter('buy')">BUY Only</button>
+              <button class="pc-btn" id="disc-filter-gem" onclick="discFilter('gem')" style="color:var(--purple);">Hidden Gem</button>
+              <button class="btn-primary" id="disc-scan-btn" onclick="runDiscover(true)" style="padding:6px 14px;font-size:11px;">Run Scan</button>
+            </div>
+          </div>
+          <div id="disc-status" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
+          <div id="disc-wrap"></div>
+        </div>
       </div>
     </div>
 
@@ -449,52 +497,7 @@
       <div id="trades-wrap"><div class="loader"><span class="spin"></span>Loading...</div></div>
     </div>
 
-    <!-- ═══ DISCOVER ═══ -->
-    <div class="view" id="view-discover">
-      <button class="back-btn" onclick="goHome()">← Home</button>
-      <div class="sh">
-        <div>
-          <div class="sh-title">🔭 Discover</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">Quant scan across 70 stocks — auto-detect BUY signals</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <div style="display:flex;gap:4px;">
-            <button class="pc-btn active" id="disc-filter-all"   onclick="discFilter('all')">All</button>
-            <button class="pc-btn"        id="disc-filter-us"    onclick="discFilter('us')">🇺🇸 US</button>
-            <button class="pc-btn"        id="disc-filter-kr"    onclick="discFilter('kr')">🇰🇷 KR</button>
-            <button class="pc-btn"        id="disc-filter-buy"   onclick="discFilter('buy')">BUY Only</button>
-            <button class="pc-btn"        id="disc-filter-gem"   onclick="discFilter('gem')" style="background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(99,102,241,.1));border-color:rgba(168,85,247,.3);">💎 Hidden Gem</button>
-          </div>
-          <button class="btn" id="disc-scan-btn" onclick="runDiscover(true)" style="padding:6px 14px;font-size:11px;">🔄 Run Scan</button>
-        </div>
-      </div>
-      <div id="disc-status" style="font-size:11px;color:var(--muted);margin-bottom:10px;"></div>
-      <div id="disc-wrap"><div class="empty"><div class="empty-icon">🔭</div><div class="empty-title">Not scanned yet</div><div class="empty-desc">Click "Run Scan" to find buy opportunities (30–60 sec)</div></div></div>
-    </div>
-
-    <!-- ═══ CROSS-ASSET ═══ -->
-    <div class="view" id="view-crossasset">
-      <button class="back-btn" onclick="goHome()">← Home</button>
-      <div class="sh">
-        <div class="sh-title">🧬 Cross-Asset Momentum</div>
-        <div id="ca-regime-badge" style="font-size:12px;padding:5px 14px;border-radius:20px;font-weight:600;"></div>
-      </div>
-
-      <!-- Macro Regime Card -->
-      <div id="ca-macro" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-xl);margin-bottom:var(--sp-lg);"></div>
-
-      <!-- Asset Heatmap Grid -->
-      <div style="font-size:14px;font-weight:600;margin-bottom:var(--sp-md);">Asset Performance Heatmap</div>
-      <div id="ca-heatmap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-sm);margin-bottom:var(--sp-xl);"></div>
-
-      <!-- TradingView Mini Charts -->
-      <div style="font-size:14px;font-weight:600;margin-bottom:var(--sp-md);">Live Charts</div>
-      <div id="ca-charts" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-md);margin-bottom:var(--sp-xl);"></div>
-
-      <!-- Momentum Ranking -->
-      <div style="font-size:14px;font-weight:600;margin-bottom:var(--sp-md);">Momentum Ranking (1M)</div>
-      <div id="ca-ranking" style="margin-bottom:var(--sp-xl);"></div>
-    </div>
+    <!-- view-discover, view-crossasset, view-sectors removed — merged into view-market -->
 
     <!-- ═══ AUTO TRADE ═══ -->
     <div class="view" id="view-autotrade">
@@ -540,35 +543,7 @@
       </div>
     </div>
 
-    <!-- ═══ DAY TRADE ═══ -->
-    <div class="view" id="view-daytrade">
-      <button class="back-btn" onclick="goHome()">← Home</button>
-      <div class="sh" style="margin-bottom:14px;">
-        <div class="sh-title">⚡ Day Trade <span style="font-size:10px;color:var(--muted);font-weight:400;">Powered by Alpaca · Real-time</span></div>
-        <div style="display:flex;gap:6px;">
-          <span id="dt-live-dot" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--green);"><span style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;"></span> LIVE</span>
-          <button class="btn" id="dt-scan-btn" onclick="runDayScan()" style="padding:6px 14px;font-size:11px;">🔍 Scan Momentum</button>
-        </div>
-      </div>
-      <div id="dt-scanner" style="margin-bottom:16px;"></div>
-      <div id="dt-detail" style="display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div>
-            <span id="dt-ticker" style="font-size:20px;font-weight:700;"></span>
-            <span id="dt-price" style="font-size:16px;margin-left:8px;"></span>
-            <span id="dt-change" style="font-size:12px;margin-left:6px;"></span>
-          </div>
-          <div style="display:flex;gap:4px;">
-            <button class="pc-btn active" onclick="loadDTChart('1Min',this)">1M</button>
-            <button class="pc-btn" onclick="loadDTChart('5Min',this)">5M</button>
-          </div>
-        </div>
-        <canvas id="dt-chart" width="800" height="350" style="width:100%;background:var(--surface);border-radius:10px;border:1px solid var(--border);margin-bottom:12px;"></canvas>
-        <div id="dt-indicators" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;"></div>
-        <div id="dt-tpsl" style="margin-bottom:12px;"></div>
-        <div id="dt-signals"></div>
-      </div>
-    </div>
+    <!-- view-daytrade removed — merged into view-market → mpanel-intraday -->
 
     <!-- ═══ WATCHLIST ═══ -->
     <div class="view" id="view-watchlist">
@@ -776,7 +751,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   // 5-min auto price refresh
-  setInterval(() => { if(user) _silentPriceRefresh(); }, 60 * 1000); // Real-time: every 1 min
+  setInterval(() => { if(user) _silentPriceRefresh(); }, 15 * 1000); // Real-time: every 15 sec
 });
 
 // ── Browser notification helpers ──────────────────────────
@@ -852,7 +827,7 @@ function onLogin() {
   document.getElementById('hero-name').textContent = user.name || user.email.split('@')[0];
   // Update home greeting
   const homeGreeting = document.getElementById('home-greeting');
-  if(homeGreeting) homeGreeting.textContent = `Welcome back, ${user.name || user.email.split('@')[0]} 👋`;
+  if(homeGreeting) homeGreeting.textContent = `Welcome back, ${user.name || user.email.split('@')[0]}`;
   requestNotifPerm();
   loadMarketStatus();
   checkAIStatus().then(() => {
@@ -860,6 +835,11 @@ function onLogin() {
   });
   // Show home view on login
   showView('home');
+  // Pre-load positions for left panel (even on home screen)
+  fetch('/api/portfolio').then(r=>r.json()).then(data=>{
+    window._positions = data.positions || [];
+    updateCmdList(); updateCmdWatchlist();
+  }).catch(()=>{});
   // Refresh market status every 1 min
   setInterval(loadMarketStatus, 10000); // Update every 10 seconds
 }
@@ -880,8 +860,8 @@ function switchTab(ev, tab) {
 // ═══════════════════════════════════════════════════════════
 let _currentView = 'home';
 function showView(v) {
-  const newView = document.getElementById('view-'+v);
-  if(!newView) return;
+  let newView = document.getElementById('view-'+v);
+  if(!newView && !({ overview:1, daytrade:1, scan:1, discover:1, sectors:1, crossasset:1 }[v])) return;
 
   // Hide all views, show new one
   document.querySelectorAll('.view').forEach(el => {
@@ -908,23 +888,65 @@ function showView(v) {
   // Scroll to top
   document.querySelector('.main')?.scrollTo(0, 0);
 
+  // Legacy redirects → unified market view
+  const marketRedirects = { overview: 'overview', daytrade: 'intraday', scan: 'scanner', discover: 'scanner', sectors: 'overview', crossasset: 'overview' };
+  if (marketRedirects[v]) {
+    const tab = marketRedirects[v];
+    v = 'market';
+    newView = document.getElementById('view-market');
+    if (!newView) return;
+    document.querySelectorAll('.view').forEach(el => { el.classList.remove('active'); el.style.animation = ''; });
+    document.querySelectorAll('.nav').forEach(el => el.classList.remove('active'));
+    newView.classList.add('active');
+    newView.style.animation = 'pageSlideIn .3s ease both';
+    const n2 = document.getElementById('nav-market'); if(n2) n2.classList.add('active');
+    _currentView = 'market';
+    const app = document.querySelector('.app');
+    app.classList.remove('home-mode');
+    document.body.classList.remove('home-active');
+    document.querySelector('.main')?.scrollTo(0, 0);
+    switchMarketTab(tab);
+    return;
+  }
+
   const loaders = {
     dashboard: loadDashboard,
     portfolio: loadPortfolio,
     alerts:    loadAlerts,
     morning:   loadMorningBrief,
-    overview:  loadOverview,
-    sectors:   loadSectors,
+    market:    loadMarket,
     trades:    loadTrades,
-    discover:  loadDiscover,
     watchlist: loadWatchlist,
-    daytrade: loadDayTrade,
     autotrade: loadAutoTrade,
-    crossasset: loadCrossAsset,
   };
   if (loaders[v]) loaders[v]();
 }
 function goHome() { showView('home'); }
+
+// ═══════════════════════════════════════════════════════════
+//  UNIFIED MARKET VIEW
+// ═══════════════════════════════════════════════════════════
+let _currentMarketTab = 'overview';
+let _marketTabLoaded = { overview: false, intraday: false, scanner: false };
+
+function switchMarketTab(tab) {
+  _currentMarketTab = tab;
+  document.querySelectorAll('.market-tab').forEach(el => el.classList.toggle('active', el.id === 'mtab-'+tab));
+  document.querySelectorAll('.market-panel').forEach(el => {
+    const isActive = el.id === 'mpanel-'+tab;
+    el.classList.toggle('active', isActive);
+    if (isActive) el.style.animation = 'fadeIn .25s ease both';
+  });
+  // Lazy-load tab content
+  if (tab === 'overview' && !_marketTabLoaded.overview) { loadOverview(); _marketTabLoaded.overview = true; }
+  if (tab === 'intraday' && !_marketTabLoaded.intraday) { loadDayTrade(); _marketTabLoaded.intraday = true; }
+  if (tab === 'scanner' && !_marketTabLoaded.scanner) { loadDiscover(); _marketTabLoaded.scanner = true; }
+}
+
+function loadMarket() {
+  _marketTabLoaded = { overview: false, intraday: false, scanner: false };
+  switchMarketTab(_currentMarketTab);
+}
 
 // ═══════════════════════════════════════════════════════════
 //  LANGUAGE
@@ -941,6 +963,15 @@ function setDetailLang(l) {
   if (curDetailData) renderDetailSignals(curDetailData);
 }
 const msg = (s) => dLang === 'kr' ? (s.msg_kr || s.msg) : s.msg;
+let dtLang = 'en';
+function setDTLang(l) {
+  dtLang = l;
+  document.getElementById('dt-lang-en').classList.toggle('active', l==='en');
+  document.getElementById('dt-lang-kr').classList.toggle('active', l==='kr');
+  if(window._lastDTScanResults) renderDayTrade(window._lastDTScanResults);
+  if(_dtTicker) openDTDetail(_dtTicker);
+}
+const dtMsg = (s) => dtLang === 'kr' ? (s.msg_kr || s.msg) : s.msg;
 
 // ═══════════════════════════════════════════════════════════
 //  DASHBOARD
@@ -1058,7 +1089,7 @@ function renderPCard(p) {
     if(p.rec_shares > 0) {
       const pps = p.price_per_share != null ? p.price_per_share : p.current_price;
       const tpHtml = p.take_profit ? `<span style="color:var(--green);"> · Target ${cur}${priceFmt(p.take_profit)}${krwEquiv(p.take_profit)}</span>` : '';
-      const slHtml = p.stop_loss   ? `<span style="color:var(--red);"> · 손절 ${cur}${priceFmt(p.stop_loss)}${krwEquiv(p.stop_loss)}</span>` : '';
+      const slHtml = p.stop_loss   ? `<span style="color:var(--red);"> · SL ${cur}${priceFmt(p.stop_loss)}${krwEquiv(p.stop_loss)}</span>` : '';
       const alreadyOwned = p.shares > 0;
       if(alreadyOwned) {
         // Already has a position — show as "Add More" instead of fresh BUY
@@ -1066,7 +1097,7 @@ function renderPCard(p) {
         recHtml = `<div class="rec-strip" style="border-color:rgba(79,158,255,.3);background:rgba(79,158,255,.04);">
           <div class="rec-strip-title" style="color:var(--accent);">📈 Add More — Currently holding ${p.shares} shares</div>
           <div class="rec-strip-body">
-            추가 <strong>${p.rec_shares}주</strong> × ${cur}${priceFmt(pps)}${krwEquiv(pps)}
+            Add <strong>${p.rec_shares} shares</strong> × ${cur}${priceFmt(pps)}${krwEquiv(pps)}
             = <strong>${cur}${priceFmt(p.rec_investment)}</strong>
             <span style="color:var(--muted);font-size:9px;display:block;margin-top:2px;">${p.rec_timing}${tpHtml}${slHtml}</span>
             ${mktTime1?`<span style="color:var(--amber);font-size:9px;display:block;margin-top:3px;">${mktTime1}</span>`:''}
@@ -1106,7 +1137,7 @@ function renderPCard(p) {
       <div class="sell-rec-title" style="color:${sellType.col};">${sellType.label} — ${p.name}</div>
       <div class="sell-rec-body">
         <strong>${sellShares}주</strong> × ${cur}${priceFmt(p.current_price)} = <strong>${cur}${Number(proceeds).toLocaleString('en-US',{maximumFractionDigits:0})}</strong>
-        &nbsp;·&nbsp; 현재 ${pnlTag}
+        &nbsp;·&nbsp; Current ${pnlTag}
         <span style="color:var(--muted);font-size:9px;display:block;margin-top:2px;">${p.sell_timing||''}</span>
       </div></div>`;
   }
@@ -1264,7 +1295,7 @@ async function showDetail(ticker, origin) {
   if(origin && origin !== 'detail') _detailOrigin = origin;
   if(!_detailOrigin || _detailOrigin === 'detail') _detailOrigin = 'dashboard';
   const backBtn = document.getElementById('detail-back-btn');
-  const labels = {portfolio:'← Back to Positions', dashboard:'← Back to Dashboard', discover:'← Back to Discover', watchlist:'← Back to Watchlist', daytrade:'← Back to Day Trade', scan:'← Back to Scanner', home:'← Home'};
+  const labels = {portfolio:'← Back to Positions', dashboard:'← Back to Dashboard', discover:'← Back to Market', watchlist:'← Back to Watchlist', daytrade:'← Back to Market', scan:'← Back to Market', market:'← Back to Market', home:'← Home'};
   if(backBtn) backBtn.textContent = labels[_detailOrigin] || '← Back';
   showView('detail');
   document.getElementById('d-ticker').textContent = ticker;
@@ -1311,6 +1342,26 @@ function renderDetailSignals(d) {
     <div class="sr-card"><div class="sr-label">Fundamental</div><div class="sr-val" style="color:${sc(d.fund_score)}">${d.fund_score.toFixed(0)}</div><div class="sr-sub">15% weight</div></div>
     <div class="sr-card"><div class="sr-label">News</div><div class="sr-val" style="color:${sc(d.news_score)}">${d.news_score.toFixed(0)}</div><div class="sr-sub">10% weight</div></div>
     <div class="sr-card"><div class="sr-label">Quant Models</div><div class="sr-val" style="color:${sc(qs)}">${qs.toFixed?qs.toFixed(0):qs}</div><div class="sr-sub">50% weight</div></div>`;
+
+  // Regime profile badge
+  if(d.regime_profile && d.regime_profile !== 'default') {
+    const profColors = {trend_rider:'#3b8bff',momentum:'#00d68f',scalper:'#ffb800',defensive:'#ff8c00',survival:'#ff4757',skip:'#666'};
+    const pc = profColors[d.regime_profile] || '#3b8bff';
+    const ri = d.regime_info || {};
+    document.getElementById('d-rings').innerHTML += `
+      <div style="grid-column:1/-1;margin-top:8px;padding:10px 14px;background:${pc}15;border:1px solid ${pc}30;border-radius:10px;display:flex;align-items:center;gap:12px;">
+        <div style="font-size:22px;">${d.regime_profile==='trend_rider'?'🏄':d.regime_profile==='momentum'?'🚀':d.regime_profile==='scalper'?'⚡':d.regime_profile==='defensive'?'🛡️':'💀'}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${pc};">${(d.regime_label||d.regime_profile).toUpperCase()}</div>
+          <div style="font-size:10px;color:var(--muted);">${d.regime_desc||''}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">Vol: ${ri.vol_regime||'—'} · Trend: ${ri.trend_regime||'—'}${d.layers_active?' · Layers: '+d.layers_active.join('+'):''}</div>
+        </div>
+        <div style="margin-left:auto;text-align:right;">
+          <div style="font-size:10px;color:var(--green);">TP ${d.tp_pct||'—'}%</div>
+          <div style="font-size:10px;color:var(--red);">SL ${Math.abs(d.sl_pct||0)}%</div>
+        </div>
+      </div>`;
+  }
 
   // Split signals into Factor (tech/fund/news) and Quant
   const allSigs = d.signals || [];
@@ -1373,7 +1424,7 @@ function renderDetailSignals(d) {
           <div class="rec-cell"><div class="rec-cell-lbl">At Price</div><div class="rec-cell-val" style="font-size:14px;">${d.price_display}</div></div>
           <div class="rec-cell"><div class="rec-cell-lbl">Proceeds</div><div class="rec-cell-val" style="color:${typeCol};">${proceeds!=null?cur+Number(proceeds).toLocaleString('en-US',{maximumFractionDigits:0}):'—'}</div></div>
         </div>
-        ${pnlHtml ? `<div style="font-size:12px;margin-bottom:8px;">현재 수익률 ${pnlHtml}</div>` : ''}
+        ${pnlHtml ? `<div style="font-size:12px;margin-bottom:8px;">Current P&L ${pnlHtml}</div>` : ''}
         <div style="font-size:11px;color:var(--accent);font-weight:500;margin-bottom:8px;">⏱ ${d.sell_timing||''}</div>
         <div class="reason-text">${dLang==='kr'?(d.reason_kr||d.reason):d.reason}</div>
       </div>`;
@@ -1633,10 +1684,8 @@ async function loadOverview() {
   } catch(err) {
     el.innerHTML = `<div style="color:var(--red);padding:24px;">Failed to load market data: ${err.message}</div>`;
   }
-  // Also load Cross-Asset + VIX + Sectors
-  loadCrossAsset();
-  loadVIXStrategy();
-  loadMarketSectors();
+  // Load Cross-Asset + VIX + Sectors in parallel
+  Promise.all([loadCrossAsset(), loadVIXStrategy(), loadMarketSectors()]).catch(()=>{});
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2731,7 +2780,7 @@ async function runBacktest(period, btnEl) {
       </div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px;text-align:center;">
         <div style="font-size:10px;color:var(--muted);">Final Value</div>
-        <div style="font-size:18px;font-weight:700;">$${d.final_value.toLocaleString()}</div>
+        <div style="font-size:18px;font-weight:700;">${d.initial_capital>=100000?'₩':'$'}${d.final_value.toLocaleString('en-US',{maximumFractionDigits:d.initial_capital>=100000?0:2})}</div>
       </div>
     </div>`;
 
@@ -2741,18 +2790,55 @@ async function runBacktest(period, btnEl) {
       <canvas id="bt-chart" width="700" height="250" style="width:100%;"></canvas>
     </div>`;
 
+    // Regime Performance (from adaptive 3-layer model)
+    const rs = d.regime_stats || {};
+    const regimeKeys = Object.keys(rs);
+    if(regimeKeys.length) {
+      const profEmoji = {trend_rider:'🏄',momentum:'🚀',scalper:'⚡',defensive:'🛡️',survival:'💀'};
+      html += `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">Regime Performance</div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(regimeKeys.length,4)},1fr);gap:var(--sp-sm);margin-bottom:var(--sp-lg);">
+        ${regimeKeys.map(k => {
+          const s = rs[k];
+          const wr = s.win_rate||0;
+          const wrCol = wr>=60?'var(--green)':wr>=40?'var(--amber)':'var(--red)';
+          return `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px;text-align:center;">
+            <div style="font-size:16px;">${profEmoji[k]||'📊'}</div>
+            <div style="font-size:11px;font-weight:600;margin:4px 0;">${s.label||k}</div>
+            <div style="font-size:10px;color:var(--muted);">${s.trades}T · ${s.wins}W · ${s.losses}L</div>
+            <div style="font-size:14px;font-weight:700;color:${wrCol};margin-top:2px;">${wr}%</div>
+            <div style="font-size:10px;color:${s.avg_pnl>=0?'var(--green)':'var(--red)'};">Avg: ${s.avg_pnl>=0?'+':''}${s.avg_pnl}%</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    // Current regime snapshot
+    const cr = d.current_regime || {};
+    if(cr.profile) {
+      const profCol = {trend_rider:'#3b8bff',momentum:'#00d68f',scalper:'#ffb800',defensive:'#ff8c00',survival:'#ff4757'};
+      const cc = profCol[cr.profile]||'#3b8bff';
+      html += `<div style="padding:10px 14px;background:${cc}12;border:1px solid ${cc}30;border-radius:10px;margin-bottom:var(--sp-lg);display:flex;align-items:center;gap:10px;">
+        <div style="font-size:11px;color:var(--muted);">Current Regime:</div>
+        <div style="font-size:12px;font-weight:700;color:${cc};">${(cr.profile_label||cr.profile).toUpperCase()}</div>
+        <div style="font-size:10px;color:var(--muted);">TP:${cr.tp_pct}% SL:${cr.sl_pct}% Trail:${cr.trail_pct}%</div>
+        <div style="font-size:10px;color:var(--muted);margin-left:auto;">Layers: ${(cr.layers_active||[]).join('+')}</div>
+      </div>`;
+    }
+
     // Trade log
     if(d.trades && d.trades.length) {
+      const profBadge = p => p ? `<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:rgba(59,139,255,.12);color:var(--accent);">${p}</span>` : '';
       html += `<div style="font-size:13px;font-weight:600;margin-bottom:8px;">Trade Log</div>
       <div style="max-height:200px;overflow-y:auto;">
         ${d.trades.map(t => {
           const isBuy = t.action === 'BUY';
           const color = isBuy ? 'var(--accent)' : (t.pnl >= 0 ? 'var(--green)' : 'var(--red)');
-          return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;">
-            <span style="color:${color};font-weight:600;">${t.action}</span>
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;">
+            <span style="color:${color};font-weight:600;min-width:32px;">${t.action}</span>
             <span>${t.date}</span>
-            <span>${t.shares} shares @ $${t.price}</span>
-            ${t.pnl!=null?`<span style="color:${t.pnl>=0?'var(--green)':'var(--red)'};">$${t.pnl>=0?'+':''}${t.pnl} (${t.reason||''})</span>`:'<span></span>'}
+            <span>${t.shares}sh @ $${t.price}</span>
+            ${profBadge(t.profile)}
+            ${t.pnl!=null?`<span style="color:${t.pnl>=0?'var(--green)':'var(--red)'};">${t.pnl_pct>=0?'+':''}${t.pnl_pct}% (${t.reason||''})</span>`:`<span style="font-size:9px;color:var(--muted);">${t.params||''}</span>`}
           </div>`;
         }).join('')}
       </div>`;
@@ -3563,7 +3649,7 @@ async function refreshAutoTradeStatus() {
       }).join('');
       logEl.scrollTop = logEl.scrollHeight;
     }
-  } catch(e) {}
+  } catch(e) { console.error('AutoTrade status:', e); }
 }
 
 async function toggleAutoTrade() {
@@ -3594,122 +3680,397 @@ let _dtStream = null;
 let _dtTicker = null;
 let _dtChartTimer = null;
 let _dtLastTf = '5Min';
+let _dtActiveTrades = []; // {ticker, name, entryPrice, shares, tp, sl, currency, isKR, time}
+let _dtClosedTrades = []; // {name, entryPrice, exitPrice, pnlPct, time}
+
+// ── Helpers ──
+function _dtSigCol(sig) { return sig==='ENTRY'||sig==='BUY'?'var(--green)':sig==='SELL'||sig==='AVOID'?'var(--red)':sig==='HOLD'?'#3b8bff':sig==='WATCH'?'var(--amber)':'var(--muted)'; }
+function _dtSigLabel(sig) { const m={ENTRY:'ENTRY',WATCH:'WATCH',WAIT:'WAIT',AVOID:'AVOID',SELL:'EXIT',HOLD:'HOLD',BUY:'BUY'}; return dtLang==='kr'?{ENTRY:'진입',WATCH:'주시',WAIT:'대기',AVOID:'회피',SELL:'청산',HOLD:'홀딩',BUY:'매수'}[sig]||sig:m[sig]||sig; }
+function _dtCur(r) { return (r.is_korean||r.currency==='KRW')?'₩':'$'; }
+function _dtPFmt(v,isKR) { return isKR?Number(v).toLocaleString():Number(v).toFixed(2); }
+function _dtIsKR(t) { return t.length===6 && /^\d+$/.test(t); }
+
+function dtFullAnalyze() {
+  const d = window._dtDetailData;
+  if(!d) return;
+  const isKR = d.is_korean || d.currency==='KRW';
+  const ticker = isKR ? d.ticker+'.KS' : d.ticker;
+  showDetail(ticker, 'daytrade');
+}
 
 function loadDayTrade() {
-  document.getElementById('dt-scanner').innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;">Click <strong>Scan Momentum</strong> to find hot stocks in real-time.</div>';
+  document.getElementById('dt-top5').innerHTML = '<div style="grid-column:1/-1;color:var(--muted);padding:20px;text-align:center;">Click <strong>🔍 Scan</strong> to find today\'s hottest stocks</div>';
+  document.getElementById('dt-all-list').innerHTML = '';
+  renderActiveTrades();
 }
 
 async function runDayScan() {
   const btn = document.getElementById('dt-scan-btn');
-  btn.disabled = true; btn.textContent = 'Scanning...';
-  document.getElementById('dt-scanner').innerHTML = '<div class="loader"><span class="spin"></span>Scanning 20 stocks for momentum signals...</div>';
+  btn.disabled = true; btn.textContent = '⏳ Scanning...';
+  document.getElementById('dt-top5').innerHTML = '<div style="grid-column:1/-1;" class="loader"><span class="spin"></span> Scanning stocks...</div>';
+  document.getElementById('dt-all-list').innerHTML = '';
   document.getElementById('dt-detail').style.display = 'none';
   try {
     const r = await fetch('/api/daytrade/scan'); const d = await r.json();
-    if(d.error) { document.getElementById('dt-scanner').innerHTML = `<div style="color:var(--red);padding:16px;">${d.error}</div>`; return; }
-    renderDTScanner(d.results || []);
+    if(d.error) { document.getElementById('dt-top5').innerHTML = `<div style="grid-column:1/-1;color:var(--red);padding:16px;">${d.error}</div>`; return; }
+    window._lastDTScanResults = d.results || [];
+    renderDayTrade(window._lastDTScanResults);
   } catch(e) {
-    document.getElementById('dt-scanner').innerHTML = '<div style="color:var(--red);padding:16px;">Scan failed.</div>';
+    document.getElementById('dt-top5').innerHTML = '<div style="grid-column:1/-1;color:var(--red);padding:16px;">Scan failed. Check connection.</div>';
   } finally {
-    btn.disabled = false; btn.textContent = '🔍 Scan Momentum';
+    btn.disabled = false; btn.textContent = '🔍 Scan';
   }
 }
 
-function renderDTScanner(results) {
+function renderDayTrade(results) {
   if(!results.length) {
-    document.getElementById('dt-scanner').innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center;">No momentum signals found. Market may be closed.</div>';
+    document.getElementById('dt-top5').innerHTML = '<div style="grid-column:1/-1;color:var(--muted);padding:20px;text-align:center;">No signals found. Market may be closed.</div>';
     return;
   }
-  document.getElementById('dt-scanner').innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
-    ${results.map(r => {
-      const sigCol = r.signal==='BUY'?'var(--green)':r.signal==='SELL'?'var(--red)':'var(--amber)';
-      const chgCol = r.change_pct>=0?'var(--green)':'var(--red)';
-      const scoreCol = r.score>=65?'var(--green)':r.score>=40?'var(--amber)':'var(--red)';
-      const hot = Math.abs(r.change_pct) >= 3 || r.vol_ratio >= 3;
-      return `<div onclick="openDTDetail('${r.ticker}')" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <div style="font-size:15px;font-weight:700;">${r.ticker} ${hot?'<span style="font-size:10px;background:rgba(239,68,68,.15);color:var(--red);padding:1px 6px;border-radius:4px;">🔥 HOT</span>':''}</div>
-          <div style="font-size:12px;font-weight:700;color:${scoreCol};">${Math.round(r.score)}</div>
+
+  // Sort by score desc, take top 5
+  const sorted = [...results].sort((a,b) => b.score - a.score);
+  const top5 = sorted.slice(0, 5);
+  const rest = sorted.slice(5);
+
+  // ── TOP 5 Cards ──
+  document.getElementById('dt-top5').innerHTML = top5.map(r => {
+    const sc = _dtSigCol(r.signal);
+    const cc = r.change_pct>=0?'var(--green)':'var(--red)';
+    const isKR = r.is_korean||r.currency==='KRW';
+    const cur = _dtCur(r);
+    const name = r.name || r.ticker;
+    const pf = _dtPFmt(r.price, isKR);
+    const hot = Math.abs(r.change_pct)>=3 || (r.vol_ratio&&r.vol_ratio>=3);
+    const held = r.is_held ? '<span style="font-size:8px;background:rgba(59,139,255,.15);color:#3b8bff;padding:1px 5px;border-radius:3px;">HELD</span>' : '';
+    // First signal message (the action line)
+    const actionMsg = r.signals&&r.signals[0] ? dtMsg(r.signals[0]) : '';
+    return `<div onclick="openDTDetail('${r.ticker}')" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:all .2s;border-top:3px solid ${sc};" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.3)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:15px;font-weight:700;">${name} ${held}</div>
+        <div style="font-size:13px;font-weight:700;color:${r.score>=65?'var(--green)':r.score>=40?'var(--amber)':'var(--red)'};">${Math.round(r.score)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:16px;font-weight:600;">${cur}${pf}</span>
+        <span style="font-size:12px;font-weight:600;color:${cc};">${r.change_pct>=0?'+':''}${r.change_pct}%</span>
+        ${hot?'<span style="font-size:10px;">🔥</span>':''}
+      </div>
+      <div style="margin-bottom:6px;">
+        <span style="font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;color:${sc};background:${sc}15;">${_dtSigLabel(r.signal)}</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);line-height:1.4;min-height:28px;">${actionMsg}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:4px;">${r.rsi?'RSI '+Math.round(r.rsi):''}${r.vol_ratio?' · Vol '+r.vol_ratio+'x':''}</div>
+    </div>`;
+  }).join('');
+
+  // ── ALL STOCKS List ──
+  document.getElementById('dt-all-list').innerHTML = rest.length ? rest.map(r => {
+    const isKR = r.is_korean||r.currency==='KRW';
+    const cur = _dtCur(r);
+    const cc = r.change_pct>=0?'var(--green)':'var(--red)';
+    const sc = _dtSigCol(r.signal);
+    return `<div onclick="openDTDetail('${r.ticker}')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,.03)'" onmouseout="this.style.background=''">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:13px;font-weight:600;min-width:100px;">${r.name||r.ticker}</div>
+        <div style="font-size:12px;">${cur}${_dtPFmt(r.price,isKR)}</div>
+        <div style="font-size:11px;color:${cc};">${r.change_pct>=0?'+':''}${r.change_pct}%</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;font-weight:600;color:${r.score>=65?'var(--green)':r.score>=40?'var(--amber)':'var(--red)'};">${Math.round(r.score)}</span>
+        <span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${sc};background:${sc}15;">${_dtSigLabel(r.signal)}</span>
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted);padding:12px;font-size:11px;">No additional stocks</div>';
+}
+
+// ── Active Trades (P&L Tracker) ──
+function renderActiveTrades() {
+  const section = document.getElementById('dt-active-section');
+  const el = document.getElementById('dt-active-trades');
+  if(!_dtActiveTrades.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  el.innerHTML = _dtActiveTrades.map((t,i) => {
+    const cur = t.isKR ? '₩' : '$';
+    const curPrice = t.currentPrice || t.entryPrice;
+    const pnl = curPrice - t.entryPrice;
+    const pnlPct = (pnl / t.entryPrice * 100);
+    const pnlCol = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    const pnlTotal = pnl * t.shares;
+
+    // Progress bar: SL ←──●──→ TP
+    const range = t.tp - t.sl;
+    const pos = range > 0 ? Math.max(0, Math.min(100, ((curPrice - t.sl) / range) * 100)) : 50;
+
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px;border-left:3px solid ${pnlCol};">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div>
+          <span style="font-size:15px;font-weight:700;">${t.name}</span>
+          <span style="font-size:11px;color:var(--muted);margin-left:6px;">${t.shares} shares @ ${cur}${_dtPFmt(t.entryPrice,t.isKR)}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-          <span style="font-size:14px;font-weight:600;">$${r.price}</span>
-          <span style="font-size:11px;color:${chgCol};">${r.change_pct>=0?'+':''}${r.change_pct}%</span>
-          <span style="font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;color:${sigCol};background:${r.signal==='BUY'?'rgba(34,197,94,.1)':r.signal==='SELL'?'rgba(239,68,68,.1)':'rgba(245,158,11,.1)'};">${r.signal}</span>
+        <div style="text-align:right;">
+          <div style="font-size:16px;font-weight:700;color:${pnlCol};">${pnl>=0?'+':''}${cur}${_dtPFmt(Math.abs(pnlTotal),t.isKR)}</div>
+          <div style="font-size:11px;color:${pnlCol};">${pnlPct>=0?'+':''}${pnlPct.toFixed(2)}%</div>
         </div>
-        <div style="font-size:9px;color:var(--muted);">Vol: ${r.vol_ratio}x avg${r.rsi?' · RSI: '+Math.round(r.rsi):''}</div>
-      </div>`;
-    }).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:9px;color:var(--red);">SL ${cur}${_dtPFmt(t.sl,t.isKR)}</span>
+        <div style="flex:1;height:6px;background:var(--bg);border-radius:3px;position:relative;">
+          <div style="position:absolute;left:0;top:0;height:100%;width:${pos}%;background:linear-gradient(90deg,var(--red),var(--amber),var(--green));border-radius:3px;transition:width .3s;"></div>
+          <div style="position:absolute;left:${pos}%;top:-3px;width:12px;height:12px;background:white;border-radius:50%;transform:translateX(-50%);box-shadow:0 1px 4px rgba(0,0,0,.4);"></div>
+        </div>
+        <span style="font-size:9px;color:var(--green);">TP ${cur}${_dtPFmt(t.tp,t.isKR)}</span>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;">
+        <button class="pc-btn" style="color:var(--red);border-color:rgba(239,68,68,.3);font-size:10px;padding:3px 10px;" onclick="dtSellTrade(${i})">Sell</button>
+        <button class="pc-btn" style="font-size:10px;padding:3px 10px;" onclick="dtCloseTrade(${i})">Close</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function dtQuickBuy() {
+  const d = window._dtDetailData;
+  if(!d) return;
+  const isKR = d.is_korean || d.currency==='KRW';
+  const shares = prompt(`How many shares of ${d.name||d.ticker}?`, '1');
+  if(!shares || isNaN(shares) || Number(shares) <= 0) return;
+
+  // TP/SL for day trade: tight targets (1~3% range, not swing trade)
+  const dtTP = d.take_profit || d.price * (isKR ? 1.015 : 1.02);
+  const dtSL = d.stop_loss || d.price * (isKR ? 0.99 : 0.985);
+
+  _dtActiveTrades.push({
+    ticker: d.ticker,
+    name: d.name || d.ticker,
+    entryPrice: d.price,
+    currentPrice: d.price,
+    shares: Number(shares),
+    tp: dtTP,
+    sl: dtSL,
+    currency: isKR ? 'KRW' : 'USD',
+    isKR: isKR,
+    time: new Date().toLocaleTimeString(),
+  });
+  renderActiveTrades();
+
+  // Add to portfolio DB (single call, no modal)
+  const ticker = isKR ? d.ticker+'.KS' : d.ticker;
+  try {
+    await api('POST', '/api/portfolio/position/buy-new', {
+      ticker, shares: Number(shares), avg_cost: d.price
+    });
+    // Refresh left panel + dashboard
+    const pData = await fetch('/api/portfolio').then(r=>r.json());
+    window._positions = pData.positions || [];
+    updateCmdList();
+    if(typeof loadDashboard === 'function') loadDashboard();
+  } catch(e) { console.warn('Portfolio sync:', e); }
+}
+
+async function dtSellTrade(idx) {
+  if(!confirm('Sell this position?')) return;
+  const t = _dtActiveTrades[idx];
+  if(!t) return;
+  const curP = t.currentPrice || t.entryPrice;
+  const pnlPct = (curP - t.entryPrice) / t.entryPrice * 100;
+
+  // Sell from portfolio DB
+  const ticker = t.isKR ? t.ticker+'.KS' : t.ticker;
+  try {
+    const pos = (window._positions||[]).find(p => p.ticker === ticker);
+    if(pos) {
+      await api('POST', `/api/portfolio/position/${pos.id}/sell`, {
+        shares: t.shares, price: curP
+      });
+    }
+  } catch(e) { console.warn('Sell sync:', e); }
+
+  // Record closed trade
+  _dtClosedTrades.push({
+    name: t.name, entryPrice: t.entryPrice, exitPrice: curP,
+    pnlPct: pnlPct, time: new Date().toLocaleTimeString()
+  });
+
+  _dtActiveTrades.splice(idx, 1);
+  renderActiveTrades();
+  renderDTStats();
+
+  // Refresh portfolio + dashboard
+  try {
+    const pData = await fetch('/api/portfolio').then(r=>r.json());
+    window._positions = pData.positions || [];
+    updateCmdList();
+    if(typeof loadDashboard === 'function') loadDashboard();
+  } catch(e) {}
+
+  alert(`Closed ${t.name}: ${pnlPct>=0?'+':''}${pnlPct.toFixed(2)}%`);
+}
+
+function dtCloseTrade(idx) {
+  _dtActiveTrades.splice(idx, 1);
+  renderActiveTrades();
+}
+
+function renderDTStats() {
+  const section = document.getElementById('dt-stats-section');
+  const el = document.getElementById('dt-stats');
+  if(!_dtClosedTrades.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  const wins = _dtClosedTrades.filter(t => t.pnlPct > 0).length;
+  const total = _dtClosedTrades.length;
+  const avgPnl = _dtClosedTrades.reduce((s,t) => s + t.pnlPct, 0) / total;
+  const wr = total > 0 ? (wins/total*100) : 0;
+  const statCard = (label, val, col) => `<div style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
+    <div style="font-size:9px;color:var(--muted);text-transform:uppercase;">${label}</div>
+    <div style="font-size:18px;font-weight:700;color:${col||'var(--fg)'};">${val}</div>
   </div>`;
+  el.innerHTML =
+    statCard('Trades', total, 'var(--fg)') +
+    statCard('Win Rate', wr.toFixed(0)+'%', wr>=50?'var(--green)':'var(--red)') +
+    statCard('Avg P&L', (avgPnl>=0?'+':'')+avgPnl.toFixed(2)+'%', avgPnl>=0?'var(--green)':'var(--red)') +
+    statCard('Wins/Losses', `${wins}/${total-wins}`, 'var(--fg)');
+}
+
+// Update active trade prices from SSE stream
+function _updateActivePrices(prices) {
+  let changed = false;
+  _dtActiveTrades.forEach(t => {
+    const key = t.ticker;
+    if(prices[key]) {
+      t.currentPrice = prices[key].price;
+      changed = true;
+      // TP/SL notification
+      if(t.currentPrice >= t.tp) { sendNotif('🎯 Target Hit!', `${t.name} hit take profit at ${_dtCur(t)}${_dtPFmt(t.currentPrice,t.isKR)}`, 'tp-'+t.ticker); }
+      if(t.currentPrice <= t.sl) { sendNotif('🛑 Stop Loss!', `${t.name} hit stop loss at ${_dtCur(t)}${_dtPFmt(t.currentPrice,t.isKR)}`, 'sl-'+t.ticker); }
+    }
+  });
+  if(changed) renderActiveTrades();
 }
 
 async function openDTDetail(ticker) {
   _dtTicker = ticker;
-  document.getElementById('dt-detail').style.display = 'block';
+  const detailEl = document.getElementById('dt-detail');
+  detailEl.style.display = 'block';
+  detailEl.scrollIntoView({behavior:'smooth', block:'nearest'});
   document.getElementById('dt-ticker').textContent = ticker;
   document.getElementById('dt-price').textContent = 'Loading...';
   document.getElementById('dt-change').textContent = '';
-  document.getElementById('dt-indicators').innerHTML = '';
+  document.getElementById('dt-action').innerHTML = '';
+  document.getElementById('dt-indicators').innerHTML = '<div class="loader"><span class="spin"></span></div>';
+  document.getElementById('dt-tpsl').innerHTML = '';
   document.getElementById('dt-signals').innerHTML = '';
 
-  // Load analysis
   try {
-    const r = await fetch(`/api/daytrade/analyze/${ticker}`); const d = await r.json();
-    if(d.error) return;
+    const r = await fetch(`/api/daytrade/analyze/${ticker}`);
+    const d = await r.json();
 
-    document.getElementById('dt-price').textContent = `$${d.price}`;
+    if(d.error) {
+      const isMarketClosed = d.error.includes('No intraday') || d.error.includes('No data');
+      document.getElementById('dt-price').textContent = '';
+      document.getElementById('dt-action').innerHTML = '';
+      const isKRT = _dtIsKR(ticker);
+      const mktName = isKRT ? 'KR Market (09:00-15:30 KST)' : 'US Market (09:30-16:00 ET)';
+      document.getElementById('dt-indicators').innerHTML = `<div style="color:var(--muted);padding:24px;text-align:center;">
+        <div style="font-size:32px;margin-bottom:10px;">${isMarketClosed?'🕐':'⚠️'}</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px;">${isMarketClosed?'Market Closed':'Error'}</div>
+        <div style="font-size:11px;color:var(--muted);">${isMarketClosed?`${mktName} — intraday data available during trading hours`:d.error}</div>
+        ${isMarketClosed?'<div style="margin-top:12px;"><button class="pc-btn" onclick="dtFullAnalyze()" style="font-size:11px;padding:5px 14px;">View Full Analysis Instead →</button></div>':''}
+      </div>`;
+      return;
+    }
+
+    const dtIsKR = d.is_korean || d.currency==='KRW';
+    const dtCur = dtIsKR ? '₩' : '$';
+    const pFmt = (v) => dtIsKR ? Number(v).toLocaleString() : Number(v).toFixed(2);
+
+    // Header
+    document.getElementById('dt-ticker').textContent = d.name || d.ticker;
+    document.getElementById('dt-price').textContent = `${dtCur}${pFmt(d.price)}`;
     const chgCol = d.change_pct>=0?'var(--green)':'var(--red)';
-    document.getElementById('dt-change').innerHTML = `<span style="color:${chgCol}">${d.change_pct>=0?'+':''}${d.change_pct}%</span>`;
+    document.getElementById('dt-change').innerHTML = `<span style="color:${chgCol};font-weight:600;">${d.change_pct>=0?'+':''}${d.change_pct}%</span>`;
 
     // Indicators
     const ind = (label, val, color) => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;">
       <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">${label}</div>
       <div style="font-size:18px;font-weight:700;color:${color||'var(--fg)'};">${val}</div>
     </div>`;
+
     const scoreCol = d.score>=65?'var(--green)':d.score>=40?'var(--amber)':'var(--red)';
+    const _sigEN = {ENTRY:'ENTRY',WATCH:'WATCH',WAIT:'WAIT',AVOID:'AVOID',SELL:'EXIT',HOLD:'HOLD',BUY:'BUY'};
+    const _sigKR = {ENTRY:'진입',WATCH:'주시',WAIT:'대기',AVOID:'회피',SELL:'청산',HOLD:'홀딩',BUY:'매수'};
+    const sigLabel = (dtLang==='kr'?_sigKR:_sigEN)[d.signal]||d.signal;
+    const sigCol = d.signal==='ENTRY'||d.signal==='BUY'?'var(--green)':d.signal==='SELL'||d.signal==='AVOID'?'var(--red)':d.signal==='HOLD'?'#3b8bff':'var(--amber)';
+    const rsiVal = d.rsi ? Math.round(d.rsi) : '—';
     const rsiCol = d.rsi>70?'var(--red)':d.rsi<30?'var(--green)':'var(--fg)';
+
+    // Action line (the most important thing — one clear message)
+    const actionLine = d.signals && d.signals[0] ? dtMsg(d.signals[0]) : '';
+    const actionBg = d.signal==='ENTRY'||d.signal==='BUY'?'rgba(34,197,94,.08)':d.signal==='SELL'||d.signal==='AVOID'?'rgba(239,68,68,.08)':'rgba(245,158,11,.06)';
+    const actionBorder = d.signal==='ENTRY'||d.signal==='BUY'?'rgba(34,197,94,.2)':d.signal==='SELL'||d.signal==='AVOID'?'rgba(239,68,68,.2)':'rgba(245,158,11,.15)';
+    document.getElementById('dt-action').innerHTML = `<span style="color:${sigCol};font-weight:700;">${sigLabel}</span> <span style="color:var(--muted);">—</span> ${actionLine}`;
+    document.getElementById('dt-action').style.background = actionBg;
+    document.getElementById('dt-action').style.border = `1px solid ${actionBorder}`;
+
+    // 3-column indicators (simplified from 5)
     document.getElementById('dt-indicators').innerHTML =
       ind('Score', Math.round(d.score)+'/100', scoreCol) +
-      ind('Signal', d.signal, d.signal==='BUY'?'var(--green)':d.signal==='SELL'?'var(--red)':'var(--amber)') +
-      ind('RSI', d.rsi?Math.round(d.rsi):'—', rsiCol) +
-      ind('VWAP', d.vwap?'$'+d.vwap:'—', d.price>d.vwap?'var(--green)':'var(--red)') +
-      ind('Vol', d.vol_ratio+'x', d.vol_ratio>=3?'var(--red)':'var(--fg)');
+      ind('RSI', rsiVal, rsiCol) +
+      ind('Volume', d.vol_ratio?d.vol_ratio+'x':'—', d.vol_ratio>=3?'var(--red)':'var(--fg)');
 
-    // TP/SL + Trailing Stop card
+    // TP/SL card
     const tpslEl = document.getElementById('dt-tpsl');
-    if(d.take_profit && d.signal !== 'HOLD') {
-      const isBuy = d.signal === 'BUY';
-      tpslEl.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+    const regimeTag = d.regime_profile ? `<div style="text-align:center;margin-bottom:8px;">
+      <span style="background:rgba(59,139,255,.15);color:var(--accent);padding:4px 12px;border-radius:12px;font-size:11px;font-weight:600;">${d.regime_profile.replace('_',' ').toUpperCase()}</span>
+    </div>` : '';
+
+    if(d.take_profit) {
+      const tpAbs = Math.abs(d.tp_pct||0);
+      const slAbs = Math.abs(d.sl_pct||0);
+      tpslEl.innerHTML = regimeTag + `<div style="display:grid;grid-template-columns:1fr 1fr${d.trailing_stop_pct?' 1fr':''};gap:8px;">
         <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px;text-align:center;">
-          <div style="font-size:9px;color:var(--green);text-transform:uppercase;letter-spacing:.5px;">🎯 Take Profit</div>
-          <div style="font-size:18px;font-weight:700;color:var(--green);margin-top:4px;">$${d.take_profit}</div>
-          <div style="font-size:10px;color:var(--muted);">${d.tp_pct>=0?'+':''}${d.tp_pct}%</div>
+          <div style="font-size:9px;color:var(--green);text-transform:uppercase;">🎯 Take Profit</div>
+          <div style="font-size:16px;font-weight:700;color:var(--green);margin-top:4px;">${dtCur}${pFmt(d.take_profit)}</div>
+          <div style="font-size:10px;color:var(--muted);">+${tpAbs}%</div>
         </div>
         <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px;text-align:center;">
-          <div style="font-size:9px;color:var(--red);text-transform:uppercase;letter-spacing:.5px;">🛑 Stop Loss</div>
-          <div style="font-size:18px;font-weight:700;color:var(--red);margin-top:4px;">$${d.stop_loss}</div>
-          <div style="font-size:10px;color:var(--muted);">${d.sl_pct}%</div>
+          <div style="font-size:9px;color:var(--red);text-transform:uppercase;">🛑 Stop Loss</div>
+          <div style="font-size:16px;font-weight:700;color:var(--red);margin-top:4px;">${dtCur}${pFmt(d.stop_loss)}</div>
+          <div style="font-size:10px;color:var(--muted);">-${slAbs}%</div>
         </div>
-        <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px;text-align:center;">
-          <div style="font-size:9px;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;">📐 Trailing Stop</div>
-          <div style="font-size:18px;font-weight:700;color:var(--amber);margin-top:4px;">${d.trailing_stop_pct}%</div>
-          <div style="font-size:10px;color:var(--muted);">Auto-adjusts${d.atr?' · ATR: $'+d.atr:''}</div>
-        </div>
+        ${d.trailing_stop_pct?`<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:9px;color:var(--amber);text-transform:uppercase;">📐 Trailing Stop</div>
+          <div style="font-size:16px;font-weight:700;color:var(--amber);margin-top:4px;">${d.trailing_stop_pct}%</div>
+          <div style="font-size:10px;color:var(--muted);">${d.atr?'ATR: '+dtCur+pFmt(d.atr):'Auto-adjust'}</div>
+        </div>`:''}
       </div>`;
     } else {
-      tpslEl.innerHTML = '';
+      tpslEl.innerHTML = regimeTag;
     }
 
-    // Signals
-    document.getElementById('dt-signals').innerHTML = (d.signals||[]).map(s =>
-      `<div class="sig-item ${s.type}"><div class="sig-dot"></div><div>${s.msg}</div></div>`
-    ).join('');
-  } catch(e) {}
+    // Signals (max 4, skip first one which is already in action line)
+    const sigs = (d.signals||[]).slice(1, 5);
+    const sigsHtml = sigs.map(s => `<div class="sig-item ${s.type}"><div class="sig-dot"></div><div>${dtMsg(s)}</div></div>`).join('');
+    document.getElementById('dt-signals').innerHTML = sigsHtml || '';
 
-  // Load chart
-  loadDTChart('5Min');
+    // Store detail data
+    window._dtDetailData = d;
 
-  // Start SSE stream for live updates
-  startDTStream();
+    // Chart: US only, hide for Korean
+    const isKRTicker = _dtIsKR(ticker);
+    const chartWrap = document.getElementById('dt-chart-wrap');
+    if(chartWrap) chartWrap.style.display = isKRTicker ? 'none' : 'block';
+    if(!isKRTicker) {
+      loadDTChart('5Min');
+      startDTStream();
+    }
+
+  } catch(e) {
+    document.getElementById('dt-action').innerHTML = '';
+    document.getElementById('dt-indicators').innerHTML = `<div style="color:var(--red);padding:16px;">Load failed: ${e.message}</div>`;
+    const chartWrap = document.getElementById('dt-chart-wrap');
+    if(chartWrap) chartWrap.style.display = _dtIsKR(ticker) ? 'none' : 'block';
+  }
 }
 
 async function loadDTChart(tf, btnEl) {
@@ -3849,18 +4210,26 @@ function startDTStream() {
     try {
       const prices = JSON.parse(e.data);
       if(prices.error) return;
-      // Update scanner cards
-      document.querySelectorAll('#dt-scanner [onclick]').forEach(card => {
+      // Update top5 + all cards
+      document.querySelectorAll('#dt-top5 [onclick], #dt-all-list [onclick]').forEach(card => {
         const ticker = card.getAttribute('onclick')?.match(/'(\w+)'/)?.[1];
         if(ticker && prices[ticker]) {
-          const priceEl = card.querySelector('span[style*="font-size:14px"]');
-          if(priceEl) priceEl.textContent = '$' + prices[ticker].price;
+          const priceEl = card.querySelector('span[style*="font-size:16px"]') || card.querySelector('span[style*="font-size:14px"]') || card.querySelector('span[style*="font-size:12px"]');
+          const isKR = ticker.length===6 && /^\d+$/.test(ticker);
+          const cur = isKR ? '₩' : '$';
+          const pFmtV = isKR ? Number(prices[ticker].price).toLocaleString() : prices[ticker].price;
+          if(priceEl) priceEl.textContent = cur + pFmtV;
         }
       });
       // Update detail if open
       if(_dtTicker && prices[_dtTicker]) {
-        document.getElementById('dt-price').textContent = '$' + prices[_dtTicker].price;
+        const isKR = _dtTicker.length===6 && /^\d+$/.test(_dtTicker);
+        const cur = isKR ? '₩' : '$';
+        const pFmtV = isKR ? Number(prices[_dtTicker].price).toLocaleString() : prices[_dtTicker].price;
+        document.getElementById('dt-price').textContent = cur + pFmtV;
       }
+      // Update active trades P&L
+      _updateActivePrices(prices);
       // Auto-refresh chart every 30 seconds
       if(_dtTicker && !_dtChartTimer) {
         _dtChartTimer = setInterval(() => { if(_dtTicker) loadDTChart(null); }, 30000);
@@ -4218,7 +4587,7 @@ async function checkAIStatus() {
   try {
     const r2 = await fetch('/api/daytrade/status');
     const d2 = await r2.json();
-    if(d2.available) document.getElementById('nav-daytrade').style.display = 'flex';
+    // Day trade available — no separate nav needed, integrated into Market tab
   } catch(e) {}
 }
 
@@ -4385,11 +4754,10 @@ function switchCoachLang(lang) {
 
 <!-- Mobile Bottom Nav -->
 <div class="mobile-nav" style="display:none;">
-  <div class="mobile-nav-item active" onclick="showView('dashboard')"><span>📊</span>Home</div>
-  <div class="mobile-nav-item" onclick="showView('daytrade')"><span>⚡</span>Trade</div>
-  <div class="mobile-nav-item" onclick="showView('scan')"><span>🔍</span>Scan</div>
-  <div class="mobile-nav-item" onclick="showView('discover')"><span>🔭</span>Discover</div>
-  <div class="mobile-nav-item" onclick="showView('overview')"><span>🌐</span>Market</div>
+  <div class="mobile-nav-item active" onclick="showView('home')"><span>🏠</span>Home</div>
+  <div class="mobile-nav-item" onclick="showView('dashboard')"><span>📊</span>Portfolio</div>
+  <div class="mobile-nav-item" onclick="showView('market')"><span>🌐</span>Market</div>
+  <div class="mobile-nav-item" onclick="showView('alerts')"><span>🔔</span>Alerts</div>
 </div>
 
 <!-- LEFT PANEL (fixed position, outside app) -->

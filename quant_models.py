@@ -480,24 +480,34 @@ class CrossAssetMomentum:
 
     @classmethod
     def analyze(cls):
-        """Analyze cross-asset momentum and correlations."""
+        """Analyze cross-asset momentum and correlations — batch download."""
         import yfinance as yf
 
+        tickers = list(cls.ASSETS.keys())
         data = {}
+        try:
+            batch = yf.download(tickers, period="3mo", group_by="ticker",
+                                threads=True, progress=False)
+        except Exception:
+            batch = pd.DataFrame()
+
         for ticker, name in cls.ASSETS.items():
             try:
-                h = yf.Ticker(ticker).history(period="3mo")
-                if not h.empty and len(h) >= 20:
-                    closes = h["Close"].values
-                    ret_1m = (closes[-1] - closes[-20]) / closes[-20] * 100
-                    ret_3m = (closes[-1] - closes[0]) / closes[0] * 100
-                    data[ticker] = {
-                        "name": name,
-                        "price": round(float(closes[-1]), 2),
-                        "return_1m": round(float(ret_1m), 1),
-                        "return_3m": round(float(ret_3m), 1),
-                        "trend": "up" if ret_1m > 0 else "down",
-                    }
+                h = batch[ticker] if len(tickers) > 1 and ticker in batch.columns.get_level_values(0) else batch
+                if h.empty or len(h) < 20:
+                    continue
+                closes = h["Close"].dropna().values
+                if len(closes) < 20:
+                    continue
+                ret_1m = (closes[-1] - closes[-20]) / closes[-20] * 100
+                ret_3m = (closes[-1] - closes[0]) / closes[0] * 100
+                data[ticker] = {
+                    "name": name,
+                    "price": round(float(closes[-1]), 2),
+                    "return_1m": round(float(ret_1m), 1),
+                    "return_3m": round(float(ret_3m), 1),
+                    "trend": "up" if ret_1m > 0 else "down",
+                }
             except Exception:
                 pass
 
@@ -749,3 +759,307 @@ class MLSignal:
             "total_votes": total_votes,
             "features": {k: round(v, 2) for k, v in features.items()},
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ADAPTIVE PARAMS — 3-Layer Dynamic Exit Parameter Engine
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class AdaptiveParams:
+    """
+    3-Layer adaptive exit parameter engine for regime-aware trading.
+
+    Layer 1: ATR-based volatility scaling (stock-specific)
+             → eliminates hard-coded Korean/US distinction
+    Layer 2: Regime matrix (VolatilityRegime × RegimeSwitching → strategy profile)
+             → adapts to market conditions: bull/bear/sideways × calm/volatile
+    Layer 3: ML confidence adjustment (MLSignal ensemble)
+             → fine-tunes based on signal consensus strength
+
+    Usage:
+        params = AdaptiveParams.calculate(closes, highs, lows, volumes)
+        # params["tp_pct"], params["sl_pct"], params["trail_pct"],
+        # params["cooldown"], params["position_mult"], params["profile"]
+    """
+
+    # ── Strategy Profiles ─────────────────────────────────────────────────────
+    # (tp_atr_mult, sl_atr_mult, trail_atr_mult, cooldown_days)
+    PROFILES = {
+        "trend_rider": {"tp": 30.0, "sl": 3.0, "trail": 5.0, "cooldown": 2,
+                        "label": "Trend Rider", "label_kr": "추세 추종",
+                        "desc": "Strong trend — ride it, exit only on trailing stop",
+                        "tp_mode": "trailing_only"},  # TP very high → rely on trail
+        "momentum":    {"tp": 14.0, "sl": 3.0, "trail": 4.0, "cooldown": 3,
+                        "label": "Momentum", "label_kr": "모멘텀",
+                        "desc": "Moderate trend — balanced risk/reward"},
+        "scalper":     {"tp": 3.5, "sl": 2.0, "trail": 3.0, "cooldown": 3,
+                        "label": "Scalper", "label_kr": "단타",
+                        "desc": "Choppy market — take quick profits"},
+        "defensive":   {"tp": 3.0, "sl": 3.0, "trail": 2.5, "cooldown": 5,
+                        "label": "Defensive", "label_kr": "방어적",
+                        "desc": "Weakening market — protect capital"},
+        "survival":    {"tp": 2.0, "sl": 3.5, "trail": 2.0, "cooldown": 7,
+                        "label": "Survival", "label_kr": "생존 모드",
+                        "desc": "Bear market — minimal exposure"},
+    }
+
+    # ── Regime → Profile Mapping ──────────────────────────────────────────────
+    # Key: (trend_regime, vol_regime) → profile name
+    REGIME_MAP = {
+        # BULL market
+        ("BULL", "LOW_VOL"):    "trend_rider",
+        ("BULL", "NORMAL"):     "trend_rider",
+        ("BULL", "HIGH_VOL"):   "momentum",
+        ("BULL", "CRISIS"):     "defensive",
+        # MILD BULL — still a bull market, trend ride when vol allows
+        ("MILD_BULL", "LOW_VOL"):  "trend_rider",
+        ("MILD_BULL", "NORMAL"):   "trend_rider",
+        ("MILD_BULL", "HIGH_VOL"): "momentum",
+        ("MILD_BULL", "CRISIS"):   "defensive",
+        # TRANSITION (sideways)
+        ("TRANSITION", "LOW_VOL"):  "scalper",
+        ("TRANSITION", "NORMAL"):   "scalper",
+        ("TRANSITION", "HIGH_VOL"): "defensive",
+        ("TRANSITION", "CRISIS"):   "survival",
+        # MILD BEAR
+        ("MILD_BEAR", "LOW_VOL"):  "scalper",
+        ("MILD_BEAR", "NORMAL"):   "defensive",
+        ("MILD_BEAR", "HIGH_VOL"): "survival",
+        ("MILD_BEAR", "CRISIS"):   "survival",
+        # BEAR
+        ("BEAR", "LOW_VOL"):  "defensive",
+        ("BEAR", "NORMAL"):   "survival",
+        ("BEAR", "HIGH_VOL"): "survival",
+        ("BEAR", "CRISIS"):   None,  # skip — don't trade
+    }
+
+    @staticmethod
+    def calculate(closes, highs, lows, volumes):
+        """
+        Calculate adaptive exit parameters based on current market regime.
+
+        Args:
+            closes, highs, lows, volumes: numpy arrays of price data
+
+        Returns:
+            dict with tp_pct, sl_pct, trail_pct, cooldown, position_mult,
+            profile, regime_info, skip_trade, layers_active
+        """
+        closes = np.array(closes, dtype=float)
+        highs = np.array(highs, dtype=float)
+        lows = np.array(lows, dtype=float)
+        volumes = np.array(volumes, dtype=float)
+        n = len(closes)
+
+        # ── Layer 1: ATR-based volatility scaling ─────────────────────────────
+        atr = AdaptiveParams._calc_atr(highs, lows, closes)
+        price = closes[-1]
+        atr_pct = (atr / price) * 100 if price > 0 else 2.0
+
+        layers_active = ["ATR"]
+
+        # ── Layer 2: Regime detection ─────────────────────────────────────────
+        vol_regime = "NORMAL"
+        trend_regime = "TRANSITION"
+        position_mult = 1.0
+        regime_confidence = 0
+        shifting = False
+
+        # VolatilityRegime (needs 60+ bars)
+        if n >= 60:
+            vr = VolatilityRegime.analyze(closes)
+            if vr:
+                vol_regime = vr["regime"]
+                position_mult = vr["position_multiplier"]
+                layers_active.append("VolRegime")
+        elif n >= 20:
+            # Fallback: simple vol classification
+            vol_ann = np.std(np.diff(np.log(closes[-20:]))) * np.sqrt(252) * 100
+            if vol_ann < 15:
+                vol_regime = "LOW_VOL"
+                position_mult = 1.3
+            elif vol_ann < 30:
+                vol_regime = "NORMAL"
+                position_mult = 1.0
+            elif vol_ann < 50:
+                vol_regime = "HIGH_VOL"
+                position_mult = 0.5
+            else:
+                vol_regime = "CRISIS"
+                position_mult = 0.2
+            layers_active.append("VolFallback")
+
+        # RegimeSwitching (needs 80+ bars)
+        if n >= 80:
+            rs = RegimeSwitching.analyze(closes)
+            if rs:
+                trend_regime = rs["regime"]
+                regime_confidence = rs.get("confidence", 50)
+                shifting = rs.get("shifting", False)
+                layers_active.append("RegimeSwitch")
+        elif n >= 25:
+            # Fallback: simple momentum classification
+            ret_20 = (closes[-1] - closes[-20]) / closes[-20] * 100
+            if ret_20 > 10:
+                trend_regime = "BULL"
+            elif ret_20 > 3:
+                trend_regime = "MILD_BULL"
+            elif ret_20 > -3:
+                trend_regime = "TRANSITION"
+            elif ret_20 > -10:
+                trend_regime = "MILD_BEAR"
+            else:
+                trend_regime = "BEAR"
+            layers_active.append("TrendFallback")
+
+        # Look up profile from regime matrix
+        profile_name = AdaptiveParams.REGIME_MAP.get(
+            (trend_regime, vol_regime), "scalper"
+        )
+
+        # Skip trade signal
+        if profile_name is None:
+            return {
+                "tp_pct": 0, "sl_pct": 0, "trail_pct": 0,
+                "cooldown": 99, "position_mult": 0,
+                "profile": "skip",
+                "profile_label": "No Trade",
+                "profile_label_kr": "거래 중단",
+                "skip_trade": True,
+                "regime_info": {
+                    "vol_regime": vol_regime,
+                    "trend_regime": trend_regime,
+                    "shifting": shifting,
+                },
+                "layers_active": layers_active,
+                "atr": round(atr, 4),
+                "atr_pct": round(atr_pct, 2),
+            }
+
+        # If regime is shifting, use more conservative profile
+        if shifting and profile_name in ("trend_rider", "momentum"):
+            profile_name = "scalper"
+
+        profile = AdaptiveParams.PROFILES[profile_name]
+
+        # Convert ATR multipliers → percentages
+        tp_pct = atr_pct * profile["tp"]
+        sl_pct = atr_pct * profile["sl"]
+        trail_pct = atr_pct * profile["trail"]
+        cooldown = profile["cooldown"]
+
+        # ── Layer 3: ML confidence adjustment ─────────────────────────────────
+        ml_adj = {"applied": False}
+        if n >= 100:
+            ml = MLSignal.generate(closes, highs, lows, volumes)
+            if ml:
+                layers_active.append("MLSignal")
+                conf = ml["confidence"]
+                ml_dir = ml["direction"]
+                ml_adj = {
+                    "applied": True,
+                    "confidence": conf,
+                    "direction": ml_dir,
+                    "signal": ml["signal"],
+                }
+
+                # High confidence → widen TP (let winners run)
+                if conf > 70:
+                    tp_pct *= 1.25
+                    ml_adj["tp_boost"] = "+25%"
+                elif conf > 50:
+                    tp_pct *= 1.1
+                    ml_adj["tp_boost"] = "+10%"
+
+                # Low confidence → tighten everything
+                if conf < 30:
+                    tp_pct *= 0.8
+                    sl_pct *= 1.2
+                    ml_adj["risk_reduction"] = True
+
+                # ML disagrees with regime → extra caution
+                regime_bullish = trend_regime in ("BULL", "MILD_BULL")
+                ml_bullish = ml_dir == "up"
+                if regime_bullish != ml_bullish and ml_dir != "flat":
+                    cooldown = int(cooldown * 1.5)
+                    position_mult *= 0.7
+                    ml_adj["conflict"] = True
+                    ml_adj["conflict_msg"] = (
+                        f"ML says {ml['signal']} but regime is {trend_regime}"
+                    )
+
+        # ── Apply floors & caps ───────────────────────────────────────────────
+        # Trend rider: high TP floor forces trailing-stop-only exits
+        is_trend_rider = profile_name == "trend_rider"
+        tp_floor = 50.0 if is_trend_rider else 5.0
+        tp_pct = max(tp_floor, min(80.0, tp_pct))
+        sl_pct = max(2.0, min(25.0, sl_pct))
+        trail_pct = max(2.0, min(20.0, trail_pct))
+        cooldown = max(1, min(10, cooldown))
+
+        return {
+            "tp_pct": round(tp_pct, 1),
+            "sl_pct": round(sl_pct, 1),
+            "trail_pct": round(trail_pct, 1),
+            "cooldown": cooldown,
+            "position_mult": round(position_mult, 2),
+            "profile": profile_name,
+            "profile_label": profile["label"],
+            "profile_label_kr": profile["label_kr"],
+            "profile_desc": profile["desc"],
+            "skip_trade": False,
+            "regime_info": {
+                "vol_regime": vol_regime,
+                "trend_regime": trend_regime,
+                "confidence": regime_confidence,
+                "shifting": shifting,
+            },
+            "layers_active": layers_active,
+            "atr": round(atr, 4),
+            "atr_pct": round(atr_pct, 2),
+            "ml_adjustment": ml_adj,
+            # Adaptive buy/sell thresholds
+            "buy_threshold": AdaptiveParams._calc_threshold(
+                trend_regime, vol_regime, "buy"),
+            "sell_threshold": AdaptiveParams._calc_threshold(
+                trend_regime, vol_regime, "sell"),
+        }
+
+    @staticmethod
+    def _calc_threshold(trend_regime, vol_regime, side):
+        """Dynamic buy/sell score thresholds based on regime."""
+        if side == "buy":
+            # Bull market: lower bar to enter (ride the trend)
+            # Bear market: higher bar (only enter on strong signals)
+            base = {
+                "BULL": 50, "MILD_BULL": 55, "TRANSITION": 60,
+                "MILD_BEAR": 65, "BEAR": 70,
+            }.get(trend_regime, 60)
+            # High vol: raise threshold (more uncertainty)
+            vol_adj = {
+                "LOW_VOL": -3, "NORMAL": 0, "HIGH_VOL": 3, "CRISIS": 8,
+            }.get(vol_regime, 0)
+            return max(40, min(75, base + vol_adj))
+        else:  # sell
+            base = {
+                "BULL": 20, "MILD_BULL": 25, "TRANSITION": 30,
+                "MILD_BEAR": 35, "BEAR": 40,
+            }.get(trend_regime, 30)
+            vol_adj = {
+                "LOW_VOL": -2, "NORMAL": 0, "HIGH_VOL": 2, "CRISIS": 5,
+            }.get(vol_regime, 0)
+            return max(15, min(45, base + vol_adj))
+
+    @staticmethod
+    def _calc_atr(highs, lows, closes, period=14):
+        """Average True Range — volatility in price units."""
+        n = len(closes)
+        if n < 2:
+            return abs(highs[-1] - lows[-1]) if n > 0 else 0
+
+        period = min(period, n - 1)
+        trs = []
+        for i in range(-period, 0):
+            h, l, pc = highs[i], lows[i], closes[i - 1]
+            trs.append(max(h - l, abs(h - pc), abs(l - pc)))
+        return np.mean(trs) if trs else 0

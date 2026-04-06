@@ -101,7 +101,7 @@ class DataFetcher:
             return f"₩{price:,.0f}"
         return f"${price:,.2f}"
 
-    def quick_lookup(self, ticker: str) -> dict | None:
+    def quick_lookup(self, ticker: str) -> "dict | None":
         """
         Fast ticker lookup for real-time modal UX.
         Uses fast_info (< 1s) for price. Name from KOREAN_NAMES dict or yfinance info.
@@ -293,124 +293,119 @@ class DataFetcher:
     # ── Macro Data ────────────────────────────────────────────────────────────
 
     def get_macro_data(self) -> dict:
-        macro: dict = {}
-
-        # Fear & Greed Index (alternative.me — free, no key)
-        try:
-            r = requests.get("https://api.alternative.me/fng/", timeout=6)
-            if r.ok:
-                d = r.json()["data"][0]
-                macro["fear_greed"] = {"value": int(d["value"]), "label": d["value_classification"]}
-        except Exception:
-            macro["fear_greed"] = {"value": 50, "label": "Neutral"}
-
-        # Equity indices
-        indices = [
-            ("^GSPC", "sp500"), ("^IXIC", "nasdaq"),
-            ("^DJI", "dow"), ("^RUT", "russell2000"),
-            ("^KS11", "kospi"), ("^KQ11", "kosdaq"),
-        ]
-        for sym, key in indices:
-            try:
-                h = yf.Ticker(sym).history(period="5d")
-                if len(h) >= 2:
-                    chg = (h["Close"].iloc[-1] - h["Close"].iloc[-2]) / h["Close"].iloc[-2] * 100
-                    macro[key] = {
-                        "price":      self._safe(h["Close"].iloc[-1]),
-                        "change_pct": self._safe(chg),
-                    }
-            except Exception:
-                pass
-
-        # VIX
-        try:
-            h = yf.Ticker("^VIX").history(period="5d")
-            if not h.empty:
-                macro["vix"] = round(float(h["Close"].iloc[-1]), 2)
-        except Exception:
-            pass
-
-        # Rates (10Y)
-        try:
-            h = yf.Ticker("^TNX").history(period="5d")
-            if not h.empty:
-                macro["treasury_10y"] = round(float(h["Close"].iloc[-1]), 2)
-        except Exception:
-            pass
-
-        return macro
+        """Basic macro data — delegates to get_enhanced_macro for full batch."""
+        return self.get_enhanced_macro()
 
     def get_enhanced_macro(self) -> dict:
-        """Full macro snapshot including commodities, FX, crypto, yield curve."""
-        macro = self.get_macro_data()
+        """Full macro snapshot — single batch yf.download() for speed."""
+        from concurrent.futures import ThreadPoolExecutor
+        macro: dict = {}
+
+        # Fear & Greed Index (parallel with yfinance)
+        fng_future = None
+        executor = ThreadPoolExecutor(max_workers=2)
+        def _fetch_fng():
+            try:
+                r = requests.get("https://api.alternative.me/fng/", timeout=6)
+                if r.ok:
+                    d = r.json()["data"][0]
+                    return {"value": int(d["value"]), "label": d["value_classification"]}
+            except Exception:
+                pass
+            return {"value": 50, "label": "Neutral"}
+        fng_future = executor.submit(_fetch_fng)
+
+        # ── Single batch download for ALL tickers ──
+        all_syms = [
+            "^GSPC", "^IXIC", "^DJI", "^RUT",        # US indices
+            "^KS11", "^KQ11",                          # Korean indices
+            "^VIX", "^TNX",                             # Volatility & rates
+            "CL=F", "GC=F", "SI=F",                    # Commodities
+            "DX-Y.NYB", "EURUSD=X", "KRW=X", "JPY=X", # FX
+            "BTC-USD",                                   # Crypto
+            "^IRX", "^TYX",                              # Yield curve (3M, 30Y)
+        ]
+        try:
+            batch = yf.download(all_syms, period="5d", group_by="ticker",
+                                threads=True, progress=False)
+        except Exception:
+            batch = pd.DataFrame()
+
+        def _extract(sym):
+            """Extract price & change_pct from batch download."""
+            try:
+                if len(all_syms) == 1:
+                    h = batch
+                else:
+                    h = batch[sym] if sym in batch.columns.get_level_values(0) else pd.DataFrame()
+                if h.empty or len(h) < 2:
+                    return None, None
+                close = h["Close"].dropna()
+                if len(close) < 2:
+                    return float(close.iloc[-1]), None
+                price = float(close.iloc[-1])
+                prev  = float(close.iloc[-2])
+                chg   = (price - prev) / prev * 100 if prev else 0
+                return price, chg
+            except Exception:
+                return None, None
+
+        # Equity indices
+        for sym, key in [("^GSPC","sp500"),("^IXIC","nasdaq"),("^DJI","dow"),
+                         ("^RUT","russell2000"),("^KS11","kospi"),("^KQ11","kosdaq")]:
+            price, chg = _extract(sym)
+            if price is not None:
+                macro[key] = {"price": self._safe(price), "change_pct": self._safe(chg)}
+
+        # VIX
+        price, _ = _extract("^VIX")
+        if price is not None:
+            macro["vix"] = round(price, 2)
+
+        # 10Y Treasury
+        price, _ = _extract("^TNX")
+        if price is not None:
+            macro["treasury_10y"] = round(price, 2)
 
         # Commodities
-        for sym, key, name in [
-            ("CL=F", "oil_wti", "WTI Crude Oil"),
-            ("GC=F", "gold",    "Gold"),
-            ("SI=F", "silver",  "Silver"),
-        ]:
-            try:
-                h = yf.Ticker(sym).history(period="5d")
-                if len(h) >= 2:
-                    chg = (h["Close"].iloc[-1] - h["Close"].iloc[-2]) / h["Close"].iloc[-2] * 100
-                    macro[key] = {
-                        "price":      self._safe(h["Close"].iloc[-1]),
-                        "change_pct": self._safe(chg),
-                        "name":       name,
-                    }
-            except Exception:
-                pass
+        for sym, key, name in [("CL=F","oil_wti","WTI Crude Oil"),
+                                ("GC=F","gold","Gold"),("SI=F","silver","Silver")]:
+            price, chg = _extract(sym)
+            if price is not None:
+                macro[key] = {"price": self._safe(price), "change_pct": self._safe(chg), "name": name}
 
         # FX
-        for sym, key, name in [
-            ("DX-Y.NYB", "dxy",    "US Dollar Index"),
-            ("EURUSD=X", "eurusd", "EUR/USD"),
-            ("KRW=X",    "usdkrw", "USD/KRW"),
-            ("JPY=X",    "usdjpy", "USD/JPY"),
-        ]:
-            try:
-                h = yf.Ticker(sym).history(period="5d")
-                if len(h) >= 2:
-                    chg = (h["Close"].iloc[-1] - h["Close"].iloc[-2]) / h["Close"].iloc[-2] * 100
-                    macro[key] = {
-                        "price":      round(float(h["Close"].iloc[-1]), 4),
-                        "change_pct": round(float(chg), 2),
-                        "name":       name,
-                    }
-            except Exception:
-                pass
+        for sym, key, name in [("DX-Y.NYB","dxy","US Dollar Index"),
+                                ("EURUSD=X","eurusd","EUR/USD"),
+                                ("KRW=X","usdkrw","USD/KRW"),
+                                ("JPY=X","usdjpy","USD/JPY")]:
+            price, chg = _extract(sym)
+            if price is not None:
+                macro[key] = {"price": round(price, 4), "change_pct": round(chg, 2) if chg else 0, "name": name}
 
         # Crypto
+        price, chg = _extract("BTC-USD")
+        if price is not None:
+            macro["btc"] = {"price": self._safe(price, 0), "change_pct": self._safe(chg)}
+
+        # Yield curve
         try:
-            h = yf.Ticker("BTC-USD").history(period="5d")
-            if len(h) >= 2:
-                chg = (h["Close"].iloc[-1] - h["Close"].iloc[-2]) / h["Close"].iloc[-2] * 100
-                macro["btc"] = {
-                    "price":      self._safe(h["Close"].iloc[-1], 0),
-                    "change_pct": self._safe(chg),
+            p3m, _ = _extract("^IRX")
+            p10y, _ = _extract("^TNX")
+            p30y, _ = _extract("^TYX")
+            if p3m is not None and p10y is not None:
+                spread = round(p10y - p3m, 2)
+                macro["yield_curve"] = {
+                    "t3m": self._safe(p3m), "t10y": self._safe(p10y),
+                    "t30y": self._safe(p30y) if p30y else None,
+                    "spread": spread, "inverted": spread < 0,
                 }
         except Exception:
             pass
 
-        # Yield curve (3M vs 10Y inversion check)
-        try:
-            h_short = yf.Ticker("^IRX").history(period="5d")   # 13-week T-bill
-            h_long  = yf.Ticker("^TNX").history(period="5d")   # 10Y
-            h_30    = yf.Ticker("^TYX").history(period="5d")   # 30Y
-            if not h_short.empty and not h_long.empty:
-                s = self._safe(h_short["Close"].iloc[-1])
-                l = self._safe(h_long["Close"].iloc[-1])
-                spread = round(l - s, 2)
-                macro["yield_curve"] = {
-                    "t3m":     s,
-                    "t10y":    l,
-                    "t30y":    self._safe(h_30["Close"].iloc[-1]) if not h_30.empty else None,
-                    "spread":  spread,
-                    "inverted": spread < 0,
-                }
-        except Exception:
-            pass
+        # Fear & Greed (collect from parallel thread)
+        macro["fear_greed"] = fng_future.result(timeout=8)
+        executor.shutdown(wait=False)
 
         return macro
 
@@ -516,7 +511,7 @@ class DataFetcher:
 
     # ── Stock Snapshot ────────────────────────────────────────────────────────
 
-    def get_stock_snapshot(self, ticker: str) -> dict | None:
+    def get_stock_snapshot(self, ticker: str) -> "dict | None":
         try:
             # Auto-append .KS for Korean stock codes
             if ticker.strip().isdigit() and len(ticker.strip()) == 6:
@@ -577,7 +572,7 @@ class DataFetcher:
             logger.error(f"Snapshot failed {ticker}: {e}")
             return None
 
-    def get_price_history(self, ticker: str, period: str = "6mo") -> pd.DataFrame | None:
+    def get_price_history(self, ticker: str, period: str = "6mo") -> "pd.DataFrame | None":
         try:
             h = yf.Ticker(ticker).history(period=period)
             return h if not h.empty else None
@@ -625,17 +620,24 @@ class DataFetcher:
             ("XLRE", "Real Estate"),   ("XLU", "Utilities"),
             ("XLC", "Comm. Services"),
         ]
+        syms = [s[0] for s in sectors]
         result = []
+        try:
+            batch = yf.download(syms, period="5d", group_by="ticker",
+                                threads=True, progress=False)
+        except Exception:
+            return result
         for sym, name in sectors:
             try:
-                h = yf.Ticker(sym).history(period="5d")
-                if len(h) >= 2:
-                    chg = (h["Close"].iloc[-1] - h["Close"].iloc[-2]) / h["Close"].iloc[-2] * 100
+                h = batch[sym] if sym in batch.columns.get_level_values(0) else pd.DataFrame()
+                close = h["Close"].dropna()
+                if len(close) >= 2:
+                    chg = (float(close.iloc[-1]) - float(close.iloc[-2])) / float(close.iloc[-2]) * 100
                     result.append({
                         "sector":     name,
                         "symbol":     sym,
-                        "change_pct": round(float(chg), 2),
-                        "price":      round(float(h["Close"].iloc[-1]), 2),
+                        "change_pct": round(chg, 2),
+                        "price":      round(float(close.iloc[-1]), 2),
                     })
             except Exception:
                 pass

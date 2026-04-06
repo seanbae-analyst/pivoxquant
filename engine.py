@@ -46,7 +46,7 @@ class QuantEngine:
     # ── Public ────────────────────────────────────────────────────────────────
 
     def analyze(self, ticker: str, capital_usd: float = 10_000.0,
-                capital_krw: float = 0.0) -> dict | None:
+                capital_krw: float = 0.0) -> "dict | None":
         ticker   = ticker.upper().strip()
         snapshot = _fetcher.get_stock_snapshot(ticker)
         hist     = _fetcher.get_price_history(ticker, "6mo")
@@ -136,14 +136,45 @@ class QuantEngine:
                 sell_pct    = 50
                 sell_timing = "Reduce by half — protect gains"
 
-        # Take-profit / stop-loss targets
+        # Take-profit / stop-loss targets (adaptive via 3-Layer regime model)
         beta = snapshot.get("beta") or 1.0
-        if signal == "BUY":
+        try:
+            from quant_models import AdaptiveParams
+            ap = AdaptiveParams.calculate(
+                hist["Close"].values, hist["High"].values,
+                hist["Low"].values, hist["Volume"].values
+            )
+            regime_profile = ap["profile"]
+            regime_label = ap.get("profile_label", "")
+            regime_label_kr = ap.get("profile_label_kr", "")
+            regime_desc = ap.get("profile_desc", "")
+            regime_info = ap.get("regime_info", {})
+            layers_active = ap.get("layers_active", [])
+
+            if ap["skip_trade"]:
+                tp_pct = 0
+                sl_pct = 0
+            elif signal == "BUY":
+                tp_pct = ap["tp_pct"]
+                sl_pct = -ap["sl_pct"]
+            elif signal == "SELL":
+                # For SELL: use adaptive SL as cover target
+                tp_pct = ap["sl_pct"]  # profit from short ≈ SL distance
+                sl_pct = -ap["tp_pct"] * 0.3  # stop for short ≈ 30% of TP
+            else:
+                # HOLD: show what params WOULD be if entering
+                tp_pct = ap["tp_pct"]
+                sl_pct = -ap["sl_pct"]
+        except Exception:
+            beta = snapshot.get("beta") or 1.0
             tp_pct = 30 if composite >= 85 else 20
             sl_pct = -12 if beta > 1.5 else -8
-        else:
-            tp_pct = 15
-            sl_pct = -8
+            regime_profile = "default"
+            regime_label = ""
+            regime_label_kr = ""
+            regime_desc = ""
+            regime_info = {}
+            layers_active = []
 
         # Priority score for capital allocation ranking
         safe_beta = max(float(beta) if beta else 1.0, 0.5)
@@ -178,6 +209,12 @@ class QuantEngine:
             "sl_pct":          sl_pct,
             "take_profit":     round(price * (1 + tp_pct / 100), dp),
             "stop_loss":       round(price * (1 + sl_pct / 100), dp),
+            "regime_profile":  regime_profile,
+            "regime_label":    regime_label,
+            "regime_label_kr": regime_label_kr,
+            "regime_desc":     regime_desc,
+            "regime_info":     regime_info,
+            "layers_active":   layers_active,
             "priority":        priority,
             "capital_gap":     capital_gap,
             "signals":         tech_sigs + fund_sigs + news_sigs + quant_sigs,
