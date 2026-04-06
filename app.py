@@ -241,6 +241,7 @@ def get_portfolio():
             "ticker":        p.ticker,
             "shares":        p.shares,
             "avg_cost":      p.avg_cost,
+            "price":         cur_px,
             "current_price": cur_px,
             "price_display": sd.get("price_display", f"${cur_px:.2f}"),
             "pnl_pct":       round(pnl, 2),
