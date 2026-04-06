@@ -203,30 +203,55 @@ class DayTradeService:
         day_open = bars[0]["open"] if bars else cur_price
         change_pct = round((cur_price - day_open) / day_open * 100, 2) if day_open else 0
 
-        # ── TP/SL + Trailing Stop ──
-        # ATR (Average True Range) for dynamic TP/SL
+        # ── TP/SL + Trailing Stop (regime-adaptive) ──
         atr = self._calc_atr(bars, 14) if len(bars) >= 15 else None
+
+        # Get daily regime for ATR multiplier adjustment
+        regime_profile = "default"
+        tp_mult, sl_mult = 2.0, 1.0  # ATR multipliers (default)
+        try:
+            import yfinance as yf
+            from quant_models import AdaptiveParams
+            hist = yf.Ticker(ticker).history(period="3mo")
+            if not hist.empty and len(hist) >= 20:
+                ap = AdaptiveParams.calculate(
+                    hist["Close"].values, hist["High"].values,
+                    hist["Low"].values, hist["Volume"].values
+                )
+                regime_profile = ap["profile"]
+                # Scale intraday ATR mults based on daily regime
+                if regime_profile == "trend_rider":
+                    tp_mult, sl_mult = 3.0, 1.5   # wider TP in trends
+                elif regime_profile == "momentum":
+                    tp_mult, sl_mult = 2.5, 1.2
+                elif regime_profile == "defensive":
+                    tp_mult, sl_mult = 1.5, 1.5   # tighter TP, wider SL
+                elif regime_profile == "survival":
+                    tp_mult, sl_mult = 1.0, 2.0   # tight TP, wide SL
+                # scalper keeps default 2.0, 1.0
+        except Exception:
+            pass
 
         if signal == "BUY":
             if atr:
-                tp_price = round(cur_price + atr * 2, 2)    # 2x ATR profit
-                sl_price = round(cur_price - atr * 1, 2)    # 1x ATR stop
-                trail_pct = round((atr / cur_price) * 100, 2)  # Trailing stop %
+                tp_price = round(cur_price + atr * tp_mult, 2)
+                sl_price = round(cur_price - atr * sl_mult, 2)
+                trail_pct = round((atr / cur_price) * 100 * (tp_mult / 2), 2)
             else:
-                tp_price = round(cur_price * 1.02, 2)   # +2% default
-                sl_price = round(cur_price * 0.99, 2)   # -1% default
+                tp_price = round(cur_price * 1.02, 2)
+                sl_price = round(cur_price * 0.99, 2)
                 trail_pct = 1.0
             tp_pct = round((tp_price - cur_price) / cur_price * 100, 2)
             sl_pct = round((sl_price - cur_price) / cur_price * 100, 2)
-            signals.append({"type": "neutral", "msg": f"Entry: ${cur_price:.2f} → TP: ${tp_price:.2f} (+{tp_pct}%) · SL: ${sl_price:.2f} ({sl_pct}%)", "msg_kr": f"진입: ${cur_price:.2f} → 익절: ${tp_price:.2f} (+{tp_pct}%) · 손절: ${sl_price:.2f} ({sl_pct}%)"})
+            signals.append({"type": "neutral", "msg": f"Entry: ${cur_price:.2f} → TP: ${tp_price:.2f} (+{tp_pct}%) · SL: ${sl_price:.2f} ({sl_pct}%) [{regime_profile}]", "msg_kr": f"진입: ${cur_price:.2f} → 익절: ${tp_price:.2f} (+{tp_pct}%) · 손절: ${sl_price:.2f} ({sl_pct}%) [{regime_profile}]"})
             signals.append({"type": "neutral", "msg": f"Trailing stop: {trail_pct}% — auto-adjusts as price rises", "msg_kr": f"트레일링 스탑: {trail_pct}% — 가격 상승 시 자동 조정"})
         elif signal == "SELL":
-            tp_price = round(cur_price * 0.98, 2)   # -2% target (short)
-            sl_price = round(cur_price * 1.01, 2)   # +1% stop (short)
-            trail_pct = 1.0
+            tp_price = round(cur_price * (1 - 0.02 * sl_mult), 2)
+            sl_price = round(cur_price * (1 + 0.01 * sl_mult), 2)
+            trail_pct = round(1.0 * sl_mult, 2)
             tp_pct = round((tp_price - cur_price) / cur_price * 100, 2)
             sl_pct = round((sl_price - cur_price) / cur_price * 100, 2)
-            signals.append({"type": "neutral", "msg": f"Exit target: ${tp_price:.2f} ({tp_pct}%) · Stop: ${sl_price:.2f} (+{sl_pct}%)", "msg_kr": f"청산 목표: ${tp_price:.2f} ({tp_pct}%) · 손절: ${sl_price:.2f} (+{sl_pct}%)"})
+            signals.append({"type": "neutral", "msg": f"Exit target: ${tp_price:.2f} ({tp_pct}%) · Stop: ${sl_price:.2f} (+{sl_pct}%) [{regime_profile}]", "msg_kr": f"청산 목표: ${tp_price:.2f} ({tp_pct}%) · 손절: ${sl_price:.2f} (+{sl_pct}%) [{regime_profile}]"})
         else:
             tp_price = None
             sl_price = None
@@ -255,6 +280,7 @@ class DayTradeService:
             "sl_pct": sl_pct,
             "trailing_stop_pct": trail_pct,
             "atr": round(atr, 2) if atr else None,
+            "regime_profile": regime_profile,
         }
 
     def scan_momentum(self):
