@@ -98,12 +98,13 @@ class User(UserMixin, db.Model):
 
 class Position(db.Model):
     __tablename__ = "positions"
-    id       = db.Column(db.Integer, primary_key=True)
-    user_id  = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    ticker   = db.Column(db.String(20),  nullable=False)
-    shares   = db.Column(db.Float,       nullable=False)
-    avg_cost = db.Column(db.Float,       nullable=False)
-    added_at = db.Column(db.DateTime,    default=datetime.utcnow)
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    ticker     = db.Column(db.String(20),  nullable=False)
+    shares     = db.Column(db.Float,       nullable=False)
+    avg_cost   = db.Column(db.Float,       nullable=False)
+    buy_fx_rate = db.Column(db.Float,      default=0.0)   # USD/KRW at buy time (US stocks only)
+    added_at   = db.Column(db.DateTime,    default=datetime.utcnow)
 
 
 class Alert(db.Model):
@@ -163,6 +164,8 @@ except Exception:
     pass
 
 # ── Auth helpers ───────────────────────────────────────────────────────────────
+
+_usdkrw = 1380.0  # Updated from market overview API
 
 @lm.user_loader
 def load_user(uid): return db.session.get(User, int(uid))
@@ -236,6 +239,16 @@ def get_portfolio():
         cur_px = sd.get("price", p.avg_cost)
         pnl    = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
         cur    = sd.get("currency", "KRW" if is_kr else "USD")
+        # KRW P&L for US stocks (토스 기준 환산)
+        buy_fx = getattr(p, 'buy_fx_rate', 0) or 0
+        krw_pnl_pct = None
+        krw_cost = None
+        krw_value = None
+        if not is_kr and buy_fx > 0:
+            krw_cost = p.avg_cost * buy_fx * p.shares
+            krw_value = cur_px * _usdkrw * p.shares
+            krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
+
         out.append({
             "id":            p.id,
             "ticker":        p.ticker,
@@ -245,6 +258,11 @@ def get_portfolio():
             "current_price": cur_px,
             "price_display": sd.get("price_display", f"${cur_px:.2f}"),
             "pnl_pct":       round(pnl, 2),
+            "pnl_krw_pct":   krw_pnl_pct,
+            "buy_fx_rate":   buy_fx,
+            "cur_fx_rate":   _usdkrw if not is_kr else 0,
+            "krw_cost":      round(krw_cost) if krw_cost else None,
+            "krw_value":     round(krw_value) if krw_value else None,
             "market_value":  round(cur_px * p.shares, 2),
             "signal":        sd.get("signal", "—"),
             "score":         sd.get("score", 0),
@@ -287,14 +305,20 @@ def add_position():
     cost   = float(d.get("avg_cost") or 0)
     if not ticker or shares <= 0 or cost <= 0:
         return jsonify({"error": "Ticker, shares, and average cost required"}), 400
+    is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
+    fx_rate = _usdkrw if not is_kr else 0.0
     ex = Position.query.filter_by(user_id=current_user.id, ticker=ticker).first()
     if ex:
         total = ex.shares * ex.avg_cost + shares * cost
+        # Weighted average FX rate
+        if not is_kr and ex.buy_fx_rate and fx_rate:
+            ex.buy_fx_rate = (ex.buy_fx_rate * ex.shares * ex.avg_cost + fx_rate * shares * cost) / total
         ex.shares   += shares
         ex.avg_cost  = total / ex.shares
     else:
         db.session.add(Position(user_id=current_user.id,
-                                ticker=ticker, shares=shares, avg_cost=cost))
+                                ticker=ticker, shares=shares, avg_cost=cost,
+                                buy_fx_rate=fx_rate))
     db.session.commit()
     _cache_ticker(ticker, current_user.available_capital)
     return jsonify({"ok": True})
@@ -1049,8 +1073,12 @@ def market_overview():
     now = _time.time()
     if _macro_cache["data"] and now - _macro_cache["ts"] < 300:   # 5-min cache
         return jsonify(_macro_cache["data"])
+    global _usdkrw
     macro   = fetcher.get_enhanced_macro()
     gs_view = fetcher.generate_gs_view(macro)
+    # Update global USD/KRW rate
+    if macro.get("usdkrw", {}).get("price"):
+        _usdkrw = macro["usdkrw"]["price"]
     result  = {"macro": macro, "gs_view": gs_view, "cached_at": datetime.utcnow().isoformat()}
     _macro_cache["data"] = result
     _macro_cache["ts"]   = now
@@ -1758,6 +1786,28 @@ with app.app_context():
             _conn.commit()
         except Exception:
             pass  # Column already exists
+        try:
+            _conn.execute(_text(
+                "ALTER TABLE positions ADD COLUMN buy_fx_rate FLOAT DEFAULT 0.0"
+            ))
+            _conn.commit()
+        except Exception:
+            pass  # Column already exists
+
+    # Backfill buy_fx_rate for existing US positions (use current rate as approximation)
+    try:
+        us_positions = Position.query.filter(
+            ~Position.ticker.endswith('.KS'),
+            ~Position.ticker.endswith('.KQ'),
+            (Position.buy_fx_rate == None) | (Position.buy_fx_rate == 0)
+        ).all()
+        if us_positions:
+            for p in us_positions:
+                p.buy_fx_rate = _usdkrw
+            db.session.commit()
+            logger.info(f"Backfilled buy_fx_rate for {len(us_positions)} US positions (rate: {_usdkrw})")
+    except Exception:
+        pass
 
     # Auto-populate signal cache on startup if empty
     try:
