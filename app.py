@@ -153,6 +153,15 @@ class Watchlist(db.Model):
 # Initialize AutoTrader with DB models
 trader = AutoTrader(db=db, Position=Position, TradeHistory=TradeHistory)
 
+# Connect KIS to AutoTrader for Korean paper trading
+try:
+    from kis_service import KISService
+    _kis_for_trader = KISService()
+    if _kis_for_trader.available:
+        trader.set_kis(_kis_for_trader)
+except Exception:
+    pass
+
 # ── Auth helpers ───────────────────────────────────────────────────────────────
 
 @lm.user_loader
@@ -1433,7 +1442,10 @@ def autotrade_stop():
 @app.route("/api/autotrade/sell-all", methods=["POST"])
 @api_auth
 def autotrade_sell_all():
-    return jsonify(trader.force_sell_all())
+    us_results = trader.force_sell_all()
+    kr_results = trader.force_sell_all_kr()
+    all_results = us_results.get("results", []) + kr_results
+    return jsonify({"results": all_results})
 
 # ── AI Analysis (SWOT, Competitor, Sector Trend) ──────────────────────────────
 
