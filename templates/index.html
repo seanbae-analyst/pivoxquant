@@ -1166,7 +1166,7 @@ function renderPCard(p) {
       <div><div class="pm-label">Shares</div><div class="pm-value">${p.shares}</div></div>
       <div><div class="pm-label">Current Price</div><div class="pm-value" style="font-size:12px;">${curPrice}</div></div>
       <div><div class="pm-label">Avg Cost</div><div class="pm-value" style="font-size:12px;">${avgCost}</div></div>
-      <div><div class="pm-label">P&L</div><div class="pm-value ${pnlCls}">${p.pnl_pct>=0?'+':''}${p.pnl_pct.toFixed(1)}% · ${mv}</div></div>
+      <div><div class="pm-label">P&L${!isKr && p.pnl_krw_pct != null ? ' <span style="font-size:8px;color:var(--muted);">(₩환산)</span>' : ''}</div><div class="pm-value ${pnlCls}">${p.pnl_pct>=0?'+':''}${p.pnl_pct.toFixed(1)}%${!isKr && p.pnl_krw_pct != null ? ` <span style="font-size:10px;color:${p.pnl_krw_pct>=0?'var(--green)':'var(--red)'};">(₩${p.pnl_krw_pct>=0?'+':''}${p.pnl_krw_pct.toFixed(1)}%)</span>` : ''} · ${mv}</div></div>
     </div>
     <div class="score-bar-wrap">
       <div class="score-bar-labels"><span>Quant Score</span><span style="color:${scoreCol}">${p.score?p.score.toFixed(0):'—'}/100</span></div>
