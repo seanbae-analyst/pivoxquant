@@ -80,7 +80,7 @@ export default function DetailPage() {
     setAiLoading("swot");
     try {
       const r = await apiFetch<{ swot: string; swot_kr: string }>("/api/ai/swot", {
-        method: "POST", body: JSON.stringify({ ticker }),
+        method: "POST", body: JSON.stringify(analysis),
       });
       setSwot(r);
     } catch { /* ignore */ }
@@ -92,7 +92,7 @@ export default function DetailPage() {
     setAiLoading("commentary");
     try {
       const r = await apiFetch<{ commentary: string; commentary_kr: string }>("/api/ai/commentary", {
-        method: "POST", body: JSON.stringify({ ticker }),
+        method: "POST", body: JSON.stringify(analysis),
       });
       setCommentary(r);
     } catch { /* ignore */ }
