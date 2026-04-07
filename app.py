@@ -92,7 +92,7 @@ class User(UserMixin, db.Model):
     alerts    = db.relationship("Alert",    backref="user", lazy=True,
                                 cascade="all, delete-orphan")
 
-    def set_pw(self, pw):  self.password_hash = generate_password_hash(pw)
+    def set_pw(self, pw):  self.password_hash = generate_password_hash(pw, method="pbkdf2:sha256")
     def chk_pw(self, pw):  return check_password_hash(self.password_hash, pw)
 
 
@@ -152,7 +152,7 @@ class Watchlist(db.Model):
     added_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Initialize AutoTrader with DB models
-trader = AutoTrader(db=db, Position=Position, TradeHistory=TradeHistory)
+trader = AutoTrader(db=db, Position=Position, TradeHistory=TradeHistory, app=app)
 
 # Connect KIS to AutoTrader for Korean paper trading
 try:
@@ -165,7 +165,42 @@ except Exception:
 
 # ── Auth helpers ───────────────────────────────────────────────────────────────
 
-_usdkrw = 1380.0  # Updated from market overview API
+_usdkrw = 1500.0  # Default, auto-updated every 30s
+_usdkrw_ts = 0.0
+
+def _refresh_usdkrw():
+    """Fast USD/KRW refresh — called from portfolio/market endpoints."""
+    global _usdkrw, _usdkrw_ts
+    import time as _t
+    now = _t.time()
+    if now - _usdkrw_ts < 30:  # 30s cache
+        return
+    _usdkrw_ts = now
+    try:
+        import yfinance as yf
+        rate = yf.Ticker("KRW=X").fast_info.get("lastPrice", 0)
+        if rate > 1000:
+            _usdkrw = round(rate, 2)
+    except Exception:
+        pass
+
+# Init on startup in background thread
+def _init_usdkrw():
+    import threading
+    def _fetch():
+        global _usdkrw, _usdkrw_ts
+        try:
+            import yfinance as yf
+            rate = yf.Ticker("KRW=X").fast_info.get("lastPrice", 0)
+            if rate > 1000:
+                _usdkrw = round(rate, 2)
+                _usdkrw_ts = __import__("time").time()
+                logger.info(f"USD/KRW initialized: {_usdkrw}")
+        except Exception:
+            pass
+    threading.Thread(target=_fetch, daemon=True).start()
+
+_init_usdkrw()
 
 @lm.user_loader
 def load_user(uid): return db.session.get(User, int(uid))
@@ -230,6 +265,7 @@ def me():
 @app.route("/api/portfolio")
 @api_auth
 def get_portfolio():
+    _refresh_usdkrw()
     positions = Position.query.filter_by(user_id=current_user.id).all()
     out = []
     for p in positions:
@@ -239,12 +275,18 @@ def get_portfolio():
         cur_px = sd.get("price", p.avg_cost)
         pnl    = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
         cur    = sd.get("currency", "KRW" if is_kr else "USD")
-        # KRW P&L for US stocks (토스 기준 환산)
+        # KRW P&L (토스 기준 환산)
         buy_fx = getattr(p, 'buy_fx_rate', 0) or 0
         krw_pnl_pct = None
         krw_cost = None
         krw_value = None
-        if not is_kr and buy_fx > 0:
+        if is_kr:
+            # Korean stocks: already in KRW
+            krw_cost = round(p.avg_cost * p.shares)
+            krw_value = round(cur_px * p.shares)
+            krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
+        elif buy_fx > 0:
+            # US stocks: convert to KRW using buy-time & current FX rates
             krw_cost = p.avg_cost * buy_fx * p.shares
             krw_value = cur_px * _usdkrw * p.shares
             krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
@@ -288,12 +330,17 @@ def get_portfolio():
         })
     total_usd = sum(p["market_value"] for p in out if p["currency"] == "USD")
     total_krw = sum(p["market_value"] for p in out if p["currency"] == "KRW")
+    # Unified KRW total (all positions converted to KRW at current rate)
+    total_all_krw = round(total_usd * _usdkrw + total_krw)
+    cap_krw = getattr(current_user, "available_capital_krw", 0.0) or 0.0
     return jsonify({
         "positions":             out,
         "available_capital":     current_user.available_capital,
-        "available_capital_krw": getattr(current_user, "available_capital_krw", 0.0) or 0.0,
+        "available_capital_krw": cap_krw,
         "total_value_usd":       round(total_usd, 2),
         "total_value_krw":       round(total_krw, 0),
+        "total_value_all_krw":   total_all_krw,
+        "fx_rate":               _usdkrw,
     })
 
 @app.route("/api/portfolio/position", methods=["POST"])
@@ -554,7 +601,7 @@ def get_signals():
 @app.route("/api/signals/<ticker>")
 @api_auth
 def signal_detail(ticker):
-    r = engine.analyze(ticker.upper(), current_user.available_capital, getattr(current_user, "available_capital_krw", 0.0) or 0.0)
+    r = engine.analyze(ticker.upper(), current_user.available_capital, getattr(current_user, "available_capital_krw", 0.0) or 0.0, fx_rate=_usdkrw)
     if not r:
         # Fallback: return cached data if available
         cached = db.session.get(SignalCache, ticker.upper())
@@ -567,10 +614,17 @@ def signal_detail(ticker):
 @app.route("/api/signals/refresh", methods=["POST"])
 @api_auth
 def refresh():
-    tickers = {p.ticker for p in Position.query.filter_by(user_id=current_user.id).all()}
+    positions = Position.query.filter_by(user_id=current_user.id).all()
+    pos_map = {p.ticker: p for p in positions}
     done = []
-    for t in tickers:
-        r = engine.analyze(t, current_user.available_capital, getattr(current_user, "available_capital_krw", 0.0) or 0.0)
+    for t, p in pos_map.items():
+        # Calculate current P&L for smart exit logic
+        cached = SignalCache.query.get(t)
+        cur_price = json.loads(cached.data_json).get("price", p.avg_cost) if cached and cached.data_json else p.avg_cost
+        pnl_pct = (cur_price - p.avg_cost) / p.avg_cost * 100 if p.avg_cost > 0 else 0
+        r = engine.analyze(t, current_user.available_capital,
+                          getattr(current_user, "available_capital_krw", 0.0) or 0.0,
+                          fx_rate=_usdkrw, current_pnl_pct=pnl_pct)
         if r:
             _save_cache(t, r)
             _maybe_alert(current_user.id, r)
@@ -601,7 +655,7 @@ def discover():
 
     def _analyze_one(ticker):
         try:
-            r = engine.analyze(ticker, cap_usd, cap_krw)
+            r = engine.analyze(ticker, cap_usd, cap_krw, fx_rate=_usdkrw)
             if r:
                 r["already_owned"] = ticker in owned
             return r
@@ -631,7 +685,7 @@ def discover():
 def scan():
     ticker = ((request.get_json() or {}).get("ticker") or "").strip().upper()
     if not ticker: return jsonify({"error": "Ticker required"}), 400
-    r = engine.analyze(ticker, current_user.available_capital, getattr(current_user, "available_capital_krw", 0.0) or 0.0)
+    r = engine.analyze(ticker, current_user.available_capital, getattr(current_user, "available_capital_krw", 0.0) or 0.0, fx_rate=_usdkrw)
     if not r:
         cached = db.session.get(SignalCache, ticker)
         if cached and cached.data_json:
@@ -1071,7 +1125,7 @@ def morning_brief():
 def market_overview():
     import time as _time
     now = _time.time()
-    if _macro_cache["data"] and now - _macro_cache["ts"] < 300:   # 5-min cache
+    if _macro_cache["data"] and now - _macro_cache["ts"] < 60:    # 1-min cache
         return jsonify(_macro_cache["data"])
     global _usdkrw
     macro   = fetcher.get_enhanced_macro()

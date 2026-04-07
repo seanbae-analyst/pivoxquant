@@ -47,11 +47,12 @@ class AutoTrader:
         "006400": "삼성SDI",
     }
 
-    def __init__(self, db=None, Position=None, TradeHistory=None, user_id=None):
+    def __init__(self, db=None, Position=None, TradeHistory=None, user_id=None, app=None):
         self.available = False
         self.running = False
         self.api = None
         self._thread = None
+        self._app = app                # Flask app for context in threads
         self._db = db                  # Flask-SQLAlchemy db instance
         self._Position = Position      # Position model
         self._TradeHistory = TradeHistory  # TradeHistory model
@@ -91,10 +92,16 @@ class AutoTrader:
             logger.info("AutoTrader: KIS connected (Korean paper trading enabled)")
 
     def _log(self, msg, level="info"):
-        entry = {"time": datetime.now().isoformat(), "msg": msg, "level": level}
+        now = datetime.now()
+        entry = {"time": now.isoformat(), "msg": msg, "level": level}
+        # Daily reset: clear logs from previous days
+        today = now.date().isoformat()
+        if getattr(self, "_log_date", None) != today:
+            self._logs = []
+            self._log_date = today
         self._logs.append(entry)
-        if len(self._logs) > 100:
-            self._logs = self._logs[-100:]
+        if len(self._logs) > 200:
+            self._logs = self._logs[-200:]
         logger.info(f"[AutoTrader] {msg}")
 
     # ── Control ───────────────────────────────────────────
@@ -105,6 +112,24 @@ class AutoTrader:
             return {"error": "AutoTrader not available (Alpaca/KIS not configured)"}
         if self.running:
             return {"error": "Already running"}
+
+        # Restore existing Alpaca positions so we don't double-buy
+        if self.api and not self._positions:
+            try:
+                for p in self.api.get_all_positions():
+                    self._positions[p.symbol] = {
+                        "ticker": p.symbol,
+                        "symbol": p.symbol,
+                        "entry_price": float(p.avg_entry_price),
+                        "shares": int(float(p.qty)),
+                        "peak_price": float(p.current_price),
+                        "entry_time": datetime.now().isoformat(),
+                        "score": 0,
+                    }
+                if self._positions:
+                    self._log(f"Restored {len(self._positions)} existing positions: {', '.join(self._positions.keys())}")
+            except Exception as e:
+                self._log(f"Position restore error: {e}", "error")
 
         self.running = True
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
@@ -142,6 +167,26 @@ class AutoTrader:
             kr_positions_list.append(pos)
         kr_total = kr_equity + kr_deployed
 
+        # Enrich US positions with live Alpaca data
+        us_positions_list = []
+        if self.api and self._positions:
+            try:
+                alpaca_positions = {p.symbol: p for p in self.api.get_all_positions()}
+                for symbol, pos in self._positions.items():
+                    ap = alpaca_positions.get(symbol)
+                    enriched = {**pos}
+                    if ap:
+                        enriched["market_value"] = float(ap.market_value)
+                        enriched["current_price"] = float(ap.current_price)
+                        enriched["unrealized_pl"] = float(ap.unrealized_pl)
+                        enriched["unrealized_plpc"] = float(ap.unrealized_plpc)
+                        enriched["qty"] = int(ap.qty)
+                    us_positions_list.append(enriched)
+            except Exception:
+                us_positions_list = list(self._positions.values())
+        else:
+            us_positions_list = list(self._positions.values())
+
         return {
             "available": self.available or (self._kis and self._kis.available),
             "running": self.running,
@@ -152,11 +197,11 @@ class AutoTrader:
             "max_positions": self.MAX_POSITIONS,
             "max_daily_trades": self.MAX_DAILY_TRADES,
             "account": account_info,
-            "active_positions": list(self._positions.values()) + kr_positions_list,
+            "active_positions": us_positions_list + kr_positions_list,
             "kr_capital": self._kr_capital,
             "kr_equity": round(kr_total),
             "kr_daily_pnl": round(self._kr_daily_pnl),
-            "logs": self._logs[-20:],
+            "logs": list(reversed(self._logs[-30:])),
         }
 
     # ── Main Loop ─────────────────────────────────────────
@@ -293,17 +338,21 @@ class AutoTrader:
                 self._log(f"Scan error {symbol}: {e}", "error")
 
     def _execute_buy(self, symbol, shares, price, score):
-        """Execute a market buy order."""
+        """Execute a buy order (limit order for extended hours compatibility)."""
         try:
-            from alpaca.trading.requests import MarketOrderRequest
+            from alpaca.trading.requests import LimitOrderRequest
             from alpaca.trading.enums import OrderSide, TimeInForce
 
+            # Use limit order at slightly above market price for reliable fills
+            limit_price = round(price * 1.005, 2)  # 0.5% above current price
+
             order = self.api.submit_order(
-                MarketOrderRequest(
+                LimitOrderRequest(
                     symbol=symbol,
                     qty=shares,
                     side=OrderSide.BUY,
                     time_in_force=TimeInForce.DAY,
+                    limit_price=limit_price,
                     extended_hours=True,
                 )
             )
@@ -417,17 +466,21 @@ class AutoTrader:
                 continue
 
     def _execute_sell(self, symbol, shares, price, reason):
-        """Execute a market sell order."""
+        """Execute a sell order (limit order for extended hours compatibility)."""
         try:
-            from alpaca.trading.requests import MarketOrderRequest
+            from alpaca.trading.requests import LimitOrderRequest
             from alpaca.trading.enums import OrderSide, TimeInForce
 
+            # Use limit order at slightly below market price for reliable fills
+            limit_price = round(price * 0.995, 2)  # 0.5% below current price
+
             order = self.api.submit_order(
-                MarketOrderRequest(
+                LimitOrderRequest(
                     symbol=symbol,
                     qty=shares,
                     side=OrderSide.SELL,
                     time_in_force=TimeInForce.DAY,
+                    limit_price=limit_price,
                     extended_hours=True,
                 )
             )
@@ -486,8 +539,7 @@ class AutoTrader:
         if not self._db or not self._Position or not self._user_id:
             return
         try:
-            from flask import current_app
-            with current_app.app_context():
+            with self._app.app_context():
                 # Check if position already exists
                 existing = self._Position.query.filter_by(
                     user_id=self._user_id, ticker=symbol
@@ -526,8 +578,7 @@ class AutoTrader:
         if not self._db or not self._Position or not self._user_id:
             return
         try:
-            from flask import current_app
-            with current_app.app_context():
+            with self._app.app_context():
                 existing = self._Position.query.filter_by(
                     user_id=self._user_id, ticker=symbol
                 ).first()
@@ -723,8 +774,7 @@ class AutoTrader:
         if not self._db or not self._Position or not self._user_id:
             return
         try:
-            from flask import current_app
-            with current_app.app_context():
+            with self._app.app_context():
                 existing = self._Position.query.filter_by(
                     user_id=self._user_id, ticker=ticker
                 ).first()
@@ -758,8 +808,7 @@ class AutoTrader:
         if not self._db or not self._Position or not self._user_id:
             return
         try:
-            from flask import current_app
-            with current_app.app_context():
+            with self._app.app_context():
                 existing = self._Position.query.filter_by(
                     user_id=self._user_id, ticker=ticker
                 ).first()

@@ -201,23 +201,100 @@ class DataFetcher:
             logger.warning(f"News fetch failed {ticker}: {ex}")
         return items[:15]
 
+    _news_score_cache = {}  # {ticker: (timestamp, (score, sigs))}
+    _NEWS_SCORE_TTL = 600  # 10 min cache for news sentiment
+
     def score_news_sentiment(self, ticker: str) -> tuple[float, list[dict]]:
-        news   = self.get_news(ticker)
-        is_kr  = self.is_korean(ticker)
+        import time as _time
+        cache_key = ticker.upper()
+        cached = self._news_score_cache.get(cache_key)
+        if cached and _time.time() - cached[0] < self._NEWS_SCORE_TTL:
+            return cached[1]
+
+        news = self.get_news(ticker)
+        if not news:
+            return 50.0, [{"type": "neutral", "msg": "No recent news", "msg_kr": "최근 뉴스 없음"}]
+
+        # Try Claude AI sentiment first, fallback to keyword-based
+        ai_result = self._score_news_with_ai(ticker, news[:8])
+        result = ai_result if ai_result else self._score_news_keywords(ticker, news)
+        self._news_score_cache[cache_key] = (_time.time(), result)
+        return result
+
+    def _score_news_with_ai(self, ticker: str, news: list) -> "tuple[float, list[dict]] | None":
+        """Use Claude Haiku for context-aware news sentiment analysis."""
+        try:
+            import os, anthropic
+            api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+            if not api_key:
+                # Try loading from .env file
+                env_path = os.path.join(os.path.dirname(__file__), ".env")
+                if os.path.exists(env_path):
+                    with open(env_path) as f:
+                        for line in f:
+                            if line.startswith("ANTHROPIC_API_KEY="):
+                                api_key = line.split("=", 1)[1].strip()
+                                os.environ["ANTHROPIC_API_KEY"] = api_key
+            if not api_key:
+                return None
+
+            headlines = "\n".join(f"- {n['title']}" for n in news[:8])
+
+            client = anthropic.Anthropic(api_key=api_key)
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=300,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Analyze these news headlines for {ticker} stock. Rate sentiment 0-100 (0=very bearish, 50=neutral, 100=very bullish).
+
+Consider:
+- Is the news about the company itself or just the sector?
+- Is it forward-looking (earnings guidance, new product) or backward (past results)?
+- Could this headline be misleading? (e.g. "stock surges" could precede a crash)
+
+Headlines:
+{headlines}
+
+Reply ONLY in this exact JSON format, nothing else:
+{{"score": <number 0-100>, "sentiment": "<bullish/bearish/neutral>", "reason": "<1 sentence why>", "reason_kr": "<same in Korean>"}}"""
+                }]
+            )
+            import json, re
+            raw = resp.content[0].text.strip()
+            # Strip markdown code fences if present
+            raw = re.sub(r'^```(?:json)?\s*', '', raw)
+            raw = re.sub(r'\s*```$', '', raw)
+            data = json.loads(raw.strip())
+            score = max(0, min(100, float(data["score"])))
+            sentiment = data.get("sentiment", "neutral")
+            sig_type = "bullish" if sentiment == "bullish" else "bearish" if sentiment == "bearish" else "neutral"
+            return score, [{
+                "type": sig_type,
+                "msg": f"AI News Analysis: {data.get('reason', sentiment)} (score {score:.0f})",
+                "msg_kr": f"AI 뉴스 분석: {data.get('reason_kr', sentiment)} (점수 {score:.0f})"
+            }]
+        except Exception as e:
+            logger.debug(f"AI news scoring failed for {ticker}: {e}")
+            return None
+
+    def _score_news_keywords(self, ticker: str, news: list) -> tuple[float, list[dict]]:
+        """Fallback keyword-based sentiment scoring."""
+        is_kr = self.is_korean(ticker)
         bull = bear = 0
         for item in news[:10]:
             words = set(item["title"].lower().split())
             if is_kr:
-                # Korean text: check character-by-character match
                 title_str = item["title"]
                 bull += sum(1 for w in KOREAN_BULLISH if w in title_str)
                 bear += sum(1 for w in KOREAN_BEARISH if w in title_str)
-            # Always run English keywords (some Korean news has English terms)
             bull += len(words & BULLISH_WORDS)
             bear += len(words & BEARISH_WORDS)
-        score = 50.0 if bull + bear == 0 else 50.0 + (bull - bear) / (bull + bear) * 35
+        total = bull + bear
+        confidence = min(1.0, total / 5) if total > 0 else 0
+        score = 50.0 if total == 0 else 50.0 + (bull - bear) / total * 35 * confidence
         score = max(0.0, min(100.0, score))
-        sigs  = []
+        sigs = []
         if bull > bear:
             sigs.append({"type": "bullish",
                           "msg":    f"Positive news flow ({bull} bullish signals)",
@@ -511,7 +588,21 @@ class DataFetcher:
 
     # ── Stock Snapshot ────────────────────────────────────────────────────────
 
+    _snapshot_cache = {}  # {ticker: (timestamp, data)}
+    _SNAPSHOT_TTL = 60   # 1 minute cache
+
     def get_stock_snapshot(self, ticker: str) -> "dict | None":
+        import time as _time
+        cache_key = ticker.upper()
+        cached = self._snapshot_cache.get(cache_key)
+        if cached and _time.time() - cached[0] < self._SNAPSHOT_TTL:
+            return cached[1]
+        result = self._fetch_snapshot(ticker)
+        if result:
+            self._snapshot_cache[cache_key] = (_time.time(), result)
+        return result
+
+    def _fetch_snapshot(self, ticker: str) -> "dict | None":
         try:
             # Auto-append .KS for Korean stock codes
             if ticker.strip().isdigit() and len(ticker.strip()) == 6:
@@ -572,10 +663,21 @@ class DataFetcher:
             logger.error(f"Snapshot failed {ticker}: {e}")
             return None
 
+    _history_cache = {}  # {(ticker, period): (timestamp, data)}
+    _HISTORY_TTL = 300   # 5 minute cache for historical data
+
     def get_price_history(self, ticker: str, period: str = "6mo") -> "pd.DataFrame | None":
+        import time as _time
+        cache_key = (ticker.upper(), period)
+        cached = self._history_cache.get(cache_key)
+        if cached and _time.time() - cached[0] < self._HISTORY_TTL:
+            return cached[1]
         try:
             h = yf.Ticker(ticker).history(period=period)
-            return h if not h.empty else None
+            result = h if not h.empty else None
+            if result is not None:
+                self._history_cache[cache_key] = (_time.time(), result)
+            return result
         except Exception:
             return None
 

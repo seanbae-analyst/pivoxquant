@@ -46,7 +46,8 @@ class QuantEngine:
     # ── Public ────────────────────────────────────────────────────────────────
 
     def analyze(self, ticker: str, capital_usd: float = 10_000.0,
-                capital_krw: float = 0.0) -> "dict | None":
+                capital_krw: float = 0.0, fx_rate: float = 0.0,
+                current_pnl_pct: float = None) -> "dict | None":
         ticker   = ticker.upper().strip()
         snapshot = _fetcher.get_stock_snapshot(ticker)
         hist     = _fetcher.get_price_history(ticker, "6mo")
@@ -58,7 +59,14 @@ class QuantEngine:
         is_korean = snapshot.get("is_korean", False)
 
         # Use the currency-matched capital for Kelly sizing
-        capital = capital_krw if (is_korean and capital_krw > 0) else capital_usd
+        if is_korean and capital_krw > 0:
+            capital = capital_krw
+        elif is_korean:
+            # No KRW capital set — convert USD to KRW so sizing works
+            _fx = fx_rate if fx_rate > 0 else 1350  # fallback rate
+            capital = capital_usd * _fx
+        else:
+            capital = capital_usd
 
         tech_score, tech_sigs = self._technical(hist)
         fund_score, fund_sigs = self._fundamental(snapshot)
@@ -67,6 +75,36 @@ class QuantEngine:
         # ── Advanced Quant Models ──
         quant_score, quant_sigs = self._quant_models(hist)
 
+        # ── Sector Relative Strength ──
+        try:
+            sector = snapshot.get("sector", "")
+            _sector_etf_map = {
+                "Technology": "XLK", "Healthcare": "XLV", "Financials": "XLF",
+                "Consumer Cyclical": "XLY", "Consumer Defensive": "XLP",
+                "Industrials": "XLI", "Energy": "XLE", "Utilities": "XLU",
+                "Real Estate": "XLRE", "Materials": "XLB", "Communication Services": "XLC",
+            }
+            sector_etf = _sector_etf_map.get(sector)
+            if sector_etf and not is_korean:
+                sector_hist = _fetcher.get_price_history(sector_etf, "1mo")
+                if sector_hist is not None and len(sector_hist) >= 5:
+                    sector_ret = (float(sector_hist["Close"].iloc[-1]) / float(sector_hist["Close"].iloc[0]) - 1) * 100
+                    stock_close = hist["Close"].astype(float)
+                    stock_ret = (float(stock_close.iloc[-1]) / float(stock_close.iloc[-22]) - 1) * 100 if len(stock_close) >= 22 else 0
+                    relative = stock_ret - sector_ret
+                    if relative < -10:
+                        tech_score = max(0, tech_score - 10)
+                        tech_sigs.append({"type": "bearish",
+                            "msg": f"Sector laggard: {relative:+.0f}% vs {sector} ({sector_ret:+.1f}%)",
+                            "msg_kr": f"섹터 대비 약세: {relative:+.0f}% vs {sector}"})
+                    elif relative > 10:
+                        tech_score = min(100, tech_score + 5)
+                        tech_sigs.append({"type": "bullish",
+                            "msg": f"Sector leader: {relative:+.0f}% vs {sector} ({sector_ret:+.1f}%)",
+                            "msg_kr": f"섹터 대비 강세: {relative:+.0f}% vs {sector}"})
+        except Exception:
+            pass
+
         # ── Adaptive Weights + Thresholds ──
         sector = snapshot.get("sector", "Unknown")
         market_cap = snapshot.get("market_cap") or 0
@@ -74,25 +112,22 @@ class QuantEngine:
 
         # Determine stock type for adaptive scoring
         if is_etf:
-            # ETF: technical only, no fundamentals
-            w_tech, w_fund, w_news, w_quant = 0.50, 0.05, 0.05, 0.40
-            buy_thresh, sell_thresh = 60, 30
+            w_tech, w_fund, w_news, w_quant = 0.50, 0.05, 0.03, 0.42
+            buy_thresh, sell_thresh = 65, 40
         elif is_korean:
-            # Korean stocks: higher fundamental weight, lower quant (regime less reliable)
-            w_tech, w_fund, w_news, w_quant = 0.30, 0.30, 0.10, 0.30
-            buy_thresh, sell_thresh = 58, 28
+            w_tech, w_fund, w_news, w_quant = 0.28, 0.32, 0.03, 0.37
+            buy_thresh, sell_thresh = 63, 38
         elif market_cap and market_cap > 100e9:
-            # Large cap US: balanced
-            w_tech, w_fund, w_news, w_quant = 0.25, 0.15, 0.10, 0.50
-            buy_thresh, sell_thresh = 65, 30
+            # Large cap: fundamentals heavy, news almost zero
+            w_tech, w_fund, w_news, w_quant = 0.22, 0.25, 0.03, 0.50
+            buy_thresh, sell_thresh = 68, 40
         elif market_cap and market_cap < 10e9:
-            # Small cap US: momentum + quant heavy
-            w_tech, w_fund, w_news, w_quant = 0.30, 0.10, 0.10, 0.50
-            buy_thresh, sell_thresh = 62, 30
+            # Small cap: highest bar, fundamentals still matter
+            w_tech, w_fund, w_news, w_quant = 0.25, 0.22, 0.03, 0.50
+            buy_thresh, sell_thresh = 70, 42
         else:
-            # Default
-            w_tech, w_fund, w_news, w_quant = 0.25, 0.15, 0.10, 0.50
-            buy_thresh, sell_thresh = 65, 30
+            w_tech, w_fund, w_news, w_quant = 0.22, 0.25, 0.03, 0.50
+            buy_thresh, sell_thresh = 68, 40
 
         # Market regime adjustment: in strong bull, lower threshold
         if quant_score >= 70:
@@ -106,11 +141,121 @@ class QuantEngine:
             news_score * w_news +
             quant_score * w_quant, 1
         )
-        signal = (
-            "BUY"  if composite >= buy_thresh  else
-            "SELL" if composite <  sell_thresh else
-            "HOLD"
-        )
+
+        # ── Macro Environment Adjustment ──
+        # VIX: raise the bar when market is fearful
+        try:
+            from quant_models import VIXStrategy
+            vix_data = VIXStrategy().analyze()
+            vix = vix_data.get("vix", 20)
+            if vix > 30:
+                buy_thresh += 5
+                composite -= 5
+                tech_sigs.append({"type": "bearish",
+                    "msg": f"VIX {vix:.0f} — extreme fear, raising buy bar",
+                    "msg_kr": f"VIX {vix:.0f} — 극도 공포, 매수 기준 강화"})
+            elif vix > 25:
+                buy_thresh += 3
+                composite -= 2
+            elif vix < 15:
+                buy_thresh -= 2
+        except Exception:
+            pass
+
+        # Cross-Asset Momentum: macro headwind/tailwind
+        try:
+            from quant_models import CrossAssetMomentum
+            cam = CrossAssetMomentum().analyze()
+            macro_regime = cam.get("macro_regime", "NEUTRAL")
+            if macro_regime in ("RISK_OFF", "LIQUIDATION"):
+                composite -= 8
+                tech_sigs.append({"type": "bearish",
+                    "msg": f"Macro regime: {macro_regime} — headwind for risk assets",
+                    "msg_kr": f"매크로: {macro_regime} — 위험자산 역풍"})
+            elif macro_regime == "RISK_ON":
+                composite += 3
+                tech_sigs.append({"type": "bullish",
+                    "msg": "Macro regime: RISK_ON — tailwind for risk assets",
+                    "msg_kr": "매크로: RISK_ON — 위험자산 순풍"})
+        except Exception:
+            pass
+
+        # ── Common-Sense Filters ──
+        # These override pure math — no amount of RSI/MACD makes a bad business good
+        disqualified = False
+        disq_reasons = []
+
+        # 1) Unprofitable + no revenue growth = don't buy
+        margin = snapshot.get("profit_margin")
+        rev_g = snapshot.get("revenue_growth")
+        if margin is not None and margin < 0 and (rev_g is None or rev_g < 0.10):
+            disqualified = True
+            disq_reasons.append("Unprofitable with weak revenue — not investable")
+
+        # 2) Leveraged / inverse ETFs = no long-term hold
+        name_upper = (snapshot.get("name") or "").upper()
+        if any(x in name_upper for x in ["2X", "3X", "LEVERAGED", "INVERSE", "ULTRA"]):
+            disqualified = True
+            disq_reasons.append("Leveraged/inverse product — not suitable for holding")
+
+        # 3) Downtrend: price below 200MA = don't catch falling knives
+        close = hist["Close"].astype(float)
+        ma200 = close.rolling(200).mean()
+        if len(ma200.dropna()) >= 1:
+            cur_price = float(close.iloc[-1])
+            ma200_val = float(ma200.dropna().iloc[-1])
+            if cur_price < ma200_val * 0.9:  # 10%+ below 200MA
+                disqualified = True
+                disq_reasons.append(f"Deep downtrend — price {((cur_price/ma200_val - 1)*100):.0f}% below 200MA")
+
+        # 4) Extreme drawdown from 52-week high
+        high_52w = snapshot.get("week52_high")
+        if high_52w and high_52w > 0:
+            drawdown = (price - high_52w) / high_52w * 100
+            if drawdown < -50:
+                disqualified = True
+                disq_reasons.append(f"Crashed {drawdown:.0f}% from 52-week high")
+
+        if disqualified:
+            # Block BUY — disqualified stocks can only be HOLD or SELL
+            signal = "SELL" if composite < sell_thresh else "HOLD"
+            for r in disq_reasons:
+                tech_sigs.append({"type": "bearish", "msg": f"⛔ {r}", "msg_kr": f"⛔ {r}"})
+        else:
+            signal = (
+                "BUY"  if composite >= buy_thresh  else
+                "SELL" if composite <  sell_thresh else
+                "HOLD"
+            )
+
+        # ── Smart Exit for Existing Holdings ──
+        # Not a fixed %, but "is the investment thesis still intact?"
+        if current_pnl_pct is not None:
+            sell_override = False
+            sell_reason = ""
+
+            if disqualified and current_pnl_pct < -5:
+                # Disqualified stock already losing → get out
+                sell_override = True
+                sell_reason = "Investment thesis broken + losing position — exit recommended"
+            elif current_pnl_pct < -30 and composite < 55:
+                # Deep loss + weak score = thesis is dead
+                sell_override = True
+                sell_reason = f"Down {current_pnl_pct:.0f}% with weak outlook (score {composite}) — cut losses"
+            elif current_pnl_pct < -15 and fund_score < 35:
+                # Moderate loss + terrible fundamentals
+                sell_override = True
+                sell_reason = f"Down {current_pnl_pct:.0f}% + poor fundamentals — reassess position"
+            elif current_pnl_pct > 40 and composite < 55:
+                # Big gain + deteriorating outlook = take profit
+                sell_override = True
+                sell_reason = f"Up {current_pnl_pct:.0f}% but weakening (score {composite}) — lock in profits"
+
+            if sell_override:
+                signal = "SELL"
+                tech_sigs.append({"type": "bearish",
+                    "msg": f"🔴 {sell_reason}",
+                    "msg_kr": f"🔴 {sell_reason}"})
 
         rec_inv, rec_sh, rec_timing = self._size(composite, price, capital, signal)
         weights_str = f"Tech {int(w_tech*100)}% + Fund {int(w_fund*100)}% + News {int(w_news*100)}% + Quant {int(w_quant*100)}%"
@@ -231,20 +376,44 @@ class QuantEngine:
         close = hist["Close"].astype(float)
         vol   = hist["Volume"].astype(float)
 
+        # ── Trend Context (used to adjust oversold/overbought signals) ──
+        ma50  = close.rolling(50).mean()
+        ma200 = close.rolling(200).mean()
+        cur_price = float(close.iloc[-1])
+        above_200ma = True  # default optimistic if not enough data
+        above_50ma = True
+        if len(ma200.dropna()) >= 1:
+            above_200ma = cur_price > float(ma200.dropna().iloc[-1])
+        if len(ma50.dropna()) >= 1:
+            above_50ma = cur_price > float(ma50.dropna().iloc[-1])
+
         # RSI ─────────────────────────────────────────────────────────────────
+        # Trend-adjusted: oversold in uptrend = opportunity, in downtrend = falling knife
         rsi = self._rsi(close)
         if len(rsi.dropna()):
             r = float(rsi.iloc[-1])
             if r < 30:
-                score += 20
-                sigs.append({"type": "bullish",
-                              "msg":    f"RSI oversold ({r:.0f}) — statistically cheap; bounce expected",
-                              "msg_kr": f"RSI 과매도 ({r:.0f}) — 통계적 저점, 반등 기대"})
+                if above_200ma:
+                    score += 20
+                    sigs.append({"type": "bullish",
+                                  "msg":    f"RSI oversold ({r:.0f}) in uptrend — strong bounce expected",
+                                  "msg_kr": f"RSI 과매도 ({r:.0f}) 상승추세 중 — 강한 반등 기대"})
+                elif above_50ma:
+                    score += 5
+                    sigs.append({"type": "neutral",
+                                  "msg":    f"RSI oversold ({r:.0f}) but below 200MA — cautious",
+                                  "msg_kr": f"RSI 과매도 ({r:.0f}) 200MA 하회 — 신중"})
+                else:
+                    # Below both MAs — falling knife, no bonus
+                    sigs.append({"type": "bearish",
+                                  "msg":    f"RSI oversold ({r:.0f}) in downtrend — falling knife, not a buy signal",
+                                  "msg_kr": f"RSI 과매도 ({r:.0f}) 하락추세 — 낙폭 확대 가능, 매수 신호 아님"})
             elif r < 45:
-                score += 10
-                sigs.append({"type": "bullish",
-                              "msg":    f"RSI below neutral ({r:.0f}) — momentum building",
-                              "msg_kr": f"RSI 중립 이하 ({r:.0f}) — 모멘텀 형성 중"})
+                adj = 10 if above_200ma else 3
+                score += adj
+                sigs.append({"type": "bullish" if above_200ma else "neutral",
+                              "msg":    f"RSI below neutral ({r:.0f})",
+                              "msg_kr": f"RSI 중립 이하 ({r:.0f})"})
             elif r > 70:
                 score -= 20
                 sigs.append({"type": "bearish",
@@ -290,19 +459,18 @@ class QuantEngine:
             if bw > 0:
                 pct_b = (cur - lo) / bw
                 if pct_b <= 0.15:
-                    score += 15
-                    sigs.append({"type": "bullish",
-                                  "msg":    "Price near lower Bollinger Band — statistically undervalued",
-                                  "msg_kr": "볼린저 하단 근접 — 통계적 저평가 구간"})
+                    bb_adj = 15 if above_200ma else 3  # downtrend = less bounce potential
+                    score += bb_adj
+                    sigs.append({"type": "bullish" if above_200ma else "neutral",
+                                  "msg":    f"Price near lower Bollinger Band{' (downtrend — limited bounce)' if not above_200ma else ''}",
+                                  "msg_kr": f"볼린저 하단 근접{' (하락추세 — 반등 제한)' if not above_200ma else ''}"})
                 elif pct_b >= 0.85:
                     score -= 15
                     sigs.append({"type": "bearish",
                                   "msg":    "Price near upper Bollinger Band — statistically stretched",
                                   "msg_kr": "볼린저 상단 근접 — 통계적 과매수 구간"})
 
-        # Moving Averages (50/200) ────────────────────────────────────────────
-        ma50  = close.rolling(50).mean()
-        ma200 = close.rolling(200).mean()
+        # Moving Averages (50/200) — already computed above for trend context
         if len(ma200.dropna()) >= 5:
             m50, m200 = float(ma50.iloc[-1]), float(ma200.iloc[-1])
             m50p = float(ma50.dropna().iloc[-5])
@@ -349,6 +517,172 @@ class QuantEngine:
                 sigs.append({"type": "bearish",
                               "msg":    "High-volume selloff — institutional distribution detected",
                               "msg_kr": "거래량 급증 하락 — 기관 매도 추정"})
+
+        # ADX — Trend Strength ────────────────────────────────────────────────
+        if "High" in hist.columns and "Low" in hist.columns:
+            high = hist["High"].astype(float)
+            low = hist["Low"].astype(float)
+            adx = self._adx(high, low, close)
+            if adx is not None and len(adx.dropna()):
+                adx_val = float(adx.dropna().iloc[-1])
+                if adx_val > 40:
+                    # Strong trend — trust momentum signals more
+                    trend_dir = "up" if above_200ma else "down"
+                    if trend_dir == "up":
+                        score += 8
+                        sigs.append({"type": "bullish",
+                                      "msg": f"ADX {adx_val:.0f} — strong uptrend confirmed",
+                                      "msg_kr": f"ADX {adx_val:.0f} — 강한 상승추세 확인"})
+                    else:
+                        score -= 8
+                        sigs.append({"type": "bearish",
+                                      "msg": f"ADX {adx_val:.0f} — strong downtrend confirmed",
+                                      "msg_kr": f"ADX {adx_val:.0f} — 강한 하락추세 확인"})
+                elif adx_val < 20:
+                    sigs.append({"type": "neutral",
+                                  "msg": f"ADX {adx_val:.0f} — no clear trend, choppy market",
+                                  "msg_kr": f"ADX {adx_val:.0f} — 추세 없음, 횡보"})
+
+            # Stochastic ──────────────────────────────────────────────────────
+            stoch = self._stochastic(high, low, close)
+            if stoch:
+                k_line, d_line = stoch
+                if len(k_line.dropna()):
+                    k = float(k_line.dropna().iloc[-1])
+                    if k < 20 and above_200ma:
+                        score += 8
+                        sigs.append({"type": "bullish",
+                                      "msg": f"Stochastic oversold ({k:.0f}) in uptrend — buy dip",
+                                      "msg_kr": f"스토캐스틱 과매도 ({k:.0f}) 상승추세 — 저가 매수 기회"})
+                    elif k > 80:
+                        score -= 5
+                        sigs.append({"type": "bearish",
+                                      "msg": f"Stochastic overbought ({k:.0f})",
+                                      "msg_kr": f"스토캐스틱 과매수 ({k:.0f})"})
+
+            # OBV Trend — money flow ──────────────────────────────────────────
+            obv = self._obv(close, vol)
+            if obv is not None and len(obv.dropna()) >= 20:
+                obv_sma = obv.rolling(20).mean()
+                if len(obv_sma.dropna()):
+                    obv_cur = float(obv.dropna().iloc[-1])
+                    obv_avg = float(obv_sma.dropna().iloc[-1])
+                    if obv_cur > obv_avg * 1.1:
+                        score += 5
+                        sigs.append({"type": "bullish",
+                                      "msg": "OBV rising — smart money accumulating",
+                                      "msg_kr": "OBV 상승 — 스마트머니 매집 중"})
+                    elif obv_cur < obv_avg * 0.9:
+                        score -= 5
+                        sigs.append({"type": "bearish",
+                                      "msg": "OBV declining — smart money distributing",
+                                      "msg_kr": "OBV 하락 — 스마트머니 매도 중"})
+
+        # ── Advanced Indicators (ta library) ─────────────────────────────────
+        try:
+            if "High" in hist.columns and "Low" in hist.columns:
+                high = hist["High"].astype(float)
+                low = hist["Low"].astype(float)
+
+                # Ichimoku Cloud — trend direction + support/resistance
+                from ta.trend import IchimokuIndicator
+                ichi = IchimokuIndicator(high=high, low=low, close=close)
+                span_a = ichi.ichimoku_a()
+                span_b = ichi.ichimoku_b()
+                if len(span_a.dropna()) > 0 and len(span_b.dropna()) > 0:
+                    sa = float(span_a.dropna().iloc[-1])
+                    sb = float(span_b.dropna().iloc[-1])
+                    if cur_price > max(sa, sb):
+                        score += 6
+                        sigs.append({"type": "bullish",
+                                      "msg": "Above Ichimoku Cloud — bullish structure",
+                                      "msg_kr": "이치모쿠 구름 위 — 강세 구조"})
+                    elif cur_price < min(sa, sb):
+                        score -= 6
+                        sigs.append({"type": "bearish",
+                                      "msg": "Below Ichimoku Cloud — bearish structure",
+                                      "msg_kr": "이치모쿠 구름 아래 — 약세 구조"})
+
+                # CCI — Commodity Channel Index (mean-reversion + trend)
+                from ta.trend import CCIIndicator
+                cci = CCIIndicator(high=high, low=low, close=close).cci()
+                if len(cci.dropna()) > 0:
+                    cci_val = float(cci.dropna().iloc[-1])
+                    if cci_val < -200 and above_200ma:
+                        score += 8
+                        sigs.append({"type": "bullish",
+                                      "msg": f"CCI extreme oversold ({cci_val:.0f}) in uptrend — snap-back likely",
+                                      "msg_kr": f"CCI 극단적 과매도 ({cci_val:.0f}) 상승추세 — 급반등 기대"})
+                    elif cci_val > 200:
+                        score -= 5
+                        sigs.append({"type": "bearish",
+                                      "msg": f"CCI extreme overbought ({cci_val:.0f}) — overextended",
+                                      "msg_kr": f"CCI 극단적 과매수 ({cci_val:.0f}) — 과열"})
+
+                # MFI — Money Flow Index (volume-weighted RSI)
+                from ta.volume import MFIIndicator
+                mfi = MFIIndicator(high=high, low=low, close=close, volume=vol).money_flow_index()
+                if len(mfi.dropna()) > 0:
+                    mfi_val = float(mfi.dropna().iloc[-1])
+                    if mfi_val < 20 and above_200ma:
+                        score += 8
+                        sigs.append({"type": "bullish",
+                                      "msg": f"MFI oversold ({mfi_val:.0f}) — heavy buying pressure",
+                                      "msg_kr": f"MFI 과매도 ({mfi_val:.0f}) — 강한 매수세"})
+                    elif mfi_val > 80:
+                        score -= 5
+                        sigs.append({"type": "bearish",
+                                      "msg": f"MFI overbought ({mfi_val:.0f}) — selling pressure building",
+                                      "msg_kr": f"MFI 과매수 ({mfi_val:.0f}) — 매도세 형성"})
+
+                # Keltner Channel — volatility squeeze detection
+                from ta.volatility import KeltnerChannel
+                kc = KeltnerChannel(high=high, low=low, close=close)
+                kc_high = kc.keltner_channel_hband()
+                kc_low = kc.keltner_channel_lband()
+                if len(kc_high.dropna()) > 0:
+                    kch = float(kc_high.dropna().iloc[-1])
+                    kcl = float(kc_low.dropna().iloc[-1])
+                    # Bollinger inside Keltner = squeeze (low vol → breakout imminent)
+                    ub_bb, _, lb_bb = self._bollinger(close)
+                    if len(ub_bb.dropna()) > 0:
+                        bb_upper = float(ub_bb.dropna().iloc[-1])
+                        bb_lower = float(lb_bb.dropna().iloc[-1])
+                        if bb_upper < kch and bb_lower > kcl:
+                            sigs.append({"type": "neutral",
+                                          "msg": "Volatility squeeze detected — breakout imminent",
+                                          "msg_kr": "변동성 압축 감지 — 돌파 임박"})
+
+                # Williams %R — momentum confirmation
+                from ta.momentum import WilliamsRIndicator
+                wr = WilliamsRIndicator(high=high, low=low, close=close).williams_r()
+                if len(wr.dropna()) > 0:
+                    wr_val = float(wr.dropna().iloc[-1])
+                    if wr_val < -80 and above_200ma:
+                        score += 5
+                    elif wr_val > -20:
+                        score -= 3
+
+                # Aroon — trend maturity
+                from ta.trend import AroonIndicator
+                aroon = AroonIndicator(high=high, low=low)
+                aroon_up = aroon.aroon_up()
+                aroon_down = aroon.aroon_down()
+                if len(aroon_up.dropna()) > 0:
+                    au = float(aroon_up.dropna().iloc[-1])
+                    ad = float(aroon_down.dropna().iloc[-1])
+                    if au > 80 and ad < 20:
+                        score += 5
+                        sigs.append({"type": "bullish",
+                                      "msg": f"Aroon strong uptrend (↑{au:.0f} ↓{ad:.0f})",
+                                      "msg_kr": f"아룬 강한 상승 (↑{au:.0f} ↓{ad:.0f})"})
+                    elif ad > 80 and au < 20:
+                        score -= 5
+                        sigs.append({"type": "bearish",
+                                      "msg": f"Aroon strong downtrend (↑{au:.0f} ↓{ad:.0f})",
+                                      "msg_kr": f"아룬 강한 하락 (↑{au:.0f} ↓{ad:.0f})"})
+        except Exception:
+            pass  # ta library indicators are bonus — don't break if unavailable
 
         return max(0.0, min(100.0, score)), sigs
 
@@ -449,6 +783,34 @@ class QuantEngine:
                           "msg":    f"High beta ({beta:.1f}) — amplified market swings",
                           "msg_kr": f"고 베타 ({beta:.1f}) — 시장 변동성 증폭"})
 
+        # Forward P/E vs Trailing P/E — growth expectation ────────────────────
+        fwd_pe = snap.get("forward_pe")
+        trail_pe = snap.get("pe_ratio")
+        if fwd_pe and trail_pe and fwd_pe > 0 and trail_pe > 0:
+            pe_compression = (fwd_pe - trail_pe) / trail_pe * 100
+            if pe_compression < -20:
+                score += 8
+                sigs.append({"type": "bullish",
+                              "msg": f"Earnings growth expected — Forward P/E {fwd_pe:.1f}x vs Trailing {trail_pe:.1f}x",
+                              "msg_kr": f"실적 성장 기대 — Forward P/E {fwd_pe:.1f}x vs Trailing {trail_pe:.1f}x"})
+            elif pe_compression > 20:
+                score -= 5
+                sigs.append({"type": "bearish",
+                              "msg": f"Earnings decline expected — Forward P/E {fwd_pe:.1f}x vs Trailing {trail_pe:.1f}x",
+                              "msg_kr": f"실적 둔화 예상 — Forward P/E {fwd_pe:.1f}x vs Trailing {trail_pe:.1f}x"})
+
+        # EPS positive/negative ───────────────────────────────────────────────
+        eps = snap.get("eps")
+        if eps is not None:
+            if eps > 0 and (margin is not None and margin > 0):
+                score += 3  # Profitable company bonus
+            elif eps < 0 and not (rev_g and rev_g > 0.5):
+                # Unprofitable AND not hyper-growing = bad
+                score -= 8
+                sigs.append({"type": "bearish",
+                              "msg": f"Negative EPS (${eps:.2f}) without high growth",
+                              "msg_kr": f"EPS 적자 (${eps:.2f}) 고성장 없음"})
+
         return max(0.0, min(100.0, score)), sigs
 
     # ── Position Sizing ────────────────────────────────────────────────────────
@@ -462,6 +824,9 @@ class QuantEngine:
         if capital < price:
             return 0.0, 0, "INSUFFICIENT"   # can't buy even 1 share
 
+        # Max affordable shares as upper bound
+        max_affordable = int(capital / price)
+
         if score >= 85:
             alloc, timing = 0.45, "Full conviction — aggressive accumulation"
         elif score >= 80:
@@ -474,9 +839,13 @@ class QuantEngine:
         invest = min(capital * alloc, capital * self.MAX_ALLOC)
         shares = int(invest / price)
 
+        # Always recommend at least 1 share if affordable
         if shares < 1:
             shares = 1
-            timing = "Minimum entry — 1 share within available capital"
+            timing = "Minimum entry — 1 share"
+
+        # Never exceed what user can actually afford
+        shares = min(shares, max_affordable)
 
         return round(shares * price, 2), shares, timing
 
@@ -555,21 +924,63 @@ class QuantEngine:
 
     @staticmethod
     def _rsi(p: pd.Series, n: int = 14) -> pd.Series:
-        d = p.diff()
-        g = d.where(d > 0, 0.0).rolling(n).mean()
-        l = (-d.where(d < 0, 0.0)).rolling(n).mean()
-        return 100 - 100 / (1 + g / l.replace(0, np.nan))
+        try:
+            from ta.momentum import RSIIndicator
+            return RSIIndicator(close=p, window=n).rsi()
+        except Exception:
+            d = p.diff()
+            g = d.where(d > 0, 0.0).rolling(n).mean()
+            l = (-d.where(d < 0, 0.0)).rolling(n).mean()
+            return 100 - 100 / (1 + g / l.replace(0, np.nan))
 
     @staticmethod
     def _macd(p: pd.Series) -> tuple[pd.Series, pd.Series]:
-        m = p.ewm(span=12, adjust=False).mean() - p.ewm(span=26, adjust=False).mean()
-        return m, m.ewm(span=9, adjust=False).mean()
+        try:
+            from ta.trend import MACD as MACD_TA
+            macd_ind = MACD_TA(close=p)
+            return macd_ind.macd(), macd_ind.macd_signal()
+        except Exception:
+            m = p.ewm(span=12, adjust=False).mean() - p.ewm(span=26, adjust=False).mean()
+            return m, m.ewm(span=9, adjust=False).mean()
 
     @staticmethod
     def _bollinger(p: pd.Series, n: int = 20, k: float = 2.0):
-        mid = p.rolling(n).mean()
-        std = p.rolling(n).std()
-        return mid + k * std, mid, mid - k * std
+        try:
+            from ta.volatility import BollingerBands
+            bb = BollingerBands(close=p, window=n, window_dev=k)
+            return bb.bollinger_hband(), bb.bollinger_mavg(), bb.bollinger_lband()
+        except Exception:
+            mid = p.rolling(n).mean()
+            std = p.rolling(n).std()
+            return mid + k * std, mid, mid - k * std
+
+    @staticmethod
+    def _adx(high: pd.Series, low: pd.Series, close: pd.Series, n: int = 14) -> "pd.Series | None":
+        """Average Directional Index — trend strength (0-100). >25 = trending."""
+        try:
+            from ta.trend import ADXIndicator
+            return ADXIndicator(high=high, low=low, close=close, window=n).adx()
+        except Exception:
+            return None
+
+    @staticmethod
+    def _stochastic(high: pd.Series, low: pd.Series, close: pd.Series) -> "tuple[pd.Series, pd.Series] | None":
+        """Stochastic Oscillator — %K and %D."""
+        try:
+            from ta.momentum import StochasticOscillator
+            stoch = StochasticOscillator(high=high, low=low, close=close)
+            return stoch.stoch(), stoch.stoch_signal()
+        except Exception:
+            return None
+
+    @staticmethod
+    def _obv(close: pd.Series, volume: pd.Series) -> "pd.Series | None":
+        """On-Balance Volume — accumulation/distribution."""
+        try:
+            from ta.volume import OnBalanceVolumeIndicator
+            return OnBalanceVolumeIndicator(close=close, volume=volume).on_balance_volume()
+        except Exception:
+            return None
 
     # ── Advanced Quant Models ────────────────────────────────────────────────────
 
