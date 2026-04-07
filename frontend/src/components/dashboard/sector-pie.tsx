@@ -11,8 +11,8 @@ import {
 } from "recharts";
 
 const COLORS = [
-  "#3b8bff", "#00d68f", "#ffb84d", "#9c6cff", "#00d4ff",
-  "#ff4757", "#ff6b9d", "#2ed573", "#ffa502", "#70a1ff",
+  "#6366f1", "#22c55e", "#f59e0b", "#a855f7", "#06b6d4",
+  "#ef4444", "#ec4899", "#14b8a6", "#f97316", "#818cf8",
 ];
 
 interface Props {
@@ -49,8 +49,8 @@ export function SectorPie({ sectorAllocation }: Props) {
             </Pie>
             <Tooltip
               contentStyle={{
-                background: "#111822",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: "#111111",
+                border: "1px solid #1f1f1f",
                 borderRadius: 8,
                 fontSize: 12,
               }}
@@ -58,7 +58,7 @@ export function SectorPie({ sectorAllocation }: Props) {
             />
             <Legend
               iconSize={8}
-              wrapperStyle={{ fontSize: 11, color: "#6b7d95" }}
+              wrapperStyle={{ fontSize: 11, color: "#666666" }}
             />
           </PieChart>
         </ResponsiveContainer>

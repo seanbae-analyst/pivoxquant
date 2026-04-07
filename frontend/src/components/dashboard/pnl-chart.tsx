@@ -39,22 +39,22 @@ export function PnlChart({ data }: Props) {
             <XAxis
               dataKey="date"
               tickFormatter={(d: string) => d.slice(5)}
-              tick={{ fontSize: 10, fill: "#6b7d95" }}
+              tick={{ fontSize: 10, fill: "#666666" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               domain={["dataMin", "dataMax"]}
               tickFormatter={(v: number) => fmtUsd(v)}
-              tick={{ fontSize: 10, fill: "#6b7d95" }}
+              tick={{ fontSize: 10, fill: "#666666" }}
               axisLine={false}
               tickLine={false}
               width={70}
             />
             <Tooltip
               contentStyle={{
-                background: "#111822",
-                border: "1px solid rgba(255,255,255,0.1)",
+                background: "#111111",
+                border: "1px solid #1f1f1f",
                 borderRadius: 8,
                 fontSize: 12,
               }}

@@ -54,7 +54,7 @@ export function SummaryCards({ data, onRefresh }: Props) {
       {cards.map((c) => (
         <Card
           key={c.label}
-          className="border-border bg-gradient-to-br from-card to-secondary p-5"
+          className="border-border bg-card p-5"
         >
           <div className="flex items-center justify-between">
             <p className="font-mono text-[10px] font-medium uppercase tracking-[0.8px] text-muted-foreground">

@@ -52,63 +52,53 @@
   --color-info: var(--info);
 }
 
-/* StockPilot Dark Terminal Theme — dark-only, no light mode */
+/* Linear/Vercel Dark Minimal */
 :root {
-  /* Backgrounds */
-  --background: #0a0e18;
-  --foreground: #f0f6ff;
-  --card: #131b28;
-  --card-foreground: #f0f6ff;
-  --popover: #0c1018;
-  --popover-foreground: #f0f6ff;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card: #111111;
+  --card-foreground: #ededed;
+  --popover: #111111;
+  --popover-foreground: #ededed;
 
-  /* Primary = blue accent */
-  --primary: #3b8bff;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
 
-  /* Secondary = surface variant */
-  --secondary: #161f2d;
-  --secondary-foreground: #c9d6e8;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #a1a1a1;
 
-  /* Muted */
-  --muted: #141c28;
-  --muted-foreground: #6b7d95;
+  --muted: #161616;
+  --muted-foreground: #666666;
 
-  /* Accent */
-  --accent: #161f2d;
-  --accent-foreground: #f0f6ff;
+  --accent: #1a1a1a;
+  --accent-foreground: #ededed;
 
-  /* Destructive = red */
-  --destructive: #ff4757;
+  --destructive: #ef4444;
 
-  /* Borders */
-  --border: rgba(255, 255, 255, 0.05);
-  --input: rgba(255, 255, 255, 0.10);
-  --ring: #3b8bff;
+  --border: #1f1f1f;
+  --input: #1f1f1f;
+  --ring: #6366f1;
 
-  /* Chart colors */
-  --chart-1: #3b8bff;
-  --chart-2: #00d68f;
-  --chart-3: #ffb84d;
-  --chart-4: #9c6cff;
-  --chart-5: #00d4ff;
+  --chart-1: #6366f1;
+  --chart-2: #22c55e;
+  --chart-3: #f59e0b;
+  --chart-4: #a855f7;
+  --chart-5: #06b6d4;
 
   --radius: 0.75rem;
 
-  /* Sidebar */
-  --sidebar: #0c1018;
-  --sidebar-foreground: #c9d6e8;
-  --sidebar-primary: #3b8bff;
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #a1a1a1;
+  --sidebar-primary: #6366f1;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(74, 158, 255, 0.06);
-  --sidebar-accent-foreground: #3b8bff;
-  --sidebar-border: rgba(255, 255, 255, 0.05);
-  --sidebar-ring: #3b8bff;
+  --sidebar-accent: rgba(99, 102, 241, 0.08);
+  --sidebar-accent-foreground: #ededed;
+  --sidebar-border: #1f1f1f;
+  --sidebar-ring: #6366f1;
 
-  /* Semantic extras */
-  --success: #00d68f;
-  --warning: #ffb84d;
-  --info: #00d4ff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #06b6d4;
 }
 
 @layer base {

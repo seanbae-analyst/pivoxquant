@@ -22,7 +22,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-white/[.04] bg-[#0a0e18]/95 px-4 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 flex h-14 items-center justify-between border-b border-border bg-[#0a0a0a]/95 px-4 backdrop-blur-xl">
       {/* Logo */}
       <div className="flex items-center gap-2.5">
         <Logo size={32} />
@@ -55,7 +55,7 @@ export function Header() {
               </Avatar>
               <span className="hidden text-xs sm:inline">{user.name}</span>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 border-border bg-[#0c1018]">
+            <DropdownMenuContent align="end" className="w-40 border-border bg-[#111111]">
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 Sign Out
               </DropdownMenuItem>

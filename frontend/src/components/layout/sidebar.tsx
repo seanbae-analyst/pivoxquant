@@ -47,7 +47,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[220px] shrink-0 overflow-y-auto border-r border-white/[.04] bg-[#080d14] px-3 py-5 md:block">
+    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[220px] shrink-0 overflow-y-auto border-r border-border bg-[#0a0a0a] px-3 py-5 md:block">
       {sections.map((section, si) => (
         <div key={section.title} className={cn("mb-5", si > 0 && "mt-2")}>
           <p className="mb-2 px-3 font-mono text-[9px] font-semibold uppercase tracking-[2px] text-muted-foreground/40">
@@ -113,7 +113,7 @@ export function MobileNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-14 items-center justify-around border-t border-white/[.06] bg-[#060910]/95 backdrop-blur-xl md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-14 items-center justify-around border-t border-border bg-[#0a0a0a]/95 backdrop-blur-xl md:hidden">
       {items.map((item) => {
         const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         return (
