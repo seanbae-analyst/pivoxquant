@@ -1,14 +1,16 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
+import { EditCapitalModal } from "@/components/dashboard/action-modals";
 import { fmtUsd, fmtKrw, fmtPct, pnlColor } from "@/lib/format";
 import type { PortfolioResponse } from "@/lib/types";
 
 interface Props {
   data: PortfolioResponse;
+  onRefresh?: () => void;
 }
 
-export function SummaryCards({ data }: Props) {
+export function SummaryCards({ data, onRefresh }: Props) {
   const { positions, total_value_usd, total_value_krw, available_capital, available_capital_krw } = data;
 
   const buyCount = positions.filter((p) => p.signal === "BUY").length;
@@ -32,6 +34,7 @@ export function SummaryCards({ data }: Props) {
       label: "Available Capital",
       value: fmtUsd(available_capital),
       sub: available_capital_krw > 0 ? fmtKrw(available_capital_krw) : undefined,
+      editable: true,
     },
     {
       label: "Signals",
@@ -53,9 +56,14 @@ export function SummaryCards({ data }: Props) {
           key={c.label}
           className="border-border bg-gradient-to-br from-card to-secondary p-5"
         >
-          <p className="font-mono text-[10px] font-medium uppercase tracking-[0.8px] text-muted-foreground">
-            {c.label}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-[10px] font-medium uppercase tracking-[0.8px] text-muted-foreground">
+              {c.label}
+            </p>
+            {c.editable && onRefresh && (
+              <EditCapitalModal currentUsd={available_capital} currentKrw={available_capital_krw} onDone={onRefresh} />
+            )}
+          </div>
           <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
             {c.value}
             {c.extra && (
