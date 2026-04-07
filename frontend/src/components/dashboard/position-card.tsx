@@ -25,7 +25,7 @@ export function PositionCard({ position: p, onUpdate }: Props) {
   };
 
   return (
-    <Card className="border-border bg-card p-5 transition hover:border-primary/20 hover:shadow-[0_0_20px_rgba(59,139,255,0.06)]">
+    <Card className="border-border bg-card p-5 transition hover:border-[#333]">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

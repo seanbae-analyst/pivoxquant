@@ -48,7 +48,7 @@ export function MarketTicker() {
   const doubled = [...items, ...items];
 
   return (
-    <div className="relative overflow-hidden border-b border-white/[.03] bg-[#040710]">
+    <div className="relative overflow-hidden border-b border-border bg-[#0a0a0a]">
       <motion.div
         className="flex items-center gap-6 whitespace-nowrap py-1.5"
         animate={{ x: ["0%", "-50%"] }}

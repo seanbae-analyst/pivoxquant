@@ -40,8 +40,8 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
       {/* Background gradient orbs */}
-      <div className="pointer-events-none absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary/8 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 h-80 w-80 rounded-full bg-[#9c6cff]/8 blur-[120px]" />
+      <div className="pointer-events-none absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-40 -right-40 h-80 w-80 rounded-full bg-[#a855f7]/10 blur-[120px]" />
 
       <div className="w-full max-w-sm">
         <div className="rounded-2xl border border-white/[.06] bg-card/80 p-8 shadow-2xl backdrop-blur-xl">
@@ -109,7 +109,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-primary to-[#00d4ff] font-semibold text-white hover:opacity-90"
+              className="w-full bg-gradient-to-r from-primary to-[#a855f7] font-semibold text-white hover:opacity-90"
               disabled={loading}
             >
               {loading ? "..." : isSignup ? "Create Account" : "Sign In"}

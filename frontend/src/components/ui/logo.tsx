@@ -15,8 +15,8 @@ export function Logo({ size = 32 }: { size?: number }) {
       {/* Background */}
       <defs>
         <linearGradient id="logo-grad" x1="0" y1="0" x2="40" y2="40">
-          <stop offset="0%" stopColor="#3b8bff" />
-          <stop offset="100%" stopColor="#00d4ff" />
+          <stop offset="0%" stopColor="#6366f1" />
+          <stop offset="100%" stopColor="#a855f7" />
         </linearGradient>
         <linearGradient id="arrow-grad" x1="10" y1="30" x2="30" y2="10">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
