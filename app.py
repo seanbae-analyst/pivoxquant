@@ -39,7 +39,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect
 from flask_login import (LoginManager, UserMixin, login_user,
                          login_required, current_user, logout_user)
 from flask_sqlalchemy import SQLAlchemy
@@ -222,7 +222,7 @@ def api_auth(f):
 # ── Pages ──────────────────────────────────────────────────────────────────────
 
 @app.route("/")
-def index(): return render_template("index.html")
+def index(): return redirect("http://localhost:3000")
 
 # ── Auth API ───────────────────────────────────────────────────────────────────
 

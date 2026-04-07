@@ -8,6 +8,7 @@ import { AnalyticsBar } from "@/components/dashboard/analytics-bar";
 import { PnlChart } from "@/components/dashboard/pnl-chart";
 import { SectorPie } from "@/components/dashboard/sector-pie";
 import { PositionCard } from "@/components/dashboard/position-card";
+import { AddPositionModal, EditCapitalModal } from "@/components/dashboard/action-modals";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 
@@ -78,19 +79,22 @@ export default function DashboardPage() {
             {portfolio.positions.length} positions tracked
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="text-xs"
-        >
-          {refreshing ? "Refreshing..." : "↻ Refresh Signals"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <AddPositionModal onDone={() => refreshPortfolio()} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="text-xs"
+          >
+            {refreshing ? "Refreshing..." : "↻ Refresh"}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
-      <SummaryCards data={portfolio} />
+      <SummaryCards data={portfolio} onRefresh={() => refreshPortfolio()} />
 
       {/* Analytics Bar */}
       {analytics && <AnalyticsBar data={analytics} />}
@@ -129,7 +133,7 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {filteredPositions.map((pos) => (
-              <PositionCard key={pos.id} position={pos} />
+              <PositionCard key={pos.id} position={pos} onUpdate={() => refreshPortfolio()} />
             ))}
           </div>
         )}

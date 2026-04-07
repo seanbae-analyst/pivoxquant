@@ -73,8 +73,8 @@ function DiscoverCard({ item }: { item: DiscoverResult }) {
     <Card className="border-border bg-card p-4 transition hover:border-primary/20">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-semibold text-foreground">{flag} {item.ticker}</p>
-          <p className="text-[11px] text-muted-foreground">{item.name}</p>
+          <p className="text-sm font-semibold text-foreground">{flag} {item.name || item.ticker}</p>
+          <p className="text-[10px] text-muted-foreground">{item.ticker}</p>
           <p className="text-[10px] text-muted-foreground">{item.sector}</p>
         </div>
         <Badge variant="outline" className={`text-[10px] font-semibold ${signalColor(item.signal)}`}>
