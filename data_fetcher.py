@@ -1,18 +1,17 @@
 """
-StockPilot — Data Fetcher v2
-Free data only: yfinance, RSS feeds, alternative.me.
+StockPilot — Data Fetcher v3
+Data sources: FMP API (primary), KIS (Korean stocks), RSS feeds, alternative.me.
 Supports US equities + Korean stocks (.KS / .KQ).
-Zero AI API calls.
 """
 
-import yfinance as yf
-import feedparser
-import requests
 import logging
+from datetime import datetime
+
+import feedparser
 import pandas as pd
-import time
-from datetime import datetime, timedelta
-from functools import lru_cache
+import requests
+
+import fmp_service as fmp
 
 logger = logging.getLogger(__name__)
 
@@ -104,42 +103,40 @@ class DataFetcher:
     def quick_lookup(self, ticker: str) -> "dict | None":
         """
         Fast ticker lookup for real-time modal UX.
-        Uses fast_info (< 1s) for price. Name from KOREAN_NAMES dict or yfinance info.
+        Uses FMP quote API for US stocks, KIS for Korean stocks.
         """
         ticker = ticker.strip().upper()
         if not ticker:
             return None
-        # Auto-append .KS for Korean stock codes (6-digit numbers without suffix)
         if ticker.isdigit() and len(ticker) == 6:
             ticker = ticker + ".KS"
         try:
-            stock = yf.Ticker(ticker)
-            fi    = stock.fast_info
-            price = fi.last_price
-            if not price or price <= 0:
-                # Try .KQ (KOSDAQ) if .KS failed
-                if ticker.endswith(".KS"):
-                    ticker_kq = ticker.replace(".KS", ".KQ")
-                    stock = yf.Ticker(ticker_kq)
-                    fi = stock.fast_info
-                    price = fi.last_price
-                    if price and price > 0:
-                        ticker = ticker_kq
-                    else:
-                        return None
-                else:
-                    return None
-
             curr = self.currency(ticker)
-
-            # Name resolution: registry → yfinance shortName/longName → ticker
+            price = None
             name = KOREAN_NAMES.get(ticker)
-            if not name:
-                try:
-                    info = stock.info
-                    name = (info.get("shortName") or info.get("longName") or "").strip()
-                except Exception:
-                    name = ""
+
+            if self.is_korean(ticker):
+                # Korean stocks: use KIS API or FMP won't have them
+                # Try FMP first for non-Korean, KIS for Korean
+                price = None  # KIS handled by realtime_service
+            else:
+                # US stocks: FMP quote
+                q = fmp.get_quote(ticker)
+                if q:
+                    price = q.get("price")
+                    if not name:
+                        name = q.get("name", "")
+
+            if not price or price <= 0:
+                # Fallback: try FMP profile
+                info = fmp.get_info(ticker)
+                if info:
+                    price = info.get("price", 0)
+                    if not name:
+                        name = info.get("shortName", ticker)
+
+            if not price or price <= 0:
+                return None
             if not name:
                 name = ticker
 
@@ -175,27 +172,23 @@ class DataFetcher:
     # ── Per-Ticker News ───────────────────────────────────────────────────────
 
     def get_news(self, ticker: str) -> list[dict]:
-        """Fetch per-ticker news via yfinance .news (no RSS rate-limit issues)."""
+        """Fetch per-ticker news via FMP API."""
         items: list[dict] = []
         try:
-            raw = yf.Ticker(ticker).news or []
-            for entry in raw[:15]:
-                c = entry.get("content", {})
-                title = (c.get("title") or "").strip()
+            raw = fmp.get_news(ticker, limit=15)
+            for entry in raw:
+                title = (entry.get("title") or "").strip()
                 if not title or len(title) < 5:
                     continue
-                url = (c.get("canonicalUrl") or c.get("clickThroughUrl") or {}).get("url", "")
-                source = (c.get("provider") or {}).get("displayName", "Yahoo Finance")
-                summary = (c.get("summary") or c.get("description") or "")[:300]
-                # strip HTML tags from summary
                 import re
+                summary = (entry.get("text") or "")[:300]
                 summary = re.sub(r"<[^>]+>", "", summary).strip()
                 items.append({
                     "title":     title,
                     "summary":   summary,
-                    "published": c.get("pubDate", ""),
-                    "link":      url,
-                    "source":    source,
+                    "published": entry.get("publishedDate", ""),
+                    "link":      entry.get("url", ""),
+                    "source":    entry.get("site", "FMP"),
                 })
         except Exception as ex:
             logger.warning(f"News fetch failed {ticker}: {ex}")
@@ -374,13 +367,13 @@ Reply ONLY in this exact JSON format, nothing else:
         return self.get_enhanced_macro()
 
     def get_enhanced_macro(self) -> dict:
-        """Full macro snapshot — single batch yf.download() for speed."""
+        """Full macro snapshot — FMP batch quotes + parallel index history."""
         from concurrent.futures import ThreadPoolExecutor
         macro: dict = {}
 
-        # Fear & Greed Index (parallel with yfinance)
-        fng_future = None
-        executor = ThreadPoolExecutor(max_workers=2)
+        executor = ThreadPoolExecutor(max_workers=5)
+
+        # Fear & Greed Index
         def _fetch_fng():
             try:
                 r = requests.get("https://api.alternative.me/fng/", timeout=6)
@@ -392,84 +385,112 @@ Reply ONLY in this exact JSON format, nothing else:
             return {"value": 50, "label": "Neutral"}
         fng_future = executor.submit(_fetch_fng)
 
-        # ── Single batch download for ALL tickers ──
-        all_syms = [
-            "^GSPC", "^IXIC", "^DJI", "^RUT",        # US indices
-            "^KS11", "^KQ11",                          # Korean indices
-            "^VIX", "^TNX",                             # Volatility & rates
-            "CL=F", "GC=F", "SI=F",                    # Commodities
-            "DX-Y.NYB", "EURUSD=X", "KRW=X", "JPY=X", # FX
-            "BTC-USD",                                   # Crypto
-            "^IRX", "^TYX",                              # Yield curve (3M, 30Y)
-        ]
-        try:
-            batch = yf.download(all_syms, period="5d", group_by="ticker",
-                                threads=True, progress=False)
-        except Exception:
-            batch = pd.DataFrame()
+        # FMP batch quote for indices and assets
+        index_syms = ["^GSPC", "^IXIC", "^DJI", "^RUT", "^VIX", "^TNX", "^IRX", "^TYX"]
+        stock_syms = ["GLD", "USO", "SLV", "UUP"]
+        fx_pairs = ["USDKRW", "EURUSD", "USDJPY"]
 
-        def _extract(sym):
-            """Extract price & change_pct from batch download."""
-            try:
-                if len(all_syms) == 1:
-                    h = batch
-                else:
-                    h = batch[sym] if sym in batch.columns.get_level_values(0) else pd.DataFrame()
-                if h.empty or len(h) < 2:
-                    return None, None
+        def _get_single_index(sym):
+            h = fmp.get_history(sym, period="5d")
+            if h is not None and not h.empty and len(h) >= 2:
                 close = h["Close"].dropna()
-                if len(close) < 2:
-                    return float(close.iloc[-1]), None
                 price = float(close.iloc[-1])
-                prev  = float(close.iloc[-2])
-                chg   = (price - prev) / prev * 100 if prev else 0
-                return price, chg
-            except Exception:
-                return None, None
+                prev = float(close.iloc[-2])
+                chg = (price - prev) / prev * 100 if prev else 0
+                return (sym, (price, chg))
+            elif h is not None and not h.empty:
+                return (sym, (float(h["Close"].iloc[-1]), 0))
+            return (sym, None)
+
+        def _get_index_quotes():
+            from concurrent.futures import ThreadPoolExecutor as _TPE
+            result = {}
+            with _TPE(max_workers=8) as pool:
+                for sym, val in pool.map(_get_single_index, index_syms):
+                    if val is not None:
+                        result[sym] = val
+            return result
+
+        def _get_stock_quotes():
+            quotes = fmp.get_quotes_batch(stock_syms)
+            return {sym: (q.get("price", 0), q.get("changesPercentage", 0))
+                    for sym, q in quotes.items()} if quotes else {}
+
+        def _get_fx_quotes():
+            from concurrent.futures import ThreadPoolExecutor as _TPE
+            result = {}
+            def _fetch_pair(pair):
+                rate = fmp.get_fx_rate(pair)
+                return (pair, rate)
+            with _TPE(max_workers=3) as pool:
+                for pair, rate in pool.map(_fetch_pair, fx_pairs):
+                    if rate:
+                        result[pair] = rate
+            return result
+
+        def _get_btc_quote():
+            q = fmp.get_quote("BTCUSD")
+            return q if q else None
+
+        idx_future = executor.submit(_get_index_quotes)
+        stk_future = executor.submit(_get_stock_quotes)
+        fx_future = executor.submit(_get_fx_quotes)
+        btc_future = executor.submit(_get_btc_quote)
+
+        idx_data = idx_future.result(timeout=15)
+        stk_data = stk_future.result(timeout=15)
+        fx_data = fx_future.result(timeout=15)
+        btc_data = btc_future.result(timeout=15)
 
         # Equity indices
-        for sym, key in [("^GSPC","sp500"),("^IXIC","nasdaq"),("^DJI","dow"),
-                         ("^RUT","russell2000"),("^KS11","kospi"),("^KQ11","kosdaq")]:
-            price, chg = _extract(sym)
-            if price is not None:
-                macro[key] = {"price": self._safe(price), "change_pct": self._safe(chg)}
+        for sym, key in [("^GSPC","sp500"),("^IXIC","nasdaq"),("^DJI","dow"),("^RUT","russell2000")]:
+            if sym in idx_data:
+                p, c = idx_data[sym]
+                macro[key] = {"price": self._safe(p), "change_pct": self._safe(c)}
+
+        # Korean indices (FMP may not have these — use defaults)
+        for sym, key in [("^KS11","kospi"),("^KQ11","kosdaq")]:
+            if sym in idx_data:
+                p, c = idx_data[sym]
+                macro[key] = {"price": self._safe(p), "change_pct": self._safe(c)}
 
         # VIX
-        price, _ = _extract("^VIX")
-        if price is not None:
-            macro["vix"] = round(price, 2)
+        if "^VIX" in idx_data:
+            macro["vix"] = round(idx_data["^VIX"][0], 2)
 
         # 10Y Treasury
-        price, _ = _extract("^TNX")
-        if price is not None:
-            macro["treasury_10y"] = round(price, 2)
+        if "^TNX" in idx_data:
+            macro["treasury_10y"] = round(idx_data["^TNX"][0], 2)
 
-        # Commodities
-        for sym, key, name in [("CL=F","oil_wti","WTI Crude Oil"),
-                                ("GC=F","gold","Gold"),("SI=F","silver","Silver")]:
-            price, chg = _extract(sym)
-            if price is not None:
-                macro[key] = {"price": self._safe(price), "change_pct": self._safe(chg), "name": name}
+        # Commodities (using ETFs as proxies)
+        for sym, key, name in [("USO","oil_wti","WTI Crude Oil"),
+                                ("GLD","gold","Gold"),("SLV","silver","Silver")]:
+            if sym in stk_data:
+                p, c = stk_data[sym]
+                macro[key] = {"price": self._safe(p), "change_pct": self._safe(c), "name": name}
 
         # FX
-        for sym, key, name in [("DX-Y.NYB","dxy","US Dollar Index"),
-                                ("EURUSD=X","eurusd","EUR/USD"),
-                                ("KRW=X","usdkrw","USD/KRW"),
-                                ("JPY=X","usdjpy","USD/JPY")]:
-            price, chg = _extract(sym)
-            if price is not None:
-                macro[key] = {"price": round(price, 4), "change_pct": round(chg, 2) if chg else 0, "name": name}
+        for pair, key, name in [("USDKRW","usdkrw","USD/KRW"),
+                                 ("EURUSD","eurusd","EUR/USD"),
+                                 ("USDJPY","usdjpy","USD/JPY")]:
+            if pair in fx_data:
+                macro[key] = {"price": round(fx_data[pair], 4), "change_pct": 0, "name": name}
 
-        # Crypto
-        price, chg = _extract("BTC-USD")
-        if price is not None:
-            macro["btc"] = {"price": self._safe(price, 0), "change_pct": self._safe(chg)}
+        # DXY via UUP (Dollar Index ETF proxy)
+        if "UUP" in stk_data:
+            p, c = stk_data["UUP"]
+            macro["dxy"] = {"price": self._safe(p), "change_pct": self._safe(c), "name": "US Dollar Index"}
+
+        # BTC (fetched in parallel above)
+        if btc_data:
+            macro["btc"] = {"price": self._safe(btc_data.get("price", 0), 0),
+                            "change_pct": self._safe(btc_data.get("changesPercentage", 0))}
 
         # Yield curve
         try:
-            p3m, _ = _extract("^IRX")
-            p10y, _ = _extract("^TNX")
-            p30y, _ = _extract("^TYX")
+            p3m = idx_data.get("^IRX", (None,))[0]
+            p10y = idx_data.get("^TNX", (None,))[0]
+            p30y = idx_data.get("^TYX", (None,))[0]
             if p3m is not None and p10y is not None:
                 spread = round(p10y - p3m, 2)
                 macro["yield_curve"] = {
@@ -480,7 +501,6 @@ Reply ONLY in this exact JSON format, nothing else:
         except Exception:
             pass
 
-        # Fear & Greed (collect from parallel thread)
         macro["fear_greed"] = fng_future.result(timeout=8)
         executor.shutdown(wait=False)
 
@@ -604,37 +624,28 @@ Reply ONLY in this exact JSON format, nothing else:
 
     def _fetch_snapshot(self, ticker: str) -> "dict | None":
         try:
-            # Auto-append .KS for Korean stock codes
             if ticker.strip().isdigit() and len(ticker.strip()) == 6:
                 ticker = ticker.strip() + ".KS"
-            stock = yf.Ticker(ticker)
 
-            # 1-min intraday (prepost) — most reliable current price
-            h1 = stock.history(period="1d", interval="1m", prepost=True)
-            if not h1.empty:
-                cur = float(h1["Close"].dropna().iloc[-1])
-            else:
-                fi  = stock.fast_info
-                cur = fi.last_price
+            info = fmp.get_info(ticker)
+            hist = fmp.get_history(ticker, period="1y")
+
+            # Get current price from quote or info
+            q = fmp.get_quote(ticker)
+            cur = q.get("price", 0) if q else info.get("price", 0)
             if not cur or cur <= 0:
                 return None
             cur = float(cur)
 
-            # History for technical indicators (need 1y for MA200)
-            hist = stock.history(period="1y")
-            if hist.empty or len(hist) < 20:
+            if hist is None or hist.empty or len(hist) < 20:
                 return None
 
-            try:
-                info = stock.info
-            except Exception:
-                info = {}
             prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else cur
-            chg  = (cur - prev) / prev * 100
+            chg = (cur - prev) / prev * 100
             curr = self.currency(ticker)
             name = KOREAN_NAMES.get(ticker.upper(),
-                   (info.get("shortName") or info.get("longName") or ticker))
-            dp   = 0 if curr == "KRW" else 2
+                   info.get("shortName", ticker))
+            dp = 0 if curr == "KRW" else 2
 
             return {
                 "ticker":         ticker.upper(),
@@ -642,18 +653,18 @@ Reply ONLY in this exact JSON format, nothing else:
                 "price":          round(cur, dp),
                 "price_display":  self.fmt_price(cur, ticker),
                 "change_pct":     round(chg, 2),
-                "volume":         int(hist["Volume"].iloc[-1]),
-                "avg_volume":     int(hist["Volume"].rolling(20).mean().iloc[-1]),
+                "volume":         int(hist["Volume"].iloc[-1]) if "Volume" in hist else 0,
+                "avg_volume":     int(hist["Volume"].rolling(20).mean().iloc[-1]) if "Volume" in hist else 0,
                 "market_cap":     info.get("marketCap"),
                 "pe_ratio":       info.get("trailingPE"),
                 "forward_pe":     info.get("forwardPE"),
                 "eps":            info.get("trailingEps"),
                 "revenue_growth": info.get("revenueGrowth"),
-                "profit_margin":  info.get("profitMargins"),
+                "profit_margin":  info.get("netProfitMargin"),
                 "debt_equity":    info.get("debtToEquity"),
                 "week52_high":    round(float(hist["High"].max()), dp),
                 "week52_low":     round(float(hist["Low"].min()), dp),
-                "sector":         info.get("sector", info.get("quoteType", "Unknown")),
+                "sector":         info.get("sector", "Unknown"),
                 "industry":       info.get("industry", "Unknown"),
                 "beta":           info.get("beta"),
                 "currency":       curr,
@@ -673,8 +684,8 @@ Reply ONLY in this exact JSON format, nothing else:
         if cached and _time.time() - cached[0] < self._HISTORY_TTL:
             return cached[1]
         try:
-            h = yf.Ticker(ticker).history(period=period)
-            result = h if not h.empty else None
+            h = fmp.get_history(ticker, period=period)
+            result = h if h is not None and not h.empty else None
             if result is not None:
                 self._history_cache[cache_key] = (_time.time(), result)
             return result
@@ -682,34 +693,23 @@ Reply ONLY in this exact JSON format, nothing else:
             return None
 
     def get_prices_batch(self, tickers: list[str]) -> dict:
-        """Reliable parallel price fetch using 1-min intraday history (pre/post market included)."""
-        from concurrent.futures import ThreadPoolExecutor
-
-        def _one(ticker: str):
-            try:
-                # 1-min bars with pre/post — always fresh, bypasses fast_info cache issues
-                h = yf.Ticker(ticker).history(period="1d", interval="1m", prepost=True)
-                if h.empty:
-                    # fallback: daily bar
-                    h = yf.Ticker(ticker).history(period="5d", interval="1d")
-                if h.empty:
-                    return ticker, None
-                price = float(h["Close"].dropna().iloc[-1])
-                if price > 0:
+        """Batch price fetch using FMP batch quote API."""
+        result = {}
+        try:
+            quotes = fmp.get_quotes_batch(tickers)
+            for ticker in tickers:
+                q = quotes.get(ticker)
+                if q and q.get("price", 0) > 0:
+                    price = q["price"]
                     curr = self.currency(ticker)
-                    return ticker, {
+                    result[ticker] = {
                         "price":         round(price, 0 if curr == "KRW" else 2),
                         "price_display": self.fmt_price(price, ticker),
                         "currency":      curr,
                     }
-            except Exception as e:
-                logger.warning(f"Price fetch failed {ticker}: {e}")
-            return ticker, None
-
-        with ThreadPoolExecutor(max_workers=10) as pool:
-            results = dict(pool.map(_one, tickers))
-
-        return {k: v for k, v in results.items() if v is not None}
+        except Exception as e:
+            logger.warning(f"Batch price fetch failed: {e}")
+        return result
 
     # ── Sectors ───────────────────────────────────────────────────────────────
 
@@ -725,22 +725,16 @@ Reply ONLY in this exact JSON format, nothing else:
         syms = [s[0] for s in sectors]
         result = []
         try:
-            batch = yf.download(syms, period="5d", group_by="ticker",
-                                threads=True, progress=False)
-        except Exception:
-            return result
-        for sym, name in sectors:
-            try:
-                h = batch[sym] if sym in batch.columns.get_level_values(0) else pd.DataFrame()
-                close = h["Close"].dropna()
-                if len(close) >= 2:
-                    chg = (float(close.iloc[-1]) - float(close.iloc[-2])) / float(close.iloc[-2]) * 100
+            quotes = fmp.get_quotes_batch(syms)
+            for sym, name in sectors:
+                q = quotes.get(sym)
+                if q:
                     result.append({
                         "sector":     name,
                         "symbol":     sym,
-                        "change_pct": round(chg, 2),
-                        "price":      round(float(close.iloc[-1]), 2),
+                        "change_pct": round(q.get("changesPercentage", 0), 2),
+                        "price":      round(q.get("price", 0), 2),
                     })
-            except Exception:
-                pass
+        except Exception:
+            pass
         return result

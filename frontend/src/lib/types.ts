@@ -42,6 +42,8 @@ export interface PortfolioResponse {
   available_capital_krw: number;
   total_value_usd: number;
   total_value_krw: number;
+  total_value_all_krw: number;
+  fx_rate: number;
 }
 
 export interface AnalyticsResponse {
@@ -238,4 +240,55 @@ export interface DiscoverResponse {
   results: DiscoverResult[];
   cached: boolean;
   cached_at?: string;
+}
+
+// ── Investment Profile ──
+export interface InvestmentProfile {
+  profile_type: string;
+  experience_level: string;
+  investment_goal: string;
+  risk_tolerance: number;
+  time_horizon: string;
+  preferred_markets: string;
+  preferred_sectors: string;
+  auto_trade_preference: string;
+  daily_time: string;
+  tech_weight: number;
+  fund_weight: number;
+  news_weight: number;
+  tp_min: number;
+  tp_max: number;
+  sl_min: number;
+  sl_max: number;
+  max_positions: number;
+  buy_threshold: number;
+  sell_threshold: number;
+  ai_coaching_style: string;
+  alert_frequency: string;
+}
+
+export interface ProfileResponse {
+  profile: InvestmentProfile | null;
+  has_profile: boolean;
+  changes_left?: number;
+  subscription_tier?: string;
+}
+
+export interface QuestionOption {
+  value: string | number;
+  label: string;
+  label_kr: string;
+  icon?: string;
+}
+
+export interface Question {
+  id: string;
+  question: string;
+  question_kr: string;
+  type?: string;
+  options: QuestionOption[];
+}
+
+export interface QuestionnaireResponse {
+  questions: Question[];
 }

@@ -6,7 +6,7 @@ Tests quant strategies on historical data with adaptive regime-aware parameters.
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
+import fmp_service as fmp
 import logging
 from datetime import datetime
 from quant_models import (MeanReversion, MomentumBreakout, VolatilityRegime,
@@ -44,7 +44,7 @@ class Backtester:
             if sell_threshold is None:
                 sell_threshold = 28 if is_korean else 30
 
-            h = yf.Ticker(ticker).history(period=period)
+            h = fmp.get_history(ticker, period=period)
             if h.empty or len(h) < 20:
                 return None
 

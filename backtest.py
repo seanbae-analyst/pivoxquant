@@ -3,7 +3,7 @@ StockPilot — Backtest Engine v2
 Uses VectorBT for high-speed backtesting + QuantStats for professional reporting.
 """
 
-import yfinance as yf
+import fmp_service as fmp
 import pandas as pd
 import numpy as np
 import logging
@@ -119,7 +119,7 @@ def backtest_engine(tickers: list[str], months: int = 6, hold_days: int = 20,
 
     for ticker in tickers:
         try:
-            data = yf.download(ticker, period=f"{months}mo", interval="1d", progress=False)
+            data = fmp.get_history(ticker, period=f"{months}mo")
             if data is None or len(data) < 60:
                 errors.append(f"{ticker}: insufficient data")
                 continue
@@ -181,8 +181,8 @@ def generate_report(tickers: list[str], months: int = 12) -> str:
         import quantstats as qs
 
         # Build daily returns from backtest trades
-        data = yf.download(tickers[0] if len(tickers) == 1 else "SPY",
-                          period=f"{months}mo", interval="1d", progress=False)
+        data = fmp.get_history(tickers[0] if len(tickers) == 1 else "SPY",
+                              period=f"{months}mo")
         if data is None or data.empty:
             return "No data"
 

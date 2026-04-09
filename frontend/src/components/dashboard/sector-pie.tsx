@@ -1,19 +1,8 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
-const COLORS = [
-  "#6366f1", "#22c55e", "#f59e0b", "#a855f7", "#06b6d4",
-  "#ef4444", "#ec4899", "#14b8a6", "#f97316", "#818cf8",
-];
+const COLORS = ["#22d3ee", "#34d399", "#fbbf24", "#f472b6", "#818cf8", "#f87171", "#06b6d4", "#f97316", "#6366f1", "#14b8a6"];
 
 interface Props {
   sectorAllocation: Record<string, number>;
@@ -27,42 +16,27 @@ export function SectorPie({ sectorAllocation }: Props) {
   if (!chartData.length) return null;
 
   return (
-    <Card className="border-border bg-card p-5">
-      <p className="mb-3 font-mono text-[10px] font-medium uppercase tracking-[0.8px] text-muted-foreground">
-        Sector Allocation
-      </p>
-      <div className="h-[200px]">
+    <div className="rounded-2xl border border-[var(--ld-border)] bg-[var(--ld-surface)] p-6">
+      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Sector Allocation</p>
+      <div className="mt-4 h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={50}
-              outerRadius={75}
-              paddingAngle={2}
-              dataKey="value"
-            >
-              {chartData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
+            <Pie data={chartData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value" strokeWidth={0}>
+              {chartData.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
             </Pie>
-            <Tooltip
-              contentStyle={{
-                background: "#111111",
-                border: "1px solid #1f1f1f",
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              formatter={(v) => [`${v}%`, "Weight"]}
-            />
-            <Legend
-              iconSize={8}
-              wrapperStyle={{ fontSize: 11, color: "#666666" }}
-            />
+            <Tooltip contentStyle={{ background: "#18181b", border: "1px solid #27272a", borderRadius: 12, fontSize: 12, color: "#fafafa" }} formatter={(v) => [`${v}%`, "Weight"]} />
           </PieChart>
         </ResponsiveContainer>
       </div>
-    </Card>
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+        {chartData.map((item, i) => (
+          <div key={item.name} className="flex items-center gap-1.5">
+            <div className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
+            <span className="text-[11px] text-zinc-500">{item.name}</span>
+            <span className="text-[11px] font-semibold text-zinc-300">{item.value}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

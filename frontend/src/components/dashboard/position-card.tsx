@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { QuickBuyModal, QuickSellModal } from "@/components/dashboard/action-modals";
 import { fmtUsd, fmtPct, pnlColor, signalColor, scoreColor } from "@/lib/format";
 import { apiFetch } from "@/lib/api";
+import { API } from "@/lib/endpoints";
 import type { Position } from "@/lib/types";
 
 interface Props {
@@ -15,93 +16,125 @@ interface Props {
 }
 
 export function PositionCard({ position: p, onUpdate }: Props) {
-  const displayName = p.name || p.ticker;  // 항상 이름이 위
-  const displayTicker = p.ticker;
+  const displayName = p.name || p.ticker;
 
   const handleDelete = async () => {
     if (!confirm(`Delete ${p.ticker} from portfolio?`)) return;
-    await apiFetch(`/api/portfolio/position/${p.id}`, { method: "DELETE" });
+    await apiFetch(API.portfolio.deletePosition(p.id), { method: "DELETE" });
     onUpdate?.();
   };
 
+  const signalBg = p.signal === "BUY"
+    ? "bg-success/10 text-success border-success/20"
+    : p.signal === "SELL"
+      ? "bg-destructive/10 text-destructive border-destructive/20"
+      : "bg-muted text-muted-foreground border-border";
+
   return (
-    <Card className="border-border bg-card p-5 transition hover:border-[#333]">
+    <Card className="glass-card group overflow-hidden transition-all duration-300 hover:border-primary/15 hover:shadow-lg hover:shadow-primary/5">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{displayName}</p>
-          <p className="text-xs text-muted-foreground">
-            {displayTicker}
-            {p.is_korean && <span className="ml-1">🇰🇷</span>}
-            {p.sector === "ETF" && <span className="ml-1">📦</span>}
+      <div className="flex items-start justify-between p-5 pb-0">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-bold text-foreground">{displayName}</p>
+          <p className="mt-0.5 text-[11px] text-foreground/50">
+            {p.ticker}{p.is_korean ? " · KRX" : ""}{p.sector !== "Unknown" ? ` · ${p.sector}` : ""}
           </p>
         </div>
-        <Badge variant="outline" className={`text-[10px] font-semibold ${signalColor(p.signal)}`}>
+        <Badge variant="outline" className={`border text-[10px] font-bold ${signalBg}`}>
           {p.signal}
         </Badge>
       </div>
 
-      {/* Recommendation strip */}
+      {/* Price & P&L hero */}
+      <div className="px-5 pt-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-foreground/50">Current</p>
+            <p className="text-lg font-bold text-foreground">{p.price_display}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-foreground/50">P&L</p>
+            <p className={`text-lg font-bold ${pnlColor(p.pnl_pct)}`}>
+              {p.pnl_pct >= 0 ? "+" : ""}{fmtPct(p.pnl_pct)}
+            </p>
+          </div>
+        </div>
+        {p.pnl_krw_pct != null && (
+          <p className="mt-1 text-right text-[10px] text-foreground/40">
+            KRW {p.pnl_krw_pct >= 0 ? "+" : ""}{fmtPct(p.pnl_krw_pct)}
+          </p>
+        )}
+      </div>
+
+      {/* Recommendation */}
       {p.signal === "BUY" && p.rec_shares > 0 && (
-        <div className="mt-3 rounded-lg border border-success/20 bg-success/5 px-3 py-2 text-xs text-success">
-          Add {p.rec_shares} shares @ {p.price_display} = {fmtUsd(p.rec_investment)}
-          {p.rec_timing && <span className="block text-[10px] text-success/70">{p.rec_timing}</span>}
+        <div className="mx-5 mt-3 rounded-lg border border-success/15 bg-success/5 px-3 py-2">
+          <p className="text-xs font-medium text-success">
+            Add {p.rec_shares} shares @ {p.price_display}
+          </p>
+          {p.rec_timing && (
+            <p className="mt-0.5 text-[10px] text-success/60">{p.rec_timing}</p>
+          )}
         </div>
       )}
       {p.signal === "SELL" && p.sell_pct > 0 && (
-        <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-          Sell {p.sell_pct}% of position
+        <div className="mx-5 mt-3 rounded-lg border border-destructive/15 bg-destructive/5 px-3 py-2">
+          <p className="text-xs font-medium text-destructive">
+            Sell {p.sell_pct}% of position
+          </p>
         </div>
       )}
 
       {/* Data grid */}
-      <div className="mt-4 grid grid-cols-2 gap-y-3 text-xs">
+      <div className="mt-4 grid grid-cols-2 gap-y-3 border-t border-border/50 px-5 py-4 text-xs">
         <div>
-          <p className="text-muted-foreground">Shares</p>
-          <p className="font-medium text-foreground">{p.shares}</p>
+          <p className="text-foreground/50">Shares</p>
+          <p className="mt-0.5 font-medium text-foreground">{p.shares}</p>
         </div>
         <div className="text-right">
-          <p className="text-muted-foreground">Current Price</p>
-          <p className="font-medium text-foreground">{p.price_display}</p>
+          <p className="text-foreground/50">Avg Cost</p>
+          <p className="mt-0.5 font-medium text-foreground">{fmtUsd(p.avg_cost)}</p>
         </div>
         <div>
-          <p className="text-muted-foreground">Avg Cost</p>
-          <p className="font-medium text-foreground">{fmtUsd(p.avg_cost)}</p>
+          <p className="text-foreground/50">Market Value</p>
+          <p className="mt-0.5 font-medium text-foreground">{fmtUsd(p.market_value)}</p>
         </div>
         <div className="text-right">
-          <p className="text-muted-foreground">P&L</p>
-          <p className={`font-medium ${pnlColor(p.pnl_pct)}`}>
-            {fmtPct(p.pnl_pct)}
-            {p.pnl_krw_pct != null && (
-              <span className="ml-1 text-[10px] text-muted-foreground">({fmtPct(p.pnl_krw_pct)} ₩)</span>
-            )}
-          </p>
+          <p className="text-foreground/50">Sector</p>
+          <p className="mt-0.5 font-medium text-foreground">{p.sector}</p>
         </div>
       </div>
 
-      {/* Score bar */}
-      <div className="mt-4">
+      {/* Score */}
+      <div className="border-t border-border/50 px-5 py-3">
         <div className="flex items-center justify-between text-[10px]">
-          <span className="text-muted-foreground">Quant Score</span>
-          <span className="font-mono font-medium text-foreground">{p.score}/100</span>
+          <span className="uppercase tracking-wider text-foreground/50">Quant Score</span>
+          <span className={`font-mono font-bold ${scoreColor(p.score)}`}>{p.score}/100</span>
         </div>
-        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-          <div className={`h-full rounded-full transition-all ${scoreColor(p.score)}`} style={{ width: `${p.score}%` }} />
+        <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ${scoreColor(p.score)}`}
+            style={{ width: `${p.score}%` }}
+          />
         </div>
       </div>
 
       {/* TP/SL */}
       {(p.take_profit || p.stop_loss) && (
-        <div className="mt-3 flex gap-3 text-[10px]">
-          {p.take_profit && <span className="text-success">TP {fmtUsd(p.take_profit)} ({fmtPct(p.tp_pct)})</span>}
-          {p.stop_loss && <span className="text-destructive">SL {fmtUsd(p.stop_loss)} ({fmtPct(p.sl_pct)})</span>}
+        <div className="flex gap-4 border-t border-border/50 px-5 py-2.5 text-[10px]">
+          {p.take_profit && (
+            <span className="text-success/70">TP {fmtUsd(p.take_profit)} <span className="text-success/40">({fmtPct(p.tp_pct)})</span></span>
+          )}
+          {p.stop_loss && (
+            <span className="text-destructive/70">SL {fmtUsd(p.stop_loss)} <span className="text-destructive/40">({fmtPct(p.sl_pct)})</span></span>
+          )}
         </div>
       )}
 
-      {/* ── Action Buttons ── */}
-      <div className="mt-4 flex gap-1.5">
+      {/* Actions */}
+      <div className="flex gap-1.5 border-t border-border/50 p-3">
         <Link href={`/detail/${encodeURIComponent(p.ticker)}`} className="flex-1">
-          <Button variant="outline" size="sm" className="h-7 w-full text-[10px] text-primary hover:bg-primary/10">
+          <Button variant="outline" size="sm" className="h-8 w-full text-[11px] font-medium text-primary hover:bg-primary/10 hover:border-primary/30">
             Analyze
           </Button>
         </Link>
@@ -122,12 +155,14 @@ export function PositionCard({ position: p, onUpdate }: Props) {
           onDone={() => onUpdate?.()}
         />
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="h-7 w-7 p-0 text-[10px] text-destructive/50 hover:bg-destructive/10 hover:text-destructive"
+          className="h-8 w-8 p-0 text-[10px] text-foreground/30 hover:bg-destructive/10 hover:text-destructive"
           onClick={handleDelete}
         >
-          ✕
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
         </Button>
       </div>
     </Card>

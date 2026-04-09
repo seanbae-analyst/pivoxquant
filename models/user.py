@@ -1,0 +1,37 @@
+from datetime import datetime
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from extensions import db
+
+
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+    id               = db.Column(db.Integer,     primary_key=True)
+    email            = db.Column(db.String(120),  unique=True, nullable=False)
+    password_hash    = db.Column(db.String(200),  nullable=True)
+    name             = db.Column(db.String(100),  default="")
+    google_id        = db.Column(db.String(100),  unique=True, nullable=True)
+    avatar_url       = db.Column(db.String(500),  nullable=True)
+    available_capital     = db.Column(db.Float, default=0.0)
+    available_capital_krw = db.Column(db.Float, default=0.0)
+    risk_profile          = db.Column(db.String(20), default="balanced")
+    profile_changes_left  = db.Column(db.Integer, default=3)
+    subscription_tier     = db.Column(db.String(10), default="free")
+    onboarding_completed  = db.Column(db.Boolean, default=False)
+    created_at       = db.Column(db.DateTime,     default=datetime.utcnow)
+    positions = db.relationship("Position", backref="user", lazy=True,
+                                cascade="all, delete-orphan")
+    alerts    = db.relationship("Alert",    backref="user", lazy=True,
+                                cascade="all, delete-orphan")
+    investment_profile = db.relationship("InvestmentProfile", backref="user",
+                                         uselist=False, lazy=True)
+    broker_connections = db.relationship("BrokerConnection", backref="user",
+                                         lazy=True)
+
+    def set_pw(self, pw):
+        self.password_hash = generate_password_hash(pw, method="pbkdf2:sha256")
+
+    def chk_pw(self, pw):
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, pw)

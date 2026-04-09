@@ -4,3 +4,9 @@ __pycache__/
 *.db
 .DS_Store
 .env
+.env.*
+.kis_token_cache.json
+.next/
+node_modules/
+.pytest_cache/
+*.egg-info/

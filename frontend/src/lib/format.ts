@@ -1,19 +1,21 @@
-export function fmtUsd(v: number): string {
-  return v.toLocaleString("en-US", {
+export function fmtUsd(v: number | null | undefined): string {
+  const n = v ?? 0;
+  return n.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: v >= 1000 ? 0 : 2,
-    maximumFractionDigits: v >= 1000 ? 0 : 2,
+    minimumFractionDigits: n >= 1000 ? 0 : 2,
+    maximumFractionDigits: n >= 1000 ? 0 : 2,
   });
 }
 
-export function fmtKrw(v: number): string {
-  return "₩" + Math.round(v).toLocaleString("ko-KR");
+export function fmtKrw(v: number | null | undefined): string {
+  return "₩" + Math.round(v ?? 0).toLocaleString("ko-KR");
 }
 
-export function fmtPct(v: number): string {
-  const s = v >= 0 ? "+" : "";
-  return `${s}${v.toFixed(2)}%`;
+export function fmtPct(v: number | null | undefined): string {
+  const n = v ?? 0;
+  const s = n >= 0 ? "+" : "";
+  return `${s}${n.toFixed(2)}%`;
 }
 
 export function pnlColor(v: number): string {

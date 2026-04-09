@@ -6,6 +6,13 @@
       "runtimeExecutable": "/usr/bin/python3",
       "runtimeArgs": ["run.py"],
       "port": 5050
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "source $HOME/.nvm/nvm.sh && cd frontend && npx next dev --port $PORT"],
+      "port": 3000,
+      "autoPort": true
     }
   ]
 }

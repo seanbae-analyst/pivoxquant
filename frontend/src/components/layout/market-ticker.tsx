@@ -44,22 +44,21 @@ export function MarketTicker() {
 
   if (items.length === 0) return null;
 
-  // Double items for seamless loop
   const doubled = [...items, ...items];
 
   return (
-    <div className="relative overflow-hidden border-b border-border bg-[#0a0a0a]">
+    <div className="relative overflow-hidden">
       <motion.div
-        className="flex items-center gap-6 whitespace-nowrap py-1.5"
+        className="flex items-center gap-8 whitespace-nowrap py-1"
         animate={{ x: ["0%", "-50%"] }}
-        transition={{ duration: 30, ease: "linear", repeat: Infinity }}
+        transition={{ duration: 35, ease: "linear", repeat: Infinity }}
       >
         {doubled.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 px-2">
-            <span className="text-[10px] font-medium text-muted-foreground/40">{item.label}</span>
-            <span className="font-mono text-[11px] font-semibold text-foreground/80">{item.price}</span>
+          <div key={i} className="flex items-center gap-2 px-1">
+            <span className="text-[9px] font-semibold text-zinc-700 uppercase tracking-wider">{item.label}</span>
+            <span className="font-mono text-[11px] font-semibold text-zinc-400">{item.price}</span>
             {item.change !== 0 && (
-              <span className={`font-mono text-[10px] font-medium ${pnlColor(item.change)}`}>
+              <span className={`font-mono text-[10px] font-semibold ${pnlColor(item.change)}`}>
                 {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%
               </span>
             )}

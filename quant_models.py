@@ -466,7 +466,7 @@ class CrossAssetMomentum:
     Cross-Asset Momentum Model
     Analyzes correlation between stocks, bonds, commodities, and FX
     to detect macro regime and relative strength.
-    Uses yfinance for multi-asset data.
+    Uses FMP API for multi-asset data.
     """
 
     ASSETS = {
@@ -475,25 +475,25 @@ class CrossAssetMomentum:
         "GLD": "Gold",
         "USO": "Oil",
         "UUP": "US Dollar",
-        "BTC-USD": "Bitcoin",
+        "BTCUSD": "Bitcoin",
     }
 
     @classmethod
     def analyze(cls):
-        """Analyze cross-asset momentum and correlations — batch download."""
-        import yfinance as yf
+        """Analyze cross-asset momentum and correlations — FMP API."""
+        import fmp_service as fmp
 
         tickers = list(cls.ASSETS.keys())
         data = {}
-        try:
-            batch = yf.download(tickers, period="3mo", group_by="ticker",
-                                threads=True, progress=False)
-        except Exception:
-            batch = pd.DataFrame()
+        batch = {}
+        for ticker in tickers:
+            h = fmp.get_history(ticker, period="3mo")
+            if h is not None and not h.empty:
+                batch[ticker] = h
 
         for ticker, name in cls.ASSETS.items():
             try:
-                h = batch[ticker] if len(tickers) > 1 and ticker in batch.columns.get_level_values(0) else batch
+                h = batch.get(ticker, pd.DataFrame())
                 if h.empty or len(h) < 20:
                     continue
                 closes = h["Close"].dropna().values
@@ -569,9 +569,9 @@ class VIXStrategy:
     @staticmethod
     def analyze():
         """Get current VIX regime and recommended exposure."""
-        import yfinance as yf
+        import fmp_service as fmp
         try:
-            h = yf.Ticker("^VIX").history(period="3mo")
+            h = fmp.get_history("^VIX", period="3mo")
             if h.empty or len(h) < 20:
                 return None
 
