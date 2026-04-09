@@ -97,4 +97,14 @@ export const API = {
     update: "/api/profile",
     questionnaire: "/api/profile/questionnaire",
   },
+  billing: {
+    createCheckout: "/api/billing/create-checkout",
+    subscription: "/api/billing/subscription",
+    portal: "/api/billing/portal",
+  },
+  push: {
+    subscribe: "/api/push/subscribe",
+    unsubscribe: "/api/push/unsubscribe",
+    status: "/api/push/status",
+  },
 } as const;

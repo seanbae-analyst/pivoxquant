@@ -17,6 +17,9 @@ class User(UserMixin, db.Model):
     risk_profile          = db.Column(db.String(20), default="balanced")
     profile_changes_left  = db.Column(db.Integer, default=3)
     subscription_tier     = db.Column(db.String(10), default="free")
+    stripe_customer_id    = db.Column(db.String(100), nullable=True)
+    stripe_subscription_id = db.Column(db.String(100), nullable=True)
+    subscription_status   = db.Column(db.String(20), default="inactive")
     onboarding_completed  = db.Column(db.Boolean, default=False)
     created_at       = db.Column(db.DateTime,     default=datetime.utcnow)
     positions = db.relationship("Position", backref="user", lazy=True,

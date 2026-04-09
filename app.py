@@ -128,6 +128,22 @@ def _run_migrations(app):
             conn.commit()
         except Exception:
             pass
+        # Stripe billing columns
+        try:
+            conn.execute(_text("ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(100)"))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(_text("ALTER TABLE users ADD COLUMN stripe_subscription_id VARCHAR(100)"))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(_text("ALTER TABLE users ADD COLUMN subscription_status VARCHAR(20) DEFAULT 'inactive'"))
+            conn.commit()
+        except Exception:
+            pass
 
     # Backfill FX rates
     from models import Position

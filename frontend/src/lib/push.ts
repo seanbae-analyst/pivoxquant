@@ -1,3 +1,5 @@
+import { API } from "./endpoints";
+
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
 
 export function isPushSupported(): boolean {
@@ -18,7 +20,11 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
   const registration = await navigator.serviceWorker.ready;
 
   const existing = await registration.pushManager.getSubscription();
-  if (existing) return existing;
+  if (existing) {
+    // Ensure backend knows about this subscription
+    await sendSubscriptionToBackend(existing);
+    return existing;
+  }
 
   if (!VAPID_PUBLIC_KEY) {
     console.warn("VAPID public key not configured");
@@ -27,11 +33,12 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
 
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
+    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      .buffer as ArrayBuffer,
   });
 
-  // Store subscription locally (send to backend when endpoint is ready)
-  localStorage.setItem("sp-push-sub", JSON.stringify(subscription));
+  // Send subscription to backend
+  await sendSubscriptionToBackend(subscription);
 
   return subscription;
 }
@@ -44,10 +51,19 @@ export async function unsubscribeFromPush(): Promise<boolean> {
 
   if (!subscription) return true;
 
-  const success = await subscription.unsubscribe();
-  if (success) {
-    localStorage.removeItem("sp-push-sub");
+  // Remove from backend
+  try {
+    await fetch(API.push.unsubscribe, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: subscription.endpoint }),
+    });
+  } catch {
+    // Continue with local unsubscribe even if backend call fails
   }
+
+  const success = await subscription.unsubscribe();
   return success;
 }
 
@@ -57,9 +73,39 @@ export async function getPushSubscription(): Promise<PushSubscription | null> {
   return registration.pushManager.getSubscription();
 }
 
+export async function getPushStatus(): Promise<{
+  subscribed: boolean;
+  count: number;
+}> {
+  try {
+    const res = await fetch(API.push.status, { credentials: "include" });
+    if (!res.ok) return { subscribed: false, count: 0 };
+    return res.json();
+  } catch {
+    return { subscribed: false, count: 0 };
+  }
+}
+
+async function sendSubscriptionToBackend(
+  subscription: PushSubscription,
+): Promise<void> {
+  try {
+    await fetch(API.push.subscribe, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: subscription.toJSON() }),
+    });
+  } catch (err) {
+    console.error("Failed to send push subscription to backend:", err);
+  }
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const base64 = (base64String + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
   const rawData = atob(base64);
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; ++i) {
