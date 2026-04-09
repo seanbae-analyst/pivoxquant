@@ -530,11 +530,11 @@ def build_evening(now: datetime) -> str:
 # ---------------------------------------------------------------------------
 
 def send_email(subject: str, html_content: str) -> None:
-    api_key = os.environ.get("SENDGRID_API_KEY")
-    to_email = os.environ.get("CEO_EMAIL", "seanbae1521@gmail.com")
-    from_email = os.environ.get("FROM_EMAIL", "seanbae1521@gmail.com")
+    api_key = os.environ.get("SENDGRID_API_KEY", "").strip()
+    to_email = os.environ.get("CEO_EMAIL", "seanbae1521@gmail.com").strip()
+    from_email = os.environ.get("FROM_EMAIL", "seanbae1521@gmail.com").strip()
 
-    if not api_key:
+    if not api_key or api_key == "***" or len(api_key) < 10:
         print("=" * 60)
         print("SENDGRID_API_KEY not set — printing email to stdout")
         print("=" * 60)
