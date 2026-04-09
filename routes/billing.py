@@ -1,0 +1,226 @@
+"""Billing routes: Stripe subscription checkout, webhooks, portal."""
+import os
+import logging
+
+import stripe
+from flask import Blueprint, request, jsonify
+
+from extensions import db
+from models import User
+from flask_login import current_user
+from .decorators import api_auth
+
+logger = logging.getLogger(__name__)
+
+billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
+
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICE_PRO = os.environ.get("STRIPE_PRICE_PRO", "")
+STRIPE_PRICE_ENTERPRISE = os.environ.get("STRIPE_PRICE_ENTERPRISE", "")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+PLAN_PRICES = {
+    "pro": STRIPE_PRICE_PRO,
+    "enterprise": STRIPE_PRICE_ENTERPRISE,
+}
+PLAN_TIERS = {
+    "pro": "pro",
+    "enterprise": "enterprise",
+}
+
+
+def _get_or_create_customer(user):
+    """Get existing Stripe customer or create a new one."""
+    if user.stripe_customer_id:
+        return user.stripe_customer_id
+    customer = stripe.Customer.create(
+        email=user.email,
+        name=user.name,
+        metadata={"user_id": str(user.id)},
+    )
+    user.stripe_customer_id = customer.id
+    db.session.commit()
+    return customer.id
+
+
+# ── Create Checkout Session ──────────────────────────────────────────────────
+
+@billing_bp.route("/create-checkout", methods=["POST"])
+@api_auth
+def create_checkout():
+    """Create a Stripe Checkout session for Pro or Enterprise plan."""
+    d = request.get_json() or {}
+    plan = (d.get("plan") or "").lower()
+    if plan not in PLAN_PRICES:
+        return jsonify({"error": "Invalid plan. Choose 'pro' or 'enterprise'."}), 400
+
+    price_id = PLAN_PRICES[plan]
+    if not price_id:
+        return jsonify({"error": f"Price ID not configured for {plan} plan."}), 500
+
+    try:
+        customer_id = _get_or_create_customer(current_user)
+        session = stripe.checkout.Session.create(
+            customer=customer_id,
+            mode="subscription",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=f"{FRONTEND_URL}/home?billing=success",
+            cancel_url=f"{FRONTEND_URL}/home?billing=cancelled",
+            metadata={"user_id": str(current_user.id), "plan": plan},
+        )
+        return jsonify({"url": session.url})
+    except stripe.StripeError as e:
+        logger.error(f"Stripe checkout error: {e}")
+        return jsonify({"error": "Failed to create checkout session."}), 500
+
+
+# ── Webhook ──────────────────────────────────────────────────────────────────
+
+@billing_bp.route("/webhook", methods=["POST"])
+def stripe_webhook():
+    """Handle Stripe webhook events. No auth — verified by signature."""
+    payload = request.get_data()
+    sig_header = request.headers.get("Stripe-Signature")
+
+    if not STRIPE_WEBHOOK_SECRET:
+        logger.error("STRIPE_WEBHOOK_SECRET not configured")
+        return jsonify({"error": "Webhook secret not configured"}), 500
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        return jsonify({"error": "Invalid payload"}), 400
+    except stripe.SignatureVerificationError:
+        return jsonify({"error": "Invalid signature"}), 400
+
+    event_type = event["type"]
+    data = event["data"]["object"]
+
+    if event_type == "checkout.session.completed":
+        _handle_checkout_completed(data)
+    elif event_type == "customer.subscription.updated":
+        _handle_subscription_updated(data)
+    elif event_type == "customer.subscription.deleted":
+        _handle_subscription_deleted(data)
+
+    return jsonify({"ok": True})
+
+
+def _handle_checkout_completed(session_data):
+    """Activate subscription after successful checkout."""
+    customer_id = session_data.get("customer")
+    subscription_id = session_data.get("subscription")
+    metadata = session_data.get("metadata", {})
+    plan = metadata.get("plan", "pro")
+
+    user = User.query.filter_by(stripe_customer_id=customer_id).first()
+    if not user:
+        # Try finding by user_id in metadata
+        user_id = metadata.get("user_id")
+        if user_id:
+            try:
+                user = db.session.get(User, int(user_id))
+            except (ValueError, TypeError):
+                logger.error(f"Webhook: Invalid user_id in metadata: {user_id}")
+                user = None
+    if not user:
+        logger.error(f"Webhook: No user found for customer {customer_id}")
+        return
+
+    user.stripe_subscription_id = subscription_id
+    user.subscription_tier = PLAN_TIERS.get(plan, "pro")
+    user.subscription_status = "active"
+    db.session.commit()
+    logger.info(f"User {user.id} subscribed to {plan}")
+
+
+def _handle_subscription_updated(subscription):
+    """Handle subscription changes (upgrade/downgrade/renewal)."""
+    customer_id = subscription.get("customer")
+    status = subscription.get("status")  # active, past_due, canceled, etc.
+
+    user = User.query.filter_by(stripe_customer_id=customer_id).first()
+    if not user:
+        return
+
+    user.subscription_status = status
+    if status == "active":
+        # Check which price to determine tier
+        items = subscription.get("items", {}).get("data", [])
+        if items:
+            price_id = items[0].get("price", {}).get("id", "")
+            if price_id == STRIPE_PRICE_ENTERPRISE:
+                user.subscription_tier = "enterprise"
+            elif price_id == STRIPE_PRICE_PRO:
+                user.subscription_tier = "pro"
+    elif status in ("canceled", "unpaid"):
+        user.subscription_tier = "free"
+        user.subscription_status = "inactive"
+
+    db.session.commit()
+    logger.info(f"User {user.id} subscription updated: {status}")
+
+
+def _handle_subscription_deleted(subscription):
+    """Handle subscription cancellation."""
+    customer_id = subscription.get("customer")
+    user = User.query.filter_by(stripe_customer_id=customer_id).first()
+    if not user:
+        return
+
+    user.subscription_tier = "free"
+    user.subscription_status = "inactive"
+    user.stripe_subscription_id = None
+    db.session.commit()
+    logger.info(f"User {user.id} subscription deleted")
+
+
+# ── Get Subscription Status ─────────────────────────────────────────────────
+
+@billing_bp.route("/subscription")
+@api_auth
+def get_subscription():
+    """Return current user's subscription info."""
+    u = current_user
+    result = {
+        "subscription_tier": u.subscription_tier,
+        "subscription_status": getattr(u, "subscription_status", "inactive") or "inactive",
+        "has_active_subscription": (
+            getattr(u, "subscription_status", "inactive") == "active"
+            and u.subscription_tier in ("pro", "enterprise")
+        ),
+    }
+
+    # Fetch latest info from Stripe if they have a subscription
+    if u.stripe_subscription_id:
+        try:
+            sub = stripe.Subscription.retrieve(u.stripe_subscription_id)
+            result["current_period_end"] = sub.get("current_period_end")
+            result["cancel_at_period_end"] = sub.get("cancel_at_period_end", False)
+        except stripe.StripeError:
+            pass
+
+    return jsonify(result)
+
+
+# ── Customer Portal ──────────────────────────────────────────────────────────
+
+@billing_bp.route("/portal", methods=["POST"])
+@api_auth
+def create_portal():
+    """Create a Stripe Customer Portal session for managing subscription."""
+    if not current_user.stripe_customer_id:
+        return jsonify({"error": "No billing account found."}), 400
+
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=current_user.stripe_customer_id,
+            return_url=f"{FRONTEND_URL}/home",
+        )
+        return jsonify({"url": session.url})
+    except stripe.StripeError as e:
+        logger.error(f"Stripe portal error: {e}")
+        return jsonify({"error": "Failed to create portal session."}), 500

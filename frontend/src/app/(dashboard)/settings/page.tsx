@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Settings, Bell, Monitor, User, Trash2 } from "lucide-react";
+import {
+  isPushSupported,
+  subscribeToPush,
+  unsubscribeFromPush,
+  getPushSubscription,
+} from "@/lib/push";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -11,7 +17,37 @@ export default function SettingsPage() {
   /* Notifications */
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushSupported, setPushSupported] = useState(true);
   const [alertFreq, setAlertFreq] = useState("realtime");
+
+  // Check current push subscription status on mount
+  useEffect(() => {
+    if (!isPushSupported()) {
+      setPushSupported(false);
+      return;
+    }
+    getPushSubscription().then((sub) => {
+      setPushNotifs(!!sub);
+    });
+  }, []);
+
+  const handlePushToggle = useCallback(async () => {
+    setPushLoading(true);
+    try {
+      if (pushNotifs) {
+        const ok = await unsubscribeFromPush();
+        if (ok) setPushNotifs(false);
+      } else {
+        const sub = await subscribeToPush();
+        setPushNotifs(!!sub);
+      }
+    } catch {
+      // Permission denied or error
+    } finally {
+      setPushLoading(false);
+    }
+  }, [pushNotifs]);
 
   /* Display */
   const [theme, setTheme] = useState("dark");
@@ -69,13 +105,22 @@ export default function SettingsPage() {
                 Push Notifications
               </p>
               <p className="text-xs text-zinc-500">
-                Browser push notifications for alerts
+                {!pushSupported
+                  ? "Not supported in this browser"
+                  : "Browser push notifications for alerts"}
               </p>
             </div>
             <button
-              onClick={() => setPushNotifs(!pushNotifs)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-                pushNotifs ? "bg-cyan-500" : "bg-zinc-700"
+              onClick={handlePushToggle}
+              disabled={pushLoading || !pushSupported}
+              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ${
+                !pushSupported
+                  ? "cursor-not-allowed bg-zinc-800 opacity-50"
+                  : pushLoading
+                    ? "cursor-wait bg-zinc-600"
+                    : pushNotifs
+                      ? "cursor-pointer bg-cyan-500"
+                      : "cursor-pointer bg-zinc-700"
               }`}
             >
               <span

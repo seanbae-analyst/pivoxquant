@@ -6,6 +6,7 @@ from .trade_history import TradeHistory
 from .watchlist import Watchlist
 from .investment_profile import InvestmentProfile
 from .broker_connection import BrokerConnection
+from .push_subscription import PushSubscription
 
 __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlist",
-           "InvestmentProfile", "BrokerConnection"]
+           "InvestmentProfile", "BrokerConnection", "PushSubscription"]

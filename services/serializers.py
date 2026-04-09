@@ -11,6 +11,7 @@ def serialize_user(u) -> dict:
         "risk_profile": getattr(u, "risk_profile", "balanced"),
         "profile_changes_left": getattr(u, "profile_changes_left", 3),
         "subscription_tier": getattr(u, "subscription_tier", "free"),
+        "subscription_status": getattr(u, "subscription_status", "inactive") or "inactive",
         "onboarding_completed": getattr(u, "onboarding_completed", False),
         "avatar_url": getattr(u, "avatar_url", None),
     }

@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { MarketTicker } from "@/components/layout/market-ticker";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 
 /* Navigation structure */
@@ -204,6 +205,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse" />
             <span className="text-[9px] font-bold text-emerald-400 tracking-[0.15em]">LIVE</span>
           </div>
+
+          {/* Notification Bell */}
+          <NotificationBell />
 
           {/* Avatar */}
           <Link href="/profile" className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-[10px] font-bold text-black shadow-[0_0_16px_rgba(16,185,129,0.2)]">

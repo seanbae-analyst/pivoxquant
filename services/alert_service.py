@@ -56,3 +56,10 @@ def maybe_generate(user_id: int, r: dict):
     db.session.add(Alert(user_id=user_id, ticker=ticker, message=msg,
                          signal=sig, score=score))
     db.session.commit()
+
+    # Send push notification (no-ops if not configured)
+    try:
+        from services.push_service import notify_alert
+        notify_alert(user_id, {"signal": sig, "ticker": ticker, "message": msg})
+    except Exception:
+        pass

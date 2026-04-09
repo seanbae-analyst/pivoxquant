@@ -182,6 +182,14 @@
   },
   "active": "dc73443181c450c3",
   "lastOpenFiles": [
+    "frontend/src/components/layout/notification-bell.tsx",
+    "services/push_service.py",
+    "routes/push.py",
+    "scripts/migrate_to_postgres.py",
+    "models/push_subscription.py",
+    "routes/billing.py",
+    "routes/broker_sync.py",
+    "services/broker_sync_service.py",
     "PRODUCT_PLAN.md",
     "scripts/briefing.py",
     "scripts"
