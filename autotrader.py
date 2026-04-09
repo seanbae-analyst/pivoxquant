@@ -360,8 +360,8 @@ class AutoTrader:
             # Calculate adaptive exit parameters
             try:
                 from quant_models import AdaptiveParams
-                import yfinance as yf
-                h = yf.Ticker(symbol).history(period="3mo")
+                import fmp_service as fmp
+                h = fmp.get_history(symbol, period="3mo")
                 if not h.empty and len(h) >= 20:
                     ap = AdaptiveParams.calculate(
                         h["Close"].values, h["High"].values,

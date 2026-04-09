@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
+import { API } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/ui/logo";
+import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const { login, signup } = useAuth();
@@ -26,10 +28,11 @@ export default function LoginPage() {
     try {
       if (isSignup) {
         await signup(email, password, name || undefined);
+        router.push("/onboarding");
       } else {
         await login(email, password);
+        router.push("/");
       }
-      router.push("/");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");
     } finally {
@@ -38,94 +41,83 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
-      {/* Background gradient orbs */}
-      <div className="pointer-events-none absolute -left-40 -top-40 h-80 w-80 rounded-full bg-primary/10 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 h-80 w-80 rounded-full bg-[#a855f7]/10 blur-[120px]" />
+    <div className="landing-dark relative flex min-h-[100dvh] items-center justify-center p-4 noise-overlay">
+      {/* Gradient mesh background */}
+      <div className="absolute inset-0 gradient-mesh" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-cyan-500/[0.04] blur-[120px]" />
 
-      <div className="w-full max-w-sm">
-        <div className="rounded-2xl border border-white/[.06] bg-card/80 p-8 shadow-2xl backdrop-blur-xl">
-          {/* Logo */}
-          <div className="flex flex-col items-center">
-            <Logo size={48} />
-            <h1 className="mt-3 text-lg font-bold tracking-tight text-foreground">
-              StockPilot
-            </h1>
-            <p className="mt-1 font-mono text-[9px] tracking-[2px] text-muted-foreground/40">
-              QUANT ENGINE v4
+      <div className="relative w-full max-w-sm z-10">
+        <Link href="/" className="mb-6 inline-flex items-center gap-2 text-[13px] text-zinc-600 spring-transition transition-colors duration-300 hover:text-zinc-300">
+          <ArrowLeft size={14} />
+          Back to home
+        </Link>
+
+        <div className="bezel-card">
+          <div className="bezel-card-inner !p-10">
+            <div className="flex flex-col items-center">
+              <Logo size={56} />
+              <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">
+                {isSignup ? "Create Account" : "Welcome Back"}
+              </h1>
+              <p className="mt-1 text-[13px] text-zinc-600">
+                {isSignup ? "Start your quant trading journey" : "Sign in to your portfolio"}
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+              {isSignup && (
+                <div className="space-y-2">
+                  <label htmlFor="name" className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Name</label>
+                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-zinc-700 focus:border-cyan-500/30 focus:shadow-[0_0_8px_rgba(34,211,238,0.08)] rounded-xl" />
+                </div>
+              )}
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Email</label>
+                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-zinc-700 focus:border-cyan-500/30 focus:shadow-[0_0_8px_rgba(34,211,238,0.08)] rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Password</label>
+                <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-zinc-700 focus:border-cyan-500/30 focus:shadow-[0_0_8px_rgba(34,211,238,0.08)] rounded-xl" />
+              </div>
+              {error && <p className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-center text-[12px] font-medium text-red-400">{error}</p>}
+              <Button type="submit" className="w-full bg-white text-zinc-900 hover:bg-zinc-200 rounded-xl font-semibold spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(255,255,255,0.1)]" disabled={loading}>
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
+                    {isSignup ? "Creating..." : "Signing in..."}
+                  </span>
+                ) : (isSignup ? "Create Account" : "Sign In")}
+              </Button>
+
+              {/* Divider */}
+              <div className="relative flex items-center">
+                <div className="flex-1 border-t border-white/[0.06]" />
+                <span className="mx-3 text-[11px] text-zinc-600">or</span>
+                <div className="flex-1 border-t border-white/[0.06]" />
+              </div>
+
+              {/* Google Sign-In */}
+              <a
+                href={API.auth.google}
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-[14px] font-medium text-white spring-transition transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.12]"
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+                  <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+                  <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+                  <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 2.58 9 2.58Z" fill="#EA4335"/>
+                </svg>
+                Continue with Google
+              </a>
+            </form>
+
+            <p className="mt-8 text-center text-[13px] text-zinc-600">
+              {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
+              <button type="button" onClick={() => { setIsSignup(!isSignup); setError(""); }} className="font-semibold text-cyan-400 hover:text-cyan-300 spring-transition transition-colors duration-300">
+                {isSignup ? "Sign In" : "Sign Up"}
+              </button>
             </p>
           </div>
-
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            {isSignup && (
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  className="border-white/[.06] bg-white/[.03]"
-                />
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="border-white/[.06] bg-white/[.03]"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min 6 characters"
-                className="border-white/[.06] bg-white/[.03]"
-              />
-            </div>
-
-            {error && (
-              <p className="text-center text-xs text-destructive">{error}</p>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-gradient-to-r from-primary to-[#a855f7] font-semibold text-white hover:opacity-90"
-              disabled={loading}
-            >
-              {loading ? "..." : isSignup ? "Create Account" : "Sign In"}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-xs text-muted-foreground/50">
-            {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button
-              type="button"
-              onClick={() => { setIsSignup(!isSignup); setError(""); }}
-              className="text-primary/80 hover:text-primary hover:underline"
-            >
-              {isSignup ? "Sign In" : "Sign Up"}
-            </button>
-          </p>
         </div>
       </div>
     </div>

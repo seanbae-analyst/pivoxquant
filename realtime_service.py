@@ -238,25 +238,25 @@ class RealtimeService:
             logger.warning(f"KIS price failed {ticker}: {e}")
             return None
 
-    # ── yfinance fallback ─────────────────────────────────────
+    # ── FMP fallback ─────────────────────────────────────────
 
     def _get_yfinance_price(self, ticker):
+        """FMP quote as fallback (kept method name for compatibility)."""
         try:
-            import yfinance as yf
-            stock = yf.Ticker(ticker)
-            fi = stock.fast_info
-            price = fi.last_price
-            if not price or price <= 0:
+            import fmp_service as fmp
+            q = fmp.get_quote(ticker)
+            if not q or q.get("price", 0) <= 0:
                 return None
+            price = q["price"]
             is_kr = self.is_korean(ticker)
             return {
                 "ticker": ticker,
                 "price": round(float(price), 0 if is_kr else 2),
                 "price_display": f"₩{int(price):,}" if is_kr else f"${float(price):,.2f}",
                 "currency": "KRW" if is_kr else "USD",
-                "source": "yfinance",
+                "source": "fmp",
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            logger.warning(f"yfinance fallback failed {ticker}: {e}")
+            logger.warning(f"FMP fallback failed {ticker}: {e}")
             return None

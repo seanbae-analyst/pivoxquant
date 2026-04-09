@@ -20,6 +20,24 @@ function metricColor(label: string, value: number): string {
   }
 }
 
+const icons: Record<string, React.ReactNode> = {
+  "Ann. Return": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 17l5-5 4 4 5-7" /><path d="M17 7h4v4" /></svg>
+  ),
+  "Volatility": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2 12h3l3-9 4 18 3-9h3l3 6h3" /></svg>
+  ),
+  "Sharpe": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v20M2 12h20" /><circle cx="12" cy="12" r="4" /></svg>
+  ),
+  "Max DD": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M7 7l5 5 4-4 5 7" /><path d="M17 17h4v-4" /></svg>
+  ),
+  "% Invested": (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 2a10 10 0 0 1 0 20" fill="currentColor" opacity="0.15" /></svg>
+  ),
+};
+
 export function AnalyticsBar({ data }: Props) {
   const metrics = [
     { label: "Ann. Return", value: data.ann_return_pct ?? 0, fmt: (v: number) => `${v.toFixed(1)}%` },
@@ -30,17 +48,18 @@ export function AnalyticsBar({ data }: Props) {
   ];
 
   return (
-    <Card className="border-border bg-card p-4">
-      <div className="grid grid-cols-5 gap-2">
-        {metrics.map((m) => (
-          <div key={m.label} className="text-center">
-            <p className="text-[11px] text-muted-foreground">{m.label}</p>
-            <p className={`mt-1 text-xl font-bold ${metricColor(m.label, m.value)}`}>
-              {m.fmt(m.value)}
-            </p>
+    <div className="grid grid-cols-5 gap-3">
+      {metrics.map((m) => (
+        <Card key={m.label} className="glass-card p-4 text-center">
+          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50 text-foreground/50">
+            {icons[m.label]}
           </div>
-        ))}
-      </div>
-    </Card>
+          <p className="text-[10px] uppercase tracking-wider text-foreground/50">{m.label}</p>
+          <p className={`mt-1 text-lg font-bold ${metricColor(m.label, m.value)}`}>
+            {m.fmt(m.value)}
+          </p>
+        </Card>
+      ))}
+    </div>
   );
 }

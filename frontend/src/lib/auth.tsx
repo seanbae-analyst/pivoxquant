@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { apiFetch } from "./api";
+import { API } from "./endpoints";
 
 export interface User {
   id: number;
@@ -15,6 +16,11 @@ export interface User {
   name: string;
   available_capital: number;
   available_capital_krw: number;
+  avatar_url?: string | null;
+  risk_profile?: string;
+  profile_changes_left?: number;
+  subscription_tier?: string;
+  onboarding_completed?: boolean;
 }
 
 interface AuthCtx {
@@ -35,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const data = await apiFetch<{ authenticated: boolean; user?: User }>(
-        "/api/auth/me",
+        API.auth.me,
       );
       setUser(data.authenticated ? (data.user ?? null) : null);
     } catch {
@@ -51,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      await apiFetch("/api/auth/login", {
+      await apiFetch(API.auth.login, {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
@@ -62,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = useCallback(
     async (email: string, password: string, name?: string) => {
-      await apiFetch("/api/auth/register", {
+      await apiFetch(API.auth.register, {
         method: "POST",
         body: JSON.stringify({ email, password, name }),
       });
@@ -72,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await apiFetch("/api/auth/logout", { method: "POST" });
+    await apiFetch(API.auth.logout, { method: "POST" });
     setUser(null);
   }, []);
 

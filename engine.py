@@ -13,7 +13,7 @@ language-toggle feature in the frontend.
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
+import fmp_service as fmp
 import logging
 from data_fetcher import DataFetcher
 from quant_models import MeanReversion, MomentumBreakout, VolatilityRegime, RegimeSwitching, MLSignal
@@ -47,7 +47,8 @@ class QuantEngine:
 
     def analyze(self, ticker: str, capital_usd: float = 10_000.0,
                 capital_krw: float = 0.0, fx_rate: float = 0.0,
-                current_pnl_pct: float = None) -> "dict | None":
+                current_pnl_pct: float = None,
+                profile_params: dict = None) -> "dict | None":
         ticker   = ticker.upper().strip()
         snapshot = _fetcher.get_stock_snapshot(ticker)
         hist     = _fetcher.get_price_history(ticker, "6mo")
@@ -128,6 +129,25 @@ class QuantEngine:
         else:
             w_tech, w_fund, w_news, w_quant = 0.22, 0.25, 0.03, 0.50
             buy_thresh, sell_thresh = 68, 40
+
+        # ── Profile-based override (투자성향 시스템) ──
+        if profile_params:
+            # Blend profile weights with stock-type weights (50/50)
+            pp = profile_params
+            w_tech = (w_tech + pp.get("tech_weight", w_tech)) / 2
+            w_fund = (w_fund + pp.get("fund_weight", w_fund)) / 2
+            w_news = (w_news + pp.get("news_weight", w_news)) / 2
+            # Normalize to sum=1 (quant weight gets remainder)
+            non_quant = w_tech + w_fund + w_news
+            if non_quant > 0.65:
+                scale = 0.65 / non_quant
+                w_tech *= scale
+                w_fund *= scale
+                w_news *= scale
+            w_quant = 1.0 - w_tech - w_fund - w_news
+            # Threshold override
+            buy_thresh = pp.get("buy_threshold", buy_thresh)
+            sell_thresh = pp.get("sell_threshold", sell_thresh)
 
         # Market regime adjustment: in strong bull, lower threshold
         if quant_score >= 70:
@@ -320,6 +340,13 @@ class QuantEngine:
             regime_desc = ""
             regime_info = {}
             layers_active = []
+
+        # ── Profile TP/SL clamp (투자성향에 따라 TP/SL 범위 제한) ──
+        if profile_params and tp_pct != 0:
+            pp_tp_max = profile_params.get("tp_max", 40)
+            pp_sl_max = profile_params.get("sl_max", 20)
+            tp_pct = min(tp_pct, pp_tp_max)
+            sl_pct = max(sl_pct, -pp_sl_max)
 
         # Priority score for capital allocation ranking
         safe_beta = max(float(beta) if beta else 1.0, 0.5)
@@ -889,7 +916,7 @@ class QuantEngine:
             sector_alloc[sector] = sector_alloc.get(sector, 0) + weight * 100
 
             try:
-                h = yf.Ticker(ticker).history(period="3mo")
+                h = fmp.get_history(ticker, period="3mo")
                 if h.empty or len(h) < 20:
                     continue
                 ret = h["Close"].pct_change().dropna() * weight
