@@ -17,14 +17,14 @@ export function SectorPie({ sectorAllocation }: Props) {
 
   return (
     <div className="rounded-2xl border border-[var(--ld-border)] bg-[var(--ld-surface)] p-6">
-      <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Sector Allocation</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Sector Allocation</p>
       <div className="mt-4 h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={chartData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value" strokeWidth={0}>
               {chartData.map((_, i) => (<Cell key={i} fill={COLORS[i % COLORS.length]} />))}
             </Pie>
-            <Tooltip contentStyle={{ background: "#18181b", border: "1px solid #27272a", borderRadius: 12, fontSize: 12, color: "#fafafa" }} formatter={(v) => [`${v}%`, "Weight"]} />
+            <Tooltip contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 12, color: "#0f172a" }} formatter={(v) => [`${v}%`, "Weight"]} />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -32,8 +32,8 @@ export function SectorPie({ sectorAllocation }: Props) {
         {chartData.map((item, i) => (
           <div key={item.name} className="flex items-center gap-1.5">
             <div className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />
-            <span className="text-[11px] text-zinc-500">{item.name}</span>
-            <span className="text-[11px] font-semibold text-zinc-300">{item.value}%</span>
+            <span className="text-[11px] text-slate-500">{item.name}</span>
+            <span className="text-[11px] font-semibold text-slate-700">{item.value}%</span>
           </div>
         ))}
       </div>

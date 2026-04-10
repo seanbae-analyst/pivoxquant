@@ -60,7 +60,7 @@ function DTDetailModal({
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white">
+          <DialogTitle className="flex items-center gap-2 text-slate-900">
             {item.name || item.ticker}
             <span className={`ml-2 text-[9px] font-bold px-2 py-0.5 rounded-md border ${signalColor(item.signal)}`}>
               {item.signal}
@@ -70,7 +70,7 @@ function DTDetailModal({
 
         <div className="space-y-4">
           <div className="flex items-end justify-between">
-            <p className="text-2xl font-bold font-mono text-white">{priceStr}</p>
+            <p className="text-2xl font-bold font-mono text-slate-900">{priceStr}</p>
             <p className={`text-sm font-medium font-mono ${pnlColor(item.change_pct ?? 0)}`}>
               {(item.change_pct ?? 0) >= 0 ? "+" : ""}{sf(item.change_pct, 2)}%
             </p>
@@ -78,35 +78,35 @@ function DTDetailModal({
 
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "RSI", value: sf(item.rsi), color: (item.rsi ?? 50) < 30 ? "text-emerald-400" : (item.rsi ?? 50) > 70 ? "text-red-400" : "text-white" },
-              { label: "Vol Ratio", value: `${sf(item.vol_ratio)}x`, color: (item.vol_ratio ?? 0) > 2 ? "text-emerald-400" : "text-white" },
-              { label: "Score", value: `${sf(item.score, 0)}/100`, color: "text-white" },
+              { label: "RSI", value: sf(item.rsi), color: (item.rsi ?? 50) < 30 ? "text-emerald-600" : (item.rsi ?? 50) > 70 ? "text-red-600" : "text-slate-900" },
+              { label: "Vol Ratio", value: `${sf(item.vol_ratio)}x`, color: (item.vol_ratio ?? 0) > 2 ? "text-emerald-600" : "text-slate-900" },
+              { label: "Score", value: `${sf(item.score, 0)}/100`, color: "text-slate-900" },
             ].map((m) => (
-              <div key={m.label} className="rounded-xl bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] p-3 text-center text-xs">
-                <p className="text-zinc-600 text-[9px] uppercase tracking-wider">{m.label}</p>
+              <div key={m.label} className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-center text-xs">
+                <p className="text-slate-400 text-[9px] uppercase tracking-wider">{m.label}</p>
                 <p className={`font-bold font-mono mt-1 ${m.color}`}>{m.value}</p>
               </div>
             ))}
           </div>
 
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
             <div className={`h-full rounded-full ${scoreColor(item.score ?? 0)}`} style={{ width: `${item.score ?? 0}%` }} />
           </div>
 
           {(item.tp_pct != null || item.sl_pct != null) && (
             <div className="grid grid-cols-2 gap-3">
               {item.take_profit != null && (
-                <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-3 text-center text-xs">
-                  <p className="text-emerald-400/60 text-[9px] uppercase tracking-wider">Take Profit</p>
-                  <p className="font-bold font-mono text-emerald-400 mt-1">{cur === "KRW" ? `₩${item.take_profit.toLocaleString()}` : `$${sf(item.take_profit, 2)}`}</p>
-                  <p className="text-emerald-400/50 text-[10px]">+{sf(item.tp_pct)}%</p>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center text-xs">
+                  <p className="text-emerald-500 text-[9px] uppercase tracking-wider">Take Profit</p>
+                  <p className="font-bold font-mono text-emerald-600 mt-1">{cur === "KRW" ? `₩${item.take_profit.toLocaleString()}` : `$${sf(item.take_profit, 2)}`}</p>
+                  <p className="text-emerald-500 text-[10px]">+{sf(item.tp_pct)}%</p>
                 </div>
               )}
               {item.stop_loss != null && (
-                <div className="rounded-xl border border-red-500/15 bg-red-500/5 p-3 text-center text-xs">
-                  <p className="text-red-400/60 text-[9px] uppercase tracking-wider">Stop Loss</p>
-                  <p className="font-bold font-mono text-red-400 mt-1">{cur === "KRW" ? `₩${item.stop_loss.toLocaleString()}` : `$${sf(item.stop_loss, 2)}`}</p>
-                  <p className="text-red-400/50 text-[10px]">{sf(item.sl_pct)}%</p>
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center text-xs">
+                  <p className="text-red-500 text-[9px] uppercase tracking-wider">Stop Loss</p>
+                  <p className="font-bold font-mono text-red-600 mt-1">{cur === "KRW" ? `₩${item.stop_loss.toLocaleString()}` : `$${sf(item.stop_loss, 2)}`}</p>
+                  <p className="text-red-500 text-[10px]">{sf(item.sl_pct)}%</p>
                 </div>
               )}
             </div>
@@ -115,25 +115,25 @@ function DTDetailModal({
           {item.signals && item.signals.length > 0 && (
             <div className="space-y-1">
               {item.signals.map((s, i) => (
-                <p key={i} className={`text-xs ${s.type === "bullish" ? "text-emerald-400" : s.type === "bearish" ? "text-red-400" : "text-zinc-500"}`}>
+                <p key={i} className={`text-xs ${s.type === "bullish" ? "text-emerald-600" : s.type === "bearish" ? "text-red-600" : "text-slate-500"}`}>
                   {s.type === "bullish" ? "+" : s.type === "bearish" ? "-" : "·"} {s.msg}
                 </p>
               ))}
             </div>
           )}
 
-          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-4">
-            <p className="mb-2 text-sm font-semibold text-emerald-400">Buy & Track</p>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="mb-2 text-sm font-semibold text-emerald-600">Buy & Track</p>
             <div className="flex items-center gap-2">
               <Input type="number" value={buyShares} onChange={(e) => setBuyShares(e.target.value)} className="h-9 w-24 text-sm" min={1} />
-              <span className="text-xs text-zinc-500">shares = {cur === "KRW" ? `₩${total.toLocaleString()}` : fmtUsd(total)}</span>
+              <span className="text-xs text-slate-500">shares = {cur === "KRW" ? `₩${total.toLocaleString()}` : fmtUsd(total)}</span>
             </div>
             <Button className="mt-3 w-full" onClick={handleBuyTrack} disabled={loading}>
               {loading ? "Processing..." : `Buy & Track ${buyShares} shares`}
             </Button>
           </div>
 
-          {msg && <p className={`text-center text-xs ${msg.startsWith("Position") ? "text-emerald-400" : "text-red-400"}`}>{msg}</p>}
+          {msg && <p className={`text-center text-xs ${msg.startsWith("Position") ? "text-emerald-600" : "text-red-600"}`}>{msg}</p>}
         </div>
       </DialogContent>
     </Dialog>
@@ -150,8 +150,8 @@ function TopCard({ item, onClick }: { item: DayTradeResult; onClick: () => void 
       <div className="bezel-card-inner !p-4">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-semibold text-white">{item.name || item.ticker}</p>
-            <p className="text-[10px] text-zinc-600 font-mono">{item.ticker}</p>
+            <p className="text-sm font-semibold text-slate-900">{item.name || item.ticker}</p>
+            <p className="text-[10px] text-slate-400 font-mono">{item.ticker}</p>
           </div>
           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${signalColor(item.signal)}`}>
             {item.signal}
@@ -159,13 +159,13 @@ function TopCard({ item, onClick }: { item: DayTradeResult; onClick: () => void 
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
           <div>
-            <p className="text-zinc-600 text-[9px]">Price</p>
-            <p className="font-medium font-mono text-white">
+            <p className="text-slate-400 text-[9px]">Price</p>
+            <p className="font-medium font-mono text-slate-900">
               {cur === "KRW" ? `₩${(item.price ?? 0).toLocaleString()}` : `$${sf(item.price, 2)}`}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-zinc-600 text-[9px]">Change</p>
+            <p className="text-slate-400 text-[9px]">Change</p>
             <p className={`font-medium font-mono ${pnlColor(item.change_pct ?? 0)}`}>
               {(item.change_pct ?? 0) >= 0 ? "+" : ""}{sf(item.change_pct, 2)}%
             </p>
@@ -173,17 +173,17 @@ function TopCard({ item, onClick }: { item: DayTradeResult; onClick: () => void 
         </div>
         <div className="mt-3">
           <div className="flex items-center justify-between text-[10px]">
-            <span className="text-zinc-600">Score</span>
-            <span className="font-mono font-medium text-white">{sf(item.score)}</span>
+            <span className="text-slate-400">Score</span>
+            <span className="font-mono font-medium text-slate-900">{sf(item.score)}</span>
           </div>
-          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
             <div className={`h-full rounded-full ${scoreColor(item.score ?? 0)}`} style={{ width: `${item.score ?? 0}%` }} />
           </div>
         </div>
         {item.signals && item.signals.length > 0 && (
           <div className="mt-3 space-y-1">
             {item.signals.slice(0, 2).map((s, i) => (
-              <p key={i} className={`text-[10px] ${s.type === "bullish" ? "text-emerald-400" : s.type === "bearish" ? "text-red-400" : "text-zinc-600"}`}>
+              <p key={i} className={`text-[10px] ${s.type === "bullish" ? "text-emerald-600" : s.type === "bearish" ? "text-red-600" : "text-slate-400"}`}>
                 {s.type === "bullish" ? "+" : s.type === "bearish" ? "-" : "·"} {s.msg}
               </p>
             ))}
@@ -197,23 +197,23 @@ function TopCard({ item, onClick }: { item: DayTradeResult; onClick: () => void 
 /* Stock Row */
 function StockRow({ item, onClick }: { item: DayTradeResult; onClick: () => void }) {
   return (
-    <div className="flex cursor-pointer items-center justify-between rounded-xl border border-[rgba(255,255,255,0.04)] bg-[var(--db-surface)] px-4 py-3 spring-transition transition-all duration-300 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.08)] group" onClick={onClick}>
+    <div className="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-[var(--db-surface)] px-4 py-3 spring-transition transition-all duration-300 hover:bg-slate-50 hover:border-slate-300 group" onClick={onClick}>
       <div className="flex items-center gap-3">
         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${signalColor(item.signal)}`}>
           {item.signal}
         </span>
         <div>
-          <p className="text-sm font-semibold text-white group-hover:text-emerald-400 spring-transition transition-colors">{item.name || item.ticker}</p>
-          <p className="text-[10px] text-zinc-600 font-mono">{item.ticker}</p>
+          <p className="text-sm font-semibold text-slate-900 group-hover:text-emerald-600 spring-transition transition-colors">{item.name || item.ticker}</p>
+          <p className="text-[10px] text-slate-400 font-mono">{item.ticker}</p>
         </div>
       </div>
       <div className="flex items-center gap-6 text-xs">
         <span className={`font-mono ${pnlColor(item.change_pct ?? 0)}`}>
           {(item.change_pct ?? 0) >= 0 ? "+" : ""}{sf(item.change_pct, 2)}%
         </span>
-        <span className="text-zinc-600 font-mono">RSI {sf(item.rsi, 0)}</span>
-        <span className="text-zinc-600 font-mono">Vol {sf(item.vol_ratio)}x</span>
-        <span className="font-mono font-medium text-white">{sf(item.score, 0)}</span>
+        <span className="text-slate-400 font-mono">RSI {sf(item.rsi, 0)}</span>
+        <span className="text-slate-400 font-mono">Vol {sf(item.vol_ratio)}x</span>
+        <span className="font-mono font-medium text-slate-900">{sf(item.score, 0)}</span>
       </div>
     </div>
   );
@@ -228,7 +228,7 @@ export function IntradayTab() {
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="mt-3 text-zinc-600 text-[12px]">Scanning intraday opportunities...</span>
+        <span className="mt-3 text-slate-400 text-[12px]">Scanning intraday opportunities...</span>
       </div>
     );
   }
@@ -240,10 +240,10 @@ export function IntradayTab() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-zinc-500">{data.count} tickers scanned</p>
+        <p className="text-sm text-slate-500">{data.count} tickers scanned</p>
         <button
           onClick={() => mutate()}
-          className="rounded-xl px-4 py-2 text-sm font-medium border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.03)] text-zinc-400 hover:text-white hover:bg-[rgba(255,255,255,0.06)] spring-transition transition-all duration-300"
+          className="rounded-xl px-4 py-2 text-sm font-medium border border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-900 hover:bg-slate-100 spring-transition transition-all duration-300"
         >
           Re-scan
         </button>
@@ -251,7 +251,7 @@ export function IntradayTab() {
 
       {/* Top 5 */}
       <div>
-        <p className="mb-3 font-mono text-[9px] font-semibold uppercase tracking-[1.5px] text-zinc-600">
+        <p className="mb-3 font-mono text-[9px] font-semibold uppercase tracking-[1.5px] text-slate-400">
           Top 5 Opportunities
         </p>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
@@ -264,7 +264,7 @@ export function IntradayTab() {
       {/* All Stocks */}
       {rest.length > 0 && (
         <div>
-          <p className="mb-3 font-mono text-[9px] font-semibold uppercase tracking-[1.5px] text-zinc-600">
+          <p className="mb-3 font-mono text-[9px] font-semibold uppercase tracking-[1.5px] text-slate-400">
             All Stocks ({rest.length})
           </p>
           <div className="space-y-1.5">

@@ -8,16 +8,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-emerald-500 text-black font-bold hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:shadow-[0_0_30px_rgba(16,185,129,0.25)] hover:scale-[1.02]",
+        default: "bg-emerald-600 text-white font-bold shadow-sm hover:bg-emerald-700 hover:scale-[1.02]",
         outline:
-          "border border-[rgba(255,255,255,0.1)] bg-transparent text-foreground hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.04)] hover:scale-[1.02]",
+          "border border-slate-200 bg-transparent text-foreground hover:border-slate-300 hover:bg-slate-50 hover:scale-[1.02]",
         secondary:
-          "bg-[rgba(255,255,255,0.06)] text-zinc-300 hover:bg-[rgba(255,255,255,0.1)] hover:text-white",
+          "bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900",
         ghost:
-          "hover:bg-[rgba(255,255,255,0.06)] hover:text-foreground",
+          "hover:bg-slate-100 hover:text-foreground",
         destructive:
-          "bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 focus-visible:border-red-400 focus-visible:ring-red-400/20",
-        link: "text-emerald-400 underline-offset-4 hover:underline",
+          "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 focus-visible:border-red-400 focus-visible:ring-red-400/20",
+        link: "text-emerald-600 underline-offset-4 hover:underline",
       },
       size: {
         default:

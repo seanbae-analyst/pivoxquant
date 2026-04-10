@@ -42,7 +42,7 @@ function computeAllocations(
   const MAX_CAP = 0.25;
 
   /* First pass: raw optimal weights */
-  let rawWeights = top5.map((p) => Math.max(p.score, 1) / scoreSum);
+  const rawWeights = top5.map((p) => Math.max(p.score, 1) / scoreSum);
 
   /* Apply 25% cap iteratively */
   let capped = rawWeights.map((w) => Math.min(w, MAX_CAP));
@@ -116,8 +116,8 @@ export default function OptimizerPage() {
   if (!portfolio || !analytics) {
     return (
       <div className="flex items-center justify-center py-32">
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse mr-2" />
+        <span className="text-slate-400 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -127,8 +127,8 @@ export default function OptimizerPage() {
       <div className="space-y-4">
         <PageHeader />
         <div className="glass-surface rounded-2xl py-12 text-center">
-          <Scale className="mx-auto h-10 w-10 text-zinc-600" />
-          <p className="mt-4 text-sm text-zinc-400">
+          <Scale className="mx-auto h-10 w-10 text-slate-400" />
+          <p className="mt-4 text-sm text-slate-500">
             No positions found. Add positions to see optimization suggestions.
           </p>
         </div>
@@ -143,39 +143,39 @@ export default function OptimizerPage() {
       {/* ── Summary Cards ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <MetricCard
-          icon={<Scale className="h-5 w-5 text-cyan-400" />}
+          icon={<Scale className="h-5 w-5 text-sky-600" />}
           label="Positions Analyzed"
           value={String(rows.length)}
           sublabel="Top 5 by market value"
         />
         <MetricCard
-          icon={<Target className="h-5 w-5 text-emerald-400" />}
+          icon={<Target className="h-5 w-5 text-emerald-600" />}
           label="Current Sharpe"
           value={sharpe.toFixed(2)}
           sublabel="Annualized risk-adjusted return"
         />
         <MetricCard
-          icon={<TrendingUp className="h-5 w-5 text-amber-400" />}
+          icon={<TrendingUp className="h-5 w-5 text-amber-500" />}
           label="Projected Sharpe Boost"
           value={`+${metrics.sharpeBoost.toFixed(2)}`}
           sublabel="Estimated improvement"
-          valueColor="text-amber-400"
+          valueColor="text-amber-500"
         />
         <MetricCard
-          icon={<ArrowRight className="h-5 w-5 text-violet-400" />}
+          icon={<ArrowRight className="h-5 w-5 text-violet-500" />}
           label="Diversification Gain"
           value={`${metrics.diversGain.toFixed(1)}%`}
           sublabel="HHI concentration reduction"
-          valueColor="text-violet-400"
+          valueColor="text-violet-500"
         />
       </div>
 
       {/* ── Bar Chart ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-1 text-lg font-semibold text-white">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">
           Current vs Optimal Allocation
         </h2>
-        <p className="mb-6 text-[13px] text-zinc-600">
+        <p className="mb-6 text-[13px] text-slate-400">
           Score-weighted optimal with 25% max cap per position
         </p>
         <div className="h-72">
@@ -187,26 +187,26 @@ export default function OptimizerPage() {
             >
               <XAxis
                 dataKey="ticker"
-                tick={{ fill: "#a1a1aa", fontSize: 12 }}
+                tick={{ fill: "#64748b", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: "#71717a", fontSize: 11 }}
+                tick={{ fill: "#94a3b8", fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v: number) => `${v}%`}
               />
               <Tooltip
                 contentStyle={{
-                  background: "#18181b",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background: "#ffffff",
+                  border: "1px solid #e2e8f0",
                   borderRadius: 12,
                   fontSize: 12,
-                  color: "#fafafa",
+                  color: "#0f172a",
                 }}
-                labelStyle={{ color: "#e4e4e7" }}
-                itemStyle={{ color: "#a1a1aa" }}
+                labelStyle={{ color: "#334155" }}
+                itemStyle={{ color: "#64748b" }}
                 formatter={(value) => [`${value}%`]}
               />
               <Bar
@@ -226,19 +226,19 @@ export default function OptimizerPage() {
                 maxBarSize={40}
               >
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill="#22d3ee" fillOpacity={0.85} />
+                  <Cell key={i} fill="#0ea5e9" fillOpacity={0.85} />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="mt-4 flex items-center justify-center gap-6 text-xs text-zinc-400">
+        <div className="mt-4 flex items-center justify-center gap-6 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-2.5 rounded-sm bg-blue-500/70" />
             Current
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-cyan-400/85" />
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-sky-500/85" />
             Optimal
           </span>
         </div>
@@ -246,16 +246,16 @@ export default function OptimizerPage() {
 
       {/* ── Side-by-Side Comparison Table ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-1 text-lg font-semibold text-white">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">
           Weight Comparison
         </h2>
-        <p className="mb-6 text-[13px] text-zinc-600">
+        <p className="mb-6 text-[13px] text-slate-400">
           Current position weights vs score-optimized targets
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06] text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+              <tr className="border-b border-slate-200 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">
                 <th className="pb-3 pr-4">Ticker</th>
                 <th className="pb-3 pr-4 text-right">Score</th>
                 <th className="pb-3 pr-4 text-right">Current</th>
@@ -270,11 +270,11 @@ export default function OptimizerPage() {
               {rows.map((r) => (
                 <tr
                   key={r.ticker}
-                  className="border-b border-white/[0.04] last:border-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+                  className="border-b border-slate-100 last:border-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
                 >
                   <td className="py-3 pr-4">
-                    <span className="font-medium text-white">{r.ticker}</span>
-                    <p className="max-w-[120px] truncate text-[10px] text-zinc-600">
+                    <span className="font-medium text-slate-900">{r.ticker}</span>
+                    <p className="max-w-[120px] truncate text-[10px] text-slate-400">
                       {r.name}
                     </p>
                   </td>
@@ -282,31 +282,31 @@ export default function OptimizerPage() {
                     <span
                       className={`font-mono font-medium ${
                         r.score >= 70
-                          ? "text-emerald-400"
+                          ? "text-emerald-600"
                           : r.score >= 45
-                            ? "text-amber-400"
-                            : "text-red-400"
+                            ? "text-amber-500"
+                            : "text-red-600"
                       }`}
                     >
                       {r.score}
                     </span>
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono text-zinc-300">
+                  <td className="py-3 pr-4 text-right font-mono text-slate-700">
                     {(r.currentWeight * 100).toFixed(1)}%
                   </td>
                   <td className="py-3 pr-4 text-center">
-                    <ArrowRight className="mx-auto h-3 w-3 text-zinc-600" />
+                    <ArrowRight className="mx-auto h-3 w-3 text-slate-400" />
                   </td>
-                  <td className="py-3 pr-4 text-right font-mono font-medium text-cyan-400">
+                  <td className="py-3 pr-4 text-right font-mono font-medium text-sky-600">
                     {(r.optimalWeight * 100).toFixed(1)}%
                   </td>
                   <td
                     className={`py-3 text-right font-mono font-medium ${
                       r.delta > 0.005
-                        ? "text-emerald-400"
+                        ? "text-emerald-600"
                         : r.delta < -0.005
-                          ? "text-red-400"
-                          : "text-zinc-500"
+                          ? "text-red-600"
+                          : "text-slate-500"
                     }`}
                   >
                     {r.delta >= 0 ? "+" : ""}
@@ -321,10 +321,10 @@ export default function OptimizerPage() {
 
       {/* ── Rebalancing Actions ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-1 text-lg font-semibold text-white">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">
           Rebalancing Actions
         </h2>
-        <p className="mb-6 text-[13px] text-zinc-600">
+        <p className="mb-6 text-[13px] text-slate-400">
           Suggested trades to reach optimal allocation
         </p>
         <div className="space-y-3">
@@ -338,35 +338,35 @@ export default function OptimizerPage() {
               return (
                 <div
                   key={r.ticker}
-                  className={`flex items-center justify-between rounded-xl border px-4 py-3 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] ${
+                  className={`flex items-center justify-between rounded-xl border px-4 py-3 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)] ${
                     isIncrease
-                      ? "border-emerald-400/20 bg-emerald-400/5"
-                      : "border-red-400/20 bg-red-400/5"
+                      ? "border-emerald-200 bg-emerald-50"
+                      : "border-red-200 bg-red-50"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span
                       className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold ${
                         isIncrease
-                          ? "bg-emerald-400/15 text-emerald-400"
-                          : "bg-red-400/15 text-red-400"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "bg-red-100 text-red-600"
                       }`}
                     >
                       {isIncrease ? "+" : "-"}
                     </span>
                     <div>
-                      <p className="text-sm font-medium text-white">
+                      <p className="text-sm font-medium text-slate-900">
                         {isIncrease ? "Increase" : "Decrease"} {r.ticker} by{" "}
                         {absPct}%
                       </p>
-                      <p className="text-[10px] text-zinc-600">
+                      <p className="text-[10px] text-slate-400">
                         {isIncrease ? "Buy" : "Sell"} approximately {absDollar}
                       </p>
                     </div>
                   </div>
                   <span
                     className={`text-sm font-mono font-semibold ${
-                      isIncrease ? "text-emerald-400" : "text-red-400"
+                      isIncrease ? "text-emerald-600" : "text-red-600"
                     }`}
                   >
                     {isIncrease ? "+" : "-"}
@@ -377,7 +377,7 @@ export default function OptimizerPage() {
             })}
           {rows.filter((r) => Math.abs(r.delta) >= 0.005).length === 0 && (
             <div className="glass-surface rounded-2xl py-12 text-center">
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-slate-500">
                 Your portfolio is already close to optimal allocation.
               </p>
             </div>
@@ -387,7 +387,7 @@ export default function OptimizerPage() {
 
       {/* ── Expected Improvements ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           Expected Improvements
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -396,24 +396,24 @@ export default function OptimizerPage() {
             from={sharpe.toFixed(2)}
             to={(sharpe + metrics.sharpeBoost).toFixed(2)}
             change={`+${metrics.sharpeBoost.toFixed(2)}`}
-            color="text-amber-400"
+            color="text-amber-500"
           />
           <ImprovementCard
             label="Diversification (HHI Reduction)"
             from="Current"
             to="Optimized"
             change={`-${metrics.diversGain.toFixed(1)}% concentration`}
-            color="text-violet-400"
+            color="text-violet-500"
           />
         </div>
       </div>
 
       {/* ── Disclaimer ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           About This Optimizer
         </h2>
-        <div className="space-y-2 text-xs text-zinc-400">
+        <div className="space-y-2 text-xs text-slate-500">
           <p>
             Optimal weights are calculated using a score-weighted allocation model.
             Each position receives a weight proportional to its composite score
@@ -426,7 +426,7 @@ export default function OptimizerPage() {
             reduction in Herfindahl-Hirschman Index (HHI), a standard concentration
             metric.
           </p>
-          <p className="text-zinc-600">
+          <p className="text-slate-400">
             This is for educational and analytical purposes only. Past performance
             does not guarantee future results.
           </p>
@@ -441,10 +441,10 @@ export default function OptimizerPage() {
 function PageHeader() {
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight text-white">
+      <h1 className="text-2xl font-bold tracking-tight text-slate-900">
         Portfolio Optimizer
       </h1>
-      <p className="mt-1 text-[13px] text-zinc-600">
+      <p className="mt-1 text-[13px] text-slate-400">
         Score-weighted allocation optimization with rebalancing suggestions
       </p>
     </div>
@@ -465,15 +465,15 @@ function MetricCard({
   valueColor?: string;
 }) {
   return (
-    <div className="glass-surface rounded-xl p-4 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+    <div className="glass-surface rounded-xl p-4 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
       <div className="flex items-center gap-2">
         {icon}
-        <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">{label}</p>
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">{label}</p>
       </div>
-      <p className={`mt-2 text-2xl font-bold font-mono ${valueColor ?? "text-white"}`}>
+      <p className={`mt-2 text-2xl font-bold font-mono ${valueColor ?? "text-slate-900"}`}>
         {value}
       </p>
-      <p className="mt-0.5 text-[10px] text-zinc-600">{sublabel}</p>
+      <p className="mt-0.5 text-[10px] text-slate-400">{sublabel}</p>
     </div>
   );
 }
@@ -492,12 +492,12 @@ function ImprovementCard({
   color: string;
 }) {
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
-      <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">{label}</p>
+    <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">{label}</p>
       <div className="mt-3 flex items-center gap-3">
-        <span className="text-lg font-semibold font-mono text-zinc-400">{from}</span>
-        <ArrowRight className="h-4 w-4 text-zinc-600" />
-        <span className="text-lg font-semibold font-mono text-white">{to}</span>
+        <span className="text-lg font-semibold font-mono text-slate-500">{from}</span>
+        <ArrowRight className="h-4 w-4 text-slate-400" />
+        <span className="text-lg font-semibold font-mono text-slate-900">{to}</span>
       </div>
       <p className={`mt-2 text-sm font-medium font-mono ${color}`}>{change}</p>
     </div>

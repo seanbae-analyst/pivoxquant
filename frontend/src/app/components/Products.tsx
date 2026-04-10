@@ -35,7 +35,7 @@ const features = [
 
 export function Products() {
   return (
-    <section id="products" className="relative py-32 px-6">
+    <section id="products" className="relative py-32 px-6 bg-[#f1f5f9]">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -44,13 +44,13 @@ export function Products() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mb-16"
         >
-          <p className="text-[13px] text-cyan-400 tracking-wider uppercase mb-3">Products</p>
+          <p className="text-[13px] text-emerald-600 tracking-wider uppercase mb-3">Products</p>
           <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight leading-tight mb-4">
             All-in-one platform for
             <br />
             data-driven investing
           </h2>
-          <p className="text-zinc-400 text-[17px] max-w-xl leading-relaxed">
+          <p className="text-slate-500 text-[17px] max-w-xl leading-relaxed">
             From complex quant analysis to automated execution, everything you need in a single platform.
           </p>
         </motion.div>
@@ -71,10 +71,10 @@ export function Products() {
                     className="w-2 h-2 rounded-full mb-5"
                     style={{ background: feature.accent }}
                   />
-                  <h3 className="text-[20px] font-semibold text-white mb-3">
+                  <h3 className="text-[20px] font-semibold text-slate-900 mb-3">
                     {feature.title}
                   </h3>
-                  <p className="text-[14px] text-zinc-400 leading-relaxed">
+                  <p className="text-[14px] text-slate-500 leading-relaxed">
                     {feature.description}
                   </p>
                 </div>
@@ -82,7 +82,7 @@ export function Products() {
                   {feature.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="text-[11px] px-2.5 py-1 rounded-full border border-zinc-700 text-zinc-400"
+                      className="text-[11px] px-2.5 py-1 rounded-full border border-slate-200 text-slate-500 bg-white"
                     >
                       {tag}
                     </span>

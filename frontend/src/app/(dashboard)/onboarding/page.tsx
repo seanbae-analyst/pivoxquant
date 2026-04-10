@@ -200,12 +200,12 @@ export default function OnboardingPage() {
         {/* Progress bar */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-zinc-500">
+            <span className="text-xs font-semibold text-slate-500">
               {step === 0 ? "Welcome" : step <= QUESTION_COUNT ? `Question ${step}/${QUESTION_COUNT}` : step === capitalStep ? "Capital" : "Result"}
             </span>
-            <span className="text-xs font-semibold text-zinc-500">{progress}%</span>
+            <span className="text-xs font-semibold text-slate-500">{progress}%</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
             <div
               className="h-full rounded-full bg-gradient-to-r from-purple-600 to-pink-600 transition-all duration-500"
               style={{ width: `${progress}%` }}

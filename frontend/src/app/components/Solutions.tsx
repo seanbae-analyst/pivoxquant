@@ -32,7 +32,7 @@ const steps = [
 export function Solutions() {
   return (
     <section id="solutions" className="relative py-32 px-6">
-      <div className="absolute inset-0 grid-pattern opacity-50" />
+      {/* removed grid-pattern for clean white */}
 
       <div className="relative max-w-6xl mx-auto">
         <motion.div
@@ -42,7 +42,7 @@ export function Solutions() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="text-center mb-20"
         >
-          <p className="text-[13px] text-emerald-400 tracking-wider uppercase mb-3">How it works</p>
+          <p className="text-[13px] text-emerald-600 tracking-wider uppercase mb-3">How it works</p>
           <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight leading-tight">
             Smart investing in 4 steps
           </h2>
@@ -58,17 +58,17 @@ export function Solutions() {
               transition={{ duration: 0.6, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
               className="group relative"
             >
-              <div className="bg-[var(--ld-surface)] border border-[var(--ld-border)] rounded-2xl p-8 h-full transition-all duration-500 hover:border-[var(--ld-border-light)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.3)]" style={{ transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)" }}>
+              <div className="bg-white border border-slate-200 rounded-2xl p-8 h-full transition-all duration-500 hover:border-slate-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]" style={{ transitionTimingFunction: "cubic-bezier(0.16,1,0.3,1)" }}>
                 <span
                   className="text-[48px] font-bold leading-none block mb-6"
                   style={{ color: step.accent, opacity: 0.15 }}
                 >
                   {step.number}
                 </span>
-                <h3 className="text-[20px] font-semibold text-white mb-3">
+                <h3 className="text-[20px] font-semibold text-slate-900 mb-3">
                   {step.title}
                 </h3>
-                <p className="text-[14px] text-zinc-400 leading-relaxed">
+                <p className="text-[14px] text-slate-500 leading-relaxed">
                   {step.description}
                 </p>
               </div>

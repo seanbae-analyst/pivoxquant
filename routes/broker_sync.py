@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
+from security import trade_rate_limit
 from services.container import broker_sync
 from .decorators import api_auth
 
@@ -9,6 +10,7 @@ broker_sync_bp = Blueprint("broker_sync", __name__, url_prefix="/api/broker")
 
 
 @broker_sync_bp.route("/sync", methods=["POST"])
+@trade_rate_limit
 @api_auth
 def trigger_sync():
     """POST /api/broker/sync — trigger manual position + balance sync."""

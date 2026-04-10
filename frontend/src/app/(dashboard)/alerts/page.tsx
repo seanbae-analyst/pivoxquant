@@ -1,15 +1,42 @@
 "use client";
 
-import useSWR from "swr";
+import { useMemo } from "react";
+import useSWR, { mutate } from "swr";
 import { API } from "@/lib/endpoints";
 import { Bell } from "lucide-react";
 import { motion } from "framer-motion";
+import { QuickSellModal } from "@/components/dashboard/action-modals";
+import type { PortfolioResponse } from "@/lib/types";
 
 interface Alert { id: number; ticker: string; message: string; signal: string; score: number; rec_shares: number; rec_investment: number; created_at: string; is_read: boolean; }
 const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r) => r.json());
 
+/** Check if the alert message indicates a TP/SL price alert */
+function isTpSlAlert(a: Alert): boolean {
+  return a.message.includes("목표가 도달") || a.message.includes("손절가 도달");
+}
+
 export default function AlertsPage() {
   const { data } = useSWR<{ alerts: Alert[]; unread: number }>(API.alerts.list, fetcher);
+  const { data: portfolio } = useSWR<PortfolioResponse>(API.portfolio.list, fetcher);
+
+  /** Map ticker -> position for fast lookups */
+  const positionMap = useMemo(() => {
+    const map = new Map<string, PortfolioResponse["positions"][number]>();
+    if (portfolio?.positions) {
+      for (const p of portfolio.positions) {
+        map.set(p.ticker, p);
+      }
+    }
+    return map;
+  }, [portfolio]);
+
+  /** Refresh both alerts and portfolio after a sell */
+  const handleSellDone = () => {
+    mutate(API.alerts.list);
+    mutate(API.portfolio.list);
+  };
+
   if (!data) return <div className="flex items-center justify-center py-24"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /><span className="ml-2 text-zinc-600 text-[12px]">Loading...</span></div>;
 
   return (
@@ -28,28 +55,47 @@ export default function AlertsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {data.alerts.map((a) => (
-            <div key={a.id} className={`flex items-start gap-4 rounded-xl p-5 spring-transition transition-all duration-300 border ${
-              !a.is_read
-                ? "bg-[var(--db-surface)] border-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.04)]"
-                : "bg-[var(--db-surface)] border-[rgba(255,255,255,0.04)]"
-            }`}>
-              <span className={`mt-0.5 shrink-0 rounded-lg px-2.5 py-1 text-[9px] font-bold border ${
-                a.signal === "BUY" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                : a.signal === "SELL" ? "bg-red-500/10 text-red-400 border-red-500/20"
-                : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-              }`}>{a.signal}</span>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white">{a.ticker}</span>
-                  <span className="text-[11px] text-zinc-700">{new Date(a.created_at).toLocaleDateString()}</span>
+          {data.alerts.map((a) => {
+            const pos = positionMap.get(a.ticker);
+            const showSell = isTpSlAlert(a) && pos && pos.shares > 0;
+
+            return (
+              <div key={a.id} className={`flex items-start gap-4 rounded-xl p-5 spring-transition transition-all duration-300 border ${
+                !a.is_read
+                  ? "bg-[var(--db-surface)] border-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.04)]"
+                  : "bg-[var(--db-surface)] border-[rgba(255,255,255,0.04)]"
+              }`}>
+                <span className={`mt-0.5 shrink-0 rounded-lg px-2.5 py-1 text-[9px] font-bold border ${
+                  a.signal === "BUY" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  : a.signal === "SELL" ? "bg-red-500/10 text-red-400 border-red-500/20"
+                  : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                }`}>{a.signal}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-white">{a.ticker}</span>
+                    <span className="text-[11px] text-zinc-700">{new Date(a.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className="mt-1 text-[13px] text-zinc-400">{a.message}</p>
+                  {a.rec_shares > 0 && <p className="mt-1.5 text-[11px] font-medium text-emerald-400">Rec: {a.rec_shares} shares (${a.rec_investment.toFixed(0)})</p>}
                 </div>
-                <p className="mt-1 text-[13px] text-zinc-400">{a.message}</p>
-                {a.rec_shares > 0 && <p className="mt-1.5 text-[11px] font-medium text-emerald-400">Rec: {a.rec_shares} shares (${a.rec_investment.toFixed(0)})</p>}
+                <div className="flex items-center gap-2 shrink-0">
+                  {showSell && (
+                    <QuickSellModal
+                      positionId={pos.id}
+                      ticker={pos.ticker}
+                      currentPrice={pos.current_price}
+                      priceDisplay={pos.price_display}
+                      maxShares={pos.shares}
+                      avgCost={pos.avg_cost}
+                      currency={pos.currency}
+                      onDone={handleSellDone}
+                    />
+                  )}
+                  <span className="rounded-lg bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] px-2.5 py-1 font-mono text-[11px] font-bold text-zinc-500">{(a.score ?? 0).toFixed(0)}</span>
+                </div>
               </div>
-              <span className="shrink-0 rounded-lg bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.06)] px-2.5 py-1 font-mono text-[11px] font-bold text-zinc-500">{(a.score ?? 0).toFixed(0)}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </motion.div>

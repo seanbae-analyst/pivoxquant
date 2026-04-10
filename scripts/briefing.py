@@ -531,7 +531,7 @@ def build_evening(now: datetime) -> str:
 
 def send_email(subject: str, html_content: str) -> None:
     api_key = os.environ.get("SENDGRID_API_KEY", "").strip()
-    to_email = os.environ.get("CEO_EMAIL", "seanbae1521@gmail.com").strip()
+    to_email = os.environ.get("CEO_EMAIL", "sanghyun0115@naver.com").strip()
     from_email = os.environ.get("FROM_EMAIL", "seanbae1521@gmail.com").strip()
 
     if not api_key or api_key == "***" or len(api_key) < 10:
@@ -585,10 +585,21 @@ def main() -> None:
     label, builder = BRIEFING_TYPES[briefing_type]
 
     now = datetime.now(KST)
+    date_str = now.strftime("%Y-%m-%d")
+
+    # --- Duplicate send guard ---
+    lock_file = Path(f"/tmp/stockpilot_briefing_{briefing_type}_{date_str}.lock")
+    if lock_file.exists():
+        print(f"Already sent {briefing_type} briefing for {date_str} — skipping.")
+        return
+
     html = builder(now)
-    subject = f"[StockPilot] {label} Briefing — {now.strftime('%Y-%m-%d')}"
+    subject = f"[StockPilot] {label} Briefing — {date_str}"
 
     send_email(subject, html)
+
+    # Mark as sent
+    lock_file.touch()
 
 
 if __name__ == "__main__":

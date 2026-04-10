@@ -144,16 +144,16 @@ function ChartTooltip({
   return (
     <div
       style={{
-        background: "#18181b",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
         borderRadius: 12,
         fontSize: 12,
-        color: "#fafafa",
+        color: "#0f172a",
       }}
       className="px-4 py-3 shadow-xl"
     >
-      <p className="text-sm font-medium text-white">{d.ticker}</p>
-      <p className="text-sm text-red-400">{fmtUsd(d.estimatedLoss)}</p>
+      <p className="text-sm font-medium text-slate-900">{d.ticker}</p>
+      <p className="text-sm text-red-600">{fmtUsd(d.estimatedLoss)}</p>
     </div>
   );
 }
@@ -218,7 +218,7 @@ export default function StressTestPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="text-slate-400 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -226,8 +226,8 @@ export default function StressTestPage() {
   if (!portfolio?.positions?.length) {
     return (
       <div className="glass-surface rounded-2xl py-12 text-center">
-        <AlertTriangle className="mx-auto h-10 w-10 text-zinc-500" />
-        <p className="mt-4 text-zinc-400">
+        <AlertTriangle className="mx-auto h-10 w-10 text-slate-400" />
+        <p className="mt-4 text-slate-500">
           No positions found. Add positions to run stress tests.
         </p>
       </div>
@@ -238,8 +238,8 @@ export default function StressTestPage() {
     <div className="mx-auto max-w-7xl space-y-4 px-4 py-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">Stress Test</h1>
-        <p className="mt-1 text-[13px] text-zinc-600">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Stress Test</h1>
+        <p className="mt-1 text-[13px] text-slate-500">
           Simulate historical crisis scenarios on your current portfolio
         </p>
       </div>
@@ -250,48 +250,48 @@ export default function StressTestPage() {
           <button
             key={s.id}
             onClick={() => setSelectedId(s.id)}
-            className={`glass-surface rounded-xl p-4 text-left spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] ${
+            className={`glass-surface rounded-xl p-4 text-left spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
               selectedId === s.id
-                ? "border border-cyan-400/60 bg-cyan-400/10"
+                ? "border border-sky-500/40 bg-sky-500/10"
                 : ""
             }`}
           >
             <div className="mb-2 flex items-center gap-2">
               <span
                 className={
-                  selectedId === s.id ? "text-cyan-400" : "text-zinc-500"
+                  selectedId === s.id ? "text-sky-600" : "text-slate-400"
                 }
               >
                 {s.icon}
               </span>
-              <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">{s.year}</span>
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">{s.year}</span>
             </div>
-            <p className="text-sm font-semibold text-white">{s.name}</p>
+            <p className="text-sm font-semibold text-slate-900">{s.name}</p>
           </button>
         ))}
 
         {/* Custom scenario card */}
         <button
           onClick={() => setSelectedId("custom")}
-          className={`glass-surface rounded-xl p-4 text-left spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] ${
+          className={`glass-surface rounded-xl p-4 text-left spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] ${
             isCustom
-              ? "border border-cyan-400/60 bg-cyan-400/10"
+              ? "border border-sky-500/40 bg-sky-500/10"
               : ""
           }`}
         >
           <div className="mb-2 flex items-center gap-2">
-            <span className={isCustom ? "text-cyan-400" : "text-zinc-500"}>
+            <span className={isCustom ? "text-sky-600" : "text-slate-400"}>
               <TrendingDown className="h-5 w-5" />
             </span>
-            <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Custom</span>
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">Custom</span>
           </div>
-          <p className="text-sm font-semibold text-white">Custom Scenario</p>
+          <p className="text-sm font-semibold text-slate-900">Custom Scenario</p>
         </button>
       </div>
 
       {/* ── Scenario description ── */}
       {activeScenario && (
-        <p className="text-sm leading-relaxed text-zinc-400">
+        <p className="text-sm leading-relaxed text-slate-500">
           {activeScenario.description}
         </p>
       )}
@@ -299,7 +299,7 @@ export default function StressTestPage() {
       {/* ── Custom slider ── */}
       {isCustom && (
         <div className="glass-surface rounded-xl p-5">
-          <label className="mb-3 block text-sm font-medium text-zinc-300">
+          <label className="mb-3 block text-sm font-medium text-slate-700">
             Uniform Drawdown: {customDrawdown}%
           </label>
           <input
@@ -308,9 +308,9 @@ export default function StressTestPage() {
             max={0}
             value={customDrawdown}
             onChange={(e) => setCustomDrawdown(Number(e.target.value))}
-            className="w-full accent-cyan-400"
+            className="w-full accent-sky-500"
           />
-          <div className="mt-2 flex justify-between text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+          <div className="mt-2 flex justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
             <span>-90%</span>
             <span>0%</span>
           </div>
@@ -319,29 +319,29 @@ export default function StressTestPage() {
 
       {/* ── Impact summary ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+        <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
             Estimated Loss
           </p>
-          <p className="mt-2 text-2xl font-bold font-mono text-red-400">
+          <p className="mt-2 text-2xl font-bold font-mono text-red-600">
             {fmtUsd(Math.abs(totalLoss))}
           </p>
         </div>
 
-        <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+        <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
             Portfolio Drawdown
           </p>
-          <p className="mt-2 text-2xl font-bold font-mono text-red-400">
+          <p className="mt-2 text-2xl font-bold font-mono text-red-600">
             {fmtPct(portfolioDrawdownPct)}
           </p>
         </div>
 
-        <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+        <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
             Est. Recovery Time
           </p>
-          <p className="mt-2 text-2xl font-bold font-mono text-zinc-300">
+          <p className="mt-2 text-2xl font-bold font-mono text-slate-900">
             ~{recoveryMonths} months
           </p>
         </div>
@@ -350,7 +350,7 @@ export default function StressTestPage() {
       {/* ── Bar chart ── */}
       {chartData.length > 0 && (
         <div className="glass-surface rounded-xl p-5">
-          <h2 className="mb-4 text-sm font-semibold text-white">
+          <h2 className="mb-4 text-sm font-semibold text-slate-900">
             Per-Position Impact
           </h2>
           <ResponsiveContainer width="100%" height={Math.max(300, chartData.length * 36)}>
@@ -361,7 +361,7 @@ export default function StressTestPage() {
             >
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="rgba(255,255,255,0.06)"
+                stroke="rgba(0,0,0,0.06)"
                 horizontal={false}
               />
               <XAxis
@@ -374,14 +374,14 @@ export default function StressTestPage() {
               <YAxis
                 dataKey="ticker"
                 type="category"
-                tick={{ fill: "#d4d4d8", fontSize: 12 }}
+                tick={{ fill: "#71717a", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
                 width={55}
               />
               <Tooltip
                 content={<ChartTooltip />}
-                cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                cursor={{ fill: "rgba(241,245,249,0.5)" }}
               />
               <Bar dataKey="estimatedLoss" radius={[0, 4, 4, 0]}>
                 {chartData.map((entry) => (
@@ -401,7 +401,7 @@ export default function StressTestPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06] text-left text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+              <tr className="border-b border-slate-200 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
                 <th className="px-5 py-3">Ticker</th>
                 <th className="px-5 py-3">Sector</th>
                 <th className="px-5 py-3 text-right">Current Value</th>
@@ -414,7 +414,7 @@ export default function StressTestPage() {
               {impacts.map((p) => (
                 <tr
                   key={p.ticker}
-                  className="border-b border-white/[0.06] last:border-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:bg-white/[0.02]"
+                  className="border-b border-slate-200 last:border-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:bg-slate-50"
                 >
                   <td className="px-5 py-3">
                     <span className="font-medium text-white">{p.ticker}</span>

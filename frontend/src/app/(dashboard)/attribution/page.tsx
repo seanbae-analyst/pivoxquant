@@ -83,32 +83,32 @@ function WaterfallTooltip({
   return (
     <div
       style={{
-        background: "#18181b",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
         borderRadius: 12,
         fontSize: 12,
-        color: "#fafafa",
+        color: "#0f172a",
       }}
       className="px-4 py-3 shadow-xl"
     >
-      <p className="text-sm font-semibold text-white">{d.ticker}</p>
-      <p className="text-[13px] text-zinc-400">{d.name}</p>
+      <p className="text-sm font-semibold text-slate-900">{d.ticker}</p>
+      <p className="text-[13px] text-slate-500">{d.name}</p>
       <div className="mt-2 space-y-1 text-[13px]">
         <div className="flex justify-between gap-6">
-          <span className="text-zinc-600">Weight</span>
-          <span className="text-zinc-300 font-mono">{d.weight.toFixed(1)}%</span>
+          <span className="text-slate-500">Weight</span>
+          <span className="text-slate-700 font-mono">{d.weight.toFixed(1)}%</span>
         </div>
         <div className="flex justify-between gap-6">
-          <span className="text-zinc-600">P&L</span>
-          <span className={`font-mono ${d.pnl_pct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+          <span className="text-slate-500">P&L</span>
+          <span className={`font-mono ${d.pnl_pct >= 0 ? "text-emerald-600" : "text-red-600"}`}>
             {fmtPct(d.pnl_pct)}
           </span>
         </div>
         <div className="flex justify-between gap-6">
-          <span className="text-zinc-600">Contribution</span>
+          <span className="text-slate-500">Contribution</span>
           <span
             className={`font-mono ${
-              d.contribution >= 0 ? "text-emerald-400" : "text-red-400"
+              d.contribution >= 0 ? "text-emerald-600" : "text-red-600"
             }`}
           >
             {d.contribution >= 0 ? "+" : ""}
@@ -134,14 +134,14 @@ function StatCard({
   color?: string;
 }) {
   return (
-    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-      <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
         {label}
       </p>
-      <p className={`mt-1 text-2xl font-bold font-mono ${color ?? "text-white"}`}>
+      <p className={`mt-1 text-2xl font-bold font-mono ${color ?? "text-slate-900"}`}>
         {value}
       </p>
-      {sub && <p className="mt-0.5 text-[13px] text-zinc-600">{sub}</p>}
+      {sub && <p className="mt-0.5 text-[13px] text-slate-500">{sub}</p>}
     </div>
   );
 }
@@ -186,7 +186,7 @@ export default function AttributionPage() {
     return (
       <div className="flex items-center py-32">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="text-slate-500 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -194,8 +194,8 @@ export default function AttributionPage() {
   if (!positions.length) {
     return (
       <div className="glass-surface rounded-2xl py-12 text-center">
-        <BarChart3 className="mx-auto h-10 w-10 text-zinc-700" />
-        <p className="mt-3 text-[13px] text-zinc-600">No positions to attribute.</p>
+        <BarChart3 className="mx-auto h-10 w-10 text-slate-400" />
+        <p className="mt-3 text-[13px] text-slate-500">No positions to attribute.</p>
       </div>
     );
   }
@@ -206,10 +206,10 @@ export default function AttributionPage() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Performance Attribution
         </h1>
-        <p className="mt-1 text-[13px] text-zinc-600">
+        <p className="mt-1 text-[13px] text-slate-500">
           How each position and sector contributed to your portfolio returns.
         </p>
       </div>
@@ -219,32 +219,32 @@ export default function AttributionPage() {
         <StatCard
           label="Total P&L Contribution"
           value={`${totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}%`}
-          color={totalPnl >= 0 ? "text-emerald-400" : "text-red-400"}
+          color={totalPnl >= 0 ? "text-emerald-600" : "text-red-600"}
         />
         <StatCard
           label="Avg Position Contribution"
           value={`${avgPnl >= 0 ? "+" : ""}${avgPnl.toFixed(3)}%`}
-          color={avgPnl >= 0 ? "text-emerald-400" : "text-red-400"}
+          color={avgPnl >= 0 ? "text-emerald-600" : "text-red-600"}
         />
         <StatCard
           label="Best Performer"
           value={best?.ticker ?? "\u2014"}
           sub={best ? fmtPct(best.pnl_pct) : undefined}
-          color="text-emerald-400"
+          color="text-emerald-600"
         />
         <StatCard
           label="Worst Performer"
           value={worst?.ticker ?? "\u2014"}
           sub={worst ? fmtPct(worst.pnl_pct) : undefined}
-          color="text-red-400"
+          color="text-red-600"
         />
       </div>
 
       {/* Waterfall Chart */}
       <div className="glass-surface rounded-xl p-6">
         <div className="mb-4 flex items-center gap-2">
-          <BarChart3 className="h-5 w-5 text-cyan-400" />
-          <h2 className="text-lg font-semibold text-white">
+          <BarChart3 className="h-5 w-5 text-sky-600" />
+          <h2 className="text-lg font-semibold text-slate-900">
             P&L Contribution by Position
           </h2>
         </div>
@@ -268,7 +268,7 @@ export default function AttributionPage() {
               />
               <Tooltip
                 content={<WaterfallTooltip />}
-                cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                cursor={{ fill: "rgba(241,245,249,0.5)" }}
               />
               <Bar dataKey="contribution" radius={[6, 6, 0, 0]}>
                 {attributions.map((a, i) => (
@@ -288,8 +288,8 @@ export default function AttributionPage() {
         {/* Sector Attribution */}
         <div className="glass-surface rounded-xl p-6 lg:col-span-1">
           <div className="mb-4 flex items-center gap-2">
-            <PieChart className="h-5 w-5 text-cyan-400" />
-            <h2 className="text-lg font-semibold text-white">
+            <PieChart className="h-5 w-5 text-sky-600" />
+            <h2 className="text-lg font-semibold text-slate-900">
               Sector Attribution
             </h2>
           </div>
@@ -297,20 +297,20 @@ export default function AttributionPage() {
             {sectorAttrs.map((s) => (
               <div key={s.sector}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-zinc-300">{s.sector}</span>
+                  <span className="text-sm text-slate-700">{s.sector}</span>
                   <span
                     className={`text-sm font-medium font-mono ${
-                      s.contribution >= 0 ? "text-emerald-400" : "text-red-400"
+                      s.contribution >= 0 ? "text-emerald-600" : "text-red-600"
                     }`}
                   >
                     {s.contribution >= 0 ? "+" : ""}
                     {s.contribution.toFixed(3)}%
                   </span>
                 </div>
-                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800">
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div
                     className={`h-full rounded-full ${
-                      s.contribution >= 0 ? "bg-emerald-400" : "bg-red-400"
+                      s.contribution >= 0 ? "bg-emerald-500" : "bg-red-500"
                     }`}
                     style={{
                       width: `${Math.min(
@@ -327,7 +327,7 @@ export default function AttributionPage() {
                     }}
                   />
                 </div>
-                <p className="mt-0.5 text-[10px] text-zinc-600">
+                <p className="mt-0.5 text-[10px] text-slate-500">
                   {s.count} position{s.count !== 1 ? "s" : ""}
                 </p>
               </div>
@@ -338,8 +338,8 @@ export default function AttributionPage() {
         {/* Top Contributors */}
         <div className="glass-surface rounded-xl p-6">
           <div className="mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-emerald-400" />
-            <h2 className="text-lg font-semibold text-white">
+            <TrendingUp className="h-5 w-5 text-emerald-600" />
+            <h2 className="text-lg font-semibold text-slate-900">
               Top Contributors
             </h2>
           </div>
@@ -347,22 +347,22 @@ export default function AttributionPage() {
             {topContributors.map((a, i) => (
               <div
                 key={a.ticker}
-                className="flex items-center gap-3 rounded-xl bg-emerald-500/5 border border-white/[0.06] px-4 py-3 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+                className="flex items-center gap-3 rounded-xl bg-emerald-500/5 border border-slate-200 px-4 py-3 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/10 text-xs font-bold text-emerald-400">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600/10 text-xs font-bold text-emerald-600">
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">
+                  <p className="truncate text-sm font-semibold text-slate-900">
                     {a.ticker}
                   </p>
-                  <p className="truncate text-[13px] text-zinc-600">{a.name}</p>
+                  <p className="truncate text-[13px] text-slate-500">{a.name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium font-mono text-emerald-400">
+                  <p className="text-sm font-medium font-mono text-emerald-600">
                     +{a.contribution.toFixed(3)}%
                   </p>
-                  <p className="text-[10px] text-zinc-600">
+                  <p className="text-[10px] text-slate-500">
                     {a.weight.toFixed(1)}% weight
                   </p>
                 </div>
@@ -374,8 +374,8 @@ export default function AttributionPage() {
         {/* Top Detractors */}
         <div className="glass-surface rounded-xl p-6">
           <div className="mb-4 flex items-center gap-2">
-            <TrendingDown className="h-5 w-5 text-red-400" />
-            <h2 className="text-lg font-semibold text-white">
+            <TrendingDown className="h-5 w-5 text-red-600" />
+            <h2 className="text-lg font-semibold text-slate-900">
               Top Detractors
             </h2>
           </div>
@@ -383,22 +383,22 @@ export default function AttributionPage() {
             {topDetractors.map((a, i) => (
               <div
                 key={a.ticker}
-                className="flex items-center gap-3 rounded-xl bg-red-500/5 border border-white/[0.06] px-4 py-3 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+                className="flex items-center gap-3 rounded-xl bg-red-500/5 border border-slate-200 px-4 py-3 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-400/10 text-xs font-bold text-red-400">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/10 text-xs font-bold text-red-600">
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-white">
+                  <p className="truncate text-sm font-semibold text-slate-900">
                     {a.ticker}
                   </p>
-                  <p className="truncate text-[13px] text-zinc-600">{a.name}</p>
+                  <p className="truncate text-[13px] text-slate-500">{a.name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium font-mono text-red-400">
+                  <p className="text-sm font-medium font-mono text-red-600">
                     {a.contribution.toFixed(3)}%
                   </p>
-                  <p className="text-[10px] text-zinc-600">
+                  <p className="text-[10px] text-slate-500">
                     {a.weight.toFixed(1)}% weight
                   </p>
                 </div>

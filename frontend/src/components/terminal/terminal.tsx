@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { MarketTicker } from "@/components/layout/market-ticker";
+import { ConnectionBanner } from "@/components/realtime/connection-banner";
 import { TerminalNav } from "./terminal-nav";
 import { TerminalMetrics } from "./terminal-metrics";
 import { TerminalChart } from "./terminal-chart";
@@ -31,8 +32,11 @@ export function Terminal() {
         />
       </div>
 
+      {/* Connection warning banner */}
+      <ConnectionBanner />
+
       {/* Market ticker */}
-      <div className="relative z-10 h-7 glass-surface border-b border-[rgba(255,255,255,0.04)] shrink-0 flex items-center overflow-hidden px-2">
+      <div className="relative z-10 h-7 glass-surface border-b border-slate-200 shrink-0 flex items-center overflow-hidden px-2">
         <MarketTicker />
       </div>
 

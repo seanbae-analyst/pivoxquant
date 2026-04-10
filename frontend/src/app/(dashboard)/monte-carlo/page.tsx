@@ -125,21 +125,21 @@ function SimTooltip({ active, payload, label }: any) {
   return (
     <div
       style={{
-        background: "#18181b",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
         borderRadius: 12,
         fontSize: 12,
-        color: "#fafafa",
+        color: "#0f172a",
       }}
       className="px-3 py-2 shadow-xl"
     >
-      <p className="mb-1 font-medium text-white">Day {data.day}</p>
+      <p className="mb-1 font-medium text-slate-900">Day {data.day}</p>
       <div className="space-y-0.5">
-        <p className="text-emerald-400">90th: {fmtUsd(data.p90)}</p>
-        <p className="text-emerald-400/70">75th: {fmtUsd(data.p75)}</p>
-        <p className="text-cyan-400">Median: {fmtUsd(data.p50)}</p>
-        <p className="text-red-400/70">25th: {fmtUsd(data.p25)}</p>
-        <p className="text-red-400">10th: {fmtUsd(data.p10)}</p>
+        <p className="text-emerald-600">90th: {fmtUsd(data.p90)}</p>
+        <p className="text-emerald-600/70">75th: {fmtUsd(data.p75)}</p>
+        <p className="text-sky-600">Median: {fmtUsd(data.p50)}</p>
+        <p className="text-red-600/70">25th: {fmtUsd(data.p25)}</p>
+        <p className="text-red-600">10th: {fmtUsd(data.p10)}</p>
       </div>
     </div>
   );
@@ -208,7 +208,7 @@ export default function MonteCarloPage() {
     return (
       <div className="flex items-center py-32">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="text-slate-400 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -218,17 +218,17 @@ export default function MonteCarloPage() {
       {/* ── Header ── */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Monte Carlo Simulation
           </h1>
-          <p className="mt-1 text-[13px] text-zinc-600">
+          <p className="mt-1 text-[13px] text-slate-500">
             {NUM_PATHS.toLocaleString()} simulated paths over {NUM_DAYS} trading
             days (1 year)
           </p>
         </div>
         <button
           onClick={rerun}
-          className="bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 text-cyan-400 border border-cyan-500/20 hover:from-cyan-500/20 hover:to-emerald-500/20 rounded-xl spring-transition transition-all duration-300 px-4 py-2 text-sm font-medium"
+          className="bg-gradient-to-r from-sky-500/10 to-emerald-500/10 text-sky-600 border border-sky-500/20 hover:from-sky-500/20 hover:to-emerald-500/20 rounded-xl spring-transition transition-all duration-300 px-4 py-2 text-sm font-medium"
         >
           Re-run Simulation
         </button>
@@ -268,10 +268,10 @@ export default function MonteCarloPage() {
 
       {/* ── Chart ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-1 text-lg font-semibold text-white">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">
           Portfolio Value Probability Cone
         </h2>
-        <p className="mb-6 text-[13px] text-zinc-600">
+        <p className="mb-6 text-[13px] text-slate-500">
           Shaded regions show the 10th-90th percentile range of simulated
           outcomes
         </p>
@@ -293,7 +293,7 @@ export default function MonteCarloPage() {
               </defs>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="rgba(255,255,255,0.06)"
+                stroke="#e2e8f0"
                 vertical={false}
               />
               <XAxis
@@ -327,7 +327,7 @@ export default function MonteCarloPage() {
                 type="monotone"
                 dataKey="p10"
                 stroke="none"
-                fill="#09090b"
+                fill="#ffffff"
                 isAnimationActive={false}
               />
               {/* inner band: 25-75 */}
@@ -342,7 +342,7 @@ export default function MonteCarloPage() {
                 type="monotone"
                 dataKey="p25"
                 stroke="none"
-                fill="#09090b"
+                fill="#ffffff"
                 isAnimationActive={false}
               />
               {/* median line */}
@@ -359,17 +359,17 @@ export default function MonteCarloPage() {
           </ResponsiveContainer>
         </div>
         {/* Legend */}
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-6 text-[13px] text-zinc-600">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-6 text-[13px] text-slate-500">
           <span className="flex items-center gap-2">
-            <span className="inline-block h-0.5 w-5 bg-cyan-400 rounded" />
+            <span className="inline-block h-0.5 w-5 bg-sky-500 rounded" />
             Median (50th)
           </span>
           <span className="flex items-center gap-2">
-            <span className="inline-block h-3 w-5 rounded bg-cyan-400/15" />
+            <span className="inline-block h-3 w-5 rounded bg-sky-500/15" />
             25th - 75th
           </span>
           <span className="flex items-center gap-2">
-            <span className="inline-block h-3 w-5 rounded bg-cyan-400/5" />
+            <span className="inline-block h-3 w-5 rounded bg-sky-500/5" />
             10th - 90th
           </span>
         </div>
@@ -377,7 +377,7 @@ export default function MonteCarloPage() {
 
       {/* ── Assumptions ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           Simulation Assumptions
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -394,7 +394,7 @@ export default function MonteCarloPage() {
             value={`${annVol.toFixed(1)}%`}
           />
         </div>
-        <p className="mt-4 text-[13px] text-zinc-600">
+        <p className="mt-4 text-[13px] text-slate-500">
           Based on Geometric Brownian Motion: S(t+1) = S(t) * exp((mu -
           sigma^2/2)*dt + sigma*sqrt(dt)*Z). Returns and volatility are derived
           from your portfolio analytics. Past performance does not guarantee
@@ -423,16 +423,16 @@ function StatCard({
   highlight?: boolean;
 }) {
   return (
-    <div className="glass-surface rounded-xl p-4 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-      <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">{label}</p>
-      <p className="text-[10px] text-zinc-600">{sublabel}</p>
+    <div className="glass-surface rounded-xl p-4 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">{label}</p>
+      <p className="text-[10px] text-slate-500">{sublabel}</p>
       <p
         className={`mt-2 text-2xl font-bold font-mono ${
           highlight
             ? positive
-              ? "text-emerald-400"
-              : "text-red-400"
-            : "text-white"
+              ? "text-emerald-600"
+              : "text-red-600"
+            : "text-slate-900"
         }`}
       >
         {value}
@@ -440,7 +440,7 @@ function StatCard({
       {change && (
         <p
           className={`mt-0.5 text-xs font-medium font-mono ${
-            positive ? "text-emerald-400" : "text-red-400"
+            positive ? "text-emerald-600" : "text-red-600"
           }`}
         >
           {change}
@@ -458,9 +458,9 @@ function AssumptionItem({
   value: string;
 }) {
   return (
-    <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3">
-      <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">{label}</p>
-      <p className="mt-1 text-lg font-semibold font-mono text-cyan-400">{value}</p>
+    <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">{label}</p>
+      <p className="mt-1 text-lg font-semibold font-mono text-sky-600">{value}</p>
     </div>
   );
 }

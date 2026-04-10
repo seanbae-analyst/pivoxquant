@@ -1,18 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageSquare, Send, Sparkles, Bot } from "lucide-react";
+import { MessageSquare, Send, Sparkles, Bot, AlertCircle, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { API } from "@/lib/endpoints";
+import { useAiStatus } from "@/lib/hooks";
+import type { AiChatMessage } from "@/lib/types";
 
-/* ── types ── */
+/* ── constants ── */
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
-
-/* ── suggested prompts ── */
+const CHAT_TIMEOUT_MS = 120_000; // 2 minutes — AI can be slow
 
 const SUGGESTIONS = [
   "Analyze my portfolio risk",
@@ -24,9 +22,11 @@ const SUGGESTIONS = [
 /* ── page ── */
 
 export default function AIChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { data: aiStatus, isLoading: statusLoading } = useAiStatus();
+  const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -40,9 +40,13 @@ export default function AIChatPage() {
 
   /* abort controller for SSE cleanup */
   const abortRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    return () => { abortRef.current?.abort(); };
+    return () => {
+      abortRef.current?.abort();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   /* send message */
@@ -52,6 +56,14 @@ export default function AIChatPage() {
       if (!trimmed || loading) return;
 
       setInput("");
+      setErrorMsg(null);
+
+      // Build history from existing messages (last 10 for context)
+      const history = messages
+        .filter((m) => m.content.length > 0)
+        .slice(-10)
+        .map((m) => ({ role: m.role, content: m.content }));
+
       setMessages((prev) => [...prev, { role: "user", content: trimmed }]);
       setLoading(true);
 
@@ -59,16 +71,25 @@ export default function AIChatPage() {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      // Timeout — abort if AI takes too long
+      timeoutRef.current = setTimeout(() => {
+        controller.abort();
+        setErrorMsg("Response timed out. The AI server may be overloaded. Please try again.");
+      }, CHAT_TIMEOUT_MS);
+
       try {
-        const res = await fetch("/api/ai/chat", {
+        const res = await fetch(API.ai.chat, {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: trimmed }),
+          body: JSON.stringify({ message: trimmed, history }),
           signal: controller.signal,
         });
 
-        if (!res.ok) throw new Error(res.statusText);
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({ error: res.statusText }));
+          throw new Error(body.error ?? `Server error (${res.status})`);
+        }
 
         const reader = res.body?.getReader();
         const decoder = new TextDecoder();
@@ -91,7 +112,7 @@ export default function AIChatPage() {
 
               for (const line of lines) {
                 if (!line.startsWith("data: ")) continue;
-                let parsed;
+                let parsed: { done?: boolean; error?: string; text?: string };
                 try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
                 if (parsed.done) { streamDone = true; break; }
                 if (parsed.error) throw new Error(parsed.error);
@@ -109,23 +130,46 @@ export default function AIChatPage() {
             reader.releaseLock();
           }
         }
+
+        // If we got no text at all, show error
+        if (!fullText && !streamDone) {
+          setMessages((prev) => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "assistant", content: "No response received. Please try again." };
+            return updated;
+          });
+        }
       } catch (err) {
-        if ((err as Error).name === "AbortError") return;
+        if ((err as Error).name === "AbortError") {
+          // If no errorMsg already set (timeout sets its own), set a generic one
+          if (!errorMsg) {
+            setMessages((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.role === "assistant" && !last.content) {
+                return prev.slice(0, -1); // Remove empty assistant placeholder
+              }
+              return prev;
+            });
+          }
+          return;
+        }
+        const errText = (err as Error).message || "Something went wrong. Please try again.";
         setMessages((prev) => {
           const last = prev[prev.length - 1];
           if (last?.role === "assistant" && !last.content) {
             const updated = [...prev];
-            updated[updated.length - 1] = { role: "assistant", content: "Sorry, something went wrong. Please try again." };
+            updated[updated.length - 1] = { role: "assistant", content: errText };
             return updated;
           }
-          return [...prev, { role: "assistant", content: "Sorry, something went wrong. Please try again." }];
+          return [...prev, { role: "assistant", content: errText }];
         });
       } finally {
         setLoading(false);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
         inputRef.current?.focus();
       }
     },
-    [loading],
+    [loading, messages, errorMsg],
   );
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -133,36 +177,78 @@ export default function AIChatPage() {
     send(input);
   };
 
+  const handleClear = () => {
+    setMessages([]);
+    setErrorMsg(null);
+    inputRef.current?.focus();
+  };
+
+  // AI not available state
+  if (!statusLoading && aiStatus && !aiStatus.available) {
+    return (
+      <div className="flex h-[calc(100vh-80px)] flex-col items-center justify-center gap-4 px-6">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10">
+          <AlertCircle className="h-8 w-8 text-amber-500" />
+        </div>
+        <h2 className="text-lg font-semibold text-slate-900">AI is not available</h2>
+        <p className="text-center text-sm text-slate-400 max-w-md">
+          The AI service requires an API key to be configured. Please check your server settings.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col">
+    <div className="flex h-[calc(100vh-80px)] flex-col">
       {/* ── header ── */}
-      <div className="shrink-0 border-b border-white/[0.06] px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/15">
-            <MessageSquare className="h-5 w-5 text-cyan-400" />
+      <div className="shrink-0 border-b border-slate-200 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-violet-500/10">
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-violet-600" />
+            </div>
+            <div>
+              <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-slate-900">AI Chat</h1>
+              <p className="text-[11px] sm:text-[13px] text-slate-400">
+                Ask anything about your portfolio
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white">AI Chat</h1>
-            <p className="text-[13px] text-zinc-600">
-              Ask anything about your portfolio
-            </p>
-          </div>
+          {messages.length > 0 && (
+            <button
+              onClick={handleClear}
+              className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-700 spring-transition transition-colors duration-300"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">New chat</span>
+            </button>
+          )}
         </div>
       </div>
 
+      {/* ── error banner ── */}
+      {errorMsg && (
+        <div className="shrink-0 bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-2.5">
+          <p className="text-[12px] text-amber-700 flex items-center gap-2">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            {errorMsg}
+          </p>
+        </div>
+      )}
+
       {/* ── messages area ── */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
         {messages.length === 0 && !loading ? (
           /* empty state */
-          <div className="flex h-full flex-col items-center justify-center gap-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-500/10">
-              <Sparkles className="h-8 w-8 text-cyan-400" />
+          <div className="flex h-full flex-col items-center justify-center gap-5 sm:gap-6">
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-2xl bg-violet-500/10">
+              <Sparkles className="h-7 w-7 sm:h-8 sm:w-8 text-violet-600" />
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-semibold text-white">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
                 How can I help?
               </h2>
-              <p className="mt-1 text-[13px] text-zinc-600">
+              <p className="mt-1 text-[12px] sm:text-[13px] text-slate-400">
                 Ask about your portfolio, market trends, or trading ideas.
               </p>
             </div>
@@ -173,7 +259,7 @@ export default function AIChatPage() {
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="glass-surface rounded-xl px-4 py-3 text-left text-sm text-zinc-300 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:text-white"
+                  className="glass-surface rounded-xl px-4 py-3 text-left text-sm text-slate-500 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] hover:text-slate-900"
                 >
                   {s}
                 </button>
@@ -182,22 +268,22 @@ export default function AIChatPage() {
           </div>
         ) : (
           /* message list */
-          <div className="mx-auto flex max-w-2xl flex-col gap-4">
+          <div className="mx-auto flex max-w-2xl flex-col gap-3 sm:gap-4">
             {messages.map((msg, i) => (
               <div
                 key={i}
                 className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.role === "assistant" && (
-                  <div className="mr-2 mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-500/15">
-                    <Bot className="h-4 w-4 text-cyan-400" />
+                  <div className="mr-2 mt-1 flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
+                    <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-violet-600" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  className={`max-w-[85%] sm:max-w-[75%] whitespace-pre-wrap rounded-2xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-[13px] sm:text-sm leading-relaxed ${
                     msg.role === "user"
-                      ? "bg-zinc-700/60 text-white"
-                      : "glass-surface text-zinc-300"
+                      ? "bg-slate-100 text-slate-900"
+                      : "glass-surface text-slate-700"
                   }`}
                 >
                   {msg.content}
@@ -206,15 +292,15 @@ export default function AIChatPage() {
             ))}
 
             {/* typing indicator */}
-            {loading && (
+            {loading && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex justify-start">
-                <div className="mr-2 mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-500/15">
-                  <Bot className="h-4 w-4 text-cyan-400" />
+                <div className="mr-2 mt-1 flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg bg-violet-500/10">
+                  <Bot className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-violet-600" />
                 </div>
                 <div className="flex items-center gap-1.5 glass-surface rounded-2xl px-4 py-3">
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500 [animation-delay:0ms]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500 [animation-delay:150ms]" />
-                  <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-500 [animation-delay:300ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:0ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:150ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:300ms]" />
                 </div>
               </div>
             )}
@@ -223,10 +309,10 @@ export default function AIChatPage() {
       </div>
 
       {/* ── input bar (fixed at bottom) ── */}
-      <div className="shrink-0 border-t border-white/[0.06] bg-white/[0.03] px-6 py-4">
+      <div className="shrink-0 border-t border-slate-200 bg-slate-50/50 px-4 sm:px-6 py-3 sm:py-4">
         <form
           onSubmit={handleSubmit}
-          className="mx-auto flex max-w-2xl items-center gap-3"
+          className="mx-auto flex max-w-2xl items-center gap-2 sm:gap-3"
         >
           <Input
             ref={inputRef}
@@ -234,17 +320,20 @@ export default function AIChatPage() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about your portfolio..."
             disabled={loading}
-            className="flex-1 bg-white/[0.03] border-white/[0.06] text-white placeholder:text-zinc-700 focus:border-cyan-500/30 rounded-xl"
+            className="flex-1 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-violet-500/30 rounded-xl text-[13px] sm:text-sm"
           />
           <Button
             type="submit"
             size="icon"
             disabled={loading || !input.trim()}
-            className="h-10 w-10 shrink-0 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl spring-transition disabled:opacity-40"
+            className="h-9 w-9 sm:h-10 sm:w-10 shrink-0 bg-gradient-to-r from-violet-500/10 to-indigo-500/10 text-violet-600 border border-violet-500/20 rounded-xl spring-transition disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
           </Button>
         </form>
+        <p className="mx-auto max-w-2xl mt-1.5 text-[9px] text-slate-300 text-center">
+          AI analysis, not financial advice. Responses include your portfolio context.
+        </p>
       </div>
     </div>
   );

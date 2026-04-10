@@ -29,9 +29,9 @@ function priorityLabel(p: number) {
 }
 
 function priorityBadgeColor(p: number) {
-  if (p === 1) return "bg-cyan-500/20 text-cyan-300 border-cyan-500/30";
-  if (p <= 3) return "bg-violet-500/15 text-violet-300 border-violet-500/25";
-  return "bg-zinc-700/40 text-zinc-400 border-zinc-600/30";
+  if (p === 1) return "bg-sky-500/10 text-sky-700 border-sky-500/20";
+  if (p <= 3) return "bg-violet-500/10 text-violet-700 border-violet-500/20";
+  return "bg-slate-100 text-slate-500 border-slate-200";
 }
 
 /* ── page ── */
@@ -60,10 +60,10 @@ export default function AIIdeasPage() {
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             AI Weekly Trade Ideas
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm text-slate-500">
             Curated by StockPilot AI based on your profile, portfolio, and
             market conditions
           </p>
@@ -72,7 +72,7 @@ export default function AIIdeasPage() {
         <button
           onClick={() => mutate()}
           disabled={isLoading}
-          className="flex items-center gap-2 self-start rounded-xl glass-surface px-4 py-2 text-sm font-medium text-zinc-300 transition hover:text-white disabled:opacity-50"
+          className="flex items-center gap-2 self-start rounded-xl glass-surface px-4 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-900 disabled:opacity-50"
         >
           <RefreshCw
             size={14}
@@ -83,25 +83,25 @@ export default function AIIdeasPage() {
       </div>
 
       {/* ── Hero ── */}
-      <div className="relative overflow-hidden rounded-2xl glass-surface bg-gradient-to-br from-cyan-950/40 p-8">
-        <div className="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-cyan-500/5 blur-3xl" />
+      <div className="relative overflow-hidden rounded-2xl glass-surface bg-gradient-to-br from-sky-50 p-8">
+        <div className="absolute -right-12 -top-12 h-56 w-56 rounded-full bg-sky-500/5 blur-3xl" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-12">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
-            <Sparkles size={28} className="text-cyan-400" />
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-sky-500/10 border border-sky-500/20">
+            <Sparkles size={28} className="text-sky-600" />
           </div>
           <div className="space-y-3 max-w-2xl">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-slate-900">
               How AI Discovery Works
             </h2>
-            <div className="grid gap-2 text-sm text-zinc-400 sm:grid-cols-3">
+            <div className="grid gap-2 text-sm text-slate-500 sm:grid-cols-3">
               <div className="flex items-start gap-2">
-                <Target size={14} className="mt-0.5 shrink-0 text-cyan-400" />
+                <Target size={14} className="mt-0.5 shrink-0 text-sky-600" />
                 <span>
                   Scans 500+ stocks for technical and fundamental signals daily
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <Layers size={14} className="mt-0.5 shrink-0 text-cyan-400" />
+                <Layers size={14} className="mt-0.5 shrink-0 text-sky-600" />
                 <span>
                   Ranks by composite score combining momentum, value, and
                   volatility
@@ -110,7 +110,7 @@ export default function AIIdeasPage() {
               <div className="flex items-start gap-2">
                 <ShieldCheck
                   size={14}
-                  className="mt-0.5 shrink-0 text-cyan-400"
+                  className="mt-0.5 shrink-0 text-sky-600"
                 />
                 <span>
                   Adapts position sizing to your risk profile and capital
@@ -124,14 +124,14 @@ export default function AIIdeasPage() {
       {/* ── Loading ── */}
       {isLoading && (
         <div className="flex items-center justify-center gap-0 py-20">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-          <span className="text-zinc-600 text-[12px]">Loading...</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse mr-2" />
+          <span className="text-slate-400 text-[12px]">Loading...</span>
         </div>
       )}
 
       {/* ── Error ── */}
       {error && !isLoading && (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-center text-sm text-red-400">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-center text-sm text-red-600">
           Failed to load trade ideas. Please try refreshing.
         </div>
       )}
@@ -146,7 +146,7 @@ export default function AIIdeasPage() {
             <Section label="Hold / Watch" icon={ShieldCheck} items={grouped.hold} />
           )}
           {grouped.buy.length === 0 && grouped.hold.length === 0 && (
-            <div className="py-16 text-center text-sm text-zinc-500">
+            <div className="py-16 text-center text-sm text-slate-500">
               No trade ideas at this time. Check back later.
             </div>
           )}
@@ -170,11 +170,11 @@ function Section({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Icon size={16} className="text-cyan-400" />
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
+        <Icon size={16} className="text-sky-600" />
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
           {label}
         </h3>
-        <span className="ml-1 text-xs text-zinc-600">{items.length}</span>
+        <span className="ml-1 text-xs text-slate-400">{items.length}</span>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -226,15 +226,15 @@ function IdeaCard({ item }: { item: DiscoverResult }) {
         <div className="flex items-start justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-white">{ticker}</span>
+              <span className="text-lg font-bold text-slate-900">{ticker}</span>
               {already_owned && (
-                <span className="flex items-center gap-0.5 text-[10px] text-emerald-400">
+                <span className="flex items-center gap-0.5 text-[10px] text-emerald-600">
                   <CheckCircle2 size={10} />
                   Owned
                 </span>
               )}
             </div>
-            <p className="mt-0.5 truncate text-xs text-zinc-500">{name}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">{name}</p>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -254,10 +254,10 @@ function IdeaCard({ item }: { item: DiscoverResult }) {
         {/* price + score row */}
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-xl font-semibold text-white">{displayPrice}</p>
+            <p className="text-xl font-semibold text-slate-900">{displayPrice}</p>
             <p
               className={`text-xs font-medium ${
-                ((item as unknown as Record<string, unknown>).change_pct as number ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"
+                ((item as unknown as Record<string, unknown>).change_pct as number ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"
               }`}
             >
               {fmtPct(((item as unknown as Record<string, unknown>).change_pct as number ?? 0))}
@@ -265,61 +265,61 @@ function IdeaCard({ item }: { item: DiscoverResult }) {
           </div>
 
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wider text-zinc-600">
+            <p className="text-[10px] uppercase tracking-wider text-slate-400">
               Score
             </p>
             <div className="mt-0.5 flex items-center gap-1.5">
-              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-800">
+              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
                 <div
                   className={`h-full rounded-full ${scoreColor(score)}`}
                   style={{ width: `${Math.min(score, 100)}%` }}
                 />
               </div>
-              <span className="text-sm font-bold text-white">{score}</span>
+              <span className="text-sm font-bold text-slate-900">{score}</span>
             </div>
           </div>
         </div>
 
         {/* sector */}
-        <div className="flex items-center gap-1.5 text-[11px] text-zinc-500">
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
           <Layers size={11} />
           {sector}
         </div>
 
         {/* recommendation */}
-        <div className="rounded-xl border border-white/[0.06] bg-zinc-900/50 p-3">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
             Recommended Action
           </p>
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="flex items-center gap-1.5">
-              <Hash size={11} className="text-cyan-400" />
-              <span className="text-zinc-400">Shares</span>
-              <span className="ml-auto font-semibold text-white">
+              <Hash size={11} className="text-sky-600" />
+              <span className="text-slate-500">Shares</span>
+              <span className="ml-auto font-semibold text-slate-900">
                 {rec_shares}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <DollarSign size={11} className="text-cyan-400" />
-              <span className="text-zinc-400">Invest</span>
-              <span className="ml-auto font-semibold text-white">
+              <DollarSign size={11} className="text-sky-600" />
+              <span className="text-slate-500">Invest</span>
+              <span className="ml-auto font-semibold text-slate-900">
                 {displayInvestment}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <ArrowUpRight size={11} className="text-emerald-400" />
-              <span className="text-zinc-400">TP</span>
-              <span className="ml-auto font-medium text-emerald-400">
+              <ArrowUpRight size={11} className="text-emerald-600" />
+              <span className="text-slate-500">TP</span>
+              <span className="ml-auto font-medium text-emerald-600">
                 {fmtPct(tp_pct ?? 0)}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <ArrowUpRight
                 size={11}
-                className="rotate-90 text-red-400"
+                className="rotate-90 text-red-600"
               />
-              <span className="text-zinc-400">SL</span>
-              <span className="ml-auto font-medium text-red-400">
+              <span className="text-slate-500">SL</span>
+              <span className="ml-auto font-medium text-red-600">
                 {fmtPct(sl_pct ? -Math.abs(sl_pct) : 0)}
               </span>
             </div>
@@ -328,7 +328,7 @@ function IdeaCard({ item }: { item: DiscoverResult }) {
 
         {/* hover arrow */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100">
-          <ArrowUpRight size={16} className="text-cyan-400" />
+          <ArrowUpRight size={16} className="text-sky-600" />
         </div>
       </motion.div>
     </Link>

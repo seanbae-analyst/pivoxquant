@@ -7,6 +7,7 @@ from flask_login import login_user, logout_user, current_user
 
 from extensions import db
 from models import User
+from security import auth_rate_limit
 from services.serializers import serialize_user
 from .decorators import api_auth
 
@@ -31,6 +32,7 @@ def init_oauth(app):
 
 
 @auth_bp.route("/register", methods=["POST"])
+@auth_rate_limit
 def register():
     d = request.get_json() or {}
     email = (d.get("email") or "").strip().lower()
@@ -51,6 +53,7 @@ def register():
 
 
 @auth_bp.route("/login", methods=["POST"])
+@auth_rate_limit
 def login():
     d = request.get_json() or {}
     u = User.query.filter_by(email=(d.get("email") or "").strip().lower()).first()
