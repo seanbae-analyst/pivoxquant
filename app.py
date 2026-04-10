@@ -17,6 +17,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from config import Config
 from extensions import db, login_manager
 from routes import register_blueprints
+from security import init_security
 from services import container as svc
 from services import fx_service, cache_service, alert_service
 
@@ -58,6 +59,9 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    # Security middleware (CORS, Rate Limiting, CSRF, Session, Headers)
+    init_security(app)
+
     # Extensions
     db.init_app(app)
     login_manager.init_app(app)
@@ -78,7 +82,8 @@ def create_app():
 
     @app.route("/")
     def index():
-        return redirect("http://localhost:3000")
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+        return redirect(frontend_url)
 
     # Initialize services
     svc.init_trader(db, Position, TradeHistory, app)

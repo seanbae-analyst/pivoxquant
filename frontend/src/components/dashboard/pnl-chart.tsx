@@ -29,11 +29,11 @@ export function PnlChart({ data }: Props) {
     <div className="rounded-2xl border border-[var(--ld-border)] bg-[var(--ld-surface)] p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">Portfolio Performance</p>
-          <p className="mt-1 text-2xl font-bold text-white">{fmtUsd(data[data.length - 1].value)}</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Portfolio Performance</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">{fmtUsd(data[data.length - 1].value)}</p>
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-bold ${
-          isUp ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400"
+          isUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
         }`}>
           {isUp ? "+" : ""}{change}%
         </span>
@@ -47,11 +47,11 @@ export function PnlChart({ data }: Props) {
                 <stop offset="100%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
             <XAxis dataKey="date" tickFormatter={(d: string) => d.slice(5)} tick={{ fontSize: 10, fill: "#52525b" }} axisLine={false} tickLine={false} />
             <YAxis domain={["dataMin", "dataMax"]} tickFormatter={(v: number) => fmtUsd(v)} tick={{ fontSize: 10, fill: "#52525b" }} axisLine={false} tickLine={false} width={70} />
             <Tooltip
-              contentStyle={{ background: "#18181b", border: "1px solid #27272a", borderRadius: 12, fontSize: 12, color: "#fafafa", boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}
+              contentStyle={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 12, fontSize: 12, color: "#0f172a", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
               formatter={(v) => [fmtUsd(Number(v)), "Value"]}
               labelFormatter={(d) => String(d)}
             />

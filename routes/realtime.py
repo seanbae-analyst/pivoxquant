@@ -1,6 +1,8 @@
 """Real-time price streaming routes."""
 import json
 import time
+import threading
+from collections import defaultdict
 from flask import Blueprint, jsonify, Response
 from flask_login import current_user
 
@@ -10,16 +12,35 @@ from .decorators import api_auth
 
 realtime_bp = Blueprint("realtime", __name__, url_prefix="/api/realtime")
 
+# ── SSE Connection Limiter ──────────────────────────────────────────────────
+# Prevents DoS via unlimited SSE connections per user.
+_MAX_SSE_PER_USER = 3
+_sse_connections = defaultdict(int)   # user_id -> active count
+_sse_lock = threading.Lock()
+
 
 @realtime_bp.route("/stream")
 @api_auth
 def stream():
-    positions = Position.query.filter_by(user_id=current_user.id).all()
+    user_id = current_user.id
+
+    # ── SSE connection limit check ──
+    with _sse_lock:
+        if _sse_connections[user_id] >= _MAX_SSE_PER_USER:
+            return jsonify({
+                "error": "Too many concurrent SSE connections.",
+                "error_kr": "동시 SSE 연결 수가 초과되었습니다.",
+                "code": "SSE_LIMIT_EXCEEDED",
+            }), 429
+
+    positions = Position.query.filter_by(user_id=user_id).all()
     tickers = [p.ticker for p in positions]
     if not tickers:
         return jsonify({"error": "No positions"}), 400
 
     def generate():
+        with _sse_lock:
+            _sse_connections[user_id] += 1
         try:
             while True:
                 try:
@@ -32,6 +53,9 @@ def stream():
                 time.sleep(5)
         except GeneratorExit:
             pass
+        finally:
+            with _sse_lock:
+                _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
 
     return Response(generate(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -42,12 +66,24 @@ def stream():
 def portfolio_stream():
     """SSE endpoint: streams portfolio price updates every 30 seconds."""
     user_id = current_user.id
+
+    # ── SSE connection limit check ──
+    with _sse_lock:
+        if _sse_connections[user_id] >= _MAX_SSE_PER_USER:
+            return jsonify({
+                "error": "Too many concurrent SSE connections.",
+                "error_kr": "동시 SSE 연결 수가 초과되었습니다.",
+                "code": "SSE_LIMIT_EXCEEDED",
+            }), 429
+
     positions = Position.query.filter_by(user_id=user_id).all()
     tickers = [p.ticker for p in positions]
     if not tickers:
         return jsonify({"error": "No positions"}), 400
 
     def generate():
+        with _sse_lock:
+            _sse_connections[user_id] += 1
         try:
             while True:
                 try:
@@ -69,6 +105,9 @@ def portfolio_stream():
                 time.sleep(30)
         except GeneratorExit:
             pass
+        finally:
+            with _sse_lock:
+                _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
 
     return Response(generate(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

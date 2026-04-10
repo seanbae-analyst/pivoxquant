@@ -94,7 +94,7 @@ function getTiltSummary(factors: FactorScore[]): { tilt: string; recommendation:
 function FactorCard({ factor }: { factor: FactorScore }) {
   const Icon = factor.icon;
   return (
-    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
       <div className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-xl"
@@ -103,8 +103,8 @@ function FactorCard({ factor }: { factor: FactorScore }) {
           <Icon className="h-5 w-5" style={{ color: factor.color }} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-white">{factor.factor}</p>
-          <p className="text-[13px] text-zinc-600">{factor.score}/100</p>
+          <p className="text-sm font-semibold text-slate-900">{factor.factor}</p>
+          <p className="text-[13px] text-slate-500">{factor.score}/100</p>
         </div>
         <span
           className="text-2xl font-bold font-mono"
@@ -115,7 +115,7 @@ function FactorCard({ factor }: { factor: FactorScore }) {
       </div>
 
       {/* Bar */}
-      <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+      <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100">
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{
@@ -125,7 +125,7 @@ function FactorCard({ factor }: { factor: FactorScore }) {
         />
       </div>
 
-      <p className="mt-3 text-[13px] leading-relaxed text-zinc-400">
+      <p className="mt-3 text-[13px] leading-relaxed text-slate-500">
         {factor.description}
       </p>
     </div>
@@ -151,7 +151,7 @@ export default function FactorsPage() {
     return (
       <div className="flex items-center py-32">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="text-slate-500 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -161,8 +161,8 @@ export default function FactorsPage() {
   if (!positions.length) {
     return (
       <div className="glass-surface rounded-2xl py-12 text-center">
-        <Target className="mx-auto h-10 w-10 text-zinc-700" />
-        <p className="mt-3 text-[13px] text-zinc-600">No positions to analyze.</p>
+        <Target className="mx-auto h-10 w-10 text-slate-400" />
+        <p className="mt-3 text-[13px] text-slate-500">No positions to analyze.</p>
       </div>
     );
   }
@@ -173,10 +173,10 @@ export default function FactorsPage() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Factor Exposure Analysis
         </h1>
-        <p className="mt-1 text-[13px] text-zinc-600">
+        <p className="mt-1 text-[13px] text-slate-500">
           Understand your portfolio&apos;s style tilts across five key investment factors.
         </p>
       </div>
@@ -184,29 +184,29 @@ export default function FactorsPage() {
       {/* Tilt Summary */}
       <div className="glass-surface rounded-xl p-6">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10">
-            <Target className="h-5 w-5 text-cyan-400" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-600/10">
+            <Target className="h-5 w-5 text-sky-600" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white">Portfolio Tilt</h2>
-            <p className="mt-1 text-sm text-zinc-300">{tilt}</p>
-            <p className="mt-1 text-[13px] text-zinc-600">{recommendation}</p>
+            <h2 className="text-lg font-semibold text-slate-900">Portfolio Tilt</h2>
+            <p className="mt-1 text-sm text-slate-700">{tilt}</p>
+            <p className="mt-1 text-[13px] text-slate-500">{recommendation}</p>
           </div>
         </div>
       </div>
 
       {/* Radar Chart */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           Factor Radar
         </h2>
         <div className="h-[380px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
-              <PolarGrid stroke="#3f3f46" />
+              <PolarGrid stroke="#e2e8f0" />
               <PolarAngleAxis
                 dataKey="factor"
-                tick={{ fill: "#a1a1aa", fontSize: 13, fontWeight: 500 }}
+                tick={{ fill: "#64748b", fontSize: 13, fontWeight: 500 }}
               />
               <Radar
                 name="Exposure"
@@ -223,7 +223,7 @@ export default function FactorsPage() {
 
       {/* Factor Cards */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           Factor Breakdown
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

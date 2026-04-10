@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, IBM_Plex_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth";
+import { RealtimeProvider } from "@/lib/realtime";
 import { SwInit } from "@/components/pwa/sw-init";
 import { InAppBrowserGuard } from "@/components/pwa/in-app-browser-guard";
 import "./globals.css";
@@ -17,7 +19,7 @@ const ibmMono = IBM_Plex_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#050508",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
   description: "AI-powered quantitative investment advisor with adaptive quant engine",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "StockPilot",
   },
   formatDetection: {
@@ -58,7 +60,15 @@ export default function RootLayout({
       >
         <InAppBrowserGuard />
         <SwInit />
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <RealtimeProvider>{children}</RealtimeProvider>
+        </AuthProvider>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: { fontFamily: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif' },
+          }}
+        />
       </body>
     </html>
   );

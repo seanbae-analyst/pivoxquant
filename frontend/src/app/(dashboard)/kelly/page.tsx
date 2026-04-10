@@ -66,8 +66,8 @@ export default function KellyPage() {
   if (!portfolio || !analytics) {
     return (
       <div className="flex items-center justify-center py-32">
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse mr-2" />
+        <span className="text-slate-400 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -76,10 +76,10 @@ export default function KellyPage() {
     <div className="space-y-4">
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Kelly Criterion Calculator
         </h1>
-        <p className="mt-1 text-[13px] text-zinc-600">
+        <p className="mt-1 text-[13px] text-slate-400">
           Optimal position sizing based on edge and reward/risk ratio
         </p>
       </div>
@@ -87,13 +87,13 @@ export default function KellyPage() {
       {/* ── Summary Cards ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <SummaryCard
-          icon={<Target className="h-5 w-5 text-cyan-400" />}
+          icon={<Target className="h-5 w-5 text-sky-600" />}
           label="Kelly-Optimal Allocation"
           value={`${summary.optimalPct.toFixed(1)}%`}
           sublabel={`of ${fmtUsd(totalCapital)} total capital`}
         />
         <SummaryCard
-          icon={<Shield className="h-5 w-5 text-emerald-400" />}
+          icon={<Shield className="h-5 w-5 text-emerald-600" />}
           label="Current Allocation"
           value={`${summary.currentPct.toFixed(1)}%`}
           sublabel={`${fmtUsd(totalValue)} invested`}
@@ -103,8 +103,8 @@ export default function KellyPage() {
             <AlertTriangle
               className={`h-5 w-5 ${
                 Math.abs(summary.diff) < 5
-                  ? "text-emerald-400"
-                  : "text-amber-400"
+                  ? "text-emerald-600"
+                  : "text-amber-500"
               }`}
             />
           }
@@ -118,14 +118,14 @@ export default function KellyPage() {
                 : "Within Kelly optimal range"
           }
           valueColor={
-            Math.abs(summary.diff) < 5 ? "text-emerald-400" : "text-amber-400"
+            Math.abs(summary.diff) < 5 ? "text-emerald-600" : "text-amber-500"
           }
         />
       </div>
 
       {/* ── Risk Meter ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           Portfolio Risk Meter
         </h2>
         <RiskMeter
@@ -137,19 +137,19 @@ export default function KellyPage() {
       {/* ── Interactive Calculator ── */}
       <div className="glass-surface rounded-xl p-6">
         <div className="mb-4 flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-cyan-400" />
-          <h2 className="text-lg font-semibold text-white">
+          <Calculator className="h-5 w-5 text-sky-600" />
+          <h2 className="text-lg font-semibold text-slate-900">
             Custom Calculator
           </h2>
         </div>
-        <p className="mb-6 text-[13px] text-zinc-600">
+        <p className="mb-6 text-[13px] text-slate-400">
           Kelly % = W - (1 - W) / R where W = win rate, R = avg win / avg loss
         </p>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Win Rate Input */}
           <div>
-            <label className="mb-1.5 block text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+            <label className="mb-1.5 block text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">
               Win Rate (%)
             </label>
             <input
@@ -163,16 +163,16 @@ export default function KellyPage() {
                   Math.min(99, Math.max(1, Number(e.target.value) || 1)),
                 )
               }
-              className="w-full rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2 text-sm text-white placeholder:text-zinc-700 outline-none transition focus:border-cyan-500/30"
+              className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-sky-500/50"
             />
-            <p className="mt-1 text-[10px] text-zinc-600">
+            <p className="mt-1 text-[10px] text-slate-400">
               Probability of a winning trade (1-99)
             </p>
           </div>
 
           {/* Reward/Risk Ratio Input */}
           <div>
-            <label className="mb-1.5 block text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+            <label className="mb-1.5 block text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">
               Reward / Risk Ratio
             </label>
             <input
@@ -186,34 +186,34 @@ export default function KellyPage() {
                   Math.min(20, Math.max(0.1, Number(e.target.value) || 0.1)),
                 )
               }
-              className="w-full rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2 text-sm text-white placeholder:text-zinc-700 outline-none transition focus:border-cyan-500/30"
+              className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-sky-500/50"
             />
-            <p className="mt-1 text-[10px] text-zinc-600">
+            <p className="mt-1 text-[10px] text-slate-400">
               Average win size / Average loss size
             </p>
           </div>
 
           {/* Result */}
-          <div className="flex flex-col justify-center rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+          <div className="flex flex-col justify-center rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
             <div className="flex items-baseline justify-between">
-              <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Full Kelly</span>
-              <span className="text-xl font-bold font-mono text-cyan-400">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Full Kelly</span>
+              <span className="text-xl font-bold font-mono text-sky-600">
                 {customKelly.toFixed(1)}%
               </span>
             </div>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Half Kelly (rec.)</span>
-              <span className="text-lg font-semibold font-mono text-emerald-400">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Half Kelly (rec.)</span>
+              <span className="text-lg font-semibold font-mono text-emerald-600">
                 {customHalfKelly.toFixed(1)}%
               </span>
             </div>
             {totalCapital > 0 && (
-              <div className="mt-2 border-t border-white/[0.06] pt-2">
+              <div className="mt-2 border-t border-slate-200 pt-2">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[10px] text-zinc-600">
+                  <span className="text-[10px] text-slate-400">
                     Suggested size
                   </span>
-                  <span className="text-sm font-medium font-mono text-zinc-300">
+                  <span className="text-sm font-medium font-mono text-slate-700">
                     {fmtUsd((customHalfKelly / 100) * totalCapital)}
                   </span>
                 </div>
@@ -225,16 +225,16 @@ export default function KellyPage() {
 
       {/* ── Position Sizing Table ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-1 text-lg font-semibold text-white">
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">
           Position Sizing Table
         </h2>
-        <p className="mb-6 text-[13px] text-zinc-600">
+        <p className="mb-6 text-[13px] text-slate-400">
           Kelly-optimal sizing for each position based on score and TP/SL ratio
         </p>
 
         {positionData.length === 0 ? (
           <div className="glass-surface rounded-2xl py-12 text-center">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-slate-500">
               No positions found. Add positions to see Kelly sizing.
             </p>
           </div>
@@ -242,7 +242,7 @@ export default function KellyPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-white/[0.06] text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+                <tr className="border-b border-slate-200 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">
                   <th className="pb-3 pr-4">Ticker</th>
                   <th className="pb-3 pr-4 text-right">Score</th>
                   <th className="pb-3 pr-4 text-right">
@@ -266,14 +266,14 @@ export default function KellyPage() {
                   .map((p) => (
                     <tr
                       key={p.id}
-                      className="border-b border-white/[0.04] last:border-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+                      className="border-b border-slate-100 last:border-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]"
                     >
                       <td className="py-3 pr-4">
                         <div>
-                          <span className="font-medium text-white">
+                          <span className="font-medium text-slate-900">
                             {p.ticker}
                           </span>
-                          <p className="text-[10px] text-zinc-600 truncate max-w-[120px]">
+                          <p className="text-[10px] text-slate-400 truncate max-w-[120px]">
                             {p.name}
                           </p>
                         </div>
@@ -282,28 +282,28 @@ export default function KellyPage() {
                         <span
                           className={`font-mono font-medium ${
                             p.score >= 70
-                              ? "text-emerald-400"
+                              ? "text-emerald-600"
                               : p.score >= 45
-                                ? "text-amber-400"
-                                : "text-red-400"
+                                ? "text-amber-500"
+                                : "text-red-600"
                           }`}
                         >
                           {p.score}
                         </span>
                       </td>
-                      <td className="py-3 pr-4 text-right font-mono text-zinc-300">
+                      <td className="py-3 pr-4 text-right font-mono text-slate-700">
                         {(p.winRate * 100).toFixed(0)}%
                       </td>
-                      <td className="py-3 pr-4 text-right font-mono text-zinc-300">
+                      <td className="py-3 pr-4 text-right font-mono text-slate-700">
                         {p.rRatio.toFixed(1)}
                       </td>
-                      <td className="py-3 pr-4 text-right font-mono text-cyan-400 font-medium">
+                      <td className="py-3 pr-4 text-right font-mono text-sky-600 font-medium">
                         {(p.kelly * 100).toFixed(1)}%
                       </td>
-                      <td className="py-3 pr-4 text-right font-mono text-emerald-400 font-medium">
+                      <td className="py-3 pr-4 text-right font-mono text-emerald-600 font-medium">
                         {(p.halfKelly * 100).toFixed(1)}%
                       </td>
-                      <td className="py-3 text-right font-mono text-zinc-300">
+                      <td className="py-3 text-right font-mono text-slate-700">
                         {fmtUsd(p.halfKelly * totalCapital)}
                       </td>
                     </tr>
@@ -316,10 +316,10 @@ export default function KellyPage() {
 
       {/* ── Disclaimer ── */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           About Kelly Criterion
         </h2>
-        <div className="space-y-2 text-xs text-zinc-400">
+        <div className="space-y-2 text-xs text-slate-500">
           <p>
             The Kelly Criterion calculates the theoretically optimal fraction of
             capital to risk on a single bet. Formula: Kelly % = W - (1 - W) / R
@@ -336,7 +336,7 @@ export default function KellyPage() {
             and the TP/SL percentage ratio is used as the reward/risk ratio R. If
             TP or SL is not set, a default R of 2.0 is used.
           </p>
-          <p className="text-zinc-600">
+          <p className="text-slate-400">
             This is for educational and analytical purposes only. Past
             performance does not guarantee future results.
           </p>
@@ -362,15 +362,15 @@ function SummaryCard({
   valueColor?: string;
 }) {
   return (
-    <div className="glass-surface rounded-xl p-4 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+    <div className="glass-surface rounded-xl p-4 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
       <div className="flex items-center gap-2">
         {icon}
-        <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">{label}</p>
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">{label}</p>
       </div>
-      <p className={`mt-2 text-2xl font-bold font-mono ${valueColor ?? "text-white"}`}>
+      <p className={`mt-2 text-2xl font-bold font-mono ${valueColor ?? "text-slate-900"}`}>
         {value}
       </p>
-      <p className="mt-0.5 text-[10px] text-zinc-600">{sublabel}</p>
+      <p className="mt-0.5 text-[10px] text-slate-400">{sublabel}</p>
     </div>
   );
 }
@@ -389,10 +389,10 @@ function RiskMeter({
   const diff = currentPct - optimalPct;
   const status =
     Math.abs(diff) < 5
-      ? { label: "Well-Balanced", color: "text-emerald-400" }
+      ? { label: "Well-Balanced", color: "text-emerald-600" }
       : diff > 0
-        ? { label: "Over-Allocated", color: "text-amber-400" }
-        : { label: "Under-Allocated", color: "text-cyan-400" };
+        ? { label: "Over-Allocated", color: "text-amber-500" }
+        : { label: "Under-Allocated", color: "text-sky-600" };
 
   return (
     <div>
@@ -400,16 +400,16 @@ function RiskMeter({
         <span className={`text-sm font-medium ${status.color}`}>
           {status.label}
         </span>
-        <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">
           {Math.abs(diff).toFixed(1)}% {diff >= 0 ? "above" : "below"} optimal
         </span>
       </div>
 
       {/* Gauge bar */}
-      <div className="relative h-6 w-full rounded-full bg-zinc-800/60 overflow-hidden">
+      <div className="relative h-6 w-full rounded-full bg-slate-100 overflow-hidden">
         {/* Optimal zone highlight */}
         <div
-          className="absolute inset-y-0 bg-emerald-400/10 border-l border-r border-emerald-400/30"
+          className="absolute inset-y-0 bg-emerald-100 border-l border-r border-emerald-300"
           style={{
             left: `${Math.max(optimalPos - 3, 0)}%`,
             width: `6%`,
@@ -419,22 +419,22 @@ function RiskMeter({
         <div
           className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
             Math.abs(diff) < 5
-              ? "bg-emerald-400/30"
+              ? "bg-emerald-200"
               : diff > 0
-                ? "bg-amber-400/30"
-                : "bg-cyan-400/30"
+                ? "bg-amber-200"
+                : "bg-sky-200"
           }`}
           style={{ width: `${currentPos}%` }}
         />
         {/* Optimal marker */}
         <div
-          className="absolute top-0 h-full w-0.5 bg-emerald-400"
+          className="absolute top-0 h-full w-0.5 bg-emerald-600"
           style={{ left: `${optimalPos}%` }}
         />
         {/* Current marker */}
         <div
           className={`absolute top-0 h-full w-0.5 ${
-            Math.abs(diff) < 5 ? "bg-white" : diff > 0 ? "bg-amber-400" : "bg-cyan-400"
+            Math.abs(diff) < 5 ? "bg-slate-900" : diff > 0 ? "bg-amber-500" : "bg-sky-600"
           }`}
           style={{ left: `${currentPos}%` }}
         />
@@ -442,11 +442,11 @@ function RiskMeter({
 
       {/* Labels */}
       <div className="mt-2 flex items-center justify-between text-[10px]">
-        <span className="text-zinc-600">0%</span>
+        <span className="text-slate-400">0%</span>
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
-            <span className="text-zinc-400">
+            <span className="inline-block h-2 w-2 rounded-full bg-emerald-600" />
+            <span className="text-slate-500">
               Optimal ({optimalPct.toFixed(0)}%)
             </span>
           </span>
@@ -454,18 +454,18 @@ function RiskMeter({
             <span
               className={`inline-block h-2 w-2 rounded-full ${
                 Math.abs(diff) < 5
-                  ? "bg-white"
+                  ? "bg-slate-900"
                   : diff > 0
-                    ? "bg-amber-400"
-                    : "bg-cyan-400"
+                    ? "bg-amber-500"
+                    : "bg-sky-600"
               }`}
             />
-            <span className="text-zinc-400">
+            <span className="text-slate-500">
               Current ({currentPct.toFixed(0)}%)
             </span>
           </span>
         </div>
-        <span className="text-zinc-600">100%</span>
+        <span className="text-slate-400">100%</span>
       </div>
     </div>
   );

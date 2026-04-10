@@ -1,23 +1,27 @@
 import type { NextConfig } from "next";
 
+// Backend API URL: Railway production or local development
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+
 const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:5050/api/:path*",
+        destination: `${BACKEND_URL}/api/:path*`,
       },
       {
         source: "/login",
-        destination: "http://localhost:5050/login",
+        destination: `${BACKEND_URL}/login`,
       },
       {
         source: "/signup",
-        destination: "http://localhost:5050/signup",
+        destination: `${BACKEND_URL}/signup`,
       },
       {
         source: "/logout",
-        destination: "http://localhost:5050/logout",
+        destination: `${BACKEND_URL}/logout`,
       },
     ];
   },

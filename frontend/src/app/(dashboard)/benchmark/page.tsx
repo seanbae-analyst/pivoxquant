@@ -78,23 +78,23 @@ function ChartTooltip({ active, payload, label }: {
   return (
     <div
       style={{
-        background: "#18181b",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
         borderRadius: 12,
         fontSize: 12,
-        color: "#fafafa",
+        color: "#0f172a",
       }}
       className="px-4 py-3 shadow-xl"
     >
-      <p className="mb-1.5 text-[13px] text-zinc-600">{label}</p>
+      <p className="mb-1.5 text-[13px] text-slate-500">{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2 text-sm">
           <span
             className="inline-block h-2 w-2 rounded-full"
             style={{ background: p.color }}
           />
-          <span className="text-zinc-400">{p.name}:</span>
-          <span className="font-semibold font-mono text-white">{p.value.toFixed(2)}</span>
+          <span className="text-slate-500">{p.name}:</span>
+          <span className="font-semibold font-mono text-slate-900">{p.value.toFixed(2)}</span>
         </div>
       ))}
     </div>
@@ -115,10 +115,10 @@ function SummaryCard({
   color: string;
 }) {
   return (
-    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
       <div className="mb-3 flex items-center gap-2">
-        <Icon size={16} className="text-zinc-600" />
-        <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+        <Icon size={16} className="text-slate-400" />
+        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
           {label}
         </span>
       </div>
@@ -241,7 +241,7 @@ export default function BenchmarkPage() {
     return (
       <div className="flex items-center py-32">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="text-slate-400 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -250,10 +250,10 @@ export default function BenchmarkPage() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Benchmark Comparison
         </h1>
-        <p className="mt-1 text-[13px] text-zinc-600">
+        <p className="mt-1 text-[13px] text-slate-500">
           Track your portfolio performance against the S&P 500
         </p>
       </div>
@@ -266,8 +266,8 @@ export default function BenchmarkPage() {
             onClick={() => setPeriod(p.key)}
             className={`rounded-xl px-4 py-1.5 text-sm font-medium spring-transition transition-all duration-300 ${
               period === p.key
-                ? "bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 text-cyan-400 border border-cyan-500/20"
-                : "bg-white/[0.03] border border-white/[0.06] text-zinc-400 hover:text-zinc-300 hover:border-white/[0.1]"
+                ? "bg-gradient-to-r from-sky-500/10 to-emerald-500/10 text-sky-600 border border-sky-500/20"
+                : "bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300"
             }`}
           >
             {p.label}
@@ -281,32 +281,32 @@ export default function BenchmarkPage() {
           icon={TrendingUp}
           label="Portfolio Return"
           value={fmtPctSigned(portfolioReturn)}
-          color={portfolioReturn >= 0 ? "text-emerald-400" : "text-red-400"}
+          color={portfolioReturn >= 0 ? "text-emerald-600" : "text-red-600"}
         />
         <SummaryCard
           icon={BarChart3}
           label="S&P 500 Return"
           value={fmtPctSigned(benchmarkReturn)}
-          color={benchmarkReturn >= 0 ? "text-emerald-400" : "text-red-400"}
+          color={benchmarkReturn >= 0 ? "text-emerald-600" : "text-red-600"}
         />
         <SummaryCard
           icon={Target}
           label="Alpha"
           value={fmtPctSigned(alpha)}
-          color={alpha >= 0 ? "text-cyan-400" : "text-red-400"}
+          color={alpha >= 0 ? "text-sky-600" : "text-red-600"}
         />
         <SummaryCard
           icon={Activity}
           label="Beta"
           value={beta.toFixed(2)}
-          color="text-white"
+          color="text-slate-900"
         />
       </div>
 
       {/* Chart */}
       <div className="glass-surface rounded-xl p-6">
         <div className="mb-4">
-          <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
             Normalized Performance (Base = 100)
           </p>
         </div>
@@ -316,13 +316,13 @@ export default function BenchmarkPage() {
               <LineChart data={chartData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="rgba(255,255,255,0.06)"
+                  stroke="#e2e8f0"
                 />
                 <XAxis
                   dataKey="date"
                   tick={{ fill: "#71717a", fontSize: 11 }}
                   tickLine={false}
-                  axisLine={{ stroke: "rgba(255,255,255,0.06)" }}
+                  axisLine={{ stroke: "#e2e8f0" }}
                   interval="preserveStartEnd"
                 />
                 <YAxis
@@ -364,7 +364,7 @@ export default function BenchmarkPage() {
           </div>
         ) : (
           <div className="glass-surface rounded-2xl py-12 text-center">
-            <p className="text-[13px] text-zinc-600">
+            <p className="text-[13px] text-slate-500">
               No portfolio history available for this period.
             </p>
           </div>
@@ -373,23 +373,23 @@ export default function BenchmarkPage() {
 
       {/* Comparison table */}
       <div className="glass-surface rounded-xl p-6">
-        <p className="mb-4 text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+        <p className="mb-4 text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
           Performance Comparison
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="pb-3 text-left text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+              <tr className="border-b border-slate-200">
+                <th className="pb-3 text-left text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
                   Period
                 </th>
-                <th className="pb-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+                <th className="pb-3 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
                   Portfolio
                 </th>
-                <th className="pb-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+                <th className="pb-3 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
                   S&P 500
                 </th>
-                <th className="pb-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
+                <th className="pb-3 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]">
                   Alpha
                 </th>
               </tr>
@@ -398,26 +398,26 @@ export default function BenchmarkPage() {
               {tableRows.map((row) => (
                 <tr
                   key={row.period}
-                  className="border-b border-white/[0.06] last:border-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+                  className="border-b border-slate-200 last:border-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
                 >
-                  <td className="py-3 text-zinc-300">{row.period}</td>
+                  <td className="py-3 text-slate-700">{row.period}</td>
                   <td
                     className={`py-3 text-right font-semibold font-mono ${
-                      row.portfolio >= 0 ? "text-emerald-400" : "text-red-400"
+                      row.portfolio >= 0 ? "text-emerald-600" : "text-red-600"
                     }`}
                   >
                     {fmtPctSigned(row.portfolio)}
                   </td>
                   <td
                     className={`py-3 text-right font-semibold font-mono ${
-                      row.benchmark >= 0 ? "text-emerald-400" : "text-red-400"
+                      row.benchmark >= 0 ? "text-emerald-600" : "text-red-600"
                     }`}
                   >
                     {fmtPctSigned(row.benchmark)}
                   </td>
                   <td
                     className={`py-3 text-right font-bold font-mono ${
-                      row.alpha >= 0 ? "text-cyan-400" : "text-red-400"
+                      row.alpha >= 0 ? "text-sky-600" : "text-red-600"
                     }`}
                   >
                     {fmtPctSigned(row.alpha)}
@@ -428,7 +428,7 @@ export default function BenchmarkPage() {
                 <tr>
                   <td
                     colSpan={4}
-                    className="py-6 text-center text-[13px] text-zinc-600"
+                    className="py-6 text-center text-[13px] text-slate-500"
                   >
                     No data available
                   </td>
@@ -440,7 +440,7 @@ export default function BenchmarkPage() {
       </div>
 
       {/* Footnote */}
-      <p className="text-[13px] text-zinc-600">
+      <p className="text-[13px] text-slate-500">
         Benchmark data is approximated from current S&P 500 change percentage.
         Beta is calculated using daily return covariance. Past performance does
         not guarantee future results.

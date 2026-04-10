@@ -16,7 +16,7 @@ export default function MainPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#09090b]">
+      <div className="flex h-screen items-center justify-center bg-white">
         <Logo size={48} />
       </div>
     );

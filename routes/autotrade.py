@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
+from security import trade_rate_limit
 from services.container import trader
 from .decorators import api_auth
 
@@ -15,6 +16,7 @@ def status():
 
 
 @autotrade_bp.route("/start", methods=["POST"])
+@trade_rate_limit
 @api_auth
 def start():
     trader._user_id = current_user.id
@@ -28,6 +30,7 @@ def stop():
 
 
 @autotrade_bp.route("/sell-all", methods=["POST"])
+@trade_rate_limit
 @api_auth
 def sell_all():
     us_results = trader.force_sell_all()

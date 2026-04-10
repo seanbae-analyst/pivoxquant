@@ -11,9 +11,7 @@ const stats = [
 
 export function Stats() {
   return (
-    <section id="stats" className="relative py-32 px-6 overflow-hidden">
-      <hr className="landing-divider absolute top-0 left-6 right-6" />
-
+    <section id="stats" className="landing-section-dark relative py-32 px-6 overflow-hidden">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -22,8 +20,8 @@ export function Stats() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="text-center mb-20"
         >
-          <p className="text-[13px] text-amber-400 tracking-wider uppercase mb-3">Performance</p>
-          <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight">
+          <p className="text-[13px] text-emerald-400 tracking-wider uppercase mb-3">Performance</p>
+          <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight text-white">
             The numbers speak for themselves
           </h2>
         </motion.div>
@@ -41,14 +39,12 @@ export function Stats() {
               <p className="text-[clamp(2.5rem,5vw,3.5rem)] font-bold tracking-tight text-white mb-2">
                 {stat.value}
               </p>
-              <p className="text-[15px] font-medium text-zinc-300 mb-1">{stat.label}</p>
-              <p className="text-[12px] text-zinc-500">{stat.description}</p>
+              <p className="text-[15px] font-medium text-slate-300 mb-1">{stat.label}</p>
+              <p className="text-[12px] text-slate-500">{stat.description}</p>
             </motion.div>
           ))}
         </div>
       </div>
-
-      <hr className="landing-divider absolute bottom-0 left-6 right-6" />
     </section>
   );
 }

@@ -6,7 +6,7 @@ import { fmtUsd, fmtKrw } from "@/lib/format";
 import { Receipt, Calculator, DollarSign, Info } from "lucide-react";
 import type { Position } from "@/lib/types";
 
-/* ── Tax rules by residency ── */
+/* -- Tax rules by residency -- */
 
 // Korean resident investing in US stocks
 const KR_RESIDENT = {
@@ -90,13 +90,13 @@ function computeRows(positions: Position[], residency: Residency, fxRate: number
 
 function SummaryCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (
-    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-      <div className="flex items-center gap-2 text-zinc-600 mb-2">
+    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+      <div className="flex items-center gap-2 text-slate-400 mb-2">
         {icon}
         <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">{label}</span>
       </div>
-      <p className="text-xl font-bold font-mono text-white">{value}</p>
-      {sub && <p className="text-[13px] text-zinc-500 mt-1">{sub}</p>}
+      <p className="text-xl font-bold font-mono text-slate-900">{value}</p>
+      {sub && <p className="text-[13px] text-slate-500 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -134,8 +134,8 @@ export default function TaxPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse mr-2" />
+        <span className="text-slate-400 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -147,24 +147,24 @@ export default function TaxPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
             <Calculator className="h-6 w-6" />
             Tax Calculator
           </h1>
-          <p className="text-[13px] text-zinc-600 mt-1">
+          <p className="text-[13px] text-slate-400 mt-1">
             Estimate capital gains tax based on your tax residency
           </p>
         </div>
 
         {/* Residency toggle */}
-        <div className="flex rounded-xl border border-white/[0.06] overflow-hidden text-sm">
+        <div className="flex rounded-xl border border-slate-200 overflow-hidden text-sm">
           {(["KR", "US"] as const).map((r) => (
             <button key={r} onClick={() => setResidency(r)}
               className={`px-4 py-2 font-medium spring-transition transition-all duration-300 ${
-                residency === r ? "bg-white/[0.06] text-white" : "text-zinc-600 hover:text-zinc-300"
+                residency === r ? "bg-slate-100 text-slate-900" : "text-slate-400 hover:text-slate-700"
               }`}
             >
-              {r === "KR" ? "🇰🇷 Korean Resident" : "🇺🇸 US Resident"}
+              {r === "KR" ? "Korean Resident" : "US Resident"}
             </button>
           ))}
         </div>
@@ -172,10 +172,10 @@ export default function TaxPage() {
 
       {/* Tax rule explanation */}
       <div className="glass-surface rounded-xl p-4 flex items-start gap-3">
-        <Info className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
+        <Info className="h-5 w-5 text-sky-600 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-white">{activeRule.label} Tax Rules</p>
-          <p className="text-[13px] text-zinc-400 mt-1">{activeRule.description}</p>
+          <p className="text-sm font-semibold text-slate-900">{activeRule.label} Tax Rules</p>
+          <p className="text-[13px] text-slate-500 mt-1">{activeRule.description}</p>
         </div>
       </div>
 
@@ -205,46 +205,46 @@ export default function TaxPage() {
 
       {/* Per-position table */}
       <div className="glass-surface rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/[0.06]">
-          <h2 className="text-white font-semibold">Per-Position Breakdown</h2>
+        <div className="px-5 py-4 border-b border-slate-200">
+          <h2 className="text-slate-900 font-semibold">Per-Position Breakdown</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left border-b border-white/[0.06]">
-                <th className="px-5 py-3 text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Stock</th>
-                <th className="px-5 py-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Shares</th>
-                <th className="px-5 py-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Cost Basis</th>
-                <th className="px-5 py-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Current</th>
-                <th className="px-5 py-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Gain/Loss</th>
-                <th className="px-5 py-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Tax</th>
-                <th className="px-5 py-3 text-right text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Note</th>
+              <tr className="text-left border-b border-slate-200">
+                <th className="px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Stock</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Shares</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Cost Basis</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Current</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Gain/Loss</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Tax</th>
+                <th className="px-5 py-3 text-right text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Note</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.ticker} className="border-b border-white/[0.06] last:border-b-0 spring-transition transition-all duration-300 hover:bg-white/[0.02]">
+                <tr key={r.ticker} className="border-b border-slate-100 last:border-b-0 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
                   <td className="px-5 py-3">
-                    <p className="text-sm font-semibold text-white">{r.name || r.ticker}</p>
-                    <p className="text-[11px] text-zinc-600">{r.ticker}{r.isKorean ? " · KRX" : ""}</p>
+                    <p className="text-sm font-semibold text-slate-900">{r.name || r.ticker}</p>
+                    <p className="text-[11px] text-slate-400">{r.ticker}{r.isKorean ? " . KRX" : ""}</p>
                   </td>
-                  <td className="px-5 py-3 text-right font-mono text-zinc-300">{r.shares}</td>
-                  <td className="px-5 py-3 text-right font-mono text-zinc-300">{fmtUsd(r.costBasis)}</td>
-                  <td className="px-5 py-3 text-right font-mono text-zinc-300">{fmtUsd(r.currentValue)}</td>
-                  <td className={`px-5 py-3 text-right font-mono font-medium ${r.gainLoss >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                  <td className="px-5 py-3 text-right font-mono text-slate-700">{r.shares}</td>
+                  <td className="px-5 py-3 text-right font-mono text-slate-700">{fmtUsd(r.costBasis)}</td>
+                  <td className="px-5 py-3 text-right font-mono text-slate-700">{fmtUsd(r.currentValue)}</td>
+                  <td className={`px-5 py-3 text-right font-mono font-medium ${r.gainLoss >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                     {r.gainLoss >= 0 ? "+" : ""}{fmtUsd(r.gainLoss)}
                   </td>
-                  <td className="px-5 py-3 text-right font-mono text-zinc-300">
+                  <td className="px-5 py-3 text-right font-mono text-slate-700">
                     {r.taxable && r.estimatedTax > 0
                       ? (residency === "KR" ? fmtKrw(r.estimatedTax) : fmtUsd(r.estimatedTax))
                       : "--"
                     }
                   </td>
-                  <td className="px-5 py-3 text-right text-[11px] text-zinc-500">{r.taxNote}</td>
+                  <td className="px-5 py-3 text-right text-[11px] text-slate-500">{r.taxNote}</td>
                 </tr>
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-8 text-center text-zinc-600">No positions found</td></tr>
+                <tr><td colSpan={7} className="px-5 py-8 text-center text-slate-400">No positions found</td></tr>
               )}
             </tbody>
           </table>
@@ -253,23 +253,23 @@ export default function TaxPage() {
 
       {/* What if I sell now? */}
       <div className="glass-surface rounded-xl p-5">
-        <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
+        <h2 className="text-slate-900 font-semibold mb-3 flex items-center gap-2">
           <Receipt className="h-5 w-5" />
           What if I sell now?
         </h2>
-        <p className="text-zinc-400 text-sm mb-4">
+        <p className="text-slate-500 text-sm mb-4">
           Estimated tax if you liquidate all positions today.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="rounded-xl bg-white/[0.03] p-4">
-            <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-1">Total Tax Bill</p>
-            <p className="text-lg font-bold font-mono text-white">
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-1">Total Tax Bill</p>
+            <p className="text-lg font-bold font-mono text-slate-900">
               {residency === "KR" ? fmtKrw(totalEstimatedTax) : fmtUsd(totalEstimatedTax)}
             </p>
           </div>
-          <div className="rounded-xl bg-white/[0.03] p-4">
-            <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em] mb-1">You Keep (After Tax)</p>
-            <p className={`text-lg font-bold font-mono ${netAfterTax >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em] mb-1">You Keep (After Tax)</p>
+            <p className={`text-lg font-bold font-mono ${netAfterTax >= 0 ? "text-emerald-600" : "text-red-600"}`}>
               {residency === "KR" ? fmtKrw(netAfterTax * fxRate) : fmtUsd(netAfterTax)}
             </p>
           </div>
@@ -277,7 +277,7 @@ export default function TaxPage() {
       </div>
 
       {/* Disclaimer */}
-      <p className="text-center text-[11px] text-zinc-700">
+      <p className="text-center text-[11px] text-slate-400">
         This is an estimate only. Consult a tax professional for accurate advice. Tax-loss harvesting and wash sale rules may apply.
       </p>
     </div>

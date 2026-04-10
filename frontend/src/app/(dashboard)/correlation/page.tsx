@@ -152,7 +152,7 @@ export default function CorrelationPage() {
     return (
       <div className="flex items-center py-32">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="text-slate-500 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -161,13 +161,13 @@ export default function CorrelationPage() {
     return (
       <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Correlation Heatmap
           </h1>
         </div>
         <div className="glass-surface rounded-2xl py-12 text-center">
-          <Grid3X3 className="mx-auto h-10 w-10 text-zinc-700" />
-          <p className="mt-3 text-[13px] text-zinc-600">
+          <Grid3X3 className="mx-auto h-10 w-10 text-slate-400" />
+          <p className="mt-3 text-[13px] text-slate-500">
             Add positions to your portfolio to see correlation analysis.
           </p>
         </div>
@@ -181,10 +181,10 @@ export default function CorrelationPage() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Correlation Heatmap
         </h1>
-        <p className="mt-1 text-[13px] text-zinc-600">
+        <p className="mt-1 text-[13px] text-slate-500">
           Sector-based correlation estimates for your top {n} positions
         </p>
       </div>
@@ -193,17 +193,17 @@ export default function CorrelationPage() {
       {summary && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Average Correlation */}
-          <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center gap-2 text-zinc-600">
+          <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-2 text-slate-500">
               <Grid3X3 className="h-4 w-4" />
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">
                 Avg Correlation
               </span>
             </div>
-            <p className="mt-2 text-2xl font-bold font-mono text-white">
+            <p className="mt-2 text-2xl font-bold font-mono text-slate-900">
               {summary.avgCorr.toFixed(3)}
             </p>
-            <p className="mt-1 text-[13px] text-zinc-600">
+            <p className="mt-1 text-[13px] text-slate-500">
               {summary.avgCorr < 0.4
                 ? "Well diversified"
                 : summary.avgCorr < 0.6
@@ -213,8 +213,8 @@ export default function CorrelationPage() {
           </div>
 
           {/* Diversification Score */}
-          <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center gap-2 text-zinc-600">
+          <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-2 text-slate-500">
               <TrendingUp className="h-4 w-4" />
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">
                 Diversification
@@ -233,7 +233,7 @@ export default function CorrelationPage() {
             >
               {summary.diversificationScore}/100
             </p>
-            <p className="mt-1 text-[13px] text-zinc-600">
+            <p className="mt-1 text-[13px] text-slate-500">
               {summary.diversificationScore >= 70
                 ? "Strong diversification"
                 : summary.diversificationScore >= 40
@@ -243,13 +243,13 @@ export default function CorrelationPage() {
           </div>
 
           {/* Most Correlated */}
-          <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center gap-2 text-zinc-600">
+          <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-2 text-slate-500">
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">
                 Most Correlated
               </span>
             </div>
-            <p className="mt-2 text-lg font-bold text-white">
+            <p className="mt-2 text-lg font-bold text-slate-900">
               {summary.maxPair[0]} / {summary.maxPair[1]}
             </p>
             <p className="mt-1 text-sm font-mono" style={{ color: correlationColor(summary.maxCorr) }}>
@@ -258,13 +258,13 @@ export default function CorrelationPage() {
           </div>
 
           {/* Least Correlated */}
-          <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-            <div className="flex items-center gap-2 text-zinc-600">
+          <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-2 text-slate-500">
               <span className="text-[10px] font-semibold uppercase tracking-[0.1em]">
                 Least Correlated
               </span>
             </div>
-            <p className="mt-2 text-lg font-bold text-white">
+            <p className="mt-2 text-lg font-bold text-slate-900">
               {summary.minPair[0]} / {summary.minPair[1]}
             </p>
             <p className="mt-1 text-sm font-mono" style={{ color: correlationColor(summary.minCorr) }}>
@@ -276,7 +276,7 @@ export default function CorrelationPage() {
 
       {/* Heatmap */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           Correlation Matrix
         </h2>
 
@@ -295,7 +295,7 @@ export default function CorrelationPage() {
             {positions.map((p) => (
               <div
                 key={`col-${p.ticker}`}
-                className="flex items-end justify-center pb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]"
+                className="flex items-end justify-center pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]"
               >
                 {p.ticker}
               </div>
@@ -307,7 +307,7 @@ export default function CorrelationPage() {
                 {/* Row header */}
                 <div
                   key={`row-${rowPos.ticker}`}
-                  className="flex items-center pr-2 text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]"
+                  className="flex items-center pr-2 text-[10px] font-semibold text-slate-500 uppercase tracking-[0.1em]"
                 >
                   {rowPos.ticker}
                 </div>
@@ -325,10 +325,10 @@ export default function CorrelationPage() {
                       className="relative flex cursor-default items-center justify-center rounded-md spring-transition transition-all duration-300"
                       style={{
                         backgroundColor: isDiagonal
-                          ? "rgba(255,255,255,0.05)"
+                          ? "rgba(241,245,249,0.5)"
                           : correlationBg(value),
                         border: isHovered
-                          ? "1px solid rgba(255,255,255,0.3)"
+                          ? "1px solid #94a3b8"
                           : "1px solid transparent",
                       }}
                       onMouseEnter={() => setHoveredCell({ row: i, col: j })}
@@ -344,7 +344,7 @@ export default function CorrelationPage() {
                       <span
                         className="relative z-10 font-mono font-medium"
                         style={{
-                          color: isHovered ? "#fff" : "rgba(255,255,255,0.7)",
+                          color: isHovered ? "#0f172a" : "#334155",
                           fontSize: isHovered ? "13px" : "11px",
                         }}
                       >
@@ -355,18 +355,18 @@ export default function CorrelationPage() {
                       {isHovered && !isDiagonal && (
                         <div
                           style={{
-                            background: "#18181b",
-                            border: "1px solid rgba(255,255,255,0.06)",
+                            background: "#ffffff",
+                            border: "1px solid #e2e8f0",
                             borderRadius: 12,
                             fontSize: 12,
-                            color: "#fafafa",
+                            color: "#0f172a",
                           }}
                           className="absolute -top-16 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap px-3 py-2 shadow-lg"
                         >
-                          <p className="font-semibold text-white">
+                          <p className="font-semibold text-slate-900">
                             {rowPos.ticker} / {colPos.ticker}
                           </p>
-                          <p className="text-zinc-400">
+                          <p className="text-slate-500">
                             Correlation:{" "}
                             <span
                               className="font-mono font-bold"
@@ -375,7 +375,7 @@ export default function CorrelationPage() {
                               {value.toFixed(3)}
                             </span>
                           </p>
-                          <p className="text-zinc-600">
+                          <p className="text-slate-500">
                             {rowPos.sector === colPos.sector
                               ? "Same sector"
                               : (RELATED_SECTORS[rowPos.sector] ?? []).includes(
@@ -396,7 +396,7 @@ export default function CorrelationPage() {
 
         {/* Legend */}
         <div className="mt-6 flex items-center gap-6">
-          <span className="text-[13px] text-zinc-600">Low</span>
+          <span className="text-[13px] text-slate-500">Low</span>
           <div className="flex h-3 flex-1 max-w-xs overflow-hidden rounded-full">
             <div className="flex-1" style={{ background: "rgb(40,180,80)" }} />
             <div className="flex-1" style={{ background: "rgb(120,180,55)" }} />
@@ -404,13 +404,13 @@ export default function CorrelationPage() {
             <div className="flex-1" style={{ background: "rgb(220,120,50)" }} />
             <div className="flex-1" style={{ background: "rgb(240,60,40)" }} />
           </div>
-          <span className="text-[13px] text-zinc-600">High</span>
+          <span className="text-[13px] text-slate-500">High</span>
         </div>
       </div>
 
       {/* Sector breakdown */}
       <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">
           Sector Breakdown
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -423,15 +423,15 @@ export default function CorrelationPage() {
           ).map(([sector, tickers]) => (
             <div
               key={sector}
-              className="bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
+              className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]"
             >
-              <p className="text-sm font-medium text-zinc-300">{sector}</p>
-              <p className="mt-1 text-[13px] text-zinc-600">
+              <p className="text-sm font-medium text-slate-700">{sector}</p>
+              <p className="mt-1 text-[13px] text-slate-500">
                 {tickers.join(", ")}
               </p>
               {tickers.length > 1 && (
                 <p className="mt-1">
-                  <span className="rounded-md px-2.5 py-1 text-[9px] font-bold bg-amber-500/15 text-amber-400">
+                  <span className="rounded-md px-2.5 py-1 text-[9px] font-bold bg-amber-500/15 text-amber-600">
                     {tickers.length} positions -- higher intra-sector correlation
                   </span>
                 </p>

@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "AI-powered quantitative investment advisor with adaptive quant engine",
     start_url: "/",
     display: "standalone",
-    background_color: "#050508",
-    theme_color: "#050508",
+    background_color: "#ffffff",
+    theme_color: "#ffffff",
     orientation: "portrait-primary",
     categories: ["finance", "business"],
     icons: [

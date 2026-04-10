@@ -31,7 +31,7 @@ export default function ProfilePage() {
     return (
       <div className="flex items-center justify-center py-20">
         <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
+        <span className="text-slate-500 text-[12px]">Loading...</span>
       </div>
     );
   }
@@ -46,8 +46,8 @@ export default function ProfilePage() {
       {/* Page Header */}
       <div className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Investment Profile</h1>
-          <p className="mt-1 text-sm text-zinc-500">Your personalized quant engine configuration</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Investment Profile</h1>
+          <p className="mt-1 text-sm text-slate-500">Your personalized quant engine configuration</p>
         </div>
         <Link href="/onboarding">
           <Button variant="outline" className="gap-2">
@@ -78,7 +78,7 @@ export default function ProfilePage() {
 
           {/* Quant Parameters Grid */}
           <div>
-            <h2 className="mb-4 text-xl font-bold text-white">Quant Engine Parameters</h2>
+            <h2 className="mb-4 text-xl font-bold text-slate-900">Quant Engine Parameters</h2>
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               <ParamCard icon={<BarChart3 size={18} />} label="Tech Weight" value={`${(profile.tech_weight * 100).toFixed(0)}%`} />
               <ParamCard icon={<Shield size={18} />} label="Fund Weight" value={`${(profile.fund_weight * 100).toFixed(0)}%`} />
@@ -93,7 +93,7 @@ export default function ProfilePage() {
 
           {/* Settings */}
           <div>
-            <h2 className="mb-4 text-xl font-bold text-white">Settings</h2>
+            <h2 className="mb-4 text-xl font-bold text-slate-900">Settings</h2>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <SettingCard icon={<Bell size={18} />} label="Alert Frequency" value={profile.alert_frequency === "realtime" ? "Real-time" : "Daily"} />
               <SettingCard icon={<User size={18} />} label="AI Coaching Style" value={profile.ai_coaching_style.replace("_", " ")} />
@@ -104,28 +104,28 @@ export default function ProfilePage() {
 
           {/* Broker Connections (placeholder) */}
           <div>
-            <h2 className="mb-4 text-xl font-bold text-white">Broker Connections</h2>
+            <h2 className="mb-4 text-xl font-bold text-slate-900">Broker Connections</h2>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="flex items-center justify-between rounded-2xl glass-surface p-6">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-6">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
                     <Link2 size={20} className="text-emerald-600" />
                   </div>
                   <div>
-                    <p className="font-semibold">Alpaca</p>
-                    <p className="text-xs text-zinc-500">US Stock Trading</p>
+                    <p className="font-semibold text-slate-900">Alpaca</p>
+                    <p className="text-xs text-slate-500">US Stock Trading</p>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" disabled>Coming Soon</Button>
               </div>
-              <div className="flex items-center justify-between rounded-2xl glass-surface p-6">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-6">
                 <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
                     <Link2 size={20} className="text-blue-600" />
                   </div>
                   <div>
-                    <p className="font-semibold">KIS (한국투자증권)</p>
-                    <p className="text-xs text-zinc-500">Korean Stock Trading</p>
+                    <p className="font-semibold text-slate-900">KIS (한국투자증권)</p>
+                    <p className="text-xs text-slate-500">Korean Stock Trading</p>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" disabled>Coming Soon</Button>
@@ -134,11 +134,11 @@ export default function ProfilePage() {
           </div>
 
           {/* Subscription */}
-          <div className="rounded-2xl glass-surface p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold text-white">Subscription: <span className="capitalize">{data.subscription_tier ?? "free"}</span></p>
-                <p className="text-sm text-zinc-500">
+                <p className="font-semibold text-slate-900">Subscription: <span className="capitalize">{data.subscription_tier ?? "free"}</span></p>
+                <p className="text-sm text-slate-500">
                   {data.subscription_tier === "free"
                     ? "Upgrade to Pro for unlimited analysis and AI features"
                     : "Thank you for being a Pro subscriber"}
@@ -152,10 +152,10 @@ export default function ProfilePage() {
         </>
       ) : (
         /* No profile yet */
-        <div className="rounded-2xl bg-gradient-to-br from-cyan-500/5 to-emerald-500/5 border border-cyan-500/20 p-12 text-center">
-          <User size={48} className="mx-auto text-cyan-400" />
-          <h2 className="mt-4 text-2xl font-bold text-white">No Profile Yet</h2>
-          <p className="mt-2 text-sm text-zinc-500">Complete the questionnaire to personalize your quant engine</p>
+        <div className="rounded-2xl bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 border border-emerald-500/20 p-12 text-center">
+          <User size={48} className="mx-auto text-emerald-600" />
+          <h2 className="mt-4 text-2xl font-bold text-slate-900">No Profile Yet</h2>
+          <p className="mt-2 text-sm text-slate-500">Complete the questionnaire to personalize your quant engine</p>
           <Link href="/onboarding">
             <Button className="mt-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
               Take Questionnaire
@@ -169,25 +169,25 @@ export default function ProfilePage() {
 
 function ParamCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="metric-card">
-      <div className="flex items-center gap-2 text-zinc-500">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="flex items-center gap-2 text-slate-500">
         {icon}
         <span className="text-xs font-medium">{label}</span>
       </div>
-      <p className="mt-2 text-2xl font-bold text-white">{value}</p>
+      <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
     </div>
   );
 }
 
 function SettingCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl glass-surface p-5">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-200/60 text-zinc-500">
+    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
         {icon}
       </div>
       <div>
-        <p className="text-xs font-medium text-zinc-500">{label}</p>
-        <p className="font-semibold capitalize text-white">{value}</p>
+        <p className="text-xs font-medium text-slate-500">{label}</p>
+        <p className="font-semibold capitalize text-slate-900">{value}</p>
       </div>
     </div>
   );

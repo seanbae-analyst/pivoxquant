@@ -55,8 +55,8 @@ export function MarketTicker() {
       >
         {doubled.map((item, i) => (
           <div key={i} className="flex items-center gap-2 px-1">
-            <span className="text-[9px] font-semibold text-zinc-700 uppercase tracking-wider">{item.label}</span>
-            <span className="font-mono text-[11px] font-semibold text-zinc-400">{item.price}</span>
+            <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">{item.label}</span>
+            <span className="font-mono text-[11px] font-semibold text-slate-700">{item.price}</span>
             {item.change !== 0 && (
               <span className={`font-mono text-[10px] font-semibold ${pnlColor(item.change)}`}>
                 {item.change >= 0 ? "+" : ""}{item.change.toFixed(2)}%

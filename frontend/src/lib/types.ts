@@ -292,3 +292,45 @@ export interface Question {
 export interface QuestionnaireResponse {
   questions: Question[];
 }
+
+/* ── AI ── */
+
+export interface AiStatusResponse {
+  available: boolean;
+}
+
+export interface AiCoachingResponse {
+  insight: string;
+  insight_kr: string;
+}
+
+export interface AiSwotResponse {
+  swot: string;
+  swot_kr: string;
+}
+
+export interface AiCommentaryResponse {
+  commentary: string;
+  commentary_kr: string;
+}
+
+export interface AiCompetitorResponse {
+  analysis: string;
+  analysis_kr: string;
+}
+
+export interface AiSectorTrendResponse {
+  trend: string;
+  trend_kr: string;
+  sector: string;
+}
+
+export interface AiMorningSummaryResponse {
+  summary: string;
+  summary_kr: string;
+}
+
+export interface AiChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}

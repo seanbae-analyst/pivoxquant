@@ -4,10 +4,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { QuickBuyModal, QuickSellModal } from "@/components/dashboard/action-modals";
+import { QuickBuyModal, QuickSellModal, EditPositionModal, DeletePositionModal } from "@/components/dashboard/action-modals";
 import { fmtUsd, fmtPct, pnlColor, signalColor, scoreColor } from "@/lib/format";
-import { apiFetch } from "@/lib/api";
-import { API } from "@/lib/endpoints";
 import type { Position } from "@/lib/types";
 
 interface Props {
@@ -17,12 +15,6 @@ interface Props {
 
 export function PositionCard({ position: p, onUpdate }: Props) {
   const displayName = p.name || p.ticker;
-
-  const handleDelete = async () => {
-    if (!confirm(`Delete ${p.ticker} from portfolio?`)) return;
-    await apiFetch(API.portfolio.deletePosition(p.id), { method: "DELETE" });
-    onUpdate?.();
-  };
 
   const signalBg = p.signal === "BUY"
     ? "bg-success/10 text-success border-success/20"
@@ -144,6 +136,7 @@ export function PositionCard({ position: p, onUpdate }: Props) {
           currentPrice={p.current_price}
           priceDisplay={p.price_display}
           recShares={p.rec_shares}
+          currency={p.currency}
           onDone={() => onUpdate?.()}
         />
         <QuickSellModal
@@ -152,18 +145,25 @@ export function PositionCard({ position: p, onUpdate }: Props) {
           currentPrice={p.current_price}
           priceDisplay={p.price_display}
           maxShares={p.shares}
+          avgCost={p.avg_cost}
+          currency={p.currency}
           onDone={() => onUpdate?.()}
         />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-[10px] text-foreground/30 hover:bg-destructive/10 hover:text-destructive"
-          onClick={handleDelete}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </Button>
+        <EditPositionModal
+          positionId={p.id}
+          ticker={p.ticker}
+          currentShares={p.shares}
+          currentAvgCost={p.avg_cost}
+          currency={p.currency}
+          onDone={() => onUpdate?.()}
+        />
+        <DeletePositionModal
+          positionId={p.id}
+          ticker={p.ticker}
+          name={displayName}
+          shares={p.shares}
+          onDone={() => onUpdate?.()}
+        />
       </div>
     </Card>
   );

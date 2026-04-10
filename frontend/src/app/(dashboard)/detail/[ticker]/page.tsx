@@ -1,17 +1,23 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { usePortfolio } from "@/lib/hooks";
+import { usePortfolio, useAiStatus } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { fmtUsd, fmtPct, pnlColor, scoreColor } from "@/lib/format";
-import type { Position } from "@/lib/types";
+import { QuickBuyModal, QuickSellModal, BuyNewModal } from "@/components/dashboard/action-modals";
+import type {
+  Position,
+  AiSwotResponse,
+  AiCommentaryResponse,
+  AiCompetitorResponse,
+  AiSectorTrendResponse,
+} from "@/lib/types";
 import { motion, AnimatePresence } from "framer-motion";
 
 const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r) => r.json());
@@ -64,45 +70,14 @@ export default function DetailPage() {
   const position = portfolio?.positions.find((p) => p.ticker === ticker);
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
-  const [buyShares, setBuyShares] = useState("1");
-  const [sellShares, setSellShares] = useState("");
-  const [loading, setLoading] = useState("");
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    if (position) setSellShares(String(position.shares));
-  }, [position]);
 
   const price = analysis?.price ?? position?.current_price ?? 0;
   const priceDisplay = analysis?.price_display ?? `$${price}`;
+  const currency = analysis?.is_korean ? "KRW" : "USD";
 
-  /* ── Trade handlers ── */
-  const handleBuy = async () => {
-    if (!position) return;
-    setLoading("buy"); setMsg("");
-    try {
-      await apiFetch(API.portfolio.buyMore(position.id), {
-        method: "POST", body: JSON.stringify({ shares: Number(buyShares), price }),
-      });
-      setMsg("Purchase complete!");
-      refreshPortfolio(); refreshAnalysis();
-    } catch (e: unknown) { setMsg((e as Error).message); }
-    finally { setLoading(""); }
-  };
-
-  const handleSell = async () => {
-    if (!position) return;
-    setLoading("sell"); setMsg("");
-    try {
-      await apiFetch(API.portfolio.sellShares(position.id), {
-        method: "POST", body: JSON.stringify({ shares: Number(sellShares), price }),
-      });
-      setMsg("Sold!");
-      refreshPortfolio();
-      if (Number(sellShares) >= position.shares) router.push("/dashboard");
-      else refreshAnalysis();
-    } catch (e: unknown) { setMsg((e as Error).message); }
-    finally { setLoading(""); }
+  const handleTradeDone = () => {
+    refreshPortfolio();
+    refreshAnalysis();
   };
 
   const handleDelete = async () => {
@@ -205,15 +180,11 @@ export default function DetailPage() {
             <OverviewTab
               analysis={analysis}
               position={position}
+              ticker={ticker}
               price={price}
-              buyShares={buyShares}
-              setBuyShares={setBuyShares}
-              sellShares={sellShares}
-              setSellShares={setSellShares}
-              loading={loading}
-              msg={msg}
-              handleBuy={handleBuy}
-              handleSell={handleSell}
+              priceDisplay={priceDisplay}
+              currency={currency}
+              onTradeDone={handleTradeDone}
               handleDelete={handleDelete}
             />
           )}
@@ -235,19 +206,15 @@ export default function DetailPage() {
 interface OverviewProps {
   analysis: Record<string, unknown>;
   position: Position | undefined;
+  ticker: string;
   price: number;
-  buyShares: string;
-  setBuyShares: (v: string) => void;
-  sellShares: string;
-  setSellShares: (v: string) => void;
-  loading: string;
-  msg: string;
-  handleBuy: () => void;
-  handleSell: () => void;
+  priceDisplay: string;
+  currency: string;
+  onTradeDone: () => void;
   handleDelete: () => void;
 }
 
-function OverviewTab({ analysis, position, price, buyShares, setBuyShares, sellShares, setSellShares, loading, msg, handleBuy, handleSell, handleDelete }: OverviewProps) {
+function OverviewTab({ analysis, position, ticker, price, priceDisplay, currency, onTradeDone, handleDelete }: OverviewProps) {
   const a = analysis as Record<string, unknown>;
   const snap = a.snapshot as Record<string, number | string | null> | undefined;
 
@@ -353,30 +320,26 @@ function OverviewTab({ analysis, position, price, buyShares, setBuyShares, sellS
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Card className="glass-card border-success/10 p-5">
-              <p className="mb-3 text-sm font-semibold text-success">Buy More</p>
-              <div className="flex items-center gap-2">
-                <Input type="number" value={buyShares} onChange={(e) => setBuyShares(e.target.value)} className="h-9 w-24 border-border/40 bg-muted/20 text-sm" min={1} />
-                <span className="text-xs text-muted-foreground/50">shares</span>
-              </div>
-              <p className="mt-1.5 text-xs text-muted-foreground/40">Total: {fmtUsd(Number(buyShares) * price)}</p>
-              <Button className="mt-3 w-full bg-success font-semibold text-white hover:bg-success/80" onClick={handleBuy} disabled={loading === "buy"}>
-                {loading === "buy" ? "Processing..." : `Buy ${buyShares} shares`}
-              </Button>
-            </Card>
-
-            <Card className="glass-card border-destructive/10 p-5">
-              <p className="mb-3 text-sm font-semibold text-destructive">Sell</p>
-              <div className="flex items-center gap-2">
-                <Input type="number" value={sellShares} onChange={(e) => setSellShares(e.target.value)} className="h-9 w-24 border-border/40 bg-muted/20 text-sm" min={1} max={position.shares as number} />
-                <Button variant="outline" size="sm" className="h-9 text-xs border-border/40" onClick={() => setSellShares(String(position.shares))}>All</Button>
-              </div>
-              <p className="mt-1.5 text-xs text-muted-foreground/40">Proceeds: {fmtUsd(Number(sellShares) * price)}</p>
-              <Button variant="destructive" className="mt-3 w-full font-semibold" onClick={handleSell} disabled={loading === "sell"}>
-                {loading === "sell" ? "Processing..." : `Sell ${sellShares} shares`}
-              </Button>
-            </Card>
+          <div className="flex items-center gap-2">
+            <QuickBuyModal
+              positionId={position.id}
+              ticker={ticker}
+              currentPrice={price}
+              priceDisplay={priceDisplay}
+              recShares={a.rec_shares as number | undefined}
+              currency={currency}
+              onDone={onTradeDone}
+            />
+            <QuickSellModal
+              positionId={position.id}
+              ticker={ticker}
+              currentPrice={price}
+              priceDisplay={priceDisplay}
+              maxShares={position.shares as number}
+              avgCost={position.avg_cost as number}
+              currency={currency}
+              onDone={onTradeDone}
+            />
           </div>
 
           <button onClick={handleDelete} className="w-full text-center text-[11px] text-muted-foreground/25 transition hover:text-destructive">
@@ -385,8 +348,17 @@ function OverviewTab({ analysis, position, price, buyShares, setBuyShares, sellS
         </>
       )}
 
-      {msg && (
-        <p className={`text-center text-sm font-semibold ${msg.includes("!") && !msg.includes("error") ? "text-success" : "text-destructive"}`}>{msg}</p>
+      {/* Buy new position if not held */}
+      {!position && (
+        <BuyNewModal
+          ticker={ticker}
+          name={(a.name as string) ?? ticker}
+          currentPrice={price}
+          priceDisplay={priceDisplay}
+          recShares={a.rec_shares as number | undefined}
+          currency={currency}
+          onDone={onTradeDone}
+        />
       )}
     </>
   );
@@ -602,59 +574,50 @@ function FundamentalsTab({ analysis, ticker }: { analysis: Record<string, unknow
    TAB 4: AI ANALYSIS
    ══════════════════════════════════════════════════════ */
 function AIAnalysisTab({ analysis }: { analysis: Record<string, unknown> }) {
-  const [swot, setSwot] = useState<{ swot: string; swot_kr: string } | null>(null);
-  const [competitor, setCompetitor] = useState<{ analysis: string; analysis_kr: string } | null>(null);
-  const [sectorTrend, setSectorTrend] = useState<{ trend: string; trend_kr: string } | null>(null);
-  const [commentary, setCommentary] = useState<{ commentary: string; commentary_kr: string } | null>(null);
+  const { data: aiStatus } = useAiStatus();
+  const [swot, setSwot] = useState<AiSwotResponse | null>(null);
+  const [competitor, setCompetitor] = useState<AiCompetitorResponse | null>(null);
+  const [sectorTrend, setSectorTrend] = useState<AiSectorTrendResponse | null>(null);
+  const [commentary, setCommentary] = useState<AiCommentaryResponse | null>(null);
   const [aiLoading, setAiLoading] = useState("");
+  const [aiError, setAiError] = useState<string | null>(null);
 
-  const loadSwot = async () => {
-    if (swot) { setSwot(null); return; }
-    setAiLoading("swot");
+  const loadWithTimeout = async <T,>(
+    key: string,
+    endpoint: string,
+    body: Record<string, unknown>,
+    setter: (v: T) => void,
+    current: T | null,
+  ) => {
+    if (current) { setter(null as unknown as T); return; }
+    setAiLoading(key);
+    setAiError(null);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90_000);
+
     try {
-      const r = await apiFetch<{ swot: string; swot_kr: string }>(API.ai.swot, {
-        method: "POST", body: JSON.stringify(analysis),
+      const r = await apiFetch<T>(endpoint, {
+        method: "POST",
+        body: JSON.stringify(body),
+        signal: controller.signal,
       });
-      setSwot(r);
-    } catch { /* ignore */ }
-    finally { setAiLoading(""); }
+      setter(r);
+    } catch (err) {
+      const msg = (err as Error).name === "AbortError"
+        ? "Request timed out. AI may be overloaded."
+        : (err as Error).message || "Failed to generate analysis.";
+      setAiError(msg);
+    } finally {
+      clearTimeout(timeout);
+      setAiLoading("");
+    }
   };
 
-  const loadCommentary = async () => {
-    if (commentary) { setCommentary(null); return; }
-    setAiLoading("commentary");
-    try {
-      const r = await apiFetch<{ commentary: string; commentary_kr: string }>(API.ai.commentary, {
-        method: "POST", body: JSON.stringify(analysis),
-      });
-      setCommentary(r);
-    } catch { /* ignore */ }
-    finally { setAiLoading(""); }
-  };
-
-  const loadCompetitor = async () => {
-    if (competitor) { setCompetitor(null); return; }
-    setAiLoading("competitor");
-    try {
-      const r = await apiFetch<{ analysis: string; analysis_kr: string }>(API.ai.competitor, {
-        method: "POST", body: JSON.stringify(analysis),
-      });
-      setCompetitor(r);
-    } catch { /* ignore */ }
-    finally { setAiLoading(""); }
-  };
-
-  const loadSectorTrend = async () => {
-    if (sectorTrend) { setSectorTrend(null); return; }
-    setAiLoading("sector");
-    try {
-      const r = await apiFetch<{ trend: string; trend_kr: string }>(API.ai.sectorTrend, {
-        method: "POST", body: JSON.stringify({ sector: analysis.sector }),
-      });
-      setSectorTrend(r);
-    } catch { /* ignore */ }
-    finally { setAiLoading(""); }
-  };
+  const loadSwot = () => loadWithTimeout("swot", API.ai.swot, analysis, setSwot, swot);
+  const loadCommentary = () => loadWithTimeout("commentary", API.ai.commentary, analysis, setCommentary, commentary);
+  const loadCompetitor = () => loadWithTimeout("competitor", API.ai.competitor, analysis, setCompetitor, competitor);
+  const loadSectorTrend = () => loadWithTimeout("sector", API.ai.sectorTrend, { sector: analysis.sector }, setSectorTrend, sectorTrend);
 
   const aiButtons = [
     { key: "commentary", label: "AI Commentary", active: !!commentary, onClick: loadCommentary },
@@ -662,6 +625,27 @@ function AIAnalysisTab({ analysis }: { analysis: Record<string, unknown> }) {
     { key: "competitor", label: "Competitor Analysis", active: !!competitor, onClick: loadCompetitor },
     { key: "sector", label: "Sector Trend", active: !!sectorTrend, onClick: loadSectorTrend },
   ];
+
+  // AI not available
+  if (aiStatus && !aiStatus.available) {
+    return (
+      <Card className="glass-card p-5">
+        <SectionLabel>AI-Powered Analysis</SectionLabel>
+        <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" className="text-amber-500">
+              <path d="M10 2L2 18h16L10 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+              <path d="M10 8v4M10 14v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-slate-700">AI service is not configured</p>
+          <p className="text-xs text-muted-foreground/50 text-center max-w-sm">
+            An API key is required for AI-powered analysis. Configure it in your server settings.
+          </p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -677,7 +661,7 @@ function AIAnalysisTab({ analysis }: { analysis: Record<string, unknown> }) {
               variant="outline"
               size="sm"
               onClick={btn.onClick}
-              disabled={aiLoading === btn.key}
+              disabled={!!aiLoading}
               className={`text-xs transition-all ${
                 btn.active
                   ? "border-primary/40 bg-primary/10 text-primary"
@@ -690,6 +674,12 @@ function AIAnalysisTab({ analysis }: { analysis: Record<string, unknown> }) {
             </Button>
           ))}
         </div>
+
+        {aiError && (
+          <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2">
+            <p className="text-[11px] text-red-600">{aiError}</p>
+          </div>
+        )}
       </Card>
 
       {commentary && (
@@ -699,6 +689,7 @@ function AIAnalysisTab({ analysis }: { analysis: Record<string, unknown> }) {
           {commentary.commentary_kr && commentary.commentary_kr !== commentary.commentary && (
             <p className="mt-4 whitespace-pre-wrap border-t border-border/30 pt-4 text-sm leading-relaxed text-muted-foreground">{commentary.commentary_kr}</p>
           )}
+          <p className="mt-3 text-[9px] text-muted-foreground/30 italic">AI analysis, not financial advice</p>
         </Card>
       )}
 
@@ -709,6 +700,7 @@ function AIAnalysisTab({ analysis }: { analysis: Record<string, unknown> }) {
           {swot.swot_kr && swot.swot_kr !== swot.swot && (
             <p className="mt-4 whitespace-pre-wrap border-t border-border/30 pt-4 text-sm leading-relaxed text-muted-foreground">{swot.swot_kr}</p>
           )}
+          <p className="mt-3 text-[9px] text-muted-foreground/30 italic">AI analysis, not financial advice</p>
         </Card>
       )}
 
@@ -719,6 +711,7 @@ function AIAnalysisTab({ analysis }: { analysis: Record<string, unknown> }) {
           {competitor.analysis_kr && competitor.analysis_kr !== competitor.analysis && (
             <p className="mt-4 whitespace-pre-wrap border-t border-border/30 pt-4 text-sm leading-relaxed text-muted-foreground">{competitor.analysis_kr}</p>
           )}
+          <p className="mt-3 text-[9px] text-muted-foreground/30 italic">AI analysis, not financial advice</p>
         </Card>
       )}
 
@@ -729,6 +722,7 @@ function AIAnalysisTab({ analysis }: { analysis: Record<string, unknown> }) {
           {sectorTrend.trend_kr && sectorTrend.trend_kr !== sectorTrend.trend && (
             <p className="mt-4 whitespace-pre-wrap border-t border-border/30 pt-4 text-sm leading-relaxed text-muted-foreground">{sectorTrend.trend_kr}</p>
           )}
+          <p className="mt-3 text-[9px] text-muted-foreground/30 italic">AI analysis, not financial advice</p>
         </Card>
       )}
     </>

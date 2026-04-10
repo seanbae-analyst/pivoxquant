@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import useSWR, { mutate as globalMutate } from "swr";
+import { useState, useCallback, useMemo } from "react";
+import useSWR from "swr";
+import { useRealtimeContext } from "./realtime";
 import { API } from "./endpoints";
 import type {
   PortfolioResponse,
@@ -14,6 +15,8 @@ import type {
   DiscoverResponse,
   ProfileResponse,
   QuestionnaireResponse,
+  AiStatusResponse,
+  AiCoachingResponse,
 } from "./types";
 
 const fetcher = (url: string) =>
@@ -111,145 +114,75 @@ export function useQuestionnaire() {
   });
 }
 
-/* ── Real-time Portfolio Prices (SSE) ── */
+/* ── AI ── */
 
-export interface RealtimePriceDetail {
-  price: number;
-  price_display: string;
-  change_pct?: number;
-}
-
-export interface RealtimePricesState {
-  prices: Record<string, number>;
-  details: Record<string, RealtimePriceDetail>;
-  connected: boolean;
-  lastUpdate: number | null;
+export function useAiStatus() {
+  return useSWR<AiStatusResponse>(API.ai.status, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 300_000,
+  });
 }
 
 /**
- * Connects to the portfolio-stream SSE endpoint.
- * Merges incoming price updates into the SWR portfolio cache so
- * every component that calls usePortfolio() sees fresh prices
- * without a full refetch.
- *
- * Returns `updatedTickers` — the set of tickers that changed in
- * the most recent SSE event, useful for flash animations.
+ * Fetches AI portfolio coaching insight.
+ * Uses POST endpoint — not auto-fetched by SWR. Instead, this hook
+ * provides a manual `refresh` trigger and caches the result.
  */
-export function useRealtimePrices() {
-  const [state, setState] = useState<RealtimePricesState>({
-    prices: {},
-    details: {},
-    connected: false,
-    lastUpdate: null,
-  });
-  const [updatedTickers, setUpdatedTickers] = useState<Set<string>>(new Set());
-  const retryRef = useRef(0);
-  const esRef = useRef<EventSource | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+export function useAiCoaching() {
+  const [data, setData] = useState<AiCoachingResponse | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const connect = useCallback(() => {
-    // Clean up any existing connection
-    if (esRef.current) {
-      esRef.current.close();
-      esRef.current = null;
-    }
-
-    const ac = new AbortController();
-    abortRef.current = ac;
-
-    const es = new EventSource(API.realtime.portfolioStream);
-    esRef.current = es;
-
-    es.onopen = () => {
-      retryRef.current = 0;
-      setState((s) => ({ ...s, connected: true }));
-    };
-
-    es.onmessage = (event) => {
-      if (ac.signal.aborted) return;
-      try {
-        const data = JSON.parse(event.data);
-        if (data.error) {
-          console.warn("[SSE] server error:", data.error);
-          return;
-        }
-
-        const prices: Record<string, number> = data.prices ?? {};
-        const details: Record<string, RealtimePriceDetail> = data.details ?? {};
-        const now = Date.now();
-
-        // Track which tickers actually changed
-        setState((prev) => {
-          const changed = new Set<string>();
-          for (const [ticker, price] of Object.entries(prices)) {
-            if (prev.prices[ticker] !== price) {
-              changed.add(ticker);
-            }
-          }
-          setUpdatedTickers(changed);
-
-          // Clear the flash after 1.5s
-          if (changed.size > 0) {
-            setTimeout(() => setUpdatedTickers(new Set()), 1500);
-          }
-
-          return { prices, details, connected: true, lastUpdate: now };
-        });
-
-        // Merge into SWR portfolio cache
-        globalMutate(
-          API.portfolio.list,
-          (current: PortfolioResponse | undefined) => {
-            if (!current) return current;
-            const updated = current.positions.map((pos) => {
-              const detail = details[pos.ticker];
-              if (!detail) return pos;
-              return {
-                ...pos,
-                price: detail.price,
-                current_price: detail.price,
-                price_display: detail.price_display,
-                // Recalculate P&L %
-                pnl_pct:
-                  pos.avg_cost > 0
-                    ? ((detail.price - pos.avg_cost) / pos.avg_cost) * 100
-                    : pos.pnl_pct,
-                market_value: detail.price * pos.shares,
-              };
-            });
-            return { ...current, positions: updated };
-          },
-          { revalidate: false },
-        );
-      } catch {
-        // ignore parse errors
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(API.ai.coaching, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? res.statusText);
       }
-    };
-
-    es.onerror = () => {
-      es.close();
-      esRef.current = null;
-      setState((s) => ({ ...s, connected: false }));
-
-      if (ac.signal.aborted) return;
-
-      // Exponential backoff: 2s, 4s, 8s, … max 60s
-      const delay = Math.min(2000 * 2 ** retryRef.current, 60_000);
-      retryRef.current += 1;
-      setTimeout(() => {
-        if (!ac.signal.aborted) connect();
-      }, delay);
-    };
+      const result: AiCoachingResponse = await res.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    connect();
-    return () => {
-      abortRef.current?.abort();
-      esRef.current?.close();
-      esRef.current = null;
-    };
-  }, [connect]);
+  return { data, error, isLoading, refresh };
+}
 
-  return { ...state, updatedTickers };
+/* ── Real-time Portfolio Prices (SSE) ── */
+
+export { useRealtimeContext } from "./realtime";
+export type { RealtimePriceDetail, PriceDirection, RealtimeState } from "./realtime";
+
+/**
+ * @deprecated Use `useRealtimeContext()` from "@/lib/realtime" for full
+ * direction-aware data. This wrapper is kept for backward compatibility.
+ *
+ * Thin consumer of the singleton RealtimeProvider context.
+ * Returns `updatedTickers` as a Set<string> (no direction info)
+ * for components that only need to know *which* tickers changed.
+ */
+export function useRealtimePrices() {
+  const ctx = useRealtimeContext();
+  // Convert Map<string, PriceDirection> → Set<string> for compat
+  const updatedTickers = useMemo(
+    () => new Set(ctx.updatedTickers.keys()),
+    [ctx.updatedTickers],
+  );
+  return {
+    prices: ctx.prices,
+    details: ctx.details,
+    connected: ctx.connected,
+    lastUpdate: ctx.lastUpdate,
+    updatedTickers,
+  };
 }

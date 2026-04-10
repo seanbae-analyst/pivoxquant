@@ -20,7 +20,7 @@ export function Header() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        className="glass-surface rounded-full px-6 py-3 flex items-center gap-8 max-w-3xl w-full"
+        className="bg-white/90 backdrop-blur-lg border border-slate-200 shadow-sm rounded-full px-6 py-3 flex items-center gap-8 max-w-3xl w-full"
       >
         <Link href="/" className="flex items-center shrink-0">
           <Logo size={32} />
@@ -31,7 +31,7 @@ export function Header() {
             <a
               key={item.href}
               href={item.href}
-              className="text-[13px] text-zinc-400 hover:text-white transition-colors duration-300"
+              className="text-[13px] text-slate-500 hover:text-slate-900 transition-colors duration-300"
             >
               {item.label}
             </a>
@@ -41,20 +41,20 @@ export function Header() {
         <div className="hidden md:flex items-center gap-3 shrink-0">
           <Link
             href="/login"
-            className="text-[13px] text-zinc-400 hover:text-white transition-colors duration-300"
+            className="text-[13px] text-slate-500 hover:text-slate-900 transition-colors duration-300"
           >
             Sign In
           </Link>
           <Link
             href="/login"
-            className="text-[13px] font-medium bg-white text-zinc-900 px-5 py-1.5 rounded-full hover:bg-zinc-200 transition-all duration-300"
+            className="text-[13px] font-medium bg-emerald-600 text-white px-5 py-1.5 rounded-full hover:bg-emerald-700 transition-all duration-300"
           >
             Get Started
           </Link>
         </div>
 
         <button
-          className="md:hidden ml-auto text-zinc-400 hover:text-white transition-colors"
+          className="md:hidden ml-auto text-slate-500 hover:text-slate-900 transition-colors"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Menu"
         >
@@ -75,25 +75,25 @@ export function Header() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed top-[72px] left-4 right-4 glass-surface rounded-2xl p-6 flex flex-col gap-4 z-50"
+            className="fixed top-[72px] left-4 right-4 bg-white/95 backdrop-blur-lg border border-slate-200 shadow-lg rounded-2xl p-6 flex flex-col gap-4 z-50"
           >
             {navItems.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
-                className="text-[15px] text-zinc-300 hover:text-white transition-colors"
+                className="text-[15px] text-slate-600 hover:text-slate-900 transition-colors"
               >
                 {item.label}
               </a>
             ))}
             <hr className="landing-divider my-2" />
-            <Link href="/login" className="text-[15px] text-zinc-300 hover:text-white transition-colors">
+            <Link href="/login" className="text-[15px] text-slate-600 hover:text-slate-900 transition-colors">
               Sign In
             </Link>
             <Link
               href="/login"
-              className="text-[14px] font-medium bg-white text-zinc-900 px-5 py-2.5 rounded-full text-center hover:bg-zinc-200 transition-all"
+              className="text-[14px] font-medium bg-emerald-600 text-white px-5 py-2.5 rounded-full text-center hover:bg-emerald-700 transition-all"
             >
               Get Started
             </Link>

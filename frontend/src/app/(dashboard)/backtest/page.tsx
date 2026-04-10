@@ -42,15 +42,15 @@ interface BacktestResult {
 function MetricCard({
   label,
   value,
-  color = "text-white",
+  color = "text-slate-900",
 }: {
   label: string;
   value: string;
   color?: string;
 }) {
   return (
-    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-600">
+    <div className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
         {label}
       </p>
       <p className={`mt-2 text-2xl font-bold font-mono ${color}`}>{value}</p>
@@ -73,16 +73,16 @@ function ChartTooltip({
   return (
     <div
       style={{
-        background: "#18181b",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
         borderRadius: 12,
         fontSize: 12,
-        color: "#fafafa",
+        color: "#0f172a",
       }}
       className="px-4 py-3 shadow-xl"
     >
-      <p className="text-xs text-zinc-400">{label}</p>
-      <p className="text-sm font-medium font-mono text-white">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-sm font-medium font-mono text-slate-900">
         ${payload[0].value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </p>
     </div>
@@ -120,17 +120,17 @@ export default function BacktestPage() {
   }
 
   const pctColor = (v: number) =>
-    v >= 0 ? "text-emerald-400" : "text-red-400";
+    v >= 0 ? "text-emerald-600" : "text-red-600";
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div>
         <div className="flex items-center gap-3">
-          <FlaskConical className="h-7 w-7 text-cyan-400" />
-          <h1 className="text-2xl font-bold tracking-tight text-white">Backtest</h1>
+          <FlaskConical className="h-7 w-7 text-sky-600" />
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Backtest</h1>
         </div>
-        <p className="mt-1 text-[13px] text-zinc-600">
+        <p className="mt-1 text-[13px] text-slate-400">
           Run a strategy backtest on any ticker to evaluate historical performance
         </p>
       </div>
@@ -142,15 +142,15 @@ export default function BacktestPage() {
           onChange={(e) => setTicker(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && runBacktest()}
           placeholder="Enter ticker symbol (e.g. AAPL)"
-          className="h-11 max-w-xs bg-white/[0.03] border-white/[0.06] text-white placeholder:text-zinc-700 focus:border-cyan-500/30 rounded-xl"
+          className="h-11 max-w-xs bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-sky-500/50 rounded-xl"
         />
         <Button
           onClick={runBacktest}
           disabled={loading || !ticker.trim()}
-          className="h-11 gap-2 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl spring-transition disabled:opacity-50"
+          className="h-11 gap-2 bg-gradient-to-r from-sky-50 to-emerald-50 text-sky-600 border border-sky-200 rounded-xl spring-transition disabled:opacity-50"
         >
           {loading ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
           ) : (
             <Play className="h-4 w-4" />
           )}
@@ -161,8 +161,8 @@ export default function BacktestPage() {
       {/* Loading State */}
       {loading && (
         <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-          <span className="text-zinc-600 text-[12px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse mr-2" />
+          <span className="text-slate-400 text-[12px]">
             Running backtest for {ticker.trim().toUpperCase()}...
           </span>
         </div>
@@ -170,8 +170,8 @@ export default function BacktestPage() {
 
       {/* Error State */}
       {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5">
-          <p className="text-sm text-red-400">{error}</p>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+          <p className="text-sm text-red-600">{error}</p>
         </div>
       )}
 
@@ -180,8 +180,8 @@ export default function BacktestPage() {
         <>
           {/* Result Header */}
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-5 w-5 text-cyan-400" />
-            <h2 className="text-lg font-semibold text-white">
+            <TrendingUp className="h-5 w-5 text-sky-600" />
+            <h2 className="text-lg font-semibold text-slate-900">
               {result.ticker} — {result.period}
             </h2>
           </div>
@@ -201,17 +201,17 @@ export default function BacktestPage() {
             <MetricCard
               label="Sharpe Ratio"
               value={result.sharpe_ratio.toFixed(2)}
-              color={result.sharpe_ratio >= 1 ? "text-emerald-400" : result.sharpe_ratio >= 0 ? "text-zinc-300" : "text-red-400"}
+              color={result.sharpe_ratio >= 1 ? "text-emerald-600" : result.sharpe_ratio >= 0 ? "text-slate-700" : "text-red-600"}
             />
             <MetricCard
               label="Max Drawdown"
               value={`${result.max_drawdown.toFixed(2)}%`}
-              color="text-red-400"
+              color="text-red-600"
             />
             <MetricCard
               label="Win Rate"
               value={`${result.win_rate.toFixed(1)}%`}
-              color={result.win_rate >= 50 ? "text-emerald-400" : "text-zinc-300"}
+              color={result.win_rate >= 50 ? "text-emerald-600" : "text-slate-700"}
             />
             <MetricCard
               label="Total Trades"
@@ -220,19 +220,19 @@ export default function BacktestPage() {
             <MetricCard
               label="Avg Win"
               value={`+${result.avg_win.toFixed(2)}%`}
-              color="text-emerald-400"
+              color="text-emerald-600"
             />
             <MetricCard
               label="Avg Loss"
               value={`${result.avg_loss.toFixed(2)}%`}
-              color="text-red-400"
+              color="text-red-600"
             />
           </div>
 
           {/* Equity Curve Chart */}
           {result.equity_curve?.length > 0 && (
             <div className="glass-surface rounded-xl p-5">
-              <h3 className="mb-4 text-sm font-semibold text-white">
+              <h3 className="mb-4 text-sm font-semibold text-slate-900">
                 Equity Curve
               </h3>
               <ResponsiveContainer width="100%" height={350}>
@@ -242,19 +242,19 @@ export default function BacktestPage() {
                 >
                   <defs>
                     <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#0ea5e9" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis
                     dataKey="date"
-                    tick={{ fill: "#71717a", fontSize: 11 }}
+                    tick={{ fill: "#94a3b8", fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                     minTickGap={60}
                   />
                   <YAxis
-                    tick={{ fill: "#71717a", fontSize: 11 }}
+                    tick={{ fill: "#94a3b8", fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                     tickFormatter={(v: number) =>
@@ -265,7 +265,7 @@ export default function BacktestPage() {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#22d3ee"
+                    stroke="#0ea5e9"
                     strokeWidth={2}
                     fill="url(#eqGrad)"
                   />
@@ -276,33 +276,33 @@ export default function BacktestPage() {
 
           {/* Trade Summary */}
           <div className="glass-surface rounded-xl p-5">
-            <h3 className="mb-4 text-sm font-semibold text-white">
+            <h3 className="mb-4 text-sm font-semibold text-slate-900">
               Trade Summary
             </h3>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div>
-                <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Profit Trades</p>
-                <p className="mt-1 text-lg font-bold font-mono text-emerald-400">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Profit Trades</p>
+                <p className="mt-1 text-lg font-bold font-mono text-emerald-600">
                   {result.profit_trades}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Loss Trades</p>
-                <p className="mt-1 text-lg font-bold font-mono text-red-400">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Loss Trades</p>
+                <p className="mt-1 text-lg font-bold font-mono text-red-600">
                   {result.loss_trades}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Win / Loss Ratio</p>
-                <p className="mt-1 text-lg font-bold font-mono text-zinc-300">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Win / Loss Ratio</p>
+                <p className="mt-1 text-lg font-bold font-mono text-slate-700">
                   {result.loss_trades > 0
                     ? (result.profit_trades / result.loss_trades).toFixed(2)
                     : "N/A"}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Profit Factor</p>
-                <p className="mt-1 text-lg font-bold font-mono text-zinc-300">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">Profit Factor</p>
+                <p className="mt-1 text-lg font-bold font-mono text-slate-700">
                   {result.avg_loss !== 0
                     ? Math.abs(
                         (result.avg_win * result.profit_trades) /
@@ -319,8 +319,8 @@ export default function BacktestPage() {
       {/* Empty State */}
       {!result && !loading && !error && (
         <div className="glass-surface rounded-2xl py-12 text-center">
-          <FlaskConical className="mx-auto h-12 w-12 text-zinc-600" />
-          <p className="mt-3 text-[13px] text-zinc-600">
+          <FlaskConical className="mx-auto h-12 w-12 text-slate-400" />
+          <p className="mt-3 text-[13px] text-slate-400">
             Enter a ticker symbol and run a backtest to see results
           </p>
         </div>

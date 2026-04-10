@@ -99,7 +99,7 @@ test.describe("Dashboard", () => {
   test("market tab loads data", async ({ page }) => {
     await page.click("button:has-text('Market')");
     await page.waitForTimeout(10000);
-    await expect(page.locator("[data-testid='market-tab'], table, text=Market").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("[data-testid='market-tab'], table").first()).toBeVisible({ timeout: 10000 });
   });
 
   test("movers tab shows gainers and losers", async ({ page }) => {

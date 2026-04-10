@@ -5,6 +5,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import Position, SignalCache, TradeHistory
+from security import trade_rate_limit
 from services.serializers import serialize_user
 from services import fx_service, cache_service
 from services.container import engine, fetcher, realtime
@@ -85,6 +86,7 @@ def get_portfolio():
 
 
 @portfolio_bp.route("/position", methods=["POST"])
+@trade_rate_limit
 @api_auth
 def add_position():
     d = request.get_json() or {}
@@ -111,6 +113,7 @@ def add_position():
 
 
 @portfolio_bp.route("/position/<int:pid>", methods=["PUT"])
+@trade_rate_limit
 @api_auth
 def edit_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
@@ -129,6 +132,7 @@ def edit_position(pid):
 
 
 @portfolio_bp.route("/position/<int:pid>", methods=["DELETE"])
+@trade_rate_limit
 @api_auth
 def del_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
@@ -140,6 +144,7 @@ def del_position(pid):
 
 
 @portfolio_bp.route("/position/<int:pid>/buy", methods=["POST"])
+@trade_rate_limit
 @api_auth
 def buy_more(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
@@ -189,6 +194,7 @@ def buy_more(pid):
 
 
 @portfolio_bp.route("/position/buy-new", methods=["POST"])
+@trade_rate_limit
 @api_auth
 def buy_new_position():
     d = request.get_json() or {}
@@ -240,6 +246,7 @@ def buy_new_position():
 
 
 @portfolio_bp.route("/position/<int:pid>/sell", methods=["POST"])
+@trade_rate_limit
 @api_auth
 def sell_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()

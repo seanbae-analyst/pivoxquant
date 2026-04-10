@@ -5,6 +5,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import Position, SignalCache
+from security import ai_rate_limit
 from services.container import ai, fetcher
 from .decorators import api_auth
 
@@ -18,6 +19,7 @@ def status():
 
 
 @ai_bp.route("/swot", methods=["POST"])
+@ai_rate_limit
 @api_auth
 def swot():
     if not ai.available:
@@ -30,6 +32,7 @@ def swot():
 
 
 @ai_bp.route("/competitor", methods=["POST"])
+@ai_rate_limit
 @api_auth
 def competitor():
     if not ai.available:
@@ -52,6 +55,7 @@ def competitor():
 
 
 @ai_bp.route("/sector-trend", methods=["POST"])
+@ai_rate_limit
 @api_auth
 def sector_trend():
     if not ai.available:
@@ -73,6 +77,7 @@ def sector_trend():
 
 
 @ai_bp.route("/chat", methods=["POST"])
+@ai_rate_limit
 @api_auth
 def chat():
     if not ai.available:
@@ -110,6 +115,7 @@ def chat():
 
 
 @ai_bp.route("/commentary", methods=["POST"])
+@ai_rate_limit
 @api_auth
 def commentary():
     if not ai.available:
@@ -122,6 +128,7 @@ def commentary():
 
 
 @ai_bp.route("/morning-summary", methods=["POST"])
+@ai_rate_limit
 @api_auth
 def morning_summary():
     if not ai.available:
@@ -134,6 +141,7 @@ def morning_summary():
 
 
 @ai_bp.route("/coaching", methods=["POST"])
+@ai_rate_limit
 @api_auth
 def coaching():
     if not ai.available:
