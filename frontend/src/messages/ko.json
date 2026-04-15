@@ -69,6 +69,38 @@
     }
   },
   "dashboard": {
+    "greeting": {
+      "morning": "좋은 아침이에요",
+      "afternoon": "좋은 오후예요",
+      "evening": "좋은 저녁이에요"
+    },
+    "metrics": {
+      "portfolioValue": "포트폴리오 가치",
+      "totalPnl": "총 손익",
+      "riskScore": "리스크 점수",
+      "noPositionsYet": "아직 포지션이 없습니다",
+      "positions": "개 포지션"
+    },
+    "positions": {
+      "title": "내 포지션",
+      "total": "개",
+      "noPositions": "아직 포지션이 없습니다",
+      "noPositionsDesc": "첫 번째 포지션을 추가하여 포트폴리오 성과를 추적해 보세요.",
+      "addPosition": "포지션 추가",
+      "viewPortfolio": "포트폴리오 보기",
+      "shares": "주"
+    },
+    "signals": {
+      "title": "주요 시그널",
+      "noSignals": "시그널 없음",
+      "noSignalsDesc": "포지션을 추가하면 AI 시그널을 확인할 수 있습니다.",
+      "viewAllSignals": "전체 시그널 보기",
+      "allSignals": "전체 시그널",
+      "positive": "POSITIVE",
+      "negative": "NEGATIVE",
+      "neutral": "NEUTRAL",
+      "generatedAt": "생성 시각"
+    },
     "home": {
       "title": "대시보드",
       "portfolioValue": "포트폴리오 가치",
@@ -94,15 +126,6 @@
       "gainers": "상승 종목",
       "losers": "하락 종목",
       "volume": "거래량"
-    },
-    "signals": {
-      "title": "시그널",
-      "allSignals": "전체 시그널",
-      "positive": "POSITIVE",
-      "negative": "NEGATIVE",
-      "neutral": "NEUTRAL",
-      "noSignals": "시그널이 없습니다",
-      "generatedAt": "생성 시각"
     },
     "discover": {
       "title": "탐색",
@@ -170,7 +193,8 @@
       "quantModels": "퀀트 모델",
       "riskDefense": "리스크 방어",
       "markets": "시장",
-      "mdd": "MDD (Buy&Hold 대비)"
+      "mdd": "MDD (백테스트, 과거 데이터)",
+      "mddDisclaimer": "과거 실적은 미래 수익을 보장하지 않습니다."
     },
     "pricing": {
       "title": "요금제",
@@ -189,7 +213,30 @@
     "notFound": "페이지를 찾을 수 없습니다.",
     "unauthorized": "로그인이 필요합니다.",
     "forbidden": "접근 권한이 없습니다.",
-    "serverError": "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+    "serverError": "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+    "somethingWrong": "오류가 발생했습니다",
+    "tryRefresh": "예상치 못한 오류가 발생했습니다. 페이지를 새로고침해 보세요.",
+    "tryAgain": "다시 시도",
+    "pageNotFound": "페이지를 찾을 수 없습니다",
+    "goHome": "홈으로 이동"
+  },
+  "errorBoundary": {
+    "title": "오류가 발생했습니다",
+    "description": "예상치 못한 오류가 발생했습니다. 페이지를 새로고침해 보세요.",
+    "retry": "다시 시도"
+  },
+  "cookieConsent": {
+    "message": "쿠키를 사용해 서비스 품질을 개선합니다. 분석 쿠키는 동의하신 경우에만 활성화됩니다.",
+    "privacyPolicy": "개인정보처리방침",
+    "reject": "거부",
+    "essentialOnly": "필수만",
+    "acceptAll": "전체 허용"
+  },
+  "tierGate": {
+    "unlockPro": "Pro로 잠금 해제",
+    "unlockPremium": "Premium으로 잠금 해제",
+    "upgradeDesc": "이 기능을 사용하려면 플랜을 업그레이드하세요.",
+    "viewPlans": "요금제 보기"
   },
   "empty": {
     "default": "데이터가 없습니다",
@@ -257,14 +304,81 @@
       "account": "계정",
       "subscription": "구독",
       "connections": "연동",
-      "notifications": "알림"
+      "notifications": "알림",
+      "language": "언어"
     },
+    "pageTitle": "설정",
+    "pageSubtitle": "계정, 플랜, 연동을 관리하세요",
+    "account": {
+      "title": "계정 정보",
+      "name": "이름",
+      "email": "이메일",
+      "joined": "가입일",
+      "loginMethod": "로그인 방법",
+      "investorType": "투자자 유형",
+      "retakeAssessment": "투자자 진단 다시 하기",
+      "takeAssessment": "투자자 진단 시작",
+      "retakeSubtitle": "투자자 프로필과 선호도를 업데이트하세요",
+      "takeSubtitle": "나만의 맞춤 투자자 프로필을 설정하세요",
+      "notSet": "미설정"
+    },
+    "subscription": {
+      "title": "구독",
+      "activePlan": "구독 활성",
+      "freePlan": "무료 플랜 (기본 기능)",
+      "upgradeToPro": "Pro로 업그레이드",
+      "manage": "구독 관리",
+      "renewsOn": "갱신일",
+      "cancelsOn": "해지 예정일",
+      "proFeatures": "Pro 플랜 혜택",
+      "proFeaturesList": [
+        "종목 무제한 트래킹",
+        "25+ 기술적 지표",
+        "AI Assistant 하루 10회 질문",
+        "전체 리스크 분석 대시보드",
+        "우선 시그널 처리"
+      ]
+    },
+    "connections": {
+      "title": "브로커 연동",
+      "alpacaDesc": "Alpaca Markets를 통한 미국 주식 거래",
+      "kisName": "한국투자증권",
+      "kisDesc": "KIS API를 통한 한국 주식 거래",
+      "connected": "연결됨",
+      "notConnected": "미연결",
+      "connectAlpaca": "Alpaca 연결하기",
+      "comingSoon": "출시 예정",
+      "connecting": "연결 중...",
+      "connect": "연결",
+      "cancel": "취소",
+      "apiKey": "API Key",
+      "apiSecret": "API Secret",
+      "alpacaConnectSuccess": "Alpaca가 성공적으로 연결됐습니다!",
+      "alpacaConnectError": "Alpaca 연결에 실패했습니다.",
+      "alpacaCredentialsRequired": "API Key와 API Secret을 모두 입력해 주세요.",
+      "brokerNote": "브로커 연동 시 실시간 포트폴리오 동기화와 자동매매가 가능합니다."
+    },
+    "language": {
+      "title": "언어",
+      "subtitle": "표시 언어를 선택하세요",
+      "korean": "한국어",
+      "english": "English",
+      "saved": "언어가 변경됐습니다"
+    },
+    "dangerZone": "위험 구역",
+    "signOut": "로그아웃",
+    "signingOut": "로그아웃 중...",
+    "deleteAccount": "계정 삭제",
+    "deleteAccountTitle": "계정 삭제",
+    "deleteAccountDesc": "앱에서 직접 계정 삭제는 현재 지원되지 않습니다. 삭제를 원하시면 고객지원에 문의해 주세요.",
+    "contactSupport": "고객지원 문의",
+    "cancelBtn": "취소",
     "notifications": {
       "title": "알림 설정",
       "subtitle": "푸시, 이메일, 카톡 알림을 관리하세요",
       "morningBriefTitle": "아침 브리핑 푸시 알림",
       "morningBriefDesc": "매일 아침, 포트폴리오 요약과 오늘의 일정을 받아보세요",
-      "timeLabel": "발송 시간",
+      "timeLabel": "발송 시간 (KST)",
       "timeHelp": "매일 이 시간에 푸시가 발송됩니다 (KST 기준)",
       "emailTitle": "이메일 알림",
       "emailDesc": "Pro 이상 플랜에서 이용 가능",
@@ -276,7 +390,15 @@
       "saved": "저장됨",
       "notSupported": "이 브라우저는 푸시 알림을 지원하지 않습니다",
       "permissionDenied": "브라우저 설정에서 알림 권한을 허용해 주세요",
-      "enableFirst": "먼저 푸시 알림을 활성화해 주세요"
+      "enableFirst": "먼저 푸시 알림을 활성화해 주세요",
+      "pushEnabled": "아침 브리핑 푸시가 활성화됐습니다",
+      "pushDisabled": "푸시 알림이 해제됐습니다",
+      "pushError": "알림 설정에 실패했습니다",
+      "emailEnabledSuccess": "이메일 알림이 활성화됐습니다",
+      "emailDisabledSuccess": "이메일 알림이 해제됐습니다",
+      "emailProRequired": "이메일 알림은 Pro 이상 플랜에서 이용할 수 있습니다",
+      "timeChanged": "발송 시간이 변경됐습니다",
+      "dismissAnytime": "알림은 언제든지 해제할 수 있습니다"
     }
   },
   "whatIf": {

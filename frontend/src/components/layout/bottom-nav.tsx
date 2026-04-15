@@ -76,11 +76,11 @@ export function BottomNav() {
                 key={tab.href}
                 href={tab.href}
                 className={cn(
-                  "flex flex-1 flex-col items-center justify-center gap-1 py-1 transition-colors duration-200",
-                  isActive ? "text-purple-600" : "text-slate-400"
+                  "flex flex-1 flex-col items-center justify-center gap-1 py-1 transition-colors duration-150",
+                  isActive ? "text-slate-900" : "text-slate-400 hover:text-slate-700"
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" strokeWidth={1.75} />
                 <span className="text-[10px] font-medium">{tab.label}</span>
               </Link>
             );
@@ -93,11 +93,11 @@ export function BottomNav() {
             aria-label="메뉴 열기"
             aria-expanded={menuOpen}
             className={cn(
-              "flex flex-1 flex-col items-center justify-center gap-1 py-1 transition-colors duration-200",
-              menuOpen ? "text-purple-600" : "text-slate-400"
+              "flex flex-1 flex-col items-center justify-center gap-1 py-1 transition-colors duration-150",
+              menuOpen ? "text-slate-900" : "text-slate-400 hover:text-slate-700"
             )}
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5" strokeWidth={1.75} />
             <span className="text-[10px] font-medium">메뉴</span>
           </button>
         </div>
@@ -134,17 +134,18 @@ export function BottomNav() {
                     href={item.href}
                     onClick={() => setMenuOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
+                      "flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-purple-50 text-purple-700"
+                        ? "bg-slate-100 text-slate-900"
                         : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     )}
                   >
                     <Icon
                       className={cn(
                         "h-[18px] w-[18px] shrink-0",
-                        isActive ? "text-purple-600" : "text-slate-400"
+                        isActive ? "text-slate-900" : "text-slate-400"
                       )}
+                      strokeWidth={1.75}
                     />
                     <span className="truncate">{t(`nav.${item.key}`)}</span>
                   </Link>

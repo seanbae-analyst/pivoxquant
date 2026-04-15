@@ -4,6 +4,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import type { Position } from "@/lib/types";
+import { useT } from "@/lib/locale";
 
 /* ── Signal badge ── */
 
@@ -42,6 +43,8 @@ interface SignalsWidgetProps {
 }
 
 export function SignalsWidget({ positions, isLoading }: SignalsWidgetProps) {
+  const t = useT();
+
   if (isLoading) {
     return (
       <div className="sp-card p-5 space-y-4">
@@ -61,11 +64,11 @@ export function SignalsWidget({ positions, isLoading }: SignalsWidgetProps) {
 
   return (
     <div className="sp-card p-5 flex flex-col">
-      <h3 className="text-base font-bold text-slate-900 mb-4">주요 시그널</h3>
+      <h3 className="text-base font-bold text-slate-900 mb-4">{t("dashboard.signals.title")}</h3>
 
       {sorted.length === 0 ? (
         <p className="text-sm text-slate-400 py-4">
-          시그널 없음. 포지션을 추가하면 AI 시그널을 확인할 수 있습니다.
+          {t("dashboard.signals.noSignals")}. {t("dashboard.signals.noSignalsDesc")}
         </p>
       ) : (
         <div className="flex flex-col gap-2.5 flex-1">
@@ -92,7 +95,7 @@ export function SignalsWidget({ positions, isLoading }: SignalsWidgetProps) {
         href="/signals"
         className="mt-4 text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors self-start"
       >
-        전체 시그널 보기 &rarr;
+        {t("dashboard.signals.viewAllSignals")} &rarr;
       </Link>
     </div>
   );

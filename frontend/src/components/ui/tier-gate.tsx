@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/locale";
 
 interface TierGateProps {
   tier: "pro" | "premium";
@@ -19,6 +20,7 @@ const TIER_LEVEL: Record<string, number> = {
 
 export function TierGate({ tier, children, fallback }: TierGateProps) {
   const { user } = useAuth();
+  const t = useT();
   const userTier = user?.subscription_tier || "free";
 
   if ((TIER_LEVEL[userTier] ?? 0) >= TIER_LEVEL[tier]) {
@@ -32,16 +34,16 @@ export function TierGate({ tier, children, fallback }: TierGateProps) {
           <Lock className="h-5 w-5 text-white" />
         </div>
         <h3 className="text-lg font-bold text-slate-900 mb-2">
-          {tier === "pro" ? "Pro" : "Premium"}로 잠금 해제
+          {tier === "pro" ? t("tierGate.unlockPro") : t("tierGate.unlockPremium")}
         </h3>
         <p className="text-slate-500 text-sm mb-5">
-          이 기능을 사용하려면 플랜을 업그레이드하세요.
+          {t("tierGate.upgradeDesc")}
         </p>
         <Link
           href="/pricing"
           className="inline-block px-6 py-2.5 rounded-full bg-slate-900 text-white text-sm font-semibold transition-all duration-200 hover:bg-slate-800 active:scale-[0.97]"
         >
-          요금제 보기
+          {t("tierGate.viewPlans")}
         </Link>
       </div>
     )

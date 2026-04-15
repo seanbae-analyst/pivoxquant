@@ -55,6 +55,22 @@ def _is_compliant(text: str) -> bool:
     return _FORBIDDEN_RE.search(text) is None
 
 
+# Public aliases for reuse by other modules (e.g. ai_service.py).
+# Keep the private names above for backwards compatibility.
+def is_compliant(text: str) -> bool:
+    """Public wrapper around the compliance vocabulary check.
+
+    Returns True when `text` contains none of the forbidden
+    investment-advisory words ('추천', '매수', '매도', 'recommend', 'buy',
+    'sell', ...). Callers should drop or redact non-compliant AI output
+    before returning it to users (자본시장법 §6 미등록 투자자문업 방지).
+    """
+    return _is_compliant(text)
+
+
+FORBIDDEN_RE = _FORBIDDEN_RE
+
+
 # ── Cost guard: daily AI call budget ─────────────────────────────────────────
 # Reset at UTC day boundary. Keeps the whole cohort under ~$3/month on
 # Claude Haiku even if active users spike.

@@ -68,7 +68,96 @@
       "signIn": "Sign in"
     }
   },
+  "landing": {
+    "hero": {
+      "badge": "AI Quant Investment Advisor",
+      "title": "Invest with Data",
+      "subtitle": "58 quant models, 7-layer risk defense, AI portfolio analysis. Unified US & Korean equity management.",
+      "cta": "Start for Free",
+      "learnMore": "Learn More"
+    },
+    "stats": {
+      "quantModels": "Quant Models",
+      "riskDefense": "Risk Defense",
+      "markets": "Markets",
+      "mdd": "MDD (backtest, past data)",
+      "mddDisclaimer": "Past performance does not guarantee future results."
+    },
+    "pricing": {
+      "title": "Pricing",
+      "free": "Free",
+      "pro": "Pro",
+      "premium": "Premium",
+      "perMonth": "/mo",
+      "startFree": "Start Free",
+      "startPro": "Start Pro",
+      "startPremium": "Start Premium"
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Please check your network connection.",
+    "notFound": "Page not found.",
+    "unauthorized": "Please sign in to continue.",
+    "forbidden": "You do not have permission to access this.",
+    "serverError": "Server error. Please try again later.",
+    "somethingWrong": "An error occurred",
+    "tryRefresh": "An unexpected error occurred. Try refreshing the page.",
+    "tryAgain": "Try again",
+    "pageNotFound": "Page not found",
+    "goHome": "Go to Home"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. Try refreshing the page.",
+    "retry": "Try again"
+  },
+  "cookieConsent": {
+    "message": "We use cookies to improve service quality. Analytics cookies are only activated with your consent.",
+    "privacyPolicy": "Privacy Policy",
+    "reject": "Reject",
+    "essentialOnly": "Essential only",
+    "acceptAll": "Accept all"
+  },
+  "tierGate": {
+    "unlockPro": "Unlock with Pro",
+    "unlockPremium": "Unlock with Premium",
+    "upgradeDesc": "Upgrade your plan to access this feature.",
+    "viewPlans": "View Plans"
+  },
   "dashboard": {
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "metrics": {
+      "portfolioValue": "Portfolio Value",
+      "totalPnl": "Total P&L",
+      "riskScore": "Risk Score",
+      "noPositionsYet": "No positions yet",
+      "positions": "positions"
+    },
+    "positions": {
+      "title": "My Positions",
+      "total": "",
+      "noPositions": "No positions yet",
+      "noPositionsDesc": "Add your first position to start tracking your portfolio performance.",
+      "addPosition": "Add Position",
+      "viewPortfolio": "View Portfolio",
+      "shares": "share"
+    },
+    "signals": {
+      "title": "Key Signals",
+      "noSignals": "No signals",
+      "noSignalsDesc": "Add positions to view AI-generated quant signals.",
+      "viewAllSignals": "View all signals",
+      "allSignals": "All signals",
+      "positive": "POSITIVE",
+      "negative": "NEGATIVE",
+      "neutral": "NEUTRAL",
+      "generatedAt": "Generated at"
+    },
     "home": {
       "title": "Dashboard",
       "portfolioValue": "Portfolio Value",
@@ -95,34 +184,12 @@
       "losers": "Top Losers",
       "volume": "Volume"
     },
-    "signals": {
-      "title": "Signals",
-      "allSignals": "All Signals",
-      "positive": "POSITIVE",
-      "negative": "NEGATIVE",
-      "neutral": "NEUTRAL",
-      "noSignals": "No signals available",
-      "generatedAt": "Generated at"
-    },
-    "discover": {
-      "title": "Discover",
-      "scanStocks": "Scan Stocks",
-      "topRated": "Top Rated",
-      "noResults": "No results found"
-    },
-    "watchlist": {
-      "title": "Watchlist",
-      "addStock": "Add Stock",
-      "empty": "Your watchlist is empty",
-      "emptyDesc": "Add stocks to monitor them here",
-      "remove": "Remove"
-    },
     "risk": {
       "title": "Risk",
       "riskDefense": "Risk Defense",
       "layers": "Layers",
       "var": "VaR",
-      "drawdown": "Drawdown",
+      "drawdown": "Max Drawdown",
       "sharpe": "Sharpe Ratio",
       "status": "Status",
       "safe": "Safe",
@@ -146,10 +213,23 @@
       "risk": "Risk",
       "trade": "Trade"
     },
+    "discover": {
+      "title": "Discover",
+      "scanStocks": "Scan Stocks",
+      "topRated": "Top Rated",
+      "noResults": "No results found"
+    },
+    "watchlist": {
+      "title": "Watchlist",
+      "addStock": "Add Stock",
+      "empty": "Your watchlist is empty",
+      "emptyDesc": "Add stocks to monitor them here",
+      "remove": "Remove"
+    },
     "settings": {
       "title": "Settings",
       "profile": "Profile",
-      "broker": "Broker Connection",
+      "broker": "Broker Connections",
       "notifications": "Notifications",
       "security": "Security",
       "plan": "Subscription Plan",
@@ -157,39 +237,6 @@
       "connectKIS": "Connect KIS",
       "deleteAccount": "Delete Account"
     }
-  },
-  "landing": {
-    "hero": {
-      "badge": "AI Quant Investment Advisor",
-      "title": "Invest with Data",
-      "subtitle": "58 quant models, 7-layer risk defense, AI portfolio analysis. Unified US & Korean equity management.",
-      "cta": "Start for Free",
-      "learnMore": "Learn More"
-    },
-    "stats": {
-      "quantModels": "Quant Models",
-      "riskDefense": "Risk Defense",
-      "markets": "Markets",
-      "mdd": "MDD vs Buy & Hold"
-    },
-    "pricing": {
-      "title": "Pricing",
-      "free": "Free",
-      "pro": "Pro",
-      "premium": "Premium",
-      "perMonth": "/mo",
-      "startFree": "Start Free",
-      "startPro": "Start Pro",
-      "startPremium": "Start Premium"
-    }
-  },
-  "errors": {
-    "generic": "Something went wrong. Please try again.",
-    "network": "Please check your network connection.",
-    "notFound": "Page not found.",
-    "unauthorized": "Please sign in to continue.",
-    "forbidden": "You don't have permission to access this.",
-    "serverError": "Server error. Please try again later."
   },
   "empty": {
     "default": "No data available",
@@ -257,26 +304,101 @@
       "account": "Account",
       "subscription": "Subscription",
       "connections": "Connections",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "language": "Language"
     },
+    "pageTitle": "Settings",
+    "pageSubtitle": "Manage your account, plan, and integrations",
+    "account": {
+      "title": "Account Info",
+      "name": "Name",
+      "email": "Email",
+      "joined": "Member since",
+      "loginMethod": "Login method",
+      "investorType": "Investor type",
+      "retakeAssessment": "Retake Assessment",
+      "takeAssessment": "Take Assessment",
+      "retakeSubtitle": "Update your investor profile and preferences",
+      "takeSubtitle": "Set up your personalized investor profile",
+      "notSet": "Not set"
+    },
+    "subscription": {
+      "title": "Subscription",
+      "activePlan": "Active subscription",
+      "freePlan": "Free plan (basic features)",
+      "upgradeToPro": "Upgrade to Pro",
+      "manage": "Manage subscription",
+      "renewsOn": "Renews on",
+      "cancelsOn": "Cancels on",
+      "proFeatures": "Pro plan benefits",
+      "proFeaturesList": [
+        "Unlimited stock tracking",
+        "25+ technical indicators",
+        "AI Assistant — 10 queries/day",
+        "Full risk analytics dashboard",
+        "Priority signal processing"
+      ]
+    },
+    "connections": {
+      "title": "Broker Integrations",
+      "alpacaDesc": "Trade US equities via Alpaca Markets",
+      "kisName": "Korea Investment & Securities",
+      "kisDesc": "Trade KR equities via KIS API",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "connectAlpaca": "Connect Alpaca",
+      "comingSoon": "Coming Soon",
+      "connecting": "Connecting...",
+      "connect": "Connect",
+      "cancel": "Cancel",
+      "apiKey": "API Key",
+      "apiSecret": "API Secret",
+      "alpacaConnectSuccess": "Alpaca connected successfully!",
+      "alpacaConnectError": "Failed to connect Alpaca.",
+      "alpacaCredentialsRequired": "Please enter both API Key and API Secret.",
+      "brokerNote": "Broker integrations enable real-time portfolio sync and automated trading."
+    },
+    "language": {
+      "title": "Language",
+      "subtitle": "Select your preferred display language",
+      "korean": "Korean",
+      "english": "English",
+      "saved": "Language updated"
+    },
+    "dangerZone": "Danger Zone",
+    "signOut": "Sign Out",
+    "signingOut": "Signing out...",
+    "deleteAccount": "Delete Account",
+    "deleteAccountTitle": "Delete Account",
+    "deleteAccountDesc": "In-app account deletion is not currently supported. Please contact support to request account deletion.",
+    "contactSupport": "Contact Support",
+    "cancelBtn": "Cancel",
     "notifications": {
       "title": "Notification Settings",
       "subtitle": "Manage push, email, and KakaoTalk alerts",
       "morningBriefTitle": "Morning Brief Push",
-      "morningBriefDesc": "Get your portfolio summary and today's events every morning",
-      "timeLabel": "Delivery time",
-      "timeHelp": "Push is sent daily at this time (KST)",
+      "morningBriefDesc": "Receive your portfolio summary and daily events every morning",
+      "timeLabel": "Delivery time (KST)",
+      "timeHelp": "Push notifications are sent daily at this time (KST)",
       "emailTitle": "Email alerts",
       "emailDesc": "Available on Pro and above",
       "kakaoTitle": "KakaoTalk alerts",
-      "kakaoDesc": "Coming soon to the Premium plan",
+      "kakaoDesc": "Coming soon on the Premium plan",
       "enable": "Enable",
       "disable": "Disable",
       "saving": "Saving...",
       "saved": "Saved",
       "notSupported": "Push notifications are not supported on this browser",
       "permissionDenied": "Please allow notifications in your browser settings",
-      "enableFirst": "Enable push notifications first"
+      "enableFirst": "Enable push notifications first",
+      "pushEnabled": "Morning Brief push notifications enabled",
+      "pushDisabled": "Push notifications disabled",
+      "pushError": "Failed to update notification settings",
+      "emailEnabledSuccess": "Email notifications enabled",
+      "emailDisabledSuccess": "Email notifications disabled",
+      "emailProRequired": "Email alerts are available on the Pro plan and above",
+      "timeChanged": "Delivery time updated",
+      "dismissAnytime": "Notifications can be disabled at any time"
     }
   },
   "whatIf": {

@@ -5,135 +5,193 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ══════════════════════════════════════════════════════════
-   PivoxQuant Design System v2
-   Based on Nexora template — clean white, purple-blue-pink
+   PivoxQuant Design System v3 — Apple HIG + Bloomberg Terminal
+   Serious financial SaaS. Neutral-heavy + single accent.
    ══════════════════════════════════════════════════════════ */
 
 @theme inline {
+  /* shadcn tokens → CSS vars */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Typography */
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --font-heading: var(--font-heading);
+
+  /* Semantic — price direction (KR default) */
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-neutral: var(--neutral);
+
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-info: var(--info);
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
 }
 
-/* ── PivoxQuant v2 Design Tokens ── */
+/* ── Design tokens (light) ── */
 :root {
-  /* Colors — Light theme (primary) */
-  --sp-bg: #ffffff;
-  --sp-bg-subtle: #f8fafc;
-  --sp-bg-muted: #f1f5f9;
-  --sp-surface: #ffffff;
-  --sp-border: #e2e8f0;
-  --sp-border-light: #f1f5f9;
-
-  /* Text */
-  --sp-text: #0f172a;
-  --sp-text-secondary: #475569;
-  --sp-text-muted: #94a3b8;
-
-  /* Accent — Purple-Blue gradient (Nexora style) */
-  --sp-accent: #8b5cf6;
-  --sp-accent-hover: #7c3aed;
-  --sp-accent-light: #ede9fe;
-  --sp-accent-blue: #3b82f6;
-  --sp-accent-pink: #ec4899;
-
-  /* Semantic */
-  --sp-success: #10b981;
-  --sp-danger: #ef4444;
-  --sp-warning: #f59e0b;
-  --sp-info: #3b82f6;
-
-  /* Dark sections */
-  --sp-dark-bg: #0f172a;
-  --sp-dark-surface: #1e293b;
-  --sp-dark-border: rgba(51, 65, 85, 0.5);
-
-  /* ── shadcn compat (light Nexora theme) ── */
-  --background: #fafafa;
-  --foreground: #0f172a;
+  /* Base neutrals — slate */
+  --background: #ffffff;
+  --foreground: #0f172a;            /* slate-900 */
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
 
-  --primary: #8b5cf6;
-  --primary-foreground: #ffffff;
+  --muted: #f1f5f9;                 /* slate-100 */
+  --muted-foreground: #475569;      /* slate-600 */
 
+  --border: #e2e8f0;                /* slate-200 */
+  --input: #e2e8f0;
+
+  /* Single accent — Warm Gold */
+  --accent: #E2B96F;
+  --accent-foreground: #0f172a;
+  --accent-hover: #d4a558;
+  --accent-muted: #f6eedd;          /* gold-tinted surface */
+
+  /* Primary = slate-900 (serious), Secondary = slate-100 */
+  --primary: #0f172a;
+  --primary-foreground: #ffffff;
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
 
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --ring: #E2B96F;
+  --destructive: #dc2626;
 
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  /* Semantic — price direction (Korean convention default) */
+  --up: #dc2626;                    /* red-600 — rise */
+  --down: #2563eb;                  /* blue-600 — fall */
+  --neutral: #64748b;               /* slate-500 */
 
-  --success: #10b981;
-  --destructive: #ef4444;
-  --warning: #f59e0b;
-  --info: #3b82f6;
+  --success: #1a7a4c;
+  --warning: #b45309;
+  --info: #1d4ed8;
 
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #8b5cf6;
+  /* Typography scale — 8px-aligned */
+  --font-size-xs: 0.75rem;          /* 12px */
+  --font-size-sm: 0.875rem;         /* 14px */
+  --font-size-base: 1rem;           /* 16px */
+  --font-size-lg: 1.125rem;         /* 18px */
+  --font-size-xl: 1.5rem;           /* 24px */
+  --font-size-2xl: 2rem;            /* 32px */
+  --font-size-3xl: 3rem;            /* 48px */
 
-  --chart-1: #8b5cf6;
-  --chart-2: #3b82f6;
-  --chart-3: #10b981;
-  --chart-4: #f59e0b;
-  --chart-5: #ec4899;
+  /* Spacing scale — 8px grid */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
 
-  --radius: 0.75rem;
+  /* Radius — subtle */
+  --radius: 0.5rem;
+
+  /* Chart palette — neutral-first with accent */
+  --chart-1: #0f172a;               /* primary line */
+  --chart-2: #E2B96F;               /* accent */
+  --chart-3: #64748b;               /* slate-500 */
+  --chart-4: #94a3b8;               /* slate-400 */
+  --chart-5: #cbd5e1;               /* slate-300 */
 
   /* Sidebar */
   --sidebar: #ffffff;
   --sidebar-foreground: #475569;
-  --sidebar-primary: #8b5cf6;
+  --sidebar-primary: #0f172a;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: #8b5cf6;
+  --sidebar-ring: #E2B96F;
+}
+
+/* ── Design tokens (dark) ── */
+.dark {
+  --background: #0a0e17;
+  --foreground: #e2e8f0;
+  --card: #111827;
+  --card-foreground: #e2e8f0;
+  --popover: #111827;
+  --popover-foreground: #e2e8f0;
+
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+
+  --border: #334155;
+  --input: #334155;
+
+  --accent: #d4a558;
+  --accent-foreground: #0f172a;
+  --accent-hover: #e2b96f;
+  --accent-muted: #2a2218;
+
+  --primary: #e2e8f0;
+  --primary-foreground: #0a0e17;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+
+  --ring: #d4a558;
+  --destructive: #f87171;
+
+  --up: #ef4444;
+  --down: #3b82f6;
+  --neutral: #94a3b8;
+
+  --chart-1: #e2e8f0;
+  --chart-2: #d4a558;
+  --chart-3: #94a3b8;
+  --chart-4: #64748b;
+  --chart-5: #475569;
+
+  --sidebar: #0a0e17;
+  --sidebar-foreground: #94a3b8;
+  --sidebar-primary: #e2e8f0;
+  --sidebar-primary-foreground: #0a0e17;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #e2e8f0;
+  --sidebar-border: #334155;
+  --sidebar-ring: #d4a558;
 }
 
 /* ── Base layer ── */
@@ -141,180 +199,258 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-    font-size: 15px;
-    line-height: 1.6;
+  html {
+    font-family: var(--font-sans), "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  html {
-    @apply font-sans;
+  body {
+    @apply bg-background text-foreground;
+    font-size: 15px;
+    line-height: 1.55;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading), var(--font-sans), "Pretendard Variable", system-ui, sans-serif;
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+  /* Numbers — always tabular for financial UI */
+  :where(table td, .numeric, [data-numeric]) {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 }
 
-/* ── Gradient text — purple > blue > pink ── */
-.gradient-text {
-  background: linear-gradient(to right, #7c3aed, #3b82f6, #ec4899);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* ══════════════════════════════════════════════════════════
+   Utility classes
+   ══════════════════════════════════════════════════════════ */
+
+/* Monospaced numeric — for prices, returns, ratios */
+.numeric {
+  font-family: var(--font-mono), ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.01em;
 }
 
-/* ── Primary gradient background ── */
-.bg-primary-gradient {
-  background: linear-gradient(135deg, #7c3aed, #3b82f6, #ec4899);
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
-/* ── Glass panels (Nexora) ── */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+/* Price direction — semantic, toggleable per user */
+.up-color   { color: var(--up); }
+.down-color { color: var(--down); }
+.neutral-color { color: var(--neutral); }
+
+.up-bg   { background-color: color-mix(in srgb, var(--up) 8%, transparent); }
+.down-bg { background-color: color-mix(in srgb, var(--down) 8%, transparent); }
+
+/* US convention (green rise / red fall) — applied when
+   user picks 'us' mode; toggle via [data-price-mode="us"] on html/body */
+[data-price-mode="us"] {
+  --up: #059669;                    /* emerald-600 */
+  --down: #dc2626;                  /* red-600 */
+}
+[data-price-mode="us"].dark,
+.dark[data-price-mode="us"] {
+  --up: #10b981;
+  --down: #ef4444;
 }
 
-.glass-panel-dark {
-  background: rgba(15, 23, 42, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+/* Accent utilities */
+.bg-accent-muted { background-color: var(--accent-muted); }
+.text-accent { color: var(--accent); }
+.border-accent { border-color: var(--accent); }
+
+/* Signal badges — neutral, bordered, no hue beyond semantic */
+.signal-positive {
+  color: var(--up);
+  background: color-mix(in srgb, var(--up) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--up) 20%, transparent);
+}
+.signal-negative {
+  color: var(--down);
+  background: color-mix(in srgb, var(--down) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--down) 20%, transparent);
+}
+.signal-neutral {
+  color: var(--muted-foreground);
+  background: var(--muted);
+  border: 1px solid var(--border);
 }
 
-/* ── Cards (Nexora clean style) ── */
+/* Card — Apple HIG: subtle border, minimal shadow */
 .sp-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
 }
 .sp-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--foreground) 18%, var(--border));
 }
 
-/* ── Spring easing ── */
-.spring-transition {
+/* Data cell — dense financial tables */
+.data-cell {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Spring easing (kept, but scoped) */
+.ease-apple {
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Scroll reveal animation ── */
+/* ══════════════════════════════════════════════════════════
+   Animations — minimal, purposeful
+   ══════════════════════════════════════════════════════════ */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.status-dot.active   { background: var(--success); }
+.status-dot.inactive { background: var(--neutral); }
+.status-dot.warning  { background: var(--warning); }
+.status-dot.danger   { background: var(--destructive); }
+
+/* Direction-aware price flash — for live ticks */
+@keyframes price-flash-up {
+  0%   { background-color: color-mix(in srgb, var(--up) 14%, transparent); }
+  100% { background-color: transparent; }
+}
+@keyframes price-flash-down {
+  0%   { background-color: color-mix(in srgb, var(--down) 14%, transparent); }
+  100% { background-color: transparent; }
+}
+.price-flash-up   { animation: price-flash-up 900ms ease-out forwards; }
+.price-flash-down { animation: price-flash-down 900ms ease-out forwards; }
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--muted) 25%, var(--border) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* Scroll reveal */
 .sp-reveal {
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transform: translateY(12px);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
 }
 .sp-reveal.sp-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* ── Loading skeleton ── */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.skeleton {
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 0.5rem;
-}
-
-/* ── Status indicators ── */
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-.status-dot.active { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
-.status-dot.inactive { background: #94a3b8; }
-.status-dot.warning { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
-.status-dot.danger { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
-
-/* ── Text gradient ── */
-.text-gradient {
-  background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ── Signal badges ── */
-.signal-positive {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  color: #059669;
-}
-.signal-negative {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #dc2626;
-}
-.signal-neutral {
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  color: #d97706;
-}
-
-/* ── PnL glow borders ── */
-.pnl-glow-positive {
-  border-left: 3px solid #10b981;
-  box-shadow: -4px 0 16px rgba(16, 185, 129, 0.12);
-}
-.pnl-glow-negative {
-  border-left: 3px solid #ef4444;
-  box-shadow: -4px 0 16px rgba(239, 68, 68, 0.1);
-}
-
-/* ── Filter pill ── */
+/* Filter pill — bordered, neutral */
 .filter-pill {
   border-radius: 9999px;
-  padding: 0.5rem 0.875rem;
+  padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 600;
-  min-height: 2.75rem;
+  font-weight: 500;
+  min-height: 2.25rem;
   display: inline-flex;
   align-items: center;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--border);
+  color: var(--muted-foreground);
+  background: transparent;
+  transition: all 180ms ease-out;
+}
+.filter-pill:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--foreground) 30%, var(--border));
 }
 .filter-pill.active {
-  background: rgba(139, 92, 246, 0.1);
-  color: #7c3aed;
-  border: 1px solid rgba(139, 92, 246, 0.2);
-}
-.filter-pill:not(.active) {
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-}
-.filter-pill:not(.active):hover {
-  background: #f8fafc;
-  color: #0f172a;
-  border-color: #cbd5e1;
+  color: var(--foreground);
+  background: var(--muted);
+  border-color: var(--foreground);
 }
 
-/* ── Tabular numbers (layout shift prevention) ── */
-.tabular {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+/* Scrollbar */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+.scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
+/* Safe area (notch phones) */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ── What-If share card print-isolation ──
-   When user clicks "Save Image" we call window.print(); this CSS hides
-   everything except #what-if-share-card so they can print/save a clean
-   version of just the card. */
+/* Onboarding slider */
+.slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+}
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--foreground);
+  cursor: pointer;
+  transition: transform 180ms ease-out;
+}
+.slider-input::-webkit-slider-thumb:hover { transform: scale(1.1); }
+.slider-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--foreground);
+  cursor: pointer;
+}
+
+/* PWA standalone */
+.pwa-standalone .hide-in-pwa { display: none; }
+
+/* What-If share card print isolation (kept functional) */
 @media print {
-  body > * {
-    visibility: hidden !important;
-  }
+  body > * { visibility: hidden !important; }
   #what-if-share-card,
-  #what-if-share-card * {
-    visibility: visible !important;
-  }
+  #what-if-share-card * { visibility: visible !important; }
   #what-if-share-card {
     position: absolute !important;
     left: 0 !important;
@@ -324,130 +460,75 @@
     border: none !important;
   }
 }
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-}
 
-/* ── Animations ── */
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.animate-fade-up {
-  animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes shimmer-slide {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
-}
-.animate-shimmer-slide {
-  animation: shimmer-slide 1.6s ease-in-out infinite;
-  background: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.3) 50%, transparent 100%);
-}
-
-/* Direction-aware price flash */
-@keyframes price-flash-up {
-  0% { background-color: rgba(16, 185, 129, 0.12); }
-  100% { background-color: transparent; }
-}
-@keyframes price-flash-down {
-  0% { background-color: rgba(239, 68, 68, 0.1); }
-  100% { background-color: transparent; }
-}
-.price-flash-up {
-  animation: price-flash-up 1.5s ease-out forwards;
-}
-.price-flash-down {
-  animation: price-flash-down 1.5s ease-out forwards;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee 30s linear infinite;
-}
-
-/* ── Scrollbar ── */
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-.scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
-.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-.scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-/* ── Safe area (notch phones) ── */
-.safe-area-pb {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* ── Onboarding slider ── */
-.slider-input {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  border-radius: 3px;
-  background: #e2e8f0;
-  outline: none;
-}
-.slider-input::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #8b5cf6;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
-}
-.slider-input::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-}
-.slider-input::-webkit-slider-thumb:active {
-  transform: scale(1.05);
-}
-.slider-input::-moz-range-thumb {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  background: #8b5cf6;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-}
-
-/* ── PWA standalone: hide browser-specific elements ── */
-.pwa-standalone .hide-in-pwa {
-  display: none;
-}
-
-/* ── Reduced motion ── */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .sp-reveal,
   .sp-card,
-  .spring-transition,
   .animate-fade-up,
-  .animate-shimmer-slide,
-  .animate-marquee {
+  .animate-marquee,
+  .status-dot,
+  .skeleton,
+  .price-flash-up,
+  .price-flash-down {
     animation: none !important;
     transition: none !important;
     transform: none !important;
   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Legacy shims — old classes still referenced in old pages.
+   Map them to new neutral tokens so nothing breaks visually
+   while Phase 3+ replaces call sites.
+   ══════════════════════════════════════════════════════════ */
+
+/* Old violet-blue-pink text gradient → foreground */
+.gradient-text,
+.text-gradient {
+  color: var(--foreground);
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: currentColor;
+}
+
+/* Old purple-blue-pink background gradient → primary solid */
+.bg-primary-gradient {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Old glass panels → flat card */
+.glass-panel,
+.glass-panel-dark {
+  background: var(--card);
+  border: 1px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* Old shimmer slide */
+.animate-shimmer-slide {
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--foreground) 8%, transparent) 50%, transparent 100%);
+}
+
+/* Old PnL glow borders → subtle semantic borders */
+.pnl-glow-positive {
+  border-left: 2px solid var(--up);
+}
+.pnl-glow-negative {
+  border-left: 2px solid var(--down);
+}
+
+/* Legacy .tabular — keep */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Spring transition legacy alias */
+.spring-transition {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
