@@ -108,8 +108,13 @@ QUESTIONNAIRE = [
 
 @profile_bp.route("/questionnaire")
 def get_questionnaire():
-    """Return the 8-question onboarding form structure."""
-    return jsonify({"questions": QUESTIONNAIRE})
+    """Return the 20-question v2 questionnaire (falls back to v1 8-question)."""
+    try:
+        from questionnaire import QUESTIONNAIRE_V2
+        return jsonify({"questions": QUESTIONNAIRE_V2})
+    except ImportError:
+        # Fallback to v1 if questionnaire.py not available
+        return jsonify({"questions": QUESTIONNAIRE})
 
 
 @profile_bp.route("/onboarding", methods=["POST"])
@@ -119,8 +124,14 @@ def submit_onboarding():
     data = request.get_json() or {}
     answers = data.get("answers", {})
 
-    # Calculate profile type from answers
-    profile_type = calculate_profile_type(answers)
+    # Try v2 classification first (20-question), fall back to v1
+    profile_v2_result = None
+    try:
+        from questionnaire import calculate_profile_v2
+        profile_v2_result = calculate_profile_v2(answers)
+        profile_type = profile_v2_result.get("investor_type", "risk_managed_growth")
+    except (ImportError, Exception):
+        profile_type = calculate_profile_type(answers)
 
     # Create or update investment profile
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()

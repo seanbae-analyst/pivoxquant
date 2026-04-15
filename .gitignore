@@ -31,3 +31,9 @@ tsconfig.tsbuildinfo
 # Build artifacts
 dist/
 build/
+Untitled*.canvas
+.bkit/
+.obsidian/
+/tmp/
+.DS_Store
+.github/workflows/ci.yml*

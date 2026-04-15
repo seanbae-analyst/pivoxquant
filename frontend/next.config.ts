@@ -11,18 +11,6 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `${BACKEND_URL}/api/:path*`,
       },
-      {
-        source: "/login",
-        destination: `${BACKEND_URL}/login`,
-      },
-      {
-        source: "/signup",
-        destination: `${BACKEND_URL}/signup`,
-      },
-      {
-        source: "/logout",
-        destination: `${BACKEND_URL}/logout`,
-      },
     ];
   },
   async headers() {
@@ -48,6 +36,14 @@ const nextConfig: NextConfig = {
           {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
           },
         ],
       },

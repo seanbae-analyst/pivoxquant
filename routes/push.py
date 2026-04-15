@@ -85,7 +85,7 @@ def send_push_to_user(user_id: int, title: str, body: str,
         return
 
     vapid_private = os.environ.get("VAPID_PRIVATE_KEY", "")
-    vapid_email = os.environ.get("VAPID_EMAIL", "mailto:admin@stockpilot.app")
+    vapid_email = os.environ.get("VAPID_EMAIL", "mailto:admin@pivoxquant.com")
 
     if not vapid_private:
         logger.warning("VAPID_PRIVATE_KEY not set — skipping push notification")

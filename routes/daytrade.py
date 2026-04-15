@@ -128,7 +128,7 @@ def analyze(ticker):
                 elif gap < -3: signals.append({"type": "bearish", "msg": f"Gap down {gap:.1f}%", "msg_kr": f"갭 하락 {gap:.1f}%"})
 
             score = max(0, min(100, score))
-            signal = "BUY" if score >= 65 else "SELL" if score < 30 else "HOLD"
+            signal = "POSITIVE" if score >= 65 else "NEGATIVE" if score < 30 else "NEUTRAL"
             atr = (high - low) if high > low else price * 0.02
             tp_price = round(price + atr * 0.7)
             sl_price = round(price - atr * 0.5)
@@ -207,7 +207,9 @@ def stream():
                     pass
                 yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
             except Exception as e:
-                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                import logging as _logging
+                _logging.getLogger(__name__).error(f"Daytrade stream error: {e}")
+                yield f"data: {json.dumps({'error': 'Price update failed'})}\n\n"
             time.sleep(10)
 
     return Response(generate(), mimetype="text/event-stream",

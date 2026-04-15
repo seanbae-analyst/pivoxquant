@@ -16,7 +16,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-slate-100 hover:text-foreground",
         destructive:
-          "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 focus-visible:border-red-400 focus-visible:ring-red-400/20",
+          "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 focus-visible:border-red-400 focus-visible:ring-red-400/20",
         link: "text-emerald-600 underline-offset-4 hover:underline",
       },
       size: {

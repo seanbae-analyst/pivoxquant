@@ -14,6 +14,7 @@ def serialize_user(u) -> dict:
         "subscription_status": getattr(u, "subscription_status", "inactive") or "inactive",
         "onboarding_completed": getattr(u, "onboarding_completed", False),
         "avatar_url": getattr(u, "avatar_url", None),
+        "oauth_provider": getattr(u, "oauth_provider", None),
     }
 
 

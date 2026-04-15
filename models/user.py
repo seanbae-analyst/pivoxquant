@@ -10,7 +10,9 @@ class User(UserMixin, db.Model):
     email            = db.Column(db.String(120),  unique=True, nullable=False)
     password_hash    = db.Column(db.String(200),  nullable=True)
     name             = db.Column(db.String(100),  default="")
+    oauth_provider   = db.Column(db.String(20),   nullable=True)  # google, kakao, or NULL (email)
     google_id        = db.Column(db.String(100),  unique=True, nullable=True)
+    kakao_id         = db.Column(db.String(100),  unique=True, nullable=True)
     avatar_url       = db.Column(db.String(500),  nullable=True)
     available_capital     = db.Column(db.Float, default=0.0)
     available_capital_krw = db.Column(db.Float, default=0.0)
@@ -32,7 +34,9 @@ class User(UserMixin, db.Model):
                                          lazy=True)
 
     def set_pw(self, pw):
-        self.password_hash = generate_password_hash(pw, method="pbkdf2:sha256")
+        self.password_hash = generate_password_hash(
+            pw, method="pbkdf2:sha256", salt_length=16
+        )
 
     def chk_pw(self, pw):
         if not self.password_hash:

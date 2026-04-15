@@ -50,7 +50,7 @@ def discover():
             if r:
                 results.append(r)
 
-    order = {"BUY": 0, "HOLD": 1, "SELL": 2}
+    order = {"POSITIVE": 0, "NEUTRAL": 1, "NEGATIVE": 2}
     results.sort(key=lambda x: (order.get(x.get("signal", ""), 9), -x.get("priority", 0)))
     cache_service.discover_cache[uid] = {"data": results, "ts": now}
     return jsonify({"results": results, "cached": False})
