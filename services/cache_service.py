@@ -1,6 +1,8 @@
 """Signal cache and discovery cache management."""
 import json
 import logging
+import threading
+import time
 from datetime import datetime
 
 from extensions import db
@@ -13,6 +15,68 @@ discover_cache: dict = {}  # user_id -> {ts, data}
 DISCOVER_TTL = 600         # 10 minutes
 
 ca_cache: dict = {}        # cross-asset cache
+
+# ── Earnings Tone cache (90-day TTL, lazy-loaded from routes/ai.py) ──
+# Structure: {ticker: {"data": {...}, "ts": unix_timestamp}}
+# Earnings calls are quarterly, so 90 days comfortably covers one cycle.
+# Only written by /api/ai/earnings-tone endpoint (Pro/Premium users).
+# engine.py reads this cache to surface results without ever triggering
+# a Claude API call from the hot analyze() path.
+earnings_tone_cache: dict = {}
+EARNINGS_TONE_TTL = 90 * 24 * 3600  # 90 days
+_earnings_tone_lock = threading.Lock()
+
+# Daily call budget for earnings-tone to cap Claude API spend even if many
+# Pro users hit it. Reset on the calendar day (UTC).
+EARNINGS_TONE_DAILY_LIMIT = 50
+_earnings_tone_usage: dict = {"day": None, "count": 0}
+
+
+def earnings_tone_cache_get(ticker: str):
+    """Thread-safe read of the earnings-tone cache. Returns data dict or None."""
+    if not ticker:
+        return None
+    ticker = ticker.upper().strip()
+    with _earnings_tone_lock:
+        entry = earnings_tone_cache.get(ticker)
+        if not entry:
+            return None
+        if time.time() - entry.get("ts", 0) >= EARNINGS_TONE_TTL:
+            return None
+        return entry.get("data")
+
+
+def earnings_tone_cache_set(ticker: str, data: dict) -> None:
+    """Thread-safe write to the earnings-tone cache."""
+    if not ticker or data is None:
+        return
+    ticker = ticker.upper().strip()
+    with _earnings_tone_lock:
+        earnings_tone_cache[ticker] = {"data": data, "ts": time.time()}
+
+
+def earnings_tone_budget_check_and_increment() -> bool:
+    """Returns True if the daily budget still has room (and increments usage).
+    Returns False if today's limit has been reached — caller should reject with 429.
+    """
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    with _earnings_tone_lock:
+        if _earnings_tone_usage["day"] != today:
+            _earnings_tone_usage["day"] = today
+            _earnings_tone_usage["count"] = 0
+        if _earnings_tone_usage["count"] >= EARNINGS_TONE_DAILY_LIMIT:
+            return False
+        _earnings_tone_usage["count"] += 1
+        return True
+
+
+def earnings_tone_budget_remaining() -> int:
+    """Return how many calls are left in today's budget."""
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    with _earnings_tone_lock:
+        if _earnings_tone_usage["day"] != today:
+            return EARNINGS_TONE_DAILY_LIMIT
+        return max(0, EARNINGS_TONE_DAILY_LIMIT - _earnings_tone_usage["count"])
 
 
 def save_signal(ticker: str, data: dict):
