@@ -11,7 +11,7 @@
  * Everything below is purely presentational.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
@@ -99,6 +99,10 @@ const fetcher = async (url: string): Promise<WhatIfResponse> => {
 export function WhatIfClient() {
   const t = useT();
   const searchParams = useSearchParams();
+  const resultAnchorRef = useRef<HTMLDivElement | null>(null);
+  // Track whether the user (as opposed to first-paint hydration) triggered
+  // the current request — we only auto-scroll in that case.
+  const shouldScrollOnNextResultRef = useRef(false);
 
   // Bootstrap form state from URL (SSR + client hydration safe).
   const [form, setForm] = useState<WhatIfFormState>(() =>
@@ -159,6 +163,7 @@ export function WhatIfClient() {
   const onSubmit = useCallback(() => {
     if (!form.ticker || !form.startDate || form.amount <= 0) return;
     const q = buildQuery(form);
+    shouldScrollOnNextResultRef.current = true;
     // Always trigger a re-fetch, even if the query string is identical
     // (force new SWR key via timestamp suffix that we strip in the fetcher key).
     setActiveQuery(q);
@@ -184,6 +189,25 @@ export function WhatIfClient() {
   const apiError = data && !data.success ? data : null;
 
   const busy = isLoading || isValidating;
+
+  /* When a user-initiated calculation completes, scroll the result into view.
+     Without this, the result renders below the fold and the page appears
+     "empty" — users were confused that nothing happened after "Calculate". */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!success || busy) return;
+    if (!shouldScrollOnNextResultRef.current) return;
+    shouldScrollOnNextResultRef.current = false;
+    const node = resultAnchorRef.current;
+    if (!node) return;
+    // Let the result's enter animation start, then align the top of the card
+    // with the viewport. `block: "start"` keeps the form visible above the
+    // fold when possible on larger screens.
+    const id = window.setTimeout(() => {
+      node.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+    return () => window.clearTimeout(id);
+  }, [success, busy]);
 
   return (
     <main className="min-h-[100dvh] bg-gradient-to-b from-white via-slate-50 to-white">
@@ -264,12 +288,16 @@ export function WhatIfClient() {
           </div>
         )}
 
-        {/* Result */}
-        {success ? (
-          <WhatIfResult data={success} shareUrl={shareUrl} />
-        ) : busy ? (
-          <div className="mt-6 h-96 animate-pulse rounded-3xl border border-slate-200 bg-slate-50" />
-        ) : null}
+        {/* Result — anchored for smooth-scroll on calculate.
+            The wrapper is a plain block so the result stays in normal
+            document flow regardless of what <WhatIfResult> does internally. */}
+        <div ref={resultAnchorRef} className="relative">
+          {success ? (
+            <WhatIfResult data={success} shareUrl={shareUrl} />
+          ) : busy ? (
+            <div className="mt-6 h-96 animate-pulse rounded-3xl border border-slate-200 bg-slate-50" />
+          ) : null}
+        </div>
 
         {/* Disclaimer */}
         <section className="mt-8 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] leading-relaxed text-slate-600">

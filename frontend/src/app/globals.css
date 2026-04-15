@@ -446,15 +446,31 @@
 /* PWA standalone */
 .pwa-standalone .hide-in-pwa { display: none; }
 
-/* What-If share card print isolation (kept functional) */
+/* What-If share card — screen-side belt-and-suspenders.
+   Explicitly lock the card to normal document flow on screen so nothing
+   (inherited motion transform, third-party screenshot helper, stale print
+   emulation) can yank it out of the form → result order. */
+@media screen {
+  #what-if-share-card {
+    position: static !important;
+    inset: auto !important;
+    transform: none;
+    contain: layout;
+  }
+}
+
+/* What-If share card print isolation — screen styles stay in normal flow.
+   Scoped strictly to @media print so the card never escapes layout on screen.
+   Avoid `position: absolute` which, if the print rule leaked (historically
+   observed when DevTools print-preview emulation is active), caused the
+   result card to overlay the viewport. */
 @media print {
-  body > * { visibility: hidden !important; }
+  @page { margin: 0; }
+  body * { visibility: hidden !important; }
   #what-if-share-card,
   #what-if-share-card * { visibility: visible !important; }
   #what-if-share-card {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    margin: 0 !important;
     width: 100% !important;
     box-shadow: none !important;
     border: none !important;
