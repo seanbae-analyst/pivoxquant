@@ -78,12 +78,12 @@ export function middleware(request: NextRequest) {
 
   const isDev = process.env.NODE_ENV === "development";
   const connectSrc = isDev
-    ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app"
-    : "'self' https://*.railway.app";
+    ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app https://cdn.jsdelivr.net"
+    : "'self' https://*.railway.app https://cdn.jsdelivr.net";
 
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval';
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     font-src 'self' https://cdn.jsdelivr.net;
     img-src 'self' data: blob:;
