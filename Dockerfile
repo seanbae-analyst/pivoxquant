@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 EXPOSE 5050
-CMD ["python", "run.py"]
+CMD ["sh", "-c", "gunicorn app:app --worker-class gevent --workers 2 --bind 0.0.0.0:${PORT:-5050} --timeout 120 --keep-alive 5 --log-level info"]

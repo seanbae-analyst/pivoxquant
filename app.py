@@ -6,12 +6,14 @@ Supports US + Korean equities.
 
 import os
 import logging
+import threading
 
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), override=True)
 
 import sentry_sdk
 from flask import Flask, redirect
+from sqlalchemy import text
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from config import Config
@@ -114,7 +116,20 @@ def create_app():
     with app.app_context():
         db.create_all()
         _run_migrations(app)
-        _populate_cache(app)
+
+    # Cache warm-up — off the boot path.
+    # Originally this ran synchronously and called FMP/Alpaca per ticker,
+    # pushing boot time past Railway's 30s healthcheck and doubling the API
+    # quota burn when gunicorn ran 2+ workers. Now it runs in a daemon thread
+    # so the HTTP server binds immediately, and is gated by POPULATE_CACHE_ON_BOOT
+    # (default "1"; set "0" to skip entirely — e.g., for worker #2).
+    if os.environ.get("POPULATE_CACHE_ON_BOOT", "1") == "1":
+        threading.Thread(
+            target=_populate_cache,
+            args=(app,),
+            daemon=True,
+            name="cache-warmup",
+        ).start()
 
     # Background scheduler
     _init_scheduler(app)
@@ -127,8 +142,37 @@ def _run_migrations(app):
 
     PostgreSQL rolls back the entire transaction on ALTER TABLE errors,
     so we check column existence first instead of relying on try/except.
+
+    When running on PostgreSQL with multiple workers (gunicorn on Railway),
+    we acquire a session-level advisory lock so that only one worker performs
+    the check-then-act migration. Other workers block until it completes,
+    then see the columns already exist and no-op. SQLite stays single-process
+    so the lock is skipped.
     """
-    from sqlalchemy import text as _text, inspect as _inspect
+    dialect = db.engine.dialect.name
+
+    if dialect == "postgresql":
+        # hashtext() returns int4 — perfect for pg_advisory_lock(bigint).
+        # Lock is held on the pooled connection for the duration of migrations.
+        db.session.execute(text(
+            "SELECT pg_advisory_lock(hashtext('pivoxquant_migrate'))"
+        ))
+        try:
+            _do_migrations()
+        finally:
+            db.session.execute(text(
+                "SELECT pg_advisory_unlock(hashtext('pivoxquant_migrate'))"
+            ))
+            db.session.commit()
+    else:
+        # SQLite — single process, no contention possible.
+        _do_migrations()
+
+
+def _do_migrations():
+    """Idempotent column-addition migrations. Safe to call concurrently only
+    when protected by an external lock (see _run_migrations)."""
+    from sqlalchemy import inspect as _inspect
 
     inspector = _inspect(db.engine)
 
@@ -151,11 +195,11 @@ def _run_migrations(app):
         if unique and is_postgres:
             sql += " UNIQUE"
         with db.engine.begin() as conn:
-            conn.execute(_text(sql))
+            conn.execute(text(sql))
             # For SQLite (and as a fallback), create the unique index separately
             if unique and not is_postgres:
                 idx_name = f"uq_{table}_{column}"
-                conn.execute(_text(
+                conn.execute(text(
                     f"CREATE UNIQUE INDEX IF NOT EXISTS {idx_name} ON {table}({column})"
                 ))
         logger.info(f"Migration: added {table}.{column}")
@@ -192,25 +236,31 @@ def _run_migrations(app):
 
 
 def _populate_cache(app):
+    """Warm the signal cache for currently-held tickers.
+
+    Runs in a daemon thread off the boot path, so it enters its own
+    app context. Failures here must never kill the worker.
+    """
     from models import Position, SignalCache
-    try:
-        positions = Position.query.all()
-        tickers = list(set(p.ticker for p in positions))
-        cached = set(c.ticker for c in SignalCache.query.all())
-        missing = [t for t in tickers if t not in cached]
-        if missing:
-            logger.info(f"Populating signal cache for {len(missing)} tickers on startup...")
-            for ticker in missing:
-                try:
-                    r = svc.engine.analyze(ticker, 10000)
-                    if r:
-                        cache_service.save_signal(ticker, r)
-                        logger.info(f"  Cached: {ticker}")
-                except Exception as e:
-                    logger.error(f"  Failed to cache {ticker}: {e}")
-            logger.info("Startup cache population complete.")
-    except Exception as e:
-        logger.error(f"Startup cache error: {e}")
+    with app.app_context():
+        try:
+            positions = Position.query.all()
+            tickers = list(set(p.ticker for p in positions))
+            cached = set(c.ticker for c in SignalCache.query.all())
+            missing = [t for t in tickers if t not in cached]
+            if missing:
+                logger.info(f"[cache-warmup] populating signal cache for {len(missing)} tickers...")
+                for ticker in missing:
+                    try:
+                        r = svc.engine.analyze(ticker, 10000)
+                        if r:
+                            cache_service.save_signal(ticker, r)
+                            logger.info(f"[cache-warmup]   cached: {ticker}")
+                    except Exception as e:
+                        logger.error(f"[cache-warmup]   failed {ticker}: {e}")
+                logger.info("[cache-warmup] complete.")
+        except Exception as e:
+            logger.error(f"[cache-warmup] error: {e}")
 
 
 def _init_scheduler(app):
