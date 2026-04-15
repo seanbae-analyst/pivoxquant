@@ -10,7 +10,6 @@ import { fmtUsd, fmtKrw, fmtPct, pnlColor } from "@/lib/format";
 import { usePortfolio } from "@/lib/hooks";
 import type { Position, LookupResult, PortfolioResponse } from "@/lib/types";
 import { ScoreBar } from "@/components/dashboard/score-bar";
-import { EmptyState } from "@/components/ui/empty-state";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
@@ -1475,7 +1474,11 @@ export default function PortfolioPage() {
           </div>
           <button
             type="button"
-            onClick={() => setShowAddModal(true)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowAddModal(true);
+            }}
             className="flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.97]"
           >
             <Plus className="h-4 w-4" />
@@ -1520,11 +1523,29 @@ export default function PortfolioPage() {
 
         {/* ── Empty state ── */}
         {!isLoading && !error && positions.length === 0 && (
-          <EmptyState
-            icon={<Briefcase className="h-8 w-8" />}
-            title="포지션 없음"
-            description="첫 번째 포지션을 추가하여 포트폴리오 성과를 추적해 보세요."
-          />
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-6 text-slate-400">
+              <Briefcase className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
+              포지션 없음
+            </h3>
+            <p className="text-slate-500 max-w-sm mb-6">
+              첫 번째 포지션을 추가하여 포트폴리오 성과를 추적해 보세요.
+            </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowAddModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 active:scale-[0.97]"
+            >
+              <Plus className="h-4 w-4" />
+              포지션 추가
+            </button>
+          </div>
         )}
 
         {/* ── Data loaded with positions ── */}

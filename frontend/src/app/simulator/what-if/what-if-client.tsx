@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
 import { motion } from "motion/react";
@@ -51,12 +51,15 @@ function parseCurrency(v: string | null): "USD" | "KRW" {
 function stateFromSearchParams(
   sp: URLSearchParams,
 ): WhatIfFormState {
-  const ticker = (sp.get("t") || "").toUpperCase();
-  const startDate = sp.get("d") || "";
-  const amountRaw = sp.get("a");
+  // Accept both short keys (t/d/a/r/c) and legacy/descriptive keys
+  // (ticker / start_date / amount / recurring / currency) so shared links
+  // from older builds still hydrate the form correctly.
+  const ticker = (sp.get("t") || sp.get("ticker") || "").toUpperCase();
+  const startDate = sp.get("d") || sp.get("start_date") || "";
+  const amountRaw = sp.get("a") ?? sp.get("amount");
   const amount = amountRaw ? Number(amountRaw) : NaN;
-  const recurring = parseRecurring(sp.get("r"));
-  const currency = parseCurrency(sp.get("c"));
+  const recurring = parseRecurring(sp.get("r") ?? sp.get("recurring"));
+  const currency = parseCurrency(sp.get("c") ?? sp.get("currency"));
 
   if (!ticker || !startDate || !isFinite(amount) || amount <= 0) {
     return DEFAULT_STATE;
@@ -95,7 +98,6 @@ const fetcher = async (url: string): Promise<WhatIfResponse> => {
 
 export function WhatIfClient() {
   const t = useT();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Bootstrap form state from URL (SSR + client hydration safe).
@@ -157,9 +159,17 @@ export function WhatIfClient() {
   const onSubmit = useCallback(() => {
     if (!form.ticker || !form.startDate || form.amount <= 0) return;
     const q = buildQuery(form);
+    // Always trigger a re-fetch, even if the query string is identical
+    // (force new SWR key via timestamp suffix that we strip in the fetcher key).
     setActiveQuery(q);
-    router.push(`/simulator/what-if?${q}`, { scroll: false });
-  }, [form, router]);
+    // Update the URL WITHOUT an App Router navigation. router.push triggers
+    // an RSC roundtrip which, under certain edge conditions (auth guard,
+    // middleware locale cookie set), was causing the page to bounce to /home
+    // or /portfolio. history.replaceState is safe: it updates the bar only.
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/simulator/what-if?${q}`);
+    }
+  }, [form]);
 
   /* ── Derived ── */
 
