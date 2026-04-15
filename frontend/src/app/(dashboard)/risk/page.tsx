@@ -1,388 +1,694 @@
 "use client";
 
-import { useMemo } from "react";
-import { usePortfolio, useAnalytics, useVixStrategy } from "@/lib/hooks";
+import useSWR from "swr";
+import { API } from "@/lib/endpoints";
+import { useAnalytics } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
 import { fmtUsd, fmtPct } from "@/lib/format";
-import { Shield, AlertTriangle, BarChart3, Target } from "lucide-react";
+import { Skeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { usePortfolio } from "@/lib/hooks";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  Cell,
-} from "recharts";
+  Shield,
+  AlertTriangle,
+  TrendingDown,
+  Activity,
+  CheckCircle,
+  XCircle,
+  BarChart3,
+} from "lucide-react";
 
-/* ── Risk level helpers ── */
+/* ── Types ── */
 
-type RiskLevel = "LOW" | "MODERATE" | "HIGH" | "EXTREME";
-
-function getRiskLevel(score: number): RiskLevel {
-  if (score <= 25) return "LOW";
-  if (score <= 50) return "MODERATE";
-  if (score <= 75) return "HIGH";
-  return "EXTREME";
+interface VaRResponse {
+  var_95?: number;
+  var_99?: number;
+  method?: string;
+  confidence_level?: number;
+  portfolio_value?: number;
 }
 
-function riskBadgeStyle(level: RiskLevel): string {
-  switch (level) {
-    case "LOW":
-      return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-    case "MODERATE":
-      return "bg-yellow-500/15 text-yellow-400 border-yellow-500/30";
-    case "HIGH":
-      return "bg-orange-500/15 text-orange-400 border-orange-500/30";
-    case "EXTREME":
-      return "bg-red-500/15 text-red-400 border-red-500/30";
-  }
+interface DrawdownResponse {
+  max_drawdown?: number;
+  current_drawdown?: number;
+  recovery_days?: number;
+  drawdown_start?: string;
+  drawdown_end?: string;
+  peak_value?: number;
+  trough_value?: number;
 }
 
-function riskGaugeColor(score: number): string {
-  if (score <= 25) return "#10b981";
-  if (score <= 50) return "#eab308";
-  if (score <= 75) return "#f97316";
-  return "#ef4444";
+interface StressScenario {
+  name?: string;
+  impact_pct?: number;
+  description?: string;
+  portfolio_loss?: number;
 }
 
-function vixRegimeStyle(regime: string): { bg: string; text: string; label: string } {
-  switch (regime) {
-    case "low_vol":
-      return { bg: "bg-emerald-500/15", text: "text-emerald-400", label: "Low Volatility" };
-    case "normal":
-      return { bg: "bg-cyan-500/15", text: "text-cyan-400", label: "Normal" };
-    case "elevated":
-      return { bg: "bg-yellow-500/15", text: "text-yellow-400", label: "Elevated" };
-    case "high_vol":
-      return { bg: "bg-orange-500/15", text: "text-orange-400", label: "High Volatility" };
-    case "crisis":
-      return { bg: "bg-red-500/15", text: "text-red-400", label: "Crisis" };
-    default:
-      return { bg: "bg-zinc-500/15", text: "text-zinc-400", label: regime };
-  }
+interface StressTestResponse {
+  scenarios?: StressScenario[];
 }
 
-/* ── Gauge SVG component ── */
+interface ComponentESItem {
+  ticker?: string;
+  contribution_pct?: number;
+  expected_shortfall?: number;
+  weight_pct?: number;
+}
 
-function RiskGauge({ score }: { score: number }) {
-  const clampedScore = Math.max(0, Math.min(100, score));
-  const color = riskGaugeColor(clampedScore);
-  // Arc from -135deg to +135deg (270deg total)
-  const radius = 80;
-  const cx = 100;
-  const cy = 100;
-  const startAngle = -225; // degrees
-  const totalAngle = 270;
-  const endAngle = startAngle + (clampedScore / 100) * totalAngle;
+interface ComponentESResponse {
+  components?: ComponentESItem[];
+  total_es?: number;
+}
 
-  function polarToCartesian(angle: number) {
-    const rad = (angle * Math.PI) / 180;
-    return { x: cx + radius * Math.cos(rad), y: cy - radius * Math.sin(rad) };
-  }
+interface DefenseLayer {
+  name?: string;
+  status?: "pass" | "warning" | "fail";
+  message?: string;
+  value?: number;
+  threshold?: number;
+  layer?: number;
+}
 
-  const bgStart = polarToCartesian(startAngle);
-  const bgEnd = polarToCartesian(startAngle + totalAngle);
-  const valEnd = polarToCartesian(endAngle);
-  const largeArcBg = totalAngle > 180 ? 1 : 0;
-  const largeArcVal = (clampedScore / 100) * totalAngle > 180 ? 1 : 0;
+interface DefenseStatusResponse {
+  layers?: DefenseLayer[];
+  overall_status?: "safe" | "warning" | "danger";
+  timestamp?: string;
+}
+
+/* ── Fetcher ── */
+
+const fetcher = async (url: string) => {
+  const r = await fetch(url, { credentials: "include" });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+};
+
+/* ── Sub-components ── */
+
+function MetricCard({
+  label,
+  value,
+  icon,
+  variant = "default",
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  variant?: "default" | "positive" | "negative" | "warning";
+}) {
+  const colorMap = {
+    default: "text-slate-900",
+    positive: "text-emerald-600",
+    negative: "text-red-500",
+    warning: "text-amber-500",
+  };
 
   return (
-    <svg viewBox="0 0 200 140" className="mx-auto w-56">
-      {/* background arc */}
-      <path
-        d={`M ${bgStart.x} ${bgStart.y} A ${radius} ${radius} 0 ${largeArcBg} 0 ${bgEnd.x} ${bgEnd.y}`}
-        fill="none"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="14"
-        strokeLinecap="round"
-      />
-      {/* value arc */}
-      {clampedScore > 0 && (
-        <path
-          d={`M ${bgStart.x} ${bgStart.y} A ${radius} ${radius} 0 ${largeArcVal} 0 ${valEnd.x} ${valEnd.y}`}
-          fill="none"
-          stroke={color}
-          strokeWidth="14"
-          strokeLinecap="round"
-        />
-      )}
-      {/* center text */}
-      <text
-        x={cx}
-        y={cy - 8}
-        textAnchor="middle"
-        className="fill-white text-4xl font-bold"
-        style={{ fontSize: 36 }}
-      >
-        {Math.round(clampedScore)}
-      </text>
-      <text
-        x={cx}
-        y={cy + 16}
-        textAnchor="middle"
-        className="fill-zinc-500 text-xs"
-        style={{ fontSize: 12 }}
-      >
-        RISK SCORE
-      </text>
-    </svg>
+    <div className="sp-card p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-slate-400">{icon}</span>
+        <span className="text-xs font-medium text-slate-500">{label}</span>
+      </div>
+      <span className={cn("text-lg font-bold tabular-nums", colorMap[variant])}>
+        {value}
+      </span>
+    </div>
   );
 }
 
-/* ── Main page ── */
+function SectionHeader({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="mb-3">
+      <h2 className="text-base font-bold text-slate-900">{title}</h2>
+      {subtitle && (
+        <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+      )}
+    </div>
+  );
+}
 
-export default function RiskDashboardPage() {
-  const { data: portfolio } = usePortfolio();
-  const { data: analytics } = useAnalytics();
-  const { data: vix } = useVixStrategy();
-
-  const positions = portfolio?.positions ?? [];
-  const totalValue = portfolio?.total_value_usd ?? 0;
-
-  /* ── Derived risk metrics ── */
-  const metrics = useMemo(() => {
-    const volatility = (analytics?.ann_vol_pct ?? 20) / 100;
-    const portfolioValue = totalValue || 1;
-
-    // VaR 95% (1-day, parametric)
-    const var95 = portfolioValue * volatility * 1.645 * Math.sqrt(1 / 252);
-
-    // CVaR / Expected Shortfall approximation
-    const cvar = var95 * 1.4;
-
-    // Max drawdown
-    const maxDD = analytics?.max_drawdown_pct ?? 0;
-
-    // Beta (default 1.0 if unavailable)
-    const beta = 1.0;
-
-    // Concentration: weight of top 3 positions
-    const sorted = [...positions].sort((a, b) => b.market_value - a.market_value);
-    const top3Weight =
-      portfolioValue > 0
-        ? sorted.slice(0, 3).reduce((s, p) => s + p.market_value, 0) / portfolioValue
-        : 0;
-
-    // Composite risk score (0-100)
-    const varScore = Math.min((var95 / portfolioValue) * 100 * 20, 25); // up to 25
-    const ddScore = Math.min(Math.abs(maxDD) * 0.5, 25); // up to 25
-    const concScore = Math.min(top3Weight * 30, 25); // up to 25
-    const volScore = Math.min(volatility * 50, 25); // up to 25
-    const riskScore = Math.round(varScore + ddScore + concScore + volScore);
-
-    return {
-      var95,
-      cvar,
-      maxDD,
-      beta,
-      volatility: volatility * 100,
-      concentration: top3Weight * 100,
-      riskScore: Math.min(riskScore, 100),
-    };
-  }, [analytics, positions, totalValue]);
-
-  /* ── Top 5 positions for bar chart ── */
-  const concentrationData = useMemo(() => {
-    if (!positions.length || totalValue === 0) return [];
-    const sorted = [...positions].sort((a, b) => b.market_value - a.market_value);
-    return sorted.slice(0, 5).map((p) => ({
-      ticker: p.ticker,
-      weight: (p.market_value / totalValue) * 100,
-    }));
-  }, [positions, totalValue]);
-
-  const riskLevel = getRiskLevel(metrics.riskScore);
-  const vixRegime = vix ? vixRegimeStyle(vix.regime) : null;
-
-  /* ── Loading state ── */
-  if (!portfolio) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-        <span className="text-zinc-600 text-[12px]">Loading...</span>
-      </div>
-    );
-  }
-
-  /* ── Metric cards config ── */
-  const cards = [
-    {
-      label: "VaR (95%)",
-      value: fmtUsd(metrics.var95),
-      sub: "1-day parametric",
-      icon: <AlertTriangle className="h-5 w-5 text-orange-400" />,
-    },
-    {
-      label: "CVaR",
-      value: fmtUsd(metrics.cvar),
-      sub: "Expected shortfall",
-      icon: <AlertTriangle className="h-5 w-5 text-red-400" />,
-    },
-    {
-      label: "Max Drawdown",
-      value: metrics.maxDD !== 0 ? fmtPct(metrics.maxDD) : "N/A",
-      sub: "Historical worst",
-      icon: <BarChart3 className="h-5 w-5 text-rose-400" />,
-    },
-    {
-      label: "Beta",
-      value: metrics.beta.toFixed(2),
-      sub: "vs S&P 500",
-      icon: <Target className="h-5 w-5 text-cyan-400" />,
-    },
-    {
-      label: "Volatility",
-      value: `${metrics.volatility.toFixed(1)}%`,
-      sub: "Annualized",
-      icon: <BarChart3 className="h-5 w-5 text-yellow-400" />,
-    },
-    {
-      label: "Concentration",
-      value: `${metrics.concentration.toFixed(1)}%`,
-      sub: "Top 3 positions",
-      icon: <Shield className="h-5 w-5 text-purple-400" />,
-    },
-  ];
+function DefenseLayerCard({ layer }: { layer: DefenseLayer }) {
+  const status = layer.status ?? "pass";
+  const StatusIcon = status === "pass" ? CheckCircle : XCircle;
 
   return (
-    <div className="space-y-4">
-      {/* ── Page Header ── */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Risk Dashboard</h1>
-          <p className="mt-1 text-[13px] text-zinc-600">
-            Portfolio risk analysis and exposure monitoring
-          </p>
-        </div>
-        <span
-          className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[9px] font-bold ${riskBadgeStyle(riskLevel)}`}
-        >
-          {riskLevel}
-        </span>
-      </div>
-
-      {/* ── Risk Gauge + VIX Regime ── */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Gauge card */}
-        <div className="glass-surface rounded-xl p-6 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <h2 className="mb-2 text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Composite Risk Score</h2>
-          <RiskGauge score={metrics.riskScore} />
-          <p className="mt-2 text-center text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">
-            Based on VaR, drawdown, volatility, and concentration
-          </p>
-        </div>
-
-        {/* VIX Regime card */}
-        <div className="glass-surface rounded-xl p-6 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
-          <h2 className="mb-4 text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">VIX Regime</h2>
-          {vix ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="text-4xl font-bold font-mono text-white">{vix.vix.toFixed(1)}</div>
-                <div>
-                  <span
-                    className={`inline-flex items-center rounded-md border px-2.5 py-1 text-[9px] font-bold ${vixRegime?.bg} ${vixRegime?.text} border-transparent`}
-                  >
-                    {vixRegime?.label}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">20D Average</p>
-                  <p className="font-mono text-white">{vix.vix_20d_avg.toFixed(1)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Trend</p>
-                  <p className="text-white capitalize">{vix.vix_trend}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Percentile</p>
-                  <p className="font-mono text-white">{vix.vix_percentile.toFixed(0)}th</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Suggested Exposure</p>
-                  <p className="font-mono text-white">{(vix.exposure * 100).toFixed(0)}%</p>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-white/[0.03] p-3">
-                <p className="text-xs text-zinc-400">{vix.action}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-40 items-center justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse mr-2" />
-              <span className="text-zinc-600 text-[12px]">Loading...</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── 6 Metric cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((c) => (
-          <div
-            key={c.label}
-            className="glass-surface rounded-xl p-5 spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)]"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">{c.label}</span>
-              {c.icon}
-            </div>
-            <p className="mt-2 text-2xl font-bold font-mono text-white">{c.value}</p>
-            <p className="mt-1 text-[13px] text-zinc-600">{c.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Position Concentration Bar Chart ── */}
-      <div className="glass-surface rounded-xl p-6">
-        <h2 className="mb-4 text-[10px] font-semibold text-zinc-600 uppercase tracking-[0.1em]">Position Concentration (Top 5)</h2>
-        {concentrationData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={concentrationData} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis
-                dataKey="ticker"
-                tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                axisLine={{ stroke: "rgba(255,255,255,0.06)" }}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fill: "#a1a1aa", fontSize: 12 }}
-                axisLine={{ stroke: "rgba(255,255,255,0.06)" }}
-                tickLine={false}
-                tickFormatter={(v: number) => `${v.toFixed(0)}%`}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "#18181b",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  borderRadius: 12,
-                  fontSize: 12,
-                  color: "#fafafa",
-                }}
-                formatter={(value) => [`${Number(value).toFixed(1)}%`, "Weight"]}
-              />
-              <Bar dataKey="weight" radius={[6, 6, 0, 0]}>
-                {concentrationData.map((_, i) => (
-                  <Cell
-                    key={i}
-                    fill={i === 0 ? "#f97316" : i === 1 ? "#eab308" : "#06b6d4"}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+    <div className="sp-card p-4 flex items-start gap-3">
+      <div
+        className={cn(
+          "mt-0.5 shrink-0",
+          status === "pass" && "text-emerald-500",
+          status === "warning" && "text-amber-500",
+          status === "fail" && "text-red-500",
+        )}
+      >
+        {status === "warning" ? (
+          <AlertTriangle className="h-5 w-5" />
         ) : (
-          <div className="glass-surface rounded-2xl py-12 text-center">
-            <p className="text-sm text-zinc-400">No positions to display</p>
+          <StatusIcon className="h-5 w-5" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-900 truncate">
+            {layer.name ?? `Layer ${layer.layer ?? "?"}`}
+          </span>
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0",
+              status === "pass" && "signal-positive",
+              status === "warning" && "signal-neutral",
+              status === "fail" && "signal-negative",
+            )}
+          >
+            {status === "pass" ? "통과" : status === "warning" ? "경고" : "실패"}
+          </span>
+        </div>
+        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+          {layer.message ?? "세부 정보 없음"}
+        </p>
+        {layer.value != null && layer.threshold != null && (
+          <div className="flex items-center gap-3 mt-2">
+            <span className="text-[11px] text-slate-400">
+              현재값:{" "}
+              <span className="font-medium tabular-nums text-slate-600">
+                {typeof layer.value === "number" ? layer.value.toFixed(2) : layer.value}
+              </span>
+            </span>
+            <span className="text-[11px] text-slate-400">
+              기준값:{" "}
+              <span className="font-medium tabular-nums text-slate-600">
+                {typeof layer.threshold === "number" ? layer.threshold.toFixed(2) : layer.threshold}
+              </span>
+            </span>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function OverallStatusBadge({
+  status,
+}: {
+  status: "safe" | "warning" | "danger";
+}) {
+  const config = {
+    safe: {
+      label: "모든 방어 레이어 정상",
+      bg: "bg-emerald-50",
+      border: "border-emerald-200",
+      text: "text-emerald-700",
+      icon: <CheckCircle className="h-4 w-4" />,
+    },
+    warning: {
+      label: "경고 감지됨",
+      bg: "bg-amber-50",
+      border: "border-amber-200",
+      text: "text-amber-700",
+      icon: <AlertTriangle className="h-4 w-4" />,
+    },
+    danger: {
+      label: "리스크 한도 초과",
+      bg: "bg-red-50",
+      border: "border-red-200",
+      text: "text-red-700",
+      icon: <XCircle className="h-4 w-4" />,
+    },
+  };
+
+  const c = config[status] ?? config.safe;
+
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5",
+        c.bg,
+        c.border,
+        c.text,
+      )}
+    >
+      {c.icon}
+      <span className="text-xs font-semibold">{c.label}</span>
+    </div>
+  );
+}
+
+/* ── Stress Test Bar ── */
+
+function StressBar({ scenario }: { scenario: StressScenario }) {
+  const impact = scenario.impact_pct ?? 0;
+  const absImpact = Math.abs(impact);
+  const barWidth = Math.min(absImpact * 4, 100);
+
+  return (
+    <div className="py-3 first:pt-0 last:pb-0">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-sm font-medium text-slate-700 truncate pr-3">
+          {scenario.name ?? "알 수 없는 시나리오"}
+        </span>
+        <span
+          className={cn(
+            "text-sm font-bold tabular-nums shrink-0",
+            impact <= -10
+              ? "text-red-500"
+              : impact < 0
+                ? "text-amber-500"
+                : "text-emerald-600",
+          )}
+        >
+          {fmtPct(impact)}
+        </span>
+      </div>
+      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className={cn(
+            "h-full rounded-full transition-all duration-500",
+            impact <= -10
+              ? "bg-red-400"
+              : impact < 0
+                ? "bg-amber-400"
+                : "bg-emerald-400",
+          )}
+          style={{ width: `${barWidth}%` }}
+        />
+      </div>
+      {scenario.description && (
+        <p className="text-[11px] text-slate-400 mt-1">{scenario.description}</p>
+      )}
+    </div>
+  );
+}
+
+/* ── Component ES Row ── */
+
+function ESRow({ item }: { item: ComponentESItem }) {
+  const contribution = item.contribution_pct ?? 0;
+  const barWidth = Math.min(Math.abs(contribution) * 5, 100);
+
+  return (
+    <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+      <span className="text-sm font-bold text-slate-900 w-16 shrink-0 tabular-nums">
+        {item.ticker ?? "???"}
+      </span>
+      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-red-400 transition-all duration-500"
+          style={{ width: `${barWidth}%` }}
+        />
+      </div>
+      <span className="text-sm font-semibold text-red-500 tabular-nums w-16 text-right shrink-0">
+        {fmtPct(contribution)}
+      </span>
+    </div>
+  );
+}
+
+/* ── Page ── */
+
+export default function RiskPage() {
+  /* ── Data hooks ── */
+  const { data: portfolio, isLoading: loadingPortfolio } = usePortfolio();
+  const { data: analytics, isLoading: loadingAnalytics } = useAnalytics();
+
+  const { data: varData, isLoading: loadingVar } = useSWR<VaRResponse>(
+    API.risk.var,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 120_000 },
+  );
+
+  const { data: drawdownData, isLoading: loadingDrawdown } =
+    useSWR<DrawdownResponse>(API.risk.drawdown, fetcher, {
+      revalidateOnFocus: false,
+      dedupingInterval: 120_000,
+    });
+
+  const { data: stressData, isLoading: loadingStress } =
+    useSWR<StressTestResponse>(API.risk.stressTest, fetcher, {
+      revalidateOnFocus: false,
+      dedupingInterval: 300_000,
+    });
+
+  const { data: esData, isLoading: loadingES } =
+    useSWR<ComponentESResponse>(API.risk.componentEs, fetcher, {
+      revalidateOnFocus: false,
+      dedupingInterval: 120_000,
+    });
+
+  const { data: defenseData, isLoading: loadingDefense } =
+    useSWR<DefenseStatusResponse>(API.risk.defenseStatus, fetcher, {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+    });
+
+  /* ── Derived values ── */
+  const sharpe = analytics?.sharpe_ratio;
+  const maxDD = analytics?.max_drawdown_pct;
+  const annVol = analytics?.ann_vol_pct;
+
+  const passCount =
+    defenseData?.layers?.filter((l) => l.status === "pass").length ?? 0;
+  const totalLayers = defenseData?.layers?.length ?? 7;
+
+  const positionCount = portfolio?.positions?.length ?? 0;
+  const showEmpty = !loadingPortfolio && positionCount === 0;
+
+  return (
+    <ErrorBoundary>
+      <div className="mx-auto max-w-3xl space-y-6">
+        {/* ── Header ── */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">
+              리스크 대시보드
+            </h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              포트폴리오 리스크 지표 및 방어 상태
+            </p>
+          </div>
+          {!showEmpty && !loadingDefense && defenseData?.overall_status && (
+            <OverallStatusBadge status={defenseData.overall_status} />
+          )}
+        </div>
+
+        {/* ── Empty state: no positions ── */}
+        {showEmpty ? (
+          <EmptyState
+            icon={<Shield className="h-8 w-8" />}
+            title="분석할 포지션이 없습니다"
+            description="포지션을 추가하면 리스크 지표, VaR, 최대 낙폭, 7단계 방어 상태를 확인할 수 있습니다."
+            action={{ label: "포지션 추가", href: "/portfolio" }}
+          />
+        ) : (
+          <>
+        {/* ── Disclaimer ── */}
+        <DisclaimerBanner type="signal" />
+
+        {/* ── Portfolio Risk Summary (from analytics) ── */}
+        {loadingAnalytics ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <MetricCard
+              label="샤프 비율"
+              value={sharpe != null ? sharpe.toFixed(2) : "\u2014"}
+              icon={<BarChart3 className="h-4 w-4" />}
+              variant={
+                sharpe == null
+                  ? "default"
+                  : sharpe >= 1
+                    ? "positive"
+                    : sharpe >= 0.5
+                      ? "warning"
+                      : "negative"
+              }
+            />
+            <MetricCard
+              label="최대 낙폭"
+              value={maxDD != null ? fmtPct(-Math.abs(maxDD)) : "\u2014"}
+              icon={<TrendingDown className="h-4 w-4" />}
+              variant={
+                maxDD == null
+                  ? "default"
+                  : Math.abs(maxDD) <= 10
+                    ? "positive"
+                    : Math.abs(maxDD) <= 20
+                      ? "warning"
+                      : "negative"
+              }
+            />
+            <MetricCard
+              label="연환산 변동성"
+              value={annVol != null ? fmtPct(annVol) : "\u2014"}
+              icon={<Activity className="h-4 w-4" />}
+              variant={
+                annVol == null
+                  ? "default"
+                  : annVol <= 15
+                    ? "positive"
+                    : annVol <= 25
+                      ? "warning"
+                      : "negative"
+              }
+            />
+            <MetricCard
+              label="방어"
+              value={`${passCount}/${totalLayers}`}
+              icon={<Shield className="h-4 w-4" />}
+              variant={
+                passCount === totalLayers
+                  ? "positive"
+                  : passCount >= totalLayers * 0.7
+                    ? "warning"
+                    : "negative"
+              }
+            />
+          </div>
+        )}
+
+        {/* ── Value at Risk (VaR) ── */}
+        <div className="sp-card p-5">
+          <SectionHeader
+            title="Value at Risk (VaR)"
+            subtitle={
+              varData?.method
+                ? `방법론: ${varData.method}`
+                : "예상 최대 손실 (95%/99% 신뢰구간)"
+            }
+          />
+
+          {loadingVar ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : varData?.var_95 == null && varData?.var_99 == null ? (
+            <p className="text-sm text-slate-400 py-2">
+              VaR 데이터 없음. 포지션을 추가하면 리스크 추정값을 확인할 수 있습니다.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+                <p className="text-xs font-medium text-slate-500 mb-1">
+                  VaR (95%)
+                </p>
+                <p className="text-xl font-bold tabular-nums text-red-500">
+                  {varData?.var_95 != null
+                    ? fmtUsd(Math.abs(varData.var_95))
+                    : "\u2014"}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  1-day potential loss
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+                <p className="text-xs font-medium text-slate-500 mb-1">
+                  VaR (99%)
+                </p>
+                <p className="text-xl font-bold tabular-nums text-red-500">
+                  {varData?.var_99 != null
+                    ? fmtUsd(Math.abs(varData.var_99))
+                    : "\u2014"}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  1-day extreme loss
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Drawdown Analysis ── */}
+        <div className="sp-card p-5">
+          <SectionHeader
+            title="최대 낙폭 분석"
+            subtitle="고점 대비 최대 하락 지표"
+          />
+
+          {loadingDrawdown ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : drawdownData?.max_drawdown == null &&
+            drawdownData?.current_drawdown == null ? (
+            <p className="text-sm text-slate-400 py-2">
+              Drawdown data is not available.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+                <p className="text-xs font-medium text-slate-500 mb-1">
+                  Max Drawdown
+                </p>
+                <p
+                  className={cn(
+                    "text-xl font-bold tabular-nums",
+                    Math.abs(drawdownData?.max_drawdown ?? 0) > 20
+                      ? "text-red-500"
+                      : "text-amber-500",
+                  )}
+                >
+                  {drawdownData?.max_drawdown != null
+                    ? fmtPct(-Math.abs(drawdownData.max_drawdown))
+                    : "\u2014"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
+                <p className="text-xs font-medium text-slate-500 mb-1">
+                  Current Drawdown
+                </p>
+                <p
+                  className={cn(
+                    "text-xl font-bold tabular-nums",
+                    Math.abs(drawdownData?.current_drawdown ?? 0) > 10
+                      ? "text-red-500"
+                      : Math.abs(drawdownData?.current_drawdown ?? 0) > 5
+                        ? "text-amber-500"
+                        : "text-emerald-600",
+                  )}
+                >
+                  {drawdownData?.current_drawdown != null
+                    ? fmtPct(-Math.abs(drawdownData.current_drawdown))
+                    : "\u2014"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 col-span-2 sm:col-span-1">
+                <p className="text-xs font-medium text-slate-500 mb-1">
+                  Recovery Days
+                </p>
+                <p className="text-xl font-bold tabular-nums text-slate-900">
+                  {drawdownData?.recovery_days != null
+                    ? `${drawdownData.recovery_days}d`
+                    : "\u2014"}
+                </p>
+                {drawdownData?.recovery_days != null &&
+                  drawdownData.recovery_days > 0 && (
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Days to recover from trough
+                    </p>
+                  )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Stress Test Results ── */}
+        <div className="sp-card p-5">
+          <SectionHeader
+            title="스트레스 테스트 시나리오"
+            subtitle="주요 시나리오별 포트폴리오 예상 영향"
+          />
+
+          {loadingStress ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : !stressData?.scenarios?.length ? (
+            <p className="text-sm text-slate-400 py-2">
+              No stress test scenarios available.
+            </p>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {stressData.scenarios.map((scenario, idx) => (
+                <StressBar key={scenario.name ?? idx} scenario={scenario} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Component Expected Shortfall ── */}
+        <div className="sp-card p-5">
+          <SectionHeader
+            title="종목별 예상 손실 기여도"
+            subtitle="포트폴리오 꼬리 리스크에 대한 종목별 기여도"
+          />
+
+          {loadingES ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
+            </div>
+          ) : !esData?.components?.length ? (
+            <p className="text-sm text-slate-400 py-2">
+              기여도 데이터가 없습니다. 여러 포지션을 추가하면 리스크 기여도를 확인할 수 있습니다.
+            </p>
+          ) : (
+            <>
+              {esData.total_es != null && (
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-500">
+                    포트폴리오 ES:
+                  </span>
+                  <span className="text-sm font-bold tabular-nums text-red-500">
+                    {fmtUsd(Math.abs(esData.total_es))}
+                  </span>
+                </div>
+              )}
+              <div className="divide-y divide-slate-50">
+                {[...esData.components]
+                  .sort(
+                    (a, b) =>
+                      Math.abs(b.contribution_pct ?? 0) -
+                      Math.abs(a.contribution_pct ?? 0),
+                  )
+                  .map((item, idx) => (
+                    <ESRow key={item.ticker ?? idx} item={item} />
+                  ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── 7-Layer Risk Defense Status ── */}
+        <div>
+          <SectionHeader
+            title="7단계 리스크 방어 상태"
+            subtitle="자동화된 리스크 관리 방어 레이어"
+          />
+
+          {loadingDefense ? (
+            <div className="space-y-3">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : !defenseData?.layers?.length ? (
+            <div className="sp-card p-5">
+              <p className="text-sm text-slate-400 py-2">
+                포지션을 추가하면 리스크 방어 레이어 상태를 확인할 수 있습니다.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {defenseData.layers.map((layer, idx) => (
+                <DefenseLayerCard
+                  key={layer.name ?? idx}
+                  layer={{ ...layer, layer: layer.layer ?? idx + 1 }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+          </>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }

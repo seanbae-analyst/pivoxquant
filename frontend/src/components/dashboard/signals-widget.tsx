@@ -1,40 +1,99 @@
 "use client";
 
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/loading-skeleton";
 import type { Position } from "@/lib/types";
 
-interface Props { positions: Position[]; }
+/* ── Signal badge ── */
 
-export function SignalsWidget({ positions }: Props) {
-  const signalPositions = positions.filter((p) => p.signal === "BUY" || p.signal === "SELL").sort((a, b) => b.score - a.score).slice(0, 6);
-  const buyCount = positions.filter((p) => p.signal === "BUY").length;
-  const sellCount = positions.filter((p) => p.signal === "SELL").length;
+function SignalBadge({ signal, score }: { signal: string; score: number }) {
+  const cls =
+    signal === "POSITIVE"
+      ? "signal-positive"
+      : signal === "NEGATIVE"
+        ? "signal-negative"
+        : "signal-neutral";
+
+  const label =
+    signal === "POSITIVE"
+      ? "Positive"
+      : signal === "NEGATIVE"
+        ? "Negative"
+        : "Neutral";
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-[var(--ld-border)] bg-[var(--ld-surface)] p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-slate-500">Active Signals</h3>
-        <div className="flex gap-2">
-          {buyCount > 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">{buyCount} BUY</span>}
-          {sellCount > 0 && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600">{sellCount} SELL</span>}
-        </div>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums",
+        cls,
+      )}
+    >
+      {label} {score}
+    </span>
+  );
+}
+
+/* ── Signals Widget ── */
+
+interface SignalsWidgetProps {
+  positions: Position[] | undefined;
+  isLoading: boolean;
+}
+
+export function SignalsWidget({ positions, isLoading }: SignalsWidgetProps) {
+  if (isLoading) {
+    return (
+      <div className="sp-card p-5 space-y-4">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
       </div>
-      {signalPositions.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center"><Zap className="h-8 w-8 text-slate-400" /><p className="mt-2 text-xs text-slate-400">No active signals</p></div>
+    );
+  }
+
+  // Sort by score descending, take top 5
+  const sorted = [...(positions ?? [])]
+    .filter((p) => p.signal !== "\u2014")
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  return (
+    <div className="sp-card p-5 flex flex-col">
+      <h3 className="text-base font-bold text-slate-900 mb-4">주요 시그널</h3>
+
+      {sorted.length === 0 ? (
+        <p className="text-sm text-slate-400 py-4">
+          시그널 없음. 포지션을 추가하면 AI 시그널을 확인할 수 있습니다.
+        </p>
       ) : (
-        <div className="flex-1 space-y-2">
-          {signalPositions.map((p) => (
-            <Link key={p.id} href={`/detail/${encodeURIComponent(p.ticker)}`} className="flex items-center justify-between rounded-xl px-3 py-2 transition-all duration-200 hover:bg-slate-50">
-              <div className="flex items-center gap-2.5">
-                <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${p.signal === "BUY" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}>{p.signal}</span>
-                <div><p className="text-sm font-semibold text-slate-900">{p.name || p.ticker}</p><p className="text-[11px] text-slate-400">{p.ticker}</p></div>
+        <div className="flex flex-col gap-2.5 flex-1">
+          {sorted.map((p) => (
+            <div
+              key={p.ticker}
+              className="flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2.5 transition-colors hover:bg-slate-100"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-slate-900 w-14">
+                  {p.ticker}
+                </span>
+                <span className="text-xs text-slate-500 truncate max-w-[100px] hidden sm:inline">
+                  {p.name}
+                </span>
               </div>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[10px] font-bold text-slate-500">{p.score.toFixed(0)}</span>
-            </Link>
+              <SignalBadge signal={p.signal} score={p.score} />
+            </div>
           ))}
         </div>
       )}
+
+      <Link
+        href="/signals"
+        className="mt-4 text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors self-start"
+      >
+        전체 시그널 보기 &rarr;
+      </Link>
     </div>
   );
 }
