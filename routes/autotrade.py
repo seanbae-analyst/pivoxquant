@@ -19,6 +19,11 @@ def status():
 @trade_rate_limit
 @api_auth
 def start():
+    # TODO(multi-user): mutating the singleton trader is unsafe under
+    # concurrent requests (one user's id can leak into another user's order).
+    # Beta mitigation: Procfile pinned to --workers 1 so only one request
+    # runs at a time. Post-launch: remove singleton, pass user_id explicitly,
+    # or instantiate a per-user AutoTrader (requires autotrader.py changes).
     trader._user_id = current_user.id
     return jsonify(trader.start())
 

@@ -263,7 +263,8 @@ def init_security(app):
         # Security headers
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
+        # X-XSS-Protection 헤더 제거됨 — Chrome 78+ 미지원, 레거시 공격 벡터 존재.
+        # CSP로 대체 방어.
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
@@ -287,6 +288,9 @@ def init_security(app):
         if not csrf_token or not _validate_csrf_token(csrf_token):
             csrf_token = _generate_csrf_token()
 
+        # Double-submit 패턴상 httpOnly=False 불가피 (SPA가 JS로 토큰 읽어 헤더에 실음).
+        # XSS가 1건이라도 발생하면 이 토큰은 탈취 가능 → XSS 방어가 1차 방어선.
+        # TODO: frontend CSP에서 'unsafe-inline' 제거 필요 (script-src, style-src).
         response.set_cookie(
             _CSRF_COOKIE_NAME,
             csrf_token,

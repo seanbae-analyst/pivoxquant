@@ -131,8 +131,13 @@ def create_app():
             name="cache-warmup",
         ).start()
 
-    # Background scheduler
-    _init_scheduler(app)
+    # Background scheduler — opt-in to avoid duplicate execution under
+    # multi-worker gunicorn (each worker would otherwise spin up its own
+    # scheduler, causing morning_brief / refresh jobs to fire N times).
+    # Default off. Set RUN_SCHEDULER=1 in exactly one process (e.g. a
+    # dedicated worker dyno, or when Procfile is pinned to --workers 1).
+    if os.environ.get("RUN_SCHEDULER", "0") == "1":
+        _init_scheduler(app)
 
     return app
 

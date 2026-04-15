@@ -3,13 +3,24 @@ import logging
 import os
 
 from authlib.integrations.flask_client import OAuth
-from flask import Blueprint, request, jsonify, redirect, session, url_for
+from flask import Blueprint, request, jsonify, redirect, session, url_for, abort
 from flask_login import login_user, logout_user, current_user
+
+
+def _safe_next(next_url):
+    """Open redirect 방어: 스킴-relative(//evil.com) + 절대 URL 차단."""
+    if not next_url or not isinstance(next_url, str):
+        return "/home"
+    if next_url.startswith("//") or "://" in next_url:
+        return "/home"
+    if not next_url.startswith("/"):
+        return "/home"
+    return next_url
 
 from extensions import db
 from models import (
     User, Position, TradeHistory, Alert, Watchlist,
-    SignalCache, InvestmentProfile, BrokerConnection, PushSubscription,
+    InvestmentProfile, BrokerConnection, PushSubscription,
     PortfolioShare,
 )
 from security import auth_rate_limit
@@ -110,13 +121,21 @@ def google_login():
     from authlib.common.security import generate_token
     redirect_uri = f"{FRONTEND_URL}/api/auth/google/callback"
     nonce = generate_token()
+    state = generate_token()
     session["oauth_nonce"] = nonce
-    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce)
+    session["oauth_state_google"] = state
+    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce, state=state)
 
 
 @auth_bp.route("/google/callback")
 def google_callback():
     """Handle the OAuth callback from Google."""
+    # CSRF state 검증: 세션에 저장한 state와 콜백에서 받은 state 대조
+    expected_state = session.pop("oauth_state_google", None)
+    received_state = request.args.get("state")
+    if not expected_state or expected_state != received_state:
+        logger.warning("Google OAuth state mismatch — possible CSRF attack")
+        return redirect(f"{FRONTEND_URL}/login?error=state_mismatch")
     try:
         token = oauth.google.authorize_access_token()
     except Exception as e:
@@ -158,9 +177,7 @@ def google_callback():
     login_user(user, remember=True)
 
     # Validate redirect destination — must be relative path, no open redirect
-    redirect_url = request.args.get("next", "/home")
-    if not redirect_url.startswith("/") or "://" in redirect_url:
-        redirect_url = "/home"
+    redirect_url = _safe_next(request.args.get("next"))
     return redirect(f"{FRONTEND_URL}{redirect_url}")
 
 
@@ -171,13 +188,22 @@ def kakao_login():
     """Redirect user to Kakao's OAuth consent screen."""
     if not os.environ.get("KAKAO_CLIENT_ID"):
         return redirect(f"{FRONTEND_URL}/login?error=kakao_not_configured")
+    from authlib.common.security import generate_token
     redirect_uri = f"{FRONTEND_URL}/api/auth/kakao/callback"
-    return oauth.kakao.authorize_redirect(redirect_uri)
+    state = generate_token()
+    session["oauth_state_kakao"] = state
+    return oauth.kakao.authorize_redirect(redirect_uri, state=state)
 
 
 @auth_bp.route("/kakao/callback")
 def kakao_callback():
     """Handle the OAuth callback from Kakao."""
+    # CSRF state 검증
+    expected_state = session.pop("oauth_state_kakao", None)
+    received_state = request.args.get("state")
+    if not expected_state or expected_state != received_state:
+        logger.warning("Kakao OAuth state mismatch — possible CSRF attack")
+        return redirect(f"{FRONTEND_URL}/login?error=state_mismatch")
     try:
         token = oauth.kakao.authorize_access_token()
     except Exception as e:
@@ -235,9 +261,7 @@ def kakao_callback():
     login_user(user, remember=True)
 
     # Validate redirect destination — must be relative path, no open redirect
-    redirect_url = request.args.get("next", "/home")
-    if not redirect_url.startswith("/") or "://" in redirect_url:
-        redirect_url = "/home"
+    redirect_url = _safe_next(request.args.get("next"))
     return redirect(f"{FRONTEND_URL}{redirect_url}")
 
 
@@ -255,7 +279,8 @@ def delete_account():
         TradeHistory.query.filter_by(user_id=user_id).delete()
         Alert.query.filter_by(user_id=user_id).delete()
         Watchlist.query.filter_by(user_id=user_id).delete()
-        SignalCache.query.filter_by(user_id=user_id).delete()
+        # SignalCache is a global cache keyed by ticker only (no user_id column).
+        # Skipping per-user cleanup; entries are shared and TTL-managed.
         InvestmentProfile.query.filter_by(user_id=user_id).delete()
         BrokerConnection.query.filter_by(user_id=user_id).delete()
         PushSubscription.query.filter_by(user_id=user_id).delete()
