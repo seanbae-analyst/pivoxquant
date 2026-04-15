@@ -1,4 +1,4 @@
-# StockPilot 면책 문구 (Disclaimer)
+# PivoxQuant 면책 문구 (Disclaimer)
 
 > 최종 수정일: 2026-04-09
 > 법적 검토 상태: 초안 (변호사 검토 전)
@@ -15,7 +15,7 @@
 > 특정 금융투자상품에 대한 매수 또는 매도를 권유하지 않습니다.
 > 제공되는 모든 정보(퀀트 시그널, AI 분석, SWOT, 코칭 등)는 데이터 기반의 참고 자료이며,
 > 투자 판단의 최종 책임은 이용자 본인에게 있습니다.
-> 본 서비스의 이용으로 인한 투자 손실에 대해 StockPilot은 법적 책임을 지지 않습니다.
+> 본 서비스의 이용으로 인한 투자 손실에 대해 PivoxQuant은 법적 책임을 지지 않습니다.
 
 ### English Version
 
@@ -27,7 +27,7 @@
 > All information provided (quantitative signals, AI analysis, SWOT, coaching, etc.)
 > is data-driven reference material only.
 > The user bears full responsibility for all investment decisions.
-> StockPilot assumes no legal liability for any investment losses arising from the use of this service.
+> PivoxQuant assumes no legal liability for any investment losses arising from the use of this service.
 
 ---
 
@@ -99,14 +99,14 @@
 #### 한국어
 
 > 자동매매 기능은 이용자가 설정한 조건에 따라 주문을 실행하는 도구입니다.
-> StockPilot은 자동매매로 인한 거래 결과, 시스템 오류, 네트워크 장애 등으로 발생한
+> PivoxQuant은 자동매매로 인한 거래 결과, 시스템 오류, 네트워크 장애 등으로 발생한
 > 손실에 대해 책임을 지지 않습니다.
 > 자동매매 이용 전 반드시 모의투자(페이퍼 트레이딩)로 충분히 테스트하시기 바랍니다.
 
 #### English
 
 > The automated trading feature executes orders based on conditions set by the user.
-> StockPilot is not liable for trading results, system errors, or network failures
+> PivoxQuant is not liable for trading results, system errors, or network failures
 > that may occur during automated trading.
 > Please thoroughly test with paper trading before using automated trading with real funds.
 

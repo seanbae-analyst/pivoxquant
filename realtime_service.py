@@ -1,6 +1,6 @@
 """
-StockPilot — Unified Real-time Price Service
-Routes: US stocks → Alpaca, KR stocks → KIS, fallback → yfinance
+PivoxQuant — Unified Real-time Price Service
+Routes: US stocks → Alpaca, KR stocks → KIS, fallback → FMP
 Provides single interface for all price data across the app.
 """
 
@@ -14,7 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class RealtimeService:
-    """Unified real-time price service. Alpaca (US) + KIS (KR) + yfinance fallback."""
+    """Unified real-time price service. Alpaca (US) + KIS (KR) + FMP fallback.
+
+    KR path: attempts KIS WebSocket (millisecond ticks) first. If approval_key
+    fails or the socket drops repeatedly, falls back to REST polling.
+    """
 
     def __init__(self):
         self.alpaca_client = None
@@ -24,6 +28,11 @@ class RealtimeService:
         self.kis_available = False
         self._price_cache = {}  # {ticker: {price, timestamp, ...}}
         self._cache_ttl = 5     # seconds
+
+        # KIS WebSocket (lazy init on first KR request)
+        self._kis_ws = None
+        self._kis_ws_attempted = False
+        self._kis_ws_lock = threading.Lock()
 
         # Init Alpaca
         api_key = os.environ.get("ALPACA_API_KEY", "").strip()
@@ -40,9 +49,16 @@ class RealtimeService:
         # Init KIS
         self.kis_key = os.environ.get("KIS_APP_KEY", "").strip()
         self.kis_secret = os.environ.get("KIS_APP_SECRET", "").strip()
+        # Real vs. Virtual (VTS) KIS endpoint
+        _use_real = os.environ.get("KIS_USE_REAL", "0").strip() in ("1", "true", "True", "TRUE", "yes")
+        self.kis_base = (
+            "https://openapi.koreainvestment.com:9443"
+            if _use_real
+            else "https://openapivts.koreainvestment.com:29443"
+        )
         if self.kis_key and self.kis_secret:
             self.kis_available = True
-            logger.info("Realtime: KIS initialized (KR stocks)")
+            logger.info(f"Realtime: KIS initialized (KR stocks) — base={self.kis_base} real={_use_real}")
 
     @staticmethod
     def is_korean(ticker):
@@ -77,9 +93,9 @@ class RealtimeService:
         else:
             result = self._get_alpaca_price(ticker)
 
-        # Fallback to yfinance
+        # Fallback to FMP
         if not result:
-            result = self._get_yfinance_price(ticker)
+            result = self._get_fmp_price(ticker)
 
         if result:
             result["_ts"] = time.time()
@@ -115,7 +131,15 @@ class RealtimeService:
             except Exception as e:
                 logger.warning(f"Alpaca batch failed: {e}")
 
-        # KR one by one (KIS doesn't support batch)
+        # KR: warm up WS subscriptions, then fetch per-ticker
+        # (KIS REST doesn't support batch; WS pushes updates into cache)
+        if kr_tickers and self.kis_available:
+            ws = self._ensure_kis_ws()
+            if ws is not None:
+                for t in kr_tickers:
+                    code = self.to_kr_code(t)
+                    if code:
+                        ws.subscribe(code)
         for t in kr_tickers:
             p = self._get_kis_price(t)
             if p:
@@ -124,7 +148,7 @@ class RealtimeService:
         # Fallback for missing
         missing = [t for t in tickers if t not in results]
         for t in missing:
-            p = self._get_yfinance_price(t)
+            p = self._get_fmp_price(t)
             if p:
                 results[t] = p
 
@@ -162,39 +186,104 @@ class RealtimeService:
             logger.warning(f"Alpaca price failed {ticker}: {e}")
             return None
 
+    # ── KIS WebSocket bootstrap (millisecond streaming) ───────
+
+    def _ensure_kis_ws(self):
+        """Lazy-start KIS WebSocket. Returns the running instance or None.
+
+        VTS(모의) 앱키는 대부분 실시간 WS 구독이 불가하므로 실패 시
+        기존 REST polling 경로로 자연스럽게 폴백한다.
+        """
+        if not self.kis_available:
+            return None
+        with self._kis_ws_lock:
+            if self._kis_ws is not None:
+                return self._kis_ws
+            if self._kis_ws_attempted:
+                # already tried and failed; don't spam re-attempts
+                return None
+            self._kis_ws_attempted = True
+            try:
+                from kis_websocket_service import KISWebSocketService
+                svc = KISWebSocketService(on_price=self._on_ws_tick)
+                if not svc.available:
+                    logger.info("KIS WS not available (library missing or creds), using polling")
+                    return None
+                if not svc.start():
+                    logger.warning(
+                        "KIS WS start failed (approval_key 발급 실패 가능) — polling 폴백"
+                    )
+                    return None
+                self._kis_ws = svc
+                logger.info("Realtime: KIS WebSocket streaming active")
+                return svc
+            except Exception as e:
+                logger.warning(f"KIS WS init error: {e} — polling 폴백")
+                return None
+
+    def _on_ws_tick(self, data: dict):
+        """Callback invoked by KIS WebSocket on every parsed trade tick.
+
+        Pushes into the shared price cache so the existing SSE generator
+        (which batches get_prices_batch()) streams fresh data unchanged.
+        """
+        try:
+            ticker = data.get("ticker")
+            if not ticker:
+                return
+            data["_ts"] = time.time()
+            self._price_cache[ticker] = data
+            # Also index by 6-digit code so either form hits cache
+            code = ticker.replace(".KS", "").replace(".KQ", "")
+            if code.isdigit() and len(code) == 6:
+                self._price_cache[code] = data
+        except Exception as e:
+            logger.debug(f"WS tick cache error: {e}")
+
+    def stop_kis_ws(self):
+        """Gracefully stop the KIS WebSocket (for shutdown hooks)."""
+        with self._kis_ws_lock:
+            if self._kis_ws is not None:
+                try:
+                    self._kis_ws.stop()
+                except Exception:
+                    pass
+                self._kis_ws = None
+
     # ── KIS (KR) ──────────────────────────────────────────────
 
     def _get_kis_token(self):
-        if self.kis_token and self.kis_token_expires and datetime.now() < self.kis_token_expires:
-            return self.kis_token
+        """Delegate to the process-wide KISTokenManager.
+
+        Keeps the old method name so existing internal callers work unchanged.
+        """
         try:
-            import requests as req
-            r = req.post(
-                "https://openapivts.koreainvestment.com:29443/oauth2/tokenP",
-                json={"grant_type": "client_credentials", "appkey": self.kis_key, "appsecret": self.kis_secret},
-                timeout=10,
-            )
-            data = r.json()
-            token = data.get("access_token")
-            if token:
-                self.kis_token = token
-                self.kis_token_expires = datetime.now() + timedelta(hours=12)
-                return token
-            logger.warning(f"KIS token error: {data}")
-            return None
+            from kis_token_manager import get_kis_token_manager
+            return get_kis_token_manager().get_token()
         except Exception as e:
-            logger.error(f"KIS token failed: {e}")
+            logger.error(f"KIS token manager error: {e}")
             return None
 
     def _get_kis_price(self, ticker):
         if not self.kis_available:
             return None
-        token = self._get_kis_token()
-        if not token:
-            return None
 
         kr_code = self.to_kr_code(ticker)
         if not kr_code:
+            return None
+
+        # ── Prefer live WebSocket stream if available ──
+        ws = self._ensure_kis_ws()
+        if ws is not None:
+            ws.subscribe(kr_code)
+            # Serve fresh cached tick (<30s) if any
+            cached = self._price_cache.get(f"{kr_code}.KS") or self._price_cache.get(kr_code)
+            if cached and cached.get("source") == "kis_ws" and time.time() - cached.get("_ts", 0) < 30:
+                return cached
+            # Otherwise fall through to REST — first tick seeds cache for next call
+
+        token = self._get_kis_token()
+        if not token:
             return None
 
         try:
@@ -208,7 +297,7 @@ class RealtimeService:
             }
             params = {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": kr_code}
             r = req.get(
-                "https://openapivts.koreainvestment.com:29443/uapi/domestic-stock/v1/quotations/inquire-price",
+                f"{self.kis_base}/uapi/domestic-stock/v1/quotations/inquire-price",
                 headers=headers, params=params, timeout=10,
             )
             data = r.json()
@@ -240,8 +329,8 @@ class RealtimeService:
 
     # ── FMP fallback ─────────────────────────────────────────
 
-    def _get_yfinance_price(self, ticker):
-        """FMP quote as fallback (kept method name for compatibility)."""
+    def _get_fmp_price(self, ticker):
+        """FMP quote as fallback for Alpaca (US) and KIS (KR)."""
         try:
             import fmp_service as fmp
             q = fmp.get_quote(ticker)

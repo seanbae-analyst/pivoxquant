@@ -19,8 +19,8 @@ def notify_alert(user_id: int, alert_data: dict):
     ticker = alert_data.get("ticker", "")
     message = alert_data.get("message", "")
 
-    icon_map = {"BUY": "Buy Signal", "SELL": "Sell Signal"}
-    title = f"StockPilot — {icon_map.get(sig, 'Alert')}: {ticker}"
+    icon_map = {"POSITIVE": "Positive Signal", "NEGATIVE": "Negative Signal"}
+    title = f"PivoxQuant — {icon_map.get(sig, 'Alert')}: {ticker}"
 
     send_push_to_user(
         user_id=user_id,
@@ -37,7 +37,7 @@ def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: flo
     except ImportError:
         return
 
-    title = f"StockPilot — Trade Executed"
+    title = f"PivoxQuant — Trade Executed"
     body = f"{action.upper()} {shares} shares of {ticker} @ ${price:,.2f}"
 
     send_push_to_user(user_id=user_id, title=title, body=body, url="/trades")
@@ -52,7 +52,7 @@ def notify_insight(user_id: int, title_text: str, body_text: str):
 
     send_push_to_user(
         user_id=user_id,
-        title=f"StockPilot — {title_text}",
+        title=f"PivoxQuant — {title_text}",
         body=body_text[:200],
         url="/ai-alerts",
     )

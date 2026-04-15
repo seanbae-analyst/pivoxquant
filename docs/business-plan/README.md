@@ -1,4 +1,4 @@
-# StockPilot 사업계획서
+# PivoxQuant 사업계획서
 
 ## 문서 구조
 
@@ -16,4 +16,4 @@
 | [10_roadmap.md](10_roadmap.md) | 12주 로드맵 + KPI |
 
 작성일: 2026-04-08
-작성자: 배상현 (StockPilot)
+작성자: 배상현 (PivoxQuant)

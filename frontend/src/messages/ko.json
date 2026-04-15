@@ -1,0 +1,351 @@
+{
+  "nav": {
+    "home": "홈",
+    "morningBrief": "아침 브리핑",
+    "portfolio": "포트폴리오",
+    "market": "시장",
+    "signals": "시그널",
+    "discover": "탐색",
+    "watchlist": "관심종목",
+    "ai": "AI Assistant",
+    "autotrade": "자동매매",
+    "risk": "리스크",
+    "settings": "설정",
+    "upgrade": "Pro 업그레이드"
+  },
+  "topbar": {
+    "searchPlaceholder": "종목, 기능 검색...",
+    "searchTicker": "티커 검색 (예: AAPL, TSLA)...",
+    "notifications": "알림",
+    "markAllRead": "모두 읽음",
+    "noNotifications": "알림이 없습니다",
+    "loading": "로딩 중...",
+    "searching": "검색 중...",
+    "noResults": "'{query}'에 대한 결과 없음",
+    "typeToSearch": "티커 심볼을 입력하세요"
+  },
+  "common": {
+    "add": "추가",
+    "edit": "편집",
+    "delete": "삭제",
+    "cancel": "취소",
+    "save": "저장",
+    "confirm": "확인",
+    "close": "닫기",
+    "back": "뒤로",
+    "next": "다음",
+    "submit": "제출",
+    "search": "검색",
+    "filter": "필터",
+    "export": "내보내기",
+    "import": "가져오기",
+    "refresh": "새로고침",
+    "loading": "로딩 중...",
+    "error": "오류",
+    "retry": "재시도",
+    "viewAll": "전체 보기",
+    "seeMore": "더 보기",
+    "learnMore": "자세히",
+    "getStarted": "시작하기",
+    "signIn": "로그인",
+    "signOut": "로그아웃",
+    "signUp": "회원가입",
+    "settings": "설정"
+  },
+  "auth": {
+    "login": {
+      "title": "다시 오신 것을 환영합니다",
+      "subtitle": "AI 퀀트 투자 어드바이저",
+      "continueWithGoogle": "Google로 계속",
+      "continueWithKakao": "Kakao로 계속",
+      "noAccount": "계정이 없으신가요?",
+      "createAccount": "계정 만들기"
+    },
+    "signup": {
+      "title": "시작하기",
+      "subtitle": "AI 퀀트 투자 플랫폼",
+      "haveAccount": "이미 계정이 있으신가요?",
+      "signIn": "로그인"
+    }
+  },
+  "dashboard": {
+    "home": {
+      "title": "대시보드",
+      "portfolioValue": "포트폴리오 가치",
+      "totalReturn": "총 수익",
+      "todayPnl": "오늘 손익",
+      "positions": "보유 종목"
+    },
+    "portfolio": {
+      "title": "포트폴리오",
+      "addPosition": "종목 추가",
+      "noPositions": "보유 종목이 없습니다",
+      "noPositionsDesc": "첫 번째 종목을 추가해 포트폴리오를 시작하세요",
+      "totalValue": "총 가치",
+      "unrealizedPnl": "미실현 손익",
+      "realizedPnl": "실현 손익",
+      "allocation": "비중"
+    },
+    "market": {
+      "title": "시장",
+      "usMarket": "미국 시장",
+      "krMarket": "한국 시장",
+      "indices": "지수",
+      "gainers": "상승 종목",
+      "losers": "하락 종목",
+      "volume": "거래량"
+    },
+    "signals": {
+      "title": "시그널",
+      "allSignals": "전체 시그널",
+      "positive": "POSITIVE",
+      "negative": "NEGATIVE",
+      "neutral": "NEUTRAL",
+      "noSignals": "시그널이 없습니다",
+      "generatedAt": "생성 시각"
+    },
+    "discover": {
+      "title": "탐색",
+      "scanStocks": "종목 스캔",
+      "topRated": "상위 종목",
+      "noResults": "검색 결과가 없습니다"
+    },
+    "watchlist": {
+      "title": "관심종목",
+      "addStock": "종목 추가",
+      "empty": "관심종목이 비어 있습니다",
+      "emptyDesc": "관심 있는 종목을 추가해 모니터링하세요",
+      "remove": "삭제"
+    },
+    "risk": {
+      "title": "리스크",
+      "riskDefense": "리스크 방어",
+      "layers": "레이어",
+      "var": "VaR",
+      "drawdown": "최대 낙폭",
+      "sharpe": "샤프 비율",
+      "status": "상태",
+      "safe": "안전",
+      "warning": "경고",
+      "critical": "위험"
+    },
+    "autotrade": {
+      "title": "자동매매",
+      "paperMode": "페이퍼 모드",
+      "killSwitch": "긴급 정지",
+      "enable": "활성화",
+      "disable": "비활성화",
+      "status": "상태"
+    },
+    "alerts": {
+      "title": "알림",
+      "createAlert": "알림 만들기",
+      "noAlerts": "알림이 없습니다",
+      "price": "가격",
+      "signal": "시그널",
+      "risk": "리스크",
+      "trade": "거래"
+    },
+    "settings": {
+      "title": "설정",
+      "profile": "프로필",
+      "broker": "브로커 연결",
+      "notifications": "알림 설정",
+      "security": "보안",
+      "plan": "구독 플랜",
+      "connectAlpaca": "Alpaca 연결",
+      "connectKIS": "KIS 연결",
+      "deleteAccount": "계정 삭제"
+    }
+  },
+  "landing": {
+    "hero": {
+      "badge": "AI 퀀트 투자 어드바이저",
+      "title": "데이터로 투자하세요",
+      "subtitle": "58개 퀀트 모델, 7-레이어 리스크 방어, AI 포트폴리오 분석. 미국·한국 주식 통합 관리.",
+      "cta": "무료로 시작하기",
+      "learnMore": "자세히 보기"
+    },
+    "stats": {
+      "quantModels": "퀀트 모델",
+      "riskDefense": "리스크 방어",
+      "markets": "시장",
+      "mdd": "MDD (Buy&Hold 대비)"
+    },
+    "pricing": {
+      "title": "요금제",
+      "free": "무료",
+      "pro": "Pro",
+      "premium": "Premium",
+      "perMonth": "/월",
+      "startFree": "무료 시작",
+      "startPro": "Pro 시작",
+      "startPremium": "Premium 시작"
+    }
+  },
+  "errors": {
+    "generic": "오류가 발생했습니다. 다시 시도해 주세요.",
+    "network": "네트워크 연결을 확인해 주세요.",
+    "notFound": "페이지를 찾을 수 없습니다.",
+    "unauthorized": "로그인이 필요합니다.",
+    "forbidden": "접근 권한이 없습니다.",
+    "serverError": "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요."
+  },
+  "empty": {
+    "default": "데이터가 없습니다",
+    "noData": "표시할 데이터가 없습니다",
+    "comingSoon": "준비 중입니다"
+  },
+  "modal": {
+    "addPosition": {
+      "title": "종목 추가",
+      "ticker": "티커",
+      "shares": "수량",
+      "avgPrice": "평균 매수가",
+      "currency": "통화"
+    },
+    "editPosition": {
+      "title": "종목 수정"
+    },
+    "deletePosition": {
+      "title": "종목 삭제",
+      "description": "이 종목을 포트폴리오에서 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+    },
+    "addAlert": {
+      "title": "알림 만들기",
+      "ticker": "티커",
+      "condition": "조건",
+      "value": "값"
+    }
+  },
+  "disclaimer": {
+    "text": "본 서비스는 투자 정보 제공 목적으로만 운영됩니다. 투자 권유가 아니며, 투자 결과에 대한 책임은 투자자 본인에게 있습니다.",
+    "short": "투자 정보 제공 전용 — 투자 권유 아님"
+  },
+  "morningBrief": {
+    "title": "아침 브리핑",
+    "today": "오늘",
+    "yesterdayClose": "어제 마감",
+    "portfolio": "내 포트폴리오",
+    "events": "오늘 일정",
+    "insight": "AI 인사이트",
+    "viewAll": "전체 보기",
+    "archive": "아카이브",
+    "archiveSubtitle": "지난 30일간의 아침 브리핑",
+    "disclaimer": "정보 제공 목적이며, 투자 판단은 본인 책임입니다.",
+    "noEvents": "오늘 주요 일정 없음",
+    "notAvailable": "아침 브리핑은 매일 오전 6시에 준비됩니다",
+    "notAvailableDesc": "새로운 브리핑이 도착하면 알림을 보내드려요",
+    "noPositionsTitle": "개인화된 브리핑을 받으세요",
+    "noPositionsDesc": "포지션을 추가하면 포트폴리오 기반 맞춤 브리핑이 제공됩니다",
+    "addPosition": "포지션 추가",
+    "noArchive": "아카이브 없음",
+    "noArchiveDesc": "최근 30일간 생성된 브리핑이 없습니다",
+    "filterAll": "전체",
+    "filterWeek": "이번 주",
+    "filterMonth": "이번 달",
+    "eventTypes": {
+      "earnings": "실적 발표",
+      "dividend": "배당",
+      "economic": "경제 지표",
+      "split": "액면분할",
+      "ipo": "IPO"
+    }
+  },
+  "settings": {
+    "tabs": {
+      "account": "계정",
+      "subscription": "구독",
+      "connections": "연동",
+      "notifications": "알림"
+    },
+    "notifications": {
+      "title": "알림 설정",
+      "subtitle": "푸시, 이메일, 카톡 알림을 관리하세요",
+      "morningBriefTitle": "아침 브리핑 푸시 알림",
+      "morningBriefDesc": "매일 아침, 포트폴리오 요약과 오늘의 일정을 받아보세요",
+      "timeLabel": "발송 시간",
+      "timeHelp": "매일 이 시간에 푸시가 발송됩니다 (KST 기준)",
+      "emailTitle": "이메일 알림",
+      "emailDesc": "Pro 이상 플랜에서 이용 가능",
+      "kakaoTitle": "카톡 알림",
+      "kakaoDesc": "Premium 플랜에서 곧 제공됩니다",
+      "enable": "활성화",
+      "disable": "비활성화",
+      "saving": "저장 중...",
+      "saved": "저장됨",
+      "notSupported": "이 브라우저는 푸시 알림을 지원하지 않습니다",
+      "permissionDenied": "브라우저 설정에서 알림 권한을 허용해 주세요",
+      "enableFirst": "먼저 푸시 알림을 활성화해 주세요"
+    }
+  },
+  "whatIf": {
+    "badge": "타임머신",
+    "hero": "만약에 샀다면?",
+    "sub": "과거에 이 종목을 샀다면 지금 얼마?",
+    "tryIt": "타임머신 체험하기",
+    "form": {
+      "ticker": "종목",
+      "tickerPlaceholder": "티커 검색 (예: AAPL, NVDA)",
+      "startDate": "시작일",
+      "amount": "투자금액",
+      "currency": "통화",
+      "krw": "원",
+      "usd": "달러",
+      "recurring": "매수 방식",
+      "lumpSum": "한번만",
+      "monthly": "월 적립",
+      "weekly": "주 적립",
+      "calculate": "계산하기",
+      "calculating": "계산 중...",
+      "recalculate": "다시 계산"
+    },
+    "result": {
+      "headline": "{date}에 {ticker}에 {amount} 샀다면",
+      "currentValue": "현재 가치",
+      "returnPct": "수익률",
+      "invested": "투자 원금",
+      "profit": "평가 손익",
+      "annualized": "연환산 수익률",
+      "duration": "투자 기간",
+      "days": "일",
+      "years": "년",
+      "vs": "vs {benchmark}",
+      "vsBenchmark": "S&P 500 대비",
+      "moreThanBench": "{amount} 더 벌었음",
+      "lessThanBench": "{amount} 덜 벌었음",
+      "chartTitle": "가치 성장 추이",
+      "milestones": "마일스톤",
+      "share": "공유",
+      "kakao": "카톡",
+      "twitter": "X (트위터)",
+      "saveImage": "이미지 저장",
+      "copyLink": "링크 복사",
+      "copied": "링크 복사됨",
+      "presets": "더 극적인 결과 보기",
+      "watermark": "pivoxquant.com/simulator/what-if"
+    },
+    "headlines": {
+      "legendary": "인생 역전 시나리오",
+      "crazy": "미친 수익률",
+      "strong": "2배 이상 달성",
+      "solid": "견조한 성장",
+      "flat": "박스권",
+      "negative": "대안 시나리오"
+    },
+    "errors": {
+      "noTicker": "종목을 선택해주세요",
+      "notFound": "티커를 찾을 수 없습니다. 예: AAPL, NVDA, TSLA",
+      "beforeListing": "이 종목은 해당 날짜에 상장 전이었어요",
+      "futureDate": "미래 날짜는 입력할 수 없습니다",
+      "amountRange": "금액은 1,000원 ~ 10억원 사이여야 합니다",
+      "dataUnavailable": "해당 데이터를 불러올 수 없습니다",
+      "generic": "잠시 후 다시 시도해주세요"
+    },
+    "disclaimer": {
+      "title": "면책 고지",
+      "ko": "본 시뮬레이션은 과거 데이터 기반 계산이며, 미래 수익을 보장하지 않습니다. 배당·세금·수수료는 반영되지 않습니다. 투자자문이 아닙니다.",
+      "en": "This simulation is based on past data only. Past performance does not guarantee future results. Dividends, taxes, and fees are not included. Not investment advice."
+    }
+  }
+}

@@ -1,6 +1,6 @@
 """
-StockPilot — FMP (Financial Modeling Prep) Service
-Replaces yfinance with official FMP API.
+PivoxQuant — FMP (Financial Modeling Prep) Service
+Official FMP API for market data.
 Free tier: 250 calls/day, 10/sec.
 """
 
@@ -18,17 +18,52 @@ logger = logging.getLogger(__name__)
 FMP_BASE = "https://financialmodelingprep.com/stable"
 FMP_KEY = os.environ.get("FMP_API_KEY", "")
 
+# ── Cache TTL Constants ─────────────────────────────────────────
+TTL_QUOTE      = 30          # 30 seconds — near-realtime
+TTL_INTRADAY   = 60          # 1 minute
+TTL_PRICE_HIST = 3600        # 1 hour — historical bars
+TTL_NEWS       = 6 * 3600    # 6 hours — news is low-weight (3%), no need for frequent refresh
+TTL_FUNDAMENTAL = 24 * 3600  # 24 hours — ratios, metrics, earnings
+TTL_PROFILE    = 7 * 24 * 3600  # 7 days — company profile rarely changes
+TTL_SECTOR     = 30 * 60     # 30 minutes
+TTL_FX         = 5           # 5 seconds — near-realtime
+
 # ── In-memory cache ─────────────────────────────────────────────
 _cache = {}
 _cache_lock = threading.Lock()
 _daily_calls = 0
 _daily_calls_reset = 0.0
 
+# 402 tracking — plan-gated endpoints should short-circuit after repeated failures
+# so callers can fall back to Alpaca/KIS without wasting network calls.
+_endpoint_402_counts = {}       # {endpoint_path: count}
+_endpoint_402_cooldown = {}     # {endpoint_path: unix_ts until cooldown expires}
+_ENDPOINT_402_THRESHOLD = 3     # After 3 consecutive 402s, block endpoint
+_ENDPOINT_402_COOLDOWN = 1800   # 30 min cooldown
+
+# Budget thresholds
+# FMP free plan: 250 calls/day.
+# Startup prefetch uses ~200 calls for 50-ticker discover pool.
+# Leave at least 48 calls for runtime (macro overview = ~15, sectors = 1, chart = 1, etc.)
+_BUDGET_STALE_THRESHOLD = 220   # At 220 calls: return expired cache (stale-while-revalidate)
+_BUDGET_HARD_STOP = 248         # At 248 calls: stop making new FMP calls entirely (2 buffer)
+
 
 def _get_cache(key, max_age):
+    """Return cached data if within max_age. Returns None otherwise."""
     with _cache_lock:
         entry = _cache.get(key)
         if entry and time.time() - entry["ts"] < max_age:
+            return entry["data"]
+    return None
+
+
+def _get_cache_stale(key):
+    """Return cached data regardless of age (stale-while-revalidate).
+    Used when API budget is running low to avoid 429 errors."""
+    with _cache_lock:
+        entry = _cache.get(key)
+        if entry:
             return entry["data"]
     return None
 
@@ -38,6 +73,16 @@ def _set_cache(key, data):
         _cache[key] = {"data": data, "ts": time.time()}
 
 
+def _is_budget_stale():
+    """True when we should prefer stale cache over fresh API calls."""
+    return _daily_calls >= _BUDGET_STALE_THRESHOLD
+
+
+def _is_budget_exhausted():
+    """True when we must stop making API calls entirely."""
+    return _daily_calls >= _BUDGET_HARD_STOP
+
+
 def _track_call():
     global _daily_calls, _daily_calls_reset
     now = time.time()
@@ -45,14 +90,55 @@ def _track_call():
         _daily_calls = 0
         _daily_calls_reset = now
     _daily_calls += 1
-    if _daily_calls > 240:
-        logger.warning(f"FMP daily calls: {_daily_calls}/250 — nearing limit")
+    if _daily_calls >= _BUDGET_HARD_STOP:
+        logger.warning(f"FMP HARD STOP: {_daily_calls}/250 calls used — blocking further API calls")
+    elif _daily_calls >= _BUDGET_STALE_THRESHOLD:
+        logger.warning(f"FMP budget low: {_daily_calls}/250 calls — returning stale cache when available")
+
+
+def _is_endpoint_blocked(endpoint):
+    """Returns True if this endpoint hit 3+ consecutive 402s and is in cooldown."""
+    with _cache_lock:
+        until = _endpoint_402_cooldown.get(endpoint, 0)
+        return time.time() < until
+
+
+def _record_402(endpoint):
+    """Track 402 responses per endpoint. Trip cooldown after threshold."""
+    with _cache_lock:
+        count = _endpoint_402_counts.get(endpoint, 0) + 1
+        _endpoint_402_counts[endpoint] = count
+        if count >= _ENDPOINT_402_THRESHOLD:
+            _endpoint_402_cooldown[endpoint] = time.time() + _ENDPOINT_402_COOLDOWN
+            logger.warning(
+                f"FMP endpoint {endpoint} disabled for {_ENDPOINT_402_COOLDOWN}s "
+                f"after {count} consecutive 402s — callers should use Alpaca/KIS fallback"
+            )
+
+
+def _record_success(endpoint):
+    """Reset 402 counter on successful call."""
+    with _cache_lock:
+        if endpoint in _endpoint_402_counts:
+            _endpoint_402_counts[endpoint] = 0
 
 
 def _fmp_get(endpoint, params=None, timeout=10):
-    """Core FMP API caller with rate tracking."""
+    """Core FMP API caller with rate tracking and budget enforcement.
+
+    Returns None on any failure. Callers should treat None as "try fallback source"
+    rather than "no data". Use stale cache where appropriate for defensive reads.
+    """
+    global _daily_calls
     if not FMP_KEY:
         logger.error("FMP_API_KEY not set")
+        return None
+    if _is_budget_exhausted():
+        logger.warning(f"FMP call blocked (budget exhausted at {_daily_calls}/250): {endpoint}")
+        return None
+    if _is_endpoint_blocked(endpoint):
+        # Endpoint is in 402 cooldown — short-circuit without network call
+        logger.debug(f"FMP {endpoint} skipped (402 cooldown active)")
         return None
     _track_call()
     url = f"{FMP_BASE}{endpoint}"
@@ -62,23 +148,47 @@ def _fmp_get(endpoint, params=None, timeout=10):
     try:
         r = requests.get(url, params=p, timeout=timeout)
         if r.status_code == 200:
+            _record_success(endpoint)
             return r.json()
-        logger.warning(f"FMP {endpoint} returned {r.status_code}")
+        if r.status_code == 429:
+            logger.error(f"FMP 429 rate limited on {endpoint} — stopping further calls this cycle")
+            _daily_calls = max(_daily_calls, _BUDGET_HARD_STOP)
+        elif r.status_code == 402:
+            # 402 = FMP plan-gated endpoint OR per-second rate limit (10/sec on free plan).
+            # Don't count this against the daily budget — the call wasn't served.
+            with _cache_lock:
+                _daily_calls = max(0, _daily_calls - 1)
+            _record_402(endpoint)
+            logger.warning(
+                f"FMP {endpoint} returned 402 (plan-gated or rate limited) — "
+                f"caller should fall back to Alpaca/KIS"
+            )
+        else:
+            logger.warning(f"FMP {endpoint} returned {r.status_code}")
         return None
     except Exception as e:
         logger.warning(f"FMP {endpoint} failed: {e}")
         return None
 
 
+def endpoint_is_blocked(endpoint):
+    """Public helper — callers can proactively skip FMP if endpoint is cooling down."""
+    return _is_endpoint_blocked(endpoint)
+
+
 # ── Quote (realtime-ish price) ──────────────────────────────────
 
 def get_quote(ticker):
-    """Get current quote. Cache 30s."""
+    """Get current quote. Cache 30s. Stale-while-revalidate when budget low."""
     cache_key = f"quote:{ticker}"
-    cached = _get_cache(cache_key, 30)
+    cached = _get_cache(cache_key, TTL_QUOTE)
     if cached:
         return cached
-    data = _fmp_get(f"/quote", {"symbol": ticker})
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
+    data = _fmp_get("/quote", {"symbol": ticker})
     if data and isinstance(data, list) and len(data) > 0:
         result = data[0]
         _set_cache(cache_key, result)
@@ -87,18 +197,42 @@ def get_quote(ticker):
 
 
 def get_quotes_batch(tickers):
-    """Get multiple quotes in one call. Cache 30s."""
+    """Get multiple quotes. Cache 30s. Stale-while-revalidate when budget low.
+    Tries comma-separated batch first (paid plans); falls back to per-ticker calls.
+    Also populates per-ticker quote cache so subsequent get_quote(ticker) calls are free.
+    """
+    if not tickers:
+        return {}
     symbols = ",".join(tickers)
     cache_key = f"batch_quote:{symbols}"
-    cached = _get_cache(cache_key, 30)
+    cached = _get_cache(cache_key, TTL_QUOTE)
     if cached:
         return cached
-    data = _fmp_get(f"/quote", {"symbol": symbols})
-    if data and isinstance(data, list):
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
+
+    # Try batch first (works on paid plans with comma-separated symbols)
+    data = _fmp_get("/quote", {"symbol": symbols})
+    if data and isinstance(data, list) and len(data) > 0:
         result = {item["symbol"]: item for item in data}
         _set_cache(cache_key, result)
+        for item in data:
+            sym = item.get("symbol", "")
+            if sym:
+                _set_cache(f"quote:{sym}", item)
         return result
-    return {}
+
+    # Fallback: per-ticker calls (free plan doesn't support comma-separated)
+    result = {}
+    for ticker in tickers:
+        q = get_quote(ticker)
+        if q:
+            result[q.get("symbol", ticker)] = q
+    if result:
+        _set_cache(cache_key, result)
+    return result
 
 
 def get_price(ticker):
@@ -112,13 +246,17 @@ def get_price(ticker):
 # ── Historical OHLCV ────────────────────────────────────────────
 
 def get_history(ticker, period="3mo"):
-    """Get historical daily OHLCV. Returns pandas DataFrame like yfinance.
-    Cache 1 hour.
+    """Get historical daily OHLCV. Returns pandas DataFrame with standard OHLCV columns.
+    Cache 1 hour. Stale-while-revalidate when budget low.
     """
     cache_key = f"history:{ticker}:{period}"
-    cached = _get_cache(cache_key, 3600)
+    cached = _get_cache(cache_key, TTL_PRICE_HIST)
     if cached is not None:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
 
     # Map period to date range
     today = datetime.now()
@@ -131,15 +269,10 @@ def get_history(ticker, period="3mo"):
     from_date = (today - timedelta(days=days)).strftime("%Y-%m-%d")
     to_date = today.strftime("%Y-%m-%d")
 
-    # Check if it's an index
-    if ticker.startswith("^"):
-        data = _fmp_get("/index-historical-price-eod/full", {
-            "symbol": ticker, "from": from_date, "to": to_date
-        })
-    else:
-        data = _fmp_get("/historical-price-eod/full", {
-            "symbol": ticker, "from": from_date, "to": to_date
-        })
+    # Stable API: both index (^GSPC) and stock tickers use the same endpoint
+    data = _fmp_get("/historical-price-eod/full", {
+        "symbol": ticker, "from": from_date, "to": to_date
+    })
 
     if not data:
         _set_cache(cache_key, pd.DataFrame())
@@ -153,7 +286,7 @@ def get_history(ticker, period="3mo"):
 
     df = pd.DataFrame(records)
 
-    # Standardize column names to match yfinance format
+    # Standardize column names to match expected OHLCV format
     col_map = {
         "date": "Date", "open": "Open", "high": "High",
         "low": "Low", "close": "Close", "adjClose": "Adj Close",
@@ -185,11 +318,15 @@ def get_history_batch(tickers, period="5d"):
 # ── Company Profile ─────────────────────────────────────────────
 
 def get_profile(ticker):
-    """Get company profile (name, sector, marketCap, beta, etc). Cache 6h."""
+    """Get company profile (name, sector, marketCap, beta, etc). Cache 7 days."""
     cache_key = f"profile:{ticker}"
-    cached = _get_cache(cache_key, 6 * 3600)
+    cached = _get_cache(cache_key, TTL_PROFILE)
     if cached:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
     data = _fmp_get("/profile", {"symbol": ticker})
     if data and isinstance(data, list) and len(data) > 0:
         result = data[0]
@@ -198,12 +335,54 @@ def get_profile(ticker):
     return {}
 
 
+def get_profiles_batch(tickers):
+    """Get profiles for up to 50 tickers. Populates per-ticker cache.
+    Tries comma-separated batch first (paid plans); falls back to per-ticker calls.
+    Returns dict {symbol: profile_dict}.
+    """
+    if not tickers:
+        return {}
+    # Check which tickers already have cached profiles
+    uncached = []
+    result = {}
+    for t in tickers[:50]:
+        cached = _get_cache(f"profile:{t}", TTL_PROFILE)
+        if cached:
+            result[t] = cached
+        else:
+            uncached.append(t)
+    if not uncached:
+        return result
+
+    # Try batch first (works on paid plans with comma-separated symbols)
+    symbols = ",".join(uncached)
+    data = _fmp_get("/profile", {"symbol": symbols})
+    if data and isinstance(data, list) and len(data) > 0:
+        for item in data:
+            sym = item.get("symbol", "")
+            if sym:
+                _set_cache(f"profile:{sym}", item)
+                result[sym] = item
+        return result
+
+    # Fallback: per-ticker calls (free plan doesn't support comma-separated)
+    for t in uncached:
+        profile = get_profile(t)
+        if profile:
+            result[t] = profile
+    return result
+
+
 def get_info(ticker):
-    """Mimic yfinance .info dict. Combines profile + ratios. Cache 6h."""
+    """Get unified stock info dict. Combines profile + ratios. Cache 24h (fundamental data)."""
     cache_key = f"info:{ticker}"
-    cached = _get_cache(cache_key, 6 * 3600)
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
     if cached:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
 
     profile = get_profile(ticker)
     ratios = get_ratios_ttm(ticker)
@@ -211,34 +390,41 @@ def get_info(ticker):
 
     info = {}
     if profile:
+        # Stable API field names: marketCap (was mktCap), lastDividend (was lastDiv),
+        # exchange (was exchangeShortName)
+        last_div = profile.get("lastDividend") or profile.get("lastDiv") or 0
+        price = profile.get("price", 0)
         info.update({
             "shortName": profile.get("companyName", ticker),
             "longName": profile.get("companyName", ticker),
             "longBusinessSummary": profile.get("description", ""),
             "sector": profile.get("sector", ""),
             "industry": profile.get("industry", ""),
-            "marketCap": profile.get("mktCap", 0),
+            "marketCap": profile.get("marketCap") or profile.get("mktCap") or 0,
             "beta": profile.get("beta", 1.0),
-            "price": profile.get("price", 0),
+            "price": price,
             "website": profile.get("website", ""),
             "ceo": profile.get("ceo", ""),
             "fullTimeEmployees": profile.get("fullTimeEmployees", 0),
             "country": profile.get("country", ""),
-            "exchange": profile.get("exchangeShortName", ""),
+            "exchange": profile.get("exchangeShortName") or profile.get("exchange", ""),
             "currency": profile.get("currency", "USD"),
             "ipoDate": profile.get("ipoDate", ""),
             "image": profile.get("image", ""),
             "52WeekHigh": profile.get("range", "").split("-")[-1].strip() if profile.get("range") else 0,
             "52WeekLow": profile.get("range", "").split("-")[0].strip() if profile.get("range") else 0,
-            "dividendYield": profile.get("lastDiv", 0) / profile.get("price", 1) if profile.get("price") else 0,
+            "dividendYield": last_div / price if price else 0,
             "isEtf": profile.get("isEtf", False),
+            "floatShares": profile.get("floatShares") or profile.get("sharesFloat"),
         })
     if ratios:
+        # Stable API: peRatioTTM -> priceToEarningsRatioTTM,
+        # debtEquityRatioTTM -> debtToEquityRatioTTM
         info.update({
-            "trailingPE": ratios.get("peRatioTTM", 0),
-            "forwardPE": ratios.get("peRatioTTM", 0),  # TTM as proxy
+            "trailingPE": ratios.get("priceToEarningsRatioTTM") or ratios.get("peRatioTTM") or 0,
+            "forwardPE": ratios.get("priceToEarningsRatioTTM") or ratios.get("peRatioTTM") or 0,
             "priceToBook": ratios.get("priceToBookRatioTTM", 0),
-            "debtToEquity": ratios.get("debtEquityRatioTTM", 0),
+            "debtToEquity": ratios.get("debtToEquityRatioTTM") or ratios.get("debtEquityRatioTTM") or 0,
             "returnOnEquity": ratios.get("returnOnEquityTTM", 0),
             "currentRatio": ratios.get("currentRatioTTM", 0),
             "netProfitMargin": ratios.get("netProfitMarginTTM", 0),
@@ -246,10 +432,14 @@ def get_info(ticker):
             "operatingProfitMargin": ratios.get("operatingProfitMarginTTM", 0),
         })
     if metrics:
+        # Stable API: epsTTM not in key-metrics; use netIncomePerShareTTM from ratios
+        # revenuePerShareTTM moved to ratios-ttm
+        eps = (ratios or {}).get("netIncomePerShareTTM") or metrics.get("epsTTM") or 0
+        rev_per_share = (ratios or {}).get("revenuePerShareTTM") or metrics.get("revenuePerShareTTM") or 0
         info.update({
-            "trailingEps": metrics.get("epsTTM", 0),
-            "revenueGrowth": metrics.get("revenuePerShareTTM", 0),
-            "revenuePerShare": metrics.get("revenuePerShareTTM", 0),
+            "trailingEps": eps,
+            "revenueGrowth": rev_per_share,
+            "revenuePerShare": rev_per_share,
         })
 
     _set_cache(cache_key, info)
@@ -259,11 +449,15 @@ def get_info(ticker):
 # ── Financial Ratios ────────────────────────────────────────────
 
 def get_ratios_ttm(ticker):
-    """Trailing 12-month ratios. Cache 6h."""
+    """Trailing 12-month ratios. Cache 24h (fundamental data changes at most daily)."""
     cache_key = f"ratios_ttm:{ticker}"
-    cached = _get_cache(cache_key, 6 * 3600)
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
     if cached:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
     data = _fmp_get("/ratios-ttm", {"symbol": ticker})
     if data and isinstance(data, list) and len(data) > 0:
         result = data[0]
@@ -273,11 +467,15 @@ def get_ratios_ttm(ticker):
 
 
 def get_key_metrics_ttm(ticker):
-    """Key metrics TTM. Cache 6h."""
+    """Key metrics TTM. Cache 24h (fundamental data changes at most daily)."""
     cache_key = f"metrics_ttm:{ticker}"
-    cached = _get_cache(cache_key, 6 * 3600)
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
     if cached:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
     data = _fmp_get("/key-metrics-ttm", {"symbol": ticker})
     if data and isinstance(data, list) and len(data) > 0:
         result = data[0]
@@ -286,14 +484,408 @@ def get_key_metrics_ttm(ticker):
     return {}
 
 
+# ── CAN SLIM fundamentals helpers ───────────────────────────────
+
+def get_quarterly_income(ticker, quarters=8):
+    """Get quarterly income statement records ordered most-recent-first.
+
+    Returns list of dicts with keys like: date, period (Q1-Q4),
+    calendarYear, eps, epsdiluted, revenue, netIncome, symbol.
+    Returns [] on failure / 402 / budget-exhausted (caller should fallback).
+
+    Cache 24h (quarterly data updates infrequently).
+    """
+    try:
+        quarters = int(quarters)
+    except (TypeError, ValueError):
+        quarters = 8
+    quarters = max(1, min(quarters, 40))
+
+    cache_key = f"income_q:{ticker}:{quarters}"
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+
+    data = _fmp_get("/income-statement", {
+        "symbol": ticker, "period": "quarter", "limit": quarters,
+    })
+    if data and isinstance(data, list):
+        _set_cache(cache_key, data)
+        return data
+
+    _set_cache(cache_key, [])
+    return []
+
+
+def get_annual_income(ticker, years=4):
+    """Get annual income statement records ordered most-recent-first.
+
+    Returns list of dicts (same shape as get_quarterly_income, period="FY").
+    Cache 24h.
+    """
+    try:
+        years = int(years)
+    except (TypeError, ValueError):
+        years = 4
+    years = max(1, min(years, 20))
+
+    cache_key = f"income_a:{ticker}:{years}"
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+
+    data = _fmp_get("/income-statement", {
+        "symbol": ticker, "period": "annual", "limit": years,
+    })
+    if data and isinstance(data, list):
+        _set_cache(cache_key, data)
+        return data
+
+    _set_cache(cache_key, [])
+    return []
+
+
+def get_quarterly_eps(ticker, quarters=8):
+    """Return a list of {date, period, eps} dicts most-recent-first.
+
+    Prefers `epsdiluted` when available (CAN SLIM convention), falls back
+    to `eps`. Skips rows with missing EPS so callers can rely on numeric
+    values. Returns [] when FMP data is unavailable.
+    """
+    rows = get_quarterly_income(ticker, quarters=quarters)
+    out = []
+    for r in rows or []:
+        eps = r.get("epsdiluted")
+        if eps in (None, 0):
+            eps = r.get("eps")
+        if eps is None:
+            continue
+        try:
+            eps_f = float(eps)
+        except (TypeError, ValueError):
+            continue
+        out.append({
+            "date": r.get("date"),
+            "period": r.get("period"),
+            "calendarYear": r.get("calendarYear"),
+            "eps": eps_f,
+        })
+    return out
+
+
+def get_annual_eps(ticker, years=4):
+    """Return a list of {date, calendarYear, eps} dicts most-recent-first."""
+    rows = get_annual_income(ticker, years=years)
+    out = []
+    for r in rows or []:
+        eps = r.get("epsdiluted")
+        if eps in (None, 0):
+            eps = r.get("eps")
+        if eps is None:
+            continue
+        try:
+            eps_f = float(eps)
+        except (TypeError, ValueError):
+            continue
+        out.append({
+            "date": r.get("date"),
+            "calendarYear": r.get("calendarYear"),
+            "eps": eps_f,
+        })
+    return out
+
+
+def get_institutional_ownership(ticker):
+    """Fetch institutional ownership summary if FMP plan allows.
+
+    Tries the `symbol-ownership` summary endpoint first (returns a time
+    series of institutional metrics). Falls back to the `institutional-holder`
+    endpoint which lists individual holders — in that case we synthesize a
+    summary from the list length and recent shares deltas.
+
+    Returns a dict like::
+
+        {
+            "available": True/False,
+            "holder_count": int or None,
+            "ownership_pct": float or None,     # % of shares held by institutions
+            "ownership_change": float or None,  # QoQ change in ownership %
+            "source": "symbol-ownership" | "institutional-holder" | None,
+        }
+
+    When the endpoint is plan-gated (402) or cooling down, returns
+    ``{"available": False, ...}`` so callers can route to the price/volume
+    proxy. Cache 24h.
+    """
+    cache_key = f"inst_own:{ticker}"
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+
+    result = {
+        "available": False,
+        "holder_count": None,
+        "ownership_pct": None,
+        "ownership_change": None,
+        "source": None,
+    }
+
+    # Try the time-series summary (most useful — gives QoQ delta).
+    summary = _fmp_get(
+        "/institutional-ownership/symbol-ownership",
+        {"symbol": ticker, "includeCurrentQuarter": "true"},
+    )
+    if summary and isinstance(summary, list) and len(summary) >= 1:
+        latest = summary[0] or {}
+        prev = summary[1] if len(summary) > 1 else {}
+        own_pct = latest.get("ownershipPercent") or latest.get("ownership")
+        prev_pct = prev.get("ownershipPercent") or prev.get("ownership")
+        try:
+            own_pct_f = float(own_pct) if own_pct is not None else None
+            prev_pct_f = float(prev_pct) if prev_pct is not None else None
+        except (TypeError, ValueError):
+            own_pct_f, prev_pct_f = None, None
+
+        change = None
+        if own_pct_f is not None and prev_pct_f is not None:
+            change = own_pct_f - prev_pct_f
+
+        try:
+            holder_count = int(latest.get("investorsHolding") or latest.get("holders") or 0) or None
+        except (TypeError, ValueError):
+            holder_count = None
+
+        result.update({
+            "available": True,
+            "holder_count": holder_count,
+            "ownership_pct": own_pct_f,
+            "ownership_change": change,
+            "source": "symbol-ownership",
+        })
+        _set_cache(cache_key, result)
+        return result
+
+    # Fallback: individual holder list (free-plan friendly on some accounts).
+    holders = _fmp_get("/institutional-holder", {"symbol": ticker})
+    if holders and isinstance(holders, list) and len(holders) > 0:
+        total_shares = 0.0
+        total_change = 0.0
+        for h in holders:
+            try:
+                total_shares += float(h.get("shares") or 0)
+                total_change += float(h.get("change") or 0)
+            except (TypeError, ValueError):
+                continue
+        change_pct = None
+        if total_shares > 0:
+            change_pct = (total_change / total_shares) * 100.0
+        result.update({
+            "available": True,
+            "holder_count": len(holders),
+            "ownership_pct": None,  # raw holder list can't give total %
+            "ownership_change": change_pct,
+            "source": "institutional-holder",
+        })
+        _set_cache(cache_key, result)
+        return result
+
+    _set_cache(cache_key, result)
+    return result
+
+
+# ── Balance Sheet & Income Statement ────────────────────────────
+# Used for Current Ratio (totalCurrentAssets / totalCurrentLiabilities)
+# and Interest Coverage (operatingIncome / interestExpense).
+# Returns:
+#   list[dict] on success (most-recent period first)
+#   None on 402 / network errors (caller treats as "try fallback" / DATA_UNAVAILABLE)
+#   [] when FMP returns empty payload (caller treats as NO_DATA)
+
+def get_balance_sheet(ticker):
+    """Latest balance sheet statements for a ticker.
+
+    Cache 24h (fundamental data changes at most once per reporting period).
+    Returns a list of statement dicts, most-recent first. None on failure
+    so callers can distinguish "plan-gated / network error" from "no data"
+    (empty list) -- downstream indicators map this to DATA_UNAVAILABLE vs NO_DATA.
+    """
+    cache_key = f"balance_sheet:{ticker}"
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+    data = _fmp_get("/balance-sheet-statement", {"symbol": ticker})
+    if data is None:
+        return None
+    if isinstance(data, list):
+        _set_cache(cache_key, data)
+        return data
+    return None
+
+
+def get_income_statement(ticker):
+    """Latest income statements for a ticker.
+
+    Cache 24h. Returns a list of statement dicts, most-recent first. None on
+    failure (distinguishable from empty list -- see get_balance_sheet).
+    """
+    cache_key = f"income_statement:{ticker}"
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+    data = _fmp_get("/income-statement", {"symbol": ticker})
+    if data is None:
+        return None
+    if isinstance(data, list):
+        _set_cache(cache_key, data)
+        return data
+    return None
+
+
+def prefetch_fundamentals(tickers):
+    """Pre-warm cache for a batch of tickers using minimal FMP calls.
+
+    Strategy:
+    - Profiles: 1 batch call per 50 tickers (FMP supports comma-separated)
+    - Quotes: 1 batch call per 50 tickers (already supported)
+    - Ratios/Metrics: only fetch for tickers not already cached (24h TTL)
+    - Uses threading to parallelize the per-ticker ratios/metrics calls
+
+    For 50 tickers, worst case:
+    - 1 batch profile call + 1 batch quote call + N uncached ratios + N uncached metrics
+    - Best case (all cached from previous day): 2 calls total
+    - Typical case (first run of day): 2 batch + ~50*2 individual = ~102 calls
+    - BUT: ratios/metrics have 24h TTL, so subsequent runs use 0 calls
+
+    The key savings come from:
+    1. Profile batch: 50 tickers in 1 call instead of 50
+    2. Quote batch: 50 tickers in 1 call instead of 50
+    3. get_info() reuses cached profile/ratios/metrics instead of re-fetching
+    """
+    if not tickers:
+        return
+
+    # Filter to US tickers only (Korean tickers not on FMP)
+    us_tickers = [t for t in tickers if not t.endswith(".KS") and not t.endswith(".KQ")]
+    if not us_tickers:
+        return
+
+    logger.info(f"FMP prefetch: warming cache for {len(us_tickers)} US tickers")
+
+    # 1. Batch profiles (1 call per 50 tickers)
+    for i in range(0, len(us_tickers), 50):
+        chunk = us_tickers[i:i+50]
+        get_profiles_batch(chunk)
+
+    # 2. Batch quotes (1 call per 50 tickers)
+    for i in range(0, len(us_tickers), 50):
+        chunk = us_tickers[i:i+50]
+        get_quotes_batch(chunk)
+
+    # 3. Per-ticker ratios and metrics — SKIPPED at startup to preserve daily budget.
+    # On the FMP free plan (250 calls/day), 50 ratios + 50 metrics = 100 calls consumed at
+    # startup, leaving almost nothing for runtime (macro/chart/sectors need ~30+ calls/session).
+    # Ratios/metrics are fetched on-demand with 24h TTL — the first analyze() call for each
+    # ticker will populate these caches and subsequent calls within 24h are free.
+    uncached_ratios = [t for t in us_tickers if not _get_cache(f"ratios_ttm:{t}", TTL_FUNDAMENTAL)]
+    uncached_metrics = [t for t in us_tickers if not _get_cache(f"metrics_ttm:{t}", TTL_FUNDAMENTAL)]
+    if uncached_ratios or uncached_metrics:
+        logger.info(f"FMP prefetch: {len(uncached_ratios)} ratios + {len(uncached_metrics)} metrics skipped (on-demand fetch preserves daily budget)")
+
+    # 4. Build get_info() cache from already-fetched components
+    # This avoids get_info() making 3 sub-calls per ticker later
+    for t in us_tickers:
+        cache_key = f"info:{t}"
+        if _get_cache(cache_key, TTL_FUNDAMENTAL):
+            continue
+        profile = _get_cache(f"profile:{t}", TTL_PROFILE)
+        ratios = _get_cache(f"ratios_ttm:{t}", TTL_FUNDAMENTAL)
+        metrics = _get_cache(f"metrics_ttm:{t}", TTL_FUNDAMENTAL)
+        if profile:
+            info = {}
+            last_div = profile.get("lastDividend") or profile.get("lastDiv") or 0
+            price = profile.get("price", 0)
+            info.update({
+                "shortName": profile.get("companyName", t),
+                "longName": profile.get("companyName", t),
+                "longBusinessSummary": profile.get("description", ""),
+                "sector": profile.get("sector", ""),
+                "industry": profile.get("industry", ""),
+                "marketCap": profile.get("marketCap") or profile.get("mktCap") or 0,
+                "beta": profile.get("beta", 1.0),
+                "price": price,
+                "website": profile.get("website", ""),
+                "ceo": profile.get("ceo", ""),
+                "fullTimeEmployees": profile.get("fullTimeEmployees", 0),
+                "country": profile.get("country", ""),
+                "exchange": profile.get("exchangeShortName") or profile.get("exchange", ""),
+                "currency": profile.get("currency", "USD"),
+                "ipoDate": profile.get("ipoDate", ""),
+                "image": profile.get("image", ""),
+                "52WeekHigh": profile.get("range", "").split("-")[-1].strip() if profile.get("range") else 0,
+                "52WeekLow": profile.get("range", "").split("-")[0].strip() if profile.get("range") else 0,
+                "dividendYield": last_div / price if price else 0,
+                "isEtf": profile.get("isEtf", False),
+                "floatShares": profile.get("floatShares") or profile.get("sharesFloat"),
+            })
+            if ratios:
+                info.update({
+                    "trailingPE": ratios.get("priceToEarningsRatioTTM") or ratios.get("peRatioTTM") or 0,
+                    "forwardPE": ratios.get("priceToEarningsRatioTTM") or ratios.get("peRatioTTM") or 0,
+                    "priceToBook": ratios.get("priceToBookRatioTTM", 0),
+                    "debtToEquity": ratios.get("debtToEquityRatioTTM") or ratios.get("debtEquityRatioTTM") or 0,
+                    "returnOnEquity": ratios.get("returnOnEquityTTM", 0),
+                    "currentRatio": ratios.get("currentRatioTTM", 0),
+                    "netProfitMargin": ratios.get("netProfitMarginTTM", 0),
+                    "grossProfitMargin": ratios.get("grossProfitMarginTTM", 0),
+                    "operatingProfitMargin": ratios.get("operatingProfitMarginTTM", 0),
+                })
+            if metrics:
+                eps = (ratios or {}).get("netIncomePerShareTTM") or metrics.get("epsTTM") or 0
+                rev_per_share = (ratios or {}).get("revenuePerShareTTM") or metrics.get("revenuePerShareTTM") or 0
+                info.update({
+                    "trailingEps": eps,
+                    "revenueGrowth": rev_per_share,
+                    "revenuePerShare": rev_per_share,
+                })
+            _set_cache(cache_key, info)
+
+    cached_count = sum(1 for t in us_tickers if _get_cache(f"info:{t}", TTL_FUNDAMENTAL))
+    logger.info(f"FMP prefetch complete: {cached_count}/{len(us_tickers)} tickers cached, "
+                f"{_daily_calls}/250 API calls used today")
+
+
 # ── News ────────────────────────────────────────────────────────
 
 def get_news(ticker, limit=15):
-    """Per-ticker news. Cache 30min."""
+    """Per-ticker news. Cache 30min. Stale-while-revalidate when budget low."""
     cache_key = f"news:{ticker}"
-    cached = _get_cache(cache_key, 30 * 60)
+    cached = _get_cache(cache_key, TTL_NEWS)
     if cached:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
     data = _fmp_get("/news/stock", {"symbol": ticker, "limit": limit})
     if data and isinstance(data, list):
         _set_cache(cache_key, data)
@@ -304,12 +896,16 @@ def get_news(ticker, limit=15):
 # ── Forex (Exchange Rate) ──────────────────────────────────────
 
 def get_fx_rate(pair="USDKRW"):
-    """Get forex rate. Cache 5s for near-realtime."""
+    """Get forex rate. Cache 5s for near-realtime. Stale-while-revalidate when budget low."""
     cache_key = f"fx:{pair}"
-    cached = _get_cache(cache_key, 5)
+    cached = _get_cache(cache_key, TTL_FX)
     if cached:
         return cached
-    data = _fmp_get("/fx", {"symbol": pair})
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
+    data = _fmp_get("/quote", {"symbol": pair})
     if data and isinstance(data, list) and len(data) > 0:
         rate = data[0].get("price", 0) or data[0].get("ask", 0)
         if rate > 100:  # Sanity check for USDKRW
@@ -321,11 +917,15 @@ def get_fx_rate(pair="USDKRW"):
 # ── Earnings Calendar ───────────────────────────────────────────
 
 def get_earnings_calendar(ticker=None, days_ahead=30):
-    """Get upcoming earnings. Cache 6h."""
+    """Get upcoming earnings. Cache 24h. Stale-while-revalidate when budget low."""
     cache_key = f"earnings:{ticker or 'all'}"
-    cached = _get_cache(cache_key, 6 * 3600)
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
     if cached:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
 
     today = datetime.now().strftime("%Y-%m-%d")
     future = (datetime.now() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
@@ -344,11 +944,15 @@ def get_earnings_calendar(ticker=None, days_ahead=30):
 # ── Dividends ───────────────────────────────────────────────────
 
 def get_dividends(ticker):
-    """Get dividend data. Cache 6h."""
+    """Get dividend data. Cache 24h. Stale-while-revalidate when budget low."""
     cache_key = f"dividends:{ticker}"
-    cached = _get_cache(cache_key, 6 * 3600)
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
     if cached:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
     data = _fmp_get("/dividends", {"symbol": ticker})
     if data and isinstance(data, list):
         _set_cache(cache_key, data)
@@ -359,17 +963,21 @@ def get_dividends(ticker):
 # ── Intraday (1min bars) ───────────────────────────────────────
 
 def get_intraday(ticker, interval="1min"):
-    """Get intraday bars. Cache 60s."""
+    """Get intraday bars. Cache 60s. Stale-while-revalidate when budget low."""
     cache_key = f"intraday:{ticker}:{interval}"
-    cached = _get_cache(cache_key, 60)
+    cached = _get_cache(cache_key, TTL_INTRADAY)
     if cached is not None:
         return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
 
     # Map interval
     interval_map = {"1m": "1min", "5m": "5min", "15m": "15min", "1h": "1hour"}
     fmp_interval = interval_map.get(interval, interval)
 
-    data = _fmp_get(f"/historical-chart/{fmp_interval}/{ticker}")
+    data = _fmp_get(f"/historical-chart/{fmp_interval}", {"symbol": ticker})
     if data and isinstance(data, list):
         df = pd.DataFrame(data)
         if "date" in df.columns:
@@ -388,15 +996,107 @@ def get_intraday(ticker, interval="1min"):
 # ── Sector Performance ──────────────────────────────────────────
 
 def get_sector_performance():
-    """Get sector performance. Cache 30min."""
+    """Get sector performance. Cache 30min. Stale-while-revalidate when budget low.
+    Uses /stable/sector-performance-snapshot which requires a date param.
+    Tries the most recent trading day (today, then yesterday, etc.)
+    and aggregates per-exchange results into a single average per sector.
+    Returns list of dicts: [{sector, changesPercentage}, ...]
+    """
     cache_key = "sector_perf"
-    cached = _get_cache(cache_key, 30 * 60)
+    cached = _get_cache(cache_key, TTL_SECTOR)
     if cached:
         return cached
-    data = _fmp_get("/sector-performance")
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
+
+    # Try last 5 days to find a trading day with data
+    data = None
+    for days_back in range(0, 5):
+        check_date = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        data = _fmp_get("/sector-performance-snapshot", {"date": check_date})
+        if data and isinstance(data, list) and len(data) > 0:
+            break
+        data = None
+
+    if not data:
+        return []
+
+    # Aggregate: average across exchanges for each sector
+    from collections import defaultdict
+    sector_totals = defaultdict(lambda: {"total": 0.0, "count": 0})
+    for item in data:
+        s = item.get("sector", "")
+        if s:
+            sector_totals[s]["total"] += item.get("averageChange", 0)
+            sector_totals[s]["count"] += 1
+
+    result = []
+    for sector, vals in sector_totals.items():
+        avg = vals["total"] / vals["count"] if vals["count"] else 0
+        result.append({
+            "sector": sector,
+            "changesPercentage": f"{avg:.4f}%",
+        })
+    result.sort(key=lambda x: float(x["changesPercentage"].rstrip("%")), reverse=True)
+
+    _set_cache(cache_key, result)
+    return result
+
+
+# ── Insider Transactions ───────────────────────────────────────
+
+TTL_INSIDER = 3600  # 1 hour — insider filings update infrequently
+
+
+def get_insider_trades(ticker, limit=50):
+    """Get insider transactions for a ticker. Cache 1 hour.
+
+    FMP endpoint: /insider-trading?symbol=TICKER
+    Returns list of dicts with keys:
+        symbol, filingDate, transactionDate, reportingName, typeOfOwner,
+        transactionType (P-Purchase, S-Sale), acquistionOrDisposition (A/D),
+        securitiesTransacted, price, securitiesOwned, link
+    """
+    cache_key = f"insider:{ticker}"
+    cached = _get_cache(cache_key, TTL_INSIDER)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+
+    data = _fmp_get("/insider-trading", {"symbol": ticker, "limit": limit})
     if data and isinstance(data, list):
         _set_cache(cache_key, data)
         return data
+
+    _set_cache(cache_key, [])
+    return []
+
+
+# ── Short Interest ─────────────────────────────────────────────
+
+def get_short_interest(ticker):
+    """Get historical short interest data. Cache 24h (fundamental-level refresh).
+    FMP endpoint: /historical/short-interest?symbol=AAPL
+    Returns list of dicts with date, shortInterest, floatShort, etc.
+    """
+    cache_key = f"short_interest:{ticker}"
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+    data = _fmp_get("/historical/short-interest", {"symbol": ticker})
+    if data and isinstance(data, list):
+        _set_cache(cache_key, data)
+        return data
+    _set_cache(cache_key, [])
     return []
 
 
@@ -416,11 +1116,21 @@ def normalize_ticker(ticker):
 
 def get_api_usage():
     """Return current API usage stats."""
+    now = time.time()
+    blocked = {ep: max(0, int(until - now))
+               for ep, until in _endpoint_402_cooldown.items()
+               if until > now}
     return {
         "daily_calls": _daily_calls,
         "daily_limit": 250,
         "remaining": max(0, 250 - _daily_calls),
         "cache_entries": len(_cache),
+        "stale_mode": _is_budget_stale(),
+        "hard_stopped": _is_budget_exhausted(),
+        "stale_threshold": _BUDGET_STALE_THRESHOLD,
+        "hard_stop_threshold": _BUDGET_HARD_STOP,
+        "blocked_endpoints": blocked,   # {path: seconds_remaining}
+        "402_counts": dict(_endpoint_402_counts),
     }
 
 

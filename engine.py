@@ -1,5 +1,5 @@
 """
-StockPilot — Quantitative Analysis Engine v2
+PivoxQuant — Quantitative Analysis Engine v2
 Goldman Sachs-style multi-factor model. Zero AI API cost.
 
 Scoring:
@@ -16,7 +16,10 @@ import pandas as pd
 import fmp_service as fmp
 import logging
 from data_fetcher import DataFetcher
-from quant_models import MeanReversion, MomentumBreakout, VolatilityRegime, RegimeSwitching, MLSignal
+from quant_models import (MeanReversion, MomentumBreakout, VolatilityRegime, RegimeSwitching, MLSignal,
+                          VarianceRatioFilter, TSMOM, FiftyTwoWeekHigh,
+                          DonchianBreakout, DualMomentum, CorrelationRegime)
+from signal_models import DispositionEffect, OrderFlowImbalance, AnchoringBias, SentimentPriceDivergence
 
 logger = logging.getLogger(__name__)
 _fetcher = DataFetcher()
@@ -25,8 +28,8 @@ _fetcher = DataFetcher()
 class QuantEngine:
 
     MAX_ALLOC   = 0.45   # max allocation per position
-    BUY_THRESH  = 70.0   # composite score minimum for BUY signal
-    SELL_THRESH = 25.0   # below this → SELL signal
+    BUY_THRESH  = 70.0   # composite score minimum for POSITIVE signal
+    SELL_THRESH = 25.0   # below this → NEGATIVE signal
 
     DISCOVER_POOL = [
         # ── US: High-momentum / growth ──
@@ -43,6 +46,32 @@ class QuantEngine:
         "096770.KS","012330.KS","028260.KS","032830.KS","015760.KS",
     ]
 
+    # ── FMP Budget Optimization ────────────────────────────────────────────────
+    _pool_prefetched = False
+    _DISCOVER_SET = frozenset(DISCOVER_POOL)  # O(1) lookup for prefetch check
+
+    @classmethod
+    def prefetch_discover_pool(cls):
+        """Pre-warm FMP cache for all discover pool tickers using batch API calls.
+        Call this before a discover scan to reduce per-ticker FMP calls from ~6 to ~0.
+        Safe to call multiple times -- will skip if already prefetched this session.
+        """
+        if cls._pool_prefetched:
+            return
+        try:
+            fmp.prefetch_fundamentals(cls.DISCOVER_POOL)
+            cls._pool_prefetched = True
+        except Exception as e:
+            logger.warning(f"Discover pool prefetch failed: {e}")
+
+    def _auto_prefetch_if_needed(self, ticker: str):
+        """Auto-trigger pool prefetch on first discover pool ticker analysis.
+        This ensures batch caching happens even if prefetch_discover_pool()
+        was not explicitly called by the route.
+        """
+        if not QuantEngine._pool_prefetched and ticker in self._DISCOVER_SET:
+            QuantEngine.prefetch_discover_pool()
+
     # ── Public ────────────────────────────────────────────────────────────────
 
     def analyze(self, ticker: str, capital_usd: float = 10_000.0,
@@ -50,6 +79,7 @@ class QuantEngine:
                 current_pnl_pct: float = None,
                 profile_params: dict = None) -> "dict | None":
         ticker   = ticker.upper().strip()
+        self._auto_prefetch_if_needed(ticker)
         snapshot = _fetcher.get_stock_snapshot(ticker)
         hist     = _fetcher.get_price_history(ticker, "6mo")
         if snapshot is None or hist is None:
@@ -74,7 +104,11 @@ class QuantEngine:
         news_score, news_sigs = _fetcher.score_news_sentiment(ticker)
 
         # ── Advanced Quant Models ──
-        quant_score, quant_sigs = self._quant_models(hist)
+        (quant_score, quant_sigs, vr_result, tsmom_result, high52_result,
+         disp_result, ofi_result, anchor_result, spd_result,
+         donchian_result, dual_mom_result, corr_regime_result) = self._quant_models(
+            hist, profile_params=profile_params, news_score=news_score
+        )
 
         # ── Sector Relative Strength ──
         try:
@@ -162,6 +196,11 @@ class QuantEngine:
             quant_score * w_quant, 1
         )
 
+        # ── 52-Week High Momentum Boost + Anchoring Bias Boost (applied to final composite) ──
+        anchor_boost = anchor_result.get("boost", 1.0) if anchor_result else 1.0
+        composite = composite * high52_result.get("boost", 1.0) * anchor_boost
+        composite = max(0, min(100, round(composite, 1)))
+
         # ── Macro Environment Adjustment ──
         # VIX: raise the bar when market is fearful
         try:
@@ -237,15 +276,15 @@ class QuantEngine:
                 disq_reasons.append(f"Crashed {drawdown:.0f}% from 52-week high")
 
         if disqualified:
-            # Block BUY — disqualified stocks can only be HOLD or SELL
-            signal = "SELL" if composite < sell_thresh else "HOLD"
+            # Block POSITIVE — disqualified stocks can only be NEUTRAL or NEGATIVE
+            signal = "NEGATIVE" if composite < sell_thresh else "NEUTRAL"
             for r in disq_reasons:
                 tech_sigs.append({"type": "bearish", "msg": f"⛔ {r}", "msg_kr": f"⛔ {r}"})
         else:
             signal = (
-                "BUY"  if composite >= buy_thresh  else
-                "SELL" if composite <  sell_thresh else
-                "HOLD"
+                "POSITIVE"  if composite >= buy_thresh  else
+                "NEGATIVE"  if composite <  sell_thresh else
+                "NEUTRAL"
             )
 
         # ── Smart Exit for Existing Holdings ──
@@ -272,7 +311,7 @@ class QuantEngine:
                 sell_reason = f"Up {current_pnl_pct:.0f}% but weakening (score {composite}) — lock in profits"
 
             if sell_override:
-                signal = "SELL"
+                signal = "NEGATIVE"
                 tech_sigs.append({"type": "bearish",
                     "msg": f"🔴 {sell_reason}",
                     "msg_kr": f"🔴 {sell_reason}"})
@@ -282,7 +321,7 @@ class QuantEngine:
         reason_en, reason_kr        = self._reason(signal, composite, tech_score,
                                                     fund_score, news_score, quant_score, weights_str)
 
-        needs_capital  = (signal == "BUY" and rec_sh == 0 and rec_timing in ("NO_CAPITAL", "INSUFFICIENT"))
+        needs_capital  = (signal == "POSITIVE" and rec_sh == 0 and rec_timing in ("NO_CAPITAL", "INSUFFICIENT"))
         capital_needed = None
         capital_gap    = None
         if rec_timing == "INSUFFICIENT" and capital > 0:
@@ -290,16 +329,16 @@ class QuantEngine:
             capital_needed = round(price, dp_n)
             capital_gap    = round(price - capital, dp_n)   # how much more needed
 
-        # SELL recommendation
-        sell_pct    = 0
-        sell_timing = ""
-        if signal == "SELL":
-            if composite < 15:
-                sell_pct    = 100
-                sell_timing = "Exit immediately — full position"
-            else:
-                sell_pct    = 50
-                sell_timing = "Reduce by half — protect gains"
+        # REMOVED: Legal compliance — 자본시장법 제7조
+        # sell_pct    = 0
+        # sell_timing = ""
+        # if signal == "SELL":
+        #     if composite < 15:
+        #         sell_pct    = 100
+        #         sell_timing = "Exit immediately — full position"
+        #     else:
+        #         sell_pct    = 50
+        #         sell_timing = "Reduce by half — protect gains"
 
         # Take-profit / stop-loss targets (adaptive via 3-Layer regime model)
         beta = snapshot.get("beta") or 1.0
@@ -319,15 +358,15 @@ class QuantEngine:
             if ap["skip_trade"]:
                 tp_pct = 0
                 sl_pct = 0
-            elif signal == "BUY":
+            elif signal == "POSITIVE":
                 tp_pct = ap["tp_pct"]
                 sl_pct = -ap["sl_pct"]
-            elif signal == "SELL":
-                # For SELL: use adaptive SL as cover target
+            elif signal == "NEGATIVE":
+                # For NEGATIVE: use adaptive SL as cover target
                 tp_pct = ap["sl_pct"]  # profit from short ≈ SL distance
                 sl_pct = -ap["tp_pct"] * 0.3  # stop for short ≈ 30% of TP
             else:
-                # HOLD: show what params WOULD be if entering
+                # NEUTRAL: show what params WOULD be if entering
                 tp_pct = ap["tp_pct"]
                 sl_pct = -ap["sl_pct"]
         except Exception:
@@ -370,17 +409,20 @@ class QuantEngine:
             "fund_score":      round(fund_score, 1),
             "news_score":      round(news_score, 1),
             "quant_score":     round(quant_score, 1),
-            "rec_investment":  round(rec_inv, 2),
-            "rec_shares":      rec_sh,
+            # REMOVED: Legal compliance — 자본시장법 제7조
+            # "rec_investment":  round(rec_inv, 2),
+            # "rec_shares":      rec_sh,
             "rec_timing":      "" if needs_capital else rec_timing,
             "needs_capital":   needs_capital,
             "capital_needed":  capital_needed,
-            "sell_pct":        sell_pct,
-            "sell_timing":     sell_timing,
+            # REMOVED: Legal compliance — 자본시장법 제7조
+            # "sell_pct":        sell_pct,
+            # "sell_timing":     sell_timing,
             "tp_pct":          tp_pct,
             "sl_pct":          sl_pct,
-            "take_profit":     round(price * (1 + tp_pct / 100), dp),
-            "stop_loss":       round(price * (1 + sl_pct / 100), dp),
+            # REMOVED: Legal compliance — 자본시장법 제7조
+            # "take_profit":     round(price * (1 + tp_pct / 100), dp),
+            # "stop_loss":       round(price * (1 + sl_pct / 100), dp),
             "regime_profile":  regime_profile,
             "regime_label":    regime_label,
             "regime_label_kr": regime_label_kr,
@@ -393,7 +435,39 @@ class QuantEngine:
             "reason":          reason_en,
             "reason_kr":       reason_kr,
             "snapshot":        snapshot,
+            "variance_ratio":  vr_result,
+            "tsmom":           tsmom_result,
+            "high_52w":        high52_result,
+            # ── New signal models (behavioral + microstructure) ──
+            "disposition_effect": disp_result,
+            "order_flow":         ofi_result,
+            "anchoring_bias":     anchor_result,
+            "sentiment_divergence": spd_result,
+            "donchian_breakout":  donchian_result,
+            "dual_momentum":      dual_mom_result,
+            "correlation_regime": corr_regime_result,
+            # Earnings Tone: NOT integrated into 4-pillar scoring (cost control).
+            # Cache-only lookup — never triggers a Claude API call from analyze().
+            # Populated by /api/ai/earnings-tone endpoint (Pro/Premium, lazy).
+            # TTL: 90 days (quarterly earnings cycle). Free users always see None.
+            "earnings_tone":      self._get_cached_earnings_tone(ticker),
         }
+
+    # ── Earnings Tone (cache-only read; populated via /api/ai/earnings-tone) ──
+
+    @staticmethod
+    def _get_cached_earnings_tone(ticker: str):
+        """Return cached earnings_tone for ticker or None.
+        This MUST remain a pure cache lookup — never call the Claude API here.
+        Writes happen only through the tier-gated POST /api/ai/earnings-tone
+        endpoint so free users incur zero AI cost from the analyze() path.
+        """
+        try:
+            from services import cache_service
+            return cache_service.earnings_tone_cache_get(ticker)
+        except Exception as e:
+            logger.warning(f"earnings_tone cache lookup failed for {ticker}: {e}")
+            return None
 
     # ── Technical Analysis ────────────────────────────────────────────────────
 
@@ -433,7 +507,7 @@ class QuantEngine:
                 else:
                     # Below both MAs — falling knife, no bonus
                     sigs.append({"type": "bearish",
-                                  "msg":    f"RSI oversold ({r:.0f}) in downtrend — falling knife, not a buy signal",
+                                  "msg":    f"RSI oversold ({r:.0f}) in downtrend — falling knife, not a positive signal",
                                   "msg_kr": f"RSI 과매도 ({r:.0f}) 하락추세 — 낙폭 확대 가능, 매수 신호 아님"})
             elif r < 45:
                 adj = 10 if above_200ma else 3
@@ -843,8 +917,8 @@ class QuantEngine:
     # ── Position Sizing ────────────────────────────────────────────────────────
 
     def _size(self, score: float, price: float, capital: float,
-              signal: str = "BUY") -> tuple[float, int, str]:
-        if signal != "BUY":
+              signal: str = "POSITIVE") -> tuple[float, int, str]:
+        if signal != "POSITIVE":
             return 0.0, 0, ""
         if capital <= 0 or price <= 0:
             return 0.0, 0, "NO_CAPITAL"
@@ -886,13 +960,13 @@ class QuantEngine:
         if not weights:
             weights = "Adaptive"
         en = (f"Composite score {score:.0f}/100 ({weights}). Primary driver: {dom[0]} ({dom[1]:.0f} pts). "
-              + {"BUY":  "Multi-factor quant model detects favorable entry. Scale in with defined risk.",
-                 "HOLD": "Hold current position. Await stronger signal before adding.",
-                 "SELL": "Quant model flags deteriorating conditions. Consider reducing or exiting position."}.get(sig, ""))
+              + {"POSITIVE":  "Multi-factor quant model detects favorable conditions. Scale in with defined risk.",
+                 "NEUTRAL": "Hold current position. Await stronger signal before adding.",
+                 "NEGATIVE": "Quant model flags deteriorating conditions. Consider reducing or exiting position."}.get(sig, ""))
         kr = (f"종합 점수 {score:.0f}/100 ({weights}). 주요 동인: {dom_kr} ({dom[1]:.0f}점). "
-              + {"BUY":  "멀티팩터 퀀트 모델이 매수 기회 감지. 분할 매수 권장.",
-                 "HOLD": "현 포지션 유지. 추가 진입 시그널 대기.",
-                 "SELL": "퀀트 모델이 약세 신호 감지. 포지션 축소 또는 청산 고려."}.get(sig, ""))
+              + {"POSITIVE":  "멀티팩터 퀀트 모델이 유리한 조건 감지. 분할 진입 권장.",
+                 "NEUTRAL": "현 포지션 유지. 추가 진입 시그널 대기.",
+                 "NEGATIVE": "퀀트 모델이 약세 신호 감지. 포지션 축소 또는 청산 고려."}.get(sig, ""))
         return en, kr
 
     # ── Portfolio-Level Analytics ─────────────────────────────────────────────
@@ -1011,14 +1085,17 @@ class QuantEngine:
 
     # ── Advanced Quant Models ────────────────────────────────────────────────────
 
-    def _quant_models(self, hist: pd.DataFrame) -> tuple[float, list[dict]]:
-        """Run Mean Reversion + Momentum Breakout + Volatility Regime models."""
+    def _quant_models(self, hist: pd.DataFrame, profile_params: dict = None,
+                       news_score: float = 50) -> tuple[float, list[dict]]:
+        """Run Mean Reversion + Momentum Breakout + Volatility Regime +
+        Disposition Effect + Order Flow + Anchoring Bias + Sentiment Divergence models."""
         sigs = []
         score = 50.0
         close = hist["Close"].astype(float).values
         high = hist["High"].astype(float).values
         low = hist["Low"].astype(float).values
         vol = hist["Volume"].astype(float).values
+        opens = hist["Open"].astype(float).values if "Open" in hist.columns else close.copy()
 
         # 1. Mean Reversion (10% → maps to 0-100)
         try:
@@ -1053,11 +1130,11 @@ class QuantEngine:
         try:
             mb = MomentumBreakout.analyze(close, high, low, vol)
             if mb:
-                if mb["signal"] == "BUY":
+                if mb["signal"] == "POSITIVE":
                     score += 20
                     for s in mb.get("signals", []):
                         sigs.append(s)
-                elif mb["signal"] == "SELL":
+                elif mb["signal"] == "NEGATIVE":
                     score -= 20
                     for s in mb.get("signals", []):
                         sigs.append(s)
@@ -1143,4 +1220,229 @@ class QuantEngine:
         except Exception:
             pass
 
-        return max(0.0, min(100.0, score)), sigs
+        # 6. Variance Ratio Filter — trending vs mean-reverting regime
+        vr_result = {"vr": 1.0, "regime": "unknown", "use_momentum": False}
+        try:
+            vr_result = VarianceRatioFilter.calculate(list(close))
+            if vr_result["use_momentum"]:
+                score += 10
+                sigs.append({"type": "bullish",
+                             "msg": f"Variance Ratio: Trending regime (VR={vr_result['vr']:.2f}) — momentum strategies favored",
+                             "msg_kr": f"분산비: 추세 레짐 (VR={vr_result['vr']:.2f}) — 모멘텀 전략 유리"})
+            elif vr_result["regime"] == "mean_reverting":
+                sigs.append({"type": "neutral",
+                             "msg": f"Variance Ratio: Mean-reverting regime (VR={vr_result['vr']:.2f})",
+                             "msg_kr": f"분산비: 평균회귀 레짐 (VR={vr_result['vr']:.2f})"})
+        except Exception:
+            pass
+
+        # 7. TSMOM — 12-month time-series momentum
+        tsmom_result = {"signal": "NEUTRAL", "momentum_12m": 0, "strength": 0}
+        try:
+            tsmom_result = TSMOM.calculate(list(close))
+            if tsmom_result["signal"] == "POSITIVE":
+                score += 12
+                sigs.append({"type": "bullish",
+                             "msg": f"TSMOM: 12M return +{tsmom_result['momentum_12m']:.1f}% (strength {tsmom_result['strength']:.2f})",
+                             "msg_kr": f"TSMOM: 12개월 수익률 +{tsmom_result['momentum_12m']:.1f}% (강도 {tsmom_result['strength']:.2f})"})
+            elif tsmom_result["signal"] == "NEGATIVE":
+                score -= 12
+                sigs.append({"type": "bearish",
+                             "msg": f"TSMOM: 12M return {tsmom_result['momentum_12m']:.1f}% (strength {tsmom_result['strength']:.2f})",
+                             "msg_kr": f"TSMOM: 12개월 수익률 {tsmom_result['momentum_12m']:.1f}% (강도 {tsmom_result['strength']:.2f})"})
+        except Exception:
+            pass
+
+        # 8. 52-Week High Momentum — nearness to 52-week high
+        high52_result = {"ratio": 0, "signal": "NEUTRAL", "boost": 1.0}
+        try:
+            high52_result = FiftyTwoWeekHigh.calculate(list(close))
+            if high52_result["signal"] == "POSITIVE":
+                sigs.append({"type": "bullish",
+                             "msg": f"52W High: {high52_result['ratio']:.1%} of high (${high52_result['high_52w']:.2f})" + (" — NEW HIGH" if high52_result.get("new_high_3d") else ""),
+                             "msg_kr": f"52주 고점: 고점 대비 {high52_result['ratio']:.1%} (${high52_result['high_52w']:.2f})" + (" — 신고가" if high52_result.get("new_high_3d") else "")})
+            elif high52_result["signal"] == "NEGATIVE":
+                sigs.append({"type": "bearish",
+                             "msg": f"52W High: Only {high52_result['ratio']:.1%} of high (${high52_result['high_52w']:.2f}) — deep pullback",
+                             "msg_kr": f"52주 고점: 고점 대비 {high52_result['ratio']:.1%} (${high52_result['high_52w']:.2f}) — 큰 폭 하락"})
+        except Exception:
+            pass
+
+        # 9. Disposition Effect — Capital Gains Overhang (Frazzini 2006)
+        disp_result = {"cgo": None}
+        try:
+            if (not profile_params or profile_params.get("use_disposition", True)):
+                closes_list = list(close)
+                vols_list = list(vol)
+                if len(closes_list) >= DispositionEffect.MIN_WINDOW:
+                    disp_result = DispositionEffect.calculate(closes_list, vols_list)
+                    cgo = disp_result.get("cgo", 0) or 0
+                    # High CGO (>0.15) = selling pressure from retail → contrarian buy signal
+                    if cgo > 0.15:
+                        score += 8
+                        sigs.append({"type": "bullish",
+                                     "msg": f"Disposition Effect: High CGO ({cgo:.3f}) — retail selling pressure, contrarian buy",
+                                     "msg_kr": f"처분효과: 높은 CGO ({cgo:.3f}) — 개인 매도 압력, 역발상 매수 신호"})
+                    elif cgo < -0.15:
+                        score -= 5
+                        sigs.append({"type": "bearish",
+                                     "msg": f"Disposition Effect: Low CGO ({cgo:.3f}) — no disposition pressure",
+                                     "msg_kr": f"처분효과: 낮은 CGO ({cgo:.3f}) — 처분 압력 없음"})
+        except Exception:
+            pass
+
+        # 10. Order Flow Imbalance — Cont, Kukanov & Stoikov (2014)
+        ofi_result = {"ofi_normalized": None, "pressure_level": "neutral"}
+        try:
+            if (not profile_params or profile_params.get("use_order_flow", True)):
+                opens_list = list(opens)
+                closes_list = list(close)
+                vols_list = list(vol)
+                if len(closes_list) >= OrderFlowImbalance.MIN_WINDOW:
+                    ofi_result = OrderFlowImbalance.calculate(opens_list, closes_list, vols_list)
+                    pressure = ofi_result.get("pressure_level", "neutral")
+                    if pressure == "high_positive":
+                        score += 6
+                        sigs.append({"type": "bullish",
+                                     "msg": f"Order Flow: Strong buying pressure (OFI={ofi_result.get('ofi_normalized', 0):.3f})",
+                                     "msg_kr": f"주문흐름: 강한 매수 압력 (OFI={ofi_result.get('ofi_normalized', 0):.3f})"})
+                    elif pressure == "high_negative":
+                        score -= 6
+                        sigs.append({"type": "bearish",
+                                     "msg": f"Order Flow: Strong selling pressure (OFI={ofi_result.get('ofi_normalized', 0):.3f})",
+                                     "msg_kr": f"주문흐름: 강한 매도 압력 (OFI={ofi_result.get('ofi_normalized', 0):.3f})"})
+        except Exception:
+            pass
+
+        # 11. Anchoring Bias — George & Hwang (2004)
+        #     Multiplicative boost applied to composite later (like 52WeekHigh)
+        anchor_result = {"nearness": None, "boost": 1.0}
+        try:
+            if (not profile_params or profile_params.get("use_anchoring", True)):
+                closes_list = list(close)
+                vols_list = list(vol)
+                if len(closes_list) >= AnchoringBias.MIN_WINDOW:
+                    anchor_result = AnchoringBias.calculate(closes_list, vols_list)
+                    nearness = anchor_result.get("nearness", 0) or 0
+                    # Derive boost: near 52W high = strong momentum → small positive boost
+                    # Far from 52W high = weak momentum → small negative boost
+                    if nearness > 0.95:
+                        anchor_result["boost"] = 1.03   # +3% composite boost
+                        sigs.append({"type": "bullish",
+                                     "msg": f"Anchoring: Near 52W high ({nearness:.1%}) — momentum intact",
+                                     "msg_kr": f"앵커링: 52주 고점 근접 ({nearness:.1%}) — 모멘텀 유지"})
+                    elif nearness > 0.85:
+                        anchor_result["boost"] = 1.01   # +1% mild boost
+                    elif nearness < 0.70:
+                        anchor_result["boost"] = 0.97   # -3% composite drag
+                        sigs.append({"type": "bearish",
+                                     "msg": f"Anchoring: Far from 52W high ({nearness:.1%}) — weak momentum",
+                                     "msg_kr": f"앵커링: 52주 고점 대비 괴리 ({nearness:.1%}) — 약한 모멘텀"})
+                    else:
+                        anchor_result["boost"] = 1.0    # neutral zone
+        except Exception:
+            pass
+
+        # 12b. Donchian Channel Breakout — Turtle Trading simplified (55/20)
+        donchian_result = {"signal": "NEUTRAL", "entry_level": None, "exit_level": None}
+        try:
+            donchian_result = DonchianBreakout.calculate(list(high), list(low), list(close))
+            if donchian_result["signal"] == "POSITIVE":
+                score += 10
+                sigs.append({"type": "bullish",
+                             "msg": f"Donchian Breakout: Price broke 55-day high (${donchian_result.get('entry_level')})",
+                             "msg_kr": f"돈치안 돌파: 55일 신고가 돌파 (${donchian_result.get('entry_level')})"})
+            elif donchian_result["signal"] == "NEGATIVE":
+                score -= 10
+                sigs.append({"type": "bearish",
+                             "msg": f"Donchian Breakout: Price broke 20-day low (${donchian_result.get('exit_level')})",
+                             "msg_kr": f"돈치안 이탈: 20일 저가 이탈 (${donchian_result.get('exit_level')})"})
+        except Exception:
+            pass
+
+        # 12c. Dual Momentum — Antonacci (absolute + relative vs SPY benchmark)
+        dual_mom_result = {"signal": "NEUTRAL", "absolute_momentum": None, "relative_momentum": None}
+        try:
+            if len(close) >= 252:
+                from services.container import fetcher as _fetcher_dm
+                bench_hist = _fetcher_dm.get_price_history("SPY", "1y")
+                if bench_hist is not None and not bench_hist.empty and len(bench_hist) >= 252:
+                    bench_closes = bench_hist["Close"].astype(float).values
+                    dual_mom_result = DualMomentum.calculate(list(close), list(bench_closes))
+                    if dual_mom_result["signal"] == "POSITIVE":
+                        score += 10
+                        sigs.append({"type": "bullish",
+                                     "msg": f"Dual Momentum: Asset +{dual_mom_result['asset_return_12m']:.1f}% beats SPY +{dual_mom_result['benchmark_return_12m']:.1f}%",
+                                     "msg_kr": f"듀얼 모멘텀: 자산 +{dual_mom_result['asset_return_12m']:.1f}% > SPY +{dual_mom_result['benchmark_return_12m']:.1f}%"})
+                    elif dual_mom_result["signal"] == "NEGATIVE":
+                        score -= 10
+                        sigs.append({"type": "bearish",
+                                     "msg": f"Dual Momentum: Asset {dual_mom_result['asset_return_12m']:.1f}% (absolute momentum fails)",
+                                     "msg_kr": f"듀얼 모멘텀: 자산 {dual_mom_result['asset_return_12m']:.1f}% (절대 모멘텀 실패)"})
+        except Exception:
+            pass
+
+        # 12d. Correlation Regime — diversification breakdown detector (sector basket)
+        corr_regime_result = {"avg_correlation": None, "regime": "unknown"}
+        try:
+            from services.container import fetcher as _fetcher_cr
+            basket = ["SPY", "QQQ", "IWM", "DIA", "XLK"]
+            returns_list = []
+            for tk in basket:
+                bh = _fetcher_cr.get_price_history(tk, "6mo")
+                if bh is not None and not bh.empty and len(bh) >= 60:
+                    br = bh["Close"].astype(float).pct_change().dropna().values
+                    if len(br) >= 60:
+                        returns_list.append(list(br))
+            if len(returns_list) >= 2:
+                corr_regime_result = CorrelationRegime.calculate(returns_list)
+                regime = corr_regime_result.get("regime", "unknown")
+                if regime == "high_correlation":
+                    score -= 5
+                    sigs.append({"type": "bearish",
+                                 "msg": f"Correlation Regime: High ({corr_regime_result.get('avg_correlation')}) — systemic risk, diversification failing",
+                                 "msg_kr": f"상관관계 레짐: 높음 ({corr_regime_result.get('avg_correlation')}) — 시스템 리스크, 분산 실패"})
+                elif regime == "low_correlation":
+                    score += 3
+                    sigs.append({"type": "bullish",
+                                 "msg": f"Correlation Regime: Low ({corr_regime_result.get('avg_correlation')}) — stock-picking environment",
+                                 "msg_kr": f"상관관계 레짐: 낮음 ({corr_regime_result.get('avg_correlation')}) — 개별종목 장세"})
+        except Exception:
+            pass
+
+        # 12. Sentiment-Price Divergence — detect sentiment/price disconnect
+        spd_result = {"divergence_type": "none", "divergence_score": None}
+        try:
+            if (not profile_params or profile_params.get("use_sentiment_divergence", True)):
+                closes_list = list(close)
+                if len(closes_list) >= SentimentPriceDivergence.MIN_DATA:
+                    # Use current news_score as constant proxy (no historical sentiment array)
+                    window_len = min(len(closes_list), 30)
+                    sentiment_scores = [news_score] * window_len
+                    spd_result = SentimentPriceDivergence.calculate(
+                        closes_list[-window_len:], sentiment_scores
+                    )
+                    div_type = spd_result.get("divergence_type", "neutral")
+                    price_roc = spd_result.get("price_roc", 0)
+                    sent_roc = spd_result.get("sentiment_roc", 0)
+
+                    # Interpret direction: divergence + price falling but sentiment up = bullish
+                    if div_type in ("strong_divergence", "mild_divergence"):
+                        if price_roc < 0 and sent_roc >= 0:
+                            # Sentiment up, price down → bullish divergence
+                            score += 10
+                            sigs.append({"type": "bullish",
+                                         "msg": f"Sentiment Divergence: Bullish — sentiment holds while price drops ({spd_result.get('divergence_score', 0):.3f})",
+                                         "msg_kr": f"센티먼트 괴리: 강세 — 가격 하락에도 심리 유지 ({spd_result.get('divergence_score', 0):.3f})"})
+                        elif price_roc > 0 and sent_roc <= 0:
+                            # Sentiment down, price up → bearish divergence
+                            score -= 10
+                            sigs.append({"type": "bearish",
+                                         "msg": f"Sentiment Divergence: Bearish — price rises but sentiment deteriorates ({spd_result.get('divergence_score', 0):.3f})",
+                                         "msg_kr": f"센티먼트 괴리: 약세 — 가격 상승에도 심리 악화 ({spd_result.get('divergence_score', 0):.3f})"})
+        except Exception:
+            pass
+
+        return (max(0.0, min(100.0, score)), sigs, vr_result, tsmom_result, high52_result,
+                disp_result, ofi_result, anchor_result, spd_result,
+                donchian_result, dual_mom_result, corr_regime_result)

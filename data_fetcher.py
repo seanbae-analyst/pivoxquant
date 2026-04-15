@@ -1,11 +1,13 @@
 """
-StockPilot — Data Fetcher v3
-Data sources: FMP API (primary), KIS (Korean stocks), RSS feeds, alternative.me.
+PivoxQuant — Data Fetcher v3
+Data sources: Alpaca (US primary), KIS (KR primary), FMP (fallback/fundamentals),
+RSS feeds, alternative.me.
 Supports US equities + Korean stocks (.KS / .KQ).
 """
 
+import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import feedparser
 import pandas as pd
@@ -14,6 +16,21 @@ import requests
 import fmp_service as fmp
 
 logger = logging.getLogger(__name__)
+
+# ── Alpaca Historical Data Client (US stocks — no call limit) ─────────────────
+_alpaca_hist_client = None
+_alpaca_hist_available = False
+
+try:
+    _alpaca_key = os.environ.get("ALPACA_API_KEY", "").strip()
+    _alpaca_secret = os.environ.get("ALPACA_SECRET_KEY", "").strip()
+    if _alpaca_key and _alpaca_secret:
+        from alpaca.data.historical import StockHistoricalDataClient
+        _alpaca_hist_client = StockHistoricalDataClient(_alpaca_key, _alpaca_secret)
+        _alpaca_hist_available = True
+        logger.info("DataFetcher: Alpaca historical client initialized (US price source)")
+except Exception as e:
+    logger.warning(f"DataFetcher: Alpaca init failed, will use FMP for US prices: {e}")
 
 # ── Korean Stock Registry ──────────────────────────────────────────────────────
 KOREAN_NAMES = {
@@ -63,7 +80,6 @@ KOREAN_BEARISH = {
 
 # Wall Street RSS feeds (free, no API key)
 WS_FEEDS = [
-    {"name": "Yahoo Finance",    "url": "https://finance.yahoo.com/rss/topstories"},
     {"name": "Reuters Business", "url": "https://feeds.reuters.com/reuters/businessNews"},
     {"name": "MarketWatch",      "url": "https://feeds.marketwatch.com/marketwatch/topstories/"},
     {"name": "CNBC Markets",     "url": "https://www.cnbc.com/id/15839069/device/rss/rss.html"},
@@ -100,10 +116,38 @@ class DataFetcher:
             return f"₩{price:,.0f}"
         return f"${price:,.2f}"
 
+    @staticmethod
+    def _alpaca_latest_quote(ticker: str) -> "dict | None":
+        """Fetch a single latest bar from Alpaca for US tickers.
+        Returns {price, open, high, low, volume} or None.
+        No daily call limit; suitable as primary source for US quotes.
+        """
+        if not _alpaca_hist_available or not _alpaca_hist_client:
+            return None
+        try:
+            from alpaca.data.requests import StockLatestBarRequest
+            req = StockLatestBarRequest(symbol_or_symbols=[ticker])
+            bars = _alpaca_hist_client.get_stock_latest_bar(req)
+            bar = bars.get(ticker)
+            if not bar:
+                return None
+            return {
+                "price":  float(bar.close),
+                "open":   float(bar.open),
+                "high":   float(bar.high),
+                "low":    float(bar.low),
+                "volume": int(bar.volume),
+            }
+        except Exception as e:
+            logger.debug(f"Alpaca latest quote failed {ticker}: {e}")
+            return None
+
     def quick_lookup(self, ticker: str) -> "dict | None":
         """
         Fast ticker lookup for real-time modal UX.
-        Uses FMP quote API for US stocks, KIS for Korean stocks.
+        Routing:
+          - KR: KIS primary -> FMP fallback
+          - US: Alpaca primary (no call limit) -> FMP fallback -> FMP profile price -> stale cache
         """
         ticker = ticker.strip().upper()
         if not ticker:
@@ -116,24 +160,44 @@ class DataFetcher:
             name = KOREAN_NAMES.get(ticker)
 
             if self.is_korean(ticker):
-                # Korean stocks: use KIS API or FMP won't have them
-                # Try FMP first for non-Korean, KIS for Korean
-                price = None  # KIS handled by realtime_service
+                # Korean stocks: use KIS API (FMP free tier does not serve KR)
+                try:
+                    from services.container import realtime as _rt
+                    kis_data = _rt.get_price(ticker)
+                    if kis_data and kis_data.get("price"):
+                        price = kis_data["price"]
+                except Exception as kis_err:
+                    logger.warning(f"KIS lookup failed {ticker}: {kis_err}")
             else:
-                # US stocks: FMP quote
-                q = fmp.get_quote(ticker)
-                if q:
-                    price = q.get("price")
+                # US stocks: Alpaca first (unlimited), FMP fallback only if Alpaca fails
+                alp = self._alpaca_latest_quote(ticker)
+                if alp and alp.get("price", 0) > 0:
+                    price = alp["price"]
+                    # Alpaca doesn't return company name — try cached FMP profile/info
+                    # (cheap: zero network calls when cached within 7d/24h TTL)
                     if not name:
-                        name = q.get("name", "")
+                        try:
+                            info_cached = fmp.get_info(ticker)
+                            if info_cached:
+                                name = info_cached.get("shortName") or info_cached.get("longName")
+                        except Exception:
+                            pass
+                else:
+                    # Alpaca failed — try FMP quote (may return None on 402)
+                    q = fmp.get_quote(ticker)
+                    if q:
+                        price = q.get("price")
+                        if not name:
+                            name = q.get("name", "")
 
             if not price or price <= 0:
-                # Fallback: try FMP profile
-                info = fmp.get_info(ticker)
-                if info:
-                    price = info.get("price", 0)
-                    if not name:
-                        name = info.get("shortName", ticker)
+                # Final fallback: try FMP profile for cached price + company name (US only)
+                if not self.is_korean(ticker):
+                    info = fmp.get_info(ticker)
+                    if info:
+                        price = info.get("price", 0)
+                        if not name:
+                            name = info.get("shortName", ticker)
 
             if not price or price <= 0:
                 return None
@@ -385,41 +449,45 @@ Reply ONLY in this exact JSON format, nothing else:
             return {"value": 50, "label": "Neutral"}
         fng_future = executor.submit(_fetch_fng)
 
-        # FMP batch quote for indices and assets
+        # FMP v4 stable: use get_quote() for all — works for indices, ETFs, crypto
         index_syms = ["^GSPC", "^IXIC", "^DJI", "^RUT", "^VIX", "^TNX", "^IRX", "^TYX"]
         stock_syms = ["GLD", "USO", "SLV", "UUP"]
         fx_pairs = ["USDKRW", "EURUSD", "USDJPY"]
 
-        def _get_single_index(sym):
-            h = fmp.get_history(sym, period="5d")
-            if h is not None and not h.empty and len(h) >= 2:
-                close = h["Close"].dropna()
-                price = float(close.iloc[-1])
-                prev = float(close.iloc[-2])
-                chg = (price - prev) / prev * 100 if prev else 0
+        def _get_single_quote(sym):
+            """Fetch a single quote via FMP v4 stable /quote endpoint."""
+            q = fmp.get_quote(sym)
+            if q and q.get("price"):
+                price = q.get("price", 0)
+                chg = q.get("changesPercentage", q.get("changePercentage", 0)) or 0
                 return (sym, (price, chg))
-            elif h is not None and not h.empty:
-                return (sym, (float(h["Close"].iloc[-1]), 0))
             return (sym, None)
 
         def _get_index_quotes():
             from concurrent.futures import ThreadPoolExecutor as _TPE
             result = {}
             with _TPE(max_workers=8) as pool:
-                for sym, val in pool.map(_get_single_index, index_syms):
+                for sym, val in pool.map(_get_single_quote, index_syms):
                     if val is not None:
                         result[sym] = val
             return result
 
         def _get_stock_quotes():
             quotes = fmp.get_quotes_batch(stock_syms)
-            return {sym: (q.get("price", 0), q.get("changesPercentage", 0))
+            return {sym: (q.get("price", 0), q.get("changesPercentage", q.get("changePercentage", 0)) or 0)
                     for sym, q in quotes.items()} if quotes else {}
 
         def _get_fx_quotes():
+            """Fetch FX rates via get_quote() — works for all pairs (USDKRW, EURUSD, USDJPY).
+            get_fx_rate() has a >100 sanity check that blocks EUR/USD (~1.17) and USD/JPY (~150),
+            so we use get_quote() directly for the macro dashboard."""
             from concurrent.futures import ThreadPoolExecutor as _TPE
             result = {}
             def _fetch_pair(pair):
+                q = fmp.get_quote(pair)
+                if q and q.get("price"):
+                    return (pair, q["price"])
+                # Fallback: try get_fx_rate (works for USDKRW where rate > 100)
                 rate = fmp.get_fx_rate(pair)
                 return (pair, rate)
             with _TPE(max_workers=3) as pool:
@@ -448,9 +516,31 @@ Reply ONLY in this exact JSON format, nothing else:
                 p, c = idx_data[sym]
                 macro[key] = {"price": self._safe(p), "change_pct": self._safe(c)}
 
-        # Korean indices (FMP may not have these — use defaults)
-        for sym, key in [("^KS11","kospi"),("^KQ11","kosdaq")]:
-            if sym in idx_data:
+        # Korean indices — FMP does not serve KR indices on free tier, prefer KIS.
+        # Fall back to FMP only if KIS fails.
+        try:
+            from services.container import realtime as _rt
+            kis_ready = getattr(_rt, "kis_available", False)
+        except Exception:
+            kis_ready = False
+
+        if kis_ready:
+            try:
+                from kis_service import KISService
+                _kis = KISService()
+                for code, key in [("0001", "kospi"), ("1001", "kosdaq")]:
+                    idx = _kis.get_index_price(code)
+                    if idx and idx.get("price"):
+                        macro[key] = {
+                            "price": self._safe(idx["price"]),
+                            "change_pct": self._safe(idx.get("change_pct", 0)),
+                        }
+            except Exception as e:
+                logger.debug(f"KIS index fetch failed: {e}")
+
+        # FMP fallback for KR indices (rarely works on free tier)
+        for sym, key in [("^KS11", "kospi"), ("^KQ11", "kosdaq")]:
+            if key not in macro and sym in idx_data:
                 p, c = idx_data[sym]
                 macro[key] = {"price": self._safe(p), "change_pct": self._safe(c)}
 
@@ -484,7 +574,7 @@ Reply ONLY in this exact JSON format, nothing else:
         # BTC (fetched in parallel above)
         if btc_data:
             macro["btc"] = {"price": self._safe(btc_data.get("price", 0), 0),
-                            "change_pct": self._safe(btc_data.get("changesPercentage", 0))}
+                            "change_pct": self._safe(btc_data.get("changesPercentage", btc_data.get("changePercentage", 0)))}
 
         # Yield curve
         try:
@@ -627,15 +717,42 @@ Reply ONLY in this exact JSON format, nothing else:
             if ticker.strip().isdigit() and len(ticker.strip()) == 6:
                 ticker = ticker.strip() + ".KS"
 
-            info = fmp.get_info(ticker)
-            hist = fmp.get_history(ticker, period="1y")
+            is_kr = self.is_korean(ticker)
 
-            # Get current price from quote or info
-            q = fmp.get_quote(ticker)
-            cur = q.get("price", 0) if q else info.get("price", 0)
+            # Korean stocks: FMP free tier does NOT serve KR — use KIS + minimal info
+            if is_kr:
+                info = {}  # FMP fundamentals unavailable for KR
+            else:
+                info = fmp.get_info(ticker) or {}
+
+            # Use get_price_history() which routes through KIS for KR, Alpaca for US
+            hist = self.get_price_history(ticker, period="1y")
+
+            # Get current price — KIS for KR, Alpaca first for US then FMP fallback
+            cur = 0
+            if is_kr:
+                try:
+                    from services.container import realtime as _rt
+                    kis_data = _rt.get_price(ticker)
+                    if kis_data and kis_data.get("price"):
+                        cur = float(kis_data["price"])
+                except Exception as kis_err:
+                    logger.warning(f"KIS snapshot price failed {ticker}: {kis_err}")
+            else:
+                # US: Alpaca primary (unlimited), FMP fallback on Alpaca failure
+                alp = self._alpaca_latest_quote(ticker)
+                if alp and alp.get("price", 0) > 0:
+                    cur = float(alp["price"])
+                else:
+                    q = fmp.get_quote(ticker)
+                    cur = float(q.get("price", 0)) if q else float(info.get("price", 0) or 0)
+
+            # Fallback to last close from history if live price missing
+            if (not cur or cur <= 0) and hist is not None and not hist.empty:
+                cur = float(hist["Close"].iloc[-1])
+
             if not cur or cur <= 0:
                 return None
-            cur = float(cur)
 
             if hist is None or hist.empty or len(hist) < 20:
                 return None
@@ -668,7 +785,7 @@ Reply ONLY in this exact JSON format, nothing else:
                 "industry":       info.get("industry", "Unknown"),
                 "beta":           info.get("beta"),
                 "currency":       curr,
-                "is_korean":      self.is_korean(ticker),
+                "is_korean":      is_kr,
             }
         except Exception as e:
             logger.error(f"Snapshot failed {ticker}: {e}")
@@ -678,37 +795,287 @@ Reply ONLY in this exact JSON format, nothing else:
     _HISTORY_TTL = 300   # 5 minute cache for historical data
 
     def get_price_history(self, ticker: str, period: str = "6mo") -> "pd.DataFrame | None":
+        """Get historical OHLCV.
+        US stocks: Alpaca (primary, no call limit) -> FMP (fallback).
+        KR stocks: KIS (primary) -> FMP (fallback).
+        Indices (^): FMP only.
+        """
         import time as _time
         cache_key = (ticker.upper(), period)
         cached = self._history_cache.get(cache_key)
         if cached and _time.time() - cached[0] < self._HISTORY_TTL:
             return cached[1]
+
+        result = None
+
+        # Route to appropriate primary source
+        if ticker.startswith("^"):
+            # Index tickers — FMP only (Alpaca doesn't serve indices)
+            result = self._get_history_fmp(ticker, period)
+        elif self.is_korean(ticker):
+            # Korean stocks — try KIS first, FMP fallback
+            result = self._get_history_kis(ticker, period)
+            if result is None:
+                result = self._get_history_fmp(ticker, period)
+        else:
+            # US stocks — try Alpaca first (no call limit), FMP fallback
+            result = self._get_history_alpaca(ticker, period)
+            if result is None:
+                result = self._get_history_fmp(ticker, period)
+
+        if result is not None:
+            self._history_cache[cache_key] = (_time.time(), result)
+        return result
+
+    @staticmethod
+    def _get_history_fmp(ticker: str, period: str) -> "pd.DataFrame | None":
+        """Fetch historical data from FMP (fallback source)."""
         try:
             h = fmp.get_history(ticker, period=period)
-            result = h if h is not None and not h.empty else None
-            if result is not None:
-                self._history_cache[cache_key] = (_time.time(), result)
-            return result
+            return h if h is not None and not h.empty else None
         except Exception:
             return None
 
-    def get_prices_batch(self, tickers: list[str]) -> dict:
-        """Batch price fetch using FMP batch quote API."""
-        result = {}
+    @staticmethod
+    def _get_history_alpaca(ticker: str, period: str) -> "pd.DataFrame | None":
+        """Fetch historical daily bars from Alpaca (US stocks, no call limit)."""
+        if not _alpaca_hist_available or not _alpaca_hist_client:
+            return None
         try:
-            quotes = fmp.get_quotes_batch(tickers)
-            for ticker in tickers:
-                q = quotes.get(ticker)
-                if q and q.get("price", 0) > 0:
-                    price = q["price"]
-                    curr = self.currency(ticker)
-                    result[ticker] = {
-                        "price":         round(price, 0 if curr == "KRW" else 2),
-                        "price_display": self.fmt_price(price, ticker),
-                        "currency":      curr,
-                    }
+            from alpaca.data.requests import StockBarsRequest
+            from alpaca.data.timeframe import TimeFrame
+            from alpaca.data.enums import Adjustment
+
+            # Map period string to days
+            period_map = {
+                "1d": 1, "5d": 5, "1mo": 30, "3mo": 90,
+                "6mo": 180, "1y": 365, "2y": 730, "3y": 1095, "5y": 1825,
+            }
+            days = period_map.get(period, 90)
+            start = datetime.now() - timedelta(days=days)
+
+            req = StockBarsRequest(
+                symbol_or_symbols=[ticker],
+                timeframe=TimeFrame.Day,
+                start=start,
+                adjustment=Adjustment.ALL,  # split + dividend adjusted
+            )
+            bars = _alpaca_hist_client.get_stock_bars(req)
+            df = bars.df
+
+            if df is None or df.empty:
+                return None
+
+            # Alpaca returns MultiIndex (symbol, timestamp) — flatten
+            if isinstance(df.index, pd.MultiIndex):
+                df = df.xs(ticker, level="symbol")
+
+            # Rename columns to match standard OHLCV format
+            col_map = {
+                "open": "Open", "high": "High", "low": "Low",
+                "close": "Close", "volume": "Volume",
+                "trade_count": "TradeCount", "vwap": "VWAP",
+            }
+            df = df.rename(columns=col_map)
+            df.index.name = "Date"
+
+            # Ensure required columns
+            for col in ["Open", "High", "Low", "Close", "Volume"]:
+                if col not in df.columns:
+                    df[col] = 0
+
+            logger.debug(f"Alpaca historical: {ticker} returned {len(df)} bars")
+            return df
+
         except Exception as e:
-            logger.warning(f"Batch price fetch failed: {e}")
+            logger.warning(f"Alpaca historical failed for {ticker}: {e}")
+            return None
+
+    @staticmethod
+    def _get_history_kis(ticker: str, period: str) -> "pd.DataFrame | None":
+        """Fetch historical daily bars from KIS API (Korean stocks).
+        KIS daily chart API: /uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice
+        """
+        try:
+            kis_key = os.environ.get("KIS_APP_KEY", "").strip()
+            kis_secret = os.environ.get("KIS_APP_SECRET", "").strip()
+            if not kis_key or not kis_secret:
+                return None
+
+            # Get KIS access token via the process-wide token manager
+            # (avoids racing with RealtimeService / KISService for KIS's
+            # 1-token-per-minute quota — see kis_token_manager.py).
+            from kis_token_manager import get_kis_token_manager
+            access_token = get_kis_token_manager().get_token()
+            if not access_token:
+                return None
+
+            # Convert ticker to 6-digit code
+            stock_code = ticker.upper().replace(".KS", "").replace(".KQ", "")
+            if not stock_code.isdigit():
+                return None
+
+            period_map = {
+                "1d": 1, "5d": 5, "1mo": 30, "3mo": 90,
+                "6mo": 180, "1y": 365, "2y": 730, "3y": 1095, "5y": 1825,
+            }
+            days = period_map.get(period, 90)
+            end_date = datetime.now().strftime("%Y%m%d")
+            start_date = (datetime.now() - timedelta(days=days)).strftime("%Y%m%d")
+
+            headers = {
+                "authorization": f"Bearer {access_token}",
+                "appkey": kis_key,
+                "appsecret": kis_secret,
+                "tr_id": "FHKST03010100",
+                "content-type": "application/json; charset=utf-8",
+            }
+
+            # KIS returns max 100 records per call — paginate backwards
+            import time as _kis_time
+            all_rows = []
+            cursor_end = end_date
+
+            for _page in range(15):  # max 15 pages = ~1500 bars (6y)
+                params = {
+                    "FID_COND_MRKT_DIV_CODE": "J",
+                    "FID_INPUT_ISCD": stock_code,
+                    "FID_INPUT_DATE_1": start_date,
+                    "FID_INPUT_DATE_2": cursor_end,
+                    "FID_PERIOD_DIV_CODE": "D",
+                    "FID_ORG_ADJ_PRC": "0",
+                }
+                r = requests.get(
+                    "https://openapi.koreainvestment.com:9443"
+                    "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+                    headers=headers,
+                    params=params,
+                    timeout=10,
+                )
+                data = r.json()
+                records = data.get("output2", [])
+                if not records:
+                    break
+
+                page_rows = []
+                earliest_dt = None
+                for rec in records:
+                    try:
+                        dt = rec.get("stck_bsop_date", "")
+                        if not dt or len(dt) != 8:
+                            continue
+                        page_rows.append({
+                            "Date": pd.Timestamp(f"{dt[:4]}-{dt[4:6]}-{dt[6:8]}"),
+                            "Open": float(rec.get("stck_oprc", 0)),
+                            "High": float(rec.get("stck_hgpr", 0)),
+                            "Low": float(rec.get("stck_lwpr", 0)),
+                            "Close": float(rec.get("stck_clpr", 0)),
+                            "Volume": int(rec.get("acml_vol", 0)),
+                        })
+                        if earliest_dt is None or dt < earliest_dt:
+                            earliest_dt = dt
+                    except (ValueError, TypeError):
+                        continue
+
+                if not page_rows:
+                    break
+                all_rows.extend(page_rows)
+
+                # If we got fewer than 100 records, no more pages
+                if len(records) < 100:
+                    break
+                # If earliest record is at or before start_date, done
+                if earliest_dt and earliest_dt <= start_date:
+                    break
+                # Move cursor to day before earliest record
+                if earliest_dt:
+                    from datetime import datetime as _dt_cls
+                    prev = _dt_cls.strptime(earliest_dt, "%Y%m%d") - timedelta(days=1)
+                    cursor_end = prev.strftime("%Y%m%d")
+
+                _kis_time.sleep(0.15)  # rate limit courtesy
+
+            if not all_rows:
+                return None
+
+            df = pd.DataFrame(all_rows)
+            df = df.drop_duplicates(subset=["Date"])
+            df = df.set_index("Date").sort_index()
+            logger.debug(f"KIS historical: {ticker} returned {len(df)} bars ({_page+1} pages)")
+            return df
+
+        except Exception as e:
+            logger.warning(f"KIS historical failed for {ticker}: {e}")
+            return None
+
+    def get_prices_batch(self, tickers: list[str]) -> dict:
+        """Batch price fetch with multi-source fallback.
+
+        Routing:
+          - US tickers: Alpaca batch (unlimited) primary, FMP batch fallback
+          - KR tickers: KIS (via realtime service), FMP fallback
+        """
+        result = {}
+        if not tickers:
+            return result
+
+        us_tickers = [t for t in tickers if not self.is_korean(t)]
+        kr_tickers = [t for t in tickers if self.is_korean(t)]
+
+        # US: Alpaca batch first (no daily call limit)
+        if us_tickers and _alpaca_hist_available and _alpaca_hist_client:
+            try:
+                from alpaca.data.requests import StockLatestBarRequest
+                req = StockLatestBarRequest(symbol_or_symbols=us_tickers)
+                bars = _alpaca_hist_client.get_stock_latest_bar(req)
+                for sym, bar in bars.items():
+                    if bar and float(bar.close) > 0:
+                        price = float(bar.close)
+                        result[sym] = {
+                            "price":         round(price, 2),
+                            "price_display": self.fmt_price(price, sym),
+                            "currency":      "USD",
+                            "source":        "alpaca",
+                        }
+            except Exception as e:
+                logger.warning(f"Alpaca batch price fetch failed: {e}")
+
+        # KR: KIS via realtime service (iterates internally)
+        if kr_tickers:
+            try:
+                from services.container import realtime as _rt
+                kis_prices = _rt.get_prices_batch(kr_tickers)
+                for t, p in kis_prices.items():
+                    if p and p.get("price", 0) > 0:
+                        price = p["price"]
+                        result[t] = {
+                            "price":         round(price, 0),
+                            "price_display": self.fmt_price(price, t),
+                            "currency":      "KRW",
+                            "source":        p.get("source", "kis"),
+                        }
+            except Exception as e:
+                logger.warning(f"KIS batch price fetch failed: {e}")
+
+        # FMP fallback for any ticker still missing
+        missing = [t for t in tickers if t not in result]
+        if missing:
+            try:
+                quotes = fmp.get_quotes_batch(missing)
+                for ticker in missing:
+                    q = quotes.get(ticker)
+                    if q and q.get("price", 0) > 0:
+                        price = q["price"]
+                        curr = self.currency(ticker)
+                        result[ticker] = {
+                            "price":         round(price, 0 if curr == "KRW" else 2),
+                            "price_display": self.fmt_price(price, ticker),
+                            "currency":      curr,
+                            "source":        "fmp",
+                        }
+            except Exception as e:
+                logger.debug(f"FMP batch fallback failed: {e}")
+
         return result
 
     # ── Sectors ───────────────────────────────────────────────────────────────
@@ -738,3 +1105,28 @@ Reply ONLY in this exact JSON format, nothing else:
         except Exception:
             pass
         return result
+
+    # ── Pre-warm Cache ────────────────────────────────────────────────────────
+
+    def prefetch_discover_pool(self, tickers: list[str] = None):
+        """Pre-warm FMP cache for discover pool tickers using batch API calls.
+
+        This should be called once on app startup or before a discover scan.
+        Dramatically reduces FMP API calls by:
+        - Fetching profiles in batch (50 tickers = 1 call instead of 50)
+        - Fetching quotes in batch (50 tickers = 1 call instead of 50)
+        - Pre-building get_info() cache from components
+
+        Without prefetch: 50 tickers * 6 calls = 300 FMP calls
+        With prefetch:    2 batch + ~100 individual ratios/metrics = ~102 calls (first run)
+                          2 batch + 0 (cached from 24h TTL) = 2 calls (subsequent runs same day)
+        """
+        if tickers is None:
+            # Import discover pool from engine if not provided
+            try:
+                from engine import QuantEngine
+                tickers = QuantEngine.DISCOVER_POOL
+            except ImportError:
+                logger.warning("Cannot import QuantEngine for discover pool")
+                return
+        fmp.prefetch_fundamentals(tickers)

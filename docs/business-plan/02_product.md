@@ -1,4 +1,4 @@
-# 2. 제품 상세 — StockPilot 퀀트 엔진
+# 2. 제품 상세 — PivoxQuant 퀀트 엔진
 
 ## 아키텍처 개요
 
@@ -33,11 +33,11 @@ AdaptiveParams 3-Layer → 동적 TP/SL/Trail
 
 | 시장 | 현재 | 프로덕션 전환 | 이유 |
 |------|------|-------------|------|
-| 미국 | yfinance | **Finnhub** (무료, 분당 60회) | yfinance는 Yahoo 비공식 스크래핑, 상업적 사용 ToS 위반 + IP 밴 리스크 |
+| 미국 | Alpaca + FMP | Alpaca (primary) + FMP (fallback) | Alpaca 무제한 시세 + FMP 250회/일 |
 | 한국 | KIS API | KIS API (유지) | 공식 API, 안정적 |
 | 스케일업 | - | Polygon.io 또는 FMP ($15~29/월) | MAU 500명+ 시 전환 검토 |
 
-> **주의**: yfinance는 2024년부터 Yahoo 제한 강화로 .info 호출 에러 빈발. 프로덕션에 쓰면 서비스 전체가 멈출 수 있음. Finnhub 교체 필수.
+> **완료**: Alpaca (US) + KIS (KR) + FMP (fallback/fundamentals) 체제로 운영 중.
 
 ---
 
@@ -196,14 +196,14 @@ SPY, TLT, GLD, USO, UUP, BTC → 5가지 거시 체제 분류
 
 ### 미국 주식 (검증됨)
 
-| 종목 | 기간 | StockPilot | Buy&Hold | Alpha |
+| 종목 | 기간 | PivoxQuant | Buy&Hold | Alpha |
 |------|------|-----------|----------|-------|
 | NVDA | 1년 | +34.7% | +15.7% | **+19.0%p** |
 | AAPL | 1년 | +29.9% | +23.5% | **+6.4%p** |
 
 ### 한계 및 주의사항
 
-| 종목 | 기간 | StockPilot | Buy&Hold | Alpha | 분석 |
+| 종목 | 기간 | PivoxQuant | Buy&Hold | Alpha | 분석 |
 |------|------|-----------|----------|-------|------|
 | Samsung | 1년 | +106.2% | +194.6% | -88.4%p | 아래 참조 |
 

@@ -1,4 +1,4 @@
-# StockPilot -- Environment Variables
+# PivoxQuant -- Environment Variables
 
 Last updated: 2026-04-09
 
@@ -16,9 +16,9 @@ Railway Dashboard > Project > Variables 에서 설정.
 | `CSRF_SECRET` | CSRF 토큰 서명 키. 고정값 필수. SECRET_KEY와 다른 값 사용 권장 | `e5f6g7h8...64자hex` |
 | `DATABASE_URL` | PostgreSQL 연결 URL. Railway Postgres 플러그인 추가 시 자동 생성 | `postgresql://user:pass@host:5432/dbname` |
 | `FLASK_ENV` | `production` 고정. Secure 쿠키, HSTS 등 보안 설정 활성화 | `production` |
-| `CORS_ORIGINS` | Vercel 프론트엔드 도메인. 쉼표 구분 가능 | `https://stockpilot.vercel.app` |
-| `FRONTEND_URL` | 프론트엔드 URL. OAuth 콜백, 리다이렉트에 사용 | `https://stockpilot.vercel.app` |
-| `ANTHROPIC_API_KEY` | Claude AI API 키 | `sk-ant-api03-...` |
+| `CORS_ORIGINS` | Vercel 프론트엔드 도메인. 쉼표 구분 가능 | `https://pivoxquant.vercel.app` |
+| `FRONTEND_URL` | 프론트엔드 URL. OAuth 콜백, 리다이렉트에 사용 | `https://pivoxquant.vercel.app` |
+| `ANTHROPIC_API_KEY` | Claude AI API 키 | `YOUR_ANTHROPIC_KEY` |
 | `PORT` | Railway가 자동 주입. 수동 설정 불필요 | (자동) |
 
 ### REQUIRED -- 기능별 (해당 기능 미사용 시 빈 문자열 가능)
@@ -75,26 +75,26 @@ CSRF_SECRET=dev-csrf-secret-change-in-production
 # DATABASE_URL 미설정 시 SQLite 자동 사용 (로컬 개발용)
 
 # --- AI ---
-ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_API_KEY=YOUR_ANTHROPIC_KEY
 
 # --- Broker ---
-ALPACA_API_KEY=PK...
-ALPACA_SECRET_KEY=...
-KIS_APP_KEY=PS...
-KIS_APP_SECRET=...
+ALPACA_API_KEY=YOUR_ALPACA_KEY
+ALPACA_SECRET_KEY=YOUR_ALPACA_SECRET
+KIS_APP_KEY=YOUR_KIS_APP_KEY
+KIS_APP_SECRET=YOUR_KIS_APP_SECRET
 
 # --- OAuth ---
-GOOGLE_CLIENT_ID=...apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-...
+GOOGLE_CLIENT_ID=YOUR_GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET=YOUR_GOOGLE_CLIENT_SECRET
 
 # --- Monitoring ---
-SENTRY_DSN=https://...@sentry.io/...
+SENTRY_DSN=YOUR_SENTRY_DSN
 
 # --- Data ---
-FMP_API_KEY=...
+FMP_API_KEY=YOUR_FMP_KEY
 
 # --- Email ---
-SENDGRID_API_KEY=SG....
+SENDGRID_API_KEY=YOUR_SENDGRID_KEY
 ```
 
 ---

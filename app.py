@@ -1,5 +1,5 @@
 """
-StockPilot — Flask Backend v2
+PivoxQuant — Flask Backend v2
 Quant Engine + AI-powered portfolio & trading dashboard.
 Supports US + Korean equities.
 """
@@ -15,7 +15,7 @@ from flask import Flask, redirect
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from config import Config
-from extensions import db, login_manager
+from extensions import db, login_manager, migrate
 from routes import register_blueprints
 from security import init_security
 from services import container as svc
@@ -28,11 +28,22 @@ logger = logging.getLogger(__name__)
 # ── Sentry filter ─────────────────────────────────────────────────────────────
 
 def _sentry_filter(event, hint):
+    # Strip sensitive headers from request data
+    if "request" in event:
+        headers = event["request"].get("headers", {})
+        for key in ["authorization", "cookie", "x-csrf-token", "x-api-key"]:
+            headers.pop(key, None)
+        # Also strip from env if present
+        env = event["request"].get("env", {})
+        for key in ["HTTP_AUTHORIZATION", "HTTP_COOKIE"]:
+            env.pop(key, None)
+
+    # Noise filtering — suppress noisy non-actionable errors
     msg = str(event.get("logentry", {}).get("message", "")) + str(hint.get("log_record", {}) if hint else "")
     noise = ["possibly delisted", "No price data found", "currentTradingPeriod",
              "No fundamentals data", "quoteSummary", "Expecting value",
              "Failed to get ticker", "Snapshot failed", "HTTP Error 404",
-             "yfinance", "No data found"]
+             "No data found"]
     all_text = msg + str(event.get("message", "")) + str(
         event.get("exception", {}).get("values", [{}])[0].get("value", "")
         if event.get("exception") else "")
@@ -42,7 +53,7 @@ def _sentry_filter(event, hint):
     if exc:
         if any(n in str(exc[1] or "") for n in noise):
             return None
-    if str(event.get("logger", "")) in ("yfinance", "data_fetcher"):
+    if str(event.get("logger", "")) in ("data_fetcher",):
         return None
     return event
 
@@ -64,6 +75,7 @@ def create_app():
 
     # Extensions
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = "index"
 
@@ -111,44 +123,55 @@ def create_app():
 
 
 def _run_migrations(app):
-    from sqlalchemy import text as _text
-    with db.engine.connect() as conn:
+    """Run safe column-addition migrations for both SQLite and PostgreSQL.
+
+    PostgreSQL rolls back the entire transaction on ALTER TABLE errors,
+    so we check column existence first instead of relying on try/except.
+    """
+    from sqlalchemy import text as _text, inspect as _inspect
+
+    inspector = _inspect(db.engine)
+
+    def _existing_columns(table_name):
         try:
-            conn.execute(_text("ALTER TABLE users ADD COLUMN available_capital_krw FLOAT DEFAULT 0.0"))
-            conn.commit()
+            return {col["name"] for col in inspector.get_columns(table_name)}
         except Exception:
-            pass
-        try:
-            conn.execute(_text("ALTER TABLE users ADD COLUMN google_id VARCHAR(100) UNIQUE"))
-            conn.commit()
-        except Exception:
-            pass
-        try:
-            conn.execute(_text("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)"))
-            conn.commit()
-        except Exception:
-            pass
-        try:
-            conn.execute(_text("ALTER TABLE positions ADD COLUMN buy_fx_rate FLOAT DEFAULT 0.0"))
-            conn.commit()
-        except Exception:
-            pass
-        # Stripe billing columns
-        try:
-            conn.execute(_text("ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(100)"))
-            conn.commit()
-        except Exception:
-            pass
-        try:
-            conn.execute(_text("ALTER TABLE users ADD COLUMN stripe_subscription_id VARCHAR(100)"))
-            conn.commit()
-        except Exception:
-            pass
-        try:
-            conn.execute(_text("ALTER TABLE users ADD COLUMN subscription_status VARCHAR(20) DEFAULT 'inactive'"))
-            conn.commit()
-        except Exception:
-            pass
+            return set()
+
+    is_postgres = db.engine.dialect.name == "postgresql"
+
+    def _add_column_if_missing(table, column, col_type, default=None, unique=False):
+        existing = _existing_columns(table)
+        if column in existing:
+            return
+        sql = f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
+        if default is not None:
+            sql += f" DEFAULT {default}"
+        # PostgreSQL supports UNIQUE inline; SQLite does not (raises OperationalError)
+        if unique and is_postgres:
+            sql += " UNIQUE"
+        with db.engine.begin() as conn:
+            conn.execute(_text(sql))
+            # For SQLite (and as a fallback), create the unique index separately
+            if unique and not is_postgres:
+                idx_name = f"uq_{table}_{column}"
+                conn.execute(_text(
+                    f"CREATE UNIQUE INDEX IF NOT EXISTS {idx_name} ON {table}({column})"
+                ))
+        logger.info(f"Migration: added {table}.{column}")
+
+    # Users table
+    _add_column_if_missing("users", "available_capital_krw", "FLOAT", default="0.0")
+    _add_column_if_missing("users", "google_id", "VARCHAR(100)", unique=True)
+    _add_column_if_missing("users", "avatar_url", "VARCHAR(500)")
+    _add_column_if_missing("users", "oauth_provider", "VARCHAR(20)")
+    _add_column_if_missing("users", "kakao_id", "VARCHAR(100)", unique=True)
+    _add_column_if_missing("users", "stripe_customer_id", "VARCHAR(100)")
+    _add_column_if_missing("users", "stripe_subscription_id", "VARCHAR(100)")
+    _add_column_if_missing("users", "subscription_status", "VARCHAR(20)", default="'inactive'")
+
+    # Positions table
+    _add_column_if_missing("positions", "buy_fx_rate", "FLOAT", default="0.0")
 
     # Backfill FX rates
     from models import Position
@@ -211,8 +234,31 @@ def _init_scheduler(app):
                     logger.error(f"Scheduler failed {ticker}: {e}")
             logger.info(f"Scheduled refresh done — {len(tku)} tickers")
 
+    def _scheduled_morning_briefs():
+        """Generate personalised morning briefings for all onboarded users.
+
+        Fires at 06:00 Asia/Seoul daily. Each cycle is wrapped in an app
+        context because APScheduler jobs execute on their own thread.
+        """
+        from services.morning_brief_service import run_daily_briefs
+        with app.app_context():
+            try:
+                summary = run_daily_briefs()
+                logger.info(f"Morning brief scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Morning brief scheduler failed: {e}")
+
     sched = BackgroundScheduler(timezone="UTC")
     sched.add_job(_scheduled_refresh, "interval", minutes=3, id="refresh")
+    sched.add_job(
+        _scheduled_morning_briefs,
+        trigger="cron",
+        hour=6, minute=0,
+        timezone="Asia/Seoul",
+        id="morning_brief_daily",
+        max_instances=1,
+        coalesce=True,
+    )
     sched.start()
 
 

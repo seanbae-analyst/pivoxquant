@@ -1,5 +1,5 @@
 """
-StockPilot — KIS (Korea Investment & Securities) Service
+PivoxQuant — KIS (Korea Investment & Securities) Service
 Real-time Korean stock data via KIS Open API.
 Supports: real-time price, intraday bars, momentum scanning.
 """
@@ -14,7 +14,8 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://openapivts.koreainvestment.com:29443"  # 모의투자
+_USE_REAL = os.environ.get("KIS_USE_REAL", "").strip() in ("1", "true", "True")
+BASE_URL = "https://openapi.koreainvestment.com:9443" if _USE_REAL else "https://openapivts.koreainvestment.com:29443"
 
 # Popular Korean stocks for day trade scanning
 KR_DAY_TRADE_POOL = [
@@ -57,60 +58,40 @@ class KISService:
         self.available = False
         self.app_key = os.environ.get("KIS_APP_KEY", "").strip()
         self.app_secret = os.environ.get("KIS_APP_SECRET", "").strip()
+        self.base_url = BASE_URL
         self.access_token = None
         self.token_expires = None
+
+        # 계좌번호: 앞 8자리 + 상품코드 뒤 2자리 (trading API에 필요)
+        # .env에 KIS_ACCOUNT_NO, KIS_ACCOUNT_PROD 설정 필요
+        self.account_no = os.environ.get("KIS_ACCOUNT_NO", "").strip()
+        self.account_prod = os.environ.get("KIS_ACCOUNT_PROD", "01").strip()
 
         if self.app_key and self.app_secret:
             self.available = True
             logger.info("KIS Service initialized (Korea Investment)")
+            if not self.account_no:
+                logger.warning("KIS_ACCOUNT_NO not set — balance/order APIs will not work")
 
     _TOKEN_CACHE_FILE = os.path.join(os.path.dirname(__file__), ".kis_token_cache.json")
 
     def _get_token(self):
-        """Get or refresh OAuth access token. Caches to file to survive restarts."""
-        if self.access_token and self.token_expires and datetime.now() < self.token_expires:
-            return self.access_token
+        """Delegate to the process-wide KISTokenManager.
 
-        # Try loading cached token from file
+        Previously this class issued its own tokens, which competed with
+        RealtimeService and data_fetcher for the 1-token-per-minute
+        quota (`EGW00133`). Routing everything through the singleton
+        collapses those competing calls into one.
+        """
         try:
-            if os.path.exists(self._TOKEN_CACHE_FILE):
-                with open(self._TOKEN_CACHE_FILE, "r") as f:
-                    cache = json.load(f)
-                expires = datetime.fromisoformat(cache["expires"])
-                if datetime.now() < expires:
-                    self.access_token = cache["token"]
-                    self.token_expires = expires
-                    logger.info("KIS token loaded from cache")
-                    return self.access_token
-        except Exception:
-            pass
-
-        # Request new token
-        try:
-            url = f"{BASE_URL}/oauth2/tokenP"
-            body = {
-                "grant_type": "client_credentials",
-                "appkey": self.app_key,
-                "appsecret": self.app_secret,
-            }
-            r = requests.post(url, json=body, timeout=10)
-            if r.ok:
-                data = r.json()
-                self.access_token = data.get("access_token")
-                expires_in = int(data.get("expires_in", 86400))
-                self.token_expires = datetime.now() + timedelta(seconds=expires_in - 60)
-                try:
-                    with open(self._TOKEN_CACHE_FILE, "w") as f:
-                        json.dump({"token": self.access_token, "expires": self.token_expires.isoformat()}, f)
-                except Exception:
-                    pass
-                logger.info("KIS token refreshed")
-                return self.access_token
-            else:
-                logger.warning("KIS token rate limited, will retry later")
-                return None
+            from kis_token_manager import get_kis_token_manager
+            token = get_kis_token_manager().get_token()
+            # Mirror into self for legacy callers that peek at attributes.
+            if token:
+                self.access_token = token
+            return token
         except Exception as e:
-            logger.warning(f"KIS token error: {e}")
+            logger.warning(f"KIS token manager error: {e}")
             return None
 
     def _headers(self):
@@ -181,6 +162,60 @@ class KISService:
         except Exception:
             return None
 
+    def get_index_price(self, index_code: str):
+        """Get current price for KR market index.
+        index_code: '0001' = KOSPI, '1001' = KOSDAQ, '2001' = KOSPI200.
+
+        KIS API: /uapi/domestic-stock/v1/quotations/inquire-index-price
+        tr_id: FHPUP02100000
+
+        Note: This endpoint requires production-grade access. Mock (VTS) endpoint
+        may not serve index data — we try production URL directly.
+
+        Returns: dict with price/change_pct or None.
+        """
+        if not self.available:
+            return None
+        token = self._get_token()
+        if not token:
+            return None
+        try:
+            headers = {
+                "Content-Type": "application/json; charset=utf-8",
+                "authorization": f"Bearer {token}",
+                "appkey": self.app_key,
+                "appsecret": self.app_secret,
+                "tr_id": "FHPUP02100000",
+            }
+            params = {
+                "FID_COND_MRKT_DIV_CODE": "U",
+                "FID_INPUT_ISCD": index_code,
+            }
+            # Try production URL first (index data usually only on real endpoint)
+            for base in ("https://openapi.koreainvestment.com:9443", self.base_url):
+                r = requests.get(
+                    f"{base}/uapi/domestic-stock/v1/quotations/inquire-index-price",
+                    headers=headers, params=params, timeout=10,
+                )
+                if r.ok:
+                    data = r.json()
+                    if data.get("rt_cd") == "0":
+                        o = data.get("output", {})
+                        price = float(o.get("bstp_nmix_prpr", 0))
+                        change_pct = float(o.get("bstp_nmix_prdy_ctrt", 0))
+                        if price > 0:
+                            return {
+                                "index_code": index_code,
+                                "price": price,
+                                "change": float(o.get("bstp_nmix_prdy_vrss", 0)),
+                                "change_pct": change_pct,
+                                "volume": int(float(o.get("acml_vol", 0))),
+                            }
+            return None
+        except Exception as e:
+            logger.debug(f"KIS index price {index_code} failed: {e}")
+            return None
+
     def get_intraday_bars(self, stock_code, timeframe="1"):
         """Get intraday minute bars."""
         if not self.available:
@@ -226,6 +261,251 @@ class KISService:
                 results[code] = price
             time.sleep(0.55)
         return results
+
+    # ── Account / Trading APIs (모의투자) ────────────────────────
+
+    def get_balance(self):
+        """한투 계좌 잔고 조회 (예수금 + 보유종목).
+
+        KIS API: GET /uapi/domestic-stock/v1/trading/inquire-balance
+        tr_id: VTTC8434R (모의투자)
+        """
+        if not self.available:
+            return {"error": "KIS not configured"}
+        if not self.account_no:
+            return {"error": "KIS_ACCOUNT_NO not set"}
+
+        try:
+            headers = self._headers()
+            if not headers:
+                return {"error": "KIS token unavailable"}
+            headers["tr_id"] = "VTTC8434R"  # 모의투자 잔고조회
+
+            params = {
+                "CANO": self.account_no,
+                "ACNT_PRDT_CD": self.account_prod,
+                "AFHR_FLPR_YN": "N",
+                "OFL_YN": "",
+                "INQR_DVSN": "02",
+                "UNPR_DVSN": "01",
+                "FUND_STTL_ICLD_YN": "N",
+                "FNCG_AMT_AUTO_RDPT_YN": "N",
+                "PRCS_DVSN": "01",
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+            }
+
+            resp = requests.get(
+                f"{self.base_url}/uapi/domestic-stock/v1/trading/inquire-balance",
+                headers=headers, params=params, timeout=10,
+            )
+            if not resp.ok:
+                logger.warning(f"KIS get_balance HTTP {resp.status_code}: {resp.text[:200]}")
+                return {"error": f"KIS API error ({resp.status_code})"}
+
+            data = resp.json()
+            if data.get("rt_cd") != "0":
+                return {"error": data.get("msg1", "Unknown KIS error")}
+
+            positions = []
+            for item in data.get("output1", []):
+                qty = int(item.get("hldg_qty", 0))
+                if qty > 0:
+                    positions.append({
+                        "ticker": item.get("pdno", ""),
+                        "name": item.get("prdt_name", ""),
+                        "shares": qty,
+                        "avg_cost": float(item.get("pchs_avg_pric", 0)),
+                        "current_price": float(item.get("prpr", 0)),
+                        "pnl": float(item.get("evlu_pfls_amt", 0)),
+                        "pnl_pct": float(item.get("evlu_pfls_rt", 0)),
+                        "currency": "KRW",
+                    })
+
+            output2 = data.get("output2", [{}])
+            if isinstance(output2, list) and output2:
+                balance_info = output2[0]
+            else:
+                balance_info = output2 or {}
+
+            return {
+                "available_cash": float(balance_info.get("dnca_tot_amt", 0)),
+                "total_value": float(balance_info.get("tot_evlu_amt", 0)),
+                "positions": positions,
+            }
+        except Exception as e:
+            logger.error(f"KIS get_balance error: {e}")
+            return {"error": str(e)}
+
+    def buy_order(self, ticker: str, quantity: int, price: int = 0, order_type: str = "00"):
+        """DISABLED -- KIS order execution is read-only for legal compliance.
+        한투 주문 실행은 투자일임업 규제로 비활성화됨.
+        Users should execute trades directly in the KIS app.
+
+        Original: POST /uapi/domestic-stock/v1/trading/order-cash
+        tr_id: VTTC0802U (모의투자 매수)
+        """
+        return {
+            "ok": False,
+            "error": "KIS order execution is disabled. Please use the KIS app to place orders.",
+            "code": "KIS_READ_ONLY",
+        }
+
+    def sell_order(self, ticker: str, quantity: int, price: int = 0, order_type: str = "00"):
+        """DISABLED -- KIS order execution is read-only for legal compliance.
+        한투 주문 실행은 투자일임업 규제로 비활성화됨.
+        Users should execute trades directly in the KIS app.
+
+        Original: POST /uapi/domestic-stock/v1/trading/order-cash
+        tr_id: VTTC0801U (모의투자 매도)
+        """
+        return {
+            "ok": False,
+            "error": "KIS order execution is disabled. Please use the KIS app to place orders.",
+            "code": "KIS_READ_ONLY",
+        }
+
+    def _place_order(self, ticker: str, quantity: int, price: int, order_type: str, side: str):
+        """DISABLED -- order execution removed for legal compliance.
+        This method is retained for reference but always returns read-only error.
+        Original implementation placed buy/sell orders via KIS order-cash API.
+        """
+        return {
+            "ok": False,
+            "error": "KIS order execution is disabled. Please use the KIS app to place orders.",
+            "code": "KIS_READ_ONLY",
+        }
+        # ── Original implementation (disabled) ──────────────────────
+        # if not self.available:
+        #     return {"ok": False, "order_no": None, "message": "KIS not configured"}
+        # if not self.account_no:
+        #     return {"ok": False, "order_no": None, "message": "KIS_ACCOUNT_NO not set"}
+        # if quantity <= 0:
+        #     return {"ok": False, "order_no": None, "message": "Quantity must be positive"}
+        # if order_type == "00" and price <= 0:
+        #     return {"ok": False, "order_no": None, "message": "Price required for limit order"}
+        #
+        # tr_id = "VTTC0802U" if side == "buy" else "VTTC0801U"
+        #
+        # try:
+        #     headers = self._headers()
+        #     if not headers:
+        #         return {"ok": False, "order_no": None, "message": "KIS token unavailable"}
+        #     headers["tr_id"] = tr_id
+        #
+        #     body = {
+        #         "CANO": self.account_no,
+        #         "ACNT_PRDT_CD": self.account_prod,
+        #         "PDNO": ticker,
+        #         "ORD_DVSN": order_type,
+        #         "ORD_QTY": str(quantity),
+        #         "ORD_UNPR": str(price) if order_type == "00" else "0",
+        #     }
+        #
+        #     resp = requests.post(
+        #         f"{self.base_url}/uapi/domestic-stock/v1/trading/order-cash",
+        #         headers=headers, json=body, timeout=10,
+        #     )
+        #     if not resp.ok:
+        #         logger.warning(f"KIS {side}_order HTTP {resp.status_code}: {resp.text[:200]}")
+        #         return {"ok": False, "order_no": None, "message": f"HTTP {resp.status_code}"}
+        #
+        #     result = resp.json()
+        #     success = result.get("rt_cd") == "0"
+        #     order_no = result.get("output", {}).get("ODNO") if success else None
+        #
+        #     if not success:
+        #         logger.warning(f"KIS {side}_order failed: {result.get('msg1')}")
+        #
+        #     return {
+        #         "ok": success,
+        #         "order_no": order_no,
+        #         "message": result.get("msg1", ""),
+        #     }
+        # except Exception as e:
+        #     logger.error(f"KIS {side}_order error: {e}")
+        #     return {"ok": False, "order_no": None, "message": str(e)}
+
+    def get_order_status(self, start_date: str = None, end_date: str = None):
+        """주문 체결 내역 조회.
+
+        KIS API: GET /uapi/domestic-stock/v1/trading/inquire-daily-ccld
+        tr_id: VTTC8001R (모의투자)
+
+        Args:
+            start_date: 조회 시작일 (YYYYMMDD). 기본값: 오늘.
+            end_date: 조회 종료일 (YYYYMMDD). 기본값: 오늘.
+
+        Returns:
+            dict with "ok" and "orders" list.
+        """
+        if not self.available:
+            return {"ok": False, "orders": [], "error": "KIS not configured"}
+        if not self.account_no:
+            return {"ok": False, "orders": [], "error": "KIS_ACCOUNT_NO not set"}
+
+        today = datetime.now().strftime("%Y%m%d")
+        if not start_date:
+            start_date = today
+        if not end_date:
+            end_date = today
+
+        try:
+            headers = self._headers()
+            if not headers:
+                return {"ok": False, "orders": [], "error": "KIS token unavailable"}
+            headers["tr_id"] = "VTTC8001R"  # 모의투자 일별체결조회
+
+            params = {
+                "CANO": self.account_no,
+                "ACNT_PRDT_CD": self.account_prod,
+                "INQR_STRT_DT": start_date,
+                "INQR_END_DT": end_date,
+                "SLL_BUY_DVSN_CD": "00",  # 전체 (매수+매도)
+                "INQR_DVSN": "00",        # 역순
+                "PDNO": "",               # 전종목
+                "CCLD_DVSN": "00",        # 전체 (체결+미체결)
+                "ORD_GNO_BRNO": "",
+                "ODNO": "",
+                "INQR_DVSN_3": "00",
+                "INQR_DVSN_1": "",
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+            }
+
+            resp = requests.get(
+                f"{self.base_url}/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
+                headers=headers, params=params, timeout=10,
+            )
+            if not resp.ok:
+                logger.warning(f"KIS get_order_status HTTP {resp.status_code}")
+                return {"ok": False, "orders": [], "error": f"HTTP {resp.status_code}"}
+
+            data = resp.json()
+            if data.get("rt_cd") != "0":
+                return {"ok": False, "orders": [], "error": data.get("msg1", "Unknown error")}
+
+            orders = []
+            for item in data.get("output1", []):
+                orders.append({
+                    "order_no": item.get("odno", ""),
+                    "ticker": item.get("pdno", ""),
+                    "name": item.get("prdt_name", ""),
+                    "side": "buy" if item.get("sll_buy_dvsn_cd") == "02" else "sell",
+                    "order_type": "limit" if item.get("ord_dvsn_cd") == "00" else "market",
+                    "order_qty": int(item.get("ord_qty", 0)),
+                    "filled_qty": int(item.get("tot_ccld_qty", 0)),
+                    "order_price": float(item.get("ord_unpr", 0)),
+                    "filled_price": float(item.get("avg_prvs", 0)),
+                    "status": "filled" if int(item.get("tot_ccld_qty", 0)) > 0 else "pending",
+                    "order_time": item.get("ord_tmd", ""),
+                    "order_date": item.get("ord_dt", ""),
+                })
+
+            return {"ok": True, "orders": orders}
+        except Exception as e:
+            logger.error(f"KIS get_order_status error: {e}")
+            return {"ok": False, "orders": [], "error": str(e)}
 
     @staticmethod
     def _sig(typ, en, kr):
@@ -363,19 +643,19 @@ class KISService:
                 # ── Signal: held vs new ────────────────────────
                 if is_held:
                     if score < 30 or (rsi and rsi > 80):
-                        signal = "SELL"
+                        signal = "NEGATIVE"
                         en = "EXIT — Take profit now" if chg > 0 else "EXIT — Cut losses"
                         kr = "청산 — 익절 타이밍" if chg > 0 else "청산 — 손절 필요"
                     elif score < 45:
-                        signal = "SELL"
+                        signal = "NEGATIVE"
                         en = "PARTIAL EXIT — Sell half, hold rest"
                         kr = "일부 청산 — 절반 정리 후 관망"
                     elif score >= 65:
-                        signal = "HOLD"
-                        en = "HOLD — Trend intact, let it ride"
+                        signal = "NEUTRAL"
+                        en = "NEUTRAL — Trend intact, let it ride"
                         kr = "홀딩 — 추세 유지, 더 갈 수 있음"
                     else:
-                        signal = "HOLD"
+                        signal = "NEUTRAL"
                         en = "WATCH — Momentum fading, stay alert"
                         kr = "관망 — 추세 약화, 주시 필요"
                     signals.insert(0, S("neutral", en, kr))

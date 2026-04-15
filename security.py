@@ -1,5 +1,5 @@
 """
-StockPilot — Security Middleware
+PivoxQuant — Security Middleware
 CORS, Rate Limiting, CSRF (Double Submit Cookie), Session Timeout, Security Headers.
 
 Usage:
@@ -267,11 +267,11 @@ def init_security(app):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             "img-src 'self' data: https:; "
             "connect-src 'self'; "
-            "font-src 'self'; "
+            "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
             "object-src 'none'; "
             "base-uri 'self'; "
             "form-action 'self'"

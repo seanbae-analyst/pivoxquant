@@ -1,5 +1,5 @@
 """
-StockPilot — Broker Sync Service
+PivoxQuant — Broker Sync Service
 Syncs positions and balance from Alpaca (paper trading) into the local DB.
 """
 
@@ -161,6 +161,80 @@ class BrokerSyncService:
             "updated_capital": cash,
         }
 
+    # ── KIS (한국투자증권) sync ────────────────────────────────
+
+    def sync_kis(self, user_id: int) -> dict:
+        """Fetch KIS positions and merge with local DB.
+
+        Returns: {"ok": True, "synced": [...], "cash": float} or {"error": ...}
+        """
+        try:
+            from kis_service import KISService
+        except ImportError:
+            return {"error": "KIS service not available"}
+
+        kis = KISService()
+        if not kis.available:
+            return {"error": "KIS not configured (missing KIS_APP_KEY / KIS_APP_SECRET)"}
+        if not kis.account_no:
+            return {"error": "KIS_ACCOUNT_NO not set in environment"}
+
+        balance = kis.get_balance()
+        if "error" in balance:
+            self._record_sync(user_id, "error", balance["error"])
+            return {"error": balance["error"]}
+
+        # Existing DB positions for this user
+        db_positions = Position.query.filter_by(user_id=user_id).all()
+        db_map = {pos.ticker: pos for pos in db_positions}
+
+        added, updated, synced = [], [], []
+
+        for pos in balance.get("positions", []):
+            raw_ticker = pos["ticker"]
+            # Normalize: 6-digit Korean code -> append .KS suffix for DB consistency
+            ticker = raw_ticker if raw_ticker.endswith(".KS") or raw_ticker.endswith(".KQ") else f"{raw_ticker}.KS"
+
+            if ticker in db_map:
+                db_pos = db_map[ticker]
+                if db_pos.shares != pos["shares"] or db_pos.avg_cost != pos["avg_cost"]:
+                    db_pos.shares = pos["shares"]
+                    db_pos.avg_cost = pos["avg_cost"]
+                    updated.append(ticker)
+            else:
+                new_pos = Position(
+                    user_id=user_id,
+                    ticker=ticker,
+                    shares=pos["shares"],
+                    avg_cost=pos["avg_cost"],
+                    buy_fx_rate=0.0,
+                )
+                db.session.add(new_pos)
+                added.append(ticker)
+            synced.append(ticker)
+
+        # Flag Korean positions no longer on KIS (set shares=0)
+        for ticker, db_pos in db_map.items():
+            is_korean = ticker.endswith(".KS") or ticker.endswith(".KQ") or (ticker.isdigit() and len(ticker) == 6)
+            if is_korean and ticker not in synced and db_pos.shares > 0:
+                db_pos.shares = 0
+
+        self._update_broker_connection(user_id, "kis")
+        db.session.commit()
+
+        detail = f"KIS sync: +{len(added)} added, ~{len(updated)} updated, {len(synced)} total"
+        self._record_sync(user_id, "success", detail)
+
+        return {
+            "ok": True,
+            "synced": synced,
+            "added": added,
+            "updated": updated,
+            "cash": balance.get("available_cash", 0),
+            "total_value": balance.get("total_value", 0),
+            "detail": detail,
+        }
+
     # ── Full sync (positions + balance) ──────────────────────
 
     def sync_all(self, user_id: int, broker: str = "alpaca") -> dict:
@@ -192,18 +266,30 @@ class BrokerSyncService:
         if conns:
             return [c.to_dict() for c in conns]
 
-        # If no explicit connection record but Alpaca env vars exist, report it
+        # If no explicit connection records, detect from env vars
+        env_conns = []
         client = self._get_alpaca_client()
         if client:
-            return [{
+            env_conns.append({
                 "broker": "alpaca",
                 "account_id": None,
                 "is_paper": True,
                 "is_active": True,
                 "last_synced_at": None,
                 "source": "env",
-            }]
-        return []
+            })
+        kis_key = os.environ.get("KIS_APP_KEY", "").strip()
+        kis_acct = os.environ.get("KIS_ACCOUNT_NO", "").strip()
+        if kis_key:
+            env_conns.append({
+                "broker": "kis",
+                "account_id": kis_acct or None,
+                "is_paper": True,  # 모의투자
+                "is_active": bool(kis_acct),
+                "last_synced_at": None,
+                "source": "env",
+            })
+        return env_conns
 
     # ── Internal helpers ─────────────────────────────────────
 

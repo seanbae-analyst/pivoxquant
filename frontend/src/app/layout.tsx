@@ -1,42 +1,110 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, IBM_Plex_Mono } from "next/font/google";
+import { Inter, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import { AuthProvider } from "@/lib/auth";
-import { RealtimeProvider } from "@/lib/realtime";
-import { SwInit } from "@/components/pwa/sw-init";
-import { InAppBrowserGuard } from "@/components/pwa/in-app-browser-guard";
 import "./globals.css";
+import { Providers } from "./providers";
+import { CookieConsent } from "@/components/ui/cookie-consent";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 
-const geist = Geist({
-  variable: "--font-geist-heading",
+const inter = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
-const ibmMono = IBM_Plex_Mono({
-  variable: "--font-geist-mono",
+const mono = IBM_Plex_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500"],
 });
 
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: "#fafafa",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
 };
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://pivoxquant.com";
+const SITE_NAME = "PivoxQuant";
+const SITE_TAGLINE = "AI Quant Advisor";
+const SITE_DESCRIPTION =
+  "PivoxQuant is an AI-powered quantitative investment advisor for US and Korean equities. Track positions, monitor 7-layer risk defense, and analyze stocks with adaptive quant signals. 미국·한국 주식 AI 퀀트 투자 어드바이저.";
+
 export const metadata: Metadata = {
-  title: "StockPilot — AI Quant Advisor",
-  description: "AI-powered quantitative investment advisor with adaptive quant engine",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [
+    "AI 주식",
+    "AI 퀀트",
+    "주식 분석",
+    "포트폴리오 관리",
+    "AI 투자 어드바이저",
+    "퀀트 투자",
+    "리스크 분석",
+    "VaR",
+    "코스피",
+    "코스닥",
+    "stock analysis",
+    "AI investing",
+    "quantitative finance",
+    "portfolio risk",
+  ],
+  authors: [{ name: "PivoxQuant" }],
+  creator: "PivoxQuant",
+  publisher: "PivoxQuant",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "StockPilot",
+    title: SITE_NAME,
   },
   formatDetection: {
     telephone: false,
+    email: false,
+    address: false,
   },
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    alternateLocale: ["en_US"],
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: `${SITE_NAME} — ${SITE_TAGLINE}`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    images: ["/opengraph-image"],
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  category: "finance",
 };
 
 export default function RootLayout({
@@ -45,30 +113,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className={`${geist.variable} ${ibmMono.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${mono.variable} h-full antialiased`}
+    >
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if(window.matchMedia('(display-mode: standalone)').matches){document.documentElement.classList.add('pwa-standalone');}`,
+          }}
+        />
         <link
           rel="stylesheet"
           as="style"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
-      <body
-        className="min-h-full bg-background text-foreground"
-        style={{ fontFamily: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif' }}
-      >
-        <InAppBrowserGuard />
-        <SwInit />
-        <AuthProvider>
-          <RealtimeProvider>{children}</RealtimeProvider>
-        </AuthProvider>
+      <body className="min-h-full bg-background text-foreground antialiased">
+        <Providers>{children}</Providers>
         <Toaster
           position="top-right"
           toastOptions={{
-            style: { fontFamily: '"Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif' },
+            style: {
+              fontFamily:
+                'var(--font-sans), "Pretendard Variable", Pretendard, system-ui, sans-serif',
+            },
           }}
         />
+        <CookieConsent />
+        <InstallPrompt />
       </body>
     </html>
   );

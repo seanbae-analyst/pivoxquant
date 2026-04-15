@@ -1,71 +1,68 @@
-# StockPilot Frontend — Session Handoff
+# PivoxQuant Frontend — Session Handoff
 
-## 현재 상태 (2026-04-07)
+## 현재 상태 (2026-04-12) — FRONTEND RESET
+
+### 상태: 프론트엔드 전체 리셋 완료
+모든 UI 페이지/컴포넌트 삭제됨. 백엔드 인프라(lib/)와 shadcn/ui 기본 컴포넌트만 남음.
+새 디자인으로 처음부터 다시 만드는 중.
 
 ### 아키텍처
-- **Next.js 16** App Router + TypeScript + Tailwind
+- **Next.js 16** App Router + TypeScript + Tailwind 4
 - **SWR** for data fetching (hooks in `src/lib/hooks.ts`)
-- **API endpoints** centralized in `src/lib/endpoints.ts` (no magic strings)
+- **API endpoints** centralized in `src/lib/endpoints.ts`
 - **Auth** via `src/lib/auth.tsx` (AuthContext + Flask session cookies)
 
-### 라우트 구조
+### 현재 파일 구조 (29개)
 ```
-/ .............. Landing page (비로그인시)
-/login ......... 로그인/회원가입
-/onboarding .... 투자성향 온보딩 (신규 유저)
-/home .......... 포트폴리오 대시보드 (메인 페이지)
-/dashboard ..... → /home 리다이렉트
-/market ........ 시장 오버뷰 (Overview/Intraday/Scanner 탭)
-/detail/[ticker] 종목 상세 분석
-/autotrade ..... 오토트레이딩
-/alerts ........ 알림
-/trades ........ 매매 기록
-/watchlist ..... 관심종목
-/morning ....... Morning Brief
-/glossary ...... 용어 사전
+src/
+├── app/
+│   ├── layout.tsx       # 루트 레이아웃 (Geist + IBM Plex Mono + Pretendard)
+│   ├── page.tsx         # 플레이스홀더 ("Rebuilding something beautiful.")
+│   ├── globals.css      # Supanova Vantablack Luxe 테마 토큰
+│   ├── manifest.ts      # PWA manifest
+│   └── favicon.ico
+├── components/ui/       # shadcn/ui 15개 (button, card, dialog, input 등)
+└── lib/                 # 백엔드 연동 인프라 (건드리지 말 것)
+    ├── api.ts           # apiFetch (CSRF, credentials)
+    ├── auth.tsx         # AuthProvider, useAuth
+    ├── endpoints.ts     # API URL 상수 (백엔드 1:1 매핑)
+    ├── hooks.ts         # SWR 데이터 페칭 훅 17개
+    ├── types.ts         # TypeScript 타입 (백엔드 응답 매핑)
+    ├── format.ts        # 포맷터 (fmtUsd, fmtPct 등)
+    ├── utils.ts         # cn() 유틸
+    ├── realtime.tsx     # SSE RealtimeProvider
+    └── push.ts          # PWA 푸시 구독
 ```
 
-### 네비게이션
-- **상단 탭** (사이드바 제거됨): Portfolio / Market / Trading / Alerts / Trades
-- **모바일**: 하단 탭 (md:hidden)
-
-### 디자인 현황 — ⚠️ UI 리디자인 필요
-현재 디자인은 기본 shadcn + 수동 색상 조합이라 **프로 수준이 아님**.
-다음 세션에서 **Tremor (무료)** 또는 **Figma 템플릿 구매**로 디자인 시스템 교체 예정.
-
-현재 color scheme (`globals.css`):
-- Background: #f5f5f7 (연한 그레이)
-- Card: #ffffff
-- Primary: #1b4dff (블루)
-- Success: #00b386 / Destructive: #e5334b
-- Font: IBM Plex Sans + IBM Plex Mono
-
-### 핵심 파일
-- `src/app/globals.css` — 전체 색상/테마 변수
-- `src/app/layout.tsx` — 루트 레이아웃 (폰트 설정)
-- `src/app/(dashboard)/layout.tsx` — 대시보드 레이아웃 (헤더+네비+마켓티커)
-- `src/app/(dashboard)/home/page.tsx` — 메인 포트폴리오 대시보드
-- `src/lib/endpoints.ts` — API URL 상수
-- `src/lib/hooks.ts` — SWR 데이터 페칭 훅
-- `src/lib/types.ts` — TypeScript 타입 정의
+### 디자인 시스템 (Supanova Design Skill 기반)
+- **Vibe**: Vantablack Luxe (#050505 base)
+- **Accent**: Warm Gold (#E2B96F)
+- **Cards**: Double-Bezel (ld-bezel + ld-bezel-inner)
+- **CTA**: Pill button (rounded-full, no neon glow)
+- **Easing**: cubic-bezier(0.16, 1, 0.3, 1) 전체 적용
+- **Fonts**: Geist (heading) + Pretendard (body) + IBM Plex Mono (numbers)
+- **BANNED**: Inter, violet/purple, neon glow, 3-equal-column, centered Hero
 
 ### 백엔드 연동
-- 프록시: `next.config.ts`에서 `/api/*` → `http://localhost:5050/api/*`
-- 백엔드: Flask (app.py = create_app factory, 189줄)
-- DB: SQLite (stockpilot.db)
-- 백엔드 기동: `python3 run.py` (port 5050)
+- 프록시: `next.config.ts` → `/api/*` → `http://localhost:5050/api/*`
+- 백엔드 62개 엔드포인트 전부 살아있음
+- `lib/hooks.ts`의 17개 SWR 훅으로 연결하면 됨
 
 ### 중요 원칙
-- **백엔드 코드 건들지 말 것** — UI 작업은 `frontend/src/` 안에서만
-- **endpoints.ts의 URL 변경 금지** — 백엔드 라우트와 1:1 매핑
-- **hooks.ts의 SWR 키 변경 금지** — 캐시 무효화 문제 발생
-- **types.ts는 추가만 가능** — 기존 타입 필드 삭제/이름변경 금지 (백엔드 응답과 매핑)
-- **디자인 변경 시 컴포넌트 파일만 수정** — lib/ 폴더의 로직 파일은 건들지 않기
+- **백엔드 코드 건들지 말 것**
+- **endpoints.ts URL 변경 금지** — 백엔드 라우트 1:1 매핑
+- **hooks.ts SWR 키 변경 금지**
+- **types.ts 추가만 가능** — 기존 필드 삭제/이름변경 금지
+- **새 페이지는 src/app/ 아래에 생성**
+- **Supanova Design Skill 규칙 준수** — THE LILA BAN (no purple/blue AI gradients)
 
-### TODO (다음 세션)
-1. [ ] Tremor 또는 프리미엄 템플릿으로 디자인 시스템 교체
-2. [ ] 대시보드 UI 완전 재디자인
-3. [ ] 투자성향 온보딩 기능 구현 (백엔드 + 프론트)
-4. [ ] 테스트 추가 (pytest + Jest)
+### TODO (새 디자인)
+1. [ ] 랜딩 페이지 — Supanova Split Hero + Bento Features
+2. [ ] 로그인/회원가입 페이지
+3. [ ] 대시보드 메인 — 포트폴리오 overview
+4. [ ] 종목 상세 페이지
+5. [ ] AI 기능 페이지 (chat, review, ideas)
+6. [ ] 설정/프로필 페이지
+7. [ ] 오토트레이딩 페이지
 
 @AGENTS.md

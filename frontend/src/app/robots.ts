@@ -1,0 +1,38 @@
+import type { MetadataRoute } from "next";
+
+const BASE_URL = "https://pivoxquant.com";
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: [
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: [
+          // ── Internal API ───────────────────────────────
+          "/api/",
+
+          // ── Authenticated dashboard pages ─────────────
+          "/home/",
+          "/portfolio/",
+          "/settings/",
+          "/risk/",
+          "/discover/",
+          "/watchlist/",
+          "/ai/",
+          "/ai-chat/",
+          "/autotrade/",
+          "/market/",
+          "/signals/",
+          "/alerts/",
+          "/detail/",
+
+          // ── Onboarding (post-signup, requires session) ─
+          "/onboarding/",
+        ],
+      },
+    ],
+    sitemap: `${BASE_URL}/sitemap.xml`,
+    host: BASE_URL,
+  };
+}

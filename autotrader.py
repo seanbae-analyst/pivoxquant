@@ -1,5 +1,5 @@
 """
-StockPilot — Auto Trader (Alpaca Paper Trading)
+PivoxQuant — Auto Trader (Alpaca Paper Trading)
 Fully automated quant trading engine.
 Scans → Analyzes → Executes → Manages Risk
 """
@@ -30,6 +30,15 @@ class AutoTrader:
     BUY_SCORE_MIN = 65          # minimum score to buy
     SELL_SCORE_MAX = 30         # sell if score drops below
     STRONG_SELL_SCORE = 15      # full sell if below
+
+    # ── Circuit Breaker Config ───────────────────────────
+    CB_POSITION_LOSS_PCT = 15.0     # auto-close if single position loses > 15% intraday
+    CB_PORTFOLIO_HOURLY_DD = 3.0    # halt new orders 30 min if portfolio drops > 3% in 1 hour
+    CB_PORTFOLIO_DAILY_DD = 5.0     # halt all trading for rest of day if > 5% daily drawdown
+    CB_HOURLY_HALT_MINUTES = 30     # how long to halt after hourly drawdown breach
+    CB_CONSECUTIVE_LOSS_LIMIT = 3   # pause after N consecutive losing trades
+    CB_VELOCITY_PAUSE_MINUTES = 15  # pause duration for velocity breaker
+    CB_EMERGENCY_HALT_HOURS = 1     # emergency halt lockout duration
 
     # Watchlist for auto-scanning
     WATCH_LIST = [
@@ -63,6 +72,21 @@ class AutoTrader:
         self._initial_equity = 0
         self._logs = []             # recent activity logs
         self._lock = threading.Lock()
+
+        # ── Circuit Breaker State ────────────────────────
+        self._circuit_breaker_state = {
+            "position_stops": 0,        # count of position-level trips today
+            "portfolio_halts": 0,       # count of portfolio-level trips today
+            "velocity_pauses": 0,       # count of velocity pauses today
+            "consecutive_losses": 0,    # current losing streak
+            "halted_until": None,       # datetime when trading can resume
+            "last_halt_reason": None,   # string description
+        }
+        self._equity_snapshots = []     # [(datetime, equity)] for hourly drawdown tracking
+
+        # ── Confirmation Mode ────────────────────────────
+        self._pending_trades: list[dict] = []
+        self._confirmation_mode = True  # Default: require user confirmation before execution
 
         # Korean paper trading (simulated, no real API)
         self._kr_positions = {}     # {code: {entry_price, shares, peak_price, ...}}
@@ -112,6 +136,13 @@ class AutoTrader:
             return {"error": "AutoTrader not available (Alpaca/KIS not configured)"}
         if self.running:
             return {"error": "Already running"}
+
+        # Check emergency halt lockout
+        halted_until = self._circuit_breaker_state.get("halted_until")
+        if halted_until and datetime.now() < halted_until:
+            remaining_min = int((halted_until - datetime.now()).total_seconds() / 60)
+            reason = self._circuit_breaker_state.get("last_halt_reason", "circuit breaker active")
+            return {"error": f"Trading halted: {reason}. Resumes in {remaining_min} min."}
 
         # Restore existing Alpaca positions so we don't double-buy
         if self.api and not self._positions:
@@ -201,6 +232,17 @@ class AutoTrader:
             "kr_capital": self._kr_capital,
             "kr_equity": round(kr_total),
             "kr_daily_pnl": round(self._kr_daily_pnl),
+            "circuit_breaker": {
+                "position_stops": self._circuit_breaker_state["position_stops"],
+                "portfolio_halts": self._circuit_breaker_state["portfolio_halts"],
+                "velocity_pauses": self._circuit_breaker_state["velocity_pauses"],
+                "consecutive_losses": self._circuit_breaker_state["consecutive_losses"],
+                "halted": self._is_halted(),
+                "halted_until": self._circuit_breaker_state["halted_until"].isoformat() if self._circuit_breaker_state.get("halted_until") else None,
+                "last_halt_reason": self._circuit_breaker_state.get("last_halt_reason"),
+            },
+            "confirmation_mode": self._confirmation_mode,
+            "pending_trades": len(self.get_pending_trades()),
             "logs": list(reversed(self._logs[-30:])),
         }
 
@@ -209,6 +251,33 @@ class AutoTrader:
     def _run_loop(self):
         while self.running:
             try:
+                # ── Circuit Breaker: daily reset + halt check ──
+                self._reset_daily_circuit_breaker_state()
+
+                if self._is_halted():
+                    reason = self._circuit_breaker_state.get("last_halt_reason", "unknown")
+                    halted_until = self._circuit_breaker_state.get("halted_until")
+                    remaining = (halted_until - datetime.now()).total_seconds() if halted_until else 0
+                    if remaining > 60:
+                        self._log(f"Trading halted ({reason}). Resuming in {int(remaining)}s. Monitoring positions only.", "warn")
+                    # While halted: still check position-level circuit breakers (emergency exits)
+                    self._check_position_circuit_breaker()
+                    self._check_position_circuit_breaker_kr()
+                    time.sleep(self.SCAN_INTERVAL)
+                    continue
+
+                # ── Circuit Breaker: portfolio-level + velocity checks ──
+                self._check_portfolio_circuit_breaker()
+                self._check_velocity_circuit_breaker()
+
+                if self._is_halted():
+                    time.sleep(self.SCAN_INTERVAL)
+                    continue
+
+                # ── Position-level circuit breaker (runs even when not halted) ──
+                self._check_position_circuit_breaker()
+                self._check_position_circuit_breaker_kr()
+
                 us_active = False
                 kr_active = False
 
@@ -276,6 +345,109 @@ class AutoTrader:
 
             time.sleep(self.SCAN_INTERVAL)
 
+    # ── Confirmation Mode ────────────────────────────────
+
+    def _propose_trade(self, ticker: str, signal: dict, action: str, shares: int, price: float, reason: str):
+        """Add trade to pending queue for user confirmation."""
+        trade_id = f"{ticker}_{int(time.time())}"
+        proposal = {
+            "id": trade_id,
+            "ticker": ticker,
+            "action": action,       # "BUY" or "SELL"
+            "shares": shares,
+            "price": price,
+            "score": signal.get("composite_score", signal.get("score", 0)),
+            "signal": signal.get("signal", "NEUTRAL"),
+            "reason": reason,
+            "proposed_at": time.time(),
+            "status": "PENDING",    # PENDING -> APPROVED / REJECTED / EXPIRED
+            "expires_at": time.time() + 300,  # 5 minute expiry
+        }
+
+        # Attach AdaptiveParams info if available
+        if "adaptive_params" in signal:
+            ap = signal["adaptive_params"]
+            proposal["tp_pct"] = ap.get("tp_pct")
+            proposal["sl_pct"] = ap.get("sl_pct")
+            proposal["regime"] = ap.get("profile")
+
+        # Attach Korean-specific fields
+        if signal.get("is_korean"):
+            proposal["currency"] = "KRW"
+            proposal["name"] = signal.get("name", ticker)
+            proposal["is_korean"] = True
+            if "_signal_data" in signal:
+                proposal["_signal_data"] = signal["_signal_data"]
+
+        with self._lock:
+            self._pending_trades.append(proposal)
+            # Clean expired proposals
+            now = time.time()
+            self._pending_trades = [
+                t for t in self._pending_trades
+                if t["expires_at"] > now or t["status"] != "PENDING"
+            ]
+
+        self._log(f"PROPOSED {action} {shares}x {ticker} @ {'₩' if signal.get('is_korean') else '$'}{price:,.2f} — awaiting confirmation (ID: {trade_id})")
+        return trade_id
+
+    def approve_trade(self, trade_id: str) -> dict:
+        """User approves a pending trade -- execute it."""
+        for trade in self._pending_trades:
+            if trade["id"] == trade_id and trade["status"] == "PENDING":
+                if trade["expires_at"] < time.time():
+                    trade["status"] = "EXPIRED"
+                    return {"ok": False, "error": "Trade proposal expired"}
+
+                trade["status"] = "APPROVED"
+
+                # Execute the actual trade
+                if trade.get("is_korean"):
+                    if trade["action"] == "BUY":
+                        self._simulate_buy_kr(
+                            trade["ticker"], trade["shares"], trade["price"],
+                            trade.get("score", 0), trade.get("_signal_data"),
+                        )
+                    else:
+                        self._simulate_sell_kr(
+                            trade["ticker"], trade["shares"], trade["price"],
+                            trade.get("reason", "USER APPROVED SELL"),
+                        )
+                else:
+                    if trade["action"] == "BUY":
+                        self._execute_buy(
+                            trade["ticker"], trade["shares"], trade["price"],
+                            trade.get("score", 0),
+                        )
+                    else:
+                        self._execute_sell(
+                            trade["ticker"], trade["shares"], trade["price"],
+                            trade.get("reason", "USER APPROVED SELL"),
+                        )
+
+                self._log(f"APPROVED trade {trade_id}: {trade['action']} {trade['shares']}x {trade['ticker']}")
+                return {"ok": True, "trade_id": trade_id}
+
+        return {"ok": False, "error": "Trade not found or already processed"}
+
+    def reject_trade(self, trade_id: str) -> dict:
+        """User rejects a pending trade."""
+        for trade in self._pending_trades:
+            if trade["id"] == trade_id and trade["status"] == "PENDING":
+                trade["status"] = "REJECTED"
+                self._log(f"REJECTED trade {trade_id}: {trade['action']} {trade['shares']}x {trade['ticker']}")
+                return {"ok": True, "trade_id": trade_id}
+        return {"ok": False, "error": "Trade not found or already processed"}
+
+    def get_pending_trades(self) -> list:
+        """Get all pending trade proposals."""
+        now = time.time()
+        # Mark expired
+        for t in self._pending_trades:
+            if t["status"] == "PENDING" and t["expires_at"] < now:
+                t["status"] = "EXPIRED"
+        return [t for t in self._pending_trades if t["status"] == "PENDING"]
+
     # ── Entry Logic ───────────────────────────────────────
 
     def _scan_for_entries(self):
@@ -331,8 +503,32 @@ class AutoTrader:
                     if shares < 1 or shares * price > buying_power:
                         continue
 
-                    # Execute buy
-                    self._execute_buy(symbol, shares, price, score)
+                    # Confirmation mode: propose instead of execute
+                    if self._confirmation_mode:
+                        signal_info = {
+                            "composite_score": score,
+                            "signal": "BUY",
+                            "score": score,
+                        }
+                        # Attempt to attach adaptive params preview
+                        try:
+                            from quant_models import AdaptiveParams
+                            import fmp_service as fmp
+                            h = fmp.get_history(symbol, period="3mo")
+                            if not h.empty and len(h) >= 20:
+                                ap = AdaptiveParams.calculate(
+                                    h["Close"].values, h["High"].values,
+                                    h["Low"].values, h["Volume"].values,
+                                )
+                                signal_info["adaptive_params"] = ap
+                        except Exception:
+                            pass
+                        self._propose_trade(
+                            symbol, signal_info, "BUY", shares, price,
+                            f"Score {score} >= {self.BUY_SCORE_MIN} (quant: {quant_score})",
+                        )
+                    else:
+                        self._execute_buy(symbol, shares, price, score)
 
             except Exception as e:
                 self._log(f"Scan error {symbol}: {e}", "error")
@@ -399,7 +595,7 @@ class AutoTrader:
 
             self._log(f"BUY {shares} x {symbol} @ ${price:.2f} (Score: {score}) — [{_profile}] TP: ${price*(1+_tp/100):.2f} ({_tp:.0f}%) / SL: ${price*(1-_sl/100):.2f} ({_sl:.0f}%) / Trail: {_trail:.0f}%")
 
-            # Sync to StockPilot portfolio DB
+            # Sync to PivoxQuant portfolio DB
             self._sync_buy_to_db(symbol, shares, price)
 
         except Exception as e:
@@ -451,18 +647,30 @@ class AutoTrader:
 
             # Check take profit
             if pnl_pct >= _tp:
-                self._execute_sell(symbol, pos["shares"], current_price, f"TAKE PROFIT (+{pnl_pct:.1f}%) [{pos.get('profile','?')}]")
+                reason = f"TAKE PROFIT (+{pnl_pct:.1f}%) [{pos.get('profile','?')}]"
+                if self._confirmation_mode:
+                    self._propose_trade(symbol, {"score": pos.get("score", 0), "signal": "SELL"}, "SELL", pos["shares"], current_price, reason)
+                else:
+                    self._execute_sell(symbol, pos["shares"], current_price, reason)
                 continue
 
             # Check stop loss
             if pnl_pct <= -_sl:
-                self._execute_sell(symbol, pos["shares"], current_price, f"STOP LOSS ({pnl_pct:.1f}%) [{pos.get('profile','?')}]")
+                reason = f"STOP LOSS ({pnl_pct:.1f}%) [{pos.get('profile','?')}]"
+                if self._confirmation_mode:
+                    self._propose_trade(symbol, {"score": pos.get("score", 0), "signal": "SELL"}, "SELL", pos["shares"], current_price, reason)
+                else:
+                    self._execute_sell(symbol, pos["shares"], current_price, reason)
                 continue
 
             # Check trailing stop
             drop_from_peak = (peak_price - current_price) / peak_price * 100
             if drop_from_peak >= _trail and pnl_pct > 0:
-                self._execute_sell(symbol, pos["shares"], current_price, f"TRAILING STOP (peak ${peak_price:.2f} → ${current_price:.2f}) [{pos.get('profile','?')}]")
+                reason = f"TRAILING STOP (peak ${peak_price:.2f} -> ${current_price:.2f}) [{pos.get('profile','?')}]"
+                if self._confirmation_mode:
+                    self._propose_trade(symbol, {"score": pos.get("score", 0), "signal": "SELL"}, "SELL", pos["shares"], current_price, reason)
+                else:
+                    self._execute_sell(symbol, pos["shares"], current_price, reason)
                 continue
 
     def _execute_sell(self, symbol, shares, price, reason):
@@ -500,11 +708,229 @@ class AutoTrader:
 
             self._log(f"SELL {shares} x {symbol} @ ${price:.2f} — {reason} — P&L: ${pnl:+.2f}")
 
-            # Sync to StockPilot portfolio DB
+            # Track outcome for velocity circuit breaker
+            self._track_trade_outcome(pnl)
+
+            # Sync to PivoxQuant portfolio DB
             self._sync_sell_to_db(symbol, shares, price, pnl, reason)
 
         except Exception as e:
             self._log(f"SELL FAILED {symbol}: {e}", "error")
+
+    # ── Circuit Breakers ─────────────────────────────────
+
+    def _is_halted(self):
+        """Check if trading is currently halted by a circuit breaker."""
+        halted_until = self._circuit_breaker_state.get("halted_until")
+        if halted_until is None:
+            return False
+        if datetime.now() >= halted_until:
+            reason = self._circuit_breaker_state.get("last_halt_reason", "unknown")
+            self._log(f"Circuit breaker cooldown expired (was: {reason}). Resuming trading.")
+            self._circuit_breaker_state["halted_until"] = None
+            self._circuit_breaker_state["last_halt_reason"] = None
+            return False
+        return True
+
+    def _halt_trading(self, until, reason):
+        """Set a trading halt until a specific datetime."""
+        self._circuit_breaker_state["halted_until"] = until
+        self._circuit_breaker_state["last_halt_reason"] = reason
+        self._log(f"CIRCUIT BREAKER: {reason} — halted until {until.strftime('%H:%M:%S')}", "error")
+
+    def _check_position_circuit_breaker(self):
+        """Position-level: auto-close any position losing > CB_POSITION_LOSS_PCT intraday."""
+        if not self._positions or not self.api:
+            return
+
+        from alpaca.data.requests import StockLatestBarRequest
+        from alpaca.data.historical import StockHistoricalDataClient
+
+        api_key = os.environ.get("ALPACA_API_KEY")
+        secret = os.environ.get("ALPACA_SECRET_KEY")
+        data_client = StockHistoricalDataClient(api_key, secret)
+
+        symbols = list(self._positions.keys())
+        try:
+            req = StockLatestBarRequest(symbol_or_symbols=symbols)
+            bars = data_client.get_stock_latest_bar(req)
+        except Exception:
+            return
+
+        for symbol in list(self._positions.keys()):
+            pos = self._positions.get(symbol)
+            if not pos:
+                continue
+            bar = bars.get(symbol)
+            if not bar:
+                continue
+
+            current_price = float(bar.close)
+            entry_price = pos["entry_price"]
+            pnl_pct = (current_price - entry_price) / entry_price * 100
+
+            if pnl_pct <= -self.CB_POSITION_LOSS_PCT:
+                self._log(
+                    f"CIRCUIT BREAKER: Position {symbol} closed at {pnl_pct:.1f}% (threshold: -{self.CB_POSITION_LOSS_PCT}%)",
+                    "error",
+                )
+                self._execute_sell(symbol, pos["shares"], current_price, f"CIRCUIT BREAKER ({pnl_pct:.1f}%)")
+                self._circuit_breaker_state["position_stops"] += 1
+
+    def _check_position_circuit_breaker_kr(self):
+        """Position-level circuit breaker for Korean positions."""
+        if not self._kr_positions or not self._kis:
+            return
+
+        for code in list(self._kr_positions.keys()):
+            pos = self._kr_positions.get(code)
+            if not pos:
+                continue
+            try:
+                price_data = self._kis.get_current_price(code)
+                if not price_data or not price_data.get("price"):
+                    continue
+
+                current_price = price_data["price"]
+                entry_price = pos["entry_price"]
+                pnl_pct = (current_price - entry_price) / entry_price * 100
+
+                if pnl_pct <= -self.CB_POSITION_LOSS_PCT:
+                    self._log(
+                        f"CIRCUIT BREAKER: Position {pos.get('name', code)} closed at {pnl_pct:.1f}% (threshold: -{self.CB_POSITION_LOSS_PCT}%)",
+                        "error",
+                    )
+                    self._simulate_sell_kr(code, pos["shares"], current_price, f"CIRCUIT BREAKER ({pnl_pct:.1f}%)")
+                    self._circuit_breaker_state["position_stops"] += 1
+            except Exception:
+                pass
+
+    def _check_portfolio_circuit_breaker(self):
+        """Portfolio-level: halt on hourly or daily drawdown thresholds."""
+        if self._is_halted():
+            return  # Already halted
+
+        now = datetime.now()
+        current_equity = 0
+
+        # Calculate current total equity (US + KR)
+        if self.api:
+            try:
+                acc = self.api.get_account()
+                current_equity = float(acc.equity)
+            except Exception:
+                return
+        else:
+            current_equity = self._initial_equity if self._initial_equity else 0
+
+        # Add KR equity
+        kr_deployed = sum(p["entry_price"] * p["shares"] for p in self._kr_positions.values())
+        kr_total_equity = self._kr_capital + kr_deployed
+
+        # Record equity snapshot for hourly tracking
+        self._equity_snapshots.append((now, current_equity, kr_total_equity))
+        # Keep only last 2 hours of snapshots
+        cutoff = now - timedelta(hours=2)
+        self._equity_snapshots = [(t, e, k) for t, e, k in self._equity_snapshots if t >= cutoff]
+
+        # ── Daily drawdown check (US market, existing + formalized) ──
+        if self._initial_equity > 0:
+            daily_dd = (self._initial_equity - current_equity) / self._initial_equity * 100
+            if daily_dd >= self.CB_PORTFOLIO_DAILY_DD:
+                end_of_day = now.replace(hour=23, minute=59, second=59)
+                self._halt_trading(end_of_day, f"Portfolio halt triggered at -{daily_dd:.1f}% drawdown (daily limit: -{self.CB_PORTFOLIO_DAILY_DD}%)")
+                self._circuit_breaker_state["portfolio_halts"] += 1
+                return
+
+        # ── Hourly drawdown check ──
+        one_hour_ago = now - timedelta(hours=1)
+        hourly_snapshots = [(t, e, k) for t, e, k in self._equity_snapshots if t <= one_hour_ago]
+        if hourly_snapshots:
+            _, earliest_us, earliest_kr = hourly_snapshots[0]
+            earliest_total = earliest_us + earliest_kr
+            current_total = current_equity + kr_total_equity
+            if earliest_total > 0:
+                hourly_dd = (earliest_total - current_total) / earliest_total * 100
+                if hourly_dd >= self.CB_PORTFOLIO_HOURLY_DD:
+                    resume_at = now + timedelta(minutes=self.CB_HOURLY_HALT_MINUTES)
+                    self._halt_trading(resume_at, f"Portfolio halt triggered at -{hourly_dd:.1f}% drawdown (hourly limit: -{self.CB_PORTFOLIO_HOURLY_DD}%)")
+                    self._circuit_breaker_state["portfolio_halts"] += 1
+                    return
+
+    def _check_velocity_circuit_breaker(self):
+        """Velocity: pause if N consecutive losing trades."""
+        if self._is_halted():
+            return
+        consecutive = self._circuit_breaker_state["consecutive_losses"]
+        if consecutive >= self.CB_CONSECUTIVE_LOSS_LIMIT:
+            resume_at = datetime.now() + timedelta(minutes=self.CB_VELOCITY_PAUSE_MINUTES)
+            self._halt_trading(
+                resume_at,
+                f"Velocity pause: {consecutive} consecutive losses (limit: {self.CB_CONSECUTIVE_LOSS_LIMIT})",
+            )
+            self._circuit_breaker_state["velocity_pauses"] += 1
+            # Reset counter so we don't re-trigger immediately after cooldown
+            self._circuit_breaker_state["consecutive_losses"] = 0
+
+    def _track_trade_outcome(self, pnl):
+        """Track consecutive wins/losses for velocity circuit breaker."""
+        if pnl < 0:
+            self._circuit_breaker_state["consecutive_losses"] += 1
+        else:
+            self._circuit_breaker_state["consecutive_losses"] = 0
+
+    def _reset_daily_circuit_breaker_state(self):
+        """Reset daily counters. Called at start of each trading day."""
+        today = datetime.now().date().isoformat()
+        if getattr(self, "_cb_reset_date", None) != today:
+            self._circuit_breaker_state["position_stops"] = 0
+            self._circuit_breaker_state["portfolio_halts"] = 0
+            self._circuit_breaker_state["velocity_pauses"] = 0
+            self._circuit_breaker_state["consecutive_losses"] = 0
+            # Only clear halt if it was a daily halt (not an emergency halt)
+            halted_until = self._circuit_breaker_state.get("halted_until")
+            if halted_until and halted_until < datetime.now():
+                self._circuit_breaker_state["halted_until"] = None
+                self._circuit_breaker_state["last_halt_reason"] = None
+            self._equity_snapshots = []
+            self._cb_reset_date = today
+
+    def emergency_halt(self):
+        """Kill switch: stop scan loop, close all positions, lock out for CB_EMERGENCY_HALT_HOURS."""
+        self._log("EMERGENCY HALT activated — closing all positions and locking trading", "error")
+
+        # 1. Stop the scan loop
+        self.running = False
+
+        # 2. Close all US positions
+        us_results = []
+        if self.available:
+            res = self.force_sell_all()
+            us_results = res.get("results", [])
+
+        # 3. Close all KR positions
+        kr_results = self.force_sell_all_kr()
+
+        # 4. Set halt lockout
+        resume_at = datetime.now() + timedelta(hours=self.CB_EMERGENCY_HALT_HOURS)
+        self._circuit_breaker_state["halted_until"] = resume_at
+        self._circuit_breaker_state["last_halt_reason"] = (
+            f"Emergency halt activated at {datetime.now().strftime('%H:%M:%S')}. "
+            f"Locked for {self.CB_EMERGENCY_HALT_HOURS}h until {resume_at.strftime('%H:%M:%S')}."
+        )
+
+        all_results = us_results + kr_results
+        self._log(
+            f"EMERGENCY HALT complete — {len(all_results)} positions closed, "
+            f"trading locked until {resume_at.strftime('%H:%M:%S')}",
+            "error",
+        )
+        return {
+            "ok": True,
+            "halted_until": resume_at.isoformat(),
+            "positions_closed": len(all_results),
+            "results": all_results,
+        }
 
     # ── Manual Actions ────────────────────────────────────
 
@@ -535,7 +961,7 @@ class AutoTrader:
     # ── DB Sync ───────────────────────────────────────────
 
     def _sync_buy_to_db(self, symbol, shares, price):
-        """Add position to StockPilot portfolio DB."""
+        """Add position to PivoxQuant portfolio DB."""
         if not self._db or not self._Position or not self._user_id:
             return
         try:
@@ -574,7 +1000,7 @@ class AutoTrader:
             self._log(f"DB SYNC FAILED (buy): {e}", "error")
 
     def _sync_sell_to_db(self, symbol, shares, price, pnl, reason):
-        """Remove/reduce position from StockPilot portfolio DB."""
+        """Remove/reduce position from PivoxQuant portfolio DB."""
         if not self._db or not self._Position or not self._user_id:
             return
         try:
@@ -648,7 +1074,7 @@ class AutoTrader:
                 price = r.get("price", 0)
                 signal = r.get("signal", "")
 
-                if score >= self.BUY_SCORE_MIN and price > 0 and signal in ("ENTRY", "BUY"):
+                if score >= self.BUY_SCORE_MIN and price > 0 and signal in ("ENTRY", "POSITIVE"):
                     # Position sizing
                     alloc_pct = 0.30 if score >= 85 else 0.25 if score >= 75 else 0.15
                     max_invest = self._kr_capital * min(alloc_pct, self.MAX_POSITION_PCT / 100)
@@ -668,7 +1094,22 @@ class AutoTrader:
                     if cost > self._kr_capital:
                         continue
 
-                    self._simulate_buy_kr(code, shares, price, score, r)
+                    # Confirmation mode: propose instead of execute
+                    if self._confirmation_mode:
+                        signal_info = {
+                            "composite_score": score,
+                            "signal": signal,
+                            "score": score,
+                            "is_korean": True,
+                            "name": r.get("name", self.KR_NAMES.get(code, code)),
+                            "_signal_data": r,  # Preserve for approve_trade execution
+                        }
+                        self._propose_trade(
+                            code, signal_info, "BUY", shares, price,
+                            f"Score {score} >= {self.BUY_SCORE_MIN} (signal: {signal})",
+                        )
+                    else:
+                        self._simulate_buy_kr(code, shares, price, score, r)
 
         except Exception as e:
             self._log(f"KR scan error: {e}", "error")
@@ -734,13 +1175,25 @@ class AutoTrader:
                     peak_price = current_price
 
                 if pnl_pct >= _tp:
-                    self._simulate_sell_kr(code, pos["shares"], current_price, f"TAKE PROFIT (+{pnl_pct:.1f}%)")
+                    reason = f"TAKE PROFIT (+{pnl_pct:.1f}%)"
+                    if self._confirmation_mode:
+                        self._propose_trade(code, {"score": pos.get("score", 0), "signal": "SELL", "is_korean": True, "name": pos.get("name", code)}, "SELL", pos["shares"], current_price, reason)
+                    else:
+                        self._simulate_sell_kr(code, pos["shares"], current_price, reason)
                 elif pnl_pct <= -_sl:
-                    self._simulate_sell_kr(code, pos["shares"], current_price, f"STOP LOSS ({pnl_pct:.1f}%)")
+                    reason = f"STOP LOSS ({pnl_pct:.1f}%)"
+                    if self._confirmation_mode:
+                        self._propose_trade(code, {"score": pos.get("score", 0), "signal": "SELL", "is_korean": True, "name": pos.get("name", code)}, "SELL", pos["shares"], current_price, reason)
+                    else:
+                        self._simulate_sell_kr(code, pos["shares"], current_price, reason)
                 elif peak_price > entry_price:
                     drop = (peak_price - current_price) / peak_price * 100
                     if drop >= _trail and pnl_pct > 0:
-                        self._simulate_sell_kr(code, pos["shares"], current_price, f"TRAILING STOP (peak ₩{peak_price:,.0f} → ₩{current_price:,.0f})")
+                        reason = f"TRAILING STOP (peak {peak_price:,.0f} -> {current_price:,.0f})"
+                        if self._confirmation_mode:
+                            self._propose_trade(code, {"score": pos.get("score", 0), "signal": "SELL", "is_korean": True, "name": pos.get("name", code)}, "SELL", pos["shares"], current_price, reason)
+                        else:
+                            self._simulate_sell_kr(code, pos["shares"], current_price, reason)
 
             except Exception as e:
                 self._log(f"KR exit check {code}: {e}", "error")
@@ -764,6 +1217,9 @@ class AutoTrader:
             })
 
         self._log(f"🇰🇷 SELL {shares}x {name} @ ₩{price:,.0f} — {reason} — P&L: ₩{pnl:+,.0f}")
+
+        # Track outcome for velocity circuit breaker
+        self._track_trade_outcome(pnl)
 
         # Sync to DB
         ticker_db = f"{code}.KS"

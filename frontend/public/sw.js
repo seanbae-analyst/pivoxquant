@@ -1,4 +1,4 @@
-// StockPilot Service Worker v1
+// PivoxQuant Service Worker v1
 const CACHE_VERSION = "sp-v1";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
