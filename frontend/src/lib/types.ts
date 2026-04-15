@@ -13,7 +13,7 @@ export interface Position {
   krw_cost: number | null;
   krw_value: number | null;
   market_value: number;
-  signal: "BUY" | "SELL" | "HOLD" | "—";
+  signal: "POSITIVE" | "NEGATIVE" | "NEUTRAL" | "—";
   score: number;
   rec_shares: number;
   rec_investment: number;
@@ -334,3 +334,224 @@ export interface AiChatMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+/* ── Portfolio Share ── */
+
+export interface ShareTokenResponse {
+  token: string;
+  expires_at: string;
+  share_url: string;
+}
+
+/** Public portfolio position — sensitive fields stripped server-side */
+export interface SharedPosition {
+  ticker: string;
+  name: string;
+  sector: string;
+  shares: number;
+  avg_cost: number;
+  price: number;
+  price_display: string;
+  pnl_pct: number;
+  market_value: number;
+  signal: "POSITIVE" | "NEGATIVE" | "NEUTRAL" | "—";
+  score: number;
+  currency: "USD" | "KRW";
+  is_korean: boolean;
+  tp_pct: number;
+  sl_pct: number;
+}
+
+export interface SharedPortfolioResponse {
+  owner_name: string;
+  positions: SharedPosition[];
+  total_value_usd: number;
+  total_value_all_krw: number;
+  avg_score: number;
+  total_pnl_pct: number;
+  buy_count: number;
+  sell_count: number;
+  fx_rate: number;
+  created_at: string;
+  expires_at: string;
+}
+
+/* ── Watchlist ── */
+
+export interface WatchlistItem {
+  id: number;
+  ticker: string;
+  name: string;
+  price: number;
+  change_pct: number;
+  signal: string;
+  score: number;
+  currency: "USD" | "KRW";
+  is_korean: boolean;
+  added_at: string;
+}
+
+export interface WatchlistResponse {
+  watchlist: WatchlistItem[];
+}
+
+/* ── Alerts ── */
+
+export interface AlertItem {
+  id: number;
+  type: string;
+  message: string;
+  ticker: string | null;
+  data: Record<string, unknown> | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface AlertsResponse {
+  alerts: AlertItem[];
+}
+
+/* ── Lookup ── */
+
+export interface LookupResult {
+  ticker: string;
+  name: string;
+  price: number;
+  change_pct?: number;
+  exchange?: string;
+  currency: string;
+  ok?: boolean;
+  price_display?: string;
+  is_korean?: boolean;
+}
+
+/* ── Morning Brief ── */
+
+export interface MorningBriefIndex {
+  price: number;
+  change_pct: number;
+}
+
+export interface MorningBriefPortfolioChange {
+  ticker: string;
+  change_pct: number;
+  direction: "up" | "down";
+}
+
+export interface MorningBriefEvent {
+  ticker: string;
+  event_type: string;
+  event_time: string;
+  description: string;
+}
+
+export interface MorningBriefContent {
+  market_summary: {
+    sp500?: MorningBriefIndex;
+    nasdaq?: MorningBriefIndex;
+    dow?: MorningBriefIndex;
+    kospi?: MorningBriefIndex;
+    kosdaq?: MorningBriefIndex;
+    vix?: MorningBriefIndex;
+  };
+  portfolio_changes: MorningBriefPortfolioChange[];
+  events: MorningBriefEvent[];
+  insight: string;
+}
+
+export interface MorningBriefResponse {
+  available: boolean;
+  brief?: MorningBriefContent;
+  message?: string;
+  generated_at?: string;
+  date?: string;
+}
+
+export interface MorningBriefArchiveItem {
+  date: string;
+  created_at?: string;
+  content: MorningBriefContent;
+}
+
+export interface MorningBriefArchiveResponse {
+  ok: boolean;
+  count: number;
+  briefs: MorningBriefArchiveItem[];
+}
+
+/* ── Counterfactual ("What-If") Simulator ── */
+
+export type RecurringMode = "none" | "monthly" | "weekly" | null;
+
+export interface WhatIfChartPoint {
+  date: string;
+  price: number;
+  invested: number;
+  value: number;
+  buy_point?: boolean;
+}
+
+export interface WhatIfMilestone {
+  date: string;
+  label: string;
+  label_kr?: string;
+  type: "multiplier" | "threshold" | "ath" | "drawdown";
+  value: number | null;
+}
+
+export interface WhatIfBenchmark {
+  ticker: string;
+  end_value: number;
+  return_pct: number;
+  total_invested?: number;
+  diff_value?: number;
+  diff_pct?: number;
+}
+
+/**
+ * Backend shape is flat (no nested input/result) — see
+ * routes/counterfactual.py:625. Keep this 1:1 with the JSON keys.
+ */
+export interface WhatIfSuccessResponse {
+  success: true;
+  ticker: string;
+  start_date: string;
+  first_buy_date: string;
+  end_date: string;
+  recurring: "none" | "weekly" | "monthly";
+  recurring_amount?: number;
+  amount_initial: number;
+  total_invested: number;
+  end_value: number;
+  profit_loss: number;
+  return_pct: number;
+  annualized_return_pct: number | null;
+  duration_days: number;
+  shares_total: number;
+  first_buy_price: number;
+  last_price: number;
+  currency: "USD" | "KRW";
+  chart_data: WhatIfChartPoint[];
+  milestones: WhatIfMilestone[];
+  benchmark: WhatIfBenchmark | null;
+  disclaimers: string[];
+}
+
+export interface WhatIfErrorResponse {
+  success: false;
+  error_code:
+    | "TICKER_NOT_FOUND"
+    | "DATE_BEFORE_LISTING"
+    | "DATE_IN_FUTURE"
+    | "AMOUNT_OUT_OF_RANGE"
+    | "DATA_UNAVAILABLE"
+    | string;
+  message: string;
+  suggestion?: {
+    field: string;
+    value: string;
+    reason?: string;
+  };
+}
+
+export type WhatIfResponse = WhatIfSuccessResponse | WhatIfErrorResponse;

@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import useSWR from "swr";
 import { useRealtimeContext } from "./realtime";
 import { API } from "./endpoints";
+import { apiFetch } from "./api";
 import type {
   PortfolioResponse,
   AnalyticsResponse,
@@ -17,13 +18,20 @@ import type {
   QuestionnaireResponse,
   AiStatusResponse,
   AiCoachingResponse,
+  WatchlistResponse,
+  AlertsResponse,
+  MorningBriefResponse,
+  MorningBriefArchiveResponse,
 } from "./types";
 
-const fetcher = (url: string) =>
-  fetch(url, { credentials: "include" }).then((r) => {
-    if (!r.ok) throw new Error(r.statusText);
-    return r.json();
-  });
+const fetcher = async (url: string) => {
+  const r = await fetch(url, { credentials: "include" });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}));
+    throw new Error(body.error || r.statusText || `HTTP ${r.status}`);
+  }
+  return r.json();
+};
 
 /* ── Portfolio ── */
 
@@ -137,16 +145,9 @@ export function useAiCoaching() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(API.ai.coaching, {
+      const result = await apiFetch<AiCoachingResponse>(API.ai.coaching, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? res.statusText);
-      }
-      const result: AiCoachingResponse = await res.json();
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err : new Error(String(err)));
@@ -156,6 +157,42 @@ export function useAiCoaching() {
   }, []);
 
   return { data, error, isLoading, refresh };
+}
+
+/* ── Watchlist ── */
+
+export function useWatchlist() {
+  return useSWR<WatchlistResponse>(API.watchlist.list, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+}
+
+/* ── Alerts ── */
+
+export function useAlerts() {
+  return useSWR<AlertsResponse>(API.alerts.list, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+}
+
+/* ── Morning Brief ── */
+
+export function useMorningBrief() {
+  return useSWR<MorningBriefResponse>(
+    API.market.morningBriefToday,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 60_000 * 10 },
+  );
+}
+
+export function useMorningBriefArchive() {
+  return useSWR<MorningBriefArchiveResponse>(
+    API.market.morningBriefArchive,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 60_000 * 30 },
+  );
 }
 
 /* ── Real-time Portfolio Prices (SSE) ── */
