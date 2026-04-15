@@ -202,7 +202,10 @@ export default function StockDetailPage() {
     { revalidateOnFocus: false, dedupingInterval: 300_000 },
   );
 
-  const isLoading = loadingSignal || loadingProfile;
+  // Only gate the hero on signal load; profile is supplementary and
+  // may legitimately 404 for some tickers. Blocking on it caused a tall
+  // empty placeholder to linger above the hero section.
+  const isLoading = loadingSignal;
   const hasPillars =
     signal?.tech_score != null ||
     signal?.fund_score != null ||
@@ -225,7 +228,7 @@ export default function StockDetailPage() {
   }
 
   /* ── Ticker not found / API failure (loaded but no data anywhere) ── */
-  if (!isLoading && !signal && !profile) {
+  if (!loadingSignal && !loadingProfile && !signal && !profile) {
     return (
       <ErrorBoundary>
         <div className="mx-auto max-w-3xl">
@@ -242,7 +245,7 @@ export default function StockDetailPage() {
 
   return (
     <ErrorBoundary>
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl space-y-5">
       {/* ── Disclaimer ── */}
       <DisclaimerBanner type="signal" />
 
@@ -261,8 +264,12 @@ export default function StockDetailPage() {
       {isLoading ? (
         <CardSkeleton />
       ) : signal ? (
-        <ScoreBar score={signal?.score ?? 0} signal={signal?.signal ?? "NEUTRAL"} />
-      ) : null}
+        <ScoreBar score={signal.score ?? 0} signal={signal.signal ?? "NEUTRAL"} />
+      ) : (
+        <div className="sp-card p-5 text-center">
+          <p className="text-sm text-slate-400">시그널 데이터를 불러오는 중...</p>
+        </div>
+      )}
 
       {/* ── Price Chart ── */}
       <PriceChart
@@ -279,7 +286,7 @@ export default function StockDetailPage() {
         <h3 className="text-base font-bold text-slate-900 mb-4">
           Key Metrics
         </h3>
-        {isLoading ? (
+        {loadingProfile && !profile ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-16 w-full" />

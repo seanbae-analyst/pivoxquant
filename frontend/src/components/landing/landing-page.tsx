@@ -254,6 +254,18 @@ export default function LandingPage() {
           variants: v,
         };
 
+  // Hero is in the initial viewport — use `animate` instead of `whileInView`
+  // so IntersectionObserver timing issues (first paint, hydration after
+  // beta-gate redirect) cannot leave elements stuck at opacity:0.
+  const heroMotionProps = (v: Variants) =>
+    prefersReduced
+      ? {}
+      : {
+          initial: "hidden" as const,
+          animate: "visible" as const,
+          variants: v,
+        };
+
   return (
     <div className="min-h-screen bg-white text-slate-900 overflow-x-hidden">
       {/* ─── 1. NAVIGATION ─── */}
@@ -359,7 +371,7 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-10 lg:gap-16 items-center">
             {/* Left: Text */}
-            <motion.div {...motionProps(staggerContainer)} className="max-w-xl">
+            <motion.div {...heroMotionProps(staggerContainer)} className="max-w-xl">
               {/* Eyebrow — neutral */}
               <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-slate-200 bg-white mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
@@ -409,7 +421,7 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Right: Dashboard preview card — Bloomberg density */}
-            <motion.div {...motionProps(scaleIn)} className="relative">
+            <motion.div {...heroMotionProps(scaleIn)} className="relative">
               <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
                 {/* Terminal header */}
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/60">
