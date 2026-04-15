@@ -1,4 +1,4 @@
-# StockPilot Privacy Policy
+# PivoxQuant Privacy Policy
 
 **Effective Date:** April 9, 2026
 **Last Updated:** April 9, 2026
@@ -7,11 +7,11 @@
 
 ## 1. Introduction
 
-StockPilot Inc. ("StockPilot," "Company," "we," "us," or "our") is committed to protecting the privacy of our users. This Privacy Policy explains how we collect, use, store, share, and protect your personal information when you use our AI-powered quantitative trading analysis platform ("Service").
+PivoxQuant Inc. ("PivoxQuant," "Company," "we," "us," or "our") is committed to protecting the privacy of our users. This Privacy Policy explains how we collect, use, store, share, and protect your personal information when you use our AI-powered quantitative trading analysis platform ("Service").
 
 This policy complies with the Korean Personal Information Protection Act (PIPA, 개인정보보호법) and other applicable data protection regulations.
 
-By using StockPilot, you acknowledge that you have read and understood this Privacy Policy.
+By using PivoxQuant, you acknowledge that you have read and understood this Privacy Policy.
 
 ---
 
@@ -19,10 +19,10 @@ By using StockPilot, you acknowledge that you have read and understood this Priv
 
 The entity responsible for processing your personal data is:
 
-- **Company Name:** StockPilot Inc.
+- **Company Name:** PivoxQuant Inc.
 - **Representative:** [Representative Name]
 - **Address:** [Business Address, Seoul, Republic of Korea]
-- **Email:** [privacy@stockpilot.com]
+- **Email:** [privacy@pivoxquant.com]
 - **Privacy Officer (개인정보 보호책임자):** [Privacy Officer Name / Contact]
 
 ---
@@ -112,11 +112,11 @@ We share personal data with the following third parties only to the extent neces
 
 ### 6.2 Payment Processors
 
-Payment information is processed directly by our third-party payment provider. StockPilot does not store your full credit card number, bank account details, or other sensitive payment data on our servers.
+Payment information is processed directly by our third-party payment provider. PivoxQuant does not store your full credit card number, bank account details, or other sensitive payment data on our servers.
 
 ### 6.3 Legal Disclosure
 
-We may disclose personal data when required by law, court order, or governmental authority, or when necessary to protect the rights, property, or safety of StockPilot, our users, or the public.
+We may disclose personal data when required by law, court order, or governmental authority, or when necessary to protect the rights, property, or safety of PivoxQuant, our users, or the public.
 
 We do **not** sell your personal data to any third party.
 
@@ -177,7 +177,7 @@ You may request a copy of your personal data in a structured, commonly used, mac
 
 To exercise any of the above rights, please contact us at:
 
-- **Email:** [privacy@stockpilot.com]
+- **Email:** [privacy@pivoxquant.com]
 - **In-App:** Account Settings > Privacy > Data Requests
 
 We will respond to your request within **10 business days** as required by PIPA. No fee is charged for exercising your rights.
@@ -245,17 +245,17 @@ We do **not** use advertising or tracking cookies.
 
 ## 11. Children's Privacy
 
-StockPilot is intended for users aged **18 years and older**. Securities trading and investment analysis are activities that carry inherent financial risk and require legal capacity.
+PivoxQuant is intended for users aged **18 years and older**. Securities trading and investment analysis are activities that carry inherent financial risk and require legal capacity.
 
 We do not knowingly collect personal data from anyone under 18 years of age. If we become aware that we have collected data from a minor, we will take immediate steps to delete such data and terminate the associated account.
 
-If you believe a minor has provided personal data to us, please contact us immediately at [privacy@stockpilot.com].
+If you believe a minor has provided personal data to us, please contact us immediately at [privacy@pivoxquant.com].
 
 ---
 
 ## 12. Automated Decision-Making
 
-StockPilot uses automated processing, including AI and machine learning algorithms, to generate quant scores, market analyses, and chat insights. These automated outputs:
+PivoxQuant uses automated processing, including AI and machine learning algorithms, to generate quant scores, market analyses, and chat insights. These automated outputs:
 
 - Are provided for informational purposes only and do not constitute investment advice.
 - Do not produce legal effects or similarly significant effects on users.
@@ -279,9 +279,9 @@ Your continued use of the Service after the effective date of any changes consti
 
 For any questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact us:
 
-- **Privacy Officer Email:** [privacy@stockpilot.com]
-- **General Contact:** [contact@stockpilot.com]
-- **Website:** [https://stockpilot.com]
+- **Privacy Officer Email:** [privacy@pivoxquant.com]
+- **General Contact:** [contact@pivoxquant.com]
+- **Website:** [https://pivoxquant.com]
 - **Address:** [Business Address, Seoul, Republic of Korea]
 
 For complaints or inquiries regarding personal information protection, you may also contact:

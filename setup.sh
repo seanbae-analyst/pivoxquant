@@ -1,8 +1,8 @@
 #!/bin/bash
-# StockPilot 설치 스크립트
+# PivoxQuant 설치 스크립트
 
 echo "=============================="
-echo "  StockPilot 환경 설치 중..."
+echo "  PivoxQuant 환경 설치 중..."
 echo "=============================="
 
 # 가상환경 생성

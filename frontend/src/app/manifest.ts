@@ -2,14 +2,14 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "StockPilot — AI Quant Advisor",
-    short_name: "StockPilot",
+    name: "PivoxQuant — AI Quant Advisor",
+    short_name: "PivoxQuant",
     description:
       "AI-powered quantitative investment advisor with adaptive quant engine",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#ffffff",
+    background_color: "#fafafa",
+    theme_color: "#8b5cf6",
     orientation: "portrait-primary",
     categories: ["finance", "business"],
     icons: [

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const EMAIL = "e2e-tester@stockpilot.com";
+const EMAIL = "e2e-tester@pivoxquant.com";
 const PASSWORD = "test123456";
 const BASE = "http://localhost:5050";
 

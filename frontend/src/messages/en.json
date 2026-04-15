@@ -1,0 +1,351 @@
+{
+  "nav": {
+    "home": "Home",
+    "morningBrief": "Morning Brief",
+    "portfolio": "Portfolio",
+    "market": "Market",
+    "signals": "Signals",
+    "discover": "Discover",
+    "watchlist": "Watchlist",
+    "ai": "AI Assistant",
+    "autotrade": "AutoTrade",
+    "risk": "Risk",
+    "settings": "Settings",
+    "upgrade": "Upgrade to Pro"
+  },
+  "topbar": {
+    "searchPlaceholder": "Search stocks, features...",
+    "searchTicker": "Search by ticker (e.g. AAPL, TSLA)...",
+    "notifications": "Notifications",
+    "markAllRead": "Mark all read",
+    "noNotifications": "No notifications",
+    "loading": "Loading...",
+    "searching": "Searching...",
+    "noResults": "No results for \"{query}\"",
+    "typeToSearch": "Type a ticker symbol to search"
+  },
+  "common": {
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "viewAll": "View All",
+    "seeMore": "See More",
+    "learnMore": "Learn More",
+    "getStarted": "Get Started",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "signUp": "Sign Up",
+    "settings": "Settings"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "AI Quant Investment Advisor",
+      "continueWithGoogle": "Continue with Google",
+      "continueWithKakao": "Continue with Kakao",
+      "noAccount": "Don't have an account?",
+      "createAccount": "Create account"
+    },
+    "signup": {
+      "title": "Get started",
+      "subtitle": "AI Quant Investment Platform",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in"
+    }
+  },
+  "dashboard": {
+    "home": {
+      "title": "Dashboard",
+      "portfolioValue": "Portfolio Value",
+      "totalReturn": "Total Return",
+      "todayPnl": "Today's P&L",
+      "positions": "Positions"
+    },
+    "portfolio": {
+      "title": "Portfolio",
+      "addPosition": "Add Position",
+      "noPositions": "No positions yet",
+      "noPositionsDesc": "Add your first position to start tracking your portfolio",
+      "totalValue": "Total Value",
+      "unrealizedPnl": "Unrealized P&L",
+      "realizedPnl": "Realized P&L",
+      "allocation": "Allocation"
+    },
+    "market": {
+      "title": "Market",
+      "usMarket": "US Market",
+      "krMarket": "KR Market",
+      "indices": "Indices",
+      "gainers": "Top Gainers",
+      "losers": "Top Losers",
+      "volume": "Volume"
+    },
+    "signals": {
+      "title": "Signals",
+      "allSignals": "All Signals",
+      "positive": "POSITIVE",
+      "negative": "NEGATIVE",
+      "neutral": "NEUTRAL",
+      "noSignals": "No signals available",
+      "generatedAt": "Generated at"
+    },
+    "discover": {
+      "title": "Discover",
+      "scanStocks": "Scan Stocks",
+      "topRated": "Top Rated",
+      "noResults": "No results found"
+    },
+    "watchlist": {
+      "title": "Watchlist",
+      "addStock": "Add Stock",
+      "empty": "Your watchlist is empty",
+      "emptyDesc": "Add stocks to monitor them here",
+      "remove": "Remove"
+    },
+    "risk": {
+      "title": "Risk",
+      "riskDefense": "Risk Defense",
+      "layers": "Layers",
+      "var": "VaR",
+      "drawdown": "Drawdown",
+      "sharpe": "Sharpe Ratio",
+      "status": "Status",
+      "safe": "Safe",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "autotrade": {
+      "title": "AutoTrade",
+      "paperMode": "Paper Mode",
+      "killSwitch": "Kill Switch",
+      "enable": "Enable",
+      "disable": "Disable",
+      "status": "Status"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "createAlert": "Create Alert",
+      "noAlerts": "No alerts set",
+      "price": "Price",
+      "signal": "Signal",
+      "risk": "Risk",
+      "trade": "Trade"
+    },
+    "settings": {
+      "title": "Settings",
+      "profile": "Profile",
+      "broker": "Broker Connection",
+      "notifications": "Notifications",
+      "security": "Security",
+      "plan": "Subscription Plan",
+      "connectAlpaca": "Connect Alpaca",
+      "connectKIS": "Connect KIS",
+      "deleteAccount": "Delete Account"
+    }
+  },
+  "landing": {
+    "hero": {
+      "badge": "AI Quant Investment Advisor",
+      "title": "Invest with Data",
+      "subtitle": "58 quant models, 7-layer risk defense, AI portfolio analysis. Unified US & Korean equity management.",
+      "cta": "Start for Free",
+      "learnMore": "Learn More"
+    },
+    "stats": {
+      "quantModels": "Quant Models",
+      "riskDefense": "Risk Defense",
+      "markets": "Markets",
+      "mdd": "MDD vs Buy & Hold"
+    },
+    "pricing": {
+      "title": "Pricing",
+      "free": "Free",
+      "pro": "Pro",
+      "premium": "Premium",
+      "perMonth": "/mo",
+      "startFree": "Start Free",
+      "startPro": "Start Pro",
+      "startPremium": "Start Premium"
+    }
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "network": "Please check your network connection.",
+    "notFound": "Page not found.",
+    "unauthorized": "Please sign in to continue.",
+    "forbidden": "You don't have permission to access this.",
+    "serverError": "Server error. Please try again later."
+  },
+  "empty": {
+    "default": "No data available",
+    "noData": "Nothing to display",
+    "comingSoon": "Coming soon"
+  },
+  "modal": {
+    "addPosition": {
+      "title": "Add Position",
+      "ticker": "Ticker",
+      "shares": "Shares",
+      "avgPrice": "Avg. Cost",
+      "currency": "Currency"
+    },
+    "editPosition": {
+      "title": "Edit Position"
+    },
+    "deletePosition": {
+      "title": "Delete Position",
+      "description": "Are you sure you want to remove this position from your portfolio? This action cannot be undone."
+    },
+    "addAlert": {
+      "title": "Create Alert",
+      "ticker": "Ticker",
+      "condition": "Condition",
+      "value": "Value"
+    }
+  },
+  "disclaimer": {
+    "text": "This service is for informational purposes only. Not investment advice. All investment decisions are your own responsibility.",
+    "short": "For informational use only — not investment advice"
+  },
+  "morningBrief": {
+    "title": "Morning Brief",
+    "today": "Today",
+    "yesterdayClose": "Yesterday's Close",
+    "portfolio": "My Portfolio",
+    "events": "Today's Events",
+    "insight": "AI Insight",
+    "viewAll": "View all",
+    "archive": "Archive",
+    "archiveSubtitle": "Past 30 days of morning briefs",
+    "disclaimer": "For informational purposes only. Investment decisions are your own responsibility.",
+    "noEvents": "No major events today",
+    "notAvailable": "Morning brief is prepared every day at 6:00 AM",
+    "notAvailableDesc": "We'll notify you when the new brief arrives",
+    "noPositionsTitle": "Get a personalized brief",
+    "noPositionsDesc": "Add positions to receive a portfolio-tailored brief",
+    "addPosition": "Add Position",
+    "noArchive": "No archive yet",
+    "noArchiveDesc": "No briefs generated in the last 30 days",
+    "filterAll": "All",
+    "filterWeek": "This week",
+    "filterMonth": "This month",
+    "eventTypes": {
+      "earnings": "Earnings",
+      "dividend": "Dividend",
+      "economic": "Economic Data",
+      "split": "Stock Split",
+      "ipo": "IPO"
+    }
+  },
+  "settings": {
+    "tabs": {
+      "account": "Account",
+      "subscription": "Subscription",
+      "connections": "Connections",
+      "notifications": "Notifications"
+    },
+    "notifications": {
+      "title": "Notification Settings",
+      "subtitle": "Manage push, email, and KakaoTalk alerts",
+      "morningBriefTitle": "Morning Brief Push",
+      "morningBriefDesc": "Get your portfolio summary and today's events every morning",
+      "timeLabel": "Delivery time",
+      "timeHelp": "Push is sent daily at this time (KST)",
+      "emailTitle": "Email alerts",
+      "emailDesc": "Available on Pro and above",
+      "kakaoTitle": "KakaoTalk alerts",
+      "kakaoDesc": "Coming soon to the Premium plan",
+      "enable": "Enable",
+      "disable": "Disable",
+      "saving": "Saving...",
+      "saved": "Saved",
+      "notSupported": "Push notifications are not supported on this browser",
+      "permissionDenied": "Please allow notifications in your browser settings",
+      "enableFirst": "Enable push notifications first"
+    }
+  },
+  "whatIf": {
+    "badge": "Time Machine",
+    "hero": "If You Had Invested...",
+    "sub": "What would your past investment be worth today?",
+    "tryIt": "Try the Time Machine",
+    "form": {
+      "ticker": "Ticker",
+      "tickerPlaceholder": "Search ticker (e.g. AAPL, NVDA)",
+      "startDate": "Start Date",
+      "amount": "Amount",
+      "currency": "Currency",
+      "krw": "KRW",
+      "usd": "USD",
+      "recurring": "Strategy",
+      "lumpSum": "Lump Sum",
+      "monthly": "Monthly DCA",
+      "weekly": "Weekly DCA",
+      "calculate": "Calculate",
+      "calculating": "Calculating...",
+      "recalculate": "Recalculate"
+    },
+    "result": {
+      "headline": "Investing {amount} in {ticker} on {date}",
+      "currentValue": "Current Value",
+      "returnPct": "Return",
+      "invested": "Invested",
+      "profit": "Profit / Loss",
+      "annualized": "Annualized",
+      "duration": "Duration",
+      "days": "days",
+      "years": "years",
+      "vs": "vs {benchmark}",
+      "vsBenchmark": "vs S&P 500",
+      "moreThanBench": "{amount} more than S&P 500",
+      "lessThanBench": "{amount} less than S&P 500",
+      "chartTitle": "Growth Over Time",
+      "milestones": "Milestones",
+      "share": "Share",
+      "kakao": "KakaoTalk",
+      "twitter": "X (Twitter)",
+      "saveImage": "Save Image",
+      "copyLink": "Copy Link",
+      "copied": "Link copied",
+      "presets": "Try more dramatic scenarios",
+      "watermark": "pivoxquant.com/simulator/what-if"
+    },
+    "headlines": {
+      "legendary": "Life-Changing Scenario",
+      "crazy": "Insane Return",
+      "strong": "2x+ Gain",
+      "solid": "Solid Growth",
+      "flat": "Sideways",
+      "negative": "Alternative Scenario"
+    },
+    "errors": {
+      "noTicker": "Please select a ticker",
+      "notFound": "Ticker not found. Try AAPL, NVDA, TSLA",
+      "beforeListing": "This stock wasn't listed on that date yet",
+      "futureDate": "Date cannot be in the future",
+      "amountRange": "Amount must be between 1,000 and 1 billion",
+      "dataUnavailable": "Could not load data for this scenario",
+      "generic": "Something went wrong. Please try again."
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "ko": "본 시뮬레이션은 과거 데이터 기반 계산이며, 미래 수익을 보장하지 않습니다. 배당·세금·수수료는 반영되지 않습니다. 투자자문이 아닙니다.",
+      "en": "This simulation is based on past data only. Past performance does not guarantee future results. Dividends, taxes, and fees are not included. Not investment advice."
+    }
+  }
+}

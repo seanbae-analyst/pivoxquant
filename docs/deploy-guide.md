@@ -1,4 +1,4 @@
-# StockPilot -- Production Deployment Guide
+# PivoxQuant -- Production Deployment Guide
 
 Last updated: 2026-04-09
 
@@ -44,7 +44,7 @@ git log --all --diff-filter=A -- .env
 1. https://railway.com 로그인
 2. "New Project" 클릭
 3. "Deploy from GitHub Repo" 선택
-4. stockpilot 리포지토리 연결
+4. pivoxquant 리포지토리 연결
 5. Root Directory 설정: `/` (프로젝트 루트, frontend가 아님)
 
 ### 2-2. PostgreSQL 추가
@@ -79,7 +79,7 @@ SENDGRID_API_KEY=<your-key>
 
 1. Railway가 자동으로 빌드 & 배포 시작
 2. Deploy Logs에서 에러 없는지 확인
-3. Railway이 부여한 도메인 확인 (예: `stockpilot-production.up.railway.app`)
+3. Railway이 부여한 도메인 확인 (예: `pivoxquant-production.up.railway.app`)
 4. 브라우저에서 `https://<railway-domain>/api/auth/me` 접속하여 JSON 응답 확인
 
 ### 2-5. Custom Domain (선택사항)
@@ -115,7 +115,7 @@ Environment: Production, Preview, Development 모두 체크.
 ### 3-3. 배포 확인
 
 1. Vercel이 자동으로 빌드 & 배포
-2. 부여된 도메인 확인 (예: `stockpilot.vercel.app`)
+2. 부여된 도메인 확인 (예: `pivoxquant.vercel.app`)
 3. 브라우저에서 접속하여 로그인 페이지 확인
 
 ---
@@ -127,13 +127,13 @@ Environment: Production, Preview, Development 모두 체크.
 Vercel 도메인이 확정되면 Railway 환경변수를 업데이트:
 
 ```
-CORS_ORIGINS=https://stockpilot.vercel.app
-FRONTEND_URL=https://stockpilot.vercel.app
+CORS_ORIGINS=https://pivoxquant.vercel.app
+FRONTEND_URL=https://pivoxquant.vercel.app
 ```
 
 여러 도메인 허용 시 쉼표 구분:
 ```
-CORS_ORIGINS=https://stockpilot.vercel.app,https://custom-domain.com
+CORS_ORIGINS=https://pivoxquant.vercel.app,https://custom-domain.com
 ```
 
 ### 4-2. Google OAuth 리다이렉트 URI 추가

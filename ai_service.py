@@ -1,5 +1,5 @@
 """
-StockPilot — AI Service (Claude Integration)
+PivoxQuant — AI Service (Claude Integration)
 Uses Claude Haiku for cost-efficient, beginner-friendly financial insights.
 """
 
@@ -10,7 +10,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are StockPilot AI, a friendly investment advisor assistant built into a quantitative portfolio analysis app.
+SYSTEM_PROMPT = """You are PivoxQuant AI, a friendly investment advisor assistant built into a quantitative portfolio analysis app.
 
 Your audience is beginner investors (주린이) who may not understand financial jargon.
 
@@ -384,6 +384,80 @@ Peers in same sector:
             return {"analysis": en, "analysis_kr": kr}
         except Exception as e:
             logger.error(f"Competitor analysis error: {e}")
+            return None
+
+    def generate_brief_insight(self, portfolio_changes, market_summary, events):
+        """Generate a ONE-LINE Korean neutral insight for the morning brief.
+
+        Strictly descriptive — no recommendations, predictions, or action verbs.
+        Caller MUST still run the compliance validator in
+        services.morning_brief_service._is_compliant() before persisting.
+
+        Returns a string (<=30 Korean chars) or None on failure so the caller
+        can fall back to rule-based text.
+        """
+        if not self.available:
+            return None
+        try:
+            tickers = ", ".join((c.get("ticker") or "?")
+                                for c in (portfolio_changes or [])[:5]) or "없음"
+            sp = (market_summary or {}).get("sp500", {}) or {}
+            nq = (market_summary or {}).get("nasdaq", {}) or {}
+            ks = (market_summary or {}).get("kospi", {}) or {}
+            vix = (market_summary or {}).get("vix", {}) or {}
+
+            def _pct(d):
+                v = d.get("change_pct") if isinstance(d, dict) else None
+                return f"{v:+.2f}" if isinstance(v, (int, float)) else "?"
+
+            def _val(d):
+                v = d.get("price") if isinstance(d, dict) else None
+                return f"{v}" if isinstance(v, (int, float)) else "?"
+
+            events_text = "; ".join(
+                f"{e.get('ticker','')} {e.get('type','')}".strip()
+                for e in (events or [])[:5]
+            ) or "없음"
+
+            prompt = f"""You are a neutral Korean market analyst. Write a ONE-LINE Korean insight (30자 이내) about market conditions.
+
+STRICT rules:
+- NO recommendations ("사세요", "파세요", "매수", "매도", "추천", "조언" 금지)
+- NO predictions ("오를 것", "내릴 것", "오른다", "내린다" 금지)
+- NO imperatives ("~해야", "~하라" 금지)
+- Use descriptive language only ("관찰됨", "변동성 확대", "주목")
+- Stay neutral, informational, factual only
+
+Input:
+- Portfolio tickers: {tickers}
+- Yesterday: S&P {_pct(sp)}%, NASDAQ {_pct(nq)}%, KOSPI {_pct(ks)}%
+- VIX: {_val(vix)}
+- Today's events: {events_text}
+
+Output ONLY a JSON object, no markdown:
+{{"insight": "..."}}"""
+
+            resp = self.client.messages.create(
+                model=MODEL,
+                max_tokens=120,
+                system="You are a neutral Korean market analyst. Output only JSON.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = resp.content[0].text.strip()
+            # Extract JSON even if the model wraps it in ```json ... ```
+            if "```" in text:
+                text = text.split("```", 2)[1]
+                if text.startswith("json"):
+                    text = text[4:]
+                text = text.strip()
+            try:
+                payload = json.loads(text)
+                insight = (payload.get("insight") or "").strip()
+                return insight or None
+            except Exception:
+                return text[:60] if text else None
+        except Exception as e:
+            logger.error(f"Brief insight error: {e}")
             return None
 
     def generate_sector_trend(self, sector, stocks_in_sector):

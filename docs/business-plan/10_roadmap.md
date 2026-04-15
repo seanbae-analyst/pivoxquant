@@ -9,7 +9,7 @@
 | W1 | 소셜 로그인 | NextAuth.js + Google/Kakao OAuth |
 | W1~W2 | PostgreSQL 마이그레이션 | SQLite → Supabase (넉넉하게 2주) |
 | W2 | PWA 설정 | manifest.json + service worker + 홈화면 추가 배너 |
-| W2 | yfinance → Finnhub 교체 | 미국주식 데이터 소스 전환 |
+| W2 | ~~데이터 소스 전환~~ (완료) | FMP + Alpaca 전환 완료 |
 | W3 | 면책/약관/법적 문서 | 이용약관 + 개인정보처리방침 + 면책 문구 전 화면 |
 | W3 | 배포 | Vercel(FE) + Railway(BE) + 도메인 연결 |
 | W4 | 결제 시스템 | 토스페이먼츠 연동 + 구독 관리 + 유저당 토큰 캡 |
@@ -108,7 +108,7 @@ MRR 9만            MRR 27만        MRR 89만         MRR 268만
 
 ## FINT 대비 마일스톤
 
-| 시점 | StockPilot | FINT (현재) |
+| 시점 | PivoxQuant | FINT (현재) |
 |------|-----------|-------------|
 | 3M | 투명한 22팩터 분석 + Finnhub 안정적 데이터 | 블랙박스 유지 |
 | 6M | 개별 종목 분석 1,000명 사용 | 포트폴리오 단위만 |

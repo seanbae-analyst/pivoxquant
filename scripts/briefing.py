@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-StockPilot CEO Briefing System
+PivoxQuant CEO Briefing System
 Generates and sends HTML email briefings via SendGrid.
 
 Usage:
@@ -14,6 +14,15 @@ import random
 import subprocess
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env from project root so standalone execution picks up secrets
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+# Fix macOS SSL certificate issue
+import certifi
+os.environ.setdefault("SSL_CERT_FILE", certifi.where())
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -182,7 +191,7 @@ BIZ_IDEAS = [
     "AI 포트폴리오 어드바이저: GPT 기반 개인 맞춤형 투자 조언 (프리미엄 기능)",
     "뉴스 센티먼트 알파: 뉴스/SNS 감성 분석으로 시장 방향 예측하는 독자 데이터 상품",
     "암호화폐 확장: 주식 외에 코인 시장도 지원하여 TAM(Total Addressable Market) 확대",
-    "API-as-a-Service: StockPilot의 퀀트 분석 엔진을 외부 개발자에게 API로 제공 ($0.01/call)",
+    "API-as-a-Service: PivoxQuant의 퀀트 분석 엔진을 외부 개발자에게 API로 제공 ($0.01/call)",
     "리밸런싱 자동화: 목표 포트폴리오 비율을 설정하면 자동으로 리밸런싱 실행",
     "연금/ISA 최적화: 한국 세제혜택 계좌에 특화된 투자 전략 추천 기능",
 ]
@@ -209,7 +218,7 @@ def html_wrapper(title: str, body_sections: str, now: datetime) -> str:
 
 <!-- Header -->
 <tr><td style="background:linear-gradient(135deg,#050508 0%,#0d1117 100%);padding:32px 24px;text-align:center;border-bottom:2px solid #10b981;">
-  <h1 style="margin:0;font-size:24px;color:#10b981;letter-spacing:1px;">StockPilot</h1>
+  <h1 style="margin:0;font-size:24px;color:#10b981;letter-spacing:1px;">PivoxQuant</h1>
   <p style="margin:8px 0 0;font-size:14px;color:#6b7280;">{title}</p>
   <p style="margin:4px 0 0;font-size:12px;color:#4b5563;">{date_str}</p>
 </td></tr>
@@ -222,7 +231,7 @@ def html_wrapper(title: str, body_sections: str, now: datetime) -> str:
 <!-- Footer -->
 <tr><td style="padding:16px 24px;text-align:center;border-top:1px solid #1a1a2e;">
   <p style="margin:0;font-size:11px;color:#4b5563;">
-    Automated by StockPilot Engineering &middot; Powered by SendGrid
+    Automated by PivoxQuant Engineering &middot; Powered by SendGrid
   </p>
 </td></tr>
 
@@ -550,7 +559,7 @@ def send_email(subject: str, html_content: str) -> None:
     from sendgrid.helpers.mail import Mail, Email, To, Content
 
     message = Mail(
-        from_email=Email(from_email, "StockPilot Briefing"),
+        from_email=Email(from_email, "PivoxQuant Briefing"),
         to_emails=To(to_email),
         subject=subject,
         html_content=Content("text/html", html_content),
@@ -594,7 +603,7 @@ def main() -> None:
         return
 
     html = builder(now)
-    subject = f"[StockPilot] {label} Briefing — {date_str}"
+    subject = f"[PivoxQuant] {label} Briefing — {date_str}"
 
     send_email(subject, html)
 

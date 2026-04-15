@@ -1,5 +1,5 @@
 """
-StockPilot — Day Trade Service (Alpaca Real-time)
+PivoxQuant — Day Trade Service (Alpaca Real-time)
 Real-time momentum scanning + short-term technical analysis.
 """
 
@@ -197,7 +197,7 @@ class DayTradeService:
             pass
 
         score = max(0, min(100, score))
-        signal = "BUY" if score >= 65 else "SELL" if score < 30 else "HOLD"
+        signal = "POSITIVE" if score >= 65 else "NEGATIVE" if score < 30 else "NEUTRAL"
 
         # Price change
         day_open = bars[0]["open"] if bars else cur_price
@@ -232,7 +232,7 @@ class DayTradeService:
         except Exception:
             pass
 
-        if signal == "BUY":
+        if signal == "POSITIVE":
             if atr:
                 tp_price = round(cur_price + atr * tp_mult, 2)
                 sl_price = round(cur_price - atr * sl_mult, 2)
@@ -245,7 +245,7 @@ class DayTradeService:
             sl_pct = round((sl_price - cur_price) / cur_price * 100, 2)
             signals.append({"type": "neutral", "msg": f"Entry: ${cur_price:.2f} → TP: ${tp_price:.2f} (+{tp_pct}%) · SL: ${sl_price:.2f} ({sl_pct}%) [{regime_profile}]", "msg_kr": f"진입: ${cur_price:.2f} → 익절: ${tp_price:.2f} (+{tp_pct}%) · 손절: ${sl_price:.2f} ({sl_pct}%) [{regime_profile}]"})
             signals.append({"type": "neutral", "msg": f"Trailing stop: {trail_pct}% — auto-adjusts as price rises", "msg_kr": f"트레일링 스탑: {trail_pct}% — 가격 상승 시 자동 조정"})
-        elif signal == "SELL":
+        elif signal == "NEGATIVE":
             tp_price = round(cur_price * (1 - 0.02 * sl_mult), 2)
             sl_price = round(cur_price * (1 + 0.01 * sl_mult), 2)
             trail_pct = round(1.0 * sl_mult, 2)

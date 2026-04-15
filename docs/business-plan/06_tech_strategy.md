@@ -41,22 +41,22 @@
 
 ## 데이터 소스 전략
 
-### yfinance → Finnhub 교체 (필수)
+### 데이터 소스 전환 완료
 
-| 항목 | yfinance (현재) | Finnhub (전환) |
-|------|----------------|----------------|
-| 유형 | Yahoo 비공식 스크래핑 | 공식 REST API |
-| 안정성 | IP 밴, 에러 빈발 | SLA 보장 |
-| 상업 이용 | Yahoo ToS 위반 리스크 | 허용 |
-| 무료 한도 | 없음 (비공식) | 분당 60회 |
-| 유료 | N/A | $50/월 |
+| 항목 | FMP (현재) | Alpaca (US primary) |
+|------|-----------|---------------------|
+| 유형 | 공식 REST API | 공식 REST API |
+| 안정성 | SLA 보장 | SLA 보장 |
+| 상업 이용 | 허용 | 허용 |
+| 무료 한도 | 250회/일 | 무제한 (시세) |
+| 유료 | $15~29/월 | $9/월 |
 
 ### 데이터 소스 로드맵
 
 | 단계 | MAU | 소스 | 월 비용 |
 |------|-----|------|---------|
-| 초기 | 0~500 | Finnhub 무료 + KIS | 0원 |
-| 성장 | 500~1K | Finnhub 유료 or Polygon ($29) | 4만원 |
+| 초기 | 0~500 | Alpaca (US) + KIS (KR) + FMP (fallback) | 0원 |
+| 성장 | 500~1K | FMP 유료 or Polygon ($29) | 2~4만원 |
 | 스케일 | 1K+ | Polygon + FMP 병행 | 6~10만원 |
 
 ---
@@ -72,7 +72,7 @@
 | DB | SQLite | Supabase PostgreSQL |
 | Auth | Flask session | NextAuth.js (Google/Kakao) |
 | AI | Claude Haiku | Claude Haiku (유저당 토큰 캡) |
-| 시세 데이터 | yfinance | **Finnhub** |
+| 시세 데이터 | Alpaca + FMP | Alpaca + FMP |
 | 브로커 US | Alpaca paper | Alpaca paper → live |
 | 브로커 KR | KIS 모의 | KIS 모의 → 실거래 |
 | CI/CD | 없음 | GitHub Actions |
@@ -86,7 +86,7 @@
 | Vercel | 100GB BW | $20/월 |
 | Railway | $5 크레딧 | ~$12/월 |
 | Supabase | 500MB DB | $25/월 |
-| Finnhub | 분당 60회 | $50/월 |
+| FMP | 250회/일 | $15~29/월 |
 | Sentry | 5K events | $26/월 |
 | PostHog | 1M events | $0 |
 
@@ -96,7 +96,7 @@
 
 ### W1~W2
 - [ ] PostgreSQL 마이그레이션 (SQLAlchemy → Supabase)
-- [ ] Finnhub API 연동 (yfinance 교체)
+- [x] FMP API 연동 완료
 - [ ] NextAuth.js 설정 (Google/Kakao OAuth)
 
 ### W2
