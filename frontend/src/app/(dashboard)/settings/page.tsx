@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import useSWR from "swr";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { useT, useLocale } from "@/lib/locale";
 import {
   isPushSupported,
   subscribeToPush,
@@ -57,25 +58,27 @@ const fetcher = async (url: string) => {
 
 /* ── Tabs ── */
 
-const TABS = [
-  { id: "account", label: "계정", icon: User },
-  { id: "subscription", label: "구독", icon: CreditCard },
-  { id: "connections", label: "연동", icon: Link2 },
-  { id: "notifications", label: "알림", icon: Bell },
-] as const;
+const TAB_CONFIG: { id: string; labelKey: string; icon: React.ElementType }[] = [
+  { id: "account", labelKey: "settings.tabs.account", icon: User },
+  { id: "subscription", labelKey: "settings.tabs.subscription", icon: CreditCard },
+  { id: "connections", labelKey: "settings.tabs.connections", icon: Link2 },
+  { id: "notifications", labelKey: "settings.tabs.notifications", icon: Bell },
+  { id: "language", labelKey: "settings.tabs.language", icon: SettingsIcon },
+];
 
-type TabId = (typeof TABS)[number]["id"];
+type TabId = "account" | "subscription" | "connections" | "notifications" | "language";
 
 /* ── Delete Account Modal ── */
 
 function DeleteAccountModal({ onClose }: { onClose: () => void }) {
+  const t = useT();
   return (
     <ModalShell onClose={onClose} ariaLabel="Delete account">
       <div className="sp-card my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto p-5 sm:p-6 sm:max-h-[90vh]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-red-500" />
-            <h3 className="text-lg font-bold text-slate-900">계정 삭제</h3>
+            <h3 className="text-lg font-bold text-slate-900">{t("settings.deleteAccountTitle")}</h3>
           </div>
           <button
             type="button"
@@ -86,21 +89,21 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="text-sm text-slate-600 mb-6">
-          앱에서 직접 계정 삭제는 현재 지원되지 않습니다. 삭제를 원하시면 고객지원에 문의해 주세요.
+          {t("settings.deleteAccountDesc")}
         </p>
         <div className="flex items-center gap-3">
           <a
             href="mailto:seanbae1521@gmail.com?subject=Account%20Deletion%20Request"
             className="flex-1 rounded-full bg-red-500 px-4 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-red-600 active:scale-[0.97]"
           >
-            고객지원 문의
+            {t("settings.contactSupport")}
           </a>
           <button
             type="button"
             onClick={onClose}
             className="flex-1 rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]"
           >
-            취소
+            {t("settings.cancelBtn")}
           </button>
         </div>
       </div>
@@ -113,21 +116,23 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
 function AccountSection() {
   const { user } = useAuth();
   const { data: profileData, isLoading: profileLoading } = useInvestmentProfile();
+  const t = useT();
+  const { locale } = useLocale();
 
   const joinedDate = user
-    ? new Date().toLocaleDateString("ko-KR", { month: "long", year: "numeric" })
+    ? new Date().toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", { month: "long", year: "numeric" })
     : "";
 
   const investorType = profileData?.profile?.profile_type ?? null;
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-bold text-slate-900">계정 정보</h2>
+      <h2 className="text-base font-bold text-slate-900">{t("settings.account.title")}</h2>
 
       <div className="sp-card divide-y divide-slate-100">
         {/* Name */}
         <div className="flex items-center justify-between px-4 py-3.5">
-          <span className="text-sm text-slate-500">이름</span>
+          <span className="text-sm text-slate-500">{t("settings.account.name")}</span>
           <span className="text-sm font-semibold text-slate-900">
             {user?.name || "---"}
           </span>
@@ -135,7 +140,7 @@ function AccountSection() {
 
         {/* Email */}
         <div className="flex items-center justify-between px-4 py-3.5">
-          <span className="text-sm text-slate-500">이메일</span>
+          <span className="text-sm text-slate-500">{t("settings.account.email")}</span>
           <span className="text-sm font-semibold text-slate-900">
             {user?.email || "---"}
           </span>
@@ -143,14 +148,14 @@ function AccountSection() {
 
         {/* Joined */}
         <div className="flex items-center justify-between px-4 py-3.5">
-          <span className="text-sm text-slate-500">가입일</span>
+          <span className="text-sm text-slate-500">{t("settings.account.joined")}</span>
           <span className="text-sm font-medium text-slate-700">{joinedDate}</span>
         </div>
 
         {/* OAuth Provider */}
         {user?.oauth_provider && (
           <div className="flex items-center justify-between px-4 py-3.5">
-            <span className="text-sm text-slate-500">로그인 방법</span>
+            <span className="text-sm text-slate-500">{t("settings.account.loginMethod")}</span>
             <span className="text-sm font-medium text-slate-700 capitalize">
               {user.oauth_provider}
             </span>
@@ -159,7 +164,7 @@ function AccountSection() {
 
         {/* Investor Type */}
         <div className="flex items-center justify-between px-4 py-3.5">
-          <span className="text-sm text-slate-500">투자자 유형</span>
+          <span className="text-sm text-slate-500">{t("settings.account.investorType")}</span>
           {profileLoading ? (
             <Skeleton className="h-5 w-28" />
           ) : investorType ? (
@@ -167,7 +172,7 @@ function AccountSection() {
               {investorType}
             </span>
           ) : (
-            <span className="text-sm text-slate-400">미설정</span>
+            <span className="text-sm text-slate-400">{t("settings.account.notSet")}</span>
           )}
         </div>
       </div>
@@ -179,12 +184,12 @@ function AccountSection() {
       >
         <div>
           <p className="text-sm font-semibold text-slate-900">
-            {investorType ? "투자자 진단 다시 하기" : "투자자 진단 시작"}
+            {investorType ? t("settings.account.retakeAssessment") : t("settings.account.takeAssessment")}
           </p>
           <p className="text-xs text-slate-500 mt-0.5">
             {investorType
-              ? "투자자 프로필과 선호도를 업데이트하세요"
-              : "나만의 맞춤 투자자 프로필을 설정하세요"}
+              ? t("settings.account.retakeSubtitle")
+              : t("settings.account.takeSubtitle")}
           </p>
         </div>
         <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5" />
@@ -201,15 +206,19 @@ function SubscriptionSection() {
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 60_000 },
   );
+  const t = useT();
+  const { locale } = useLocale();
 
   const tier = subData?.tier ?? "free";
   const isPro = tier === "pro";
   const isPremium = tier === "premium";
   const isPaid = isPro || isPremium;
 
+  const dateLocale = locale === "ko" ? "ko-KR" : "en-US";
+
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-bold text-slate-900">구독</h2>
+      <h2 className="text-base font-bold text-slate-900">{t("settings.subscription.title")}</h2>
 
       {isLoading ? (
         <CardSkeleton />
@@ -236,8 +245,8 @@ function SubscriptionSection() {
                 </p>
                 <p className="text-xs text-slate-500">
                   {isPaid
-                    ? `구독 활성`
-                    : "무료 플랜 (기본 기능)"}
+                    ? t("settings.subscription.activePlan")
+                    : t("settings.subscription.freePlan")}
                 </p>
               </div>
             </div>
@@ -245,8 +254,8 @@ function SubscriptionSection() {
             {subData?.current_period_end && isPaid && (
               <p className="text-xs text-slate-500 mb-4">
                 {subData.cancel_at_period_end
-                  ? `해지 예정: ${new Date(subData.current_period_end).toLocaleDateString("ko-KR")}`
-                  : `갱신일: ${new Date(subData.current_period_end).toLocaleDateString("ko-KR")}`}
+                  ? `${t("settings.subscription.cancelsOn")}: ${new Date(subData.current_period_end).toLocaleDateString(dateLocale)}`
+                  : `${t("settings.subscription.renewsOn")}: ${new Date(subData.current_period_end).toLocaleDateString(dateLocale)}`}
               </p>
             )}
 
@@ -256,7 +265,7 @@ function SubscriptionSection() {
                 className="flex items-center justify-center gap-2 w-full rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.97]"
               >
                 <Crown className="h-4 w-4" />
-                Pro로 업그레이드
+                {t("settings.subscription.upgradeToPro")}
               </Link>
             )}
 
@@ -276,7 +285,7 @@ function SubscriptionSection() {
                 }}
                 className="w-full rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]"
               >
-                구독 관리
+                {t("settings.subscription.manage")}
               </button>
             )}
           </div>
@@ -285,15 +294,15 @@ function SubscriptionSection() {
           {!isPaid && (
             <div className="sp-card p-4">
               <p className="text-xs font-semibold text-slate-900 mb-3">
-                Pro 플랜 혜택
+                {t("settings.subscription.proFeatures")}
               </p>
               <ul className="space-y-2">
                 {[
-                  "종목 무제한 트래킹",
-                  "25+ 기술적 지표",
-                  "AI Assistant 하루 10회 질문",
-                  "전체 리스크 분석 대시보드",
-                  "우선 시그널 처리",
+                  t("settings.subscription.proFeaturesList.0"),
+                  t("settings.subscription.proFeaturesList.1"),
+                  t("settings.subscription.proFeaturesList.2"),
+                  t("settings.subscription.proFeaturesList.3"),
+                  t("settings.subscription.proFeaturesList.4"),
                 ].map((feat) => (
                   <li
                     key={feat}
@@ -320,11 +329,12 @@ function ConnectionsSection() {
   const [apiSecret, setApiSecret] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [connected, setConnected] = useState(false);
+  const t = useT();
 
   const handleAlpacaConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim() || !apiSecret.trim()) {
-      toast.error("API Key와 API Secret을 모두 입력해 주세요.");
+      toast.error(t("settings.connections.alpacaCredentialsRequired"));
       return;
     }
     setConnecting(true);
@@ -342,10 +352,10 @@ function ConnectionsSection() {
       setShowAlpacaForm(false);
       setApiKey("");
       setApiSecret("");
-      toast.success("Alpaca가 성공적으로 연결됐습니다!");
+      toast.success(t("settings.connections.alpacaConnectSuccess"));
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Alpaca 연결에 실패했습니다.";
+        err instanceof Error ? err.message : t("settings.connections.alpacaConnectError");
       toast.error(message);
     } finally {
       setConnecting(false);
@@ -354,7 +364,7 @@ function ConnectionsSection() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-base font-bold text-slate-900">브로커 연동</h2>
+      <h2 className="text-base font-bold text-slate-900">{t("settings.connections.title")}</h2>
 
       {/* Alpaca */}
       <div className="sp-card p-4">
@@ -365,17 +375,17 @@ function ConnectionsSection() {
           <div className="flex-1">
             <p className="text-sm font-semibold text-slate-900">Alpaca</p>
             <p className="text-xs text-slate-500">
-              Alpaca Markets를 통한 미국 주식 거래
+              {t("settings.connections.alpacaDesc")}
             </p>
           </div>
           {connected ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600">
               <Check className="h-3 w-3" />
-              연결됨
+              {t("settings.connections.connected")}
             </span>
           ) : (
             <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
-              미연결
+              {t("settings.connections.notConnected")}
             </span>
           )}
         </div>
@@ -386,7 +396,7 @@ function ConnectionsSection() {
             onClick={() => setShowAlpacaForm(true)}
             className="w-full rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]"
           >
-            Alpaca 연결하기
+            {t("settings.connections.connectAlpaca")}
           </button>
         )}
 
@@ -397,7 +407,7 @@ function ConnectionsSection() {
                 htmlFor="alpaca-api-key"
                 className="block text-xs font-medium text-slate-600 mb-1"
               >
-                API Key
+                {t("settings.connections.apiKey")}
               </label>
               <input
                 id="alpaca-api-key"
@@ -414,14 +424,14 @@ function ConnectionsSection() {
                 htmlFor="alpaca-api-secret"
                 className="block text-xs font-medium text-slate-600 mb-1"
               >
-                API Secret
+                {t("settings.connections.apiSecret")}
               </label>
               <input
                 id="alpaca-api-secret"
                 type="password"
                 value={apiSecret}
                 onChange={(e) => setApiSecret(e.target.value)}
-                placeholder="Enter your API secret"
+                placeholder="••••••••"
                 autoComplete="off"
                 className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
               />
@@ -438,7 +448,7 @@ function ConnectionsSection() {
                 {connecting && (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 )}
-                {connecting ? "연결 중..." : "연결"}
+                {connecting ? t("settings.connections.connecting") : t("settings.connections.connect")}
               </button>
               <button
                 type="button"
@@ -450,7 +460,7 @@ function ConnectionsSection() {
                 disabled={connecting}
                 className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                취소
+                {t("settings.connections.cancel")}
               </button>
             </div>
           </form>
@@ -465,14 +475,14 @@ function ConnectionsSection() {
           </span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-slate-900">
-              한국투자증권
+              {t("settings.connections.kisName")}
             </p>
             <p className="text-xs text-slate-500">
-              KIS API를 통한 한국 주식 거래
+              {t("settings.connections.kisDesc")}
             </p>
           </div>
           <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
-            출시 예정
+            {t("settings.connections.comingSoon")}
           </span>
         </div>
         <button
@@ -480,12 +490,12 @@ function ConnectionsSection() {
           disabled
           className="w-full rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-400 cursor-not-allowed"
         >
-          Coming Soon
+          {t("settings.connections.comingSoon")}
         </button>
       </div>
 
       <p className="text-xs text-slate-400 text-center pt-2">
-        브로커 연동 시 실시간 포트폴리오 동기화와 자동매매가 가능합니다.
+        {t("settings.connections.brokerNote")}
       </p>
     </div>
   );
@@ -558,6 +568,7 @@ function NotificationsSection() {
   const [pushLoading, setPushLoading] = useState(false);
   const [time, setTime] = useState("06:00");
   const [emailEnabled, setEmailEnabled] = useState(false);
+  const t = useT();
 
   // Get tier for gating
   const { data: subData } = useSWR<SubscriptionResponse>(
@@ -578,7 +589,6 @@ function NotificationsSection() {
       .then((sub) => setPushEnabled(!!sub))
       .catch(() => setPushEnabled(false));
 
-    // Local storage-backed preference (backend endpoint not yet finalized)
     const savedTime = window.localStorage.getItem("sp_mb_time");
     if (savedTime) setTime(savedTime);
 
@@ -588,7 +598,7 @@ function NotificationsSection() {
 
   const handlePushToggle = async (next: boolean) => {
     if (!pushSupported) {
-      toast.error("이 브라우저는 푸시 알림을 지원하지 않습니다");
+      toast.error(t("settings.notifications.notSupported"));
       return;
     }
     setPushLoading(true);
@@ -596,19 +606,19 @@ function NotificationsSection() {
       if (next) {
         const sub = await subscribeToPush();
         if (!sub) {
-          toast.error("브라우저 설정에서 알림 권한을 허용해 주세요");
+          toast.error(t("settings.notifications.permissionDenied"));
           setPushEnabled(false);
           return;
         }
         setPushEnabled(true);
-        toast.success("아침 브리핑 푸시가 활성화됐습니다");
+        toast.success(t("settings.notifications.pushEnabled"));
       } else {
         await unsubscribeFromPush();
         setPushEnabled(false);
-        toast.success("푸시 알림이 해제됐습니다");
+        toast.success(t("settings.notifications.pushDisabled"));
       }
     } catch {
-      toast.error("알림 설정에 실패했습니다");
+      toast.error(t("settings.notifications.pushError"));
     } finally {
       setPushLoading(false);
     }
@@ -619,27 +629,27 @@ function NotificationsSection() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem("sp_mb_time", value);
     }
-    toast.success("발송 시간이 변경됐습니다");
+    toast.success(t("settings.notifications.timeChanged"));
   };
 
   const handleEmailToggle = (next: boolean) => {
     if (!isPro) {
-      toast.error("이메일 알림은 Pro 이상 플랜에서 이용할 수 있습니다");
+      toast.error(t("settings.notifications.emailProRequired"));
       return;
     }
     setEmailEnabled(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("sp_mb_email", next ? "1" : "0");
     }
-    toast.success(next ? "이메일 알림이 활성화됐습니다" : "이메일 알림이 해제됐습니다");
+    toast.success(next ? t("settings.notifications.emailEnabledSuccess") : t("settings.notifications.emailDisabledSuccess"));
   };
 
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-base font-bold text-slate-900">알림 설정</h2>
+        <h2 className="text-base font-bold text-slate-900">{t("settings.notifications.title")}</h2>
         <p className="mt-0.5 text-xs text-slate-500">
-          푸시, 이메일, 카톡 알림을 관리하세요
+          {t("settings.notifications.subtitle")}
         </p>
       </div>
 
@@ -656,24 +666,24 @@ function NotificationsSection() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-slate-900">
-                  아침 브리핑 푸시 알림
+                  {t("settings.notifications.morningBriefTitle")}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  매일 아침, 포트폴리오 요약과 오늘의 일정을 받아보세요
+                  {t("settings.notifications.morningBriefDesc")}
                 </p>
               </div>
               <ToggleSwitch
                 checked={pushEnabled}
                 onChange={handlePushToggle}
                 disabled={pushLoading || !pushSupported}
-                ariaLabel="아침 브리핑 푸시 알림"
+                ariaLabel={t("settings.notifications.morningBriefTitle")}
               />
             </div>
 
             {!pushSupported && (
               <p className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-600">
                 <AlertTriangle className="h-3 w-3" />
-                이 브라우저는 푸시 알림을 지원하지 않습니다
+                {t("settings.notifications.notSupported")}
               </p>
             )}
 
@@ -688,7 +698,7 @@ function NotificationsSection() {
                 htmlFor="mb-time-select"
                 className="block text-xs font-medium text-slate-600"
               >
-                발송 시간 (KST)
+                {t("settings.notifications.timeLabel")}
               </label>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
                 {TIME_OPTIONS.map((opt) => {
@@ -713,7 +723,7 @@ function NotificationsSection() {
                 })}
               </div>
               <p className="mt-2 text-[11px] text-slate-400">
-                매일 이 시간에 푸시가 발송됩니다 (KST 기준)
+                {t("settings.notifications.timeHelp")}
               </p>
             </div>
           </div>
@@ -742,21 +752,21 @@ function NotificationsSection() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-slate-900">
-                    이메일 알림
+                    {t("settings.notifications.emailTitle")}
                   </p>
                   {!isPro && <TierBadge tier="pro" />}
                 </div>
                 <p className="mt-0.5 text-xs text-slate-500">
                   {isPro
-                    ? "가입한 이메일로 매일 아침 브리핑을 받아보세요"
-                    : "Pro 이상 플랜에서 이용 가능"}
+                    ? t("morningBrief.noPositionsDesc")
+                    : t("settings.notifications.emailDesc")}
                 </p>
               </div>
               <ToggleSwitch
                 checked={emailEnabled}
                 onChange={handleEmailToggle}
                 disabled={!isPro}
-                ariaLabel="이메일 알림"
+                ariaLabel={t("settings.notifications.emailTitle")}
               />
             </div>
 
@@ -765,7 +775,7 @@ function NotificationsSection() {
                 href="/pricing"
                 className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:text-purple-800"
               >
-                Pro 업그레이드
+                {t("settings.subscription.upgradeToPro")}
                 <ChevronRight className="h-3 w-3" />
               </Link>
             )}
@@ -787,22 +797,22 @@ function NotificationsSection() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-slate-900">
-                    카톡 알림
+                    {t("settings.notifications.kakaoTitle")}
                   </p>
                   <TierBadge tier="premium" />
                   <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                    출시 예정
+                    {t("settings.connections.comingSoon")}
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Premium 플랜에서 곧 제공됩니다 (v2)
+                  {t("settings.notifications.kakaoDesc")}
                 </p>
               </div>
               <ToggleSwitch
                 checked={false}
                 onChange={() => {}}
                 disabled
-                ariaLabel="카톡 알림"
+                ariaLabel={t("settings.notifications.kakaoTitle")}
               />
             </div>
           </div>
@@ -810,8 +820,65 @@ function NotificationsSection() {
       </div>
 
       <p className="pt-2 text-center text-[11px] text-slate-400">
-        알림은 언제든지 해제할 수 있습니다
+        {t("settings.notifications.dismissAnytime")}
       </p>
+    </div>
+  );
+}
+
+/* ── Language Section ── */
+
+function LanguageSection() {
+  const { locale, setLocale } = useLocale();
+  const t = useT();
+
+  const handleChange = (next: "ko" | "en") => {
+    setLocale(next);
+    toast.success(t("settings.language.saved"));
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-base font-bold text-slate-900">{t("settings.language.title")}</h2>
+        <p className="mt-0.5 text-xs text-slate-500">{t("settings.language.subtitle")}</p>
+      </div>
+
+      <div className="sp-card divide-y divide-slate-100">
+        {/* Korean */}
+        <button
+          type="button"
+          onClick={() => handleChange("ko")}
+          className={cn(
+            "flex w-full items-center justify-between px-4 py-3.5 transition-colors hover:bg-slate-50",
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg" role="img" aria-label="Korean flag">&#x1F1F0;&#x1F1F7;</span>
+            <span className="text-sm font-medium text-slate-900">{t("settings.language.korean")}</span>
+          </div>
+          {locale === "ko" && (
+            <Check className="h-4 w-4 text-emerald-500" />
+          )}
+        </button>
+
+        {/* English */}
+        <button
+          type="button"
+          onClick={() => handleChange("en")}
+          className={cn(
+            "flex w-full items-center justify-between px-4 py-3.5 transition-colors hover:bg-slate-50",
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-lg" role="img" aria-label="US flag">&#x1F1FA;&#x1F1F8;</span>
+            <span className="text-sm font-medium text-slate-900">{t("settings.language.english")}</span>
+          </div>
+          {locale === "en" && (
+            <Check className="h-4 w-4 text-emerald-500" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -821,6 +888,7 @@ function NotificationsSection() {
 export default function SettingsPage() {
   const router = useRouter();
   const { logout } = useAuth();
+  const t = useT();
   const [activeTab, setActiveTab] = useState<TabId>("account");
   const [signingOut, setSigningOut] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -844,30 +912,30 @@ export default function SettingsPage() {
             <SettingsIcon className="h-5 w-5 text-slate-500" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900">설정</h1>
+            <h1 className="text-xl font-bold text-slate-900">{t("settings.pageTitle")}</h1>
             <p className="text-sm text-slate-500">
-              계정, 플랜, 연동을 관리하세요
+              {t("settings.pageSubtitle")}
             </p>
           </div>
         </div>
 
         {/* ── Tab navigation ── */}
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {TABS.map((tab) => {
+          {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => setActiveTab(tab.id as TabId)}
                 className={cn(
                   "filter-pill flex items-center gap-1.5 whitespace-nowrap",
                   isActive && "active",
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             );
           })}
@@ -878,11 +946,12 @@ export default function SettingsPage() {
         {activeTab === "subscription" && <SubscriptionSection />}
         {activeTab === "connections" && <ConnectionsSection />}
         {activeTab === "notifications" && <NotificationsSection />}
+        {activeTab === "language" && <LanguageSection />}
 
         {/* ── Danger Zone ── */}
         <div className="space-y-3 pt-4 border-t border-slate-100">
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            위험 구역
+            {t("settings.dangerZone")}
           </h2>
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -897,7 +966,7 @@ export default function SettingsPage() {
               )}
             >
               <LogOut className="h-4 w-4" />
-              {signingOut ? "로그아웃 중..." : "로그아웃"}
+              {signingOut ? t("settings.signingOut") : t("settings.signOut")}
             </button>
 
             {/* Delete Account */}
@@ -907,7 +976,7 @@ export default function SettingsPage() {
               className="flex flex-1 items-center justify-center gap-2 rounded-full border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-[0.97]"
             >
               <Trash2 className="h-4 w-4" />
-              계정 삭제
+              {t("settings.deleteAccount")}
             </button>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { Position } from "@/lib/types";
 import type { PriceDirection } from "@/lib/realtime";
+import { useT } from "@/lib/locale";
 
 /* ── Signal badge ── */
 
@@ -99,6 +100,8 @@ export function PositionsList({
   updatedTickers,
   isLoading,
 }: PositionsListProps) {
+  const t = useT();
+
   if (isLoading) {
     return (
       <div className="sp-card p-5 space-y-3">
@@ -117,10 +120,10 @@ export function PositionsList({
   return (
     <div className="sp-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-bold text-slate-900">내 포지션</h3>
+        <h3 className="text-base font-bold text-slate-900">{t("dashboard.positions.title")}</h3>
         {list.length > 0 && (
           <span className="text-xs font-medium text-slate-400 tabular-nums">
-            {list.length}개
+            {list.length}{t("dashboard.positions.total")}
           </span>
         )}
       </div>
@@ -132,9 +135,9 @@ export function PositionsList({
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           }
-          title="아직 포지션이 없습니다"
-          description="첫 번째 포지션을 추가하여 포트폴리오 성과를 추적해 보세요."
-          action={{ label: "포지션 추가", href: "/portfolio" }}
+          title={t("dashboard.positions.noPositions")}
+          description={t("dashboard.positions.noPositionsDesc")}
+          action={{ label: t("dashboard.positions.addPosition"), href: "/portfolio" }}
         />
       ) : (
         <>
@@ -153,7 +156,7 @@ export function PositionsList({
               href="/portfolio"
               className="text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors"
             >
-              포트폴리오 보기 &rarr;
+              {t("dashboard.positions.viewPortfolio")} &rarr;
             </Link>
           </div>
         </>

@@ -10,7 +10,56 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """You are PivoxQuant AI, a friendly investment advisor assistant built into a quantitative portfolio analysis app.
+
+# ── Compliance filter ────────────────────────────────────────────────
+# 자본시장법 §6 미등록 투자자문업 위반 방지. AI가 '추천/매수/매도/
+# recommend/buy/sell' 같은 자문업 언어를 산출할 경우 응답을 면책 문구로
+# 교체한다. 사전 정의 패턴은 services.morning_brief_service 에서 관리.
+try:
+    from services.morning_brief_service import is_compliant as _is_compliant
+except Exception:  # pragma: no cover — avoid import-time boot failure
+    import re as _re
+    _FALLBACK_RE = _re.compile(
+        r"추천|조언|권(?:고|유|장)|매수|매도|사세요|파세요|사라|팔아|"
+        r"오를\s*것|내릴\s*것|오른다|내린다|"
+        r"\b(?:buy|sell|recommend|advice|advise)\b",
+        _re.IGNORECASE,
+    )
+
+    def _is_compliant(text):
+        if not text:
+            return True
+        return _FALLBACK_RE.search(text) is None
+
+
+_DISCLAIMER_EN = (
+    "This content is informational only and not investment advice. "
+    "PivoxQuant does not provide individualized recommendations."
+)
+_DISCLAIMER_KR = (
+    "본 내용은 정보 제공 목적이며 투자 권유가 아닙니다. "
+    "PivoxQuant는 개별 투자 자문을 제공하지 않습니다."
+)
+
+
+def _compliance_filter(text, lang="en"):
+    """Return `text` if compliant; otherwise a neutral disclaimer fallback.
+
+    Any AI-generated string that contains forbidden advisory vocabulary is
+    dropped and replaced with a safe disclaimer so we never surface raw
+    "buy"/"sell"/"추천"/"매수" to end users.
+    """
+    if text is None:
+        return text
+    try:
+        if _is_compliant(text):
+            return text
+    except Exception as e:  # pragma: no cover
+        logger.warning(f"Compliance check failed, returning disclaimer: {e}")
+    logger.warning("AI response blocked by compliance filter; replacing with disclaimer.")
+    return _DISCLAIMER_KR if lang == "kr" else _DISCLAIMER_EN
+
+SYSTEM_PROMPT = """You are PivoxQuant AI, a friendly market data analysis assistant built into a quantitative portfolio analysis app.
 
 Your audience is beginner investors (주린이) who may not understand financial jargon.
 
@@ -19,10 +68,11 @@ Rules:
 - Always match the user's language (Korean → Korean, English → English).
 - Keep responses concise: 2-4 sentences for summaries, up to a short paragraph for chat.
 - Use the exact numbers from the provided data context.
-- Be encouraging but honest about risks.
+- Be honest about risks; describe data neutrally.
 - Base your analysis on the quant scores and signals provided.
-- End with a clear, actionable takeaway when possible.
-- IMPORTANT: Add a disclaimer that this is algorithmic analysis, not financial advice.
+- End with an informational takeaway — NEVER an action recommendation.
+- CRITICAL: Do NOT recommend buying, selling, or holding any security. Do not use words like "recommend", "buy", "sell", "추천", "조언", "매수", "매도". Describe data only.
+- Always include a disclaimer that this is algorithmic analysis, not financial advice / 투자 권유 아님.
 - Use casual, approachable tone — not stiff corporate speak."""
 
 MODEL = "claude-haiku-4-5-20251001"
@@ -103,7 +153,7 @@ class AIService:
             lines.append(f"- [{s.get('type', '')}] {s.get('msg', '')}")
         lines.append(f"\nAnalyst Reason: {data.get('reason', '')}")
         if data.get("rec_shares"):
-            lines.append(f"Recommendation: Buy {data['rec_shares']} shares (~${data.get('rec_investment', 0):,.0f})")
+            lines.append(f"Suggested position size: {data['rec_shares']} shares (~${data.get('rec_investment', 0):,.0f}) — informational only, not a recommendation")
         if data.get("take_profit"):
             lines.append(f"Take Profit: {data['take_profit']}, Stop Loss: {data.get('stop_loss', '?')}")
         return "\n".join(lines)
@@ -174,7 +224,13 @@ class AIService:
     # ── Chat (Streaming) ─────────────────────────────────────────
 
     def chat_stream(self, message, history, context):
-        """Generator that yields text chunks from Claude streaming response."""
+        """Generator that yields text chunks from Claude streaming response.
+
+        Streamed output is accumulated locally and validated against the
+        compliance filter at end-of-stream. If the full response contains
+        forbidden advisory vocabulary, a bilingual disclaimer line is
+        appended so the user sees an explicit non-recommendation notice.
+        """
         if not self.available:
             yield "AI 기능이 비활성화되어 있습니다. API 키를 설정해주세요."
             return
@@ -184,6 +240,7 @@ class AIService:
                 messages.append({"role": h["role"], "content": h["content"]})
             messages.append({"role": "user", "content": message})
 
+            accumulated = []
             with self.client.messages.stream(
                 model=MODEL,
                 max_tokens=4000,
@@ -191,7 +248,17 @@ class AIService:
                 messages=messages,
             ) as stream:
                 for text in stream.text_stream:
+                    accumulated.append(text)
                     yield text
+
+            full = "".join(accumulated)
+            if full and not _is_compliant(full):
+                logger.warning("chat_stream: non-compliant output detected; appending disclaimer.")
+                yield (
+                    "\n\n---\n"
+                    + _DISCLAIMER_EN + "\n"
+                    + _DISCLAIMER_KR
+                )
         except Exception as e:
             logger.error(f"Chat stream error: {e}")
             yield f"죄송합니다. AI 응답 중 오류가 발생했습니다: {str(e)}"
@@ -211,7 +278,7 @@ class AIService:
                 messages=[{
                     "role": "user",
                     "content": f"""Based on this analysis data, write a beginner-friendly explanation.
-Focus on: what the numbers mean, whether it's a good time to buy/sell, and one key risk.
+Focus on: what the numbers mean, what the current signals describe, and one key risk. Do NOT recommend buying or selling — this is informational analysis only, not investment advice.
 
 IMPORTANT: You MUST write BOTH English AND Korean versions. Do NOT skip Korean.
 Use these EXACT markers:
@@ -226,7 +293,10 @@ Use these EXACT markers:
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {"commentary": en, "commentary_kr": kr}
+            return {
+                "commentary": _compliance_filter(en, "en"),
+                "commentary_kr": _compliance_filter(kr, "kr"),
+            }
         except Exception as e:
             logger.error(f"Commentary error: {e}")
             return None
@@ -266,7 +336,10 @@ Top Headlines:
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {"summary": en, "summary_kr": kr}
+            return {
+                "summary": _compliance_filter(en, "en"),
+                "summary_kr": _compliance_filter(kr, "kr"),
+            }
         except Exception as e:
             logger.error(f"Morning summary error: {e}")
             return None
@@ -297,7 +370,10 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean. Do NOT cu
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {"insight": en, "insight_kr": kr}
+            return {
+                "insight": _compliance_filter(en, "en"),
+                "insight_kr": _compliance_filter(kr, "kr"),
+            }
         except Exception as e:
             logger.error(f"Coaching error: {e}")
             return None
@@ -335,7 +411,10 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {"swot": en, "swot_kr": kr}
+            return {
+                "swot": _compliance_filter(en, "en"),
+                "swot_kr": _compliance_filter(kr, "kr"),
+            }
         except Exception as e:
             logger.error(f"SWOT error: {e}")
             return None
@@ -381,7 +460,10 @@ Peers in same sector:
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {"analysis": en, "analysis_kr": kr}
+            return {
+                "analysis": _compliance_filter(en, "en"),
+                "analysis_kr": _compliance_filter(kr, "kr"),
+            }
         except Exception as e:
             logger.error(f"Competitor analysis error: {e}")
             return None
@@ -453,9 +535,16 @@ Output ONLY a JSON object, no markdown:
             try:
                 payload = json.loads(text)
                 insight = (payload.get("insight") or "").strip()
-                return insight or None
+                if not insight:
+                    return None
+                # Drop (return None) if compliance fails so caller falls
+                # back to rule-based text rather than showing a disclaimer.
+                return insight if _is_compliant(insight) else None
             except Exception:
-                return text[:60] if text else None
+                fallback = text[:60] if text else None
+                if not fallback:
+                    return None
+                return fallback if _is_compliant(fallback) else None
         except Exception as e:
             logger.error(f"Brief insight error: {e}")
             return None
@@ -497,7 +586,11 @@ Stocks in {sector}:
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {"trend": en, "trend_kr": kr, "sector": sector}
+            return {
+                "trend": _compliance_filter(en, "en"),
+                "trend_kr": _compliance_filter(kr, "kr"),
+                "sector": sector,
+            }
         except Exception as e:
             logger.error(f"Sector trend error: {e}")
             return None

@@ -1,24 +1,36 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, IBM_Plex_Mono } from "next/font/google";
+import { Geist, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
 import { CookieConsent } from "@/components/ui/cookie-consent";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 
-const inter = Inter({
+// Geist — latin UI/headings. Pretendard (CDN link below) handles Korean.
+const geist = Geist({
   variable: "--font-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
+// Heading font = Geist (same family, tighter usage)
+const geistHeading = Geist({
+  variable: "--font-heading",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+});
+
+// Tabular-nums mono for prices, ratios, tickers
 const mono = IBM_Plex_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const viewport: Viewport = {
-  themeColor: "#fafafa",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -115,7 +127,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${mono.variable} h-full antialiased`}
+      className={`${geist.variable} ${geistHeading.variable} ${mono.variable} h-full antialiased`}
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

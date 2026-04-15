@@ -17,6 +17,7 @@ import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
+import { changeColorClass } from "@/lib/price-color";
 import type { AlertItem, LookupResult } from "@/lib/types";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { useT } from "@/lib/locale";
@@ -261,7 +262,7 @@ export function TopBar() {
             >
               <Bell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--destructive)]" />
               )}
               <span className="sr-only">{t("topbar.notifications")}</span>
             </button>
@@ -276,7 +277,7 @@ export function TopBar() {
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllRead}
-                      className="text-xs font-medium text-purple-600 transition-colors hover:text-purple-800"
+                      className="text-xs font-medium text-slate-700 transition-colors hover:text-slate-900 underline-offset-2 hover:underline"
                       type="button"
                     >
                       {t("topbar.markAllRead")}
@@ -299,7 +300,7 @@ export function TopBar() {
                         key={alert.id}
                         className={cn(
                           "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50",
-                          !alert.is_read && "bg-purple-50/50",
+                          !alert.is_read && "bg-slate-50",
                         )}
                         type="button"
                         onClick={() => {
@@ -328,7 +329,7 @@ export function TopBar() {
                           </p>
                         </div>
                         {!alert.is_read && (
-                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-purple-500" />
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-900" />
                         )}
                       </button>
                     ))
@@ -353,7 +354,7 @@ export function TopBar() {
                   className="h-8 w-8 rounded-lg object-cover"
                 />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 text-xs font-bold text-purple-700">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-900 text-xs font-semibold text-white">
                   {initials}
                 </div>
               )}
@@ -390,7 +391,7 @@ export function TopBar() {
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50"
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[var(--destructive)] transition-colors hover:bg-red-50/60"
                     type="button"
                   >
                     <LogOut className="h-4 w-4" />
@@ -473,15 +474,13 @@ export function TopBar() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium text-slate-900">
+                      <p className="text-sm font-medium text-slate-900 numeric">
                         ${r.price?.toFixed(2)}
                       </p>
                       <p
                         className={cn(
-                          "text-xs font-medium",
-                          (r.change_pct ?? 0) >= 0
-                            ? "text-emerald-600"
-                            : "text-red-500",
+                          "text-xs font-medium numeric",
+                          changeColorClass(r.change_pct),
                         )}
                       >
                         {fmtPct(r.change_pct)}

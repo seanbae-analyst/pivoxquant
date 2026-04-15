@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { fmtUsd, fmtPct, pnlColor } from "@/lib/format";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import type { PortfolioResponse, AnalyticsResponse } from "@/lib/types";
+import { useT } from "@/lib/locale";
 
 /* ── Icons (inline SVG to avoid bundle dep) ── */
 
@@ -94,6 +95,8 @@ interface MetricCardsProps {
 }
 
 export function MetricCards({ portfolio, analytics, isLoading }: MetricCardsProps) {
+  const t = useT();
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -120,14 +123,14 @@ export function MetricCards({ portfolio, analytics, isLoading }: MetricCardsProp
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <MetricCard
-        label="포트폴리오 가치"
+        label={t("dashboard.metrics.portfolioValue")}
         icon={<WalletIcon />}
         iconBg="bg-violet-50 text-violet-600"
         value={fmtUsd(totalValue)}
-        sub={positions.length > 0 ? `${positions.length}개 포지션` : "아직 포지션이 없습니다"}
+        sub={positions.length > 0 ? `${positions.length}${t("dashboard.metrics.positions")}` : t("dashboard.metrics.noPositionsYet")}
       />
       <MetricCard
-        label="총 손익"
+        label={t("dashboard.metrics.totalPnl")}
         icon={<TrendUpIcon />}
         iconBg={totalPnl >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}
         value={`${totalPnl >= 0 ? "+" : ""}${fmtUsd(totalPnl)}`}
@@ -135,7 +138,7 @@ export function MetricCards({ portfolio, analytics, isLoading }: MetricCardsProp
         subColor={pnlColor(totalPnlPct)}
       />
       <MetricCard
-        label="리스크 점수"
+        label={t("dashboard.metrics.riskScore")}
         icon={<ShieldIcon />}
         iconBg={riskScore >= 70 ? "bg-emerald-50 text-emerald-600" : riskScore >= 40 ? "bg-amber-50 text-amber-500" : "bg-red-50 text-red-500"}
         value={`${riskScore}/100`}

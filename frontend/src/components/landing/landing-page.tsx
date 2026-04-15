@@ -9,9 +9,6 @@ import {
   BarChart3,
   Shield,
   Brain,
-  User,
-  Search,
-  FlaskConical,
   Menu,
   X,
   ArrowRight,
@@ -51,46 +48,28 @@ const scaleIn: Variants = {
 
 const features = [
   {
+    id: "01",
     icon: BarChart3,
     title: "Quant Scoring",
     description:
-      "25 technical + 13 fundamental indicators score every stock 0-100. Data-driven decisions, not gut feelings.",
+      "25 technical + 13 fundamental indicators score every stock 0-100. Data over opinion.",
     href: "/features/quant-scoring",
   },
   {
-    icon: Brain,
-    title: "AI Assistant",
-    description:
-      "Claude AI explains your portfolio in plain language. Get personalized insights and actionable insights.",
-    href: "/features/ai-assistant",
-  },
-  {
+    id: "02",
     icon: Shield,
-    title: "Risk Defense",
+    title: "7-Layer Risk Defense",
     description:
-      "7-layer protection system: VaR, correlation limits, VIX hedge, sector caps, drawdown guards, and more.",
+      "VaR, correlation limits, VIX hedge, sector caps, drawdown guards. Protect capital first.",
     href: "/features/risk-defense",
   },
   {
-    icon: User,
-    title: "Smart Profiles",
+    id: "03",
+    icon: Brain,
+    title: "AI Assistant",
     description:
-      "8 investor types with customized strategies. Your risk tolerance shapes every analysis.",
-    href: "/features/profiles",
-  },
-  {
-    icon: Search,
-    title: "CAN SLIM Screener",
-    description:
-      "William O'Neil's systematic 7-factor stock selection method. Find tomorrow's leaders before the crowd.",
-    href: "/features/canslim",
-  },
-  {
-    icon: FlaskConical,
-    title: "Paper Trading",
-    description:
-      "Test strategies risk-free with real market data. Validate before you commit real capital.",
-    href: "/features/paper-trading",
+      "Claude explains your portfolio in plain language. No jargon, no hype.",
+    href: "/features/ai-assistant",
   },
 ];
 
@@ -98,7 +77,7 @@ const stats = [
   { value: "58+", label: "Quant Models" },
   { value: "7-Layer", label: "Risk Defense" },
   { value: "US + KR", label: "Markets" },
-  { value: "-52%", label: "MDD vs Buy & Hold" },
+  { value: "-52%", label: "MDD (backtest, past data)", disclaimer: "Past performance does not guarantee future results." },
 ];
 
 const steps = [
@@ -116,9 +95,9 @@ const steps = [
   },
   {
     step: "03",
-    title: "AI Protects & Grows",
+    title: "AI Analyzes & Monitors",
     description:
-      "58 quant models analyze continuously. 7 layers defend your capital. AI assists you through every decision.",
+      "58 quant models analyze continuously. 7 layers monitor your capital. AI helps you understand the data.",
   },
 ];
 
@@ -203,15 +182,15 @@ function MiniEquityCurve() {
     <svg viewBox="0 0 200 60" className="w-full h-12" preserveAspectRatio="none">
       <defs>
         <linearGradient id="curveGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path
         d="M0 45 C20 42, 30 38, 50 35 C70 32, 80 28, 100 30 C120 32, 130 20, 150 15 C170 10, 180 12, 200 8"
         fill="none"
-        stroke="#8b5cf6"
-        strokeWidth="2"
+        stroke="#0f172a"
+        strokeWidth="1.5"
         strokeLinecap="round"
       />
       <path
@@ -231,15 +210,15 @@ function DashboardEquityCurve() {
     <svg viewBox="0 0 500 120" className="w-full h-full" preserveAspectRatio="none">
       <defs>
         <linearGradient id="dashCurve" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+          <stop offset="0%" stopColor="#0f172a" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path
         d="M0 90 C30 88, 50 80, 80 75 C110 70, 130 65, 160 58 C190 51, 210 55, 240 48 C270 41, 290 38, 320 32 C350 26, 370 30, 400 22 C430 14, 460 18, 500 10"
         fill="none"
-        stroke="#8b5cf6"
-        strokeWidth="2"
+        stroke="#0f172a"
+        strokeWidth="1.5"
       />
       <path
         d="M0 90 C30 88, 50 80, 80 75 C110 70, 130 65, 160 58 C190 51, 210 55, 240 48 C270 41, 290 38, 320 32 C350 26, 370 30, 400 22 C430 14, 460 18, 500 10 L500 120 L0 120 Z"
@@ -289,11 +268,11 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-primary-gradient flex items-center justify-center">
-                <TrendingUp className="w-4.5 h-4.5 text-white" />
+              <div className="w-8 h-8 rounded-md bg-slate-900 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-white" />
               </div>
-              <span className="text-lg font-bold text-slate-900">
-                Stock<span className="gradient-text">Pilot</span>
+              <span className="text-base font-semibold text-slate-900 tracking-tight">
+                PivoxQuant
               </span>
             </Link>
 
@@ -376,184 +355,184 @@ export default function LandingPage() {
       </nav>
 
       {/* ─── 2. HERO SECTION ─── */}
-      <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-violet-100/40 blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-blue-100/30 blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-pink-50/40 blur-3xl" />
-        </div>
-
+      <section className="relative pt-28 pb-16 md:pt-32 md:pb-24 border-b border-slate-100">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-10 lg:gap-16 items-center">
             {/* Left: Text */}
             <motion.div {...motionProps(staggerContainer)} className="max-w-xl">
-              {/* Eyebrow badge */}
-              <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-50 border border-violet-100 mb-6">
-                <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-                <span className="text-xs font-medium text-violet-700">AI Quant Platform &mdash; Now in Beta</span>
+              {/* Eyebrow — neutral */}
+              <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-slate-200 bg-white mb-6">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
+                <span className="text-[11px] font-medium text-slate-600 tracking-wide uppercase">Beta · Now Open</span>
               </motion.div>
 
-              {/* Headline */}
-              <motion.h1 variants={fadeUp} className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold leading-[1.1] tracking-tight text-slate-900 mb-6">
-                Smarter investing, powered by{" "}
-                <span className="gradient-text">AI + Quant.</span>
+              {/* Headline — no gradient */}
+              <motion.h1 variants={fadeUp} className="text-[2rem] sm:text-5xl lg:text-[3.25rem] font-semibold leading-[1.1] tracking-tight text-slate-900 mb-5 break-keep">
+                퀀트 + AI로 보는<br />
+                미국·한국 주식.
               </motion.h1>
 
               {/* Subtitle */}
-              <motion.p variants={fadeUp} className="text-lg text-slate-500 leading-relaxed mb-8">
-                58 quant models. 7-layer risk defense. US + Korea markets. The only platform
-                that protects your portfolio while growing it.
+              <motion.p variants={fadeUp} className="text-base md:text-lg text-slate-600 leading-relaxed mb-8">
+                58개 퀀트 모델, 7-Layer 리스크 방어, 실시간 시그널.
+                의견이 아니라 데이터 기반 분석을 제공합니다.
               </motion.p>
 
-              {/* CTAs */}
-              <motion.div variants={fadeUp} className="flex flex-wrap gap-3 mb-6">
+              {/* CTAs — neutral only */}
+              <motion.div variants={fadeUp} className="flex flex-wrap gap-2.5 mb-5">
                 <Link
                   href="/signup"
-                  className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all active:scale-[0.97]"
+                  className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors active:scale-[0.98]"
                 >
                   Start Free
                   <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link
-                  href="/simulator/what-if"
-                  className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-gradient-to-r from-violet-600 via-blue-500 to-pink-500 text-white text-sm font-semibold shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 transition-all active:scale-[0.97]"
-                >
-                  <Clock className="w-4 h-4" />
-                  타임머신 체험하기
-                </Link>
                 <a
                   href="#dashboard-preview"
-                  className="inline-flex items-center gap-2 px-7 py-3 rounded-full border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all active:scale-[0.97]"
+                  className="inline-flex items-center gap-2 h-11 px-5 rounded-md border border-slate-200 bg-white text-slate-800 text-sm font-medium hover:border-slate-400 transition-colors active:scale-[0.98]"
                 >
-                  View Demo
+                  View Dashboard
                 </a>
+                <Link
+                  href="/simulator/what-if"
+                  className="inline-flex items-center gap-2 h-11 px-5 rounded-md text-slate-600 text-sm font-medium hover:text-slate-900 transition-colors"
+                >
+                  <Clock className="w-4 h-4" />
+                  타임머신 시뮬레이터
+                </Link>
               </motion.div>
 
               {/* Trust line */}
               <motion.p variants={fadeUp} className="text-xs text-slate-400">
-                No credit card required &middot; Free during beta
+                카드 등록 불필요 · 베타 기간 무료
               </motion.p>
             </motion.div>
 
-            {/* Right: Dashboard preview card */}
+            {/* Right: Dashboard preview card — Bloomberg density */}
             <motion.div {...motionProps(scaleIn)} className="relative">
-              {/* Main card */}
-              <div className="glass-panel rounded-2xl p-6 relative">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <p className="text-xs text-slate-400 mb-0.5">Portfolio Value</p>
-                    <p className="text-2xl font-bold text-slate-900 tabular-nums">$127,450</p>
+              <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+                {/* Terminal header */}
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/60">
+                  <div className="flex items-center gap-2">
+                    <div className="status-dot active" />
+                    <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Portfolio · Live</span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100">
-                    <Shield className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-xs font-semibold text-emerald-700">Risk: 85</span>
+                  <span className="text-[11px] text-slate-400 numeric">14:32:08 KST</span>
+                </div>
+
+                {/* Header stats row */}
+                <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+                  <div className="px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Equity</p>
+                    <p className="text-lg font-semibold text-slate-900 numeric">$127,450</p>
+                  </div>
+                  <div className="px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Day P/L</p>
+                    <p className="text-lg font-semibold up-color numeric">+$1,284</p>
+                  </div>
+                  <div className="px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1">Risk</p>
+                    <p className="text-lg font-semibold text-slate-900 numeric">85<span className="text-xs text-slate-400 ml-1">/100</span></p>
                   </div>
                 </div>
 
                 {/* Equity curve */}
-                <div className="mb-5 rounded-lg bg-slate-50/80 p-3">
-                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-2">Equity Curve (6M)</p>
+                <div className="px-4 pt-3 pb-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400">Equity · 6M</p>
+                    <p className="text-[10px] text-slate-500 numeric">+12.4%</p>
+                  </div>
                   <MiniEquityCurve />
                 </div>
 
-                {/* Signal items */}
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-white border border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[11px] font-bold text-slate-700">
-                        AAPL
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">Apple Inc.</p>
-                        <p className="text-xs text-slate-400">Technology</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">POSITIVE</span>
-                      <span className="text-xs font-mono font-bold text-slate-700">78</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-white border border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[11px] font-bold text-slate-700">
-                        NVDA
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">NVIDIA Corp.</p>
-                        <p className="text-xs text-slate-400">Semiconductors</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">NEUTRAL</span>
-                      <span className="text-xs font-mono font-bold text-slate-700">52</span>
-                    </div>
-                  </div>
+                {/* Positions table — dense */}
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-t border-slate-100 bg-slate-50/40">
+                      <th className="text-left px-4 py-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-medium">Ticker</th>
+                      <th className="text-right px-2 py-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-medium">Price</th>
+                      <th className="text-right px-2 py-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-medium">Δ %</th>
+                      <th className="text-right px-4 py-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-medium">Score</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr>
+                      <td className="px-4 py-2 font-medium text-slate-900 numeric">TICKER A</td>
+                      <td className="text-right px-2 py-2 numeric text-slate-700">—</td>
+                      <td className="text-right px-2 py-2 numeric text-slate-400">—</td>
+                      <td className="text-right px-4 py-2 numeric"><span className="signal-positive text-[11px] font-medium px-1.5 py-0.5 rounded">—</span></td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2 font-medium text-slate-900 numeric">TICKER B</td>
+                      <td className="text-right px-2 py-2 numeric text-slate-700">—</td>
+                      <td className="text-right px-2 py-2 numeric text-slate-400">—</td>
+                      <td className="text-right px-4 py-2 numeric"><span className="signal-positive text-[11px] font-medium px-1.5 py-0.5 rounded">—</span></td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2 font-medium text-slate-900 numeric">TICKER C</td>
+                      <td className="text-right px-2 py-2 numeric text-slate-700">—</td>
+                      <td className="text-right px-2 py-2 numeric text-slate-400">—</td>
+                      <td className="text-right px-4 py-2 numeric"><span className="signal-neutral text-[11px] font-medium px-1.5 py-0.5 rounded">—</span></td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2 font-medium text-slate-900 numeric">TICKER D</td>
+                      <td className="text-right px-2 py-2 numeric text-slate-700">—</td>
+                      <td className="text-right px-2 py-2 numeric text-slate-400">—</td>
+                      <td className="text-right px-4 py-2 numeric"><span className="signal-positive text-[11px] font-medium px-1.5 py-0.5 rounded">—</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 bg-slate-50/40">
+                  <span className="text-[11px] text-slate-500">58 models · 7 layers active</span>
+                  <span className="text-[11px] text-slate-400 numeric">MDD −52% (backtest)</span>
                 </div>
               </div>
-
-              {/* Floating cards */}
-              <motion.div
-                animate={prefersReduced ? {} : { y: [0, -6, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -top-4 -right-4 lg:-right-8 glass-panel rounded-xl px-4 py-2.5 shadow-lg"
-              >
-                <p className="text-[11px] text-slate-400">MDD Reduced</p>
-                <p className="text-lg font-bold text-emerald-600">-52%</p>
-              </motion.div>
-
-              <motion.div
-                animate={prefersReduced ? {} : { y: [0, -6, 0] }}
-                transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute -bottom-3 -left-3 lg:-left-6 glass-panel rounded-xl px-4 py-2.5 shadow-lg"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <p className="text-xs font-semibold text-slate-700">58 Models Active</p>
-                </div>
-              </motion.div>
             </motion.div>
           </div>
         </div>
       </section>
 
-      {/* ─── 3. STATS BAR ─── */}
-      <section className="bg-slate-900 py-12 md:py-16">
+      {/* ─── 3. STATS BAR — dense, numeric, no hype ─── */}
+      <section className="bg-slate-950 py-10 md:py-12 border-y border-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             {...motionProps(staggerContainer)}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12"
+            className="grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-800"
           >
             {stats.map((stat) => (
-              <motion.div key={stat.label} variants={fadeUp} className="text-center">
-                <p className="text-3xl md:text-4xl font-bold text-white mb-1">{stat.value}</p>
-                <p className="text-sm text-slate-400">{stat.label}</p>
+              <motion.div key={stat.label} variants={fadeUp} className="px-4 md:px-8 first:pl-0 last:pr-0">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5 font-medium">{stat.label}</p>
+                <p className="text-2xl md:text-3xl font-semibold text-white numeric">{stat.value}</p>
+                {stat.disclaimer && (
+                  <p className="text-[9px] text-slate-500 mt-1.5 leading-tight">{stat.disclaimer}</p>
+                )}
               </motion.div>
             ))}
           </motion.div>
-          <p className="text-xs text-slate-400 text-center mt-4 max-w-2xl mx-auto">
-            Based on backtested portfolio simulation. Past performance does not guarantee future results. All figures are hypothetical.
+          <p className="text-[11px] text-slate-500 mt-6 max-w-2xl">
+            * Backtest only. Past performance does not guarantee future results. Figures are hypothetical.
           </p>
         </div>
       </section>
 
-      {/* ─── 4. FEATURES GRID ─── */}
-      <section id="features" className="py-20 md:py-28">
+      {/* ─── 4. FEATURES — 3 column, monochrome, numbered ─── */}
+      <section id="features" className="py-20 md:py-28 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div {...motionProps(fadeUp)} className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-sm font-semibold text-violet-600 mb-3 uppercase tracking-wider">Features</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Everything you need to invest smarter
+          <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-14">
+            <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">Core capabilities</p>
+            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
+              세 가지 레이어. 한 개의 결론.
             </h2>
-            <p className="text-lg text-slate-500">
-              Institutional-grade quantitative analysis tools, now accessible to every investor.
+            <p className="text-base text-slate-600 leading-relaxed">
+              시그널, 리스크, 설명. 기관급 퀀트 파이프라인을 한 화면으로.
             </p>
           </motion.div>
 
           <motion.div
             {...motionProps(staggerContainer)}
-            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-slate-100 border border-slate-100 rounded-lg overflow-hidden"
           >
             {features.map((feature) => {
               const Icon = feature.icon;
@@ -561,18 +540,19 @@ export default function LandingPage() {
                 <motion.div
                   key={feature.title}
                   variants={fadeUp}
-                  className="sp-card rounded-2xl p-6 group"
+                  className="bg-white p-8 group hover:bg-slate-50/60 transition-colors ease-apple"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center mb-4 group-hover:bg-primary-gradient transition-colors duration-300">
-                    <Icon className="w-5 h-5 text-violet-600 group-hover:text-white transition-colors duration-300" />
+                  <div className="flex items-start justify-between mb-6">
+                    <Icon className="w-5 h-5 text-slate-900" strokeWidth={1.5} />
+                    <span className="text-[11px] font-medium text-slate-400 numeric tracking-wider">{feature.id}</span>
                   </div>
-                  <h3 className="text-base font-semibold text-slate-900 mb-2">{feature.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed mb-4">{feature.description}</p>
+                  <h3 className="text-base font-semibold text-slate-900 mb-2 tracking-tight">{feature.title}</h3>
+                  <p className="text-sm text-slate-600 leading-relaxed mb-5">{feature.description}</p>
                   <Link
                     href={feature.href}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-violet-600 group-hover:gap-2 transition-all"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-slate-900 border-b border-slate-300 group-hover:border-slate-900 transition-colors pb-0.5"
                   >
-                    Learn more <ChevronRight className="w-3.5 h-3.5" />
+                    Learn more <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.75} />
                   </Link>
                 </motion.div>
               );
@@ -581,16 +561,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── 5. DASHBOARD PREVIEW (full width) ─── */}
-      <section id="dashboard-preview" className="py-20 md:py-28 bg-slate-50/50">
+      {/* ─── 5. DASHBOARD PREVIEW ─── */}
+      <section id="dashboard-preview" className="py-20 md:py-28 bg-slate-50/60 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div {...motionProps(fadeUp)} className="text-center max-w-2xl mx-auto mb-12">
-            <p className="text-sm font-semibold text-violet-600 mb-3 uppercase tracking-wider">Dashboard</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Your portfolio command center
+          <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-10">
+            <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">Dashboard</p>
+            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
+              포트폴리오 · 리스크 · 시그널 한 화면.
             </h2>
-            <p className="text-lg text-slate-500">
-              Every metric, signal, and analysis in one unified view.
+            <p className="text-base text-slate-600 leading-relaxed">
+              모든 지표가 동일한 레이어에. 탭 전환 없이 전체를 읽습니다.
             </p>
           </motion.div>
 
@@ -617,12 +597,12 @@ export default function LandingPage() {
                 {/* Sidebar */}
                 <div className="hidden md:flex flex-col w-52 border-r border-slate-100 bg-white p-4">
                   <div className="flex items-center gap-2 mb-8">
-                    <div className="w-7 h-7 rounded-lg bg-primary-gradient flex items-center justify-center">
-                      <TrendingUp className="w-3.5 h-3.5 text-white" />
+                    <div className="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center">
+                      <TrendingUp className="w-3.5 h-3.5 text-white" strokeWidth={1.75} />
                     </div>
-                    <span className="text-sm font-bold">PivoxQuant</span>
+                    <span className="text-sm font-semibold tracking-tight">PivoxQuant</span>
                   </div>
-                  <nav className="space-y-1">
+                  <nav className="space-y-0.5">
                     {[
                       { icon: Home, label: "Home", active: true },
                       { icon: Activity, label: "Market", active: false },
@@ -634,13 +614,13 @@ export default function LandingPage() {
                     ].map((item) => (
                       <div
                         key={item.label}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm ${
+                        className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-[13px] ${
                           item.active
-                            ? "bg-violet-50 text-violet-700 font-medium"
-                            : "text-slate-400 hover:text-slate-600"
+                            ? "bg-slate-100 text-slate-900 font-medium"
+                            : "text-slate-500 hover:text-slate-800"
                         }`}
                       >
-                        <item.icon className="w-4 h-4" />
+                        <item.icon className="w-4 h-4" strokeWidth={1.75} />
                         {item.label}
                       </div>
                     ))}
@@ -650,37 +630,37 @@ export default function LandingPage() {
                 {/* Main content */}
                 <div className="flex-1 p-5 md:p-6">
                   {/* Metric cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <div className="rounded-xl border border-slate-100 p-4 bg-white">
-                      <p className="text-xs text-slate-400 mb-1">Portfolio Value</p>
-                      <p className="text-xl font-bold text-slate-900 tabular-nums">$127,450</p>
-                      <p className="text-xs text-emerald-600 font-medium mt-1">+12.4% all time</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                    <div className="rounded-md border border-slate-200 p-3.5 bg-white">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Portfolio Value</p>
+                      <p className="text-lg font-semibold text-slate-900 numeric">$127,450</p>
+                      <p className="text-[11px] up-color font-medium mt-1 numeric">+12.4% all time</p>
                     </div>
-                    <div className="rounded-xl border border-slate-100 p-4 bg-white">
-                      <p className="text-xs text-slate-400 mb-1">Risk Score</p>
+                    <div className="rounded-md border border-slate-200 p-3.5 bg-white">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Risk Score</p>
                       <div className="flex items-baseline gap-2">
-                        <p className="text-xl font-bold text-slate-900">85</p>
-                        <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">SAFE</span>
+                        <p className="text-lg font-semibold text-slate-900 numeric">85</p>
+                        <span className="text-[10px] font-medium text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded">SAFE</span>
                       </div>
-                      <p className="text-xs text-slate-400 mt-1">7 layers active</p>
+                      <p className="text-[11px] text-slate-500 mt-1">7 layers active</p>
                     </div>
-                    <div className="rounded-xl border border-slate-100 p-4 bg-white">
-                      <p className="text-xs text-slate-400 mb-1">Active Signals</p>
-                      <p className="text-xl font-bold text-slate-900">14</p>
-                      <p className="text-xs text-violet-600 font-medium mt-1">3 new today</p>
+                    <div className="rounded-md border border-slate-200 p-3.5 bg-white">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Active Signals</p>
+                      <p className="text-lg font-semibold text-slate-900 numeric">14</p>
+                      <p className="text-[11px] text-slate-600 font-medium mt-1">3 new today</p>
                     </div>
                   </div>
 
                   {/* Chart area */}
-                  <div className="rounded-xl border border-slate-100 p-4 bg-white mb-6">
+                  <div className="rounded-md border border-slate-200 p-4 bg-white mb-5">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-semibold text-slate-700">Portfolio Performance</p>
-                      <div className="flex gap-1">
+                      <p className="text-xs font-medium text-slate-700">Portfolio Performance</p>
+                      <div className="flex gap-0.5">
                         {["1W", "1M", "3M", "6M", "1Y"].map((t) => (
                           <span
                             key={t}
-                            className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                              t === "6M" ? "bg-violet-50 text-violet-700" : "text-slate-400"
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-medium numeric ${
+                              t === "6M" ? "bg-slate-900 text-white" : "text-slate-500 hover:text-slate-800"
                             }`}
                           >
                             {t}
@@ -693,35 +673,24 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  {/* Signal list */}
-                  <div className="rounded-xl border border-slate-100 bg-white">
-                    <div className="px-4 py-3 border-b border-slate-50">
-                      <p className="text-sm font-semibold text-slate-700">Recent Signals</p>
+                  {/* Signal list — table style */}
+                  <div className="rounded-md border border-slate-200 bg-white overflow-hidden">
+                    <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/40">
+                      <p className="text-[11px] font-medium text-slate-600 uppercase tracking-wider">Recent Signals</p>
                     </div>
                     {[
-                      { ticker: "AAPL", name: "Apple", signal: "POSITIVE", score: 78, change: "+1.2%" },
-                      { ticker: "MSFT", name: "Microsoft", signal: "POSITIVE", score: 82, change: "+0.8%" },
-                      { ticker: "NVDA", name: "NVIDIA", signal: "NEUTRAL", score: 52, change: "-0.3%" },
+                      { ticker: "AAPL", name: "Apple", signal: "POSITIVE", score: 78, change: "+1.24%" },
+                      { ticker: "MSFT", name: "Microsoft", signal: "POSITIVE", score: 82, change: "+0.82%" },
+                      { ticker: "NVDA", name: "NVIDIA", signal: "NEUTRAL", score: 52, change: "−0.34%" },
                     ].map((item) => (
-                      <div key={item.ticker} className="flex items-center justify-between px-4 py-2.5 border-b border-slate-50 last:border-0">
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                            {item.ticker.slice(0, 2)}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-slate-700">{item.ticker}</p>
-                            <p className="text-[10px] text-slate-400">{item.name}</p>
-                          </div>
+                      <div key={item.ticker} className="flex items-center justify-between px-4 py-2 border-b border-slate-100 last:border-0 hover:bg-slate-50/40">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-[13px] font-medium text-slate-900 numeric">{item.ticker}</span>
+                          <span className="text-[11px] text-slate-400 truncate">{item.name}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-medium text-slate-500">{item.change}</span>
-                          <span
-                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              item.signal === "POSITIVE"
-                                ? "text-emerald-600 bg-emerald-50"
-                                : "text-amber-600 bg-amber-50"
-                            }`}
-                          >
+                          <span className={`text-[11px] font-medium numeric ${item.change.startsWith("+") ? "up-color" : "down-color"}`}>{item.change}</span>
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded numeric ${item.signal === "POSITIVE" ? "signal-positive" : "signal-neutral"}`}>
                             {item.score}
                           </span>
                         </div>
@@ -736,35 +705,24 @@ export default function LandingPage() {
       </section>
 
       {/* ─── 6. HOW IT WORKS ─── */}
-      <section id="how-it-works" className="py-20 md:py-28">
+      <section id="how-it-works" className="py-20 md:py-28 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div {...motionProps(fadeUp)} className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-sm font-semibold text-violet-600 mb-3 uppercase tracking-wider">How It Works</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Get started in three simple steps
+          <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-14">
+            <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">How It Works</p>
+            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
+              3단계, 5분 안에 셋업.
             </h2>
-            <p className="text-lg text-slate-500">
-              From sign-up to AI-powered portfolio management in under 5 minutes.
-            </p>
           </motion.div>
 
           <motion.div
             {...motionProps(staggerContainer)}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12"
+            className="grid grid-cols-1 md:grid-cols-3 gap-px bg-slate-100 border border-slate-100 rounded-lg overflow-hidden"
           >
-            {steps.map((step, i) => (
-              <motion.div key={step.step} variants={fadeUp} className="relative">
-                {/* Connection line */}
-                {i < steps.length - 1 && (
-                  <div className="hidden md:block absolute top-8 left-[calc(50%+40px)] right-[calc(-50%+40px)] h-px bg-slate-200" />
-                )}
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-violet-50 border border-violet-100 mb-5">
-                    <span className="text-xl font-bold gradient-text">{step.step}</span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{step.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed max-w-xs mx-auto">{step.description}</p>
-                </div>
+            {steps.map((step) => (
+              <motion.div key={step.step} variants={fadeUp} className="bg-white p-8">
+                <p className="text-[11px] font-medium text-slate-400 numeric tracking-wider mb-6">{step.step}</p>
+                <h3 className="text-base font-semibold text-slate-900 mb-2 tracking-tight">{step.title}</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{step.description}</p>
               </motion.div>
             ))}
           </motion.div>
@@ -772,47 +730,47 @@ export default function LandingPage() {
       </section>
 
       {/* ─── 7. PRICING ─── */}
-      <section id="pricing" className="py-20 md:py-28 bg-slate-50/50">
+      <section id="pricing" className="py-20 md:py-28 bg-slate-50/60 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div {...motionProps(fadeUp)} className="text-center max-w-2xl mx-auto mb-16">
-            <p className="text-sm font-semibold text-violet-600 mb-3 uppercase tracking-wider">Pricing</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Simple, transparent pricing
+          <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-14">
+            <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">Pricing</p>
+            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
+              명확한 요금제.
             </h2>
-            <p className="text-lg text-slate-500">
-              Start free. Upgrade when you need more power.
+            <p className="text-base text-slate-600 leading-relaxed">
+              무료로 시작. 필요할 때 업그레이드.
             </p>
           </motion.div>
 
           <motion.div
             {...motionProps(staggerContainer)}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl"
           >
             {pricingPlans.map((plan) => (
               <motion.div
                 key={plan.name}
                 variants={fadeUp}
-                className={`rounded-2xl p-6 md:p-8 ${
+                className={`rounded-lg p-7 relative ${
                   plan.highlighted
-                    ? "bg-slate-900 text-white ring-2 ring-slate-900 relative"
+                    ? "bg-slate-950 text-white border border-slate-900"
                     : "bg-white border border-slate-200"
                 }`}
               >
                 {plan.highlighted && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary-gradient text-white text-xs font-semibold">
+                  <div className="absolute -top-2.5 left-7 px-2 py-0.5 rounded-sm bg-accent text-slate-900 text-[10px] font-semibold tracking-wider uppercase">
                     Most Popular
                   </div>
                 )}
 
                 <div className="mb-6">
-                  <h3 className={`text-lg font-semibold mb-1 ${plan.highlighted ? "text-white" : "text-slate-900"}`}>
+                  <h3 className={`text-sm font-medium mb-1 uppercase tracking-wider ${plan.highlighted ? "text-slate-300" : "text-slate-500"}`}>
                     {plan.name}
                   </h3>
-                  <p className={`text-sm mb-4 ${plan.highlighted ? "text-slate-400" : "text-slate-500"}`}>
+                  <p className={`text-xs mb-5 ${plan.highlighted ? "text-slate-400" : "text-slate-500"}`}>
                     {plan.description}
                   </p>
                   <div className="flex items-baseline gap-1">
-                    <span className={`text-4xl font-bold ${plan.highlighted ? "text-white" : "text-slate-900"}`}>
+                    <span className={`text-4xl font-semibold numeric tracking-tight ${plan.highlighted ? "text-white" : "text-slate-900"}`}>
                       {plan.currency}{plan.price}
                     </span>
                     {plan.period && (
@@ -822,17 +780,17 @@ export default function LandingPage() {
                     )}
                   </div>
                   {plan.originalPrice && (
-                    <p className="text-xs text-violet-400 mt-1.5">
-                      Introductory price &mdash; normally {plan.currency}{plan.originalPrice}/mo
+                    <p className="text-xs text-accent mt-1.5 numeric">
+                      Intro — normally {plan.currency}{plan.originalPrice}/mo
                     </p>
                   )}
                 </div>
 
-                <ul className="space-y-3 mb-8">
+                <ul className="space-y-2.5 mb-7">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2.5">
-                      <Check className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? "text-violet-400" : "text-violet-500"}`} />
-                      <span className={`text-sm ${plan.highlighted ? "text-slate-300" : "text-slate-600"}`}>
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check className={`w-4 h-4 mt-0.5 shrink-0 ${plan.highlighted ? "text-accent" : "text-slate-900"}`} strokeWidth={2} />
+                      <span className={`text-sm ${plan.highlighted ? "text-slate-300" : "text-slate-700"}`}>
                         {feature}
                       </span>
                     </li>
@@ -841,7 +799,7 @@ export default function LandingPage() {
 
                 <Link
                   href="/signup"
-                  className={`block text-center w-full px-5 py-2.5 rounded-full text-sm font-semibold transition-all active:scale-[0.97] ${
+                  className={`block text-center w-full h-10 px-4 rounded-md text-sm font-medium leading-10 transition-colors active:scale-[0.98] ${
                     plan.highlighted
                       ? "bg-white text-slate-900 hover:bg-slate-100"
                       : "bg-slate-900 text-white hover:bg-slate-800"
@@ -855,23 +813,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── 8. TESTIMONIAL / QUOTE ─── */}
-      <section className="bg-slate-900 py-20 md:py-28">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      {/* ─── 8. QUOTE STRIP ─── */}
+      <section className="bg-slate-950 py-20 md:py-24 border-y border-slate-900">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)}>
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/10 mb-6">
-              <Star className="w-6 h-6 text-violet-400" />
-            </div>
-            <blockquote className="text-2xl md:text-3xl font-semibold text-white leading-snug mb-6">
-              &ldquo;The only platform that manages both US and Korean stocks with institutional-grade risk management.&rdquo;
+            <Star className="w-5 h-5 text-accent mb-6" strokeWidth={1.5} />
+            <blockquote className="text-2xl md:text-[2rem] font-medium text-white leading-snug mb-8 tracking-tight">
+              미국과 한국 시장을 한 화면에서. 기관 수준 리스크 관리로.
             </blockquote>
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary-gradient flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-slate-800 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-white" strokeWidth={1.5} />
               </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold text-white">PivoxQuant Team</p>
-                <p className="text-xs text-slate-400">Built for investors, by investors</p>
+              <div>
+                <p className="text-xs font-medium text-white">PivoxQuant Team</p>
+                <p className="text-[11px] text-slate-400">Built for investors, by investors</p>
               </div>
             </div>
           </motion.div>
@@ -879,30 +835,26 @@ export default function LandingPage() {
       </section>
 
       {/* ─── 9. FINAL CTA ─── */}
-      <section className="py-20 md:py-28 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full bg-violet-50/60 blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full bg-blue-50/40 blur-3xl" />
-        </div>
-        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="py-20 md:py-24">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)}>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Start protecting your portfolio today.
+            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-4 tracking-tight">
+              오늘부터 포트폴리오를 지키세요.
             </h2>
-            <p className="text-lg text-slate-500 mb-8 max-w-xl mx-auto">
-              Join investors who trust AI + Quant models to manage risk and find opportunities across US and Korean markets.
+            <p className="text-base text-slate-600 mb-8 max-w-xl leading-relaxed">
+              퀀트 모델과 리스크 방어로 미국·한국 시장을 동시에 관리합니다.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-wrap gap-2.5">
               <Link
                 href="/signup"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all active:scale-[0.97]"
+                className="inline-flex items-center gap-2 h-11 px-6 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors active:scale-[0.98]"
               >
                 Get Started Free
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <a
                 href="mailto:seanbae1521@gmail.com"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all active:scale-[0.97]"
+                className="inline-flex items-center gap-2 h-11 px-6 rounded-md border border-slate-200 text-slate-700 text-sm font-medium hover:border-slate-400 transition-colors active:scale-[0.98]"
               >
                 Contact Sales
               </a>
@@ -912,21 +864,21 @@ export default function LandingPage() {
       </section>
 
       {/* ─── 10. FOOTER ─── */}
-      <footer className="border-t border-slate-100 bg-white py-12 md:py-16">
+      <footer className="border-t border-slate-200 bg-white py-12 md:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
             {/* Brand */}
             <div className="col-span-2">
               <Link href="/" className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-primary-gradient flex items-center justify-center">
-                  <TrendingUp className="w-4.5 h-4.5 text-white" />
+                <div className="w-8 h-8 rounded-md bg-slate-900 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-white" strokeWidth={1.75} />
                 </div>
-                <span className="text-lg font-bold text-slate-900">
-                  Stock<span className="gradient-text">Pilot</span>
+                <span className="text-base font-semibold text-slate-900 tracking-tight">
+                  PivoxQuant
                 </span>
               </Link>
-              <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
-                AI-powered quantitative investment platform for smarter, safer investing.
+              <p className="text-sm text-slate-500 leading-relaxed max-w-xs">
+                미국·한국 주식을 위한 퀀트 + AI 투자 플랫폼.
               </p>
             </div>
 
