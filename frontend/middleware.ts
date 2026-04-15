@@ -11,6 +11,30 @@ const BETA_PASSWORD = process.env.BETA_PASSWORD;
 const BETA_COOKIE_NAME = "pivox_beta_access";
 const BETA_GATE_PATH = "/beta-gate";
 const BETA_AUTH_API = "/api/beta-auth";
+const BETA_SIGNING_SECRET =
+  process.env.BETA_SIGNING_SECRET ?? process.env.SECRET_KEY ?? "";
+
+// Edge-runtime compatible HMAC-SHA256 using Web Crypto.
+let cachedBetaToken: string | null = null;
+async function betaSignedToken(): Promise<string> {
+  if (cachedBetaToken) return cachedBetaToken;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(BETA_SIGNING_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode("beta-verified"),
+  );
+  cachedBetaToken = Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return cachedBetaToken;
+}
 
 // Paths that must remain accessible even without beta authentication.
 // (Next internal assets already excluded by matcher below.)
@@ -51,14 +75,15 @@ function isBetaBypass(pathname: string): boolean {
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ─── Beta gate (only when BETA_PASSWORD is configured) ──────────────────
   // No password env → skipped entirely so local dev stays unblocked.
   if (BETA_PASSWORD && !isBetaBypass(pathname)) {
     const token = request.cookies.get(BETA_COOKIE_NAME)?.value;
-    if (token !== BETA_PASSWORD) {
+    const expected = BETA_SIGNING_SECRET ? await betaSignedToken() : null;
+    if (!expected || token !== expected) {
       const url = request.nextUrl.clone();
       url.pathname = BETA_GATE_PATH;
       url.search = "";
@@ -78,18 +103,23 @@ export function middleware(request: NextRequest) {
 
   const isDev = process.env.NODE_ENV === "development";
   const connectSrc = isDev
-    ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app https://cdn.jsdelivr.net"
-    : "'self' https://*.railway.app https://cdn.jsdelivr.net";
+    ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app https://cdn.jsdelivr.net https://api.stripe.com https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com"
+    : "'self' https://*.railway.app https://cdn.jsdelivr.net https://api.stripe.com https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com";
+
+  const scriptSrc = isDev
+    ? "'self' 'unsafe-inline' 'unsafe-eval'"
+    : "'self' 'unsafe-inline'";
 
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval';
+    script-src ${scriptSrc};
     style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
     font-src 'self' https://cdn.jsdelivr.net;
     img-src 'self' data: blob:;
     media-src 'self';
     connect-src ${connectSrc};
     worker-src 'self';
+    frame-src 'self' https://js.stripe.com https://hooks.stripe.com;
     frame-ancestors 'none';
     base-uri 'self';
     form-action 'self';

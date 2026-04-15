@@ -282,16 +282,8 @@ class DataFetcher:
         """Use Claude Haiku for context-aware news sentiment analysis."""
         try:
             import os, anthropic
+            # dotenv는 app.py 시작 시점에 이미 로드됨. Railway에선 환경변수로 주입.
             api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-            if not api_key:
-                # Try loading from .env file
-                env_path = os.path.join(os.path.dirname(__file__), ".env")
-                if os.path.exists(env_path):
-                    with open(env_path) as f:
-                        for line in f:
-                            if line.startswith("ANTHROPIC_API_KEY="):
-                                api_key = line.split("=", 1)[1].strip()
-                                os.environ["ANTHROPIC_API_KEY"] = api_key
             if not api_key:
                 return None
 

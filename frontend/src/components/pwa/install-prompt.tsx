@@ -14,6 +14,16 @@ export function InstallPrompt() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
+    // Register the PWA service worker in production only (dev causes HMR conflicts)
+    if (
+      "serviceWorker" in navigator &&
+      process.env.NODE_ENV === "production"
+    ) {
+      navigator.serviceWorker
+        .register("/sw.js", { scope: "/" })
+        .catch((err) => console.warn("[PWA] SW register failed:", err));
+    }
+
     if (localStorage.getItem("pwa_install_dismissed")) return;
     if (window.matchMedia("(display-mode: standalone)").matches) return;
 

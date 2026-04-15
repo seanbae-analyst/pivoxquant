@@ -463,10 +463,14 @@ export default function OnboardingPage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Redirect if not logged in
+  // Redirect if not logged in, or if onboarding is already complete
   useEffect(() => {
     if (!authLoading && !user) {
       router.replace("/login");
+      return;
+    }
+    if (!authLoading && user && user.onboarding_completed === true) {
+      router.replace("/home");
     }
   }, [authLoading, user, router]);
 
@@ -584,9 +588,25 @@ export default function OnboardingPage() {
     }
   }, [step]);
 
-  const handleSkip = useCallback(() => {
-    router.replace("/home");
-  }, [router]);
+  const [skipping, setSkipping] = useState(false);
+  const handleSkip = useCallback(async () => {
+    if (skipping) return;
+    setSkipping(true);
+    try {
+      // Mark onboarding completed on the backend with empty answers,
+      // otherwise the dashboard layout redirects us back to /onboarding.
+      await apiFetch(API.profile.onboarding, {
+        method: "POST",
+        body: JSON.stringify({ answers: {} }),
+      });
+      await refresh();
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Fall through — still navigate so user isn't stuck if backend is down.
+    } finally {
+      router.replace("/home");
+    }
+  }, [router, refresh, skipping]);
 
   // Determine investor type when reaching result screen
   useEffect(() => {
@@ -657,6 +677,9 @@ export default function OnboardingPage() {
 
   if (!user) return null;
 
+  // Already onboarded — don't flash the wizard while redirect runs
+  if (user.onboarding_completed === true) return null;
+
   // ── Result screen ────────────────────────────────────────────────────────
 
   if (isResultScreen) {
@@ -688,9 +711,10 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={handleSkip}
-              className="text-xs font-medium text-slate-400 transition-colors hover:text-slate-600"
+              disabled={skipping}
+              className="text-xs font-medium text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50"
             >
-              Skip for now
+              {skipping ? "Skipping…" : "Skip for now"}
             </button>
           </div>
           <ProgressBar current={displayStep} total={TOTAL_STEPS} category={category} />
