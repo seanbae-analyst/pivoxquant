@@ -9,6 +9,8 @@ export const API = {
     logout: "/api/auth/logout",
     me: "/api/auth/me",
     google: "/api/auth/google",
+    kakao: "/api/auth/kakao",
+    deleteAccount: "/api/auth/delete-account",
   },
   portfolio: {
     list: "/api/portfolio",
@@ -27,6 +29,13 @@ export const API = {
     one: (ticker: string) => `/api/signals/${ticker}`,
     refresh: "/api/signals/refresh",
     scan: "/api/scan",
+    shortInterest: (ticker: string) => `/api/signals/short-interest/${ticker}`,
+    insider: (ticker: string) => `/api/signals/insider/${ticker}`,
+    disposition: (ticker: string) => `/api/signals/disposition/${ticker}`,
+    ofi: (ticker: string) => `/api/signals/ofi/${ticker}`,
+    sentimentDivergence: (ticker: string) => `/api/signals/sentiment-divergence/${ticker}`,
+    anchoring: (ticker: string) => `/api/signals/anchoring/${ticker}`,
+    herding: "/api/signals/herding",
   },
   discover: "/api/discover",
   market: {
@@ -35,6 +44,8 @@ export const API = {
     macro: "/api/macro",
     sectors: "/api/sectors",
     morningBrief: "/api/morning-brief",
+    morningBriefToday: "/api/brief/today",
+    morningBriefArchive: "/api/brief/archive",
     lookup: (ticker: string) => `/api/lookup/${ticker}`,
     prices: "/api/prices",
     chart: (ticker: string) => `/api/chart/${ticker}`,
@@ -64,6 +75,9 @@ export const API = {
     start: "/api/autotrade/start",
     stop: "/api/autotrade/stop",
     sellAll: "/api/autotrade/sell-all",
+    pending: "/api/autotrade/pending",
+    approve: (tradeId: string) => `/api/autotrade/approve/${tradeId}`,
+    reject: (tradeId: string) => `/api/autotrade/reject/${tradeId}`,
   },
   ai: {
     status: "/api/ai/status",
@@ -74,6 +88,9 @@ export const API = {
     commentary: "/api/ai/commentary",
     morningSummary: "/api/ai/morning-summary",
     coaching: "/api/ai/coaching",
+    earningsTone: "/api/ai/earnings-tone",
+    sectorRegime: "/api/ai/sector-regime",
+    riskSummary: "/api/ai/risk-summary",
   },
   watchlist: {
     list: "/api/watchlist",
@@ -90,6 +107,52 @@ export const API = {
   quant: {
     vixStrategy: "/api/vix-strategy",
     crossAsset: "/api/cross-asset",
+    statArb: "/api/stat-arb",
+    indicators: (ticker: string) => `/api/indicators/${ticker}`,
+    canslim: (ticker: string) => `/api/screener/canslim/${ticker}`,
+    interestRateRegime: "/api/regime/interest-rate",
+  },
+  analytics: {
+    regimeReport: "/api/analytics/regime-report",
+    benchmark: "/api/analytics/benchmark",
+    turnover: "/api/analytics/turnover",
+  },
+  risk: {
+    var: "/api/risk/var",
+    drawdown: "/api/risk/drawdown",
+    stressTest: "/api/risk/stress-test",
+    volatility: (ticker: string) => `/api/risk/volatility/${ticker}`,
+    componentEs: "/api/risk/component-es",
+    defenseStatus: "/api/risk/defense-status",
+  },
+  simulate: {
+    hrp: "/api/portfolio/simulate/hrp",
+    trp: "/api/portfolio/simulate/trp",
+    mdp: "/api/portfolio/simulate/mdp",
+    erc: "/api/portfolio/simulate/erc",
+    minVariance: "/api/portfolio/simulate/min-variance",
+    counterfactual: (params: {
+      ticker: string;
+      start_date: string;
+      amount: number;
+      recurring?: string | null;
+    }) => {
+      const q = new URLSearchParams({
+        ticker: params.ticker,
+        start_date: params.start_date,
+        amount: String(params.amount),
+      });
+      if (params.recurring) q.set("recurring", params.recurring);
+      return `/api/simulate/counterfactual?${q.toString()}`;
+    },
+  },
+  performance: {
+    ledger: "/api/performance/ledger",
+  },
+  tools: {
+    positionSizing: "/api/tools/position-sizing",
+    correlationMatrix: "/api/tools/correlation-matrix",
+    sectorHeatmap: "/api/tools/sector-heatmap",
   },
   profile: {
     get: "/api/profile",
@@ -106,5 +169,15 @@ export const API = {
     subscribe: "/api/push/subscribe",
     unsubscribe: "/api/push/unsubscribe",
     status: "/api/push/status",
+  },
+  broker: {
+    sync: "/api/broker/sync",
+    syncKis: "/api/broker/sync-kis",
+    syncStatus: "/api/broker/sync-status",
+    connections: "/api/broker/connections",
+  },
+  share: {
+    create: "/api/portfolio/share",
+    get: (token: string) => `/api/portfolio/share/${token}`,
   },
 } as const;

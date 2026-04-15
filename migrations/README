@@ -1,0 +1,17 @@
+Single-database configuration for Flask-Migrate / Alembic.
+
+Usage:
+    # Generate a migration after changing models:
+    flask db migrate -m "describe the change"
+
+    # Apply migrations:
+    flask db upgrade
+
+    # Rollback one step:
+    flask db downgrade
+
+    # Show current migration state:
+    flask db current
+
+    # Show migration history:
+    flask db history

@@ -20,10 +20,16 @@ def register_blueprints(app):
     from .broker_sync import broker_sync_bp
     from .billing import billing_bp
     from .push import push_bp
+    from .share import share_bp
+    from .simulate import simulate_bp
+    from .counterfactual import counterfactual_bp
+    from .command_center import command_center_bp
+    from .morning_brief import morning_brief_bp
 
     for bp in (auth_bp, portfolio_bp, signals_bp, discover_bp,
                market_bp, daytrade_bp, alerts_bp, trades_bp,
                autotrade_bp, ai_bp, watchlist_bp, backtest_bp,
                quant_bp, realtime_bp, profile_bp, broker_sync_bp,
-               billing_bp, push_bp):
+               billing_bp, push_bp, share_bp, simulate_bp,
+               counterfactual_bp, command_center_bp, morning_brief_bp):
         app.register_blueprint(bp)
