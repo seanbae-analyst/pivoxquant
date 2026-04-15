@@ -55,6 +55,7 @@ def get_prices_fast():
 
 
 @market_bp.route("/morning-brief")
+@api_auth
 def morning_brief():
     brief = fetcher.get_wall_street_brief()
     macro = fetcher.get_macro_data()
@@ -63,6 +64,7 @@ def morning_brief():
 
 
 @market_bp.route("/market/overview")
+@api_auth
 def market_overview():
     now = _time.time()
     if _macro_cache["data"] and now - _macro_cache["ts"] < 90:
@@ -83,6 +85,7 @@ def market_overview():
 
 
 @market_bp.route("/macro")
+@api_auth
 def get_macro():
     resp = jsonify(fetcher.get_macro_data())
     resp.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=30"
@@ -90,6 +93,7 @@ def get_macro():
 
 
 @market_bp.route("/sectors")
+@api_auth
 def get_sectors():
     resp = jsonify(fetcher.get_sector_performance())
     resp.headers["Cache-Control"] = "public, max-age=120, stale-while-revalidate=60"
@@ -103,6 +107,7 @@ def get_news(ticker):
 
 
 @market_bp.route("/market/status")
+@api_auth
 def market_status():
     from zoneinfo import ZoneInfo
     now_utc = datetime.utcnow().replace(tzinfo=ZoneInfo("UTC"))
@@ -161,6 +166,7 @@ def chart_data(ticker):
         ticker += ".KS"
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
 
+    # US intraday (1d/5d) — Alpaca primary, FMP fallback
     if not is_kr and realtime.alpaca_available and period in ("1d", "5d"):
         try:
             from alpaca.data.requests import StockBarsRequest
@@ -176,20 +182,52 @@ def chart_data(ticker):
             if data:
                 return jsonify({"ticker": ticker, "period": period, "data": data, "source": "alpaca"})
         except Exception as e:
-            logger.warning(f"Alpaca chart failed {ticker}: {e}")
+            logger.warning(f"Alpaca intraday chart failed {ticker}: {e}")
 
+    # US daily (1mo+) — Alpaca primary via fetcher.get_price_history() (which already
+    # routes Alpaca -> FMP fallback). For KR, same fetcher routes KIS -> FMP fallback.
+    if not ticker.startswith("^"):
+        try:
+            h = fetcher.get_price_history(ticker, period=period)
+            if h is not None and not h.empty:
+                data = [{"date": (date.strftime("%Y-%m-%d %H:%M") if hasattr(date, 'hour')
+                                  and (date.hour or date.minute) else date.strftime("%Y-%m-%d")),
+                         "close": round(float(row["Close"]), 2),
+                         "volume": int(row.get("Volume", 0))} for date, row in h.iterrows()]
+                # Identify source: Alpaca for US, KIS for KR, FMP fallback otherwise
+                source = "alpaca" if not is_kr else "kis"
+                return jsonify({"ticker": ticker, "period": period,
+                                "data": data, "source": source})
+        except Exception as e:
+            logger.warning(f"Primary chart source failed {ticker}: {e}")
+
+    # Final fallback — FMP directly (indices, or when primaries failed)
     try:
         import fmp_service as fmp
         h = fmp.get_history(ticker, period=period)
         if h is None or h.empty:
-            return jsonify({"error": "No data"}), 404
+            # Return friendly empty state rather than 404 so frontend can show
+            # "No chart data available" instead of an error card.
+            return jsonify({
+                "ticker": ticker,
+                "period": period,
+                "data": [],
+                "source": "none",
+                "message": "Chart data temporarily unavailable",
+            })
         data = [{"date": date.strftime("%Y-%m-%d"),
                  "close": round(float(row["Close"]), 2),
                  "volume": int(row.get("Volume", 0))} for date, row in h.iterrows()]
         return jsonify({"ticker": ticker, "period": period, "data": data, "source": "fmp"})
     except Exception as e:
         logger.error(f"Chart error {ticker}: {e}")
-        return jsonify({"error": "Unable to fetch chart data"}), 500
+        return jsonify({
+            "ticker": ticker,
+            "period": period,
+            "data": [],
+            "source": "none",
+            "message": "Unable to fetch chart data",
+        })
 
 
 @market_bp.route("/earnings")
