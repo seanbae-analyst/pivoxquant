@@ -1,74 +1,397 @@
 "use client";
 
-import { useState } from "react";
-import useSWR from "swr";
-import { Input } from "@/components/ui/input";
-import { pnlColor } from "@/lib/format";
-import { apiFetch } from "@/lib/api";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
-import { Eye, X } from "lucide-react";
-import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { fmtPct } from "@/lib/format";
+import { useWatchlist } from "@/lib/hooks";
+import type { WatchlistItem, LookupResult } from "@/lib/types";
+import { ScoreBar } from "@/components/dashboard/score-bar";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CardSkeleton } from "@/components/ui/loading-skeleton";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { Search, Plus, X, Star } from "lucide-react";
 
-interface WatchlistItem { id: number; ticker: string; name: string; price: number; price_display: string; change_pct: number; signal: string; score: number; currency: string; is_korean: boolean; }
-const fetcher = (url: string) => fetch(url, { credentials: "include" }).then((r) => r.json());
+/* ── Signal Badge (local) ── */
 
-export default function WatchlistPage() {
-  const { data, mutate } = useSWR<{ watchlist: WatchlistItem[] }>(API.watchlist.list, fetcher);
-  const [ticker, setTicker] = useState("");
-  const [adding, setAdding] = useState(false);
-
-  const handleAdd = async () => {
-    if (!ticker.trim()) return;
-    setAdding(true);
-    try { await apiFetch(API.watchlist.add, { method: "POST", body: JSON.stringify({ ticker: ticker.trim().toUpperCase() }) }); setTicker(""); mutate(); } catch {} finally { setAdding(false); }
-  };
-
-  const handleRemove = async (id: number) => { await apiFetch(API.watchlist.remove(id), { method: "DELETE" }); mutate(); };
-
-  if (!data) return <div className="flex items-center justify-center py-24"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /><span className="ml-2 text-slate-500 text-[12px]">Loading...</span></div>;
+function SignalBadge({ signal }: { signal: string }) {
+  const cls =
+    signal === "POSITIVE"
+      ? "signal-positive"
+      : signal === "NEGATIVE"
+        ? "signal-negative"
+        : "signal-neutral";
+  const label =
+    signal === "POSITIVE"
+      ? "Positive"
+      : signal === "NEGATIVE"
+        ? "Negative"
+        : "Neutral";
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900" style={{ fontFamily: "var(--font-geist-heading), sans-serif" }}>Watchlist</h1>
-        <p className="mt-1 text-[13px] text-slate-500">Track stocks you&apos;re interested in</p>
-      </div>
-      <div className="flex gap-2">
-        <Input value={ticker} onChange={(e) => setTicker(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAdd()} placeholder="Add ticker (e.g. AAPL)" className="max-w-xs" />
-        <button onClick={handleAdd} disabled={adding} className="rounded-xl px-5 py-2 text-sm font-semibold border border-emerald-500/20 bg-emerald-500/8 text-emerald-600 hover:bg-emerald-500/15 spring-transition transition-all duration-300 disabled:opacity-50 flex items-center gap-2">
-          {adding ? "..." : "Add"}
-        </button>
-      </div>
-      {data.watchlist.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white py-20 text-center">
-          <Eye className="mx-auto h-10 w-10 text-slate-300" />
-          <p className="mt-3 text-[13px] text-slate-500">Watchlist is empty. Add tickers above.</p>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        cls,
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+/* ── Search Dropdown ── */
+
+function SearchDropdown({
+  results,
+  isLoading,
+  onSelect,
+}: {
+  results: LookupResult[];
+  isLoading: boolean;
+  onSelect: (r: LookupResult) => void;
+}) {
+  if (!isLoading && results.length === 0) return null;
+
+  return (
+    <div className="absolute left-0 right-0 top-full mt-1 z-30 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
+      {isLoading ? (
+        <div className="px-4 py-3 space-y-2">
+          <div className="skeleton h-4 w-32" />
+          <div className="skeleton h-4 w-24" />
         </div>
       ) : (
-        <div className="space-y-1.5">
-          {data.watchlist.map((w) => (
-            <div key={w.id} className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-5 py-4 spring-transition transition-all duration-300 hover:border-slate-300 hover:bg-slate-50 group">
-              <div className="flex items-center gap-4">
-                <span className={`rounded-lg px-2.5 py-1 text-[9px] font-bold border ${
-                  w.signal === "BUY" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                  : w.signal === "SELL" ? "bg-red-500/10 text-red-600 border-red-500/20"
-                  : "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                }`}>{w.signal}</span>
-                <div>
-                  <span className="text-sm font-semibold text-slate-900">{w.ticker}</span>
-                  <span className="ml-2 text-sm text-slate-500">{w.name}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-5 text-sm">
-                <span className="font-semibold font-mono text-slate-700">{w.price_display}</span>
-                <span className={`font-bold font-mono ${pnlColor(w.change_pct ?? 0)}`}>{(w.change_pct ?? 0) >= 0 ? "+" : ""}{(w.change_pct ?? 0).toFixed(2)}%</span>
-                <span className="rounded-lg bg-slate-100 border border-slate-200 px-2.5 py-1 font-mono text-[11px] font-bold text-slate-500">{(w.score ?? 0).toFixed(0)}</span>
-                <button onClick={() => handleRemove(w.id)} className="rounded-lg p-1.5 text-slate-400 opacity-0 group-hover:opacity-100 spring-transition transition-all duration-300 hover:bg-red-500/10 hover:text-red-600"><X size={14} /></button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ul className="max-h-64 overflow-y-auto scrollbar-thin">
+          {results.map((r) => {
+            const isPositive = (r?.change_pct ?? 0) >= 0;
+            return (
+              <li key={r?.ticker ?? "unknown"}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(r)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+                >
+                  <div className="min-w-0 flex-1">
+                    <span className="text-sm font-bold text-slate-900">
+                      {r?.ticker ?? "\u2014"}
+                    </span>
+                    <span className="ml-2 text-xs text-slate-500 truncate">
+                      {r?.name ?? ""}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-sm font-semibold tabular-nums text-slate-900">
+                      {r?.price != null
+                        ? `$${r.price.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}`
+                        : "\u2014"}
+                    </span>
+                    <span
+                      className={cn(
+                        "ml-2 text-xs font-semibold tabular-nums",
+                        isPositive ? "text-emerald-600" : "text-red-500",
+                      )}
+                    >
+                      {fmtPct(r?.change_pct ?? 0)}
+                    </span>
+                  </div>
+                  <Plus className="h-4 w-4 shrink-0 text-slate-400" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
-    </motion.div>
+    </div>
+  );
+}
+
+/* ── Watchlist Row ── */
+
+function WatchlistRow({
+  item,
+  onRemove,
+  onClick,
+}: {
+  item: WatchlistItem;
+  onRemove: (id: number) => void;
+  onClick: () => void;
+}) {
+  const [removing, setRemoving] = useState(false);
+  const isPositive = (item?.change_pct ?? 0) >= 0;
+  const priceDisplay =
+    item?.price == null
+      ? "\u2014"
+      : item.currency === "KRW"
+        ? `₩${Math.round(item.price).toLocaleString("ko-KR")}`
+        : `$${item.price.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`;
+
+  const handleRemove = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRemoving(true);
+    try {
+      await apiFetch(API.watchlist.remove(item.id), { method: "DELETE" });
+      onRemove(item.id);
+    } catch {
+      toast.error("관심종목에서 제거하지 못했습니다");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="sp-card p-4 w-full text-left transition-all hover:shadow-md active:scale-[0.99] cursor-pointer"
+    >
+      <div className="flex items-start justify-between gap-3">
+        {/* Left: ticker + name */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-slate-900">
+              {item.ticker}
+            </span>
+            <SignalBadge signal={item.signal} />
+          </div>
+          <p className="text-xs text-slate-500 truncate mt-0.5">{item.name}</p>
+        </div>
+
+        {/* Right: price + change + remove */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right">
+            <p className="text-sm font-bold tabular-nums text-slate-900">
+              {priceDisplay}
+            </p>
+            <p
+              className={cn(
+                "text-xs font-semibold tabular-nums",
+                isPositive ? "text-emerald-600" : "text-red-500",
+              )}
+            >
+              {fmtPct(item?.change_pct ?? 0)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRemove}
+            disabled={removing}
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
+              "text-slate-400 hover:text-red-500 hover:bg-red-50",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+            )}
+            title="관심종목에서 제거"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Score bar mini */}
+      <div className="mt-3">
+        <ScoreBar score={item.score} mini />
+      </div>
+    </div>
+  );
+}
+
+/* ── Page ── */
+
+export default function WatchlistPage() {
+  const router = useRouter();
+  const { data, isLoading, mutate } = useWatchlist();
+
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<LookupResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const watchlist = useMemo(() => data?.watchlist ?? [], [data?.watchlist]);
+
+  /* ── Close dropdown on click outside ── */
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  /* ── Debounced search ── */
+  const handleSearch = useCallback(
+    (value: string) => {
+      setQuery(value);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+
+      if (value.trim().length < 1) {
+        setSearchResults([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      debounceRef.current = setTimeout(async () => {
+        setSearching(true);
+        setShowDropdown(true);
+        try {
+          const res = await fetch(API.market.lookup(value.trim()), {
+            credentials: "include",
+          });
+          if (!res.ok) throw new Error("Search failed");
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setSearchResults(data);
+          } else if (data.results) {
+            setSearchResults(data.results);
+          } else if (data.ticker) {
+            setSearchResults([data]);
+          } else {
+            setSearchResults([]);
+          }
+        } catch {
+          setSearchResults([]);
+        } finally {
+          setSearching(false);
+        }
+      }, 300);
+    },
+    [],
+  );
+
+  /* ── Add to watchlist ── */
+  const handleAdd = useCallback(
+    async (result: LookupResult) => {
+      setShowDropdown(false);
+      setQuery("");
+      setSearchResults([]);
+
+      // Check if already in watchlist
+      if (watchlist.some((w) => w.ticker === result.ticker)) {
+        toast.info(`${result.ticker}은(는) 이미 관심종목에 있습니다`);
+        return;
+      }
+
+      try {
+        await apiFetch(API.watchlist.add, {
+          method: "POST",
+          body: JSON.stringify({ ticker: result.ticker }),
+        });
+        toast.success(`${result.ticker} 관심종목에 추가됐습니다`);
+        await mutate();
+      } catch {
+        toast.error(`${result.ticker} 추가에 실패했습니다`);
+      }
+    },
+    [watchlist, mutate],
+  );
+
+  /* ── Remove from watchlist ── */
+  const handleRemove = useCallback(
+    async (id: number) => {
+      try {
+        await apiFetch(API.watchlist.remove(id), { method: "DELETE" });
+        toast.success("관심종목에서 제거됐습니다");
+        await mutate();
+      } catch {
+        toast.error("관심종목에서 제거하지 못했습니다");
+      }
+    },
+    [mutate],
+  );
+
+  return (
+    <ErrorBoundary>
+      <div className="mx-auto max-w-3xl space-y-5">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-slate-900">관심종목</h1>
+          <span className="text-sm text-slate-400 tabular-nums">
+            {watchlist.length}개 종목
+          </span>
+        </div>
+
+        {/* ── Signal disclaimer ── */}
+        <DisclaimerBanner type="signal" />
+
+        {/* ── Search bar ── */}
+        <div ref={searchRef} className="relative">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => {
+                if (searchResults.length > 0) setShowDropdown(true);
+              }}
+              placeholder="종목 검색 (AAPL, NVDA, TSLA...)"
+              className={cn(
+                "w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4",
+                "text-sm text-slate-900 placeholder:text-slate-400",
+                "transition-all focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-100",
+              )}
+            />
+          </div>
+          {showDropdown && (
+            <SearchDropdown
+              results={searchResults}
+              isLoading={searching}
+              onSelect={handleAdd}
+            />
+          )}
+        </div>
+
+        {/* ── Loading ── */}
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        ) : watchlist.length === 0 ? (
+          /* ── Empty state ── */
+          <EmptyState
+            icon={<Star className="h-8 w-8" />}
+            title="관심종목 없음"
+            description="관심 있는 종목을 추가해 보세요. 위 검색창에서 첫 번째 종목을 찾아 추가하세요."
+          />
+        ) : (
+          /* ── Watchlist rows ── */
+          <div className="space-y-3">
+            {watchlist.map((item) => (
+              <WatchlistRow
+                key={item.id}
+                item={item}
+                onRemove={handleRemove}
+                onClick={() => router.push(`/detail/${item.ticker}`)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }
