@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 
-// Backend API URL: Railway production or local development
+// Backend API URL: Railway production or local development.
+// NEXT_PUBLIC_API_URL is evaluated in next.config.ts at build time.
+// On Vercel we pin the Railway hostname directly to avoid env var drift;
+// local dev still uses the env override or falls back to localhost:5050.
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050";
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.VERCEL ? "https://RAILWAY_BACKEND_HOST.up.railway.app" : "http://localhost:5050");
 
 const nextConfig: NextConfig = {
   async rewrites() {
