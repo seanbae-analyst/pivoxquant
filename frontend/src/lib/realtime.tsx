@@ -21,6 +21,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -87,6 +88,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Previous prices — used to determine direction. */
   const prevPricesRef = useRef<Record<string, number>>({});
+  const connectRef = useRef<() => void>(() => {});
 
   const connect = useCallback(() => {
     // Tear down existing connection
@@ -122,7 +124,6 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         };
 
         if (data.error) {
-          console.warn("[SSE] server error:", data.error);
           return;
         }
 
@@ -199,14 +200,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         MAX_DELAY_MS,
       );
       retryRef.current += 1;
-      console.warn(
-        `[SSE] connection lost. Reconnecting in ${delay}ms (attempt ${retryRef.current})`,
-      );
       setTimeout(() => {
-        if (!ac.signal.aborted) connect();
+        if (!ac.signal.aborted) connectRef.current();
       }, delay);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    connectRef.current = connect;
+  });
 
   useEffect(() => {
     // Only connect SSE when user is authenticated
@@ -215,6 +217,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       abortRef.current?.abort();
       esRef.current?.close();
       esRef.current = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(INITIAL_STATE);
       return;
     }

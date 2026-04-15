@@ -89,6 +89,17 @@ def get_portfolio():
 @trade_rate_limit
 @api_auth
 def add_position():
+    # Tier check: Free users limited to 3 positions
+    if getattr(current_user, "subscription_tier", None) in (None, "free"):
+        position_count = Position.query.filter_by(user_id=current_user.id).count()
+        if position_count >= 3:
+            return jsonify({
+                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
+                "code": "TIER_LIMIT",
+                "current_count": position_count,
+                "limit": 3,
+            }), 403
+
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip().upper()
     shares = float(d.get("shares") or 0)
@@ -261,19 +272,28 @@ def sell_position(pid):
     if sell_price <= 0:
         sell_price = sd.get("price", p.avg_cost) if sd else p.avg_cost
 
-    sell_shares = min(sell_shares, p.shares)
-    proceeds = sell_shares * sell_price
-    cost_basis = sell_shares * p.avg_cost
+    # Detect oversell: requested more shares than available
+    if sell_shares > p.shares:
+        adjusted = True
+        requested_shares = sell_shares
+        actual_sell = p.shares
+    else:
+        adjusted = False
+        requested_shares = sell_shares
+        actual_sell = sell_shares
+
+    proceeds = actual_sell * sell_price
+    cost_basis = actual_sell * p.avg_cost
     pnl = proceeds - cost_basis
     pnl_pct = pnl / cost_basis * 100 if cost_basis > 0 else 0
     name = sd.get("name", p.ticker)
     currency = sd.get("currency", "USD")
     is_kr = sd.get("is_korean", False)
 
-    if sell_shares >= p.shares - 0.0001:
+    if actual_sell >= p.shares - 0.0001:
         db.session.delete(p)
     else:
-        p.shares = round(p.shares - sell_shares, 6)
+        p.shares = round(p.shares - actual_sell, 6)
 
     if is_kr:
         current_user.available_capital_krw = (getattr(current_user, "available_capital_krw", 0) or 0) + proceeds
@@ -282,12 +302,12 @@ def sell_position(pid):
 
     db.session.add(TradeHistory(
         user_id=current_user.id, ticker=p.ticker, name=name,
-        action="SELL", shares=sell_shares, price_per_share=round(sell_price, 2),
+        action="SELL", shares=actual_sell, price_per_share=round(sell_price, 2),
         total_value=round(proceeds, 2), pnl=round(pnl, 2), pnl_pct=round(pnl_pct, 2),
         currency=currency,
     ))
     db.session.commit()
-    return jsonify({
+    response = {
         "ok": True,
         "proceeds": round(proceeds, 2),
         "pnl": round(pnl, 2),
@@ -295,7 +315,16 @@ def sell_position(pid):
         "currency": currency,
         "new_capital_usd": current_user.available_capital,
         "new_capital_krw": getattr(current_user, "available_capital_krw", 0) or 0,
-    })
+        "adjusted": adjusted,
+    }
+    if adjusted:
+        response["warning"] = (
+            f"Requested {requested_shares} shares but only "
+            f"{actual_sell} available. Sold all {actual_sell} shares."
+        )
+        response["requested_shares"] = requested_shares
+        response["actual_shares"] = actual_sell
+    return jsonify(response)
 
 
 @portfolio_bp.route("/capital", methods=["PUT"])
@@ -339,7 +368,7 @@ def portfolio_history():
     import fmp_service as fmp
 
     period = request.args.get("period", "5d")
-    if period not in ("5d", "1mo", "3mo"):
+    if period not in ("5d", "1mo", "3mo", "6mo", "1y"):
         period = "5d"
     all_values = {}
     for p in positions:

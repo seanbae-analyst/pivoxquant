@@ -1,4 +1,5 @@
 import { API } from "./endpoints";
+import { apiFetch } from "./api";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
 
@@ -27,7 +28,6 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
   }
 
   if (!VAPID_PUBLIC_KEY) {
-    console.warn("VAPID public key not configured");
     return null;
   }
 
@@ -53,10 +53,8 @@ export async function unsubscribeFromPush(): Promise<boolean> {
 
   // Remove from backend
   try {
-    await fetch(API.push.unsubscribe, {
+    await apiFetch(API.push.unsubscribe, {
       method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ endpoint: subscription.endpoint }),
     });
   } catch {
@@ -90,10 +88,8 @@ async function sendSubscriptionToBackend(
   subscription: PushSubscription,
 ): Promise<void> {
   try {
-    await fetch(API.push.subscribe, {
+    await apiFetch(API.push.subscribe, {
       method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ subscription: subscription.toJSON() }),
     });
   } catch (err) {

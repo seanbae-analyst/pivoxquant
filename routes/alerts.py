@@ -74,7 +74,7 @@ def price_check():
                   .filter(Alert.created_at > datetime.utcnow() - timedelta(hours=4))
                   .first())
         if not recent:
-            sig = "SELL" if a["type"] == "STOP_LOSS" else "BUY"
+            sig = "NEGATIVE" if a["type"] == "STOP_LOSS" else "POSITIVE"
             db.session.add(Alert(user_id=current_user.id, ticker=a["ticker"],
                                  message=a["message"], signal=sig, score=0))
     if alerts:

@@ -21,6 +21,17 @@ def trigger_sync():
     return jsonify(result), status_code
 
 
+@broker_sync_bp.route("/sync-kis", methods=["POST"])
+@trade_rate_limit
+@api_auth
+def sync_kis():
+    """POST /api/broker/sync-kis — sync KIS (한투) positions + balance."""
+    result = broker_sync.sync_kis(current_user.id)
+    if "error" in result:
+        return jsonify({"error": result["error"]}), 502
+    return jsonify({"ok": True, **result})
+
+
 @broker_sync_bp.route("/sync-status", methods=["GET"])
 @api_auth
 def sync_status():

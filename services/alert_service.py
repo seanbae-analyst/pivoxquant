@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def maybe_generate(user_id: int, r: dict):
     """Generate an alert if the signal is actionable (BUY/SELL) and not duplicated."""
     sig = r.get("signal")
-    if sig not in ("BUY", "SELL"):
+    if sig not in ("POSITIVE", "NEGATIVE"):
         return
 
     # Only alert during market hours
@@ -41,17 +41,17 @@ def maybe_generate(user_id: int, r: dict):
         return
 
     cur = "₩" if r.get("is_korean") else "$"
-    if sig == "BUY":
+    if sig == "POSITIVE":
         sh = r.get("rec_shares", 0)
         inv = r.get("rec_investment", 0)
         tim = r.get("rec_timing", "")
         inv_str = f"{cur}{inv:,.0f}" if inv > 0 else "set capital for sizing"
-        msg = (f"[BUY] {name} ({ticker}) — Score {score:.0f}/100. "
+        msg = (f"[POSITIVE] {name} ({ticker}) — Score {score:.0f}/100. "
                f"Rec: {sh} shares · {inv_str}. {tim}.")
     else:
         sell_pct = r.get("sell_pct", 50)
-        msg = (f"[SELL] {name} ({ticker}) — Score {score:.0f}/100. "
-               f"Quant flags weakness. Consider selling {sell_pct}% of position.")
+        msg = (f"[NEGATIVE] {name} ({ticker}) — Score {score:.0f}/100. "
+               f"Quant flags weakness. Consider reducing {sell_pct}% of position.")
 
     db.session.add(Alert(user_id=user_id, ticker=ticker, message=msg,
                          signal=sig, score=score))

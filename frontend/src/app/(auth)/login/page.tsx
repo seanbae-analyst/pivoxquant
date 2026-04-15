@@ -1,125 +1,144 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Logo } from "@/components/ui/logo";
-import { ArrowLeft } from "lucide-react";
+
+function GoogleIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+        fill="#34A853"
+      />
+      <path
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A11.96 11.96 0 0 0 1 12c0 1.94.46 3.77 1.18 5.07l3.66-2.98z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
+function KakaoIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 3C6.48 3 2 6.58 2 10.94c0 2.8 1.86 5.27 4.66 6.67-.15.53-.96 3.41-.99 3.63 0 0-.02.16.08.22.1.06.23.01.23.01.3-.04 3.5-2.3 4.05-2.67.62.09 1.27.14 1.97.14 5.52 0 10-3.58 10-7.94S17.52 3 12 3z"
+        fill="#191919"
+      />
+    </svg>
+  );
+}
 
 export default function LoginPage() {
-  const { login, signup } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const [isSignup, setIsSignup] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      if (isSignup) {
-        await signup(email, password, name || undefined);
-        router.push("/onboarding");
-      } else {
-        await login(email, password);
-        router.push("/");
-      }
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/home");
     }
-  };
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center py-16">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-[var(--sp-accent)]" />
+      </div>
+    );
+  }
+
+  if (user) return null;
 
   return (
-    <div className="landing-dark relative flex min-h-[100dvh] items-center justify-center p-4 noise-overlay">
-      {/* Gradient mesh background */}
-      <div className="absolute inset-0 gradient-mesh" />
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-cyan-500/[0.04] blur-[120px]" />
-
-      <div className="relative w-full max-w-sm z-10">
-        <Link href="/" className="mb-6 inline-flex items-center gap-2 text-[13px] text-zinc-600 spring-transition transition-colors duration-300 hover:text-zinc-300">
-          <ArrowLeft size={14} />
-          Back to home
-        </Link>
-
-        <div className="bezel-card">
-          <div className="bezel-card-inner !p-10">
-            <div className="flex flex-col items-center">
-              <Logo size={56} />
-              <h1 className="mt-4 text-2xl font-bold tracking-tight text-white">
-                {isSignup ? "Create Account" : "Welcome Back"}
-              </h1>
-              <p className="mt-1 text-[13px] text-zinc-600">
-                {isSignup ? "Start your quant trading journey" : "Sign in to your portfolio"}
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              {isSignup && (
-                <div className="space-y-2">
-                  <label htmlFor="name" className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Name</label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-zinc-700 focus:border-cyan-500/30 focus:shadow-[0_0_8px_rgba(34,211,238,0.08)] rounded-xl" />
-                </div>
-              )}
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Email</label>
-                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-zinc-700 focus:border-cyan-500/30 focus:shadow-[0_0_8px_rgba(34,211,238,0.08)] rounded-xl" />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">Password</label>
-                <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 6 characters" className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-zinc-700 focus:border-cyan-500/30 focus:shadow-[0_0_8px_rgba(34,211,238,0.08)] rounded-xl" />
-              </div>
-              {error && <p className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-center text-[12px] font-medium text-red-400">{error}</p>}
-              <Button type="submit" className="w-full bg-white text-zinc-900 hover:bg-zinc-200 rounded-xl font-semibold spring-transition transition-all duration-300 hover:shadow-[0_4px_20px_rgba(255,255,255,0.1)]" disabled={loading}>
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-900" />
-                    {isSignup ? "Creating..." : "Signing in..."}
-                  </span>
-                ) : (isSignup ? "Create Account" : "Sign In")}
-              </Button>
-
-              {/* Divider */}
-              <div className="relative flex items-center">
-                <div className="flex-1 border-t border-white/[0.06]" />
-                <span className="mx-3 text-[11px] text-zinc-600">or</span>
-                <div className="flex-1 border-t border-white/[0.06]" />
-              </div>
-
-              {/* Google Sign-In */}
-              <a
-                href={API.auth.google}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-[14px] font-medium text-white spring-transition transition-all duration-300 hover:bg-white/[0.06] hover:border-white/[0.12]"
-              >
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
-                  <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
-                  <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
-                  <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 2.58 9 2.58Z" fill="#EA4335"/>
-                </svg>
-                Continue with Google
-              </a>
-            </form>
-
-            <p className="mt-8 text-center text-[13px] text-zinc-600">
-              {isSignup ? "Already have an account?" : "Don't have an account?"}{" "}
-              <button type="button" onClick={() => { setIsSignup(!isSignup); setError(""); }} className="font-semibold text-cyan-400 hover:text-cyan-300 spring-transition transition-colors duration-300">
-                {isSignup ? "Sign In" : "Sign Up"}
-              </button>
-            </p>
-          </div>
+    <div className="flex flex-col items-center">
+      {/* Logo */}
+      <div className="mb-8 flex flex-col items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#3b82f6] shadow-lg shadow-purple-200/50">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+            <polyline points="16 7 22 7 22 13" />
+          </svg>
         </div>
+        <span className="text-lg font-semibold text-slate-900">PivoxQuant</span>
       </div>
+
+      {/* Heading */}
+      <h1 className="text-center text-2xl font-bold tracking-tight text-slate-900">
+        다시 오셨군요
+      </h1>
+      <p className="mt-2 text-center text-sm text-slate-500">
+        계정에 로그인하세요
+      </p>
+
+      {/* OAuth Buttons */}
+      <div className="mt-8 flex w-full flex-col gap-3">
+        <a
+          href={API.auth.google}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm active:scale-[0.98]"
+        >
+          <GoogleIcon />
+          Google로 계속하기
+        </a>
+
+        <a
+          href={API.auth.kakao}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#FEE500]/20 bg-[#FEE500] px-4 py-3 text-sm font-medium text-[#191919] transition-all duration-200 hover:bg-[#FFEB3B] hover:shadow-sm active:scale-[0.98]"
+        >
+          <KakaoIcon />
+          카카오로 계속하기
+        </a>
+      </div>
+
+      {/* Divider */}
+      <div className="my-6 flex w-full items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs text-slate-400">또는</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
+      {/* Switch to signup */}
+      <p className="text-center text-sm text-slate-500">
+        계정이 없으신가요?{" "}
+        <Link
+          href="/signup"
+          className="font-medium text-[var(--sp-accent)] hover:text-[var(--sp-accent-hover)] transition-colors"
+        >
+          회원가입
+        </Link>
+      </p>
+
+      {/* Legal footer */}
+      <p className="mt-8 text-center text-xs leading-relaxed text-slate-400">
+        계속하면{" "}
+        <Link href="/terms" className="underline hover:text-slate-600 transition-colors">
+          이용약관
+        </Link>{" "}
+        및{" "}
+        <Link href="/privacy" className="underline hover:text-slate-600 transition-colors">
+          개인정보처리방침
+        </Link>
+        에 동의하게 됩니다.
+      </p>
     </div>
   );
 }

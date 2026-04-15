@@ -47,7 +47,9 @@ def stream():
                     prices = realtime.get_prices_batch(tickers)
                     yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
                 except Exception as e:
-                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    import logging as _logging
+                    _logging.getLogger(__name__).error(f"SSE price stream error: {e}")
+                    yield f"data: {json.dumps({'error': 'Price update failed'})}\n\n"
                 # Heartbeat to detect dead connections
                 yield ": heartbeat\n\n"
                 time.sleep(5)
@@ -100,7 +102,9 @@ def portfolio_stream():
                     payload = json.dumps({"prices": prices, "details": full}, ensure_ascii=False)
                     yield f"data: {payload}\n\n"
                 except Exception as e:
-                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    import logging as _logging
+                    _logging.getLogger(__name__).error(f"SSE portfolio stream error: {e}")
+                    yield f"data: {json.dumps({'error': 'Portfolio update failed'})}\n\n"
                 yield ": heartbeat\n\n"
                 time.sleep(30)
         except GeneratorExit:
@@ -129,7 +133,7 @@ def status():
         "alpaca": realtime.alpaca_available,
         "kis": realtime.kis_available,
         "sources": {
-            "us": "alpaca" if realtime.alpaca_available else "yfinance",
-            "kr": "kis" if realtime.kis_available else "yfinance",
+            "us": "alpaca" if realtime.alpaca_available else "fmp",
+            "kr": "kis" if realtime.kis_available else "fmp",
         }
     })

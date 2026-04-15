@@ -17,6 +17,7 @@ export interface User {
   available_capital: number;
   available_capital_krw: number;
   avatar_url?: string | null;
+  oauth_provider?: string | null;
   risk_profile?: string;
   profile_changes_left?: number;
   subscription_tier?: string;
@@ -53,6 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refresh();
+    const interval = setInterval(refresh, 5 * 60 * 1000); // Refresh session every 5 min
+    return () => clearInterval(interval);
   }, [refresh]);
 
   const login = useCallback(

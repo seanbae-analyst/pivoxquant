@@ -37,3 +37,42 @@ def sell_all():
     kr_results = trader.force_sell_all_kr()
     all_results = us_results.get("results", []) + kr_results
     return jsonify({"results": all_results})
+
+
+@autotrade_bp.route("/pending", methods=["GET"])
+@api_auth
+def get_pending():
+    """Get pending trade proposals awaiting user confirmation."""
+    return jsonify({"ok": True, "pending": trader.get_pending_trades()})
+
+
+@autotrade_bp.route("/approve/<trade_id>", methods=["POST"])
+@api_auth
+@trade_rate_limit
+def approve(trade_id):
+    """User approves a pending trade for execution."""
+    result = trader.approve_trade(trade_id)
+    if not result.get("ok"):
+        return jsonify(result), 400
+    return jsonify(result)
+
+
+@autotrade_bp.route("/reject/<trade_id>", methods=["POST"])
+@api_auth
+def reject(trade_id):
+    """User rejects a pending trade."""
+    result = trader.reject_trade(trade_id)
+    if not result.get("ok"):
+        return jsonify(result), 400
+    return jsonify(result)
+
+
+@autotrade_bp.route("/emergency-halt", methods=["POST"])
+@trade_rate_limit
+@api_auth
+def emergency_halt():
+    """Kill switch: stop trading, close all positions, lock out for 1 hour."""
+    result = trader.emergency_halt()
+    if "error" in result:
+        return jsonify(result), 400
+    return jsonify(result)

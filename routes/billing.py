@@ -17,16 +17,16 @@ billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_PRO = os.environ.get("STRIPE_PRICE_PRO", "")
-STRIPE_PRICE_ENTERPRISE = os.environ.get("STRIPE_PRICE_ENTERPRISE", "")
+STRIPE_PRICE_PREMIUM = os.environ.get("STRIPE_PRICE_PREMIUM", "")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 
 PLAN_PRICES = {
     "pro": STRIPE_PRICE_PRO,
-    "enterprise": STRIPE_PRICE_ENTERPRISE,
+    "premium": STRIPE_PRICE_PREMIUM,
 }
 PLAN_TIERS = {
     "pro": "pro",
-    "enterprise": "enterprise",
+    "premium": "premium",
 }
 
 
@@ -49,11 +49,11 @@ def _get_or_create_customer(user):
 @billing_bp.route("/create-checkout", methods=["POST"])
 @api_auth
 def create_checkout():
-    """Create a Stripe Checkout session for Pro or Enterprise plan."""
+    """Create a Stripe Checkout session for Pro or Premium plan."""
     d = request.get_json() or {}
     plan = (d.get("plan") or "").lower()
     if plan not in PLAN_PRICES:
-        return jsonify({"error": "Invalid plan. Choose 'pro' or 'enterprise'."}), 400
+        return jsonify({"error": "Invalid plan. Choose 'pro' or 'premium'."}), 400
 
     price_id = PLAN_PRICES[plan]
     if not price_id:
@@ -105,6 +105,10 @@ def stripe_webhook():
         _handle_subscription_updated(data)
     elif event_type == "customer.subscription.deleted":
         _handle_subscription_deleted(data)
+    elif event_type == "invoice.payment_failed":
+        _handle_invoice_payment_failed(data)
+    elif event_type == "invoice.paid":
+        _handle_invoice_paid(data)
 
     return jsonify({"ok": True})
 
@@ -152,8 +156,8 @@ def _handle_subscription_updated(subscription):
         items = subscription.get("items", {}).get("data", [])
         if items:
             price_id = items[0].get("price", {}).get("id", "")
-            if price_id == STRIPE_PRICE_ENTERPRISE:
-                user.subscription_tier = "enterprise"
+            if price_id == STRIPE_PRICE_PREMIUM:
+                user.subscription_tier = "premium"
             elif price_id == STRIPE_PRICE_PRO:
                 user.subscription_tier = "pro"
     elif status in ("canceled", "unpaid"):
@@ -178,6 +182,32 @@ def _handle_subscription_deleted(subscription):
     logger.info(f"User {user.id} subscription deleted")
 
 
+def _handle_invoice_payment_failed(invoice):
+    """Log failed invoice payment. Tier is kept — Stripe retries automatically."""
+    customer_id = invoice.get("customer")
+    invoice_id = invoice.get("id")
+    attempt = invoice.get("attempt_count", 0)
+    user = User.query.filter_by(stripe_customer_id=customer_id).first()
+    user_id = user.id if user else "unknown"
+    logger.warning(
+        f"Invoice payment failed: invoice={invoice_id} "
+        f"customer={customer_id} user={user_id} attempt={attempt}"
+    )
+
+
+def _handle_invoice_paid(invoice):
+    """Log successful invoice payment."""
+    customer_id = invoice.get("customer")
+    invoice_id = invoice.get("id")
+    amount = invoice.get("amount_paid", 0)
+    user = User.query.filter_by(stripe_customer_id=customer_id).first()
+    user_id = user.id if user else "unknown"
+    logger.info(
+        f"Invoice paid: invoice={invoice_id} "
+        f"customer={customer_id} user={user_id} amount={amount}"
+    )
+
+
 # ── Get Subscription Status ─────────────────────────────────────────────────
 
 @billing_bp.route("/subscription")
@@ -190,7 +220,7 @@ def get_subscription():
         "subscription_status": getattr(u, "subscription_status", "inactive") or "inactive",
         "has_active_subscription": (
             getattr(u, "subscription_status", "inactive") == "active"
-            and u.subscription_tier in ("pro", "enterprise")
+            and u.subscription_tier in ("pro", "premium")
         ),
     }
 

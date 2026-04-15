@@ -12,7 +12,7 @@ if not _db_url:
 if _db_url.startswith("postgres://"):
     _db_url = _db_url.replace("postgres://", "postgresql://", 1)
 
-_is_postgres = _db_url.startswith("postgresql")
+IS_POSTGRES = _db_url.startswith("postgresql")
 
 
 class Config:
@@ -21,7 +21,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Connection pool settings (only effective for PostgreSQL; SQLite ignores them)
-    if _is_postgres:
+    if IS_POSTGRES:
         SQLALCHEMY_ENGINE_OPTIONS = {
             "pool_size": 5,
             "max_overflow": 10,
