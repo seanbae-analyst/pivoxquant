@@ -237,6 +237,8 @@ function AddPositionModal({
   };
 
   const handleSubmit = async () => {
+    if (submitting) return;
+
     let stock = selected;
 
     /* If no stock selected via dropdown, try to look up the typed ticker */
@@ -272,10 +274,12 @@ function AddPositionModal({
     const costNum = parseFloat(avgCost);
     if (!sharesNum || sharesNum <= 0) {
       toast.error("올바른 수량을 입력해 주세요");
+      setSubmitting(false);
       return;
     }
     if (!costNum || costNum <= 0) {
       toast.error("올바른 평균 단가를 입력해 주세요");
+      setSubmitting(false);
       return;
     }
 
