@@ -222,17 +222,32 @@ KR_SECTORS: dict[str, str] = {
 }
 
 
+# ── Full KRX master (loaded from JSON, ~2,770 stocks) ──
+import json as _json
+import os as _os
+_FULL_PATH = _os.path.join(_os.path.dirname(__file__), "kr_stocks_data.json")
+try:
+    with open(_FULL_PATH, "r", encoding="utf-8") as _f:
+        KR_STOCKS_FULL: dict[str, dict] = _json.load(_f)
+except FileNotFoundError:
+    KR_STOCKS_FULL = {}
+
+
 def search(query: str, limit: int = 15) -> list[dict]:
     """Return matching KR stocks for a query string.
 
-    Matches against ticker code (6-digit), English name (case-insensitive),
-    and Korean name (literal substring).
+    Searches both:
+      - KR_STOCKS (curated, with English names + sector) — priority
+      - KR_STOCKS_FULL (full KRX listing, Korean only) — fallback for breadth
     """
     q = (query or "").strip()
     if not q:
         return []
     ql = q.lower()
     results: list[dict] = []
+    seen: set[str] = set()
+
+    # Priority 1: curated registry (English + Korean searchable, sector available)
     for ticker, (name_en, name_kr) in KR_STOCKS.items():
         code = ticker.split(".")[0]
         if (ql in code.lower()
@@ -247,18 +262,42 @@ def search(query: str, limit: int = 15) -> list[dict]:
                 "currency": "KRW",
                 "is_korean": True,
             })
+            seen.add(ticker)
+            if len(results) >= limit:
+                return results
+
+    # Priority 2: full KRX master (Korean name only)
+    for ticker, info in KR_STOCKS_FULL.items():
+        if ticker in seen:
+            continue
+        code = ticker.split(".")[0]
+        name_kr = info.get("name", "")
+        if ql in code.lower() or q in name_kr:
+            results.append({
+                "ticker":   ticker,
+                "name":     name_kr,
+                "name_en":  "",
+                "name_kr":  name_kr,
+                "exchange": info.get("market", "KOSPI" if ticker.endswith(".KS") else "KOSDAQ"),
+                "currency": "KRW",
+                "is_korean": True,
+            })
             if len(results) >= limit:
                 break
     return results
 
 
 def get_name(ticker: str) -> "str | None":
-    """Return preferred Korean name for a ticker, else English, else None."""
-    entry = KR_STOCKS.get(ticker.upper())
-    if not entry:
-        return None
-    name_en, name_kr = entry
-    return name_kr or name_en
+    """Return preferred Korean name. Prefer curated, fallback to full master."""
+    t = ticker.upper()
+    entry = KR_STOCKS.get(t)
+    if entry:
+        name_en, name_kr = entry
+        return name_kr or name_en
+    full = KR_STOCKS_FULL.get(t)
+    if full:
+        return full.get("name")
+    return None
 
 
 def get_sector(ticker: str) -> "str | None":
