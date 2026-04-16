@@ -138,25 +138,53 @@ class DataFetcher:
 
     @staticmethod
     def _alpaca_latest_quote(ticker: str) -> "dict | None":
-        """Fetch a single latest bar from Alpaca for US tickers.
+        """Fetch latest trade price from Alpaca for US tickers.
+
+        Uses StockLatestTradeRequest (actual last trade) — fresher than
+        StockLatestBarRequest which aggregates a 1-min bar and can lag
+        30-60s during fast markets. Falls back to latest bar if trade
+        endpoint fails (e.g., illiquid symbols outside RTH).
         Returns {price, open, high, low, volume} or None.
-        No daily call limit; suitable as primary source for US quotes.
         """
         if not _alpaca_hist_available or not _alpaca_hist_client:
             return None
         try:
-            from alpaca.data.requests import StockLatestBarRequest
-            req = StockLatestBarRequest(symbol_or_symbols=[ticker])
-            bars = _alpaca_hist_client.get_stock_latest_bar(req)
-            bar = bars.get(ticker)
-            if not bar:
+            from alpaca.data.requests import (
+                StockLatestTradeRequest,
+                StockLatestBarRequest,
+            )
+            # Latest trade = actual NBBO last print, near real-time.
+            try:
+                tr_req = StockLatestTradeRequest(symbol_or_symbols=[ticker])
+                trades = _alpaca_hist_client.get_stock_latest_trade(tr_req)
+                trade = trades.get(ticker) if trades else None
+            except Exception:
+                trade = None
+
+            # Always pull the latest bar too — needed for OHLC + volume that
+            # the rest of the app expects in this dict.
+            try:
+                br_req = StockLatestBarRequest(symbol_or_symbols=[ticker])
+                bars = _alpaca_hist_client.get_stock_latest_bar(br_req)
+                bar = bars.get(ticker) if bars else None
+            except Exception:
+                bar = None
+
+            if trade is None and bar is None:
                 return None
+
+            price = float(trade.price) if (trade and getattr(trade, "price", 0)) else (
+                float(bar.close) if bar else 0.0
+            )
+            if price <= 0:
+                return None
+
             return {
-                "price":  float(bar.close),
-                "open":   float(bar.open),
-                "high":   float(bar.high),
-                "low":    float(bar.low),
-                "volume": int(bar.volume),
+                "price":  price,
+                "open":   float(bar.open) if bar else price,
+                "high":   float(bar.high) if bar else price,
+                "low":    float(bar.low) if bar else price,
+                "volume": int(bar.volume) if bar else 0,
             }
         except Exception as e:
             logger.debug(f"Alpaca latest quote failed {ticker}: {e}")
@@ -178,6 +206,13 @@ class DataFetcher:
             curr = self.currency(ticker)
             price = None
             name = KOREAN_NAMES.get(ticker)
+            # Extended registry fallback (top ~250 KR stocks)
+            if not name and self.is_korean(ticker):
+                try:
+                    from services import kr_stock_registry as _kr_reg
+                    name = _kr_reg.get_name(ticker)
+                except Exception:
+                    pass
 
             if self.is_korean(ticker):
                 # Korean stocks: use KIS API (FMP free tier does not serve KR)

@@ -109,24 +109,46 @@ class RealtimeService:
         kr_tickers = [t for t in tickers if self.is_korean(t)]
         results = {}
 
-        # Batch US via Alpaca
+        # Batch US via Alpaca — prefer latest trade prints over 1-min bars.
         if us_tickers and self.alpaca_available:
             try:
-                from alpaca.data.requests import StockLatestBarRequest
+                from alpaca.data.requests import (
+                    StockLatestTradeRequest,
+                    StockLatestBarRequest,
+                )
+                trades_map = {}
+                try:
+                    tr_req = StockLatestTradeRequest(symbol_or_symbols=us_tickers)
+                    trades_map = self.alpaca_client.get_stock_latest_trade(tr_req) or {}
+                except Exception as te:
+                    logger.debug(f"Alpaca batch latest trade failed: {te}")
+
                 req = StockLatestBarRequest(symbol_or_symbols=us_tickers)
-                bars = self.alpaca_client.get_stock_latest_bar(req)
-                for sym, bar in bars.items():
+                bars = self.alpaca_client.get_stock_latest_bar(req) or {}
+                # Union of symbols across both responses
+                all_syms = set(bars.keys()) | set(trades_map.keys())
+                for sym in all_syms:
+                    bar = bars.get(sym)
+                    trade = trades_map.get(sym)
+                    trade_price = float(trade.price) if (trade and getattr(trade, "price", 0)) else None
+                    if trade_price is None and bar is None:
+                        continue
+                    price = trade_price if trade_price is not None else float(bar.close)
+                    ts = (
+                        trade.timestamp.isoformat() if (trade and getattr(trade, "timestamp", None))
+                        else (bar.timestamp.isoformat() if bar else datetime.now().isoformat())
+                    )
                     results[sym] = {
                         "ticker": sym,
-                        "price": round(float(bar.close), 2),
-                        "price_display": f"${float(bar.close):,.2f}",
-                        "open": round(float(bar.open), 2),
-                        "high": round(float(bar.high), 2),
-                        "low": round(float(bar.low), 2),
-                        "volume": int(bar.volume),
+                        "price": round(price, 2),
+                        "price_display": f"${price:,.2f}",
+                        "open": round(float(bar.open), 2) if bar else round(price, 2),
+                        "high": round(float(bar.high), 2) if bar else round(price, 2),
+                        "low": round(float(bar.low), 2) if bar else round(price, 2),
+                        "volume": int(bar.volume) if bar else 0,
                         "currency": "USD",
                         "source": "alpaca",
-                        "timestamp": bar.timestamp.isoformat(),
+                        "timestamp": ts,
                     }
             except Exception as e:
                 logger.warning(f"Alpaca batch failed: {e}")
@@ -164,23 +186,42 @@ class RealtimeService:
         if not self.alpaca_available:
             return None
         try:
-            from alpaca.data.requests import StockLatestBarRequest
+            from alpaca.data.requests import (
+                StockLatestTradeRequest,
+                StockLatestBarRequest,
+            )
+            # Prefer latest trade (actual print, ~real-time during RTH).
+            trade_price = None
+            trade_ts = None
+            try:
+                tr_req = StockLatestTradeRequest(symbol_or_symbols=[ticker])
+                trades = self.alpaca_client.get_stock_latest_trade(tr_req)
+                trade = trades.get(ticker) if trades else None
+                if trade and getattr(trade, "price", 0):
+                    trade_price = float(trade.price)
+                    trade_ts = trade.timestamp.isoformat() if getattr(trade, "timestamp", None) else None
+            except Exception as te:
+                logger.debug(f"Alpaca latest trade failed {ticker}: {te}")
+
+            # Bar gives OHLC + volume context regardless.
             req = StockLatestBarRequest(symbol_or_symbols=[ticker])
             bars = self.alpaca_client.get_stock_latest_bar(req)
             bar = bars.get(ticker)
-            if not bar:
+            if bar is None and trade_price is None:
                 return None
+
+            price = trade_price if trade_price is not None else float(bar.close)
             return {
                 "ticker": ticker,
-                "price": round(float(bar.close), 2),
-                "price_display": f"${float(bar.close):,.2f}",
-                "open": round(float(bar.open), 2),
-                "high": round(float(bar.high), 2),
-                "low": round(float(bar.low), 2),
-                "volume": int(bar.volume),
+                "price": round(price, 2),
+                "price_display": f"${price:,.2f}",
+                "open": round(float(bar.open), 2) if bar else round(price, 2),
+                "high": round(float(bar.high), 2) if bar else round(price, 2),
+                "low": round(float(bar.low), 2) if bar else round(price, 2),
+                "volume": int(bar.volume) if bar else 0,
                 "currency": "USD",
                 "source": "alpaca",
-                "timestamp": bar.timestamp.isoformat(),
+                "timestamp": trade_ts or (bar.timestamp.isoformat() if bar else datetime.now().isoformat()),
             }
         except Exception as e:
             logger.warning(f"Alpaca price failed {ticker}: {e}")
