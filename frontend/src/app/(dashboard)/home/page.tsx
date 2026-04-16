@@ -101,6 +101,7 @@ export default function HomePage() {
           <RiskWidget
             analytics={analytics}
             isLoading={analyticsLoading}
+            hasPositions={(portfolio?.positions?.length ?? 0) > 0}
           />
         </div>
 

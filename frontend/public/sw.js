@@ -1,5 +1,5 @@
-// PivoxQuant Service Worker v1
-const CACHE_VERSION = "sp-v1";
+// PivoxQuant Service Worker v2 (B3 fix: portfolio/watchlist/alerts moved to network-first)
+const CACHE_VERSION = "sp-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
@@ -18,22 +18,25 @@ const NETWORK_ONLY_PATTERNS = [
 
 const CACHE_FIRST_PATTERNS = [/\/api\/morning-brief/];
 
+// Read-mostly endpoints (no user mutations): SWR safe
 const STALE_WHILE_REVALIDATE_CONFIG = {
-  "/api/portfolio": 5 * 60 * 1000,
-  "/api/portfolio/analytics": 5 * 60 * 1000,
-  "/api/portfolio/history": 10 * 60 * 1000,
   "/api/market/overview": 2 * 60 * 1000,
   "/api/sectors": 2 * 60 * 1000,
   "/api/macro": 2 * 60 * 1000,
-  "/api/watchlist": 10 * 60 * 1000,
   "/api/discover": 30 * 60 * 1000,
   "/api/profile": 60 * 60 * 1000,
   "/api/earnings": 15 * 60 * 1000,
-  "/api/alerts": 3 * 60 * 1000,
-  "/api/trades": 3 * 60 * 1000,
 };
 
+// Write-affected endpoints (have POST/DELETE/PUT): MUST be network-first
+// to avoid returning stale cache after mutations (B3 bug fix)
 const NETWORK_FIRST_CONFIG = {
+  "/api/portfolio": 5 * 60 * 1000,
+  "/api/portfolio/analytics": 5 * 60 * 1000,
+  "/api/portfolio/history": 10 * 60 * 1000,
+  "/api/watchlist": 10 * 60 * 1000,
+  "/api/alerts": 3 * 60 * 1000,
+  "/api/trades": 3 * 60 * 1000,
   "/api/signals": 5 * 60 * 1000,
   "/api/scan": 5 * 60 * 1000,
   "/api/news": 15 * 60 * 1000,

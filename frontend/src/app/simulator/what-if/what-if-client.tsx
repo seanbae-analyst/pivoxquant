@@ -159,6 +159,7 @@ export function WhatIfClient() {
       ticker: form.ticker,
       start_date: form.startDate,
       amount: form.amount,
+      currency: form.currency,
       recurring: form.recurring,
     });
     // `activeQuery` may carry a `_t=…` cache-buster appended by onSubmit()

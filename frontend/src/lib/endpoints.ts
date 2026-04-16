@@ -137,6 +137,7 @@ export const API = {
       ticker: string;
       start_date: string;
       amount: number;
+      currency?: string | null;
       recurring?: string | null;
     }) => {
       const q = new URLSearchParams({
@@ -144,6 +145,7 @@ export const API = {
         start_date: params.start_date,
         amount: String(params.amount),
       });
+      if (params.currency) q.set("currency", params.currency);
       if (params.recurring) q.set("recurring", params.recurring);
       return `/api/simulate/counterfactual?${q.toString()}`;
     },

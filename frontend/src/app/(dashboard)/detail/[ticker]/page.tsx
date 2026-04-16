@@ -380,11 +380,11 @@ export default function StockDetailPage() {
       </div>
 
       {/* ── Quant Breakdown (4 Pillars) ── */}
-      {hasPillars && (
-        <div>
-          <h3 className="text-base font-bold text-slate-900 mb-3">
-            Quant Breakdown
-          </h3>
+      <div>
+        <h3 className="text-base font-bold text-slate-900 mb-3">
+          Quant Breakdown
+        </h3>
+        {hasPillars ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <PillarCard
               label="Technical"
@@ -407,8 +407,12 @@ export default function StockDetailPage() {
               score={signal?.quant_score ?? 0}
             />
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="sp-card p-6 text-center text-sm text-slate-400">
+            분석 데이터 준비 중 — Analysis data pending
+          </div>
+        )}
+      </div>
 
       {/* ── News ── */}
       <div className="sp-card p-5">
