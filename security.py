@@ -71,7 +71,7 @@ _CSRF_COOKIE_NAME = "csrf_token"
 _CSRF_HEADER_NAME = "X-CSRF-Token"
 _CSRF_SAFE_METHODS = frozenset(["GET", "HEAD", "OPTIONS"])
 # Endpoints exempt from CSRF (webhooks verified by their own signatures)
-_CSRF_EXEMPT_PREFIXES = ("/api/billing/webhook",)
+_CSRF_EXEMPT_PREFIXES = ("/api/billing/webhook", "/api/auth/dev-login")
 
 
 def _get_session_bind_id():

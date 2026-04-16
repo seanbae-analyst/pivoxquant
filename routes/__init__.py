@@ -41,5 +41,11 @@ def register_blueprints(app):
         from .command_center import command_center_bp
         blueprints.append(command_center_bp)
 
+    # Dev-login bypass for E2E testing — only when DEV_LOGIN_SECRET is set.
+    # Production (Railway) must NOT set this variable.
+    if os.environ.get("DEV_LOGIN_SECRET"):
+        from .dev_auth import dev_auth_bp
+        blueprints.append(dev_auth_bp)
+
     for bp in blueprints:
         app.register_blueprint(bp)
