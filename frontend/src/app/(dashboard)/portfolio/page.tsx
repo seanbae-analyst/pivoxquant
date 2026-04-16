@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtUsd, fmtKrw, fmtPct, pnlColor } from "@/lib/format";
 import { usePortfolio } from "@/lib/hooks";
 import type { Position, LookupResult, SearchResult, PortfolioResponse } from "@/lib/types";
@@ -116,10 +116,10 @@ function SearchDropdown({
               >
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-bold text-slate-900">
-                    {r.ticker}
+                    {isKoreanTicker(r.ticker, r.is_korean) ? (r.name || r.ticker) : r.ticker}
                   </span>
                   <span className="ml-2 text-xs text-slate-500 truncate">
-                    {r.name}
+                    {isKoreanTicker(r.ticker, r.is_korean) ? r.ticker : r.name}
                   </span>
                 </div>
                 <div className="text-right shrink-0">
@@ -375,10 +375,10 @@ function AddPositionModal({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-900">
-                  {selected.ticker}
+                  {isKoreanTicker(selected.ticker, selected.is_korean) ? (selected.name || selected.ticker) : selected.ticker}
                 </span>
                 <span className="text-xs text-slate-500 truncate">
-                  {selected.name}
+                  {isKoreanTicker(selected.ticker, selected.is_korean) ? selected.ticker : selected.name}
                 </span>
                 {selected.is_korean && (
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100">
@@ -398,10 +398,10 @@ function AddPositionModal({
           <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-900">
-                {selected.ticker}
+                {isKoreanTicker(selected.ticker, selected.is_korean) ? (selected.name || selected.ticker) : selected.ticker}
               </span>
               <span className="text-xs text-slate-500 truncate">
-                {selected.name}
+                {isKoreanTicker(selected.ticker, selected.is_korean) ? selected.ticker : selected.name}
               </span>
               {selected.is_korean && (
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100">
@@ -1196,8 +1196,8 @@ function PositionCard({
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold text-slate-900">
-              {position.ticker}
+            <span className="text-base font-semibold text-slate-900">
+              {isKoreanTicker(position.ticker, position.is_korean) ? (position.name || position.ticker) : position.ticker}
             </span>
             {position.signal && position.signal !== "\u2014" && (
               <SignalBadge signal={position.signal} />
@@ -1209,7 +1209,7 @@ function PositionCard({
             )}
           </div>
           <p className="text-xs text-slate-500 truncate mt-0.5">
-            {position.name}
+            {isKoreanTicker(position.ticker, position.is_korean) ? `${position.ticker} · KRX` : position.name}
           </p>
         </div>
         <PositionActions

@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
 import { useDiscover } from "@/lib/hooks";
 import type { DiscoverResult } from "@/lib/types";
@@ -86,7 +86,7 @@ function DiscoverRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-slate-900">
-            {item.ticker}
+            {isKoreanTicker(item.ticker, item.is_korean) ? (item.name || item.ticker) : item.ticker}
           </span>
           {item.already_owned && (
             <span className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-semibold text-purple-600">
@@ -94,7 +94,9 @@ function DiscoverRow({
             </span>
           )}
         </div>
-        <p className="text-xs text-slate-500 truncate mt-0.5">{item.name}</p>
+        <p className="text-xs text-slate-500 truncate mt-0.5">
+          {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.name}
+        </p>
       </div>
 
       {/* Price + Change */}

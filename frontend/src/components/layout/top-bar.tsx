@@ -15,7 +15,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { cn } from "@/lib/utils";
+import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
 import { changeColorClass } from "@/lib/price-color";
 import type { AlertItem, LookupResult } from "@/lib/types";
@@ -463,14 +463,14 @@ export function TopBar() {
                     onClick={() => handleResultClick(r.ticker)}
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-700">
-                      {r.ticker.slice(0, 3)}
+                      {isKoreanTicker(r.ticker) ? (r.name?.slice(0, 2) ?? r.ticker.slice(0, 3)) : r.ticker.slice(0, 3)}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-slate-900">
-                        {r.ticker}
+                        {isKoreanTicker(r.ticker) ? (r.name || r.ticker) : r.ticker}
                       </p>
                       <p className="truncate text-xs text-slate-400">
-                        {r.name}
+                        {isKoreanTicker(r.ticker) ? `${r.ticker} · KRX` : r.name}
                       </p>
                     </div>
                     <div className="text-right">
