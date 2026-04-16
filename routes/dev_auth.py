@@ -57,3 +57,38 @@ def dev_login():
             "name": user.name,
         },
     })
+
+
+@dev_auth_bp.route("/api/auth/dev-upgrade", methods=["POST"])
+def dev_upgrade():
+    """Upgrade a user's subscription tier. Requires DEV_LOGIN_SECRET."""
+    secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not secret:
+        return jsonify({"error": "Dev endpoints disabled"}), 404
+
+    body = request.get_json(silent=True) or {}
+    if body.get("secret") != secret:
+        logger.warning("dev-upgrade: invalid secret attempt")
+        return jsonify({"error": "Invalid secret"}), 401
+
+    email = (body.get("email") or "").strip().lower()
+    tier = (body.get("tier") or "premium").strip().lower()
+    if not email:
+        return jsonify({"error": "email required"}), 400
+    if tier not in ("free", "pro", "premium"):
+        return jsonify({"error": "tier must be free|pro|premium"}), 400
+
+    user = User.query.filter(db.func.lower(User.email) == email).first()
+    if not user:
+        return jsonify({"error": f"user not found: {email}"}), 404
+
+    user.subscription_tier = tier
+    user.subscription_status = "active" if tier != "free" else "inactive"
+    db.session.commit()
+    logger.info("dev-upgrade: %s -> tier=%s", email, tier)
+    return jsonify({
+        "ok": True,
+        "email": user.email,
+        "subscription_tier": user.subscription_tier,
+        "subscription_status": user.subscription_status,
+    })
