@@ -52,6 +52,8 @@ export interface RealtimeState {
   lastUpdate: number | null;
   /** Tickers that changed in the latest event, with direction */
   updatedTickers: Map<string, PriceDirection>;
+  /** True when max retries exceeded — SSE gave up */
+  failed: boolean;
 }
 
 const INITIAL_STATE: RealtimeState = {
@@ -60,6 +62,7 @@ const INITIAL_STATE: RealtimeState = {
   connected: false,
   lastUpdate: null,
   updatedTickers: new Map(),
+  failed: false,
 };
 
 const RealtimeContext = createContext<RealtimeState>(INITIAL_STATE);
@@ -70,6 +73,8 @@ const RealtimeContext = createContext<RealtimeState>(INITIAL_STATE);
 const BASE_DELAY_MS = 1_000;
 /** Maximum reconnection delay (ms). */
 const MAX_DELAY_MS = 30_000;
+/** Stop reconnecting after this many consecutive failures. */
+const MAX_RETRIES = 5;
 /** Duration to keep the flash indicator visible (ms). */
 const FLASH_DURATION_MS = 1_500;
 /** Minimum interval between state updates (ms) — throttle. */
@@ -148,6 +153,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           connected: true,
           lastUpdate: now,
           updatedTickers: directionMap,
+          failed: false,
         });
 
         // Clear flash after FLASH_DURATION_MS
@@ -193,6 +199,12 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, connected: false }));
 
       if (ac.signal.aborted) return;
+
+      // Give up after MAX_RETRIES consecutive failures
+      if (retryRef.current >= MAX_RETRIES) {
+        setState((s) => ({ ...s, connected: false, failed: true }));
+        return;
+      }
 
       // Exponential backoff: 1s, 2s, 4s, 8s, ... max 30s
       const delay = Math.min(

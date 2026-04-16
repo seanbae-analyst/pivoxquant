@@ -280,6 +280,7 @@ export default function StockDetailPage() {
         onRetry={() => mutateChart()}
         period={chartPeriod}
         onPeriodChange={setChartPeriod}
+        currency={signal?.currency}
       />
 
       {/* ── Key Metrics Grid ── */}
