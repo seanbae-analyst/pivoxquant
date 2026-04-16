@@ -1164,6 +1164,7 @@ Reply ONLY in this exact JSON format, nothing else:
         ]
         syms = [s[0] for s in sectors]
         result = []
+        filled = set()
         try:
             quotes = fmp.get_quotes_batch(syms)
             for sym, name in sectors:
@@ -1175,8 +1176,39 @@ Reply ONLY in this exact JSON format, nothing else:
                         "change_pct": round(q.get("changesPercentage", 0), 2),
                         "price":      round(q.get("price", 0), 2),
                     })
+                    filled.add(sym)
         except Exception:
             pass
+
+        missing = [(sym, name) for sym, name in sectors if sym not in filled]
+        if missing:
+            try:
+                import yfinance as yf
+
+                def _yf_quote(yf_sym):
+                    try:
+                        t = yf.Ticker(yf_sym)
+                        info = t.fast_info
+                        price = info.get("last_price") or info.get("lastPrice")
+                        prev = info.get("previous_close") or info.get("previousClose")
+                        if price is None:
+                            return None
+                        chg_pct = ((price - prev) / prev * 100) if prev else 0
+                        return (float(price), float(chg_pct))
+                    except Exception:
+                        return None
+
+                for sym, name in missing:
+                    val = _yf_quote(sym)
+                    if val:
+                        result.append({
+                            "sector":     name,
+                            "symbol":     sym,
+                            "change_pct": round(val[1], 2),
+                            "price":      round(val[0], 2),
+                        })
+            except Exception:
+                pass
         return result
 
     # ── Pre-warm Cache ────────────────────────────────────────────────────────

@@ -37,7 +37,9 @@ import {
   Sunrise,
   Mail,
   MessageCircle,
+  Wallet,
 } from "lucide-react";
+import { fmtUsd, fmtKrw } from "@/lib/format";
 
 /* ── Types ── */
 
@@ -124,6 +126,165 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+/* ── Seed Capital (분석용 시드머니) ── */
+
+/** Upper bound mirrors backend MAX_CAPITAL — single source of truth in the API. */
+const MAX_SEED_CAPITAL = 1_000_000_000;
+
+/** Parse a user input string into a non-negative number. Returns null on empty/invalid. */
+function parseCapitalInput(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  // Strip thousands separators that users may type (e.g. "10,000").
+  const normalized = trimmed.replace(/,/g, "");
+  const n = Number(normalized);
+  if (!Number.isFinite(n)) return null;
+  return n;
+}
+
+interface CapitalUpdateResponse {
+  ok: boolean;
+  available_capital: number;
+  available_capital_krw: number;
+}
+
+function SeedCapitalSection() {
+  const { user, refresh } = useAuth();
+  const [usdInput, setUsdInput] = useState("");
+  const [krwInput, setKrwInput] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Initialize inputs from current user values once loaded.
+  useEffect(() => {
+    if (!user) return;
+    setUsdInput(user.available_capital ? String(user.available_capital) : "");
+    setKrwInput(user.available_capital_krw ? String(user.available_capital_krw) : "");
+  }, [user]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const usd = parseCapitalInput(usdInput);
+    const krw = parseCapitalInput(krwInput);
+
+    if (usd === null && krw === null) {
+      toast.error("USD 또는 KRW 시드머니를 입력해주세요.");
+      return;
+    }
+    if (usd !== null && (usd < 0 || usd > MAX_SEED_CAPITAL)) {
+      toast.error(`USD 시드머니는 0 ~ ${MAX_SEED_CAPITAL.toLocaleString()} 사이여야 합니다.`);
+      return;
+    }
+    if (krw !== null && (krw < 0 || krw > MAX_SEED_CAPITAL)) {
+      toast.error(`KRW 시드머니는 0 ~ ${MAX_SEED_CAPITAL.toLocaleString()} 사이여야 합니다.`);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const body: Record<string, number> = {};
+      if (usd !== null) body.available_capital_usd = usd;
+      if (krw !== null) body.available_capital_krw = krw;
+
+      await apiFetch<CapitalUpdateResponse>(API.profile.capital, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+      await refresh();
+      toast.success("시드머니가 저장되었습니다.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "저장에 실패했습니다.";
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const currentUsd = user?.available_capital ?? 0;
+  const currentKrw = user?.available_capital_krw ?? 0;
+
+  return (
+    <div className="sp-card p-4">
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+          <Wallet className="h-5 w-5 text-emerald-600" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-slate-900">시드머니 설정</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            분석에 사용될 총 투자 가능 자본. 시그널/디스커버/포트폴리오에 반영됩니다.
+          </p>
+        </div>
+      </div>
+
+      {/* Current values */}
+      <div className="mb-3 grid grid-cols-2 gap-2">
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[11px] text-slate-500">현재 USD</p>
+          <p className="text-sm font-semibold text-slate-900 tabular-nums">
+            {fmtUsd(currentUsd)}
+          </p>
+        </div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">
+          <p className="text-[11px] text-slate-500">현재 KRW</p>
+          <p className="text-sm font-semibold text-slate-900 tabular-nums">
+            {fmtKrw(currentKrw)}
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-3">
+        <div>
+          <label htmlFor="seed-capital-usd" className="block text-xs font-medium text-slate-600 mb-1">
+            USD ($)
+          </label>
+          <input
+            id="seed-capital-usd"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            max={MAX_SEED_CAPITAL}
+            step="0.01"
+            value={usdInput}
+            onChange={(e) => setUsdInput(e.target.value)}
+            placeholder="예: 10000"
+            autoComplete="off"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors tabular-nums"
+          />
+        </div>
+        <div>
+          <label htmlFor="seed-capital-krw" className="block text-xs font-medium text-slate-600 mb-1">
+            KRW (₩)
+          </label>
+          <input
+            id="seed-capital-krw"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={MAX_SEED_CAPITAL}
+            step="1"
+            value={krwInput}
+            onChange={(e) => setKrwInput(e.target.value)}
+            placeholder="예: 10000000"
+            autoComplete="off"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors tabular-nums"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={saving}
+          className={cn(
+            "flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.97]",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+          )}
+        >
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {saving ? "저장 중..." : "저장"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 /* ── Account Section ── */
 
 function AccountSection() {
@@ -207,6 +368,9 @@ function AccountSection() {
         </div>
         <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5" />
       </Link>
+
+      {/* Seed Capital (분석용 시드머니) */}
+      <SeedCapitalSection />
     </div>
   );
 }

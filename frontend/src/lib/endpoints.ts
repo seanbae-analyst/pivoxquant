@@ -163,6 +163,7 @@ export const API = {
     onboarding: "/api/profile/onboarding",
     update: "/api/profile",
     questionnaire: "/api/profile/questionnaire",
+    capital: "/api/profile/capital",
   },
   billing: {
     createCheckout: "/api/billing/create-checkout",

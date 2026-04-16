@@ -183,6 +183,63 @@ def get_profile():
     })
 
 
+# ── Seed Capital (분석용 시드머니) ────────────────────────────────────────
+# Upper bound: ₩1B / $1B (arbitrary sanity cap — prevents accidental overflow).
+MAX_CAPITAL = 1_000_000_000.0
+
+
+@profile_bp.route("/capital", methods=["POST"])
+@api_auth
+def update_capital():
+    """Update the user's seed capital used by signals/discover/portfolio analysis.
+
+    Body: {"available_capital_usd"?: number, "available_capital_krw"?: number}
+    Either field may be omitted; omitted fields are left unchanged.
+
+    Values are validated as non-negative finite numbers within MAX_CAPITAL.
+    Returns the committed values so the client can refresh its AuthContext.
+    """
+    data = request.get_json(silent=True) or {}
+
+    def _coerce(value, field):
+        """Coerce one optional numeric input; return (kept_existing, parsed)."""
+        if value is None:
+            return True, None
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{field} must be a number")
+        if parsed != parsed or parsed in (float("inf"), float("-inf")):
+            raise ValueError(f"{field} must be a finite number")
+        if parsed < 0:
+            raise ValueError(f"{field} must be ≥ 0")
+        if parsed > MAX_CAPITAL:
+            raise ValueError(f"{field} must be ≤ {int(MAX_CAPITAL):,}")
+        return False, parsed
+
+    try:
+        keep_usd, usd = _coerce(data.get("available_capital_usd"), "available_capital_usd")
+        keep_krw, krw = _coerce(data.get("available_capital_krw"), "available_capital_krw")
+    except ValueError as err:
+        return jsonify({"error": str(err)}), 400
+
+    if keep_usd and keep_krw:
+        return jsonify({"error": "Provide at least one of available_capital_usd or available_capital_krw"}), 400
+
+    if not keep_usd:
+        current_user.available_capital = usd
+    if not keep_krw:
+        current_user.available_capital_krw = krw
+
+    db.session.commit()
+
+    return jsonify({
+        "ok": True,
+        "available_capital": current_user.available_capital,
+        "available_capital_krw": current_user.available_capital_krw,
+    })
+
+
 @profile_bp.route("", methods=["PUT"])
 @api_auth
 def update_profile():
