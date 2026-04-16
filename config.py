@@ -1,5 +1,7 @@
 """Application configuration."""
 import os
+import logging
+import warnings
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -14,9 +16,28 @@ if _db_url.startswith("postgres://"):
 
 IS_POSTGRES = _db_url.startswith("postgresql")
 
+_IS_PRODUCTION = os.environ.get("FLASK_ENV", "development").lower() == "production"
+
+# SECRET_KEY: MUST be set via env var in production.
+# Without a fixed key, every gunicorn worker (and every restart) generates
+# a different key, invalidating all existing session cookies → universal 401.
+_secret = os.environ.get("SECRET_KEY")
+if not _secret:
+    if _IS_PRODUCTION:
+        warnings.warn(
+            "CRITICAL: SECRET_KEY not set in production. "
+            "All sessions will be lost on every restart. "
+            "Set SECRET_KEY in Railway environment variables.",
+            stacklevel=2,
+        )
+        logging.getLogger(__name__).critical(
+            "SECRET_KEY not set — sessions will not persist across workers/restarts"
+        )
+    _secret = os.urandom(32).hex()
+
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY") or os.urandom(32).hex()
+    SECRET_KEY = _secret
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

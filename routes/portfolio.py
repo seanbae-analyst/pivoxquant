@@ -1,6 +1,8 @@
 """Portfolio routes: positions CRUD, buy/sell, capital, analytics."""
 import json
-from flask import Blueprint, request, jsonify
+import logging
+import threading
+from flask import Blueprint, current_app, request, jsonify
 from flask_login import current_user
 
 from extensions import db
@@ -11,7 +13,29 @@ from services import fx_service, cache_service
 from services.container import engine, fetcher, realtime
 from .decorators import api_auth
 
+logger = logging.getLogger(__name__)
+
 portfolio_bp = Blueprint("portfolio", __name__, url_prefix="/api/portfolio")
+
+
+def _cache_ticker_async(app, ticker: str, capital: float):
+    """Warm the SignalCache for a newly-added ticker without blocking the
+    HTTP response. engine.analyze() can take 10-30s when FMP/Alpaca are
+    slow (e.g. FMP 402 fallbacks), which would exceed the frontend
+    apiFetch timeout and surface as a false 'add failed' error even
+    though the Position row was already committed. Running it in a
+    background thread keeps add_position snappy and idempotent —
+    the cache miss on the next GET /portfolio call will simply fall
+    back to stored avg_cost defaults, exactly as cache_service already
+    handles."""
+    def _run():
+        with app.app_context():
+            try:
+                cache_service.cache_ticker(ticker, capital, engine)
+            except Exception as e:
+                logger.error(f"Background cache_ticker failed {ticker}: {e}")
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 @portfolio_bp.route("")
@@ -102,24 +126,38 @@ def add_position():
 
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip().upper()
-    shares = float(d.get("shares") or 0)
-    cost = float(d.get("avg_cost") or 0)
+    try:
+        shares = float(d.get("shares") or 0)
+        cost = float(d.get("avg_cost") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Shares and average cost must be numbers"}), 400
     if not ticker or shares <= 0 or cost <= 0:
         return jsonify({"error": "Ticker, shares, and average cost required"}), 400
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
-    ex = Position.query.filter_by(user_id=current_user.id, ticker=ticker).first()
-    if ex:
-        total = ex.shares * ex.avg_cost + shares * cost
-        if not is_kr and ex.buy_fx_rate and fx_rate:
-            ex.buy_fx_rate = (ex.buy_fx_rate * ex.shares * ex.avg_cost + fx_rate * shares * cost) / total
-        ex.shares += shares
-        ex.avg_cost = total / ex.shares
-    else:
-        db.session.add(Position(user_id=current_user.id, ticker=ticker,
-                                shares=shares, avg_cost=cost, buy_fx_rate=fx_rate))
-    db.session.commit()
-    cache_service.cache_ticker(ticker, current_user.available_capital, engine)
+    try:
+        ex = Position.query.filter_by(user_id=current_user.id, ticker=ticker).first()
+        if ex:
+            total = ex.shares * ex.avg_cost + shares * cost
+            if not is_kr and ex.buy_fx_rate and fx_rate:
+                ex.buy_fx_rate = (ex.buy_fx_rate * ex.shares * ex.avg_cost + fx_rate * shares * cost) / total
+            ex.shares += shares
+            ex.avg_cost = total / ex.shares
+        else:
+            db.session.add(Position(user_id=current_user.id, ticker=ticker,
+                                    shares=shares, avg_cost=cost, buy_fx_rate=fx_rate))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("add_position DB commit failed")
+        return jsonify({"error": f"Failed to save position: {e}"}), 500
+
+    # Warm the signal cache in the background — see _cache_ticker_async.
+    _cache_ticker_async(
+        current_app._get_current_object(),
+        ticker,
+        current_user.available_capital,
+    )
     return jsonify({"ok": True})
 
 

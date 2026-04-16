@@ -411,6 +411,16 @@ export interface AlertsResponse {
   alerts: AlertItem[];
 }
 
+/* ── Search ── */
+
+export interface SearchResult {
+  ticker: string;
+  name: string;
+  exchange?: string;
+  currency: string;
+  is_korean?: boolean;
+}
+
 /* ── Lookup ── */
 
 export interface LookupResult {
