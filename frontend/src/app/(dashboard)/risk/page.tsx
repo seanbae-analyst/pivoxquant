@@ -18,7 +18,77 @@ import {
   CheckCircle,
   XCircle,
   BarChart3,
+  Info,
+  Lightbulb,
 } from "lucide-react";
+
+/* ── 7-Layer Risk Defense reference (canonical names + meanings + actions) ── */
+
+interface LayerDefinition {
+  no: number;
+  key: string;        // matched against backend layer name (loose match)
+  title: string;
+  meaning: string;    // why this layer exists
+  triggerAction: string; // what to do when triggered
+}
+
+const LAYER_DEFINITIONS: LayerDefinition[] = [
+  {
+    no: 1,
+    key: "var",
+    title: "VaR Layer — 일별 손실 한도",
+    meaning: "95% 확률로 하루 손실 한도를 넘는지 감시.",
+    triggerAction: "신규 매수 보류, 비중 큰 종목부터 부분 익절/손절 고려.",
+  },
+  {
+    no: 2,
+    key: "correlation",
+    title: "Correlation Layer — 종목 간 상관관계",
+    meaning: "포지션들이 너무 같은 방향으로 움직이는지(분산 효과 소실) 감시.",
+    triggerAction: "다른 섹터/자산군(예: 채권 ETF, 금) 추가로 분산 강화.",
+  },
+  {
+    no: 3,
+    key: "vix",
+    title: "VIX Layer — 시장 변동성",
+    meaning: "VIX(공포지수)가 기준 위로 치솟으면 시장 전반 위험 국면.",
+    triggerAction: "변동성 확대 국면 — 신규 매수 보류, 현금 비중 확대 권장.",
+  },
+  {
+    no: 4,
+    key: "tail",
+    title: "Tail Layer — 극단 손실 위험",
+    meaning: "정규 분포로는 설명 안 되는 꼬리 위험(블랙스완) 노출 측정.",
+    triggerAction: "헤지 수단(인버스 ETF, 풋옵션) 검토 또는 위험자산 비중 축소.",
+  },
+  {
+    no: 5,
+    key: "daily",
+    title: "Daily Layer — 일일 손실 누적",
+    meaning: "오늘 하루 누적 손실이 일일 한도를 초과했는지.",
+    triggerAction: "당일 추가 매매 중단, 다음날 시장 재평가 후 진입.",
+  },
+  {
+    no: 6,
+    key: "sector",
+    title: "Sector Layer — 섹터 집중 리스크",
+    meaning: "한 섹터에 비중이 과도하게 쏠려 있는지(예: 반도체 60%).",
+    triggerAction: "초과 섹터 비중을 줄이고 다른 섹터로 재배분.",
+  },
+  {
+    no: 7,
+    key: "cash",
+    title: "Cash Layer — 현금 비중",
+    meaning: "현금 buffer가 너무 적어 급락 시 매수 여력/방어력이 없는지.",
+    triggerAction: "일부 포지션 정리해 현금 비중을 권장 수준으로 회복.",
+  },
+];
+
+function findLayerDefinition(name: string | undefined): LayerDefinition | undefined {
+  if (!name) return undefined;
+  const n = name.toLowerCase();
+  return LAYER_DEFINITIONS.find((d) => n.includes(d.key));
+}
 
 /* ── Types ── */
 
@@ -342,6 +412,8 @@ function SectionHeader({
 function DefenseLayerCard({ layer }: { layer: DefenseLayer }) {
   const status = layer.status ?? "pass";
   const StatusIcon = status === "pass" ? CheckCircle : XCircle;
+  const def = findLayerDefinition(layer.name);
+  const displayTitle = def?.title ?? layer.name ?? `Layer ${layer.layer ?? "?"}`;
 
   return (
     <div className="sp-card p-4 flex items-start gap-3">
@@ -362,7 +434,7 @@ function DefenseLayerCard({ layer }: { layer: DefenseLayer }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-slate-900 truncate">
-            {layer.name ?? `Layer ${layer.layer ?? "?"}`}
+            {displayTitle}
           </span>
           <span
             className={cn(
@@ -372,12 +444,19 @@ function DefenseLayerCard({ layer }: { layer: DefenseLayer }) {
               status === "fail" && "signal-negative",
             )}
           >
-            {status === "pass" ? "통과" : status === "warning" ? "경고" : "실패"}
+            {status === "pass" ? "통과" : status === "warning" ? "경고" : "트리거"}
           </span>
         </div>
-        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-          {layer.message ?? "세부 정보 없음"}
-        </p>
+        {def?.meaning && (
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+            {def.meaning}
+          </p>
+        )}
+        {layer.message && (
+          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+            {layer.message}
+          </p>
+        )}
         {layer.value != null && layer.threshold != null && (
           <div className="flex items-center gap-3 mt-2">
             <span className="text-[11px] text-slate-400">
@@ -394,7 +473,39 @@ function DefenseLayerCard({ layer }: { layer: DefenseLayer }) {
             </span>
           </div>
         )}
+        {(status === "fail" || status === "warning") && def?.triggerAction && (
+          <div className="mt-2 flex items-start gap-1.5 rounded-md bg-amber-50 border border-amber-100 px-2 py-1.5">
+            <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-[11px] leading-relaxed text-amber-800">
+              <span className="font-semibold">권장 행동: </span>
+              {def.triggerAction}
+            </p>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+/* ── Reusable guide block: explains a metric's meaning + how to act ── */
+
+function MetricGuide({
+  why,
+  how,
+}: {
+  why: string;
+  how: string;
+}) {
+  return (
+    <div className="mt-3 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2 space-y-1">
+      <p className="text-[11px] leading-relaxed text-slate-600">
+        <span className="font-semibold text-slate-700">왜? </span>
+        {why}
+      </p>
+      <p className="text-[11px] leading-relaxed text-slate-600">
+        <span className="font-semibold text-slate-700">어떻게? </span>
+        {how}
+      </p>
     </div>
   );
 }
@@ -606,6 +717,28 @@ export default function RiskPage() {
         {/* ── Disclaimer ── */}
         <DisclaimerBanner type="signal" />
 
+        {/* ── About Risk Analysis (header guide) ── */}
+        <div className="sp-card p-5 border-l-4 border-l-blue-500">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <h2 className="text-sm font-bold text-slate-900">
+                리스크 분석이란?
+              </h2>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                PivoxQuant는 골드만삭스 PM이 사용하는 7가지 리스크 지표로
+                포트폴리오의 잠재 손실을 정량 측정합니다. 각 지표가 위험 수준이면
+                <span className="font-semibold text-slate-800"> 포지션 비중 조정 / 헤지 / 손절 시점</span>을
+                직접 판단하는 데 활용하세요.
+              </p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                미국·한국 종목의 시가는 모두 KRW로 환산해 비중을 계산하므로,
+                양 시장 종목이 동일 기준으로 비교됩니다.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* ── Portfolio Risk Summary (from analytics) ── */}
         {loadingAnalytics ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -722,6 +855,10 @@ export default function RiskPage() {
               </div>
             </div>
           )}
+          <MetricGuide
+            why="95% 확률로 하루 최대 이 금액까지 손실이 날 수 있다는 의미입니다. 나머지 5% 확률의 극단 상황에는 더 클 수 있음."
+            how="이 금액이 감당 가능한 수준보다 크면 비중을 줄이거나 변동성이 낮은 종목으로 리밸런싱을 고려하세요."
+          />
         </div>
 
         {/* ── Drawdown Analysis ── */}
@@ -798,6 +935,10 @@ export default function RiskPage() {
               </div>
             </div>
           )}
+          <MetricGuide
+            why="지금 고점 대비 얼마나 빠진 상태인지 보여줍니다. 큰 낙폭은 회복까지 오랜 시간이 걸려 복리 수익률을 갉아먹습니다."
+            how="현재 낙폭이 크다면 추가 매수 시점일 수도, 손절 시점일 수도 있습니다. 종목 펀더멘털을 다시 점검하세요."
+          />
         </div>
 
         {/* ── Stress Test Results ── */}
@@ -824,6 +965,10 @@ export default function RiskPage() {
               ))}
             </div>
           )}
+          <MetricGuide
+            why="과거 위기(2008 금융위기, 2020 코로나, 금리 +1% 등) 시나리오가 다시 와도 포트폴리오가 얼마나 손실 볼지 시뮬레이션."
+            how="감당하기 힘든 시나리오 손실이 보이면 해당 위기 유형에 약한 종목 비중을 줄이고 헤지 자산(달러, 금)을 추가하세요."
+          />
         </div>
 
         {/* ── Component Expected Shortfall ── */}
@@ -872,6 +1017,10 @@ export default function RiskPage() {
               </div>
             </>
           )}
+          <MetricGuide
+            why="포트폴리오 꼬리 손실(극단 시장 상황 손실) 중 어떤 종목이 가장 많이 기여하는지 분해. 비중 큰 종목 ≠ 위험 큰 종목."
+            how="기여도 1·2위 종목이 비중 1·2위와 다르면 비중 조정 우선 후보. 한 종목이 전체 위험의 30% 이상이면 분산이 부족한 상태."
+          />
         </div>
 
         {/* ── 7-Layer Risk Defense Status ── */}
@@ -881,6 +1030,38 @@ export default function RiskPage() {
             subtitle="자동화된 리스크 관리 방어 레이어"
           />
 
+          {/* Layer catalog — always shown so users know what defenses exist */}
+          <div className="sp-card p-5 mb-3 bg-slate-50/50">
+            <div className="flex items-start gap-2 mb-3">
+              <Info className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-600 leading-relaxed">
+                <span className="font-semibold text-slate-700">7개 방어 레이어란? </span>
+                포트폴리오를 위협하는 7가지 위험 요인을 실시간 감시.
+                트리거된 레이어가 있으면 아래 권장 행동을 참고해 직접 대응 결정을 내리세요.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {LAYER_DEFINITIONS.map((d) => (
+                <div
+                  key={d.no}
+                  className="flex items-start gap-2 rounded-md bg-white border border-slate-100 px-3 py-2"
+                >
+                  <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0 mt-0.5">
+                    {String(d.no).padStart(2, "0")}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold text-slate-800 leading-snug">
+                      {d.title}
+                    </p>
+                    <p className="text-[10px] text-slate-500 leading-snug mt-0.5">
+                      {d.meaning}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {loadingDefense ? (
             <div className="space-y-3">
               {Array.from({ length: 7 }).map((_, i) => (
@@ -888,13 +1069,29 @@ export default function RiskPage() {
               ))}
             </div>
           ) : !defenseData?.layers?.length ? (
-            <div className="sp-card p-5">
-              <p className="text-sm text-slate-400 py-2">
-                포지션을 추가하면 리스크 방어 레이어 상태를 확인할 수 있습니다.
-              </p>
+            <div className="sp-card p-5 bg-emerald-50/40 border-emerald-100">
+              <div className="flex items-start gap-2">
+                <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-emerald-800">
+                    트리거된 방어 레이어 없음
+                  </p>
+                  <p className="text-xs text-emerald-700 mt-1 leading-relaxed">
+                    현재 7개 방어 레이어 모두 정상 범위입니다. 위 카탈로그의 각 레이어 설명을 참고해
+                    어떤 위험을 감시하고 있는지 확인하세요. 위험 신호가 감지되면 이 영역에 자동 표시됩니다.
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
+              <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+                <p className="text-xs text-amber-900 leading-relaxed">
+                  <span className="font-semibold">{defenseData.layers.length}개 레이어가 트리거</span>되었습니다.
+                  각 카드의 권장 행동을 참고해 비중 조정·헤지·매매 보류 등을 직접 결정하세요.
+                  PivoxQuant는 자동 매매를 실행하지 않습니다 (read-only).
+                </p>
+              </div>
               {defenseData.layers.map((layer, idx) => (
                 <DefenseLayerCard
                   key={layer.name ?? idx}
