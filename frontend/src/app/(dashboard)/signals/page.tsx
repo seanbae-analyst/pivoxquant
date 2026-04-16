@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
 import { ScoreBar } from "@/components/dashboard/score-bar";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
@@ -140,12 +140,12 @@ function SignalCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-900">
-              {item.ticker}
+              {isKoreanTicker(item.ticker, item.is_korean) ? (item.name || item.ticker) : item.ticker}
             </span>
             <SignalBadge signal={item.signal} />
           </div>
           <p className="text-xs text-slate-500 truncate mt-0.5">
-            {item.name}
+            {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.name}
           </p>
         </div>
 

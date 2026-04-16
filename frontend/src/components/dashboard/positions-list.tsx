@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtUsd, fmtPct, pnlColor } from "@/lib/format";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -45,6 +45,7 @@ function PositionRow({ position, flash }: PositionRowProps) {
   const glowClass = isPositive ? "pnl-glow-positive" : "pnl-glow-negative";
 
   const flashClass = flash === "up" ? "price-flash-up" : flash === "down" ? "price-flash-down" : "";
+  const kr = isKoreanTicker(position.ticker, position.is_korean);
 
   return (
     <div
@@ -58,14 +59,16 @@ function PositionRow({ position, flash }: PositionRowProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold text-slate-900">
-            {position.ticker}
+            {kr ? (position.name || position.ticker) : position.ticker}
           </span>
           {position.signal !== "\u2014" && (
             <SignalBadge signal={position.signal} score={position.score} />
           )}
         </div>
         <p className="text-xs text-slate-500 truncate mt-0.5">
-          {position.name} &middot; {position.shares} share{position.shares > 1 ? "s" : ""}
+          {kr
+            ? `${position.ticker} · KRX · ${position.shares}주`
+            : `${position.name} · ${position.shares} share${position.shares > 1 ? "s" : ""}`}
         </p>
       </div>
 

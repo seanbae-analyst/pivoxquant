@@ -257,6 +257,7 @@ export default function StockDetailPage() {
         changePct={signal?.change_pct}
         sector={signal?.sector ?? profile?.sector}
         currency={signal?.currency}
+        isKorean={signal?.is_korean}
         isLoading={isLoading}
       />
 

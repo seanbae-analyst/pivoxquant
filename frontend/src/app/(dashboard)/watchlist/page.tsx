@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
 import { useWatchlist } from "@/lib/hooks";
 import type { WatchlistItem, LookupResult } from "@/lib/types";
@@ -77,10 +77,10 @@ function SearchDropdown({
                 >
                   <div className="min-w-0 flex-1">
                     <span className="text-sm font-bold text-slate-900">
-                      {r?.ticker ?? "\u2014"}
+                      {isKoreanTicker(r?.ticker ?? "") ? (r?.name || r?.ticker || "\u2014") : (r?.ticker ?? "\u2014")}
                     </span>
                     <span className="ml-2 text-xs text-slate-500 truncate">
-                      {r?.name ?? ""}
+                      {isKoreanTicker(r?.ticker ?? "") ? (r?.ticker ?? "") : (r?.name ?? "")}
                     </span>
                   </div>
                   <div className="text-right shrink-0">
@@ -166,11 +166,13 @@ function WatchlistRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-slate-900">
-              {item.ticker}
+              {isKoreanTicker(item.ticker, item.is_korean) ? (item.name || item.ticker) : item.ticker}
             </span>
             <SignalBadge signal={item.signal} />
           </div>
-          <p className="text-xs text-slate-500 truncate mt-0.5">{item.name}</p>
+          <p className="text-xs text-slate-500 truncate mt-0.5">
+            {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.name}
+          </p>
         </div>
 
         {/* Right: price + change + remove */}

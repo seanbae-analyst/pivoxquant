@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
-import { MorningBriefCard } from "@/components/dashboard/morning-brief-card";
 import type {
   MorningBriefArchiveItem,
   MorningBriefIndex,
@@ -249,14 +248,82 @@ function EmptyArchiveState() {
 
 /* ── Page ── */
 
+/* ── Inline today brief (avoids circular "view all" links) ── */
+
+function TodayBriefSection() {
+  const { data, isLoading } = useMorningBrief();
+  const t = useT();
+
+  if (isLoading) return <CardSkeleton />;
+  if (!data?.available || !data.brief) {
+    return (
+      <div className="sp-card flex flex-col items-center justify-center px-4 py-6 text-center">
+        <Sunrise className="mb-2 h-6 w-6 text-amber-400" aria-hidden />
+        <p className="text-sm font-semibold text-slate-700">
+          {t("morningBrief.notAvailable")}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          {t("morningBrief.notAvailableDesc")}
+        </p>
+      </div>
+    );
+  }
+
+  const { market_summary, portfolio_changes, insight } = data.brief;
+  const topPortfolio = portfolio_changes.slice(0, 4);
+
+  return (
+    <article className="sp-card overflow-hidden p-4 sm:p-5 space-y-3">
+      {/* Market indices */}
+      <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+        <IndexMini label="S&P 500" data={market_summary.sp500} />
+        <IndexMini label="NASDAQ" data={market_summary.nasdaq} />
+        <IndexMini label="KOSPI" data={market_summary.kospi} />
+      </div>
+
+      {/* Portfolio changes */}
+      {topPortfolio.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {topPortfolio.map((change) => {
+            const isUp = change.direction === "up";
+            const Icon = isUp ? TrendingUp : TrendingDown;
+            return (
+              <div
+                key={change.ticker}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+                  isUp ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700",
+                )}
+              >
+                <span className="font-mono">{change.ticker}</span>
+                <Icon className="h-3 w-3" />
+                <span className="tabular-nums">{fmtPctSigned(change.change_pct)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Insight */}
+      {insight && (
+        <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 px-3 py-2.5">
+          <p className="flex items-start gap-2 text-xs text-slate-700">
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-500" aria-hidden />
+            <span className="leading-relaxed">{insight}</span>
+          </p>
+        </div>
+      )}
+    </article>
+  );
+}
+
+/* ── Page ── */
+
 export default function MorningBriefPage() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const t = useT();
 
-  // Prefetch today's brief so the top card renders consistently
-  useMorningBrief();
-
-  const { data: archive, isLoading } = useMorningBriefArchive();
+  const { data: archive, isLoading, error } = useMorningBriefArchive();
 
   const items = useMemo<MorningBriefArchiveItem[]>(() => {
     const list = archive?.briefs ?? [];
@@ -287,69 +354,80 @@ export default function MorningBriefPage() {
         {/* Disclaimer */}
         <DisclaimerBanner type="signal" />
 
-        {/* Today's brief (reuse card) */}
+        {/* Today's brief (inline, no circular links) */}
         <div>
           <h2 className="mb-3 text-sm font-bold text-slate-900">
             {t("morningBrief.today")}
           </h2>
-          <MorningBriefCard />
+          <TodayBriefSection />
         </div>
 
-        {/* Archive list */}
-        <section aria-labelledby="archive-heading">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h2
-              id="archive-heading"
-              className="text-sm font-bold text-slate-900"
-            >
-              {t("morningBrief.archive")}
-            </h2>
-
-            {/* Filter pills */}
-            <div
-              className="flex gap-1.5 overflow-x-auto scrollbar-hide"
-              role="tablist"
-              aria-label="Date filter"
-            >
-              {FILTERS.map((f) => {
-                const active = filter === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    onClick={() => setFilter(f.key)}
-                    className={cn(
-                      "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                      active
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-                    )}
-                  >
-                    {t(f.labelKey)}
-                  </button>
-                );
-              })}
-            </div>
+        {/* Error state */}
+        {error && !isLoading && (
+          <div className="sp-card p-6 text-center">
+            <p className="text-sm text-slate-500">
+              아카이브를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+            </p>
           </div>
+        )}
 
-          {isLoading ? (
-            <div className="space-y-3">
-              <CardSkeleton />
-              <CardSkeleton />
-              <CardSkeleton />
+        {/* Archive list */}
+        {!error && (
+          <section aria-labelledby="archive-heading">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2
+                id="archive-heading"
+                className="text-sm font-bold text-slate-900"
+              >
+                {t("morningBrief.archive")}
+              </h2>
+
+              {/* Filter pills */}
+              <div
+                className="flex gap-1.5 overflow-x-auto scrollbar-hide"
+                role="tablist"
+                aria-label="Date filter"
+              >
+                {FILTERS.map((f) => {
+                  const active = filter === f.key;
+                  return (
+                    <button
+                      key={f.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setFilter(f.key)}
+                      className={cn(
+                        "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                        active
+                          ? "bg-slate-900 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+                      )}
+                    >
+                      {t(f.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          ) : items.length === 0 ? (
-            <EmptyArchiveState />
-          ) : (
-            <div className="space-y-3">
-              {items.map((item) => (
-                <ArchiveCard key={item.date} item={item} />
-              ))}
-            </div>
-          )}
-        </section>
+
+            {isLoading ? (
+              <div className="space-y-3">
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
+              </div>
+            ) : items.length === 0 ? (
+              <EmptyArchiveState />
+            ) : (
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <ArchiveCard key={item.date} item={item} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Footer CTA */}
         <div className="pt-2 text-center">
