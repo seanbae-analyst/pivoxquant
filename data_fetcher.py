@@ -151,9 +151,10 @@ class DataFetcher:
         try:
             from alpaca.data.requests import (
                 StockLatestTradeRequest,
+                StockLatestQuoteRequest,
                 StockLatestBarRequest,
             )
-            # Latest trade = actual NBBO last print, near real-time.
+            # Latest trade — RTH only.
             try:
                 tr_req = StockLatestTradeRequest(symbol_or_symbols=[ticker])
                 trades = _alpaca_hist_client.get_stock_latest_trade(tr_req)
@@ -161,8 +162,14 @@ class DataFetcher:
             except Exception:
                 trade = None
 
-            # Always pull the latest bar too — needed for OHLC + volume that
-            # the rest of the app expects in this dict.
+            # Latest quote — captures pre-market / after-hours bid/ask.
+            try:
+                q_req = StockLatestQuoteRequest(symbol_or_symbols=[ticker])
+                quotes = _alpaca_hist_client.get_stock_latest_quote(q_req)
+                quote = quotes.get(ticker) if quotes else None
+            except Exception:
+                quote = None
+
             try:
                 br_req = StockLatestBarRequest(symbol_or_symbols=[ticker])
                 bars = _alpaca_hist_client.get_stock_latest_bar(br_req)
@@ -170,12 +177,38 @@ class DataFetcher:
             except Exception:
                 bar = None
 
-            if trade is None and bar is None:
+            if trade is None and bar is None and quote is None:
                 return None
 
-            price = float(trade.price) if (trade and getattr(trade, "price", 0)) else (
-                float(bar.close) if bar else 0.0
-            )
+            # Compute quote midpoint
+            quote_price = None
+            quote_ts = None
+            if quote:
+                bid = float(getattr(quote, "bid_price", 0) or 0)
+                ask = float(getattr(quote, "ask_price", 0) or 0)
+                if bid > 0 and ask > 0:
+                    quote_price = (bid + ask) / 2
+                elif bid > 0:
+                    quote_price = bid
+                elif ask > 0:
+                    quote_price = ask
+                quote_ts = getattr(quote, "timestamp", None)
+
+            trade_price = float(trade.price) if (trade and getattr(trade, "price", 0)) else None
+            trade_ts = getattr(trade, "timestamp", None) if trade else None
+
+            # Pick freshest source: quote often wins in extended hours.
+            if quote_price and quote_ts and trade_ts:
+                price = quote_price if quote_ts > trade_ts else trade_price
+            elif trade_price:
+                price = trade_price
+            elif quote_price:
+                price = quote_price
+            elif bar:
+                price = float(bar.close)
+            else:
+                return None
+
             if price <= 0:
                 return None
 
