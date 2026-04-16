@@ -31,39 +31,27 @@ def search_stocks():
     results = []
     seen = set()
 
-    # 1) Search Korean stock registry (name + ticker match)
-    from data_fetcher import KOREAN_NAMES
-    # Korean display names for Korean-language search
-    _KR_NAMES = {
-        "005930.KS": "삼성전자", "000660.KS": "SK하이닉스",
-        "035420.KS": "네이버", "035720.KS": "카카오",
-        "005380.KS": "현대자동차", "000270.KS": "기아",
-        "005490.KS": "포스코홀딩스", "051910.KS": "LG화학",
-        "066570.KS": "LG전자", "068270.KS": "셀트리온",
-        "373220.KS": "LG에너지솔루션", "207940.KS": "삼성바이오로직스",
-        "003550.KS": "LG", "096770.KS": "SK이노베이션",
-        "017670.KS": "SK텔레콤", "030200.KS": "KT",
-        "105560.KS": "KB금융", "086790.KS": "하나금융지주",
-        "055550.KS": "신한지주", "000810.KS": "삼성화재",
-        "032830.KS": "삼성생명", "009150.KS": "삼성전기",
-        "028260.KS": "삼성물산", "010140.KS": "삼성중공업",
-        "047050.KS": "크래프톤", "263750.KS": "펄어비스",
-        "035900.KQ": "JYP Ent.", "041510.KQ": "에스엠",
-        "122870.KQ": "YG Ent.", "352820.KS": "하이브",
-        "377300.KS": "카카오페이", "403550.KS": "카카오뱅크",
-    }
-    ql = query.lower()
-    for ticker_code, name_en in KOREAN_NAMES.items():
-        code_only = ticker_code.replace(".KS", "").replace(".KQ", "")
-        name_kr = _KR_NAMES.get(ticker_code, "")
-        if (ql in name_en.lower() or ql in name_kr or ql in code_only
-                or ql in ticker_code.lower()):
+    # 1) Search Korean stock registry (top ~250 KOSPI/KOSDAQ stocks)
+    from services import kr_stock_registry
+    for hit in kr_stock_registry.search(query, limit=15):
+        if hit["ticker"] not in seen:
+            results.append(hit)
+            seen.add(hit["ticker"])
+
+    # 1b) Allow raw 6-digit codes as a passthrough (any KRX ticker, even
+    # if not in the static registry — KIS will resolve at lookup time).
+    bare = query.strip()
+    if bare.isdigit() and len(bare) == 6:
+        candidate = f"{bare}.KS"
+        if candidate not in seen:
             results.append({
-                "ticker": ticker_code, "name": f"{name_kr} ({name_en})" if name_kr else name_en,
-                "exchange": "KOSDAQ" if ticker_code.endswith(".KQ") else "KOSPI",
-                "currency": "KRW", "is_korean": True,
+                "ticker":    candidate,
+                "name":      candidate,
+                "exchange":  "KOSPI",
+                "currency":  "KRW",
+                "is_korean": True,
             })
-            seen.add(ticker_code)
+            seen.add(candidate)
 
     # 2) FMP search API for US/global stocks
     import os
