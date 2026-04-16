@@ -68,6 +68,19 @@ const TAB_CONFIG: { id: string; labelKey: string; icon: React.ElementType }[] = 
 
 type TabId = "account" | "subscription" | "connections" | "notifications" | "language";
 
+/* ── Investor Type Labels ── */
+
+const INVESTOR_TYPE_LABELS: Record<string, string> = {
+  passive_index_hugger: "패시브 인덱스 추종형",
+  steady_accumulator: "꾸준한 축적형",
+  value_hunter: "가치 투자형",
+  risk_managed_growth: "리스크 관리 성장형",
+  swing_trader: "스윙 트레이더",
+  momentum_rider: "모멘텀 추종형",
+  macro_rotator: "매크로 로테이션형",
+  aggressive_scalper: "공격적 스캘퍼",
+};
+
 /* ── Delete Account Modal ── */
 
 function DeleteAccountModal({ onClose }: { onClose: () => void }) {
@@ -169,7 +182,7 @@ function AccountSection() {
             <Skeleton className="h-5 w-28" />
           ) : investorType ? (
             <span className="text-sm font-semibold text-purple-600">
-              {investorType}
+              {INVESTOR_TYPE_LABELS[investorType] ?? investorType}
             </span>
           ) : (
             <span className="text-sm text-slate-400">{t("settings.account.notSet")}</span>

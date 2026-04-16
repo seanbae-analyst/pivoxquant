@@ -1317,16 +1317,40 @@ function PositionCard({
    ================================================================ */
 
 function PortfolioSummary({ data }: { data: PortfolioResponse }) {
+  const fxRate = data.fx_rate ?? 0;
+  const hasKrw =
+    data.total_value_krw > 0 ||
+    data.positions.some((p) => p.currency === "KRW" || p.is_korean);
+  const hasUsd =
+    data.total_value_usd > 0 ||
+    data.positions.some((p) => p.currency !== "KRW" && !p.is_korean);
+  const unit: "KRW" | "USD" = hasKrw ? "KRW" : "USD";
+
   const totalPnl = data.positions.reduce((sum, p) => {
     const cost = p.shares * p.avg_cost;
-    return sum + (p.market_value - cost);
+    const pnlNative = p.market_value - cost;
+    const isKrw = p.currency === "KRW" || p.is_korean;
+    if (unit === "KRW") {
+      return sum + (isKrw ? pnlNative : pnlNative * (fxRate || 0));
+    }
+    return sum + (isKrw ? 0 : pnlNative);
   }, 0);
 
-  const totalCost = data.positions.reduce(
-    (sum, p) => sum + p.shares * p.avg_cost,
-    0,
-  );
+  const totalCost = data.positions.reduce((sum, p) => {
+    const costNative = p.shares * p.avg_cost;
+    const isKrw = p.currency === "KRW" || p.is_korean;
+    if (unit === "KRW") {
+      return sum + (isKrw ? costNative : costNative * (fxRate || 0));
+    }
+    return sum + (isKrw ? 0 : costNative);
+  }, 0);
   const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+
+  const mainTotalValue =
+    unit === "KRW" ? data.total_value_all_krw : data.total_value_usd;
+  const fmtMain = unit === "KRW" ? fmtKrw : fmtUsd;
+  const mainCash =
+    unit === "KRW" ? data.available_capital_krw : data.available_capital;
 
   const positiveCount = data.positions.filter(
     (p) => p.signal === "POSITIVE",
@@ -1343,9 +1367,14 @@ function PortfolioSummary({ data }: { data: PortfolioResponse }) {
           총 평가금액
         </p>
         <p className="text-lg font-bold tabular-nums text-slate-900">
-          {fmtUsd(data.total_value_usd)}
+          {fmtMain(mainTotalValue)}
         </p>
-        {data.total_value_krw > 0 && (
+        {unit === "KRW" && hasUsd && data.total_value_usd > 0 && (
+          <p className="text-xs text-slate-400 tabular-nums">
+            {fmtUsd(data.total_value_usd)}
+          </p>
+        )}
+        {unit === "USD" && data.total_value_krw > 0 && (
           <p className="text-xs text-slate-400 tabular-nums">
             {fmtKrw(data.total_value_all_krw)}
           </p>
@@ -1364,7 +1393,7 @@ function PortfolioSummary({ data }: { data: PortfolioResponse }) {
           )}
         >
           {totalPnl >= 0 ? "+" : ""}
-          {fmtUsd(totalPnl)}
+          {fmtMain(totalPnl)}
         </p>
         <p
           className={cn(
@@ -1382,9 +1411,14 @@ function PortfolioSummary({ data }: { data: PortfolioResponse }) {
           가용 현금
         </p>
         <p className="text-lg font-bold tabular-nums text-slate-900">
-          {fmtUsd(data.available_capital)}
+          {fmtMain(mainCash)}
         </p>
-        {data.available_capital_krw > 0 && (
+        {unit === "KRW" && data.available_capital > 0 && (
+          <p className="text-xs text-slate-400 tabular-nums">
+            {fmtUsd(data.available_capital)}
+          </p>
+        )}
+        {unit === "USD" && data.available_capital_krw > 0 && (
           <p className="text-xs text-slate-400 tabular-nums">
             {fmtKrw(data.available_capital_krw)}
           </p>

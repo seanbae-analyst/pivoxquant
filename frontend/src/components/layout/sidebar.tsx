@@ -15,6 +15,7 @@ import {
   Settings,
   Crown,
   Sunrise,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/locale";
@@ -30,6 +31,7 @@ type NavKey =
   | "ai"
   | "autotrade"
   | "risk"
+  | "alerts"
   | "settings";
 
 const NAV_ITEMS: { href: string; key: NavKey; icon: React.ElementType }[] = [
@@ -43,6 +45,7 @@ const NAV_ITEMS: { href: string; key: NavKey; icon: React.ElementType }[] = [
   { href: "/ai", key: "ai", icon: Bot },
   { href: "/autotrade", key: "autotrade", icon: Zap },
   { href: "/risk", key: "risk", icon: Shield },
+  { href: "/alerts", key: "alerts", icon: Bell },
   { href: "/settings", key: "settings", icon: Settings },
 ];
 
