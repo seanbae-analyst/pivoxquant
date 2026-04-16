@@ -310,16 +310,10 @@ export default function WatchlistPage() {
     [watchlist, mutate],
   );
 
-  /* ── Remove from watchlist ── */
+  /* ── Remove from watchlist (API call already done in WatchlistRow) ── */
   const handleRemove = useCallback(
-    async (id: number) => {
-      try {
-        await apiFetch(API.watchlist.remove(id), { method: "DELETE" });
-        toast.success("관심종목에서 제거됐습니다");
-        await mutate();
-      } catch {
-        toast.error("관심종목에서 제거하지 못했습니다");
-      }
+    async (_id: number) => {
+      await mutate();
     },
     [mutate],
   );

@@ -148,8 +148,8 @@ export function WhatIfChart({
   const isSparse = buyPoints.length > 0 && buyPoints.length < 40;
 
   return (
-    <div className="w-full">
-      <ResponsiveContainer width="100%" height={320}>
+    <div className="w-full overflow-hidden">
+      <ResponsiveContainer width="100%" height={320} maxHeight={400}>
         <ChartEl
           data={prepared}
           margin={{ top: 8, right: 8, bottom: 0, left: 0 }}

@@ -1475,8 +1475,8 @@ export default function PortfolioPage() {
   const [sortDesc, setSortDesc] = useState(true);
   const [signalFilter, setSignalFilter] = useState<FilterSignal>("ALL");
 
-  const handleMutate = useCallback(() => {
-    mutate();
+  const handleMutate = useCallback(async () => {
+    await mutate();
   }, [mutate]);
 
   const handleSortToggle = (key: SortKey) => {
