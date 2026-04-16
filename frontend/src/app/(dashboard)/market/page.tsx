@@ -8,6 +8,7 @@ import { fmtPct } from "@/lib/format";
 import { Skeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MarketStatusBadge } from "@/components/dashboard/market-status-badge";
 import {
   Activity,
   Globe,
@@ -186,6 +187,7 @@ export default function MarketPage() {
   return (
     <ErrorBoundary>
     <div className="mx-auto max-w-3xl space-y-6">
+      <MarketStatusBadge />
       {/* ── Header + Status ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
