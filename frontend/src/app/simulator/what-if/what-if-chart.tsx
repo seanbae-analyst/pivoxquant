@@ -156,8 +156,8 @@ export function WhatIfChart({
         >
           <defs>
             <linearGradient id="whatIfFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+              <stop offset="0%" stopColor="#0f172a" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#0f172a" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid
@@ -185,13 +185,13 @@ export function WhatIfChart({
           <Area
             type="monotone"
             dataKey="value"
-            stroke="#8b5cf6"
+            stroke="#0f172a"
             strokeWidth={2.5}
             fill="url(#whatIfFill)"
             animationDuration={900}
             animationEasing="ease-out"
             dot={false}
-            activeDot={{ r: 4, fill: "#8b5cf6" }}
+            activeDot={{ r: 4, fill: "#0f172a" }}
           />
           {showInvestedLine ? (
             <Line
@@ -211,7 +211,7 @@ export function WhatIfChart({
                   x={pt.label}
                   y={pt.value}
                   r={3}
-                  fill="#3b82f6"
+                  fill="#64748b"
                   stroke="#ffffff"
                   strokeWidth={1.5}
                 />

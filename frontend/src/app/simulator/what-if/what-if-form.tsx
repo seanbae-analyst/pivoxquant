@@ -213,7 +213,7 @@ export function WhatIfForm({
               onChange({ ...value, ticker: v, tickerName: undefined });
             }}
             onFocus={() => setShowSuggestions(true)}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-200"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
           />
           {showSuggestions && tickerInput.length > 0 && (
             <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
@@ -265,7 +265,7 @@ export function WhatIfForm({
             onChange={(e) =>
               onChange({ ...value, startDate: e.target.value })
             }
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-200"
+            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
           />
         </div>
 
@@ -275,7 +275,7 @@ export function WhatIfForm({
             <Coins className="h-3.5 w-3.5" />
             {t("whatIf.form.amount")}
           </label>
-          <div className="flex h-11 overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-200">
+          <div className="flex h-11 overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
             <input
               type="number"
               inputMode="numeric"
@@ -339,7 +339,7 @@ export function WhatIfForm({
                   className={cn(
                     "h-11 rounded-xl border text-xs font-semibold transition",
                     active
-                      ? "border-violet-500 bg-violet-50 text-violet-700"
+                      ? "border-slate-900 bg-slate-50 text-slate-900"
                       : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
                   )}
                 >
@@ -358,9 +358,8 @@ export function WhatIfForm({
         disabled={!canSubmit}
         className={cn(
           "mt-5 h-12 w-full rounded-xl text-sm font-bold text-white transition-all",
-          "bg-gradient-to-r from-violet-600 via-blue-500 to-pink-500",
-          "shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 active:scale-[0.99]",
-          "disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none",
+          "bg-slate-900 hover:bg-slate-800 active:scale-[0.99]",
+          "disabled:cursor-not-allowed disabled:opacity-50",
         )}
       >
         {isLoading
@@ -380,7 +379,7 @@ export function WhatIfForm({
               key={`${p.ticker}-${p.date}`}
               type="button"
               onClick={() => applyPreset(p)}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
             >
               {p.labelKo}
             </button>

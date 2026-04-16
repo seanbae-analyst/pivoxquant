@@ -166,18 +166,11 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
       <div
         ref={cardRef}
         id="what-if-share-card"
-        className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl"
+        className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
       >
-        {/* Gradient hero band */}
-        <div
-          className={cn(
-            "px-5 py-5 sm:px-8 sm:py-6",
-            isPositive
-              ? "bg-gradient-to-br from-violet-50 via-blue-50 to-pink-50"
-              : "bg-gradient-to-br from-slate-50 to-slate-100",
-          )}
-        >
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-violet-700">
+        {/* Hero band */}
+        <div className="px-5 py-5 sm:px-8 sm:py-6 bg-slate-50">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
             <Sparkles className="h-3.5 w-3.5" />
             {t(headlineKey)}
           </div>
@@ -207,7 +200,7 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
             <div
               className={cn(
                 "mt-1 font-mono text-2xl font-bold tabular-nums sm:text-3xl",
-                isPositive ? "text-emerald-600" : "text-rose-600",
+                isPositive ? "up-color" : "down-color",
               )}
             >
               {fmtPctStrong(return_pct)}
@@ -233,8 +226,8 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
               className={cn(
                 "mt-0.5 font-mono text-xs font-semibold tabular-nums sm:text-sm",
                 annualizedValue >= 0
-                  ? "text-emerald-600"
-                  : "text-rose-600",
+                  ? "up-color"
+                  : "down-color",
               )}
             >
               {annualized_return_pct === null
@@ -267,8 +260,8 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
 
         {/* Benchmark */}
         {benchmark ? (
-          <div className="mx-4 mb-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 sm:mx-6">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">
+          <div className="mx-4 mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:mx-6">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
               {t("whatIf.result.vsBenchmark")}
             </div>
             <div className="mt-1 flex items-baseline justify-between gap-3 text-sm">
@@ -284,8 +277,8 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
                 className={cn(
                   "font-mono text-xs font-semibold tabular-nums",
                   end_value >= benchmark.end_value
-                    ? "text-emerald-600"
-                    : "text-rose-600",
+                    ? "up-color"
+                    : "down-color",
                 )}
               >
                 {t(
@@ -332,7 +325,7 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
         {/* Watermark */}
         <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-5 py-3 sm:px-8">
           <div className="flex items-center gap-1.5">
-            <div className="h-5 w-5 rounded-md bg-gradient-to-br from-violet-600 via-blue-500 to-pink-500" />
+            <div className="h-5 w-5 rounded-md bg-slate-900" />
             <span className="text-[11px] font-bold text-slate-700">
               PivoxQuant
             </span>
