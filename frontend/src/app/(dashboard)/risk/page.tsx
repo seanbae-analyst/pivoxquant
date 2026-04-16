@@ -61,6 +61,7 @@ interface ComponentESItem {
 interface ComponentESResponse {
   components?: ComponentESItem[];
   total_es?: number;
+  insufficientPositions?: boolean;
 }
 
 interface DefenseLayer {
@@ -85,6 +86,208 @@ const fetcher = async (url: string) => {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 };
+
+/* ── Backend raw shapes (as returned by routes/quant.py) ── */
+
+interface RawVarMethod {
+  var_95?: number;
+  var_99?: number;
+}
+
+interface RawVarResponse {
+  portfolio_value?: number;
+  parametric?: RawVarMethod;
+  historical?: RawVarMethod;
+  methodology?: string;
+  confidence_level?: number;
+}
+
+interface RawDrawdownResponse {
+  max_drawdown_pct?: number;
+  current_drawdown?: {
+    pct?: number;
+    start_date?: string;
+    duration_days?: number;
+    is_in_drawdown?: boolean;
+  };
+  recovery?: {
+    longest_days?: number;
+    average_days?: number;
+  };
+  top_drawdowns?: Array<{
+    start?: string;
+    end?: string;
+    pct?: number;
+  }>;
+  ulcer_index?: number;
+  calmar_ratio?: number;
+  peak_value?: number;
+  trough_value?: number;
+}
+
+interface RawStressScenario {
+  name?: string;
+  description?: string;
+  portfolio_impact_pct?: number;
+  portfolio_impact_usd?: number;
+}
+
+interface RawStressTestResponse {
+  scenarios?: RawStressScenario[];
+}
+
+interface RawComponentESPosition {
+  ticker?: string;
+  weight_pct?: number;
+  component_es_pct?: number;
+  risk_contribution_pct?: number;
+}
+
+interface RawComponentESResponse {
+  positions?: RawComponentESPosition[];
+  portfolio_es_pct?: number;
+  error?: string;
+}
+
+interface RawDefenseLayerItem {
+  name?: string;
+  message?: string;
+  status?: string;
+  value?: number;
+  threshold?: number;
+  layer?: number;
+}
+
+interface RawDefenseStatusResponse {
+  defense_score?: number;
+  status?: "GREEN" | "YELLOW" | "RED" | string;
+  layers_triggered?: Array<RawDefenseLayerItem | string>;
+  warnings?: Array<RawDefenseLayerItem | string>;
+  risk_exposure?: number;
+  regime_risk_level?: string;
+  halt_trading?: boolean;
+  timestamp?: string;
+}
+
+/* ── Adapters: raw backend shape → frontend shape ── */
+
+function normalizeVar(raw: RawVarResponse | undefined): VaRResponse | undefined {
+  if (!raw) return raw;
+  const hist = raw.historical ?? {};
+  const param = raw.parametric ?? {};
+  return {
+    var_95: hist.var_95 ?? param.var_95,
+    var_99: hist.var_99 ?? param.var_99,
+    method: raw.methodology,
+    confidence_level: raw.confidence_level,
+    portfolio_value: raw.portfolio_value,
+  };
+}
+
+function normalizeDrawdown(
+  raw: RawDrawdownResponse | undefined,
+): DrawdownResponse | undefined {
+  if (!raw) return raw;
+  const current = raw.current_drawdown ?? {};
+  const recovery = raw.recovery ?? {};
+  const topEnd = raw.top_drawdowns?.[0]?.end;
+
+  return {
+    max_drawdown: raw.max_drawdown_pct,
+    current_drawdown: current.pct,
+    recovery_days: recovery.average_days ?? recovery.longest_days,
+    drawdown_start: current.start_date,
+    drawdown_end: topEnd,
+    peak_value: raw.peak_value,
+    trough_value: raw.trough_value,
+  };
+}
+
+function normalizeStressTest(
+  raw: RawStressTestResponse | undefined,
+): StressTestResponse | undefined {
+  if (!raw) return raw;
+  return {
+    scenarios: (raw.scenarios ?? []).map((s) => ({
+      name: s.name,
+      description: s.description,
+      impact_pct: s.portfolio_impact_pct,
+      portfolio_loss: s.portfolio_impact_usd,
+    })),
+  };
+}
+
+function normalizeComponentES(
+  raw: RawComponentESResponse | undefined,
+): ComponentESResponse | undefined {
+  if (!raw) return raw;
+  const positions = raw.positions ?? [];
+  // Backend returns 400 with error if positions < 2, but in case it slips through
+  const insufficientPositions = positions.length < 2;
+  return {
+    components: positions.map((p) => ({
+      ticker: p.ticker,
+      contribution_pct: p.risk_contribution_pct,
+      weight_pct: p.weight_pct,
+      expected_shortfall: p.component_es_pct,
+    })),
+    total_es: raw.portfolio_es_pct,
+    insufficientPositions,
+  };
+}
+
+function normalizeDefenseStatus(
+  raw: RawDefenseStatusResponse | undefined,
+): DefenseStatusResponse | undefined {
+  if (!raw) return raw;
+
+  const overall_status: "safe" | "warning" | "danger" =
+    raw.status === "GREEN"
+      ? "safe"
+      : raw.status === "YELLOW"
+        ? "warning"
+        : raw.status === "RED"
+          ? "danger"
+          : "safe";
+
+  const triggered = (raw.layers_triggered ?? []).map(
+    (l): DefenseLayer => {
+      if (typeof l === "string") {
+        return { name: l, status: "fail", message: "" };
+      }
+      return {
+        name: l.name ?? `Layer ${l.layer ?? "?"}`,
+        status: "fail",
+        message: l.message ?? "",
+        value: l.value,
+        threshold: l.threshold,
+        layer: l.layer,
+      };
+    },
+  );
+
+  const warn = (raw.warnings ?? []).map(
+    (w): DefenseLayer => {
+      if (typeof w === "string") {
+        return { name: "Warning", status: "warning", message: w };
+      }
+      return {
+        name: w.name ?? "Warning",
+        status: "warning",
+        message: w.message ?? "",
+        value: w.value,
+        threshold: w.threshold,
+        layer: w.layer,
+      };
+    },
+  );
+
+  return {
+    layers: [...triggered, ...warn],
+    overall_status,
+    timestamp: raw.timestamp,
+  };
+}
 
 /* ── Sub-components ── */
 
@@ -319,35 +522,46 @@ export default function RiskPage() {
   const { data: portfolio, isLoading: loadingPortfolio } = usePortfolio();
   const { data: analytics, isLoading: loadingAnalytics } = useAnalytics();
 
-  const { data: varData, isLoading: loadingVar } = useSWR<VaRResponse>(
+  const { data: rawVarData, isLoading: loadingVar } = useSWR<RawVarResponse>(
     API.risk.var,
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 120_000 },
   );
 
-  const { data: drawdownData, isLoading: loadingDrawdown } =
-    useSWR<DrawdownResponse>(API.risk.drawdown, fetcher, {
+  const { data: rawDrawdownData, isLoading: loadingDrawdown } =
+    useSWR<RawDrawdownResponse>(API.risk.drawdown, fetcher, {
       revalidateOnFocus: false,
       dedupingInterval: 120_000,
     });
 
-  const { data: stressData, isLoading: loadingStress } =
-    useSWR<StressTestResponse>(API.risk.stressTest, fetcher, {
+  const { data: rawStressData, isLoading: loadingStress } =
+    useSWR<RawStressTestResponse>(API.risk.stressTest, fetcher, {
       revalidateOnFocus: false,
       dedupingInterval: 300_000,
     });
 
-  const { data: esData, isLoading: loadingES } =
-    useSWR<ComponentESResponse>(API.risk.componentEs, fetcher, {
+  const { data: rawEsData, isLoading: loadingES, error: esError } =
+    useSWR<RawComponentESResponse>(API.risk.componentEs, fetcher, {
       revalidateOnFocus: false,
       dedupingInterval: 120_000,
     });
 
-  const { data: defenseData, isLoading: loadingDefense } =
-    useSWR<DefenseStatusResponse>(API.risk.defenseStatus, fetcher, {
+  const { data: rawDefenseData, isLoading: loadingDefense } =
+    useSWR<RawDefenseStatusResponse>(API.risk.defenseStatus, fetcher, {
       revalidateOnFocus: false,
       dedupingInterval: 60_000,
     });
+
+  /* ── Normalize backend responses to frontend shape ── */
+  const varData = normalizeVar(rawVarData);
+  const drawdownData = normalizeDrawdown(rawDrawdownData);
+  const stressData = normalizeStressTest(rawStressData);
+  const esData = normalizeComponentES(rawEsData);
+  const defenseData = normalizeDefenseStatus(rawDefenseData);
+
+  // Backend returns 400 when positions < 2 for component-es → esError will be set
+  const esInsufficientPositions =
+    esError != null || esData?.insufficientPositions === true;
 
   /* ── Derived values ── */
   const sharpe = analytics?.sharpe_ratio;
@@ -625,6 +839,10 @@ export default function RiskPage() {
                 <Skeleton key={i} className="h-8 w-full" />
               ))}
             </div>
+          ) : esInsufficientPositions ? (
+            <p className="text-sm text-slate-400 py-2">
+              포지션 2개 이상 필요. 리스크 기여도 분석은 분산 효과 측정을 위해 최소 2개 포지션이 필요합니다.
+            </p>
           ) : !esData?.components?.length ? (
             <p className="text-sm text-slate-400 py-2">
               기여도 데이터가 없습니다. 여러 포지션을 추가하면 리스크 기여도를 확인할 수 있습니다.
