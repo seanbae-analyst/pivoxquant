@@ -68,12 +68,14 @@ def search_stocks():
     # 2) FMP search API for US/global stocks
     import os
     fmp_key = os.environ.get("FMP_API_KEY", "")
+    fmp_ok = False
     if fmp_key:
         try:
             import requests as _req
             url = f"https://financialmodelingprep.com/api/v3/search?query={query}&limit=10&apikey={fmp_key}"
             resp = _req.get(url, timeout=5)
             if resp.status_code == 200:
+                fmp_ok = True
                 for item in resp.json():
                     sym = item.get("symbol", "")
                     if sym and sym not in seen:
@@ -85,8 +87,40 @@ def search_stocks():
                             "is_korean": False,
                         })
                         seen.add(sym)
+            else:
+                logger.warning(f"FMP search HTTP {resp.status_code}")
         except Exception as e:
             logger.warning(f"FMP search failed: {e}")
+
+    # 3) Fallback: match popular US tickers locally when FMP unavailable
+    if not fmp_ok:
+        _US_POPULAR = {
+            "AAPL": "Apple Inc.", "MSFT": "Microsoft Corp.", "GOOGL": "Alphabet Inc.",
+            "AMZN": "Amazon.com Inc.", "NVDA": "NVIDIA Corp.", "META": "Meta Platforms Inc.",
+            "TSLA": "Tesla Inc.", "NFLX": "Netflix Inc.", "AMD": "Advanced Micro Devices",
+            "INTC": "Intel Corp.", "AVGO": "Broadcom Inc.", "CRM": "Salesforce Inc.",
+            "ORCL": "Oracle Corp.", "QCOM": "Qualcomm Inc.", "ADBE": "Adobe Inc.",
+            "COST": "Costco Wholesale", "PEP": "PepsiCo Inc.", "KO": "The Coca-Cola Co.",
+            "DIS": "The Walt Disney Co.", "PYPL": "PayPal Holdings",
+            "BA": "Boeing Co.", "V": "Visa Inc.", "MA": "Mastercard Inc.",
+            "JPM": "JPMorgan Chase", "BAC": "Bank of America",
+            "WMT": "Walmart Inc.", "JNJ": "Johnson & Johnson",
+            "PG": "Procter & Gamble", "UNH": "UnitedHealth Group",
+            "XOM": "Exxon Mobil Corp.", "CVX": "Chevron Corp.",
+            "SPY": "SPDR S&P 500 ETF", "QQQ": "Invesco QQQ Trust",
+            "PLTR": "Palantir Technologies", "COIN": "Coinbase Global",
+            "SOFI": "SoFi Technologies", "UBER": "Uber Technologies",
+            "SNOW": "Snowflake Inc.", "SQ": "Block Inc.",
+        }
+        for sym, name_us in _US_POPULAR.items():
+            if sym in seen:
+                continue
+            if ql in sym.lower() or ql in name_us.lower():
+                results.append({
+                    "ticker": sym, "name": name_us,
+                    "exchange": "NASDAQ", "currency": "USD", "is_korean": False,
+                })
+                seen.add(sym)
 
     return jsonify({"results": results[:15]})
 

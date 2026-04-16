@@ -201,6 +201,7 @@ function AccountSection() {
 /* ── Subscription Section ── */
 
 function SubscriptionSection() {
+  const { user } = useAuth();
   const { data: subData, isLoading } = useSWR<SubscriptionResponse>(
     API.billing.subscription,
     fetcher,
@@ -209,7 +210,8 @@ function SubscriptionSection() {
   const t = useT();
   const { locale } = useLocale();
 
-  const tier = subData?.tier ?? "free";
+  // Prefer user.subscription_tier from auth (source of truth) over billing endpoint
+  const tier = user?.subscription_tier || subData?.tier || "free";
   const isPro = tier === "pro";
   const isPremium = tier === "premium";
   const isPaid = isPro || isPremium;
