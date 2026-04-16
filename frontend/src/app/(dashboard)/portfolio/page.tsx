@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { fmtUsd, fmtKrw, fmtPct, pnlColor } from "@/lib/format";
 import { usePortfolio } from "@/lib/hooks";
-import type { Position, LookupResult, PortfolioResponse } from "@/lib/types";
+import type { Position, LookupResult, SearchResult, PortfolioResponse } from "@/lib/types";
 import { ScoreBar } from "@/components/dashboard/score-bar";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -92,9 +92,9 @@ function SearchDropdown({
   isLoading,
   onSelect,
 }: {
-  results: LookupResult[];
+  results: SearchResult[];
   isLoading: boolean;
-  onSelect: (r: LookupResult) => void;
+  onSelect: (r: SearchResult) => void;
 }) {
   if (!isLoading && results.length === 0) return null;
 
@@ -107,47 +107,36 @@ function SearchDropdown({
         </div>
       ) : (
         <ul className="max-h-64 overflow-y-auto scrollbar-thin">
-          {results.map((r) => {
-            const hasPct = r.change_pct != null;
-            const isPositive = (r.change_pct ?? 0) >= 0;
-            return (
-              <li key={r.ticker}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(r)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
-                >
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-bold text-slate-900">
-                      {r.ticker}
+          {results.map((r) => (
+            <li key={r.ticker}>
+              <button
+                type="button"
+                onClick={() => onSelect(r)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+              >
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm font-bold text-slate-900">
+                    {r.ticker}
+                  </span>
+                  <span className="ml-2 text-xs text-slate-500 truncate">
+                    {r.name}
+                  </span>
+                </div>
+                <div className="text-right shrink-0">
+                  {r.exchange && (
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {r.exchange}
                     </span>
-                    <span className="ml-2 text-xs text-slate-500 truncate">
-                      {r.name}
+                  )}
+                  {r.is_korean && (
+                    <span className="ml-1 inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100">
+                      KR
                     </span>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-sm font-semibold tabular-nums text-slate-900">
-                      {r.price_display ??
-                        `$${r.price.toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}`}
-                    </span>
-                    {hasPct && (
-                      <span
-                        className={cn(
-                          "ml-2 text-xs font-semibold tabular-nums",
-                          isPositive ? "text-emerald-600" : "text-red-500",
-                        )}
-                      >
-                        {fmtPct(r.change_pct)}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              </li>
-            );
-          })}
+                  )}
+                </div>
+              </button>
+            </li>
+          ))}
         </ul>
       )}
     </div>
@@ -166,12 +155,13 @@ function AddPositionModal({
   onSuccess: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<LookupResult[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selected, setSelected] = useState<LookupResult | null>(null);
   const [shares, setShares] = useState("");
   const [avgCost, setAvgCost] = useState("");
+  const [avgCostTouched, setAvgCostTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -187,9 +177,10 @@ function AddPositionModal({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  /* Debounced search */
+  /* B1: Debounced fuzzy search via /api/search */
   const handleSearch = useCallback((value: string) => {
     setQuery(value);
+    setSelected(null);
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     if (value.trim().length < 1) {
@@ -204,19 +195,12 @@ function AddPositionModal({
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(API.market.lookup(value.trim()), {
+        const res = await fetch(API.market.search(value.trim()), {
           credentials: "include",
         });
         if (!res.ok) throw new Error("Search failed");
         const data = await res.json();
-        let parsed: LookupResult[] = [];
-        if (Array.isArray(data)) {
-          parsed = data;
-        } else if (data.results) {
-          parsed = data.results;
-        } else if (data.ticker) {
-          parsed = [data as LookupResult];
-        }
+        const parsed: SearchResult[] = data.results ?? [];
         setSearchResults(parsed);
         setShowDropdown(parsed.length > 0);
       } catch {
@@ -228,12 +212,37 @@ function AddPositionModal({
     }, 300);
   }, []);
 
-  const handleSelect = (r: LookupResult) => {
-    setSelected(r);
+  /* B1+B4: When user selects from dropdown, look up price via exact match */
+  const handleSelect = async (r: SearchResult) => {
     setQuery(r.ticker);
     setShowDropdown(false);
     setSearchResults([]);
-    if (!avgCost) setAvgCost(r.price.toString());
+
+    try {
+      const res = await fetch(API.market.lookup(r.ticker), {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ticker) {
+          const lookup = data as LookupResult;
+          setSelected(lookup);
+          /* B2: Only auto-fill avgCost if user has NOT manually typed one */
+          if (!avgCostTouched) setAvgCost(lookup.price.toString());
+          return;
+        }
+      }
+    } catch {
+      /* lookup failed, proceed with search result only */
+    }
+    /* Fallback: use search result without price */
+    setSelected({
+      ticker: r.ticker,
+      name: r.name,
+      price: 0,
+      currency: r.currency,
+      is_korean: r.is_korean,
+    });
   };
 
   const handleSubmit = async () => {
@@ -305,6 +314,9 @@ function AddPositionModal({
     }
   };
 
+  /* B3: Determine currency symbol for selected stock */
+  const selectedCurrency = selected?.is_korean ? "KRW" : (selected?.currency === "KRW" ? "KRW" : "USD");
+
   return (
     <ModalOverlay onClose={onClose}>
       <div
@@ -340,7 +352,7 @@ function AddPositionModal({
               onFocus={() => {
                 if (searchResults.length > 0) setShowDropdown(true);
               }}
-              placeholder="티커 또는 종목명 검색..."
+              placeholder="티커, 종목명, 한글명 검색... (예: nvidia, 삼성전자)"
               className={cn(
                 "w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4",
                 "text-sm text-slate-900 placeholder:text-slate-400",
@@ -357,24 +369,45 @@ function AddPositionModal({
           )}
         </div>
 
-        {/* Selected stock preview */}
-        {selected && (
+        {/* B3: Selected stock preview with correct currency symbol */}
+        {selected && selected.price > 0 && (
           <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-center justify-between">
-              <div>
+              <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-900">
                   {selected.ticker}
                 </span>
-                <span className="ml-2 text-xs text-slate-500">
+                <span className="text-xs text-slate-500 truncate">
                   {selected.name}
                 </span>
+                {selected.is_korean && (
+                  <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100">
+                    KR
+                  </span>
+                )}
               </div>
               <span className="text-sm font-semibold tabular-nums text-slate-900">
-                ${selected.price.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {formatPrice(selected.price, selectedCurrency as "USD" | "KRW")}
               </span>
+            </div>
+          </div>
+        )}
+
+        {/* Selected but no price yet */}
+        {selected && selected.price === 0 && (
+          <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-900">
+                {selected.ticker}
+              </span>
+              <span className="text-xs text-slate-500 truncate">
+                {selected.name}
+              </span>
+              {selected.is_korean && (
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100">
+                  KR
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -401,12 +434,15 @@ function AddPositionModal({
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-600 mb-1.5 block">
-              평균 단가
+              평균 단가 ({selectedCurrency === "KRW" ? "\u20A9" : "$"})
             </label>
             <input
               type="number"
               value={avgCost}
-              onChange={(e) => setAvgCost(e.target.value)}
+              onChange={(e) => {
+                setAvgCost(e.target.value);
+                setAvgCostTouched(true);
+              }}
               placeholder="0.00"
               min="0"
               step="any"
