@@ -173,7 +173,11 @@ function MetricCell({
 
 export default function StockDetailPage() {
   const params = useParams<{ ticker: string }>();
-  const ticker = (params.ticker ?? "").toUpperCase();
+  // Korean tickers arrive as bare 6-digit codes (e.g. "005930") but the
+  // SignalCache / backend expects the Yahoo-style ".KS" suffix. Normalize
+  // here so every downstream fetch hits the right key.
+  const raw = (params.ticker ?? "").toUpperCase();
+  const ticker = /^\d{6}$/.test(raw) ? `${raw}.KS` : raw;
 
   const [chartPeriod, setChartPeriod] = useState("1M");
 

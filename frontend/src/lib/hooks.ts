@@ -22,6 +22,7 @@ import type {
   AlertsResponse,
   MorningBriefResponse,
   MorningBriefArchiveResponse,
+  FxRateResponse,
 } from "./types";
 
 const fetcher = async (url: string) => {
@@ -157,6 +158,43 @@ export function useAiCoaching() {
   }, []);
 
   return { data, error, isLoading, refresh };
+}
+
+/* ── FX Rate ── */
+
+/**
+ * Live USD/KRW exchange rate. Polls every 30 seconds for near-realtime
+ * cross-currency math. The backend scheduler refreshes the underlying
+ * rate every 1 minute, so this cadence surfaces updates within ~30s of
+ * the upstream fetch while staying cheap (memory-only on the server).
+ *
+ * Falls back to 1400 if the endpoint is unreachable.
+ *
+ * Returns:
+ *   rate: current USD→KRW rate (number)
+ *   stale: true if backend reports the rate is > 10 minutes old
+ *   lastUpdated: ISO-8601 UTC timestamp of the last successful upstream fetch
+ *   ageSeconds: seconds since last successful fetch (-1 if never)
+ *   isLoading / error: SWR state flags
+ */
+export function useFxRate() {
+  const { data, error, isLoading } = useSWR<FxRateResponse>(
+    API.market.fx,
+    fetcher,
+    {
+      refreshInterval: 30_000,    // 30s — tighter than backend cadence for snappy UI
+      dedupingInterval: 15_000,   // block duplicate in-flight requests within 15s
+      revalidateOnFocus: true,    // refresh when user returns to the tab
+    },
+  );
+  return {
+    rate: data?.usd_krw ?? 1400,
+    stale: data?.is_stale ?? data?.stale ?? false,
+    lastUpdated: data?.last_updated ?? null,
+    ageSeconds: data?.age_seconds ?? -1,
+    isLoading,
+    error,
+  };
 }
 
 /* ── Watchlist ── */

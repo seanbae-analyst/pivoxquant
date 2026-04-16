@@ -565,3 +565,27 @@ export interface WhatIfErrorResponse {
 }
 
 export type WhatIfResponse = WhatIfSuccessResponse | WhatIfErrorResponse;
+
+/* ── FX Rate ── */
+
+/**
+ * Response shape for GET /api/market/fx.
+ * Backend scheduler refreshes the underlying rate every 1 minute; frontend
+ * should poll at ~30s intervals with `useFxRate()` to stay near-realtime.
+ */
+export interface FxRateResponse {
+  ok: true;
+  usd_krw: number;
+  /** ISO-8601 UTC timestamp of the last successful upstream fetch. Null when never fetched. */
+  last_updated: string | null;
+  /** Unix epoch timestamp (float) of the last successful fetch. 0 when never fetched. */
+  last_updated_ts: number;
+  /** Seconds since last successful fetch. -1 when never fetched. */
+  age_seconds: number;
+  /** True when the cached rate is older than 10 minutes (degraded display recommended). */
+  is_stale: boolean;
+  /** Deprecated alias for is_stale — kept for backward compatibility. */
+  stale: boolean;
+  /** Expected refresh cadence hint (seconds). */
+  ttl_seconds: number;
+}

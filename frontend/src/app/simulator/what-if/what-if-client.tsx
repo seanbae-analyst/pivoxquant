@@ -81,7 +81,22 @@ function buildQuery(s: WhatIfFormState): string {
 /* ── SWR fetcher ── */
 
 const fetcher = async (url: string): Promise<WhatIfResponse> => {
-  const res = await fetch(url, { credentials: "include" });
+  // The SWR key embeds a cache-buster (`&_t=…`) so that clicking "Calculate"
+  // with identical inputs still produces a new key and bypasses dedupe.
+  // Strip it before hitting the backend — it's a client-only signal.
+  let requestUrl = url;
+  try {
+    const u = new URL(url, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+    if (u.searchParams.has("_t")) {
+      u.searchParams.delete("_t");
+      requestUrl = u.pathname + (u.searchParams.toString() ? `?${u.searchParams.toString()}` : "");
+    }
+  } catch {
+    // Fallback: regex strip
+    requestUrl = url.replace(/([?&])_t=\d+(&|$)/, (_m, p1, p2) => (p2 === "&" ? p1 : ""))
+      .replace(/[?&]$/, "");
+  }
+  const res = await fetch(requestUrl, { credentials: "include" });
   // Backend may return 200 with {success:false,...} OR non-2xx — handle both.
   const body = await res.json().catch(() => null);
   if (!body) {
@@ -140,12 +155,20 @@ export function WhatIfClient() {
 
   const swrKey = useMemo(() => {
     if (!activeQuery) return null;
-    return API.simulate.counterfactual({
+    const base = API.simulate.counterfactual({
       ticker: form.ticker,
       start_date: form.startDate,
       amount: form.amount,
       recurring: form.recurring,
     });
+    // `activeQuery` may carry a `_t=…` cache-buster appended by onSubmit()
+    // when the user re-submits identical inputs. Append it to the SWR key
+    // so the key differs, bypassing dedupe — the fetcher then strips it
+    // before calling the backend.
+    const tMatch = activeQuery.match(/(?:^|&)_t=(\d+)/);
+    if (!tMatch) return base;
+    const sep = base.includes("?") ? "&" : "?";
+    return `${base}${sep}_t=${tMatch[1]}`;
   }, [activeQuery, form]);
 
   const { data, error, isLoading, isValidating } = useSWR<WhatIfResponse>(
@@ -165,12 +188,17 @@ export function WhatIfClient() {
     const q = buildQuery(form);
     shouldScrollOnNextResultRef.current = true;
     // Always trigger a re-fetch, even if the query string is identical
-    // (force new SWR key via timestamp suffix that we strip in the fetcher key).
-    setActiveQuery(q);
+    // (force new SWR key via timestamp suffix that we strip in the fetcher).
+    // Without this, clicking "Calculate" twice with the same inputs falls
+    // inside SWR's 60s dedupingInterval and the result silently never
+    // refreshes — which was the whole B7 symptom ("nothing happens").
+    const keyed = `${q}&_t=${Date.now()}`;
+    setActiveQuery(keyed);
     // Update the URL WITHOUT an App Router navigation. router.push triggers
     // an RSC roundtrip which, under certain edge conditions (auth guard,
     // middleware locale cookie set), was causing the page to bounce to /home
     // or /portfolio. history.replaceState is safe: it updates the bar only.
+    // We omit `_t` from the visible URL — it's purely a client-side key.
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", `/simulator/what-if?${q}`);
     }
@@ -181,7 +209,10 @@ export function WhatIfClient() {
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
     if (!activeQuery) return `${window.location.origin}/simulator/what-if`;
-    return `${window.location.origin}/simulator/what-if?${activeQuery}`;
+    // Strip the client-side `_t=…` cache-buster from the shared URL so
+    // recipients don't see (or preserve) a meaningless timestamp.
+    const visible = activeQuery.replace(/(?:^|&)_t=\d+/, "").replace(/^&/, "");
+    return `${window.location.origin}/simulator/what-if?${visible}`;
   }, [activeQuery]);
 
   const success: WhatIfSuccessResponse | null =
