@@ -52,6 +52,26 @@ KOREAN_NAMES = {
     "377300.KS": "Kakao Pay", "403550.KS": "Kakao Bank",
 }
 
+# Korean stock sector mapping (FMP often returns empty sector for KR tickers on free tier)
+KOREAN_SECTORS = {
+    "005930.KS": "Technology", "000660.KS": "Technology",
+    "035420.KS": "Communication Services", "035720.KS": "Communication Services",
+    "005380.KS": "Consumer Cyclical", "000270.KS": "Consumer Cyclical",
+    "005490.KS": "Basic Materials", "051910.KS": "Basic Materials",
+    "066570.KS": "Technology", "068270.KS": "Healthcare",
+    "373220.KS": "Industrials", "207940.KS": "Healthcare",
+    "003550.KS": "Industrials", "096770.KS": "Energy",
+    "017670.KS": "Communication Services", "030200.KS": "Communication Services",
+    "105560.KS": "Financial Services", "086790.KS": "Financial Services",
+    "055550.KS": "Financial Services", "000810.KS": "Financial Services",
+    "032830.KS": "Financial Services", "009150.KS": "Technology",
+    "028260.KS": "Industrials", "010140.KS": "Industrials",
+    "047050.KS": "Communication Services", "263750.KS": "Communication Services",
+    "035900.KQ": "Communication Services", "041510.KQ": "Communication Services",
+    "122870.KQ": "Communication Services", "352820.KS": "Communication Services",
+    "377300.KS": "Financial Services", "403550.KS": "Financial Services",
+}
+
 # ── Sentiment Word Lists ───────────────────────────────────────────────────────
 BULLISH_WORDS = {
     "beat", "beats", "surge", "surges", "soar", "soars", "rally",
@@ -834,7 +854,7 @@ Reply ONLY in this exact JSON format, nothing else:
                 "debt_equity":    info.get("debtToEquity"),
                 "week52_high":    round(float(hist["High"].max()), dp),
                 "week52_low":     round(float(hist["Low"].min()), dp),
-                "sector":         info.get("sector", "Unknown"),
+                "sector":         (info.get("sector") or KOREAN_SECTORS.get(ticker.upper(), "Unknown")) if is_kr else info.get("sector", "Unknown"),
                 "industry":       info.get("industry", "Unknown"),
                 "beta":           info.get("beta"),
                 "currency":       curr,

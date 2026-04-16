@@ -466,20 +466,25 @@ def company_profile(ticker):
     ticker = ticker.strip().upper()
     if ticker.isdigit() and len(ticker) == 6:
         ticker += ".KS"
+    is_korean = ticker.endswith(".KS") or ticker.endswith(".KQ")
     try:
         import fmp_service as fmp
         info = fmp.get_info(ticker)
+        sector = info.get("sector", "")
+        if is_korean and not sector:
+            from data_fetcher import KOREAN_SECTORS
+            sector = KOREAN_SECTORS.get(ticker, "")
         return jsonify({
             "ticker": ticker,
             "name": info.get("shortName", ticker),
             "summary": info.get("longBusinessSummary", ""),
-            "sector": info.get("sector", ""),
+            "sector": sector,
             "industry": info.get("industry", ""),
             "website": info.get("website", ""),
             "employees": info.get("fullTimeEmployees"),
             "country": info.get("country", ""),
             "market_cap": info.get("marketCap"),
-            "currency": "KRW" if ticker.endswith(".KS") or ticker.endswith(".KQ") else "USD",
+            "currency": "KRW" if is_korean else "USD",
         })
     except Exception as e:
         logger.error(f"Profile error {ticker}: {e}")
