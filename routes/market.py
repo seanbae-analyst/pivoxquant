@@ -10,6 +10,7 @@ from extensions import db
 from models import Position, SignalCache
 from services import fx_service
 from services.container import engine, fetcher, realtime
+from services.market_status import get_market_status
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -260,52 +261,9 @@ def get_news(ticker):
 
 
 @market_bp.route("/market/status")
-@api_auth
-def market_status():
-    from zoneinfo import ZoneInfo
-    now_utc = datetime.utcnow().replace(tzinfo=ZoneInfo("UTC"))
-
-    US_HOLIDAYS = {
-        "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03",
-        "2026-05-25", "2026-07-03", "2026-09-07", "2026-11-26", "2026-12-25",
-    }
-    KR_HOLIDAYS = {
-        "2026-01-01", "2026-01-28", "2026-01-29", "2026-01-30",
-        "2026-03-01", "2026-05-05", "2026-05-24", "2026-06-06",
-        "2026-08-15", "2026-09-24", "2026-09-25", "2026-09-26",
-        "2026-10-03", "2026-10-09", "2026-12-25",
-    }
-
-    et = now_utc.astimezone(ZoneInfo("America/New_York"))
-    us_min = et.hour * 60 + et.minute
-    us_date = et.strftime("%Y-%m-%d")
-    if et.weekday() >= 5 or us_date in US_HOLIDAYS:
-        us_status = "CLOSED"
-        us_label = "Holiday" if us_date in US_HOLIDAYS else "Weekend"
-    elif 570 <= us_min < 960:
-        us_status, us_label = "OPEN", "Market Open"
-    elif 240 <= us_min < 570:
-        us_status, us_label = "PRE_MARKET", "Pre-Market"
-    elif 960 <= us_min < 1200:
-        us_status, us_label = "AFTER_HOURS", "After Hours"
-    else:
-        us_status, us_label = "CLOSED", "Closed"
-
-    kst = now_utc.astimezone(ZoneInfo("Asia/Seoul"))
-    kr_min = kst.hour * 60 + kst.minute
-    kr_date = kst.strftime("%Y-%m-%d")
-    if kst.weekday() >= 5 or kr_date in KR_HOLIDAYS:
-        kr_status = "CLOSED"
-        kr_label = "Holiday" if kr_date in KR_HOLIDAYS else "Weekend"
-    elif 540 <= kr_min < 930:
-        kr_status, kr_label = "OPEN", "Market Open"
-    else:
-        kr_status, kr_label = "CLOSED", "Closed"
-
-    return jsonify({
-        "us": {"status": us_status, "label": us_label, "time": et.strftime("%H:%M ET")},
-        "kr": {"status": kr_status, "label": kr_label, "time": kst.strftime("%H:%M KST")},
-    })
+def market_status_route():
+    """Public endpoint — KST-based market status for US + KR (tradable + next event)."""
+    return jsonify(get_market_status())
 
 
 @market_bp.route("/chart/<ticker>")
