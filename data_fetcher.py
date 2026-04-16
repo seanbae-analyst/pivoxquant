@@ -502,6 +502,67 @@ Reply ONLY in this exact JSON format, nothing else:
         fx_data = fx_future.result(timeout=15)
         btc_data = btc_future.result(timeout=15)
 
+        # ── yfinance fallback for FMP-gated symbols ───────────────────────────
+        # FMP free/starter tier returns 402 for ^GSPC/^IXIC/^DJI/^VIX/^TNX/etc.
+        # Fill missing index/stock quotes via yfinance (no API key required).
+        YF_FALLBACK_MAP = {
+            "^GSPC": "^GSPC", "^IXIC": "^IXIC", "^DJI": "^DJI",
+            "^RUT": "^RUT", "^VIX": "^VIX", "^TNX": "^TNX",
+            "^IRX": "^IRX", "^TYX": "^TYX",
+        }
+        YF_STOCK_MAP = {"GLD": "GLD", "USO": "USO", "SLV": "SLV", "UUP": "UUP"}
+        YF_FX_MAP = {"USDKRW": "KRW=X", "EURUSD": "EURUSD=X", "USDJPY": "JPY=X"}
+
+        missing_idx = [s for s in index_syms if s not in idx_data]
+        missing_stk = [s for s in stock_syms if s not in stk_data]
+        missing_fx = [p for p in fx_pairs if p not in fx_data]
+        need_btc = not btc_data
+
+        if missing_idx or missing_stk or missing_fx or need_btc:
+            try:
+                import yfinance as yf
+
+                def _yf_quote(yf_sym):
+                    try:
+                        t = yf.Ticker(yf_sym)
+                        info = t.fast_info
+                        price = info.get("last_price") or info.get("lastPrice")
+                        prev = info.get("previous_close") or info.get("previousClose")
+                        if price is None:
+                            return None
+                        chg_pct = ((price - prev) / prev * 100) if prev else 0
+                        return (float(price), float(chg_pct))
+                    except Exception:
+                        return None
+
+                for sym in missing_idx:
+                    yf_sym = YF_FALLBACK_MAP.get(sym)
+                    if yf_sym:
+                        val = _yf_quote(yf_sym)
+                        if val:
+                            idx_data[sym] = val
+
+                for sym in missing_stk:
+                    yf_sym = YF_STOCK_MAP.get(sym)
+                    if yf_sym:
+                        val = _yf_quote(yf_sym)
+                        if val:
+                            stk_data[sym] = val
+
+                for pair in missing_fx:
+                    yf_sym = YF_FX_MAP.get(pair)
+                    if yf_sym:
+                        val = _yf_quote(yf_sym)
+                        if val:
+                            fx_data[pair] = val[0]
+
+                if need_btc:
+                    val = _yf_quote("BTC-USD")
+                    if val:
+                        btc_data = {"price": val[0], "changesPercentage": val[1]}
+            except Exception as _yf_err:
+                logger.warning(f"yfinance fallback failed: {_yf_err}")
+
         # Equity indices
         for sym, key in [("^GSPC","sp500"),("^IXIC","nasdaq"),("^DJI","dow"),("^RUT","russell2000")]:
             if sym in idx_data:

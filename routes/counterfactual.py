@@ -25,6 +25,8 @@ from datetime import date, datetime, timedelta
 
 from flask import Blueprint, jsonify, request
 
+from services.fx_service import get_rate as _fx_get_rate
+
 logger = logging.getLogger(__name__)
 
 counterfactual_bp = Blueprint("counterfactual", __name__, url_prefix="/api/simulate")
@@ -475,6 +477,20 @@ def counterfactual():
     start_raw = (request.args.get("start_date") or "").strip()
     amount_raw = request.args.get("amount")
     recurring_raw = (request.args.get("recurring") or "none").strip().lower()
+    # Optional: user-facing currency of the `amount` input. When provided and
+    # it differs from the ticker's native listing currency, we FX-convert the
+    # amount before buying shares — otherwise a 5_000_000 "KRW" input against
+    # an NVDA (USD) ticker would be interpreted as $5M and inflate shares by
+    # ~1,475× (the KRW/USD rate). Response values are emitted in this
+    # user-facing currency so the UI reads naturally.
+    # TODO(fx-historical): uses CURRENT USD/KRW rate for both amount ingress
+    # and value egress — a 2020 amount should ideally be converted at the
+    # 2020 rate. Until we wire historical FX (fmp_service has the endpoint),
+    # the residual error is a per-unit ratio on the USD/KRW drift since the
+    # start date (single-digit % typically) — vastly smaller than the
+    # 1,475× bug this replaces.
+    user_currency_raw = (request.args.get("currency") or "").strip().upper()
+    user_currency: str | None = user_currency_raw if user_currency_raw in ("KRW", "USD") else None
 
     # ── Validation ────────────────────────────────────────────────
     if not ticker_raw:
@@ -526,7 +542,10 @@ def counterfactual():
         recurring = "none"
 
     # ── Cache check ───────────────────────────────────────────────
-    cache_key = (ticker, start.isoformat(), round(amount, 2), recurring)
+    # user_currency is part of the key because it controls both the
+    # native-amount derivation (shares count) and the response egress
+    # currency — two distinct payloads for the same ticker/date/amount.
+    cache_key = (ticker, start.isoformat(), round(amount, 2), recurring, user_currency)
     cached = _cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
@@ -575,9 +594,32 @@ def counterfactual():
             },
         )
 
+    # ── Currency normalization ────────────────────────────────────
+    # `amount` comes in the user's requested currency (user_currency). The
+    # price series is in the ticker's native listing currency. Convert the
+    # amount to native BEFORE computing shares so shares = amount_native /
+    # price yields a sane count regardless of (user currency, ticker
+    # currency) combination.
+    native_currency = "KRW" if _is_korean(ticker) else "USD"
+    effective_user_currency = user_currency or native_currency
+    fx_rate = None
+    amount_native = amount
+    if user_currency and user_currency != native_currency:
+        fx_rate = _fx_get_rate()  # USD → KRW (e.g., 1380)
+        if not fx_rate or fx_rate <= 0:
+            return _error(
+                "DATA_UNAVAILABLE",
+                "환율 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+                http=503,
+            )
+        if user_currency == "KRW" and native_currency == "USD":
+            amount_native = amount / fx_rate
+        elif user_currency == "USD" and native_currency == "KRW":
+            amount_native = amount * fx_rate
+
     # ── Core simulation ───────────────────────────────────────────
     chart_data, invested_total, shares_total, first_buy_price, first_buy_date = \
-        _compute_shares_series(hist, start, amount, recurring)
+        _compute_shares_series(hist, start, amount_native, recurring)
 
     if not chart_data or not invested_total:
         return _error(
@@ -588,6 +630,9 @@ def counterfactual():
 
     end_point = chart_data[-1]
     end_value = end_point["value"]
+    # return_pct is currency-invariant (ratio of end/invested), so it's safe
+    # to compute in native space — no re-conversion needed when we later
+    # present invested/end_value in user_currency.
     return_pct = (end_value - invested_total) / invested_total * 100.0
 
     # CAGR for display (only meaningful for ≥ 30 day windows)
@@ -599,28 +644,58 @@ def counterfactual():
         except (ValueError, ZeroDivisionError, OverflowError):
             annualized = None
 
-    # Milestones anchored to FIRST DAY's stake (amount if lump, amount if DCA first buy)
-    milestones = _extract_milestones(chart_data, amount)
+    # Milestones anchored to FIRST DAY's native stake (DCA first buy size).
+    # amount_native matches chart_data[*].value currency, so labels like
+    # "원금 2배" compare correctly.
+    milestones = _extract_milestones(chart_data, amount_native)
 
-    # Benchmark — always include so the frontend can render "+$X vs S&P 500"
+    # Benchmark — always include so the frontend can render "+$X vs S&P 500".
+    # Pass amount_native so the benchmark buys shares of SPY/KOSPI in the
+    # benchmark's own native price series. The benchmark's native currency
+    # matches native_currency here (SPY → USD for US tickers, ^KS11 → KRW
+    # for KR tickers), so results are directly comparable.
     bench_ticker = _benchmark_ticker_for(ticker)
     benchmark_payload = None
     if bench_ticker.upper() != ticker.upper():
-        bench = _simulate_benchmark(bench_ticker, start, amount, recurring, period_key)
+        bench = _simulate_benchmark(bench_ticker, start, amount_native, recurring, period_key)
         if bench:
-            diff_value = end_value - bench["end_value"]
+            diff_value_native = end_value - bench["end_value"]
             diff_pct = return_pct - bench["return_pct"]
             benchmark_payload = {
-                **bench,
-                "diff_value": round(diff_value, 2),
+                "ticker": bench["ticker"],
+                "end_value": round(_to_user_ccy(bench["end_value"], user_currency, native_currency, fx_rate), 2),
+                "return_pct": bench["return_pct"],
+                "total_invested": round(_to_user_ccy(bench["total_invested"], user_currency, native_currency, fx_rate), 2),
+                "diff_value": round(_to_user_ccy(diff_value_native, user_currency, native_currency, fx_rate), 2),
                 "diff_pct": round(diff_pct, 2),
             }
 
-    # Downsample chart
-    chart_data_out = _downsample(chart_data, _MAX_CHART_POINTS)
+    # Downsample chart (still in native currency at this point)
+    chart_data_native = _downsample(chart_data, _MAX_CHART_POINTS)
+    # Re-project chart values into user_currency for UI rendering. Prices
+    # stay in native (they're a reference; the chart plots portfolio VALUE).
+    if user_currency and user_currency != native_currency and fx_rate:
+        chart_data_out = [
+            {
+                **pt,
+                "invested": round(_to_user_ccy(pt["invested"], user_currency, native_currency, fx_rate), 2),
+                "value": round(_to_user_ccy(pt["value"], user_currency, native_currency, fx_rate), 2),
+            }
+            for pt in chart_data_native
+        ]
+        milestones_out = [
+            {**m, "portfolio_value": round(_to_user_ccy(m["portfolio_value"], user_currency, native_currency, fx_rate), 2)}
+            for m in milestones
+        ]
+    else:
+        chart_data_out = chart_data_native
+        milestones_out = milestones
 
-    currency = "KRW" if _is_korean(ticker) else "USD"
-    recurring_amount = amount if recurring != "none" else 0
+    # Top-level scalars in user_currency
+    invested_total_out = _to_user_ccy(invested_total, user_currency, native_currency, fx_rate)
+    end_value_out = _to_user_ccy(end_value, user_currency, native_currency, fx_rate)
+    amount_initial_out = amount  # user's original input — already in user_currency
+    recurring_amount_out = amount if recurring != "none" else 0
 
     payload = {
         "success": True,
@@ -629,23 +704,42 @@ def counterfactual():
         "first_buy_date": first_buy_date.isoformat(),
         "end_date": end_point["date"],
         "recurring": recurring,
-        "recurring_amount": round(recurring_amount, 2),
-        "amount_initial": round(amount, 2),
-        "total_invested": round(invested_total, 2),
-        "end_value": round(end_value, 2),
-        "profit_loss": round(end_value - invested_total, 2),
+        "recurring_amount": round(recurring_amount_out, 2),
+        "amount_initial": round(amount_initial_out, 2),
+        "total_invested": round(invested_total_out, 2),
+        "end_value": round(end_value_out, 2),
+        "profit_loss": round(end_value_out - invested_total_out, 2),
         "return_pct": round(return_pct, 2),
         "annualized_return_pct": round(annualized, 2) if annualized is not None else None,
         "duration_days": (date.fromisoformat(end_point["date"]) - first_buy_date).days,
         "shares_total": round(shares_total, 6),
         "first_buy_price": round(first_buy_price, 4),
         "last_price": round(end_point["price"], 4),
-        "currency": currency,
+        "currency": effective_user_currency,
+        "native_currency": native_currency,
+        "fx_rate": round(fx_rate, 4) if fx_rate else None,
         "chart_data": chart_data_out,
-        "milestones": milestones,
+        "milestones": milestones_out,
         "benchmark": benchmark_payload,
         "disclaimers": DISCLAIMERS,
     }
 
     _cache_set(cache_key, payload)
     return jsonify(payload)
+
+
+def _to_user_ccy(value_native: float, user_ccy: str | None, native_ccy: str, fx_rate: float | None) -> float:
+    """Convert a native-currency amount into the user-facing currency.
+
+    - If user did not specify a currency, or it matches native, return as-is.
+    - KRW↔USD conversion uses the current USD/KRW rate from fx_service.
+      (See TODO(fx-historical) near the parsing block for the caveat about
+      point-in-time rates.)
+    """
+    if not user_ccy or user_ccy == native_ccy or not fx_rate or fx_rate <= 0:
+        return value_native
+    if user_ccy == "KRW" and native_ccy == "USD":
+        return value_native * fx_rate
+    if user_ccy == "USD" and native_ccy == "KRW":
+        return value_native / fx_rate
+    return value_native

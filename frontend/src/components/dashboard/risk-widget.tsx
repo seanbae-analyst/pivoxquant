@@ -48,9 +48,10 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
 interface RiskWidgetProps {
   analytics: AnalyticsResponse | undefined;
   isLoading: boolean;
+  hasPositions?: boolean;
 }
 
-export function RiskWidget({ analytics, isLoading }: RiskWidgetProps) {
+export function RiskWidget({ analytics, isLoading, hasPositions = true }: RiskWidgetProps) {
   if (isLoading) {
     return (
       <div className="sp-card p-5 space-y-4">
@@ -62,6 +63,27 @@ export function RiskWidget({ analytics, isLoading }: RiskWidgetProps) {
             <Skeleton className="h-3 w-32" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!hasPositions) {
+    return (
+      <div className="sp-card p-5 flex flex-col">
+        <h3 className="text-base font-bold text-slate-900 mb-4">
+          리스크 방어
+        </h3>
+        <div className="flex-1 flex items-center justify-center py-6">
+          <p className="text-sm text-slate-400 text-center">
+            포지션이 없습니다 — 리스크 분석 대기중
+          </p>
+        </div>
+        <Link
+          href="/portfolio"
+          className="mt-auto text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors self-start"
+        >
+          포지션 추가 &rarr;
+        </Link>
       </div>
     );
   }

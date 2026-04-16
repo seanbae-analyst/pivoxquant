@@ -216,6 +216,7 @@ export function TopBar() {
   /* ───────────── Profile Dropdown ───────────── */
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement | null>(null);
+  const [avatarError, setAvatarError] = useState(false);
 
   function toggleProfile() {
     setProfileOpen((prev) => !prev);
@@ -346,12 +347,13 @@ export function TopBar() {
               type="button"
               onClick={toggleProfile}
             >
-              {user?.avatar_url ? (
+              {user?.avatar_url && !avatarError ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={user.avatar_url}
                   alt={user.name || "User"}
                   className="h-8 w-8 rounded-lg object-cover"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-900 text-xs font-semibold text-white">

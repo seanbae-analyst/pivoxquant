@@ -170,7 +170,7 @@ function AccountSection() {
           <div className="flex items-center justify-between px-4 py-3.5">
             <span className="text-sm text-slate-500">{t("settings.account.loginMethod")}</span>
             <span className="text-sm font-medium text-slate-700 capitalize">
-              {user.oauth_provider}
+              {user.oauth_provider === "kakao" ? "카카오" : user.oauth_provider}
             </span>
           </div>
         )}
