@@ -188,9 +188,10 @@ class RealtimeService:
         try:
             from alpaca.data.requests import (
                 StockLatestTradeRequest,
+                StockLatestQuoteRequest,
                 StockLatestBarRequest,
             )
-            # Prefer latest trade (actual print, ~real-time during RTH).
+            # Latest trade (actual print, but RTH-only).
             trade_price = None
             trade_ts = None
             try:
@@ -199,18 +200,45 @@ class RealtimeService:
                 trade = trades.get(ticker) if trades else None
                 if trade and getattr(trade, "price", 0):
                     trade_price = float(trade.price)
-                    trade_ts = trade.timestamp.isoformat() if getattr(trade, "timestamp", None) else None
+                    trade_ts = trade.timestamp
             except Exception as te:
                 logger.debug(f"Alpaca latest trade failed {ticker}: {te}")
 
-            # Bar gives OHLC + volume context regardless.
+            # Latest quote — captures pre-market / after-hours via bid/ask.
+            quote_price = None
+            quote_ts = None
+            try:
+                q_req = StockLatestQuoteRequest(symbol_or_symbols=[ticker])
+                quotes = self.alpaca_client.get_stock_latest_quote(q_req)
+                quote = quotes.get(ticker) if quotes else None
+                if quote:
+                    bid = float(getattr(quote, "bid_price", 0) or 0)
+                    ask = float(getattr(quote, "ask_price", 0) or 0)
+                    if bid > 0 and ask > 0:
+                        quote_price = (bid + ask) / 2
+                    elif bid > 0:
+                        quote_price = bid
+                    elif ask > 0:
+                        quote_price = ask
+                    quote_ts = getattr(quote, "timestamp", None)
+            except Exception as qe:
+                logger.debug(f"Alpaca latest quote failed {ticker}: {qe}")
+
+            # Bar for OHLC.
             req = StockLatestBarRequest(symbol_or_symbols=[ticker])
             bars = self.alpaca_client.get_stock_latest_bar(req)
             bar = bars.get(ticker)
-            if bar is None and trade_price is None:
+            if bar is None and trade_price is None and quote_price is None:
                 return None
 
-            price = trade_price if trade_price is not None else float(bar.close)
+            # Pick freshest source: extended-hours quote often beats stale trade.
+            price = trade_price if trade_price is not None else float(bar.close) if bar else quote_price
+            if quote_price is not None and quote_ts is not None and trade_ts is not None:
+                if quote_ts > trade_ts:
+                    price = quote_price
+                    trade_ts = quote_ts
+            elif trade_price is None and quote_price is not None:
+                price = quote_price
             return {
                 "ticker": ticker,
                 "price": round(price, 2),
