@@ -1,5 +1,6 @@
 export function fmtUsd(v: number | null | undefined): string {
   const n = v ?? 0;
+  if (!isFinite(n)) return "$\u2014";
   return n.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
@@ -9,11 +10,14 @@ export function fmtUsd(v: number | null | undefined): string {
 }
 
 export function fmtKrw(v: number | null | undefined): string {
-  return "₩" + Math.round(v ?? 0).toLocaleString("ko-KR");
+  const n = v ?? 0;
+  if (!isFinite(n)) return "₩\u2014";
+  return "₩" + Math.round(n).toLocaleString("ko-KR");
 }
 
 export function fmtPct(v: number | null | undefined): string {
   const n = v ?? 0;
+  if (!isFinite(n)) return "\u2014";
   const s = n >= 0 ? "+" : "";
   return `${s}${n.toFixed(2)}%`;
 }
