@@ -9,7 +9,7 @@ from extensions import db
 from models import Position, SignalCache, TradeHistory
 from security import trade_rate_limit
 from services.serializers import serialize_user
-from services import fx_service, cache_service
+from services import fx_service, cache_service, kr_stock_registry
 from services.container import engine, fetcher, realtime
 from .decorators import api_auth
 
@@ -63,6 +63,14 @@ def get_portfolio():
             krw_value = cur_px * fx_service.get_rate() * p.shares
             krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
 
+        # Prefer cache name, fall back to KR registry (covers 2.7k KRX listings
+        # when SignalCache is cold so UI can render 회사명 instead of bare ticker).
+        display_name = sd.get("name")
+        if not display_name and is_kr:
+            display_name = kr_stock_registry.get_name(p.ticker) or p.ticker
+        if not display_name:
+            display_name = p.ticker
+
         out.append({
             "id": p.id, "ticker": p.ticker, "shares": p.shares,
             "avg_cost": p.avg_cost, "price": cur_px, "current_price": cur_px,
@@ -77,7 +85,7 @@ def get_portfolio():
             "rec_shares": sd.get("rec_shares", 0),
             "rec_investment": sd.get("rec_investment", 0),
             "rec_timing": sd.get("rec_timing", ""),
-            "name": sd.get("name", p.ticker),
+            "name": display_name,
             "sector": sd.get("sector", "Unknown"),
             "currency": cur, "is_korean": sd.get("is_korean", is_kr),
             "sell_pct": sd.get("sell_pct", 0),
@@ -158,7 +166,18 @@ def add_position():
         ticker,
         current_user.available_capital,
     )
-    return jsonify({"ok": True})
+
+    # Resolve display name synchronously so the client can show 회사명
+    # immediately, before the background cache warm finishes.
+    resolved_name = None
+    if is_kr:
+        resolved_name = kr_stock_registry.get_name(ticker)
+    return jsonify({
+        "ok": True,
+        "ticker": ticker,
+        "name": resolved_name or ticker,
+        "is_korean": is_kr,
+    })
 
 
 @portfolio_bp.route("/position/<int:pid>", methods=["PUT"])

@@ -28,6 +28,7 @@ def search_stocks():
     query = (request.args.get("q") or "").strip()
     if len(query) < 1:
         return jsonify({"results": []})
+    ql = query.lower()  # used by US fallback matcher below
 
     results = []
     seen = set()
