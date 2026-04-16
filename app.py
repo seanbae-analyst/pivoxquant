@@ -314,6 +314,18 @@ def _init_scheduler(app):
         max_instances=1,
         coalesce=True,
     )
+    # USD/KRW FX rate — refresh every 1 minute via FMP (primary) and
+    # exchangerate-api.com (backup). 1440 upstream calls/day is well within
+    # FMP Starter plan per-minute limits and free tier of exchangerate-api.
+    # Logs a WARNING when stale > 10min.
+    sched.add_job(
+        func=lambda: fx_service._refresh_fx_rate(app),
+        trigger="interval",
+        minutes=1,
+        id="fx_rate_refresh",
+        max_instances=1,
+        coalesce=True,
+    )
     sched.start()
 
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { fmtUsd, fmtPct, pnlColor } from "@/lib/format";
+import { fmtUsd, fmtKrw, fmtPct, pnlColor } from "@/lib/format";
 import { CardSkeleton } from "@/components/ui/loading-skeleton";
-import type { PortfolioResponse, AnalyticsResponse } from "@/lib/types";
+import type { PortfolioResponse, Position, AnalyticsResponse } from "@/lib/types";
 import { useT } from "@/lib/locale";
 
 /* ── Icons (inline SVG to avoid bundle dep) ── */
@@ -32,25 +32,64 @@ function ShieldIcon() {
   );
 }
 
-/* ── Helpers ── */
+/* ── Helpers ──
+ *
+ * NOTE on currency mixing (B4 bug fix):
+ *   positions can be either USD (e.g. NVDA at $1,000) or KRW (e.g. 005930 at ₩70,000).
+ *   Summing raw (price - cost) * shares across both produces nonsense numbers like
+ *   "+$14,700,000". We resolve this by converting every position to a single unit:
+ *
+ *     - If any KRW position exists, display everything in KRW (한국 유저 타겟).
+ *       Use backend-computed `total_value_all_krw` + fx_rate to keep 1:1 parity
+ *       with the /portfolio page and the backend's own bookkeeping.
+ *     - If US-only portfolio, keep the existing USD display (미국 유저 호환).
+ */
 
-function computeTodayPnl(positions: PortfolioResponse["positions"]): number {
+type Unit = "KRW" | "USD";
+
+/**
+ * Decide the display unit based on whether the user holds any KRW positions.
+ * Mirrors the pattern already used in /portfolio/page.tsx:1348.
+ */
+function pickDisplayUnit(portfolio: PortfolioResponse | undefined): Unit {
+  if (!portfolio) return "USD";
+  const hasKrw =
+    portfolio.total_value_krw > 0 ||
+    portfolio.positions.some((p) => p.currency === "KRW" || p.is_korean);
+  return hasKrw ? "KRW" : "USD";
+}
+
+/**
+ * Today's unrealized P&L summed in a consistent currency.
+ * USD positions are converted to KRW via `fx_rate` when the display unit is KRW.
+ */
+function computeTodayPnl(positions: Position[], unit: Unit, fxRate: number): number {
   return positions.reduce((sum, p) => {
-    const dayChange = p.current_price - p.avg_cost;
-    return sum + dayChange * p.shares;
+    const pnlNative = (p.current_price - p.avg_cost) * p.shares;
+    if (unit === "KRW") {
+      // KRW position: already in KRW. USD position: multiply by current FX.
+      const isKrw = p.currency === "KRW" || p.is_korean;
+      return sum + (isKrw ? pnlNative : pnlNative * (fxRate || 0));
+    }
+    // USD-only portfolio path: positions are all USD; ignore any stray KRW to avoid mixing.
+    const isKrw = p.currency === "KRW" || p.is_korean;
+    return sum + (isKrw ? 0 : pnlNative);
   }, 0);
 }
 
-function computeTodayPnlPct(portfolio: PortfolioResponse): number {
-  const totalCost = portfolio.positions.reduce(
-    (sum, p) => sum + p.avg_cost * p.shares,
-    0,
-  );
+/**
+ * Today's P&L percentage — cost basis converted the same way as P&L above
+ * so the ratio is unit-consistent.
+ */
+function computeTodayPnlPct(positions: Position[], unit: Unit, fxRate: number): number {
+  const totalCost = positions.reduce((sum, p) => {
+    const costNative = p.avg_cost * p.shares;
+    const isKrw = p.currency === "KRW" || p.is_korean;
+    if (unit === "KRW") return sum + (isKrw ? costNative : costNative * (fxRate || 0));
+    return sum + (isKrw ? 0 : costNative);
+  }, 0);
   if (totalCost === 0) return 0;
-  const totalPnl = portfolio.positions.reduce(
-    (sum, p) => sum + (p.current_price - p.avg_cost) * p.shares,
-    0,
-  );
+  const totalPnl = computeTodayPnl(positions, unit, fxRate);
   return (totalPnl / totalCost) * 100;
 }
 
@@ -107,10 +146,22 @@ export function MetricCards({ portfolio, analytics, isLoading }: MetricCardsProp
     );
   }
 
-  const totalValue = portfolio?.total_value_usd ?? 0;
   const positions = portfolio?.positions ?? [];
-  const totalPnl = computeTodayPnl(positions);
-  const totalPnlPct = computeTodayPnlPct(portfolio ?? { positions: [], available_capital: 0, available_capital_krw: 0, total_value_usd: 0, total_value_krw: 0, total_value_all_krw: 0, fx_rate: 0 });
+  const fxRate = portfolio?.fx_rate ?? 0;
+  const unit: Unit = pickDisplayUnit(portfolio);
+
+  // Total portfolio value, unified in display unit.
+  // KRW unit: use backend-precomputed `total_value_all_krw` (USD×fx + KRW) for 1:1 parity
+  //           with /portfolio page and backend bookkeeping.
+  // USD unit: US-only portfolios → `total_value_usd`.
+  const totalValue =
+    unit === "KRW"
+      ? portfolio?.total_value_all_krw ?? 0
+      : portfolio?.total_value_usd ?? 0;
+  const fmtValue = unit === "KRW" ? fmtKrw : fmtUsd;
+
+  const totalPnl = computeTodayPnl(positions, unit, fxRate);
+  const totalPnlPct = computeTodayPnlPct(positions, unit, fxRate);
   const sharpe = analytics?.sharpe_ratio;
 
   // Risk score derived from Sharpe + MDD
@@ -126,14 +177,14 @@ export function MetricCards({ portfolio, analytics, isLoading }: MetricCardsProp
         label={t("dashboard.metrics.portfolioValue")}
         icon={<WalletIcon />}
         iconBg="bg-violet-50 text-violet-600"
-        value={fmtUsd(totalValue)}
+        value={fmtValue(totalValue)}
         sub={positions.length > 0 ? `${positions.length}${t("dashboard.metrics.positions")}` : t("dashboard.metrics.noPositionsYet")}
       />
       <MetricCard
         label={t("dashboard.metrics.totalPnl")}
         icon={<TrendUpIcon />}
         iconBg={totalPnl >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"}
-        value={`${totalPnl >= 0 ? "+" : ""}${fmtUsd(totalPnl)}`}
+        value={`${totalPnl >= 0 ? "+" : ""}${fmtValue(totalPnl)}`}
         sub={fmtPct(totalPnlPct)}
         subColor={pnlColor(totalPnlPct)}
       />

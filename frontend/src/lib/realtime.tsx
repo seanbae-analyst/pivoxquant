@@ -25,7 +25,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { mutate as globalMutate } from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { useAuth } from "./auth";
 import { API } from "./endpoints";
 import type { PortfolioResponse } from "./types";
@@ -82,9 +82,34 @@ const THROTTLE_MS = 500;
 
 /* ── Provider ── */
 
+/** Minimal fetcher — reads from the same endpoint usePortfolio() uses so
+ *  SWR serves both from a single cache entry. We only need to know whether
+ *  the user has >=1 position before opening the SSE stream (B6: the backend
+ *  returns 400 when no positions exist, which triggered infinite onerror
+ *  retries). */
+const portfolioFetcher = async (url: string): Promise<PortfolioResponse> => {
+  const r = await fetch(url, { credentials: "include" });
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}));
+    throw new Error(body.error || r.statusText || `HTTP ${r.status}`);
+  }
+  return r.json();
+};
+
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [state, setState] = useState<RealtimeState>(INITIAL_STATE);
+
+  // Subscribe to the portfolio cache (shares a key with usePortfolio()) so
+  // we can gate the SSE connection on positions.length > 0. Using useSWR
+  // here with the same key is free — SWR de-duplicates by key.
+  const { data: portfolioData } = useSWR<PortfolioResponse>(
+    user ? API.portfolio.list : null,
+    portfolioFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000 },
+  );
+  const hasPositions =
+    !!portfolioData && portfolioData.positions.length > 0;
 
   const esRef = useRef<EventSource | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -223,7 +248,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    // Only connect SSE when user is authenticated
+    // Only connect SSE when user is authenticated AND owns >=1 position.
+    // B6: portfolio-stream returns 400 for users with no positions, which
+    // triggered the SSE `onerror` → 5 retries → persistent 400 spam in
+    // the network log. Wait for usePortfolio() to resolve before connecting,
+    // and auto-(dis)connect as positions appear or go to zero.
     if (!user) {
       // Tear down any existing connection on logout
       abortRef.current?.abort();
@@ -234,6 +263,19 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (!hasPositions) {
+      // Either portfolio still loading, or user truly has 0 positions.
+      // Either way, don't open the stream yet. When positions.length
+      // transitions 0 → >0 this effect re-runs and connects.
+      abortRef.current?.abort();
+      esRef.current?.close();
+      esRef.current = null;
+      return;
+    }
+
+    // Reset retry counter whenever we (re-)enter the "should connect"
+    // state — a prior streak of failures shouldn't carry forward.
+    retryRef.current = 0;
     connect();
     return () => {
       abortRef.current?.abort();
@@ -241,7 +283,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       esRef.current = null;
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     };
-  }, [user, connect]);
+  }, [user, hasPositions, connect]);
 
   return (
     <RealtimeContext.Provider value={state}>

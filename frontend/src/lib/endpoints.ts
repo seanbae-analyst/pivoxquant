@@ -41,6 +41,7 @@ export const API = {
   market: {
     overview: "/api/market/overview",
     status: "/api/market/status",
+    fx: "/api/market/fx",
     macro: "/api/macro",
     sectors: "/api/sectors",
     morningBrief: "/api/morning-brief",

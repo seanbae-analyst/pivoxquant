@@ -190,6 +190,56 @@ def market_overview():
     return resp
 
 
+@market_bp.route("/market/fx")
+@api_auth
+def get_fx_rates():
+    """Return the live USD/KRW exchange rate.
+
+    The backend scheduler refreshes this value every 1 minute, so the
+    frontend can poll at 30s intervals for near-realtime cross-currency
+    math (portfolio KRW equivalence, target allocation rebalancing, etc.).
+
+    Response:
+        ok (bool): Always true when served.
+        usd_krw (float): Most recent USD/KRW rate (rounded to 2 decimals).
+        last_updated (str|float): ISO-8601 UTC timestamp of the last
+            successful fetch (falls back to unix epoch 0 when never fetched).
+        age_seconds (int): Seconds since the last successful fetch (-1 if never).
+        is_stale (bool): True when the rate is older than 10 minutes —
+            frontend can display a warning indicator.
+        stale (bool): Deprecated alias for is_stale (kept for compatibility).
+        ttl_seconds (int): Expected refresh cadence hint for clients (60s).
+    """
+    try:
+        # Opportunistic refresh — cheap (5s internal short-cache).
+        fx_service.refresh()
+        ts = fx_service.last_updated()
+        age = int(_time.time() - ts) if ts else -1
+        stale = fx_service.is_stale()
+
+        # ISO-8601 for easy frontend parsing; raw unix ts kept available
+        # via age_seconds. Emit epoch 0 as empty-string sentinel only when
+        # truly never fetched.
+        if ts:
+            last_updated_iso = datetime.utcfromtimestamp(ts).strftime("%Y-%m-%dT%H:%M:%SZ")
+        else:
+            last_updated_iso = None
+
+        return jsonify({
+            "ok": True,
+            "usd_krw": fx_service.get_rate(),
+            "last_updated": last_updated_iso,
+            "last_updated_ts": ts,
+            "age_seconds": age,
+            "is_stale": stale,
+            "stale": stale,  # deprecated — remove after frontend migration
+            "ttl_seconds": 60,
+        })
+    except Exception as e:
+        logger.error(f"FX endpoint error: {e}")
+        return jsonify({"error": "Unable to fetch FX rate"}), 500
+
+
 @market_bp.route("/macro")
 @api_auth
 def get_macro():
