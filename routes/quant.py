@@ -306,32 +306,45 @@ _VAR_CACHE_TTL = 300  # 5 minutes
 def _load_positions_with_prices():
     """Load current user positions with latest prices.
 
-    Returns list of dicts: [{ticker, shares, avg_cost, price, market_value, is_kr}]
-    and total portfolio value.
+    Returns list of dicts: [{ticker, shares, avg_cost, price, market_value, market_value_krw, is_kr, fx_rate}]
+    and total portfolio value (KRW-normalized).
+
+    Currency normalization (CRITICAL for cross-market risk analytics):
+      - Korean tickers (.KS/.KQ): price is in KRW → market_value_krw = price * shares
+      - US tickers: price is in USD → market_value_krw = price * shares * USD/KRW
+      - All weight/contribution calculations downstream use market_value (KRW),
+        ensuring US positions are not under-weighted vs KRW-denominated positions.
     """
     from models import Position, SignalCache
+    from services import fx_service
 
     positions = Position.query.filter_by(user_id=current_user.id).all()
     if not positions:
         return [], 0.0
 
+    fx_rate = fx_service.get_rate()  # USD → KRW
     items = []
     total_value = 0.0
     for p in positions:
         cached = SignalCache.query.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
-        mv = price * p.shares
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
+        # Native-currency market value (KRW for KR, USD for US)
+        mv_native = price * p.shares
+        # Normalize to KRW for cross-market aggregation
+        mv_krw = mv_native if is_kr else mv_native * fx_rate
         items.append({
             "ticker": p.ticker,
             "shares": p.shares,
             "avg_cost": p.avg_cost,
             "price": price,
-            "market_value": mv,
+            "market_value": mv_krw,        # KRW-normalized (used for weights/risk)
+            "market_value_native": mv_native,  # original currency (display only)
             "is_kr": is_kr,
+            "fx_rate": fx_rate if not is_kr else 1.0,
         })
-        total_value += mv
+        total_value += mv_krw
 
     return items, total_value
 
