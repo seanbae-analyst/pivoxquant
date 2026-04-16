@@ -75,18 +75,27 @@ def search_stocks():
             url = f"https://financialmodelingprep.com/api/v3/search?query={query}&limit=10&apikey={fmp_key}"
             resp = _req.get(url, timeout=5)
             if resp.status_code == 200:
-                fmp_ok = True
-                for item in resp.json():
-                    sym = item.get("symbol", "")
-                    if sym and sym not in seen:
-                        results.append({
-                            "ticker": sym,
-                            "name": item.get("name", sym),
-                            "exchange": item.get("stockExchange", item.get("exchangeShortName", "")),
-                            "currency": item.get("currency", "USD"),
-                            "is_korean": False,
-                        })
-                        seen.add(sym)
+                try:
+                    parsed = resp.json()
+                except Exception as e:
+                    logger.warning(f"FMP search JSON parse failed: {e}")
+                    parsed = None
+                if isinstance(parsed, list) and parsed:
+                    added = 0
+                    for item in parsed:
+                        sym = item.get("symbol", "")
+                        if sym and sym not in seen:
+                            results.append({
+                                "ticker": sym,
+                                "name": item.get("name", sym),
+                                "exchange": item.get("stockExchange", item.get("exchangeShortName", "")),
+                                "currency": item.get("currency", "USD"),
+                                "is_korean": False,
+                            })
+                            seen.add(sym)
+                            added += 1
+                    if added > 0:
+                        fmp_ok = True
             else:
                 logger.warning(f"FMP search HTTP {resp.status_code}")
         except Exception as e:

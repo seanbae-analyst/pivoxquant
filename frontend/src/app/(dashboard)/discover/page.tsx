@@ -67,14 +67,16 @@ function DiscoverRow({
 }) {
   const isPositive = (item?.change_pct ?? 0) >= 0;
   const priceDisplay =
-    item?.price == null
-      ? "\u2014"
-      : item.currency === "KRW"
-        ? `₩${Math.round(item.price).toLocaleString("ko-KR")}`
-        : `$${item.price.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`;
+    item?.price_display != null && item.price_display !== ""
+      ? item.price_display
+      : item?.price == null
+        ? "\u2014"
+        : item.currency === "KRW"
+          ? `₩${Math.round(item.price).toLocaleString("ko-KR")}`
+          : `$${item.price.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`;
 
   return (
     <button

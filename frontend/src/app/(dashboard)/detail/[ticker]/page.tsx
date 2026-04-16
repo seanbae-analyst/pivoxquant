@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { API } from "@/lib/endpoints";
-import { fmtUsd } from "@/lib/format";
+import { fmtUsd, fmtKrw } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { StockHeader } from "@/components/dashboard/stock-header";
 import { ScoreBar } from "@/components/dashboard/score-bar";
@@ -87,6 +87,29 @@ const fetcher = async (url: string) => {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 };
+
+/* ── Currency helpers (Fix 4) ── */
+
+function isKrwSignal(signal: SignalDetail | undefined, ticker: string): boolean {
+  if (signal?.currency === "KRW") return true;
+  if (signal?.is_korean === true) return true;
+  return /^\d{6}\.(KS|KQ)$/i.test(ticker);
+}
+
+function fmtPriceByCurrency(value: number, isKrw: boolean): string {
+  return isKrw ? fmtKrw(value) : fmtUsd(value);
+}
+
+function fmtMarketCap(value: number, isKrw: boolean): string {
+  if (isKrw) {
+    if (value >= 1e12) return `${(value / 1e12).toFixed(1)}조원`;
+    if (value >= 1e8) return `${(value / 1e8).toFixed(0)}억원`;
+    return `${value.toLocaleString("ko-KR")}원`;
+  }
+  if (value >= 1e12) return `$${(value / 1e12).toFixed(1)}T`;
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
+  return `$${(value / 1e6).toFixed(0)}M`;
+}
 
 /* ── Period mapping ── */
 
@@ -304,7 +327,10 @@ export default function StockDetailPage() {
               label="Take Profit"
               value={
                 signal?.price && signal?.tp_pct
-                  ? fmtUsd(signal.price * (1 + signal.tp_pct / 100))
+                  ? fmtPriceByCurrency(
+                      signal.price * (1 + signal.tp_pct / 100),
+                      isKrwSignal(signal, ticker),
+                    )
                   : "--"
               }
               valueColor="text-emerald-600"
@@ -313,7 +339,10 @@ export default function StockDetailPage() {
               label="Stop Loss"
               value={
                 signal?.price && signal?.sl_pct
-                  ? fmtUsd(signal.price * (1 + signal.sl_pct / 100))
+                  ? fmtPriceByCurrency(
+                      signal.price * (1 + signal.sl_pct / 100),
+                      isKrwSignal(signal, ticker),
+                    )
                   : "--"
               }
               valueColor="text-red-500"
@@ -326,21 +355,25 @@ export default function StockDetailPage() {
               label="Market Cap"
               value={
                 profile?.market_cap != null && profile.market_cap > 0
-                  ? profile.market_cap >= 1e12
-                    ? `$${(profile.market_cap / 1e12).toFixed(1)}T`
-                    : profile.market_cap >= 1e9
-                      ? `$${(profile.market_cap / 1e9).toFixed(1)}B`
-                      : `$${(profile.market_cap / 1e6).toFixed(0)}M`
+                  ? fmtMarketCap(profile.market_cap, isKrwSignal(signal, ticker))
                   : "--"
               }
             />
             <MetricCell
               label="52W High"
-              value={profile?.week52_high ? fmtUsd(profile.week52_high) : "--"}
+              value={
+                profile?.week52_high
+                  ? fmtPriceByCurrency(profile.week52_high, isKrwSignal(signal, ticker))
+                  : "--"
+              }
             />
             <MetricCell
               label="52W Low"
-              value={profile?.week52_low ? fmtUsd(profile.week52_low) : "--"}
+              value={
+                profile?.week52_low
+                  ? fmtPriceByCurrency(profile.week52_low, isKrwSignal(signal, ticker))
+                  : "--"
+              }
             />
           </div>
         )}

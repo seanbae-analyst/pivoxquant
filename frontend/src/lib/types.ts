@@ -221,6 +221,7 @@ export interface DiscoverResult {
   signal: string;
   score: number;
   price: number;
+  price_display?: string;
   change_pct: number;
   priority: number;
   is_korean: boolean;

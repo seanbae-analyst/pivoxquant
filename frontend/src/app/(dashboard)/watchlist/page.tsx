@@ -259,20 +259,13 @@ export default function WatchlistPage() {
         setSearching(true);
         setShowDropdown(true);
         try {
-          const res = await fetch(API.market.lookup(value.trim()), {
+          const res = await fetch(API.market.search(value.trim()), {
             credentials: "include",
           });
           if (!res.ok) throw new Error("Search failed");
           const data = await res.json();
-          if (Array.isArray(data)) {
-            setSearchResults(data);
-          } else if (data.results) {
-            setSearchResults(data.results);
-          } else if (data.ticker) {
-            setSearchResults([data]);
-          } else {
-            setSearchResults([]);
-          }
+          const parsed: LookupResult[] = data.results ?? [];
+          setSearchResults(parsed);
         } catch {
           setSearchResults([]);
         } finally {
