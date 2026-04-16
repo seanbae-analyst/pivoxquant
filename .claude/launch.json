@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "StockPilot",
+      "name": "PivoxQuant",
       "runtimeExecutable": "/usr/bin/python3",
       "runtimeArgs": ["run.py"],
       "port": 5050

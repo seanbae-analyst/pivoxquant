@@ -19,7 +19,7 @@ import type { OnboardingOption, OnboardingQuestion } from "@/data/onboarding-que
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "stockpilot_onboarding_answers";
+const STORAGE_KEY = "pivoxquant_onboarding_answers";
 const TOTAL_STEPS = WIZARD_QUESTIONS.length + 1; // 19 wizard + 1 legal
 const SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
 
@@ -621,7 +621,7 @@ export default function OnboardingPage() {
     setSubmitting(true);
     try {
       // Store full 20 answers in localStorage
-      localStorage.setItem("stockpilot_onboarding_full_answers", JSON.stringify(answers));
+      localStorage.setItem("pivoxquant_onboarding_full_answers", JSON.stringify(answers));
 
       // POST the answers to the onboarding endpoint
       await apiFetch(API.profile.onboarding, {

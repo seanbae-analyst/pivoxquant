@@ -8,7 +8,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 _db_url = os.environ.get("DATABASE_URL", "").strip()
 if not _db_url:
     # Fallback to SQLite for local development
-    _db_url = f"sqlite:///{os.path.join(BASE, 'stockpilot.db')}"
+    _db_url = f"sqlite:///{os.path.join(BASE, 'pivoxquant.db')}"
 
 # Heroku / Supabase sometimes use postgres:// which SQLAlchemy 2.x rejects
 if _db_url.startswith("postgres://"):

@@ -36,7 +36,7 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 # Force a clean, throwaway environment.
-_test_db_fd, _test_db_path = tempfile.mkstemp(suffix=".sqlite", prefix="stockpilot_test_")
+_test_db_fd, _test_db_path = tempfile.mkstemp(suffix=".sqlite", prefix="pivoxquant_test_")
 os.close(_test_db_fd)
 
 os.environ["DATABASE_URL"] = f"sqlite:///{_test_db_path}"
