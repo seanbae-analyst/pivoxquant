@@ -218,7 +218,7 @@ export function WhatIfClient() {
             href="/"
             className="flex items-center gap-2 text-sm font-bold text-slate-900"
           >
-            <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-violet-600 via-blue-500 to-pink-500" />
+            <div className="h-6 w-6 rounded-lg bg-slate-900" />
             PivoxQuant
           </Link>
           <Link
@@ -239,14 +239,12 @@ export function WhatIfClient() {
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mb-6 sm:mb-8"
         >
-          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-violet-700">
+          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-600">
             <Clock className="h-3 w-3" />
             {t("whatIf.badge")}
           </div>
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-            <span className="bg-gradient-to-r from-violet-600 via-blue-500 to-pink-500 bg-clip-text text-transparent">
-              {t("whatIf.hero")}
-            </span>
+            {t("whatIf.hero")}
           </h1>
           <p className="mt-2 text-sm text-slate-600 sm:text-base">
             {t("whatIf.sub")}
