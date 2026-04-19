@@ -355,8 +355,16 @@ def _do_migrations():
     # local dev DBs that boot without running Alembic.
     _add_column_if_missing("users", "email_opt_out_earnings", "BOOLEAN", default="0")
 
-    # Positions table
+    # Positions table — full coverage of Position model columns.
+    # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but
+    # _do_migrations() was never updated, causing ProgrammingError on
+    # INSERT when Railway PostgreSQL does not have these columns.
     _add_column_if_missing("positions", "buy_fx_rate", "FLOAT", default="0.0")
+    _add_column_if_missing("positions", "thesis", "VARCHAR(500)")
+    _add_column_if_missing("positions", "thesis_created_at", "TIMESTAMP")
+    _add_column_if_missing("positions", "thesis_last_checked", "TIMESTAMP")
+    _add_column_if_missing("positions", "thesis_status", "VARCHAR(20)", default="'pending'")
+    _add_column_if_missing("positions", "thesis_reason", "VARCHAR(500)")
 
     # Backfill FX rates
     from models import Position
