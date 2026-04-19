@@ -27,11 +27,15 @@ import { useT } from "@/lib/locale";
 // Bottom tabs on mobile. We surface Reports here instead of Alerts — Alerts
 // remains reachable via the Menu sheet and the top-bar bell icon, while
 // Reports is a destination users will return to weekly.
+//
+// Labels are resolved via `t()` at render time so they stay in sync with
+// the active locale (Korean default, English toggle). Keep `key` in
+// lockstep with entries under `nav.*` in messages/{ko,en}.json.
 const TABS = [
-  { href: "/home", label: "홈", icon: Home },
-  { href: "/market", label: "시장", icon: BarChart3 },
-  { href: "/ai", label: "AI", icon: Bot },
-  { href: "/reports", label: "리포트", icon: FileText },
+  { href: "/home", key: "home", icon: Home },
+  { href: "/market", key: "market", icon: BarChart3 },
+  { href: "/ai", key: "ai", icon: Bot },
+  { href: "/reports", key: "reports", icon: FileText },
 ] as const;
 
 type NavKey =
@@ -89,7 +93,7 @@ export function BottomNav() {
                 )}
               >
                 <Icon className="h-5 w-5" strokeWidth={1.75} />
-                <span className="text-[10px] font-medium">{tab.label}</span>
+                <span className="text-[10px] font-medium">{t(`nav.${tab.key}`)}</span>
               </Link>
             );
           })}
@@ -98,7 +102,7 @@ export function BottomNav() {
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            aria-label="메뉴 열기"
+            aria-label={t("a11y.openMenu")}
             aria-expanded={menuOpen}
             className={cn(
               "flex flex-1 flex-col items-center justify-center gap-1 py-1 transition-colors duration-150",
@@ -106,7 +110,7 @@ export function BottomNav() {
             )}
           >
             <Menu className="h-5 w-5" strokeWidth={1.75} />
-            <span className="text-[10px] font-medium">메뉴</span>
+            <span className="text-[10px] font-medium">{t("a11y.menu")}</span>
           </button>
         </div>
       </nav>
@@ -114,16 +118,16 @@ export function BottomNav() {
       {menuOpen && (
         <ModalShell
           onClose={() => setMenuOpen(false)}
-          ariaLabel="메뉴"
+          ariaLabel={t("a11y.menu")}
           className="!items-end sm:!items-end"
         >
           <div className="w-full max-w-md rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <h3 className="text-sm font-semibold text-slate-900">메뉴</h3>
+              <h3 className="text-sm font-semibold text-slate-900">{t("a11y.menu")}</h3>
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
-                aria-label="닫기"
+                aria-label={t("common.close")}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
               >
                 <X className="h-4 w-4" />

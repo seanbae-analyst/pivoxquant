@@ -241,6 +241,7 @@ export function TopBar() {
           className="flex h-10 w-full max-w-md items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-400 transition-colors duration-200 hover:border-slate-300 hover:bg-white"
           onClick={openSearch}
           type="button"
+          aria-label={t("a11y.search")}
         >
           <Search className="h-4 w-4 shrink-0" />
           <span className="flex-1 text-left">{t("topbar.searchPlaceholder")}</span>
@@ -260,6 +261,8 @@ export function TopBar() {
               className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700"
               type="button"
               onClick={toggleBell}
+              aria-label={t("a11y.bell")}
+              aria-expanded={bellOpen}
             >
               <Bell className="h-[18px] w-[18px]" />
               {unreadCount > 0 && (
@@ -346,6 +349,8 @@ export function TopBar() {
               className="flex items-center gap-2 rounded-xl py-1 pl-1 pr-2 transition-colors duration-200 hover:bg-slate-100"
               type="button"
               onClick={toggleProfile}
+              aria-label={t("a11y.profile")}
+              aria-expanded={profileOpen}
             >
               {user?.avatar_url && !avatarError ? (
                 // eslint-disable-next-line @next/next/no-img-element
