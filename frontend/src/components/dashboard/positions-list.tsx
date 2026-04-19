@@ -55,11 +55,11 @@ function PositionRow({ position, flash }: PositionRowProps) {
         flashClass,
       )}
     >
-      {/* Ticker + Name */}
+      {/* Name + Ticker */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-slate-900">
-            {kr ? (position.name || position.ticker) : position.ticker}
+          <span className="text-sm font-bold text-slate-900 truncate">
+            {position.name || position.ticker}
           </span>
           {position.signal !== "\u2014" && (
             <SignalBadge signal={position.signal} score={position.score} />
@@ -68,7 +68,7 @@ function PositionRow({ position, flash }: PositionRowProps) {
         <p className="text-xs text-slate-500 truncate mt-0.5">
           {kr
             ? `${position.ticker} · KRX · ${position.shares}주`
-            : `${position.name} · ${position.shares} share${position.shares > 1 ? "s" : ""}`}
+            : `${position.ticker} · ${position.shares} share${position.shares > 1 ? "s" : ""}`}
         </p>
       </div>
 

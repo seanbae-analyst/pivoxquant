@@ -77,10 +77,10 @@ function SearchDropdown({
                 >
                   <div className="min-w-0 flex-1">
                     <span className="text-sm font-bold text-slate-900">
-                      {isKoreanTicker(r?.ticker ?? "") ? (r?.name || r?.ticker || "\u2014") : (r?.ticker ?? "\u2014")}
+                      {r?.name || r?.ticker || "\u2014"}
                     </span>
                     <span className="ml-2 text-xs text-slate-500 truncate">
-                      {isKoreanTicker(r?.ticker ?? "") ? (r?.ticker ?? "") : (r?.name ?? "")}
+                      {r?.ticker ?? ""}
                     </span>
                   </div>
                   <div className="text-right shrink-0">
@@ -162,16 +162,16 @@ function WatchlistRow({
       className="sp-card p-4 w-full text-left transition-all hover:shadow-md active:scale-[0.99] cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3">
-        {/* Left: ticker + name */}
+        {/* Left: name + ticker */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-900">
-              {isKoreanTicker(item.ticker, item.is_korean) ? (item.name || item.ticker) : item.ticker}
+            <span className="text-sm font-bold text-slate-900 truncate">
+              {item.name || item.ticker}
             </span>
             <SignalBadge signal={item.signal} />
           </div>
           <p className="text-xs text-slate-500 truncate mt-0.5">
-            {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.name}
+            {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.ticker}
           </p>
         </div>
 

@@ -60,35 +60,19 @@ export function StockHeader({
       </button>
 
       <div className="flex-1 min-w-0">
-        {isKoreanTicker(ticker, isKorean) ? (
-          <>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">{name || ticker}</h1>
-              {sector && (
-                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
-                  {sector}
-                </span>
-              )}
-            </div>
-            <p className="mt-0.5 text-sm text-slate-500 truncate">
-              {ticker} · KRX
-            </p>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-900">{ticker}</h1>
-              {sector && (
-                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
-                  {sector}
-                </span>
-              )}
-            </div>
-            {name && (
-              <p className="mt-0.5 text-sm text-slate-500 truncate">{name}</p>
-            )}
-          </>
-        )}
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold text-slate-900 truncate">
+            {name || ticker}
+          </h1>
+          {sector && (
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500 shrink-0">
+              {sector}
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 text-sm text-slate-500 truncate">
+          {isKoreanTicker(ticker, isKorean) ? `${ticker} · KRX` : ticker}
+        </p>
 
         <div className="mt-2 flex items-baseline gap-3">
           <span className="text-3xl font-bold text-slate-900 tabular-nums">

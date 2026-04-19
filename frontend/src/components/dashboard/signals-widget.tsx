@@ -77,12 +77,12 @@ export function SignalsWidget({ positions, isLoading }: SignalsWidgetProps) {
               key={p.ticker}
               className="flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-2.5 transition-colors hover:bg-slate-100"
             >
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-slate-900 w-14">
-                  {p.ticker}
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <span className="text-sm font-bold text-slate-900 truncate">
+                  {p.name || p.ticker}
                 </span>
-                <span className="text-xs text-slate-500 truncate max-w-[100px] hidden sm:inline">
-                  {p.name}
+                <span className="text-xs text-slate-500 truncate max-w-[80px] hidden sm:inline shrink-0">
+                  {p.ticker}
                 </span>
               </div>
               <SignalBadge signal={p.signal} score={p.score} />
