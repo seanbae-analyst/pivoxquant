@@ -271,12 +271,15 @@ def init_security(app):
 
     @app.before_request
     def _enforce_session():
-        """Make sessions permanent and enforce inactivity timeout."""
+        """Make sessions permanent and enforce inactivity timeout for authenticated users only."""
         from datetime import datetime, timezone
+        from flask_login import current_user
         session.permanent = True
 
+        is_authenticated = bool(getattr(current_user, "is_authenticated", False))
         now = datetime.now(timezone.utc)
         last_active = session.get("_last_active")
+
         if last_active:
             try:
                 if isinstance(last_active, str):
@@ -284,24 +287,28 @@ def init_security(app):
                 if not last_active.tzinfo:
                     last_active = last_active.replace(tzinfo=timezone.utc)
                 if (now - last_active) > _INACTIVITY_TIMEOUT:
+                    was_authenticated = is_authenticated
                     session.clear()
-                    from flask_login import logout_user
-                    try:
-                        logout_user()
-                    except Exception as e:
-                        logger.debug(
-                            "SECURITY: logout_user() failed during session expiry — %s", e
-                        )
-                    if request.path.startswith("/api/"):
-                        return jsonify({
-                            "error": "Session expired due to inactivity.",
-                            "error_kr": "비활성으로 인해 세션이 만료되었습니다.",
-                            "code": "SESSION_EXPIRED",
-                        }), 401
+                    if was_authenticated:
+                        from flask_login import logout_user
+                        try:
+                            logout_user()
+                        except Exception as e:
+                            logger.debug(
+                                "SECURITY: logout_user() failed during session expiry — %s", e
+                            )
+                        if request.path.startswith("/api/"):
+                            return jsonify({
+                                "error": "Session expired due to inactivity.",
+                                "error_kr": "비활성으로 인해 세션이 만료되었습니다.",
+                                "code": "SESSION_EXPIRED",
+                            }), 401
+                    return
             except (ValueError, TypeError):
                 pass
 
-        session["_last_active"] = now.isoformat()
+        if is_authenticated:
+            session["_last_active"] = now.isoformat()
 
     @app.before_request
     def _csrf_protect():
