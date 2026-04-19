@@ -1,72 +1,125 @@
-# Dead Code 후보 리스트 (CEO 판단 필요)
+# Dead Code 제거 기록
 
-> 2026-04-19 cleanup 패스에서 식별된 미사용 코드. **자동 삭제하지 않았음** —
-> 스케줄러/백그라운드 참조 가능성, 또는 의도적으로 보존된 코드일 수 있어
-> CEO(배상현) 확인 후 삭제 권장.
+> 2026-04-19 cleanup 패스에서 식별된 미사용 코드 + 실제 제거 기록.
 
 ---
 
 ## 백엔드 — Python 파일
 
 ### `investor_profiles.py` (미사용, 루트)
-- `from investor_profiles` / `import investor_profiles` 참조 **0회**.
-- 내부 독스트링: `get_profile_params(investor_type)` 제공 목적.
-- **권고**: onboarding/questionnaire 파이프라인에서 재연결 계획이 없다면
-  삭제 검토. (`questionnaire.py`와 통합 가능성 있음)
+- [x] **제거 완료 (2026-04-19)** — 1164줄 삭제
+- `from investor_profiles` / `import investor_profiles` 참조 **0회** 최종 확인 후 삭제.
+- 재연결 계획이 생기면 git 히스토리에서 복원 가능.
 
 ---
 
 ## 프론트엔드 — 미사용 React Hooks
 
 `frontend/src/lib/hooks.ts` 에서 정의됐으나 어느 페이지/컴포넌트에서도
-import 되지 않은 훅 목록. 총 **8개**, 추정 LOC 감소량 **약 150~200줄**.
+import 되지 않은 훅 목록. 총 **8개 전부 제거 완료 (2026-04-19)**.
 
-| Hook | 정의 라인 | 비고 |
+| Hook | 정의 라인 | 상태 |
 | --- | --- | --- |
-| `useEarnings` | L66 | 실적 캘린더용. 페이지 미연결 |
-| `useCrossAsset` | L82 | Cross-asset 대시보드용. UI 미구현 |
-| `useVixStrategy` | L89 | VIX 전략 위젯용. UI 미구현 |
-| `useDaytradeScan` | L103 | DayTrade → Market 통합 후 미사용 |
-| `useQuestionnaire` | L124 | 온보딩 재설계 대기 |
-| `useAiStatus` | L133 | AI 상태 배지용. UI 미구현 |
-| `useAiCoaching` | L145 | "코치" 네이밍 법적 이슈로 보류 |
-| `useRealtimePrices` | L318 | SSE provider가 직접 `realtime.tsx`에서 처리 |
+| `useEarnings` | L66 | [x] 제거 |
+| `useCrossAsset` | L82 | [x] 제거 |
+| `useVixStrategy` | L89 | [x] 제거 |
+| `useDaytradeScan` | L103 | [x] 제거 |
+| `useQuestionnaire` | L124 | [x] 제거 |
+| `useAiStatus` | L133 | [x] 제거 |
+| `useAiCoaching` | L145 | [x] 제거 (ai/page.tsx 가 직접 apiFetch 사용 중) |
+| `useRealtimePrices` | L318 | [x] 제거 (@deprecated wrapper) |
+
+부수 효과로 `useState`, `useCallback`, `useMemo`, `useRealtimeContext`, `apiFetch`
+import 도 정리.
 
 ---
 
 ## 프론트엔드 — 미사용 UI 컴포넌트
 
 `frontend/src/components/ui/` 에서 shadcn 기본 컴포넌트로 생성됐으나
-어느 컴포넌트/페이지에서도 import 되지 않음. 총 **624 LOC**.
+어느 컴포넌트/페이지에서도 import 되지 않음.
 
-| Component | LOC | 비고 |
+| Component | LOC | 상태 |
 | --- | --- | --- |
-| `avatar.tsx` | 109 | 프로필 드롭다운 미구현 상태 |
-| `checkbox.tsx` | 31 | Terms checkbox는 native input 사용 |
-| `dialog.tsx` | 159 | `modal-shell.tsx`로 대체됨 |
-| `dropdown-menu.tsx` | 268 | 프로필/알림 드롭다운 미구현 |
-| `input.tsx` | 21 | native input 사용 |
-| `label.tsx` | 20 | native label 사용 |
-| `logo.tsx` | 16 | 랜딩에서 inline SVG 사용 |
+| `avatar.tsx` | 109 | 보존 — P1 프로필 드롭다운 구현 예정 |
+| `checkbox.tsx` | 31 | [x] 제거 |
+| `dialog.tsx` | 159 | [x] 제거 (`modal-shell.tsx`로 대체됨) |
+| `dropdown-menu.tsx` | 268 | 보존 — P1 프로필/알림 드롭다운 예정 |
+| `input.tsx` | 21 | [x] 제거 (native input 사용) |
+| `label.tsx` | 20 | [x] 제거 (native label 사용) |
+| `logo.tsx` | 16 | [x] 제거 (랜딩에서 inline SVG 사용) |
 
-**권고**: avatar/dropdown-menu는 P1(프로필 드롭다운 구현) 에서 사용될
-예정이므로 **보존**. 나머지 5개(`checkbox`, `dialog`, `input`, `label`,
-`logo`)는 삭제해도 무방 — 단, shadcn CLI로 언제든 재생성 가능.
+**제거된 UI 컴포넌트 총 247줄.** shadcn CLI로 언제든 재생성 가능
+(`npx shadcn@latest add <name>`).
+
+---
+
+## 프론트엔드 — 미사용 타입 (types.ts)
+
+`frontend/src/lib/types.ts` 에서 어디서도 import 되지 않는 타입들 제거.
+Artifact 관련 타입은 전부 보존.
+
+| Type | 상태 | 사유 |
+| --- | --- | --- |
+| `EarningsItem` | [x] 제거 | `useEarnings` 훅과 함께 사용됐음 |
+| `EarningsResponse` | [x] 제거 | `useEarnings` 훅과 함께 사용됐음 |
+| `CrossAssetItem` | [x] 제거 | `useCrossAsset` 훅과 함께 사용됐음 |
+| `CrossAssetResponse` | [x] 제거 | `useCrossAsset` 훅과 함께 사용됐음 |
+| `VixStrategyResponse` | [x] 제거 | `useVixStrategy` 훅과 함께 사용됐음 |
+| `SignalMsg` | [x] 제거 | DayTradeResult/ScanResult에서만 사용 |
+| `DayTradeResult` | [x] 제거 | `useDaytradeScan` 훅과 함께 사용됐음 |
+| `DayTradeScanResponse` | [x] 제거 | `useDaytradeScan` 훅과 함께 사용됐음 |
+| `ScanResult` | [x] 제거 | 어디서도 미사용 (orphaned) |
+| `QuestionOption` | [x] 제거 | `useQuestionnaire` 훅과 함께 사용됐음 |
+| `Question` | [x] 제거 | `useQuestionnaire` 훅과 함께 사용됐음 |
+| `QuestionnaireResponse` | [x] 제거 | `useQuestionnaire` 훅과 함께 사용됐음 |
+| `AiStatusResponse` | [x] 제거 | `useAiStatus` 훅과 함께 사용됐음 |
+| `AiMorningSummaryResponse` | [x] 제거 | 어디서도 미사용 (orphaned) |
+| `AiChatMessage` | [x] 제거 | 어디서도 미사용 (orphaned) |
+| `ShareTokenResponse` | [x] 제거 | Portfolio Share 기능 미구현 (orphaned) |
+| `SharedPosition` | [x] 제거 | Portfolio Share 기능 미구현 (orphaned) |
+| `SharedPortfolioResponse` | [x] 제거 | Portfolio Share 기능 미구현 (orphaned) |
+| `AiCoachingResponse` | 보존 | ai/page.tsx 가 직접 사용 중 |
+| `AiSwotResponse` 외 AI 타입 | 보존 | ai/page.tsx 가 사용 중 |
+| `Artifact*` | 보존 | 최근 추가된 MVP 타입 |
 
 ---
 
 ## 프론트엔드 — 의존성 검토
 
 `frontend/package.json`:
-- **`shadcn`** (`^4.1.2`) — CLI 도구. runtime import 0회. `devDependencies`
-  로 이동하거나 제거 권장 (필요 시 `npx shadcn@latest` 사용).
-- **`tw-animate-css`** — `src/app/globals.css`에서 `@import` 사용 중.
-  **보존** (globals.css는 정책상 수정 금지).
+- [x] **`shadcn`** (`^4.1.2`) — `dependencies` → `devDependencies` 이동 완료.
+  필요 시 `npx shadcn@latest` 사용.
+- **`tw-animate-css`** — `src/app/globals.css`에서 `@import` 사용 중. **보존**.
 
 ## 백엔드 — 의존성 검토
 
 `requirements.txt` 전수 확인 완료. 모든 패키지가 실제 import 됨
 (lazy/conditional import 포함). **제거 후보 없음**.
+
+---
+
+## 검증 결과 (2026-04-19)
+
+- `npx tsc --noEmit` ✅ 통과 (exit 0)
+- `npx eslint .` ✅ 통과 (exit 0)
+- `npx next build` ✅ 빌드 성공 (compiled in ~38s, 모든 페이지 prerender 성공)
+- `python3 -m pytest tests/` ✅ 279 passed, 60 warnings in 77.59s
+
+회귀 없음.
+
+---
+
+## 다음 세션 후보
+
+다음 dead-code 패스에서 검토할 항목:
+
+1. **services/ 디렉토리 구조 분리** (ai/, brokers/, data/, infra/) — 임포트 경로
+   갱신 범위가 커서 별도 리팩토링 세션 권장.
+2. **공유 포트폴리오 기능** (`SharedPosition*` 타입 제거됨) — 재구현 시
+   타입 복원 필요. 현재 `routes/` 에는 구현된 엔드포인트가 있는지 확인 필요.
+3. **`avatar.tsx`, `dropdown-menu.tsx`** — P1 프로필 드롭다운이 구현되지 않으면
+   다음 cleanup에서 제거 검토.
 
 ---
 
