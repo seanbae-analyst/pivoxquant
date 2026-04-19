@@ -8,7 +8,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-emerald-600 text-white font-bold shadow-sm hover:bg-emerald-700 hover:scale-[1.02]",
+        // CFO Warm Gold — ties every primary CTA back to the Vantablack-Luxe
+        // accent token defined in globals.css (`--accent`). Text uses the
+        // page background so we get automatic dark-on-gold contrast without
+        // re-declaring a foreground colour per theme.
+        default:
+          "bg-accent text-background font-bold shadow-sm hover:bg-accent/90 hover:scale-[1.02]",
         outline:
           "border border-slate-200 bg-transparent text-foreground hover:border-slate-300 hover:bg-slate-50 hover:scale-[1.02]",
         secondary:
@@ -17,7 +22,7 @@ const buttonVariants = cva(
           "hover:bg-slate-100 hover:text-foreground",
         destructive:
           "bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 focus-visible:border-red-400 focus-visible:ring-red-400/20",
-        link: "text-emerald-600 underline-offset-4 hover:underline",
+        link: "text-accent underline-offset-4 hover:underline",
       },
       size: {
         default:

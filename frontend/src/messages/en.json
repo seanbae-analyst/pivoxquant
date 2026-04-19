@@ -26,6 +26,13 @@
     "noResults": "No results for \"{query}\"",
     "typeToSearch": "Type a ticker symbol to search"
   },
+  "a11y": {
+    "bell": "Notifications",
+    "profile": "Profile menu",
+    "search": "Search",
+    "menu": "Menu",
+    "openMenu": "Open menu"
+  },
   "common": {
     "add": "Add",
     "edit": "Edit",

@@ -26,6 +26,13 @@
     "noResults": "'{query}'에 대한 결과 없음",
     "typeToSearch": "티커 심볼을 입력하세요"
   },
+  "a11y": {
+    "bell": "알림",
+    "profile": "프로필 메뉴",
+    "search": "검색",
+    "menu": "메뉴",
+    "openMenu": "메뉴 열기"
+  },
   "common": {
     "add": "추가",
     "edit": "편집",
