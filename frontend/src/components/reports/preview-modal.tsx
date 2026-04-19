@@ -61,13 +61,7 @@ export function PreviewModal({ artifact, onClose, onDownload }: PreviewModalProp
         {/* Header */}
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
           <div className="min-w-0 flex-1">
-            <h2
-              className="truncate text-lg font-semibold text-slate-900"
-              style={{
-                fontFamily:
-                  "'Iowan Old Style', 'Palatino', 'Georgia', ui-serif, serif",
-              }}
-            >
+            <h2 className="font-serif truncate text-lg font-semibold text-slate-900">
               {artifact.title}
             </h2>
             {artifact.subtitle && (

@@ -201,7 +201,7 @@ function PlanCard({
 
       <div className="mb-5">
         <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-slate-900 tabular-nums">{price}</span>
+          <span className="font-mono text-3xl font-bold text-slate-900 tabular-nums">{price}</span>
           <span className="text-sm text-slate-500">{period}</span>
         </div>
       </div>
@@ -268,7 +268,7 @@ export default function PricingPage() {
         <div className="mx-auto max-w-6xl px-4 pb-20">
           {/* ── Hero ── */}
           <div className="text-center mb-12">
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
+            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
               받아보는 리포트로 고르세요.
             </h1>
             <p className="text-lg text-slate-500 max-w-xl mx-auto leading-relaxed">
@@ -365,7 +365,7 @@ export default function PricingPage() {
           {/* ── Feature Comparison Table ── */}
           <div className="sp-card overflow-hidden mb-16">
             <div className="px-6 py-4 border-b border-slate-100">
-              <h2 className="text-base font-bold text-slate-900">
+              <h2 className="font-serif text-base font-bold text-slate-900">
                 받아보는 리포트 비교
               </h2>
             </div>
@@ -424,7 +424,7 @@ export default function PricingPage() {
 
           {/* ── FAQ ── */}
           <div className="max-w-2xl mx-auto mb-16">
-            <h2 className="text-xl font-bold text-slate-900 text-center mb-8">
+            <h2 className="font-serif text-xl font-bold text-slate-900 text-center mb-8">
               자주 묻는 질문
             </h2>
             <div className="sp-card px-6">

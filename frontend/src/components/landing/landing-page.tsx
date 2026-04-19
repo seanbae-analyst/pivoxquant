@@ -389,7 +389,7 @@ export default function LandingPage() {
               </motion.div>
 
               {/* Headline — no gradient */}
-              <motion.h1 variants={fadeUp} className="text-[2rem] sm:text-5xl lg:text-[3.25rem] font-semibold leading-[1.1] tracking-tight text-slate-900 mb-5 break-keep">
+              <motion.h1 variants={fadeUp} className="font-serif text-[2rem] sm:text-5xl lg:text-[3.25rem] font-semibold leading-[1.1] tracking-tight text-slate-900 mb-5 break-keep">
                 ChatGPT는 물어야 답합니다.<br />
                 PivoxQuant는 자는 동안 씁니다.
               </motion.h1>
@@ -544,7 +544,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-14">
             <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">당신의 리서치 데스크</p>
-            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
+            <h2 className="font-serif text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
               챗봇이 아닙니다. 리포트가 나옵니다.
             </h2>
             <p className="text-base text-slate-600 leading-relaxed">
@@ -588,7 +588,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-10">
             <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">Dashboard</p>
-            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
+            <h2 className="font-serif text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
               포트폴리오 · 리스크 · 시그널 한 화면.
             </h2>
             <p className="text-base text-slate-600 leading-relaxed">
@@ -731,7 +731,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-14">
             <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">How It Works</p>
-            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
+            <h2 className="font-serif text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
               3단계, 5분 안에 셋업.
             </h2>
           </motion.div>
@@ -756,7 +756,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-14">
             <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">Pricing</p>
-            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
+            <h2 className="font-serif text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
               명확한 요금제.
             </h2>
             <p className="text-base text-slate-600 leading-relaxed">
@@ -856,7 +856,7 @@ export default function LandingPage() {
       <section className="py-20 md:py-24">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)}>
-            <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-4 tracking-tight">
+            <h2 className="font-serif text-3xl md:text-4xl font-semibold text-slate-900 mb-4 tracking-tight">
               내일 아침 6시, 첫 리포트가 메일함에.
             </h2>
             <p className="text-base text-slate-600 mb-8 max-w-xl leading-relaxed">
