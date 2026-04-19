@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import base64
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from flask import Blueprint, Response, current_app, jsonify, request, send_file
@@ -44,7 +44,236 @@ from .decorators import api_auth, require_tier
 artifacts_bp = Blueprint("artifacts", __name__, url_prefix="/api/artifacts")
 
 
+# ═══════ UNIFIED ARTIFACTS API ═══════
+# Single-URL shape consumed by the frontend (`/api/artifacts/list`,
+# `/api/artifacts/<id>/download`, etc). Each call dispatches to the matching
+# type-specific handler so that new artefact classes (earnings_prebrief,
+# quarterly_review, …) are automatically supported without frontend changes.
+#
+# The existing per-type routes (`/weekly-memo/*`, `/brag-card/*`,
+# `/earnings-prebrief/*`) remain for QA / legacy flows — treat them as
+# deprecated aliases. New frontend code should target the unified endpoints.
+
+# Typed → (mimetype, extension) mapping used by the unified download route.
+_ARTIFACT_DOWNLOAD_META = {
+    "weekly_memo":       ("application/pdf", "pdf"),
+    "earnings_prebrief": ("application/pdf", "pdf"),
+    "earnings_pre":      ("application/pdf", "pdf"),
+    "fomc_playbook":     ("application/pdf", "pdf"),
+    "monthly_brag":      ("image/png",       "png"),
+    "brag_card":         ("image/png",       "png"),
+    "morning_brief":     ("application/pdf", "pdf"),
+    "quarterly_review":  ("application/pdf", "pdf"),
+    "risk_report":       ("application/pdf", "pdf"),
+    "custom":            ("application/pdf", "pdf"),
+}
+
+
+def _since_to_cutoff(since: str | None) -> datetime | None:
+    """Translate a relative `since` token ('30d', '90d', 'all') into a
+    UTC datetime cutoff. Returns None for 'all' / unrecognised values so
+    callers can skip the filter."""
+    if not since or since == "all":
+        return None
+    try:
+        if since.endswith("d"):
+            days = int(since[:-1])
+            return datetime.utcnow() - timedelta(days=days)
+    except ValueError:
+        return None
+    # Fall-through: try to parse as ISO date ("2026-01-01")
+    try:
+        return datetime.fromisoformat(since)
+    except ValueError:
+        return None
+
+
+@artifacts_bp.route("/list", methods=["GET"])
+@api_auth
+def artifacts_list():
+    """List the current user's artifacts with optional type/since/limit filters.
+
+    Query params:
+        type   — "weekly_memo" | "brag_card" | "monthly_brag" |
+                 "earnings_prebrief" | ... | "all" (default: all)
+        since  — "30d" | "90d" | "all" | ISO date (default: all)
+        limit  — integer, bounded [1, 200] (default: 50)
+
+    Returns:
+        { ok, artifacts: [...], total, unread_count }
+    where `artifacts` is sorted newest-first and `unread_count` counts rows
+    with `opened_at IS NULL` for sidebar/badge UIs.
+    """
+    req_type = (request.args.get("type") or "").strip().lower()
+    since = request.args.get("since")
+    try:
+        limit = int(request.args.get("limit", "50"))
+    except ValueError:
+        return jsonify({"error": "limit must be an integer"}), 400
+    limit = max(1, min(limit, 200))
+
+    q = Artifact.query.filter(Artifact.user_id == current_user.id)
+
+    if req_type and req_type != "all":
+        q = q.filter(Artifact.type == req_type)
+
+    cutoff = _since_to_cutoff(since)
+    if cutoff is not None:
+        # Prefer sent_at when present (email delivery time); fall back to
+        # created_at so rows that were generated but never emailed still
+        # show up in the archive.
+        q = q.filter(
+            db.or_(
+                Artifact.sent_at >= cutoff,
+                db.and_(Artifact.sent_at.is_(None),
+                        Artifact.created_at >= cutoff),
+            )
+        )
+
+    total = q.count()
+    rows = (
+        q.order_by(Artifact.created_at.desc())
+         .limit(limit)
+         .all()
+    )
+
+    # Unread count ignores the type/since filter — it's meant for the global
+    # sidebar badge, which should reflect *all* unopened reports.
+    unread_count = (
+        Artifact.query
+        .filter(Artifact.user_id == current_user.id,
+                Artifact.opened_at.is_(None))
+        .count()
+    )
+
+    def _as_list_row(a: Artifact) -> dict:
+        base = a.to_dict()
+        # Surface fields the frontend `Artifact` type expects that aren't
+        # on the raw model (best-effort; None when unavailable).
+        data = base.get("data") or {}
+        base["subtitle"] = data.get("subtitle") or data.get("summary") or None
+        base["period_label"] = data.get("month_label") or data.get("week_label")
+        base["data_preview"] = {
+            k: v for k, v in data.items()
+            if k in {"return_pct", "summary", "subtitle", "week_label",
+                     "month_label", "ticker", "earnings_dt"}
+        } or None
+        return base
+
+    return jsonify({
+        "ok":            True,
+        "artifacts":     [_as_list_row(r) for r in rows],
+        "total":         total,
+        "unread_count":  unread_count,
+    })
+
+
+@artifacts_bp.route("/<int:artifact_id>/preview", methods=["GET"])
+@api_auth
+def artifacts_preview(artifact_id: int):
+    """Return the structured data payload for one artifact. Owner-only.
+
+    Unlike the per-type `/preview` endpoints (which re-generate the artefact
+    from scratch for the current user), this endpoint reads the persisted
+    `data_json` from the row — so it's cheap and deterministic. Useful for
+    the frontend preview modal.
+    """
+    artefact = db.session.get(Artifact, artifact_id)
+    if not artefact or artefact.user_id != current_user.id:
+        return jsonify({"error": "Artifact not found"}), 404
+
+    return jsonify({
+        "ok":       True,
+        "id":       artefact.id,
+        "type":     artefact.type,
+        "title":    artefact.title,
+        "data":     artefact.data_json or {},
+        "has_file": bool(artefact.pdf_path),
+    })
+
+
+@artifacts_bp.route("/<int:artifact_id>/download", methods=["GET"])
+@api_auth
+def artifacts_download(artifact_id: int):
+    """Stream the rendered artefact file. Owner-only.
+
+    Polymorphic over all artefact types — picks the right mimetype/
+    extension from `_ARTIFACT_DOWNLOAD_META`. 404/410 semantics mirror the
+    type-specific handlers so the frontend can render a single error UI.
+    """
+    artefact = db.session.get(Artifact, artifact_id)
+    if not artefact or artefact.user_id != current_user.id:
+        return jsonify({"error": "Artifact not found"}), 404
+
+    meta = _ARTIFACT_DOWNLOAD_META.get(artefact.type)
+    if not meta:
+        return jsonify({
+            "error": f"Download not supported for type={artefact.type}",
+            "code":  "TYPE_NOT_DOWNLOADABLE",
+        }), 415
+    mimetype, ext = meta
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "File unavailable for this artifact",
+            "code":  "FILE_NOT_RENDERED",
+        }), 410
+
+    file_path = Path(artefact.pdf_path)
+    if not file_path.exists():
+        return jsonify({
+            "error": "File missing on disk",
+            "code":  "FILE_MISSING",
+        }), 410
+
+    # Mark opened on first successful download — same convention as the
+    # per-type endpoints above.
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.utcnow()
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    return send_file(
+        str(file_path),
+        mimetype=mimetype,
+        as_attachment=True,
+        download_name=f"{artefact.type}_{artefact.id}.{ext}",
+    )
+
+
+@artifacts_bp.route("/<int:artifact_id>/read", methods=["POST"])
+@api_auth
+def artifacts_mark_read(artifact_id: int):
+    """Mark an artifact as read. Owner-only. Idempotent."""
+    artefact = db.session.get(Artifact, artifact_id)
+    if not artefact or artefact.user_id != current_user.id:
+        return jsonify({"error": "Artifact not found"}), 404
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.utcnow()
+        try:
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning(
+                "markRead failed for artefact %s: %s", artifact_id, exc,
+            )
+            return jsonify({"error": "Could not mark as read"}), 500
+
+    return jsonify({
+        "ok":         True,
+        "id":         artefact.id,
+        "opened_at":  artefact.opened_at.isoformat() + "Z"
+                      if artefact.opened_at else None,
+    })
+
+
 # ── Weekly Memo ──────────────────────────────────────────────────────────────
+# DEPRECATED: prefer `/api/artifacts/list`, `/api/artifacts/<id>/download`,
+# `/api/artifacts/<id>/preview`. These per-type routes remain for QA and
+# legacy callers only.
 
 @artifacts_bp.route("/weekly-memo/preview", methods=["POST", "GET"])
 @api_auth

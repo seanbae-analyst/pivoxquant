@@ -1,4 +1,5 @@
 """Blueprint registration."""
+import logging
 import os
 
 
@@ -28,9 +29,26 @@ def register_blueprints(app):
     from .morning_brief import morning_brief_bp
     from .alt_data import alt_data_bp
     from .artifacts import artifacts_bp
-    from agent_worker.growth_routes import growth_bp
+    from .health import health_bp
+
+    # agent_worker is a sibling package and may be absent in some deploys
+    # (it ships a Procfile + its own requirements). When it's unavailable
+    # we skip the Growth blueprint rather than crashing the whole app —
+    # the health probe and all other routes must stay up.
+    growth_bp = None
+    try:
+        from agent_worker.growth_routes import growth_bp as _growth_bp
+        growth_bp = _growth_bp
+    except Exception as exc:  # pragma: no cover — exercised only on ImportError
+        logging.getLogger(__name__).warning(
+            "agent_worker.growth_routes unavailable (%s); /api/growth disabled",
+            exc,
+        )
+        # TODO: bundle agent_worker into the main image or extract it
+        # behind a feature flag before GA.
 
     blueprints = [
+        health_bp,
         auth_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, daytrade_bp, alerts_bp, trades_bp,
         autotrade_bp, ai_bp, watchlist_bp, backtest_bp,
@@ -38,8 +56,10 @@ def register_blueprints(app):
         broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
         counterfactual_bp, morning_brief_bp, alt_data_bp,
-        artifacts_bp, growth_bp,
+        artifacts_bp,
     ]
+    if growth_bp is not None:
+        blueprints.append(growth_bp)
 
     # Command Center writes to disk without authentication — opt-in only.
     # Enable in local dev by setting ENABLE_COMMAND_CENTER=1.
