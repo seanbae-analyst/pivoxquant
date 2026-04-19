@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import base64
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from flask import Blueprint, Response, current_app, jsonify, request, send_file
@@ -78,7 +78,7 @@ def _since_to_cutoff(since: str | None) -> datetime | None:
     try:
         if since.endswith("d"):
             days = int(since[:-1])
-            return datetime.utcnow() - timedelta(days=days)
+            return datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
     except ValueError:
         return None
     # Fall-through: try to parse as ISO date ("2026-01-01")
@@ -229,7 +229,7 @@ def artifacts_download(artifact_id: int):
     # Mark opened on first successful download — same convention as the
     # per-type endpoints above.
     if not artefact.opened_at:
-        artefact.opened_at = datetime.utcnow()
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
         try:
             db.session.commit()
         except Exception:
@@ -252,7 +252,7 @@ def artifacts_mark_read(artifact_id: int):
         return jsonify({"error": "Artifact not found"}), 404
 
     if not artefact.opened_at:
-        artefact.opened_at = datetime.utcnow()
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
         try:
             db.session.commit()
         except Exception as exc:
@@ -330,8 +330,8 @@ def weekly_memo_download(memo_id: int):
 
     # Mark as opened on first successful download
     if not artefact.opened_at:
-        from datetime import datetime
-        artefact.opened_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
         try:
             db.session.commit()
         except Exception:
@@ -484,8 +484,8 @@ def monthly_brag_download(brag_id: int):
     # Mark as opened on first successful download — same convention as
     # the weekly memo route.
     if not artefact.opened_at:
-        from datetime import datetime
-        artefact.opened_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
         try:
             db.session.commit()
         except Exception:
@@ -688,8 +688,8 @@ def brag_card_download(card_id: int):
         }), 410
 
     if not artefact.opened_at:
-        from datetime import datetime
-        artefact.opened_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
         try:
             db.session.commit()
         except Exception:
@@ -951,8 +951,8 @@ def earnings_prebrief_download(brief_id: int):
         }), 410
 
     if not artefact.opened_at:
-        from datetime import datetime
-        artefact.opened_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
         try:
             db.session.commit()
         except Exception:

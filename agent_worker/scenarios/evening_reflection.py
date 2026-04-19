@@ -9,7 +9,7 @@ Capital-markets-law guard: identical to morning_briefing.py.
 """
 import json
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 
 from sqlalchemy import create_engine, text
@@ -118,7 +118,7 @@ def _persist_reflection_questions(engine: Engine, questions: list[str], raw: str
                 "date": today,
                 "questions": json.dumps(questions, ensure_ascii=False),
                 "raw": raw,
-                "now": datetime.utcnow(),
+                "now": datetime.now(timezone.utc).replace(tzinfo=None),
             },
         ).fetchone()
         return row.id

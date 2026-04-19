@@ -7,7 +7,7 @@ Supports US equities + Korean stocks (.KS / .KQ).
 
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import feedparser
 import pandas as pd
@@ -500,8 +500,8 @@ Reply ONLY in this exact JSON format, nothing else:
             "bull_count":  bull_cnt,
             "bear_count":  bear_cnt,
             "sources":     sources_ok,
-            "date":        datetime.utcnow().strftime("%B %d, %Y"),
-            "generated_at": datetime.utcnow().isoformat(),
+            "date":        datetime.now(timezone.utc).replace(tzinfo=None).strftime("%B %d, %Y"),
+            "generated_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         }
 
     # ── Macro Data ────────────────────────────────────────────────────────────
@@ -1130,7 +1130,7 @@ Reply ONLY in this exact JSON format, nothing else:
                     break
                 # Move cursor to day before earliest record
                 if earliest_dt:
-                    from datetime import datetime as _dt_cls
+                    from datetime import datetime as _dt_cls, timezone
                     prev = _dt_cls.strptime(earliest_dt, "%Y%m%d") - timedelta(days=1)
                     cursor_end = prev.strftime("%Y%m%d")
 

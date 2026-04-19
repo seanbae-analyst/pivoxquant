@@ -35,7 +35,7 @@ def _envelope(key: str, value, data, cached_at: str | None) -> dict:
     return {
         key: value,
         "data": data,
-        "cached_at": cached_at or datetime.utcnow().isoformat(),
+        "cached_at": cached_at or datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "source": "pyKRX",
     }
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from extensions import db
 
 
@@ -10,7 +10,7 @@ class Position(db.Model):
     shares     = db.Column(db.Float,       nullable=False)
     avg_cost   = db.Column(db.Float,       nullable=False)
     buy_fx_rate = db.Column(db.Float,      default=0.0)
-    added_at   = db.Column(db.DateTime,    default=datetime.utcnow)
+    added_at   = db.Column(db.DateTime,    default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Thesis Tracker — 매수 이유 + 주간 AI 유효성 체크
     thesis              = db.Column(db.String(500), nullable=True)

@@ -22,7 +22,7 @@ mocked so the suite runs cold without any API keys.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -54,7 +54,7 @@ def free_user(app, make_user):
 def _make_fmp_calendar_row(ticker="TSLA", dt=None, eps_est=0.75,
                             rev_est=25_000_000_000.0, time_code="amc"):
     """FMP /earnings-calendar shape we need to exercise the matcher."""
-    dt = dt or (datetime.utcnow() + timedelta(minutes=30))
+    dt = dt or (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30))
     return {
         "symbol":         ticker,
         "date":           dt.date().isoformat(),
@@ -73,8 +73,8 @@ def test_find_upcoming_earnings_filters_to_window(
     appear; those outside should be filtered out."""
     add_position(pro_user["id"], ticker="TSLA", shares=10)
 
-    inside_dt = datetime.utcnow() + timedelta(minutes=30)
-    outside_dt = datetime.utcnow() + timedelta(hours=48)
+    inside_dt = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30)
+    outside_dt = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=48)
     cal_rows = [
         _make_fmp_calendar_row(ticker="TSLA", dt=inside_dt,
                                 time_code=inside_dt.strftime("%H:%M")),
@@ -91,7 +91,7 @@ def test_find_upcoming_earnings_filters_to_window(
     tickers = {r["ticker"] for r in rows}
     assert "TSLA" in tickers
     # Everything must be inside the 60-min window
-    cutoff = datetime.utcnow() + timedelta(minutes=60)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=60)
     assert all(r["earnings_dt"] <= cutoff for r in rows)
 
 
@@ -136,7 +136,7 @@ def test_claude_questions_parse_to_five(app, pro_user, add_position, svc):
     and populates `expected_questions` verbatim (length == 5)."""
     add_position(pro_user["id"], ticker="NVDA", shares=3)
 
-    earnings_dt = datetime.utcnow() + timedelta(hours=1)
+    earnings_dt = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
     cal_row = _make_fmp_calendar_row(ticker="NVDA", dt=earnings_dt)
 
     fake_block = MagicMock()
@@ -242,7 +242,7 @@ def test_run_scan_skips_already_sent(
     candidate as skipped (not re-attempted)."""
     add_position(pro_user["id"], ticker="AAPL", shares=8)
 
-    earnings_dt = datetime.utcnow() + timedelta(minutes=30)
+    earnings_dt = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30)
     cal_row = _make_fmp_calendar_row(ticker="AAPL", dt=earnings_dt,
                                       time_code=earnings_dt.strftime("%H:%M"))
 

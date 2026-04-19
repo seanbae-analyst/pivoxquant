@@ -5,7 +5,7 @@ All endpoints require authentication via @api_auth.
 """
 import json
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
@@ -90,7 +90,7 @@ def submit_reflection():
     if not row:
         return jsonify({"error": "Reflection not found"}), 404
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     answers_json = json.dumps(answers, ensure_ascii=False)
 
     # Update reflection with answers

@@ -2,7 +2,7 @@
 import json
 import logging
 import time as _time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 
@@ -151,11 +151,11 @@ def get_prices_fast():
                 if pdata.get("change_pct") is not None:
                     sd["change_pct"] = pdata["change_pct"]
                 c.data_json = json.dumps(sd, ensure_ascii=False)
-                c.updated_at = datetime.utcnow()
+                c.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             except Exception:
                 pass
     db.session.commit()
-    return jsonify({"prices": prices, "updated_at": datetime.utcnow().isoformat(),
+    return jsonify({"prices": prices, "updated_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                     "sources": {t: p.get("source", "?") for t, p in prices.items()}})
 
 
@@ -181,7 +181,7 @@ def market_overview():
     gs_view = fetcher.generate_gs_view(macro)
     if macro.get("usdkrw", {}).get("price"):
         fx_service.set_rate(macro["usdkrw"]["price"])
-    result = {"macro": macro, "gs_view": gs_view, "cached_at": datetime.utcnow().isoformat()}
+    result = {"macro": macro, "gs_view": gs_view, "cached_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}
     _macro_cache["data"] = result
     _macro_cache["ts"] = now
     resp = jsonify(result)
@@ -220,7 +220,7 @@ def get_fx_rates():
         # via age_seconds. Emit epoch 0 as empty-string sentinel only when
         # truly never fetched.
         if ts:
-            last_updated_iso = datetime.utcfromtimestamp(ts).strftime("%Y-%m-%dT%H:%M:%SZ")
+            last_updated_iso = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         else:
             last_updated_iso = None
 
@@ -285,7 +285,7 @@ def chart_data(ticker):
             from alpaca.data.timeframe import TimeFrame
             tf = TimeFrame.Minute if period == "1d" else TimeFrame(5, "Min")
             days = 1 if period == "1d" else 5
-            start = datetime.utcnow() - timedelta(days=days)
+            start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
             req = StockBarsRequest(symbol_or_symbols=ticker, timeframe=tf, start=start, limit=500)
             bars = realtime.alpaca_client.get_stock_bars(req)
             data = [{"date": bar.timestamp.strftime("%Y-%m-%d %H:%M"),

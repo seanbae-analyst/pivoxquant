@@ -3,7 +3,7 @@ import json
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from extensions import db
 from models import SignalCache
@@ -59,7 +59,7 @@ def earnings_tone_budget_check_and_increment() -> bool:
     """Returns True if the daily budget still has room (and increments usage).
     Returns False if today's limit has been reached — caller should reject with 429.
     """
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
     with _earnings_tone_lock:
         if _earnings_tone_usage["day"] != today:
             _earnings_tone_usage["day"] = today
@@ -72,7 +72,7 @@ def earnings_tone_budget_check_and_increment() -> bool:
 
 def earnings_tone_budget_remaining() -> int:
     """Return how many calls are left in today's budget."""
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
     with _earnings_tone_lock:
         if _earnings_tone_usage["day"] != today:
             return EARNINGS_TONE_DAILY_LIMIT
@@ -100,12 +100,12 @@ def save_signal(ticker: str, data: dict):
     c = db.session.get(SignalCache, ticker)
     if c:
         c.data_json = json.dumps(data, ensure_ascii=False)
-        c.updated_at = datetime.utcnow()
+        c.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         db.session.add(SignalCache(
             ticker=ticker,
             data_json=json.dumps(data, ensure_ascii=False),
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
         ))
     db.session.commit()
 

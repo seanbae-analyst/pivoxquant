@@ -1,5 +1,5 @@
 """Investment profile model — stores onboarding answers + auto-calculated quant params."""
-from datetime import datetime
+from datetime import datetime, timezone
 from extensions import db
 
 # ── Profile presets: maps profile_type → quant engine parameters ──
@@ -97,8 +97,8 @@ class InvestmentProfile(db.Model):
     ai_coaching_style = db.Column(db.String(20), default="balanced")
     alert_frequency = db.Column(db.String(20), default="daily")
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     def apply_preset(self):
         """Apply preset quant params based on profile_type."""

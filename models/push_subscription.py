@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from extensions import db
 
 
@@ -9,4 +9,4 @@ class PushSubscription(db.Model):
     endpoint   = db.Column(db.Text, nullable=False, unique=True)
     p256dh     = db.Column(db.Text, nullable=False)
     auth       = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

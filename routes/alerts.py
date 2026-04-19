@@ -1,6 +1,6 @@
 """Alert routes."""
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify
 from flask_login import current_user
 
@@ -15,7 +15,7 @@ alerts_bp = Blueprint("alerts", __name__, url_prefix="/api/alerts")
 @alerts_bp.route("")
 @api_auth
 def get_alerts():
-    cutoff = datetime.utcnow() - timedelta(days=7)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
     Alert.query.filter(Alert.user_id == current_user.id, Alert.created_at < cutoff).delete()
     db.session.commit()
     alerts = (Alert.query.filter_by(user_id=current_user.id)
@@ -71,7 +71,7 @@ def price_check():
     for a in alerts:
         recent = (Alert.query.filter_by(user_id=current_user.id, ticker=a["ticker"])
                   .filter(Alert.message.contains(a["type"]))
-                  .filter(Alert.created_at > datetime.utcnow() - timedelta(hours=4))
+                  .filter(Alert.created_at > datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=4))
                   .first())
         if not recent:
             sig = "NEGATIVE" if a["type"] == "STOP_LOSS" else "POSITIVE"

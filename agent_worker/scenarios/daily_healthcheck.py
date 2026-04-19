@@ -6,7 +6,7 @@ being down.
 """
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
@@ -161,7 +161,7 @@ def _insert_task(engine: Engine, task_type: str, payload: dict, result: dict, ri
                 "result": json.dumps(result, ensure_ascii=False),
                 "description": f"Daily healthcheck @ {TARGET_URL}",
                 "risk": risk,
-                "now": datetime.utcnow(),
+                "now": datetime.now(timezone.utc).replace(tzinfo=None),
             },
         ).fetchone()
         return row.id

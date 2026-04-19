@@ -54,7 +54,7 @@ import logging
 import os
 from calendar import monthrange
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -369,7 +369,7 @@ class MonthlyBragService:
             month_label=_month_label(start),
             month_start=start,
             month_end=end,
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(timezone.utc).replace(tzinfo=None),
             return_pct=stats["return_pct"],
             trade_count=stats["trade_count"],
             hold_days_avg=stats["hold_days_avg"],
@@ -659,7 +659,7 @@ background:#0B0D12;color:#F6F3EC;padding:32px;">
             if png_path:
                 artefact.pdf_path = png_path  # column is reused across artefact types
             if sent and not artefact.sent_at:
-                artefact.sent_at = datetime.utcnow()
+                artefact.sent_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             artefact = Artifact(
                 user_id=user_id,
@@ -667,7 +667,7 @@ background:#0B0D12;color:#F6F3EC;padding:32px;">
                 title=title,
                 data_json=data,
                 pdf_path=png_path,
-                sent_at=datetime.utcnow() if sent else None,
+                sent_at=datetime.now(timezone.utc).replace(tzinfo=None) if sent else None,
             )
             db.session.add(artefact)
         db.session.commit()

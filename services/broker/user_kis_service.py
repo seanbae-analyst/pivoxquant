@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
@@ -96,7 +96,7 @@ class UserKISService:
 
     def _save_token(self, token: str, expires_in: int) -> None:
         self._conn.encrypted_access_token = encrypt(token)
-        self._conn.token_expires_at = datetime.utcnow() + timedelta(
+        self._conn.token_expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
             seconds=max(0, int(expires_in) - 60)
         )
         db.session.commit()
@@ -108,7 +108,7 @@ class UserKISService:
         if (
             self._conn.encrypted_access_token
             and self._conn.token_expires_at
-            and self._conn.token_expires_at > datetime.utcnow()
+            and self._conn.token_expires_at > datetime.now(timezone.utc).replace(tzinfo=None)
         ):
             try:
                 self._access_token = decrypt(self._conn.encrypted_access_token)
@@ -132,7 +132,7 @@ class UserKISService:
         self._conn.last_sync_status = status
         self._conn.last_sync_error = None
         self._conn.consecutive_failures = 0
-        self._conn.last_synced_at = datetime.utcnow()
+        self._conn.last_synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
         db.session.commit()
 
     # ── Public: authenticate ──────────────────────────────────────────────

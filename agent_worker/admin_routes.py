@@ -10,7 +10,7 @@ Labels are restricted to 승인/거절/상세/중지.
 import json
 import logging
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from flask import Blueprint, abort, jsonify, redirect, request, url_for
 from flask_login import current_user, login_required
@@ -128,7 +128,7 @@ def approve(task_id: int):
         ),
         {
             "approver": current_user.email,
-            "now": datetime.utcnow(),
+            "now": datetime.now(timezone.utc).replace(tzinfo=None),
             "id": task_id,
         },
     )
@@ -172,7 +172,7 @@ def reject(task_id: int):
         ),
         {
             "approver": current_user.email,
-            "now": datetime.utcnow(),
+            "now": datetime.now(timezone.utc).replace(tzinfo=None),
             "id": task_id,
         },
     )

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from extensions import db
@@ -40,7 +40,7 @@ class User(UserMixin, db.Model):
     # opt out. Managed via migration 009_earnings_prebrief.
     email_opt_out_earnings = db.Column(db.Boolean, default=False,
                                         nullable=False, server_default="0")
-    created_at       = db.Column(db.DateTime,     default=datetime.utcnow)
+    created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")
     alerts    = db.relationship("Alert",    backref="user", lazy=True,

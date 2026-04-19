@@ -6,7 +6,7 @@ Uses Claude Haiku for cost-efficient, beginner-friendly financial insights.
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class AIService:
 
     def build_portfolio_context(self, user, positions, signals_cache=None, macro=None):
         """Build a structured context string from user's portfolio state."""
-        lines = ["## User Portfolio Context", f"Date: {datetime.utcnow().strftime('%Y-%m-%d')}"]
+        lines = ["## User Portfolio Context", f"Date: {datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y-%m-%d')}"]
 
         cap_usd = getattr(user, "available_capital", 0) or 0
         cap_krw = getattr(user, "available_capital_krw", 0) or 0
