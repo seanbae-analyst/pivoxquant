@@ -245,10 +245,96 @@ def get_price(ticker):
 
 # ── Historical OHLCV ────────────────────────────────────────────
 
+def _get_history_pykrx(ticker, period="3mo"):
+    """Korean stocks (.KS/.KQ) historical OHLCV via pyKRX.
+
+    FMP free/stable tier does not cover KRX-listed tickers, so portfolio
+    analytics (Sharpe/MaxDD/AnnVol) silently drop Korean positions. We
+    route them to pyKRX and return the same DataFrame schema the rest of
+    engine.py expects: index=DatetimeIndex, columns=[Open, High, Low, Close, Volume].
+
+    Cache key + TTL + stale-while-revalidate are shared with FMP history so
+    the 3mo window for a Korean ticker is only fetched once per hour.
+    Returns empty DataFrame on any failure — never raises.
+    """
+    cache_key = f"history:{ticker}:{period}"
+    cached = _get_cache(cache_key, TTL_PRICE_HIST)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+
+    # Strip '.KS' / '.KQ' → 6-digit KRX code
+    code = ticker.split(".")[0].strip()
+    if not (code.isdigit() and len(code) == 6):
+        _set_cache(cache_key, pd.DataFrame())
+        return pd.DataFrame()
+
+    period_map = {
+        "1mo": 30, "3mo": 90, "6mo": 180,
+        "1y": 365, "2y": 730, "5y": 1825,
+        "5d": 5, "1d": 1,
+    }
+    days = period_map.get(period, 90)
+    # Widen window ~1.5x to absorb weekends/holidays (trading days only)
+    today = datetime.now()
+    from_date = (today - timedelta(days=int(days * 1.5) + 5)).strftime("%Y%m%d")
+    to_date = today.strftime("%Y%m%d")
+
+    try:
+        from pykrx import stock as _krx
+        df = _krx.get_market_ohlcv(from_date, to_date, code)
+        if df is None or df.empty:
+            _set_cache(cache_key, pd.DataFrame())
+            return pd.DataFrame()
+
+        # pyKRX columns are Korean: 시가/고가/저가/종가/거래량 (+ 거래대금/등락률)
+        col_map = {
+            "시가": "Open", "고가": "High", "저가": "Low",
+            "종가": "Close", "거래량": "Volume",
+        }
+        df = df.rename(columns=col_map)
+
+        # Index is DatetimeIndex named 'Date' in pyKRX — normalize to match FMP path
+        df.index = pd.to_datetime(df.index)
+        df.index.name = "Date"
+        df = df.sort_index()
+
+        # Keep only the last `days` calendar days so callers that slice by len()
+        # get the same window as the FMP branch.
+        cutoff = today - timedelta(days=days)
+        df = df[df.index >= pd.Timestamp(cutoff)]
+
+        # Ensure required columns exist (pyKRX always returns them, defensive)
+        for col in ["Open", "High", "Low", "Close", "Volume"]:
+            if col not in df.columns:
+                df[col] = 0
+
+        # Drop extra pyKRX columns (거래대금, 등락률) to match FMP schema
+        df = df[["Open", "High", "Low", "Close", "Volume"]]
+
+        _set_cache(cache_key, df)
+        return df
+    except Exception as e:
+        logger.warning(f"pyKRX get_history failed for {ticker}: {e}")
+        _set_cache(cache_key, pd.DataFrame())
+        return pd.DataFrame()
+
+
 def get_history(ticker, period="3mo"):
     """Get historical daily OHLCV. Returns pandas DataFrame with standard OHLCV columns.
     Cache 1 hour. Stale-while-revalidate when budget low.
+
+    Korean tickers (.KS/.KQ) are dispatched to pyKRX since FMP does not
+    cover KRX — this keeps engine.portfolio_analytics() working for mixed
+    US/KR portfolios (Sharpe/MaxDD/AnnVol were previously null).
     """
+    # Korean tickers → pyKRX (FMP doesn't cover KRX)
+    if isinstance(ticker, str) and (ticker.endswith(".KS") or ticker.endswith(".KQ")):
+        return _get_history_pykrx(ticker, period)
+
     cache_key = f"history:{ticker}:{period}"
     cached = _get_cache(cache_key, TTL_PRICE_HIST)
     if cached is not None:
