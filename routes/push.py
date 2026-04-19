@@ -31,19 +31,24 @@ def subscribe():
     endpoint = sub["endpoint"]
 
     # Upsert: replace if same endpoint exists
-    existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
-    if existing:
-        existing.user_id = current_user.id
-        existing.p256dh = keys.get("p256dh", "")
-        existing.auth = keys.get("auth", "")
-    else:
-        db.session.add(PushSubscription(
-            user_id=current_user.id,
-            endpoint=endpoint,
-            p256dh=keys.get("p256dh", ""),
-            auth=keys.get("auth", ""),
-        ))
-    db.session.commit()
+    try:
+        existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
+        if existing:
+            existing.user_id = current_user.id
+            existing.p256dh = keys.get("p256dh", "")
+            existing.auth = keys.get("auth", "")
+        else:
+            db.session.add(PushSubscription(
+                user_id=current_user.id,
+                endpoint=endpoint,
+                p256dh=keys.get("p256dh", ""),
+                auth=keys.get("auth", ""),
+            ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("push.subscribe commit failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to save push subscription"}), 500
     return jsonify({"ok": True})
 
 
@@ -53,14 +58,19 @@ def unsubscribe():
     """Remove a push subscription."""
     data = request.get_json(force=True)
     endpoint = data.get("endpoint", "")
-    if endpoint:
-        PushSubscription.query.filter_by(
-            user_id=current_user.id, endpoint=endpoint
-        ).delete()
-    else:
-        # Remove all subscriptions for user
-        PushSubscription.query.filter_by(user_id=current_user.id).delete()
-    db.session.commit()
+    try:
+        if endpoint:
+            PushSubscription.query.filter_by(
+                user_id=current_user.id, endpoint=endpoint
+            ).delete()
+        else:
+            # Remove all subscriptions for user
+            PushSubscription.query.filter_by(user_id=current_user.id).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("push.unsubscribe commit failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to unsubscribe"}), 500
     return jsonify({"ok": True})
 
 
@@ -118,7 +128,11 @@ def send_push_to_user(user_id: int, title: str, body: str,
             # Remove expired/invalid subscriptions
             if "410" in err_msg or "404" in err_msg:
                 logger.info(f"Removing expired push subscription {sub.id}")
-                db.session.delete(sub)
-                db.session.commit()
+                try:
+                    db.session.delete(sub)
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+                    logger.exception("push send cleanup failed for sub %s", sub.id)
             else:
                 logger.error(f"Push send failed for sub {sub.id}: {e}")

@@ -1,5 +1,7 @@
 """Watchlist routes."""
 import json
+import logging
+
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 
@@ -8,6 +10,8 @@ from models import Watchlist, SignalCache
 from services import cache_service
 from services.container import engine
 from .decorators import api_auth
+
+logger = logging.getLogger(__name__)
 
 watchlist_bp = Blueprint("watchlist", __name__, url_prefix="/api/watchlist")
 
@@ -47,9 +51,18 @@ def add():
     existing = Watchlist.query.filter_by(user_id=current_user.id, ticker=ticker).first()
     if existing:
         return jsonify({"error": "Already in watchlist"}), 409
-    db.session.add(Watchlist(user_id=current_user.id, ticker=ticker))
-    db.session.commit()
-    cache_service.cache_ticker(ticker, current_user.available_capital, engine)
+    try:
+        db.session.add(Watchlist(user_id=current_user.id, ticker=ticker))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("watchlist.add commit failed (ticker=%s)", ticker)
+        return jsonify({"error": "Failed to add to watchlist"}), 500
+    # Best-effort cache warm — never block the response on cache failures.
+    try:
+        cache_service.cache_ticker(ticker, current_user.available_capital, engine)
+    except Exception:
+        logger.exception("watchlist.add cache_ticker failed (ticker=%s)", ticker)
     return jsonify({"ok": True, "ticker": ticker})
 
 
@@ -59,6 +72,11 @@ def remove(wid):
     w = db.session.get(Watchlist, wid)
     if not w or w.user_id != current_user.id:
         return jsonify({"error": "Not found"}), 404
-    db.session.delete(w)
-    db.session.commit()
+    try:
+        db.session.delete(w)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("watchlist.remove commit failed (wid=%s)", wid)
+        return jsonify({"error": "Failed to remove from watchlist"}), 500
     return jsonify({"ok": True})

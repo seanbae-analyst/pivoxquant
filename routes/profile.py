@@ -1,5 +1,7 @@
 """Investment profile routes: onboarding, get/update profile, questionnaire."""
 import json
+import logging
+
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 
@@ -7,6 +9,8 @@ from extensions import db
 from models import InvestmentProfile
 from models.investment_profile import calculate_profile_type, PROFILE_PRESETS
 from .decorators import api_auth
+
+logger = logging.getLogger(__name__)
 
 profile_bp = Blueprint("profile", __name__, url_prefix="/api/profile")
 
@@ -157,7 +161,12 @@ def submit_onboarding():
     current_user.risk_profile = profile_type
     current_user.onboarding_completed = True
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("profile.submit_onboarding commit failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to save onboarding answers. Please try again."}), 500
 
     return jsonify({
         "ok": True,
@@ -231,7 +240,12 @@ def update_capital():
     if not keep_krw:
         current_user.available_capital_krw = krw
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("profile.update_capital commit failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to update capital. Please try again."}), 500
 
     return jsonify({
         "ok": True,
@@ -272,7 +286,12 @@ def update_profile():
     if current_user.subscription_tier == "free":
         current_user.profile_changes_left -= 1
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("profile.update_profile commit failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to update profile. Please try again."}), 500
 
     return jsonify({
         "ok": True,

@@ -31,7 +31,11 @@ PLAN_TIERS = {
 
 
 def _get_or_create_customer(user):
-    """Get existing Stripe customer or create a new one."""
+    """Get existing Stripe customer or create a new one.
+
+    Raises stripe.StripeError on API failure — the caller must handle it
+    (all call sites already wrap in `except stripe.StripeError`).
+    """
     if user.stripe_customer_id:
         return user.stripe_customer_id
     customer = stripe.Customer.create(
@@ -40,7 +44,17 @@ def _get_or_create_customer(user):
         metadata={"user_id": str(user.id)},
     )
     user.stripe_customer_id = customer.id
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "Failed to persist stripe_customer_id=%s for user_id=%s",
+            customer.id, user.id,
+        )
+        # Stripe customer was created successfully — surface the id even
+        # though we couldn't persist it. Next checkout attempt will create
+        # a duplicate customer; orphan cleanup is handled out-of-band.
     return customer.id
 
 
@@ -99,16 +113,33 @@ def stripe_webhook():
     event_type = event["type"]
     data = event["data"]["object"]
 
-    if event_type == "checkout.session.completed":
-        _handle_checkout_completed(data)
-    elif event_type == "customer.subscription.updated":
-        _handle_subscription_updated(data)
-    elif event_type == "customer.subscription.deleted":
-        _handle_subscription_deleted(data)
-    elif event_type == "invoice.payment_failed":
-        _handle_invoice_payment_failed(data)
-    elif event_type == "invoice.paid":
-        _handle_invoice_paid(data)
+    # Webhook handlers must never 500 — Stripe retries failed webhooks for
+    # up to 3 days (exponential backoff), which would spam our error logs
+    # and potentially duplicate side-effects. Catch + rollback + log, then
+    # ACK so Stripe moves on. The event is still recorded upstream so we
+    # can replay manually if the handler truly needed to succeed.
+    try:
+        if event_type == "checkout.session.completed":
+            _handle_checkout_completed(data)
+        elif event_type == "customer.subscription.updated":
+            _handle_subscription_updated(data)
+        elif event_type == "customer.subscription.deleted":
+            _handle_subscription_deleted(data)
+        elif event_type == "invoice.payment_failed":
+            _handle_invoice_payment_failed(data)
+        elif event_type == "invoice.paid":
+            _handle_invoice_paid(data)
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.exception(
+            "Stripe webhook handler failed (event_type=%s, event_id=%s)",
+            event_type, event.get("id"),
+        )
+        # Still ACK so Stripe doesn't retry forever.
+        return jsonify({"ok": True, "warning": "handler_failed"}), 200
 
     return jsonify({"ok": True})
 

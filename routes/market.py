@@ -154,7 +154,15 @@ def get_prices_fast():
                 c.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             except Exception:
                 pass
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # Cache update is a side-effect; the prices payload is what matters.
+        import logging as _logging
+        _logging.getLogger(__name__).exception(
+            "market.get_prices_fast cache-update commit failed"
+        )
     return jsonify({"prices": prices, "updated_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                     "sources": {t: p.get("source", "?") for t, p in prices.items()}})
 

@@ -1,5 +1,6 @@
 """Portfolio share routes: create and read public share links."""
 import json
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -11,6 +12,8 @@ from models import Position, SignalCache, User
 from models.portfolio_share import PortfolioShare
 from services import fx_service
 from .decorators import api_auth
+
+logger = logging.getLogger(__name__)
 
 share_bp = Blueprint("share", __name__, url_prefix="/api/portfolio/share")
 
@@ -29,8 +32,13 @@ def create_share():
         created_at=now,
         expires_at=expires_at,
     )
-    db.session.add(share)
-    db.session.commit()
+    try:
+        db.session.add(share)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("share.create_share commit failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to create share link"}), 500
 
     base_url = current_app.config.get("FRONTEND_URL", "http://localhost:3000")
     share_url = f"{base_url}/portfolio/shared/{token}"
