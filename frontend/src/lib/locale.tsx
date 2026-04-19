@@ -61,11 +61,12 @@ function writeLocaleCookie(locale: Locale): void {
  */
 function resolve(messages: Messages, key: string): string {
   const parts = key.split(".");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let node: any = messages;
+  // Walk the nested messages tree. `unknown` (not `any`) forces the
+  // object/string type guards below to narrow on each step.
+  let node: unknown = messages;
   for (const part of parts) {
     if (node == null || typeof node !== "object") return key;
-    node = node[part];
+    node = (node as Record<string, unknown>)[part];
   }
   return typeof node === "string" ? node : key;
 }
