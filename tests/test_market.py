@@ -16,9 +16,11 @@ class TestMarketStatus:
         assert r.status_code == 200
         d = r.get_json()
         assert "us" in d and "kr" in d
+        # services/market_status.py uses lowercase status tokens:
+        # regular / pre_market / after_hours / closed
         for region in ("us", "kr"):
             assert d[region]["status"] in (
-                "OPEN", "CLOSED", "PRE_MARKET", "AFTER_HOURS",
+                "regular", "closed", "pre_market", "after_hours",
             )
 
 

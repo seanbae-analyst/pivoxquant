@@ -307,8 +307,10 @@ class TestVolatilityRegime:
         closes, _, _, _ = steady_uptrend
         result = VolatilityRegime.analyze(closes)
         assert result is not None
+        # Note: field is `vol_description` (not `recommendation`) — this is
+        # intentional to comply with 자본시장법 (no "추천/조언" language).
         required = {"model", "regime", "label", "label_kr", "current_vol",
-                    "position_multiplier", "recommendation", "recommendation_kr"}
+                    "position_multiplier", "vol_description", "vol_description_kr"}
         assert required.issubset(result.keys())
 
     def test_regime_is_valid_enum(self, steady_uptrend):
@@ -633,18 +635,34 @@ class TestAdaptiveParams:
         assert profile is None, "BEAR+CRISIS should skip trade"
 
     def test_tp_sl_trail_floors_and_caps(self, steady_uptrend):
-        """TP, SL, trail must be within defined bounds."""
+        """TP, SL, trail must be within defined bounds.
+
+        Note: profiles whose tp_mode == 'trail_only' (e.g. trend_rider, momentum)
+        intentionally pin tp_pct >= 9000 so it never triggers — the exit is
+        handled entirely by EmergencySL / trailing stop. Those profiles also use
+        a wider SL range (15..35). Skip the standard TP bound in that branch.
+        """
         closes, highs, lows, volumes = steady_uptrend
         result = AdaptiveParams.calculate(closes, highs, lows, volumes)
         if not result["skip_trade"]:
-            # TP: 5.0 to 80.0 (50.0 floor for trend_rider)
-            assert 5.0 <= result["tp_pct"] <= 80.0, (
-                f"TP {result['tp_pct']} outside [5, 80]"
-            )
-            # SL: 2.0 to 25.0
-            assert 2.0 <= result["sl_pct"] <= 25.0, (
-                f"SL {result['sl_pct']} outside [2, 25]"
-            )
+            tp_mode = result.get("tp_mode", "normal")
+            if tp_mode == "trail_only":
+                # Trend Hold: TP never triggers by design; SL uses wide emergency range.
+                assert result["tp_pct"] >= 9000.0, (
+                    f"trail_only TP should be >= 9000 to disable TP exit, got {result['tp_pct']}"
+                )
+                assert 15.0 <= result["sl_pct"] <= 35.0, (
+                    f"trail_only SL {result['sl_pct']} outside [15, 35]"
+                )
+            else:
+                # TP: 5.0 to 80.0
+                assert 5.0 <= result["tp_pct"] <= 80.0, (
+                    f"TP {result['tp_pct']} outside [5, 80]"
+                )
+                # SL: 2.0 to 25.0
+                assert 2.0 <= result["sl_pct"] <= 25.0, (
+                    f"SL {result['sl_pct']} outside [2, 25]"
+                )
             # Trail: 2.0 to 20.0
             assert 2.0 <= result["trail_pct"] <= 20.0, (
                 f"Trail {result['trail_pct']} outside [2, 20]"
