@@ -19,5 +19,15 @@ sendgrid>=6.11.0
 stripe>=8.0.0
 pywebpush>=2.0.0
 flask-limiter>=3.5.0
+cryptography>=42.0.0
 gunicorn>=22.0.0
 gevent>=24.2.1
+pykrx>=1.0.45
+weasyprint>=62.0
+jinja2>=3.1.0
+# Monthly Brag Card (MVP #2) PNG rendering via headless Chromium.
+# First run on a fresh host requires: `playwright install chromium`
+# (downloads a ~120 MB browser bundle). The service tolerates a missing
+# install: render_png() returns None and the Artifact row is still
+# persisted for later rasterization.
+playwright>=1.40
