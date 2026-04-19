@@ -1,0 +1,1069 @@
+"""Earnings Pre-Brief — 30-min pre-announcement 2p PDF, emailed + pushed to Pro+ holders.
+
+Entry points
+------------
+    EarningsPreBriefService().get_upcoming_earnings(hours=24)
+    EarningsPreBriefService().generate_for_position(user_id, ticker, earnings_date)
+    EarningsPreBriefService().render_pdf(data)        → bytes
+    EarningsPreBriefService().render_email_html(data, pdf_url=None)
+    EarningsPreBriefService().send_notification(user, pdf_bytes, html_body, data)
+    EarningsPreBriefService().run_scan()              → summary dict (cron target, 10-min cadence)
+
+Design principles
+-----------------
+1. Pro+ only. Free tier silently skipped.
+2. Event-triggered, not scheduled by calendar. Cron runs every 10 min and
+   matches "positions whose earnings are ~30 minutes away (tolerance ±5 min)
+   and who have no prebrief artifact yet for that (ticker, earnings_date)".
+3. Idempotent. (user_id, 'earnings_prebrief', title) UNIQUE, title encodes
+   ticker + earnings_date so a re-run cannot duplicate.
+4. Graceful degradation. Every upstream failure (FMP down, Claude down,
+   WeasyPrint missing, push unconfigured) is caught and the affected
+   section/channel is skipped. Fallback questions are hardcoded so a
+   brief always ships with 5 questions.
+5. No modifications to fmp_service / ai_service / push_service /
+   morning_brief_service / weekly_memo_service / engine.py / quant_models.
+   All integration is read-only import + call.
+
+Storage
+-------
+PDFs live in `<project>/artifacts/earnings_prebrief/<user_id>/<ticker>_<date>.pdf`
+unless `EARNINGS_PREBRIEF_STORAGE_DIR` env override is set.
+
+Lead time
+---------
+`EARNINGS_PREBRIEF_LEAD_MINUTES` (default 30) controls how far before the
+announcement the brief fires. Matcher tolerance is ±5 min around that.
+"""
+from __future__ import annotations
+
+import logging
+import os
+import re
+import threading
+from dataclasses import dataclass
+from datetime import date, datetime, time as _time, timedelta
+from pathlib import Path
+from typing import Any, Optional
+
+from extensions import db
+from models import Artifact, Position, User
+
+logger = logging.getLogger(__name__)
+
+
+# ── paths / config ───────────────────────────────────────────────────────────
+
+_TEMPLATE_DIR = Path(__file__).parent / "templates"
+_DEFAULT_STORAGE_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "earnings_prebrief"
+
+# Tiers eligible for the pre-brief — Pro+ only.
+_PAID_TIERS = frozenset({"pro", "premium", "elite"})
+
+# ± window (minutes) around the 30-min-before target. Must exceed cron cadence
+# to avoid gaps. Default 10-min cron + ±6min window → every earnings is matched
+# exactly once.
+_MATCH_TOLERANCE_MIN = 6
+
+# Hardcoded fallback question bank — used when Claude API is unavailable OR
+# returns fewer than 5 parsable items. Ensures a brief always ships.
+_FALLBACK_QUESTIONS_EN = [
+    "Guidance for next quarter and full-year outlook focus points",
+    "Gross margin trend versus consensus expectations",
+    "Capital expenditure plans and return on invested capital",
+    "Revenue mix shift across key business segments",
+    "Macro headwinds management expects to call out",
+]
+
+_FALLBACK_QUESTIONS_KO = [
+    "다음 분기와 연간 가이던스의 톤과 핵심 포인트 관찰",
+    "총마진 트렌드와 컨센서스 대비 차이 확인 여부",
+    "설비 투자 계획과 투자수익률 코멘트 관찰",
+    "주요 사업부문별 매출 구성 변화 확인",
+    "거시적 역풍에 대한 경영진 코멘트 톤 확인",
+]
+
+
+def _lead_minutes() -> int:
+    try:
+        return int(os.environ.get("EARNINGS_PREBRIEF_LEAD_MINUTES", "30"))
+    except ValueError:
+        return 30
+
+
+def _storage_dir() -> Path:
+    override = os.environ.get("EARNINGS_PREBRIEF_STORAGE_DIR")
+    d = Path(override) if override else _DEFAULT_STORAGE_DIR
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+# ── lazy optional deps ───────────────────────────────────────────────────────
+
+def _try_import_weasyprint():
+    try:
+        from weasyprint import HTML  # type: ignore
+        return HTML
+    except Exception as exc:  # pragma: no cover — native libs
+        logger.info("WeasyPrint unavailable (%s); PDF generation will be skipped.", exc)
+        return None
+
+
+def _try_import_jinja():
+    try:
+        from jinja2 import Environment, FileSystemLoader, select_autoescape
+        return Environment, FileSystemLoader, select_autoescape
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Jinja2 unavailable (%s); template rendering will fall back to string.", exc)
+        return None, None, None
+
+
+# ── AI budget (module-level; mirrors morning_brief / weekly_memo) ────────────
+
+_AI_LIMIT = 100  # per UTC day — earnings are rarer than morning briefs
+_ai_usage = {"day": None, "count": 0}
+_ai_lock = threading.Lock()
+
+
+def _ai_budget_available() -> bool:
+    today_utc = datetime.utcnow().date()
+    with _ai_lock:
+        if _ai_usage["day"] != today_utc:
+            _ai_usage["day"] = today_utc
+            _ai_usage["count"] = 0
+        return _ai_usage["count"] < _AI_LIMIT
+
+
+def _ai_budget_consume() -> None:
+    today_utc = datetime.utcnow().date()
+    with _ai_lock:
+        if _ai_usage["day"] != today_utc:
+            _ai_usage["day"] = today_utc
+            _ai_usage["count"] = 0
+        _ai_usage["count"] += 1
+
+
+# ── data shape ───────────────────────────────────────────────────────────────
+
+@dataclass
+class PreBriefContext:
+    """Template-friendly payload. Any field may be falsy — template hides
+    sections that have no data so the PDF always renders cleanly."""
+    user_id:             int
+    user_name:           str
+    ticker:              str
+    company_name:        str
+    earnings_datetime:   datetime          # aware or naive UTC; template converts to KST display
+    fiscal_period:       str               # e.g. "Q1 2026"
+    generated_at:        datetime
+    consensus_eps:       Optional[float]
+    consensus_eps_low:   Optional[float]
+    consensus_eps_high:  Optional[float]
+    consensus_revenue:   Optional[float]   # USD millions
+    current_price:       Optional[float]
+    surprise_history:    list[dict[str, Any]]  # last 4 qtrs
+    expected_questions:  list[str]         # exactly 5
+    position_shares:     float
+    position_avg_cost:   float
+    position_mv:         float
+    sensitivity_beat:    Optional[float]   # $ PnL if +3% beat
+    sensitivity_miss:    Optional[float]   # $ PnL if -3% miss
+    risk_notes:          list[str]
+    disclaimer:          str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "user_id":            self.user_id,
+            "user_name":          self.user_name,
+            "ticker":             self.ticker,
+            "company_name":       self.company_name,
+            "earnings_datetime":  self.earnings_datetime.isoformat() + ("Z" if self.earnings_datetime.tzinfo is None else ""),
+            "fiscal_period":      self.fiscal_period,
+            "generated_at":       self.generated_at.isoformat() + "Z",
+            "consensus_eps":      self.consensus_eps,
+            "consensus_eps_low":  self.consensus_eps_low,
+            "consensus_eps_high": self.consensus_eps_high,
+            "consensus_revenue":  self.consensus_revenue,
+            "current_price":      self.current_price,
+            "surprise_history":   self.surprise_history,
+            "expected_questions": self.expected_questions,
+            "position_shares":    self.position_shares,
+            "position_avg_cost":  self.position_avg_cost,
+            "position_mv":        self.position_mv,
+            "sensitivity_beat":   self.sensitivity_beat,
+            "sensitivity_miss":   self.sensitivity_miss,
+            "risk_notes":         self.risk_notes,
+            "disclaimer":         self.disclaimer,
+        }
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def _safe_fetch_quote(ticker: str) -> Optional[dict]:
+    """Thin wrapper around fmp_service.get_quote — never raises."""
+    try:
+        import fmp_service as fmp  # type: ignore
+        q = fmp.get_quote(ticker)
+        return q if isinstance(q, dict) else (q[0] if isinstance(q, list) and q else None)
+    except Exception as exc:
+        logger.debug("quote fetch failed for %s: %s", ticker, exc)
+        return None
+
+
+def _safe_get_earnings_calendar(ticker: Optional[str] = None,
+                                 days_ahead: int = 2) -> list[dict]:
+    """Read-only wrapper around fmp_service.get_earnings_calendar.
+
+    Returns [] if FMP unavailable / disabled / errors.
+    """
+    try:
+        import fmp_service as fmp  # type: ignore
+        rows = fmp.get_earnings_calendar(ticker=ticker, days_ahead=days_ahead)
+        return rows if isinstance(rows, list) else []
+    except Exception as exc:
+        logger.debug("earnings calendar fetch failed (ticker=%s): %s", ticker, exc)
+        return []
+
+
+def _safe_get_quarterly_eps(ticker: str, quarters: int = 4) -> list[dict]:
+    """Last N quarters of EPS actuals + estimates for surprise history."""
+    try:
+        import fmp_service as fmp  # type: ignore
+        rows = fmp.get_quarterly_eps(ticker, quarters=quarters)
+        return rows if isinstance(rows, list) else []
+    except Exception as exc:
+        logger.debug("quarterly EPS fetch failed for %s: %s", ticker, exc)
+        return []
+
+
+def _safe_get_news(ticker: str, limit: int = 8) -> list[dict]:
+    try:
+        import fmp_service as fmp  # type: ignore
+        rows = fmp.get_news(ticker, limit=limit)
+        return rows if isinstance(rows, list) else []
+    except Exception as exc:
+        logger.debug("news fetch failed for %s: %s", ticker, exc)
+        return []
+
+
+def _parse_earnings_row_datetime(row: dict) -> Optional[datetime]:
+    """FMP earnings-calendar rows come with `date` (YYYY-MM-DD) and an
+    optional `time` field ("bmo"/"amc"/"HH:MM"). We map those to a naive
+    UTC datetime — good enough for the 30-min matcher.
+
+    bmo (before market open)  → 13:30 UTC  (≈ 09:30 ET pre-market close)
+    amc (after market close)  → 20:30 UTC  (≈ 16:30 ET post-market)
+    """
+    d_str = str(row.get("date", ""))[:10]
+    if not d_str:
+        return None
+    try:
+        d = date.fromisoformat(d_str)
+    except ValueError:
+        return None
+
+    t_raw = str(row.get("time") or "").strip().lower()
+    if t_raw in ("bmo", "pre", "pre-market", "premarket", "before"):
+        t = _time(13, 30)
+    elif t_raw in ("amc", "post", "post-market", "postmarket", "after"):
+        t = _time(20, 30)
+    elif re.match(r"^\d{1,2}:\d{2}$", t_raw):
+        hh, mm = t_raw.split(":")
+        try:
+            t = _time(int(hh), int(mm))
+        except ValueError:
+            t = _time(20, 30)
+    else:
+        # Default to amc — most S&P 500 report post-market.
+        t = _time(20, 30)
+    return datetime.combine(d, t)
+
+
+def _fiscal_period_label(dt: datetime) -> str:
+    """Best-effort "Q{n} {YYYY}" label from a calendar date."""
+    q = (dt.month - 1) // 3 + 1
+    return f"Q{q} {dt.year}"
+
+
+def _derive_consensus_eps(calendar_row: dict) -> tuple[Optional[float], Optional[float], Optional[float]]:
+    """Extract (mean, low, high) consensus EPS from an FMP calendar row.
+
+    FMP stable earnings-calendar returns `epsEstimated`. Some endpoints
+    also include `epsEstimatedLow`/`epsEstimatedHigh` — we read them
+    defensively and fall back to ±10% of the mean for the bar chart.
+    """
+    mean = calendar_row.get("epsEstimated")
+    try:
+        mean_f = float(mean) if mean is not None else None
+    except (TypeError, ValueError):
+        mean_f = None
+
+    low = calendar_row.get("epsEstimatedLow")
+    high = calendar_row.get("epsEstimatedHigh")
+    try:
+        low_f = float(low) if low is not None else None
+    except (TypeError, ValueError):
+        low_f = None
+    try:
+        high_f = float(high) if high is not None else None
+    except (TypeError, ValueError):
+        high_f = None
+
+    if mean_f is not None and (low_f is None or high_f is None):
+        # Synthesise a ±10% band for visualisation; mark semantically via
+        # equal low/high when mean is 0.
+        band = abs(mean_f) * 0.10 if mean_f else 0.0
+        low_f = low_f if low_f is not None else round(mean_f - band, 4)
+        high_f = high_f if high_f is not None else round(mean_f + band, 4)
+
+    return mean_f, low_f, high_f
+
+
+def _derive_consensus_revenue(calendar_row: dict) -> Optional[float]:
+    """USD millions. FMP returns raw USD — we divide by 1e6 for display."""
+    rev = calendar_row.get("revenueEstimated")
+    try:
+        rev_f = float(rev) if rev is not None else None
+    except (TypeError, ValueError):
+        return None
+    if rev_f is None or rev_f <= 0:
+        return None
+    # Heuristic: FMP sometimes returns millions already, sometimes raw.
+    # Assume > 1e9 means raw, else already in millions.
+    return round(rev_f / 1_000_000, 1) if rev_f > 1_000_000 else round(rev_f, 1)
+
+
+def _build_surprise_history(eps_rows: list[dict]) -> list[dict[str, Any]]:
+    """Condense last-4-quarter EPS actual vs estimate into template shape."""
+    out: list[dict[str, Any]] = []
+    for row in eps_rows[:4]:
+        try:
+            actual = float(row.get("actualEarningResult") or row.get("actualEPS") or 0)
+            est = float(row.get("estimatedEarning") or row.get("epsEstimated") or 0)
+        except (TypeError, ValueError):
+            continue
+        d_str = str(row.get("date", ""))[:10]
+        if est == 0:
+            surprise_pct = None
+        else:
+            surprise_pct = round((actual - est) / abs(est) * 100, 1)
+        out.append({
+            "date":         d_str,
+            "actual_eps":   actual,
+            "estimate_eps": est,
+            "surprise_pct": surprise_pct,
+        })
+    return out
+
+
+def _position_sensitivity(shares: float, current_price: Optional[float],
+                          beat_miss_pct: float = 3.0) -> tuple[Optional[float], Optional[float]]:
+    """$ PnL impact for a ±`beat_miss_pct`% post-earnings move.
+
+    Uses live price × shares × pct. If current_price is missing, returns
+    (None, None) so the template hides the row.
+    """
+    if current_price is None or current_price <= 0 or shares <= 0:
+        return None, None
+    mv = current_price * shares
+    move = mv * (beat_miss_pct / 100.0)
+    return round(move, 2), round(-move, 2)
+
+
+_FORBIDDEN_PHRASES = ("buy", "sell", "추천", "매수 시점", "매도 시점",
+                      "recommend", "advice", "조언")
+
+
+def _is_compliant_question(q: str) -> bool:
+    low = q.lower()
+    return not any(p in low for p in _FORBIDDEN_PHRASES)
+
+
+def _parse_numbered_questions(text: str) -> list[str]:
+    """Extract lines prefixed by '1.', '2.' etc. Strips enumeration + trailing
+    punctuation. Returns up to 5 cleaned questions."""
+    if not text:
+        return []
+    lines = []
+    for raw in text.splitlines():
+        m = re.match(r"^\s*(\d+)[\.\)]\s+(.+?)\s*$", raw)
+        if m:
+            q = m.group(2).strip().rstrip(".?!")
+            if q:
+                lines.append(q)
+    return lines[:5]
+
+
+def _call_claude_for_questions(ticker: str, fiscal_period: str,
+                                news_snippets: list[str]) -> list[str]:
+    """Ask Claude for 5 short expected-question bullets. Returns [] on any failure.
+
+    Uses the shared ai_service client WITHOUT mutating it — we only read
+    `.client` and `.available`. One retry when the parsed list has < 5 items.
+    """
+    if not _ai_budget_available():
+        logger.info("AI budget exhausted; skipping Claude for %s", ticker)
+        return []
+
+    try:
+        from ai_service import AIService  # type: ignore
+    except Exception as exc:
+        logger.debug("ai_service import failed: %s", exc)
+        return []
+
+    try:
+        svc = AIService()
+    except Exception as exc:
+        logger.debug("AIService init failed: %s", exc)
+        return []
+
+    if not getattr(svc, "available", False) or not getattr(svc, "client", None):
+        return []
+
+    news_block = "\n".join(f"- {s}" for s in news_snippets[:5]) or "- (no recent news)"
+    prompt = (
+        f"당신은 월스트리트 시니어 애널리스트. {ticker} {fiscal_period} 실적 발표 전 "
+        f"투자자가 주목할 질문 5개 작성.\n"
+        f"최근 뉴스:\n{news_block}\n"
+        f"전분기 주요 이슈: 마진 트렌드, 가이던스 톤, 자본 배분.\n\n"
+        f"형식: 번호 매김 5개. 각 질문은 1문장, 20-30자. "
+        f"'매수/매도 시점', '추천' 같은 표현 금지."
+    )
+
+    def _one_shot() -> list[str]:
+        _ai_budget_consume()
+        try:
+            resp = svc.client.messages.create(
+                model="claude-haiku-4-5",
+                max_tokens=400,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = ""
+            for block in getattr(resp, "content", []) or []:
+                if getattr(block, "type", None) == "text":
+                    text += getattr(block, "text", "")
+            return _parse_numbered_questions(text)
+        except Exception as exc:
+            logger.warning("Claude call failed for %s: %s", ticker, exc)
+            return []
+
+    parsed = _one_shot()
+    if len(parsed) < 5:
+        # Single retry — model sometimes truncates on the first shot.
+        parsed = _one_shot()
+    # Compliance filter
+    parsed = [q for q in parsed if _is_compliant_question(q)]
+    return parsed[:5]
+
+
+# ── The service ──────────────────────────────────────────────────────────────
+
+class EarningsPreBriefService:
+    """Coordinates match → assembly → render → dispatch → persist."""
+
+    # ── discovery ──────────────────────────────────────────────────────────
+
+    def get_upcoming_earnings(self, hours: int = 24) -> list[dict[str, Any]]:
+        """Return (user_id, ticker, earnings_dt, shares, avg_cost) rows
+        for Pro+ holders whose position's earnings fall within `hours`.
+
+        Join is done in Python — `Position × User × FMP.calendar(ticker)`.
+        FMP call per distinct ticker is cached 24h by fmp_service itself,
+        so the scan is cheap even with many positions.
+        """
+        horizon = datetime.utcnow() + timedelta(hours=hours)
+
+        paid_users = (
+            User.query
+            .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
+            .all()
+        )
+        paid_ids = [u.id for u in paid_users]
+        if not paid_ids:
+            return []
+
+        positions = (
+            Position.query
+            .filter(Position.user_id.in_(paid_ids))
+            .all()
+        )
+        if not positions:
+            return []
+
+        # Group so we hit FMP once per ticker.
+        ticker_to_positions: dict[str, list[Position]] = {}
+        for p in positions:
+            ticker_to_positions.setdefault(p.ticker.upper(), []).append(p)
+
+        rows: list[dict[str, Any]] = []
+        now = datetime.utcnow()
+        for ticker, pos_list in ticker_to_positions.items():
+            cal = _safe_get_earnings_calendar(ticker=ticker,
+                                               days_ahead=max(2, (hours // 24) + 1))
+            for c in cal:
+                dt = _parse_earnings_row_datetime(c)
+                if dt is None:
+                    continue
+                if not (now <= dt <= horizon):
+                    continue
+                for p in pos_list:
+                    rows.append({
+                        "user_id":       p.user_id,
+                        "ticker":        ticker,
+                        "earnings_dt":   dt,
+                        "shares":        float(p.shares or 0),
+                        "avg_cost":      float(p.avg_cost or 0),
+                        "calendar_row":  c,
+                    })
+        rows.sort(key=lambda r: r["earnings_dt"])
+        return rows
+
+    # ── assembly ───────────────────────────────────────────────────────────
+
+    def generate_for_position(self, user_id: int, ticker: str,
+                               earnings_date: datetime,
+                               *, calendar_row: Optional[dict] = None
+                              ) -> dict[str, Any]:
+        """Assemble the full payload for one (user, ticker, earnings_dt).
+
+        Missing upstream data → section drops silently; the brief still
+        renders. Hardcoded fallback questions are used when Claude is
+        unavailable OR returns fewer than 5 parsable items.
+        """
+        user = db.session.get(User, user_id)
+        if not user:
+            raise ValueError(f"user {user_id} not found")
+
+        ticker = ticker.upper()
+
+        # Pull the position (may be stale by a few seconds; fine for email copy)
+        pos = (Position.query
+               .filter_by(user_id=user_id, ticker=ticker)
+               .first())
+        shares = float(pos.shares) if pos else 0.0
+        avg_cost = float(pos.avg_cost) if pos else 0.0
+
+        # Calendar row — reuse the one from the matcher when given, else fetch.
+        if calendar_row is None:
+            cal = _safe_get_earnings_calendar(ticker=ticker, days_ahead=5)
+            calendar_row = next(
+                (c for c in cal if _parse_earnings_row_datetime(c) and
+                 abs((_parse_earnings_row_datetime(c) - earnings_date).total_seconds()) < 3600),
+                {},
+            ) or {}
+
+        consensus_eps, eps_low, eps_high = _derive_consensus_eps(calendar_row)
+        consensus_rev = _derive_consensus_revenue(calendar_row)
+
+        # Live quote for sensitivity calc + header badge
+        quote = _safe_fetch_quote(ticker) or {}
+        try:
+            current_price = float(quote.get("price") or quote.get("c") or 0) or None
+        except (TypeError, ValueError):
+            current_price = None
+
+        # Surprise history — last 4 quarters
+        eps_rows = _safe_get_quarterly_eps(ticker, quarters=4)
+        surprise_history = _build_surprise_history(eps_rows)
+
+        # Position sensitivity — ±3% move
+        mv = (current_price or 0) * shares if current_price else avg_cost * shares
+        sens_beat, sens_miss = _position_sensitivity(shares, current_price)
+
+        # Expected questions — Claude first, then fallback
+        news = _safe_get_news(ticker, limit=6)
+        news_snippets = [
+            (n.get("title") or n.get("headline") or "")[:140]
+            for n in news if isinstance(n, dict)
+        ][:5]
+        ai_questions = _call_claude_for_questions(ticker,
+                                                   _fiscal_period_label(earnings_date),
+                                                   news_snippets)
+        if len(ai_questions) < 5:
+            # Top-up with fallbacks (never advisory language)
+            pool = _FALLBACK_QUESTIONS_KO if user.name and re.search(r"[\uac00-\ud7a3]", user.name or "") \
+                   else _FALLBACK_QUESTIONS_EN
+            for q in pool:
+                if len(ai_questions) >= 5:
+                    break
+                if q not in ai_questions:
+                    ai_questions.append(q)
+        expected_questions = ai_questions[:5]
+
+        # Risk notes — rule-based, never advisory
+        risk_notes: list[str] = []
+        if mv and mv >= 50_000:
+            risk_notes.append(f"포지션 규모 ${mv:,.0f} — 단일 이벤트 노출 구간 관찰")
+        if surprise_history:
+            beats = sum(1 for s in surprise_history if (s.get("surprise_pct") or 0) > 0)
+            if beats <= 1:
+                risk_notes.append(f"최근 4분기 중 {beats}회 beat — 기대치 조정 관찰")
+        if not consensus_eps:
+            risk_notes.append("컨센서스 EPS 데이터 미확보 — 참고 목적")
+
+        company_name = quote.get("name") or ticker
+
+        ctx = PreBriefContext(
+            user_id=user_id,
+            user_name=user.name or user.email.split("@")[0],
+            ticker=ticker,
+            company_name=str(company_name),
+            earnings_datetime=earnings_date,
+            fiscal_period=_fiscal_period_label(earnings_date),
+            generated_at=datetime.utcnow(),
+            consensus_eps=consensus_eps,
+            consensus_eps_low=eps_low,
+            consensus_eps_high=eps_high,
+            consensus_revenue=consensus_rev,
+            current_price=current_price,
+            surprise_history=surprise_history,
+            expected_questions=expected_questions,
+            position_shares=shares,
+            position_avg_cost=avg_cost,
+            position_mv=round(mv, 2) if mv else 0.0,
+            sensitivity_beat=sens_beat,
+            sensitivity_miss=sens_miss,
+            risk_notes=risk_notes,
+            disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+        )
+        return ctx.to_dict()
+
+    # ── render ─────────────────────────────────────────────────────────────
+
+    def _jinja_env(self):
+        Environment, FileSystemLoader, select_autoescape = _try_import_jinja()
+        if Environment is None:
+            return None
+        try:
+            return Environment(
+                loader=FileSystemLoader(str(_TEMPLATE_DIR)),
+                autoescape=select_autoescape(["html", "xml"]),
+                trim_blocks=True,
+                lstrip_blocks=True,
+            )
+        except Exception as exc:  # pragma: no cover
+            logger.warning("Jinja env build failed: %s", exc)
+            return None
+
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
+        env = self._jinja_env()
+        if env is None:
+            return self._fallback_html(data, email=False)
+        try:
+            tpl = env.get_template("earnings_prebrief.html")
+            return tpl.render(**data)
+        except Exception as exc:
+            logger.warning("pdf template render failed: %s", exc)
+            return self._fallback_html(data, email=False)
+
+    def render_email_html(self, data: dict[str, Any],
+                           pdf_url: Optional[str] = None) -> str:
+        env = self._jinja_env()
+        if env is None:
+            return self._fallback_html(data, email=True, pdf_url=pdf_url)
+        try:
+            tpl = env.get_template("earnings_prebrief_email.html")
+            return tpl.render(pdf_url=pdf_url, **data)
+        except Exception as exc:
+            logger.warning("email template render failed: %s", exc)
+            return self._fallback_html(data, email=True, pdf_url=pdf_url)
+
+    def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
+        """HTML → PDF via WeasyPrint. None when WeasyPrint is unavailable."""
+        HTML = _try_import_weasyprint()
+        if HTML is None:
+            return None
+        html_str = self.render_pdf_html(data)
+        try:
+            return HTML(string=html_str).write_pdf()
+        except Exception as exc:  # pragma: no cover — native deps
+            logger.error("WeasyPrint render failed: %s", exc)
+            return None
+
+    def _fallback_html(self, data: dict[str, Any], *, email: bool,
+                        pdf_url: Optional[str] = None) -> str:
+        """Template-free minimal HTML — keeps dispatch working in broken envs."""
+        from html import escape
+        qs = "".join(
+            f"<li>{escape(q)}</li>" for q in (data.get("expected_questions") or [])
+        )
+        eps = data.get("consensus_eps")
+        eps_str = f"${eps}" if eps is not None else "N/A"
+        ticker = escape(data.get("ticker", "?"))
+        fp = escape(data.get("fiscal_period", ""))
+        user_name = escape(data.get("user_name", ""))
+        cta = ""
+        if email and pdf_url:
+            cta = f'<p><a href="{escape(pdf_url)}">Download full PDF →</a></p>'
+        return f"""<!doctype html><html><body>
+<h1>{ticker} — {fp} Earnings Pre-Brief</h1>
+<p>For {user_name}. Consensus EPS: <strong>{eps_str}</strong></p>
+<h2>Top 5 Expected Questions</h2>
+<ol>{qs}</ol>
+{cta}
+<p><em>{escape(data.get('disclaimer',''))}</em></p>
+</body></html>"""
+
+    # ── dispatch ───────────────────────────────────────────────────────────
+
+    def send_notification(self, user: User,
+                           pdf_bytes: Optional[bytes],
+                           html_body: str,
+                           data: dict[str, Any]) -> dict[str, bool]:
+        """Send both email + web-push. Neither failure blocks the other.
+
+        Returns {"email": bool, "push": bool}. Both True means full delivery.
+        """
+        out = {"email": False, "push": False}
+
+        # 1) Email — SendGrid first, SMTP fallback, else skip.
+        try:
+            out["email"] = self._send_email(user, pdf_bytes, html_body, data)
+        except Exception as exc:
+            logger.error("email send raised for user %s: %s", user.id, exc)
+
+        # 2) Push — via services.push_service.notify_insight (read-only call)
+        try:
+            from services.push_service import notify_insight
+            ticker = data.get("ticker", "?")
+            title_text = f"${ticker} 실적 30분 전"
+            body_text = "예상 질문 5개 + 컨센서스 브리프 도착"
+            # The underlying send_push_to_user accepts an explicit `url`
+            # param; notify_insight hardcodes it. We call the lower-level
+            # function when possible to hit /reports?highlight=... but fall
+            # back to notify_insight on any import failure.
+            try:
+                from routes.push import send_push_to_user
+                send_push_to_user(
+                    user_id=user.id,
+                    title=f"PivoxQuant — {title_text}",
+                    body=body_text,
+                    url=f"/reports?highlight={data.get('_artifact_id','')}".rstrip("="),
+                )
+            except Exception:
+                notify_insight(user.id, title_text, body_text)
+            out["push"] = True
+        except Exception as exc:
+            logger.warning("push send failed for user %s: %s", user.id, exc)
+
+        return out
+
+    def _send_email(self, user: User,
+                     pdf_bytes: Optional[bytes],
+                     html_body: str,
+                     data: dict[str, Any]) -> bool:
+        """SendGrid → SMTP → skip. Same pattern as WeeklyMemoService.
+
+        Honors both the global `email_opt_out` flag and the Pre-Brief-
+        specific `email_opt_out_earnings` flag (added in migration 009)
+        so a user can silence earnings alerts without muting every
+        other artefact email.
+        """
+        if getattr(user, "email_opt_out", False):
+            logger.info("user %s opted out of email (global)", user.id)
+            return False
+        if getattr(user, "email_opt_out_earnings", False):
+            logger.info("user %s opted out of earnings prebrief email", user.id)
+            return False
+
+        from_email = os.environ.get(
+            "EARNINGS_PREBRIEF_FROM_EMAIL",
+            os.environ.get("WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"),
+        )
+        ticker = data.get("ticker", "?")
+        subject = f"[Pre-Brief] ${ticker} — Earnings in {_lead_minutes()} min"
+
+        sg_key = os.environ.get("SENDGRID_API_KEY")
+        if sg_key:
+            try:
+                import base64
+                from sendgrid import SendGridAPIClient  # type: ignore
+                from sendgrid.helpers.mail import (  # type: ignore
+                    Mail, Attachment, FileContent, FileName, FileType, Disposition,
+                )
+                mail = Mail(from_email=from_email, to_emails=user.email,
+                            subject=subject, html_content=html_body)
+                if pdf_bytes:
+                    enc = base64.b64encode(pdf_bytes).decode()
+                    att = Attachment(
+                        FileContent(enc),
+                        FileName(f"prebrief_{ticker}_{user.id}.pdf"),
+                        FileType("application/pdf"),
+                        Disposition("attachment"),
+                    )
+                    mail.attachment = att
+                SendGridAPIClient(sg_key).send(mail)
+                return True
+            except Exception as exc:
+                logger.error("SendGrid send failed for user %s: %s", user.id, exc)
+                return False
+
+        smtp_host = os.environ.get("SMTP_HOST")
+        if smtp_host:
+            try:
+                import smtplib
+                from email.message import EmailMessage
+                msg = EmailMessage()
+                msg["From"] = from_email
+                msg["To"] = user.email
+                msg["Subject"] = subject
+                msg.set_content("HTML-only; view in an HTML-capable client.")
+                msg.add_alternative(html_body, subtype="html")
+                if pdf_bytes:
+                    msg.add_attachment(pdf_bytes, maintype="application",
+                                       subtype="pdf",
+                                       filename=f"prebrief_{ticker}_{user.id}.pdf")
+                port = int(os.environ.get("SMTP_PORT", "587"))
+                user_ = os.environ.get("SMTP_USER")
+                pw = os.environ.get("SMTP_PASSWORD")
+                with smtplib.SMTP(smtp_host, port, timeout=10) as s:
+                    s.starttls()
+                    if user_ and pw:
+                        s.login(user_, pw)
+                    s.send_message(msg)
+                return True
+            except Exception as exc:
+                logger.error("SMTP send failed for user %s: %s", user.id, exc)
+                return False
+
+        logger.info("no email provider configured — skipping pre-brief email for user %s", user.id)
+        return False
+
+    # ── persist ────────────────────────────────────────────────────────────
+
+    def _title_for(self, ticker: str, earnings_date: datetime) -> str:
+        """Deterministic title → UNIQUE (user_id, type, title) prevents dupes.
+
+        Format: "$TSLA Q1 2026 Earnings Pre-Brief — 2026-04-22 20:30".
+        """
+        period = _fiscal_period_label(earnings_date)
+        ts = earnings_date.strftime("%Y-%m-%d %H:%M")
+        return f"${ticker} {period} Earnings Pre-Brief — {ts}"
+
+    def _persist(self, user_id: int, data: dict[str, Any],
+                 pdf_bytes: Optional[bytes], earnings_date: datetime,
+                 sent: bool) -> Artifact:
+        ticker = data["ticker"]
+        title = self._title_for(ticker, earnings_date)
+
+        pdf_path: Optional[str] = None
+        if pdf_bytes:
+            try:
+                base = _storage_dir() / str(user_id)
+                base.mkdir(parents=True, exist_ok=True)
+                fname = f"{ticker}_{earnings_date.strftime('%Y%m%d_%H%M')}.pdf"
+                path = base / fname
+                path.write_bytes(pdf_bytes)
+                pdf_path = str(path)
+            except Exception as exc:
+                logger.warning("PDF write failed for user %s: %s", user_id, exc)
+
+        artefact = (
+            Artifact.query
+            .filter_by(user_id=user_id, type="earnings_prebrief", title=title)
+            .first()
+        )
+        if artefact:
+            artefact.data_json = data
+            if pdf_path:
+                artefact.pdf_path = pdf_path
+            if sent and not artefact.sent_at:
+                artefact.sent_at = datetime.utcnow()
+        else:
+            artefact = Artifact(
+                user_id=user_id,
+                type="earnings_prebrief",
+                title=title,
+                data_json=data,
+                pdf_path=pdf_path,
+                sent_at=datetime.utcnow() if sent else None,
+            )
+            db.session.add(artefact)
+        db.session.commit()
+        return artefact
+
+    def _already_sent(self, user_id: int, ticker: str,
+                      earnings_date: datetime) -> bool:
+        """True if a prebrief for this exact (user, ticker, earnings_dt) was
+        already persisted + `sent_at` set — the dedup guard."""
+        title = self._title_for(ticker, earnings_date)
+        existing = (Artifact.query
+                    .filter_by(user_id=user_id,
+                               type="earnings_prebrief",
+                               title=title)
+                    .first())
+        return bool(existing and existing.sent_at)
+
+    # ── orchestration ──────────────────────────────────────────────────────
+
+    def run_for_match(self, user: User, ticker: str,
+                      earnings_date: datetime,
+                      *, calendar_row: Optional[dict] = None,
+                      send: bool = True) -> Optional[Artifact]:
+        """End-to-end: assemble → render → dispatch → persist for one match.
+
+        Returns the Artifact row. Returns None if already delivered
+        (dedup) or if upstream data was catastrophically empty.
+        """
+        if self._already_sent(user.id, ticker, earnings_date):
+            logger.info("prebrief already sent for user=%s ticker=%s dt=%s",
+                        user.id, ticker, earnings_date)
+            return None
+
+        try:
+            data = self.generate_for_position(user.id, ticker, earnings_date,
+                                               calendar_row=calendar_row)
+        except Exception as exc:
+            logger.error("prebrief assembly failed (user=%s ticker=%s): %s",
+                         user.id, ticker, exc)
+            return None
+
+        pdf_bytes = self.render_pdf(data)
+        html_body = self.render_email_html(data)
+
+        sent_any = False
+        if send:
+            try:
+                result = self.send_notification(user, pdf_bytes, html_body, data)
+                sent_any = bool(result.get("email") or result.get("push"))
+            except Exception as exc:
+                logger.error("send_notification raised for user %s: %s", user.id, exc)
+
+        return self._persist(user.id, data, pdf_bytes, earnings_date, sent_any)
+
+    def run_scan(self, *, send: bool = True) -> dict[str, Any]:
+        """Cron target — every 10 min. Match positions whose earnings are
+        `LEAD_MINUTES ± TOLERANCE` away, dispatch prebriefs.
+
+        Never raises. Per-user failures are logged and the loop continues.
+        """
+        lead = _lead_minutes()
+        now = datetime.utcnow()
+        target_window_start = now + timedelta(minutes=lead - _MATCH_TOLERANCE_MIN)
+        target_window_end   = now + timedelta(minutes=lead + _MATCH_TOLERANCE_MIN)
+
+        try:
+            candidates = self.get_upcoming_earnings(
+                hours=max(1, (lead + _MATCH_TOLERANCE_MIN) // 60 + 1),
+            )
+        except Exception as exc:
+            logger.error("scan: get_upcoming_earnings raised: %s", exc)
+            return {"attempted": 0, "success": 0, "failed": 0, "skipped": 0,
+                    "error": str(exc)}
+
+        # Filter to the tight 30-min window.
+        in_window = [c for c in candidates
+                     if target_window_start <= c["earnings_dt"] <= target_window_end]
+
+        successes = 0
+        failures = 0
+        skipped = 0
+        attempted = 0
+
+        # Cache user objects so we don't re-query for every row.
+        user_cache: dict[int, User] = {}
+        for row in in_window:
+            uid = row["user_id"]
+            if uid not in user_cache:
+                u = db.session.get(User, uid)
+                if u is None:
+                    continue
+                user_cache[uid] = u
+            user = user_cache[uid]
+
+            attempted += 1
+            try:
+                result = self.run_for_match(
+                    user, row["ticker"], row["earnings_dt"],
+                    calendar_row=row.get("calendar_row"),
+                    send=send,
+                )
+                if result is None:
+                    skipped += 1
+                else:
+                    successes += 1
+            except Exception as exc:
+                db.session.rollback()
+                failures += 1
+                logger.error("prebrief failed user=%s ticker=%s: %s",
+                             uid, row["ticker"], exc)
+
+        summary = {
+            "now":         now.isoformat() + "Z",
+            "lead_minutes": lead,
+            "candidates":  len(candidates),
+            "in_window":   len(in_window),
+            "attempted":   attempted,
+            "success":     successes,
+            "failed":      failures,
+            "skipped":     skipped,
+        }
+        logger.info("earnings prebrief scan: %s", summary)
+        return summary
+
+    # ── spec-aligned aliases ───────────────────────────────────────────────
+    # The MVP #3 task spec uses a slightly different surface:
+    #   find_upcoming_earnings(within_minutes=60) -> list
+    #   generate_for_user(user_id, ticker) -> dict
+    #   render_email(data) -> str
+    #   send(user, pdf_bytes, html, ticker) -> dict
+    # These thin wrappers present that surface without touching any
+    # existing callers.
+
+    def find_upcoming_earnings(self, within_minutes: int = 60
+                                ) -> list[dict[str, Any]]:
+        """Spec-aligned alias for `get_upcoming_earnings`, expressed in
+        minutes. Uses an hours ceiling so the underlying matcher's
+        hour-grained FMP window covers the request."""
+        hours = max(1, (within_minutes + 59) // 60)
+        rows = self.get_upcoming_earnings(hours=hours)
+        cutoff = datetime.utcnow() + timedelta(minutes=within_minutes)
+        return [r for r in rows if r["earnings_dt"] <= cutoff]
+
+    def generate_for_user(self, user_id: int, ticker: str,
+                          *, earnings_date: Optional[datetime] = None,
+                          calendar_row: Optional[dict] = None
+                          ) -> Optional[dict[str, Any]]:
+        """Spec-aligned alias — resolve the earnings_date from FMP when not
+        supplied. Returns None when no upcoming earnings are found for
+        the ticker (rather than raising) so routes can 404 cleanly."""
+        if earnings_date is None:
+            cal = _safe_get_earnings_calendar(ticker=ticker, days_ahead=7)
+            for c in cal:
+                dt = _parse_earnings_row_datetime(c)
+                if dt and dt >= datetime.utcnow():
+                    earnings_date = dt
+                    calendar_row = c
+                    break
+        if earnings_date is None:
+            return None
+        return self.generate_for_position(user_id, ticker, earnings_date,
+                                           calendar_row=calendar_row)
+
+    def render_email(self, data: dict[str, Any],
+                     pdf_url: Optional[str] = None) -> str:
+        """Spec-aligned alias for `render_email_html`."""
+        return self.render_email_html(data, pdf_url=pdf_url)
+
+    def send(self, user: User, pdf_bytes: Optional[bytes],
+             html: str, ticker: str) -> dict[str, bool]:
+        """Spec-aligned alias for `send_notification`. Accepts `ticker`
+        explicitly instead of threading a full `data` dict; rebuilds the
+        minimal payload downstream wants (ticker + artifact_id if present)."""
+        data = {"ticker": ticker}
+        return self.send_notification(user, pdf_bytes, html, data)
+
+
+# ── Spec-aligned name alias ───────────────────────────────────────────────────
+# The task spec references the class as `EarningsPrebriefService` (lower-case
+# 'b'); the historical class name is `EarningsPreBriefService`. We export both
+# so either import path works. New code should prefer the spec-aligned form.
+
+EarningsPrebriefService = EarningsPreBriefService
+
+
+__all__ = [
+    "EarningsPreBriefService",
+    "EarningsPrebriefService",
+    "PreBriefContext",
+]

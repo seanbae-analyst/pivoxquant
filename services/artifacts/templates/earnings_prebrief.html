@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>{{ ticker }} {{ fiscal_period }} Earnings Pre-Brief — {{ user_name }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 18mm 18mm 18mm;
+      @top-right {
+        content: "PivoxQuant Pre-Brief | Page " counter(page) " / " counter(pages);
+        font-family: Georgia, serif;
+        font-size: 9pt;
+        color: #333;
+      }
+      @bottom-center {
+        content: "— Confidential. For the addressee only. —";
+        font-family: Georgia, serif;
+        font-size: 8pt;
+        color: #888;
+      }
+    }
+
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #111;
+    }
+
+    .ticker-hero {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 72pt;
+      font-weight: 600;
+      letter-spacing: -3pt;
+      line-height: 1;
+      margin: 0;
+    }
+    .subtitle {
+      font-size: 14pt;
+      margin: 4pt 0 0 0;
+      color: #222;
+      letter-spacing: 0.2pt;
+    }
+    .meta-band {
+      font-size: 9pt;
+      color: #555;
+      margin: 12pt 0 20pt 0;
+      border-top: 0.5pt solid #ccc;
+      border-bottom: 0.5pt solid #ccc;
+      padding: 6pt 0;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    h2 {
+      font-size: 12pt;
+      font-weight: 600;
+      margin: 18pt 0 8pt 0;
+      border-bottom: 0.5pt solid #000;
+      padding-bottom: 3pt;
+      text-transform: uppercase;
+      letter-spacing: 0.4pt;
+    }
+    h3 { font-size: 10.5pt; font-weight: 600; margin: 10pt 0 4pt 0; }
+
+    .report-surface {
+      background: #fdfcf8;
+      border: 0.5pt solid #e5e0d6;
+      padding: 12pt 14pt;
+      margin-bottom: 8pt;
+    }
+
+    .two-col {
+      display: flex;
+      gap: 14pt;
+    }
+    .two-col .col { flex: 1 1 50%; }
+
+    /* Consensus bar */
+    .consensus-bar {
+      margin: 6pt 0;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      font-size: 9pt;
+      margin-bottom: 3pt;
+    }
+    .bar-label { width: 44pt; color: #555; }
+    .bar-track {
+      flex: 1;
+      height: 6pt;
+      background: #ece8df;
+      position: relative;
+      border-radius: 1pt;
+    }
+    .bar-fill {
+      height: 100%;
+      background: #111;
+      border-radius: 1pt;
+    }
+    .bar-value {
+      width: 48pt;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    /* Expected questions — numbered */
+    ol.questions {
+      padding-left: 18pt;
+      margin: 0;
+    }
+    ol.questions li {
+      margin-bottom: 6pt;
+      line-height: 1.45;
+    }
+
+    /* Surprise history table */
+    table.history {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6pt;
+    }
+    table.history th, table.history td {
+      text-align: right;
+      padding: 4pt 6pt;
+      border-bottom: 0.5pt solid #ddd;
+      font-size: 9.5pt;
+    }
+    table.history th {
+      font-weight: 600;
+      border-bottom: 0.5pt solid #000;
+      text-transform: uppercase;
+      font-size: 8pt;
+      letter-spacing: 0.3pt;
+    }
+    table.history td:first-child, table.history th:first-child { text-align: left; }
+    .pos { color: #0a6f3c; }
+    .neg { color: #a11d1d; }
+
+    /* Sensitivity tile */
+    .sens-tile {
+      border: 0.5pt solid #000;
+      padding: 10pt 12pt;
+      margin-top: 6pt;
+    }
+    .sens-tile .row { display: flex; justify-content: space-between; margin: 3pt 0; font-size: 10pt; }
+
+    .risk-notes li { margin-bottom: 4pt; }
+
+    .disclaimer {
+      font-size: 8.5pt;
+      color: #666;
+      margin-top: 18pt;
+      border-top: 0.5pt solid #ddd;
+      padding-top: 6pt;
+    }
+
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Page 1 ─────────────────────────────────────────────────────────── -->
+
+  <h1 class="ticker-hero">${{ ticker }}</h1>
+  <p class="subtitle">{{ fiscal_period }} Earnings Preview · {{ company_name }}</p>
+  <div class="meta-band">
+    <span>Announcement: {{ earnings_datetime }} UTC</span>
+    <span>Prepared for {{ user_name }}</span>
+  </div>
+
+  <div class="two-col">
+    <div class="col">
+      <h2>Consensus</h2>
+      <div class="report-surface">
+        {% if consensus_eps is not none %}
+        <div class="consensus-bar">
+          <h3>EPS Estimate Range</h3>
+          <div class="bar-row">
+            <span class="bar-label">Low</span>
+            <span class="bar-track"><span class="bar-fill" style="width: 25%"></span></span>
+            <span class="bar-value">
+              {{ "$%.2f"|format(consensus_eps_low) if consensus_eps_low is not none else "—" }}
+            </span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Mean</span>
+            <span class="bar-track"><span class="bar-fill" style="width: 60%"></span></span>
+            <span class="bar-value">{{ "$%.2f"|format(consensus_eps) }}</span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">High</span>
+            <span class="bar-track"><span class="bar-fill" style="width: 85%"></span></span>
+            <span class="bar-value">
+              {{ "$%.2f"|format(consensus_eps_high) if consensus_eps_high is not none else "—" }}
+            </span>
+          </div>
+        </div>
+        {% else %}
+        <p><em>컨센서스 EPS 데이터 미확보.</em></p>
+        {% endif %}
+
+        {% if consensus_revenue %}
+        <h3>Revenue (Consensus)</h3>
+        <p style="margin-top:2pt; font-size: 11pt;">
+          <strong>${{ "%.1f"|format(consensus_revenue) }}M</strong>
+        </p>
+        {% endif %}
+
+        {% if current_price %}
+        <h3>Current Price</h3>
+        <p style="margin-top:2pt; font-size: 11pt;">
+          <strong>${{ "%.2f"|format(current_price) }}</strong>
+        </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="col">
+      <h2>Top 5 Expected Questions</h2>
+      <div class="report-surface">
+        <ol class="questions">
+          {% for q in expected_questions %}
+            <li>{{ q }}</li>
+          {% endfor %}
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Page 2 ─────────────────────────────────────────────────────────── -->
+  <div class="page-break"></div>
+
+  <h2>Last 4 Quarters — Surprise History</h2>
+  <div class="report-surface">
+    {% if surprise_history %}
+    <table class="history">
+      <thead>
+        <tr>
+          <th>Quarter</th>
+          <th>Actual EPS</th>
+          <th>Estimate</th>
+          <th>Surprise</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in surprise_history %}
+        <tr>
+          <td>{{ s.date }}</td>
+          <td>${{ "%.2f"|format(s.actual_eps) }}</td>
+          <td>${{ "%.2f"|format(s.estimate_eps) }}</td>
+          <td class="{{ 'pos' if (s.surprise_pct or 0) > 0 else 'neg' }}">
+            {% if s.surprise_pct is not none %}
+              {{ "%+.1f"|format(s.surprise_pct) }}%
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p><em>지난 4분기 데이터 미확보.</em></p>
+    {% endif %}
+  </div>
+
+  <h2>Position Sensitivity (±3% Move)</h2>
+  <div class="sens-tile">
+    <div class="row"><span>Shares</span><strong>{{ position_shares }}</strong></div>
+    <div class="row"><span>Avg Cost</span><strong>${{ "%.2f"|format(position_avg_cost) }}</strong></div>
+    <div class="row"><span>Market Value</span><strong>${{ "{:,.2f}".format(position_mv) }}</strong></div>
+    {% if sensitivity_beat is not none %}
+    <div class="row">
+      <span>If +3% Beat Move</span>
+      <strong class="pos">+${{ "{:,.2f}".format(sensitivity_beat) }}</strong>
+    </div>
+    <div class="row">
+      <span>If −3% Miss Move</span>
+      <strong class="neg">${{ "{:,.2f}".format(sensitivity_miss) }}</strong>
+    </div>
+    {% else %}
+    <div class="row"><span><em>현재가 미확보 — 민감도 계산 생략</em></span><span></span></div>
+    {% endif %}
+  </div>
+
+  {% if risk_notes %}
+  <h2>Risk Notes</h2>
+  <div class="report-surface">
+    <ul class="risk-notes">
+      {% for n in risk_notes %}
+      <li>{{ n }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <p class="disclaimer">{{ disclaimer }}</p>
+</body>
+</html>

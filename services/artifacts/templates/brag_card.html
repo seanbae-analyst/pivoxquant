@@ -1,0 +1,191 @@
+{# Monthly Brag Card — 1080 x 1920 (Instagram Story, 9:16).
+
+   Fixed viewport; no responsive logic. Rendered by Playwright + headless
+   Chromium. All type is loaded from Google Fonts CDN so the image is
+   byte-identical across machines.
+
+   Variables expected (BragCardService.generate_for_user):
+     - return_pct          Optional[float]   (None → em-dash hero)
+     - month_label         str               "Mar 2026"  (mono-friendly short)
+     - month_label_long    str               "March 2026" (serif headline)
+     - user_name           str
+     - best_ticker         Optional[str]     anonymous mode masks to "A 종목"
+     - best_return_pct     Optional[float]
+     - anonymous           bool
+     - is_empty            bool
+     - disclaimer          str
+#}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>{{ month_label }} — PivoxQuant</title>
+  <!-- Google Fonts CDN: Source Serif 4 (serif) + JetBrains Mono (numeric). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset & canvas ─────────────────────────────────────────── */
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      width: 1080px; height: 1920px;
+      background: #0a0a0a;
+      color: #F6F3EC;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      font-family: "Source Serif 4", Georgia, serif;
+    }
+
+    /* ── Layout grid (absolute, pixel-exact) ───────────────────── */
+    .frame { position: relative; width: 1080px; height: 1920px; }
+
+    /* Header — masthead */
+    .mast {
+      position: absolute; top: 120px; left: 0; right: 0;
+      text-align: center;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 26px;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: rgba(246, 243, 236, 0.45);
+    }
+
+    /* Hero return % — dominant visual */
+    .hero {
+      position: absolute;
+      top: 540px; left: 0; right: 0;
+      text-align: center;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 220px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+    .hero.gain  { color: #E2B96F; }   /* Warm Gold */
+    .hero.loss  { color: #8C8B87; }   /* Neutral — we don't punish losses */
+    .hero.empty { color: #8C8B87; }
+
+    /* Month label (serif, mid-card) */
+    .month {
+      position: absolute;
+      top: 860px; left: 0; right: 0;
+      text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 72px;
+      letter-spacing: -0.01em;
+      color: #F6F3EC;
+    }
+
+    /* Sub-line (Long View on loss, user handle on gain) */
+    .sub {
+      position: absolute;
+      top: 990px; left: 0; right: 0;
+      text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 34px;
+      letter-spacing: 0.01em;
+      color: rgba(246, 243, 236, 0.65);
+    }
+
+    /* Top holding meta (ticker + contribution) */
+    .top-holding {
+      position: absolute;
+      top: 1240px; left: 0; right: 0;
+      text-align: center;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 30px;
+      letter-spacing: 0.08em;
+      color: rgba(246, 243, 236, 0.75);
+    }
+    .top-holding .tkr  { color: #E2B96F; }
+
+    /* Divider (tiny rule) */
+    .rule {
+      position: absolute;
+      top: 1700px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px; height: 1px;
+      background: rgba(246, 243, 236, 0.18);
+    }
+
+    /* Watermark — uppercase serif, widely letter-spaced */
+    .watermark {
+      position: absolute;
+      top: 1750px;
+      left: 0; right: 0;
+      text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-weight: 600;
+      font-size: 42px;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: rgba(246, 243, 236, 0.70);
+    }
+
+    /* Compliance disclaimer — tiny, bottom */
+    .disclaimer {
+      position: absolute;
+      bottom: 60px; left: 0; right: 0;
+      text-align: center;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      color: rgba(246, 243, 236, 0.35);
+    }
+  </style>
+</head>
+<body>
+<div class="frame">
+
+  <!-- Masthead: "PIVOXQUANT · MONTHLY BRAG · MAR 2026" -->
+  <div class="mast">
+    PIVOXQUANT &nbsp;·&nbsp; MONTHLY BRAG &nbsp;·&nbsp; {{ month_label|upper }}
+  </div>
+
+  <!-- Hero: the return % (or — for empty months) -->
+  {% if return_pct is none or is_empty %}
+    <div class="hero empty">—</div>
+  {% else %}
+    {% if return_pct >= 0 %}
+      <div class="hero gain">+{{ '%.1f'|format(return_pct) }}%</div>
+    {% else %}
+      <div class="hero loss">{{ '%.1f'|format(return_pct) }}%</div>
+    {% endif %}
+  {% endif %}
+
+  <!-- Month: serif italic headline -->
+  <div class="month">{{ month_label_long }}</div>
+
+  <!-- Sub: Long View on loss months, user handle on gain months -->
+  {% if return_pct is not none and return_pct < 0 %}
+    <div class="sub">Long View</div>
+  {% elif is_empty %}
+    <div class="sub">Welcome aboard</div>
+  {% else %}
+    <div class="sub">{{ user_name }}</div>
+  {% endif %}
+
+  <!-- Top holding — best performer + contribution -->
+  {% if best_ticker and best_return_pct is not none %}
+    <div class="top-holding">
+      TOP &nbsp;
+      <span class="tkr">{{ best_ticker }}</span>
+      &nbsp;
+      {% if best_return_pct >= 0 %}+{% endif %}{{ '%.1f'|format(best_return_pct) }}%
+    </div>
+  {% endif %}
+
+  <!-- Rule + watermark -->
+  <div class="rule"></div>
+  <div class="watermark">PIVOXQUANT</div>
+
+  <!-- Compliance -->
+  <div class="disclaimer">{{ disclaimer }}</div>
+
+</div>
+</body>
+</html>

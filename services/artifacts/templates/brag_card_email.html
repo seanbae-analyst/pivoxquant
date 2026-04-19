@@ -1,0 +1,151 @@
+{# Brag Card — email body (mobile-first HTML).
+
+   Rendered server-side and delivered alongside the PNG attachment (and,
+   where `png_url` is available, inline via <img>). Table layout because
+   Gmail/Outlook still don't honor flex/grid reliably.
+
+   Variables:
+     - user_name, month_label, month_label_long
+     - return_pct, best_ticker, best_return_pct, trade_count
+     - share_url         full URL carrying referral code
+     - png_url           optional inline PNG URL
+     - disclaimer
+#}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{{ user_name }}의 {{ month_label }} 리포트</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111;">
+
+  <!-- Preview text (hidden) — shown after subject line in inbox previews -->
+  <div style="display:none;max-height:0;overflow:hidden;">
+    {{ user_name }}의 {{ month_label_long }} 리포트가 도착했습니다
+    {% if return_pct is not none %}· {{ '%+.1f'|format(return_pct) }}%{% endif %}
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="background:#f4f4f5;padding:24px 0;">
+    <tr><td align="center">
+
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+             style="background:#ffffff;border-radius:8px;overflow:hidden;
+                    box-shadow:0 1px 2px rgba(0,0,0,0.06);max-width:600px;">
+
+        <!-- Masthead -->
+        <tr><td style="padding:24px 32px 8px 32px;border-bottom:1px solid #e5e7eb;">
+          <div style="font-size:10pt;color:#6b7280;letter-spacing:.5pt;
+                      text-transform:uppercase;">
+            PIVOXQUANT · Monthly Brag · {{ month_label }}
+          </div>
+          <h1 style="margin:10px 0 0 0;font-size:22pt;font-weight:700;
+                     letter-spacing:-0.3pt;">
+            {{ user_name }}님의 {{ month_label_long }}
+          </h1>
+        </td></tr>
+
+        <!-- Hero return -->
+        <tr><td style="padding:24px 32px 8px 32px;text-align:center;">
+          {% if return_pct is none %}
+            <div style="font-size:56pt;color:#9ca3af;font-weight:700;">—</div>
+          {% elif return_pct >= 0 %}
+            <div style="font-size:56pt;color:#E2B96F;font-weight:700;">
+              +{{ '%.1f'|format(return_pct) }}%
+            </div>
+          {% else %}
+            <div style="font-size:56pt;color:#6b7280;font-weight:700;">
+              {{ '%.1f'|format(return_pct) }}%
+            </div>
+          {% endif %}
+          <div style="font-size:10pt;color:#6b7280;letter-spacing:.4pt;
+                      text-transform:uppercase;margin-top:6px;">
+            Realized return · {{ trade_count }} trades
+          </div>
+        </td></tr>
+
+        <!-- PNG card preview (inline) -->
+        {% if png_url %}
+        <tr><td style="padding:12px 32px 24px 32px;text-align:center;">
+          <img src="{{ png_url }}" alt="{{ user_name }}'s brag card"
+               style="max-width:100%;border-radius:10px;
+                      box-shadow:0 2px 12px rgba(0,0,0,0.08);"/>
+        </td></tr>
+        {% else %}
+        <tr><td style="padding:12px 32px 24px 32px;text-align:center;
+                       color:#6b7280;font-size:10pt;">
+          (카드 이미지는 첨부 파일로 포함되어 있습니다.)
+        </td></tr>
+        {% endif %}
+
+        <!-- Share row — Instagram / KakaoTalk / Twitter -->
+        {% if share_url %}
+        <tr><td style="padding:8px 32px 24px 32px;text-align:center;
+                       border-top:1px solid #e5e7eb;">
+          <div style="font-size:11pt;color:#111;margin:18px 0 12px;">
+            한 번의 공유가 다음 달 누군가의 시작점입니다.
+          </div>
+          <table role="presentation" cellpadding="0" cellspacing="0"
+                 style="margin:0 auto;"><tr>
+            <td style="padding:0 6px;">
+              <a href="https://www.instagram.com/?url={{ share_url|urlencode }}"
+                 style="display:inline-block;padding:12px 20px;
+                        background:#E2B96F;color:#0a0a0a;
+                        text-decoration:none;border-radius:8px;
+                        font-weight:600;font-size:11pt;">
+                Instagram
+              </a>
+            </td>
+            <td style="padding:0 6px;">
+              <a href="https://story.kakao.com/s/share?url={{ share_url|urlencode }}"
+                 style="display:inline-block;padding:12px 20px;
+                        background:#FEE500;color:#111;
+                        text-decoration:none;border-radius:8px;
+                        font-weight:600;font-size:11pt;">
+                카카오톡
+              </a>
+            </td>
+            <td style="padding:0 6px;">
+              <a href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}"
+                 style="display:inline-block;padding:12px 20px;
+                        background:#111;color:#fff;
+                        text-decoration:none;border-radius:8px;
+                        font-weight:600;font-size:11pt;">
+                X
+              </a>
+            </td>
+          </tr></table>
+        </td></tr>
+        {% endif %}
+
+        <!-- Archive CTA -->
+        <tr><td style="padding:16px 32px 28px 32px;text-align:center;
+                       border-top:1px solid #e5e7eb;">
+          <a href="https://pivoxquant.com/artifacts"
+             style="display:inline-block;padding:10px 18px;
+                    background:#ffffff;color:#111;
+                    border:1px solid #d1d5db;border-radius:6px;
+                    text-decoration:none;font-size:11pt;">
+            전체 리포트 아카이브 →
+          </a>
+        </td></tr>
+
+        <!-- Disclaimer -->
+        <tr><td style="padding:16px 32px 24px 32px;
+                       background:#fafafa;color:#6b7280;font-size:9pt;
+                       line-height:1.5;border-top:1px solid #e5e7eb;">
+          <em>{{ disclaimer }}</em>
+        </td></tr>
+
+      </table>
+
+      <div style="margin-top:16px;font-size:9pt;color:#9ca3af;">
+        PivoxQuant · reports@pivoxquant.com
+      </div>
+
+    </td></tr>
+  </table>
+
+</body>
+</html>

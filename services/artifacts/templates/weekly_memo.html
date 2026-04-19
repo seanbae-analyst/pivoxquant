@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Week {{ week_number }} Investor Memo — {{ user_name }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-right {
+        content: "Prepared by PivoxQuant | Week " counter(page) " of " counter(pages);
+        font-family: Georgia, serif;
+        font-size: 9pt;
+        color: #333;
+      }
+      @bottom-center {
+        content: "— Confidential. For the addressee only. —";
+        font-family: Georgia, serif;
+        font-size: 8pt;
+        color: #888;
+      }
+    }
+
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #111;
+    }
+    h1 {
+      font-size: 22pt;
+      font-weight: 600;
+      margin: 0 0 4pt 0;
+      letter-spacing: -0.5pt;
+    }
+    h2 {
+      font-size: 13pt;
+      font-weight: 600;
+      margin: 24pt 0 8pt 0;
+      border-bottom: 0.5pt solid #000;
+      padding-bottom: 4pt;
+      letter-spacing: 0.2pt;
+      text-transform: uppercase;
+    }
+    h3 { font-size: 11pt; font-weight: 600; margin: 14pt 0 6pt 0; }
+    .meta {
+      font-size: 9pt;
+      color: #555;
+      margin-bottom: 18pt;
+      border-top: 0.5pt solid #ccc;
+      border-bottom: 0.5pt solid #ccc;
+      padding: 4pt 0;
+    }
+    .kpi {
+      display: inline-block;
+      width: 30%;
+      padding: 8pt 0;
+      border-right: 0.5pt solid #ccc;
+      text-align: center;
+      vertical-align: top;
+    }
+    .kpi:last-child { border-right: 0; }
+    .kpi .label { font-size: 9pt; color: #666; text-transform: uppercase; }
+    .kpi .value { font-size: 18pt; font-weight: 600; display: block; margin-top: 4pt; }
+    .kpi .value.up   { color: #0a6f3c; }
+    .kpi .value.down { color: #a11d1d; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 6pt; }
+    th, td {
+      text-align: left;
+      padding: 4pt 6pt;
+      border-bottom: 0.5pt solid #ddd;
+      font-size: 10pt;
+    }
+    th {
+      font-weight: 600;
+      border-bottom: 0.5pt solid #000;
+      text-transform: uppercase;
+      font-size: 8.5pt;
+      letter-spacing: 0.3pt;
+    }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .up   { color: #0a6f3c; }
+    .down { color: #a11d1d; }
+    .muted { color: #888; font-size: 9pt; }
+    .page-break { page-break-before: always; }
+    ul.ticklist { list-style: none; padding-left: 0; }
+    ul.ticklist li { padding: 4pt 0; border-bottom: 0.25pt dotted #ccc; }
+    .disclaimer {
+      margin-top: 24pt;
+      padding-top: 12pt;
+      border-top: 0.5pt solid #ccc;
+      font-size: 8.5pt;
+      color: #666;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═════════ PAGE 1: EXECUTIVE SUMMARY ═════════ -->
+<h1>Week {{ week_number }} Investor Memo</h1>
+<div class="meta">
+  <strong>{{ user_name }}</strong>&nbsp;·&nbsp;
+  Period {{ period_start }} → {{ period_end }}&nbsp;·&nbsp;
+  Generated {{ generated_at }}
+</div>
+
+<h2>Executive Summary</h2>
+<div>
+  <div class="kpi">
+    <span class="label">Weekly Return</span>
+    {% if weekly_return_pct is not none %}
+      <span class="value {% if weekly_return_pct >= 0 %}up{% else %}down{% endif %}">
+        {{ '%+.2f'|format(weekly_return_pct) }}%
+      </span>
+    {% else %}
+      <span class="value muted">—</span>
+    {% endif %}
+  </div>
+  <div class="kpi">
+    <span class="label">Benchmark (S&amp;P 500)</span>
+    {% if benchmark_pct is not none %}
+      <span class="value {% if benchmark_pct >= 0 %}up{% else %}down{% endif %}">
+        {{ '%+.2f'|format(benchmark_pct) }}%
+      </span>
+    {% else %}
+      <span class="value muted">—</span>
+    {% endif %}
+  </div>
+  <div class="kpi">
+    <span class="label">Alpha</span>
+    {% if alpha_pct is not none %}
+      <span class="value {% if alpha_pct >= 0 %}up{% else %}down{% endif %}">
+        {{ '%+.2f'|format(alpha_pct) }}%
+      </span>
+    {% else %}
+      <span class="value muted">—</span>
+    {% endif %}
+  </div>
+</div>
+
+<h3>Week at a glance</h3>
+<p>
+  이번 주 포트폴리오는 벤치마크 대비
+  {% if alpha_pct is not none and alpha_pct >= 0 %}
+    <strong class="up">{{ '%+.2f'|format(alpha_pct) }}%p</strong> 상회했습니다.
+  {% elif alpha_pct is not none %}
+    <strong class="down">{{ '%+.2f'|format(alpha_pct) }}%p</strong> 하회했습니다.
+  {% else %}
+    비교 데이터가 아직 준비되지 않았습니다.
+  {% endif %}
+  {% if top_movers_up %}
+    상승 기여도 상위 종목은 <strong>{{ top_movers_up[0].ticker }}</strong>
+    ({{ '%+.2f'|format(top_movers_up[0].weekly_return_pct) }}%) 입니다.
+  {% endif %}
+</p>
+
+<!-- ═════════ PAGE 2: SECTOR ALLOCATION ═════════ -->
+<div class="page-break"></div>
+<h2>Sector Allocation</h2>
+{% if sector_alloc %}
+<table>
+  <thead><tr>
+    <th>Sector</th>
+    <th class="num">This Week</th>
+    <th class="num">Last Week</th>
+    <th class="num">Δ (pp)</th>
+  </tr></thead>
+  <tbody>
+  {% for row in sector_changes %}
+    <tr>
+      <td>{{ row.sector }}</td>
+      <td class="num">{{ '%.1f'|format(row.current) }}%</td>
+      <td class="num">{{ '%.1f'|format(row.previous) }}%</td>
+      <td class="num {% if row.delta_pp > 0 %}up{% elif row.delta_pp < 0 %}down{% endif %}">
+        {{ '%+.1f'|format(row.delta_pp) }}
+      </td>
+    </tr>
+  {% endfor %}
+  {% if not sector_changes %}
+    {% for sector, pct in sector_alloc.items() %}
+      <tr>
+        <td>{{ sector }}</td>
+        <td class="num">{{ '%.1f'|format(pct) }}%</td>
+        <td class="num muted">—</td>
+        <td class="num muted">—</td>
+      </tr>
+    {% endfor %}
+  {% endif %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">포트폴리오 섹터 데이터가 아직 준비되지 않았습니다.</p>
+{% endif %}
+
+<!-- ═════════ PAGE 3: TOP 3 MOVERS ═════════ -->
+<div class="page-break"></div>
+<h2>Top 3 Movers</h2>
+
+<h3>Gainers</h3>
+{% if top_movers_up %}
+<table>
+  <thead><tr><th>Ticker</th><th class="num">Weekly Return</th></tr></thead>
+  <tbody>
+  {% for m in top_movers_up %}
+    <tr>
+      <td><strong>{{ m.ticker }}</strong></td>
+      <td class="num up">{{ '%+.2f'|format(m.weekly_return_pct) }}%</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="muted">상승 종목 데이터 없음.</p>{% endif %}
+
+<h3>Laggards</h3>
+{% if top_movers_down %}
+<table>
+  <thead><tr><th>Ticker</th><th class="num">Weekly Return</th></tr></thead>
+  <tbody>
+  {% for m in top_movers_down %}
+    <tr>
+      <td><strong>{{ m.ticker }}</strong></td>
+      <td class="num down">{{ '%+.2f'|format(m.weekly_return_pct) }}%</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="muted">하락 종목 데이터 없음.</p>{% endif %}
+
+<!-- ═════════ PAGE 4: EARNINGS CALENDAR ═════════ -->
+<div class="page-break"></div>
+<h2>Next Week — Earnings Calendar</h2>
+{% if earnings_calendar %}
+<table>
+  <thead><tr>
+    <th>Date</th><th>Ticker</th><th>Time</th>
+  </tr></thead>
+  <tbody>
+  {% for e in earnings_calendar %}
+    <tr>
+      <td>{{ e.date }}</td>
+      <td><strong>{{ e.ticker }}</strong></td>
+      <td>{{ e.time or '—' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">다음 주 7일간 보유 종목 실적 일정이 확인되지 않습니다.</p>
+{% endif %}
+
+<!-- ═════════ PAGE 5: MACRO + RISK ═════════ -->
+<div class="page-break"></div>
+<h2>Macro Checklist</h2>
+{% if macro_checklist %}
+<table>
+  <thead><tr>
+    <th>Indicator</th>
+    <th class="num">Value</th>
+    <th>Units</th>
+    <th class="num">Δ%</th>
+    <th>As of</th>
+  </tr></thead>
+  <tbody>
+  {% for m in macro_checklist %}
+    <tr>
+      <td>{{ m.label }}</td>
+      <td class="num">{{ '%.2f'|format(m.value) if m.value is not none else '—' }}</td>
+      <td>{{ m.units }}</td>
+      <td class="num
+          {% if m.pct_change is not none and m.pct_change > 0 %}up
+          {% elif m.pct_change is not none and m.pct_change < 0 %}down{% endif %}">
+        {% if m.pct_change is not none %}{{ '%+.2f'|format(m.pct_change) }}%{% else %}—{% endif %}
+      </td>
+      <td>{{ m.date }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">FRED 매크로 데이터 미연결. <code>FRED_API_KEY</code> 설정 후 다음 주부터 노출됩니다.</p>
+{% endif %}
+
+<h2>Portfolio Risk Notes</h2>
+{% if risk_notes %}
+<ul class="ticklist">
+  {% for note in risk_notes %}
+    <li>{{ note }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">이번 주 특이 리스크 관찰 사항 없음.</p>
+{% endif %}
+
+<div class="disclaimer">
+  {{ disclaimer }}
+</div>
+
+</body>
+</html>
