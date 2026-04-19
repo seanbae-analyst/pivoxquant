@@ -5,6 +5,14 @@ RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/li
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright's bundled Chromium for Brag Card PNG rendering
+# (services/artifacts/brag_card_service.py). Failure is tolerated — the
+# service degrades gracefully to HTML-only preview, so a broken install
+# must not block the whole image build.
+RUN playwright install chromium --with-deps \
+    || echo "WARNING: playwright install failed; Brag Card PNG will be skipped"
+
 COPY . .
 
 EXPOSE 5050
