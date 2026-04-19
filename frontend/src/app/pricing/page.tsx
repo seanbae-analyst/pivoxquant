@@ -11,34 +11,47 @@ import {
   X,
   Crown,
   Zap,
+  Sparkles,
   BarChart3,
   ChevronDown,
   ShieldAlert,
   ArrowLeft,
 } from "lucide-react";
 
-/* ── Tier data ── */
+/* ── Tier data (4 tiers confirmed 2026-04-19) ── */
+
+type TierKey = "free" | "pro" | "premium" | "elite";
 
 interface PlanFeature {
   label: string;
   free: string | boolean;
   pro: string | boolean;
   premium: string | boolean;
+  elite: string | boolean;
 }
 
 const PLAN_FEATURES: PlanFeature[] = [
-  { label: "Stock tracking", free: "3 stocks", pro: "Unlimited", premium: "Unlimited" },
-  { label: "Technical indicators", free: "5 basic", pro: "25+ advanced", premium: "58 full models" },
-  { label: "AI Assistant queries", free: false, pro: "10/day", premium: "100/day" },
-  { label: "Signal analysis", free: "Basic score", pro: "Full 4-pillar analysis", premium: "Full + historical" },
-  { label: "Risk dashboard", free: false, pro: true, premium: true },
-  { label: "Portfolio analytics", free: "Basic", pro: "Advanced", premium: "Advanced + benchmark" },
-  { label: "Watchlist", free: "5 stocks", pro: "Unlimited", premium: "Unlimited" },
-  { label: "AutoTrade", free: false, pro: false, premium: true },
-  { label: "Portfolio optimization", free: false, pro: false, premium: true },
-  { label: "Real-time alerts", free: false, pro: true, premium: true },
-  { label: "Broker sync", free: false, pro: true, premium: true },
-  { label: "Priority processing", free: false, pro: true, premium: true },
+  { label: "Brag Card (인스타 9:16)", free: "월 1회", pro: true, premium: true, elite: true },
+  { label: "실적 캘린더 iCal", free: true, pro: true, premium: true, elite: true },
+  { label: "관심종목 핫리스트", free: true, pro: true, premium: true, elite: true },
+  { label: "Morning Brief (매일 6시)", free: false, pro: true, premium: true, elite: true },
+  { label: "Evening Wrap (장마감 정리)", free: false, pro: true, premium: true, elite: true },
+  { label: "Weekly Investor Memo (PDF)", free: false, pro: true, premium: true, elite: true },
+  { label: "Earnings Pre-Brief (실적 30분 전)", free: false, pro: true, premium: true, elite: true },
+  { label: "Thesis Tracker", free: false, pro: true, premium: true, elite: true },
+  { label: "Red/Green Alert", free: false, pro: true, premium: true, elite: true },
+  { label: "FOMC Playbook", free: false, pro: false, premium: true, elite: true },
+  { label: "CPI Brief", free: false, pro: false, premium: true, elite: true },
+  { label: "Sector Monthly", free: false, pro: false, premium: true, elite: true },
+  { label: "Tax Lot Harvest", free: false, pro: false, premium: true, elite: true },
+  { label: "IPO Radar", free: false, pro: false, premium: true, elite: true },
+  { label: "Yearly Wrapped", free: false, pro: false, premium: true, elite: true },
+  { label: "10-K Personal (분기 사업보고서)", free: false, pro: false, premium: false, elite: true },
+  { label: "Annual Letter to Self", free: false, pro: false, premium: false, elite: true },
+  { label: "Commute Podcast (음성)", free: false, pro: false, premium: false, elite: true },
+  { label: "Quarterly Self-Interview", free: false, pro: false, premium: false, elite: true },
+  { label: "Peer Benchmark 리포트", free: false, pro: false, premium: false, elite: true },
+  { label: "Stress Test", free: false, pro: false, premium: false, elite: true },
 ];
 
 /* ── FAQ data ── */
@@ -50,24 +63,32 @@ interface FaqItem {
 
 const FAQ_ITEMS: FaqItem[] = [
   {
-    q: "Can I cancel my subscription anytime?",
-    a: "Yes, you can cancel your subscription at any time. You will continue to have access to your paid features until the end of your current billing period. No questions asked.",
+    q: "PivoxQuant은 ChatGPT와 뭐가 다른가요?",
+    a: "ChatGPT Plus는 ₩27,000/월, PivoxQuant Elite는 ₩29,900/월 — 거의 같은 가격대입니다. 차이는 결과물 형태입니다. ChatGPT는 당신이 물어야 답합니다. PivoxQuant는 당신이 자는 동안 Morning Brief·Weekly Memo·10-K Personal을 이메일·PDF·음성으로 만들어 둡니다.",
   },
   {
-    q: "Is my financial data safe?",
-    a: "Absolutely. We use bank-level encryption (AES-256) for all data at rest, and TLS 1.3 for data in transit. We never store your brokerage credentials directly. All broker connections use OAuth or API key-based authentication.",
+    q: "어느 플랜이 나에게 맞나요?",
+    a: "개인 투자자 대부분은 Premium(₩19,900)이 적정선입니다. Morning·Evening·Weekly 데일리 리포트에 FOMC·CPI·Sector Monthly·IPO Radar·Yearly Wrapped 같은 이벤트/분기 리포트까지 모두 포함됩니다. Elite(₩29,900)는 연례 주주서한 포맷·팟캐스트·Peer Benchmark 같은 헤비 유저용입니다.",
   },
   {
-    q: "What is included in the free plan?",
-    a: "The free plan includes tracking up to 3 stocks with basic signal scores, 5 technical indicators, and basic portfolio analytics. It is a great way to experience PivoxQuant before committing to a paid plan.",
+    q: "리포트는 어떻게 받나요?",
+    a: "Pro 이상 구독 시 매일 아침 6시 Morning Brief 이메일, 매주 일요일 Weekly Memo PDF, 보유 종목 실적 30분 전 Pre-Brief가 자동 발송됩니다. 웹 대시보드 아카이브에서도 언제든 다시 열람할 수 있습니다.",
   },
   {
-    q: "How does AutoTrade work?",
-    a: "AutoTrade executes trades automatically based on your configured rules and signal thresholds. It requires a connected broker account and is available on the Premium plan. Please test with paper trading first.",
+    q: "무료 플랜에는 무엇이 포함되나요?",
+    a: "월간 Brag Card(인스타 9:16 카드), 실적 캘린더 iCal 구독, 관심종목 핫리스트를 제공합니다. 데일리 리포트는 Pro부터 시작합니다.",
   },
   {
-    q: "Do prices include VAT?",
-    a: "Yes, all displayed prices include VAT. There are no hidden fees or additional charges. What you see is what you pay.",
+    q: "언제든 해지할 수 있나요?",
+    a: "네, 언제든 해지 가능합니다. 다음 결제일까지 기능이 유지되며, 이후 자동으로 Free 플랜으로 전환됩니다.",
+  },
+  {
+    q: "리포트는 투자 자문인가요?",
+    a: "아닙니다. PivoxQuant는 정보 제공 도구입니다. 리포트는 시장 데이터·재무 지표·관찰 포인트를 정리한 분석물이며, 특정 종목의 매수·매도를 추천하거나 권유하지 않습니다. 모든 투자 판단은 이용자 본인의 책임입니다.",
+  },
+  {
+    q: "VAT 포함 가격인가요?",
+    a: "네, 표시 가격은 VAT 포함입니다. 숨겨진 수수료는 없습니다.",
   },
 ];
 
@@ -122,7 +143,6 @@ function FeatureValue({ value }: { value: string | boolean }) {
 function PlanCard({
   name,
   price,
-  originalPrice,
   period,
   description,
   features,
@@ -135,7 +155,6 @@ function PlanCard({
 }: {
   name: string;
   price: string;
-  originalPrice?: string;
   period: string;
   description: string;
   features: string[];
@@ -154,12 +173,12 @@ function PlanCard({
     <div
       className={cn(
         "sp-card relative flex flex-col p-6",
-        highlighted && "ring-2 ring-purple-500/20 border-purple-200",
+        highlighted && "ring-2 ring-accent/40 border-l-2 border-l-accent",
       )}
     >
       {badge && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="inline-flex items-center rounded-full bg-primary-gradient px-3 py-1 text-[11px] font-bold text-white">
+          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[11px] font-bold text-slate-900">
             {badge}
           </span>
         </div>
@@ -169,12 +188,10 @@ function PlanCard({
         <div
           className={cn(
             "flex h-10 w-10 items-center justify-center rounded-xl",
-            highlighted ? "bg-primary-gradient" : "bg-slate-100",
+            highlighted ? "bg-accent text-slate-900" : "bg-slate-100 text-slate-500",
           )}
         >
-          <span className={highlighted ? "text-white" : "text-slate-400"}>
-            {icon}
-          </span>
+          {icon}
         </div>
         <div>
           <p className="text-base font-bold text-slate-900">{name}</p>
@@ -184,17 +201,9 @@ function PlanCard({
 
       <div className="mb-5">
         <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-slate-900">{price}</span>
+          <span className="text-3xl font-bold text-slate-900 tabular-nums">{price}</span>
           <span className="text-sm text-slate-500">{period}</span>
         </div>
-        {originalPrice && (
-          <p className="text-xs text-slate-400 mt-1">
-            <span className="line-through">{originalPrice}</span>{" "}
-            <span className="text-purple-600 font-semibold">
-              Introductory price
-            </span>
-          </p>
-        )}
       </div>
 
       <ul className="flex-1 space-y-2.5 mb-6">
@@ -222,9 +231,9 @@ function PlanCard({
 /* ── Page ── */
 
 export default function PricingPage() {
-  const [loadingCheckout, setLoadingCheckout] = useState<string | null>(null);
+  const [loadingCheckout, setLoadingCheckout] = useState<TierKey | null>(null);
 
-  const handleCheckout = useCallback(async (plan: string) => {
+  const handleCheckout = useCallback(async (plan: TierKey) => {
     setLoadingCheckout(plan);
     try {
       const result = await apiFetch<{ url: string }>(API.billing.createCheckout, {
@@ -246,7 +255,7 @@ export default function PricingPage() {
     <ErrorBoundary>
       <div className="min-h-screen bg-[#fafafa]">
         {/* ── Top navigation ── */}
-        <div className="mx-auto max-w-5xl px-4 py-4">
+        <div className="mx-auto max-w-6xl px-4 py-4">
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
@@ -256,83 +265,108 @@ export default function PricingPage() {
           </Link>
         </div>
 
-        <div className="mx-auto max-w-5xl px-4 pb-20">
+        <div className="mx-auto max-w-6xl px-4 pb-20">
           {/* ── Hero ── */}
           <div className="text-center mb-12">
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
-              Simple, transparent pricing.
+              받아보는 리포트로 고르세요.
             </h1>
-            <p className="text-lg text-slate-500 max-w-md mx-auto">
-              Start free. Upgrade when you are ready.
+            <p className="text-lg text-slate-500 max-w-xl mx-auto leading-relaxed">
+              같은 가격, 다른 제품. ChatGPT는 물어야 답하고, PivoxQuant는 매일 만듭니다.
             </p>
           </div>
 
-          {/* ── Plan Cards ── */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-16">
+          {/* ── Plan Cards (4 tiers) ── */}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-16">
             <PlanCard
               name="Free"
               price="₩0"
-              period="/mo"
-              description="Get started with basics"
+              period="/월"
+              description="맛보기 · 월 3개"
               icon={<BarChart3 className="h-5 w-5" />}
               features={[
-                "Track up to 3 stocks",
-                "5 basic technical indicators",
-                "Basic signal scores",
-                "Portfolio overview",
-                "Community access",
+                "Brag Card (월 1회)",
+                "실적 캘린더 iCal",
+                "관심종목 핫리스트",
               ]}
-              cta="Get Started"
+              cta="무료 시작"
               ctaHref="/signup"
             />
 
             <PlanCard
               name="Pro"
               price="₩9,900"
-              originalPrice="₩14,900/mo"
-              period="/mo"
-              description="For active investors"
-              icon={<Crown className="h-5 w-5" />}
-              highlighted
-              badge="Most Popular"
+              period="/월"
+              description="데일리 리서치 데스크"
+              icon={<Sparkles className="h-5 w-5" />}
               features={[
-                "Unlimited stock tracking",
-                "25+ advanced indicators",
-                "AI Assistant (10 queries/day)",
-                "Full 4-pillar signal analysis",
-                "Risk dashboard & alerts",
-                "Broker sync",
+                "Morning Brief · Evening Wrap",
+                "Weekly Investor Memo (PDF)",
+                "Earnings Pre-Brief",
+                "Thesis Tracker",
+                "Red/Green Alert",
               ]}
-              cta={loadingCheckout === "pro" ? "Loading..." : "Upgrade to Pro"}
+              cta={loadingCheckout === "pro" ? "로딩..." : "Pro로 구독"}
               onCtaClick={() => handleCheckout("pro")}
             />
 
             <PlanCard
               name="Premium"
               price="₩19,900"
-              period="/mo"
-              description="Maximum performance"
-              icon={<Zap className="h-5 w-5" />}
+              period="/월"
+              description="분기 리포트 + 시장 이벤트"
+              icon={<Crown className="h-5 w-5" />}
+              highlighted
+              badge="가장 많이 선택"
               features={[
-                "Everything in Pro",
-                "58 quantitative models",
-                "AI Assistant (100 queries/day)",
-                "AutoTrade with paper trading",
-                "Portfolio optimization (HRP, MDP)",
-                "Priority signal processing",
+                "Pro 전부 포함",
+                "FOMC Playbook · CPI Brief",
+                "Sector Monthly",
+                "Tax Lot Harvest · IPO Radar",
+                "Yearly Wrapped",
               ]}
               cta={
-                loadingCheckout === "premium" ? "Loading..." : "Upgrade to Premium"
+                loadingCheckout === "premium" ? "로딩..." : "Premium으로 구독"
               }
               onCtaClick={() => handleCheckout("premium")}
             />
+
+            <PlanCard
+              name="Elite"
+              price="₩29,900"
+              period="/월"
+              description="ChatGPT Plus 가격, 다른 제품"
+              icon={<Zap className="h-5 w-5" />}
+              features={[
+                "Premium 전부 포함",
+                "10-K Personal",
+                "Annual Letter to Self",
+                "Commute Podcast (음성)",
+                "Quarterly Self-Interview",
+                "Peer Benchmark · Stress Test",
+              ]}
+              cta={
+                loadingCheckout === "elite" ? "로딩..." : "Elite로 구독"
+              }
+              onCtaClick={() => handleCheckout("elite")}
+            />
+          </div>
+
+          {/* ── Value Anchor Note ── */}
+          <div className="mx-auto max-w-2xl mb-16 rounded-2xl border border-slate-200 bg-white p-5 text-center">
+            <p className="text-sm font-semibold text-slate-900 mb-1">
+              ChatGPT Plus ₩27,000 · PivoxQuant Elite ₩29,900
+            </p>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              챗봇은 당신이 물어야 답합니다. 리서치 데스크는 매일 스스로 만듭니다.
+            </p>
           </div>
 
           {/* ── Feature Comparison Table ── */}
           <div className="sp-card overflow-hidden mb-16">
             <div className="px-6 py-4 border-b border-slate-100">
               <h2 className="text-base font-bold text-slate-900">
-                Feature Comparison
+                받아보는 리포트 비교
               </h2>
             </div>
 
@@ -343,14 +377,17 @@ export default function PricingPage() {
                     <th className="px-6 py-3 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">
                       Feature
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-28">
+                    <th className="px-4 py-3 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-24">
                       Free
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold text-purple-600 text-xs uppercase tracking-wider w-28">
+                    <th className="px-4 py-3 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-24">
                       Pro
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-28">
+                    <th className="px-4 py-3 text-center font-semibold text-accent text-xs uppercase tracking-wider w-24">
                       Premium
+                    </th>
+                    <th className="px-4 py-3 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-24">
+                      Elite
                     </th>
                   </tr>
                 </thead>
@@ -369,11 +406,14 @@ export default function PricingPage() {
                       <td className="px-4 py-3">
                         <FeatureValue value={feat.free} />
                       </td>
-                      <td className="px-4 py-3 bg-purple-50/30">
+                      <td className="px-4 py-3">
                         <FeatureValue value={feat.pro} />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 bg-accent/5">
                         <FeatureValue value={feat.premium} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <FeatureValue value={feat.elite} />
                       </td>
                     </tr>
                   ))}
@@ -385,7 +425,7 @@ export default function PricingPage() {
           {/* ── FAQ ── */}
           <div className="max-w-2xl mx-auto mb-16">
             <h2 className="text-xl font-bold text-slate-900 text-center mb-8">
-              Frequently Asked Questions
+              자주 묻는 질문
             </h2>
             <div className="sp-card px-6">
               {FAQ_ITEMS.map((item) => (
@@ -397,15 +437,15 @@ export default function PricingPage() {
           {/* ── VAT & Disclaimer ── */}
           <div className="text-center space-y-3">
             <p className="text-xs text-slate-500">
-              All prices in KRW. VAT included. Cancel anytime.
+              KRW 기준 · VAT 포함 · 언제든 해지 가능
             </p>
             <div className="mx-auto max-w-xl rounded-xl border border-slate-200 bg-slate-50 p-3">
               <div className="flex items-start gap-2">
                 <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
                 <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Past performance does not guarantee future results. PivoxQuant
-                  provides data-driven analysis tools, not investment advice. All
-                  investment decisions are the sole responsibility of the user.
+                  과거 성과는 미래 수익을 보장하지 않습니다. PivoxQuant는 정보 제공 도구이며 투자 자문이 아닙니다.
+                  리포트는 시장 데이터·관찰 포인트를 정리한 분석물이며, 특정 종목 매수·매도를 권유하지 않습니다.
+                  모든 투자 판단의 책임은 이용자 본인에게 있습니다.
                 </p>
               </div>
             </div>

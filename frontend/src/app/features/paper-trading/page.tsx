@@ -93,8 +93,8 @@ export default function PaperTradingPage() {
 
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 mb-6">
-            <FlaskConical className="w-7 h-7 text-violet-600" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
+            <FlaskConical className="w-7 h-7 text-accent" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
             <span className="gradient-text">Paper Trading</span>
@@ -141,8 +141,8 @@ export default function PaperTradingPage() {
           <div className="space-y-4">
             {steps.map((item) => (
               <div key={item.step} className="flex items-start gap-4">
-                <div className="shrink-0 w-10 h-10 rounded-full bg-violet-50 flex items-center justify-center">
-                  <span className="text-sm font-bold text-violet-600">{item.step}</span>
+                <div className="shrink-0 w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                  <span className="text-sm font-bold text-accent">{item.step}</span>
                 </div>
                 <div className="pt-1.5 min-w-0 flex-1">
                   <h3 className="text-sm font-semibold text-slate-900 mb-1">{item.title}</h3>
@@ -165,8 +165,8 @@ export default function PaperTradingPage() {
               return (
                 <div key={metric.label} className="sp-card rounded-2xl p-5">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
-                      <Icon className="w-4 h-4 text-violet-600" />
+                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <Icon className="w-4 h-4 text-accent" />
                     </div>
                     <h3 className="text-sm font-semibold text-slate-900">{metric.label}</h3>
                   </div>

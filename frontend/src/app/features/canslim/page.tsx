@@ -31,7 +31,7 @@ const factors = [
     description: "Quarterly earnings growth of 25% or more. Is the company making more money right now than it did last year at this time?",
     icon: TrendingUp,
     threshold: "25%+ quarterly growth",
-    color: "text-violet-600 bg-violet-50 border-violet-100",
+    color: "text-accent bg-accent/10 border-accent/20",
   },
   {
     letter: "A",
@@ -47,7 +47,7 @@ const factors = [
     description: "Stock trading near its 52-week high. Counterintuitively, stocks making new highs tend to go even higher. Momentum matters.",
     icon: Sparkles,
     threshold: "Near 52-week high",
-    color: "text-pink-600 bg-pink-50 border-pink-100",
+    color: "text-amber-600 bg-amber-50 border-amber-100",
   },
   {
     letter: "S",
@@ -140,8 +140,8 @@ export default function CanslimPage() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-20">
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 mb-6">
-            <Search className="w-7 h-7 text-violet-600" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
+            <Search className="w-7 h-7 text-accent" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
             <span className="gradient-text">CAN SLIM</span> Stock Screener
@@ -186,8 +186,8 @@ export default function CanslimPage() {
                         {factor.description}
                       </p>
                       <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-violet-500" />
-                        <span className="text-xs font-medium text-violet-600">{factor.threshold}</span>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
+                        <span className="text-xs font-medium text-accent">{factor.threshold}</span>
                       </div>
                     </div>
                   </div>

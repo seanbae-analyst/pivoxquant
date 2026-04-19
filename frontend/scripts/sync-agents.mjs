@@ -204,7 +204,7 @@ function inferGroup(id) {
 // ---------------------------------------------------------------------------
 // 헬퍼: pdcaPhases 추론 (body 키워드로)
 // ---------------------------------------------------------------------------
-function inferPdcaPhases(body, id) {
+function inferPdcaPhases(body) {
   const lower = body.toLowerCase();
   const phases = [];
 
@@ -241,7 +241,7 @@ function inferPdcaPhases(body, id) {
 // README.md 파싱 → parentId 맵 구축
 // 조직도 텍스트에서 "child → parent" 관계 추출
 // ---------------------------------------------------------------------------
-function buildParentMapFromReadme(readmeContent) {
+function buildParentMapFromReadme() {
   const parentMap = {};
 
   // C-Suite → CEO
@@ -253,8 +253,7 @@ function buildParentMapFromReadme(readmeContent) {
   // 각 섹션 헤더로 그룹화: "### 전략 그룹", "### 제품 그룹", "### 지원 그룹", "### 감사"
   // 파일명 → C-Suite 매핑은 README 구조로 파악
 
-  // 전략 그룹: CFO 또는 CMO 또는 CDO 하위
-  const strategyGroupDepts = ["strategy", "finance", "growth", "marketing", "analytics"];
+  // 전략 그룹 매핑 (주석용 참고): strategy, finance, growth, marketing, analytics
   // strategy, pitch는 CEO 직속
   // finance → cfo, growth/marketing → cmo, analytics → cdo
   parentMap["strategy"] = "ceo";
@@ -468,7 +467,7 @@ function buildAgent(id, data, body, existing, parentMap) {
 // ---------------------------------------------------------------------------
 // AGENTS 배열 → TypeScript 소스 직렬화
 // ---------------------------------------------------------------------------
-function serializeAgents(agents, existingContent) {
+function serializeAgents(agents) {
   // 기존 섹션 그룹화를 최대한 유지하기 위해
   // tier + parentId 기준으로 정렬
 

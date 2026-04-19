@@ -11,6 +11,7 @@
     "autotrade": "AutoTrade",
     "risk": "Risk",
     "alerts": "Alerts",
+    "reports": "My Reports",
     "settings": "Settings",
     "upgrade": "Upgrade to Pro"
   },
@@ -89,10 +90,15 @@
       "free": "Free",
       "pro": "Pro",
       "premium": "Premium",
+      "elite": "Elite",
       "perMonth": "/mo",
+      "proPrice": "₩9,900",
+      "premiumPrice": "₩19,900",
+      "elitePrice": "₩29,900",
       "startFree": "Start Free",
       "startPro": "Start Pro",
-      "startPremium": "Start Premium"
+      "startPremium": "Start Premium",
+      "startElite": "Start Elite"
     }
   },
   "errors": {
@@ -469,6 +475,51 @@
       "title": "Disclaimer",
       "ko": "본 시뮬레이션은 과거 데이터 기반 계산이며, 미래 수익을 보장하지 않습니다. 배당·세금·수수료는 반영되지 않습니다. 투자자문이 아닙니다.",
       "en": "This simulation is based on past data only. Past performance does not guarantee future results. Dividends, taxes, and fees are not included. Not investment advice."
+    }
+  },
+  "reports": {
+    "title": "My Reports",
+    "subtitle": "A library of reports your AI built for you",
+    "empty": {
+      "title": "No reports yet",
+      "description": "Your first report will arrive this Sunday."
+    },
+    "filters": {
+      "type": "Type",
+      "period": "Period",
+      "typeAll": "All",
+      "typeWeekly": "Weekly Memo",
+      "typeMorning": "Morning Brief",
+      "typeEarnings": "Earnings Prebrief",
+      "typeMonthly": "Monthly Card",
+      "typeQuarterly": "Quarterly Review",
+      "typeRisk": "Risk Report",
+      "period30": "Last 30 days",
+      "period90": "Last 90 days",
+      "periodAll": "All time"
+    },
+    "card": {
+      "new": "NEW",
+      "download": "Download",
+      "preview": "Preview"
+    },
+    "preview": {
+      "title": "Report Preview",
+      "close": "Close",
+      "download": "Download PDF",
+      "share": "Share",
+      "shareKakao": "KakaoTalk",
+      "shareInsta": "Instagram",
+      "notAvailable": "Preview is being prepared"
+    },
+    "badge": {
+      "weeklyMemo": "Weekly Memo",
+      "morningBrief": "Morning Brief",
+      "earningsPrebrief": "Earnings Prebrief",
+      "monthlyBrag": "Monthly Card",
+      "quarterlyReview": "Quarterly Review",
+      "riskReport": "Risk Report",
+      "custom": "Report"
     }
   }
 }

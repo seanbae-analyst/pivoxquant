@@ -17,51 +17,51 @@ import {
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 
 export const metadata: Metadata = {
-  title: "Your AI Investment Assistant — PivoxQuant",
+  title: "당신의 전속 리서치 데스크 — PivoxQuant",
   description:
-    "Ask anything about your portfolio. Get answers in plain language, powered by Claude AI.",
+    "당신이 자는 동안 리포트가 만들어집니다. Morning Brief, Weekly Memo, Earnings Pre-Brief — 맥킨지 포맷의 분석물이 메일함에 도착합니다.",
 };
 
-/* ── Example conversations ── */
+/* ── 발행되는 리포트 샘플 ── */
 const conversations = [
   {
     icon: MessageSquare,
-    question: "Why did my portfolio drop today?",
+    question: "Morning Brief · 화요일 06:00 KST",
     answer:
-      "Your portfolio dropped 2.3% mainly because your tech stocks (60% of portfolio) reacted to rising interest rate fears. NVDA fell 4.1% and AAPL fell 1.8%.",
-    color: "bg-violet-50 text-violet-600",
+      "간밤 S&P 500 +0.4%, 보유 종목 중 NVDA +1.2% / AAPL -0.3%. 오늘 관찰 포인트: 10시 FOMC 의사록 공개, 당신 포트폴리오 금리 민감도 0.8β. 섹터 로테이션 신호는 에너지 → IT 방향.",
+    color: "bg-accent/10 text-accent",
   },
   {
     icon: BarChart3,
-    question: "What do AAPL's quant metrics look like?",
+    question: "Earnings Pre-Brief · AAPL 실적 30분 전",
     answer:
-      "Current quant score: 72 (Positive). Technical: 68, Fundamental: 85. Strong fundamentals with $95B free cash flow. RSI at 68 suggests it may be slightly overbought short-term.",
+      "Q3 EPS 컨센 $2.10, 가이던스 범위 $2.05~$2.18. 예상 질문 TOP 5: (1) 중국 매출 회복, (2) Vision Pro 판매량, (3) 서비스 마진, (4) 설비투자 가이던스, (5) 환율 영향. 당신 포지션 비중 18% — 실적 이후 변동성 주시.",
     color: "bg-blue-50 text-blue-600",
   },
   {
     icon: PieChart,
-    question: "What does my sector allocation look like?",
+    question: "Weekly Investor Memo · 일요일 5p PDF",
     answer:
-      "Your current sector exposure: Technology 65%. Your risk profile target: 40% max per sector. Healthcare and consumer staples are currently underrepresented relative to your target allocation.",
-    color: "bg-pink-50 text-pink-600",
+      "이번 주 포트폴리오 +1.8%, 벤치마크 +0.9% 대비 +0.9%p. 기여 섹터: IT(+1.1), 헬스케어(+0.4). 리스크 관찰: 테크 집중도 65% (목표 상한 40% 초과). 다음 주 관찰 포인트 3가지와 당신 테마의 논리 점검.",
+    color: "bg-rose-50 text-rose-600",
   },
   {
     icon: Target,
-    question: "What is my biggest risk right now?",
+    question: "Yearly Wrapped · 12월 31일",
     answer:
-      "Your top risk is sector concentration: 3 of your 5 holdings are in semiconductors. If chip stocks correct, you could see a 12-15% drawdown. Adding uncorrelated assets would help cushion that.",
+      "2026년 당신의 포트폴리오: 누적 +14.2%, 최고 보유일 3월 14일 (+3.1%), 가장 많이 거래한 섹터 반도체 (32회). Spotify Wrapped 스타일 카드 9:16 — 공유 가능. 당신의 투자 한 해가 한 장에.",
     color: "bg-emerald-50 text-emerald-600",
   },
 ];
 
-/* ── What AI Assistant knows ── */
+/* ── 리서치 데스크가 읽는 데이터 ── */
 const knowledgeSources = [
-  { icon: User, label: "Your actual portfolio and positions" },
-  { icon: Zap, label: "Real-time market data and news" },
-  { icon: BarChart3, label: "58 quant model outputs" },
-  { icon: ShieldCheck, label: "Your personal risk profile" },
-  { icon: PieChart, label: "Sector and correlation analysis" },
-  { icon: Target, label: "Historical performance patterns" },
+  { icon: User, label: "당신의 포트폴리오와 실제 포지션" },
+  { icon: Zap, label: "실시간 시장 데이터·뉴스" },
+  { icon: BarChart3, label: "58개 퀀트 모델 출력물" },
+  { icon: ShieldCheck, label: "당신의 위험 허용도 프로필" },
+  { icon: PieChart, label: "섹터·상관관계 분석" },
+  { icon: Target, label: "과거 성과 패턴과 벤치마크" },
 ];
 
 export default function AiAssistantPage() {
@@ -78,7 +78,7 @@ export default function AiAssistantPage() {
             Back
           </Link>
           <span className="text-slate-300">/</span>
-          <span className="text-sm font-medium text-slate-700">AI Assistant</span>
+          <span className="text-sm font-medium text-slate-700">Research Desk</span>
         </div>
       </header>
 
@@ -90,20 +90,20 @@ export default function AiAssistantPage() {
 
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 mb-6">
-            <Brain className="w-7 h-7 text-violet-600" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
+            <Brain className="w-7 h-7 text-accent" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            Your AI <span className="gradient-text">Investment Assistant</span>
+            당신의 <span className="gradient-text">전속 리서치 데스크</span>
           </h1>
           <p className="text-lg text-slate-500 max-w-xl mx-auto">
-            Ask anything about your portfolio. Get answers in plain language.
+            당신은 CFO입니다. 리포트는 저희가 씁니다. 매일 아침 6시, 메일함에.
           </p>
         </div>
 
-        {/* ── What can AI Assistant do? ── */}
+        {/* ── 어떤 리포트가 도착하나요? ── */}
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">What can AI Assistant do?</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-6">어떤 리포트가 도착하나요?</h2>
           <div className="space-y-4">
             {conversations.map((conv) => {
               const Icon = conv.icon;
@@ -123,8 +123,8 @@ export default function AiAssistantPage() {
                       {/* AI answer */}
                       <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                         <div className="flex items-center gap-1.5 mb-2">
-                          <Sparkles className="w-3.5 h-3.5 text-violet-500" />
-                          <span className="text-xs font-semibold text-violet-600">AI Assistant</span>
+                          <Sparkles className="w-3.5 h-3.5 text-accent" />
+                          <span className="text-xs font-semibold text-accent">PivoxQuant Analyst Desk</span>
                         </div>
                         <p className="text-sm text-slate-600 leading-relaxed">{conv.answer}</p>
                       </div>
@@ -140,17 +140,16 @@ export default function AiAssistantPage() {
         <section className="mb-16">
           <div className="bg-slate-50 rounded-2xl p-6 sm:p-8">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center">
-                <Brain className="w-5 h-5 text-violet-600" />
+              <div className="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-accent" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Powered by Claude AI</h2>
-                <p className="text-sm text-slate-500">Not a generic chatbot. It knows your portfolio.</p>
+                <h2 className="text-lg font-bold text-slate-900">챗봇이 아닌 리서치 데스크</h2>
+                <p className="text-sm text-slate-500">당신의 장부를 읽고, 당신의 리포트를 씁니다.</p>
               </div>
             </div>
             <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              Unlike generic AI chatbots that give vague market commentary, our AI Assistant has access to
-              your actual data. Every answer is personalized analysis based on your specific situation.
+              ChatGPT는 당신이 물어야 답합니다. PivoxQuant는 당신이 자는 동안 만듭니다. 정기 스케줄에 따라 매일·매주·분기별 리포트가 당신의 메일함, PDF, 음성 파일로 발행됩니다. 당신 포트폴리오 한 명만을 위한 애널리스트 팀.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {knowledgeSources.map((source) => {
@@ -167,15 +166,15 @@ export default function AiAssistantPage() {
 
         {/* ── How it works ── */}
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">How It Works</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-6">리포트가 만들어지는 과정</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { step: "01", title: "Ask a question", desc: "Type anything about your portfolio, a stock, or the market in plain English." },
-              { step: "02", title: "AI analyzes your data", desc: "It checks your positions, quant scores, risk metrics, and real-time market data." },
-              { step: "03", title: "Get clear answers", desc: "Receive personalized analysis explained simply, with specific numbers and data points." },
+              { step: "01", title: "CFO 프로필 등록", desc: "당신의 포트폴리오, 투자 스타일, 위험 허용도를 온보딩으로 입력합니다." },
+              { step: "02", title: "데스크가 데이터 수집", desc: "당신 포지션·시장 데이터·58개 퀀트 모델·섹터 로테이션을 자동으로 읽습니다." },
+              { step: "03", title: "리포트 발행", desc: "매일 6시 이메일, 일요일 PDF, 실적 30분 전 프리브리프가 자동 발송됩니다." },
             ].map((item) => (
               <div key={item.step} className="sp-card rounded-2xl p-6 text-center">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-violet-50 text-violet-600 text-sm font-bold mb-3">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent text-sm font-bold mb-3">
                   {item.step}
                 </div>
                 <h3 className="text-sm font-semibold text-slate-900 mb-2">{item.title}</h3>
@@ -188,17 +187,16 @@ export default function AiAssistantPage() {
         {/* ── CTA ── */}
         <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
           <h2 className="text-2xl font-bold text-slate-900 mb-3">
-            Try AI Assistant for free
+            내일 아침 6시, 첫 리포트가 메일함에.
           </h2>
           <p className="text-slate-500 mb-6 max-w-md mx-auto">
-            Ask your first question today. No credit card required.
-            Your assistant is ready when you are.
+            무료 플랜으로 월간 Brag Card부터. Pro로 업그레이드하면 데일리 리포트가 시작됩니다.
           </p>
           <Link
             href="/signup"
             className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all active:scale-[0.97]"
           >
-            Try AI Assistant Free
+            첫 리포트 받아보기
             <ArrowRight className="w-4 h-4" />
           </Link>
         </section>

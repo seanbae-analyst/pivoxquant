@@ -66,10 +66,10 @@ const profiles = [
     title: "Momentum Rider",
     quote: "I ride trends for weeks to months.",
     strategy: "Trend-following signals, wide trailing stops, ride momentum.",
-    colorBg: "bg-violet-50",
-    colorBorder: "border-violet-100",
-    colorIcon: "text-violet-600",
-    colorTag: "bg-violet-100 text-violet-700",
+    colorBg: "bg-accent/10",
+    colorBorder: "border-accent/20",
+    colorIcon: "text-accent",
+    colorTag: "bg-accent/15 text-accent",
     tag: "Momentum",
   },
   {
@@ -88,10 +88,10 @@ const profiles = [
     title: "Risk-Managed Growth",
     quote: "Growth, but with strict loss limits.",
     strategy: "Hard 11% max drawdown cap, growth-oriented with guardrails.",
-    colorBg: "bg-pink-50",
-    colorBorder: "border-pink-100",
-    colorIcon: "text-pink-600",
-    colorTag: "bg-pink-100 text-pink-700",
+    colorBg: "bg-rose-50",
+    colorBorder: "border-rose-100",
+    colorIcon: "text-rose-600",
+    colorTag: "bg-rose-100 text-rose-700",
     tag: "Protected",
   },
   {
@@ -152,8 +152,8 @@ export default function ProfilesPage() {
 
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 mb-6">
-            <User className="w-7 h-7 text-violet-600" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
+            <User className="w-7 h-7 text-accent" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
             Find Your <span className="gradient-text">Investor Type</span>
@@ -220,7 +220,7 @@ export default function ProfilesPage() {
               {customizations.map((item) => {
                 return (
                   <div key={item.label} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-slate-100">
-                    <CheckCircle2 className="w-4 h-4 text-violet-500 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-accent shrink-0" />
                     <span className="text-sm text-slate-700">{item.label}</span>
                   </div>
                 );
