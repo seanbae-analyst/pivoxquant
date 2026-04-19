@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/locale";
 import { useArtifacts } from "@/lib/hooks";
+import { useAuth } from "@/lib/auth";
 
 type NavKey =
   | "home"
@@ -59,6 +60,10 @@ export function Sidebar() {
   // Unread artifact badge — tiny dot next to Reports link when >0 unread.
   // Fails silently if the backend isn't up yet (hook returns 0).
   const { unreadCount } = useArtifacts();
+  const { user } = useAuth();
+  // Hide upgrade CTA for paid users — effective_tier is resolved server-side
+  // (DEV_PREMIUM_EMAILS override applied). Free users still see the button.
+  const isPaid = user?.subscription_tier === "premium" || user?.subscription_tier === "pro";
 
   return (
     <aside className="flex h-screen w-[220px] flex-col border-r border-slate-200 bg-white">
@@ -112,16 +117,18 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Upgrade CTA */}
-      <div className="p-3">
-        <Link
-          href="/pricing"
-          className="flex items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-        >
-          <Crown className="h-4 w-4" strokeWidth={1.75} />
-          <span>{t("nav.upgrade")}</span>
-        </Link>
-      </div>
+      {/* Upgrade CTA — hidden for paid tiers */}
+      {!isPaid && (
+        <div className="p-3">
+          <Link
+            href="/pricing"
+            className="flex items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+          >
+            <Crown className="h-4 w-4" strokeWidth={1.75} />
+            <span>{t("nav.upgrade")}</span>
+          </Link>
+        </div>
+      )}
     </aside>
   );
 }
