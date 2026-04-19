@@ -328,8 +328,15 @@ def _do_migrations():
                 ))
         logger.info(f"Migration: added {table}.{column}")
 
-    # Users table
+    # Users table — full coverage of User model columns so any DB
+    # (new PG instance, restored snapshot, legacy SQLite dev box) can
+    # boot without ProgrammingError / OperationalError on SELECT.
+    _add_column_if_missing("users", "available_capital", "FLOAT", default="0.0")
     _add_column_if_missing("users", "available_capital_krw", "FLOAT", default="0.0")
+    _add_column_if_missing("users", "risk_profile", "VARCHAR(20)", default="'balanced'")
+    _add_column_if_missing("users", "profile_changes_left", "INTEGER", default="3")
+    _add_column_if_missing("users", "subscription_tier", "VARCHAR(10)", default="'free'")
+    _add_column_if_missing("users", "onboarding_completed", "BOOLEAN", default="0")
     _add_column_if_missing("users", "google_id", "VARCHAR(100)", unique=True)
     _add_column_if_missing("users", "avatar_url", "VARCHAR(500)")
     _add_column_if_missing("users", "oauth_provider", "VARCHAR(20)")
