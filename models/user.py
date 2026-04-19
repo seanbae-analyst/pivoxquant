@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -59,3 +60,20 @@ class User(UserMixin, db.Model):
         if not self.password_hash:
             return False
         return check_password_hash(self.password_hash, pw)
+
+    @property
+    def effective_tier(self) -> str:
+        """Tier after applying dev overrides.
+
+        Any email listed in `DEV_PREMIUM_EMAILS` (comma-separated env var) is
+        treated as Premium regardless of their stored `subscription_tier`.
+        This is a dev/admin backdoor for owner accounts and invited testers —
+        it never downgrades, only upgrades. The stored column remains the
+        source of truth for Stripe billing state.
+        """
+        raw = os.environ.get("DEV_PREMIUM_EMAILS", "") or ""
+        if raw and self.email:
+            allow = {e.strip().lower() for e in raw.split(",") if e.strip()}
+            if self.email.lower() in allow:
+                return "premium"
+        return self.subscription_tier or "free"

@@ -415,6 +415,72 @@
       "dismissAnytime": "Notifications can be disabled at any time"
     }
   },
+  "brokerOnboarding": {
+    "title": "Connect your brokerage",
+    "subtitle": "Link your broker to auto-import positions. You can always do this later.",
+    "stepLabel": "Getting started",
+    "skip": "Skip for now",
+    "nextStep": "Continue",
+    "cancel": "Cancel",
+    "note": "You can update these connections anytime in Settings → Connections.",
+    "badge": {
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "uploadNeeded": "Upload needed"
+    },
+    "kis": {
+      "name": "Korea Investment & Securities",
+      "desc": "Auto-sync via API key",
+      "connect": "Connect",
+      "connectBtn": "Connect",
+      "connecting": "Connecting...",
+      "sync": "Sync",
+      "syncing": "Syncing...",
+      "disconnect": "Disconnect",
+      "lastSync": "Last sync",
+      "modalTitle": "Connect KIS",
+      "modalSubtitle": "Enter the API credentials issued from the KIS developer portal.",
+      "appKey": "App Key",
+      "appSecret": "App Secret",
+      "accountNo": "Account No. (first 8 digits)",
+      "accountNoHint": "Please enter 6–12 digits.",
+      "accountProd": "Product",
+      "helpLink": "How to issue an App Key",
+      "connectSuccess": "KIS connected successfully!",
+      "connectError": "Failed to connect KIS. Please double-check your keys and account number.",
+      "syncSuccess": "Balances synced.",
+      "syncError": "Sync failed.",
+      "disconnectConfirm": "Disconnect KIS? Your stored API keys will be permanently removed.",
+      "disconnectSuccess": "KIS disconnected.",
+      "disconnectError": "Failed to disconnect."
+    },
+    "kiwoom": {
+      "name": "Kiwoom Securities",
+      "desc": "Upload your 영웅문 balance export",
+      "upload": "Upload CSV",
+      "reupload": "Re-upload",
+      "uploadBtn": "Upload",
+      "uploading": "Uploading...",
+      "lastUpload": "Last upload",
+      "modalTitle": "Upload Kiwoom balances",
+      "modalSubtitle": "Upload the balance .xls/.xlsx or .csv file exported from 영웅문.",
+      "dropHere": "Drop your file here, or click to select",
+      "acceptHint": "Accepted: .xls, .xlsx, .csv (max 5MB)",
+      "badFormat": "Unsupported file type. Only .xls, .xlsx, .csv are allowed.",
+      "fileTooLarge": "File is too large. Please keep it under 5MB.",
+      "formatGuide": "How to export balances from 영웅문",
+      "importSuccess": "Imported {count} positions.",
+      "importEmpty": "File uploaded, but no positions were found to import.",
+      "uploadError": "Upload failed. Please try again shortly."
+    },
+    "manual": {
+      "title": "Manual",
+      "subtitle": "Track positions by hand",
+      "badge": "No sync",
+      "description": "If you don't use KIS or 키움, or prefer to manage holdings yourself, just add positions manually. You can always change this later.",
+      "cta": "Start manually"
+    }
+  },
   "whatIf": {
     "badge": "Time Machine",
     "hero": "If You Had Invested...",

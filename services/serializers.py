@@ -10,7 +10,9 @@ def serialize_user(u) -> dict:
         "available_capital_krw": getattr(u, "available_capital_krw", 0.0) or 0.0,
         "risk_profile": getattr(u, "risk_profile", "balanced"),
         "profile_changes_left": getattr(u, "profile_changes_left", 3),
-        "subscription_tier": getattr(u, "subscription_tier", "free"),
+        # effective_tier applies the DEV_PREMIUM_EMAILS override; falls back
+        # to the stored column for users not in the allowlist.
+        "subscription_tier": getattr(u, "effective_tier", None) or getattr(u, "subscription_tier", "free"),
         "subscription_status": getattr(u, "subscription_status", "inactive") or "inactive",
         "onboarding_completed": getattr(u, "onboarding_completed", False),
         "avatar_url": getattr(u, "avatar_url", None),

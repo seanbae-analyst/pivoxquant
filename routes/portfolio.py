@@ -131,7 +131,8 @@ def get_portfolio():
 @api_auth
 def add_position():
     # Tier check: Free users limited to 3 positions
-    if getattr(current_user, "subscription_tier", None) in (None, "free"):
+    # Use effective_tier so DEV_PREMIUM_EMAILS can bypass the free-plan cap.
+    if getattr(current_user, "effective_tier", None) in (None, "free"):
         position_count = Position.query.filter_by(user_id=current_user.id).count()
         if position_count >= 3:
             return jsonify({
