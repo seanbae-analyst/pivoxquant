@@ -369,11 +369,13 @@ function MetricCard({
   value,
   icon,
   variant = "default",
+  subtitle,
 }: {
   label: string;
   value: string;
   icon: React.ReactNode;
   variant?: "default" | "positive" | "negative" | "warning";
+  subtitle?: string;
 }) {
   const colorMap = {
     default: "text-slate-900",
@@ -391,6 +393,9 @@ function MetricCard({
       <span className={cn("text-lg font-bold tabular-nums", colorMap[variant])}>
         {value}
       </span>
+      {subtitle && (
+        <p className="mt-1 text-[10px] text-slate-400 leading-snug">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -760,7 +765,7 @@ export default function RiskPage() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <MetricCard
-              label="샤프 비율"
+              label="샤프 비율 (연환산)"
               value={sharpe != null ? sharpe.toFixed(2) : "\u2014"}
               icon={<BarChart3 className="h-4 w-4" />}
               variant={
@@ -771,6 +776,11 @@ export default function RiskPage() {
                     : sharpe >= 0.5
                       ? "warning"
                       : "negative"
+              }
+              subtitle={
+                sharpe == null
+                  ? "이력 20일 미만 — 계산 불가"
+                  : "(수익률-RF) / 변동성 × √252"
               }
             />
             <MetricCard
