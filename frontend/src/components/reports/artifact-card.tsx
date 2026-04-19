@@ -130,13 +130,7 @@ export function ArtifactCard({
       {/* Content */}
       <div className="flex flex-1 flex-col gap-3 p-5">
         {/* Title — serif for that library-archive feel */}
-        <h3
-          className="line-clamp-2 text-[17px] font-semibold leading-snug text-slate-900"
-          style={{
-            fontFamily:
-              "'Iowan Old Style', 'Palatino', 'Georgia', ui-serif, serif",
-          }}
-        >
+        <h3 className="font-serif line-clamp-2 text-[17px] font-semibold leading-snug text-slate-900">
           {artifact.title}
         </h3>
 

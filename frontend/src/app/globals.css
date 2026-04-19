@@ -258,7 +258,7 @@
 
 /* Monospaced numeric — for prices, returns, ratios */
 .numeric {
-  font-family: var(--font-mono), ui-monospace, "SF Mono", "IBM Plex Mono", Menlo, Consolas, monospace;
+  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   letter-spacing: -0.01em;
