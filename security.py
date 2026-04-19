@@ -1,6 +1,7 @@
 """
 PivoxQuant — Security Middleware
-CORS, Rate Limiting, CSRF (Double Submit Cookie), Session Timeout, Security Headers.
+CORS, Rate Limiting, CSRF (Double Submit Cookie), Session Timeout, Security Headers,
+Sensitive-header log scrubbing.
 
 Usage:
     from security import init_security
@@ -8,6 +9,7 @@ Usage:
 """
 
 import os
+import re
 import hashlib
 import hmac
 import secrets
@@ -117,6 +119,68 @@ _SESSION_LIFETIME = timedelta(hours=24)
 _INACTIVITY_TIMEOUT = timedelta(hours=2)
 
 
+# ── Sensitive Header Masking (shared with app.py Sentry filter) ──────────────
+
+# Headers whose values must never appear in logs, Sentry events, or request dumps.
+# Broker headers (appkey/appsecret) are set by services/broker/user_kis_service.py
+# during authenticated KIS requests; if an upstream 4xx/5xx is logged naively,
+# the raw credentials would be exposed.
+SENSITIVE_HEADERS = frozenset({
+    "authorization", "cookie", "set-cookie",
+    "x-csrf-token", "x-api-key",
+    "appkey", "appsecret",
+    "proxy-authorization",
+})
+
+
+def mask_headers(headers):
+    """Return a NEW dict with sensitive header values replaced by '***'.
+    Case-insensitive. Non-sensitive values are passed through unchanged.
+
+    Use this before logging any dict of HTTP headers. Example:
+
+        logger.debug("KIS request headers=%s", mask_headers(headers))
+    """
+    if not headers:
+        return {}
+    out = {}
+    for k, v in headers.items():
+        out[k] = "***" if isinstance(k, str) and k.lower() in SENSITIVE_HEADERS else v
+    return out
+
+
+# Regex patterns that match accidental leakage of sensitive fields anywhere in a
+# log message (e.g., `repr(headers)` or an f-string that spliced a token in).
+# These are a defensive second layer: the primary defense is `mask_headers` +
+# the Sentry before_send hook.
+_SECRET_VALUE_PATTERNS = [
+    # "appkey": "XXXX..." or appkey=XXXX...  (JSON/dict/query forms)
+    re.compile(r'(?i)("?(?:appkey|appsecret|authorization|x-api-key|cookie)"?\s*[:=]\s*"?)[^"\s,}&]+', re.MULTILINE),
+    # Bearer <token>
+    re.compile(r'(?i)(Bearer\s+)[A-Za-z0-9\-_\.=]+'),
+]
+
+
+class _SensitiveHeaderScrubber(logging.Filter):
+    """logging.Filter that rewrites LogRecord.msg/args to mask secret-looking
+    values. Attached to the root logger inside init_security().
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: D401
+        try:
+            # Format the final message once, then scrub it. We store it back
+            # on .msg and clear .args so downstream formatters don't re-interpolate.
+            msg = record.getMessage()
+            for pat in _SECRET_VALUE_PATTERNS:
+                msg = pat.sub(lambda m: m.group(1) + "***", msg)
+            record.msg = msg
+            record.args = None
+        except Exception:
+            # Never let log scrubbing break logging itself.
+            pass
+        return True
+
+
 # ── Init Function ────────────────────────────────────────────────────────────
 
 def init_security(app):
@@ -124,6 +188,15 @@ def init_security(app):
     Initialize all security middleware on the Flask app.
     Call this AFTER app.config.from_object(Config) but BEFORE blueprint registration.
     """
+
+    # ── 0. Log Scrubber (attach first so every subsequent logger inherits) ─
+    # Mask secrets that may accidentally be logged by third-party libraries
+    # (requests, urllib3) or by our own debug logs. Paired with the Sentry
+    # `before_send` hook in app.py (which also masks request headers).
+    root_logger = logging.getLogger()
+    if not any(isinstance(f, _SensitiveHeaderScrubber) for f in root_logger.filters):
+        root_logger.addFilter(_SensitiveHeaderScrubber())
+    logger.info("SECURITY: sensitive-header log scrubber attached")
 
     # ── 1. CORS ──────────────────────────────────────────────────────────
     origins = _get_cors_origins()

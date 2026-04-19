@@ -29,15 +29,44 @@ logger = logging.getLogger(__name__)
 
 # ── Sentry filter ─────────────────────────────────────────────────────────────
 
+# Sensitive header names (lowercased) — must NEVER reach Sentry/logs.
+# Broker headers (appkey/appsecret) were added after the Wave 1 KIS OAuth work
+# introduced services/broker/user_kis_service.py::_auth_headers(), which embeds
+# the user's raw KIS credentials in outbound HTTP headers. Without masking, any
+# exception raised during a KIS request would ship those credentials to Sentry.
+SENSITIVE_HEADERS = frozenset({
+    "authorization", "cookie", "set-cookie",
+    "x-csrf-token", "x-api-key",
+    "appkey", "appsecret",                # KIS broker credentials
+    "tr_id",                              # KIS transaction id (not secret, but contextless in Sentry)
+    "proxy-authorization",
+})
+_SENSITIVE_ENV_KEYS = frozenset({
+    "HTTP_AUTHORIZATION", "HTTP_COOKIE",
+    "HTTP_APPKEY", "HTTP_APPSECRET",
+    "HTTP_X_CSRF_TOKEN", "HTTP_X_API_KEY",
+})
+
+
+def _mask_headers(headers: dict) -> None:
+    """In-place: redact any sensitive header value to '***'.
+    Case-insensitive match against SENSITIVE_HEADERS.
+    """
+    if not headers:
+        return
+    for key in list(headers.keys()):
+        if key.lower() in SENSITIVE_HEADERS:
+            headers[key] = "***"
+
+
 def _sentry_filter(event, hint):
     # Strip sensitive headers from request data
     if "request" in event:
         headers = event["request"].get("headers", {})
-        for key in ["authorization", "cookie", "x-csrf-token", "x-api-key"]:
-            headers.pop(key, None)
+        _mask_headers(headers)
         # Also strip from env if present
         env = event["request"].get("env", {})
-        for key in ["HTTP_AUTHORIZATION", "HTTP_COOKIE"]:
+        for key in _SENSITIVE_ENV_KEYS:
             env.pop(key, None)
 
     # Noise filtering — suppress noisy non-actionable errors
@@ -218,6 +247,10 @@ def _do_migrations():
     _add_column_if_missing("users", "stripe_customer_id", "VARCHAR(100)")
     _add_column_if_missing("users", "stripe_subscription_id", "VARCHAR(100)")
     _add_column_if_missing("users", "subscription_status", "VARCHAR(20)", default="'inactive'")
+    # MVP #3 Earnings Pre-Brief — per-channel email opt-out. Added via
+    # migration 009_earnings_prebrief; this runtime hook covers existing
+    # local dev DBs that boot without running Alembic.
+    _add_column_if_missing("users", "email_opt_out_earnings", "BOOLEAN", default="0")
 
     # Positions table
     _add_column_if_missing("positions", "buy_fx_rate", "FLOAT", default="0.0")
@@ -303,6 +336,75 @@ def _init_scheduler(app):
             except Exception as e:
                 logger.error(f"Morning brief scheduler failed: {e}")
 
+    def _scheduled_weekly_memo():
+        """Generate + email the weekly investor memo to Pro+ users.
+
+        Fires Sunday 08:00 Asia/Seoul. Free users are silently skipped.
+        Empty portfolios are skipped. Failure of one user never blocks
+        the others — see WeeklyMemoService.run_weekly.
+        """
+        from services.artifacts.weekly_memo_service import WeeklyMemoService
+        with app.app_context():
+            try:
+                summary = WeeklyMemoService().run_weekly()
+                logger.info(f"Weekly memo scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Weekly memo scheduler failed: {e}")
+
+    def _scheduled_monthly_brag():
+        """Generate + email the monthly brag card to every user.
+
+        Fires 1st of each month 09:00 Asia/Seoul. Unlike the weekly memo
+        this runs for Free users too — the brag card is the viral loop
+        input. Empty portfolios receive a "welcome" variant so new
+        signups aren't excluded from the habit.
+        """
+        from services.artifacts.monthly_brag_service import MonthlyBragService
+        with app.app_context():
+            try:
+                summary = MonthlyBragService().run_monthly()
+                logger.info(f"Monthly brag scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Monthly brag scheduler failed: {e}")
+
+    def _scheduled_brag_card():
+        """Generate + email the Playwright-rendered brag card (MVP #2).
+
+        Same cadence as `_scheduled_monthly_brag` (1st of month, 09:00
+        KST) but calls the newer `BragCardService` which renders a 9:16
+        HTML card via headless Chromium. The two schedulers run side by
+        side during the rollout — operators can disable whichever they
+        prefer by removing the relevant `sched.add_job` call below.
+        """
+        from services.artifacts.brag_card_service import BragCardService
+        with app.app_context():
+            try:
+                summary = BragCardService().run_monthly()
+                logger.info(f"Brag card scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Brag card scheduler failed: {e}")
+
+    def _scheduled_earnings_prebrief():
+        """Scan every 15 min for positions whose earnings fire in ~30 min
+        (MVP #3). The service enforces dedup per (user, ticker,
+        earnings_dt) so a scan that fires at T-35 and another at T-25
+        won't double-send — the brief only emits inside the tight
+        `LEAD_MINUTES ± tolerance` window.
+
+        Runs at 15-min cadence to comfortably contain the ±6-min match
+        window — a 30-min cadence would miss narrowly-scheduled
+        announcements. Per-user failures never block the next one.
+        """
+        from services.artifacts.earnings_prebrief_service import (
+            EarningsPrebriefService,
+        )
+        with app.app_context():
+            try:
+                summary = EarningsPrebriefService().run_scan()
+                logger.info(f"Earnings pre-brief scan: {summary}")
+            except Exception as e:
+                logger.error(f"Earnings pre-brief scan failed: {e}")
+
     sched = BackgroundScheduler(timezone="UTC")
     sched.add_job(_scheduled_refresh, "interval", minutes=3, id="refresh")
     sched.add_job(
@@ -311,6 +413,38 @@ def _init_scheduler(app):
         hour=6, minute=0,
         timezone="Asia/Seoul",
         id="morning_brief_daily",
+        max_instances=1,
+        coalesce=True,
+    )
+    # Sunday 08:00 KST — 주간 맥킨지 스타일 PDF 메모 (Pro+).
+    sched.add_job(
+        _scheduled_weekly_memo,
+        trigger="cron",
+        day_of_week="sun",
+        hour=8, minute=0,
+        timezone="Asia/Seoul",
+        id="weekly_memo_sunday",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매월 1일 09:00 KST — MVP #2 Monthly Brag Card (9:16 PNG, 전 유저).
+    sched.add_job(
+        _scheduled_brag_card,
+        trigger="cron",
+        day=1, hour=9, minute=0,
+        timezone="Asia/Seoul",
+        id="brag_card_monthly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 15분 간격 — MVP #3 Earnings Pre-Brief scan. The service's internal
+    # window matcher ensures only positions ~30 min away from their
+    # earnings actually trigger a send, so this cadence is safe.
+    sched.add_job(
+        _scheduled_earnings_prebrief,
+        trigger="interval",
+        minutes=15,
+        id="earnings_prebrief_scan",
         max_instances=1,
         coalesce=True,
     )

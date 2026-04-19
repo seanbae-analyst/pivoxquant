@@ -79,8 +79,24 @@ def earnings_tone_budget_remaining() -> int:
         return max(0, EARNINGS_TONE_DAILY_LIMIT - _earnings_tone_usage["count"])
 
 
+def get_signal(ticker: str):
+    """Read signal cache for a ticker.
+
+    Returns the SignalCache row if it exists and is not stale.
+    Returns None if the record is missing or has exceeded TTL_SECONDS,
+    so callers know to trigger a fresh analysis pass.
+    """
+    row = db.session.get(SignalCache, ticker)
+    if row is None:
+        return None
+    if row.is_stale():
+        logger.debug("SignalCache stale for %s (updated_at=%s)", ticker, row.updated_at)
+        return None
+    return row
+
+
 def save_signal(ticker: str, data: dict):
-    """Upsert signal cache for a ticker."""
+    """Upsert signal cache for a ticker. Always refreshes updated_at."""
     c = db.session.get(SignalCache, ticker)
     if c:
         c.data_json = json.dumps(data, ensure_ascii=False)
@@ -89,6 +105,7 @@ def save_signal(ticker: str, data: dict):
         db.session.add(SignalCache(
             ticker=ticker,
             data_json=json.dumps(data, ensure_ascii=False),
+            updated_at=datetime.utcnow(),
         ))
     db.session.commit()
 

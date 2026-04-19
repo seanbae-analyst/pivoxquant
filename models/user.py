@@ -23,6 +23,23 @@ class User(UserMixin, db.Model):
     stripe_subscription_id = db.Column(db.String(100), nullable=True)
     subscription_status   = db.Column(db.String(20), default="inactive")
     onboarding_completed  = db.Column(db.Boolean, default=False)
+    # Brag Card (MVP #2) — anonymous mode masks ticker names as "A 종목"
+    # on shared cards. Default False so existing users keep identified
+    # tickers unless they explicitly opt in via /api/artifacts/brag-card/privacy.
+    privacy_mode          = db.Column(db.Boolean, default=False)
+    # Per-user referral code (viral loop). Kept nullable so the column
+    # can be added via idempotent ALTER TABLE without backfill — the
+    # legacy UserReferral side-table remains the authoritative store
+    # until every row is backfilled. `unique=True` is expressed via a
+    # unique index in the migration (SQLite can't add UNIQUE inline).
+    referral_code         = db.Column(db.String(16), nullable=True)
+    # Earnings Pre-Brief (MVP #3) per-channel email opt-out. Distinct from
+    # the global `email_opt_out` so users can mute time-sensitive earnings
+    # alerts without silencing every artefact email. Default False so
+    # existing users continue to receive Pre-Briefs until they explicitly
+    # opt out. Managed via migration 009_earnings_prebrief.
+    email_opt_out_earnings = db.Column(db.Boolean, default=False,
+                                        nullable=False, server_default="0")
     created_at       = db.Column(db.DateTime,     default=datetime.utcnow)
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")

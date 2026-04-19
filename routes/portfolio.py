@@ -43,9 +43,17 @@ def _cache_ticker_async(app, ticker: str, capital: float):
 def get_portfolio():
     fx_service.refresh()
     positions = Position.query.filter_by(user_id=current_user.id).all()
+
+    # Batch-load all SignalCache rows in a single query to avoid N+1.
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     out = []
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
         cur_px = sd.get("price", p.avg_cost)
@@ -134,6 +142,7 @@ def add_position():
 
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip().upper()
+    thesis = (d.get("thesis") or "").strip()[:500] or None
     try:
         shares = float(d.get("shares") or 0)
         cost = float(d.get("avg_cost") or 0)
@@ -151,9 +160,18 @@ def add_position():
                 ex.buy_fx_rate = (ex.buy_fx_rate * ex.shares * ex.avg_cost + fx_rate * shares * cost) / total
             ex.shares += shares
             ex.avg_cost = total / ex.shares
+            if thesis and not ex.thesis:
+                ex.thesis = thesis
+                ex.thesis_created_at = datetime.utcnow()
+                ex.thesis_status = "pending"
         else:
-            db.session.add(Position(user_id=current_user.id, ticker=ticker,
-                                    shares=shares, avg_cost=cost, buy_fx_rate=fx_rate))
+            db.session.add(Position(
+                user_id=current_user.id, ticker=ticker,
+                shares=shares, avg_cost=cost, buy_fx_rate=fx_rate,
+                thesis=thesis,
+                thesis_created_at=datetime.utcnow() if thesis else None,
+                thesis_status="pending" if thesis else "pending",
+            ))
         db.session.commit()
     except Exception as e:
         db.session.rollback()
@@ -225,7 +243,10 @@ def buy_more(pid):
         return jsonify({"error": "Shares and price required"}), 400
 
     cost = buy_shares * buy_price
-    cached = SignalCache.query.get(p.ticker)
+    # Use TTL-aware cache accessor for consistency with the rest of the codebase.
+    # get_signal() returns None if the row is stale, so callers fall back to
+    # safe defaults below instead of rendering stale name/currency values.
+    cached = cache_service.get_signal(p.ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
     is_kr = sd.get("is_korean", False)
     name = sd.get("name", p.ticker)
@@ -295,7 +316,7 @@ def buy_new_position():
     else:
         current_user.available_capital = cap - cost
 
-    cached = SignalCache.query.get(ticker)
+    cached = cache_service.get_signal(ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
     name = sd.get("name", ticker)
     db.session.add(TradeHistory(
@@ -324,7 +345,7 @@ def sell_position(pid):
     sell_shares = float(d.get("shares") or p.shares)
     sell_price = float(d.get("price") or 0)
 
-    cached = SignalCache.query.get(p.ticker)
+    cached = cache_service.get_signal(p.ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
     if sell_price <= 0:
         sell_price = sd.get("price", p.avg_cost) if sd else p.avg_cost
@@ -402,9 +423,17 @@ def set_capital():
 @api_auth
 def portfolio_analytics():
     positions = Position.query.filter_by(user_id=current_user.id).all()
+
+    # Batch-load all SignalCache rows in a single query to avoid N+1.
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     pl = []
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         pl.append({
             "ticker": p.ticker,
