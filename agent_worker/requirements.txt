@@ -1,0 +1,10 @@
+# Agent worker 전용 추가 패키지 — 없음.
+# 필요한 의존성은 전부 repo root requirements.txt 에 이미 존재:
+#   anthropic>=0.39.0          (claude_client.py)
+#   apscheduler==3.10.4        (worker.py)
+#   requests==2.32.3           (escalation.py, daily_healthcheck.py)
+#   sqlalchemy (flask-sqlalchemy 경유)
+#   psycopg2-binary>=2.9.9     (Postgres driver)
+#   flask==3.0.3 / flask-login (admin_routes.py — Web 서비스에만 필요)
+#
+# Worker 서비스 Railway 배포 시: 루트 requirements.txt 그대로 사용.

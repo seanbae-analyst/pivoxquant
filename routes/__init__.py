@@ -19,20 +19,26 @@ def register_blueprints(app):
     from .realtime import realtime_bp
     from .profile import profile_bp
     from .broker_sync import broker_sync_bp
+    from .broker_oauth import broker_oauth_bp
     from .billing import billing_bp
     from .push import push_bp
     from .share import share_bp
     from .simulate import simulate_bp
     from .counterfactual import counterfactual_bp
     from .morning_brief import morning_brief_bp
+    from .alt_data import alt_data_bp
+    from .artifacts import artifacts_bp
+    from agent_worker.growth_routes import growth_bp
 
     blueprints = [
         auth_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, daytrade_bp, alerts_bp, trades_bp,
         autotrade_bp, ai_bp, watchlist_bp, backtest_bp,
         quant_bp, realtime_bp, profile_bp, broker_sync_bp,
+        broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
-        counterfactual_bp, morning_brief_bp,
+        counterfactual_bp, morning_brief_bp, alt_data_bp,
+        artifacts_bp, growth_bp,
     ]
 
     # Command Center writes to disk without authentication — opt-in only.

@@ -11,3 +11,10 @@ class Position(db.Model):
     avg_cost   = db.Column(db.Float,       nullable=False)
     buy_fx_rate = db.Column(db.Float,      default=0.0)
     added_at   = db.Column(db.DateTime,    default=datetime.utcnow)
+
+    # Thesis Tracker — 매수 이유 + 주간 AI 유효성 체크
+    thesis              = db.Column(db.String(500), nullable=True)
+    thesis_created_at   = db.Column(db.DateTime,    nullable=True)
+    thesis_last_checked = db.Column(db.DateTime,    nullable=True)
+    thesis_status       = db.Column(db.String(20),  default="pending")  # pending/valid/warning/invalidated
+    thesis_reason       = db.Column(db.String(500), nullable=True)       # AI check 결과 이유
