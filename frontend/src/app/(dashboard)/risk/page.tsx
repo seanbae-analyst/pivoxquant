@@ -796,6 +796,11 @@ export default function RiskPage() {
                       ? "warning"
                       : "negative"
               }
+              subtitle={
+                maxDD == null
+                  ? "이력 20일 미만 — 계산 불가"
+                  : "고점 대비 최대 하락률"
+              }
             />
             <MetricCard
               label="연환산 변동성"
@@ -809,6 +814,11 @@ export default function RiskPage() {
                     : annVol <= 25
                       ? "warning"
                       : "negative"
+              }
+              subtitle={
+                annVol == null
+                  ? "이력 20일 미만 — 계산 불가"
+                  : "일변동성 × √252"
               }
             />
             <MetricCard
