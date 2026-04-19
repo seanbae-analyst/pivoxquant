@@ -542,7 +542,7 @@ function BuyMoreModal({
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-emerald-600" />
             <h3 className="text-lg font-bold text-slate-900">
-              {position.ticker} 추가 매수
+              {position.name || position.ticker} 추가 매수
             </h3>
           </div>
           <button
@@ -709,7 +709,7 @@ function SellSharesModal({
           <div className="flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-red-500" />
             <h3 className="text-lg font-bold text-slate-900">
-              {position.ticker} 매도
+              {position.name || position.ticker} 매도
             </h3>
           </div>
           <button
@@ -889,7 +889,7 @@ function EditPositionModal({
           <div className="flex items-center gap-2">
             <Pencil className="h-5 w-5 text-slate-500" />
             <h3 className="text-lg font-bold text-slate-900">
-              {position.ticker} 수정
+              {position.name || position.ticker} 수정
             </h3>
           </div>
           <button
@@ -1009,7 +1009,7 @@ function DeletePositionModal({
           <div className="flex items-center gap-2">
             <Trash2 className="h-5 w-5 text-red-500" />
             <h3 className="text-lg font-bold text-slate-900">
-              {position.ticker} 제거
+              {position.name || position.ticker} 제거
             </h3>
           </div>
           <button
@@ -1022,8 +1022,13 @@ function DeletePositionModal({
         </div>
 
         <p className="text-sm text-slate-600 mb-2">
-          <span className="font-bold text-slate-900">{position.ticker}</span>{" "}
-          ({position.shares}주)를 포트폴리오에서 제거하시겠습니까?
+          <span className="font-bold text-slate-900">
+            {position.name || position.ticker}
+          </span>{" "}
+          <span className="font-mono text-xs text-slate-400">
+            ({position.ticker})
+          </span>{" "}
+          {position.shares}주를 포트폴리오에서 제거하시겠습니까?
         </p>
         <p className="text-xs text-slate-400 mb-6">
           이 작업은 되돌릴 수 없습니다. 거래 이력은 보존됩니다.

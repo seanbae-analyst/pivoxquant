@@ -1908,11 +1908,14 @@ def risk_component_es():
     if result["portfolio_es"] is None:
         return jsonify({"error": "Could not compute Expected Shortfall"}), 500
 
-    # Enrich with ticker labels
+    # Enrich with ticker labels + resolved company name (name primary in UI)
+    from services.name_resolver import resolve_stock_name
+
     positions_out = []
     for j, ticker_sym in enumerate(tickers_used):
         positions_out.append({
             "ticker": ticker_sym,
+            "name": resolve_stock_name(ticker_sym) or ticker_sym,
             "weight_pct": round(float(weights[j]) * 100, 2),
             "component_es_pct": result["component_es"][j],
             "risk_contribution_pct": result["pct_contribution"][j],
