@@ -220,6 +220,25 @@ export function useArtifacts(options: UseArtifactsOptions = {}) {
   };
 }
 
+/* ── Broker connections (KIS / Kiwoom / Alpaca status) ── */
+
+export interface BrokerConnectionsResponse {
+  kis_connected?: boolean;
+  kiwoom_connected?: boolean;
+  alpaca_connected?: boolean;
+  kis_last_sync?: string | null;
+  kiwoom_last_upload?: string | null;
+  alpaca_last_sync?: string | null;
+}
+
+export function useBrokerConnections() {
+  return useSWR<BrokerConnectionsResponse>(
+    API.broker.connections,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000 },
+  );
+}
+
 /* ── Real-time Portfolio Prices (SSE) ── */
 
 export { useRealtimeContext } from "./realtime";

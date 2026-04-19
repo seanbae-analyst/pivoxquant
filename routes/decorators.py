@@ -35,7 +35,12 @@ def require_tier(minimum_tier):
     def decorator(f):
         @wraps(f)
         def wrapped(*a, **kw):
-            user_tier = getattr(current_user, "subscription_tier", "free") or "free"
+            # effective_tier applies DEV_PREMIUM_EMAILS override, then falls back.
+            user_tier = (
+                getattr(current_user, "effective_tier", None)
+                or getattr(current_user, "subscription_tier", "free")
+                or "free"
+            )
             required_rank = _TIER_RANK.get(minimum_tier, 0)
             user_rank = _TIER_RANK.get(user_tier, 0)
 

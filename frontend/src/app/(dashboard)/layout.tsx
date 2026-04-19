@@ -15,9 +15,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     if (!loading && !user) {
       router.replace("/login");
     }
-    // Redirect to onboarding if the user hasn't completed it
+    // Redirect to onboarding if the user hasn't completed it.
+    // Step 0 is the broker-connect screen, which then routes into the 20-question wizard.
     if (!loading && user && user.onboarding_completed === false) {
-      router.replace("/onboarding");
+      router.replace("/onboarding/broker");
     }
   }, [user, loading, router]);
 

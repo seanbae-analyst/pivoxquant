@@ -176,7 +176,11 @@ def coaching():
 #   5. Flask-Limiter: 10 req/min/user on top.
 
 def _earnings_tone_tier_ok(user) -> bool:
-    tier = (getattr(user, "subscription_tier", "free") or "free").lower()
+    tier = (
+        getattr(user, "effective_tier", None)
+        or getattr(user, "subscription_tier", "free")
+        or "free"
+    ).lower()
     return tier in ("pro", "premium")
 
 

@@ -6,9 +6,13 @@ import Link from "next/link";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { useInvestmentProfile } from "@/lib/hooks";
+import { useInvestmentProfile, useBrokerConnections } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
+import { KisCard } from "@/components/broker/kis-card";
+import { KiwoomCard } from "@/components/broker/kiwoom-card";
+import { KisConnectModal } from "@/components/broker/kis-connect-modal";
+import { KiwoomUploadModal } from "@/components/broker/kiwoom-upload-modal";
 import { cn } from "@/lib/utils";
 import { Skeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -510,6 +514,46 @@ function ConnectionsSection() {
   const [connected, setConnected] = useState(false);
   const t = useT();
 
+  // KIS + Kiwoom connection state (shared components handle UI)
+  const { data: brokerData, mutate: refreshBrokers } = useBrokerConnections();
+  const [kisModalOpen, setKisModalOpen] = useState(false);
+  const [kiwoomModalOpen, setKiwoomModalOpen] = useState(false);
+  const [kisSyncing, setKisSyncing] = useState(false);
+  const [kisDisconnecting, setKisDisconnecting] = useState(false);
+
+  const handleKisSync = useCallback(async () => {
+    setKisSyncing(true);
+    try {
+      await apiFetch(API.broker.kisSync, { method: "POST" });
+      await refreshBrokers();
+      toast.success(t("brokerOnboarding.kis.syncSuccess"));
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : t("brokerOnboarding.kis.syncError");
+      toast.error(msg);
+    } finally {
+      setKisSyncing(false);
+    }
+  }, [refreshBrokers, t]);
+
+  const handleKisDisconnect = useCallback(async () => {
+    if (!confirm(t("brokerOnboarding.kis.disconnectConfirm"))) return;
+    setKisDisconnecting(true);
+    try {
+      await apiFetch(API.broker.kisDisconnect, { method: "DELETE" });
+      await refreshBrokers();
+      toast.success(t("brokerOnboarding.kis.disconnectSuccess"));
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t("brokerOnboarding.kis.disconnectError");
+      toast.error(msg);
+    } finally {
+      setKisDisconnecting(false);
+    }
+  }, [refreshBrokers, t]);
+
   const handleAlpacaConnect = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim() || !apiSecret.trim()) {
@@ -646,36 +690,39 @@ function ConnectionsSection() {
         )}
       </div>
 
-      {/* KIS */}
-      <div className="sp-card p-4 opacity-60">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-lg" role="img" aria-label="KR flag">
-            &#x1F1F0;&#x1F1F7;
-          </span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-slate-900">
-              {t("settings.connections.kisName")}
-            </p>
-            <p className="text-xs text-slate-500">
-              {t("settings.connections.kisDesc")}
-            </p>
-          </div>
-          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
-            {t("settings.connections.comingSoon")}
-          </span>
-        </div>
-        <button
-          type="button"
-          disabled
-          className="w-full rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-400 cursor-not-allowed"
-        >
-          {t("settings.connections.comingSoon")}
-        </button>
-      </div>
+      {/* KIS (한국투자증권) — shared card */}
+      <KisCard
+        connected={Boolean(brokerData?.kis_connected)}
+        lastSync={brokerData?.kis_last_sync ?? null}
+        onConnect={() => setKisModalOpen(true)}
+        onSync={handleKisSync}
+        onDisconnect={handleKisDisconnect}
+        syncing={kisSyncing}
+        disconnecting={kisDisconnecting}
+      />
+
+      {/* Kiwoom (키움증권) — CSV upload flow */}
+      <KiwoomCard
+        lastUpload={brokerData?.kiwoom_last_upload ?? null}
+        onUpload={() => setKiwoomModalOpen(true)}
+      />
 
       <p className="text-xs text-slate-400 text-center pt-2">
         {t("settings.connections.brokerNote")}
       </p>
+
+      {kisModalOpen && (
+        <KisConnectModal
+          onClose={() => setKisModalOpen(false)}
+          onSuccess={() => refreshBrokers()}
+        />
+      )}
+      {kiwoomModalOpen && (
+        <KiwoomUploadModal
+          onClose={() => setKiwoomModalOpen(false)}
+          onSuccess={() => refreshBrokers()}
+        />
+      )}
     </div>
   );
 }
