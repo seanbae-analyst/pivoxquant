@@ -1,7 +1,7 @@
 """Human-in-the-loop escalation — Slack webhook for critical decisions."""
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 from sqlalchemy import text
@@ -77,7 +77,7 @@ def escalate_task(db_session, task_id: int, trigger: dict, task: dict, decision:
     Mark task as escalated and send Slack notification.
     Task will remain in 'escalated' status until human approves/rejects via admin endpoint.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Update task status
     db_session.execute(

@@ -2,6 +2,7 @@
 import json
 import logging
 import threading
+from datetime import datetime, timezone
 from flask import Blueprint, current_app, request, jsonify
 from flask_login import current_user
 
@@ -162,14 +163,14 @@ def add_position():
             ex.avg_cost = total / ex.shares
             if thesis and not ex.thesis:
                 ex.thesis = thesis
-                ex.thesis_created_at = datetime.utcnow()
+                ex.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 ex.thesis_status = "pending"
         else:
             db.session.add(Position(
                 user_id=current_user.id, ticker=ticker,
                 shares=shares, avg_cost=cost, buy_fx_rate=fx_rate,
                 thesis=thesis,
-                thesis_created_at=datetime.utcnow() if thesis else None,
+                thesis_created_at=datetime.now(timezone.utc).replace(tzinfo=None) if thesis else None,
                 thesis_status="pending" if thesis else "pending",
             ))
         db.session.commit()
@@ -447,7 +448,7 @@ def portfolio_analytics():
 @portfolio_bp.route("/history")
 @api_auth
 def portfolio_history():
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     positions = Position.query.filter_by(user_id=current_user.id).all()
     if not positions:
         return jsonify({"data": []})
@@ -474,7 +475,7 @@ def portfolio_history():
         return jsonify({"data": []})
 
     try:
-        today = datetime.utcnow().strftime("%Y-%m-%d")
+        today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
         rt_prices = realtime.get_prices_batch([p.ticker for p in positions])
         today_val = 0
         for p in positions:

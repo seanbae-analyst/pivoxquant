@@ -5,7 +5,7 @@ Syncs positions and balance from Alpaca (paper trading) into the local DB.
 
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from extensions import db
 from models.position import Position
@@ -295,7 +295,7 @@ class BrokerSyncService:
 
     def _record_sync(self, user_id: int, status: str, detail: str = ""):
         self._last_sync[user_id] = {
-            "time": datetime.utcnow(),
+            "time": datetime.now(timezone.utc).replace(tzinfo=None),
             "status": status,
             "detail": detail,
         }
@@ -304,7 +304,7 @@ class BrokerSyncService:
         """Update or create BrokerConnection.last_synced_at."""
         conn = BrokerConnection.query.filter_by(user_id=user_id, broker=broker).first()
         if conn:
-            conn.last_synced_at = datetime.utcnow()
+            conn.last_synced_at = datetime.now(timezone.utc).replace(tzinfo=None)
             conn.is_active = True
         else:
             conn = BrokerConnection(
@@ -312,6 +312,6 @@ class BrokerSyncService:
                 broker=broker,
                 is_paper=True,
                 is_active=True,
-                last_synced_at=datetime.utcnow(),
+                last_synced_at=datetime.now(timezone.utc).replace(tzinfo=None),
             )
             db.session.add(conn)

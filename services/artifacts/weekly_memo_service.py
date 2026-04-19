@@ -43,7 +43,7 @@ import logging
 import os
 import threading
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -151,7 +151,7 @@ _ai_lock = threading.Lock()
 
 
 def _ai_budget_available() -> bool:
-    today_utc = datetime.utcnow().date()
+    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
     with _ai_lock:
         if _ai_usage["day"] != today_utc:
             _ai_usage["day"] = today_utc
@@ -160,7 +160,7 @@ def _ai_budget_available() -> bool:
 
 
 def _ai_budget_consume() -> None:
-    today_utc = datetime.utcnow().date()
+    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
     with _ai_lock:
         if _ai_usage["day"] != today_utc:
             _ai_usage["day"] = today_utc
@@ -454,7 +454,7 @@ class WeeklyMemoService:
             week_number=_iso_week_number(target_date),
             period_start=period_start,
             period_end=period_end,
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(timezone.utc).replace(tzinfo=None),
             weekly_return_pct=weekly_return,
             benchmark_pct=benchmark,
             alpha_pct=alpha,
@@ -590,7 +590,7 @@ class WeeklyMemoService:
         from_email = os.environ.get(
             "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
-        subject = f"Week {datetime.utcnow().isocalendar()[1]} Investor Memo"
+        subject = f"Week {datetime.now(timezone.utc).replace(tzinfo=None).isocalendar()[1]} Investor Memo"
 
         # --- SendGrid ---
         sg_key = os.environ.get("SENDGRID_API_KEY")
@@ -677,7 +677,7 @@ class WeeklyMemoService:
             if pdf_path:
                 artefact.pdf_path = pdf_path
             if sent and not artefact.sent_at:
-                artefact.sent_at = datetime.utcnow()
+                artefact.sent_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             artefact = Artifact(
                 user_id=user_id,
@@ -685,7 +685,7 @@ class WeeklyMemoService:
                 title=title,
                 data_json=data,
                 pdf_path=pdf_path,
-                sent_at=datetime.utcnow() if sent else None,
+                sent_at=datetime.now(timezone.utc).replace(tzinfo=None) if sent else None,
             )
             db.session.add(artefact)
         db.session.commit()

@@ -42,7 +42,7 @@ import os
 import re
 import threading
 from dataclasses import dataclass
-from datetime import date, datetime, time as _time, timedelta
+from datetime import date, datetime, time as _time, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -126,7 +126,7 @@ _ai_lock = threading.Lock()
 
 
 def _ai_budget_available() -> bool:
-    today_utc = datetime.utcnow().date()
+    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
     with _ai_lock:
         if _ai_usage["day"] != today_utc:
             _ai_usage["day"] = today_utc
@@ -135,7 +135,7 @@ def _ai_budget_available() -> bool:
 
 
 def _ai_budget_consume() -> None:
-    today_utc = datetime.utcnow().date()
+    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
     with _ai_lock:
         if _ai_usage["day"] != today_utc:
             _ai_usage["day"] = today_utc
@@ -471,7 +471,7 @@ class EarningsPreBriefService:
         FMP call per distinct ticker is cached 24h by fmp_service itself,
         so the scan is cheap even with many positions.
         """
-        horizon = datetime.utcnow() + timedelta(hours=hours)
+        horizon = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=hours)
 
         paid_users = (
             User.query
@@ -496,7 +496,7 @@ class EarningsPreBriefService:
             ticker_to_positions.setdefault(p.ticker.upper(), []).append(p)
 
         rows: list[dict[str, Any]] = []
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         for ticker, pos_list in ticker_to_positions.items():
             cal = _safe_get_earnings_calendar(ticker=ticker,
                                                days_ahead=max(2, (hours // 24) + 1))
@@ -610,7 +610,7 @@ class EarningsPreBriefService:
             company_name=str(company_name),
             earnings_datetime=earnings_date,
             fiscal_period=_fiscal_period_label(earnings_date),
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(timezone.utc).replace(tzinfo=None),
             consensus_eps=consensus_eps,
             consensus_eps_low=eps_low,
             consensus_eps_high=eps_high,
@@ -868,7 +868,7 @@ class EarningsPreBriefService:
             if pdf_path:
                 artefact.pdf_path = pdf_path
             if sent and not artefact.sent_at:
-                artefact.sent_at = datetime.utcnow()
+                artefact.sent_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             artefact = Artifact(
                 user_id=user_id,
@@ -876,7 +876,7 @@ class EarningsPreBriefService:
                 title=title,
                 data_json=data,
                 pdf_path=pdf_path,
-                sent_at=datetime.utcnow() if sent else None,
+                sent_at=datetime.now(timezone.utc).replace(tzinfo=None) if sent else None,
             )
             db.session.add(artefact)
         db.session.commit()
@@ -938,7 +938,7 @@ class EarningsPreBriefService:
         Never raises. Per-user failures are logged and the loop continues.
         """
         lead = _lead_minutes()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         target_window_start = now + timedelta(minutes=lead - _MATCH_TOLERANCE_MIN)
         target_window_end   = now + timedelta(minutes=lead + _MATCH_TOLERANCE_MIN)
 
@@ -1017,7 +1017,7 @@ class EarningsPreBriefService:
         hour-grained FMP window covers the request."""
         hours = max(1, (within_minutes + 59) // 60)
         rows = self.get_upcoming_earnings(hours=hours)
-        cutoff = datetime.utcnow() + timedelta(minutes=within_minutes)
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=within_minutes)
         return [r for r in rows if r["earnings_dt"] <= cutoff]
 
     def generate_for_user(self, user_id: int, ticker: str,
@@ -1031,7 +1031,7 @@ class EarningsPreBriefService:
             cal = _safe_get_earnings_calendar(ticker=ticker, days_ahead=7)
             for c in cal:
                 dt = _parse_earnings_row_datetime(c)
-                if dt and dt >= datetime.utcnow():
+                if dt and dt >= datetime.now(timezone.utc).replace(tzinfo=None):
                     earnings_date = dt
                     calendar_row = c
                     break

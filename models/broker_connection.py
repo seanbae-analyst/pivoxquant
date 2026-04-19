@@ -5,7 +5,7 @@ credentials. Existing `access_token` / `refresh_token` columns are retained for
 backward compatibility with Alpaca and legacy code paths; new KIS flow writes
 into the `encrypted_*` columns via `services.crypto_service`.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from extensions import db
 
 
@@ -21,7 +21,7 @@ class BrokerConnection(db.Model):
     is_paper = db.Column(db.Boolean, default=True)          # True=paper/mock, False=live
     is_active = db.Column(db.Boolean, default=True)
     last_synced_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # ── Week 1: Per-user KIS/Kiwoom encrypted credentials ────────────────
     # All values are AES-256-GCM base64 ciphertext (via services.crypto_service).

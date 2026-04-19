@@ -53,7 +53,7 @@ import os
 import secrets
 from calendar import monthrange
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -383,7 +383,7 @@ class BragCardService:
             month_label_long=_month_label_long(start),
             month_start=start,
             month_end=end,
-            generated_at=datetime.utcnow(),
+            generated_at=datetime.now(timezone.utc).replace(tzinfo=None),
             return_pct=stats["return_pct"],
             trade_count=stats["trade_count"],
             best_ticker=_mask_ticker(stats["best_ticker"], anonymous),
@@ -708,7 +708,7 @@ class BragCardService:
             if png_path:
                 artefact.pdf_path = png_path  # column reused for PNG path
             if sent and not artefact.sent_at:
-                artefact.sent_at = datetime.utcnow()
+                artefact.sent_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             artefact = Artifact(
                 user_id=user_id,
@@ -716,7 +716,7 @@ class BragCardService:
                 title=title,
                 data_json=data_payload,
                 pdf_path=png_path,
-                sent_at=datetime.utcnow() if sent else None,
+                sent_at=datetime.now(timezone.utc).replace(tzinfo=None) if sent else None,
             )
             # Set share_token attribute if the column exists on the model.
             try:
@@ -739,7 +739,7 @@ class BragCardService:
                 title=title + "-r",
                 data_json=data_payload,
                 pdf_path=png_path,
-                sent_at=datetime.utcnow() if sent else None,
+                sent_at=datetime.now(timezone.utc).replace(tzinfo=None) if sent else None,
             )
             try:
                 setattr(artefact, "share_token", new_token)

@@ -9,7 +9,7 @@ import threading
 import time
 import json
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import deque
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ class DayTradeService:
             from alpaca.data.requests import StockBarsRequest
             from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
             tf = TimeFrame.Minute if timeframe == "1Min" else TimeFrame(5, TimeFrameUnit.Minute)
-            start = datetime.utcnow() - timedelta(days=1)
+            start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
             req = StockBarsRequest(
                 symbol_or_symbols=ticker.upper(),
                 timeframe=tf,

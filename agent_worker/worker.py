@@ -9,7 +9,7 @@ import signal
 import sys
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import create_engine, text
@@ -118,7 +118,7 @@ def _log_task_pickup(engine: Engine, task: dict) -> None:
             {
                 "task_id": task["id"],
                 "agent": task["assigned_to"] or "worker",
-                "now": datetime.utcnow(),
+                "now": datetime.now(timezone.utc).replace(tzinfo=None),
             },
         )
 

@@ -9,7 +9,7 @@ Capital-markets-law guard: identical to other Growth OS scenarios.
 """
 import json
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import create_engine, text
@@ -193,7 +193,7 @@ def _persist_report(
                 "suggestions": json.dumps(suggestions, ensure_ascii=False),
                 "score": week_score,
                 "raw": raw,
-                "now": datetime.utcnow(),
+                "now": datetime.now(timezone.utc).replace(tzinfo=None),
             },
         ).fetchone()
         return row.id

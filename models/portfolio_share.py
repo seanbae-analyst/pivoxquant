@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from extensions import db
 
 
@@ -9,5 +9,5 @@ class PortfolioShare(db.Model):
     user_id    = db.Column(db.Integer,     db.ForeignKey("users.id"), nullable=False)
     token      = db.Column(db.String(64),  unique=True, nullable=False,
                            default=lambda: secrets.token_urlsafe(16))
-    created_at = db.Column(db.DateTime,    default=datetime.utcnow)
+    created_at = db.Column(db.DateTime,    default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     expires_at = db.Column(db.DateTime,    nullable=False)

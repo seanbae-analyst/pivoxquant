@@ -14,7 +14,7 @@ even at millions of users.
 from __future__ import annotations
 
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 from extensions import db
 
@@ -42,7 +42,7 @@ class UserReferral(db.Model):
     user_id       = db.Column(db.Integer,    db.ForeignKey("users.id"),
                               nullable=False, unique=True, index=True)
     referral_code = db.Column(db.String(16), nullable=False, unique=True, index=True)
-    created_at    = db.Column(db.DateTime,   default=datetime.utcnow, nullable=False)
+    created_at    = db.Column(db.DateTime,   default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     invited_count = db.Column(db.Integer,    default=0, nullable=False)
 
     def to_dict(self) -> dict:

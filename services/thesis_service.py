@@ -5,7 +5,7 @@ PivoxQuant — Thesis Tracker Service
 Claude AI로 주간 체크. 가격 변화 + 최근 뉴스 + thesis 텍스트 입력.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -88,7 +88,7 @@ def check_all_positions_for_user(user_id: int) -> int:
         )
         pos.thesis_status = result["status"]
         pos.thesis_reason = result["reason"]
-        pos.thesis_last_checked = datetime.utcnow()
+        pos.thesis_last_checked = datetime.now(timezone.utc).replace(tzinfo=None)
         count += 1
 
     try:

@@ -10,7 +10,7 @@ import json
 import time
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +231,7 @@ class EarningsCallToneAnalyzer:
             "tone_shift": tone,
             "conviction_score": conviction,
             "summary": summary,
-            "analyzed_at": datetime.utcnow().isoformat() + "Z",
+            "analyzed_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
         }
 
 
@@ -441,7 +441,7 @@ class AISectorRotation:
             "historical_sector_performance": sector_data,
             "data_label": "Historical average sector returns during similar macro regimes",
             "disclaimer": _SECTOR_DISCLAIMER,
-            "analyzed_at": datetime.utcnow().isoformat() + "Z",
+            "analyzed_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
         }
 
         _set_cache(cache_key, result)
@@ -575,5 +575,5 @@ class AIRiskSummary:
             "summary_kr": summary_kr,
             "risk_level": risk_level,
             "top_risk_factor": top_factor,
-            "analyzed_at": datetime.utcnow().isoformat() + "Z",
+            "analyzed_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
         }

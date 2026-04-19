@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 import re
 import threading
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from extensions import db
 from models import MorningBrief, Position, SignalCache, User, Watchlist
@@ -81,7 +81,7 @@ _ai_lock = threading.Lock()
 
 def _ai_budget_available() -> bool:
     """True if we still have budget to call Claude Haiku today."""
-    today_utc = datetime.utcnow().date()
+    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
     with _ai_lock:
         if _ai_usage["day"] != today_utc:
             _ai_usage["day"] = today_utc
@@ -90,7 +90,7 @@ def _ai_budget_available() -> bool:
 
 
 def _ai_budget_consume() -> None:
-    today_utc = datetime.utcnow().date()
+    today_utc = datetime.now(timezone.utc).replace(tzinfo=None).date()
     with _ai_lock:
         if _ai_usage["day"] != today_utc:
             _ai_usage["day"] = today_utc
@@ -303,7 +303,7 @@ def generate_brief(user: User, for_date: date | None = None) -> MorningBrief:
         "events":            events,
         "insight":           insight,
         "disclaimer":        "정보 제공 목적, 투자 판단은 본인 책임",
-        "generated_at":      datetime.utcnow().isoformat() + "Z",
+        "generated_at":      datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
     }
 
     # 5. Upsert — idempotent re-runs on the same date
@@ -312,7 +312,7 @@ def generate_brief(user: User, for_date: date | None = None) -> MorningBrief:
     ).first()
     if existing:
         existing.content = content
-        existing.created_at = datetime.utcnow()
+        existing.created_at = datetime.now(timezone.utc).replace(tzinfo=None)
         brief = existing
     else:
         brief = MorningBrief(

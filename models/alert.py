@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from extensions import db
 
 
@@ -12,5 +12,5 @@ class Alert(db.Model):
     score          = db.Column(db.Float,   default=0)
     rec_shares     = db.Column(db.Integer, default=0)
     rec_investment = db.Column(db.Float,   default=0)
-    created_at     = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at     = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     is_read        = db.Column(db.Boolean,  default=False)

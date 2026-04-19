@@ -10,7 +10,7 @@ Capital-markets-law guard: scans all AI output for forbidden terms
 """
 import json
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import create_engine, text
@@ -158,7 +158,7 @@ def _persist_briefing(engine: Engine, priorities: list[str], motivation: str, ra
                 "priorities": json.dumps(priorities, ensure_ascii=False),
                 "motivation": motivation,
                 "raw": raw,
-                "now": datetime.utcnow(),
+                "now": datetime.now(timezone.utc).replace(tzinfo=None),
             },
         ).fetchone()
         return row.id

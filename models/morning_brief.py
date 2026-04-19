@@ -13,7 +13,7 @@ structure produced by services/morning_brief_service.py:
 No investment advice / no trade recommendations — see morning_brief_service
 for the regex validator and Claude Haiku system prompt that enforce this.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 from extensions import db
 
@@ -25,7 +25,7 @@ class MorningBrief(db.Model):
     user_id    = db.Column(db.Integer,  db.ForeignKey("users.id"), nullable=False, index=True)
     brief_date = db.Column(db.Date,     nullable=False, index=True)
     content    = db.Column(db.JSON)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         db.UniqueConstraint("user_id", "brief_date", name="uq_morning_brief_user_date"),

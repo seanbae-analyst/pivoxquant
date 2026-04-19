@@ -1,7 +1,7 @@
 """Portfolio share routes: create and read public share links."""
 import json
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import current_user
@@ -20,7 +20,7 @@ share_bp = Blueprint("share", __name__, url_prefix="/api/portfolio/share")
 def create_share():
     """Create a 7-day public share token for the authenticated user's portfolio."""
     token = secrets.token_urlsafe(16)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     expires_at = now + timedelta(days=7)
 
     share = PortfolioShare(
@@ -53,7 +53,7 @@ def get_shared_portfolio(token):
     if not share:
         return jsonify({"error": "Share link not found"}), 404
 
-    if datetime.utcnow() > share.expires_at:
+    if datetime.now(timezone.utc).replace(tzinfo=None) > share.expires_at:
         return jsonify({"error": "Share link has expired"}), 410
 
     owner = db.session.get(User, share.user_id)

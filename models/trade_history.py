@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from extensions import db
 
 
@@ -15,4 +15,4 @@ class TradeHistory(db.Model):
     pnl             = db.Column(db.Float, default=0.0)
     pnl_pct         = db.Column(db.Float, default=0.0)
     currency        = db.Column(db.String(5), default="USD")
-    traded_at       = db.Column(db.DateTime, default=datetime.utcnow)
+    traded_at       = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

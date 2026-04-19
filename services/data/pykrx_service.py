@@ -23,7 +23,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ class PyKRXService:
 
     def _cache_set(self, key: str, data: Any) -> None:
         with self._cache_lock:
-            self._cache[key] = {"data": data, "ts": time.time(), "cached_at": datetime.utcnow().isoformat()}
+            self._cache[key] = {"data": data, "ts": time.time(), "cached_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat()}
 
     def _cache_cached_at(self, key: str) -> str | None:
         with self._cache_lock:

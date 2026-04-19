@@ -15,7 +15,7 @@ dead" (TCP refused) from "DB dead" (200/503 with `db != ok`).
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify
 from sqlalchemy import text
@@ -36,7 +36,7 @@ def health():
     payload: dict = {
         "status":    "ok",
         "version":   HEALTH_VERSION,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
     }
 
     # Best-effort DB ping. SQLAlchemy 2.x requires an explicit `text()`

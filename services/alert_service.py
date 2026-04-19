@@ -1,6 +1,6 @@
 """Alert generation service."""
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from extensions import db
 from models import Alert
@@ -16,7 +16,7 @@ def maybe_generate(user_id: int, r: dict):
 
     # Only alert during market hours
     from zoneinfo import ZoneInfo
-    now_utc = datetime.utcnow().replace(tzinfo=ZoneInfo("UTC"))
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=ZoneInfo("UTC"))
     is_kr = r.get("is_korean", False)
     if is_kr:
         kst = now_utc.astimezone(ZoneInfo("Asia/Seoul"))
@@ -35,7 +35,7 @@ def maybe_generate(user_id: int, r: dict):
 
     # Dedup: skip if same ticker alerted within 4 hours
     recent = (Alert.query.filter_by(user_id=user_id, ticker=ticker)
-              .filter(Alert.created_at > datetime.utcnow() - timedelta(hours=4))
+              .filter(Alert.created_at > datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=4))
               .first())
     if recent:
         return

@@ -1466,7 +1466,7 @@ def turnover_report():
     Query params:
         period: '3m', '6m', '1y', '2y', 'all' (default '1y')
     """
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     from models.trade_history import TradeHistory
 
     period = request.args.get("period", "1y")
@@ -1476,7 +1476,7 @@ def turnover_report():
     uid = current_user.id
     query = TradeHistory.query.filter_by(user_id=uid)
     if days is not None:
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
         query = query.filter(TradeHistory.traded_at >= cutoff)
     query = query.order_by(TradeHistory.traded_at.asc())
     trades = query.all()
@@ -1597,9 +1597,9 @@ def _compute_insider_signal(transactions):
     Returns:
         (insider_list, summary, signal_strength)
     """
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     cutoff_90d = now - timedelta(days=90)
     cutoff_14d = now - timedelta(days=14)
 
@@ -1952,7 +1952,7 @@ def performance_ledger():
         period: '3m', '6m', '1y', '2y', 'all' (default 'all')
     """
     from collections import defaultdict
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     from models.trade_history import TradeHistory
 
     period = request.args.get("period", "all")
@@ -1962,7 +1962,7 @@ def performance_ledger():
     uid = current_user.id
     query = TradeHistory.query.filter_by(user_id=uid)
     if days is not None:
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
         query = query.filter(TradeHistory.traded_at >= cutoff)
     query = query.order_by(TradeHistory.traded_at.asc())
     trades = query.all()

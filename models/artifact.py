@@ -23,7 +23,7 @@ Idempotency: the `(user_id, type, title)` triple is declared UNIQUE so a
 scheduler re-run on the same week/month cannot create duplicate rows.
 Re-runs should UPSERT into the existing row via `title` collision.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 from extensions import db
 
@@ -59,7 +59,7 @@ class Artifact(db.Model):
     # nullable because legacy rows don't have one; UNIQUE enforced via
     # the migration's explicit index.
     share_token = db.Column(db.String(32), nullable=True, index=True)
-    created_at = db.Column(db.DateTime,   default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime,   default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         db.UniqueConstraint("user_id", "type", "title",
