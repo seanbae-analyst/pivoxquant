@@ -357,13 +357,22 @@ def google_callback():
 
         session.clear()  # Session fixation 방어
         login_user(user, remember=True)
-    except Exception:
-        logger.exception("Google OAuth user-provisioning error (userinfo_keys=%s)", list(userinfo.keys()) if isinstance(userinfo, dict) else "n/a")
+    except Exception as exc:
+        exc_type = type(exc).__name__
+        exc_msg = str(exc)[:200]
+        logger.exception(
+            "Google OAuth user-provisioning error (userinfo_keys=%s exc_type=%s msg=%s)",
+            list(userinfo.keys()) if isinstance(userinfo, dict) else "n/a",
+            exc_type, exc_msg,
+        )
         try:
             db.session.rollback()
         except Exception:
             pass
-        return redirect(f"{origin}/login?error=google_user_error")
+        from urllib.parse import quote
+        return redirect(
+            f"{origin}/login?error=google_user_error&etype={quote(exc_type)}&emsg={quote(exc_msg)}"
+        )
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
@@ -464,13 +473,22 @@ def kakao_callback():
 
         session.clear()  # Session fixation 방어
         login_user(user, remember=True)
-    except Exception:
-        logger.exception("Kakao OAuth user-provisioning error (profile_keys=%s)", list(profile.keys()) if isinstance(profile, dict) else "n/a")
+    except Exception as exc:
+        exc_type = type(exc).__name__
+        exc_msg = str(exc)[:200]
+        logger.exception(
+            "Kakao OAuth user-provisioning error (profile_keys=%s exc_type=%s msg=%s)",
+            list(profile.keys()) if isinstance(profile, dict) else "n/a",
+            exc_type, exc_msg,
+        )
         try:
             db.session.rollback()
         except Exception:
             pass
-        return redirect(f"{origin}/login?error=kakao_user_error")
+        from urllib.parse import quote
+        return redirect(
+            f"{origin}/login?error=kakao_user_error&etype={quote(exc_type)}&emsg={quote(exc_msg)}"
+        )
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
