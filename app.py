@@ -366,6 +366,84 @@ def _do_migrations():
     _add_column_if_missing("positions", "thesis_status", "VARCHAR(20)", default="'pending'")
     _add_column_if_missing("positions", "thesis_reason", "VARCHAR(500)")
 
+    # Alerts table — full coverage of Alert model columns.
+    # Added defensively because post-creation column additions (score, signal,
+    # rec_shares, rec_investment, is_read) must survive legacy DBs that were
+    # created before those columns existed.
+    _add_column_if_missing("alerts", "ticker", "VARCHAR(20)")
+    _add_column_if_missing("alerts", "signal", "VARCHAR(10)")
+    _add_column_if_missing("alerts", "score", "FLOAT", default="0")
+    _add_column_if_missing("alerts", "rec_shares", "INTEGER", default="0")
+    _add_column_if_missing("alerts", "rec_investment", "FLOAT", default="0")
+    _add_column_if_missing("alerts", "is_read", "BOOLEAN", default="0")
+
+    # Artifacts table — full coverage of Artifact model columns.
+    # `share_token` was added post-initial-creation (MVP#2 Brag Card public
+    # share); other cols are base but safe to declare idempotently.
+    _add_column_if_missing("artifacts", "data_json", "JSON")
+    _add_column_if_missing("artifacts", "pdf_path", "VARCHAR(500)")
+    _add_column_if_missing("artifacts", "sent_at", "TIMESTAMP")
+    _add_column_if_missing("artifacts", "opened_at", "TIMESTAMP")
+    _add_column_if_missing("artifacts", "share_token", "VARCHAR(32)")
+
+    # Broker connections — Week 1 (2026-04-18) added AES-256-GCM encrypted
+    # credential columns. HIGH RISK of ProgrammingError on legacy DBs.
+    _add_column_if_missing("broker_connections", "access_token", "TEXT")
+    _add_column_if_missing("broker_connections", "refresh_token", "TEXT")
+    _add_column_if_missing("broker_connections", "account_id", "VARCHAR(50)")
+    _add_column_if_missing("broker_connections", "is_paper", "BOOLEAN", default="1")
+    _add_column_if_missing("broker_connections", "is_active", "BOOLEAN", default="1")
+    _add_column_if_missing("broker_connections", "last_synced_at", "TIMESTAMP")
+    _add_column_if_missing("broker_connections", "encrypted_app_key", "TEXT")
+    _add_column_if_missing("broker_connections", "encrypted_app_secret", "TEXT")
+    _add_column_if_missing("broker_connections", "encrypted_account_no", "TEXT")
+    _add_column_if_missing("broker_connections", "account_prod", "VARCHAR(4)", default="'01'")
+    _add_column_if_missing("broker_connections", "encrypted_access_token", "TEXT")
+    _add_column_if_missing("broker_connections", "token_expires_at", "TIMESTAMP")
+    _add_column_if_missing("broker_connections", "encryption_key_version", "SMALLINT", default="1")
+    _add_column_if_missing("broker_connections", "display_name", "VARCHAR(100)")
+    _add_column_if_missing("broker_connections", "last_sync_status", "VARCHAR(20)")
+    _add_column_if_missing("broker_connections", "last_sync_error", "TEXT")
+    _add_column_if_missing("broker_connections", "consecutive_failures", "INTEGER", default="0")
+
+    # Trade history — post-creation columns: pnl, pnl_pct, name, currency.
+    _add_column_if_missing("trade_history", "name", "VARCHAR(100)", default="''")
+    _add_column_if_missing("trade_history", "pnl", "FLOAT", default="0.0")
+    _add_column_if_missing("trade_history", "pnl_pct", "FLOAT", default="0.0")
+    _add_column_if_missing("trade_history", "currency", "VARCHAR(5)", default="'USD'")
+
+    # Investment profiles — covers onboarding answers + auto-calc quant params.
+    _add_column_if_missing("investment_profiles", "experience_level", "VARCHAR(20)", default="'beginner'")
+    _add_column_if_missing("investment_profiles", "investment_goal", "VARCHAR(30)", default="'growth'")
+    _add_column_if_missing("investment_profiles", "risk_tolerance", "INTEGER", default="5")
+    _add_column_if_missing("investment_profiles", "time_horizon", "VARCHAR(20)", default="'medium'")
+    _add_column_if_missing("investment_profiles", "preferred_markets", "VARCHAR(10)", default="'both'")
+    _add_column_if_missing("investment_profiles", "preferred_sectors", "TEXT", default="'[]'")
+    _add_column_if_missing("investment_profiles", "auto_trade_preference", "VARCHAR(20)", default="'manual'")
+    _add_column_if_missing("investment_profiles", "daily_time", "VARCHAR(20)", default="'moderate'")
+    _add_column_if_missing("investment_profiles", "profile_type", "VARCHAR(20)", default="'balanced'")
+    _add_column_if_missing("investment_profiles", "tech_weight", "FLOAT", default="0.50")
+    _add_column_if_missing("investment_profiles", "fund_weight", "FLOAT", default="0.30")
+    _add_column_if_missing("investment_profiles", "news_weight", "FLOAT", default="0.20")
+    _add_column_if_missing("investment_profiles", "tp_min", "FLOAT", default="8.0")
+    _add_column_if_missing("investment_profiles", "tp_max", "FLOAT", default="15.0")
+    _add_column_if_missing("investment_profiles", "sl_min", "FLOAT", default="5.0")
+    _add_column_if_missing("investment_profiles", "sl_max", "FLOAT", default="8.0")
+    _add_column_if_missing("investment_profiles", "max_positions", "INTEGER", default="15")
+    _add_column_if_missing("investment_profiles", "buy_threshold", "FLOAT", default="70.0")
+    _add_column_if_missing("investment_profiles", "sell_threshold", "FLOAT", default="25.0")
+    _add_column_if_missing("investment_profiles", "ai_coaching_style", "VARCHAR(20)", default="'balanced'")
+    _add_column_if_missing("investment_profiles", "alert_frequency", "VARCHAR(20)", default="'daily'")
+    _add_column_if_missing("investment_profiles", "updated_at", "TIMESTAMP")
+
+    # User referrals — `invited_count` is the one post-create candidate.
+    _add_column_if_missing("user_referrals", "invited_count", "INTEGER", default="0")
+
+    # Morning briefs / portfolio shares / push subscriptions / signal_cache /
+    # watchlist — all their current columns are in the initial create_all
+    # snapshot. No post-creation additions observed. Declared here as a
+    # no-op safety net so future model additions auto-get a migration hook.
+
     # Backfill FX rates
     from models import Position
     try:
