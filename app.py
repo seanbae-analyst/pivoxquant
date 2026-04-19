@@ -337,6 +337,12 @@ def _do_migrations():
     _add_column_if_missing("users", "stripe_customer_id", "VARCHAR(100)")
     _add_column_if_missing("users", "stripe_subscription_id", "VARCHAR(100)")
     _add_column_if_missing("users", "subscription_status", "VARCHAR(20)", default="'inactive'")
+    # MVP #2 Brag Card — anonymous-mode toggle. Added via Alembic
+    # migration 008_brag_card_fields; this runtime hook covers boxes
+    # that booted without running Alembic (and legacy local dev DBs).
+    _add_column_if_missing("users", "privacy_mode", "BOOLEAN", default="0")
+    # Viral-loop referral code mirror. Nullable + unique.
+    _add_column_if_missing("users", "referral_code", "VARCHAR(16)", unique=True)
     # MVP #3 Earnings Pre-Brief — per-channel email opt-out. Added via
     # migration 009_earnings_prebrief; this runtime hook covers existing
     # local dev DBs that boot without running Alembic.
