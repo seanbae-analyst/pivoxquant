@@ -235,6 +235,13 @@ export interface AlertItem {
   type: string;
   message: string;
   ticker: string | null;
+  /**
+   * Company display name (e.g. "Samsung Electronics", "삼성전자", "Apple Inc.").
+   * Backend guarantees this is present and non-empty when `ticker` is
+   * present — falls back to the ticker itself when the registry can't
+   * resolve a name. Null only when `ticker` is null.
+   */
+  name: string | null;
   data: Record<string, unknown> | null;
   is_read: boolean;
   created_at: string;
@@ -242,6 +249,7 @@ export interface AlertItem {
 
 export interface AlertsResponse {
   alerts: AlertItem[];
+  unread?: number;
 }
 
 /* ── Search ── */
@@ -277,12 +285,16 @@ export interface MorningBriefIndex {
 
 export interface MorningBriefPortfolioChange {
   ticker: string;
+  /** Company display name. Backend guarantees non-empty (falls back to ticker). */
+  name: string;
   change_pct: number;
   direction: "up" | "down";
 }
 
 export interface MorningBriefEvent {
   ticker: string;
+  /** Company display name. Backend guarantees non-empty (falls back to ticker). */
+  name: string;
   event_type: string;
   event_time: string;
   description: string;

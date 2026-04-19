@@ -108,6 +108,7 @@ function BriefBody({ brief }: { brief: MorningBriefContent }) {
             {topPortfolio.map((change) => {
               const isUp = change.direction === "up";
               const Icon = isUp ? TrendingUp : TrendingDown;
+              const displayName = change.name || change.ticker;
               return (
                 <div
                   key={change.ticker}
@@ -117,8 +118,11 @@ function BriefBody({ brief }: { brief: MorningBriefContent }) {
                       ? "bg-emerald-50 text-emerald-700"
                       : "bg-red-50 text-red-700",
                   )}
+                  title={change.ticker}
                 >
-                  <span className="font-mono">{change.ticker}</span>
+                  <span className="max-w-[10rem] truncate font-semibold">
+                    {displayName}
+                  </span>
                   <Icon className="h-3 w-3" />
                   <span className="tabular-nums">
                     {fmtPctSigned(change.change_pct)}
@@ -138,25 +142,31 @@ function BriefBody({ brief }: { brief: MorningBriefContent }) {
             {t("morningBrief.events")}
           </p>
           <ul className="space-y-1.5">
-            {events.slice(0, 3).map((event, i) => (
-              <li
-                key={`${event.ticker}-${i}`}
-                className="flex items-start gap-2 text-xs text-slate-700"
-              >
-                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-accent" />
-                <span className="font-medium">
-                  <span className="font-mono text-slate-900">
-                    {event.ticker}
-                  </span>{" "}
-                  {event.description}
-                  {event.event_time && (
-                    <span className="ml-1 text-slate-400">
-                      ({event.event_time})
+            {events.slice(0, 3).map((event, i) => {
+              const displayName = event.name || event.ticker;
+              return (
+                <li
+                  key={`${event.ticker}-${i}`}
+                  className="flex items-start gap-2 text-xs text-slate-700"
+                >
+                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                  <span className="min-w-0">
+                    <span className="font-semibold text-slate-900">
+                      {displayName}
                     </span>
-                  )}
-                </span>
-              </li>
-            ))}
+                    <span className="ml-1.5 font-mono text-[10px] text-slate-400">
+                      {event.ticker}
+                    </span>{" "}
+                    <span className="font-medium">{event.description}</span>
+                    {event.event_time && (
+                      <span className="ml-1 text-slate-400">
+                        ({event.event_time})
+                      </span>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

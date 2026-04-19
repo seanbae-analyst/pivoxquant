@@ -4,9 +4,32 @@ from flask_login import current_user
 
 from security import trade_rate_limit
 from services.container import trader
+from services.name_resolver import (
+    lookup_name_from_signal_cache,
+    resolve_stock_name,
+)
 from .decorators import api_auth
 
 autotrade_bp = Blueprint("autotrade", __name__, url_prefix="/api/autotrade")
+
+
+def _enrich_pending_trade(t: dict) -> dict:
+    """Return a copy of `t` with `name` guaranteed (falls back to ticker).
+
+    Korean proposals already carry a `name` (see autotrader._propose_trade);
+    US proposals don't. We resolve once here so every client gets a
+    uniform shape without touching autotrader.py (frozen file).
+    """
+    if not isinstance(t, dict):
+        return t
+    enriched = dict(t)
+    ticker = enriched.get("ticker") or ""
+    if not enriched.get("name"):
+        name = lookup_name_from_signal_cache(ticker) or resolve_stock_name(
+            ticker
+        )
+        enriched["name"] = name or ticker
+    return enriched
 
 
 @autotrade_bp.route("/status")
@@ -47,8 +70,16 @@ def sell_all():
 @autotrade_bp.route("/pending", methods=["GET"])
 @api_auth
 def get_pending():
-    """Get pending trade proposals awaiting user confirmation."""
-    return jsonify({"ok": True, "pending": trader.get_pending_trades()})
+    """Get pending trade proposals awaiting user confirmation.
+
+    Each proposal is enriched with a `name` field (company display name)
+    so the frontend can render name-large / ticker-small. Falls back to
+    ticker when unresolvable.
+    """
+    pending = [
+        _enrich_pending_trade(t) for t in (trader.get_pending_trades() or [])
+    ]
+    return jsonify({"ok": True, "pending": pending})
 
 
 @autotrade_bp.route("/approve/<trade_id>", methods=["POST"])

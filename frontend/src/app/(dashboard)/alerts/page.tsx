@@ -116,6 +116,19 @@ function AlertRow({
 
       {/* Content */}
       <div className="min-w-0 flex-1">
+        {/* Company name (big) + ticker (small) — name falls back to ticker
+            on backend when unresolvable, so this is always present when
+            alert.ticker exists. */}
+        {alert.ticker && (
+          <div className="mb-1 flex items-baseline gap-2">
+            <h3 className="truncate text-base font-bold text-slate-900">
+              {alert.name || alert.ticker}
+            </h3>
+            <span className="shrink-0 font-mono text-[11px] text-slate-400">
+              {alert.ticker}
+            </span>
+          </div>
+        )}
         <p
           className={cn(
             "text-sm leading-snug",
@@ -127,11 +140,6 @@ function AlertRow({
           {alert.message}
         </p>
         <div className="flex items-center gap-2 mt-1">
-          {alert.ticker && (
-            <span className="text-xs font-semibold text-accent">
-              {alert.ticker}
-            </span>
-          )}
           <span className="text-[11px] text-slate-400 tabular-nums">
             {relativeTime(alert.created_at)}
           </span>
