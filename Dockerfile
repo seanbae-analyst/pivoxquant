@@ -2,7 +2,8 @@ FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y \
     libpq-dev gcc \
-    libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libgdk-pixbuf2.0-0 \
+    libpango-1.0-0 libpangoft2-1.0-0 libcairo2 \
+    libgdk-pixbuf-2.0-0 libgdk-pixbuf2.0-common \
     libffi-dev libxml2 libxslt1.1 shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
