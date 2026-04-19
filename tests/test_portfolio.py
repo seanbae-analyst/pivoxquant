@@ -52,7 +52,12 @@ class TestAddPosition:
                 "avg_cost": 300.0,
             })
         assert r.status_code == 200
-        assert r.get_json() == {"ok": True}
+        # Route returns ok + resolved display metadata (ticker, name, is_korean)
+        # so the client can render 회사명 immediately without a second round-trip.
+        payload = r.get_json()
+        assert payload["ok"] is True
+        assert payload["ticker"] == "MSFT"
+        assert payload["is_korean"] is False
 
     def test_add_position_missing_ticker_returns_400(self, client, auth_user):
         r = client.post("/api/portfolio/position", json={
