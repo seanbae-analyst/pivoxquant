@@ -5,36 +5,49 @@ __pycache__/
 *.pyo
 *.egg-info/
 .pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
 
 # Node / Next.js
 node_modules/
 .next/
 test-results/
 tsconfig.tsbuildinfo
+playwright-report/
 
 # Database
 *.db
+*.sqlite
+*.sqlite3
 
 # Environment / Secrets
 .env
 .env.*
 !.env.example
 .kis_token_cache.json
+*.pem
+*.key
 
 # OS
 .DS_Store
+Thumbs.db
 
 # IDE / Editor
 .obsidian/
 *.swp
 *.swo
+.vscode/
 
 # Build artifacts
 dist/
 build/
 Untitled*.canvas
 .bkit/
-.obsidian/
 /tmp/
-.DS_Store
 .claude/settings.local.json
+
+# Logs
+*.log
+agent_worker/logs/
+logs/
