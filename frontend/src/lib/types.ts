@@ -66,18 +66,6 @@ export interface HistoryResponse {
   data: HistoryPoint[];
 }
 
-export interface EarningsItem {
-  ticker: string;
-  name: string;
-  date: string;
-  signal: string;
-  score: number;
-}
-
-export interface EarningsResponse {
-  earnings: EarningsItem[];
-}
-
 /* ── Market ── */
 
 export interface IndexData {
@@ -123,38 +111,6 @@ export interface MarketOverviewResponse {
   cached_at: string;
 }
 
-export interface CrossAssetItem {
-  ticker: string;
-  name: string;
-  price: number;
-  return_1m: number;
-  return_3m: number;
-  return_6m: number;
-  volatility: number;
-  sharpe: number;
-}
-
-export interface CrossAssetResponse {
-  macro_regime: string;
-  macro_label: string;
-  macro_kr: string;
-  strongest: string;
-  weakest: string;
-  ranking: CrossAssetItem[];
-}
-
-export interface VixStrategyResponse {
-  vix: number;
-  vix_20d_avg: number;
-  vix_trend: string;
-  vix_percentile: number;
-  regime: string;
-  color: string;
-  exposure: number;
-  action: string;
-  action_kr: string;
-}
-
 export interface SectorItem {
   sector: string;
   price: number;
@@ -163,57 +119,7 @@ export interface SectorItem {
   top_movers: string[];
 }
 
-/* ── Intraday ── */
-
-export interface SignalMsg {
-  type: "bullish" | "bearish";
-  msg: string;
-  msg_kr: string;
-}
-
-export interface DayTradeResult {
-  ticker: string;
-  name: string;
-  price: number;
-  change_pct: number;
-  score: number;
-  signal: string;
-  is_korean: boolean;
-  currency: string;
-  signals: SignalMsg[];
-  rsi: number;
-  vol_ratio: number;
-  vwap: number | null;
-  take_profit: number;
-  stop_loss: number;
-  tp_pct: number;
-  sl_pct: number;
-  trailing_stop_pct: number;
-  atr: number;
-  is_held?: boolean;
-  regime_profile?: string;
-}
-
-export interface DayTradeScanResponse {
-  results: DayTradeResult[];
-  count: number;
-}
-
-/* ── Scanner ── */
-
-export interface ScanResult {
-  ticker: string;
-  name: string;
-  signal: string;
-  score: number;
-  price: number;
-  change_pct: number;
-  signals: SignalMsg[];
-  snapshot: Record<string, number | string | null>;
-  take_profit: number;
-  stop_loss: number;
-  is_korean: boolean;
-}
+/* ── Discover ── */
 
 export interface DiscoverResult {
   ticker: string;
@@ -275,30 +181,7 @@ export interface ProfileResponse {
   subscription_tier?: string;
 }
 
-export interface QuestionOption {
-  value: string | number;
-  label: string;
-  label_kr: string;
-  icon?: string;
-}
-
-export interface Question {
-  id: string;
-  question: string;
-  question_kr: string;
-  type?: string;
-  options: QuestionOption[];
-}
-
-export interface QuestionnaireResponse {
-  questions: Question[];
-}
-
 /* ── AI ── */
-
-export interface AiStatusResponse {
-  available: boolean;
-}
 
 export interface AiCoachingResponse {
   insight: string;
@@ -324,57 +207,6 @@ export interface AiSectorTrendResponse {
   trend: string;
   trend_kr: string;
   sector: string;
-}
-
-export interface AiMorningSummaryResponse {
-  summary: string;
-  summary_kr: string;
-}
-
-export interface AiChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-/* ── Portfolio Share ── */
-
-export interface ShareTokenResponse {
-  token: string;
-  expires_at: string;
-  share_url: string;
-}
-
-/** Public portfolio position — sensitive fields stripped server-side */
-export interface SharedPosition {
-  ticker: string;
-  name: string;
-  sector: string;
-  shares: number;
-  avg_cost: number;
-  price: number;
-  price_display: string;
-  pnl_pct: number;
-  market_value: number;
-  signal: "POSITIVE" | "NEGATIVE" | "NEUTRAL" | "—";
-  score: number;
-  currency: "USD" | "KRW";
-  is_korean: boolean;
-  tp_pct: number;
-  sl_pct: number;
-}
-
-export interface SharedPortfolioResponse {
-  owner_name: string;
-  positions: SharedPosition[];
-  total_value_usd: number;
-  total_value_all_krw: number;
-  avg_score: number;
-  total_pnl_pct: number;
-  buy_count: number;
-  sell_count: number;
-  fx_rate: number;
-  created_at: string;
-  expires_at: string;
 }
 
 /* ── Watchlist ── */
