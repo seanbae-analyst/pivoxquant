@@ -40,6 +40,22 @@ def _is_korean(ticker: str) -> bool:
 
 
 @lru_cache(maxsize=4096)
+def _pykrx_name(ticker_code: str) -> Optional[str]:
+    """Resolve any KRX ticker (6-digit) via pyKRX. Covers the long tail
+    that isn't in the curated kr_stock_registry. LRU-cached so repeat
+    hits stay free after the first call.
+    """
+    try:
+        from pykrx import stock
+        name = stock.get_market_ticker_name(ticker_code)
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    except Exception:
+        pass
+    return None
+
+
+@lru_cache(maxsize=4096)
 def resolve_stock_name(ticker: str) -> Optional[str]:
     """Return the display name for `ticker`, or None if unresolvable.
 
@@ -54,8 +70,14 @@ def resolve_stock_name(ticker: str) -> Optional[str]:
 
     try:
         if _is_korean(t):
+            # 1. Curated registry (fast, ~250 popular names)
             from services import kr_stock_registry
-            return kr_stock_registry.get_name(t)
+            name = kr_stock_registry.get_name(t)
+            if name:
+                return name
+            # 2. pyKRX fallback — covers every KRX-listed ticker (2,500+)
+            code = t.split(".")[0]
+            return _pykrx_name(code)
         from services import us_stock_registry
         return us_stock_registry.get_name(t)
     except Exception:
