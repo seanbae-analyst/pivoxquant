@@ -116,10 +116,10 @@ function SearchDropdown({
               >
                 <div className="min-w-0 flex-1">
                   <span className="text-sm font-bold text-slate-900">
-                    {isKoreanTicker(r.ticker, r.is_korean) ? (r.name || r.ticker) : r.ticker}
+                    {r.name || r.ticker}
                   </span>
                   <span className="ml-2 text-xs text-slate-500 truncate">
-                    {isKoreanTicker(r.ticker, r.is_korean) ? r.ticker : r.name}
+                    {r.ticker}
                   </span>
                 </div>
                 <div className="text-right shrink-0">
@@ -373,20 +373,20 @@ function AddPositionModal({
         {selected && selected.price > 0 && (
           <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-900">
-                  {isKoreanTicker(selected.ticker, selected.is_korean) ? (selected.name || selected.ticker) : selected.ticker}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-bold text-slate-900 truncate">
+                  {selected.name || selected.ticker}
                 </span>
-                <span className="text-xs text-slate-500 truncate">
-                  {isKoreanTicker(selected.ticker, selected.is_korean) ? selected.ticker : selected.name}
+                <span className="text-xs text-slate-500 truncate shrink-0">
+                  {selected.ticker}
                 </span>
                 {selected.is_korean && (
-                  <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100">
+                  <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100 shrink-0">
                     KR
                   </span>
                 )}
               </div>
-              <span className="text-sm font-semibold tabular-nums text-slate-900">
+              <span className="text-sm font-semibold tabular-nums text-slate-900 shrink-0 ml-2">
                 {formatPrice(selected.price, selectedCurrency as "USD" | "KRW")}
               </span>
             </div>
@@ -396,15 +396,15 @@ function AddPositionModal({
         {/* Selected but no price yet */}
         {selected && selected.price === 0 && (
           <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-900">
-                {isKoreanTicker(selected.ticker, selected.is_korean) ? (selected.name || selected.ticker) : selected.ticker}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold text-slate-900 truncate">
+                {selected.name || selected.ticker}
               </span>
-              <span className="text-xs text-slate-500 truncate">
-                {isKoreanTicker(selected.ticker, selected.is_korean) ? selected.ticker : selected.name}
+              <span className="text-xs text-slate-500 truncate shrink-0">
+                {selected.ticker}
               </span>
               {selected.is_korean && (
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100">
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 border border-blue-100 shrink-0">
                   KR
                 </span>
               )}
@@ -1197,7 +1197,7 @@ function PositionCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-base font-semibold text-slate-900">
-              {isKoreanTicker(position.ticker, position.is_korean) ? (position.name || position.ticker) : position.ticker}
+              {position.name || position.ticker}
             </span>
             {position.signal && position.signal !== "\u2014" && (
               <SignalBadge signal={position.signal} />
@@ -1209,7 +1209,7 @@ function PositionCard({
             )}
           </div>
           <p className="text-xs text-slate-500 truncate mt-0.5">
-            {isKoreanTicker(position.ticker, position.is_korean) ? `${position.ticker} · KRX` : position.name}
+            {isKoreanTicker(position.ticker, position.is_korean) ? `${position.ticker} · KRX` : position.ticker}
           </p>
         </div>
         <PositionActions

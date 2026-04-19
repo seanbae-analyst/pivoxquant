@@ -474,10 +474,10 @@ export function TopBar() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-slate-900">
-                        {isKoreanTicker(r.ticker) ? (r.name || r.ticker) : r.ticker}
+                        {r.name || r.ticker}
                       </p>
                       <p className="truncate text-xs text-slate-400">
-                        {isKoreanTicker(r.ticker) ? `${r.ticker} · KRX` : r.name}
+                        {isKoreanTicker(r.ticker) ? `${r.ticker} · KRX` : r.ticker}
                       </p>
                     </div>
                     <div className="text-right">

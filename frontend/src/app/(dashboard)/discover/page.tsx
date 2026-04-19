@@ -84,20 +84,20 @@ function DiscoverRow({
       onClick={onClick}
       className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
     >
-      {/* Ticker + Name */}
+      {/* Name + Ticker */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-slate-900">
-            {isKoreanTicker(item.ticker, item.is_korean) ? (item.name || item.ticker) : item.ticker}
+          <span className="text-sm font-bold text-slate-900 truncate">
+            {item.name || item.ticker}
           </span>
           {item.already_owned && (
-            <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
+            <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent shrink-0">
               보유중
             </span>
           )}
         </div>
         <p className="text-xs text-slate-500 truncate mt-0.5">
-          {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.name}
+          {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.ticker}
         </p>
       </div>
 

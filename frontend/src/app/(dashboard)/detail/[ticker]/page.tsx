@@ -55,10 +55,10 @@ interface ChartResponse {
 
 interface NewsItem {
   title: string;
-  url: string;
+  link: string;
   source: string;
-  date: string;
-  sentiment?: string;
+  published: string;
+  summary?: string;
 }
 
 interface NewsResponse {
@@ -436,7 +436,7 @@ export default function StockDetailPage() {
             {newsRes.news.slice(0, 8).map((item, i) => (
               <a
                 key={i}
-                href={item.url}
+                href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-slate-50 group"
@@ -451,7 +451,7 @@ export default function StockDetailPage() {
                     </span>
                     <span className="text-[11px] text-slate-300">|</span>
                     <span className="text-[11px] text-slate-400">
-                      {item.date}
+                      {item.published}
                     </span>
                   </div>
                 </div>

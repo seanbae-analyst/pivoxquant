@@ -234,11 +234,11 @@ export function WhatIfForm({
                     className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-bold text-slate-900">
-                        {r.ticker}
+                      <div className="text-sm font-bold text-slate-900 truncate">
+                        {r.name || r.ticker}
                       </div>
                       <div className="truncate text-xs text-slate-500">
-                        {r.name}
+                        {r.ticker}
                       </div>
                     </div>
                     <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
