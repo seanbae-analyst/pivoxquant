@@ -224,7 +224,16 @@ def _do_migrations():
             return
         sql = f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"
         if default is not None:
-            sql += f" DEFAULT {default}"
+            # PostgreSQL is strict: BOOLEAN columns reject integer defaults
+            # (e.g. `DEFAULT 0`). Translate 0/1 → false/true for BOOLEAN
+            # targets on PG; SQLite accepts both forms.
+            resolved_default = default
+            if is_postgres and col_type.upper().startswith("BOOLEAN"):
+                if str(default).strip() in ("0", "'0'"):
+                    resolved_default = "false"
+                elif str(default).strip() in ("1", "'1'"):
+                    resolved_default = "true"
+            sql += f" DEFAULT {resolved_default}"
         # PostgreSQL supports UNIQUE inline; SQLite does not (raises OperationalError)
         if unique and is_postgres:
             sql += " UNIQUE"
