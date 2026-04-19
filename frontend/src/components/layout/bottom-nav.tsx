@@ -17,17 +17,21 @@ import {
   Shield,
   Settings,
   Sunrise,
+  FileText,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { useT } from "@/lib/locale";
 
+// Bottom tabs on mobile. We surface Reports here instead of Alerts — Alerts
+// remains reachable via the Menu sheet and the top-bar bell icon, while
+// Reports is a destination users will return to weekly.
 const TABS = [
   { href: "/home", label: "홈", icon: Home },
   { href: "/market", label: "시장", icon: BarChart3 },
   { href: "/ai", label: "AI", icon: Bot },
-  { href: "/alerts", label: "알림", icon: Bell },
+  { href: "/reports", label: "리포트", icon: FileText },
 ] as const;
 
 type NavKey =
@@ -41,6 +45,8 @@ type NavKey =
   | "ai"
   | "autotrade"
   | "risk"
+  | "alerts"
+  | "reports"
   | "settings";
 
 const MENU_ITEMS: { href: string; key: NavKey; icon: React.ElementType }[] = [
@@ -54,6 +60,8 @@ const MENU_ITEMS: { href: string; key: NavKey; icon: React.ElementType }[] = [
   { href: "/ai", key: "ai", icon: Bot },
   { href: "/autotrade", key: "autotrade", icon: Zap },
   { href: "/risk", key: "risk", icon: Shield },
+  { href: "/alerts", key: "alerts", icon: Bell },
+  { href: "/reports", key: "reports", icon: FileText },
   { href: "/settings", key: "settings", icon: Settings },
 ];
 
