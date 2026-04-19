@@ -1,11 +1,14 @@
 """Auth routes: register, login, logout, me, Google OAuth, Kakao OAuth."""
 import logging
 import os
+import secrets
+import time
 from urllib.parse import urlparse
 
 from authlib.integrations.flask_client import OAuth
-from flask import Blueprint, request, jsonify, redirect, session, url_for, abort
+from flask import Blueprint, request, jsonify, redirect, session, url_for, abort, current_app
 from flask_login import login_user, logout_user, current_user
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 
 def _safe_next(next_url):
@@ -92,6 +95,106 @@ def _resolve_frontend_url() -> str:
     return os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 
+# ── Stateless OAuth state (HMAC signed token) ───────────────────────────────
+#
+# Why stateless:
+#   Vercel rewrites `/api/*` to Railway. Session cookies issued on the
+#   /api/auth/google redirect don't always round-trip back to the callback,
+#   so authlib's session-based state check (`_state_<name>_<state>`) fails
+#   with state_mismatch. We sign state as a self-contained token so
+#   verification does not require the cookie surviving the round-trip.
+#
+# The signed state carries everything authlib needs (nonce, redirect_uri)
+# plus our own bookkeeping (origin, provider). On the callback we:
+#   1. Verify the HMAC signature + timestamp (10-min expiry).
+#   2. Rehydrate authlib's `_state_<name>_<state>` session slot in-process
+#      so `authorize_access_token()` can read it back out.
+#
+# This keeps the authlib code path untouched while removing the
+# cross-request session-cookie dependency that was causing state_mismatch.
+
+_OAUTH_STATE_MAX_AGE = 600  # seconds (10 minutes)
+_OAUTH_STATE_SALT = "pivoxquant.oauth.state.v1"
+
+
+def _state_serializer() -> URLSafeTimedSerializer:
+    """Serializer bound to the app's SECRET_KEY."""
+    secret = current_app.secret_key
+    if not secret:
+        # Should never happen — config.py always sets one (random fallback).
+        logger.critical("OAuth state serializer: SECRET_KEY missing on app")
+        raise RuntimeError("SECRET_KEY not configured")
+    return URLSafeTimedSerializer(secret, salt=_OAUTH_STATE_SALT)
+
+
+def _build_signed_state(provider: str, origin: str, redirect_uri: str) -> str:
+    """Build a self-contained HMAC-signed state token.
+
+    The full signed string is passed to the OAuth provider as `state=`.
+    On the callback the provider echoes it back verbatim; we verify the
+    signature, decode the payload, and rehydrate authlib's session slot
+    using the signed token itself as the lookup key.
+    """
+    nonce = secrets.token_urlsafe(16)
+    payload = {
+        "n": nonce,               # OIDC nonce (Google id_token binding)
+        "o": origin,              # frontend origin for final redirect
+        "p": provider,            # "google" | "kakao"
+        "r": redirect_uri,        # exact redirect_uri used in the request
+        "k": secrets.token_urlsafe(8),  # anti-replay nonce for the payload
+    }
+    return _state_serializer().dumps(payload)
+
+
+def _verify_signed_state(signed: str | None, expected_provider: str) -> dict | None:
+    """Verify a signed state token. Returns the payload dict or None.
+
+    Logs the failure reason at warning level; callers translate None into
+    a user-facing error redirect.
+    """
+    if not signed:
+        logger.warning("OAuth state verify: missing state parameter (provider=%s)", expected_provider)
+        return None
+    try:
+        payload = _state_serializer().loads(signed, max_age=_OAUTH_STATE_MAX_AGE)
+    except SignatureExpired:
+        logger.warning("OAuth state verify: state token expired (provider=%s)", expected_provider)
+        return None
+    except BadSignature:
+        logger.warning("OAuth state verify: state signature invalid (provider=%s)", expected_provider)
+        return None
+    except Exception:  # noqa: BLE001 — defensive, never let a decode bug 500
+        logger.exception("OAuth state verify: unexpected decode error (provider=%s)", expected_provider)
+        return None
+
+    if payload.get("p") != expected_provider:
+        logger.warning(
+            "OAuth state verify: state provider mismatch (got=%s expected=%s)",
+            payload.get("p"), expected_provider,
+        )
+        return None
+    return payload
+
+
+def _rehydrate_authlib_state(provider: str, received_state: str, payload: dict) -> None:
+    """Restore the session slot authlib expects, using values from our signed
+    token. authlib's `authorize_access_token()` reads
+    `session["_state_<provider>_<received_state>"]` to recover `redirect_uri`
+    and (for OIDC) `nonce`. The `received_state` is the full signed token the
+    provider echoed back in the query string.
+    """
+    key = f"_state_{provider}_{received_state}"
+    data = {
+        "redirect_uri": payload.get("r"),
+    }
+    if payload.get("n"):
+        data["nonce"] = payload["n"]
+    session[key] = {
+        "data": data,
+        "exp": time.time() + _OAUTH_STATE_MAX_AGE,
+    }
+
+
 def init_oauth(app):
     """Call from create_app() to bind OAuth to the Flask app."""
     oauth.init_app(app)
@@ -172,37 +275,49 @@ def me():
 
 @auth_bp.route("/google")
 def google_login():
-    """Redirect user to Google's OAuth consent screen."""
-    from authlib.common.security import generate_token
+    """Redirect user to Google's OAuth consent screen.
+
+    Uses a stateless HMAC-signed state token so the callback does not
+    depend on session cookies surviving the Vercel → Railway round-trip.
+    """
     origin = _resolve_frontend_url()
     redirect_uri = f"{origin}/api/auth/google/callback"
-    nonce = generate_token()
-    state = generate_token()
-    session["oauth_nonce"] = nonce
-    session["oauth_state_google"] = state
-    # Remember which origin the user came from so the final redirect lands
-    # back on the same domain (vercel.app vs pivoxquant.com).
-    session["oauth_origin"] = origin
-    logger.info("Google OAuth start: origin=%s redirect_uri=%s", origin, redirect_uri)
-    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce, state=state)
+    signed_state = _build_signed_state("google", origin, redirect_uri)
+    # Extract the nonce from the signed payload so we pass the exact same
+    # value to Google that our callback will later verify against.
+    nonce = _state_serializer().loads(signed_state, max_age=_OAUTH_STATE_MAX_AGE)["n"]
+    logger.info(
+        "OAuth start: provider=google origin=%s redirect_uri=%s",
+        origin, redirect_uri,
+    )
+    # authlib will also write a session slot under _state_google_<signed_state>;
+    # that slot is redundant (we rehydrate it on callback) but harmless.
+    return oauth.google.authorize_redirect(redirect_uri, nonce=nonce, state=signed_state)
 
 
 @auth_bp.route("/google/callback")
 def google_callback():
-    """Handle the OAuth callback from Google."""
-    # Origin to redirect back to: prefer the one we stashed at login start;
-    # if the session lost it (cross-domain cookie, timeout), re-resolve.
-    origin = session.pop("oauth_origin", None) or _resolve_frontend_url()
+    """Handle the OAuth callback from Google.
 
-    # CSRF state 검증: 세션에 저장한 state와 콜백에서 받은 state 대조
-    expected_state = session.pop("oauth_state_google", None)
+    Verifies our HMAC-signed state (stateless — no session cookie required),
+    rehydrates the authlib session slot in-process, then lets authlib
+    exchange the code for a token normally.
+    """
     received_state = request.args.get("state")
-    if not expected_state or expected_state != received_state:
-        logger.warning("Google OAuth state mismatch — possible CSRF attack")
+    payload = _verify_signed_state(received_state, expected_provider="google")
+    if not payload:
+        # Fallback origin for the error redirect only.
+        origin = _resolve_frontend_url()
+        logger.info("OAuth callback: provider=google origin=%s state_ok=False", origin)
         return redirect(f"{origin}/login?error=state_mismatch")
+
+    origin = payload.get("o") or _resolve_frontend_url()
+    _rehydrate_authlib_state("google", received_state, payload)
+    logger.info("OAuth callback: provider=google origin=%s state_ok=True", origin)
+
     try:
         token = oauth.google.authorize_access_token()
-    except Exception as e:
+    except Exception:
         logger.exception("Google callback error")
         return redirect(f"{origin}/login?error=google_failed")
     userinfo = token.get("userinfo")
@@ -250,33 +365,42 @@ def google_callback():
 
 @auth_bp.route("/kakao")
 def kakao_login():
-    """Redirect user to Kakao's OAuth consent screen."""
+    """Redirect user to Kakao's OAuth consent screen.
+
+    Uses a stateless HMAC-signed state token (see google_login for rationale).
+    """
     origin = _resolve_frontend_url()
     if not os.environ.get("KAKAO_CLIENT_ID"):
         return redirect(f"{origin}/login?error=kakao_not_configured")
-    from authlib.common.security import generate_token
     redirect_uri = f"{origin}/api/auth/kakao/callback"
-    state = generate_token()
-    session["oauth_state_kakao"] = state
-    session["oauth_origin"] = origin
-    logger.info("Kakao OAuth start: origin=%s redirect_uri=%s", origin, redirect_uri)
-    return oauth.kakao.authorize_redirect(redirect_uri, state=state)
+    signed_state = _build_signed_state("kakao", origin, redirect_uri)
+    logger.info(
+        "OAuth start: provider=kakao origin=%s redirect_uri=%s",
+        origin, redirect_uri,
+    )
+    return oauth.kakao.authorize_redirect(redirect_uri, state=signed_state)
 
 
 @auth_bp.route("/kakao/callback")
 def kakao_callback():
-    """Handle the OAuth callback from Kakao."""
-    origin = session.pop("oauth_origin", None) or _resolve_frontend_url()
+    """Handle the OAuth callback from Kakao.
 
-    # CSRF state 검증
-    expected_state = session.pop("oauth_state_kakao", None)
+    Stateless state verification — see google_callback for rationale.
+    """
     received_state = request.args.get("state")
-    if not expected_state or expected_state != received_state:
-        logger.warning("Kakao OAuth state mismatch — possible CSRF attack")
+    payload = _verify_signed_state(received_state, expected_provider="kakao")
+    if not payload:
+        origin = _resolve_frontend_url()
+        logger.info("OAuth callback: provider=kakao origin=%s state_ok=False", origin)
         return redirect(f"{origin}/login?error=state_mismatch")
+
+    origin = payload.get("o") or _resolve_frontend_url()
+    _rehydrate_authlib_state("kakao", received_state, payload)
+    logger.info("OAuth callback: provider=kakao origin=%s state_ok=True", origin)
+
     try:
         token = oauth.kakao.authorize_access_token()
-    except Exception as e:
+    except Exception:
         logger.exception("Kakao callback error")
         return redirect(f"{origin}/login?error=kakao_failed")
 
