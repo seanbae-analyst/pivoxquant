@@ -88,7 +88,10 @@ function detectLocale(request: NextRequest): Locale {
 
 function isBetaBypass(pathname: string): boolean {
   return BETA_BYPASS_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    (prefix) =>
+      pathname === prefix ||
+      pathname.startsWith(`${prefix}/`) ||
+      pathname.startsWith(`${prefix}.`),
   );
 }
 
