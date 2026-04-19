@@ -1,5 +1,6 @@
 """Alert routes."""
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify
 from flask_login import current_user
@@ -9,6 +10,8 @@ from models import Position, Alert, SignalCache
 from services.serializers import serialize_alert
 from .decorators import api_auth
 
+logger = logging.getLogger(__name__)
+
 alerts_bp = Blueprint("alerts", __name__, url_prefix="/api/alerts")
 
 
@@ -16,8 +19,16 @@ alerts_bp = Blueprint("alerts", __name__, url_prefix="/api/alerts")
 @api_auth
 def get_alerts():
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
-    Alert.query.filter(Alert.user_id == current_user.id, Alert.created_at < cutoff).delete()
-    db.session.commit()
+    # TTL cleanup — best-effort. Must never break the GET if the delete fails
+    # (e.g. row-lock contention); the read path below is what matters.
+    try:
+        Alert.query.filter(
+            Alert.user_id == current_user.id, Alert.created_at < cutoff
+        ).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("alerts.get_alerts TTL cleanup failed")
     alerts = (Alert.query.filter_by(user_id=current_user.id)
               .order_by(Alert.created_at.desc()).limit(20).all())
     return jsonify({
@@ -29,16 +40,26 @@ def get_alerts():
 @alerts_bp.route("/read", methods=["POST"])
 @api_auth
 def mark_read():
-    Alert.query.filter_by(user_id=current_user.id, is_read=False).update({"is_read": True})
-    db.session.commit()
+    try:
+        Alert.query.filter_by(user_id=current_user.id, is_read=False).update({"is_read": True})
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("alerts.mark_read commit failed")
+        return jsonify({"error": "Failed to update alerts"}), 500
     return jsonify({"ok": True})
 
 
 @alerts_bp.route("/clear", methods=["POST"])
 @api_auth
 def clear():
-    Alert.query.filter_by(user_id=current_user.id).delete()
-    db.session.commit()
+    try:
+        Alert.query.filter_by(user_id=current_user.id).delete()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("alerts.clear commit failed")
+        return jsonify({"error": "Failed to clear alerts"}), 500
     return jsonify({"ok": True})
 
 
@@ -68,16 +89,22 @@ def price_check():
                            "proceeds": round(p.shares * price),
                            "message": f"🛑 {name} 손절가 도달! {cur}{round(price):,} ≤ {cur}{round(sl):,} — {p.shares}주 손절 권고"})
 
-    for a in alerts:
-        recent = (Alert.query.filter_by(user_id=current_user.id, ticker=a["ticker"])
-                  .filter(Alert.message.contains(a["type"]))
-                  .filter(Alert.created_at > datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=4))
-                  .first())
-        if not recent:
-            sig = "NEGATIVE" if a["type"] == "STOP_LOSS" else "POSITIVE"
-            db.session.add(Alert(user_id=current_user.id, ticker=a["ticker"],
-                                 message=a["message"], signal=sig, score=0))
-    if alerts:
-        db.session.commit()
+    try:
+        for a in alerts:
+            recent = (Alert.query.filter_by(user_id=current_user.id, ticker=a["ticker"])
+                      .filter(Alert.message.contains(a["type"]))
+                      .filter(Alert.created_at > datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=4))
+                      .first())
+            if not recent:
+                sig = "NEGATIVE" if a["type"] == "STOP_LOSS" else "POSITIVE"
+                db.session.add(Alert(user_id=current_user.id, ticker=a["ticker"],
+                                     message=a["message"], signal=sig, score=0))
+        if alerts:
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("alerts.price_check persist failed")
+        # Still return the alerts payload — persistence is a side-effect,
+        # not the primary purpose of this endpoint.
 
     return jsonify({"alerts": alerts})

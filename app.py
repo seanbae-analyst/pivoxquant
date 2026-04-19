@@ -5,6 +5,7 @@ Supports US + Korean equities.
 """
 
 import os
+import uuid
 import logging
 import threading
 
@@ -12,7 +13,8 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), override=True)
 
 import sentry_sdk
-from flask import Flask, redirect
+from flask import Flask, redirect, request, jsonify
+from werkzeug.exceptions import HTTPException
 from sqlalchemy import text
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -116,6 +118,71 @@ def create_app():
     @login_manager.user_loader
     def load_user(uid):
         return db.session.get(User, int(uid))
+
+    # ── Global exception handler ──────────────────────────────────────────
+    # Catches every unhandled exception bubbling out of a view/before-request
+    # hook before Werkzeug turns it into an opaque 500 HTML page.
+    #
+    # Behaviour:
+    #   • HTTPException (abort(4xx/5xx), NotFound, MethodNotAllowed, …)
+    #       → let Flask render its default handler; only attach a request_id
+    #         + log if it's a 5xx. The rate-limit 429 handler in security.py
+    #         stays authoritative (errorhandler(429) registered earlier wins).
+    #   • Anything else (unhandled exception)
+    #       → rollback any dangling DB transaction so the worker's session
+    #         isn't poisoned for the next request.
+    #       → log with request_id so Railway logs can be correlated with the
+    #         client-visible error.
+    #       → Sentry gets the full exception automatically (sentry_sdk.init
+    #         above registers a Flask integration).
+    #       → API callers (/api/*) get a JSON error envelope matching the
+    #         shape used elsewhere (`error`, `code`, `request_id`).
+    #       → Browser callers are bounced to /login?error=server_error with
+    #         the request_id in the query string for support tickets.
+    #
+    # NOTE: @app.errorhandler(Exception) does NOT override the specific
+    # @app.errorhandler(429) registered in security.init_security — Flask
+    # dispatches to the most specific handler first.
+    @app.errorhandler(Exception)
+    def _handle_unhandled_exception(exc):
+        # HTTPException (incl. 404/405/401/403/429) — preserve Flask's default
+        # rendering. Only annotate 5xx HTTP errors with a request_id.
+        if isinstance(exc, HTTPException):
+            if exc.code and exc.code >= 500:
+                request_id = uuid.uuid4().hex[:12]
+                logger.exception(
+                    "HTTP %s on %s %s — request_id=%s",
+                    exc.code, request.method, request.path, request_id,
+                )
+            return exc
+
+        request_id = uuid.uuid4().hex[:12]
+
+        # Roll back any dangling DB transaction. A SQLAlchemyError leaves
+        # the session in a "transaction aborted" state; subsequent queries
+        # on the same worker will all fail with InvalidRequestError until
+        # we rollback(). Best-effort — never let rollback itself 500.
+        try:
+            db.session.rollback()
+        except Exception:  # pragma: no cover — defensive
+            logger.exception("Rollback failed in global error handler (request_id=%s)", request_id)
+
+        logger.exception(
+            "Unhandled exception on %s %s — request_id=%s",
+            request.method, request.path, request_id,
+        )
+
+        # API callers get JSON; browser callers get a friendly redirect.
+        if request.path.startswith("/api/"):
+            return jsonify({
+                "error": "Internal server error. Please try again.",
+                "error_kr": "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+                "code": "INTERNAL_ERROR",
+                "request_id": request_id,
+            }), 500
+
+        frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+        return redirect(f"{frontend_url}/login?error=server_error&rid={request_id}")
 
     @app.after_request
     def no_cache(r):
