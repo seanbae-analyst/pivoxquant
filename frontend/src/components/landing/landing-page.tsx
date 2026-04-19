@@ -50,25 +50,25 @@ const features = [
   {
     id: "01",
     icon: BarChart3,
-    title: "Quant Scoring",
+    title: "Morning Brief",
     description:
-      "25 technical + 13 fundamental indicators score every stock 0-100. Data over opinion.",
+      "매일 아침 6시, 내 포트폴리오 기준 시장 요약 리포트. 밤사이 뉴스·지표·섹터 로테이션 5분 안에.",
     href: "/features/quant-scoring",
   },
   {
     id: "02",
     icon: Shield,
-    title: "7-Layer Risk Defense",
+    title: "Weekly Investor Memo",
     description:
-      "VaR, correlation limits, VIX hedge, sector caps, drawdown guards. Protect capital first.",
+      "일요일마다 맥킨지 스타일 5페이지 PDF가 메일함에 도착합니다. 분석팀 대신 주간 메모를.",
     href: "/features/risk-defense",
   },
   {
     id: "03",
     icon: Brain,
-    title: "AI Assistant",
+    title: "Earnings Pre-Brief",
     description:
-      "Claude explains your portfolio in plain language. No jargon, no hype.",
+      "내 종목 실적 발표 30분 전, 예상 질문 TOP 5와 관찰 포인트. 컨퍼런스콜 준비 완료.",
     href: "/features/ai-assistant",
   },
 ];
@@ -83,21 +83,21 @@ const stats = [
 const steps = [
   {
     step: "01",
-    title: "Sign Up & Profile",
+    title: "CFO 프로필 등록",
     description:
-      "Answer 20 questions about your investing style. Get matched to one of 8 investor types with customized parameters.",
+      "20문항 온보딩으로 당신의 투자 스타일과 위험 허용도를 설정합니다. 당신이 CFO, 저희는 애널리스트 팀.",
   },
   {
     step: "02",
-    title: "Connect Portfolio",
+    title: "포트폴리오 연동",
     description:
-      "Link your Alpaca account (US) or KIS account (Korea), or add positions manually. We support both markets.",
+      "Alpaca(미국) 또는 KIS(한국) 계좌를 연결하거나 직접 입력. 분석팀이 당신의 장부를 인수합니다.",
   },
   {
     step: "03",
-    title: "AI Analyzes & Monitors",
+    title: "리포트를 받아보세요",
     description:
-      "58 quant models analyze continuously. 7 layers monitor your capital. AI helps you understand the data.",
+      "매일 아침 Morning Brief, 매주 일요일 5p 메모, 실적 전 프리브리프. 당신이 자는 동안 리포트가 만들어집니다.",
   },
 ];
 
@@ -107,52 +107,62 @@ const pricingPlans = [
     price: "0",
     currency: "",
     period: "",
-    description: "Get started with essential tools",
+    description: "맛보기 · 월 3개",
     features: [
-      "5 stock analysis per day",
-      "Basic quant scoring",
-      "1 investor profile",
-      "Paper trading",
-      "Community access",
+      "Brag Card (월 1회)",
+      "실적 캘린더",
+      "관심종목 핫리스트",
     ],
-    cta: "Get Started Free",
+    cta: "무료 시작",
     highlighted: false,
   },
   {
     name: "Pro",
     price: "9,900",
     currency: "\u20a9",
-    period: "/mo",
-    description: "For serious individual investors",
-    originalPrice: "14,900",
+    period: "/월",
+    description: "데일리 리서치 데스크",
     features: [
-      "Unlimited stock analysis",
-      "Full 58-model scoring",
-      "7-layer risk defense",
-      "AI Assistant conversations",
-      "CAN SLIM screener",
-      "Real-time alerts",
-      "US + KR markets",
+      "Morning Brief · Evening Wrap",
+      "Weekly Investor Memo (PDF)",
+      "Earnings Pre-Brief",
+      "Thesis Tracker",
+      "Red/Green Alert",
     ],
-    cta: "Start Pro Trial",
-    highlighted: true,
+    cta: "Pro로 구독",
+    highlighted: false,
   },
   {
     name: "Premium",
     price: "19,900",
     currency: "\u20a9",
-    period: "/mo",
-    description: "Institutional-grade tools for power users",
+    period: "/월",
+    description: "분기 리포트 + 시장 이벤트",
     features: [
-      "Everything in Pro",
-      "Auto-trading (Alpaca + KIS)",
-      "Advanced backtesting",
-      "Custom quant models",
-      "Priority AI assistant",
-      "API access",
-      "Dedicated support",
+      "Pro 전부 포함",
+      "FOMC Playbook · CPI Brief",
+      "Sector Monthly",
+      "Tax Lot Harvest · IPO Radar",
+      "Yearly Wrapped",
     ],
-    cta: "Start Premium Trial",
+    cta: "Premium으로 구독",
+    highlighted: true,
+  },
+  {
+    name: "Elite",
+    price: "29,900",
+    currency: "\u20a9",
+    period: "/월",
+    description: "ChatGPT Plus 가격, 다른 제품",
+    features: [
+      "Premium 전부 포함",
+      "10-K Personal (분기 사업보고서)",
+      "Annual Letter to Self",
+      "Commute Podcast (음성)",
+      "Quarterly Self-Interview",
+      "Peer Benchmark · Stress Test",
+    ],
+    cta: "Elite로 구독",
     highlighted: false,
   },
 ];
@@ -375,19 +385,19 @@ export default function LandingPage() {
               {/* Eyebrow — neutral */}
               <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-slate-200 bg-white mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
-                <span className="text-[11px] font-medium text-slate-600 tracking-wide uppercase">Beta · Now Open</span>
+                <span className="text-[11px] font-medium text-slate-600 tracking-wide uppercase">당신의 전속 애널리스트 팀 · Beta</span>
               </motion.div>
 
               {/* Headline — no gradient */}
               <motion.h1 variants={fadeUp} className="text-[2rem] sm:text-5xl lg:text-[3.25rem] font-semibold leading-[1.1] tracking-tight text-slate-900 mb-5 break-keep">
-                퀀트 + AI로 보는<br />
-                미국·한국 주식.
+                ChatGPT는 물어야 답합니다.<br />
+                PivoxQuant는 자는 동안 씁니다.
               </motion.h1>
 
               {/* Subtitle */}
               <motion.p variants={fadeUp} className="text-base md:text-lg text-slate-600 leading-relaxed mb-8">
-                58개 퀀트 모델, 7-Layer 리스크 방어, 실시간 시그널.
-                의견이 아니라 데이터 기반 분석을 제공합니다.
+                매일 아침 6시, 당신 책상에 투자 보고서가 도착합니다.
+                Morning Brief, 일요일 5페이지 메모, 실적 프리브리프 — 당신은 CFO, 리포트는 저희가 씁니다.
               </motion.p>
 
               {/* CTAs — neutral only */}
@@ -396,14 +406,14 @@ export default function LandingPage() {
                   href="/signup"
                   className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors active:scale-[0.98]"
                 >
-                  Start Free
+                  첫 리포트 받아보기
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <a
                   href="#dashboard-preview"
                   className="inline-flex items-center gap-2 h-11 px-5 rounded-md border border-slate-200 bg-white text-slate-800 text-sm font-medium hover:border-slate-400 transition-colors active:scale-[0.98]"
                 >
-                  View Dashboard
+                  샘플 리포트 보기
                 </a>
                 <Link
                   href="/simulator/what-if"
@@ -533,12 +543,12 @@ export default function LandingPage() {
       <section id="features" className="py-20 md:py-28 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-14">
-            <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">Core capabilities</p>
+            <p className="text-[11px] font-medium text-slate-500 mb-3 uppercase tracking-wider">당신의 리서치 데스크</p>
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-3 tracking-tight">
-              세 가지 레이어. 한 개의 결론.
+              챗봇이 아닙니다. 리포트가 나옵니다.
             </h2>
             <p className="text-base text-slate-600 leading-relaxed">
-              시그널, 리스크, 설명. 기관급 퀀트 파이프라인을 한 화면으로.
+              Seeking Alpha가 만 명에게 보내는 리포트를, 당신 포트폴리오 한 명을 위해. 맥킨지 메모 포맷으로.
             </p>
           </motion.div>
 
@@ -620,7 +630,7 @@ export default function LandingPage() {
                       { icon: Activity, label: "Market", active: false },
                       { icon: Target, label: "Signals", active: false },
                       { icon: Shield, label: "Risk", active: false },
-                      { icon: Brain, label: "AI Assistant", active: false },
+                      { icon: Brain, label: "Reports", active: false },
                       { icon: Bell, label: "Alerts", active: false },
                       { icon: Settings, label: "Settings", active: false },
                     ].map((item) => (
@@ -750,13 +760,13 @@ export default function LandingPage() {
               명확한 요금제.
             </h2>
             <p className="text-base text-slate-600 leading-relaxed">
-              무료로 시작. 필요할 때 업그레이드.
+              같은 가격, 다른 제품. ChatGPT는 물어야 답하고, PivoxQuant는 매일 만듭니다.
             </p>
           </motion.div>
 
           <motion.div
             {...motionProps(staggerContainer)}
-            className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
           >
             {pricingPlans.map((plan) => (
               <motion.div
@@ -791,11 +801,6 @@ export default function LandingPage() {
                       </span>
                     )}
                   </div>
-                  {plan.originalPrice && (
-                    <p className="text-xs text-accent mt-1.5 numeric">
-                      Intro — normally {plan.currency}{plan.originalPrice}/mo
-                    </p>
-                  )}
                 </div>
 
                 <ul className="space-y-2.5 mb-7">
@@ -831,15 +836,16 @@ export default function LandingPage() {
           <motion.div {...motionProps(fadeUp)}>
             <Star className="w-5 h-5 text-accent mb-6" strokeWidth={1.5} />
             <blockquote className="text-2xl md:text-[2rem] font-medium text-white leading-snug mb-8 tracking-tight">
-              미국과 한국 시장을 한 화면에서. 기관 수준 리스크 관리로.
+              &ldquo;당신은 당신 포트폴리오의 CFO입니다.<br />
+              리서치 데스크는 저희가 운영합니다.&rdquo;
             </blockquote>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-md bg-slate-800 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 text-white" strokeWidth={1.5} />
               </div>
               <div>
-                <p className="text-xs font-medium text-white">PivoxQuant Team</p>
-                <p className="text-[11px] text-slate-400">Built for investors, by investors</p>
+                <p className="text-xs font-medium text-white">PivoxQuant Analyst Desk</p>
+                <p className="text-[11px] text-slate-400">24시간 운영 · 월 16개 리포트 발행</p>
               </div>
             </div>
           </motion.div>
@@ -851,17 +857,17 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...motionProps(fadeUp)}>
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-4 tracking-tight">
-              오늘부터 포트폴리오를 지키세요.
+              내일 아침 6시, 첫 리포트가 메일함에.
             </h2>
             <p className="text-base text-slate-600 mb-8 max-w-xl leading-relaxed">
-              퀀트 모델과 리스크 방어로 미국·한국 시장을 동시에 관리합니다.
+              CFO 프로필 등록 · 포트폴리오 연동 · 리포트 구독. 5분이면 시작됩니다.
             </p>
             <div className="flex flex-wrap gap-2.5">
               <Link
                 href="/signup"
                 className="inline-flex items-center gap-2 h-11 px-6 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors active:scale-[0.98]"
               >
-                Get Started Free
+                첫 리포트 받아보기
                 <ArrowRight className="w-4 h-4" />
               </Link>
               <a
@@ -890,7 +896,7 @@ export default function LandingPage() {
                 </span>
               </Link>
               <p className="text-sm text-slate-500 leading-relaxed max-w-xs">
-                미국·한국 주식을 위한 퀀트 + AI 투자 플랫폼.
+                당신의 전속 리서치 데스크. 매일 아침 6시, 리포트가 도착합니다.
               </p>
             </div>
 

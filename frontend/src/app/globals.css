@@ -49,6 +49,12 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-heading);
+  --font-serif: var(--font-serif);
+
+  /* Report tokens — Artifact / Memo / PDF surfaces */
+  --color-report-paper: var(--report-paper);
+  --color-report-ink: var(--report-ink);
+  --color-report-rule: var(--report-rule);
 
   /* Semantic — price direction (KR default) */
   --color-up: var(--up);
@@ -105,6 +111,14 @@
   --success: #1a7a4c;
   --warning: #b45309;
   --info: #1d4ed8;
+
+  /* Report surface — Memo / PDF / Artifact (McKinsey × Goldman)
+     Light-theme ivory paper, regardless of app dark mode. Use on
+     printable/export views and archive thumbnails. */
+  --report-paper: #FAF8F3;        /* off-white ivory (not pure #fff) */
+  --report-ink:   #1A1A1A;        /* printed-ink black (not pure #000) */
+  --report-rule:  #D9D4C7;        /* hairline rule, warm-gray */
+  --report-tldr-bg: #F1EEE5;      /* TL;DR box — a shade darker than paper */
 
   /* Typography scale — 8px-aligned */
   --font-size-xs: 0.75rem;          /* 12px */
@@ -178,6 +192,14 @@
   --down: #3b82f6;
   --neutral: #94a3b8;
 
+  /* Report surface in dark mode — Memo paper stays ivory even here
+     (we do NOT invert: printed reports don't invert), but the chrome
+     around them uses dark-tuned rule/tldr for hover/border of archive cards. */
+  --report-paper: #FAF8F3;
+  --report-ink:   #1A1A1A;
+  --report-rule:  #2a2d36;        /* archive-card border on dark chrome */
+  --report-tldr-bg: #1a1d24;      /* TL;DR box when rendered on dark */
+
   --chart-1: #e2e8f0;
   --chart-2: #d4a558;
   --chart-3: #94a3b8;
@@ -213,6 +235,14 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading), var(--font-sans), "Pretendard Variable", system-ui, sans-serif;
     letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+  /* Opt-in Serif for Artifact/Memo surfaces only — apply via .report-surface
+     or .font-serif. Keeps existing SaaS UI untouched. */
+  .report-surface h1, .report-surface h2, .report-surface h3,
+  .font-serif, h1.font-serif, h2.font-serif, h3.font-serif {
+    font-family: var(--font-serif), "Source Serif 4", "EB Garamond", "Iowan Old Style", "Apple Garamond", Georgia, "Times New Roman", serif;
+    letter-spacing: -0.015em;
     font-weight: 600;
   }
   /* Numbers — always tabular for financial UI */
@@ -536,6 +566,56 @@
 }
 .pnl-glow-negative {
   border-left: 2px solid var(--down);
+}
+
+/* ══════════════════════════════════════════════════════════
+   Report surface — Artifact / Memo / PDF / Archive thumbnails
+   "User as CFO": McKinsey memo + Goldman research layout.
+   Apply `.report-surface` on the outermost element of any
+   printable / exportable document. Never on app chrome.
+   ══════════════════════════════════════════════════════════ */
+.report-surface {
+  background: var(--report-paper);
+  color: var(--report-ink);
+  font-family: var(--font-sans), "Pretendard Variable", system-ui, sans-serif;
+  --foreground: var(--report-ink);
+  --muted-foreground: #5a5a5a;
+  --border: var(--report-rule);
+}
+.report-surface .report-rule {
+  border: 0;
+  border-top: 1px solid var(--report-rule);
+  margin: 1rem 0;
+}
+.report-surface .report-meta {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5a5a5a;
+}
+.report-surface .report-tldr {
+  background: var(--report-tldr-bg);
+  border-left: 2px solid var(--report-ink);
+  padding: 1rem 1.25rem;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.report-surface .report-footnote {
+  border-top: 1px solid var(--report-rule);
+  padding-top: 0.75rem;
+  font-size: 11px;
+  color: #5a5a5a;
+}
+
+/* Archive card — dashboard "Past Reports" grid. Chrome-side
+   (not inside .report-surface); shows ivory thumbnail inside
+   the regular dark/light app card. */
+.report-archive-thumb {
+  background: var(--report-paper);
+  border-bottom: 1px solid var(--report-rule);
+  aspect-ratio: 3 / 4;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Legacy .tabular — keep */

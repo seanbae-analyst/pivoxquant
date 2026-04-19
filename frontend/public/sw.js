@@ -195,7 +195,7 @@ async function staleWhileRevalidate(request, cacheName, maxAge) {
   return fetchPromise;
 }
 
-async function networkFirst(request, cacheName, maxAge) {
+async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
 
   try {

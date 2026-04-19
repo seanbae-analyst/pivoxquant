@@ -11,6 +11,7 @@
     "autotrade": "자동매매",
     "risk": "리스크",
     "alerts": "알림",
+    "reports": "나의 리포트",
     "settings": "설정",
     "upgrade": "Pro 업그레이드"
   },
@@ -202,10 +203,15 @@
       "free": "무료",
       "pro": "Pro",
       "premium": "Premium",
+      "elite": "Elite",
       "perMonth": "/월",
+      "proPrice": "₩9,900",
+      "premiumPrice": "₩19,900",
+      "elitePrice": "₩29,900",
       "startFree": "무료 시작",
       "startPro": "Pro 시작",
-      "startPremium": "Premium 시작"
+      "startPremium": "Premium 시작",
+      "startElite": "Elite 시작"
     }
   },
   "errors": {
@@ -469,6 +475,51 @@
       "title": "면책 고지",
       "ko": "본 시뮬레이션은 과거 데이터 기반 계산이며, 미래 수익을 보장하지 않습니다. 배당·세금·수수료는 반영되지 않습니다. 투자자문이 아닙니다.",
       "en": "This simulation is based on past data only. Past performance does not guarantee future results. Dividends, taxes, and fees are not included. Not investment advice."
+    }
+  },
+  "reports": {
+    "title": "나의 리포트",
+    "subtitle": "AI가 당신을 위해 만든 리포트 라이브러리",
+    "empty": {
+      "title": "아직 리포트가 없어요",
+      "description": "첫 리포트는 이번 주 일요일에 도착합니다."
+    },
+    "filters": {
+      "type": "유형",
+      "period": "기간",
+      "typeAll": "전체",
+      "typeWeekly": "주간 메모",
+      "typeMorning": "아침 브리핑",
+      "typeEarnings": "실적 프리브리프",
+      "typeMonthly": "월간 카드",
+      "typeQuarterly": "분기 리뷰",
+      "typeRisk": "리스크 리포트",
+      "period30": "최근 30일",
+      "period90": "최근 90일",
+      "periodAll": "전체"
+    },
+    "card": {
+      "new": "NEW",
+      "download": "다운로드",
+      "preview": "미리보기"
+    },
+    "preview": {
+      "title": "리포트 미리보기",
+      "close": "닫기",
+      "download": "PDF 다운로드",
+      "share": "공유",
+      "shareKakao": "카카오톡",
+      "shareInsta": "인스타그램",
+      "notAvailable": "미리보기를 준비 중입니다"
+    },
+    "badge": {
+      "weeklyMemo": "주간 메모",
+      "morningBrief": "아침 브리핑",
+      "earningsPrebrief": "실적 프리브리프",
+      "monthlyBrag": "월간 카드",
+      "quarterlyReview": "분기 리뷰",
+      "riskReport": "리스크 리포트",
+      "custom": "리포트"
     }
   }
 }

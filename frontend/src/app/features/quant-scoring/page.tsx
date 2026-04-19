@@ -51,7 +51,7 @@ const pillars = [
     title: "Technical",
     count: "25 signals",
     question: "Is the chart saying buy or sell?",
-    color: "bg-violet-50 text-violet-600",
+    color: "bg-accent/10 text-accent",
   },
   {
     icon: DollarSign,
@@ -65,7 +65,7 @@ const pillars = [
     title: "Sentiment",
     count: "News tone",
     question: "What are people saying?",
-    color: "bg-pink-50 text-pink-600",
+    color: "bg-rose-50 text-rose-600",
   },
   {
     icon: Brain,
@@ -122,8 +122,8 @@ export default function QuantScoringPage() {
 
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 mb-6">
-            <BarChart3 className="w-7 h-7 text-violet-600" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
+            <BarChart3 className="w-7 h-7 text-accent" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
             How <span className="gradient-text">Quant Scoring</span> Works
@@ -183,7 +183,7 @@ export default function QuantScoringPage() {
                     <Icon className={`w-5 h-5 ${pillar.color.split(" ")[1]}`} />
                   </div>
                   <h3 className="text-base font-semibold text-slate-900 mb-1">{pillar.title}</h3>
-                  <p className="text-xs font-medium text-violet-600 mb-2">{pillar.count}</p>
+                  <p className="text-xs font-medium text-accent mb-2">{pillar.count}</p>
                   <p className="text-sm text-slate-500 italic">&ldquo;{pillar.question}&rdquo;</p>
                 </div>
               );
@@ -202,7 +202,7 @@ export default function QuantScoringPage() {
             {technicalIndicators.map((ind) => (
               <div key={ind.name} className="flex items-start gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100">
                 <div className="mt-0.5 shrink-0">
-                  <CheckCircle2 className="w-4.5 h-4.5 text-violet-500" />
+                  <CheckCircle2 className="w-4.5 h-4.5 text-accent" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{ind.name}</p>

@@ -28,7 +28,7 @@ const layers = [
     question: "How much could I lose today?",
     description:
       "Value at Risk calculates your worst-case daily loss at 95% confidence. If your VaR exceeds your comfort zone, you get an immediate alert so you can act before losses pile up.",
-    color: "text-violet-600 bg-violet-50",
+    color: "text-accent bg-accent/10",
   },
   {
     number: 2,
@@ -46,7 +46,7 @@ const layers = [
     question: "Is the market scared?",
     description:
       "The VIX measures market fear. When it spikes, this layer automatically suggests raising your cash position to weather the storm.",
-    color: "text-pink-600 bg-pink-50",
+    color: "text-amber-600 bg-amber-50",
   },
   {
     number: 4,
@@ -107,8 +107,8 @@ export default function RiskDefensePage() {
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-20">
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-violet-50 mb-6">
-            <Shield className="w-7 h-7 text-violet-600" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
+            <Shield className="w-7 h-7 text-accent" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
             7-Layer <span className="gradient-text">Risk Defense</span>
@@ -154,7 +154,7 @@ export default function RiskDefensePage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded">
+                        <span className="text-xs font-bold text-accent bg-accent/10 px-2 py-0.5 rounded">
                           Layer {layer.number}
                         </span>
                         <h3 className="text-base font-semibold text-slate-900">{layer.title}</h3>
