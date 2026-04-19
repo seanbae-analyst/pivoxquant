@@ -1,5 +1,8 @@
-// PivoxQuant Service Worker v2 (B3 fix: portfolio/watchlist/alerts moved to network-first)
-const CACHE_VERSION = "sp-v2";
+// PivoxQuant Service Worker v3 (artifacts + growth + alt-data + broker policy)
+// v2 → v3: added per-user artefact/growth/alt-data/broker routing.
+// Bumping the version string evicts the v2 caches via the activate step
+// so users never see a stale pre-policy response after upgrade.
+const CACHE_VERSION = "sp-v3";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
@@ -8,17 +11,24 @@ const OFFLINE_URL = "/offline.html";
 const PRECACHE_ASSETS = [OFFLINE_URL];
 
 // ── Cache strategy config ──────────────────────────────────────
+// NETWORK_ONLY covers anything sensitive (auth), live (realtime/daytrade),
+// LLM-generated (/api/ai), or inherently user-specific + mutating enough
+// that a stale cache is worse than an offline error. Broker KIS endpoints
+// land here because the payload includes encrypted account state.
 const NETWORK_ONLY_PATTERNS = [
   /\/api\/auth\//,
   /\/api\/ai\//,
   /\/api\/daytrade\//,
   /\/api\/realtime\//,
   /\/api\/autotrade\//,
+  /\/api\/broker\/kis\//,
 ];
 
 const CACHE_FIRST_PATTERNS = [/\/api\/morning-brief/];
 
-// Read-mostly endpoints (no user mutations): SWR safe
+// Read-mostly endpoints (no user mutations): SWR safe.
+// FRED macro data refreshes daily so a 2-hour SWR window is plenty, and
+// we eat the cache hit on repeated macro-page visits.
 const STALE_WHILE_REVALIDATE_CONFIG = {
   "/api/market/overview": 2 * 60 * 1000,
   "/api/sectors": 2 * 60 * 1000,
@@ -26,10 +36,11 @@ const STALE_WHILE_REVALIDATE_CONFIG = {
   "/api/discover": 30 * 60 * 1000,
   "/api/profile": 60 * 60 * 1000,
   "/api/earnings": 15 * 60 * 1000,
+  "/api/alt-data/macro": 2 * 60 * 60 * 1000,
 };
 
-// Write-affected endpoints (have POST/DELETE/PUT): MUST be network-first
-// to avoid returning stale cache after mutations (B3 bug fix)
+// Write-affected / per-user endpoints: network-first with cache fallback
+// so mutations reflect immediately AND users still see something offline.
 const NETWORK_FIRST_CONFIG = {
   "/api/portfolio": 5 * 60 * 1000,
   "/api/portfolio/analytics": 5 * 60 * 1000,
@@ -40,6 +51,9 @@ const NETWORK_FIRST_CONFIG = {
   "/api/signals": 5 * 60 * 1000,
   "/api/scan": 5 * 60 * 1000,
   "/api/news": 15 * 60 * 1000,
+  "/api/artifacts": 5 * 60 * 1000,
+  "/api/growth": 5 * 60 * 1000,
+  "/api/alt-data/kr": 5 * 60 * 1000,
 };
 
 // ── Install ────────────────────────────────────────────────────
