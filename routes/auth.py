@@ -324,36 +324,46 @@ def google_callback():
     if not userinfo:
         return redirect(f"{origin}/login?error=google_failed")
 
-    google_id = userinfo["sub"]
-    email = userinfo["email"].strip().lower()
-    name = userinfo.get("name", email.split("@")[0])
-    avatar = userinfo.get("picture")
+    try:
+        google_id = userinfo.get("sub")
+        email = (userinfo.get("email") or "").strip().lower()
+        if not google_id or not email:
+            return redirect(f"{origin}/login?error=google_failed")
+        name = userinfo.get("name") or email.split("@")[0]
+        avatar = userinfo.get("picture")
 
-    # Find existing user by google_id or email
-    user = User.query.filter_by(google_id=google_id).first()
-    if not user:
-        user = User.query.filter_by(email=email).first()
-        if user:
-            # Link existing email account with Google
-            user.google_id = google_id
-            if not user.oauth_provider:
-                user.oauth_provider = "google"
-            if avatar and not user.avatar_url:
-                user.avatar_url = avatar
-        else:
-            # Create new Google user
-            user = User(
-                email=email,
-                name=name,
-                google_id=google_id,
-                oauth_provider="google",
-                avatar_url=avatar,
-            )
-            db.session.add(user)
-        db.session.commit()
+        # Find existing user by google_id or email
+        user = User.query.filter_by(google_id=google_id).first()
+        if not user:
+            user = User.query.filter_by(email=email).first()
+            if user:
+                # Link existing email account with Google
+                user.google_id = google_id
+                if not user.oauth_provider:
+                    user.oauth_provider = "google"
+                if avatar and not user.avatar_url:
+                    user.avatar_url = avatar
+            else:
+                # Create new Google user
+                user = User(
+                    email=email,
+                    name=name,
+                    google_id=google_id,
+                    oauth_provider="google",
+                    avatar_url=avatar,
+                )
+                db.session.add(user)
+            db.session.commit()
 
-    session.clear()  # Session fixation 방어
-    login_user(user, remember=True)
+        session.clear()  # Session fixation 방어
+        login_user(user, remember=True)
+    except Exception:
+        logger.exception("Google OAuth user-provisioning error (userinfo_keys=%s)", list(userinfo.keys()) if isinstance(userinfo, dict) else "n/a")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return redirect(f"{origin}/login?error=google_user_error")
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
@@ -413,46 +423,54 @@ def kakao_callback():
         logger.exception("Kakao profile fetch error")
         return redirect(f"{origin}/login?error=kakao_failed")
 
-    kakao_id = str(profile.get("id", ""))
-    if not kakao_id:
-        return redirect(f"{origin}/login?error=kakao_failed")
+    try:
+        kakao_id = str(profile.get("id", ""))
+        if not kakao_id:
+            return redirect(f"{origin}/login?error=kakao_failed")
 
-    kakao_account = profile.get("kakao_account") or {}
-    kakao_profile = kakao_account.get("profile") or {}
+        kakao_account = profile.get("kakao_account") or {}
+        kakao_profile = kakao_account.get("profile") or {}
 
-    email = (kakao_account.get("email") or "").strip().lower()
-    name = kakao_profile.get("nickname") or ""
-    avatar = kakao_profile.get("profile_image_url")
+        email = (kakao_account.get("email") or "").strip().lower()
+        name = kakao_profile.get("nickname") or ""
+        avatar = kakao_profile.get("profile_image_url")
 
-    # If Kakao didn't provide an email, generate a placeholder
-    if not email:
-        email = f"kakao_{kakao_id}@kakao.local"
+        # If Kakao didn't provide an email, generate a placeholder
+        if not email:
+            email = f"kakao_{kakao_id}@kakao.local"
 
-    # Find existing user by kakao_id or email
-    user = User.query.filter_by(kakao_id=kakao_id).first()
-    if not user:
-        user = User.query.filter_by(email=email).first()
-        if user:
-            # Link existing account with Kakao
-            user.kakao_id = kakao_id
-            if not user.oauth_provider:
-                user.oauth_provider = "kakao"
-            if avatar and not user.avatar_url:
-                user.avatar_url = avatar
-        else:
-            # Create new Kakao user
-            user = User(
-                email=email,
-                name=name or email.split("@")[0],
-                kakao_id=kakao_id,
-                oauth_provider="kakao",
-                avatar_url=avatar,
-            )
-            db.session.add(user)
-        db.session.commit()
+        # Find existing user by kakao_id or email
+        user = User.query.filter_by(kakao_id=kakao_id).first()
+        if not user:
+            user = User.query.filter_by(email=email).first()
+            if user:
+                # Link existing account with Kakao
+                user.kakao_id = kakao_id
+                if not user.oauth_provider:
+                    user.oauth_provider = "kakao"
+                if avatar and not user.avatar_url:
+                    user.avatar_url = avatar
+            else:
+                # Create new Kakao user
+                user = User(
+                    email=email,
+                    name=name or email.split("@")[0],
+                    kakao_id=kakao_id,
+                    oauth_provider="kakao",
+                    avatar_url=avatar,
+                )
+                db.session.add(user)
+            db.session.commit()
 
-    session.clear()  # Session fixation 방어
-    login_user(user, remember=True)
+        session.clear()  # Session fixation 방어
+        login_user(user, remember=True)
+    except Exception:
+        logger.exception("Kakao OAuth user-provisioning error (profile_keys=%s)", list(profile.keys()) if isinstance(profile, dict) else "n/a")
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        return redirect(f"{origin}/login?error=kakao_user_error")
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
