@@ -417,11 +417,11 @@ def kakao_callback():
     if not kakao_id:
         return redirect(f"{origin}/login?error=kakao_failed")
 
-    kakao_account = profile.get("kakao_account", {})
-    kakao_profile = kakao_account.get("profile", {})
+    kakao_account = profile.get("kakao_account") or {}
+    kakao_profile = kakao_account.get("profile") or {}
 
-    email = kakao_account.get("email", "").strip().lower()
-    name = kakao_profile.get("nickname", "")
+    email = (kakao_account.get("email") or "").strip().lower()
+    name = kakao_profile.get("nickname") or ""
     avatar = kakao_profile.get("profile_image_url")
 
     # If Kakao didn't provide an email, generate a placeholder
