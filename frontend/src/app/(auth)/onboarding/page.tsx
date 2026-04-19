@@ -267,7 +267,7 @@ function SliderInput({
               flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all duration-200
               ${
                 Number(opt.value) === value
-                  ? "bg-[#8b5cf6] text-white shadow-lg shadow-purple-200/50"
+                  ? "bg-accent text-slate-900 shadow-lg shadow-accent/30"
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200"
               }
             `}
@@ -368,7 +368,7 @@ function ResultScreen({
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.2, ...SPRING }}
-        className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-[#8b5cf6] to-[#3b82f6] shadow-xl shadow-purple-200/40"
+        className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-950 border border-accent shadow-xl shadow-accent/20"
       >
         <span className="text-3xl">{"\u{1F3AF}"}</span>
       </motion.div>
@@ -432,7 +432,7 @@ function ResultScreen({
         transition={{ delay: 1.0 }}
         onClick={onContinue}
         disabled={loading}
-        className="mt-10 flex w-full max-w-sm items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#8b5cf6] to-[#3b82f6] px-8 py-4 text-base font-bold text-white shadow-lg shadow-purple-200/40 transition-all duration-300 hover:shadow-xl hover:shadow-purple-200/50 active:scale-[0.98] disabled:opacity-60"
+        className="mt-10 flex w-full max-w-sm items-center justify-center gap-2 rounded-full bg-slate-950 px-8 py-4 text-base font-bold text-white shadow-lg shadow-accent/20 transition-all duration-300 hover:shadow-xl hover:shadow-accent/30 hover:bg-slate-900 active:scale-[0.98] disabled:opacity-60"
         style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
       >
         {loading ? (
@@ -780,7 +780,7 @@ export default function OnboardingPage() {
               flex items-center gap-1 rounded-full px-7 py-2.5 text-sm font-bold transition-all duration-300
               ${
                 isStepValid
-                  ? "bg-[#8b5cf6] text-white shadow-md shadow-purple-200/40 hover:bg-[#7c3aed] hover:shadow-lg active:scale-[0.97]"
+                  ? "bg-slate-950 text-white shadow-md shadow-accent/20 hover:bg-slate-800 hover:shadow-lg active:scale-[0.97]"
                   : "bg-slate-100 text-slate-400 cursor-not-allowed"
               }
             `}

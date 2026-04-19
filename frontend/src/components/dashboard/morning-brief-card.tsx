@@ -143,7 +143,7 @@ function BriefBody({ brief }: { brief: MorningBriefContent }) {
                 key={`${event.ticker}-${i}`}
                 className="flex items-start gap-2 text-xs text-slate-700"
               >
-                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-purple-400" />
+                <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-accent" />
                 <span className="font-medium">
                   <span className="font-mono text-slate-900">
                     {event.ticker}
@@ -163,9 +163,9 @@ function BriefBody({ brief }: { brief: MorningBriefContent }) {
 
       {/* AI Insight */}
       {insight && (
-        <section className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 px-4 py-3">
+        <section className="rounded-xl bg-muted border-l-2 border-accent px-4 py-3">
           <p className="flex items-start gap-2 text-xs text-slate-700">
-            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-500" />
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
             <span className="leading-relaxed">{insight}</span>
           </p>
         </section>
@@ -245,7 +245,7 @@ export function MorningBriefCard() {
         </div>
         <Link
           href="/morning-brief"
-          className="hidden sm:inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 transition-colors"
+          className="hidden sm:inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-accent/10 transition-colors"
         >
           {t("morningBrief.viewAll")}
           <ArrowRight className="h-3 w-3" />

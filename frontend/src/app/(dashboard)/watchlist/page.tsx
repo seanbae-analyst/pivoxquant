@@ -120,7 +120,7 @@ function WatchlistRow({
   onClick,
 }: {
   item: WatchlistItem;
-  onRemove: (id: number) => void;
+  onRemove: () => void;
   onClick: () => void;
 }) {
   const [removing, setRemoving] = useState(false);
@@ -140,7 +140,7 @@ function WatchlistRow({
     setRemoving(true);
     try {
       await apiFetch(API.watchlist.remove(item.id), { method: "DELETE" });
-      onRemove(item.id);
+      onRemove();
     } catch {
       toast.error("관심종목에서 제거하지 못했습니다");
     } finally {
@@ -305,7 +305,7 @@ export default function WatchlistPage() {
 
   /* ── Remove from watchlist (API call already done in WatchlistRow) ── */
   const handleRemove = useCallback(
-    async (_id: number) => {
+    async () => {
       await mutate();
     },
     [mutate],
@@ -340,7 +340,7 @@ export default function WatchlistPage() {
               className={cn(
                 "w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4",
                 "text-sm text-slate-900 placeholder:text-slate-400",
-                "transition-all focus:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-100",
+                "transition-all focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/20",
               )}
             />
           </div>

@@ -442,7 +442,7 @@ export default function StockDetailPage() {
                 className="flex items-start gap-3 rounded-xl p-3 transition-colors hover:bg-slate-50 group"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 line-clamp-2 group-hover:text-violet-600 transition-colors">
+                  <p className="text-sm font-medium text-slate-900 line-clamp-2 group-hover:text-accent transition-colors">
                     {item.title}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
@@ -455,7 +455,7 @@ export default function StockDetailPage() {
                     </span>
                   </div>
                 </div>
-                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-300 mt-0.5 group-hover:text-violet-400 transition-colors" />
+                <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-300 mt-0.5 group-hover:text-accent transition-colors" />
               </a>
             ))}
           </div>

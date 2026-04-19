@@ -39,8 +39,8 @@ export function PushPermission() {
   return (
     <div className="fixed top-20 right-4 z-50 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:right-6">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100">
-          <Bell className="h-5 w-5 text-violet-600" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10">
+          <Bell className="h-5 w-5 text-accent" />
         </div>
         <div className="flex-1">
           <h3 className="mb-1 text-sm font-bold text-slate-900">

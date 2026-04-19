@@ -176,7 +176,7 @@ export function MetricCards({ portfolio, analytics, isLoading }: MetricCardsProp
       <MetricCard
         label={t("dashboard.metrics.portfolioValue")}
         icon={<WalletIcon />}
-        iconBg="bg-violet-50 text-violet-600"
+        iconBg="bg-accent/10 text-accent"
         value={fmtValue(totalValue)}
         sub={positions.length > 0 ? `${positions.length}${t("dashboard.metrics.positions")}` : t("dashboard.metrics.noPositionsYet")}
       />

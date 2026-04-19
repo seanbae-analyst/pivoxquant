@@ -84,7 +84,7 @@ function AlertIcon({ type }: { type: string }) {
       return <AlertTriangle className="h-4 w-4 text-amber-500" />;
     case "trade":
     case "auto_trade":
-      return <Zap className="h-4 w-4 text-purple-500" />;
+      return <Zap className="h-4 w-4 text-accent" />;
     default:
       return <Info className="h-4 w-4 text-blue-500" />;
   }
@@ -106,7 +106,7 @@ function AlertRow({
       className={cn(
         "flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors",
         "hover:bg-slate-50 active:bg-slate-100",
-        !alert.is_read && "bg-violet-50/60",
+        !alert.is_read && "bg-accent/5",
       )}
     >
       {/* Icon */}
@@ -128,7 +128,7 @@ function AlertRow({
         </p>
         <div className="flex items-center gap-2 mt-1">
           {alert.ticker && (
-            <span className="text-xs font-semibold text-purple-600">
+            <span className="text-xs font-semibold text-accent">
               {alert.ticker}
             </span>
           )}
@@ -140,7 +140,7 @@ function AlertRow({
 
       {/* Unread indicator */}
       {!alert.is_read && (
-        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-purple-500" />
+        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent" />
       )}
     </button>
   );
@@ -235,7 +235,7 @@ export default function AlertsPage() {
               알림
             </h1>
             {unreadCount > 0 && (
-              <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700 tabular-nums">
+              <span className="inline-flex items-center rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold text-accent tabular-nums">
                 {unreadCount}
               </span>
             )}

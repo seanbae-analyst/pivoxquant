@@ -64,7 +64,7 @@ export default function LoginPage() {
     <div className="flex flex-col items-center">
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#8b5cf6] to-[#3b82f6] shadow-lg shadow-purple-200/50">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-950 border border-accent shadow-lg shadow-accent/20">
           <svg
             width="24"
             height="24"

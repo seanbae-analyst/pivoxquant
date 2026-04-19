@@ -43,13 +43,22 @@ export function applyPriceMode(mode: PriceMode) {
 }
 
 export function usePriceMode(): [PriceMode, (m: PriceMode) => void] {
-  const [mode, setMode] = useState<PriceMode>(DEFAULT_MODE);
+  // Lazy initializer: read stored mode exactly once at mount. Safe on SSR
+  // because getPriceMode() returns DEFAULT_MODE when window is undefined,
+  // and the first client render will agree with the server render.
+  const [mode, setMode] = useState<PriceMode>(() => getPriceMode());
 
+  // Sync the <html data-price-mode="..."> attribute with React state.
+  // Runs on mount (in case the attribute wasn't set yet) and whenever mode
+  // changes via setPriceMode() locally.
   useEffect(() => {
-    const current = getPriceMode();
-    setMode(current);
-    applyPriceMode(current);
+    applyPriceMode(mode);
+  }, [mode]);
 
+  // Subscribe to external price-mode broadcasts (other tabs / sibling
+  // components). The setState inside the handler is a subscription callback,
+  // not a synchronous effect body call — allowed by react-hooks/set-state-in-effect.
+  useEffect(() => {
     const handler = (e: Event) => {
       const ce = e as CustomEvent<PriceMode>;
       if (ce.detail) setMode(ce.detail);
