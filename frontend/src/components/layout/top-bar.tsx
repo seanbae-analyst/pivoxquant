@@ -318,6 +318,16 @@ export function TopBar() {
                           {alertTypeIcon(alert.type)}
                         </span>
                         <div className="min-w-0 flex-1">
+                          {alert.ticker && (
+                            <div className="mb-0.5 flex items-baseline gap-1.5">
+                              <span className="truncate text-sm font-bold text-slate-900">
+                                {alert.name || alert.ticker}
+                              </span>
+                              <span className="shrink-0 font-mono text-[10px] text-slate-400">
+                                {alert.ticker}
+                              </span>
+                            </div>
+                          )}
                           <p
                             className={cn(
                               "text-sm leading-snug",

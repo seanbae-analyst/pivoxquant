@@ -31,6 +31,10 @@ from extensions import db
 from models import MorningBrief, Position, SignalCache, User, Watchlist
 from services.container import ai as ai_service
 from services.container import fetcher
+from services.name_resolver import (
+    lookup_name_from_signal_cache,
+    resolve_stock_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -156,15 +160,26 @@ def _market_summary(macro: dict) -> dict:
 
 
 def _portfolio_changes(positions: list[Position]) -> list[dict]:
-    """Per-position yesterday change; skips rows with no cached data."""
+    """Per-position yesterday change; skips rows with no cached data.
+
+    Name resolution: SignalCache first (broker-fresh), then the static
+    US/KR registry, then ticker as last-resort fallback. The name is
+    guaranteed to be a non-empty string so the frontend can render it.
+    """
     out: list[dict] = []
     for p in positions:
         change = _yesterday_change(p.ticker)
         if change is None:
             continue
+        cached_name = _signal_data(p.ticker).get("name")
+        name = (
+            cached_name
+            or resolve_stock_name(p.ticker)
+            or p.ticker
+        )
         out.append({
             "ticker":     p.ticker,
-            "name":       _signal_data(p.ticker).get("name", p.ticker),
+            "name":       name,
             "change_pct": change,
             "direction":  "up" if change > 0 else ("down" if change < 0 else "flat"),
         })
@@ -176,6 +191,9 @@ def _today_events(tickers: list[str]) -> list[dict]:
 
     Pulls from FMP earnings-calendar. No tickers => empty list (avoids the
     full-market variant, which is huge and expensive).
+
+    Each event carries a `name` field (company name, falls back to ticker)
+    so the frontend can render the name prominently without a second lookup.
     """
     if not tickers:
         return []
@@ -196,6 +214,13 @@ def _today_events(tickers: list[str]) -> list[dict]:
         except Exception as e:
             logger.debug(f"Earnings fetch failed for {ticker}: {e}")
             continue
+        # Prefer the broker-fresh cache, then static registry. Resolved
+        # once per ticker even if multiple rows match.
+        name = (
+            lookup_name_from_signal_cache(ticker)
+            or resolve_stock_name(ticker)
+            or ticker
+        )
         for r in rows:
             if not isinstance(r, dict):
                 continue
@@ -204,9 +229,10 @@ def _today_events(tickers: list[str]) -> list[dict]:
                 continue
             events.append({
                 "ticker":      ticker,
+                "name":        name,
                 "event_type":  "earnings",
                 "date":        d,
-                "description": f"{ticker} 실적 발표",
+                "description": f"{name} 실적 발표",
                 "event_time":  r.get("time") or "",
             })
             if len(events) >= 5:

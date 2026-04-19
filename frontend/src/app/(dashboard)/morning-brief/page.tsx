@@ -157,6 +157,7 @@ function ArchiveCard({ item }: { item: MorningBriefArchiveItem }) {
                 {topPortfolio.map((change) => {
                   const isUp = change.direction === "up";
                   const Icon = isUp ? TrendingUp : TrendingDown;
+                  const displayName = change.name || change.ticker;
                   return (
                     <div
                       key={change.ticker}
@@ -166,8 +167,11 @@ function ArchiveCard({ item }: { item: MorningBriefArchiveItem }) {
                           ? "bg-emerald-50 text-emerald-700"
                           : "bg-red-50 text-red-700",
                       )}
+                      title={change.ticker}
                     >
-                      <span className="font-mono">{change.ticker}</span>
+                      <span className="max-w-[9rem] truncate font-semibold">
+                        {displayName}
+                      </span>
                       <Icon className="h-3 w-3" />
                       <span className="tabular-nums">
                         {fmtPctSigned(change.change_pct)}
@@ -186,25 +190,31 @@ function ArchiveCard({ item }: { item: MorningBriefArchiveItem }) {
                 📅 {t("morningBrief.events")}
               </p>
               <ul className="space-y-1.5">
-                {brief.events.slice(0, 3).map((event, i) => (
-                  <li
-                    key={`${event.ticker}-${i}`}
-                    className="flex items-start gap-2 text-xs text-slate-700"
-                  >
-                    <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-accent" />
-                    <span>
-                      <span className="font-mono text-slate-900">
-                        {event.ticker}
-                      </span>{" "}
-                      {event.description}
-                      {event.event_time && (
-                        <span className="ml-1 text-slate-400">
-                          ({event.event_time})
+                {brief.events.slice(0, 3).map((event, i) => {
+                  const displayName = event.name || event.ticker;
+                  return (
+                    <li
+                      key={`${event.ticker}-${i}`}
+                      className="flex items-start gap-2 text-xs text-slate-700"
+                    >
+                      <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                      <span className="min-w-0">
+                        <span className="font-semibold text-slate-900">
+                          {displayName}
                         </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
+                        <span className="ml-1.5 font-mono text-[10px] text-slate-400">
+                          {event.ticker}
+                        </span>{" "}
+                        {event.description}
+                        {event.event_time && (
+                          <span className="ml-1 text-slate-400">
+                            ({event.event_time})
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           )}
@@ -287,6 +297,7 @@ function TodayBriefSection() {
           {topPortfolio.map((change) => {
             const isUp = change.direction === "up";
             const Icon = isUp ? TrendingUp : TrendingDown;
+            const displayName = change.name || change.ticker;
             return (
               <div
                 key={change.ticker}
@@ -294,8 +305,11 @@ function TodayBriefSection() {
                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
                   isUp ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700",
                 )}
+                title={change.ticker}
               >
-                <span className="font-mono">{change.ticker}</span>
+                <span className="max-w-[9rem] truncate font-semibold">
+                  {displayName}
+                </span>
                 <Icon className="h-3 w-3" />
                 <span className="tabular-nums">{fmtPctSigned(change.change_pct)}</span>
               </div>

@@ -1,5 +1,21 @@
 """Model serialization helpers."""
 
+from services.name_resolver import (
+    lookup_name_from_signal_cache,
+    resolve_stock_name,
+)
+
+
+def _resolve_display_name(ticker: str) -> str | None:
+    """Prefer the live SignalCache name (broker-provided), then static
+    registries. Returns None when nothing resolves — callers fall back
+    to the ticker itself to preserve legacy behaviour.
+    """
+    if not ticker:
+        return None
+    name = lookup_name_from_signal_cache(ticker) or resolve_stock_name(ticker)
+    return name
+
 
 def serialize_user(u) -> dict:
     return {
@@ -37,9 +53,13 @@ def serialize_trade(t) -> dict:
 
 
 def serialize_alert(a) -> dict:
+    # Resolve once per alert. Cache-backed via services.name_resolver so
+    # a list render costs ~O(unique tickers) DB hits at worst.
+    name = _resolve_display_name(a.ticker) if a.ticker else None
     return {
         "id": a.id,
         "ticker": a.ticker,
+        "name": name or a.ticker,
         "message": a.message,
         "signal": a.signal,
         "score": a.score,
