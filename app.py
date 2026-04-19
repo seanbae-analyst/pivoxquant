@@ -186,18 +186,32 @@ def _run_migrations(app):
     dialect = db.engine.dialect.name
 
     if dialect == "postgresql":
-        # hashtext() returns int4 — perfect for pg_advisory_lock(bigint).
-        # Lock is held on the pooled connection for the duration of migrations.
-        db.session.execute(text(
-            "SELECT pg_advisory_lock(hashtext('pivoxquant_migrate'))"
-        ))
-        try:
-            _do_migrations()
-        finally:
-            db.session.execute(text(
-                "SELECT pg_advisory_unlock(hashtext('pivoxquant_migrate'))"
+        # Acquire advisory lock on a DEDICATED connection so it's isolated
+        # from the ALTER TABLE work in `_do_migrations()`. Previous impl used
+        # `db.session` for both lock and unlock — a single failed migration
+        # would abort the session's transaction, causing the final unlock
+        # to raise `InFailedSqlTransaction` and leave the lock stuck until
+        # the worker exits. Isolation here makes the unlock path bullet-proof.
+        with db.engine.connect() as lock_conn:
+            # Use autocommit so lock/unlock aren't bundled into an implicit txn
+            # that could be poisoned by unrelated failures.
+            lock_conn = lock_conn.execution_options(isolation_level="AUTOCOMMIT")
+            lock_conn.execute(text(
+                "SELECT pg_advisory_lock(hashtext('pivoxquant_migrate'))"
             ))
-            db.session.commit()
+            try:
+                _do_migrations()
+            except Exception:
+                # Leave the advisory lock release to `finally`; re-raise so
+                # the caller can log the root cause and fail fast if needed.
+                raise
+            finally:
+                try:
+                    lock_conn.execute(text(
+                        "SELECT pg_advisory_unlock(hashtext('pivoxquant_migrate'))"
+                    ))
+                except Exception:  # pragma: no cover — best-effort cleanup
+                    pass
     else:
         # SQLite — single process, no contention possible.
         _do_migrations()
