@@ -35,20 +35,45 @@ _IS_PRODUCTION = _FLASK_ENV == "production"
 
 _DEFAULT_DEV_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
+# Production origins that PivoxQuant must always accept, regardless of the
+# CORS_ORIGINS env var. Beta users are currently on pivoxquant.vercel.app
+# (Vercel preview domain); the apex + www redirect to each other, so all three
+# are first-class origins.
+_REQUIRED_PROD_ORIGINS = (
+    "https://pivoxquant.com",
+    "https://www.pivoxquant.com",
+    "https://pivoxquant.vercel.app",
+)
+
+
 def _get_cors_origins():
-    """Resolve CORS allowed origins from environment."""
+    """Resolve CORS allowed origins from environment.
+
+    Precedence:
+      1. `CORS_ORIGINS` env var (comma-separated) — operator override.
+         Required production origins are merged in defensively so forgetting
+         `https://pivoxquant.vercel.app` doesn't break the current beta.
+      2. Production default: the three required PivoxQuant origins.
+      3. Development default: localhost on :3000.
+    """
     env_origins = os.environ.get("CORS_ORIGINS", "").strip()
     if env_origins:
-        return [o.strip().rstrip("/") for o in env_origins.split(",") if o.strip()]
+        parsed = [o.strip().rstrip("/") for o in env_origins.split(",") if o.strip()]
+        if _IS_PRODUCTION:
+            # Union with required prod origins (preserve operator-specified order)
+            for required in _REQUIRED_PROD_ORIGINS:
+                if required not in parsed:
+                    parsed.append(required)
+        return parsed
     if _IS_PRODUCTION:
-        # CRITICAL: In production, CORS_ORIGINS must be explicitly set.
-        # If not set, deny all cross-origin requests as a safe default.
+        # CORS_ORIGINS not set in production — fall back to the known apex +
+        # www + Vercel preview instead of denying everything. The prior "empty
+        # list" behaviour silently broke the beta when the env var was missing.
         logger.warning(
-            "SECURITY: CORS_ORIGINS not set in production. "
-            "Cross-origin requests will be blocked. "
-            "Set CORS_ORIGINS=https://your-vercel-domain.vercel.app"
+            "SECURITY: CORS_ORIGINS not set in production — falling back to "
+            "required PivoxQuant origins. Set CORS_ORIGINS explicitly in Railway."
         )
-        return []
+        return list(_REQUIRED_PROD_ORIGINS)
     return _DEFAULT_DEV_ORIGINS
 
 
