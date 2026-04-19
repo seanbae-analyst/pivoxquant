@@ -185,4 +185,16 @@ export const API = {
     create: "/api/portfolio/share",
     get: (token: string) => `/api/portfolio/share/${token}`,
   },
+  growth: {
+    data: (range: string) => `/api/growth/data?range=${range}`,
+    today: "/api/growth/today",
+    reflect: "/api/growth/reflect",
+    weekly: "/api/growth/weekly",
+  },
+  artifacts: {
+    list: "/api/artifacts/list",
+    download: (id: number) => `/api/artifacts/${id}/download`,
+    preview: (id: number) => `/api/artifacts/${id}/preview`,
+    markRead: (id: number) => `/api/artifacts/${id}/read`,
+  },
 } as const;

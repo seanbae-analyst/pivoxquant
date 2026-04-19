@@ -16,9 +16,11 @@ import {
   Crown,
   Sunrise,
   Bell,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/locale";
+import { useArtifacts } from "@/lib/hooks";
 
 type NavKey =
   | "home"
@@ -32,6 +34,7 @@ type NavKey =
   | "autotrade"
   | "risk"
   | "alerts"
+  | "reports"
   | "settings";
 
 const NAV_ITEMS: { href: string; key: NavKey; icon: React.ElementType }[] = [
@@ -46,12 +49,16 @@ const NAV_ITEMS: { href: string; key: NavKey; icon: React.ElementType }[] = [
   { href: "/autotrade", key: "autotrade", icon: Zap },
   { href: "/risk", key: "risk", icon: Shield },
   { href: "/alerts", key: "alerts", icon: Bell },
+  { href: "/reports", key: "reports", icon: FileText },
   { href: "/settings", key: "settings", icon: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const t = useT();
+  // Unread artifact badge — tiny dot next to Reports link when >0 unread.
+  // Fails silently if the backend isn't up yet (hook returns 0).
+  const { unreadCount } = useArtifacts();
 
   return (
     <aside className="flex h-screen w-[220px] flex-col border-r border-slate-200 bg-white">
@@ -73,6 +80,7 @@ export function Sidebar() {
           const isActive =
             pathname === item.href || pathname?.startsWith(item.href + "/");
           const Icon = item.icon;
+          const showUnreadDot = item.key === "reports" && unreadCount > 0;
 
           return (
             <Link
@@ -92,7 +100,13 @@ export function Sidebar() {
                 )}
                 strokeWidth={1.75}
               />
-              <span>{t(`nav.${item.key}`)}</span>
+              <span className="flex-1">{t(`nav.${item.key}`)}</span>
+              {showUnreadDot && (
+                <span
+                  aria-label={`${unreadCount} unread`}
+                  className="inline-flex h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                />
+              )}
             </Link>
           );
         })}

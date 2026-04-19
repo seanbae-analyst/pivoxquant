@@ -23,6 +23,11 @@ import type {
   MorningBriefResponse,
   MorningBriefArchiveResponse,
   FxRateResponse,
+  GrowthScoreEntry,
+  GrowthTodayResponse,
+  GrowthWeeklyReport,
+  ArtifactsListResponse,
+  ArtifactType,
 } from "./types";
 
 const fetcher = async (url: string) => {
@@ -231,6 +236,70 @@ export function useMorningBriefArchive() {
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 60_000 * 30 },
   );
+}
+
+/* ── Growth OS ── */
+
+export function useGrowthData(range = "365d") {
+  return useSWR<GrowthScoreEntry[]>(
+    API.growth.data(range),
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 60_000 },
+  );
+}
+
+export function useGrowthToday() {
+  return useSWR<GrowthTodayResponse>(
+    API.growth.today,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000 },
+  );
+}
+
+export function useGrowthWeekly() {
+  return useSWR<GrowthWeeklyReport[]>(
+    API.growth.weekly,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 300_000 },
+  );
+}
+
+/* ── Artifacts (My Reports library) ── */
+
+export interface UseArtifactsOptions {
+  type?: ArtifactType | "all";
+  since?: "30d" | "90d" | "all";
+  limit?: number;
+}
+
+/**
+ * Fetches the user's artifact (report) archive.
+ * Returns artifacts plus total count and unread count for sidebar badge.
+ * Builds the request URL with query params so SWR caches each filter
+ * combination independently.
+ */
+export function useArtifacts(options: UseArtifactsOptions = {}) {
+  const { type, since, limit } = options;
+  const qs = new URLSearchParams();
+  if (type && type !== "all") qs.set("type", type);
+  if (since && since !== "all") qs.set("since", since);
+  if (typeof limit === "number") qs.set("limit", String(limit));
+  const qsStr = qs.toString();
+  const key = qsStr.length > 0 ? `${API.artifacts.list}?${qsStr}` : API.artifacts.list;
+
+  const swr = useSWR<ArtifactsListResponse>(key, fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+
+  return {
+    artifacts: swr.data?.artifacts ?? [],
+    total: swr.data?.total ?? 0,
+    unreadCount: swr.data?.unread_count ?? 0,
+    isLoading: swr.isLoading,
+    error: swr.error as Error | undefined,
+    mutate: swr.mutate,
+  };
 }
 
 /* ── Real-time Portfolio Prices (SSE) ── */

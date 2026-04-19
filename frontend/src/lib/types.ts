@@ -590,3 +590,78 @@ export interface FxRateResponse {
   /** Expected refresh cadence hint (seconds). */
   ttl_seconds: number;
 }
+
+/* ── Growth OS ── */
+
+export interface GrowthScoreEntry {
+  date: string;
+  activity: number;
+  reflection: number;
+  total: number;
+  streak: number;
+}
+
+export interface GrowthBriefing {
+  priorities: string[];
+  motivation: string;
+}
+
+export interface GrowthReflection {
+  id: number;
+  questions: string[];
+  answers: string[] | null;
+  mood: number | null;
+}
+
+export interface GrowthTodayResponse {
+  date: string;
+  briefing: GrowthBriefing | null;
+  reflection: GrowthReflection | null;
+  score: {
+    activity: number;
+    reflection: number;
+    total: number;
+    streak: number;
+  } | null;
+}
+
+export interface GrowthWeeklyReport {
+  id: number;
+  week_start: string;
+  summary: string;
+  patterns: string[];
+  growth_areas: string[];
+  next_week_suggestions: string[];
+  week_score: number;
+}
+
+/* ── Artifact / Reports Archive ── */
+
+export type ArtifactType =
+  | "weekly_memo"
+  | "morning_brief"
+  | "earnings_prebrief"
+  | "monthly_brag"
+  | "quarterly_review"
+  | "risk_report"
+  | "custom";
+
+export interface Artifact {
+  id: number;
+  type: ArtifactType;
+  title: string;
+  subtitle?: string | null;
+  sent_at: string;
+  opened_at: string | null;
+  pdf_url?: string | null;
+  thumbnail_url?: string | null;
+  data_preview?: Record<string, unknown> | null;
+  size_bytes?: number | null;
+  period_label?: string | null;
+}
+
+export interface ArtifactsListResponse {
+  artifacts: Artifact[];
+  total: number;
+  unread_count: number;
+}
