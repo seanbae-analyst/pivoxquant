@@ -47,17 +47,24 @@ export const viewport: Viewport = {
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://pivoxquant.com";
 const SITE_NAME = "PivoxQuant";
-const SITE_TAGLINE = "AI Quant Advisor";
-const SITE_DESCRIPTION =
-  "PivoxQuant is an AI-powered quantitative investment advisor for US and Korean equities. Track positions, monitor 7-layer risk defense, and analyze stocks with adaptive quant signals. 미국·한국 주식 AI 퀀트 투자 어드바이저.";
+// Korean-first positioning — the CFO framing is the marketing spear, so the
+// default title + OG card speak in that voice. English sub-copy kept in the
+// description for US previews (LinkedIn, Slack).
+const SITE_TITLE_KR = `${SITE_NAME} — 당신은 당신 포트폴리오의 CFO`;
+const SITE_DESCRIPTION_KR =
+  "ChatGPT는 물어야 답한다. PivoxQuant는 자는 동안 만든다. 매주 일요일 당신의 포트폴리오 리포트가 도착합니다.";
+const SITE_DESCRIPTION_OG =
+  "전속 리서치 데스크가 매주 당신의 투자 리포트를 씁니다.";
+const SITE_DESCRIPTION_TWITTER =
+  "당신은 당신 포트폴리오의 CFO. 리포트는 저희가 씁니다.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
-    template: `%s · ${SITE_NAME}`,
+    default: SITE_TITLE_KR,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: SITE_DESCRIPTION,
+  description: SITE_DESCRIPTION_KR,
   applicationName: SITE_NAME,
   keywords: [
     "AI 주식",
@@ -94,21 +101,21 @@ export const metadata: Metadata = {
     alternateLocale: ["en_US"],
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
-    description: SITE_DESCRIPTION,
+    title: SITE_TITLE_KR,
+    description: SITE_DESCRIPTION_OG,
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME} — ${SITE_TAGLINE}`,
+        alt: SITE_NAME,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
-    description: SITE_DESCRIPTION,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION_TWITTER,
     images: ["/opengraph-image"],
   },
   alternates: {

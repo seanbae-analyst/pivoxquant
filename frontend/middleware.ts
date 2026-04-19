@@ -55,6 +55,18 @@ const BETA_BYPASS_PREFIXES = [
   "/simulator",
 ];
 
+// Social/search crawler User-Agents that should see the rendered OG metadata
+// instead of the beta gate. Without this, SNS shares fall back to the gate
+// HTML (no og:title / og:image) and the unfurl is empty. Match loosely — we
+// want to let these bots through, the cost is tiny (HTML only, no API calls).
+const CRAWLER_UA_PATTERN =
+  /facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|TelegramBot|WhatsApp|Discordbot|KAKAOTALK|kakaotalk-scrap|Line|NaverBot|Yeti|Googlebot|bingbot|Applebot|Pinterest|redditbot|Embedly|SkypeUriPreview/i;
+
+function isCrawlerUserAgent(ua: string | null): boolean {
+  if (!ua) return false;
+  return CRAWLER_UA_PATTERN.test(ua);
+}
+
 /**
  * Detect preferred locale from cookie first, then Accept-Language header.
  * Falls back to DEFAULT_LOCALE ("ko").
@@ -85,7 +97,10 @@ export async function middleware(request: NextRequest) {
 
   // ─── Beta gate (only when BETA_PASSWORD is configured) ──────────────────
   // No password env → skipped entirely so local dev stays unblocked.
-  if (BETA_PASSWORD && !isBetaBypass(pathname)) {
+  // Social/search crawlers bypass the gate so OG cards render on share.
+  const userAgent = request.headers.get("user-agent");
+  const isCrawler = isCrawlerUserAgent(userAgent);
+  if (BETA_PASSWORD && !isBetaBypass(pathname) && !isCrawler) {
     const token = request.cookies.get(BETA_COOKIE_NAME)?.value;
     const expected = BETA_SIGNING_SECRET ? await betaSignedToken() : null;
     if (!expected || token !== expected) {
@@ -119,6 +134,15 @@ export async function middleware(request: NextRequest) {
   const hasCookie = !!request.cookies.get(LOCALE_COOKIE)?.value;
 
   // ─── CSP ─────────────────────────────────────────────────────────────────
+  // TODO(security): Migrate `script-src` from 'unsafe-inline' to nonce-based.
+  //   Next.js 16 still emits inline bootstrap scripts (hydration payload,
+  //   `__next_f` flight chunks) without nonce attributes by default. Removing
+  //   'unsafe-inline' today breaks hydration across the whole app. Track the
+  //   upstream RFC before flipping this — once Next wires the nonce through
+  //   automatically, replace 'unsafe-inline' with `'nonce-${nonce}'` and add
+  //   'strict-dynamic' for transitively loaded chunks.
+  //   `style-src` must keep 'unsafe-inline' — Tailwind 4 inlines arbitrary
+  //   utility styles and shadcn/Radix primitives set inline style props.
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
   const isDev = process.env.NODE_ENV === "development";
@@ -126,6 +150,7 @@ export async function middleware(request: NextRequest) {
     ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app https://cdn.jsdelivr.net https://api.stripe.com https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com"
     : "'self' https://*.railway.app https://cdn.jsdelivr.net https://api.stripe.com https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com";
 
+  // Dev keeps 'unsafe-eval' for React Fast Refresh. Prod drops it.
   const scriptSrc = isDev
     ? "'self' 'unsafe-inline' 'unsafe-eval'"
     : "'self' 'unsafe-inline'";
@@ -144,6 +169,7 @@ export async function middleware(request: NextRequest) {
     base-uri 'self';
     form-action 'self';
     object-src 'none';
+    upgrade-insecure-requests;
   `
     .replace(/\s{2,}/g, " ")
     .trim();
