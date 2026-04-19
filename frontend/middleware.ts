@@ -13,6 +13,10 @@ const BETA_GATE_PATH = "/beta-gate";
 const BETA_AUTH_API = "/api/beta-auth";
 const BETA_SIGNING_SECRET =
   process.env.BETA_SIGNING_SECRET ?? process.env.SECRET_KEY ?? "";
+// Bump this when BETA_PASSWORD / BETA_SIGNING_SECRET rotate to force all
+// existing tokens to fail validation. Middleware detects version mismatch and
+// clears the stale cookie so users land on the gate with a clean slate.
+const BETA_TOKEN_VERSION = "v2";
 
 // Edge-runtime compatible HMAC-SHA256 using Web Crypto.
 let cachedBetaToken: string | null = null;
@@ -28,11 +32,12 @@ async function betaSignedToken(): Promise<string> {
   const sig = await crypto.subtle.sign(
     "HMAC",
     key,
-    new TextEncoder().encode("beta-verified"),
+    new TextEncoder().encode(`${BETA_TOKEN_VERSION}:beta-verified`),
   );
-  cachedBetaToken = Array.from(new Uint8Array(sig))
+  const hex = Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+  cachedBetaToken = `${BETA_TOKEN_VERSION}.${hex}`;
   return cachedBetaToken;
 }
 
@@ -90,7 +95,22 @@ export async function middleware(request: NextRequest) {
       // Preserve original destination (path + query) so user returns after auth.
       const redirectTarget = pathname + (request.nextUrl.search ?? "");
       url.searchParams.set("redirect", redirectTarget);
-      return NextResponse.redirect(url);
+      const redirect = NextResponse.redirect(url);
+      // If an invalid/stale cookie is present (e.g. signed with a previous
+      // BETA_SIGNING_SECRET or BETA_PASSWORD after rotation, or a mismatched
+      // token version), explicitly clear it so the user can re-authenticate
+      // without manually wiping cookies. Without this, the browser keeps
+      // replaying the stale cookie and the gate loops forever.
+      if (token) {
+        redirect.cookies.set(BETA_COOKIE_NAME, "", {
+          path: "/",
+          maxAge: 0,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+        });
+      }
+      return redirect;
     }
   }
 
