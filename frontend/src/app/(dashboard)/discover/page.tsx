@@ -91,7 +91,7 @@ function DiscoverRow({
             {isKoreanTicker(item.ticker, item.is_korean) ? (item.name || item.ticker) : item.ticker}
           </span>
           {item.already_owned && (
-            <span className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] font-semibold text-purple-600">
+            <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent">
               보유중
             </span>
           )}
@@ -151,7 +151,7 @@ function SortButton({
       onClick={() => onSort(sortKey)}
       className={cn(
         "flex items-center gap-1 text-xs font-medium transition-colors",
-        isActive ? "text-purple-600" : "text-slate-500 hover:text-slate-700",
+        isActive ? "text-accent" : "text-slate-500 hover:text-slate-700",
       )}
     >
       {label}

@@ -342,7 +342,7 @@ function AccountSection() {
           {profileLoading ? (
             <Skeleton className="h-5 w-28" />
           ) : investorType ? (
-            <span className="text-sm font-semibold text-purple-600">
+            <span className="text-sm font-semibold text-slate-900">
               {INVESTOR_TYPE_LABELS[investorType] ?? investorType}
             </span>
           ) : (
@@ -696,7 +696,7 @@ function TierBadge({ tier }: { tier: "pro" | "premium" }) {
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
         tier === "premium"
-          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+          ? "bg-accent text-slate-900"
           : "bg-amber-100 text-amber-700",
       )}
     >
@@ -727,7 +727,7 @@ function ToggleSwitch({
       onClick={() => onChange(!checked)}
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
-        checked ? "bg-purple-600" : "bg-slate-200",
+        checked ? "bg-accent" : "bg-slate-200",
         disabled && "opacity-50 cursor-not-allowed",
       )}
     >
@@ -952,7 +952,7 @@ function NotificationsSection() {
             {!isPro && (
               <Link
                 href="/pricing"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-purple-700 hover:text-purple-800"
+                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-accent transition-colors"
               >
                 {t("settings.subscription.upgradeToPro")}
                 <ChevronRight className="h-3 w-3" />

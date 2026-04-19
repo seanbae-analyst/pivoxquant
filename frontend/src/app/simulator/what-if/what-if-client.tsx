@@ -138,7 +138,8 @@ export function WhatIfClient() {
   useEffect(() => {
     const qs = searchParams?.toString() ?? "";
     const next = stateFromSearchParams(new URLSearchParams(qs));
-    // Only adopt if it differs — avoid loops.
+    // Only adopt if it differs — avoid loops. The setState is guarded by an
+    // equality check so it won't cascade: prev === next short-circuits.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm((prev) => {
       const prevQ = buildQuery(prev);
@@ -225,7 +226,6 @@ export function WhatIfClient() {
   /* When a user-initiated calculation completes, scroll the result into view.
      Without this, the result renders below the fold and the page appears
      "empty" — users were confused that nothing happened after "Calculate". */
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!success || busy) return;
     if (!shouldScrollOnNextResultRef.current) return;

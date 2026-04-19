@@ -157,7 +157,7 @@ export function PositionsList({
           <div className="mt-4 flex items-center gap-3">
             <Link
               href="/portfolio"
-              className="text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors"
+              className="text-sm font-semibold text-accent hover:text-accent/80 transition-colors"
             >
               {t("dashboard.positions.viewPortfolio")} &rarr;
             </Link>

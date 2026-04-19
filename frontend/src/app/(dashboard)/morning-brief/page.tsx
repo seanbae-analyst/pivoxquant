@@ -191,7 +191,7 @@ function ArchiveCard({ item }: { item: MorningBriefArchiveItem }) {
                     key={`${event.ticker}-${i}`}
                     className="flex items-start gap-2 text-xs text-slate-700"
                   >
-                    <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-purple-400" />
+                    <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-accent" />
                     <span>
                       <span className="font-mono text-slate-900">
                         {event.ticker}
@@ -211,10 +211,10 @@ function ArchiveCard({ item }: { item: MorningBriefArchiveItem }) {
 
           {/* Insight */}
           {brief.insight && (
-            <section className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 px-3 py-2.5">
+            <section className="rounded-xl bg-muted border-l-2 border-accent px-3 py-2.5">
               <p className="flex items-start gap-2 text-xs text-slate-700">
                 <Sparkles
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-500"
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent"
                   aria-hidden
                 />
                 <span className="leading-relaxed">{brief.insight}</span>
@@ -306,9 +306,9 @@ function TodayBriefSection() {
 
       {/* Insight */}
       {insight && (
-        <div className="rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 px-3 py-2.5">
+        <div className="rounded-xl bg-muted border-l-2 border-accent px-3 py-2.5">
           <p className="flex items-start gap-2 text-xs text-slate-700">
-            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-500" aria-hidden />
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
             <span className="leading-relaxed">{insight}</span>
           </p>
         </div>
@@ -433,7 +433,7 @@ export default function MorningBriefPage() {
         <div className="pt-2 text-center">
           <Link
             href="/settings"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-700 hover:text-purple-800"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-accent transition-colors"
           >
             <span>알림 설정 관리</span>
             <ArrowRight className="h-3 w-3" />

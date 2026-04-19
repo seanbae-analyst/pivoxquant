@@ -93,7 +93,7 @@ export function SignalsWidget({ positions, isLoading }: SignalsWidgetProps) {
 
       <Link
         href="/signals"
-        className="mt-4 text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors self-start"
+        className="mt-4 text-sm font-semibold text-accent hover:text-accent/80 transition-colors self-start"
       >
         {t("dashboard.signals.viewAllSignals")} &rarr;
       </Link>

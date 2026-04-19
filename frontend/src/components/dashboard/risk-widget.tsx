@@ -80,7 +80,7 @@ export function RiskWidget({ analytics, isLoading, hasPositions = true }: RiskWi
         </div>
         <Link
           href="/portfolio"
-          className="mt-auto text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors self-start"
+          className="mt-auto text-sm font-semibold text-accent hover:text-accent/80 transition-colors self-start"
         >
           포지션 추가 &rarr;
         </Link>
@@ -169,7 +169,7 @@ export function RiskWidget({ analytics, isLoading, hasPositions = true }: RiskWi
 
       <Link
         href="/risk"
-        className="mt-auto text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors self-start"
+        className="mt-auto text-sm font-semibold text-accent hover:text-accent/80 transition-colors self-start"
       >
         상세 보기 &rarr;
       </Link>

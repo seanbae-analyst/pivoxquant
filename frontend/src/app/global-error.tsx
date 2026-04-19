@@ -49,13 +49,14 @@ export default function GlobalError({
             textAlign: "center",
           }}
         >
-          {/* Logo mark with inline purple-blue-pink gradient (--sp-accent family) */}
+          {/* Logo mark — Vantablack + Warm Gold accent */}
           <div
             style={{
               width: "56px",
               height: "56px",
               borderRadius: "16px",
-              background: "linear-gradient(135deg, #7c3aed, #3b82f6, #ec4899)",
+              background: "#050505",
+              border: "1px solid #E2B96F",
               margin: "0 auto 24px",
               display: "flex",
               alignItems: "center",
