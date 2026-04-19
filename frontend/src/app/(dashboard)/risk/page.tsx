@@ -123,6 +123,7 @@ interface StressTestResponse {
 
 interface ComponentESItem {
   ticker?: string;
+  name?: string;
   contribution_pct?: number;
   expected_shortfall?: number;
   weight_pct?: number;
@@ -208,6 +209,7 @@ interface RawStressTestResponse {
 
 interface RawComponentESPosition {
   ticker?: string;
+  name?: string;
   weight_pct?: number;
   component_es_pct?: number;
   risk_contribution_pct?: number;
@@ -297,6 +299,7 @@ function normalizeComponentES(
   return {
     components: positions.map((p) => ({
       ticker: p.ticker,
+      name: p.name,
       contribution_pct: p.risk_contribution_pct,
       weight_pct: p.weight_pct,
       expected_shortfall: p.component_es_pct,
@@ -607,12 +610,20 @@ function StressBar({ scenario }: { scenario: StressScenario }) {
 function ESRow({ item }: { item: ComponentESItem }) {
   const contribution = item.contribution_pct ?? 0;
   const barWidth = Math.min(Math.abs(contribution) * 5, 100);
+  const displayName = item.name || item.ticker || "???";
 
   return (
     <div className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-      <span className="text-sm font-bold text-slate-900 w-16 shrink-0 tabular-nums">
-        {item.ticker ?? "???"}
-      </span>
+      <div className="flex min-w-0 flex-col w-32 shrink-0">
+        <span className="truncate text-sm font-bold text-slate-900">
+          {displayName}
+        </span>
+        {item.ticker && item.name && item.name !== item.ticker && (
+          <span className="font-mono text-[10px] text-slate-400 tabular-nums">
+            {item.ticker}
+          </span>
+        )}
+      </div>
       <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
         <div
           className="h-full rounded-full bg-red-400 transition-all duration-500"
