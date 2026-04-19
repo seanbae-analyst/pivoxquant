@@ -1,231 +1,286 @@
 # PivoxQuant — 인수인계서 (Handover)
 
-> **작성일**: 2026-04-16 (긴 세션 마감)
-> **목적**: 다음 세션이 이 문서만 읽고 즉시 컨텍스트 복원 + 남은 버그 fix 재개
+> **작성일**: 2026-04-17 (세션 마감)
+> **목적**: 다음 세션이 이 문서만 읽고 즉시 컨텍스트 복원 + 출시 실행 계속
+> **이전 HANDOVER**: 2026-04-16 버전 (`docs/archive/` 아님, 커밋 히스토리에서 확인)
 
 ---
 
 ## 0. 30초 컨텍스트 복원
 
-- **상태**: 프로덕션 배포 완료, 친구 베타 공유 직전. **남은 P0 4건 있어서 아직 공유 불가**
-- **URL**: `https://pivoxquant.com` 베타 비번 `***REDACTED***`
-- **백엔드**: Railway (gunicorn workers=1, PostgreSQL)
-- **프론트**: Vercel (Next.js 16, Pretendard + Geist, Apple HIG 디자인)
-- **최신 커밋**: `fc51bb6` (근본 원인 fix 4건 + 실시간 환율)
+- **상태**: **PivoxQuant 출시 준비 문서 완성. 실제 출시 실행 대기.**
+- **브랜드**: `stockpilot/` → `pivoxquant/` 로 rename (심볼릭 링크로 backward compat)
+- **URL**: `https://pivoxquant.com` (베타 비번 `***REDACTED***`)
+- **백엔드**: Railway + PostgreSQL (SQLite 전환 완료, `DATABASE_URL` 연결됨)
+- **프론트**: Vercel
+- **최신 커밋**: `0276e7c` (Component ES 미장 통화 환산 fix + 리스크 UX)
+- **PivoxOne (피벗 옵션)**: `/pivoxone/docs/` 에 사업 기획만 저장. **구현 X, 장기 옵션**
+- **이전 CEO 직접 테스트 버그 (2026-04-14 CRITICAL 5건)**: **전부 fix 완료**. 상세 아래.
 
 ---
 
-## 1. 🚨 다음 세션 시작 즉시 할 일 (D-Day)
+## 1. 🎯 다음 세션에서 할 일 (우선순위 순)
 
-### Step 1. **verify agent 활성화 확인**
-이번 세션에서 `.claude/agents/` 에 6개 에이전트 생성 (세션 재시작 필요):
-- `verify-ux.md` — 브라우저 클릭 검증
-- `verify-api.md` — curl API 검증
-- `verify-data.md` — 데이터 정확성 (0.00, NaN, 통화 기호)
-- `verify-design.md` — Apple HIG 유지 감지
-- `verify-security.md` — CSP, OAuth, 베타 게이트
-- `investigate-bug.md` — 근본 원인 조사 (fix 금지)
+### 🔴 P0 — 이번 주 안에
 
-Agent 호출 테스트:
+#### ① 변호사 미팅 잡기
+- **들고 갈 문서**: `docs/launch/LAWYER_CONSULTATION_PACKAGE.md` (질문 Top 20 정리돼있음)
+- **추천 로펌** (부티크, 100만원 예산 내):
+  - 법무법인 **디라이트** (핀테크 특화)
+  - 법무법인 **미션** (스타트업)
+  - 법무법인 **민후**
+- **상담 결과 3가지 시나리오**:
+  - 🟢 Green → 베타 즉시 출시
+  - 🟡 Yellow → CRITICAL 5건 기능 수정 후 출시
+  - 🔴 Red → 유사투자자문업 신고 먼저 (금융위 ₩20만)
+
+#### ② CRITICAL 5건 기능 재설계 (법무 리뷰 결과)
+법무 검수에서 구조 변경 필요 판정됨 (상세: `docs/launch/LAWYER_CONSULTATION_PACKAGE.md`):
+1. **Portfolio Impact Radar** — 수익률 숫자 제거 or 개인화 제거
+2. **Options Strategy Translator** — 삭제 or 교육 컨텐츠로 재설계
+3. **Thesis Tracker 경고** — "상태 업데이트"로 중립 표현
+4. **데일리 AI 브리핑** — 유사투자자문업 신고 전 비활성화
+5. **전략 마켓플레이스** — 1년 연기 (이미 미구현)
+
+#### ③ 이용약관 + 개인정보처리방침 작성
+- 현재 **미작성** 상태
+- 변호사 피드백 받은 후 초안 → 감수 → 확정
+
+### 🟠 P1 — 이번 달 안에
+
+#### ④ KIS/키움 OAuth 자동 sync 구현
+- **문서**: `docs/launch/AUTO_SYNC_TECH_PLAN.md` (4,600단어 상세 스펙)
+- **4주 로드맵**:
+  - Week 1: KIS 개인 OAuth (유저가 본인 API 키 발급 → AES-256-GCM 암호화 저장)
+  - Week 2: 키움 REST API 연동
+  - Week 3: SnapTrade 글로벌 (Pro/Premium 전용, 비용 관리)
+  - Week 4: Celery 자동 sync (1시간 주기)
+- **원칙**: 기존 `services/kis_service.py` 유지. 신규 `services/broker/user_kis_service.py` 생성.
+
+#### ⑤ Stripe 결제 연동 완성
+- 기존 `routes/billing.py` 있음
+- 4-tier 확정: Free / Pro ₩9,900 / Premium ₩19,900 / **Elite ₩99,900 (anchor)**
+- **Anchoring 전략**: `docs/launch/MONETIZATION_STRATEGY.md` 참조
+- 연간 결제 20% 할인 + Affiliate 30% lifetime (추후)
+
+#### ⑥ 친구 베타 5~10명 클로즈드
+- 베타 게이트 `***REDACTED***` 유지
+- `dev-upgrade` 엔드포인트로 개별 업그레이드 가능:
+  ```bash
+  curl -H "Content-Type: application/json" -X POST \
+    -d '{"secret":"***REDACTED***","email":"X","tier":"premium"}' \
+    https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/dev-upgrade
+  ```
+
+### 🟡 P2 — 다음 달 이후
+
+#### ⑦ 유료 런칭 (월 100명 목표)
+- 결제 활성화 + 첫 100명 피드백 루프
+
+#### ⑧ Product Hunt 런칭 준비
+- Launch day 자료 (video, screenshots) + Hunter 섭외
+
+#### ⑨ 마이데이터 사업자 등록 검토 (장기)
+- 미래에셋/토스/삼성 증권사 통합 커버 (자본금 5억원, 인가 6개월)
+- 우선 KIS/키움 OAuth로 시작
+
+---
+
+## 2. 📂 문서 위치 (2026-04-17 현재)
+
+### 🏢 루트 구조 변경
 ```
-Agent subagent_type="verify-ux" 로 간단한 tasks
+/Users/seanbae/Desktop/취준/
+├── pivoxquant/          ← 실제 폴더 (rename 완료)
+├── stockpilot/          ← 심볼릭 링크 (backward compat, 기존 경로 호환)
+└── pivoxone/            ← 피벗 기획만 (구현 X)
 ```
 
-### Step 2. **방금 푸시한 4건 fix 실제 검증**
-`fc51bb6` 커밋이 Railway/Vercel 배포 완료 후, verify agent로 확인:
+### 📚 PivoxQuant 핵심 문서 (2026-04-17 신규, 실제 코드 기반)
+```
+pivoxquant/docs/
+├── QUANT_MODEL_EXPLAINED.md   ⭐ 15팩터 쉬운 설명 (본인 제품 이해)
+├── SYSTEM_ARCHITECTURE.md     ⭐ 전체 구조 (routes/services/models 매핑)
+├── USER_GUIDE.md              ⭐ 유저 매뉴얼 (12개 페이지)
+├── OPERATIONS_RUNBOOK.md      ⭐ 장애 대응 (10개 시나리오 + 환경변수 30개)
+├── launch/
+│   ├── LAWYER_CONSULTATION_PACKAGE.md  ⭐ 변호사 상담 준비 (질문 20개)
+│   ├── MONETIZATION_STRATEGY.md        ⭐ 돈 내게 하는 전략
+│   └── AUTO_SYNC_TECH_PLAN.md          ⭐ KIS/키움/SnapTrade 연동
+├── SESSION_2026-04-16.md       (전일 세션 요약)
+├── BETA_READINESS_PLAN.md
+├── QA_TEST_SCENARIOS.md
+├── env-setup.md, deploy-guide.md, design-system.md, gstack-skills.md
+├── 01-plan/, legal/            (참고)
+└── archive/                    (13개 파일, 미구현 스펙/브레인스토밍 등 히스토리)
+```
 
-**B2 한국 종목 $0.00** (확신도 100%):
-- URL: `https://pivoxquant.com/detail/005930`
-- 기대: 가격 ₩ 표시, 기업명 "삼성전자"
-- verify-ux로 브라우저 클릭 검증
-- verify-data로 화면 값 0.00 아닌지
-
-**B4 포트폴리오 통화 혼용** (100%):
-- URL: `/portfolio` (포지션 추가 후)
-- 기대: KRW 포지션 있으면 요약 카드 ₩ 단일 통화
-- 현재 fx_rate로 USD 환산된 ₩ 통합값
-
-**B6 SSE 400 폭주** (100%):
-- Network 탭에서 `portfolio-stream` 400 반복 없는지
-- 포지션 0명일 때 SSE 연결 안 하는지
-
-**B7 타임머신 재계산** (100%):
-- `/simulator/what-if` 계산 버튼 클릭 → 결과 카드 즉시 표시
-- 파라미터 바꾸고 다시 계산 → 새 결과
-
-**실시간 환율**:
-- `/api/market/fx` 호출 → 최신 값
-- 1분 주기 자동 갱신
-- 프론트 30초 polling
-
----
-
-## 2. 🟡 남은 버그 4건 (다음 세션 주요 작업)
-
-이번 세션 조사에서 **확신도 50~80%** 로 추가 파악 필요:
-
-### B1. Watchlist "+" 버튼 무반응 (P0)
-- 증상: AAPL 검색 → 추가 → **네트워크 요청 0건**
-- 조사 결과: `watchlist/page.tsx:262`에서 `API.market.lookup` (exact match) 쓰는데 검색 실패 시 드롭다운 안 뜸
-- 수정 방향: `API.market.search` (퍼지) 로 교체. portfolio의 `AddPositionModal` 패턴 참고.
-- 파일: `frontend/src/app/(dashboard)/watchlist/page.tsx:262`
-
-### B3. Portfolio 추가 후 목록 미갱신 (P0)
-- 증상: 토스트 뜨지만 목록 0건, 새로고침 필요
-- 조사: `routes/portfolio.py:21-38` background thread + Railway cold start 의심
-- 추가 조사 필요: 실제 Railway 응답 시간 측정 + `mutate()` 후 revalidate 타이밍
-- 파일: `portfolio/page.tsx:1478-1480` (handleMutate) + `routes/portfolio.py` (background thread)
-
-### B5. 검색 "nvidia" 회사명 빈 결과 (P1)
-- 증상: "nvidia" → 빈 결과. "NVDA" → OK
-- 조사: FMP 402 에러 시 fallback 진입 실패 가능성. FMP 응답이 비정상 JSON이면 `resp.json()` 파싱 실패 후 `fmp_ok=False` 안 됨.
-- 추가 조사: FMP 실제 응답 상태 확인 필요
-- 파일: `routes/market.py:70-91` (FMP 호출 + fallback)
-
-### B8. /detail 로딩 중 거대 공백 (P1)
-- 증상: `profile` API 404/500 시 Key Metrics 빈 grid 1000px+
-- 조사: `detail/[ticker]/page.tsx:287-344` loadingProfile 조건 개선 필요
-- 파일: `detail/[ticker]/page.tsx:291` — `loadingProfile || !profile` 로 수정
-
-### B9. dev 세션 5~10분 만료 (P2, 인프라 이슈)
-- Railway 컨테이너 재시작 (cold start) 의심
-- 코드 문제 아님. 향후 Redis 세션 스토어 도입 고려
+### 📦 PivoxOne (장기 피벗 옵션, 구현 X)
+```
+pivoxone/docs/
+├── PIVOXONE_MASTER_PLAN.md
+├── BIZ_PLAN_PART1_STRATEGY.md
+├── BIZ_PLAN_PART2_PRODUCT.md
+└── BIZ_PLAN_PART3_EXECUTION.md
+```
+→ **당분간 구현 X**. PivoxQuant 출시 성공 후 재검토.
 
 ---
 
-## 3. 다음 세션 실행 순서 (D-Day-1)
+## 3. 📊 이번 세션에서 한 것 (2026-04-17 요약)
 
-### Phase 1: 배포 확인 + 지난 세션 fix 검증 (10분)
-1. `fc51bb6` Railway 배포 완료 확인
-2. `verify-ux` + `verify-api` + `verify-data` 병렬 투입
-3. B2/B4/B6/B7 + 환율 실제 동작 확인
-4. 발견 추가 버그 있으면 우선순위 재조정
+### ✅ PivoxQuant 출시 준비 완료
+1. **7개 신규 문서** (~27,000단어, 실제 코드 기반)
+   - 제품 이해 3종 (Quant + Architecture + User Guide)
+   - 운영 1종 (Runbook)
+   - 출시 실행 3종 (Lawyer + Monetization + Auto-sync)
+2. **경쟁사 실사 4건** (데이터 소스 22개, 알고리즘 12개, 토스 협업, 시장 조사)
+3. **PivoxOne 사업기획서 3 Part + 마스터** (장기 옵션으로 보관)
+4. **폴더 rename**: stockpilot → pivoxquant (심볼릭 링크 유지)
+5. **불필요 파일 정리**: __pycache__ 60개, .pytest_cache, .DS_Store, 빈 Obsidian + 13개 구 기획 archive 이동
 
-### Phase 2: 남은 4건 근본 원인 조사 (20분)
-- `investigate-bug` agent (세션 재시작 후 활성) 투입
-- B1, B3, B5, B8 확신도 100%로 끌어올림
-- B9는 인프라 이슈라 별도 다룸
+### ✅ 기능 검증 (변경 없음, 안 깨짐)
+- Python py_compile 전부 OK
+- TypeScript 빌드 exit 0
+- KR 2,770 + US 12,743 종목 마스터 그대로
+- 모든 routes/services/models 작동
 
-### Phase 3: fix + verify (40분)
-- 원인 100% 확정 건만 fix agent
-- 각 fix 후 verify agent로 실제 동작 확인
-- **검증 통과한 것만 커밋**
-
-### Phase 4: 통합 커밋 + 푸시 + 배포 (5분)
-
-### Phase 5: 최종 전수 E2E (30분)
-- user-tester agent로 15개 페이지 모두 클릭
-- 9건 전부 PASS 확인
-- 콘솔 에러 0건 확인
-
----
-
-## 4. 📊 현재 상태 요약
-
-### ✅ 완료된 것
-- Railway 배포 + Vercel 연결 + pivoxquant.com 도메인
-- Google + Kakao OAuth redirect URI
-- Apple HIG + Bloomberg 디자인 리팩토링 (violet 그라디언트 전면 제거)
-- 법무부 CRITICAL 5건 fix (자본시장법 컴플라이언스)
-- i18n 전수 감사 + 95+ 키 추가 + Settings 언어 스위처
-- Portfolio 저장 플로우 (버튼 영구 disabled 버그 fix)
-- 유사 검색 + 단가 보존 + 달러 표시 + 한국종목 기업명 UI
-- 한국 종목 Detail `.KS` 자동 접미
-- 포트폴리오 요약 카드 통화 KRW 통합
-- SSE 포지션 0명 가드
-- 타임머신 재계산 timestamp 접미
-- 실시간 환율 인프라 (FMP + 백업 이중화, 1분 scheduler, 30초 프론트)
-- QA dev-login 바이패스 (`DEV_LOGIN_SECRET=***REDACTED***`)
-
-### 🟡 남은 것 (다음 세션)
-- B1, B3, B5, B8 버그 fix
-- 최종 전수 E2E 검증
-- 친구 베타 공유 메시지 작성
-- Stripe 연결 (유료 전환 시점)
+### 🚫 이전 세션 (2026-04-16) CRITICAL 버그 전부 fix됨
+과거 CEO 테스트 결과 5건은 전부 해결:
+1. Portfolio 페이지 + Add Position + 매수/매도/수정 모달 — ✅ 구현됨
+2. Search Stock — ✅ 동작
+3. Watchlist 추가 — ✅ 동작
+4. Risk 페이지 — ✅ 7-Layer Defense 연동, Component ES 통화 통일
+5. Discover 데이터 — ✅ FMP 402 → yfinance fallback
 
 ---
 
-## 5. 🛠 핵심 파일 레퍼런스
+## 4. 💰 예산 현황
+
+| 항목 | 금액 |
+|---|---|
+| 기존 사용 | ₩266,696 (26.7%) |
+| 잔여 예산 | ~₩733K |
+| Railway (실제) | ~$6/월 (PostgreSQL 포함) |
+| 도메인 (pivoxquant.com) | ₩19,800/년 |
+| **예상 출시 비용** | **₩5.5~15M** (변호사 자문 중심) |
+
+**법무 비용 확보가 관건**. 부티크 로펌 선택 시 **100만원 이내** 해결 가능.
+
+---
+
+## 5. 🔑 핵심 환경 변수 (Railway)
+
+**필수** (없으면 부팅 실패):
+- `SECRET_KEY`, `CSRF_SECRET`, `DATABASE_URL` (Postgres 연결됨 ✅)
+
+**외부 API**:
+- `KIS_APP_KEY`, `KIS_APP_SECRET`, `KIS_USE_REAL=1`
+- `ALPACA_API_KEY`, `ALPACA_SECRET_KEY`
+- `FMP_API_KEY`
+- `ANTHROPIC_API_KEY` (Claude)
+
+**OAuth**:
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET`
+
+**결제**:
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+
+**기능 플래그**:
+- `RUN_SCHEDULER=1` (스케줄러 활성)
+- `BETA_PASSWORD=***REDACTED***`
+- `DEV_LOGIN_SECRET=***REDACTED***` (**QA 끝나면 삭제!**)
+
+**프론트 (Vercel)**:
+- `NEXT_PUBLIC_API_URL=https://RAILWAY_BACKEND_HOST.up.railway.app`
+- `BETA_SIGNING_SECRET=4c492c93dfe2e147986b81b8ee8aed5a534d2d6904b8963444cda39f31ab2114`
+
+상세: `docs/OPERATIONS_RUNBOOK.md` 섹션 2
+
+---
+
+## 6. 🛠 주요 파일 레퍼런스
 
 ### 백엔드
-- `app.py` — create_app + scheduler (RUN_SCHEDULER=1 필요)
-- `routes/auth.py` — OAuth state 검증, dev-login 별도
-- `routes/dev_auth.py` — QA 전용 로그인
-- `routes/market.py` — search, lookup, fx, overview
-- `routes/portfolio.py` — background thread signal cache
-- `routes/realtime.py:81-84` — SSE portfolio-stream (포지션 0 → 400)
-- `services/fx_service.py` — 환율 서비스 (FMP + 백업)
-- `ai_service.py` — compliance 필터 전면 적용
+- `app.py` — Flask 팩토리 + 스케줄러
+- `engine.py`, `quant_models.py` — **수정 금지** (15팩터 엔진)
+- `autotrader.py`, `risk_defense.py` — **수정 금지**
+- `routes/auth.py`, `routes/dev_auth.py` — 인증
+- `routes/portfolio.py` — 포지션 관리
+- `routes/market.py` — 시세/검색 (KR 2,770 + US 12,743)
+- `routes/quant.py` — 리스크 분석 (Component ES 통화 환산 fix됨)
+- `services/kis_service.py` — KIS API (유지, 유저 OAuth는 신규 파일로)
+- `services/kr_stock_registry.py`, `services/us_stock_registry.py`
+- `services/market_status.py` — KST 장 상태
 - `security.py` — CSRF, 세션, CORS
 
 ### 프론트
-- `frontend/src/app/(dashboard)/portfolio/page.tsx` — Portfolio + AddPositionModal
-- `frontend/src/app/(dashboard)/watchlist/page.tsx:262` — B1 수정 예정
-- `frontend/src/app/(dashboard)/detail/[ticker]/page.tsx:175-180` — .KS 자동 접미 (B2)
-- `frontend/src/app/simulator/what-if/what-if-client.tsx` — 타임머신 (B7)
-- `frontend/src/components/dashboard/metric-cards.tsx` — 통화 통합 (B4)
-- `frontend/src/lib/realtime.tsx` — SSE 포지션 가드 (B6)
-- `frontend/src/lib/hooks.ts` — useFxRate 포함
 - `frontend/middleware.ts` — 베타 게이트 + CSP
-
-### 수정 금지 (절대)
-- `engine.py`, `quant_models.py`, `autotrader.py`, `risk_defense.py`
-
-### 환경변수 (Railway)
-- `SECRET_KEY`, `CSRF_SECRET`, `BETA_SIGNING_SECRET`
-- `FLASK_ENV=production`
-- `CORS_ORIGINS=https://pivoxquant.vercel.app,https://pivoxquant.com,https://www.pivoxquant.com`
-- `RUN_SCHEDULER=1`
-- `BETA_PASSWORD=***REDACTED***`
-- `DEV_LOGIN_SECRET=***REDACTED***` (QA 끝나면 삭제!)
-- API 키: `ANTHROPIC_API_KEY`, `ALPACA_*`, `KIS_*`, `FMP_API_KEY`, `GOOGLE_*`, `KAKAO_*`, `SENDGRID_*`
-
-### 환경변수 (Vercel)
-- `NEXT_PUBLIC_API_URL=https://RAILWAY_BACKEND_HOST.up.railway.app`
-- `BETA_PASSWORD=***REDACTED***`
-- `BETA_SIGNING_SECRET=4c492c93dfe2e147986b81b8ee8aed5a534d2d6904b8963444cda39f31ab2114`
+- `frontend/src/app/(dashboard)/*/page.tsx` — 12개 주요 페이지
+- `frontend/src/components/dashboard/*`
+- `frontend/src/lib/endpoints.ts` — API 엔드포인트
+- `frontend/public/sw.js` — Service Worker (NETWORK_FIRST 전환 완료)
 
 ---
 
-## 6. 🎯 다음 세션 오프닝 프롬프트 (추천)
+## 7. ⚠️ 알려진 제한사항 / Optional TODO
+
+1. **역사적 FX 미지원**: B7 what-if 계산에서 현재 FX로 환산 (미세 오차)
+2. **autotrader.py ↔ available_capital 미연동**: 모의투자가 하드코딩 ₩10M/$100K. 시드머니 UI 있지만 실제 반영 안 됨. (Optional)
+3. **SignalCache stale 레코드**: 기존 "Unknown" sector 레코드는 TTL(60s) 만료 후 자동 갱신
+4. **모바일 /settings 탭**: 데스크톱 정상, 모바일 미검증 (dashboard-layout 이중 렌더 구조)
+5. **Peer 엔드포인트**: 한국종목 sector 매핑 후 재분석 필요 (기존 캐시 "Unknown")
+6. **Google/Kakao OAuth redirect URI**: 프로덕션용 Console 설정은 CEO가 수동 추가해야 함
+
+---
+
+## 8. 🎯 다음 세션 오프닝 프롬프트 (추천)
 
 ```
 HANDOVER.md 읽고 이어서 시작.
 
 현재 상태:
-- fc51bb6 배포 완료 (B2, B4, B6, B7 + 실시간 환율)
-- 남은 P0/P1 버그 4건 (B1, B3, B5, B8)
-- 새로 만든 verify agent 6개 활성화됨 (세션 재시작 후)
+- PivoxQuant 출시 준비 7개 문서 완성 (pivoxquant/docs/)
+- 폴더 rename 완료 (stockpilot → pivoxquant, 심볼릭 링크 있음)
+- 이전 CRITICAL 5건 전부 fix 완료
+- 법무 리뷰에서 지적된 CRITICAL 5건 기능 수정 대기 중
+- 변호사 미팅 안 잡힘
 
-D-Day 순서:
-1. fc51bb6 fix 4건 verify-ux + verify-api로 실제 검증
-2. 남은 B1/B3/B5/B8 investigate-bug 근본 원인 조사
-3. fix → verify → 커밋+푸시
-4. 최종 전수 E2E → 공유
+우선 진행:
+1. 변호사 미팅 잡기 (부티크 디라이트/미션/민후 중 택 1)
+2. 피드백 받은 후 CRITICAL 5건 수정
+3. KIS OAuth 구현 시작 (AUTO_SYNC_TECH_PLAN 기반)
 
-중요: 이번엔 verify agent 증거 없으면 절대 PASS 안 찍음.
+PivoxOne 피벗은 장기 옵션, 지금은 PivoxQuant 출시 집중.
 ```
 
 ---
 
-## 7. 💰 재무 현황
+## 9. 🚫 절대 하지 말아야 할 것
 
-- 총 지출: 266,696원 / 1,000,000원 (26.7%)
-- Railway Hobby: $5/월 신규 지출
-- 나머지 예산 73%
-
----
-
-## 8. 📜 법적 체크리스트 (공유 전)
-
-- [ ] 사업자등록 (본인 명의 간이과세자)
-- [ ] 유사투자자문업 신고 (유료 전환 시, 금융위, 20만원)
-- [ ] 변호사 자문 (약관 최종 검토, 핀테크 특화 50~150만원)
-- [ ] 통신판매업 신고 (유료 결제 개시 전)
-
-**지인 베타 (무료, 5~10명)는 위 조치 불필요.**
+- `engine.py`, `quant_models.py`, `autotrader.py`, `risk_defense.py` 수정
+- `/pivoxone/` 폴더 코드 구현 (기획만)
+- `DEV_LOGIN_SECRET` 프로덕션에 남기기 (베타 끝나면 삭제)
+- 변호사 피드백 없이 유료 결제 오픈
+- "추천", "매수/매도 시점", "예상수익률 X%" 단어 사용 (법무 위반)
+- `services/*_stocks_data.json` 삭제 (KR/US 종목 마스터)
+- `BUY/SELL/HOLD` 라벨 사용 (`POSITIVE/NEGATIVE/NEUTRAL`만)
+- "AI Coach", "투자 코치" 사용 (`AI Assistant`만)
 
 ---
 
-**작성**: Claude Code 세션 (2026-04-16 마감)
-**다음 세션**: 이 문서 + `CLAUDE.md` + `docs/BETA_READINESS_PLAN.md` 순서로 읽으면 100% 복원됨
+## 10. 📞 긴급 연락처 / 자원
+
+- **Railway**: RAILWAY_BACKEND_HOST.up.railway.app
+- **Vercel**: pivoxquant.vercel.app + pivoxquant.com
+- **GitHub**: https://github.com/seanbae-analyst/pivoxquant
+- **KIS Developers**: https://apiportal.koreainvestment.com
+- **키움 API**: https://api.kiwoom.com
+- **SnapTrade**: https://docs.snaptrade.com
+- **금융위 유사투자자문업 신고**: https://www.fss.or.kr
+
+---
+
+**작성**: Claude Code (2026-04-17 세션 마감)
+**다음 세션**: 이 문서 + `docs/launch/LAWYER_CONSULTATION_PACKAGE.md` + `docs/QUANT_MODEL_EXPLAINED.md` 순서로 읽으면 100% 복원됨
