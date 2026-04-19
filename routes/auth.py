@@ -1,6 +1,7 @@
 """Auth routes: register, login, logout, me, Google OAuth, Kakao OAuth."""
 import logging
 import os
+from urllib.parse import urlparse
 
 from authlib.integrations.flask_client import OAuth
 from flask import Blueprint, request, jsonify, redirect, session, url_for, abort
@@ -35,6 +36,60 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 oauth = OAuth()
 
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+
+# Whitelist of origins we are willing to redirect OAuth callbacks to.
+# Keeps the open-redirect surface tight even when a user-controlled header
+# (Referer / Origin / X-Forwarded-Host) is used to resolve the origin.
+_ALLOWED_OAUTH_ORIGINS = frozenset({
+    "https://pivoxquant.vercel.app",
+    "https://pivoxquant.com",
+    "https://www.pivoxquant.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+})
+
+
+def _resolve_frontend_url() -> str:
+    """Return the user-facing origin for OAuth redirects.
+
+    Priority:
+      1. Referer header origin (user's actual frontend) — if whitelisted
+      2. Origin header — if whitelisted
+      3. X-Forwarded-Host (injected by Vercel / Railway edge) — if whitelisted
+      4. FRONTEND_URL env var (fallback for CLI/direct tests)
+
+    Only origins in `_ALLOWED_OAUTH_ORIGINS` are honoured; everything else
+    falls through to the env var default so an attacker cannot steer the
+    OAuth callback to a hostile domain via crafted headers.
+    """
+    candidates = []
+
+    referrer = request.referrer
+    if referrer:
+        parsed = urlparse(referrer)
+        if parsed.scheme and parsed.netloc:
+            candidates.append(f"{parsed.scheme}://{parsed.netloc}")
+
+    origin_hdr = request.headers.get("Origin")
+    if origin_hdr:
+        candidates.append(origin_hdr.rstrip("/"))
+
+    fwd_host = request.headers.get("X-Forwarded-Host")
+    if fwd_host:
+        # Forwarded-Host is just a host — pair it with the forwarded proto
+        # when available, default to https in production.
+        proto = request.headers.get("X-Forwarded-Proto", "https")
+        # Take the first host if the header is a comma-separated chain.
+        first_host = fwd_host.split(",")[0].strip()
+        if first_host:
+            candidates.append(f"{proto}://{first_host}".rstrip("/"))
+
+    for origin in candidates:
+        if origin in _ALLOWED_OAUTH_ORIGINS:
+            return origin
+
+    # Fallback: environment variable (configured per deploy).
+    return os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 
 def init_oauth(app):
@@ -119,31 +174,40 @@ def me():
 def google_login():
     """Redirect user to Google's OAuth consent screen."""
     from authlib.common.security import generate_token
-    redirect_uri = f"{FRONTEND_URL}/api/auth/google/callback"
+    origin = _resolve_frontend_url()
+    redirect_uri = f"{origin}/api/auth/google/callback"
     nonce = generate_token()
     state = generate_token()
     session["oauth_nonce"] = nonce
     session["oauth_state_google"] = state
+    # Remember which origin the user came from so the final redirect lands
+    # back on the same domain (vercel.app vs pivoxquant.com).
+    session["oauth_origin"] = origin
+    logger.info("Google OAuth start: origin=%s redirect_uri=%s", origin, redirect_uri)
     return oauth.google.authorize_redirect(redirect_uri, nonce=nonce, state=state)
 
 
 @auth_bp.route("/google/callback")
 def google_callback():
     """Handle the OAuth callback from Google."""
+    # Origin to redirect back to: prefer the one we stashed at login start;
+    # if the session lost it (cross-domain cookie, timeout), re-resolve.
+    origin = session.pop("oauth_origin", None) or _resolve_frontend_url()
+
     # CSRF state 검증: 세션에 저장한 state와 콜백에서 받은 state 대조
     expected_state = session.pop("oauth_state_google", None)
     received_state = request.args.get("state")
     if not expected_state or expected_state != received_state:
         logger.warning("Google OAuth state mismatch — possible CSRF attack")
-        return redirect(f"{FRONTEND_URL}/login?error=state_mismatch")
+        return redirect(f"{origin}/login?error=state_mismatch")
     try:
         token = oauth.google.authorize_access_token()
     except Exception as e:
         logger.exception("Google callback error")
-        return redirect(f"{FRONTEND_URL}/login?error=google_failed")
+        return redirect(f"{origin}/login?error=google_failed")
     userinfo = token.get("userinfo")
     if not userinfo:
-        return redirect(f"{FRONTEND_URL}/login?error=google_failed")
+        return redirect(f"{origin}/login?error=google_failed")
 
     google_id = userinfo["sub"]
     email = userinfo["email"].strip().lower()
@@ -178,7 +242,8 @@ def google_callback():
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
-    return redirect(f"{FRONTEND_URL}{redirect_url}")
+    logger.info("Google OAuth success: origin=%s path=%s", origin, redirect_url)
+    return redirect(f"{origin}{redirect_url}")
 
 
 # ── Kakao OAuth ─────────────────────────────────────────────────────────────
@@ -186,29 +251,34 @@ def google_callback():
 @auth_bp.route("/kakao")
 def kakao_login():
     """Redirect user to Kakao's OAuth consent screen."""
+    origin = _resolve_frontend_url()
     if not os.environ.get("KAKAO_CLIENT_ID"):
-        return redirect(f"{FRONTEND_URL}/login?error=kakao_not_configured")
+        return redirect(f"{origin}/login?error=kakao_not_configured")
     from authlib.common.security import generate_token
-    redirect_uri = f"{FRONTEND_URL}/api/auth/kakao/callback"
+    redirect_uri = f"{origin}/api/auth/kakao/callback"
     state = generate_token()
     session["oauth_state_kakao"] = state
+    session["oauth_origin"] = origin
+    logger.info("Kakao OAuth start: origin=%s redirect_uri=%s", origin, redirect_uri)
     return oauth.kakao.authorize_redirect(redirect_uri, state=state)
 
 
 @auth_bp.route("/kakao/callback")
 def kakao_callback():
     """Handle the OAuth callback from Kakao."""
+    origin = session.pop("oauth_origin", None) or _resolve_frontend_url()
+
     # CSRF state 검증
     expected_state = session.pop("oauth_state_kakao", None)
     received_state = request.args.get("state")
     if not expected_state or expected_state != received_state:
         logger.warning("Kakao OAuth state mismatch — possible CSRF attack")
-        return redirect(f"{FRONTEND_URL}/login?error=state_mismatch")
+        return redirect(f"{origin}/login?error=state_mismatch")
     try:
         token = oauth.kakao.authorize_access_token()
     except Exception as e:
         logger.exception("Kakao callback error")
-        return redirect(f"{FRONTEND_URL}/login?error=kakao_failed")
+        return redirect(f"{origin}/login?error=kakao_failed")
 
     # Fetch user profile from Kakao
     try:
@@ -217,11 +287,11 @@ def kakao_callback():
         profile = resp.json()
     except Exception as e:
         logger.exception("Kakao profile fetch error")
-        return redirect(f"{FRONTEND_URL}/login?error=kakao_failed")
+        return redirect(f"{origin}/login?error=kakao_failed")
 
     kakao_id = str(profile.get("id", ""))
     if not kakao_id:
-        return redirect(f"{FRONTEND_URL}/login?error=kakao_failed")
+        return redirect(f"{origin}/login?error=kakao_failed")
 
     kakao_account = profile.get("kakao_account", {})
     kakao_profile = kakao_account.get("profile", {})
@@ -262,7 +332,8 @@ def kakao_callback():
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
-    return redirect(f"{FRONTEND_URL}{redirect_url}")
+    logger.info("Kakao OAuth success: origin=%s path=%s", origin, redirect_url)
+    return redirect(f"{origin}{redirect_url}")
 
 
 # ── Account Deletion (PIPA compliance) ─────────────────────────────────────
