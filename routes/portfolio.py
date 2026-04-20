@@ -73,12 +73,16 @@ def get_portfolio():
             krw_value = cur_px * fx_service.get_rate() * p.shares
             krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
 
-        # Prefer cache name, fall back to name_resolver (pyKRX for KR,
-        # us_stock_registry for US — covers every KRX listing + all US
-        # tickers so UI can render 회사명 instead of bare ticker even when
-        # SignalCache is cold or the ticker is a long-tail listing).
-        from services.name_resolver import resolve_stock_name
-        display_name = sd.get("name") or resolve_stock_name(p.ticker) or p.ticker
+        # Prefer cache name only when it differs from the raw ticker.
+        # If SignalCache stored the ticker itself as name (fetcher fallback
+        # when KIS/FMP returned no name), ignore it and re-resolve via
+        # kr_stock_registry/pyKRX (KR) or us_stock_registry (US).
+        # Option B: skip stale name == ticker entries.
+        cached_name = sd.get("name")
+        if cached_name and cached_name.upper() != p.ticker.upper():
+            display_name = cached_name
+        else:
+            display_name = resolve_stock_name(p.ticker) or p.ticker
 
         out.append({
             "id": p.id, "ticker": p.ticker, "shares": p.shares,
