@@ -250,9 +250,9 @@ def _fetch_kr_events(tickers: list[str], days: int) -> tuple[list[EventRow], boo
     for t in tickers:
         corp_code = dart_insider.ticker_to_corp_code(t)
         if not corp_code:
-            # corp_code resolution not implemented yet — skip silently;
-            # the MVP contract is "works when DART_API_KEY is set", not
-            # "works for every KR ticker". See dart_insider module.
+            # Unlisted symbol or CORPCODE.xml download failed — skip
+            # silently. Rest of the report still renders with the US
+            # section + an empty-KR note on the PDF.
             continue
         try:
             trades = dart_insider.get_insider_trades(corp_code, days=days) or []
