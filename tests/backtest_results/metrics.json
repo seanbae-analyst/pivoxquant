@@ -1,0 +1,85 @@
+{
+  "metadata": {
+    "generated_at": "2026-04-20T17:40:23.813427",
+    "start": "2021-12-01",
+    "end": "2026-04-17",
+    "universe_size": 39,
+    "top_n_per_month": 15,
+    "round_trip_cost": 0.002,
+    "rf_rate": 0.045
+  },
+  "strategies": [
+    {
+      "total_return": 89.36,
+      "cagr": 15.71,
+      "sharpe": 0.78,
+      "sortino": 1.04,
+      "calmar": 0.76,
+      "max_drawdown": -20.57,
+      "volatility": 14.36,
+      "best_month": 13.26,
+      "worst_month": -6.4,
+      "beta": 0.62,
+      "alpha": 5.69,
+      "information_ratio": 0.19,
+      "monthly_win_rate_vs_spy": 53.8,
+      "strategy": "A \u2014 Quant Score"
+    },
+    {
+      "total_return": 78.47,
+      "cagr": 14.16,
+      "sharpe": 0.72,
+      "sortino": 0.95,
+      "calmar": 0.72,
+      "max_drawdown": -19.64,
+      "volatility": 13.46,
+      "best_month": 9.26,
+      "worst_month": -6.4,
+      "beta": 0.56,
+      "alpha": 4.7,
+      "information_ratio": 0.06,
+      "monthly_win_rate_vs_spy": 51.9,
+      "strategy": "B \u2014 Risk-Defense"
+    },
+    {
+      "total_return": 131.82,
+      "cagr": 21.19,
+      "sharpe": 0.94,
+      "sortino": 1.25,
+      "calmar": 0.87,
+      "max_drawdown": -23.82,
+      "volatility": 17.32,
+      "best_month": 13.57,
+      "worst_month": -8.92,
+      "beta": 0.74,
+      "alpha": 9.66,
+      "information_ratio": 0.61,
+      "monthly_win_rate_vs_spy": 61.5,
+      "strategy": "C \u2014 Multi-Model"
+    },
+    {
+      "total_return": 67.72,
+      "cagr": 12.55,
+      "sharpe": 0.5,
+      "sortino": 0.7,
+      "calmar": 0.55,
+      "max_drawdown": -24.5,
+      "volatility": 17.77,
+      "best_month": 9.21,
+      "worst_month": -9.24,
+      "strategy": "SPY (B&H)"
+    },
+    {
+      "total_return": 72.61,
+      "cagr": 13.29,
+      "sharpe": 0.46,
+      "sortino": 0.66,
+      "calmar": 0.44,
+      "max_drawdown": -35.01,
+      "volatility": 23.35,
+      "best_month": 12.55,
+      "worst_month": -13.6,
+      "strategy": "QQQ (B&H)"
+    }
+  ]
+}
