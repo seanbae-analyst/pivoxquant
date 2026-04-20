@@ -52,6 +52,13 @@ ARTIFACT_TYPES = {
     # 2026-04-19 (Premium-tier risk + segment reports)
     "risk_board",        # Monthly + VIX-spike 8-page deck (Premium)
     "portfolio_segment", # Quarterly 4-page segment breakdown (Premium)
+    # 2026-04-19 (Premium — on-demand What-If + weekly event feed)
+    "capital_allocation", # On-demand Capital Allocation What-If (Premium)
+    "insider_mirror",    # Weekly 3-page SEC/DART insider event feed (Premium)
+    # 2026-04-19 (Premium-tier retrospective artefacts — download-only,
+    # no share surface per explicit legal decision)
+    "year_end_letter",        # Annual 6-page Buffett-tone letter (Premium)
+    "quarterly_self_report",  # Quarterly 15-page Self 10-K + Thesis check (Premium)
 }
 
 

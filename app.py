@@ -613,20 +613,58 @@ def _init_scheduler(app):
                 logger.error(f"KPI dashboard scheduler failed: {e}")
 
     def _scheduled_self_audit():
-        """Quarterly (1/7, 4/7, 7/7, 10/7) 08:00 KST — Self Audit PDF (Premium).
+        """DEPRECATED (2026-04-19) — absorbed into Quarterly Self Report.
 
-        The `_quarter_bounds` helper inside the service resolves "today" to
-        the preceding quarter when we're in the first week of the new
-        quarter, so calling this job with day=7 of those months always
-        audits the quarter that just closed.
+        The standalone Self Audit job was retired when the 15-page
+        Quarterly Self Report (`quarterly_self_report_service`) was
+        introduced. Part 2 (P8-P11) of the new report re-uses
+        `SelfAuditService.generate_for_user(...)` internally, so every
+        user still receives the same decision-quality analysis — just
+        inside the larger quarterly deliverable instead of a separate
+        email.
+
+        This function is kept as a no-op; the sched.add_job registration
+        below is commented out to disable the duplicate cron.
         """
-        from services.artifacts.self_audit_service import SelfAuditService
+        logger.info(
+            "self_audit standalone job is deprecated — "
+            "see quarterly_self_report"
+        )
+
+    def _scheduled_quarterly_self_report():
+        """Quarterly (1/7, 4/7, 7/7, 10/7) 10:00 KST — Premium 15-page
+        Self 10-K + Thesis Reality Check.
+
+        Wraps the old Self Audit (Part 2) and adds a full Self 10-K
+        narrative (Part 1) + watch items. The service resolves the
+        quarter that just closed via `_quarter_bounds`.
+        """
+        from services.artifacts.quarterly_self_report_service import (
+            QuarterlySelfReportService,
+        )
         with app.app_context():
             try:
-                summary = SelfAuditService().run_quarterly()
-                logger.info(f"Self audit scheduler run: {summary}")
+                summary = QuarterlySelfReportService().run_quarterly()
+                logger.info(f"Quarterly self report scheduler run: {summary}")
             except Exception as e:
-                logger.error(f"Self audit scheduler failed: {e}")
+                logger.error(f"Quarterly self report scheduler failed: {e}")
+
+    def _scheduled_year_end_letter():
+        """Annual (12/31) 10:00 KST — Premium 6-page Year-End Investor
+        Letter (Buffett tone).
+
+        Download-only surface — no share link. Empty-trade users are
+        skipped inside `run_for_user`.
+        """
+        from services.artifacts.year_end_letter_service import (
+            YearEndLetterService,
+        )
+        with app.app_context():
+            try:
+                summary = YearEndLetterService().run_annual()
+                logger.info(f"Year-end letter scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Year-end letter scheduler failed: {e}")
 
     def _scheduled_dd_checklist():
         """Daily 08:00 KST — T+3 post-entry DD checklist email (Pro+).
@@ -756,6 +794,42 @@ def _init_scheduler(app):
             except Exception as e:
                 logger.error(f"Portfolio segment scheduler failed: {e}")
 
+    def _scheduled_capital_allocation_reminder():
+        """Quarterly +14 days (1/14, 4/14, 7/14, 10/14) 09:00 KST.
+
+        Sends an **email reminder only** — nudges Premium users to revisit
+        the on-demand What-If Capital Allocation Calculator. No calculation
+        is performed on the server. This decoupling is deliberate: we never
+        push allocation suggestions; the user must opt into the calculator.
+        """
+        from services.artifacts.capital_allocation_service import (
+            CapitalAllocationService,
+        )
+        with app.app_context():
+            try:
+                summary = CapitalAllocationService().send_quarterly_reminder()
+                logger.info(f"Capital allocation reminder run: {summary}")
+            except Exception as e:
+                logger.error(f"Capital allocation reminder failed: {e}")
+
+    def _scheduled_insider_mirror_weekly():
+        """Weekly (Mon) 09:00 KST — Insider Transaction Mirror PDF (Premium).
+
+        Aggregates SEC Form 4 (US) and DART 임원·주요주주 공시 (KR, optional)
+        for each Premium user's tracked tickers. Factual event feed only —
+        no signals, no hit-rate analytics. Empty portfolios are skipped.
+        When DART_API_KEY is unset the KR section collapses silently.
+        """
+        from services.artifacts.insider_mirror_service import (
+            InsiderMirrorService,
+        )
+        with app.app_context():
+            try:
+                summary = InsiderMirrorService().run_weekly()
+                logger.info(f"Insider mirror weekly run: {summary}")
+            except Exception as e:
+                logger.error(f"Insider mirror weekly failed: {e}")
+
     def _scheduled_earnings_prebrief():
         """Scan every 15 min for positions whose earnings fire in ~30 min
         (MVP #3). The service enforces dedup per (user, ticker,
@@ -835,15 +909,48 @@ def _init_scheduler(app):
     #     max_instances=1,
     #     coalesce=True,
     # )
-    # 분기 +7일 (1/7, 4/7, 7/7, 10/7) 08:00 KST — Self Audit PDF (Premium).
+    # ── DISABLED (2026-04-19): Self Audit → Quarterly Self Report 흡수 ──
+    # 기존 Self Audit (4p, 08:00 KST) job 은 Quarterly Self Report (15p,
+    # 10:00 KST) Part 2 로 완전히 흡수되었다. SelfAuditService 는 여전히
+    # import 가능하며 Quarterly Self Report 내부에서 호출되기 때문에
+    # 로직/함수/엔드포인트(/api/artifacts/self-audit/*)는 남겨두되,
+    # 분기 cron 은 중복 이메일 방지를 위해 제거한다.
+    #
+    # sched.add_job(
+    #     _scheduled_self_audit,
+    #     trigger="cron",
+    #     month="1,4,7,10",
+    #     day=7,
+    #     hour=8, minute=0,
+    #     timezone="Asia/Seoul",
+    #     id="self_audit_quarterly",
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
+    # 분기 +7일 (1/7, 4/7, 7/7, 10/7) 10:00 KST — Quarterly Self Report
+    # (Premium, 15p Self 10-K + Thesis Reality Check). Self Audit 의 기능을
+    # Part 2 로 흡수. portfolio_segment_quarterly 와 같은 10:00 슬롯이지만
+    # 서비스가 독립적으로 User 쿼리/FMP 호출을 분산해 수행하므로 충돌 없음.
     sched.add_job(
-        _scheduled_self_audit,
+        _scheduled_quarterly_self_report,
         trigger="cron",
         month="1,4,7,10",
         day=7,
-        hour=8, minute=0,
+        hour=10, minute=0,
         timezone="Asia/Seoul",
-        id="self_audit_quarterly",
+        id="quarterly_self_report",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매년 12/31 10:00 KST — Year-End Investor Letter (Premium, 6p PDF).
+    # 연간 Buffett 톤 회고 서한. Download-only — share 링크 없음.
+    sched.add_job(
+        _scheduled_year_end_letter,
+        trigger="cron",
+        month=12, day=31,
+        hour=10, minute=0,
+        timezone="Asia/Seoul",
+        id="year_end_letter_annual",
         max_instances=1,
         coalesce=True,
     )
@@ -932,6 +1039,31 @@ def _init_scheduler(app):
         hour=10, minute=0,
         timezone="Asia/Seoul",
         id="portfolio_segment_quarterly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 분기 +14일 (1/14, 4/14, 7/14, 10/14) 09:00 KST — Capital Allocation
+    # What-If Calculator 이메일 리마인더 (Premium). 서버 계산은 하지 않는다.
+    sched.add_job(
+        _scheduled_capital_allocation_reminder,
+        trigger="cron",
+        month="1,4,7,10",
+        day=14,
+        hour=9, minute=0,
+        timezone="Asia/Seoul",
+        id="capital_allocation_quarterly_reminder",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매주 월요일 09:00 KST — Insider Transaction Mirror 주간 PDF (Premium).
+    # SEC Form 4 + DART 공시 이벤트 피드. 사실 기록만, 해석 없음.
+    sched.add_job(
+        _scheduled_insider_mirror_weekly,
+        trigger="cron",
+        day_of_week="mon",
+        hour=9, minute=0,
+        timezone="Asia/Seoul",
+        id="insider_mirror_weekly",
         max_instances=1,
         coalesce=True,
     )

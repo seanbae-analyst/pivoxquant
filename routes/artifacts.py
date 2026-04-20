@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import base64
 import os
+import re
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -79,6 +80,12 @@ _ARTIFACT_DOWNLOAD_META = {
     # 2026-04-19 — Premium risk + segment reports
     "risk_board":        ("application/pdf", "pdf"),
     "portfolio_segment": ("application/pdf", "pdf"),
+    # 2026-04-19 — Capital Allocation (on-demand) + Insider Mirror (weekly)
+    "capital_allocation": ("application/pdf", "pdf"),
+    "insider_mirror":     ("application/pdf", "pdf"),
+    # 2026-04-19 — Premium retrospective artefacts (download-only, no share)
+    "year_end_letter":        ("application/pdf", "pdf"),
+    "quarterly_self_report":  ("application/pdf", "pdf"),
 }
 
 
@@ -1980,6 +1987,525 @@ def portfolio_segment_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("portfolio_segment manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ CAPITAL ALLOCATION CALCULATOR (Premium, on-demand) ═══════
+# Premium-only What-If calculator. Frontend POSTs {cash_amount, scenarios[]}
+# and gets back a calc_id + preview data. Follow-up GETs render the PDF
+# from the persisted Artifact row. Quarterly scheduler sends a reminder
+# email only — never fires a calculation autonomously.
+
+from services.artifacts.capital_allocation_service import (  # noqa: E402
+    CapitalAllocationService,
+)
+
+
+@artifacts_bp.route("/capital-allocation/calculate", methods=["POST"])
+@api_auth
+@require_tier("premium")
+def capital_allocation_calculate():
+    """Run the What-If calculator with up to 4 caller-supplied scenarios.
+
+    Body:
+        {
+          "cash_amount": 1000000,
+          "scenarios": [
+            {"type": "diversify_existing", "params": {}},
+            {"type": "new_ticker",         "params": {"ticker": "NVDA"}},
+            {"type": "cash",               "params": {}},
+            {"type": "dividend_etf",       "params": {"ticker": "SCHD"}}
+          ]
+        }
+
+    Returns:
+        { ok, calc_id, data }
+    """
+    body = request.get_json(silent=True) or {}
+    cash_amount = body.get("cash_amount")
+    scenarios = body.get("scenarios")
+
+    if cash_amount is None:
+        return jsonify({"error": "cash_amount is required"}), 400
+    if scenarios is None:
+        return jsonify({"error": "scenarios is required"}), 400
+
+    svc = CapitalAllocationService()
+    try:
+        data = svc.calculate_for_user(
+            current_user.id,
+            cash_amount=cash_amount,
+            scenarios=scenarios,
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        current_app.logger.error("capital_allocation calc failed: %s", exc)
+        return jsonify({"error": f"Calculation failed: {exc}"}), 500
+
+    try:
+        pdf_bytes = svc.render_pdf(data)
+        artefact = svc.persist(current_user.id, data, pdf_bytes)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("capital_allocation persist failed: %s", exc)
+        return jsonify({"error": f"Persist failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "calc_id": artefact.id, "data": data})
+
+
+@artifacts_bp.route("/capital-allocation/preview/<int:calc_id>",
+                    methods=["GET"])
+@api_auth
+@require_tier("premium")
+def capital_allocation_preview(calc_id: int):
+    """Return the persisted calculation payload (+ rendered HTML). Owner-only."""
+    artefact = db.session.get(Artifact, calc_id)
+    if (artefact is None or artefact.user_id != current_user.id
+            or artefact.type != "capital_allocation"):
+        return jsonify({"error": "Calculation not found"}), 404
+
+    svc = CapitalAllocationService()
+    try:
+        html = svc.render_html(artefact.data_json or {})
+    except Exception as exc:
+        current_app.logger.error("capital_allocation preview render failed: %s", exc)
+        return jsonify({"error": f"Render failed: {exc}"}), 500
+
+    return jsonify({
+        "ok":   True,
+        "id":   artefact.id,
+        "data": artefact.data_json or {},
+        "html": html,
+    })
+
+
+@artifacts_bp.route("/capital-allocation/download/<int:calc_id>",
+                    methods=["GET"])
+@api_auth
+@require_tier("premium")
+def capital_allocation_download(calc_id: int):
+    """Stream the calculator's persisted PDF. Owner-only."""
+    artefact = db.session.get(Artifact, calc_id)
+    if (artefact is None or artefact.user_id != current_user.id
+            or artefact.type != "capital_allocation"):
+        return jsonify({"error": "Calculation not found"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this calculation",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    token = (artefact.data_json or {}).get("calc_token", "calc")
+    safe = str(token).replace(" ", "_")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"capital_allocation_{safe}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/capital-allocation/reminder-trigger", methods=["POST"])
+@api_auth
+def capital_allocation_reminder_trigger():
+    """Admin-only manual trigger for the quarterly reminder email.
+
+    Note: this ONLY sends reminder emails. It never runs calculations
+    autonomously — that's deliberate for the legal posture.
+    """
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    try:
+        summary = CapitalAllocationService().send_quarterly_reminder()
+    except Exception as exc:
+        current_app.logger.error("capital_allocation reminder failed: %s", exc)
+        return jsonify({"error": f"Reminder run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ INSIDER TRANSACTION MIRROR (Premium, weekly) ═══════
+# Weekly 3-page PDF (Mon 09:00 KST). SEC Form 4 + DART insider feed —
+# strictly factual. See services/artifacts/insider_mirror_service.py.
+
+from services.artifacts.insider_mirror_service import (  # noqa: E402
+    InsiderMirrorService,
+)
+
+
+@artifacts_bp.route("/insider-mirror/preview", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def insider_mirror_preview():
+    """Generate (don't email) a preview Insider Mirror for the caller.
+
+    Returns { ok, data, html }. The html string is the same source that
+    WeasyPrint renders into the weekly PDF so the frontend can surface
+    an in-app preview.
+    """
+    try:
+        svc = InsiderMirrorService()
+        data = svc.generate_for_user(current_user.id)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("insider_mirror preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/insider-mirror/download", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def insider_mirror_download_latest():
+    """Stream the caller's most recent Insider Mirror PDF. Owner-only."""
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="insider_mirror")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Insider Mirror report available yet",
+                        "code": "NO_REPORT"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this report",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    period = (artefact.data_json or {}).get("period_label", "week")
+    safe = re.sub(r"[^A-Za-z0-9_-]+", "_", period) if period else "week"
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"insider_mirror_{safe}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/insider-mirror/trigger", methods=["POST"])
+@api_auth
+def insider_mirror_trigger():
+    """Admin-only manual trigger for the weekly insider mirror cron."""
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    anchor_str = body.get("anchor")
+    anchor = None
+    if anchor_str:
+        try:
+            anchor = date.fromisoformat(anchor_str)
+        except ValueError:
+            return jsonify({
+                "error": "invalid anchor (expected YYYY-MM-DD)",
+            }), 400
+
+    try:
+        summary = InsiderMirrorService().run_weekly(anchor=anchor)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("insider_mirror manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ YEAR-END INVESTOR LETTER (Premium, annual) ═══════
+# Download-only surface — no share link, no OG card, no public landing.
+# Cron target: 12/31 10:00 KST (app.py :: year_end_letter_annual).
+#
+# Note on legal posture: this block was added 2026-04-19 as part of the
+# explicit legal-safety design. Every endpoint below is owner-bound and
+# tier-gated; the public share surface that *other* artefact classes
+# expose (monthly_brag_share) is intentionally absent here.
+
+from services.artifacts.year_end_letter_service import (  # noqa: E402
+    YearEndLetterService,
+)
+
+
+@artifacts_bp.route("/year-end-letter/preview", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def year_end_letter_preview():
+    """Generate (don't email) a preview Year-End Letter for the caller.
+
+    Returns:
+        { ok, data, html }
+    Query param `year` (optional, YYYY) overrides the target year —
+    handy for QA / admin demos.
+    """
+    year_str = request.args.get("year")
+    target_year: int | None = None
+    if year_str:
+        try:
+            target_year = int(year_str)
+        except ValueError:
+            return jsonify({"error": "invalid year (expected YYYY)"}), 400
+
+    try:
+        svc = YearEndLetterService()
+        data = svc.generate_for_user(current_user.id, target_year=target_year)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("year_end_letter preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/year-end-letter/download", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def year_end_letter_download_latest():
+    """Stream the caller's most recent Year-End Letter PDF. Owner-only.
+
+    404 — no letter generated yet. 410 — row exists but no PDF rendered
+    (WeasyPrint unavailable at generation time).
+    """
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="year_end_letter")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Year-End Letter available yet",
+                        "code": "NO_LETTER"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this letter",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    year_val = (artefact.data_json or {}).get("year", "year")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"year_end_letter_{year_val}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/year-end-letter/trigger", methods=["POST"])
+@api_auth
+def year_end_letter_trigger():
+    """Manual trigger for the annual cron. Admin-only.
+
+    Gating — same convention as weekly_memo/trigger:
+      1. `DEV_LOGIN_SECRET` env must be set (dev/staging only).
+      2. Caller must pass `X-Admin-Secret` header equal to it.
+
+    Body (optional): { "target_year": 2026 }.
+    """
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    target_year = body.get("target_year")
+    if target_year is not None:
+        try:
+            target_year = int(target_year)
+        except (TypeError, ValueError):
+            return jsonify({"error": "invalid target_year (expected int)"}), 400
+
+    try:
+        summary = YearEndLetterService().run_annual(target_year=target_year)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("year_end_letter manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ QUARTERLY SELF REPORT (Premium, quarterly) ═══════
+# 15-page Self 10-K + Thesis Reality Check. Absorbs the old Self Audit
+# (still importable via SelfAuditService for Part 2 reuse). Download-only
+# surface — no share links. Cron target: month=1,4,7,10 day=7 10:00 KST
+# (see app.py :: quarterly_self_report).
+
+from services.artifacts.quarterly_self_report_service import (  # noqa: E402
+    QuarterlySelfReportService,
+)
+
+
+@artifacts_bp.route("/quarterly-self/preview", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def quarterly_self_report_preview():
+    """Generate (don't email) a preview Quarterly Self Report for the caller.
+
+    Returns:
+        { ok, data, html }
+    Query param `quarter_end` (YYYY-MM-DD) pins the audit window;
+    otherwise the service resolves to "today's" quarter.
+    """
+    qe_str = request.args.get("quarter_end")
+    quarter_end: date | None = None
+    if qe_str:
+        try:
+            quarter_end = date.fromisoformat(qe_str)
+        except ValueError:
+            return jsonify({
+                "error": "invalid quarter_end (expected YYYY-MM-DD)",
+            }), 400
+
+    try:
+        svc = QuarterlySelfReportService()
+        data = svc.generate_for_user(current_user.id, quarter_end=quarter_end)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("quarterly_self preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/quarterly-self/download", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def quarterly_self_report_download_latest():
+    """Stream the caller's most recent Quarterly Self Report PDF. Owner-only."""
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="quarterly_self_report")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Quarterly Self Report available yet",
+                        "code": "NO_REPORT"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this report",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    quarter = (artefact.data_json or {}).get("quarter_label", "quarter")
+    safe_q = quarter.replace(" ", "_")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"quarterly_self_{safe_q}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/quarterly-self/trigger", methods=["POST"])
+@api_auth
+def quarterly_self_report_trigger():
+    """Manual trigger for the quarterly cron. Admin-only.
+
+    Body (optional): { "quarter_end": "2026-03-31" }.
+    """
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    qe_str = body.get("quarter_end")
+    quarter_end = None
+    if qe_str:
+        try:
+            quarter_end = date.fromisoformat(qe_str)
+        except ValueError:
+            return jsonify({
+                "error": "invalid quarter_end (expected YYYY-MM-DD)",
+            }), 400
+
+    try:
+        summary = QuarterlySelfReportService().run_quarterly(
+            quarter_end=quarter_end,
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("quarterly_self manual run failed: %s", exc)
         return jsonify({"error": f"Manual run failed: {exc}"}), 500
 
     return jsonify({"ok": True, "summary": summary})
