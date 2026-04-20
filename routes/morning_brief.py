@@ -23,6 +23,7 @@ from models import MorningBrief
 from services.morning_brief_service import (
     ai_usage_snapshot,
     generate_brief,
+    render_brief_email,
 )
 
 from .decorators import api_auth, require_tier
@@ -80,6 +81,44 @@ def get_archive():
             }
             for b in rows
         ],
+    })
+
+
+@morning_brief_bp.route("/preview-email", methods=["GET"])
+@api_auth
+def preview_email():
+    """Return the integrated Morning Brief Plus HTML email.
+
+    If today's brief is missing, it is generated on the fly so Pro users
+    and admins can preview the combined artefact (KPI 5-card grid + brief
+    body + disclaimer) any time. Returns both the structured content and
+    the rendered HTML so a frontend pane can show either.
+    """
+    today = date.today()
+    brief = (
+        MorningBrief.query
+        .filter_by(user_id=current_user.id, brief_date=today)
+        .first()
+    )
+    if not brief:
+        try:
+            brief = generate_brief(current_user)
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": f"Brief generation failed: {e}"}), 500
+
+    content = brief.content or {}
+    try:
+        html = render_brief_email(content, user=current_user)
+    except Exception as e:
+        return jsonify({"error": f"Render failed: {e}"}), 500
+
+    return jsonify({
+        "ok":         True,
+        "date":       brief.brief_date.isoformat(),
+        "created_at": brief.created_at.isoformat() + "Z",
+        "content":    content,
+        "html":       html,
     })
 
 

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>PivoxQuant Morning Brief — {{ as_of }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#111;">
+
+<!-- Preview text (hidden) -->
+<div style="display:none;max-height:0;overflow:hidden;">
+  오늘의 포트폴리오 5개 KPI + 시장 요약 + 포지션 변동
+  {% if kpis.ytd_return_pct is not none %}· YTD {{ '%+.2f'|format(kpis.ytd_return_pct) }}%{% endif %}
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 0;">
+  <tr><td align="center">
+
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+           style="background:#ffffff;border-radius:8px;overflow:hidden;
+                  box-shadow:0 1px 2px rgba(0,0,0,0.06);max-width:600px;">
+
+      <!-- Masthead -->
+      <tr><td style="padding:24px 32px 8px 32px;border-bottom:1px solid #e5e7eb;">
+        <div style="font-size:10pt;color:#6b7280;letter-spacing:.5pt;text-transform:uppercase;">
+          PivoxQuant · Morning Brief · {{ as_of }}
+        </div>
+        <h1 style="margin:8px 0 0 0;font-size:20pt;font-weight:700;letter-spacing:-0.3pt;">
+          {% if user_name %}{{ user_name }}'s Morning Brief{% else %}Morning Brief{% endif %}
+        </h1>
+        {% if kpis.position_count is defined %}
+        <div style="margin-top:4px;font-size:10pt;color:#6b7280;">
+          {{ kpis.position_count }}개 종목 보유 중
+        </div>
+        {% endif %}
+      </td></tr>
+
+      {% if kpis %}
+      <!-- ═══ SECTION 1: KPI 5-CARD GRID (상단) ═══ -->
+      <!-- KPI 1: Portfolio Value + YTD -->
+      <tr><td style="padding:20px 32px 4px 32px;">
+        <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+          1 · Portfolio Value
+        </div>
+        <div style="font-size:28pt;font-weight:700;margin-top:4px;color:#111827;letter-spacing:-0.5pt;">
+          {% if kpis.portfolio_value is not none %}
+            {% if kpis.portfolio_ccy == 'KRW' %}₩{{ '{:,.0f}'.format(kpis.portfolio_value) }}{% else %}${{ '{:,.0f}'.format(kpis.portfolio_value) }}{% endif %}
+          {% else %}—{% endif %}
+        </div>
+        <div style="margin-top:4px;font-size:11pt;
+                    color:{% if kpis.ytd_return_pct is not none and kpis.ytd_return_pct >= 0 %}#0a6f3c{% elif kpis.ytd_return_pct is not none %}#a11d1d{% else %}#9ca3af{% endif %};">
+          {% if kpis.ytd_return_pct is not none %}
+            YTD {{ '%+.2f'|format(kpis.ytd_return_pct) }}%
+          {% else %}YTD —{% endif %}
+        </div>
+      </td></tr>
+
+      <!-- KPI 2-5: Two-column grid -->
+      <tr><td style="padding:20px 32px 12px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="width:50%;padding:16px 12px 16px 0;border-top:1px solid #e5e7eb;vertical-align:top;">
+              <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+                2 · Sharpe (연환산)
+              </div>
+              <div style="font-size:22pt;font-weight:700;margin-top:6px;color:#111827;">
+                {% if kpis.sharpe_annual is not none %}{{ '%.2f'|format(kpis.sharpe_annual) }}{% else %}—{% endif %}
+              </div>
+              <div style="margin-top:4px;font-size:9pt;color:#9ca3af;">
+                최근 3개월 일간 수익률 기반
+              </div>
+            </td>
+            <td style="width:50%;padding:16px 0 16px 12px;border-top:1px solid #e5e7eb;vertical-align:top;">
+              <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+                3 · Max Drawdown (3M)
+              </div>
+              <div style="font-size:22pt;font-weight:700;margin-top:6px;
+                          color:{% if kpis.max_drawdown_pct is not none %}#a11d1d{% else %}#111827{% endif %};">
+                {% if kpis.max_drawdown_pct is not none %}{{ '%.2f'|format(kpis.max_drawdown_pct) }}%{% else %}—{% endif %}
+              </div>
+              <div style="margin-top:4px;font-size:9pt;color:#9ca3af;">
+                고점 대비 최대 낙폭 관찰
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="width:50%;padding:16px 12px 16px 0;border-top:1px solid #e5e7eb;vertical-align:top;">
+              <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+                4 · Turnover (30D)
+              </div>
+              <div style="font-size:22pt;font-weight:700;margin-top:6px;color:#111827;">
+                {% if kpis.turnover_ratio is not none %}{{ '%.1f'|format(kpis.turnover_ratio * 100) }}%{% else %}—{% endif %}
+              </div>
+              <div style="margin-top:4px;font-size:9pt;color:#9ca3af;">
+                Σ|거래 금액| / 포트폴리오 가치
+              </div>
+            </td>
+            <td style="width:50%;padding:16px 0 16px 12px;border-top:1px solid #e5e7eb;vertical-align:top;">
+              <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+                5 · Cash %
+              </div>
+              <div style="font-size:22pt;font-weight:700;margin-top:6px;color:#111827;">
+                {% if kpis.cash_pct is not none %}{{ '%.1f'|format(kpis.cash_pct * 100) }}%{% else %}—{% endif %}
+              </div>
+              <div style="margin-top:4px;font-size:9pt;color:#9ca3af;">
+                현금 / (현금 + 포지션 시가)
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+      {% endif %}
+
+      <!-- ═══ SECTION 2: MORNING BRIEF 본문 (중간) ═══ -->
+
+      {% if content.insight %}
+      <!-- AI one-liner insight -->
+      <tr><td style="padding:22px 32px 6px 32px;border-top:1px solid #e5e7eb;">
+        <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+          오늘의 한 줄
+        </div>
+        <div style="margin-top:6px;font-size:13pt;line-height:1.5;color:#111827;">
+          {{ content.insight }}
+        </div>
+      </td></tr>
+      {% endif %}
+
+      {% if content.market_summary %}
+      <!-- Market summary (indices + VIX) -->
+      <tr><td style="padding:18px 32px 6px 32px;">
+        <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+          시장 스냅샷
+        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+          {% for key, label in [('sp500','S&P 500'),('nasdaq','NASDAQ'),('dow','Dow'),('kospi','KOSPI'),('kosdaq','KOSDAQ'),('vix','VIX')] %}
+            {% set idx = content.market_summary.get(key) %}
+            {% if idx %}
+            <tr>
+              <td style="padding:4px 0;font-size:11pt;color:#374151;width:40%;">{{ label }}</td>
+              <td style="padding:4px 0;font-size:11pt;text-align:right;color:#111827;">
+                {% if idx.price is defined and idx.price is not none %}{{ '%.2f'|format(idx.price) }}{% else %}—{% endif %}
+              </td>
+              <td style="padding:4px 0 4px 12px;font-size:11pt;text-align:right;
+                         color:{% if idx.change_pct is defined and idx.change_pct is not none and idx.change_pct >= 0 %}#0a6f3c{% elif idx.change_pct is defined and idx.change_pct is not none %}#a11d1d{% else %}#9ca3af{% endif %};">
+                {% if idx.change_pct is defined and idx.change_pct is not none %}{{ '%+.2f'|format(idx.change_pct) }}%{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endif %}
+          {% endfor %}
+        </table>
+      </td></tr>
+      {% endif %}
+
+      {% if content.portfolio_changes %}
+      <!-- Portfolio yesterday-change -->
+      <tr><td style="padding:18px 32px 6px 32px;">
+        <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+          보유 종목 변동
+        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+          {% for row in content.portfolio_changes[:10] %}
+          <tr>
+            <td style="padding:4px 0;font-size:11pt;color:#111827;width:55%;">
+              <strong>{{ row.ticker }}</strong>
+              <span style="color:#6b7280;"> · {{ row.name }}</span>
+            </td>
+            <td style="padding:4px 0;font-size:11pt;text-align:right;
+                       color:{% if row.direction == 'up' %}#0a6f3c{% elif row.direction == 'down' %}#a11d1d{% else %}#9ca3af{% endif %};">
+              {{ '%+.2f'|format(row.change_pct) }}%
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </td></tr>
+      {% endif %}
+
+      {% if content.events %}
+      <!-- Upcoming events (이번 주 실적 일정) -->
+      <tr><td style="padding:18px 32px 6px 32px;">
+        <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;letter-spacing:.5pt;">
+          예정 이벤트
+        </div>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+          {% for ev in content.events[:5] %}
+          <tr>
+            <td style="padding:4px 0;font-size:11pt;color:#111827;width:30%;">
+              <strong>{{ ev.ticker }}</strong>
+            </td>
+            <td style="padding:4px 0;font-size:11pt;color:#374151;">
+              {{ ev.description }}{% if ev.event_time %} · {{ ev.event_time }}{% endif %}
+            </td>
+            <td style="padding:4px 0;font-size:10pt;text-align:right;color:#6b7280;">
+              {{ ev.date }}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </td></tr>
+      {% endif %}
+
+      <!-- ═══ SECTION 3: DISCLAIMER (하단) ═══ -->
+      <tr><td style="padding:20px 32px 22px 32px;border-top:1px solid #e5e7eb;
+                     font-size:8.5pt;color:#9ca3af;line-height:1.5;">
+        {% include '_disclaimer.html' %}
+        <div style="margin-top:10px;">
+          Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
+        </div>
+      </td></tr>
+    </table>
+
+  </td></tr>
+</table>
+
+</body>
+</html>

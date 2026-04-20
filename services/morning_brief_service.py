@@ -23,9 +23,11 @@ Design principles
 from __future__ import annotations
 
 import logging
+import os
 import re
 import threading
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 from extensions import db
 from models import MorningBrief, Position, SignalCache, User, Watchlist
@@ -37,6 +39,16 @@ from services.name_resolver import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Shared templates directory (Morning Brief Plus + KPI Dashboard + other
+# artefacts all live here so the _disclaimer.html partial is reachable via
+# one loader). Morning Brief historically shipped as a JSON API only — with
+# the Morning Brief Plus integration we start rendering the same content as
+# an HTML email at 06:00 KST.
+_TEMPLATE_DIR = (
+    Path(__file__).parent / "artifacts" / "templates"
+)
+_PAID_TIERS = frozenset({"pro", "premium", "elite"})
 
 
 # ── Compliance: forbidden vocabulary (regex) ─────────────────────────────────
@@ -323,7 +335,21 @@ def generate_brief(user: User, for_date: date | None = None) -> MorningBrief:
     # 4. AI one-liner (compliance-filtered)
     insight = _generate_insight(portfolio_changes, market_summary, events)
 
+    # 5. KPI snapshot (Morning Brief Plus — replaces the stand-alone daily
+    #    KPI Dashboard email). Best-effort; an empty/failed KPI block
+    #    degrades gracefully to an empty dict and the template renders "—".
+    kpis: dict = {}
+    try:
+        from services.artifacts.kpi_dashboard_service import (
+            compute_kpis_for_user,
+        )
+        kpis = compute_kpis_for_user(user.id, target_date=brief_date)
+    except Exception as e:
+        logger.warning(f"Morning brief KPI computation failed for user {user.id}: {e}")
+        kpis = {}
+
     content = {
+        "kpis":              kpis,
         "market_summary":    market_summary,
         "portfolio_changes": portfolio_changes,
         "events":            events,
@@ -332,7 +358,7 @@ def generate_brief(user: User, for_date: date | None = None) -> MorningBrief:
         "generated_at":      datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
     }
 
-    # 5. Upsert — idempotent re-runs on the same date
+    # 6. Upsert — idempotent re-runs on the same date
     existing = MorningBrief.query.filter_by(
         user_id=user.id, brief_date=brief_date
     ).first()
@@ -355,6 +381,12 @@ def generate_brief(user: User, for_date: date | None = None) -> MorningBrief:
 def run_daily_briefs() -> dict:
     """Generate briefs for every onboarded user. Cron target.
 
+    With the Morning Brief Plus integration this also *emails* the brief to
+    Pro+ subscribers — the stand-alone `kpi_dashboard_daily` scheduler job
+    has been retired; its five KPIs are now embedded at the top of the
+    Morning Brief email. Free users still get the JSON brief via `/api/brief/today`
+    but no email is sent.
+
     Returns a summary dict for logging / monitoring.
     """
     # Onboarded users are the closest proxy we have to "active".
@@ -363,6 +395,7 @@ def run_daily_briefs() -> dict:
     successes = 0
     failures = 0
     skipped  = 0
+    emailed  = 0
 
     for user in users:
         try:
@@ -374,8 +407,19 @@ def run_daily_briefs() -> dict:
                 skipped += 1
                 continue
 
-            generate_brief(user)
+            brief = generate_brief(user)
             successes += 1
+
+            # Pro+ users get the Morning Brief Plus email (KPI cards + brief).
+            # Free users still see the in-app /api/brief/today payload but no email.
+            if (getattr(user, "subscription_tier", "free") or "free").lower() in _PAID_TIERS:
+                try:
+                    html_body = render_brief_email(brief.content or {},
+                                                   user=user)
+                    if send_brief_email(user, html_body):
+                        emailed += 1
+                except Exception as e:
+                    logger.error(f"Morning brief email failed for user {user.id}: {e}")
         except Exception as e:
             db.session.rollback()
             failures += 1
@@ -385,9 +429,133 @@ def run_daily_briefs() -> dict:
         "date":      date.today().isoformat(),
         "attempted": len(users),
         "success":   successes,
+        "emailed":   emailed,
         "failed":    failures,
         "skipped":   skipped,
         "ai_usage":  ai_usage_snapshot(),
     }
     logger.info(f"Morning brief daily run: {summary}")
     return summary
+
+
+# ── Email rendering + delivery (Morning Brief Plus) ──────────────────────────
+
+def _jinja_env():
+    """Lazy Jinja environment pointed at the shared artifacts templates dir.
+
+    Kept inside the function so a missing Jinja install doesn't break the
+    JSON-only API — the email path is allowed to fail independently.
+    """
+    try:
+        from jinja2 import Environment, FileSystemLoader, select_autoescape
+        return Environment(
+            loader=FileSystemLoader(str(_TEMPLATE_DIR)),
+            autoescape=select_autoescape(["html", "xml"]),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Morning brief: Jinja env build failed: %s", exc)
+        return None
+
+
+def render_brief_email(content: dict, *, user: User | None = None) -> str:
+    """Render the Morning Brief Plus HTML email.
+
+    `content` is the dict produced by `generate_brief()` (has `kpis`,
+    `market_summary`, `portfolio_changes`, `events`, `insight`,
+    `disclaimer`, `generated_at`). A missing `kpis` key degrades cleanly —
+    the template hides the KPI grid rather than erroring.
+    """
+    env = _jinja_env()
+    context = {
+        "content":   content,
+        "kpis":      content.get("kpis") or {},
+        "user_name": (user.name if user and user.name
+                      else (user.email.split("@")[0] if user and user.email else "")),
+        "as_of":     (content.get("kpis") or {}).get("as_of")
+                     or date.today().isoformat(),
+    }
+    if env is None:
+        return _fallback_brief_email(context)
+    try:
+        tpl = env.get_template("morning_brief_plus.html")
+        return tpl.render(**context)
+    except Exception as exc:
+        logger.warning("Morning brief template render failed: %s", exc)
+        return _fallback_brief_email(context)
+
+
+def _fallback_brief_email(ctx: dict) -> str:
+    """Minimal HTML used if Jinja/template is unavailable."""
+    from html import escape
+    content = ctx.get("content") or {}
+    insight = escape(str(content.get("insight", "") or ""))
+    disclaimer = escape(str(content.get("disclaimer", "") or ""))
+    return (
+        "<!doctype html><html><body>"
+        f"<h1>PivoxQuant Morning Brief — {escape(ctx.get('as_of',''))}</h1>"
+        f"<p>{insight}</p>"
+        f"<p><em>{disclaimer}</em></p>"
+        "</body></html>"
+    )
+
+
+def send_brief_email(user: User, html_body: str) -> bool:
+    """Deliver Morning Brief Plus via SendGrid → SMTP → skip.
+
+    Mirrors the KPI Dashboard / Weekly Memo sender contract so operators
+    can reuse the same env vars (`SENDGRID_API_KEY`, `SMTP_*`,
+    `WEEKLY_MEMO_FROM_EMAIL`). Honours `user.email_opt_out`.
+    """
+    if getattr(user, "email_opt_out", False):
+        return False
+    if not getattr(user, "email", None):
+        return False
+
+    from_email = os.environ.get(
+        "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
+    )
+    subject = f"PivoxQuant Morning Brief — {date.today().isoformat()}"
+
+    sg_key = os.environ.get("SENDGRID_API_KEY")
+    if sg_key:
+        try:
+            from sendgrid import SendGridAPIClient  # type: ignore
+            from sendgrid.helpers.mail import Mail  # type: ignore
+            mail = Mail(from_email=from_email, to_emails=user.email,
+                        subject=subject, html_content=html_body)
+            SendGridAPIClient(sg_key).send(mail)
+            return True
+        except Exception as exc:
+            logger.error("SendGrid morning-brief send failed for user %s: %s",
+                         user.id, exc)
+            return False
+
+    smtp_host = os.environ.get("SMTP_HOST")
+    if smtp_host:
+        try:
+            import smtplib
+            from email.message import EmailMessage
+            msg = EmailMessage()
+            msg["From"] = from_email
+            msg["To"] = user.email
+            msg["Subject"] = subject
+            msg.set_content("HTML-only; view in an HTML-capable client.")
+            msg.add_alternative(html_body, subtype="html")
+            port = int(os.environ.get("SMTP_PORT", "587"))
+            user_ = os.environ.get("SMTP_USER")
+            pw = os.environ.get("SMTP_PASSWORD")
+            with smtplib.SMTP(smtp_host, port, timeout=10) as s:
+                s.starttls()
+                if user_ and pw:
+                    s.login(user_, pw)
+                s.send_message(msg)
+            return True
+        except Exception as exc:
+            logger.error("SMTP morning-brief send failed for user %s: %s",
+                         user.id, exc)
+            return False
+
+    logger.info("no email provider — skip morning-brief send for user %s", user.id)
+    return False
