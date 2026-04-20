@@ -43,6 +43,9 @@ ARTIFACT_TYPES = {
     "kpi_dashboard",     # Daily 08:00 KST KPI email (Pro+)
     "self_audit",        # Quarterly decision-quality PDF (Premium)
     "dd_checklist",      # T+3 post-entry due-diligence email (Pro+)
+    # 2026-04-19 (Pro-tier expansion)
+    "burn_rate",         # Monthly 1-page PDF — cost + expected tax (Pro+)
+    "credit_rating",     # Monthly self-assessed portfolio grade (Pro+)
 }
 
 

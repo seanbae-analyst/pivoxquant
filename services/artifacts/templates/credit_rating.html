@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Credit Rating Self-Assessment — {{ as_of }}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                       Helvetica, Arial, "Apple SD Gothic Neo",
+                       "Noto Sans KR", sans-serif;
+           color: #111; line-height: 1.5; font-size: 14px;
+           max-width: 640px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 22px; margin: 0 0 4px 0; letter-spacing: -0.3px; }
+    h2 { font-size: 15px; margin: 22px 0 8px 0;
+         border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+    .meta { font-size: 11px; color: #6b7280; text-transform: uppercase;
+            letter-spacing: .5px; }
+    .grade-box { background: #faf9f6; border-left: 3px solid #111;
+                 padding: 16px 18px; margin: 14px 0; display: table; width: 100%; }
+    .grade-cell { display: table-cell; vertical-align: middle; }
+    .grade-letter { font-size: 56px; font-weight: 700; letter-spacing: -1.5px;
+                    line-height: 1; }
+    .grade-score { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .grade-change { font-size: 12px; font-weight: 600; padding: 4px 10px;
+                    border-radius: 12px; display: inline-block; }
+    .change-upgrade { background: #dcfce7; color: #166534; }
+    .change-downgrade { background: #fee2e2; color: #991b1b; }
+    .change-same { background: #f3f4f6; color: #4b5563; }
+    .change-new { background: #e0e7ff; color: #3730a3; }
+    table.factors { width: 100%; border-collapse: collapse; margin-top: 4px;
+                    font-size: 13px; }
+    table.factors th, table.factors td { padding: 10px 8px; text-align: left;
+                                         border-bottom: 1px solid #e5e7eb; }
+    table.factors th { font-size: 11px; color: #6b7280;
+                       text-transform: uppercase; letter-spacing: .4px;
+                       font-weight: 500; }
+    table.factors td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .bar { display: inline-block; width: 80px; height: 6px; background: #e5e7eb;
+           border-radius: 3px; vertical-align: middle; overflow: hidden; }
+    .bar-fill { display: block; height: 100%; background: #111; }
+    .footer { font-size: 11px; color: #9ca3af; margin-top: 22px; line-height: 1.45; }
+    .muted { color: #6b7280; }
+  </style>
+</head>
+<body>
+
+<div class="meta">PivoxQuant · Credit Rating · {{ as_of }}</div>
+<h1>{{ user_name }}'s Portfolio Rating</h1>
+<div class="meta">{{ position_count }} positions · self-assessed</div>
+
+<div class="grade-box">
+  <div class="grade-cell" style="width:40%;">
+    <div class="grade-letter">{{ grade }}</div>
+    <div class="grade-score">
+      {% if composite_score is not none %}
+        {{ '%.1f'|format(composite_score) }} / 100
+      {% else %}
+        데이터 부족
+      {% endif %}
+    </div>
+  </div>
+  <div class="grade-cell" style="text-align:right;">
+    {% if change == 'upgrade' %}
+      <span class="grade-change change-upgrade">▲ UPGRADE ({{ prev_grade }} → {{ grade }})</span>
+    {% elif change == 'downgrade' %}
+      <span class="grade-change change-downgrade">▼ DOWNGRADE ({{ prev_grade }} → {{ grade }})</span>
+    {% elif change == 'same' %}
+      <span class="grade-change change-same">= UNCHANGED ({{ prev_grade }})</span>
+    {% else %}
+      <span class="grade-change change-new">★ NEW</span>
+    {% endif %}
+  </div>
+</div>
+
+<h2>Factor Breakdown</h2>
+<table class="factors">
+  <thead>
+    <tr>
+      <th>Factor</th>
+      <th class="num">Weight</th>
+      <th class="num">Score</th>
+      <th>Bar</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for f in factor_details %}
+    <tr>
+      <td>{{ f.name }}</td>
+      <td class="num muted">{{ '%.0f'|format(f.weight * 100) }}%</td>
+      <td class="num">
+        {% if f.score is not none %}{{ '%.1f'|format(f.score) }}{% else %}—{% endif %}
+      </td>
+      <td>
+        {% if f.score is not none %}
+          <span class="bar"><span class="bar-fill"
+            style="width: {{ f.score|round(0, 'floor')|int }}%"></span></span>
+        {% else %}
+          <span class="muted">n/a</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>Methodology</h2>
+<p class="muted" style="font-size:12px;">
+  5개 팩터(분산·유동성·위험조정수익률·드로다운 규율·현금비중)를 각 0–100으로 스코어링
+  후 가중평균합니다. 등급 매핑: 90+ AAA / 80–89 AA / 70–79 A / 60–69 BBB /
+  50–59 BB / 50 미만 B. 전월 아티팩트가 있으면 등급 변화를 upgrade/downgrade로 표시합니다.
+</p>
+
+<h2>Disclaimer</h2>
+{% include '_disclaimer.html' %}
+
+<div class="footer">
+  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
+</div>
+
+</body>
+</html>

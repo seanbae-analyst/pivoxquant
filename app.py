@@ -643,6 +643,35 @@ def _init_scheduler(app):
             except Exception as e:
                 logger.error(f"DD checklist scheduler failed: {e}")
 
+    def _scheduled_burn_rate():
+        """Monthly (day=1) 09:00 KST — Burn Rate Report PDF (Pro+).
+
+        Calls `run_monthly(target_month=date.today())` which resolves the
+        *previous* calendar month via `_prev_month_bounds`. Empty-trade
+        users are skipped inside `run_for_user`.
+        """
+        from services.artifacts.burn_rate_service import BurnRateService
+        with app.app_context():
+            try:
+                summary = BurnRateService().run_monthly()
+                logger.info(f"Burn rate scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Burn rate scheduler failed: {e}")
+
+    def _scheduled_credit_rating():
+        """Monthly (day=15) 09:00 KST — Credit Rating email (Pro+).
+
+        Empty portfolios are skipped. Per-user failures never block the
+        rest — see `CreditRatingService.run_monthly`.
+        """
+        from services.artifacts.credit_rating_service import CreditRatingService
+        with app.app_context():
+            try:
+                summary = CreditRatingService().run_monthly()
+                logger.info(f"Credit rating scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Credit rating scheduler failed: {e}")
+
     def _scheduled_earnings_prebrief():
         """Scan every 15 min for positions whose earnings fire in ~30 min
         (MVP #3). The service enforces dedup per (user, ticker,
@@ -737,6 +766,28 @@ def _init_scheduler(app):
         hour=8, minute=5,
         timezone="Asia/Seoul",
         id="dd_checklist_daily",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매월 1일 09:00 KST — Burn Rate Report PDF (Pro+). 전월 거래 집계.
+    sched.add_job(
+        _scheduled_burn_rate,
+        trigger="cron",
+        day=1,
+        hour=9, minute=0,
+        timezone="Asia/Seoul",
+        id="burn_rate_monthly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매월 15일 09:00 KST — Credit Rating Self-Assessment 이메일 (Pro+).
+    sched.add_job(
+        _scheduled_credit_rating,
+        trigger="cron",
+        day=15,
+        hour=9, minute=0,
+        timezone="Asia/Seoul",
+        id="credit_rating_monthly",
         max_instances=1,
         coalesce=True,
     )

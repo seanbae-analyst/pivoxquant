@@ -71,6 +71,8 @@ _ARTIFACT_DOWNLOAD_META = {
     "self_audit":        ("application/pdf", "pdf"),
     "kpi_dashboard":     ("text/html",       "html"),
     "dd_checklist":      ("text/html",       "html"),
+    "burn_rate":         ("application/pdf", "pdf"),
+    "credit_rating":     ("text/html",       "html"),
 }
 
 
@@ -1314,6 +1316,185 @@ def dd_checklist_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("dd manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ BURN RATE REPORT (Pro+) ═══════
+# Monthly 1st 09:00 KST — 1-page PDF aggregating last month's commission,
+# transaction tax, expected CGT, FX spread, slippage estimate. See
+# services/artifacts/burn_rate_service.py for the calculation contract.
+
+from services.artifacts.burn_rate_service import (  # noqa: E402
+    BurnRateService,
+)
+
+
+@artifacts_bp.route("/burn-rate/preview", methods=["GET"])
+@api_auth
+@require_tier("pro")
+def burn_rate_preview():
+    """Generate (don't email) a preview Burn Rate for the caller.
+
+    Returns:
+        { ok, data, html }
+    Mirrors the /self-audit/preview contract so the frontend preview pane
+    can treat these two polymorphically.
+    """
+    try:
+        svc = BurnRateService()
+        data = svc.generate_for_user(current_user.id)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("burn_rate preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/burn-rate/download", methods=["GET"])
+@api_auth
+@require_tier("pro")
+def burn_rate_download_latest():
+    """Stream the most recent Burn Rate PDF for the caller. Owner-only.
+
+    Same semantics as /self-audit/download — resolves to the latest row
+    so the frontend can deep-link to `download` without tracking IDs.
+    """
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="burn_rate")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Burn Rate report available yet",
+                        "code": "NO_REPORT"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this report",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    period = (artefact.data_json or {}).get("period_label", "period")
+    safe_p = period.replace(" ", "_")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"burn_rate_{safe_p}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/burn-rate/trigger", methods=["POST"])
+@api_auth
+def burn_rate_trigger():
+    """Manual trigger for the monthly cron. Admin-only.
+
+    Gating — same convention as weekly_memo/trigger:
+      1. `DEV_LOGIN_SECRET` env must be set.
+      2. Caller must pass `X-Admin-Secret` header equal to it.
+    Body (optional): { "target_month": "2026-04-01" } to pin the run
+    date (used by `_prev_month_bounds` to back-out the prior month).
+    """
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    target_str = body.get("target_month")
+    target_month = None
+    if target_str:
+        try:
+            target_month = date.fromisoformat(target_str)
+        except ValueError:
+            return jsonify({"error": "invalid target_month (expected YYYY-MM-DD)"}), 400
+
+    try:
+        summary = BurnRateService().run_monthly(target_month=target_month)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("burn_rate manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ CREDIT RATING SELF-ASSESSMENT (Pro+) ═══════
+# Monthly 15th 09:00 KST — 1-page HTML email with portfolio self-rating.
+
+from services.artifacts.credit_rating_service import (  # noqa: E402
+    CreditRatingService,
+)
+
+
+@artifacts_bp.route("/credit-rating/preview", methods=["GET"])
+@api_auth
+@require_tier("pro")
+def credit_rating_preview():
+    """Generate (don't email) a preview Credit Rating for the caller.
+
+    Returns:
+        { ok, data, html }
+    """
+    try:
+        svc = CreditRatingService()
+        data = svc.generate_for_user(current_user.id)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("credit_rating preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/credit-rating/trigger", methods=["POST"])
+@api_auth
+def credit_rating_trigger():
+    """Manual trigger for the monthly cron. Admin-only. Same gating as
+    weekly_memo/trigger."""
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    as_of_str = body.get("as_of")
+    as_of = None
+    if as_of_str:
+        try:
+            as_of = date.fromisoformat(as_of_str)
+        except ValueError:
+            return jsonify({"error": "invalid as_of (expected YYYY-MM-DD)"}), 400
+
+    try:
+        summary = CreditRatingService().run_monthly(as_of=as_of)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("credit_rating manual run failed: %s", exc)
         return jsonify({"error": f"Manual run failed: {exc}"}), 500
 
     return jsonify({"ok": True, "summary": summary})
