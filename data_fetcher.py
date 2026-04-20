@@ -1,7 +1,7 @@
 """
 PivoxQuant — Data Fetcher v3
-Data sources: Alpaca (US primary), KIS (KR primary), FMP (fallback/fundamentals),
-RSS feeds, alternative.me.
+Data sources: Alpaca (US primary), KIS (KR primary), FMP (fundamentals +
+licensed news aggregator), alternative.me (Fear & Greed only).
 Supports US equities + Korean stocks (.KS / .KQ).
 """
 
@@ -9,7 +9,6 @@ import os
 import logging
 from datetime import datetime, timedelta, timezone
 
-import feedparser
 import pandas as pd
 import requests
 
@@ -98,13 +97,9 @@ KOREAN_BEARISH = {
     "우려", "악재", "충격", "약세", "리스크", "부채", "정체", "축소", "하향조정",
 }
 
-# Wall Street RSS feeds (free, no API key)
-WS_FEEDS = [
-    {"name": "Reuters Business", "url": "https://feeds.reuters.com/reuters/businessNews"},
-    {"name": "MarketWatch",      "url": "https://feeds.marketwatch.com/marketwatch/topstories/"},
-    {"name": "CNBC Markets",     "url": "https://www.cnbc.com/id/15839069/device/rss/rss.html"},
-    {"name": "Seeking Alpha",    "url": "https://seekingalpha.com/market_currents.xml"},
-]
+# Wall Street news: sourced via FMP /news/general (licensed aggregator).
+# Direct Reuters/MarketWatch/CNBC/Seeking Alpha RSS removed 2026-04-19
+# for commercial-use ToS compliance.
 
 
 class DataFetcher:
@@ -305,22 +300,6 @@ class DataFetcher:
             logger.error(f"Quick lookup failed {ticker}: {e}")
             return None
 
-    _RSS_HEADERS = {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/120.0.0.0 Safari/537.36"
-        )
-    }
-
-    def _fetch_feed(self, url: str) -> "feedparser.FeedParserDict":
-        """Fetch RSS via requests (with UA header) then parse the content."""
-        try:
-            r = requests.get(url, headers=self._RSS_HEADERS, timeout=8)
-            return feedparser.parse(r.text)
-        except Exception:
-            return feedparser.parse("")
-
     # ── Per-Ticker News ───────────────────────────────────────────────────────
 
     def get_news(self, ticker: str) -> list[dict]:
@@ -472,39 +451,57 @@ Reply ONLY in this exact JSON format, nothing else:
 
     def get_wall_street_brief(self) -> dict:
         """
-        Aggregate top Wall Street stories from multiple free RSS feeds.
-        Returns GS-style morning brief payload.
+        Aggregate top Wall Street stories via FMP ``/news/general``.
+
+        FMP aggregates licensed news feeds (Reuters, MarketWatch,
+        Bloomberg, etc.) so commercial redistribution is permitted.
+        Direct Reuters/MarketWatch/CNBC/Seeking Alpha RSS calls were
+        removed 2026-04-19 for ToS compliance. On failure → empty stories.
+
+        Returns GS-style morning brief payload with fields
+        ``{stories, market_mood, mood_color, bull_count, bear_count,
+        sources, date, generated_at}``.
         """
         stories: list[dict] = []
-        sources_ok: list[str] = []
+        sources_ok_set: set[str] = set()
 
-        for feed_info in WS_FEEDS:
-            try:
-                feed = self._fetch_feed(feed_info["url"])
-                count = 0
-                for e in feed.entries[:5]:
-                    title = e.get("title", "").strip()
-                    if not title or len(title) < 10:
-                        continue
-                    words = set(title.lower().split())
-                    bull = len(words & BULLISH_WORDS)
-                    bear = len(words & BEARISH_WORDS)
-                    sentiment = "bullish" if bull > bear else "bearish" if bear > bull else "neutral"
-                    stories.append({
-                        "title":     title,
-                        "summary":   e.get("summary", "")[:200].strip(),
-                        "published": e.get("published", ""),
-                        "link":      e.get("link", ""),
-                        "source":    feed_info["name"],
-                        "sentiment": sentiment,
-                    })
-                    count += 1
-                if count:
-                    sources_ok.append(feed_info["name"])
-            except Exception as ex:
-                logger.debug(f"Feed {feed_info['name']} failed: {ex}")
+        try:
+            raw = fmp.get_general_news(limit=24) or []
+        except Exception as ex:
+            logger.debug(f"FMP general news failed: {ex}")
+            raw = []
+
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            title = (item.get("title") or "").strip()
+            if not title or len(title) < 10:
+                continue
+            # FMP schema: title / text / publishedDate / url / site / image
+            summary_raw = item.get("text") or item.get("summary") or ""
+            summary = str(summary_raw)[:200].strip()
+            published = item.get("publishedDate") or item.get("published") or ""
+            link = item.get("url") or item.get("link") or ""
+            source = (item.get("site") or item.get("publisher")
+                      or item.get("source") or "FMP").strip() or "FMP"
+
+            words = set(title.lower().split())
+            bull = len(words & BULLISH_WORDS)
+            bear = len(words & BEARISH_WORDS)
+            sentiment = "bullish" if bull > bear else "bearish" if bear > bull else "neutral"
+
+            stories.append({
+                "title":     title,
+                "summary":   summary,
+                "published": published,
+                "link":      link,
+                "source":    source,
+                "sentiment": sentiment,
+            })
+            sources_ok_set.add(source)
 
         stories = stories[:24]
+        sources_ok = sorted(sources_ok_set)
         bull_cnt = sum(1 for s in stories if s["sentiment"] == "bullish")
         bear_cnt = sum(1 for s in stories if s["sentiment"] == "bearish")
 
