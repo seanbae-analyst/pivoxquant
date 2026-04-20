@@ -1,9 +1,26 @@
 """
 PivoxQuant — News Service
-KR ticker (.KS / .KQ) → Naver Developers Search API (official, commercial OK)
-US ticker              → Yahoo Finance RSS / Google News RSS (public feeds)
 
-Response schema (identical to FMP path used by frontend):
+Legal-compliant per-ticker news.
+
+Sources:
+  - KR ticker (.KS / .KQ) → Naver Developers Search News API (official,
+    commercial-use-allowed under the Naver Developers Agreement §2 once
+    NAVER_CLIENT_ID / NAVER_CLIENT_SECRET are set).
+  - US ticker              → FMP `/news/stock` (paid subscription, commercial OK).
+    No RSS fallback. When FMP returns nothing the caller sees an empty list
+    and the UI renders a "no recent news" state.
+
+Removed (2026-04-19):
+  - ``get_news_google``      — Google News RSS is grey-area for commercial
+                               use and Google has announced its retirement.
+  - ``get_news_yahoo_rss``   — Yahoo Finance RSS ToS forbids commercial use
+                               and it was rate-limited into uselessness.
+  - Naver mobile-JSON scrape — violated Naver's robots/scraping ToS (already
+                               removed in commit 2421871, documented here).
+
+Response schema (stable — matches the FMP path the frontend consumes):
+
     {
         "title":     str,
         "summary":   str,   # may be ""
@@ -13,14 +30,6 @@ Response schema (identical to FMP path used by frontend):
     }
 
 Never raises — returns [] on any failure. Times out in ~8s.
-
-Legal note:
-  The legacy implementation scraped Naver's mobile JSON endpoint
-  (`m.stock.naver.com/api/news/stock/...`). That endpoint is undocumented
-  and violates Naver's robots / scraping ToS. The official Search News
-  API (this file) is explicitly commercial-use-allowed under the Naver
-  Developers Agreement §2 once NAVER_CLIENT_ID / NAVER_CLIENT_SECRET are
-  issued via https://developers.naver.com/apps/#/register.
 """
 
 from __future__ import annotations
@@ -33,17 +42,12 @@ from email.utils import parsedate_to_datetime
 from html import unescape
 from typing import Dict, List
 
-import feedparser
 import requests
 
 logger = logging.getLogger(__name__)
 
 _HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": "PivoxQuant/1.0 (contact: seanbae1521@gmail.com)",
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
 }
 
@@ -101,7 +105,8 @@ _NAVER_API = "https://openapi.naver.com/v1/search/news.json"
 def _naver_credentials() -> tuple[str, str] | None:
     """Read NAVER_CLIENT_ID / NAVER_CLIENT_SECRET from env.
 
-    Returns None if either is missing — caller falls through to RSS feeds.
+    Returns None if either is missing — caller gets an empty list (no RSS
+    fallback; this is intentional post-2026-04-19).
     """
     cid = os.environ.get("NAVER_CLIENT_ID", "").strip()
     secret = os.environ.get("NAVER_CLIENT_SECRET", "").strip()
@@ -134,8 +139,7 @@ def get_news_naver(ticker: str) -> List[dict]:
     """Fetch news for a KR ticker via Naver's official Search News API.
 
     Requires NAVER_CLIENT_ID + NAVER_CLIENT_SECRET env. Returns [] when the
-    keys are unset (caller should fall through to Google News RSS) or on
-    any error — never raises.
+    keys are unset or on any error — never raises.
     """
     cache_key = f"naver:{ticker.upper()}"
     cached = _cache_get(cache_key)
@@ -197,129 +201,6 @@ def get_news_naver(ticker: str) -> List[dict]:
                 break
     except Exception as ex:
         logger.warning("Naver Search API fetch failed %s: %s", ticker, ex)
-        return []
-
-    _cache_set(cache_key, items)
-    return items
-
-
-# ── Yahoo Finance RSS (US fallback) ──────────────────────────────────────────
-
-_YAHOO_RSS_URL = (
-    "https://feeds.finance.yahoo.com/rss/2.0/headline"
-    "?s={symbol}&region=US&lang=en-US"
-)
-
-
-def get_news_yahoo_rss(ticker: str) -> List[dict]:
-    """Fetch Yahoo Finance RSS feed for a US ticker.
-
-    Returns [] on any failure.
-    """
-    cache_key = f"yahoo:{ticker.upper()}"
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached
-
-    # Yahoo uses bare symbol (no suffix)
-    symbol = ticker.split(".")[0].strip().upper()
-    if not symbol:
-        return []
-
-    url = _YAHOO_RSS_URL.format(symbol=symbol)
-    items: List[dict] = []
-
-    # Yahoo throttles requests with ko-KR Accept-Language; use en-only headers.
-    yahoo_headers = {
-        "User-Agent": _HEADERS["User-Agent"],
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
-    }
-
-    try:
-        resp = requests.get(url, headers=yahoo_headers, timeout=_REQUEST_TIMEOUT)
-        if resp.status_code != 200:
-            logger.warning(f"Yahoo RSS HTTP {resp.status_code} for {ticker}")
-            return []
-        parsed = feedparser.parse(resp.text)
-        for entry in (parsed.entries or [])[:_MAX_ITEMS]:
-            title = _clean_text(entry.get("title", ""))
-            if not title or len(title) < 5:
-                continue
-            summary = _clean_text(entry.get("summary", ""))[:300]
-            items.append({
-                "title":     title,
-                "summary":   summary,
-                "published": entry.get("published", "") or entry.get("updated", ""),
-                "link":      entry.get("link", ""),
-                "source":    "Yahoo Finance",
-            })
-    except Exception as ex:
-        logger.warning(f"Yahoo RSS fetch failed {ticker}: {ex}")
-        return []
-
-    _cache_set(cache_key, items)
-    return items
-
-
-# ── Google News RSS (universal fallback) ─────────────────────────────────────
-
-_GOOGLE_NEWS_RSS = (
-    "https://news.google.com/rss/search"
-    "?q={query}&hl=en-US&gl=US&ceid=US:en"
-)
-
-
-def get_news_google(ticker: str) -> List[dict]:
-    """Fetch Google News RSS for a ticker (US fallback when Yahoo throttles).
-
-    Uses `{symbol} stock` as the search query. Returns [] on failure.
-    """
-    cache_key = f"google:{ticker.upper()}"
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached
-
-    symbol = ticker.split(".")[0].strip().upper()
-    if not symbol:
-        return []
-
-    query = f"{symbol}+stock"
-    url = _GOOGLE_NEWS_RSS.format(query=query)
-    items: List[dict] = []
-
-    headers = {
-        "User-Agent": _HEADERS["User-Agent"],
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-
-    try:
-        resp = requests.get(url, headers=headers, timeout=_REQUEST_TIMEOUT)
-        if resp.status_code != 200:
-            logger.warning(f"Google News HTTP {resp.status_code} for {ticker}")
-            return []
-        parsed = feedparser.parse(resp.text)
-        for entry in (parsed.entries or [])[:_MAX_ITEMS]:
-            title = _clean_text(entry.get("title", ""))
-            if not title or len(title) < 5:
-                continue
-            # Google News titles end with " - <Source>" — split it out.
-            source_name = "Google News"
-            if " - " in title:
-                title_core, _, src = title.rpartition(" - ")
-                if src and len(src) < 40:
-                    title = title_core
-                    source_name = src
-            summary = _clean_text(entry.get("summary", ""))[:300]
-            items.append({
-                "title":     title,
-                "summary":   summary,
-                "published": entry.get("published", "") or entry.get("updated", ""),
-                "link":      entry.get("link", ""),
-                "source":    source_name,
-            })
-    except Exception as ex:
-        logger.warning(f"Google News fetch failed {ticker}: {ex}")
         return []
 
     _cache_set(cache_key, items)
