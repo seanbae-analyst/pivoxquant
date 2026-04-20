@@ -211,35 +211,24 @@ def get_insider_trades(
 
 
 def ticker_to_corp_code(ticker: str) -> str | None:
-    """Best-effort map KR ticker → DART 8-digit corp_code.
+    """Map a KR ticker → DART 8-digit corp_code.
 
-    Uses DART's ``list.json`` search by stock_code. Returns None if the
-    API key is missing, the lookup fails, or the ticker is not KR.
+    Delegates to :mod:`services.data.dart_corp_code`, which downloads and
+    caches DART's ``CORPCODE.xml`` master file. Returns ``None`` when the
+    API key is missing, the ticker is non-KR, or the symbol is not listed.
     """
     if not is_configured():
         return None
     t = (ticker or "").upper().strip()
     if not (t.endswith(".KS") or t.endswith(".KQ")):
         return None
-    stock_code = t.split(".")[0]
-    cache_key = f"dart_corp_code:{stock_code}"
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached or None
-
-    end = datetime.now(timezone.utc).date()
-    begin = end - timedelta(days=365)
-    data = _get("list.json", {
-        "bgn_de":    begin.strftime("%Y%m%d"),
-        "end_de":    end.strftime("%Y%m%d"),
-        "page_count": 1,
-    })
-    if data is None:
-        _cache_set(cache_key, "")
+    try:
+        from services.data import dart_corp_code
+    except Exception as exc:  # pragma: no cover
+        logger.debug("dart_corp_code import failed: %s", exc)
         return None
-    # list.json doesn't directly filter by stock_code — this path is a
-    # placeholder for when corp_code resolution is needed. For the MVP
-    # we rely on the caller to pass the corp_code directly (or skip the
-    # KR half). Keep signature so future migration is trivial.
-    _cache_set(cache_key, "")
-    return None
+    try:
+        return dart_corp_code.corp_code_for(t)
+    except Exception as exc:
+        logger.debug("dart_corp_code.corp_code_for(%s) raised: %s", t, exc)
+        return None
