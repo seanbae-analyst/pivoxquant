@@ -623,66 +623,30 @@ Reply ONLY in this exact JSON format, nothing else:
         fx_data = fx_future.result(timeout=15)
         btc_data = btc_future.result(timeout=15)
 
-        # ── yfinance fallback for FMP-gated symbols ───────────────────────────
-        # FMP free/starter tier returns 402 for ^GSPC/^IXIC/^DJI/^VIX/^TNX/etc.
-        # Fill missing index/stock quotes via yfinance (no API key required).
-        YF_FALLBACK_MAP = {
-            "^GSPC": "^GSPC", "^IXIC": "^IXIC", "^DJI": "^DJI",
-            "^RUT": "^RUT", "^VIX": "^VIX", "^TNX": "^TNX",
-            "^IRX": "^IRX", "^TYX": "^TYX",
-        }
-        YF_STOCK_MAP = {"GLD": "GLD", "USO": "USO", "SLV": "SLV", "UUP": "UUP"}
-        YF_FX_MAP = {"USDKRW": "KRW=X", "EURUSD": "EURUSD=X", "USDJPY": "JPY=X"}
+        # ── Alpaca fallback for FMP-gated symbols ────────────────────────────
+        # FMP free/starter tier returns 402 for many index/ETF quotes. Alpaca
+        # Market Data covers ETFs (GLD/USO/SLV/UUP) and several index proxies.
+        # Alpaca does NOT serve raw ^GSPC/^IXIC/^DJI/^VIX symbols — for those
+        # we rely on the ETF equivalents already in the discover pool (SPY/
+        # QQQ/DIA/VIXY) or stale cache, and skip the fallback here.
+        ALPACA_STOCK_MAP = {"GLD": "GLD", "USO": "USO", "SLV": "SLV", "UUP": "UUP"}
 
-        missing_idx = [s for s in index_syms if s not in idx_data]
         missing_stk = [s for s in stock_syms if s not in stk_data]
-        missing_fx = [p for p in fx_pairs if p not in fx_data]
-        need_btc = not btc_data
 
-        if missing_idx or missing_stk or missing_fx or need_btc:
+        if missing_stk:
             try:
-                import yfinance as yf
-
-                def _yf_quote(yf_sym):
-                    try:
-                        t = yf.Ticker(yf_sym)
-                        info = t.fast_info
-                        price = info.get("last_price") or info.get("lastPrice")
-                        prev = info.get("previous_close") or info.get("previousClose")
-                        if price is None:
-                            return None
-                        chg_pct = ((price - prev) / prev * 100) if prev else 0
-                        return (float(price), float(chg_pct))
-                    except Exception:
-                        return None
-
-                for sym in missing_idx:
-                    yf_sym = YF_FALLBACK_MAP.get(sym)
-                    if yf_sym:
-                        val = _yf_quote(yf_sym)
-                        if val:
-                            idx_data[sym] = val
+                from services.data import alpaca_market_adapter as ama
 
                 for sym in missing_stk:
-                    yf_sym = YF_STOCK_MAP.get(sym)
-                    if yf_sym:
-                        val = _yf_quote(yf_sym)
-                        if val:
-                            stk_data[sym] = val
-
-                for pair in missing_fx:
-                    yf_sym = YF_FX_MAP.get(pair)
-                    if yf_sym:
-                        val = _yf_quote(yf_sym)
-                        if val:
-                            fx_data[pair] = val[0]
-
-                if need_btc:
-                    val = _yf_quote("BTC-USD")
-                    if val:
-                        btc_data = {"price": val[0], "changesPercentage": val[1]}
-            except Exception as _yf_err:
-                logger.warning(f"yfinance fallback failed: {_yf_err}")
+                    a_sym = ALPACA_STOCK_MAP.get(sym)
+                    if not a_sym:
+                        continue
+                    q = ama.get_quote(a_sym)
+                    if q and q.get("price") is not None:
+                        stk_data[sym] = (float(q["price"]),
+                                          float(q.get("changesPercentage") or 0))
+            except Exception as _ama_err:
+                logger.warning(f"Alpaca fallback failed: {_ama_err}")
 
         # Equity indices
         for sym, key in [("^GSPC","sp500"),("^IXIC","nasdaq"),("^DJI","dow"),("^RUT","russell2000")]:
@@ -1284,32 +1248,19 @@ Reply ONLY in this exact JSON format, nothing else:
         missing = [(sym, name) for sym, name in sectors if sym not in filled]
         if missing:
             try:
-                import yfinance as yf
-
-                def _yf_quote(yf_sym):
-                    try:
-                        t = yf.Ticker(yf_sym)
-                        info = t.fast_info
-                        price = info.get("last_price") or info.get("lastPrice")
-                        prev = info.get("previous_close") or info.get("previousClose")
-                        if price is None:
-                            return None
-                        chg_pct = ((price - prev) / prev * 100) if prev else 0
-                        return (float(price), float(chg_pct))
-                    except Exception:
-                        return None
+                from services.data import alpaca_market_adapter as ama
 
                 for sym, name in missing:
-                    val = _yf_quote(sym)
-                    if val:
+                    q = ama.get_quote(sym)
+                    if q and q.get("price") is not None:
                         result.append({
                             "sector":     name,
                             "symbol":     sym,
-                            "change_pct": round(val[1], 2),
-                            "price":      round(val[0], 2),
+                            "change_pct": round(float(q.get("changesPercentage") or 0), 2),
+                            "price":      round(float(q["price"]), 2),
                         })
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning(f"Alpaca sector fallback failed: {exc}")
         return result
 
     # ── Pre-warm Cache ────────────────────────────────────────────────────────

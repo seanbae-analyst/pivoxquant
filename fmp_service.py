@@ -176,24 +176,33 @@ def endpoint_is_blocked(endpoint):
     return _is_endpoint_blocked(endpoint)
 
 
-# ── yfinance fallback (lazy import) ─────────────────────────────
-# Kept at module level but imported lazily so unit tests that never exercise
-# the fallback path don't pay the yfinance import cost (~300 ms cold).
+# ── Alpaca Market Data fallback (lazy import) ───────────────────
+# Replaces the old yfinance adapter. Alpaca is a licensed US broker whose
+# market-data API is explicitly cleared for commercial use — yfinance
+# scrapes Yahoo and violates that ToS for a paid service.
+# Imported lazily so unit tests that never exercise the fallback path
+# don't pay the SDK import cost.
 
-def _yfa():
-    """Return the yfinance adapter module or None (import errors are swallowed)."""
+def _ama():
+    """Return the Alpaca market-data adapter module or None (import errors swallowed)."""
     try:
-        from services.data import yfinance_adapter as yfa
-        return yfa
+        from services.data import alpaca_market_adapter as ama
+        return ama
     except Exception as exc:  # pragma: no cover — import path
-        logger.info("yfinance_adapter unavailable (%s) — fallback disabled", exc)
+        logger.info("alpaca_market_adapter unavailable (%s) — fallback disabled", exc)
         return None
 
 
+# Backwards-compat alias: a few tests still patch `_yfa` by name. Keeping
+# the name pointed at the new adapter is safer than a rename sweep that
+# might miss a patch site and silently disable the fallback.
+_yfa = _ama
+
+
 def _is_us_ticker(ticker):
-    """yfinance works for US + most global tickers. We explicitly skip the
-    KR suffixes because those are already routed through pyKRX above —
-    Yahoo's KR data quality lags pyKRX by 1-2 trading days."""
+    """Alpaca Market Data covers US-listed equities (NYSE/NASDAQ/ARCA).
+    KR tickers route through the KIS adapter instead — Alpaca has no
+    KRX coverage and Yahoo's KR data was the old (illegal) path."""
     if not isinstance(ticker, str):
         return False
     return not (ticker.endswith(".KS") or ticker.endswith(".KQ"))
@@ -207,7 +216,7 @@ def get_quote(ticker):
     Fallback chain (US tickers only):
       1. 30s TTL cache
       2. FMP /quote
-      3. yfinance (free, no-key) — when FMP returns None / 402 / budget-out
+      3. Alpaca Market Data — when FMP returns None / 402 / budget-out
       4. Stale cache (any age)
     """
     cache_key = f"quote:{ticker}"
@@ -224,15 +233,15 @@ def get_quote(ticker):
         _set_cache(cache_key, result)
         return result
 
-    # FMP miss → yfinance fallback (US tickers only)
+    # FMP miss → Alpaca fallback (US tickers only)
     if _is_us_ticker(ticker):
-        yfa = _yfa()
-        if yfa is not None:
-            yf_quote = yfa.get_quote(ticker)
-            if yf_quote:
-                logger.info("FMP quote miss for %s — served via yfinance fallback", ticker)
-                _set_cache(cache_key, yf_quote)
-                return yf_quote
+        ama = _ama()
+        if ama is not None:
+            a_quote = ama.get_quote(ticker)
+            if a_quote:
+                logger.info("FMP quote miss for %s — served via Alpaca fallback", ticker)
+                _set_cache(cache_key, a_quote)
+                return a_quote
 
     # Final resort: any stale cache rather than None so callers can show *something*.
     stale = _get_cache_stale(cache_key)
@@ -290,17 +299,17 @@ def get_price(ticker):
 
 # ── Historical OHLCV ────────────────────────────────────────────
 
-def _get_history_pykrx(ticker, period="3mo"):
-    """Korean stocks (.KS/.KQ) historical OHLCV via pyKRX.
+def _get_history_kr(ticker, period="3mo"):
+    """Korean stocks (.KS/.KQ) historical OHLCV via the KIS public API.
 
-    FMP free/stable tier does not cover KRX-listed tickers, so portfolio
-    analytics (Sharpe/MaxDD/AnnVol) silently drop Korean positions. We
-    route them to pyKRX and return the same DataFrame schema the rest of
-    engine.py expects: index=DatetimeIndex, columns=[Open, High, Low, Close, Volume].
+    Replaces the legacy pyKRX path. KIS is a licensed broker whose Open
+    API is commercial-use-cleared; pyKRX scraped the KRX data portal in
+    a legal grey area. The DataFrame schema is identical to FMP:
+    index=DatetimeIndex, columns=[Open, High, Low, Close, Volume].
 
-    Cache key + TTL + stale-while-revalidate are shared with FMP history so
-    the 3mo window for a Korean ticker is only fetched once per hour.
-    Returns empty DataFrame on any failure — never raises.
+    Cache key + TTL + stale-while-revalidate are shared with the FMP
+    history cache so a 3mo window for a Korean ticker is only fetched
+    once per hour. Returns an empty DataFrame on any failure — never raises.
     """
     cache_key = f"history:{ticker}:{period}"
     cached = _get_cache(cache_key, TTL_PRICE_HIST)
@@ -311,61 +320,26 @@ def _get_history_pykrx(ticker, period="3mo"):
         if stale is not None:
             return stale
 
-    # Strip '.KS' / '.KQ' → 6-digit KRX code
-    code = ticker.split(".")[0].strip()
-    if not (code.isdigit() and len(code) == 6):
-        _set_cache(cache_key, pd.DataFrame())
-        return pd.DataFrame()
-
-    period_map = {
-        "1mo": 30, "3mo": 90, "6mo": 180,
-        "1y": 365, "2y": 730, "5y": 1825,
-        "5d": 5, "1d": 1,
-    }
-    days = period_map.get(period, 90)
-    # Widen window ~1.5x to absorb weekends/holidays (trading days only)
-    today = datetime.now()
-    from_date = (today - timedelta(days=int(days * 1.5) + 5)).strftime("%Y%m%d")
-    to_date = today.strftime("%Y%m%d")
-
     try:
-        from pykrx import stock as _krx
-        df = _krx.get_market_ohlcv(from_date, to_date, code)
-        if df is None or df.empty:
-            _set_cache(cache_key, pd.DataFrame())
-            return pd.DataFrame()
-
-        # pyKRX columns are Korean: 시가/고가/저가/종가/거래량 (+ 거래대금/등락률)
-        col_map = {
-            "시가": "Open", "고가": "High", "저가": "Low",
-            "종가": "Close", "거래량": "Volume",
-        }
-        df = df.rename(columns=col_map)
-
-        # Index is DatetimeIndex named 'Date' in pyKRX — normalize to match FMP path
-        df.index = pd.to_datetime(df.index)
-        df.index.name = "Date"
-        df = df.sort_index()
-
-        # Keep only the last `days` calendar days so callers that slice by len()
-        # get the same window as the FMP branch.
-        cutoff = today - timedelta(days=days)
-        df = df[df.index >= pd.Timestamp(cutoff)]
-
-        # Ensure required columns exist (pyKRX always returns them, defensive)
-        for col in ["Open", "High", "Low", "Close", "Volume"]:
-            if col not in df.columns:
-                df[col] = 0
-
-        # Drop extra pyKRX columns (거래대금, 등락률) to match FMP schema
-        df = df[["Open", "High", "Low", "Close", "Volume"]]
-
-        _set_cache(cache_key, df)
-        return df
-    except Exception as e:
-        logger.warning(f"pyKRX get_history failed for {ticker}: {e}")
+        from services.data import kis_market_adapter as kma
+    except Exception as exc:  # pragma: no cover — import path
+        logger.warning(f"kis_market_adapter unavailable: {exc}")
         _set_cache(cache_key, pd.DataFrame())
         return pd.DataFrame()
+
+    df = kma.get_history(ticker, period)
+    if df is None or df.empty:
+        _set_cache(cache_key, pd.DataFrame())
+        return pd.DataFrame()
+
+    # kis_market_adapter already returns [Open, High, Low, Close, Volume]
+    # with a DatetimeIndex named 'Date' — cache as-is.
+    _set_cache(cache_key, df)
+    return df
+
+
+# Backwards-compat alias — a handful of tests import this by its old name.
+_get_history_pykrx = _get_history_kr
 
 
 def get_history(ticker, period="3mo"):
@@ -376,9 +350,9 @@ def get_history(ticker, period="3mo"):
     cover KRX — this keeps engine.portfolio_analytics() working for mixed
     US/KR portfolios (Sharpe/MaxDD/AnnVol were previously null).
     """
-    # Korean tickers → pyKRX (FMP doesn't cover KRX)
+    # Korean tickers → KIS adapter (FMP doesn't cover KRX)
     if isinstance(ticker, str) and (ticker.endswith(".KS") or ticker.endswith(".KQ")):
-        return _get_history_pykrx(ticker, period)
+        return _get_history_kr(ticker, period)
 
     cache_key = f"history:{ticker}:{period}"
     cached = _get_cache(cache_key, TTL_PRICE_HIST)
@@ -407,18 +381,19 @@ def get_history(ticker, period="3mo"):
 
     if not data:
         # FMP returned nothing (402 plan-gated, index symbol, or network
-        # failure). yfinance handles US equities *and* major indices/ETFs/
-        # commodities without an API key — use it before giving up.
-        yfa = _yfa()
-        if yfa is not None:
-            yf_df = yfa.get_history(ticker, period)
-            if yf_df is not None and not yf_df.empty:
+        # failure). Alpaca Market Data covers all US-listed equities and
+        # major ETFs — try it before giving up. Indices (^GSPC/^IXIC) are
+        # not supported by Alpaca; those stay on FMP or stale cache.
+        ama = _ama()
+        if ama is not None:
+            a_df = ama.get_history(ticker, period)
+            if a_df is not None and not a_df.empty:
                 logger.info(
-                    "FMP history miss for %s (%s) — served via yfinance fallback",
+                    "FMP history miss for %s (%s) — served via Alpaca fallback",
                     ticker, period,
                 )
-                _set_cache(cache_key, yf_df)
-                return yf_df
+                _set_cache(cache_key, a_df)
+                return a_df
         _set_cache(cache_key, pd.DataFrame())
         return pd.DataFrame()
 
@@ -1130,20 +1105,20 @@ def get_earnings_calendar(ticker=None, days_ahead=30):
         _set_cache(cache_key, data)
         return data
 
-    # FMP miss — yfinance fallback (per-ticker only; yfinance has no
-    # aggregate calendar endpoint so we can only help when the caller
-    # scoped to a single symbol).
+    # FMP miss — Alpaca does NOT publish earnings calendars, so no
+    # fallback here today. The adapter returns [] deliberately; future
+    # work could wire Tiingo/EDGAR 8-K for US earnings calendar parity.
     if ticker and _is_us_ticker(ticker):
-        yfa = _yfa()
-        if yfa is not None:
-            yf_cal = yfa.get_earnings_calendar(ticker)
-            if yf_cal:
+        ama = _ama()
+        if ama is not None:
+            cal = ama.get_earnings_calendar(ticker)
+            if cal:
                 logger.info(
-                    "FMP earnings-calendar miss for %s — served via yfinance fallback",
+                    "FMP earnings-calendar miss for %s — served via Alpaca fallback",
                     ticker,
                 )
-                _set_cache(cache_key, yf_cal)
-                return yf_cal
+                _set_cache(cache_key, cal)
+                return cal
     return []
 
 

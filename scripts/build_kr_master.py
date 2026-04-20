@@ -1,8 +1,13 @@
 """Build KRX stock master JSON for offline search.
 
-Downloads the full KOSPI + KOSDAQ ticker list (~2,500 names) via pykrx
-and writes services/kr_stocks_data.json. Run once at build time; the
-runtime registry loads the JSON.
+DEPRECATED (2026-04-19): pykrx removed from runtime deps for legal reasons
+(ToS grey area — scrapes KRX portal without a commercial licence). The
+committed ``services/kr_stocks_data.json`` is the canonical source of
+truth; regenerate it manually via the KRX Open Data Portal CSV export or
+via a dev-only pykrx install outside the production dependency tree.
+
+This script is kept as historical reference only. Running it requires
+a local `pip install pykrx` — it will NOT install from requirements.txt.
 """
 import json
 import os
@@ -10,7 +15,14 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-from pykrx import stock
+try:
+    from pykrx import stock  # type: ignore
+except ImportError as _exc:  # pragma: no cover — not installed in prod
+    raise SystemExit(
+        "pykrx is not installed. This script is deprecated — see the "
+        "module docstring. If you really need to regenerate the KR master "
+        "JSON, run `pip install pykrx` in a dev-only virtualenv."
+    ) from _exc
 
 
 def _try_dates():
