@@ -45,7 +45,11 @@ _BASE_URL = (
     else "https://openapivts.koreainvestment.com:29443"
 )
 _TR_ID_BALANCE = "TTTC8434R" if _USE_REAL else "VTTC8434R"
+_TR_ID_OVERSEAS_BALANCE = "TTTS3012R" if _USE_REAL else "VTTS3012R"
 _REQUEST_TIMEOUT = 10
+
+# 해외거래소 — 미국 커버 (NASDAQ + NYSE + AMEX)
+_US_EXCHANGES = ("NASD", "NYSE", "AMEX")
 
 
 class UserKISError(Exception):
@@ -219,10 +223,11 @@ class UserKISService:
             "appsecret": self.app_secret,
         }
 
-    def get_balance(self) -> dict:
-        """한투 계좌 잔고 조회 — 예수금 + 보유종목.
+    def _inquire_domestic_balance(self) -> dict:
+        """국내주식 잔고 조회 — inquire-balance endpoint.
 
-        Returns dict: `{"ok": True, "available_cash", "total_value", "positions": [...]}`
+        Returns the same shape as the previous monolithic `get_balance()`:
+        `{"ok": True, "available_cash", "total_value", "positions": [...]}`
         or `{"ok": False, "code", "error"}`.
         """
         headers = self._auth_headers()
@@ -291,6 +296,7 @@ class UserKISService:
                     "pnl": float(item.get("evlu_pfls_amt", 0) or 0),
                     "pnl_pct": float(item.get("evlu_pfls_rt", 0) or 0),
                     "currency": "KRW",
+                    "market": "KR",
                 }
             )
         output2 = body.get("output2") or [{}]
@@ -302,6 +308,205 @@ class UserKISService:
             "positions": positions,
         }
 
+    def _inquire_overseas_balance(self, exchange_code: str) -> dict:
+        """단일 해외거래소 잔고 조회 (NASD/NYSE/AMEX 등).
+
+        Returns `{"ok": True, "positions": [...], "summary": {...}}` or
+        `{"ok": False, "code", "error"}`. Empty holdings → positions=[].
+        """
+        headers = self._auth_headers()
+        if headers is None:
+            return {
+                "ok": False,
+                "code": "TOKEN_EXPIRED",
+                "error": "KIS 토큰이 만료되었습니다. 재연결해 주세요.",
+            }
+        headers["tr_id"] = _TR_ID_OVERSEAS_BALANCE
+
+        params = {
+            "CANO": self.account_no,
+            "ACNT_PRDT_CD": self.account_prod,
+            "OVRS_EXCG_CD": exchange_code,
+            "TR_CRCY_CD": "USD",
+            "CTX_AREA_FK200": "",
+            "CTX_AREA_NK200": "",
+        }
+        try:
+            resp = requests.get(
+                f"{self.base_url}/uapi/overseas-stock/v1/trading/inquire-balance",
+                headers=headers,
+                params=params,
+                timeout=_REQUEST_TIMEOUT,
+            )
+        except requests.RequestException as exc:
+            logger.warning(
+                f"UserKIS overseas balance HTTP error user_id={self.user_id} "
+                f"exch={exchange_code}: {exc}"
+            )
+            return {
+                "ok": False,
+                "code": "BROKER_DOWN",
+                "error": f"해외 증권사 연결 실패 ({exchange_code}).",
+            }
+
+        if not resp.ok:
+            logger.warning(
+                f"UserKIS overseas balance HTTP {resp.status_code} "
+                f"user_id={self.user_id} exch={exchange_code}"
+            )
+            return {
+                "ok": False,
+                "code": "BROKER_DOWN",
+                "error": f"KIS 해외 API 오류 ({resp.status_code})",
+            }
+
+        body = resp.json()
+        if body.get("rt_cd") != "0":
+            msg = body.get("msg1", "Unknown KIS overseas error")
+            # 해외 계좌 미개설 케이스는 에러가 아닌 빈 결과로 처리
+            return {
+                "ok": False,
+                "code": "BROKER_DOWN",
+                "error": msg,
+            }
+
+        positions = []
+        for item in body.get("output1", []) or []:
+            try:
+                qty = float(item.get("ovrs_cblc_qty", 0) or 0)
+            except (TypeError, ValueError):
+                qty = 0.0
+            if qty <= 0:
+                continue
+            ticker = (item.get("ovrs_pdno") or "").strip()
+            if not ticker:
+                continue
+            positions.append(
+                {
+                    "ticker": ticker,
+                    "name": item.get("ovrs_item_name", ""),
+                    "shares": qty,
+                    "avg_cost": float(item.get("pchs_avg_pric", 0) or 0),
+                    "current_price": float(item.get("now_pric2", 0) or 0),
+                    "pnl": float(item.get("evlu_pfls_amt", 0) or 0),
+                    "pnl_pct": float(item.get("evlu_pfls_rt", 0) or 0),
+                    "currency": (item.get("tr_crcy_cd") or "USD").upper(),
+                    "market": "US",
+                    "exchange": (item.get("ovrs_excg_cd") or exchange_code).upper(),
+                    "evlu_amt_usd": float(item.get("evlu_amt", 0) or 0),
+                    "frcr_pchs_amt_usd": float(item.get("frcr_pchs_amt1", 0) or 0),
+                }
+            )
+
+        output2 = body.get("output2") or {}
+        if isinstance(output2, list):
+            output2 = output2[0] if output2 else {}
+        summary = {
+            "frcr_pchs_amt1": float(output2.get("frcr_pchs_amt1", 0) or 0),
+            "tot_evlu_pfls_amt": float(output2.get("tot_evlu_pfls_amt", 0) or 0),
+        }
+        return {"ok": True, "positions": positions, "summary": summary}
+
+    def _inquire_all_overseas_balances(self) -> dict:
+        """NASD + NYSE + AMEX 3개 거래소 잔고를 병합.
+
+        Returns `{"ok": True, "positions": [...], "total_purchase_usd", "total_pnl_usd"}`.
+        개별 거래소 실패는 warning-log 후 skip (부분 성공 허용).
+        모두 실패하면 `ok=False`. 해외 계좌 자체가 없으면 빈 리스트 반환.
+        """
+        merged: list[dict] = []
+        total_purchase_usd = 0.0
+        total_pnl_usd = 0.0
+        successes = 0
+        failures = 0
+        last_error = None
+
+        for exch in _US_EXCHANGES:
+            result = self._inquire_overseas_balance(exch)
+            if not result.get("ok"):
+                failures += 1
+                last_error = result.get("error")
+                logger.info(
+                    f"UserKIS overseas {exch} skipped user_id={self.user_id}: "
+                    f"{result.get('error')}"
+                )
+                continue
+            successes += 1
+            merged.extend(result.get("positions", []))
+            summary = result.get("summary") or {}
+            total_purchase_usd += float(summary.get("frcr_pchs_amt1", 0) or 0)
+            total_pnl_usd += float(summary.get("tot_evlu_pfls_amt", 0) or 0)
+
+        if successes == 0:
+            return {
+                "ok": False,
+                "code": "BROKER_DOWN",
+                "error": last_error or "해외주식 잔고 조회 실패",
+                "positions": [],
+            }
+        return {
+            "ok": True,
+            "positions": merged,
+            "total_purchase_usd": total_purchase_usd,
+            "total_pnl_usd": total_pnl_usd,
+        }
+
+    def get_balance(self) -> dict:
+        """한투 계좌 잔고 — 국내 + 해외 통합.
+
+        Returns:
+            {
+                "ok": True,
+                "available_cash": KRW 예수금,
+                "total_value": KRW 평가액 (국내 원화 기준; 해외는 USD→KRW 환산 합산),
+                "positions": [국내 + 해외 통합 리스트],
+                "overseas_total_usd": 해외 매입액 USD,
+                "fx_rate": 환산에 사용된 환율 (USD/KRW),
+                "currency_breakdown": {"KRW": ..., "USD": ...},
+            }
+            or `{"ok": False, "code", "error"}`.
+
+        국내 조회 실패 → 전체 실패. 해외만 부분 실패는 partial 결과 반환.
+        """
+        domestic = self._inquire_domestic_balance()
+        if not domestic.get("ok"):
+            # 국내 실패 시 해외도 인증 토큰을 공유하므로 전체 실패로 처리.
+            return domestic
+
+        overseas = self._inquire_all_overseas_balances()
+        overseas_positions = overseas.get("positions", []) if overseas.get("ok") else []
+
+        # 환율 (USD→KRW). fx_service 재활용, 실패 시 기본값.
+        try:
+            from services import fx_service
+            fx_rate = float(fx_service.get_rate() or 0) or 1380.0
+        except Exception as exc:  # pragma: no cover — defensive
+            logger.debug(f"fx_service.get_rate failed: {exc}")
+            fx_rate = 1380.0
+
+        overseas_value_usd = sum(
+            float(p.get("evlu_amt_usd", 0) or 0) for p in overseas_positions
+        )
+        overseas_value_krw = overseas_value_usd * fx_rate
+
+        merged_positions = list(domestic.get("positions", [])) + list(overseas_positions)
+
+        return {
+            "ok": True,
+            "available_cash": domestic["available_cash"],
+            "total_value": domestic["total_value"] + overseas_value_krw,
+            "total_value_krw": domestic["total_value"] + overseas_value_krw,
+            "positions": merged_positions,
+            "overseas_total_usd": overseas_value_usd,
+            "overseas_purchase_usd": overseas.get("total_purchase_usd", 0.0) if overseas.get("ok") else 0.0,
+            "fx_rate": fx_rate,
+            "currency_breakdown": {
+                "KRW": domestic["total_value"],
+                "USD": overseas_value_usd,
+            },
+            "overseas_partial_failure": not overseas.get("ok"),
+        }
+
     def get_positions(self) -> list[dict]:
         """Convenience — returns just the positions list. Empty on error."""
         data = self.get_balance()
@@ -310,24 +515,42 @@ class UserKISService:
     # ── Public: sync to DB ────────────────────────────────────────────────
 
     def sync_to_db(self) -> dict:
-        """Fetch balance and upsert into `positions` table for this user.
+        """Fetch balance (국내 + 해외) and upsert into `positions` table.
 
-        Normalization: Korean 6-digit codes are stored with '.KS' suffix to match
-        the convention used by the rest of PivoxQuant.
+        Normalization rules:
+          - KR 6-digit codes → append `.KS` suffix (기존 컨벤션)
+          - US tickers (해외 — NASD/NYSE/AMEX) → suffix 없음 (`AAPL`, `SPY`, ...)
+
+        KIS를 소스 of truth로 간주 — shares/avg_cost는 매 sync마다 덮어씀.
+        매입 환율(`buy_fx_rate`)은 KIS가 제공하지 않으므로, 신규 생성 시만 현재 환율을 저장하고
+        기존 포지션은 그대로 유지한다.
         """
         balance = self.get_balance()
         if not balance.get("ok"):
             return balance  # propagate error
 
+        fx_rate = float(balance.get("fx_rate") or 0) or 0.0
+
         existing = Position.query.filter_by(user_id=self.user_id).all()
         existing_map = {p.ticker: p for p in existing}
 
         added, updated, synced = [], [], []
+        overseas_synced = set()
         for pos in balance["positions"]:
-            raw = pos["ticker"]
-            ticker = (
-                raw if raw.endswith(".KS") or raw.endswith(".KQ") else f"{raw}.KS"
-            )
+            raw = (pos.get("ticker") or "").strip()
+            if not raw:
+                continue
+            market = pos.get("market")
+            is_overseas = market == "US" or pos.get("currency") == "USD"
+
+            if is_overseas:
+                # US 티커는 suffix 없이 그대로 (AAPL, SPY, JPM, ...)
+                ticker = raw.upper()
+                overseas_synced.add(ticker)
+            else:
+                ticker = (
+                    raw if raw.endswith(".KS") or raw.endswith(".KQ") else f"{raw}.KS"
+                )
             synced.append(ticker)
 
             if ticker in existing_map:
@@ -335,6 +558,11 @@ class UserKISService:
                 if db_pos.shares != pos["shares"] or db_pos.avg_cost != pos["avg_cost"]:
                     db_pos.shares = pos["shares"]
                     db_pos.avg_cost = pos["avg_cost"]
+                    # 해외이고 기존 buy_fx_rate가 비어있으면 현재 환율로 임시 저장
+                    if is_overseas and fx_rate > 0 and (
+                        not db_pos.buy_fx_rate or db_pos.buy_fx_rate <= 0
+                    ):
+                        db_pos.buy_fx_rate = fx_rate
                     updated.append(ticker)
             else:
                 new_pos = Position(
@@ -342,20 +570,36 @@ class UserKISService:
                     ticker=ticker,
                     shares=pos["shares"],
                     avg_cost=pos["avg_cost"],
-                    buy_fx_rate=0.0,
+                    buy_fx_rate=fx_rate if is_overseas else 0.0,
                 )
                 db.session.add(new_pos)
                 added.append(ticker)
 
         # Zero-out Korean positions that disappeared from the broker side.
+        synced_set = set(synced)
         for ticker, db_pos in existing_map.items():
             is_kr = (
                 ticker.endswith(".KS")
                 or ticker.endswith(".KQ")
                 or (ticker.isdigit() and len(ticker) == 6)
             )
-            if is_kr and ticker not in synced and db_pos.shares > 0:
+            if is_kr and ticker not in synced_set and db_pos.shares > 0:
                 db_pos.shares = 0
+
+        # Zero-out overseas (US) positions that disappeared — only if overseas
+        # fetch succeeded. On overseas partial failure we keep existing rows
+        # untouched to avoid data loss.
+        if not balance.get("overseas_partial_failure"):
+            for ticker, db_pos in existing_map.items():
+                # US ticker heuristic: suffix 없음 + 알파벳 대문자 1~6자리 (dot/hyphen 허용)
+                is_us = (
+                    not ticker.endswith(".KS")
+                    and not ticker.endswith(".KQ")
+                    and not (ticker.isdigit() and len(ticker) == 6)
+                    and any(c.isalpha() for c in ticker)
+                )
+                if is_us and ticker not in overseas_synced and db_pos.shares > 0:
+                    db_pos.shares = 0
 
         db.session.commit()
         self._record_success()
@@ -367,6 +611,9 @@ class UserKISService:
             "synced": synced,
             "available_cash": balance["available_cash"],
             "total_value": balance["total_value"],
+            "fx_rate": fx_rate,
+            "overseas_total_usd": balance.get("overseas_total_usd", 0.0),
+            "overseas_partial_failure": balance.get("overseas_partial_failure", False),
         }
 
 
