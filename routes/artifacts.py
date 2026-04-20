@@ -38,6 +38,7 @@ from extensions import db
 from models import Artifact
 from services.artifacts.monthly_brag_service import MonthlyBragService
 from services.artifacts.weekly_memo_service import WeeklyMemoService
+from services.name_resolver import resolve_stock_name
 
 from .decorators import api_auth, require_tier
 
@@ -866,6 +867,7 @@ def earnings_prebrief_upcoming():
     mine = [
         {
             "ticker":       r["ticker"],
+            "name":         resolve_stock_name(r["ticker"]) or r["ticker"],
             "earnings_dt":  r["earnings_dt"].isoformat() + "Z",
             "shares":       r["shares"],
             "avg_cost":     r["avg_cost"],

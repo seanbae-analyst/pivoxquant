@@ -11,6 +11,7 @@ from extensions import db
 from models import Position, SignalCache, User
 from models.portfolio_share import PortfolioShare
 from services import fx_service
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -112,7 +113,7 @@ def get_shared_portfolio(token):
             "pnl_pct": round(pnl_pct, 2),
             "signal": sd.get("signal", "—"),
             "score": score,
-            "name": sd.get("name", p.ticker),
+            "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
             "sector": sd.get("sector", "Unknown"),
             "currency": currency,
             "is_korean": sd.get("is_korean", is_kr),

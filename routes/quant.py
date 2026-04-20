@@ -7,6 +7,7 @@ import numpy as np
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 quant_bp = Blueprint("quant", __name__, url_prefix="/api")
@@ -158,7 +159,11 @@ def regime_report():
             sd = json.loads(cached.data_json) if cached and cached.data_json else {}
             price = sd.get("price", p.avg_cost)
             mv = price * p.shares
-            pos_with_value.append({"ticker": p.ticker, "market_value": mv})
+            pos_with_value.append({
+                "ticker": p.ticker,
+                "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
+                "market_value": mv,
+            })
 
         pos_with_value.sort(key=lambda x: x["market_value"], reverse=True)
         tickers_to_test = [p["ticker"] for p in pos_with_value[:5]]
@@ -334,8 +339,10 @@ def _load_positions_with_prices():
         mv_native = price * p.shares
         # Normalize to KRW for cross-market aggregation
         mv_krw = mv_native if is_kr else mv_native * fx_rate
+        from services.name_resolver import resolve_stock_name
         items.append({
             "ticker": p.ticker,
+            "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
             "shares": p.shares,
             "avg_cost": p.avg_cost,
             "price": price,
@@ -1116,6 +1123,7 @@ def portfolio_stress_test():
 
             positions_out.append({
                 "ticker": pos["ticker"],
+                "name": pos.get("name") or pos["ticker"],
                 "current_value": round(pos["market_value"], 2),
                 "estimated_loss_pct": pct,
                 "estimated_loss_usd": loss_usd,
@@ -1371,7 +1379,7 @@ def short_interest_signal(ticker):
     if not result:
         return jsonify({"error": "Could not compute short interest signal"}), 500
 
-    payload = {"ticker": ticker, **result}
+    payload = {"ticker": ticker, "name": resolve_stock_name(ticker) or ticker, **result}
     add_disclaimer(payload, "indicator")
 
     _si_cache[ticker] = {"data": payload, "ts": now}
@@ -1733,6 +1741,7 @@ def insider_signal(ticker):
     if not raw:
         empty_payload = {
             "ticker": ticker,
+            "name": resolve_stock_name(ticker) or ticker,
             "insider_transactions": [],
             "summary": {
                 "net_insider_sentiment": "NEUTRAL",
@@ -1750,6 +1759,7 @@ def insider_signal(ticker):
 
     payload = {
         "ticker": ticker,
+        "name": resolve_stock_name(ticker) or ticker,
         "insider_transactions": insider_list[:30],  # cap response size
         "summary": summary,
         "signal_strength": signal_strength,
@@ -1812,7 +1822,7 @@ def risk_volatility(ticker):
     if result["vol_gkyz"] is None:
         return jsonify({"error": "Could not compute volatility"}), 500
 
-    payload = {"ticker": ticker, **result}
+    payload = {"ticker": ticker, "name": resolve_stock_name(ticker) or ticker, **result}
     add_disclaimer(payload, "indicator")
     _vol_cache[cache_key] = {"data": payload, "ts": now}
     return jsonify(payload)
@@ -2020,6 +2030,7 @@ def performance_ledger():
     for ticker, s in sorted(strategy_stats.items()):
         per_strategy.append({
             "ticker": ticker,
+            "name": resolve_stock_name(ticker) or ticker,
             "trades": s["trades"],
             "wins": s["wins"],
             "losses": s["losses"],
@@ -2170,6 +2181,7 @@ def position_sizing_calculator():
 
     payload = {
         "ticker": ticker,
+        "name": resolve_stock_name(ticker) or ticker,
         "inputs": {
             "win_probability": win_prob,
             "avg_win": avg_win,
@@ -2257,6 +2269,7 @@ def signal_disposition(ticker):
 
     payload = {
         "ticker": ticker,
+        "name": resolve_stock_name(ticker) or ticker,
         "model": "disposition_effect",
         "classification": "YELLOW",
         **result,
@@ -2306,6 +2319,7 @@ def signal_ofi(ticker):
 
     payload = {
         "ticker": ticker,
+        "name": resolve_stock_name(ticker) or ticker,
         "model": "order_flow_imbalance",
         "classification": "YELLOW",
         **result,
@@ -2370,6 +2384,7 @@ def signal_sentiment_divergence(ticker):
 
     payload = {
         "ticker": ticker,
+        "name": resolve_stock_name(ticker) or ticker,
         "model": "sentiment_price_divergence",
         "classification": "GREEN",
         "news_sentiment_score": round(sentiment_score, 1),
@@ -2419,6 +2434,7 @@ def signal_anchoring(ticker):
 
     payload = {
         "ticker": ticker,
+        "name": resolve_stock_name(ticker) or ticker,
         "model": "anchoring_bias",
         "classification": "YELLOW",
         **result,
@@ -2571,6 +2587,7 @@ def extended_indicators(ticker):
     payload = {
         "ok": True,
         "ticker": ticker,
+        "name": resolve_stock_name(ticker) or ticker,
         "period": period,
         "data_points": len(closes),
         "current_price": round(current_price, 2) if current_price else None,
@@ -2971,8 +2988,10 @@ def risk_defense_status():
         mv = price * p.shares
         sector = sd.get("sector", "Unknown")
         total_value += mv
+        from services.name_resolver import resolve_stock_name
         pos_list.append({
             "ticker": p.ticker,
+            "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
             "value": mv,
             "sector": sector,
             "weight": 0,  # filled below
@@ -3050,7 +3069,12 @@ def risk_defense_status():
         "layers_triggered": result["layers_triggered"],
         "warnings": result["warnings"],
         "risk_exposure": [
-            {"ticker": t, "risk_contribution_pct": r, "reason": reason}
+            {
+                "ticker": t,
+                "name": resolve_stock_name(t) or t,
+                "risk_contribution_pct": r,
+                "reason": reason,
+            }
             for t, r, reason in result["risk_exposure"]
         ],
         "regime_risk_level": result["regime_risk_level"],
@@ -3222,6 +3246,7 @@ def risk_sortino_by_position():
         if hist is None or hist.empty or len(hist) < 21:
             positions_out.append({
                 "ticker": it["ticker"],
+                "name": it.get("name") or it["ticker"],
                 "sortino": None,
                 "error": "insufficient history",
             })
@@ -3230,6 +3255,7 @@ def risk_sortino_by_position():
         if len(rets) < 20:
             positions_out.append({
                 "ticker": it["ticker"],
+                "name": it.get("name") or it["ticker"],
                 "sortino": None,
                 "error": "insufficient history",
             })
@@ -3237,6 +3263,7 @@ def risk_sortino_by_position():
         result = SortinoByPosition.calculate(rets, risk_free_annual=rf)
         positions_out.append({
             "ticker": it["ticker"],
+            "name": it.get("name") or it["ticker"],
             "sortino": result.get("sortino"),
             "downside_dev_pct": result.get("downside_dev"),
             "annualized_return_pct": result.get("annualized_return"),

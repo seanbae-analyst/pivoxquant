@@ -9,6 +9,7 @@ from flask_login import current_user
 from models import Position
 from services import fx_service, cache_service
 from services.container import engine
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,10 @@ def discover():
             r = engine.analyze(ticker, cap_usd, cap_krw, fx_rate=fx_service.get_rate())
             if r:
                 r["already_owned"] = ticker in owned
+                # Backfill name for long-tail listings whose snapshot returns
+                # only a ticker (pyKRX / us_stock_registry cover all KRX/US).
+                if not r.get("name") or r.get("name") == ticker:
+                    r["name"] = resolve_stock_name(ticker) or ticker
             return r
         except Exception as e:
             logger.warning(f"Discover skip {ticker}: {e}")

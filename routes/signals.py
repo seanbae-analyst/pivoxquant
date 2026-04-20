@@ -7,6 +7,7 @@ from extensions import db
 from models import Position, SignalCache, InvestmentProfile
 from services import fx_service, cache_service, alert_service
 from services.container import engine
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 
@@ -31,6 +32,12 @@ def get_signals():
             except json.JSONDecodeError:
                 d = {}
             d["cached_at"] = c.updated_at.isoformat()
+            # Backfill name: SignalCache blobs are populated by engine.analyze()
+            # which may emit bare ticker when the broker snapshot lacks a name.
+            # resolve_stock_name guarantees 회사명 for every KRX/US listing.
+            if not d.get("name") or d.get("name") == t:
+                d["name"] = resolve_stock_name(t) or t
+            d.setdefault("ticker", t)
             out.append(d)
     return jsonify({"signals": out})
 
@@ -38,16 +45,22 @@ def get_signals():
 @signals_bp.route("/signals/<ticker>")
 @api_auth
 def signal_detail(ticker):
-    r = engine.analyze(ticker.upper(), current_user.available_capital,
+    t_up = ticker.upper()
+    r = engine.analyze(t_up, current_user.available_capital,
                        getattr(current_user, "available_capital_krw", 0.0) or 0.0,
                        fx_rate=fx_service.get_rate(),
                        profile_params=_get_profile_params())
     if not r:
-        cached = db.session.get(SignalCache, ticker.upper())
+        cached = db.session.get(SignalCache, t_up)
         if cached and cached.data_json:
-            return jsonify(json.loads(cached.data_json))
+            d = json.loads(cached.data_json)
+            if not d.get("name") or d.get("name") == t_up:
+                d["name"] = resolve_stock_name(t_up) or t_up
+            return jsonify(d)
         return jsonify({"error": f"Analysis failed for '{ticker}'. Check the ticker symbol."}), 404
-    cache_service.save_signal(ticker.upper(), r)
+    cache_service.save_signal(t_up, r)
+    if not r.get("name") or r.get("name") == t_up:
+        r["name"] = resolve_stock_name(t_up) or t_up
     return jsonify(r)
 
 
@@ -85,6 +98,11 @@ def scan():
     if not r:
         cached = db.session.get(SignalCache, ticker)
         if cached and cached.data_json:
-            return jsonify(json.loads(cached.data_json))
+            d = json.loads(cached.data_json)
+            if not d.get("name") or d.get("name") == ticker:
+                d["name"] = resolve_stock_name(ticker) or ticker
+            return jsonify(d)
         return jsonify({"error": f"Analysis failed for '{ticker}'"}), 404
+    if not r.get("name") or r.get("name") == ticker:
+        r["name"] = resolve_stock_name(ticker) or ticker
     return jsonify(r)

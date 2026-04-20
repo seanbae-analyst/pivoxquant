@@ -7,6 +7,7 @@ from flask_login import current_user
 
 from models import Position
 from services.container import daytrade
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,15 @@ def scan():
 
     if not results and not daytrade.available:
         return jsonify({"error": "Day trade not configured (Alpaca API key missing)"}), 503
+
+    # Guarantee every scan hit carries a display name. The US scanner emits
+    # ticker-only for long-tail Alpaca assets; KIS emits Korean names for KR.
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        t = item.get("ticker") or ""
+        if t and (not item.get("name") or item.get("name") == t):
+            item["name"] = resolve_stock_name(t) or t
 
     results.sort(key=lambda x: x.get("score", 0), reverse=True)
     return jsonify({"results": results, "count": len(results)})
@@ -155,6 +165,12 @@ def analyze(ticker):
     r = daytrade.analyze_short_term(ticker)
     if not r:
         return jsonify({"error": f"No intraday data for {ticker}"}), 404
+    # Backfill name for US daytrade payload (Alpaca scanner emits ticker-only
+    # for long-tail listings — us_stock_registry covers the full ~12.7k set).
+    if isinstance(r, dict):
+        t_up = ticker.upper() if isinstance(ticker, str) else ticker
+        if not r.get("name") or r.get("name") == t_up:
+            r["name"] = resolve_stock_name(t_up) or t_up
     return jsonify(r)
 
 

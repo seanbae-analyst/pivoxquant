@@ -26,6 +26,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, jsonify, request
 
 from services.fx_service import get_rate as _fx_get_rate
+from services.name_resolver import resolve_stock_name
 
 logger = logging.getLogger(__name__)
 
@@ -455,6 +456,7 @@ def _simulate_benchmark(
     ret_pct = (end_val - invested) / invested * 100.0
     return {
         "ticker": bench_ticker,
+        "name": resolve_stock_name(bench_ticker) or bench_ticker,
         "end_value": round(end_val, 2),
         "return_pct": round(ret_pct, 2),
         "total_invested": round(invested, 2),
@@ -663,6 +665,7 @@ def counterfactual():
             diff_pct = return_pct - bench["return_pct"]
             benchmark_payload = {
                 "ticker": bench["ticker"],
+                "name": bench.get("name") or bench["ticker"],
                 "end_value": round(_to_user_ccy(bench["end_value"], user_currency, native_currency, fx_rate), 2),
                 "return_pct": bench["return_pct"],
                 "total_invested": round(_to_user_ccy(bench["total_invested"], user_currency, native_currency, fx_rate), 2),
@@ -700,6 +703,7 @@ def counterfactual():
     payload = {
         "success": True,
         "ticker": ticker,
+        "name": resolve_stock_name(ticker) or ticker,
         "start_date": start.isoformat(),
         "first_buy_date": first_buy_date.isoformat(),
         "end_date": end_point["date"],
