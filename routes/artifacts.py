@@ -67,6 +67,10 @@ _ARTIFACT_DOWNLOAD_META = {
     "quarterly_review":  ("application/pdf", "pdf"),
     "risk_report":       ("application/pdf", "pdf"),
     "custom":            ("application/pdf", "pdf"),
+    # 2026-04-19 — new artefact classes
+    "self_audit":        ("application/pdf", "pdf"),
+    "kpi_dashboard":     ("text/html",       "html"),
+    "dd_checklist":      ("text/html",       "html"),
 }
 
 
@@ -1004,6 +1008,312 @@ def earnings_prebrief_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("prebrief manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ KPI DASHBOARD (Pro+) ═══════
+# Daily 08:00 KST 5-metric email. Short HTML, no PDF. See
+# services/artifacts/kpi_dashboard_service.py for KPI definitions.
+
+from services.artifacts.kpi_dashboard_service import (  # noqa: E402
+    KPIDashboardService,
+)
+
+
+@artifacts_bp.route("/kpi-dashboard/preview", methods=["GET"])
+@api_auth
+@require_tier("pro")
+def kpi_dashboard_preview():
+    """Generate (don't email) the current KPI snapshot for the caller.
+
+    Returns:
+        { ok, data, html }
+    `data` is the raw 5-metric payload; `html` is the rendered email
+    body so the frontend preview pane can render it as-is.
+    """
+    try:
+        svc = KPIDashboardService()
+        data = svc.generate_for_user(current_user.id)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("kpi dashboard preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/kpi-dashboard/trigger", methods=["POST"])
+@api_auth
+def kpi_dashboard_trigger():
+    """Manual trigger for the daily KPI cron. Admin-only.
+
+    Gating — same convention as weekly_memo/trigger:
+      1. `DEV_LOGIN_SECRET` env must be set.
+      2. Caller must pass `X-Admin-Secret` header equal to it.
+    """
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    target_str = body.get("target_date")
+    target_date = None
+    if target_str:
+        try:
+            target_date = date.fromisoformat(target_str)
+        except ValueError:
+            return jsonify({"error": "invalid target_date (expected YYYY-MM-DD)"}), 400
+
+    try:
+        summary = KPIDashboardService().run_daily(target_date=target_date)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("kpi dashboard manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ SELF AUDIT (Premium) ═══════
+# Quarterly 4-page PDF of decision-quality for premium users. Fired
+# 1/7, 4/7, 7/7, 10/7 at 08:00 KST. No AI judgement in the scores —
+# Haiku only contributes a 1-paragraph pattern summary. See
+# services/artifacts/self_audit_service.py for methodology.
+
+from services.artifacts.self_audit_service import (  # noqa: E402
+    SelfAuditService,
+)
+
+
+@artifacts_bp.route("/self-audit/preview", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def self_audit_preview():
+    """Generate (don't email) a preview Self Audit for the caller.
+
+    Returns:
+        { ok, data, html }
+    """
+    try:
+        svc = SelfAuditService()
+        data = svc.generate_for_user(current_user.id)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("self audit preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/self-audit/download", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def self_audit_download_latest():
+    """Stream the most recent Self Audit PDF for the caller.
+
+    Unlike `/weekly-memo/download/<id>` this route auto-resolves to the
+    latest audit row so the frontend can link `download` directly
+    without tracking artefact IDs. Owner-only.
+
+    404 — no audit exists yet. 410 — audit row exists but no PDF was
+    rendered (WeasyPrint unavailable at generation time).
+    """
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="self_audit")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Self Audit available yet",
+                        "code": "NO_AUDIT"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this audit",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    quarter = (artefact.data_json or {}).get("quarter_label", "quarter")
+    safe_q = quarter.replace(" ", "_")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"self_audit_{safe_q}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/self-audit/trigger", methods=["POST"])
+@api_auth
+def self_audit_trigger():
+    """Manual trigger for the quarterly cron. Admin-only.
+
+    Gating — identical to weekly_memo/trigger.
+    Body (optional): { "quarter_end": "2026-03-31" } to pin the audit
+    window. Defaults to today (which maps to whichever quarter the
+    `_quarter_bounds` helper resolves).
+    """
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    qe_str = body.get("quarter_end")
+    quarter_end = None
+    if qe_str:
+        try:
+            quarter_end = date.fromisoformat(qe_str)
+        except ValueError:
+            return jsonify({"error": "invalid quarter_end (expected YYYY-MM-DD)"}), 400
+
+    try:
+        summary = SelfAuditService().run_quarterly(quarter_end=quarter_end)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("self audit manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ DUE-DILIGENCE CHECKLIST (Pro+) ═══════
+# T+3 post-entry prompt. Legal-safe: recorded AFTER the user has already
+# bought. No AI judgement — only Y/N answers from the user. See
+# services/artifacts/dd_checklist_service.py.
+
+from services.artifacts.dd_checklist_service import (  # noqa: E402
+    DDChecklistService,
+)
+
+
+@artifacts_bp.route("/dd-checklist/pending", methods=["GET"])
+@api_auth
+@require_tier("pro")
+def dd_checklist_pending():
+    """List the caller's positions that are T+3 or older and still
+    unchecked (i.e. no PositionDDCheck row yet).
+
+    Returns:
+        { ok, pending: [...] }
+    """
+    try:
+        svc = DDChecklistService()
+        pending = svc.pending_for_user(current_user.id)
+    except Exception as exc:
+        current_app.logger.error("dd pending fetch failed: %s", exc)
+        return jsonify({"error": f"Pending fetch failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "count": len(pending), "pending": pending})
+
+
+@artifacts_bp.route("/dd-checklist/submit", methods=["POST"])
+@api_auth
+@require_tier("pro")
+def dd_checklist_submit():
+    """Record the user's 5-item Y/N review for one position.
+
+    Body:
+        {
+          "position_id":         int,
+          "financials_checked":  bool,
+          "moat_checked":        bool,
+          "management_checked":  bool,
+          "valuation_checked":   bool,
+          "risks_checked":       bool,
+          "note":                str (optional, max 500 chars)
+        }
+
+    Returns the persisted row (to_dict()). Idempotent via UNIQUE
+    `position_id` — subsequent submits update the existing row.
+    """
+    body = request.get_json(silent=True) or {}
+
+    # Input validation — type + presence
+    try:
+        position_id = int(body.get("position_id"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "position_id must be an integer"}), 400
+
+    bool_fields = ("financials_checked", "moat_checked", "management_checked",
+                   "valuation_checked", "risks_checked")
+    for f in bool_fields:
+        if not isinstance(body.get(f), bool):
+            return jsonify({"error": f"{f} must be a boolean"}), 400
+
+    note = body.get("note")
+    if note is not None and not isinstance(note, str):
+        return jsonify({"error": "note must be a string"}), 400
+    if isinstance(note, str) and len(note) > 500:
+        return jsonify({"error": "note exceeds 500 characters"}), 400
+
+    svc = DDChecklistService()
+    try:
+        row = svc.submit(
+            user_id=current_user.id,
+            position_id=position_id,
+            financials=body["financials_checked"],
+            moat=body["moat_checked"],
+            management=body["management_checked"],
+            valuation=body["valuation_checked"],
+            risks=body["risks_checked"],
+            note=note,
+        )
+    except LookupError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except PermissionError:
+        return jsonify({"error": "Position does not belong to you"}), 403
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("dd submit failed for user %s: %s",
+                                 current_user.id, exc)
+        return jsonify({"error": f"Submit failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "dd_check": row.to_dict()})
+
+
+@artifacts_bp.route("/dd-checklist/trigger", methods=["POST"])
+@api_auth
+def dd_checklist_trigger():
+    """Manual trigger for the T+3 cron. Admin-only. Same gating as
+    weekly_memo/trigger."""
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    try:
+        summary = DDChecklistService().run_daily()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("dd manual run failed: %s", exc)
         return jsonify({"error": f"Manual run failed: {exc}"}), 500
 
     return jsonify({"ok": True, "summary": summary})

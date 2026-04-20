@@ -39,6 +39,10 @@ ARTIFACT_TYPES = {
     "earnings_prebrief",  # MVP #3: 30-min pre-announcement brief
     "earnings_post",
     "fomc_playbook",
+    # 2026-04-19 — Three new artefact classes:
+    "kpi_dashboard",     # Daily 08:00 KST KPI email (Pro+)
+    "self_audit",        # Quarterly decision-quality PDF (Premium)
+    "dd_checklist",      # T+3 post-entry due-diligence email (Pro+)
 }
 
 

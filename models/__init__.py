@@ -11,8 +11,10 @@ from .portfolio_share import PortfolioShare
 from .morning_brief import MorningBrief
 from .artifact import Artifact, ARTIFACT_TYPES
 from .user_referral import UserReferral, generate_referral_code
+from .position_dd_check import PositionDDCheck
 
 __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlist",
            "InvestmentProfile", "BrokerConnection", "PushSubscription", "PortfolioShare",
            "MorningBrief", "Artifact", "ARTIFACT_TYPES",
-           "UserReferral", "generate_referral_code"]
+           "UserReferral", "generate_referral_code",
+           "PositionDDCheck"]
