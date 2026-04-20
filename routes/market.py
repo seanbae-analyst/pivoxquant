@@ -11,6 +11,7 @@ from models import Position, SignalCache
 from services import fx_service
 from services.container import engine, fetcher, realtime
 from services.market_status import get_market_status
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -370,7 +371,8 @@ def earnings_calendar():
                         c = db.session.get(SignalCache, p.ticker)
                         sd = json.loads(c.data_json) if c and c.data_json else {}
                         earnings.append({
-                            "ticker": p.ticker, "name": sd.get("name", p.ticker),
+                            "ticker": p.ticker,
+                            "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
                             "date": ds, "signal": sd.get("signal", "—"),
                             "score": sd.get("score", 0),
                         })
@@ -401,7 +403,8 @@ def peer_comparison(ticker):
             sd = json.loads(sc.data_json) if sc.data_json else {}
             if sd.get("sector") == sector:
                 peers.append({
-                    "ticker": sc.ticker, "name": sd.get("name", sc.ticker),
+                    "ticker": sc.ticker,
+                    "name": sd.get("name") or resolve_stock_name(sc.ticker) or sc.ticker,
                     "score": sd.get("score", 0), "signal": sd.get("signal", "—"),
                     "price": sd.get("price", 0), "price_display": sd.get("price_display", "—"),
                     "change_pct": sd.get("change_pct", 0),
@@ -431,7 +434,7 @@ def company_profile(ticker):
             sector = KOREAN_SECTORS.get(ticker, "")
         return jsonify({
             "ticker": ticker,
-            "name": info.get("shortName", ticker),
+            "name": info.get("shortName") or resolve_stock_name(ticker) or ticker,
             "summary": info.get("longBusinessSummary", ""),
             "sector": sector,
             "industry": info.get("industry", ""),

@@ -11,6 +11,7 @@ from models import Position, SignalCache, TradeHistory
 from security import trade_rate_limit
 from services.serializers import serialize_user
 from services import fx_service, cache_service, kr_stock_registry
+from services.name_resolver import resolve_stock_name
 from services.container import engine, fetcher, realtime
 from .decorators import api_auth
 
@@ -251,7 +252,7 @@ def buy_more(pid):
     cached = cache_service.get_signal(p.ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
     is_kr = sd.get("is_korean", False)
-    name = sd.get("name", p.ticker)
+    name = sd.get("name") or resolve_stock_name(p.ticker) or p.ticker
     currency = sd.get("currency", "USD")
 
     if is_kr:
@@ -320,7 +321,7 @@ def buy_new_position():
 
     cached = cache_service.get_signal(ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
-    name = sd.get("name", ticker)
+    name = sd.get("name") or resolve_stock_name(ticker) or ticker
     db.session.add(TradeHistory(
         user_id=current_user.id, ticker=ticker, name=name,
         action="BUY", shares=shares, price_per_share=round(price, 2),
@@ -366,7 +367,7 @@ def sell_position(pid):
     cost_basis = actual_sell * p.avg_cost
     pnl = proceeds - cost_basis
     pnl_pct = pnl / cost_basis * 100 if cost_basis > 0 else 0
-    name = sd.get("name", p.ticker)
+    name = sd.get("name") or resolve_stock_name(p.ticker) or p.ticker
     currency = sd.get("currency", "USD")
     is_kr = sd.get("is_korean", False)
 
@@ -439,6 +440,7 @@ def portfolio_analytics():
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         pl.append({
             "ticker": p.ticker,
+            "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
             "shares": p.shares,
             "market_value": sd.get("price", p.avg_cost) * p.shares,
             "sector": sd.get("sector", "Unknown"),

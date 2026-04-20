@@ -8,6 +8,7 @@ from flask_login import current_user
 from extensions import db
 from models import Position, Alert, SignalCache
 from services.serializers import serialize_alert
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ def price_check():
         price = sd.get("price", 0)
         tp = sd.get("take_profit")
         sl = sd.get("stop_loss")
-        name = sd.get("name", p.ticker)
+        name = sd.get("name") or resolve_stock_name(p.ticker) or p.ticker
         cur = "₩" if sd.get("is_korean") else "$"
         if tp and price >= tp:
             alerts.append({"ticker": p.ticker, "name": name, "type": "TAKE_PROFIT",

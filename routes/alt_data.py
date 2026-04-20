@@ -23,6 +23,7 @@ from flask import Blueprint, request, jsonify
 from services.data.pykrx_service import pykrx_service, _normalize_ticker
 from services.data.fred_service import FRED_SERIES, get_fred_service
 from services.data.sec_edgar_service import SECEdgarService, SMART_MONEY_CIKS
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -31,13 +32,23 @@ alt_data_bp = Blueprint("alt_data", __name__, url_prefix="/api/alt-data")
 
 
 def _envelope(key: str, value, data, cached_at: str | None) -> dict:
-    """Build the standard response envelope."""
-    return {
+    """Build the standard response envelope.
+
+    When `key == "ticker"` we also emit a resolved `name` so the frontend can
+    render 회사명 without re-querying /api/lookup. pyKRX ticker codes are
+    6-digit KR listings — resolve_stock_name prepends .KS/.KQ internally.
+    """
+    out = {
         key: value,
         "data": data,
         "cached_at": cached_at or datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
         "source": "pyKRX",
     }
+    if key == "ticker" and isinstance(value, str) and value:
+        # pyKRX uses 6-digit codes; resolver wraps them in .KS/.KQ internally.
+        v = value if value.upper().endswith((".KS", ".KQ")) else f"{value}.KS"
+        out["name"] = resolve_stock_name(v) or resolve_stock_name(value) or value
+    return out
 
 
 @alt_data_bp.route("/kr/foreign-flow/<ticker>", methods=["GET"])
@@ -107,13 +118,19 @@ def _now_iso_utc() -> str:
 
 
 def _sec_envelope(key: str, value, data, *, extra: dict | None = None) -> dict:
-    """Build SEC EDGAR response envelope (mirrors pyKRX shape but source=SEC)."""
+    """Build SEC EDGAR response envelope (mirrors pyKRX shape but source=SEC).
+
+    When `key == "ticker"` we also emit a resolved `name` so frontends can
+    render 회사명 immediately without a second round-trip.
+    """
     payload = {
         key: value,
         "data": data,
         "cached_at": _now_iso_utc(),
         "source": _SRC_SEC,
     }
+    if key == "ticker" and isinstance(value, str) and value:
+        payload["name"] = resolve_stock_name(value) or value
     if extra:
         payload.update(extra)
     return payload

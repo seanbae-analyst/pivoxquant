@@ -9,6 +9,7 @@ from extensions import db
 from models import Watchlist, SignalCache
 from services import cache_service
 from services.container import engine
+from services.name_resolver import resolve_stock_name
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def get_watchlist():
         is_kr = w.ticker.upper().endswith(".KS") or w.ticker.upper().endswith(".KQ")
         out.append({
             "id": w.id, "ticker": w.ticker,
-            "name": sd.get("name", w.ticker),
+            "name": sd.get("name") or resolve_stock_name(w.ticker) or w.ticker,
             "price": sd.get("price", 0),
             "price_display": sd.get("price_display", "—"),
             "change_pct": sd.get("change_pct", 0),
