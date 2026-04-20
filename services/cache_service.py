@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from extensions import db
 from models import SignalCache
+from services.legal_filter import scrub_signal
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,14 @@ def get_signal(ticker: str):
 
 
 def save_signal(ticker: str, data: dict):
-    """Upsert signal cache for a ticker. Always refreshes updated_at."""
+    """Upsert signal cache for a ticker. Always refreshes updated_at.
+
+    Legal filter: free-text fields (commentary, summary, risk notes, ...) are
+    scrubbed via services.legal_filter.scrub_signal BEFORE serialization so
+    "매수 권고" / "포지션 축소 고려" never land in the DB. Engine/models code
+    stays untouched — scrubbing happens at the storage boundary.
+    """
+    data = scrub_signal(data)
     c = db.session.get(SignalCache, ticker)
     if c:
         c.data_json = json.dumps(data, ensure_ascii=False)

@@ -38,7 +38,7 @@ const LAYER_DEFINITIONS: LayerDefinition[] = [
     key: "var",
     title: "VaR Layer — 일별 손실 한도",
     meaning: "95% 확률로 하루 손실 한도를 넘는지 감시.",
-    triggerAction: "신규 매수 보류, 비중 큰 종목부터 부분 익절/손절 고려.",
+    triggerAction: "현 상태: 높은 변동성 구간 (관찰 지표).",
   },
   {
     no: 2,
@@ -52,14 +52,14 @@ const LAYER_DEFINITIONS: LayerDefinition[] = [
     key: "vix",
     title: "VIX Layer — 시장 변동성",
     meaning: "VIX(공포지수)가 기준 위로 치솟으면 시장 전반 위험 국면.",
-    triggerAction: "변동성 확대 국면 — 신규 매수 보류, 현금 비중 확대 권장.",
+    triggerAction: "변동성 확대 국면 — 현금 비중 관찰 지표.",
   },
   {
     no: 4,
     key: "tail",
     title: "Tail Layer — 극단 손실 위험",
     meaning: "정규 분포로는 설명 안 되는 꼬리 위험(블랙스완) 노출 측정.",
-    triggerAction: "헤지 수단(인버스 ETF, 풋옵션) 검토 또는 위험자산 비중 축소.",
+    triggerAction: "헤지 수단(인버스 ETF, 풋옵션) 관련 지표 / 위험자산 비중 모니터링.",
   },
   {
     no: 5,

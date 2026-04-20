@@ -50,7 +50,7 @@ const pillars = [
     icon: LineChart,
     title: "Technical",
     count: "25 signals",
-    question: "Is the chart saying buy or sell?",
+    question: "Is the chart showing momentum or weakness?",
     color: "bg-accent/10 text-accent",
   },
   {

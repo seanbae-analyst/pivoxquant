@@ -1437,10 +1437,10 @@ function PortfolioSummary({ data }: { data: PortfolioResponse }) {
         </p>
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-emerald-600 tabular-nums">
-            {positiveCount} 매수
+            POSITIVE {positiveCount}
           </span>
           <span className="text-sm font-bold text-red-500 tabular-nums">
-            {negativeCount} 매도
+            NEGATIVE {negativeCount}
           </span>
         </div>
         <p className="text-xs text-slate-400">
