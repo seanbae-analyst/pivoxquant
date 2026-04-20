@@ -324,7 +324,24 @@ class DataFetcher:
     # ── Per-Ticker News ───────────────────────────────────────────────────────
 
     def get_news(self, ticker: str) -> list[dict]:
-        """Fetch per-ticker news via FMP API."""
+        """Fetch per-ticker news.
+
+        Routing:
+          - KR (.KS / .KQ) → Naver Finance HTML scrape
+          - US             → FMP first, Yahoo Finance RSS fallback if empty
+
+        Always returns a list (possibly empty) — never raises.
+        """
+        # KR branch — FMP has no Korean coverage
+        if self.is_korean(ticker):
+            try:
+                from services.news_service import get_news_naver
+                return get_news_naver(ticker)[:15]
+            except Exception as ex:
+                logger.warning(f"Naver news failed {ticker}: {ex}")
+                return []
+
+        # US branch — FMP primary
         items: list[dict] = []
         try:
             raw = fmp.get_news(ticker, limit=15)
@@ -343,7 +360,23 @@ class DataFetcher:
                     "source":    entry.get("site", "FMP"),
                 })
         except Exception as ex:
-            logger.warning(f"News fetch failed {ticker}: {ex}")
+            logger.warning(f"FMP news fetch failed {ticker}: {ex}")
+
+        # Fallback chain when FMP returned nothing: Yahoo RSS → Google News RSS
+        if not items:
+            try:
+                from services.news_service import get_news_yahoo_rss
+                items = get_news_yahoo_rss(ticker)
+            except Exception as ex:
+                logger.warning(f"Yahoo RSS fallback failed {ticker}: {ex}")
+
+        if not items:
+            try:
+                from services.news_service import get_news_google
+                items = get_news_google(ticker)
+            except Exception as ex:
+                logger.warning(f"Google News fallback failed {ticker}: {ex}")
+
         return items[:15]
 
     _news_score_cache = {}  # {ticker: (timestamp, (score, sigs))}
