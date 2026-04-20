@@ -1,12 +1,12 @@
 """
-PivoxQuant — Broker OAuth / personal-credential routes (Week 1: KIS, Week 2: Kiwoom CSV).
+PivoxQuant — Broker connection routes (KIS only, 2026-04-20).
 
 Endpoints (all require login; mutating ones rate-limited):
     POST   /api/broker/kis/connect       submit app_key/app_secret/account_no
     POST   /api/broker/kis/sync          manual position sync
     DELETE /api/broker/kis/disconnect    remove credentials
     GET    /api/broker/kis/status        connection + last-sync status
-    POST   /api/broker/kiwoom/csv        upload 영웅문 잔고 엑셀/CSV → positions merge
+    GET    /api/broker/connections       broker connection summary for the user
 
 All endpoints respond `{"ok": true, ...}` on success or `{"error": str, "code": str?}`
 on failure with an appropriate HTTP status.
@@ -14,29 +14,27 @@ on failure with an appropriate HTTP status.
 Sensitive inputs (app_key / app_secret / account_no) are encrypted via
 `services.crypto_service` before being persisted. Raw values never leave this
 request handler.
+
+History:
+    - 2026-04-20: Simplified to KIS only. Removed /api/broker/kiwoom/csv and
+      Alpaca/broker-sync routes. Legacy `broker='alpaca'` / `broker='kiwoom_csv'`
+      rows in `broker_connections` are preserved but no longer writable.
 """
 from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from extensions import db
 from models.broker_connection import BrokerConnection
-from models.position import Position
 from security import trade_rate_limit
 from services.broker.user_kis_service import (
     UserKISError,
     UserKISService,
     delete_kis_connection,
     upsert_kis_connection,
-)
-from services.broker.user_kiwoom_csv_service import (
-    UserKiwoomCSVError,
-    parse_kiwoom_balance_file,
 )
 
 from .decorators import api_auth
@@ -227,181 +225,27 @@ def kis_status():
     })
 
 
-# ── POST /api/broker/kiwoom/csv ───────────────────────────────────────────
+# ── GET /api/broker/connections ──────────────────────────────────────────
 #
-# Upload the 영웅문 HTS 잔고 export (.xls / .xlsx / .csv) and merge it into
-# the user's `positions` table. We do NOT store the raw credentials — Kiwoom
-# OAuth (api.kiwoom.com) requires a separate review; this CSV path is the
-# interim zero-approval option.
-#
-# Request:  multipart/form-data with field name `file` (<= 5 MB).
-# Success:  200 {"ok": true, "imported": N, "updated": M, "tickers": [...]}
-# Errors:   400 parse / 403 tier limit / 404 etc., all with {error, code}.
-_KIWOOM_CSV_BROKER = "kiwoom_csv"
-_KIWOOM_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
-_KIWOOM_ALLOWED_EXTS = (".xls", ".xlsx", ".csv")
-
-
-def _upsert_kiwoom_csv_connection(user_id: int) -> BrokerConnection:
-    """Record `kiwoom_csv` broker row so /status shows 'last import' time.
-
-    We reuse BrokerConnection to keep one table. broker='kiwoom_csv' holds
-    only last_synced_at + display_name — no encrypted credentials, since
-    this path has none to store.
-    """
-    conn = BrokerConnection.query.filter_by(
-        user_id=user_id, broker=_KIWOOM_CSV_BROKER
-    ).first()
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    if conn is None:
-        conn = BrokerConnection(
-            user_id=user_id,
-            broker=_KIWOOM_CSV_BROKER,
-            is_paper=False,
-            is_active=True,
-            display_name="키움 영웅문 (CSV)",
-            last_synced_at=now,
-            last_sync_status="ok",
-            consecutive_failures=0,
-        )
-        db.session.add(conn)
-    else:
-        conn.is_active = True
-        conn.last_synced_at = now
-        conn.last_sync_status = "ok"
-        conn.last_sync_error = None
-        conn.consecutive_failures = 0
-    return conn
-
-
-@broker_oauth_bp.route("/kiwoom/csv", methods=["POST"])
-@trade_rate_limit
+# Frontend summary endpoint. Returns only the fields the UI actually reads
+# (`kis_connected`, `kis_last_sync`). Legacy `broker='alpaca'` and
+# `broker='kiwoom_csv'` rows are intentionally ignored — we preserve them
+# in the DB for historical positions but stopped surfacing them in the UI
+# on 2026-04-20.
+@broker_oauth_bp.route("/connections", methods=["GET"])
 @api_auth
-def kiwoom_upload_csv():
-    """Parse a 영웅문 balance export and merge into positions."""
-    uploaded = request.files.get("file")
-    if uploaded is None or not uploaded.filename:
-        return jsonify({
-            "error": "No file uploaded",
-            "error_kr": "업로드된 파일이 없습니다.",
-            "code": "CSV_NO_FILE",
-        }), 400
+def broker_connections():
+    """Return a KIS-only connection summary for the current user."""
+    kis_conn = BrokerConnection.query.filter_by(
+        user_id=current_user.id, broker="kis"
+    ).first()
 
-    filename = uploaded.filename
-    ext = ("." + filename.rsplit(".", 1)[-1].lower()) if "." in filename else ""
-    if ext not in _KIWOOM_ALLOWED_EXTS:
-        return jsonify({
-            "error": f"Unsupported file extension: {ext or 'none'}",
-            "error_kr": "지원하지 않는 파일 형식입니다. .xls / .xlsx / .csv 만 업로드 가능합니다.",
-            "code": "CSV_BAD_EXTENSION",
-        }), 400
-
-    data = uploaded.read()
-    if not data:
-        return jsonify({
-            "error": "Empty file",
-            "error_kr": "업로드된 파일이 비어 있습니다.",
-            "code": "CSV_EMPTY",
-        }), 400
-    if len(data) > _KIWOOM_MAX_BYTES:
-        return jsonify({
-            "error": f"File too large ({len(data)} bytes > 5MB)",
-            "error_kr": "파일 크기가 5MB를 초과합니다.",
-            "code": "CSV_TOO_LARGE",
-        }), 400
-
-    try:
-        parsed_rows = parse_kiwoom_balance_file(data, filename)
-    except UserKiwoomCSVError as exc:
-        return jsonify({
-            "error": exc.message,
-            "error_kr": exc.message,
-            "code": exc.code,
-        }), 400
-    except Exception as exc:  # pragma: no cover
-        logger.exception(f"kiwoom_csv parse failed user_id={current_user.id}")
-        return jsonify({
-            "error": "Failed to parse file",
-            "error_kr": "파일 파싱 중 알 수 없는 오류가 발생했습니다.",
-            "code": "CSV_PARSE_FAILED",
-        }), 400
-
-    # ── Tier check: Free plan limited to 3 TOTAL positions ────────────────
-    # We compute post-merge count BEFORE writing, so free users don't get
-    # a partial import. Existing tickers in the upload don't count against
-    # the 3-position cap since they only mutate an existing row.
-    tier = getattr(current_user, "effective_tier", None) or getattr(current_user, "subscription_tier", None) or "free"
-    if tier == "free":
-        existing_tickers = {
-            p.ticker
-            for p in Position.query.filter_by(user_id=current_user.id).all()
-        }
-        new_tickers = {row["ticker"] for row in parsed_rows} - existing_tickers
-        projected = len(existing_tickers) + len(new_tickers)
-        if projected > 3:
-            return jsonify({
-                "error": "Free plan limited to 3 positions",
-                "error_kr": (
-                    f"무료 플랜은 포지션 3개까지만 가능합니다. "
-                    f"(현재 {len(existing_tickers)}개 + 신규 {len(new_tickers)}개 = {projected}개) "
-                    "Pro 요금제로 업그레이드하시면 무제한입니다."
-                ),
-                "code": "TIER_LIMIT",
-                "current_count": len(existing_tickers),
-                "projected_count": projected,
-                "limit": 3,
-            }), 403
-
-    # ── Merge into positions table (weighted-average avg_cost on conflict) ─
-    imported = 0
-    updated = 0
-    imported_tickers: list[str] = []
-    try:
-        for row in parsed_rows:
-            ticker = row["ticker"]
-            shares = float(row["shares"])
-            avg_cost = float(row["avg_cost"])
-
-            existing = Position.query.filter_by(
-                user_id=current_user.id, ticker=ticker
-            ).first()
-            if existing is None:
-                db.session.add(Position(
-                    user_id=current_user.id,
-                    ticker=ticker,
-                    shares=shares,
-                    avg_cost=avg_cost,
-                    buy_fx_rate=0.0,  # KR stocks: no FX
-                    thesis_status="pending",
-                ))
-                imported += 1
-            else:
-                total_shares = (existing.shares or 0) + shares
-                if total_shares > 0 and existing.avg_cost and existing.shares:
-                    # Weighted average of the two buy bases.
-                    existing.avg_cost = (
-                        existing.avg_cost * existing.shares + avg_cost * shares
-                    ) / total_shares
-                else:
-                    existing.avg_cost = avg_cost
-                existing.shares = total_shares
-                updated += 1
-            imported_tickers.append(ticker)
-
-        _upsert_kiwoom_csv_connection(current_user.id)
-        db.session.commit()
-    except Exception as exc:
-        db.session.rollback()
-        logger.exception(f"kiwoom_csv DB merge failed user_id={current_user.id}")
-        return jsonify({
-            "error": f"Failed to save positions: {exc}",
-            "error_kr": "포지션 저장에 실패했습니다. 잠시 후 다시 시도해주세요.",
-            "code": "CSV_PERSIST_FAILED",
-        }), 500
+    if kis_conn is None:
+        return jsonify({"kis_connected": False, "kis_last_sync": None})
 
     return jsonify({
-        "ok": True,
-        "imported": imported,
-        "updated": updated,
-        "tickers": imported_tickers,
-    }), 200
+        "kis_connected": bool(kis_conn.is_active),
+        "kis_last_sync": kis_conn.last_synced_at.isoformat()
+        if kis_conn.last_synced_at
+        else None,
+    })

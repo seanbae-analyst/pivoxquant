@@ -4,11 +4,11 @@ import { PencilLine } from "lucide-react";
 import { useT } from "@/lib/locale";
 
 /**
- * Option 3 on the broker-onboarding screen: skip broker linking entirely
+ * Option 2 on the broker-onboarding screen: skip broker linking entirely
  * and manage positions by hand (same flow as /portfolio "add position").
  *
- * Users who don't use KIS or Kiwoom (e.g. foreign broker, not disclosed,
- * or just testing) land here so the three-card grid stays symmetric.
+ * Users who don't use KIS (e.g. foreign broker, not disclosed, or just
+ * testing) land here.
  */
 export function ManualCard({ onSelect }: { onSelect: () => void }) {
   const t = useT();

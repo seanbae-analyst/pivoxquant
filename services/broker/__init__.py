@@ -1,1 +1,1 @@
-"""Per-user broker service adapters (KIS Week 1, Kiwoom Week 2 stub)."""
+"""Per-user broker service adapters (KIS only, 2026-04-20)."""
