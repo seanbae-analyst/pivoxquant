@@ -298,6 +298,58 @@ def _cash_pct(user: User, portfolio_value: Optional[float]) -> Optional[float]:
     return round(cash / total, 3)
 
 
+# ── public reusable helper ────────────────────────────────────────────────────
+#
+# `compute_kpis_for_user` is the canonical entry for any caller that wants the
+# 5-metric KPI snapshot without the email/artifact plumbing. Used by the
+# Morning Brief Plus integration (services/morning_brief_service.py) so the
+# daily 06:00 KST brief embeds the same numbers that the stand-alone daily
+# KPI email used to ship. Keep this free function — services that need the
+# raw metrics should NOT have to instantiate KPIDashboardService.
+
+def compute_kpis_for_user(user_id: int,
+                          target_date: date | None = None) -> dict[str, Any]:
+    """Compute the 5-metric KPI snapshot for a user.
+
+    Returns a dict shaped like `KPIContext.to_dict()` — safe to merge into
+    the Morning Brief content payload and pass straight to a Jinja template.
+    Every metric is individually best-effort; missing values come back as
+    `None` (template renders "—"). Never raises for empty portfolios; the
+    numeric fields are `None` / `0.0` and `position_count == 0`.
+    """
+    user = db.session.get(User, user_id)
+    if not user:
+        raise ValueError(f"user {user_id} not found")
+
+    as_of = target_date or date.today()
+    positions = Position.query.filter_by(user_id=user_id).all()
+
+    pv, ccy = _portfolio_value(positions)
+    ytd = _ytd_return(positions) if positions else None
+    daily_rets = _equal_weight_daily_returns(positions) if positions else []
+    sharpe = _sharpe_annual(daily_rets)
+    mdd = _max_drawdown_pct(daily_rets)
+    turnover = _turnover_ratio(user_id, pv)
+    cash = _cash_pct(user, pv)
+
+    ctx = KPIContext(
+        user_id=user_id,
+        user_name=user.name or user.email.split("@")[0],
+        as_of=as_of,
+        generated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        portfolio_value=pv,
+        portfolio_ccy=ccy,
+        ytd_return_pct=ytd,
+        sharpe_annual=sharpe,
+        max_drawdown_pct=mdd,
+        turnover_ratio=turnover,
+        cash_pct=cash,
+        position_count=len(positions),
+        disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+    )
+    return ctx.to_dict()
+
+
 # ── service ──────────────────────────────────────────────────────────────────
 
 class KPIDashboardService:
@@ -307,37 +359,10 @@ class KPIDashboardService:
 
     def generate_for_user(self, user_id: int,
                           target_date: date | None = None) -> dict[str, Any]:
-        user = db.session.get(User, user_id)
-        if not user:
-            raise ValueError(f"user {user_id} not found")
-
-        as_of = target_date or date.today()
-        positions = Position.query.filter_by(user_id=user_id).all()
-
-        pv, ccy = _portfolio_value(positions)
-        ytd = _ytd_return(positions) if positions else None
-        daily_rets = _equal_weight_daily_returns(positions) if positions else []
-        sharpe = _sharpe_annual(daily_rets)
-        mdd = _max_drawdown_pct(daily_rets)
-        turnover = _turnover_ratio(user_id, pv)
-        cash = _cash_pct(user, pv)
-
-        ctx = KPIContext(
-            user_id=user_id,
-            user_name=user.name or user.email.split("@")[0],
-            as_of=as_of,
-            generated_at=datetime.now(timezone.utc).replace(tzinfo=None),
-            portfolio_value=pv,
-            portfolio_ccy=ccy,
-            ytd_return_pct=ytd,
-            sharpe_annual=sharpe,
-            max_drawdown_pct=mdd,
-            turnover_ratio=turnover,
-            cash_pct=cash,
-            position_count=len(positions),
-            disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
-        )
-        return ctx.to_dict()
+        # Thin wrapper — the canonical implementation is the module-level
+        # `compute_kpis_for_user` so both the stand-alone dashboard preview
+        # and the Morning Brief Plus integration share one code path.
+        return compute_kpis_for_user(user_id, target_date=target_date)
 
     # ── render ──────────────────────────────────────────────────────────────
 

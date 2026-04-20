@@ -820,16 +820,21 @@ def _init_scheduler(app):
         max_instances=1,
         coalesce=True,
     )
-    # 매일 08:00 KST — KPI Dashboard 일일 5-메트릭 이메일 (Pro+).
-    sched.add_job(
-        _scheduled_kpi_dashboard,
-        trigger="cron",
-        hour=8, minute=0,
-        timezone="Asia/Seoul",
-        id="kpi_dashboard_daily",
-        max_instances=1,
-        coalesce=True,
-    )
+    # ── DISABLED (2026-04-19): KPI Dashboard → Morning Brief Plus 통합 ──
+    # 5-메트릭 KPI 카드는 이제 06:00 KST Morning Brief 이메일 상단에 포함된다.
+    # 스케줄러 job은 제거됐지만 `_scheduled_kpi_dashboard` 함수 + 서비스 +
+    # `/api/artifacts/kpi-dashboard/preview` 엔드포인트 + `/kpi-dashboard/trigger`
+    # 는 관리자 디버그용으로 그대로 남아있다. 중복 daily 이메일 제거가 목적.
+    #
+    # sched.add_job(
+    #     _scheduled_kpi_dashboard,
+    #     trigger="cron",
+    #     hour=8, minute=0,
+    #     timezone="Asia/Seoul",
+    #     id="kpi_dashboard_daily",
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
     # 분기 +7일 (1/7, 4/7, 7/7, 10/7) 08:00 KST — Self Audit PDF (Premium).
     sched.add_job(
         _scheduled_self_audit,
