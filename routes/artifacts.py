@@ -278,6 +278,7 @@ def artifacts_mark_read(artifact_id: int):
 
 @artifacts_bp.route("/weekly-memo/preview", methods=["POST", "GET"])
 @api_auth
+@require_tier("pro")
 def weekly_memo_preview():
     """Generate (don't email) a preview memo for the current user.
 
@@ -302,6 +303,7 @@ def weekly_memo_preview():
 
 @artifacts_bp.route("/weekly-memo/download/<int:memo_id>", methods=["GET"])
 @api_auth
+@require_tier("pro")
 def weekly_memo_download(memo_id: int):
     """Stream the PDF for one memo. Only the owning user may download.
 
@@ -348,6 +350,7 @@ def weekly_memo_download(memo_id: int):
 
 @artifacts_bp.route("/weekly-memo/history", methods=["GET"])
 @api_auth
+@require_tier("pro")
 def weekly_memo_history():
     """Last 12 weeks of memos for the current user (newest first)."""
     cutoff = date.today() - timedelta(weeks=13)
@@ -840,6 +843,7 @@ from services.artifacts.earnings_prebrief_service import (  # noqa: E402
 
 @artifacts_bp.route("/earnings-prebrief/upcoming", methods=["GET"])
 @api_auth
+@require_tier("pro")
 def earnings_prebrief_upcoming():
     """List the current user's positions whose earnings fall within the
     requested window (default: this week, i.e. 168h).
@@ -885,6 +889,7 @@ def earnings_prebrief_upcoming():
 
 @artifacts_bp.route("/earnings-prebrief/preview/<string:ticker>", methods=["GET"])
 @api_auth
+@require_tier("pro")
 def earnings_prebrief_preview(ticker: str):
     """Generate (don't email) a preview prebrief for the calling user
     and the given ticker. Intended for the in-app preview pane.
@@ -925,6 +930,7 @@ def earnings_prebrief_preview(ticker: str):
 
 @artifacts_bp.route("/earnings-prebrief/download/<int:brief_id>", methods=["GET"])
 @api_auth
+@require_tier("pro")
 def earnings_prebrief_download(brief_id: int):
     """Stream the 2-page PDF for a persisted prebrief. Owner-only.
 
