@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Self Audit Report — {{ quarter_label }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                       Helvetica, Arial, "Apple SD Gothic Neo",
+                       "Noto Sans KR", sans-serif;
+           color: #111; line-height: 1.5; font-size: 10.5pt; margin: 0; }
+    h1 { font-size: 22pt; margin: 0 0 4pt 0; letter-spacing: -0.3pt; }
+    h2 { font-size: 13pt; margin: 18pt 0 6pt 0;
+         border-bottom: 1px solid #e5e7eb; padding-bottom: 4pt; }
+    .meta { font-size: 9pt; color: #6b7280; text-transform: uppercase;
+            letter-spacing: .5pt; }
+    .kpi-row { display: table; width: 100%; margin: 12pt 0; }
+    .kpi-cell { display: table-cell; width: 33%; padding: 10pt 8pt;
+                border-right: 1px solid #e5e7eb; text-align: center; }
+    .kpi-cell:last-child { border-right: none; }
+    .kpi-label { font-size: 9pt; color: #6b7280;
+                 text-transform: uppercase; letter-spacing: .4pt; }
+    .kpi-value { font-size: 22pt; font-weight: 700; margin-top: 3pt;
+                 letter-spacing: -0.3pt; }
+    .kpi-positive { color: #0a6f3c; }
+    .kpi-negative { color: #a11d1d; }
+    .kpi-neutral { color: #374151; }
+    table.trades { width: 100%; border-collapse: collapse; margin-top: 4pt;
+                   font-size: 9.5pt; }
+    table.trades th, table.trades td { padding: 6pt 4pt; text-align: left;
+                                       border-bottom: 1px solid #e5e7eb; }
+    table.trades th { font-size: 8.5pt; color: #6b7280;
+                      text-transform: uppercase; letter-spacing: .4pt;
+                      font-weight: 500; }
+    table.trades td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pattern { background: #faf9f6; border-left: 3px solid #111; padding: 10pt 14pt;
+               margin: 10pt 0; font-size: 10.5pt; }
+    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt; line-height: 1.45; }
+    .page-break { page-break-after: always; }
+  </style>
+</head>
+<body>
+
+<!-- ── PAGE 1 · Masthead + KPIs ── -->
+<div class="meta">PivoxQuant · Self Audit · {{ quarter_label }}</div>
+<h1>{{ user_name }}'s Quarterly Decision Review</h1>
+<div class="meta">{{ period_start }} → {{ period_end }}</div>
+
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">Trades Analysed</div>
+    <div class="kpi-value kpi-neutral">{{ trades_total }}</div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Win Rate</div>
+    <div class="kpi-value kpi-neutral">
+      {% if win_rate_pct is not none %}{{ '%.0f'|format(win_rate_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Avg Return</div>
+    <div class="kpi-value
+         {% if avg_return_pct is not none and avg_return_pct >= 0 %}kpi-positive
+         {% elif avg_return_pct is not none %}kpi-negative
+         {% else %}kpi-neutral{% endif %}">
+      {% if avg_return_pct is not none %}{{ '%+.2f'|format(avg_return_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+<h2>Observed Pattern</h2>
+<div class="pattern">{{ pattern_summary }}</div>
+
+<div class="page-break"></div>
+
+<!-- ── PAGE 2 · Best Decisions ── -->
+<h2>Best Decisions (Top 3 by return)</h2>
+{% if best_decisions %}
+<table class="trades">
+  <thead>
+    <tr>
+      <th>Ticker</th><th>Bought</th>
+      <th class="num">Buy Price</th><th class="num">Outcome</th>
+      <th class="num">Return</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in best_decisions %}
+    <tr>
+      <td><strong>{{ s.ticker }}</strong></td>
+      <td>{{ s.buy_date or '—' }}</td>
+      <td class="num">{{ '%.2f'|format(s.buy_price) }}</td>
+      <td class="num">
+        {% if s.sell_price %}sold @ {{ '%.2f'|format(s.sell_price) }}
+        {% else %}forward price{% endif %}
+      </td>
+      <td class="num
+           {% if s.return_pct is not none and s.return_pct >= 0 %}kpi-positive
+           {% else %}kpi-negative{% endif %}">
+        {% if s.return_pct is not none %}{{ '%+.2f'|format(s.return_pct) }}%{% else %}—{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color:#9ca3af;">데이터가 충분하지 않아 관찰 대상이 없습니다.</p>
+{% endif %}
+
+<h2>Worst Decisions (Bottom 3 by return)</h2>
+{% if worst_decisions %}
+<table class="trades">
+  <thead>
+    <tr>
+      <th>Ticker</th><th>Bought</th>
+      <th class="num">Buy Price</th><th class="num">Outcome</th>
+      <th class="num">Return</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in worst_decisions %}
+    <tr>
+      <td><strong>{{ s.ticker }}</strong></td>
+      <td>{{ s.buy_date or '—' }}</td>
+      <td class="num">{{ '%.2f'|format(s.buy_price) }}</td>
+      <td class="num">
+        {% if s.sell_price %}sold @ {{ '%.2f'|format(s.sell_price) }}
+        {% else %}forward price{% endif %}
+      </td>
+      <td class="num
+           {% if s.return_pct is not none and s.return_pct >= 0 %}kpi-positive
+           {% else %}kpi-negative{% endif %}">
+        {% if s.return_pct is not none %}{{ '%+.2f'|format(s.return_pct) }}%{% else %}—{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p style="color:#9ca3af;">데이터가 충분하지 않아 관찰 대상이 없습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── PAGE 3 · Methodology ── -->
+<h2>Methodology</h2>
+<p>
+  본 리포트는 분기 내 <strong>매수(BUY) 거래</strong>를 기준으로 각 결정의
+  결과를 관찰합니다. 매수 이후 같은 종목에 대한 매도(SELL) 기록이 존재하면
+  매수가 대비 매도가를, 존재하지 않으면 매수 90일 이후 시점의 종가를
+  프록시로 사용합니다. 수익률이 계산 가능한 거래만 승률/평균에 반영되며,
+  데이터 부족 거래는 집계에서 제외됩니다.
+</p>
+<p>
+  PivoxQuant은 매매 판단을 내리지 않으며, 본 리포트는 이용자 본인의 과거
+  기록을 사실 그대로 서술합니다. 패턴 요약 문장은 AI 모델이 중립적
+  언어로 재구성한 관찰입니다.
+</p>
+
+<!-- ── PAGE 4 · Disclaimer ── -->
+<h2>Disclaimer</h2>
+{% include '_disclaimer.html' %}
+<div class="footer">
+  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
+</div>
+
+</body>
+</html>

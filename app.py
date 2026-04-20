@@ -439,6 +439,31 @@ def _do_migrations():
     # User referrals — `invited_count` is the one post-create candidate.
     _add_column_if_missing("user_referrals", "invited_count", "INTEGER", default="0")
 
+    # 2026-04-19 — position_dd_checks: create the table if absent.
+    # The model is covered by `db.create_all()` on first boot, but we
+    # also guard here so live DBs that were migrated before this table
+    # existed don't need a manual `flask db upgrade` step.
+    try:
+        existing_tables = set(inspector.get_table_names())
+    except Exception:
+        existing_tables = set()
+    if "position_dd_checks" not in existing_tables:
+        try:
+            from models.position_dd_check import PositionDDCheck  # noqa: F401
+            db.metadata.tables["position_dd_checks"].create(bind=db.engine)
+            logger.info("Migration: created table position_dd_checks")
+        except Exception as exc:
+            logger.warning("Migration: could not create position_dd_checks: %s", exc)
+    else:
+        # Idempotent column backfill — matches the pattern used for
+        # other tables above.
+        _add_column_if_missing("position_dd_checks", "financials_checked", "BOOLEAN", default="0")
+        _add_column_if_missing("position_dd_checks", "moat_checked",       "BOOLEAN", default="0")
+        _add_column_if_missing("position_dd_checks", "management_checked", "BOOLEAN", default="0")
+        _add_column_if_missing("position_dd_checks", "valuation_checked",  "BOOLEAN", default="0")
+        _add_column_if_missing("position_dd_checks", "risks_checked",      "BOOLEAN", default="0")
+        _add_column_if_missing("position_dd_checks", "note",               "VARCHAR(500)")
+
     # Morning briefs / portfolio shares / push subscriptions / signal_cache /
     # watchlist — all their current columns are in the initial create_all
     # snapshot. No post-creation additions observed. Declared here as a
@@ -573,6 +598,51 @@ def _init_scheduler(app):
             except Exception as e:
                 logger.error(f"Brag card scheduler failed: {e}")
 
+    def _scheduled_kpi_dashboard():
+        """Daily 08:00 KST — 5-metric KPI email (Pro+).
+
+        Short HTML email, no PDF. Empty portfolios are skipped. Per-user
+        failures never block the rest — see KPIDashboardService.run_daily.
+        """
+        from services.artifacts.kpi_dashboard_service import KPIDashboardService
+        with app.app_context():
+            try:
+                summary = KPIDashboardService().run_daily()
+                logger.info(f"KPI dashboard scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"KPI dashboard scheduler failed: {e}")
+
+    def _scheduled_self_audit():
+        """Quarterly (1/7, 4/7, 7/7, 10/7) 08:00 KST — Self Audit PDF (Premium).
+
+        The `_quarter_bounds` helper inside the service resolves "today" to
+        the preceding quarter when we're in the first week of the new
+        quarter, so calling this job with day=7 of those months always
+        audits the quarter that just closed.
+        """
+        from services.artifacts.self_audit_service import SelfAuditService
+        with app.app_context():
+            try:
+                summary = SelfAuditService().run_quarterly()
+                logger.info(f"Self audit scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Self audit scheduler failed: {e}")
+
+    def _scheduled_dd_checklist():
+        """Daily 08:00 KST — T+3 post-entry DD checklist email (Pro+).
+
+        Idempotent via the one-row-per-position DDCheck UNIQUE constraint,
+        so a second firing on the same day is a no-op for already-checked
+        positions.
+        """
+        from services.artifacts.dd_checklist_service import DDChecklistService
+        with app.app_context():
+            try:
+                summary = DDChecklistService().run_daily()
+                logger.info(f"DD checklist scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"DD checklist scheduler failed: {e}")
+
     def _scheduled_earnings_prebrief():
         """Scan every 15 min for positions whose earnings fire in ~30 min
         (MVP #3). The service enforces dedup per (user, ticker,
@@ -634,6 +704,39 @@ def _init_scheduler(app):
         trigger="interval",
         minutes=15,
         id="earnings_prebrief_scan",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매일 08:00 KST — KPI Dashboard 일일 5-메트릭 이메일 (Pro+).
+    sched.add_job(
+        _scheduled_kpi_dashboard,
+        trigger="cron",
+        hour=8, minute=0,
+        timezone="Asia/Seoul",
+        id="kpi_dashboard_daily",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 분기 +7일 (1/7, 4/7, 7/7, 10/7) 08:00 KST — Self Audit PDF (Premium).
+    sched.add_job(
+        _scheduled_self_audit,
+        trigger="cron",
+        month="1,4,7,10",
+        day=7,
+        hour=8, minute=0,
+        timezone="Asia/Seoul",
+        id="self_audit_quarterly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매일 08:00 KST — DD 체크리스트 T+3 프롬프트 이메일 (Pro+).
+    # 5분 차이를 두어 KPI job과 겹치지 않게 한다.
+    sched.add_job(
+        _scheduled_dd_checklist,
+        trigger="cron",
+        hour=8, minute=5,
+        timezone="Asia/Seoul",
+        id="dd_checklist_daily",
         max_instances=1,
         coalesce=True,
     )
