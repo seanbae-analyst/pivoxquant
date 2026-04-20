@@ -120,7 +120,7 @@ const profiles = [
 
 /* ── What each profile customizes ── */
 const customizations = [
-  { icon: Target, label: "Buy/sell thresholds" },
+  { icon: Target, label: "Signal thresholds (POSITIVE/NEGATIVE)" },
   { icon: ShieldCheck, label: "Risk defense settings" },
   { icon: BarChart3, label: "Model activation" },
   { icon: SlidersHorizontal, label: "Position sizing" },

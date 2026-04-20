@@ -83,12 +83,12 @@ def price_check():
             alerts.append({"ticker": p.ticker, "name": name, "type": "TAKE_PROFIT",
                            "price": price, "target": tp, "shares": p.shares,
                            "proceeds": round(p.shares * price),
-                           "message": f"🎯 {name} 목표가 도달! {cur}{round(price):,} ≥ {cur}{round(tp):,} — {p.shares}주 매도 권고"})
+                           "message": f"🎯 {name} 사전 설정 TP 레벨 도달 — 정보 고지 ({cur}{round(price):,} ≥ {cur}{round(tp):,}, 보유 {p.shares}주)"})
         elif sl and price <= sl:
             alerts.append({"ticker": p.ticker, "name": name, "type": "STOP_LOSS",
                            "price": price, "target": sl, "shares": p.shares,
                            "proceeds": round(p.shares * price),
-                           "message": f"🛑 {name} 손절가 도달! {cur}{round(price):,} ≤ {cur}{round(sl):,} — {p.shares}주 손절 권고"})
+                           "message": f"🛑 {name} 사전 설정 SL 레벨 도달 — 정보 고지 ({cur}{round(price):,} ≤ {cur}{round(sl):,}, 보유 {p.shares}주)"})
 
     try:
         for a in alerts:

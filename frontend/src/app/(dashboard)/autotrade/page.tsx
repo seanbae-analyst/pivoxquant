@@ -95,7 +95,7 @@ function PendingTradeCard({
                   : "signal-negative",
               )}
             >
-              {trade.action?.toLowerCase() === "buy" ? "매수" : "매도"}
+              {trade.action?.toLowerCase() === "buy" ? "매수 주문 기록" : "매도 주문 기록"}
             </span>
             <span className="text-xs text-slate-500">
               {trade?.shares ?? 0} shares @{" "}
