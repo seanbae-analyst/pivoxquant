@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Capital Allocation Calculator — {{ calc_token }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                       Helvetica, Arial, "Apple SD Gothic Neo",
+                       "Noto Sans KR", sans-serif;
+           color: #111; line-height: 1.5; font-size: 10.5pt; margin: 0; }
+    h1 { font-size: 22pt; margin: 0 0 4pt 0; letter-spacing: -0.3pt; }
+    h2 { font-size: 13pt; margin: 18pt 0 6pt 0;
+         border-bottom: 1px solid #e5e7eb; padding-bottom: 4pt; }
+    h3 { font-size: 11pt; margin: 10pt 0 4pt 0; }
+    .meta { font-size: 9pt; color: #6b7280; text-transform: uppercase;
+            letter-spacing: .5pt; }
+    .muted { color: #6b7280; font-size: 9.5pt; }
+    .callout { background: #faf9f6; border-left: 3px solid #111;
+               padding: 10pt 14pt; margin: 10pt 0; }
+    .callout .label { font-size: 9pt; color: #6b7280;
+                      text-transform: uppercase; letter-spacing: .4pt; }
+    .callout .value { font-size: 22pt; font-weight: 700; margin-top: 3pt;
+                      letter-spacing: -0.3pt; }
+    table.scenarios { width: 100%; border-collapse: collapse; margin-top: 6pt;
+                      font-size: 9.5pt; }
+    table.scenarios th, table.scenarios td { padding: 7pt 6pt; text-align: left;
+                                             border-bottom: 1px solid #e5e7eb;
+                                             vertical-align: top; }
+    table.scenarios th { font-size: 8.5pt; color: #6b7280;
+                         text-transform: uppercase; letter-spacing: .4pt;
+                         font-weight: 500; background: #fafafa; }
+    table.scenarios td.num { text-align: right;
+                             font-variant-numeric: tabular-nums; }
+    .pos { color: #0a6f3c; }
+    .neg { color: #a11d1d; }
+    .page-break { page-break-after: always; }
+    .ticker-chip { display: inline-block; font-size: 8.5pt;
+                   background: #f3f4f6; padding: 1pt 5pt; margin: 1pt 2pt 1pt 0;
+                   border-radius: 3pt; }
+    .banner { border: 1px solid #e5e7eb; padding: 10pt 14pt;
+              background: #fffdf7; margin: 10pt 0; font-size: 9.5pt; }
+    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt; line-height: 1.45; }
+  </style>
+</head>
+<body>
+
+<!-- ── PAGE 1 · Input summary + What-If framing ── -->
+<div class="meta">PivoxQuant · What-If Capital Allocation · {{ generated_at }}</div>
+<h1>{{ user_name }}'s Capital Allocation Calculator</h1>
+<div class="meta">Calc ID {{ calc_token }}</div>
+
+<div class="callout">
+  <div class="label">New Cash Entered ({{ portfolio_ccy }})</div>
+  <div class="value">{{ '{:,.0f}'.format(cash_amount) }}</div>
+  <div class="muted" style="margin-top:6pt;">
+    이 계산은 이용자 본인이 직접 입력한 시나리오의 <strong>과거 사실</strong>만 요약합니다.
+    PivoxQuant은 배분을 권유하거나 추천하지 않습니다.
+  </div>
+</div>
+
+<div class="banner">
+  <strong>What-If Framing</strong> —
+  아래 시나리오는 이용자께서 고려 중인 배분을 입력하신 것이며,
+  각 시나리오의 <strong>과거 5년</strong> 수익률·변동성·최대 낙폭을 병렬로 표시합니다.
+  PivoxQuant은 어떤 시나리오도 "추천" 또는 "최적"이라고 판단하지 않습니다.
+  숫자는 모두 과거의 관찰이며, 향후 수익률을 보장하지 않습니다.
+</div>
+
+<h2>Scenarios Summary</h2>
+<p class="muted">
+  입력하신 {{ scenarios|length }}개 시나리오가 이어지는 페이지에서 상세 비교됩니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ── PAGE 2 · Side-by-side comparison table ── -->
+<h2>Parallel Scenario Comparison (과거 5년)</h2>
+<table class="scenarios">
+  <thead>
+    <tr>
+      <th>Scenario</th>
+      <th>Tickers</th>
+      <th class="num">CAGR %</th>
+      <th class="num">Volatility %</th>
+      <th class="num">Max DD %</th>
+      <th class="num">Sharpe</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in scenarios %}
+    <tr>
+      <td><strong>{{ s.label }}</strong></td>
+      <td>
+        {% if s.tickers %}
+          {% for t in s.tickers %}<span class="ticker-chip">{{ t }}</span>{% endfor %}
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td class="num {% if s.return_cagr is not none and s.return_cagr >= 0 %}pos{% elif s.return_cagr is not none %}neg{% endif %}">
+        {% if s.return_cagr is not none %}{{ '%+.2f'|format(s.return_cagr) }}{% else %}—{% endif %}
+      </td>
+      <td class="num">
+        {% if s.volatility is not none %}{{ '%.2f'|format(s.volatility) }}{% else %}—{% endif %}
+      </td>
+      <td class="num {% if s.max_dd is not none and s.max_dd < 0 %}neg{% endif %}">
+        {% if s.max_dd is not none %}{{ '%.2f'|format(s.max_dd) }}{% else %}—{% endif %}
+      </td>
+      <td class="num">
+        {% if s.sharpe is not none %}{{ '%.2f'|format(s.sharpe) }}{% else %}—{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="muted" style="margin-top:8pt;">
+  수치는 모두 선택한 티커의 과거 5년 일별 종가 기준으로 계산되었습니다. Sharpe는 rf=0 단순형입니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ── PAGE 3 · Per-scenario detail ── -->
+<h2>Scenario Detail</h2>
+{% for s in scenarios %}
+  <h3>{{ loop.index }}. {{ s.label }}</h3>
+  <p class="muted" style="margin:2pt 0 6pt 0;">Type: <code>{{ s.type }}</code></p>
+
+  {% if s.tickers %}
+    <p style="margin:2pt 0 6pt 0;">
+      {% for t in s.tickers %}
+        <span class="ticker-chip">{{ t }} · {{ '%.1f'|format(s.weights[loop.index0] * 100) }}%</span>
+      {% endfor %}
+    </p>
+  {% endif %}
+
+  <table class="scenarios" style="margin-bottom:10pt;">
+    <tr>
+      <th>CAGR (5y)</th>
+      <th>Volatility</th>
+      <th>Max Drawdown</th>
+      <th>Sharpe</th>
+    </tr>
+    <tr>
+      <td class="num {% if s.return_cagr is not none and s.return_cagr >= 0 %}pos{% elif s.return_cagr is not none %}neg{% endif %}">
+        {% if s.return_cagr is not none %}{{ '%+.2f'|format(s.return_cagr) }}%{% else %}—{% endif %}
+      </td>
+      <td class="num">
+        {% if s.volatility is not none %}{{ '%.2f'|format(s.volatility) }}%{% else %}—{% endif %}
+      </td>
+      <td class="num {% if s.max_dd is not none %}neg{% endif %}">
+        {% if s.max_dd is not none %}{{ '%.2f'|format(s.max_dd) }}%{% else %}—{% endif %}
+      </td>
+      <td class="num">
+        {% if s.sharpe is not none %}{{ '%.2f'|format(s.sharpe) }}{% else %}—{% endif %}
+      </td>
+    </tr>
+  </table>
+  <p class="muted">{{ s.note }}</p>
+{% endfor %}
+
+<div class="page-break"></div>
+
+<!-- ── PAGE 4 · Methodology ── -->
+<h2>Methodology</h2>
+<p>
+  본 계산은 PivoxQuant가 이용자의 입력을 받아 <strong>과거 5년</strong> 가격 데이터에서
+  추출한 사실을 요약한 결과입니다. 계산 단계는 다음과 같습니다:
+</p>
+<ol>
+  <li>각 시나리오에 대해 해당 티커의 일별 종가를 수집.</li>
+  <li>총 수익률을 연환산(CAGR)으로 환산.</li>
+  <li>일별 수익률의 표준편차를 연환산(√252)하여 변동성 산출.</li>
+  <li>종가 시리즈의 누적 최고점 대비 하락폭의 최댓값을 Max Drawdown으로 산출.</li>
+  <li>Sharpe = CAGR / 변동성 (무위험수익률 0% 단순 가정).</li>
+  <li>포트폴리오 시나리오는 각 티커의 통계를 비중으로 가중 평균 (공분산 미고려 · 보수적).</li>
+</ol>
+<p class="muted">
+  본 계산은 배당 재투자, 거래비용, 세금, 환율 변동, 슬리피지를 포함하지 않습니다.
+  또한 과거 수익률은 미래 수익률을 보장하지 않습니다.
+</p>
+
+<h2>Disclaimer</h2>
+{% include '_disclaimer.html' %}
+
+<div class="footer">
+  Generated {{ generated_at }} · Calc ID {{ calc_token }} · Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
+</div>
+
+</body>
+</html>

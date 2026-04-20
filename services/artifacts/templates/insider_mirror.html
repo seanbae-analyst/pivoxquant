@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Insider Transaction Mirror — {{ period_label }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                       Helvetica, Arial, "Apple SD Gothic Neo",
+                       "Noto Sans KR", sans-serif;
+           color: #111; line-height: 1.5; font-size: 10.5pt; margin: 0; }
+    h1 { font-size: 22pt; margin: 0 0 4pt 0; letter-spacing: -0.3pt; }
+    h2 { font-size: 13pt; margin: 18pt 0 6pt 0;
+         border-bottom: 1px solid #e5e7eb; padding-bottom: 4pt; }
+    h3 { font-size: 10.5pt; margin: 12pt 0 4pt 0; }
+    .meta { font-size: 9pt; color: #6b7280; text-transform: uppercase;
+            letter-spacing: .5pt; }
+    .muted { color: #6b7280; font-size: 9.5pt; }
+    .callout { background: #faf9f6; border-left: 3px solid #111;
+               padding: 10pt 14pt; margin: 10pt 0; }
+    .callout .label { font-size: 9pt; color: #6b7280;
+                      text-transform: uppercase; letter-spacing: .4pt; }
+    .callout .value { font-size: 22pt; font-weight: 700; margin-top: 3pt;
+                      letter-spacing: -0.3pt; }
+    .kpi-row { display: table; width: 100%; margin: 12pt 0; }
+    .kpi-cell { display: table-cell; width: 33%; padding: 10pt 8pt;
+                border-right: 1px solid #e5e7eb; text-align: center; }
+    .kpi-cell:last-child { border-right: none; }
+    .kpi-label { font-size: 9pt; color: #6b7280;
+                 text-transform: uppercase; letter-spacing: .4pt; }
+    .kpi-value { font-size: 22pt; font-weight: 700; margin-top: 3pt;
+                 letter-spacing: -0.3pt; }
+    table.events { width: 100%; border-collapse: collapse; margin-top: 4pt;
+                   font-size: 8.5pt; table-layout: fixed; }
+    table.events th, table.events td { padding: 5pt 4pt; text-align: left;
+                                       border-bottom: 1px solid #e5e7eb;
+                                       word-wrap: break-word;
+                                       overflow-wrap: break-word; }
+    table.events th { font-size: 8pt; color: #6b7280;
+                      text-transform: uppercase; letter-spacing: .4pt;
+                      font-weight: 500; background: #fafafa; }
+    table.events td.num { text-align: right;
+                          font-variant-numeric: tabular-nums; }
+    .buy  { color: #0a6f3c; font-weight: 600; }
+    .sell { color: #a11d1d; font-weight: 600; }
+    .source-chip { font-size: 7.5pt; background: #f3f4f6;
+                   padding: 1pt 4pt; border-radius: 2pt; color: #374151; }
+    .ticker-chip { display: inline-block; font-size: 8.5pt;
+                   background: #f3f4f6; padding: 1pt 5pt; margin: 1pt 2pt 1pt 0;
+                   border-radius: 3pt; }
+    .trend-grid { display: table; width: 100%; margin: 10pt 0;
+                  border-collapse: collapse; }
+    .trend-col { display: table-cell; vertical-align: bottom;
+                 text-align: center; border-right: 1px solid #f3f4f6;
+                 padding: 2pt 1pt; }
+    .trend-col:last-child { border-right: none; }
+    .trend-bar { background: #111; margin: 0 auto 2pt; width: 60%; }
+    .trend-label { font-size: 7pt; color: #6b7280; }
+    .trend-count { font-size: 9pt; color: #111; margin-top: 2pt;
+                   font-variant-numeric: tabular-nums; }
+    .banner { border: 1px solid #e5e7eb; padding: 10pt 14pt;
+              background: #fffdf7; margin: 10pt 0; font-size: 9.5pt; }
+    .page-break { page-break-after: always; }
+    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt; line-height: 1.45; }
+    a { color: #2563eb; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<!-- ── PAGE 1 · Weekly summary ── -->
+<div class="meta">PivoxQuant · Insider Mirror · {{ period_label }}</div>
+<h1>{{ user_name }}'s Weekly Insider Events</h1>
+<div class="meta">{{ period_start }} → {{ period_end }}</div>
+
+<div class="callout">
+  <div class="label">Filings This Week (holdings only)</div>
+  <div class="value">{{ total_events }}</div>
+  <div class="muted" style="margin-top:6pt;">
+    본 보고서는 이용자 보유 {{ tickers|length }}개 종목에 대한 SEC Form 4
+    (미국) 및 DART 공시 (한국)만 집계합니다.
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">Tickers Tracked</div>
+    <div class="kpi-value">{{ tickers|length }}</div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">US Coverage</div>
+    <div class="kpi-value">{{ us_tickers|length }}</div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">KR Coverage</div>
+    <div class="kpi-value">
+      {% if dart_configured %}{{ kr_tickers|length }}{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if kr_tickers and not dart_configured %}
+<div class="banner">
+  <strong>Note — DART API key not configured</strong>:
+  한국 보유 종목 ({{ kr_tickers|length }}개)의 임원·주요주주 공시는
+  DART Open API 키 (<code>DART_API_KEY</code>)가 설정되면 다음 주 리포트부터 포함됩니다.
+  현재는 미국 (SEC) 섹션만 포함되어 있습니다.
+</div>
+{% endif %}
+
+<h3>Tracked Tickers</h3>
+<p style="margin:4pt 0;">
+  {% for t in tickers %}<span class="ticker-chip">{{ t }}</span>{% endfor %}
+</p>
+
+<div class="banner">
+  <strong>Legal framing</strong> —
+  본 리포트는 공시된 내부자 거래 사실을 시간순으로 나열하는 <strong>이벤트 피드</strong>입니다.
+  PivoxQuant은 특정 내부자의 매매를 따라할 것을 권유하거나, 어떤 매매 신호 · 적중률 ·
+  우열 판단도 제공하지 않습니다. 모든 해석과 판단은 이용자 본인의 책임입니다.
+</div>
+
+<div class="page-break"></div>
+
+<!-- ── PAGE 2 · Event feed ── -->
+<h2>Event Feed ({{ events|length }} / {{ total_events }})</h2>
+{% if events %}
+<table class="events">
+  <colgroup>
+    <col style="width:12%"/>
+    <col style="width:11%"/>
+    <col style="width:22%"/>
+    <col style="width:8%"/>
+    <col style="width:12%"/>
+    <col style="width:12%"/>
+    <col style="width:9%"/>
+    <col style="width:14%"/>
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Ticker</th>
+      <th>Insider / Role</th>
+      <th>Side</th>
+      <th class="num">Shares</th>
+      <th class="num">Value</th>
+      <th>Source</th>
+      <th>Filing</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for ev in events %}
+    <tr>
+      <td>{{ ev.transaction_date or '—' }}</td>
+      <td><strong>{{ ev.ticker }}</strong></td>
+      <td>
+        {{ ev.insider or '—' }}
+        {% if ev.relationship %}<br/><span class="muted">{{ ev.relationship }}</span>{% endif %}
+      </td>
+      <td>
+        {% if ev.direction == 'buy' %}<span class="buy">BUY</span>
+        {% elif ev.direction == 'sell' %}<span class="sell">SELL</span>
+        {% else %}<span class="muted">{{ ev.transaction_code or '—' }}</span>{% endif %}
+      </td>
+      <td class="num">{{ '{:,}'.format(ev.shares) if ev.shares else '—' }}</td>
+      <td class="num">
+        {% if ev.value %}{{ '{:,.0f}'.format(ev.value) }} {{ ev.currency }}
+        {% else %}—{% endif %}
+      </td>
+      <td><span class="source-chip">{{ ev.source }}</span></td>
+      <td>
+        {% if ev.disclosure_url %}
+          <a href="{{ ev.disclosure_url }}">공시 →</a>
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">이번 주 보유 종목에 관한 내부자 공시가 관찰되지 않았습니다.</p>
+{% endif %}
+
+<p class="muted" style="margin-top:8pt;">
+  행은 거래일(공시일이 아닌 보고된 거래일) 기준 최신순입니다.
+  BUY/SELL 분류는 SEC 거래코드 (P/S) 또는 DART의 "매수/매도" 표기를 사용합니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ── PAGE 3 · Trend + disclaimer ── -->
+<h2>12-Week Filings Trend</h2>
+<p class="muted">
+  지난 12주 동안 이용자 보유 종목 전체에 대해 접수된 내부자 공시 건수입니다.
+  이 그래프는 단순 카운트이며, 거래의 강도·규모·방향 해석을 포함하지 않습니다.
+</p>
+
+{% set max_count = 1 %}
+{% for r in trend_rows %}
+  {% if r.count > max_count %}{% set max_count = r.count %}{% endif %}
+{% endfor %}
+
+<div class="trend-grid">
+  {% for r in trend_rows %}
+    <div class="trend-col">
+      <div class="trend-count">{{ r.count }}</div>
+      <div class="trend-bar"
+           style="height: {{ ((r.count * 100) // max_count) if max_count else 0 }}pt;
+                  min-height: 1pt;"></div>
+      <div class="trend-label">{{ r.week }}</div>
+    </div>
+  {% endfor %}
+</div>
+
+<table class="events" style="margin-top:12pt;">
+  <thead>
+    <tr>
+      <th>Week</th>
+      <th class="num">Total</th>
+      <th class="num">Buys</th>
+      <th class="num">Sells</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in trend_rows %}
+    <tr>
+      <td>{{ r.week }}</td>
+      <td class="num">{{ r.count }}</td>
+      <td class="num"><span class="buy">{{ r.buys }}</span></td>
+      <td class="num"><span class="sell">{{ r.sells }}</span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2>Sources</h2>
+<ul class="muted">
+  <li><strong>SEC EDGAR Form 4</strong> — 미국 상장사 임원·10% 이상 보유자의
+      주식 변동 공시. <a href="https://www.sec.gov/edgar/searchedgar/companysearch">sec.gov</a></li>
+  <li><strong>DART 임원·주요주주 특정증권등 소유상황 보고</strong> —
+      한국 상장사 내부자 공시 (<code>DART_API_KEY</code> 설정 시 활성화).
+      <a href="https://opendart.fss.or.kr">opendart.fss.or.kr</a></li>
+</ul>
+
+<h2>Disclaimer</h2>
+<p class="muted">{{ disclaimer }}</p>
+{% include '_disclaimer.html' %}
+
+<div class="footer">
+  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
+</div>
+
+</body>
+</html>
