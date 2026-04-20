@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
@@ -213,6 +214,24 @@ export function TopBar() {
 
   useClickOutside(bellRef, () => setBellOpen(false));
 
+  /* ───────────── Admin visibility ───────────── */
+  // Server-side gate: if the admin catalog endpoint succeeds, this session
+  // is an admin. Non-admins get 404 and we hide the link silently.
+  const [isAdmin, setIsAdmin] = useState(false);
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    let alive = true;
+    apiFetch(API.admin.artifactsList)
+      .then(() => alive && setIsAdmin(true))
+      .catch(() => alive && setIsAdmin(false));
+    return () => {
+      alive = false;
+    };
+  }, [user]);
+
   /* ───────────── Profile Dropdown ───────────── */
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement | null>(null);
@@ -398,6 +417,16 @@ export function TopBar() {
 
                 {/* Menu items */}
                 <div className="p-1.5">
+                  {isAdmin && (
+                    <Link
+                      href="/admin/preview"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 transition-colors hover:bg-amber-50"
+                    >
+                      <ShieldCheck className="h-4 w-4 text-amber-600" />
+                      Admin · Artifact Preview
+                    </Link>
+                  )}
                   <Link
                     href="/settings"
                     onClick={() => setProfileOpen(false)}

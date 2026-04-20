@@ -200,4 +200,11 @@ export const API = {
     preview: (id: number) => `/api/artifacts/${id}/preview`,
     markRead: (id: number) => `/api/artifacts/${id}/read`,
   },
+  admin: {
+    artifactsList: "/api/admin/artifacts/list",
+    artifactPreview: (type: string, format: "html" | "pdf" | "email" | "png") =>
+      `/api/admin/artifacts/preview/${type}?format=${format}`,
+    artifactDownload: (type: string, format: "html" | "pdf" | "email" | "png") =>
+      `/api/admin/artifacts/preview/${type}?format=${format}&download=1`,
+  },
 } as const;
