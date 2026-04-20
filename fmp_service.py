@@ -176,10 +176,40 @@ def endpoint_is_blocked(endpoint):
     return _is_endpoint_blocked(endpoint)
 
 
+# ── yfinance fallback (lazy import) ─────────────────────────────
+# Kept at module level but imported lazily so unit tests that never exercise
+# the fallback path don't pay the yfinance import cost (~300 ms cold).
+
+def _yfa():
+    """Return the yfinance adapter module or None (import errors are swallowed)."""
+    try:
+        from services.data import yfinance_adapter as yfa
+        return yfa
+    except Exception as exc:  # pragma: no cover — import path
+        logger.info("yfinance_adapter unavailable (%s) — fallback disabled", exc)
+        return None
+
+
+def _is_us_ticker(ticker):
+    """yfinance works for US + most global tickers. We explicitly skip the
+    KR suffixes because those are already routed through pyKRX above —
+    Yahoo's KR data quality lags pyKRX by 1-2 trading days."""
+    if not isinstance(ticker, str):
+        return False
+    return not (ticker.endswith(".KS") or ticker.endswith(".KQ"))
+
+
 # ── Quote (realtime-ish price) ──────────────────────────────────
 
 def get_quote(ticker):
-    """Get current quote. Cache 30s. Stale-while-revalidate when budget low."""
+    """Get current quote. Cache 30s. Stale-while-revalidate when budget low.
+
+    Fallback chain (US tickers only):
+      1. 30s TTL cache
+      2. FMP /quote
+      3. yfinance (free, no-key) — when FMP returns None / 402 / budget-out
+      4. Stale cache (any age)
+    """
     cache_key = f"quote:{ticker}"
     cached = _get_cache(cache_key, TTL_QUOTE)
     if cached:
@@ -193,6 +223,21 @@ def get_quote(ticker):
         result = data[0]
         _set_cache(cache_key, result)
         return result
+
+    # FMP miss → yfinance fallback (US tickers only)
+    if _is_us_ticker(ticker):
+        yfa = _yfa()
+        if yfa is not None:
+            yf_quote = yfa.get_quote(ticker)
+            if yf_quote:
+                logger.info("FMP quote miss for %s — served via yfinance fallback", ticker)
+                _set_cache(cache_key, yf_quote)
+                return yf_quote
+
+    # Final resort: any stale cache rather than None so callers can show *something*.
+    stale = _get_cache_stale(cache_key)
+    if stale:
+        return stale
     return None
 
 
@@ -361,6 +406,19 @@ def get_history(ticker, period="3mo"):
     })
 
     if not data:
+        # FMP returned nothing (402 plan-gated, index symbol, or network
+        # failure). yfinance handles US equities *and* major indices/ETFs/
+        # commodities without an API key — use it before giving up.
+        yfa = _yfa()
+        if yfa is not None:
+            yf_df = yfa.get_history(ticker, period)
+            if yf_df is not None and not yf_df.empty:
+                logger.info(
+                    "FMP history miss for %s (%s) — served via yfinance fallback",
+                    ticker, period,
+                )
+                _set_cache(cache_key, yf_df)
+                return yf_df
         _set_cache(cache_key, pd.DataFrame())
         return pd.DataFrame()
 
@@ -799,6 +857,30 @@ def get_institutional_ownership(ticker):
 #   None on 402 / network errors (caller treats as "try fallback" / DATA_UNAVAILABLE)
 #   [] when FMP returns empty payload (caller treats as NO_DATA)
 
+def _edgar_fundamentals_fallback(ticker):
+    """Convert SEC EDGAR ``companyfacts`` into a single FMP-shaped record.
+
+    EDGAR gives us annual (10-K) values only through the
+    ``EdgarService.get_fundamentals`` helper, so the shape is much sparser
+    than FMP's full statement. Returns a **list with one dict** (to match
+    FMP's list-of-statements contract) or an empty list when EDGAR has no
+    data. Never raises.
+    """
+    try:
+        from edgar_service import EdgarService
+    except Exception as exc:  # pragma: no cover — import path
+        logger.info("EDGAR fallback unavailable (%s)", exc)
+        return []
+    try:
+        fund = EdgarService.get_fundamentals(ticker)
+    except Exception as exc:
+        logger.info("EDGAR fallback failed for %s: %s", ticker, exc)
+        return []
+    if not fund:
+        return []
+    return [fund]
+
+
 def get_balance_sheet(ticker):
     """Latest balance sheet statements for a ticker.
 
@@ -806,6 +888,10 @@ def get_balance_sheet(ticker):
     Returns a list of statement dicts, most-recent first. None on failure
     so callers can distinguish "plan-gated / network error" from "no data"
     (empty list) -- downstream indicators map this to DATA_UNAVAILABLE vs NO_DATA.
+
+    Fallback: when FMP returns None (plan-gated / network error) and the
+    ticker is US, SEC EDGAR ``companyfacts`` provides the debt/equity
+    numbers that downstream indicators depend on.
     """
     cache_key = f"balance_sheet:{ticker}"
     cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
@@ -816,12 +902,21 @@ def get_balance_sheet(ticker):
         if stale is not None:
             return stale
     data = _fmp_get("/balance-sheet-statement", {"symbol": ticker})
-    if data is None:
-        return None
-    if isinstance(data, list):
+    if isinstance(data, list) and data:
         _set_cache(cache_key, data)
         return data
-    return None
+    # FMP returned None or [] — try EDGAR for US tickers.
+    if _is_us_ticker(ticker):
+        edgar = _edgar_fundamentals_fallback(ticker)
+        if edgar:
+            logger.info("FMP balance-sheet miss for %s — served via EDGAR fallback", ticker)
+            _set_cache(cache_key, edgar)
+            return edgar
+    if data is None:
+        return None
+    # Cache the empty FMP response so we don't retry in-session.
+    _set_cache(cache_key, data)
+    return data
 
 
 def get_income_statement(ticker):
@@ -829,6 +924,8 @@ def get_income_statement(ticker):
 
     Cache 24h. Returns a list of statement dicts, most-recent first. None on
     failure (distinguishable from empty list -- see get_balance_sheet).
+
+    Fallback: SEC EDGAR ``companyfacts`` for US tickers when FMP is gated.
     """
     cache_key = f"income_statement:{ticker}"
     cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
@@ -839,12 +936,20 @@ def get_income_statement(ticker):
         if stale is not None:
             return stale
     data = _fmp_get("/income-statement", {"symbol": ticker})
-    if data is None:
-        return None
-    if isinstance(data, list):
+    if isinstance(data, list) and data:
         _set_cache(cache_key, data)
         return data
-    return None
+    # FMP miss → EDGAR fallback (US tickers only)
+    if _is_us_ticker(ticker):
+        edgar = _edgar_fundamentals_fallback(ticker)
+        if edgar:
+            logger.info("FMP income-statement miss for %s — served via EDGAR fallback", ticker)
+            _set_cache(cache_key, edgar)
+            return edgar
+    if data is None:
+        return None
+    _set_cache(cache_key, data)
+    return data
 
 
 def prefetch_fundamentals(tickers):
@@ -1024,6 +1129,21 @@ def get_earnings_calendar(ticker=None, days_ahead=30):
     if data and isinstance(data, list):
         _set_cache(cache_key, data)
         return data
+
+    # FMP miss — yfinance fallback (per-ticker only; yfinance has no
+    # aggregate calendar endpoint so we can only help when the caller
+    # scoped to a single symbol).
+    if ticker and _is_us_ticker(ticker):
+        yfa = _yfa()
+        if yfa is not None:
+            yf_cal = yfa.get_earnings_calendar(ticker)
+            if yf_cal:
+                logger.info(
+                    "FMP earnings-calendar miss for %s — served via yfinance fallback",
+                    ticker,
+                )
+                _set_cache(cache_key, yf_cal)
+                return yf_cal
     return []
 
 

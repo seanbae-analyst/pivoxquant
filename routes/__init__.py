@@ -30,6 +30,7 @@ def register_blueprints(app):
     from .alt_data import alt_data_bp
     from .artifacts import artifacts_bp
     from .health import health_bp
+    from .admin_fmp import admin_fmp_bp
 
     # agent_worker is a sibling package and may be absent in some deploys
     # (it ships a Procfile + its own requirements). When it's unavailable
@@ -56,7 +57,7 @@ def register_blueprints(app):
         broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
         counterfactual_bp, morning_brief_bp, alt_data_bp,
-        artifacts_bp,
+        artifacts_bp, admin_fmp_bp,
     ]
     if growth_bp is not None:
         blueprints.append(growth_bp)
