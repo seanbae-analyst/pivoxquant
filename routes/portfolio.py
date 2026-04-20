@@ -72,13 +72,12 @@ def get_portfolio():
             krw_value = cur_px * fx_service.get_rate() * p.shares
             krw_pnl_pct = round((krw_value - krw_cost) / krw_cost * 100, 2) if krw_cost else 0
 
-        # Prefer cache name, fall back to KR registry (covers 2.7k KRX listings
-        # when SignalCache is cold so UI can render 회사명 instead of bare ticker).
-        display_name = sd.get("name")
-        if not display_name and is_kr:
-            display_name = kr_stock_registry.get_name(p.ticker) or p.ticker
-        if not display_name:
-            display_name = p.ticker
+        # Prefer cache name, fall back to name_resolver (pyKRX for KR,
+        # us_stock_registry for US — covers every KRX listing + all US
+        # tickers so UI can render 회사명 instead of bare ticker even when
+        # SignalCache is cold or the ticker is a long-tail listing).
+        from services.name_resolver import resolve_stock_name
+        display_name = sd.get("name") or resolve_stock_name(p.ticker) or p.ticker
 
         out.append({
             "id": p.id, "ticker": p.ticker, "shares": p.shares,
@@ -189,9 +188,10 @@ def add_position():
 
     # Resolve display name synchronously so the client can show 회사명
     # immediately, before the background cache warm finishes.
-    resolved_name = None
-    if is_kr:
-        resolved_name = kr_stock_registry.get_name(ticker)
+    # Uses name_resolver (pyKRX for KR, us_stock_registry for US) so every
+    # long-tail KRX listing resolves even on first add.
+    from services.name_resolver import resolve_stock_name
+    resolved_name = resolve_stock_name(ticker)
     return jsonify({
         "ok": True,
         "ticker": ticker,
