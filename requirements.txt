@@ -23,6 +23,10 @@ cryptography>=42.0.0
 gunicorn>=22.0.0
 gevent>=24.2.1
 pykrx>=1.0.45
+# yfinance — free Yahoo! Finance fallback when FMP returns 402 / hits daily
+# budget. Used by `services/data/yfinance_adapter.py` and wired into
+# `fmp_service.get_quote / get_history / get_earnings_calendar`. No API key.
+yfinance>=0.2.40
 # Kiwoom 영웅문 balance file parser (.xlsx path). .xls handled via optional
 # xlrd fallback; CSV via stdlib. Keep openpyxl required so the /api/broker/
 # kiwoom/csv endpoint never 500s on a fresh install.
