@@ -7,7 +7,8 @@ render the name large and the ticker small — on every page.
 Resolution order
 ----------------
 1. Korean registries (ticker endswith .KS / .KQ)
-     - kr_stock_registry.get_name()  → curated, then full KRX master
+     - kr_stock_registry.get_name()  → curated ~2,500 names (offline JSON)
+     - KIS API fallback for the long tail (rate-limited, paid quota)
 2. US registry (everything else)
      - us_stock_registry.get_name()  → Alpaca asset master (~12,700 rows)
 3. Module-level LRU cache for `lookup_name_from_signal_cache`
@@ -27,6 +28,9 @@ Design notes
   (morning_brief_service, autotrader) use it; pure serializers don't.
 - All lookups are case-insensitive via `.upper()` in the underlying
   registries.
+- Legacy note: the pyKRX name fallback was removed (2026-04-19) — pyKRX
+  scrapes KRX in a legal grey area. The curated JSON plus KIS API cover
+  the same ground without the ToS risk.
 """
 from __future__ import annotations
 
@@ -40,19 +44,16 @@ def _is_korean(ticker: str) -> bool:
 
 
 @lru_cache(maxsize=4096)
-def _pykrx_name(ticker_code: str) -> Optional[str]:
-    """Resolve any KRX ticker (6-digit) via pyKRX. Covers the long tail
+def _kis_name(ticker: str) -> Optional[str]:
+    """Resolve any KRX ticker via the KIS public API. Covers the long tail
     that isn't in the curated kr_stock_registry. LRU-cached so repeat
     hits stay free after the first call.
     """
     try:
-        from pykrx import stock
-        name = stock.get_market_ticker_name(ticker_code)
-        if isinstance(name, str) and name.strip():
-            return name.strip()
+        from services.data import kis_market_adapter as kma
+        return kma.get_name(ticker)
     except Exception:
-        pass
-    return None
+        return None
 
 
 @lru_cache(maxsize=4096)
@@ -70,14 +71,13 @@ def resolve_stock_name(ticker: str) -> Optional[str]:
 
     try:
         if _is_korean(t):
-            # 1. Curated registry (fast, ~250 popular names)
+            # 1. Curated registry (fast, ~2,500 names, no network)
             from services import kr_stock_registry
             name = kr_stock_registry.get_name(t)
             if name:
                 return name
-            # 2. pyKRX fallback — covers every KRX-listed ticker (2,500+)
-            code = t.split(".")[0]
-            return _pykrx_name(code)
+            # 2. KIS API fallback — covers every KRX-listed ticker
+            return _kis_name(t)
         from services import us_stock_registry
         return us_stock_registry.get_name(t)
     except Exception:

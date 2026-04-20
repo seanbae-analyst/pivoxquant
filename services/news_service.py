@@ -1,27 +1,37 @@
 """
 PivoxQuant — News Service
-KR ticker (.KS / .KQ) → Naver Finance mobile JSON API
-US ticker              → Yahoo Finance RSS (fallback when FMP empty)
+KR ticker (.KS / .KQ) → Naver Developers Search API (official, commercial OK)
+US ticker              → Yahoo Finance RSS / Google News RSS (public feeds)
 
 Response schema (identical to FMP path used by frontend):
     {
         "title":     str,
         "summary":   str,   # may be ""
-        "published": str,   # raw timestamp string (site format)
+        "published": str,   # ISO-8601 or raw RFC822 (readable)
         "link":      str,
         "source":    str,
     }
 
 Never raises — returns [] on any failure. Times out in ~8s.
+
+Legal note:
+  The legacy implementation scraped Naver's mobile JSON endpoint
+  (`m.stock.naver.com/api/news/stock/...`). That endpoint is undocumented
+  and violates Naver's robots / scraping ToS. The official Search News
+  API (this file) is explicitly commercial-use-allowed under the Naver
+  Developers Agreement §2 once NAVER_CLIENT_ID / NAVER_CLIENT_SECRET are
+  issued via https://developers.naver.com/apps/#/register.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
+from email.utils import parsedate_to_datetime
 from html import unescape
-from typing import List, Dict
+from typing import Dict, List
 
 import feedparser
 import requests
@@ -66,90 +76,127 @@ def _clean_text(raw: str) -> str:
     return unescape(_TAG_RE.sub("", raw or "")).strip()
 
 
-# ── Naver Finance (KR) — mobile JSON API ────────────────────────────────────
+def _rfc822_to_iso(raw: str) -> str:
+    """Convert Naver's RFC822 `pubDate` ('Mon, 20 Apr 2026 13:12:00 +0900')
+    to an ISO-8601 string. Returns the raw value if parsing fails so the
+    frontend gets *something* rather than a blank."""
+    if not raw:
+        return ""
+    try:
+        dt = parsedate_to_datetime(raw)
+        if dt is None:
+            return raw
+        return dt.isoformat()
+    except (TypeError, ValueError):
+        return raw
 
-# Powers the official Naver mobile stock news widget. Returns a list of
-# "news group" dicts, each with an `items` array of articles.
-_NAVER_API = "https://m.stock.naver.com/api/news/stock/{code}?pageSize={size}&page=1"
+
+# ── Naver Developers Search API (KR) ───────────────────────────────────────
+# https://developers.naver.com/docs/serviceapi/search/news/news.md
+# Free tier: 25,000 calls/day. Commercial use allowed.
+
+_NAVER_API = "https://openapi.naver.com/v1/search/news.json"
 
 
-def _naver_code(ticker: str) -> str:
-    """Extract 6-digit Naver code from '005930.KS' → '005930'."""
-    return ticker.split(".")[0].strip()
+def _naver_credentials() -> tuple[str, str] | None:
+    """Read NAVER_CLIENT_ID / NAVER_CLIENT_SECRET from env.
+
+    Returns None if either is missing — caller falls through to RSS feeds.
+    """
+    cid = os.environ.get("NAVER_CLIENT_ID", "").strip()
+    secret = os.environ.get("NAVER_CLIENT_SECRET", "").strip()
+    if not cid or not secret:
+        return None
+    return cid, secret
 
 
-def _format_naver_datetime(raw: str) -> str:
-    """Convert '202604201312' → '2026-04-20 13:12' for readable display."""
-    s = (raw or "").strip()
-    if len(s) == 12 and s.isdigit():
-        return f"{s[0:4]}-{s[4:6]}-{s[6:8]} {s[8:10]}:{s[10:12]}"
-    return s
+def _resolve_query(ticker: str) -> str:
+    """Pick a Korean search query for a KRX ticker.
+
+    Prefers the curated ``kr_stock_registry`` name (e.g. 삼성전자) over the
+    bare 6-digit code — searching by code returns far fewer and noisier
+    hits. Falls back to ``<code> 주가`` when the name is unknown.
+    """
+    try:
+        from services import kr_stock_registry
+        name = kr_stock_registry.get_name(ticker)
+        if name:
+            return f"{name} 주가"
+    except Exception:
+        pass
+    code = ticker.split(".")[0].strip()
+    if code:
+        return f"{code} 주가"
+    return ticker
 
 
 def get_news_naver(ticker: str) -> List[dict]:
-    """Fetch news for a KR ticker via Naver's mobile JSON API.
+    """Fetch news for a KR ticker via Naver's official Search News API.
 
-    Returns [] on any failure — never raises.
+    Requires NAVER_CLIENT_ID + NAVER_CLIENT_SECRET env. Returns [] when the
+    keys are unset (caller should fall through to Google News RSS) or on
+    any error — never raises.
     """
     cache_key = f"naver:{ticker.upper()}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
 
-    code = _naver_code(ticker)
-    if not code.isdigit() or len(code) != 6:
+    creds = _naver_credentials()
+    if creds is None:
+        logger.info("Naver Search API disabled — NAVER_CLIENT_ID/SECRET not set")
         return []
+    client_id, client_secret = creds
 
-    url = _NAVER_API.format(code=code, size=_MAX_ITEMS)
+    query = _resolve_query(ticker)
+    params = {
+        "query": query,
+        "display": _MAX_ITEMS,   # max 100 per Naver docs
+        "start": 1,
+        "sort": "date",          # most-recent first
+    }
+    headers = {
+        "X-Naver-Client-Id": client_id,
+        "X-Naver-Client-Secret": client_secret,
+        "User-Agent": _HEADERS["User-Agent"],
+    }
+
     items: List[dict] = []
-
     try:
-        resp = requests.get(url, headers=_HEADERS, timeout=_REQUEST_TIMEOUT)
+        resp = requests.get(
+            _NAVER_API, headers=headers, params=params, timeout=_REQUEST_TIMEOUT
+        )
         if resp.status_code != 200:
-            logger.warning(f"Naver news HTTP {resp.status_code} for {ticker}")
+            logger.warning("Naver Search API HTTP %s for %s (%s)",
+                           resp.status_code, ticker, resp.text[:120])
             return []
-        payload = resp.json()
-        if not isinstance(payload, list):
-            return []
-
-        seen_ids = set()
-        for group in payload:
-            if not isinstance(group, dict):
+        payload = resp.json() or {}
+        for entry in payload.get("items", []) or []:
+            title = _clean_text(entry.get("title", ""))
+            if not title or len(title) < 5:
                 continue
-            for entry in group.get("items", []) or []:
-                nid = entry.get("id") or entry.get("articleId") or ""
-                if nid in seen_ids:
-                    continue
-                seen_ids.add(nid)
+            summary = _clean_text(entry.get("description", ""))[:300]
+            link = entry.get("link") or entry.get("originallink") or ""
+            source_hint = entry.get("originallink") or ""
+            # Extract domain for a readable `source` label when the original
+            # publisher link is present; fallback to "Naver News".
+            source_label = "Naver News"
+            if source_hint:
+                m = re.search(r"https?://(?:www\.)?([^/]+)", source_hint)
+                if m:
+                    source_label = m.group(1)
 
-                title = _clean_text(
-                    entry.get("titleFull") or entry.get("title") or ""
-                )
-                if not title or len(title) < 5:
-                    continue
-
-                body = _clean_text(entry.get("body") or "")[:300]
-                link = entry.get("mobileNewsUrl") or ""
-                # Fallback link if API omits mobileNewsUrl
-                if not link and entry.get("officeId") and entry.get("articleId"):
-                    link = (
-                        f"https://n.news.naver.com/mnews/article/"
-                        f"{entry['officeId']}/{entry['articleId']}"
-                    )
-
-                items.append({
-                    "title":     title,
-                    "summary":   body,
-                    "published": _format_naver_datetime(entry.get("datetime", "")),
-                    "link":      link,
-                    "source":    entry.get("officeName") or "Naver Finance",
-                })
-                if len(items) >= _MAX_ITEMS:
-                    break
+            items.append({
+                "title":     title,
+                "summary":   summary,
+                "published": _rfc822_to_iso(entry.get("pubDate", "")),
+                "link":      link,
+                "source":    source_label,
+            })
             if len(items) >= _MAX_ITEMS:
                 break
     except Exception as ex:
-        logger.warning(f"Naver news fetch failed {ticker}: {ex}")
+        logger.warning("Naver Search API fetch failed %s: %s", ticker, ex)
         return []
 
     _cache_set(cache_key, items)
