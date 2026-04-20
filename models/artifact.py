@@ -46,6 +46,12 @@ ARTIFACT_TYPES = {
     # 2026-04-19 (Pro-tier expansion)
     "burn_rate",         # Monthly 1-page PDF — cost + expected tax (Pro+)
     "credit_rating",     # Monthly self-assessed portfolio grade (Pro+)
+    # 2026-04-19 (Premium-tier finance reports)
+    "dividend_income",   # Monthly 3-page dividend statement (Premium)
+    "monthly_finance",   # Monthly 6-page Cash Runway + Cost/Tax (Premium)
+    # 2026-04-19 (Premium-tier risk + segment reports)
+    "risk_board",        # Monthly + VIX-spike 8-page deck (Premium)
+    "portfolio_segment", # Quarterly 4-page segment breakdown (Premium)
 }
 
 
