@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Risk Board — {{ period_label }}</title>
+  <style>
+    @page { size: A4 landscape; margin: 16mm 18mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                       Helvetica, Arial, "Apple SD Gothic Neo",
+                       "Noto Sans KR", sans-serif;
+           color: #111; line-height: 1.45; font-size: 10.5pt; margin: 0; }
+    h1 { font-size: 26pt; margin: 0 0 6pt 0; letter-spacing: -0.4pt; }
+    h2 { font-size: 15pt; margin: 14pt 0 8pt 0;
+         border-bottom: 1px solid #e5e7eb; padding-bottom: 4pt; }
+    .meta { font-size: 9pt; color: #6b7280; text-transform: uppercase;
+            letter-spacing: .5pt; }
+    .page-break { page-break-after: always; }
+    .slide-label { font-size: 8pt; color: #9ca3af;
+                   text-transform: uppercase; letter-spacing: .6pt;
+                   margin-bottom: 4pt; }
+    .kpi-row { display: table; width: 100%; margin: 12pt 0; }
+    .kpi-cell { display: table-cell; padding: 14pt 10pt;
+                border-right: 1px solid #e5e7eb; text-align: center;
+                vertical-align: middle; }
+    .kpi-cell:last-child { border-right: none; }
+    .kpi-label { font-size: 9pt; color: #6b7280;
+                 text-transform: uppercase; letter-spacing: .4pt; }
+    .kpi-value { font-size: 26pt; font-weight: 700; margin-top: 4pt;
+                 letter-spacing: -0.3pt; }
+    .kpi-positive { color: #0a6f3c; }
+    .kpi-negative { color: #a11d1d; }
+    .kpi-neutral  { color: #374151; }
+    table.layout { width: 100%; border-collapse: collapse; margin-top: 4pt;
+                   font-size: 10pt; }
+    table.layout th, table.layout td { padding: 8pt 6pt; text-align: left;
+                                       border-bottom: 1px solid #e5e7eb; }
+    table.layout th { font-size: 8.5pt; color: #6b7280;
+                      text-transform: uppercase; letter-spacing: .4pt;
+                      font-weight: 500; }
+    table.layout td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pass-pill { display: inline-block; padding: 2pt 8pt; border-radius: 10pt;
+                 font-size: 8.5pt; letter-spacing: .3pt;
+                 text-transform: uppercase; }
+    .pass-ok   { background: #e6f4ec; color: #0a6f3c; }
+    .pass-fail { background: #fbeaea; color: #a11d1d; }
+    .badge-status { display: inline-block; padding: 4pt 10pt;
+                    border-radius: 999pt; font-weight: 600;
+                    letter-spacing: .5pt; text-transform: uppercase;
+                    font-size: 9pt; }
+    .badge-GREEN  { background: #e6f4ec; color: #0a6f3c; }
+    .badge-YELLOW { background: #fff7e0; color: #8a6d0b; }
+    .badge-RED    { background: #fbeaea; color: #a11d1d; }
+    .narrative { background: #faf9f6; border-left: 3px solid #111;
+                 padding: 12pt 16pt; margin: 8pt 0; font-size: 11pt; }
+    .bar-row { display: flex; align-items: center; margin: 4pt 0;
+               font-size: 10pt; }
+    .bar-label { width: 160pt; color: #374151; }
+    .bar-track { flex: 1; height: 10pt; background: #f3f4f6;
+                 border-radius: 5pt; position: relative; overflow: hidden;
+                 margin: 0 8pt; }
+    .bar-fill { position: absolute; top: 0; left: 0; bottom: 0;
+                background: #111; }
+    .bar-value { width: 54pt; text-align: right;
+                 font-variant-numeric: tabular-nums; color: #111; }
+    ul.pie-legend { list-style: none; padding: 0; margin: 0;
+                    font-size: 10pt; }
+    ul.pie-legend li { padding: 3pt 0; border-bottom: 1px dotted #e5e7eb; }
+    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt; line-height: 1.4; }
+    .two-col { display: table; width: 100%; }
+    .two-col > .col { display: table-cell; width: 50%; vertical-align: top;
+                      padding-right: 10pt; }
+  </style>
+</head>
+<body>
+
+<!-- ═══ P1 · COVER + SNAPSHOT ═══ -->
+<div class="slide-label">Page 1 / 8 · Cover</div>
+<div class="meta">PivoxQuant · Risk Board Meeting Deck</div>
+<h1>{{ user_name }} — {{ period_label }}</h1>
+<div class="meta">
+  {% if trigger == 'vix_spike' %}
+    Event-driven edition · VIX threshold crossed
+  {% else %}
+    Monthly edition · Generated {{ generated_at }}
+  {% endif %}
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">Portfolio Value</div>
+    <div class="kpi-value kpi-neutral">
+      {% if portfolio_value %}
+        {{ portfolio_ccy }} {{ '{:,.0f}'.format(portfolio_value) }}
+      {% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Positions</div>
+    <div class="kpi-value kpi-neutral">{{ position_count }}</div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Defense Score</div>
+    <div class="kpi-value kpi-neutral">
+      {% if defense_score is not none %}{{ defense_score }}{% else %}—{% endif %}
+    </div>
+    {% if defense_status %}
+      <div style="margin-top:6pt;">
+        <span class="badge-status badge-{{ defense_status }}">{{ defense_status }}</span>
+      </div>
+    {% endif %}
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">VIX</div>
+    <div class="kpi-value kpi-neutral">
+      {% if vix_current is not none %}{{ '%.1f'|format(vix_current) }}{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+<p class="meta" style="margin-top:18pt;">
+  본 리포트는 투자 판단이 아닌 관찰 지표 모음입니다. 모든 수치는 정보 제공 목적의
+  체크리스트이며, 매매를 권유하지 않습니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ═══ P2 · VAR ═══ -->
+<div class="slide-label">Page 2 / 8 · Value at Risk (Historical)</div>
+<h2>Daily VaR — 3-month rolling window</h2>
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">VaR 95%</div>
+    <div class="kpi-value {% if var95_pct is not none %}kpi-negative{% else %}kpi-neutral{% endif %}">
+      {% if var95_pct is not none %}-{{ '%.2f'|format(var95_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">VaR 99%</div>
+    <div class="kpi-value {% if var99_pct is not none %}kpi-negative{% else %}kpi-neutral{% endif %}">
+      {% if var99_pct is not none %}-{{ '%.2f'|format(var99_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+<p>
+  95% / 99% 히스토리컬 VaR은 최근 3개월의 일일 수익률 분포에서 각각 5%, 1%
+  분위의 손실 수준을 관찰한 값입니다. 관찰 지표이며, 목표가나 손절 레벨을
+  제시하지 않습니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ═══ P3 · RATIOS ═══ -->
+<div class="slide-label">Page 3 / 8 · Risk-adjusted Ratios</div>
+<h2>Sharpe / Sortino / Calmar</h2>
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">Sharpe (annual)</div>
+    <div class="kpi-value
+         {% if sharpe_annual is not none and sharpe_annual >= 0 %}kpi-positive
+         {% elif sharpe_annual is not none %}kpi-negative
+         {% else %}kpi-neutral{% endif %}">
+      {% if sharpe_annual is not none %}{{ '%.2f'|format(sharpe_annual) }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Sortino (annual)</div>
+    <div class="kpi-value
+         {% if sortino_annual is not none and sortino_annual >= 0 %}kpi-positive
+         {% elif sortino_annual is not none %}kpi-negative
+         {% else %}kpi-neutral{% endif %}">
+      {% if sortino_annual is not none %}{{ '%.2f'|format(sortino_annual) }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Calmar</div>
+    <div class="kpi-value
+         {% if calmar is not none and calmar >= 0 %}kpi-positive
+         {% elif calmar is not none %}kpi-negative
+         {% else %}kpi-neutral{% endif %}">
+      {% if calmar is not none %}{{ '%.2f'|format(calmar) }}{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+<p>
+  Sharpe는 평균 수익을 전체 변동성으로, Sortino는 하방 변동성으로 정규화한
+  값입니다. Calmar는 연환산 수익 대비 최대 낙폭을 관찰합니다. 무위험 수익률은
+  0으로 가정했습니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ═══ P4 · DRAWDOWN + SECTOR ═══ -->
+<div class="slide-label">Page 4 / 8 · Drawdown + Sector Concentration</div>
+<h2>Max Drawdown (3-month) · Sector Breakdown</h2>
+<div class="two-col">
+  <div class="col">
+    <div class="kpi-cell" style="border:none; padding: 0;">
+      <div class="kpi-label">Max Drawdown</div>
+      <div class="kpi-value
+           {% if max_drawdown_pct is not none %}kpi-negative{% else %}kpi-neutral{% endif %}"
+           style="font-size: 36pt;">
+        {% if max_drawdown_pct is not none %}
+          {{ '%.2f'|format(max_drawdown_pct) }}%
+        {% else %}—{% endif %}
+      </div>
+    </div>
+    <p style="margin-top: 10pt;">
+      3개월 누적 자본 곡선의 고점 대비 저점 관찰 값. 음수일수록 큰 낙폭을 의미합니다.
+    </p>
+  </div>
+  <div class="col">
+    <div class="kpi-label" style="margin-bottom: 6pt;">Sector Weights</div>
+    {% if sector_breakdown %}
+      {% for s in sector_breakdown[:8] %}
+      <div class="bar-row">
+        <div class="bar-label">{{ s.sector }}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ (s.weight_pct|float) if s.weight_pct is not none else 0 }}%;"></div>
+        </div>
+        <div class="bar-value">{{ '%.1f'|format(s.weight_pct) }}%</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="color: #9ca3af;">데이터 부족.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ═══ P5 · TAIL + CES ═══ -->
+<div class="slide-label">Page 5 / 8 · Tail Risk</div>
+<h2>Tail Ratio · Component Expected Shortfall (Top 3)</h2>
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">Tail Ratio (95p / |5p|)</div>
+    <div class="kpi-value kpi-neutral">
+      {% if tail_ratio is not none %}{{ '%.2f'|format(tail_ratio) }}{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+<h2 style="margin-top: 18pt;">Top 3 Component ES Contributors</h2>
+{% if component_es %}
+<table class="layout">
+  <thead>
+    <tr><th>Ticker</th><th>Sector</th><th class="num">ES Contribution (%)</th></tr>
+  </thead>
+  <tbody>
+  {% for c in component_es %}
+    <tr>
+      <td><strong>{{ c.ticker }}</strong></td>
+      <td>{{ c.sector or '—' }}</td>
+      <td class="num">{{ '%.3f'|format(c.es_contrib) }}%</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p style="margin-top: 8pt;">
+  Component ES는 포트폴리오 꼬리 손실(5% 분위 이하 일일 수익률)에 대한 각
+  종목의 평균 기여도 관찰입니다. 절대 값이 클수록 해당 종목이 꼬리 손실에
+  더 크게 기여합니다.
+</p>
+{% else %}
+<p style="color: #9ca3af;">데이터 부족 — 관찰 구간 20일 미만.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ═══ P6 · 7-LAYER DEFENSE ═══ -->
+<div class="slide-label">Page 6 / 8 · 7-Layer Risk Defense</div>
+<h2>Layer Status</h2>
+<table class="layout">
+  <thead>
+    <tr><th style="width: 240pt;">Layer</th><th>Status</th><th>Note</th></tr>
+  </thead>
+  <tbody>
+  {% for row in layer_status %}
+    <tr>
+      <td>{{ row.label }}</td>
+      <td>
+        {% if row.passed %}
+          <span class="pass-pill pass-ok">PASS</span>
+        {% else %}
+          <span class="pass-pill pass-fail">ATTENTION</span>
+        {% endif %}
+      </td>
+      <td>{{ row.note }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p style="margin-top: 10pt;">
+  7-Layer Risk Defense는 VaR · Correlation · VIX · Tail · Daily Loss ·
+  Sector · Cash의 관찰 레이어입니다. "ATTENTION"은 해당 레이어가 임계치를
+  넘어 관찰 대상 구간에 진입했음을 의미하며, 매매 판단 신호가 아닙니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ═══ P7 · AI NARRATIVE ═══ -->
+<div class="slide-label">Page 7 / 8 · Observed Top Risks</div>
+<h2>Top 3 Observations</h2>
+<div class="narrative">{{ top_risks }}</div>
+<p>
+  위 문장은 AI 모델이 본 리포트의 관찰 지표만을 바탕으로 중립 언어로 재구성한
+  요약입니다. 매매 판단이나 권유를 포함하지 않습니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ═══ P8 · DISCLAIMER ═══ -->
+<div class="slide-label">Page 8 / 8 · Legal</div>
+<h2>Disclaimer</h2>
+{% include '_disclaimer.html' %}
+<div class="footer">
+  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> ·
+  pivoxquant.com · trigger={{ trigger }}
+</div>
+
+</body>
+</html>
