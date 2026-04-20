@@ -672,6 +672,90 @@ def _init_scheduler(app):
             except Exception as e:
                 logger.error(f"Credit rating scheduler failed: {e}")
 
+    def _scheduled_dividend_income():
+        """Monthly (day=1) 10:00 KST — Dividend Income Statement PDF (Premium).
+
+        Resolves the *prior* calendar month internally via `_prev_month`.
+        Empty-portfolio users are skipped inside `run_for_user`.
+        """
+        from services.artifacts.dividend_income_service import (
+            DividendIncomeService,
+        )
+        with app.app_context():
+            try:
+                summary = DividendIncomeService().run_monthly()
+                logger.info(f"Dividend income scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Dividend income scheduler failed: {e}")
+
+    def _scheduled_monthly_finance():
+        """Monthly (day=1) 11:00 KST — Monthly Finance Report PDF (Premium).
+
+        Cash Runway + Cost/Tax Ledger + Watch Items combined. Scheduled
+        1h after the Dividend Statement to avoid resource contention on
+        the shared FMP budget. Empty book + zero cash users are skipped.
+        """
+        from services.artifacts.monthly_finance_service import (
+            MonthlyFinanceService,
+        )
+        with app.app_context():
+            try:
+                summary = MonthlyFinanceService().run_monthly()
+                logger.info(f"Monthly finance scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Monthly finance scheduler failed: {e}")
+
+    def _scheduled_risk_board_monthly():
+        """Monthly (day=15) 09:30 KST — Risk Board Meeting Deck (Premium).
+
+        Regular monthly edition — service runs over every Premium user
+        with at least one position. Empty portfolios are skipped; per-user
+        failures never block the rest. The event-driven VIX spike
+        edition is fired by `_scheduled_vix_spike_monitor` below.
+        """
+        from services.artifacts.risk_board_service import RiskBoardService
+        with app.app_context():
+            try:
+                summary = RiskBoardService().run_monthly()
+                logger.info(f"Risk board monthly scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Risk board monthly scheduler failed: {e}")
+
+    def _scheduled_vix_spike_monitor():
+        """Hourly (minute=30) — fire the Risk Board deck when VIX first
+        crosses above 25.
+
+        The service stores the last observed VIX in a tiny on-disk JSON
+        state file so a restart in the middle of a spike episode doesn't
+        re-notify. When VIX is already elevated this call is a cheap
+        no-op.
+        """
+        from services.artifacts.risk_board_service import RiskBoardService
+        with app.app_context():
+            try:
+                result = RiskBoardService().run_vix_spike_check()
+                logger.info(f"Risk board VIX spike monitor: {result}")
+            except Exception as e:
+                logger.error(f"Risk board VIX spike monitor failed: {e}")
+
+    def _scheduled_portfolio_segment():
+        """Quarterly (month=1,4,7,10 day=7) 10:00 KST — Portfolio Segment
+        Report PDF (Premium).
+
+        Fires 7 days into each quarter to audit the one that just closed —
+        mirrors the Self Audit cadence so both reports land in the same
+        post-quarter window. Empty portfolios are skipped.
+        """
+        from services.artifacts.portfolio_segment_service import (
+            PortfolioSegmentService,
+        )
+        with app.app_context():
+            try:
+                summary = PortfolioSegmentService().run_quarterly()
+                logger.info(f"Portfolio segment scheduler run: {summary}")
+            except Exception as e:
+                logger.error(f"Portfolio segment scheduler failed: {e}")
+
     def _scheduled_earnings_prebrief():
         """Scan every 15 min for positions whose earnings fire in ~30 min
         (MVP #3). The service enforces dedup per (user, ticker,
@@ -788,6 +872,61 @@ def _init_scheduler(app):
         hour=9, minute=0,
         timezone="Asia/Seoul",
         id="credit_rating_monthly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매월 1일 10:00 KST — Dividend Income Statement PDF (Premium).
+    sched.add_job(
+        _scheduled_dividend_income,
+        trigger="cron",
+        day=1,
+        hour=10, minute=0,
+        timezone="Asia/Seoul",
+        id="dividend_income_monthly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매월 1일 11:00 KST — Monthly Finance Report PDF (Premium).
+    # 1시간 뒤로 분리해 Dividend Statement와 FMP 예산이 겹치지 않게 한다.
+    sched.add_job(
+        _scheduled_monthly_finance,
+        trigger="cron",
+        day=1,
+        hour=11, minute=0,
+        timezone="Asia/Seoul",
+        id="monthly_finance_monthly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매월 15일 09:30 KST — Risk Board Meeting Deck (Premium) 월간 에디션.
+    sched.add_job(
+        _scheduled_risk_board_monthly,
+        trigger="cron",
+        day=15, hour=9, minute=30,
+        timezone="Asia/Seoul",
+        id="risk_board_monthly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매시 30분 — VIX 임계값 (>25) 신규 돌파 감지, Premium 전 유저 이벤트
+    # 에디션 발송. 이미 임계값 위에 머물러 있는 구간은 no-op.
+    sched.add_job(
+        _scheduled_vix_spike_monitor,
+        trigger="cron",
+        minute=30,
+        id="vix_spike_monitor",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 분기 +7일 (1/7, 4/7, 7/7, 10/7) 10:00 KST — Portfolio Segment Report (Premium).
+    sched.add_job(
+        _scheduled_portfolio_segment,
+        trigger="cron",
+        month="1,4,7,10",
+        day=7,
+        hour=10, minute=0,
+        timezone="Asia/Seoul",
+        id="portfolio_segment_quarterly",
         max_instances=1,
         coalesce=True,
     )

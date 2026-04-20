@@ -73,6 +73,12 @@ _ARTIFACT_DOWNLOAD_META = {
     "dd_checklist":      ("text/html",       "html"),
     "burn_rate":         ("application/pdf", "pdf"),
     "credit_rating":     ("text/html",       "html"),
+    # 2026-04-19 — Premium finance reports
+    "dividend_income":   ("application/pdf", "pdf"),
+    "monthly_finance":   ("application/pdf", "pdf"),
+    # 2026-04-19 — Premium risk + segment reports
+    "risk_board":        ("application/pdf", "pdf"),
+    "portfolio_segment": ("application/pdf", "pdf"),
 }
 
 
@@ -1495,6 +1501,485 @@ def credit_rating_trigger():
     except Exception as exc:
         db.session.rollback()
         current_app.logger.error("credit_rating manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ DIVIDEND INCOME STATEMENT (Premium) ═══════
+# Monthly 3-page PDF fired 1st of month 10:00 KST. See
+# services/artifacts/dividend_income_service.py.
+
+from services.artifacts.dividend_income_service import (  # noqa: E402
+    DividendIncomeService,
+)
+
+
+@artifacts_bp.route("/dividend-income/preview", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def dividend_income_preview():
+    """Generate (don't email) a preview dividend statement for the caller.
+
+    Returns: { ok, data, html }
+    """
+    try:
+        svc = DividendIncomeService()
+        data = svc.generate_for_user(current_user.id)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("dividend_income preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/dividend-income/download", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def dividend_income_download_latest():
+    """Stream the most recent Dividend Statement PDF for the caller.
+
+    Auto-resolves to the newest `dividend_income` row so the frontend
+    can link `download` without tracking IDs. Owner-only.
+
+    404 — no statement exists yet. 410 — row exists but no PDF rendered
+    (WeasyPrint unavailable at generation time).
+    """
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="dividend_income")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Dividend Statement available yet",
+                        "code": "NO_STATEMENT"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this statement",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    month = (artefact.data_json or {}).get("month_label", "month")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"dividend_{month}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/dividend-income/trigger", methods=["POST"])
+@api_auth
+def dividend_income_trigger():
+    """Manual trigger for the monthly dividend cron. Admin-only
+    (DEV_LOGIN_SECRET + X-Admin-Secret header — same pattern as the
+    weekly_memo/trigger)."""
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    target_str = body.get("target_month")
+    target_month = None
+    if target_str:
+        try:
+            target_month = date.fromisoformat(target_str)
+        except ValueError:
+            return jsonify({"error": "invalid target_month (expected YYYY-MM-DD)"}), 400
+
+    try:
+        summary = DividendIncomeService().run_monthly(target_month=target_month)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("dividend_income manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ MONTHLY FINANCE REPORT (Premium) ═══════
+# Cash Runway + Cost/Tax Ledger + Watch Items, 6-page PDF fired 1st of
+# month 11:00 KST. See services/artifacts/monthly_finance_service.py.
+
+from services.artifacts.monthly_finance_service import (  # noqa: E402
+    MonthlyFinanceService,
+)
+
+
+@artifacts_bp.route("/monthly-finance/preview", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def monthly_finance_preview():
+    """Generate (don't email) a preview finance report for the caller.
+
+    Returns: { ok, data, html }
+    """
+    try:
+        svc = MonthlyFinanceService()
+        data = svc.generate_for_user(current_user.id)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("monthly_finance preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/monthly-finance/download", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def monthly_finance_download_latest():
+    """Stream the most recent Monthly Finance Report PDF for the caller.
+
+    Auto-resolves to the newest `monthly_finance` row. Owner-only.
+
+    404 — no report exists yet. 410 — row exists but no PDF rendered.
+    """
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="monthly_finance")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Finance Report available yet",
+                        "code": "NO_REPORT"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this report",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    month = (artefact.data_json or {}).get("month_label", "month")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"finance_{month}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/monthly-finance/trigger", methods=["POST"])
+@api_auth
+def monthly_finance_trigger():
+    """Manual trigger for the monthly finance cron. Admin-only."""
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    target_str = body.get("target_month")
+    target_month = None
+    if target_str:
+        try:
+            target_month = date.fromisoformat(target_str)
+        except ValueError:
+            return jsonify({"error": "invalid target_month (expected YYYY-MM-DD)"}), 400
+
+    try:
+        summary = MonthlyFinanceService().run_monthly(target_month=target_month)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("monthly_finance manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ RISK BOARD MEETING DECK (Premium) ═══════
+# Monthly 8-page PDF (day 15 09:30 KST) + event-driven VIX spike edition.
+# See services/artifacts/risk_board_service.py for the 7-layer contract.
+
+from services.artifacts.risk_board_service import (  # noqa: E402
+    RiskBoardService,
+)
+
+
+@artifacts_bp.route("/risk-board/preview", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def risk_board_preview():
+    """Generate (don't email) a preview Risk Board deck for the caller.
+
+    Returns:
+        { ok, data, html }
+    `data` is the raw 8-page payload; `html` is the rendered PDF-source
+    HTML so the frontend preview pane can render it directly.
+    """
+    try:
+        svc = RiskBoardService()
+        data = svc.generate_for_user(current_user.id, trigger="monthly")
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("risk_board preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/risk-board/download", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def risk_board_download_latest():
+    """Stream the caller's most recent Risk Board PDF. Owner-only.
+
+    404 — no deck generated yet. 410 — row exists but no PDF rendered
+    (WeasyPrint unavailable at generation time).
+    """
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="risk_board")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Risk Board deck available yet",
+                        "code": "NO_DECK"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this deck",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    label = (artefact.data_json or {}).get("period_label", "deck")
+    safe = label.replace(" ", "_").replace("·", "").replace("/", "-")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"risk_board_{safe}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/risk-board/trigger", methods=["POST"])
+@api_auth
+def risk_board_trigger():
+    """Manual trigger for the Risk Board deck. Admin-only.
+
+    Gating — same convention as weekly_memo/trigger:
+      1. `DEV_LOGIN_SECRET` env must be set.
+      2. Caller must pass `X-Admin-Secret` header equal to it.
+
+    Body (optional): { "trigger": "monthly" | "vix_spike" }.
+    Default: "monthly". `vix_spike` bypasses the threshold check and
+    fires a deck to every Premium user (for QA).
+    """
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    trigger = (body.get("trigger") or "monthly").strip().lower()
+    if trigger not in ("monthly", "vix_spike"):
+        return jsonify({"error": "trigger must be 'monthly' or 'vix_spike'"}), 400
+
+    svc = RiskBoardService()
+    try:
+        if trigger == "monthly":
+            summary = svc.run_monthly()
+        else:
+            # Force-fire path: fan out to every premium user regardless of
+            # the persistent VIX state. Useful for QA; protected by admin
+            # secret above.
+            from models import User as _User
+            paid = (
+                _User.query
+                .filter(_User.subscription_tier.in_(["premium", "elite"]))
+                .all()
+            )
+            notified = 0
+            for u in paid:
+                try:
+                    r = svc.run_for_user(u, trigger="vix_spike")
+                    if r is not None:
+                        notified += 1
+                except Exception as exc:
+                    db.session.rollback()
+                    current_app.logger.error(
+                        "risk_board spike trigger failed user %s: %s",
+                        u.id, exc,
+                    )
+            summary = {"trigger": "vix_spike",
+                       "attempted": len(paid),
+                       "notified": notified}
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("risk_board manual run failed: %s", exc)
+        return jsonify({"error": f"Manual run failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════ PORTFOLIO SEGMENT REPORT (Premium) ═══════
+# Quarterly 4-page PDF (1/7, 4/7, 7/7, 10/7 @ 10:00 KST). Sector / Region /
+# Style breakdown — see services/artifacts/portfolio_segment_service.py.
+
+from services.artifacts.portfolio_segment_service import (  # noqa: E402
+    PortfolioSegmentService,
+)
+
+
+@artifacts_bp.route("/portfolio-segment/preview", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def portfolio_segment_preview():
+    """Generate (don't email) a preview Portfolio Segment report for the caller.
+
+    Returns:
+        { ok, data, html }
+    """
+    try:
+        svc = PortfolioSegmentService()
+        data = svc.generate_for_user(current_user.id)
+        html = svc.render_html(data)
+    except Exception as exc:
+        current_app.logger.error("portfolio_segment preview failed: %s", exc)
+        return jsonify({"error": f"Preview failed: {exc}"}), 500
+
+    return jsonify({"ok": True, "data": data, "html": html})
+
+
+@artifacts_bp.route("/portfolio-segment/download", methods=["GET"])
+@api_auth
+@require_tier("premium")
+def portfolio_segment_download_latest():
+    """Stream the caller's most recent Portfolio Segment PDF. Owner-only.
+
+    404 — no report generated yet. 410 — row exists but no PDF rendered.
+    """
+    artefact = (
+        Artifact.query
+        .filter_by(user_id=current_user.id, type="portfolio_segment")
+        .order_by(Artifact.created_at.desc())
+        .first()
+    )
+    if not artefact:
+        return jsonify({"error": "No Portfolio Segment report available yet",
+                        "code": "NO_REPORT"}), 404
+
+    if not artefact.pdf_path:
+        return jsonify({
+            "error": "PDF unavailable for this report",
+            "code":  "PDF_NOT_RENDERED",
+        }), 410
+
+    pdf_file = Path(artefact.pdf_path)
+    if not pdf_file.exists():
+        return jsonify({
+            "error": "PDF file missing on disk",
+            "code":  "PDF_FILE_MISSING",
+        }), 410
+
+    if not artefact.opened_at:
+        artefact.opened_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    quarter = (artefact.data_json or {}).get("quarter_label", "quarter")
+    safe_q = quarter.replace(" ", "_")
+    return send_file(
+        str(pdf_file),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=f"portfolio_segment_{safe_q}_{artefact.id}.pdf",
+    )
+
+
+@artifacts_bp.route("/portfolio-segment/trigger", methods=["POST"])
+@api_auth
+def portfolio_segment_trigger():
+    """Manual trigger for the quarterly cron. Admin-only.
+
+    Gating — identical to weekly_memo/trigger.
+    Body (optional): { "quarter_end": "2026-03-31" } to pin the audit
+    window. Defaults to today (which the `_quarter_bounds` helper maps
+    to whichever quarter just closed).
+    """
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+    if not dev_secret:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != dev_secret:
+        return jsonify({"error": "Admin only"}), 403
+
+    body = request.get_json(silent=True) or {}
+    qe_str = body.get("quarter_end")
+    quarter_end = None
+    if qe_str:
+        try:
+            quarter_end = date.fromisoformat(qe_str)
+        except ValueError:
+            return jsonify({
+                "error": "invalid quarter_end (expected YYYY-MM-DD)",
+            }), 400
+
+    try:
+        summary = PortfolioSegmentService().run_quarterly(quarter_end=quarter_end)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error("portfolio_segment manual run failed: %s", exc)
         return jsonify({"error": f"Manual run failed: {exc}"}), 500
 
     return jsonify({"ok": True, "summary": summary})
