@@ -29,7 +29,7 @@ interface LayerDefinition {
   key: string;        // matched against backend layer name (loose match)
   title: string;
   meaning: string;    // why this layer exists
-  triggerAction: string; // what to do when triggered
+  triggerAction: string; // what state the metric indicates (observation note)
 }
 
 const LAYER_DEFINITIONS: LayerDefinition[] = [
@@ -45,42 +45,42 @@ const LAYER_DEFINITIONS: LayerDefinition[] = [
     key: "correlation",
     title: "Correlation Layer — 종목 간 상관관계",
     meaning: "포지션들이 너무 같은 방향으로 움직이는지(분산 효과 소실) 감시.",
-    triggerAction: "다른 섹터/자산군(예: 채권 ETF, 금) 추가로 분산 강화.",
+    triggerAction: "포지션 간 상관관계 지표가 임계치를 넘은 상태 (관찰 지표).",
   },
   {
     no: 3,
     key: "vix",
     title: "VIX Layer — 시장 변동성",
     meaning: "VIX(공포지수)가 기준 위로 치솟으면 시장 전반 위험 국면.",
-    triggerAction: "변동성 확대 국면 — 현금 비중 관찰 지표.",
+    triggerAction: "시장 변동성 지표가 상승 구간 (관찰 지표).",
   },
   {
     no: 4,
     key: "tail",
     title: "Tail Layer — 극단 손실 위험",
     meaning: "정규 분포로는 설명 안 되는 꼬리 위험(블랙스완) 노출 측정.",
-    triggerAction: "헤지 수단(인버스 ETF, 풋옵션) 관련 지표 / 위험자산 비중 모니터링.",
+    triggerAction: "꼬리 위험 지표가 정상 범위를 벗어난 상태 (관찰 지표).",
   },
   {
     no: 5,
     key: "daily",
     title: "Daily Layer — 일일 손실 누적",
     meaning: "오늘 하루 누적 손실이 일일 한도를 초과했는지.",
-    triggerAction: "당일 추가 매매 중단, 다음날 시장 재평가 후 진입.",
+    triggerAction: "일일 손실 한도 초과 상태 (지표 기록).",
   },
   {
     no: 6,
     key: "sector",
     title: "Sector Layer — 섹터 집중 리스크",
     meaning: "한 섹터에 비중이 과도하게 쏠려 있는지(예: 반도체 60%).",
-    triggerAction: "초과 섹터 비중을 줄이고 다른 섹터로 재배분.",
+    triggerAction: "섹터 집중도 지표가 한도 초과 상태 (관찰 지표).",
   },
   {
     no: 7,
     key: "cash",
     title: "Cash Layer — 현금 비중",
     meaning: "현금 buffer가 너무 적어 급락 시 매수 여력/방어력이 없는지.",
-    triggerAction: "일부 포지션 정리해 현금 비중을 권장 수준으로 회복.",
+    triggerAction: "현금 비중 지표가 하한 미만 상태 (관찰 지표).",
   },
 ];
 
@@ -485,7 +485,7 @@ function DefenseLayerCard({ layer }: { layer: DefenseLayer }) {
           <div className="mt-2 flex items-start gap-1.5 rounded-md bg-amber-50 border border-amber-100 px-2 py-1.5">
             <Lightbulb className="h-3.5 w-3.5 text-amber-600 mt-0.5 shrink-0" />
             <p className="text-[11px] leading-relaxed text-amber-800">
-              <span className="font-semibold">권장 행동: </span>
+              <span className="font-semibold">관찰 포인트: </span>
               {def.triggerAction}
             </p>
           </div>
@@ -743,9 +743,8 @@ export default function RiskPage() {
               </h2>
               <p className="text-xs text-slate-600 leading-relaxed">
                 PivoxQuant는 골드만삭스 PM이 사용하는 7가지 리스크 지표로
-                포트폴리오의 잠재 손실을 정량 측정합니다. 각 지표가 위험 수준이면
-                <span className="font-semibold text-slate-800"> 포지션 비중 조정 / 헤지 / 손절 시점</span>을
-                직접 판단하는 데 활용하세요.
+                포트폴리오의 잠재 손실을 정량 측정해 기록합니다. 본 지표는 정보 제공 목적이며,
+                모든 투자 판단은 이용자 본인의 책임하에 이루어집니다.
               </p>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 미국·한국 종목의 시가는 모두 KRW로 환산해 비중을 계산하므로,
@@ -888,7 +887,7 @@ export default function RiskPage() {
           )}
           <MetricGuide
             why="95% 확률로 하루 최대 이 금액까지 손실이 날 수 있다는 의미입니다. 나머지 5% 확률의 극단 상황에는 더 클 수 있음."
-            how="이 금액이 감당 가능한 수준보다 크면 비중을 줄이거나 변동성이 낮은 종목으로 리밸런싱을 고려하세요."
+            how="이 금액이 감당 가능한 수준보다 큰지 확인할 수 있는 지표입니다. 투자 판단은 이용자 본인의 책임하에 이루어집니다."
           />
         </div>
 
@@ -967,8 +966,8 @@ export default function RiskPage() {
             </div>
           )}
           <MetricGuide
-            why="지금 고점 대비 얼마나 빠진 상태인지 보여줍니다. 큰 낙폭은 회복까지 오랜 시간이 걸려 복리 수익률을 갉아먹습니다."
-            how="현재 낙폭이 크다면 추가 매수 시점일 수도, 손절 시점일 수도 있습니다. 종목 펀더멘털을 다시 점검하세요."
+            why="지금 고점 대비 얼마나 빠진 상태인지 보여주는 지표입니다. 큰 낙폭은 이전 수준 도달까지 오랜 시간이 걸려 복리 수익률에 영향을 줍니다."
+            how="현재 낙폭 수준을 기록하는 지표입니다. 모든 투자 판단은 이용자 본인의 책임하에 이루어집니다."
           />
         </div>
 
@@ -998,7 +997,7 @@ export default function RiskPage() {
           )}
           <MetricGuide
             why="과거 위기(2008 금융위기, 2020 코로나, 금리 +1% 등) 시나리오가 다시 와도 포트폴리오가 얼마나 손실 볼지 시뮬레이션."
-            how="감당하기 힘든 시나리오 손실이 보이면 해당 위기 유형에 약한 종목 비중을 줄이고 헤지 자산(달러, 금)을 추가하세요."
+            how="각 시나리오별 포트폴리오 예상 손실 규모를 기록하는 지표입니다. 모든 투자 판단은 이용자 본인의 책임하에 이루어집니다."
           />
         </div>
 
@@ -1050,7 +1049,7 @@ export default function RiskPage() {
           )}
           <MetricGuide
             why="포트폴리오 꼬리 손실(극단 시장 상황 손실) 중 어떤 종목이 가장 많이 기여하는지 분해. 비중 큰 종목 ≠ 위험 큰 종목."
-            how="기여도 1·2위 종목이 비중 1·2위와 다르면 비중 조정 우선 후보. 한 종목이 전체 위험의 30% 이상이면 분산이 부족한 상태."
+            how="기여도 1·2위 종목이 비중 1·2위와 다르면 지표 불일치 상태 (관찰). 한 종목이 전체 위험의 30% 이상이면 분산 지표가 낮은 상태 (관찰)."
           />
         </div>
 
@@ -1067,8 +1066,9 @@ export default function RiskPage() {
               <Info className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
               <p className="text-xs text-slate-600 leading-relaxed">
                 <span className="font-semibold text-slate-700">7개 방어 레이어란? </span>
-                포트폴리오를 위협하는 7가지 위험 요인을 실시간 감시.
-                트리거된 레이어가 있으면 아래 권장 행동을 참고해 직접 대응 결정을 내리세요.
+                포트폴리오 7가지 리스크 지표를 실시간 기록합니다.
+                트리거된 레이어가 있으면 아래 관찰 포인트를 참고하세요.
+                모든 투자 판단은 이용자 본인의 책임하에 이루어집니다.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1119,7 +1119,7 @@ export default function RiskPage() {
               <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
                 <p className="text-xs text-amber-900 leading-relaxed">
                   <span className="font-semibold">{defenseData.layers.length}개 레이어가 트리거</span>되었습니다.
-                  각 카드의 권장 행동을 참고해 비중 조정·헤지·매매 보류 등을 직접 결정하세요.
+                  각 카드의 관찰 포인트를 참고하세요. 모든 투자 판단은 이용자 본인의 책임하에 이루어집니다.
                   PivoxQuant는 자동 매매를 실행하지 않습니다 (read-only).
                 </p>
               </div>
