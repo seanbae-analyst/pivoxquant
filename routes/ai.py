@@ -9,7 +9,7 @@ from security import ai_rate_limit
 from services.container import ai, fetcher
 from services import cache_service
 from ai_models import EarningsCallToneAnalyzer, AISectorRotation, AIRiskSummary
-from .decorators import api_auth
+from .decorators import api_auth, require_tier
 
 ai_bp = Blueprint("ai", __name__, url_prefix="/api/ai")
 
@@ -23,6 +23,7 @@ def status():
 @ai_bp.route("/swot", methods=["POST"])
 @ai_rate_limit
 @api_auth
+@require_tier("pro")
 def swot():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -36,6 +37,7 @@ def swot():
 @ai_bp.route("/competitor", methods=["POST"])
 @ai_rate_limit
 @api_auth
+@require_tier("pro")
 def competitor():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -59,6 +61,7 @@ def competitor():
 @ai_bp.route("/sector-trend", methods=["POST"])
 @ai_rate_limit
 @api_auth
+@require_tier("pro")
 def sector_trend():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -121,6 +124,7 @@ def chat():
 @ai_bp.route("/commentary", methods=["POST"])
 @ai_rate_limit
 @api_auth
+@require_tier("pro")
 def commentary():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -134,6 +138,7 @@ def commentary():
 @ai_bp.route("/morning-summary", methods=["POST"])
 @ai_rate_limit
 @api_auth
+@require_tier("pro")
 def morning_summary():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -147,6 +152,7 @@ def morning_summary():
 @ai_bp.route("/coaching", methods=["POST"])
 @ai_rate_limit
 @api_auth
+@require_tier("pro")
 def coaching():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -284,6 +290,7 @@ def earnings_tone_get(ticker):
 @ai_bp.route("/sector-regime", methods=["GET"])
 @ai_rate_limit
 @api_auth
+@require_tier("pro")
 def sector_regime():
     """Classify current macro regime and return historical sector performance.
     No parameters needed — uses current macro data automatically.
@@ -300,6 +307,7 @@ def sector_regime():
 @ai_bp.route("/risk-summary", methods=["POST"])
 @ai_rate_limit
 @api_auth
+@require_tier("pro")
 def risk_summary():
     """Generate a plain-language risk summary for the user's portfolio.
 
