@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Year-End Investor Letter — {{ year }} — {{ user_name }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 24mm 22mm;
+      @top-right {
+        content: "PivoxQuant · {{ year }} Year-End Letter · p." counter(page) " / " counter(pages);
+        font-family: Georgia, serif; font-size: 9pt; color: #555;
+      }
+      @bottom-center {
+        content: "For the addressee only — do not forward or share.";
+        font-family: Georgia, serif; font-size: 8pt; color: #888;
+      }
+    }
+    body {
+      font-family: Georgia, "Times New Roman", "Apple SD Gothic Neo",
+                   "Noto Sans KR", serif;
+      font-size: 11pt; line-height: 1.55; color: #111; margin: 0;
+    }
+    h1 {
+      font-size: 26pt; font-weight: 500; margin: 0 0 6pt 0;
+      letter-spacing: -0.5pt;
+    }
+    h2 {
+      font-size: 14pt; font-weight: 600; margin: 24pt 0 10pt 0;
+      border-bottom: 0.5pt solid #000; padding-bottom: 5pt;
+      letter-spacing: 0.2pt; text-transform: uppercase;
+    }
+    h3 { font-size: 11.5pt; font-weight: 600; margin: 14pt 0 6pt 0; }
+    .meta {
+      font-size: 9.5pt; color: #555; margin-bottom: 20pt;
+      border-top: 0.5pt solid #ccc; border-bottom: 0.5pt solid #ccc;
+      padding: 5pt 0;
+    }
+    .cover {
+      text-align: center; padding-top: 70pt;
+    }
+    .cover .crest {
+      font-size: 10pt; letter-spacing: 4pt; color: #555;
+      text-transform: uppercase;
+    }
+    .cover .year {
+      font-size: 60pt; font-weight: 300; margin: 12pt 0;
+      letter-spacing: -1pt;
+    }
+    .cover .name {
+      font-size: 13pt; color: #333; margin-top: 12pt; font-style: italic;
+    }
+    .kpi-row { display: table; width: 100%; margin: 12pt 0 16pt 0; }
+    .kpi-cell {
+      display: table-cell; width: 25%; padding: 10pt 8pt;
+      border-right: 0.5pt solid #ccc; text-align: center;
+    }
+    .kpi-cell:last-child { border-right: none; }
+    .kpi-label {
+      font-size: 8.5pt; color: #666; text-transform: uppercase;
+      letter-spacing: .5pt;
+    }
+    .kpi-value {
+      font-size: 20pt; font-weight: 600; margin-top: 3pt;
+      letter-spacing: -0.3pt;
+    }
+    .kpi-pos { color: #0a6f3c; }
+    .kpi-neg { color: #a11d1d; }
+    .kpi-neu { color: #333; }
+    table.trades {
+      width: 100%; border-collapse: collapse; margin-top: 6pt;
+      font-size: 10pt;
+    }
+    table.trades th, table.trades td {
+      padding: 6pt 4pt; text-align: left;
+      border-bottom: 0.5pt solid #e5e7eb;
+    }
+    table.trades th {
+      font-size: 8.5pt; color: #555; text-transform: uppercase;
+      letter-spacing: .4pt; font-weight: 500;
+    }
+    table.trades td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .letter {
+      background: #faf9f6; border-left: 3px solid #111;
+      padding: 14pt 18pt; margin: 12pt 0; font-size: 11pt;
+      font-family: Georgia, serif; line-height: 1.65;
+      white-space: pre-wrap;
+    }
+    .note {
+      background: #fafafa; border: 0.5pt solid #e5e7eb;
+      padding: 10pt 12pt; margin: 10pt 0; font-size: 10pt; color: #333;
+    }
+    .footer {
+      font-size: 8pt; color: #9ca3af; margin-top: 18pt;
+      line-height: 1.45;
+    }
+    .page-break { page-break-after: always; }
+    ul.watch { padding-left: 18pt; margin: 6pt 0 0 0; }
+    ul.watch li { margin: 5pt 0; font-size: 10pt; }
+    .disclaimer { margin-top: 18pt; font-size: 9pt; color: #444;
+                  border-top: 0.5pt solid #ccc; padding-top: 10pt; }
+    .disclaimer__title { margin: 0 0 6pt 0; }
+  </style>
+</head>
+<body>
+
+<!-- ── P1 · Cover + annual summary ─────────────────────────────────── -->
+<div class="cover">
+  <div class="crest">PivoxQuant · Year-End Investor Letter</div>
+  <div class="year">{{ year }}</div>
+  <div class="name">Prepared for <em>{{ user_name }}</em></div>
+  <div class="meta" style="margin-top: 36pt;">
+    {{ period_start }} &rarr; {{ period_end }} &nbsp;·&nbsp; Generated {{ generated_at }}
+  </div>
+</div>
+
+<h2>연간 요약</h2>
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">YTD Return</div>
+    <div class="kpi-value
+      {% if ytd_return_pct is not none and ytd_return_pct >= 0 %}kpi-pos
+      {% elif ytd_return_pct is not none %}kpi-neg
+      {% else %}kpi-neu{% endif %}">
+      {% if ytd_return_pct is not none %}{{ '%+.2f'|format(ytd_return_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Benchmark</div>
+    <div class="kpi-value kpi-neu">
+      {% if benchmark_pct is not none %}{{ '%+.2f'|format(benchmark_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Alpha</div>
+    <div class="kpi-value
+      {% if alpha_pct is not none and alpha_pct >= 0 %}kpi-pos
+      {% elif alpha_pct is not none %}kpi-neg
+      {% else %}kpi-neu{% endif %}">
+      {% if alpha_pct is not none %}{{ '%+.2f'|format(alpha_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Win Rate</div>
+    <div class="kpi-value kpi-neu">
+      {% if win_rate_pct is not none %}{{ '%.0f'|format(win_rate_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="letter">{{ shareholder_letter }}</div>
+
+<div class="page-break"></div>
+
+<!-- ── P2 · Annual performance · portfolio value + sector contribution ── -->
+<h2>연간 성과</h2>
+<table class="trades">
+  <tbody>
+    <tr>
+      <td>기초 포트폴리오 가치 (추정)</td>
+      <td class="num">
+        {% if opening_value is not none %}{{ '%.0f'|format(opening_value) }}{% else %}—{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>기말 포트폴리오 가치</td>
+      <td class="num">
+        {% if closing_value is not none %}{{ '%.0f'|format(closing_value) }}{% else %}—{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td>연간 거래 총건수</td>
+      <td class="num">{{ total_trades }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>섹터별 기여</h3>
+{% if sector_contribution %}
+<table class="trades">
+  <thead>
+    <tr><th>섹터</th><th class="num">거래 수</th><th class="num">평균 수익률</th></tr>
+  </thead>
+  <tbody>
+  {% for s in sector_contribution %}
+    <tr>
+      <td>{{ s.sector }}</td>
+      <td class="num">{{ s.trade_count }}</td>
+      <td class="num {% if s.avg_return_pct >= 0 %}kpi-pos{% else %}kpi-neg{% endif %}">
+        {{ '%+.2f'|format(s.avg_return_pct) }}%
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">기록된 거래가 없거나 수익률 계산이 가능한 거래가 부족해 섹터 기여는 생략합니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P3 · Best 3 decisions ─────────────────────────────────────────── -->
+<h2>베스트 3 결정 — 가장 큰 수익</h2>
+{% if best_decisions %}
+<table class="trades">
+  <thead>
+    <tr>
+      <th>Ticker</th><th>Bought</th>
+      <th class="num">Buy</th><th class="num">Outcome</th>
+      <th class="num">Return</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in best_decisions %}
+    <tr>
+      <td><strong>{{ s.ticker }}</strong></td>
+      <td>{{ s.buy_date or '—' }}</td>
+      <td class="num">{{ '%.2f'|format(s.buy_price) }}</td>
+      <td class="num">
+        {% if s.sell_price %}sold @ {{ '%.2f'|format(s.sell_price) }}
+        {% else %}open / forward{% endif %}
+      </td>
+      <td class="num
+           {% if s.return_pct is not none and s.return_pct >= 0 %}kpi-pos
+           {% else %}kpi-neg{% endif %}">
+        {% if s.return_pct is not none %}{{ '%+.2f'|format(s.return_pct) }}%{% else %}—{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">데이터가 충분하지 않아 관찰 대상이 없습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P4 · Worst 3 decisions + lesson framing ─────────────────────── -->
+<h2>워스트 3 결정 — 가장 큰 손실 / 교훈</h2>
+{% if worst_decisions %}
+<table class="trades">
+  <thead>
+    <tr>
+      <th>Ticker</th><th>Bought</th>
+      <th class="num">Buy</th><th class="num">Outcome</th>
+      <th class="num">Return</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in worst_decisions %}
+    <tr>
+      <td><strong>{{ s.ticker }}</strong></td>
+      <td>{{ s.buy_date or '—' }}</td>
+      <td class="num">{{ '%.2f'|format(s.buy_price) }}</td>
+      <td class="num">
+        {% if s.sell_price %}sold @ {{ '%.2f'|format(s.sell_price) }}
+        {% else %}open / forward{% endif %}
+      </td>
+      <td class="num
+           {% if s.return_pct is not none and s.return_pct >= 0 %}kpi-pos
+           {% else %}kpi-neg{% endif %}">
+        {% if s.return_pct is not none %}{{ '%+.2f'|format(s.return_pct) }}%{% else %}—{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="note">
+  워스트 결정은 내년 판단에서 <strong>동일 패턴이 재현되는지 관찰</strong>하기
+  위한 기록입니다. 본 란은 자기 점검을 위한 참고 자료이며 매매 권유가 아닙니다.
+</p>
+{% else %}
+<p class="note">데이터가 충분하지 않아 관찰 대상이 없습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P5 · Strategy consistency ─────────────────────────────────────── -->
+<h2>전략 일관성 점검</h2>
+<table class="trades">
+  <tbody>
+    <tr>
+      <td>온보딩 리스크 성향</td>
+      <td class="num">{{ risk_profile or '—' }}</td>
+    </tr>
+    <tr>
+      <td>실제 거래 패턴 (관찰)</td>
+      <td class="num">{{ realized_style or '—' }}</td>
+    </tr>
+    <tr>
+      <td>일관성 스코어</td>
+      <td class="num">
+        {% if consistency_score is not none %}{{ consistency_score }} / 100{% else %}—{% endif %}
+      </td>
+    </tr>
+  </tbody>
+</table>
+{% if consistency_notes %}
+<div class="note">{{ consistency_notes }}</div>
+{% endif %}
+<p style="color:#555; font-size: 10pt;">
+  이 점수는 <strong>판단이 아닌 관찰</strong>입니다. 실제 거래가 온보딩 당시의
+  성향과 다를 수 있으며, 그 차이를 인지하는 것 자체가 목적입니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ── P6 · Watch Items + Disclaimer ─────────────────────────────────── -->
+<h2>내년 Watch Items (캘린더)</h2>
+<p style="color:#555; font-size: 10pt;">
+  아래는 <strong>공개된 경제·규제 일정</strong>입니다. 매매 권유가 아니며,
+  해당 일정을 관찰하기 위한 참고 자료입니다.
+</p>
+<ul class="watch">
+{% for w in watch_items %}
+  <li><strong>{{ w.date }}</strong> — {{ w.label }}</li>
+{% endfor %}
+</ul>
+
+<h2>Disclaimer</h2>
+{% include '_disclaimer.html' %}
+<div class="footer">
+  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> ·
+  pivoxquant.com · For the addressee only — not for distribution.
+</div>
+
+</body>
+</html>
