@@ -1,4 +1,12 @@
-"""AI analysis routes: SWOT, competitor, sector trend, chat, coaching, earnings tone, sector regime."""
+"""AI analysis routes: SWOT, competitor, sector trend, chat, coaching, earnings tone, sector regime.
+
+Legal boundary
+--------------
+Every AI response MUST pass through ``legal_filter.scrub_response`` before
+``jsonify`` — this is the last runtime defense against 자본시장법 §6 (미등록
+투자자문업) and §101 (불공정 영업행위) violations. Use ``_scrub_and_jsonify``
+helper instead of calling ``jsonify`` directly.
+"""
 import json
 from flask import Blueprint, request, jsonify, Response
 from flask_login import current_user
@@ -8,10 +16,22 @@ from models import Position, SignalCache
 from security import ai_rate_limit
 from services.container import ai, fetcher
 from services import cache_service
+from services.legal_filter import scrub_response
 from ai_models import EarningsCallToneAnalyzer, AISectorRotation, AIRiskSummary
 from .decorators import api_auth, require_tier
 
 ai_bp = Blueprint("ai", __name__, url_prefix="/api/ai")
+
+
+def _scrub_and_jsonify(payload, status: int = 200):
+    """Deep-scrub AI payload through legal_filter, then jsonify.
+
+    This is the single exit point for every AI response in this module — do
+    NOT call ``jsonify(ai_result)`` directly; it would bypass §6 / §101 the
+    legal boundary. Non-AI errors (e.g. {"error": "AI not configured"}) also
+    go through this path (idempotent on dicts with no risky text).
+    """
+    return jsonify(scrub_response(payload)), status
 
 
 @ai_bp.route("/status")
@@ -30,7 +50,7 @@ def swot():
     d = request.get_json() or {}
     result = ai.generate_swot(d)
     if result:
-        return jsonify(result)
+        return _scrub_and_jsonify(result)
     return jsonify({"error": "Failed to generate SWOT"}), 500
 
 
@@ -54,7 +74,7 @@ def competitor():
             pass
     result = ai.generate_competitor_analysis(d, peers[:8])
     if result:
-        return jsonify(result)
+        return _scrub_and_jsonify(result)
     return jsonify({"error": "Failed to generate competitor analysis"}), 500
 
 
@@ -77,7 +97,7 @@ def sector_trend():
             pass
     result = ai.generate_sector_trend(sector, stocks[:10])
     if result:
-        return jsonify(result)
+        return _scrub_and_jsonify(result)
     return jsonify({"error": "Failed to generate sector trend"}), 500
 
 
@@ -109,8 +129,11 @@ def chat():
 
     def generate():
         try:
+            from services.legal_filter import safe_scrub
             for chunk in ai.chat_stream(message, history, context):
-                yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+                # SSE 스트림 경계에서도 §6 / §101 방어선 유지.
+                safe_chunk = safe_scrub(chunk, context="ai.chat.stream") or ""
+                yield f"data: {json.dumps({'text': safe_chunk}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
             import logging as _logging
@@ -131,7 +154,7 @@ def commentary():
     d = request.get_json() or {}
     result = ai.generate_commentary(d)
     if result:
-        return jsonify(result)
+        return _scrub_and_jsonify(result)
     return jsonify({"error": "Failed to generate commentary"}), 500
 
 
@@ -145,7 +168,7 @@ def morning_summary():
     d = request.get_json() or {}
     result = ai.generate_morning_summary(d)
     if result:
-        return jsonify(result)
+        return _scrub_and_jsonify(result)
     return jsonify({"error": "Failed to generate summary"}), 500
 
 
@@ -168,7 +191,7 @@ def coaching():
     context = ai.build_portfolio_context(current_user, positions, sig_cache)
     result = ai.generate_coaching(context)
     if result:
-        return jsonify(result)
+        return _scrub_and_jsonify(result)
     return jsonify({"error": "Failed to generate coaching"}), 500
 
 
@@ -222,7 +245,7 @@ def earnings_tone():
 
     cached = cache_service.earnings_tone_cache_get(ticker)
     if cached is not None and transcript is None:
-        return jsonify({**cached, "cached": True}), 200
+        return _scrub_and_jsonify({**cached, "cached": True}, 200)
 
     # 2) Cache miss — enforce daily Claude budget before spending tokens.
     if not cache_service.earnings_tone_budget_check_and_increment():
@@ -239,7 +262,7 @@ def earnings_tone():
     if status_code == 200 and isinstance(result, dict) and "error" not in result:
         cache_service.earnings_tone_cache_set(ticker, result)
 
-    return jsonify(result), status_code
+    return _scrub_and_jsonify(result, status_code)
 
 
 @ai_bp.route("/earnings-tone/<ticker>", methods=["GET"])
@@ -269,7 +292,7 @@ def earnings_tone_get(ticker):
 
     cached = cache_service.earnings_tone_cache_get(ticker)
     if cached is not None:
-        return jsonify({**cached, "cached": True}), 200
+        return _scrub_and_jsonify({**cached, "cached": True}, 200)
 
     if not cache_service.earnings_tone_budget_check_and_increment():
         return jsonify({
@@ -282,7 +305,7 @@ def earnings_tone_get(ticker):
     if status_code == 200 and isinstance(result, dict) and "error" not in result:
         cache_service.earnings_tone_cache_set(ticker, result)
 
-    return jsonify(result), status_code
+    return _scrub_and_jsonify(result, status_code)
 
 
 # ── AI Sector Regime Classification (YELLOW — informational only) ────────────
@@ -299,7 +322,7 @@ def sector_regime():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
     result, status_code = AISectorRotation.analyze()
-    return jsonify(result), status_code
+    return _scrub_and_jsonify(result, status_code)
 
 
 # ── AI Risk Summary (GREEN — pure analysis, no advisory) ──────────────────────
@@ -351,4 +374,4 @@ def risk_summary():
     stress_data = d.get("stress_data")
 
     result, status_code = AIRiskSummary.generate(portfolio_data, var_data, stress_data)
-    return jsonify(result), status_code
+    return _scrub_and_jsonify(result, status_code)

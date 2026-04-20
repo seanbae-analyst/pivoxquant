@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "PivoxQuant Pricing — Free, Pro, Premium",
     description:
-      "AI Quant Advisor pricing. Start free; upgrade for full quant scoring, AI Assistant, and risk dashboard.",
+      "AI Quant Research Tool pricing. Start free; upgrade for full quant scoring, AI Assistant, and risk dashboard.",
     url: "/pricing",
     type: "website",
   },

@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "Welcome back",
-      "subtitle": "AI Quant Investment Advisor",
+      "subtitle": "AI Quant Research Tool",
       "continueWithGoogle": "Continue with Google",
       "continueWithKakao": "Continue with Kakao",
       "noAccount": "Don't have an account?",
@@ -72,14 +72,14 @@
     },
     "signup": {
       "title": "Get started",
-      "subtitle": "AI Quant Investment Platform",
+      "subtitle": "AI Quant Research Platform",
       "haveAccount": "Already have an account?",
       "signIn": "Sign in"
     }
   },
   "landing": {
     "hero": {
-      "badge": "AI Quant Investment Advisor",
+      "badge": "AI Quant Research Tool",
       "title": "Invest with Data",
       "subtitle": "58 quant models, 7-layer risk defense, AI portfolio analysis. Unified US & Korean equity management.",
       "cta": "Start for Free",

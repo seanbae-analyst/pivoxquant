@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PivoxQuant — AI Quant Advisor",
+    name: "PivoxQuant — AI Quant Research Tool",
     short_name: "PivoxQuant",
     description:
-      "AI-powered quantitative investment advisor with adaptive quant engine",
+      "AI-powered quantitative research tool with adaptive quant engine (information only, not investment advice)",
     start_url: "/",
     display: "standalone",
     background_color: "#fafafa",

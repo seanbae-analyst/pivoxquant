@@ -59,7 +59,7 @@ def _compliance_filter(text, lang="en"):
     logger.warning("AI response blocked by compliance filter; replacing with disclaimer.")
     return _DISCLAIMER_KR if lang == "kr" else _DISCLAIMER_EN
 
-SYSTEM_PROMPT = """You are PivoxQuant AI, a friendly market data analysis assistant built into a quantitative portfolio analysis app.
+SYSTEM_PROMPT = """You are PivoxQuant AI, a neutral market data analysis assistant built into a quantitative research tool.
 
 Your audience is beginner investors (주린이) who may not understand financial jargon.
 
@@ -68,11 +68,34 @@ Rules:
 - Always match the user's language (Korean → Korean, English → English).
 - Keep responses concise: 2-4 sentences for summaries, up to a short paragraph for chat.
 - Use the exact numbers from the provided data context.
-- Be honest about risks; describe data neutrally.
+- Be honest about risks; describe data neutrally in a descriptive tone (~입니다 / 기록했습니다).
 - Base your analysis on the quant scores and signals provided.
-- End with an informational takeaway — NEVER an action recommendation.
-- CRITICAL: Do NOT recommend buying, selling, or holding any security. Do not use words like "recommend", "buy", "sell", "추천", "조언", "매수", "매도". Describe data only.
-- Always include a disclaimer that this is algorithmic analysis, not financial advice / 투자 권유 아님.
+- End with an informational takeaway — NEVER an action recommendation or future prediction.
+
+CRITICAL — FORBIDDEN VOCABULARY (자본시장법 §6 / §101 방어선):
+- Korean (한글 금지어):
+  추천, 권고, 권유, 제안, 조언,
+  매수, 매도, 사세요, 파세요, 사라, 팔아, 손절, 익절,
+  목표가, 적정가, 예상 수익률, 예상가,
+  유리, 불리, 우수, 열등, 좋다, 나쁘다, 유망,
+  기회, 주의, 공격적, 보수적 (투자 권유 맥락일 때),
+  전망, 예측, 예상 (미래 단정 맥락일 때),
+  오를 것, 내릴 것, 오른다, 내린다, 이긴다, 이겼다,
+  고평가, 저평가 (단정적 맥락일 때).
+- English (영문 금지어):
+  buy, sell (imperative), recommend, advise, suggest (imperative),
+  target price, fair value, price target, expected return %,
+  outperform, beat the market, beat S&P, 이긴다/beat,
+  bullish, bearish (as action cues),
+  predict, forecast (as certainty).
+
+REQUIRED WORDING (강제 포함):
+- Describe signals as POSITIVE / NEGATIVE / NEUTRAL indicators, never buy/sell.
+- Use observation tone: "~을 기록했습니다", "~관찰됩니다", "~지표가 높습니다".
+- Never forecast future prices. Say "과거 기록 지표" or "관찰 구간" instead.
+- Every output MUST end with this exact disclaimer sentence in the matching language:
+  EN: "This is informational only and not investment advice."
+  KR: "본 내용은 정보 제공 목적이며 투자 권유가 아닙니다."
 - Use casual, approachable tone — not stiff corporate speak."""
 
 MODEL = "claude-haiku-4-5-20251001"
@@ -398,7 +421,7 @@ Make it actionable, not generic:
 - OPPORTUNITIES: What market trends could benefit this company?
 - THREATS: What specific risks could hurt this company in the next 1-2 years?
 
-End with: "Bottom line: [one sentence investment thesis]"
+End with: "Bottom line: [one sentence factual observation summary — NOT a thesis, recommendation, or future prediction]"
 
 IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
 [EN]
@@ -437,11 +460,11 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
                     "role": "user",
                     "content": f"""Analyze the competitive positioning of these companies in the same sector based on the quant data provided.
 
-Cover:
-- How does the main stock compare to peers in terms of score and signal?
-- Which peer looks like the best opportunity based on the data?
-- What's the biggest risk in this sector right now?
-- One actionable insight for an investor
+Cover (observation only — no recommendations, no "best opportunity", no "most attractive"):
+- How does the main stock compare to peers in terms of score and signal (pure indicator comparison)?
+- Which peer currently shows the highest quant indicator (factual observation, NOT a recommendation).
+- Which risk indicator stands out in this sector right now based on the data.
+- One neutral data observation (no action verbs, no "should", no "유리/불리").
 
 Keep it concise. 2-3 sentences per point.
 
@@ -564,15 +587,15 @@ Output ONLY a JSON object, no markdown:
                 system=SYSTEM_PROMPT,
                 messages=[{
                     "role": "user",
-                    "content": f"""Create a brief trend report for the {sector} sector based on the stock data provided.
+                    "content": f"""Create a brief, descriptive trend report for the {sector} sector based ONLY on the stock data provided.
 
-Cover:
-1. Top 3 trends in this sector right now
-2. One risk most investors aren't watching
-3. Which stock in this sector looks best positioned based on the scores
-4. Your prediction for the next 6 months
+Cover (observation only, no forecasts, no recommendations):
+1. Top 3 observed trends in this sector right now (based on the provided scores).
+2. One risk indicator worth noting from the data.
+3. Which stock currently shows the highest quant score in this sector (pure indicator observation, NOT a recommendation).
+4. Summary of the current observation window (past + present indicators ONLY; do NOT predict or forecast future months).
 
-Be specific. Use the data provided.
+Use descriptive, past/present tense. Do NOT use words like "predict", "forecast", "will", "expected to", "전망", "예측", "예상", "오를 것", "내릴 것".
 
 IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
 [EN]

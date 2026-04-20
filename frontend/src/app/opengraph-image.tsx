@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
 
-export const alt = "PivoxQuant — AI Quant Advisor";
+export const alt = "PivoxQuant — AI Quant Research Tool";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -64,7 +64,7 @@ export default function OpengraphImage() {
               maxWidth: 900,
             }}
           >
-            AI Quant Advisor
+            AI Quant Research Tool
             <br />
             <span style={{ color: "#E2B96F" }}>for serious investors</span>
           </span>

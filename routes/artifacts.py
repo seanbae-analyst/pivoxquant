@@ -568,7 +568,7 @@ def monthly_brag_share_link(brag_id: int):
 
     og = {
         "og:title":        f"{month_label} {ret_str} — PivoxQuant",
-        "og:description":  "월간 브래그 카드 — AI + Quant 투자 어드바이저",
+        "og:description":  "월간 브래그 카드 — AI + Quant 리서치 툴",
         "og:image":        f"{share_domain}/api/artifacts/monthly-brag/download/{artefact.id}",
         "og:url":          share_url,
         "twitter:card":    "summary_large_image",
@@ -770,7 +770,7 @@ def brag_card_share(share_token: str):
         f'<meta property="og:title" content="{data.get("month_label","")} '
         f'{ret_str} — PivoxQuant">'
         f'<meta property="og:description" content="월간 브래그 카드 — '
-        f'AI + Quant 투자 어드바이저">'
+        f'AI + Quant 리서치 툴">'
         f'<meta property="og:image" content="{png_endpoint}">'
         f'<meta property="og:url" content="{share_url}">'
         f'<meta name="twitter:card" content="summary_large_image">'
