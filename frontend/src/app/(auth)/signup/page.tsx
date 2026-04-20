@@ -40,10 +40,77 @@ function KakaoIcon() {
   );
 }
 
+/* ── Legal consent state keys ──
+ *
+ * Stored briefly in localStorage before OAuth redirect, so that when the
+ * OAuth callback returns to /onboarding we can mark the user's consent
+ * on first login. Backend persistence is a separate task; this UI
+ * enforces the legal contract client-side per §17 금소법 적합성 +
+ * 전자상거래법 §17 + PIPA §22 age confirmation.
+ */
+const CONSENT_STORAGE_KEY = "pivox_signup_consents";
+
+interface Consents {
+  terms: boolean;
+  non_advisory: boolean;
+  age: boolean;
+  marketing: boolean;
+}
+
+function Checkbox({
+  checked,
+  onChange,
+  id,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  id: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      id={id}
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-200 ${
+        checked
+          ? "border-[var(--sp-accent)] bg-[var(--sp-accent)]"
+          : "border-slate-300 bg-white hover:border-slate-400"
+      }`}
+    >
+      {checked && (
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="white"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="2 6 5 9 10 3" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export default function SignupPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [agreed, setAgreed] = useState(false);
+  const [consents, setConsents] = useState<Consents>({
+    terms: false,
+    non_advisory: false,
+    age: false,
+    marketing: false,
+  });
+  const [allRequired, setAllRequired] = useState(false);
+
+  useEffect(() => {
+    setAllRequired(consents.terms && consents.non_advisory && consents.age);
+  }, [consents]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -60,6 +127,30 @@ export default function SignupPage() {
   }
 
   if (user) return null;
+
+  const setConsent = (key: keyof Consents) => (next: boolean) => {
+    setConsents((prev) => ({ ...prev, [key]: next }));
+  };
+
+  const handleOAuthClick = (url: string) => (e: React.MouseEvent) => {
+    if (!allRequired) {
+      e.preventDefault();
+      return;
+    }
+    // Persist consent snapshot for OAuth callback handler.
+    try {
+      window.localStorage.setItem(
+        CONSENT_STORAGE_KEY,
+        JSON.stringify({
+          ...consents,
+          consented_at: new Date().toISOString(),
+        }),
+      );
+    } catch {
+      // non-fatal
+    }
+    window.location.href = url;
+  };
 
   return (
     <div className="flex flex-col items-center">
@@ -91,11 +182,93 @@ export default function SignupPage() {
         58개 퀀트 모델을 무료로 시작하세요
       </p>
 
+      {/* Legal consent checkboxes (required before OAuth) */}
+      <div className="mt-8 w-full space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+        <p className="text-xs font-semibold text-slate-700">가입 전 확인</p>
+
+        {/* 1. 이용약관 + 개인정보처리방침 */}
+        <label htmlFor="agree_terms" className="flex cursor-pointer items-start gap-2">
+          <Checkbox
+            id="agree_terms"
+            checked={consents.terms}
+            onChange={setConsent("terms")}
+          />
+          <span className="text-xs leading-relaxed text-slate-600">
+            <strong className="text-slate-900">[필수]</strong>{" "}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="underline hover:text-slate-900"
+              onClick={(e) => e.stopPropagation()}
+            >
+              이용약관
+            </Link>{" "}
+            및{" "}
+            <Link
+              href="/privacy"
+              target="_blank"
+              className="underline hover:text-slate-900"
+              onClick={(e) => e.stopPropagation()}
+            >
+              개인정보처리방침
+            </Link>
+            에 동의합니다.
+          </span>
+        </label>
+
+        {/* 2. 투자자문업 아님 고지 (자본시장법) */}
+        <label
+          htmlFor="agree_non_advisory"
+          className="flex cursor-pointer items-start gap-2"
+        >
+          <Checkbox
+            id="agree_non_advisory"
+            checked={consents.non_advisory}
+            onChange={setConsent("non_advisory")}
+          />
+          <span className="text-xs leading-relaxed text-slate-600">
+            <strong className="text-slate-900">[필수]</strong> PivoxQuant는 자본시장법상
+            투자자문업이 아니며, 본 서비스의 모든 분석·리포트·시그널은 정보 제공 목적임을
+            이해합니다. 투자 판단과 그 결과는 이용자 본인의 책임입니다.
+          </span>
+        </label>
+
+        {/* 3. 만 14세 이상 (PIPA §22) */}
+        <label htmlFor="agree_age" className="flex cursor-pointer items-start gap-2">
+          <Checkbox
+            id="agree_age"
+            checked={consents.age}
+            onChange={setConsent("age")}
+          />
+          <span className="text-xs leading-relaxed text-slate-600">
+            <strong className="text-slate-900">[필수]</strong> 만 14세 이상입니다.
+            (개인정보보호법 §22)
+          </span>
+        </label>
+
+        {/* 4. 마케팅 수신 (선택) */}
+        <label
+          htmlFor="agree_marketing"
+          className="flex cursor-pointer items-start gap-2"
+        >
+          <Checkbox
+            id="agree_marketing"
+            checked={consents.marketing}
+            onChange={setConsent("marketing")}
+          />
+          <span className="text-xs leading-relaxed text-slate-600">
+            <span className="text-slate-500">[선택]</span> 마케팅 정보(이벤트, 신기능
+            안내) 수신에 동의합니다.
+          </span>
+        </label>
+      </div>
+
       {/* OAuth Buttons */}
-      <div className="mt-8 flex w-full flex-col gap-3">
-        {agreed ? (
+      <div className="mt-6 flex w-full flex-col gap-3">
+        {allRequired ? (
           <a
             href={API.auth.google}
+            onClick={handleOAuthClick(API.auth.google)}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-all duration-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm active:scale-[0.98]"
           >
             <GoogleIcon />
@@ -105,6 +278,7 @@ export default function SignupPage() {
           <button
             type="button"
             disabled
+            aria-disabled="true"
             className="flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-400"
           >
             <GoogleIcon />
@@ -112,9 +286,10 @@ export default function SignupPage() {
           </button>
         )}
 
-        {agreed ? (
+        {allRequired ? (
           <a
             href={API.auth.kakao}
+            onClick={handleOAuthClick(API.auth.kakao)}
             className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#FEE500]/20 bg-[#FEE500] px-4 py-3 text-sm font-medium text-[#191919] transition-all duration-200 hover:bg-[#FFEB3B] hover:shadow-sm active:scale-[0.98]"
           >
             <KakaoIcon />
@@ -124,6 +299,7 @@ export default function SignupPage() {
           <button
             type="button"
             disabled
+            aria-disabled="true"
             className="flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl border border-[#FEE500]/20 bg-[#FEE500]/50 px-4 py-3 text-sm font-medium text-[#191919]/40"
           >
             <KakaoIcon />
@@ -132,53 +308,11 @@ export default function SignupPage() {
         )}
       </div>
 
-      {/* Terms checkbox */}
-      <label className="mt-6 flex w-full cursor-pointer items-start gap-3">
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={agreed}
-          onClick={() => setAgreed(!agreed)}
-          className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-200 ${
-            agreed
-              ? "border-[var(--sp-accent)] bg-[var(--sp-accent)]"
-              : "border-slate-300 bg-white hover:border-slate-400"
-          }`}
-        >
-          {agreed && (
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <polyline points="2 6 5 9 10 3" />
-            </svg>
-          )}
-        </button>
-        <span className="text-xs leading-relaxed text-slate-500">
-          <Link
-            href="/terms"
-            className="underline hover:text-slate-700 transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            이용약관
-          </Link>{" "}
-          및{" "}
-          <Link
-            href="/privacy"
-            className="underline hover:text-slate-700 transition-colors"
-            onClick={(e) => e.stopPropagation()}
-          >
-            개인정보처리방침
-          </Link>
-          에 동의합니다
-        </span>
-      </label>
+      {!allRequired && (
+        <p className="mt-3 text-center text-[11px] text-slate-400">
+          필수 항목 3개에 모두 동의해야 가입할 수 있습니다.
+        </p>
+      )}
 
       {/* Divider */}
       <div className="my-6 flex w-full items-center gap-3">

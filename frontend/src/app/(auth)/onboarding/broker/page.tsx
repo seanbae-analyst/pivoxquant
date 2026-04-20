@@ -13,6 +13,10 @@ import { useT } from "@/lib/locale";
 import { KisCard } from "@/components/broker/kis-card";
 import { ManualCard } from "@/components/broker/manual-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
+import {
+  LegalConsentModal,
+  hasLocalConsent,
+} from "@/components/ui/legal-consent-modal";
 
 /**
  * Step 0 of the onboarding flow — broker connection.
@@ -36,6 +40,17 @@ export default function OnboardingBrokerPage() {
   const [kisModalOpen, setKisModalOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+
+  // Legal consent gate — blocks first-time OAuth users who bypassed the
+  // signup consent checkboxes. Initialized false on the server to match SSR,
+  // then reconciled on mount.
+  const [needsLegalConsent, setNeedsLegalConsent] = useState(false);
+
+  useEffect(() => {
+    if (!hasLocalConsent()) {
+      setNeedsLegalConsent(true);
+    }
+  }, []);
 
   // Redirect unauthenticated visitors to login; send already-onboarded users home.
   useEffect(() => {
@@ -197,6 +212,10 @@ export default function OnboardingBrokerPage() {
           onClose={() => setKisModalOpen(false)}
           onSuccess={() => mutate()}
         />
+      )}
+
+      {needsLegalConsent && (
+        <LegalConsentModal onAgree={() => setNeedsLegalConsent(false)} />
       )}
     </div>
   );
