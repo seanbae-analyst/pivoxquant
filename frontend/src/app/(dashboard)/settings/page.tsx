@@ -451,23 +451,30 @@ function SubscriptionSection() {
             )}
 
             {isPaid && (
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const result = await apiFetch<{ url: string }>(
-                      API.billing.portal,
-                      { method: "POST" },
-                    );
-                    if (result.url) window.location.href = result.url;
-                  } catch {
-                    // silent
-                  }
-                }}
-                className="w-full rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]"
-              >
-                {t("settings.subscription.manage")}
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const result = await apiFetch<{ url: string }>(
+                        API.billing.portal,
+                        { method: "POST" },
+                      );
+                      if (result.url) window.location.href = result.url;
+                    } catch {
+                      // silent
+                    }
+                  }}
+                  className="w-full rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]"
+                >
+                  {t("settings.subscription.manage")}
+                </button>
+                <p className="text-[11px] text-slate-500 leading-relaxed text-center">
+                  구독 후 14일 이내 전액 환불 가능. 결제 관리 화면에서 언제든
+                  즉시 해지할 수 있습니다. 해지 시 당기 기간 말까지 기능이
+                  유지된 후 Free 플랜으로 자동 전환됩니다.
+                </p>
+              </div>
             )}
           </div>
 

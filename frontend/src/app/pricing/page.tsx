@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { ModalShell } from "@/components/ui/modal-shell";
 import {
   Check,
   X,
@@ -16,6 +17,8 @@ import {
   ChevronDown,
   ShieldAlert,
   ArrowLeft,
+  Info,
+  X as IconClose,
 } from "lucide-react";
 
 /* ── Tier data (4 tiers confirmed 2026-04-19) ── */
@@ -121,6 +124,291 @@ function FaqAccordion({ item }: { item: FaqItem }) {
         </p>
       )}
     </div>
+  );
+}
+
+/* ── Key Info Sheet (금소법 §19 핵심설명서) ── */
+
+interface KeyInfoData {
+  tier: TierKey;
+  name: string;
+  priceMonthly: string;
+}
+
+const KEY_INFO: Record<TierKey, KeyInfoData> = {
+  free: { tier: "free", name: "Free", priceMonthly: "₩0" },
+  pro: { tier: "pro", name: "Pro", priceMonthly: "₩9,900" },
+  premium: { tier: "premium", name: "Premium", priceMonthly: "₩19,900" },
+  elite: { tier: "elite", name: "Elite", priceMonthly: "₩29,900" },
+};
+
+function KeyInfoModal({
+  tier,
+  onClose,
+}: {
+  tier: TierKey;
+  onClose: () => void;
+}) {
+  const info = KEY_INFO[tier];
+
+  return (
+    <ModalShell onClose={onClose} ariaLabel="핵심 설명서">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
+        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">
+              핵심 설명서 · {info.name}
+            </h2>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              금융소비자보호법 §19 — 구독 전 확인사항
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          >
+            <IconClose className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
+          <dl className="space-y-4 text-sm">
+            <Row label="상품명">PivoxQuant {info.name}</Row>
+            <Row label="가격">{info.priceMonthly} / 월 (VAT 포함)</Row>
+            <Row label="결제 주기">매월 자동 결제 (해지 시까지)</Row>
+            <Row label="제공 기능">
+              데일리/주간 리포트 이메일·PDF 자동 발송, 웹 대시보드 아카이브 열람. 자세한
+              목록은 이 페이지의 기능 비교표를 참조하세요.
+            </Row>
+            <Row label="환불 규정">
+              결제일로부터 <strong>14일 이내</strong> 전액 환불 가능 (실제 이용 여부
+              무관). 15일 이후에는 당기 결제분 환불 불가, 다음 결제일부터 자동 중지.
+            </Row>
+            <Row label="해지 방법">
+              Settings › Subscription 탭에서 즉시 해지 가능. 해지 시 다음 결제일까지
+              기능 유지 후 Free 플랜으로 자동 전환.
+            </Row>
+            <Row label="개인정보 처리">
+              결제 카드 정보는 Stripe, Inc.(미국)에 저장되며 PivoxQuant 서버에는
+              저장되지 않습니다. 상세 내용은{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="underline hover:text-slate-900"
+              >
+                개인정보처리방침
+              </Link>
+              을 참조.
+            </Row>
+            <Row label="국외이전">
+              결제 처리를 위해 카드 정보가 미국 Stripe로 이전됩니다 (개인정보보호법 §28
+              국외이전 동의 대상).
+            </Row>
+            <Row label="투자 성과 보장">
+              본 서비스는 정보 제공 도구이며 특정 종목의 매수·매도를 권유하지 않습니다.
+              과거 성과는 미래 수익을 보장하지 않으며, 모든 투자 판단 책임은 이용자에게
+              있습니다.
+            </Row>
+          </dl>
+        </div>
+
+        <div className="border-t border-slate-100 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.97]"
+          >
+            확인했습니다
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[110px_1fr] gap-3">
+      <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+        {label}
+      </dt>
+      <dd className="text-sm text-slate-700 leading-relaxed">{children}</dd>
+    </div>
+  );
+}
+
+/* ── Billing Consent Modal (결제 전 법적 동의) ── */
+
+function BillingConsentModal({
+  tier,
+  onClose,
+  onConfirm,
+  submitting,
+}: {
+  tier: TierKey;
+  onClose: () => void;
+  onConfirm: () => void;
+  submitting: boolean;
+}) {
+  const [showKeyInfo, setShowKeyInfo] = useState(false);
+  const [agreeKey, setAgreeKey] = useState(false);
+  const [agreeRecurring, setAgreeRecurring] = useState(false);
+  const [agreeStripe, setAgreeStripe] = useState(false);
+
+  const info = KEY_INFO[tier];
+  const allAgreed = agreeKey && agreeRecurring && agreeStripe;
+
+  return (
+    <>
+      <ModalShell onClose={onClose} ariaLabel="구독 전 동의">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
+          <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">
+                {info.name} 구독 전 확인
+              </h2>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                {info.priceMonthly} / 월 · VAT 포함
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
+              className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <IconClose className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="space-y-3 px-6 py-5">
+            {/* A. 핵심설명서 */}
+            <label className="flex cursor-pointer items-start gap-2">
+              <CheckboxBtn
+                checked={agreeKey}
+                onChange={() => setAgreeKey((v) => !v)}
+              />
+              <span className="text-xs leading-relaxed text-slate-600">
+                <strong className="text-slate-900">[필수]</strong> 본 구독 상품의
+                핵심 내용(가격, 기간, 제공 기능, 환불 규정, 해지 방법)을 확인했으며
+                이에 동의합니다.{" "}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowKeyInfo(true);
+                  }}
+                  className="inline-flex items-center gap-0.5 text-slate-900 underline hover:text-slate-700"
+                >
+                  <Info className="h-3 w-3" />
+                  핵심설명 보기
+                </button>
+              </span>
+            </label>
+
+            {/* B. 정기결제 (전자상거래법 §22의2) */}
+            <label className="flex cursor-pointer items-start gap-2">
+              <CheckboxBtn
+                checked={agreeRecurring}
+                onChange={() => setAgreeRecurring((v) => !v)}
+              />
+              <span className="text-xs leading-relaxed text-slate-600">
+                <strong className="text-slate-900">[필수]</strong> 매월 자동결제에
+                동의합니다. 해지 시까지 매월 {info.priceMonthly}이 결제되며, Settings
+                에서 언제든 해지할 수 있습니다.
+              </span>
+            </label>
+
+            {/* D. Stripe 해외 결제 대행사 */}
+            <label className="flex cursor-pointer items-start gap-2">
+              <CheckboxBtn
+                checked={agreeStripe}
+                onChange={() => setAgreeStripe((v) => !v)}
+              />
+              <span className="text-xs leading-relaxed text-slate-600">
+                <strong className="text-slate-900">[필수]</strong> 결제는 Stripe, Inc.
+                (미국)가 처리하며, 카드 정보가 미국으로 이전·저장된다는 점에 동의합니다.
+                (개인정보보호법 §28 국외이전)
+              </span>
+            </label>
+
+            {/* C. 14일 청약철회권 고지 */}
+            <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[11px] text-slate-600 leading-relaxed">
+                <strong className="text-slate-900">청약철회권:</strong> 구독 시작 후
+                14일 이내에는 실제 콘텐츠 제공 이력과 무관하게 전액 환불이 가능합니다.
+                15일 이후에는 당기 결제분 환불이 불가하며 다음 결제일부터 중지됩니다.
+                (전자상거래법 §17)
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 px-6 py-4 space-y-2">
+            <button
+              type="button"
+              disabled={!allAgreed || submitting}
+              onClick={onConfirm}
+              className={cn(
+                "w-full rounded-full px-4 py-3 text-sm font-semibold transition-all",
+                allAgreed && !submitting
+                  ? "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]"
+                  : "cursor-not-allowed bg-slate-100 text-slate-400",
+              )}
+            >
+              {submitting ? "이동 중…" : "동의하고 결제로 이동"}
+            </button>
+            <p className="text-center text-[10px] text-slate-400">
+              결제 처리: Stripe, Inc. (미국) · 카드 정보는 Stripe에 저장되며
+              PivoxQuant는 저장하지 않습니다.
+            </p>
+          </div>
+        </div>
+      </ModalShell>
+
+      {showKeyInfo && (
+        <KeyInfoModal tier={tier} onClose={() => setShowKeyInfo(false)} />
+      )}
+    </>
+  );
+}
+
+function CheckboxBtn({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      onClick={onChange}
+      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-200 ${
+        checked
+          ? "border-slate-900 bg-slate-900"
+          : "border-slate-300 bg-white hover:border-slate-400"
+      }`}
+    >
+      {checked && (
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="white"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="2 6 5 9 10 3" />
+        </svg>
+      )}
+    </button>
   );
 }
 
@@ -232,14 +520,39 @@ function PlanCard({
 
 export default function PricingPage() {
   const [loadingCheckout, setLoadingCheckout] = useState<TierKey | null>(null);
+  // Tier whose consent modal is currently open. Null means no modal.
+  const [consentTier, setConsentTier] = useState<TierKey | null>(null);
 
-  const handleCheckout = useCallback(async (plan: TierKey) => {
+  /**
+   * Open the consent modal first. Actual checkout is triggered by the modal's
+   * "동의하고 결제로 이동" button, which calls `proceedToCheckout` below.
+   * Free tier skips this flow entirely (no payment).
+   */
+  const handleCheckout = useCallback((plan: TierKey) => {
+    setConsentTier(plan);
+  }, []);
+
+  const proceedToCheckout = useCallback(async () => {
+    if (!consentTier) return;
+    const plan = consentTier;
     setLoadingCheckout(plan);
     try {
-      const result = await apiFetch<{ url: string }>(API.billing.createCheckout, {
-        method: "POST",
-        body: JSON.stringify({ plan }),
-      });
+      const result = await apiFetch<{ url: string }>(
+        API.billing.createCheckout,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            plan,
+            // Legal consent snapshot — backend may log per 전자상거래법 §22의2
+            consent: {
+              key_info: true,
+              recurring: true,
+              stripe_overseas: true,
+              consented_at: new Date().toISOString(),
+            },
+          }),
+        },
+      );
       if (result.url) {
         window.location.href = result.url;
       }
@@ -248,8 +561,9 @@ export default function PricingPage() {
       window.location.href = "/signup";
     } finally {
       setLoadingCheckout(null);
+      setConsentTier(null);
     }
-  }, []);
+  }, [consentTier]);
 
   return (
     <ErrorBoundary>
@@ -437,7 +751,7 @@ export default function PricingPage() {
           {/* ── VAT & Disclaimer ── */}
           <div className="text-center space-y-3">
             <p className="text-xs text-slate-500">
-              KRW 기준 · VAT 포함 · 언제든 해지 가능
+              KRW 기준 · VAT 포함 · 구독 후 14일 이내 전액 환불 가능 · 언제든 해지 가능
             </p>
             <div className="mx-auto max-w-xl rounded-xl border border-slate-200 bg-slate-50 p-3">
               <div className="flex items-start gap-2">
@@ -449,8 +763,20 @@ export default function PricingPage() {
                 </p>
               </div>
             </div>
+            <p className="text-[11px] text-slate-400">
+              결제 처리: Stripe, Inc. (미국) · 카드 정보는 Stripe에 저장되며 PivoxQuant는 저장하지 않습니다.
+            </p>
           </div>
         </div>
+
+        {consentTier && (
+          <BillingConsentModal
+            tier={consentTier}
+            onClose={() => setConsentTier(null)}
+            onConfirm={proceedToCheckout}
+            submitting={loadingCheckout === consentTier}
+          />
+        )}
       </div>
     </ErrorBoundary>
   );
