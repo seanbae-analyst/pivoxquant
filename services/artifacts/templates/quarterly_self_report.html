@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <title>Quarterly Self Report — {{ quarter_label }} — {{ user_name }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 22mm 20mm;
+      @top-right {
+        content: "PivoxQuant · Quarterly Self Report · {{ quarter_label }} · p." counter(page) " / " counter(pages);
+        font-family: Georgia, serif; font-size: 9pt; color: #555;
+      }
+      @bottom-center {
+        content: "Confidential — for the addressee only.";
+        font-family: Georgia, serif; font-size: 8pt; color: #888;
+      }
+    }
+    body {
+      font-family: Georgia, "Times New Roman", "Apple SD Gothic Neo",
+                   "Noto Sans KR", serif;
+      font-size: 10.5pt; line-height: 1.5; color: #111; margin: 0;
+    }
+    h1 { font-size: 22pt; font-weight: 600; margin: 0 0 4pt 0;
+         letter-spacing: -0.3pt; }
+    h2 { font-size: 13pt; font-weight: 600; margin: 22pt 0 8pt 0;
+         border-bottom: 0.5pt solid #000; padding-bottom: 4pt;
+         letter-spacing: 0.2pt; text-transform: uppercase; }
+    h3 { font-size: 11pt; font-weight: 600; margin: 14pt 0 6pt 0; }
+    .meta { font-size: 9pt; color: #555; margin-bottom: 16pt;
+            border-top: 0.5pt solid #ccc; border-bottom: 0.5pt solid #ccc;
+            padding: 4pt 0; }
+    .part-label { font-size: 9pt; letter-spacing: 3pt; color: #888;
+                  text-transform: uppercase; margin-bottom: 4pt; }
+    .kpi-row { display: table; width: 100%; margin: 12pt 0; }
+    .kpi-cell { display: table-cell; width: 25%; padding: 10pt 8pt;
+                border-right: 0.5pt solid #ccc; text-align: center; }
+    .kpi-cell:last-child { border-right: none; }
+    .kpi-label { font-size: 8.5pt; color: #666;
+                 text-transform: uppercase; letter-spacing: .4pt; }
+    .kpi-value { font-size: 18pt; font-weight: 600; margin-top: 3pt; }
+    .kpi-pos { color: #0a6f3c; } .kpi-neg { color: #a11d1d; }
+    .kpi-neu { color: #333; }
+    table.rep { width: 100%; border-collapse: collapse; margin-top: 6pt;
+                font-size: 9.5pt; }
+    table.rep th, table.rep td { padding: 5pt 4pt; text-align: left;
+                                 border-bottom: 0.5pt solid #e5e7eb; }
+    table.rep th { font-size: 8pt; color: #555; text-transform: uppercase;
+                   letter-spacing: .4pt; font-weight: 500; }
+    table.rep td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .mdna { background: #faf9f6; border-left: 3px solid #111;
+            padding: 10pt 14pt; margin: 10pt 0; font-size: 10.5pt;
+            line-height: 1.6; white-space: pre-wrap; }
+    .note { background: #fafafa; border: 0.5pt solid #e5e7eb;
+            padding: 8pt 10pt; margin: 8pt 0; font-size: 9.5pt;
+            color: #333; }
+    .control-ok { color: #0a6f3c; font-weight: 600; }
+    .control-warn { color: #a11d1d; font-weight: 600; }
+    .verdict-valid { color: #0a6f3c; font-weight: 600; }
+    .verdict-warning { color: #b45309; font-weight: 600; }
+    .verdict-invalid { color: #a11d1d; font-weight: 600; }
+    .verdict-pending { color: #666; }
+    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt;
+              line-height: 1.45; }
+    .page-break { page-break-after: always; }
+    .checkbox { display: inline-block; width: 14pt; height: 14pt;
+                border: 1pt solid #555; vertical-align: middle;
+                margin-right: 6pt; }
+    ul.watch { padding-left: 18pt; margin: 6pt 0 0 0; }
+    ul.watch li { margin: 5pt 0; font-size: 10pt; }
+  </style>
+</head>
+<body>
+
+<!-- ── P1 · Masthead + Quarterly Financial Summary ─────────────────── -->
+<div class="part-label">Part 1 · Self 10-K</div>
+<h1>{{ user_name }} — Quarterly Self Report</h1>
+<div class="meta">
+  {{ quarter_label }} &nbsp;·&nbsp;
+  {{ period_start }} &rarr; {{ period_end }} &nbsp;·&nbsp;
+  Generated {{ generated_at }}
+</div>
+
+<h2>P1 · 분기 재무 요약</h2>
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">기초 가치</div>
+    <div class="kpi-value kpi-neu">
+      {% if opening_value is not none %}{{ '{:,.0f}'.format(opening_value) }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">기말 가치</div>
+    <div class="kpi-value kpi-neu">
+      {% if closing_value is not none %}{{ '{:,.0f}'.format(closing_value) }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">순현금흐름</div>
+    <div class="kpi-value
+      {% if net_cash_flow is not none and net_cash_flow >= 0 %}kpi-pos
+      {% elif net_cash_flow is not none %}kpi-neg
+      {% else %}kpi-neu{% endif %}">
+      {% if net_cash_flow is not none %}{{ '{:+,.0f}'.format(net_cash_flow) }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Q 수익률(관찰)</div>
+    <div class="kpi-value
+      {% if quarterly_return_pct is not none and quarterly_return_pct >= 0 %}kpi-pos
+      {% elif quarterly_return_pct is not none %}kpi-neg
+      {% else %}kpi-neu{% endif %}">
+      {% if quarterly_return_pct is not none %}{{ '%+.2f'|format(quarterly_return_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<!-- ── P2 · MD&A ─────────────────────────────────────────────────────── -->
+<h2>P2 · MD&amp;A (Management Discussion &amp; Analysis)</h2>
+<div class="mdna">{{ mdna }}</div>
+
+<div class="page-break"></div>
+
+<!-- ── P3 · Segment Performance ─────────────────────────────────────── -->
+<h2>P3 · 세그먼트 퍼포먼스 (섹터별 P/L)</h2>
+{% if segments %}
+<table class="rep">
+  <thead>
+    <tr><th>섹터</th><th class="num">거래 수</th><th class="num">P/L</th></tr>
+  </thead>
+  <tbody>
+  {% for s in segments %}
+    <tr>
+      <td>{{ s.sector }}</td>
+      <td class="num">{{ s.trade_count }}</td>
+      <td class="num {% if s.pnl >= 0 %}kpi-pos{% else %}kpi-neg{% endif %}">
+        {{ '{:+,.0f}'.format(s.pnl) }}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">분기 내 거래가 없거나 섹터 분류가 어려워 세그먼트를 생략합니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P4 · Risk Factors ────────────────────────────────────────────── -->
+<h2>P4 · 리스크 팩터</h2>
+{% if risk_factors %}
+<table class="rep">
+  <thead>
+    <tr><th>팩터</th><th>관찰 메모</th></tr>
+  </thead>
+  <tbody>
+  {% for r in risk_factors %}
+    <tr><td><strong>{{ r.factor }}</strong></td><td>{{ r.note }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">주요 집중도 또는 분산 관련 관찰 지표가 임계값 이내입니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P5 · Internal Controls ───────────────────────────────────────── -->
+<h2>P5 · 내부 통제 (Risk Defense 7-Layer)</h2>
+<table class="rep">
+  <thead>
+    <tr><th>Layer</th><th>구성 요소</th><th>상태</th></tr>
+  </thead>
+  <tbody>
+  {% for c in internal_controls %}
+    <tr>
+      <td><strong>{{ c.layer }}</strong></td>
+      <td>{{ c.label }}</td>
+      <td class="{% if c.status == 'active' %}control-ok{% else %}control-warn{% endif %}">
+        {{ c.status }}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p style="color:#555; font-size:9.5pt;">
+  본 란은 PivoxQuant 플랫폼이 보유하고 있는 7-layer Risk Defense 모듈의 로드 상태
+  스냅샷입니다. 각 레이어의 정책 트리거는 서비스 운영 시점에 동작하며, 본 리포트는
+  해당 통제가 분기 동안 시스템에 <em>설치/가용</em>했는지를 기록합니다.
+</p>
+
+<div class="page-break"></div>
+
+<!-- ── P6 · Legal Matters ──────────────────────────────────────────── -->
+<h2>P6 · 법적 사항 (분기 이벤트 로그)</h2>
+<p style="color:#555; font-size:9.5pt;">
+  <strong>주의:</strong> 본 란은 이용자에게 <strong>법적 문제가 있다는 뜻이 아닙니다</strong>.
+  Self 10-K 포맷의 관례상, 분기 동안 발생한 <em>기록 가능한 이벤트</em>(거래 집계, 계정 연결 등)를
+  나열하기 위한 섹션입니다.
+</p>
+{% if legal_matters %}
+<table class="rep">
+  <thead><tr><th>Date</th><th>Event</th></tr></thead>
+  <tbody>
+  {% for e in legal_matters %}
+    <tr><td>{{ e.date }}</td><td>{{ e.label }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">기록할 이벤트가 없습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P7 · Principal Positions ─────────────────────────────────────── -->
+<h2>P7 · 주요 포지션 상세</h2>
+{% if principal_positions %}
+<table class="rep">
+  <thead>
+    <tr>
+      <th>Ticker</th><th>Sector</th>
+      <th class="num">Shares</th>
+      <th class="num">Avg Cost</th>
+      <th class="num">Last</th>
+      <th class="num">MV</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in principal_positions %}
+    <tr>
+      <td><strong>{{ p.ticker }}</strong></td>
+      <td>{{ p.sector }}</td>
+      <td class="num">{{ '{:,.2f}'.format(p.shares) }}</td>
+      <td class="num">{{ '{:,.2f}'.format(p.avg_cost) }}</td>
+      <td class="num">{{ '{:,.2f}'.format(p.last) }}</td>
+      <td class="num">{{ '{:,.0f}'.format(p.mv) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">현재 보유 포지션이 없습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P8 · Thesis Reality Check · opening theses ─────────────────── -->
+<div class="part-label">Part 2 · Thesis Reality Check</div>
+<h2>P8 · 분기 초 Thesis</h2>
+{% if thesis_entries %}
+<table class="rep">
+  <thead>
+    <tr><th>Ticker</th><th>Thesis</th><th>Recorded</th></tr>
+  </thead>
+  <tbody>
+  {% for e in thesis_entries %}
+    <tr>
+      <td><strong>{{ e.ticker }}</strong></td>
+      <td>{{ e.thesis }}</td>
+      <td>{{ e.created_at or '—' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">기록된 thesis가 없습니다. 포지션 상세에서 thesis 필드를 채우면 다음 분기부터 추적됩니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P9 · Thesis validity (AI) ────────────────────────────────────── -->
+<h2>P9 · Thesis 검증 상태</h2>
+{% if thesis_checks %}
+<table class="rep">
+  <thead>
+    <tr><th>Ticker</th><th>Verdict</th><th>Note</th></tr>
+  </thead>
+  <tbody>
+  {% for c in thesis_checks %}
+    <tr>
+      <td><strong>{{ c.ticker }}</strong></td>
+      <td class="verdict-{{ c.verdict }}">{{ c.verdict }}</td>
+      <td>{{ c.note }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">검증할 thesis가 없습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P10 · Decision quality · Self Audit re-used ─────────────────── -->
+<h2>P10 · 매수 결정 품질 스코어</h2>
+<div class="kpi-row">
+  <div class="kpi-cell">
+    <div class="kpi-label">Trades</div>
+    <div class="kpi-value kpi-neu">{{ decision_quality.trades_total or 0 }}</div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Win Rate</div>
+    <div class="kpi-value kpi-neu">
+      {% if decision_quality.win_rate_pct is not none %}{{ '%.0f'|format(decision_quality.win_rate_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">Avg Return</div>
+    <div class="kpi-value
+      {% if decision_quality.avg_return_pct is not none and decision_quality.avg_return_pct >= 0 %}kpi-pos
+      {% elif decision_quality.avg_return_pct is not none %}kpi-neg
+      {% else %}kpi-neu{% endif %}">
+      {% if decision_quality.avg_return_pct is not none %}{{ '%+.2f'|format(decision_quality.avg_return_pct) }}%{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="kpi-cell">
+    <div class="kpi-label">W / L</div>
+    <div class="kpi-value kpi-neu">
+      {{ decision_quality.wins or 0 }} / {{ decision_quality.losses or 0 }}
+    </div>
+  </div>
+</div>
+{% if decision_quality.pattern_summary %}
+<div class="note">{{ decision_quality.pattern_summary }}</div>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P11 · Thesis change checklist ────────────────────────────────── -->
+<h2>P11 · 변화 필요한 Thesis 체크리스트</h2>
+<p style="color:#555; font-size:9.5pt;">
+  각 thesis가 여전히 유효한지 본인이 체크하십시오. 본 란은 AI 판단을 반영하지 않습니다.
+</p>
+{% if thesis_checklist %}
+<table class="rep">
+  <thead>
+    <tr><th>Ticker</th><th>Still valid? (Y/N)</th><th>Question</th></tr>
+  </thead>
+  <tbody>
+  {% for c in thesis_checklist %}
+    <tr>
+      <td><strong>{{ c.ticker }}</strong></td>
+      <td><span class="checkbox"></span> Y &nbsp;&nbsp; <span class="checkbox"></span> N</td>
+      <td>{{ c.question }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">체크할 thesis가 없습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P12 · Best decisions ─────────────────────────────────────────── -->
+<h2>P12 · 베스트 결정 (Top 3)</h2>
+{% if decision_quality.best_decisions %}
+<table class="rep">
+  <thead>
+    <tr>
+      <th>Ticker</th><th>Bought</th>
+      <th class="num">Buy</th><th class="num">Outcome</th>
+      <th class="num">Return</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in decision_quality.best_decisions %}
+    <tr>
+      <td><strong>{{ s.ticker }}</strong></td>
+      <td>{{ s.buy_date or '—' }}</td>
+      <td class="num">{{ '%.2f'|format(s.buy_price) }}</td>
+      <td class="num">
+        {% if s.sell_price %}sold @ {{ '%.2f'|format(s.sell_price) }}
+        {% else %}forward price{% endif %}
+      </td>
+      <td class="num
+           {% if s.return_pct is not none and s.return_pct >= 0 %}kpi-pos
+           {% else %}kpi-neg{% endif %}">
+        {% if s.return_pct is not none %}{{ '%+.2f'|format(s.return_pct) }}%{% else %}—{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">데이터가 충분하지 않습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P13 · Worst decisions ───────────────────────────────────────── -->
+<h2>P13 · 워스트 결정 (Bottom 3)</h2>
+{% if decision_quality.worst_decisions %}
+<table class="rep">
+  <thead>
+    <tr>
+      <th>Ticker</th><th>Bought</th>
+      <th class="num">Buy</th><th class="num">Outcome</th>
+      <th class="num">Return</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in decision_quality.worst_decisions %}
+    <tr>
+      <td><strong>{{ s.ticker }}</strong></td>
+      <td>{{ s.buy_date or '—' }}</td>
+      <td class="num">{{ '%.2f'|format(s.buy_price) }}</td>
+      <td class="num">
+        {% if s.sell_price %}sold @ {{ '%.2f'|format(s.sell_price) }}
+        {% else %}forward price{% endif %}
+      </td>
+      <td class="num
+           {% if s.return_pct is not none and s.return_pct >= 0 %}kpi-pos
+           {% else %}kpi-neg{% endif %}">
+        {% if s.return_pct is not none %}{{ '%+.2f'|format(s.return_pct) }}%{% else %}—{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="note">데이터가 충분하지 않습니다.</p>
+{% endif %}
+
+<div class="page-break"></div>
+
+<!-- ── P14 · Next-quarter watch items ──────────────────────────────── -->
+<h2>P14 · 다음 분기 Watch Items (캘린더)</h2>
+<p style="color:#555; font-size:9.5pt;">
+  아래는 <strong>관찰 구간</strong> 캘린더이며, 매매 권유가 아닙니다.
+</p>
+<ul class="watch">
+{% for w in watch_items %}
+  <li><strong>{{ w.date }}</strong> — {{ w.label }}</li>
+{% endfor %}
+</ul>
+
+<div class="page-break"></div>
+
+<!-- ── P15 · Disclaimer ─────────────────────────────────────────────── -->
+<h2>P15 · Disclaimer</h2>
+{% include '_disclaimer.html' %}
+<div class="footer">
+  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> ·
+  pivoxquant.com · For the addressee only — not for distribution.
+</div>
+
+</body>
+</html>
