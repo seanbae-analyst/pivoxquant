@@ -1,294 +1,151 @@
-# PivoxQuant Privacy Policy
+# PivoxQuant 개인정보처리방침
 
-**Effective Date:** April 9, 2026
-**Last Updated:** April 9, 2026
+**시행일:** 2026년 4월 19일
+**최종 개정일:** 2026년 4월 19일
 
----
-
-## 1. Introduction
-
-PivoxQuant Inc. ("PivoxQuant," "Company," "we," "us," or "our") is committed to protecting the privacy of our users. This Privacy Policy explains how we collect, use, store, share, and protect your personal information when you use our AI-powered quantitative trading analysis platform ("Service").
-
-This policy complies with the Korean Personal Information Protection Act (PIPA, 개인정보보호법) and other applicable data protection regulations.
-
-By using PivoxQuant, you acknowledge that you have read and understood this Privacy Policy.
+> 본 방침은 「개인정보 보호법」(PIPA) 및 관계 법령에 따라 작성된 한국어 초안이며, 유료 서비스 런칭 전 변호사 최종 검토가 필요합니다.
 
 ---
 
-## 2. Data Controller
+## 1. 수집하는 개인정보 항목
 
-The entity responsible for processing your personal data is:
+회사는 다음과 같은 개인정보를 수집·처리합니다.
 
-- **Company Name:** PivoxQuant Inc.
-- **Representative:** [Representative Name]
-- **Address:** [Business Address, Seoul, Republic of Korea]
-- **Email:** [privacy@pivoxquant.com]
-- **Privacy Officer (개인정보 보호책임자):** [Privacy Officer Name / Contact]
+### 1.1 회원가입 시 (필수)
+- **인증 정보**: 이메일 주소, OAuth 고유 ID (Google sub / Kakao user_id)
+- **프로필 정보**: 이름(OAuth 제공자로부터 수신), 프로필 이미지 URL(선택)
 
----
+### 1.2 서비스 이용 중 (선택·기능별)
+- **투자 성향 응답**: 온보딩 20문항 응답 결과
+- **포트폴리오 데이터**: 종목, 수량, 매입가, 평가액 등 (회원이 수동 입력 또는 브로커 API 연동 시)
+- **브로커 API 키**: Alpaca, 한국투자증권(KIS) API 키·시크릿 (**AES-256-GCM 암호화 저장**)
+- **관심 종목, 알림 설정, 사용 패턴 로그**
+- **결제 정보**: Stripe Customer ID, 구독 상태 (카드 번호 전문은 회사가 저장하지 않음. Stripe, Inc.가 PCI-DSS 기준에 따라 직접 처리)
 
-## 3. Personal Data We Collect
-
-### 3.1 Required Information
-
-The following data is collected upon account registration and is necessary to provide the Service:
-
-| Data Type | Purpose |
-|-----------|---------|
-| Email address | Account identification, login, communications |
-| Password | Account authentication (stored as a salted, hashed value only) |
-| Name | Account identification, personalization |
-
-### 3.2 Optional Information
-
-The following data may be provided voluntarily to enhance your experience:
-
-| Data Type | Purpose |
-|-----------|---------|
-| Investment profile answers | Personalized quant analysis, risk assessment |
-| Portfolio data (holdings, watchlists) | Portfolio management features |
-| Trading preferences | Customized alerts and insights |
-| Profile settings | User experience personalization |
-
-### 3.3 Automatically Collected Information
-
-The following data is collected automatically when you use the Service:
-
-| Data Type | Purpose |
-|-----------|---------|
-| IP address | Security, fraud prevention, approximate geolocation |
-| Device information (type, OS, browser) | Service optimization, troubleshooting |
-| Usage logs (pages visited, features used, timestamps) | Service improvement, analytics |
-| Cookies and similar identifiers | Session management, preferences |
-| Error and crash reports | Service stability and debugging |
+### 1.3 자동 수집
+- **접속 기록**: IP 주소, User-Agent, 접속 일시, 쿠키, 세션 ID
+- **서비스 이용 기록**: 페이지 뷰, API 호출 로그, 에러 로그
 
 ---
 
-## 4. Purpose of Data Collection
+## 2. 수집 목적
 
-We collect and process personal data for the following purposes:
-
-1. **Service Provision:** To create and manage your account, provide core platform features, and deliver the Service.
-2. **Service Improvement:** To analyze usage patterns, improve features, and develop new functionality.
-3. **Communication:** To send service-related notices, security alerts, and support messages.
-4. **Security:** To detect, prevent, and respond to fraud, abuse, and security incidents.
-5. **Legal Compliance:** To comply with applicable laws, regulations, and legal processes.
-6. **Subscription Management:** To process payments and manage subscription plans.
-7. **AI Feature Enhancement:** To improve the accuracy and relevance of AI-generated insights (using anonymized and aggregated data only).
-
-We do not use your personal data for purposes beyond those stated above without obtaining your separate consent.
+- 회원 식별 및 본인 인증
+- 서비스 제공 (포트폴리오 집계·시각화, 시그널·리스크 분석, AI Artifact 생성)
+- 유료 구독 결제 및 환불 처리
+- 서비스 개선, 버그 수정, 보안 사고 대응
+- 이용약관 위반 행위 조사
+- 법령상 의무 이행 (세금계산서 발행, 전자상거래법·전자금융거래법상 기록 보존)
 
 ---
 
-## 5. Data Retention
+## 3. 보유 및 이용 기간
 
-We retain your personal data for the following periods:
-
-| Data Category | Retention Period | Legal Basis |
-|---------------|-----------------|-------------|
-| Account information (email, name, password) | Duration of account + 30 days after deletion request | Contractual necessity |
-| Transaction and payment logs | 5 years after the transaction | Electronic Financial Transactions Act (전자금융거래법) |
-| Usage logs and analytics | 1 year from date of collection | Legitimate interest |
-| Communication records (customer support) | 3 years | Consumer Protection in Electronic Commerce Act (전자상거래법) |
-| Consent records | Duration of account + 30 days | PIPA compliance |
-
-Upon expiration of the retention period, personal data is destroyed without delay using secure methods (electronic files are permanently deleted; physical documents are shredded).
+- **원칙**: 수집 목적 달성 또는 회원탈퇴 시 **지체 없이 파기**합니다.
+- **예외 (법정 보존)**:
+  - 계약 또는 청약철회 기록: **5년** (전자상거래법 제6조)
+  - 대금결제 및 재화 공급 기록: **5년** (전자상거래법 제6조)
+  - 소비자 불만 또는 분쟁처리 기록: **3년** (전자상거래법 제6조)
+  - 전자금융거래 기록: **5년** (전자금융거래법 제22조) — 브로커 API 연동 시
+  - 접속 기록: **3개월** (통신비밀보호법 제15조의2)
 
 ---
 
-## 6. Third-Party Data Sharing
+## 4. 제3자 제공
 
-We share personal data with the following third parties only to the extent necessary to provide and improve the Service:
-
-### 6.1 Service Partners
-
-| Third Party | Data Shared | Purpose | Location |
-|-------------|-------------|---------|----------|
-| **Alpaca Markets, Inc.** | Trading activity data (paper trading) | US paper trading execution | United States |
-| **Korea Investment & Securities (KIS)** | Market data request parameters | Korean stock market data access | Republic of Korea |
-| **Anthropic, PBC** | Anonymized conversation context only (no PII) | AI chat analysis and insights | United States |
-| **Sentry (Functional Software, Inc.)** | Error logs, device info (anonymized) | Error tracking and debugging | United States |
-| **Vercel Inc.** | IP address, usage data | Hosting, CDN, analytics | United States |
-
-### 6.2 Payment Processors
-
-Payment information is processed directly by our third-party payment provider. PivoxQuant does not store your full credit card number, bank account details, or other sensitive payment data on our servers.
-
-### 6.3 Legal Disclosure
-
-We may disclose personal data when required by law, court order, or governmental authority, or when necessary to protect the rights, property, or safety of PivoxQuant, our users, or the public.
-
-We do **not** sell your personal data to any third party.
+회사는 회원의 개인정보를 원칙적으로 외부에 제공하지 않습니다. 다만, 아래의 경우는 예외로 합니다.
+- 회원이 사전에 명시적으로 동의한 경우
+- 법령에 따른 수사·조사 목적의 요청이 있는 경우
 
 ---
 
-## 7. International Data Transfers
+## 5. 개인정보 처리 위탁
 
-As some of our service partners are located outside the Republic of Korea (primarily in the United States), your personal data may be transferred to and processed in countries with different data protection standards.
+서비스 제공을 위해 다음 업체에 개인정보 처리를 위탁합니다.
 
-When transferring data internationally, we ensure appropriate safeguards are in place, including:
+| 수탁자 | 위탁 업무 | 이전 국가 | 보유 기간 |
+|--------|----------|----------|----------|
+| Stripe, Inc. | 결제 처리 및 청구 | 미국 | 결제 기록 5년 (전자상거래법) |
+| Anthropic, PBC | AI(Claude API) 응답 생성 | 미국 | 요청 종료 시 삭제 (Anthropic 정책) |
+| Railway Corp. | 애플리케이션 호스팅·DB 저장 | 미국 | 서비스 종료 시 파기 |
+| Vercel Inc. | 프론트엔드 호스팅·정적 자산 | 미국 | 서비스 종료 시 파기 |
+| Google LLC | OAuth 인증 | 미국 | 세션 종료 시 |
+| Kakao Corp. | OAuth 인증 | 대한민국 | 세션 종료 시 |
 
-- Standard contractual clauses approved by relevant data protection authorities.
-- Data processing agreements with all third-party recipients.
-- Encryption of data in transit and at rest.
+**국외 이전**: 상기 미국 소재 업체로의 개인정보 국외 이전은 「개인정보 보호법」 제28조의8에 따라 본 방침을 통한 고지로 동의를 갈음합니다.
 
-By using the Service, you consent to the transfer of your data to the jurisdictions listed in Section 6 for the purposes described in this Privacy Policy.
-
-### 7.1 Transfer Details
-
-| Recipient | Country | Data Transferred | Safeguard |
-|-----------|---------|-----------------|-----------|
-| Alpaca Markets | United States | Paper trading data | Standard contractual clauses, encryption |
-| Anthropic | United States | Anonymized conversation context | Standard contractual clauses, data anonymization |
-| Sentry | United States | Anonymized error logs | Standard contractual clauses, data minimization |
-| Vercel | United States | IP, usage analytics | Standard contractual clauses, encryption |
+**AI 위탁 주의사항**: Claude API로 전송되는 데이터는 회사의 분석 요청에 한정되며, Anthropic은 고객 데이터를 모델 학습에 사용하지 않습니다(Anthropic Commercial Terms 기준).
 
 ---
 
-## 8. Your Rights
+## 6. 이용자의 권리 및 행사 방법
 
-Under PIPA and applicable data protection laws, you have the following rights regarding your personal data:
+회원은 「개인정보 보호법」 제35조~제37조에 따라 언제든 다음 권리를 행사할 수 있습니다.
 
-### 8.1 Right of Access
+1. **열람권** — 본인 개인정보의 처리 현황 열람
+2. **정정·삭제권** — 오류 정정 또는 삭제 요구
+3. **처리정지권** — 개인정보 처리의 일시 중단 요구
+4. **동의철회권** — 수집·이용 동의 철회
 
-You may request access to the personal data we hold about you at any time.
-
-### 8.2 Right of Correction
-
-You may request correction of inaccurate or incomplete personal data. We will process correction requests without undue delay.
-
-### 8.3 Right of Deletion
-
-You may request deletion of your personal data, subject to legal retention requirements. Upon receiving a valid deletion request, we will:
-
-- Delete your account and associated personal data within 30 days.
-- Retain only data required by law (e.g., transaction logs for 5 years per 전자금융거래법).
-- Confirm deletion via email.
-
-### 8.4 Right to Withdraw Consent
-
-Where processing is based on your consent, you may withdraw consent at any time. Withdrawal does not affect the lawfulness of processing performed prior to withdrawal.
-
-### 8.5 Right to Data Portability
-
-You may request a copy of your personal data in a structured, commonly used, machine-readable format.
-
-### 8.6 How to Exercise Your Rights
-
-To exercise any of the above rights, please contact us at:
-
-- **Email:** [privacy@pivoxquant.com]
-- **In-App:** Account Settings > Privacy > Data Requests
-
-We will respond to your request within **10 business days** as required by PIPA. No fee is charged for exercising your rights.
-
-If you are not satisfied with our response, you may file a complaint with the Personal Information Protection Commission (PIPC, 개인정보보호위원회) at [www.pipc.go.kr](https://www.pipc.go.kr).
+**행사 방법**: 이메일(seanbae1521@gmail.com)로 요청 또는 "설정 > 개인정보 관리" 메뉴에서 직접 처리 가능합니다. 회사는 요청 접수 후 **10일 이내** 조치합니다.
 
 ---
 
-## 9. Data Protection Measures
+## 7. 개인정보 파기 절차 및 방법
 
-We implement the following technical and organizational measures to protect your personal data:
+- **파기 시점**: 보유 기간 경과, 처리 목적 달성, 회원탈퇴 즉시
+- **파기 방법**:
+  - 전자 파일: 복구 불가능한 방법으로 영구 삭제 (DB row delete + 백업 순환 파기)
+  - 종이 문서: 분쇄 또는 소각
 
-### 9.1 Technical Measures
-
-- **Encryption:** All data is encrypted in transit (TLS 1.2+) and at rest (AES-256).
-- **Password Security:** Passwords are salted and hashed using industry-standard algorithms (bcrypt). We never store plaintext passwords.
-- **Secure Sessions:** Session tokens are securely generated with automatic expiration and rotation.
-- **Access Control:** Role-based access control (RBAC) limits internal access to personal data on a need-to-know basis.
-- **Infrastructure Security:** Hosted on Vercel and Railway with enterprise-grade security, DDoS protection, and regular security patches.
-- **Database Security:** Supabase with row-level security (RLS) policies ensuring users can only access their own data.
-
-### 9.2 Organizational Measures
-
-- Regular security audits and vulnerability assessments.
-- Data access logging and monitoring.
-- Incident response procedures for data breaches.
-- Employee training on data protection best practices.
-
-### 9.3 Breach Notification
-
-In the event of a personal data breach that is likely to affect your rights, we will:
-
-- Notify the Personal Information Protection Commission (PIPC) within 72 hours.
-- Notify affected users without undue delay via email and in-app notification.
-- Provide details of the breach, potential impact, and remedial actions taken.
+회원탈퇴 시 암호화 저장된 브로커 API 키는 즉시 파기하며, 법정 보존 의무가 있는 결제 기록은 분리 보관합니다.
 
 ---
 
-## 10. Cookie Policy
+## 8. 개인정보의 안전성 확보 조치
 
-### 10.1 What Are Cookies
+회사는 「개인정보 보호법」 제29조 및 「개인정보의 안전성 확보조치 기준」(개인정보보호위원회 고시)에 따라 다음 조치를 취합니다.
 
-Cookies are small text files stored on your device when you visit a website. We use cookies and similar technologies to operate and improve the Service.
-
-### 10.2 Types of Cookies We Use
-
-| Cookie Type | Purpose | Duration |
-|-------------|---------|----------|
-| **Essential Cookies** | Authentication, session management, security | Session / up to 30 days |
-| **Functional Cookies** | User preferences, language settings, UI customization | Up to 1 year |
-| **Analytics Cookies** | Usage statistics, feature adoption tracking (aggregated) | Up to 1 year |
-
-### 10.3 Managing Cookies
-
-You can manage cookie preferences through:
-
-- Your browser settings (blocking or deleting cookies).
-- In-app cookie preference settings when available.
-
-Disabling essential cookies may prevent the Service from functioning properly.
-
-We do **not** use advertising or tracking cookies.
+- **관리적 조치**: 개인정보 취급자 최소화, 접근 권한 관리, 내부관리계획 수립
+- **기술적 조치**:
+  - **민감 데이터 암호화**: 브로커 API 키는 **AES-256-GCM**으로 암호화 저장
+  - 비밀번호는 사용하지 않음 (OAuth 2.0 전용)
+  - 데이터 전송 시 **HTTPS/TLS 1.2+** 강제
+  - 세션 만료 및 CSRF 방어
+  - 접근 통제 시스템(IAM) 운용, 비정상 접근 탐지
+- **물리적 조치**: Railway/Vercel의 SOC 2 인증 데이터센터 이용
 
 ---
 
-## 11. Children's Privacy
+## 9. 쿠키 및 유사 기술
 
-PivoxQuant is intended for users aged **18 years and older**. Securities trading and investment analysis are activities that carry inherent financial risk and require legal capacity.
-
-We do not knowingly collect personal data from anyone under 18 years of age. If we become aware that we have collected data from a minor, we will take immediate steps to delete such data and terminate the associated account.
-
-If you believe a minor has provided personal data to us, please contact us immediately at [privacy@pivoxquant.com].
+회사는 세션 유지·보안·서비스 개선을 위해 쿠키 및 로컬 스토리지를 이용합니다.
+- 회원은 브라우저 설정에서 쿠키를 거부할 수 있으나, 이 경우 로그인 등 일부 기능이 제한될 수 있습니다.
+- 회사는 온보딩 시 **쿠키 동의 배너(Cookie Consent)**를 통해 선택적 쿠키에 대한 동의를 수집합니다.
 
 ---
 
-## 12. Automated Decision-Making
+## 10. 개인정보 보호책임자
 
-PivoxQuant uses automated processing, including AI and machine learning algorithms, to generate quant scores, market analyses, and chat insights. These automated outputs:
+| 항목 | 내용 |
+|------|------|
+| 성명 | 배상현 |
+| 직책 | 서비스 운영자 / 개인정보 보호책임자 |
+| 이메일 | seanbae1521@gmail.com |
 
-- Are provided for informational purposes only and do not constitute investment advice.
-- Do not produce legal effects or similarly significant effects on users.
-- Can be supplemented by contacting our support team for human review upon request.
-
----
-
-## 13. Changes to This Privacy Policy
-
-We may update this Privacy Policy from time to time. When we make material changes, we will:
-
-- Post the updated Privacy Policy on our website and in the app.
-- Notify you via email or in-app notification at least **14 days** before the changes take effect.
-- Update the "Last Updated" date at the top of this document.
-
-Your continued use of the Service after the effective date of any changes constitutes acceptance of the updated Privacy Policy.
+개인정보 침해 신고·상담이 필요한 경우 아래 기관에도 문의할 수 있습니다.
+- **개인정보분쟁조정위원회**: 1833-6972 (privacy.go.kr)
+- **개인정보침해신고센터**: 118 (privacy.kisa.or.kr)
+- **대검찰청 사이버수사과**: 1301 (spo.go.kr)
+- **경찰청 사이버수사국**: 182 (ecrm.cyber.go.kr)
 
 ---
 
-## 14. Contact Information
+## 11. 방침의 변경
 
-For any questions, concerns, or requests regarding this Privacy Policy or your personal data, please contact us:
-
-- **Privacy Officer Email:** [privacy@pivoxquant.com]
-- **General Contact:** [contact@pivoxquant.com]
-- **Website:** [https://pivoxquant.com]
-- **Address:** [Business Address, Seoul, Republic of Korea]
-
-For complaints or inquiries regarding personal information protection, you may also contact:
-
-- **Personal Information Protection Commission (PIPC):** [www.pipc.go.kr](https://www.pipc.go.kr) / 1833-6972
-- **Korea Internet & Security Agency (KISA) Privacy Center:** [privacy.kisa.or.kr](https://privacy.kisa.or.kr) / 118
+본 개인정보처리방침이 변경되는 경우, 회사는 변경 내용을 **시행일 7일 전**(중대한 변경은 **30일 전**) 서비스 내 공지 및 가입 이메일로 통지합니다. 회원이 변경에 동의하지 않을 경우 회원탈퇴를 요청할 수 있습니다.
 
 ---
 
-*This Privacy Policy was last updated on April 9, 2026.*
+**공고일자:** 2026년 4월 19일
+**시행일자:** 2026년 4월 19일
