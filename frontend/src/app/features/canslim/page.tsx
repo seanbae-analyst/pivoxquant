@@ -60,9 +60,9 @@ const factors = [
   {
     letter: "L",
     title: "Leader",
-    description: "The stock outperforms its sector. You want the leader of a strong industry, not the laggard of a weak one.",
+    description: "The stock shows higher relative strength versus its sector (benchmark comparison, information only).",
     icon: Award,
-    threshold: "Outperforming its sector",
+    threshold: "Higher relative strength vs sector",
     color: "text-amber-600 bg-amber-50 border-amber-100",
   },
   {

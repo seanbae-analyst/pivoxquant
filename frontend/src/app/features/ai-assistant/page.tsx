@@ -149,7 +149,7 @@ export default function AiAssistantPage() {
               </div>
             </div>
             <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              ChatGPT는 당신이 물어야 답합니다. PivoxQuant는 당신이 자는 동안 만듭니다. 정기 스케줄에 따라 매일·매주·분기별 리포트가 당신의 메일함, PDF, 음성 파일로 발행됩니다. 당신 포트폴리오 한 명만을 위한 애널리스트 팀.
+              ChatGPT는 당신이 물어야 답합니다. PivoxQuant는 당신이 자는 동안 만듭니다. 정기 스케줄에 따라 매일·매주·분기별 리포트가 당신의 메일함, PDF, 음성 파일로 발행됩니다. 당신 포트폴리오 한 명만을 위한 리서치 데스크.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {knowledgeSources.map((source) => {

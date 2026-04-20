@@ -85,7 +85,7 @@ const steps = [
     step: "01",
     title: "CFO 프로필 등록",
     description:
-      "20문항 온보딩으로 당신의 투자 스타일과 위험 허용도를 설정합니다. 당신이 CFO, 저희는 애널리스트 팀.",
+      "20문항 온보딩으로 당신의 투자 스타일과 위험 허용도를 설정합니다. 당신이 CFO, 저희는 리서치 데스크.",
   },
   {
     step: "02",
@@ -385,7 +385,7 @@ export default function LandingPage() {
               {/* Eyebrow — neutral */}
               <motion.div variants={fadeUp} className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md border border-slate-200 bg-white mb-6">
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-900" />
-                <span className="text-[11px] font-medium text-slate-600 tracking-wide uppercase">당신의 전속 애널리스트 팀 · Beta</span>
+                <span className="text-[11px] font-medium text-slate-600 tracking-wide uppercase">당신의 전속 리서치 데스크 · Beta</span>
               </motion.div>
 
               {/* Headline — no gradient */}

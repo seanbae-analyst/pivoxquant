@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     "AI 퀀트",
     "주식 분석",
     "포트폴리오 관리",
-    "AI 투자 어드바이저",
+    "AI 리서치 툴",
     "퀀트 투자",
     "리스크 분석",
     "VaR",

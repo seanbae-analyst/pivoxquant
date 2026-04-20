@@ -64,7 +64,7 @@
   "auth": {
     "login": {
       "title": "다시 오신 것을 환영합니다",
-      "subtitle": "AI 퀀트 투자 어드바이저",
+      "subtitle": "AI 퀀트 리서치 툴",
       "continueWithGoogle": "Google로 계속",
       "continueWithKakao": "Kakao로 계속",
       "noAccount": "계정이 없으신가요?",
@@ -72,7 +72,7 @@
     },
     "signup": {
       "title": "시작하기",
-      "subtitle": "AI 퀀트 투자 플랫폼",
+      "subtitle": "AI 퀀트 리서치 플랫폼",
       "haveAccount": "이미 계정이 있으신가요?",
       "signIn": "로그인"
     }
@@ -192,7 +192,7 @@
   },
   "landing": {
     "hero": {
-      "badge": "AI 퀀트 투자 어드바이저",
+      "badge": "AI 퀀트 리서치 툴",
       "title": "데이터로 투자하세요",
       "subtitle": "58개 퀀트 모델, 7-레이어 리스크 방어, AI 포트폴리오 분석. 미국·한국 주식 통합 관리.",
       "cta": "무료로 시작하기",
