@@ -176,17 +176,13 @@ export const API = {
     status: "/api/push/status",
   },
   broker: {
-    sync: "/api/broker/sync",
-    syncKis: "/api/broker/sync-kis",
-    syncStatus: "/api/broker/sync-status",
     connections: "/api/broker/connections",
-    // KIS OAuth-less direct API-key flow (routes/broker_oauth.py)
+    // KIS (한국투자증권) — the only supported broker connection.
+    // Kiwoom / Alpaca connection flows were removed 2026-04-20.
     kisConnect: "/api/broker/kis/connect",
     kisSync: "/api/broker/kis/sync",
     kisDisconnect: "/api/broker/kis/disconnect",
     kisStatus: "/api/broker/kis/status",
-    // Kiwoom 영웅문 잔고 CSV/엑셀 업로드 (백엔드 구현 대기 중)
-    kiwoomCsvUpload: "/api/broker/kiwoom/csv",
   },
   share: {
     create: "/api/portfolio/share",

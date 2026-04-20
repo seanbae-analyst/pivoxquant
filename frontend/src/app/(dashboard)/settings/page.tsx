@@ -10,9 +10,7 @@ import { useInvestmentProfile, useBrokerConnections } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { KisCard } from "@/components/broker/kis-card";
-import { KiwoomCard } from "@/components/broker/kiwoom-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
-import { KiwoomUploadModal } from "@/components/broker/kiwoom-upload-modal";
 import { cn } from "@/lib/utils";
 import { Skeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -506,18 +504,15 @@ function SubscriptionSection() {
 
 /* ── Connections Section ── */
 
+/**
+ * Simplified 2026-04-20 to KIS-only. Kiwoom CSV + Alpaca broker-connection
+ * flows were removed. US market data still comes from Alpaca Market Data,
+ * but that is a shared server-side data source, not a per-user connection.
+ */
 function ConnectionsSection() {
-  const [showAlpacaForm, setShowAlpacaForm] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const [apiSecret, setApiSecret] = useState("");
-  const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(false);
   const t = useT();
-
-  // KIS + Kiwoom connection state (shared components handle UI)
   const { data: brokerData, mutate: refreshBrokers } = useBrokerConnections();
   const [kisModalOpen, setKisModalOpen] = useState(false);
-  const [kiwoomModalOpen, setKiwoomModalOpen] = useState(false);
   const [kisSyncing, setKisSyncing] = useState(false);
   const [kisDisconnecting, setKisDisconnecting] = useState(false);
 
@@ -554,143 +549,11 @@ function ConnectionsSection() {
     }
   }, [refreshBrokers, t]);
 
-  const handleAlpacaConnect = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!apiKey.trim() || !apiSecret.trim()) {
-      toast.error(t("settings.connections.alpacaCredentialsRequired"));
-      return;
-    }
-    setConnecting(true);
-    try {
-      await apiFetch(API.broker.sync, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          broker: "alpaca",
-          api_key: apiKey.trim(),
-          api_secret: apiSecret.trim(),
-        }),
-      });
-      setConnected(true);
-      setShowAlpacaForm(false);
-      setApiKey("");
-      setApiSecret("");
-      toast.success(t("settings.connections.alpacaConnectSuccess"));
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : t("settings.connections.alpacaConnectError");
-      toast.error(message);
-    } finally {
-      setConnecting(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
       <h2 className="text-base font-bold text-slate-900">{t("settings.connections.title")}</h2>
 
-      {/* Alpaca */}
-      <div className="sp-card p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-lg" role="img" aria-label="US flag">
-            &#x1F1FA;&#x1F1F8;
-          </span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-slate-900">Alpaca</p>
-            <p className="text-xs text-slate-500">
-              {t("settings.connections.alpacaDesc")}
-            </p>
-          </div>
-          {connected ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-600">
-              <Check className="h-3 w-3" />
-              {t("settings.connections.connected")}
-            </span>
-          ) : (
-            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-500">
-              {t("settings.connections.notConnected")}
-            </span>
-          )}
-        </div>
-
-        {!connected && !showAlpacaForm && (
-          <button
-            type="button"
-            onClick={() => setShowAlpacaForm(true)}
-            className="w-full rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]"
-          >
-            {t("settings.connections.connectAlpaca")}
-          </button>
-        )}
-
-        {!connected && showAlpacaForm && (
-          <form onSubmit={handleAlpacaConnect} className="space-y-3">
-            <div>
-              <label
-                htmlFor="alpaca-api-key"
-                className="block text-xs font-medium text-slate-600 mb-1"
-              >
-                {t("settings.connections.apiKey")}
-              </label>
-              <input
-                id="alpaca-api-key"
-                type="text"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="PK..."
-                autoComplete="off"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="alpaca-api-secret"
-                className="block text-xs font-medium text-slate-600 mb-1"
-              >
-                {t("settings.connections.apiSecret")}
-              </label>
-              <input
-                id="alpaca-api-secret"
-                type="password"
-                value={apiSecret}
-                onChange={(e) => setApiSecret(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="off"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={connecting}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.97]",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                )}
-              >
-                {connecting && (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                )}
-                {connecting ? t("settings.connections.connecting") : t("settings.connections.connect")}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAlpacaForm(false);
-                  setApiKey("");
-                  setApiSecret("");
-                }}
-                disabled={connecting}
-                className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {t("settings.connections.cancel")}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-
-      {/* KIS (한국투자증권) — shared card */}
+      {/* KIS (한국투자증권) — the only supported broker connection */}
       <KisCard
         connected={Boolean(brokerData?.kis_connected)}
         lastSync={brokerData?.kis_last_sync ?? null}
@@ -701,12 +564,6 @@ function ConnectionsSection() {
         disconnecting={kisDisconnecting}
       />
 
-      {/* Kiwoom (키움증권) — CSV upload flow */}
-      <KiwoomCard
-        lastUpload={brokerData?.kiwoom_last_upload ?? null}
-        onUpload={() => setKiwoomModalOpen(true)}
-      />
-
       <p className="text-xs text-slate-400 text-center pt-2">
         {t("settings.connections.brokerNote")}
       </p>
@@ -714,12 +571,6 @@ function ConnectionsSection() {
       {kisModalOpen && (
         <KisConnectModal
           onClose={() => setKisModalOpen(false)}
-          onSuccess={() => refreshBrokers()}
-        />
-      )}
-      {kiwoomModalOpen && (
-        <KiwoomUploadModal
-          onClose={() => setKiwoomModalOpen(false)}
           onSuccess={() => refreshBrokers()}
         />
       )}

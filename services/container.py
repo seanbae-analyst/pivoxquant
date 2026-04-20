@@ -6,14 +6,12 @@ from ai_service import AIService
 from daytrade_service import DayTradeService
 from realtime_service import RealtimeService
 from autotrader import AutoTrader
-from services.broker_sync_service import BrokerSyncService
 
 engine = QuantEngine()
 fetcher = DataFetcher()
 ai = AIService()
 daytrade = DayTradeService()
 realtime = RealtimeService()
-broker_sync = BrokerSyncService()
 
 # AutoTrader requires db + models, initialized via init_trader()
 trader: AutoTrader | None = None

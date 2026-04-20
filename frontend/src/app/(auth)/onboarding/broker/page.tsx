@@ -11,10 +11,8 @@ import { API } from "@/lib/endpoints";
 import { useBrokerConnections } from "@/lib/hooks";
 import { useT } from "@/lib/locale";
 import { KisCard } from "@/components/broker/kis-card";
-import { KiwoomCard } from "@/components/broker/kiwoom-card";
 import { ManualCard } from "@/components/broker/manual-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
-import { KiwoomUploadModal } from "@/components/broker/kiwoom-upload-modal";
 
 /**
  * Step 0 of the onboarding flow — broker connection.
@@ -22,8 +20,12 @@ import { KiwoomUploadModal } from "@/components/broker/kiwoom-upload-modal";
  * Flow:
  *   /login success → /onboarding/broker (Step 0, optional) → /onboarding (20 Q's)
  *
- * Skip is always allowed; the user can connect brokers later from Settings.
+ * Skip is always allowed; the user can connect a broker later from Settings.
  * The 21-step counter keeps visual continuity with the 20-question wizard.
+ *
+ * 2026-04-20: Simplified to KIS-only. Kiwoom CSV + Alpaca connection flows
+ * were removed — US market data still comes from Alpaca Market Data but is
+ * not a per-user broker connection.
  */
 export default function OnboardingBrokerPage() {
   const router = useRouter();
@@ -32,7 +34,6 @@ export default function OnboardingBrokerPage() {
   const { data, mutate, isLoading } = useBrokerConnections();
 
   const [kisModalOpen, setKisModalOpen] = useState(false);
-  const [kiwoomModalOpen, setKiwoomModalOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
@@ -100,7 +101,6 @@ export default function OnboardingBrokerPage() {
   if (user.onboarding_completed === true) return null;
 
   const kisConnected = Boolean(data?.kis_connected);
-  const kiwoomLastUpload = data?.kiwoom_last_upload ?? null;
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-white">
@@ -158,7 +158,7 @@ export default function OnboardingBrokerPage() {
               <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <KisCard
                 connected={kisConnected}
                 onConnect={() => setKisModalOpen(true)}
@@ -166,10 +166,6 @@ export default function OnboardingBrokerPage() {
                 onDisconnect={handleDisconnect}
                 syncing={syncing}
                 disconnecting={disconnecting}
-              />
-              <KiwoomCard
-                lastUpload={kiwoomLastUpload}
-                onUpload={() => setKiwoomModalOpen(true)}
               />
               <ManualCard onSelect={goNext} />
             </div>
@@ -199,12 +195,6 @@ export default function OnboardingBrokerPage() {
       {kisModalOpen && (
         <KisConnectModal
           onClose={() => setKisModalOpen(false)}
-          onSuccess={() => mutate()}
-        />
-      )}
-      {kiwoomModalOpen && (
-        <KiwoomUploadModal
-          onClose={() => setKiwoomModalOpen(false)}
           onSuccess={() => mutate()}
         />
       )}

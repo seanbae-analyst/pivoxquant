@@ -220,15 +220,11 @@ export function useArtifacts(options: UseArtifactsOptions = {}) {
   };
 }
 
-/* ── Broker connections (KIS / Kiwoom / Alpaca status) ── */
+/* ── Broker connections (KIS only — Kiwoom/Alpaca removed 2026-04-20) ── */
 
 export interface BrokerConnectionsResponse {
   kis_connected?: boolean;
-  kiwoom_connected?: boolean;
-  alpaca_connected?: boolean;
   kis_last_sync?: string | null;
-  kiwoom_last_upload?: string | null;
-  alpaca_last_sync?: string | null;
 }
 
 export function useBrokerConnections() {

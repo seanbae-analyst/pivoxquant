@@ -19,7 +19,6 @@ def register_blueprints(app):
     from .quant import quant_bp
     from .realtime import realtime_bp
     from .profile import profile_bp
-    from .broker_sync import broker_sync_bp
     from .broker_oauth import broker_oauth_bp
     from .billing import billing_bp
     from .push import push_bp
@@ -53,8 +52,7 @@ def register_blueprints(app):
         auth_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, daytrade_bp, alerts_bp, trades_bp,
         autotrade_bp, ai_bp, watchlist_bp, backtest_bp,
-        quant_bp, realtime_bp, profile_bp, broker_sync_bp,
-        broker_oauth_bp,
+        quant_bp, realtime_bp, profile_bp, broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
         counterfactual_bp, morning_brief_bp, alt_data_bp,
         artifacts_bp, admin_fmp_bp,
