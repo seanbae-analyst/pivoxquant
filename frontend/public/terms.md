@@ -1,303 +1,152 @@
-# PivoxQuant Terms of Service
+# PivoxQuant 이용약관
 
-**Effective Date:** April 9, 2026
-**Last Updated:** April 9, 2026
+**시행일:** 2026년 4월 19일
+**최종 개정일:** 2026년 4월 19일
 
----
-
-## 1. Introduction
-
-Welcome to PivoxQuant ("Service," "Platform," "we," "us," or "our"). PivoxQuant is an AI-powered quantitative trading analysis platform operated by PivoxQuant Inc. ("Company"). By accessing or using our Service, you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, you must not use the Service.
-
-Please read these Terms carefully before using PivoxQuant.
+> 본 약관은 한국어 초안이며, 유료 서비스 런칭 전 변호사 최종 검토가 필요합니다.
 
 ---
 
-## 2. Service Description and Scope
+## 제1조 (목적)
 
-PivoxQuant provides the following features for informational and educational purposes:
-
-- **Portfolio Management:** Tools to track, organize, and monitor your investment portfolio.
-- **Quant Scoring:** Proprietary quantitative scoring system (0-100) for stock analysis based on technical and fundamental indicators.
-- **AI Chat Insights:** AI-powered conversational analysis of market data, portfolio performance, and trading strategies.
-- **Market Data:** Real-time and historical market data for US and Korean stock markets.
-- **Backtesting:** Historical simulation of trading strategies against past market data.
-- **Paper Trading Integration:** Simulated trading via Alpaca (US markets) for practice purposes.
-
-### 2.1 What PivoxQuant Does NOT Provide
-
-PivoxQuant is **NOT** a registered investment adviser, broker-dealer, or financial planner. The Service:
-
-- Does **NOT** provide investment advice, financial advice, tax advice, or legal advice.
-- Does **NOT** guarantee any investment returns or trading performance.
-- Does **NOT** execute real trades on behalf of users.
-- Does **NOT** manage user funds or hold any user assets.
-- Does **NOT** make personalized investment recommendations.
-
-All scores, analyses, and insights provided by the Service are for **informational and educational purposes only** and should not be construed as a recommendation to buy, sell, or hold any security.
+본 약관은 PivoxQuant(이하 "회사"라 합니다)가 운영하는 정보 제공 서비스(이하 "서비스")의 이용 조건 및 절차, 회사와 회원 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.
 
 ---
 
-## 3. Eligibility
+## 제2조 (서비스 개요)
 
-To use PivoxQuant, you must:
+1. 본 서비스는 회원이 스스로 입력하거나 외부 브로커 API를 통해 연동한 **본인의 포트폴리오 데이터**를 집계·가공하여 시각화·요약·알림 형태로 제공하는 **정보 제공 도구**입니다.
 
-- Be at least 18 years of age.
-- Have the legal capacity to enter into a binding agreement.
-- Not be prohibited from using the Service under applicable laws.
+2. **본 서비스는 「자본시장과 금융투자업에 관한 법률」(이하 "자본시장법")상 투자자문업, 투자일임업, 투자중개업에 해당하지 아니하며, 회사는 해당 업무를 수행하지 않습니다.**
 
-By using the Service, you represent and warrant that you meet all eligibility requirements.
+3. 서비스가 제공하는 모든 분석(시그널, 리스크 스코어, AI 요약, 차트 등)은 정보 제공 및 교육 목적이며, 특정 종목의 매매를 권유하거나 투자자문을 제공하는 것이 아닙니다.
 
----
-
-## 4. Account Registration and Security
-
-### 4.1 Account Creation
-
-To access certain features, you must create an account by providing a valid email address and password. You agree to:
-
-- Provide accurate, current, and complete information during registration.
-- Maintain and promptly update your account information.
-- Maintain only **one account per person**. Creating multiple accounts is prohibited and may result in termination.
-
-### 4.2 Account Security
-
-You are solely responsible for:
-
-- Maintaining the confidentiality of your login credentials.
-- All activities that occur under your account.
-- Notifying us immediately at [contact@pivoxquant.com] if you suspect unauthorized access.
-
-We are not liable for any loss or damage arising from unauthorized use of your account.
+4. 회사는 회원에게 **특정 금융투자상품에 대한 매수·매도 권유, 투자 수익 보장, 매매 타이밍 자문**을 제공하지 않습니다.
 
 ---
 
-## 5. User Responsibilities
+## 제3조 (회원가입 및 이용 조건)
 
-### 5.1 Investment Decisions
+1. 회원은 회사가 지정한 절차에 따라 Google 또는 Kakao 소셜 로그인(OAuth 2.0)을 통해 계정을 생성할 수 있습니다.
 
-You acknowledge and agree that:
+2. 회원은 만 19세 이상이어야 하며, 대한민국 거주자 또는 서비스 이용 자격을 갖춘 자여야 합니다.
 
-- **All investment decisions are solely your own responsibility.** PivoxQuant does not direct, recommend, or endorse any specific investment action.
-- You should consult a qualified financial advisor before making any investment decisions.
-- Past performance, backtesting results, and quant scores do not guarantee future results.
-- You bear all risk associated with your investment decisions, including the risk of total loss.
+3. 회원가입 시 회원은 본 약관 및 개인정보처리방침에 동의한 것으로 간주됩니다.
 
-### 5.2 Acceptable Use
-
-You agree not to:
-
-- Use the Service for any illegal or unauthorized purpose.
-- Attempt to reverse-engineer, decompile, or disassemble any part of the Service.
-- Scrape, crawl, or use automated means to extract data from the Service without prior written consent.
-- Interfere with or disrupt the integrity or performance of the Service.
-- Share your account credentials with any third party.
-- Use the Service to manipulate markets or engage in fraudulent trading activity.
-- Redistribute, resell, or commercially exploit the Service or its content without authorization.
+4. 회사는 다음 각 호에 해당하는 경우 회원가입을 거부하거나 사후 해지할 수 있습니다.
+   - 허위 정보를 제공한 경우
+   - 타인의 명의를 도용한 경우
+   - 과거 회원자격을 상실한 전력이 있는 경우
 
 ---
 
-## 6. Subscription Plans and Payment
+## 제4조 (유료 서비스 및 결제)
 
-### 6.1 Plans
+1. **요금제**
+   - **Free**: 기본 기능 무료
+   - **Pro**: 월 9,900원 (부가세 포함)
+   - **Premium**: 월 19,900원 (부가세 포함)
 
-PivoxQuant offers the following subscription tiers:
+2. **결제 수단**: 결제는 Stripe, Inc.(미국)를 통해 신용카드 또는 직불카드로 처리되며, 결제 정보는 Stripe에 직접 전달되어 회사는 카드 번호 전문을 저장하지 않습니다.
 
-| Plan | Price | Features |
-|------|-------|----------|
-| **Free** | $0/month | Basic portfolio tracking, limited quant scores, limited market data |
-| **Pro** | $9.99/month | Full quant scoring, AI chat insights, backtesting, paper trading |
-| **Enterprise** | $29.99/month | All Pro features plus advanced analytics, priority support, API access |
+3. **환불 규정 (「전자상거래 등에서의 소비자보호에 관한 법률」 제17조 기반)**
+   - 결제일로부터 **14일 이내** 실질적 서비스를 이용하지 않은 경우 전액 환불
+   - 이미 서비스를 실질적으로 이용한 경우, 잔여 기간에 해당하는 금액에서 환불 수수료 및 결제 수수료를 공제 후 환불
+   - 디지털 서비스 특성상 AI Artifact 생성·다운로드 등을 이용한 경우 해당 부분은 환불 대상에서 제외될 수 있음
 
-### 6.2 Billing and Payment
+4. **자동 갱신**: 유료 구독은 매월 자동 갱신되며, 회원은 언제든 "설정 > 구독 관리"에서 해지할 수 있습니다. 해지는 다음 결제 주기부터 적용됩니다.
 
-- Subscriptions are billed on a monthly recurring basis.
-- Payment is processed through our third-party payment provider. By subscribing, you authorize recurring charges to your designated payment method.
-- All fees are quoted in US Dollars (USD) unless otherwise stated.
-- Prices are subject to change with 30 days' prior notice.
-
-### 6.3 Cancellation and Refunds
-
-- You may cancel your subscription at any time through your account settings.
-- Cancellation takes effect at the end of the current billing period. You will retain access to paid features until then.
-- **No refunds** are provided for partial billing periods, except as required by applicable law.
-- If we terminate your account for a breach of these Terms, no refund will be issued.
-
-### 6.4 Free Trial
-
-If a free trial is offered, it will automatically convert to a paid subscription at the end of the trial period unless cancelled beforehand. You will be notified before any charge is applied.
+5. 회사는 사전 30일 공지 후 요금 및 결제 정책을 변경할 수 있습니다.
 
 ---
 
-## 7. Data Accuracy and Market Information Disclaimer
+## 제5조 (이용자의 의무)
 
-### 7.1 Market Data
+1. 회원은 본인이 제공하는 모든 정보(이메일, 포트폴리오, 브로커 API 키, 투자 성향 응답 등)의 정확성과 진실성에 대한 책임을 부담합니다.
 
-Market data displayed on PivoxQuant is sourced from third-party providers including Alpaca Markets and Korea Investment & Securities (KIS). You acknowledge that:
+2. **회원은 서비스가 제공하는 모든 정보는 참고용에 불과하며, 투자 판단 및 그로 인한 손익은 전적으로 회원 본인의 판단과 책임에 따라 이루어진다는 점을 이해하고 동의합니다.**
 
-- Market data **may be delayed** and is not guaranteed to be real-time.
-- Data accuracy depends on third-party sources and may contain errors or omissions.
-- We do not warrant the completeness, accuracy, or timeliness of any market data.
-
-### 7.2 AI-Generated Content
-
-Content generated by our AI features (including chat insights and analyses) is produced by machine learning models and:
-
-- May contain inaccuracies, errors, or outdated information.
-- Should not be relied upon as the sole basis for any investment decision.
-- Does not reflect the opinions or recommendations of PivoxQuant or its employees.
-
-### 7.3 Quant Scores
-
-Quant scores are derived from proprietary algorithms analyzing publicly available data. These scores:
-
-- Are mathematical calculations, not investment recommendations.
-- May change without notice as algorithms are updated.
-- Do not account for all factors that may affect a security's performance.
+3. 회원은 다음의 행위를 하여서는 안 됩니다.
+   - 서비스를 이용하여 제3자에게 투자자문, 투자일임, 매매 권유 등을 제공하는 행위 (자본시장법 위반)
+   - 회사의 서비스·데이터·콘텐츠를 무단 복제, 배포, 상업적 이용하는 행위
+   - 타인의 계정을 도용하거나 부정 사용하는 행위
+   - 서비스의 정상적 운영을 방해하는 행위 (자동화 스크립트, 비정상 트래픽 등)
+   - 불법·유해·음란·차별적 정보를 업로드하는 행위
 
 ---
 
-## 8. Intellectual Property
+## 제6조 (회사의 면책)
 
-### 8.1 Our Property
+1. **투자자문업 아님 명시**: 회사는 자본시장법 제6조(금융투자업)에 따른 투자자문업·투자일임업·투자중개업 인가를 받지 않았으며, 서비스의 어떠한 기능도 금융투자업에 해당하지 아니합니다.
 
-All intellectual property rights in the Service, including but not limited to:
+2. **정보 제공 목적**: 서비스가 제공하는 모든 시그널, 리스크 점수, AI 요약, Artifact(Weekly Memo / Brag Card / Earnings Pre-Brief 등)는 회원 본인의 포트폴리오 데이터를 집계한 **정보 제공 목적의 참고 자료**이며, 특정 종목의 매수·매도·보유를 권유하거나 투자 수익을 보장하지 않습니다.
 
-- Proprietary quantitative models and scoring algorithms
-- AI models and machine learning systems
-- Software, source code, and technical infrastructure
-- User interface design, graphics, and visual elements
-- Trademarks, logos, and brand assets
-- Documentation and educational content
+3. **투자 손실 책임 불부담**: 회원이 서비스를 참고하여 수행한 투자 활동의 결과(수익 또는 손실)에 대해 회사는 어떠한 책임도 지지 않습니다.
 
-are owned by or licensed to PivoxQuant and are protected by applicable intellectual property laws. You may not copy, modify, distribute, sell, or lease any part of the Service without our prior written consent.
+4. **데이터 정확성**: 회사는 제3자(Alpaca, FMP, KIS, SEC EDGAR 등)로부터 공급받는 시세·재무 데이터의 정확성·최신성을 보장하지 않으며, 해당 데이터에 오류가 있을 경우 회사에 직접적·결과적 손해배상 책임이 없습니다.
 
-### 8.2 User Content
+5. **서비스 중단 면책**: 천재지변, 국가비상사태, 정전, 통신 장애, 제3자 API 장애 등 회사의 합리적 통제를 벗어난 사유로 인한 서비스 중단에 대해 회사는 책임을 지지 않습니다.
 
-You retain ownership of any data or content you submit to the Service (such as portfolio information or watchlists). By submitting content, you grant us a non-exclusive, worldwide, royalty-free license to use, process, and display such content solely for the purpose of providing and improving the Service.
+6. **AI 출력의 한계**: 서비스에 포함된 AI 기능(Claude API 기반)은 통계적 패턴에 기반한 자연어 생성 결과이며, 사실의 정확성·완전성을 보장하지 않습니다. 회원은 AI 출력을 그대로 투자 결정의 근거로 삼지 않아야 합니다.
 
 ---
 
-## 9. Third-Party Services
+## 제7조 (개인정보)
 
-PivoxQuant integrates with third-party services including:
+1. 회사는 「개인정보 보호법」 및 관련 법령에 따라 회원의 개인정보를 보호하며, 수집·이용·보관·파기에 관한 상세한 사항은 별도의 [개인정보처리방침](/privacy)에 따릅니다.
 
-- **Alpaca Markets** for US paper trading functionality
-- **Korea Investment & Securities (KIS)** for Korean market data
-- **Anthropic** for AI-powered analysis features
-
-Your use of these third-party services is subject to their respective terms of service and privacy policies. We are not responsible for the availability, accuracy, or practices of third-party services.
+2. 회원은 언제든 개인정보의 열람·정정·삭제·처리정지를 요구할 수 있으며, 회원탈퇴 시 관련 법령에 따른 보존 의무 데이터를 제외한 모든 개인정보는 즉시 파기됩니다.
 
 ---
 
-## 10. Limitation of Liability
+## 제8조 (지적재산권)
 
-### 10.1 Disclaimer of Warranties
+1. 서비스에 포함된 모든 콘텐츠(디자인, 로고, 브랜드, 코드, UI, 텍스트, 분석 알고리즘 등)에 대한 저작권 및 기타 지적재산권은 회사에 귀속됩니다.
 
-THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+2. 회원이 입력·업로드하는 콘텐츠(포트폴리오 데이터, 메모 등)에 대한 권리는 회원에게 있으며, 회사는 서비스 제공에 필요한 범위 내에서만 이를 이용합니다.
 
-WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, SECURE, OR ERROR-FREE, OR THAT ANY DEFECTS WILL BE CORRECTED.
-
-### 10.2 Limitation of Damages
-
-TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL PIVOXQUANT, ITS DIRECTORS, OFFICERS, EMPLOYEES, AFFILIATES, OR AGENTS BE LIABLE FOR:
-
-- Any indirect, incidental, special, consequential, or punitive damages.
-- Any loss of profits, revenue, data, or business opportunities.
-- Any investment losses or trading losses, regardless of whether we were advised of the possibility of such damages.
-
-OUR TOTAL AGGREGATE LIABILITY FOR ALL CLAIMS ARISING OUT OF OR RELATING TO THE SERVICE SHALL NOT EXCEED THE AMOUNT YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR ONE HUNDRED US DOLLARS ($100), WHICHEVER IS GREATER.
-
-### 10.3 Investment Risk Acknowledgment
-
-You expressly acknowledge that investing in securities involves substantial risk of loss. PivoxQuant shall bear no liability for any financial losses incurred as a result of investment decisions made based on information obtained through the Service.
+3. 회사는 「저작권법」 제35조의5(공정이용) 범위 내에서 외부 공개 데이터(시세, 재무제표 등)를 이용하며, 제3자의 저작물 포함 시 해당 라이선스를 준수합니다.
 
 ---
 
-## 11. Indemnification
+## 제9조 (서비스의 변경 및 중단)
 
-You agree to indemnify, defend, and hold harmless PivoxQuant and its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, costs, or expenses (including reasonable attorneys' fees) arising from:
+1. 회사는 서비스의 품질 향상, 기술적 필요, 법령 변경 등의 사유로 서비스 내용의 전부 또는 일부를 변경하거나 중단할 수 있습니다.
 
-- Your use of the Service.
-- Your violation of these Terms.
-- Your violation of any third-party rights.
-- Any investment decisions you make based on information from the Service.
+2. 중대한 서비스 변경 또는 중단 시 회사는 최소 30일 전 이메일 또는 서비스 내 공지를 통해 사전 고지합니다. (긴급한 보안·법적 사유의 경우 예외)
 
----
-
-## 12. Termination
-
-### 12.1 By You
-
-You may terminate your account at any time by contacting us or through your account settings. Upon termination, your right to use the Service ceases immediately.
-
-### 12.2 By Us
-
-We may suspend or terminate your account at our sole discretion, with or without notice, if:
-
-- You breach any provision of these Terms.
-- We are required to do so by law.
-- We discontinue the Service or any material part thereof.
-- Your account shows signs of fraudulent or abusive activity.
-
-### 12.3 Effect of Termination
-
-Upon termination:
-
-- Your access to the Service will be revoked.
-- Your personal data will be handled in accordance with our Privacy Policy.
-- Provisions that by their nature should survive termination (including Sections 8, 10, 11, and 13) will remain in effect.
+3. 유료 서비스가 중단되는 경우, 회사는 잔여 기간에 비례하여 환불합니다.
 
 ---
 
-## 13. Governing Law and Dispute Resolution
+## 제10조 (회원탈퇴 및 이용계약 해지)
 
-### 13.1 Governing Law
+1. 회원은 언제든 "설정 > 계정 삭제" 메뉴에서 스스로 회원탈퇴를 할 수 있습니다.
 
-These Terms shall be governed by and construed in accordance with the laws of the **Republic of Korea**, without regard to its conflict of law provisions.
+2. 회원탈퇴 시 회사는 「개인정보 보호법」 제21조에 따라 지체 없이 개인정보를 파기합니다. 단, 「전자상거래법」, 「전자금융거래법」 등 관계법령에서 정한 보존 의무가 있는 기록은 해당 기간 동안 분리 보관 후 파기합니다.
 
-### 13.2 Jurisdiction
-
-Any disputes arising from or relating to these Terms or the Service shall be subject to the exclusive jurisdiction of the courts located in Seoul, Republic of Korea.
-
-### 13.3 Dispute Resolution
-
-Before initiating any legal proceedings, the parties shall attempt to resolve disputes through good-faith negotiation for a period of at least thirty (30) days.
+3. 회사는 회원이 본 약관 제5조 제3항에 해당하는 행위를 한 경우, 사전 통지 후 이용계약을 해지할 수 있습니다.
 
 ---
 
-## 14. General Provisions
+## 제11조 (분쟁 해결 및 준거법)
 
-### 14.1 Modifications
+1. 본 약관 및 서비스에 관한 분쟁은 **대한민국 법률**을 준거법으로 합니다.
 
-We reserve the right to modify these Terms at any time. Material changes will be communicated via email or through a notice on the Service at least 14 days before taking effect. Your continued use of the Service after such changes constitutes acceptance of the modified Terms.
+2. 회사와 회원 간 발생한 분쟁은 상호 성실한 협의를 통해 해결하며, 협의가 이루어지지 않을 경우 **서울중앙지방법원**을 제1심 관할법원으로 합니다.
 
-### 14.2 Severability
-
-If any provision of these Terms is found to be unenforceable, the remaining provisions shall continue in full force and effect.
-
-### 14.3 Entire Agreement
-
-These Terms, together with our Privacy Policy, constitute the entire agreement between you and PivoxQuant regarding the use of the Service.
-
-### 14.4 No Waiver
-
-Our failure to enforce any right or provision of these Terms shall not constitute a waiver of such right or provision.
-
-### 14.5 Assignment
-
-You may not assign or transfer these Terms without our prior written consent. We may assign these Terms without restriction.
+3. 소비자 분쟁의 경우 「소비자기본법」 제60조에 따른 소비자분쟁조정위원회의 조정을 신청할 수 있습니다.
 
 ---
 
-## 15. Contact Information
+## 부칙
 
-If you have any questions about these Terms of Service, please contact us:
-
-- **Email:** [contact@pivoxquant.com]
-- **Website:** [https://pivoxquant.com]
-- **Address:** [Business Address, Seoul, Republic of Korea]
+본 약관은 **2026년 4월 19일**부터 시행됩니다.
 
 ---
 
-*These Terms of Service were last updated on April 9, 2026.*
+## 문의
+
+- 서비스 운영자: PivoxQuant
+- 문의 이메일: seanbae1521@gmail.com
+- 개인정보 보호책임자: 배상현 (seanbae1521@gmail.com)
