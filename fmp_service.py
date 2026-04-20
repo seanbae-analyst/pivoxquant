@@ -1059,6 +1059,29 @@ def get_news(ticker, limit=15):
     return []
 
 
+def get_general_news(limit=15):
+    """General market news. FMP aggregates licensed news feeds
+    (Reuters, MarketWatch, Bloomberg, etc.) so commercial use is OK.
+
+    Returns list of dicts with keys: title, text/summary, publishedDate,
+    url/link, site/source, image. Empty list on failure.
+    Cache TTL_NEWS (6h). Stale-while-revalidate when budget low.
+    """
+    cache_key = "news:general"
+    cached = _get_cache(cache_key, TTL_NEWS)
+    if cached:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale:
+            return stale
+    data = _fmp_get("/news/general", {"limit": limit})
+    if data and isinstance(data, list):
+        _set_cache(cache_key, data)
+        return data
+    return []
+
+
 # ── Forex (Exchange Rate) ──────────────────────────────────────
 
 def get_fx_rate(pair="USDKRW"):
