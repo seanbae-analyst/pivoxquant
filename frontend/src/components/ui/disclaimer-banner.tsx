@@ -35,28 +35,36 @@ const COMMON_DISCLAIMER = {
 };
 
 type DisclaimerType = keyof typeof DISCLAIMER_CONTENT;
+type DisclaimerTheme = "dark" | "light";
 
 interface DisclaimerBannerProps {
   type: DisclaimerType;
   /** Force the banner to always stay expanded (e.g. auto-trade) */
   alwaysExpanded?: boolean;
+  /** Theme — defaults to dark (Vantablack dashboard). Use "light" on ivory feature pages. */
+  theme?: DisclaimerTheme;
   className?: string;
 }
 
 export function DisclaimerBanner({
   type,
   alwaysExpanded = false,
+  theme = "dark",
   className,
 }: DisclaimerBannerProps) {
   const [expanded, setExpanded] = useState(true);
   const content = DISCLAIMER_CONTENT[type];
 
   const isExpanded = alwaysExpanded || expanded;
+  const isDark = theme === "dark";
 
   return (
     <div
       className={cn(
-        "rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300",
+        "rounded-[2px] transition-all duration-300",
+        isDark
+          ? "border border-[rgba(245,240,232,0.12)] bg-[rgba(255,255,255,0.02)]"
+          : "rounded-xl border border-slate-200 bg-slate-50",
         className,
       )}
     >
@@ -70,14 +78,30 @@ export function DisclaimerBanner({
         )}
         aria-expanded={isExpanded}
       >
-        <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-        <span className="flex-1 text-[11px] font-semibold text-slate-700">
+        <ShieldAlert
+          className={cn(
+            "h-3.5 w-3.5 shrink-0",
+            isDark ? "text-[var(--pq-bronze-light)]" : "text-slate-500",
+          )}
+        />
+        {isDark && (
+          <span className="text-[9px] tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mr-1">
+            Disclaimer
+          </span>
+        )}
+        <span
+          className={cn(
+            "flex-1 text-[11px] font-semibold",
+            isDark ? "text-[rgba(245,240,232,0.85)]" : "text-slate-700",
+          )}
+        >
           {COMMON_DISCLAIMER.ko}
         </span>
         {!alwaysExpanded && (
           <ChevronDown
             className={cn(
-              "h-3.5 w-3.5 shrink-0 text-slate-500 transition-transform duration-200",
+              "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+              isDark ? "text-[rgba(245,240,232,0.55)]" : "text-slate-500",
               isExpanded && "rotate-180",
             )}
           />
@@ -85,14 +109,36 @@ export function DisclaimerBanner({
       </button>
 
       {isExpanded && (
-        <div className="border-t border-slate-200 px-3 pb-3 pt-2">
-          <p className="text-[11px] leading-relaxed text-slate-600">
+        <div
+          className={cn(
+            "px-3 pb-3 pt-2 border-t",
+            isDark
+              ? "border-[rgba(245,240,232,0.08)]"
+              : "border-slate-200",
+          )}
+        >
+          <p
+            className={cn(
+              "text-[11px] leading-relaxed",
+              isDark ? "text-[rgba(245,240,232,0.75)]" : "text-slate-600",
+            )}
+          >
             {content.ko}
           </p>
-          <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500">
+          <p
+            className={cn(
+              "mt-1.5 text-[10px] leading-relaxed",
+              isDark ? "text-[rgba(245,240,232,0.55)]" : "text-slate-500",
+            )}
+          >
             {content.en}
           </p>
-          <p className="mt-1.5 text-[10px] leading-relaxed text-slate-500 italic">
+          <p
+            className={cn(
+              "mt-1.5 text-[10px] leading-relaxed italic",
+              isDark ? "text-[rgba(245,240,232,0.45)]" : "text-slate-500",
+            )}
+          >
             {COMMON_DISCLAIMER.en}
           </p>
         </div>

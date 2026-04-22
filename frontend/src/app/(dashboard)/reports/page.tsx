@@ -1,168 +1,235 @@
 "use client";
 
-import { useState } from "react";
-import { FileText } from "lucide-react";
+/**
+ * /reports — Artifact library in the Vantablack ink theme.
+ *
+ * Mirrors the 17 artifact types the backend can generate. When a live
+ * artifact exists in `useArtifacts()` (the real generation log), we show
+ * its sent_at + open/download routes. When it hasn't been generated yet
+ * we still render the catalog card with the static `/samples/{name}.pdf`
+ * so users can preview the format.
+ *
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner at top.
+ */
+
+import { useMemo, useState } from "react";
+import { FileText, Lock, Download, Eye } from "lucide-react";
 import { useArtifacts } from "@/lib/hooks";
-import { useT } from "@/lib/locale";
+import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
-import { ArtifactCard } from "@/components/reports/artifact-card";
-import { PreviewModal } from "@/components/reports/preview-modal";
-import { EmptyState } from "@/components/ui/empty-state";
-import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import type { Artifact, ArtifactType } from "@/lib/types";
+import type { Artifact } from "@/lib/types";
+import Link from "next/link";
 
-/* ── Filter options ──────────────────────────────────────────────────── */
+/* ── Catalog — 17 types + tier gating + sample PDFs ── */
 
-type TypeFilter = ArtifactType | "all";
-type PeriodFilter = "30d" | "90d" | "all";
+type Tier = "free" | "pro" | "premium";
 
-const TYPE_FILTERS: { key: TypeFilter; labelKey: string }[] = [
-  { key: "all", labelKey: "reports.filters.typeAll" },
-  { key: "weekly_memo", labelKey: "reports.filters.typeWeekly" },
-  { key: "morning_brief", labelKey: "reports.filters.typeMorning" },
-  { key: "earnings_prebrief", labelKey: "reports.filters.typeEarnings" },
-  { key: "monthly_brag", labelKey: "reports.filters.typeMonthly" },
+interface CatalogEntry {
+  slug: string;       // file stem under /public/samples
+  type: string;       // matches backend `type` when present
+  title: string;
+  cadence: string;
+  minTier: Tier;
+}
+
+const CATALOG: CatalogEntry[] = [
+  { slug: "weekly_memo",           type: "weekly_memo",          title: "Weekly Memo",             cadence: "Every Sunday",   minTier: "free" },
+  { slug: "morning_brief_plus",    type: "morning_brief",        title: "Morning Brief Plus",      cadence: "Every weekday",  minTier: "free" },
+  { slug: "brag_card",             type: "monthly_brag",         title: "Brag Card",               cadence: "Monthly",        minTier: "free" },
+  { slug: "earnings_prebrief",     type: "earnings_prebrief",    title: "Earnings Pre-Brief",      cadence: "Per event",      minTier: "pro" },
+  { slug: "risk_board",            type: "risk_report",          title: "Risk Board",              cadence: "Weekly",         minTier: "pro" },
+  { slug: "quarterly_self_report", type: "quarterly_review",     title: "Quarterly Self Report",   cadence: "Quarterly",      minTier: "pro" },
+  { slug: "self_audit",            type: "custom",               title: "Self Audit",              cadence: "On demand",      minTier: "pro" },
+  { slug: "dd_checklist",          type: "custom",               title: "DD Checklist",            cadence: "On demand",      minTier: "pro" },
+  { slug: "dividend_income",       type: "custom",               title: "Dividend Income",         cadence: "Monthly",        minTier: "pro" },
+  { slug: "insider_mirror",        type: "custom",               title: "Insider Mirror",          cadence: "Weekly",         minTier: "pro" },
+  { slug: "sp500_backtest",        type: "custom",               title: "S&P 500 Backtest",        cadence: "On demand",      minTier: "pro" },
+  { slug: "portfolio_segment",     type: "custom",               title: "Portfolio Segment",       cadence: "Monthly",        minTier: "pro" },
+  { slug: "capital_allocation",    type: "custom",               title: "Capital Allocation",      cadence: "Quarterly",      minTier: "premium" },
+  { slug: "credit_rating",         type: "custom",               title: "Credit Rating",           cadence: "Quarterly",      minTier: "premium" },
+  { slug: "burn_rate",             type: "custom",               title: "Burn Rate",               cadence: "Monthly",        minTier: "premium" },
+  { slug: "monthly_finance",       type: "custom",               title: "Monthly Finance",         cadence: "Monthly",        minTier: "premium" },
+  { slug: "kpi_dashboard",         type: "custom",               title: "KPI Dashboard",           cadence: "Weekly",         minTier: "premium" },
+  { slug: "year_end_letter",       type: "custom",               title: "Year-End Letter",         cadence: "Annual",         minTier: "premium" },
 ];
 
-const PERIOD_FILTERS: { key: PeriodFilter; labelKey: string }[] = [
-  { key: "30d", labelKey: "reports.filters.period30" },
-  { key: "90d", labelKey: "reports.filters.period90" },
-  { key: "all", labelKey: "reports.filters.periodAll" },
-];
+/* ── Tier gating ── */
 
-/* ── Page ────────────────────────────────────────────────────────────── */
+const TIER_RANK: Record<Tier, number> = { free: 0, pro: 1, premium: 2 };
+function hasAccess(userTier: Tier, required: Tier): boolean {
+  return TIER_RANK[userTier] >= TIER_RANK[required];
+}
 
-function ReportsPageInner() {
-  const t = useT();
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
-  const [preview, setPreview] = useState<Artifact | null>(null);
+/* ── Card ── */
 
-  const { artifacts, isLoading, error } = useArtifacts({
-    type: typeFilter,
-    since: periodFilter,
-  });
+function ArtifactCard({
+  entry,
+  live,
+  locked,
+}: {
+  entry: CatalogEntry;
+  live?: Artifact;
+  locked: boolean;
+}) {
+  const samplePdf = `/samples/${entry.slug}.pdf`;
+  const viewHref = live ? API.artifacts.preview(live.id) : samplePdf;
+  const downloadHref = live ? API.artifacts.download(live.id) : samplePdf;
 
-  // Show a skeleton grid during initial load only. Once we've loaded once,
-  // subsequent filter toggles swap data instantly from SWR cache.
-  const showSkeleton = isLoading && artifacts.length === 0;
-
-  // Server-side filtering via `since` query param — we trust the backend
-  // response and don't re-filter on the client. Keeps the render pure
-  // (no Date.now() at render time).
-  const filteredArtifacts = artifacts;
-
-  const handleDownload = (artifact: Artifact) => {
-    const url = artifact.pdf_url ?? API.artifacts.download(artifact.id);
-    // Open in a new tab — browser will stream the PDF. This bypasses the
-    // need for blob juggling and respects the backend's Content-Disposition.
-    if (typeof window !== "undefined") {
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-  };
+  const lastGenerated =
+    live?.sent_at
+      ? new Date(live.sent_at).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "Sample available";
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      {/* Header */}
-      <header className="mb-8">
-        <h1 className="font-serif text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-          {t("reports.title")}
+    <article
+      className={cn(
+        "bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] relative overflow-hidden transition-colors hover:border-[var(--pq-bronze)]",
+        locked && "opacity-60",
+      )}
+    >
+      {/* Locked overlay */}
+      {locked && (
+        <div className="absolute top-4 right-4">
+          <Lock className="h-3.5 w-3.5 text-[var(--pq-bronze)]" />
+        </div>
+      )}
+
+      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        {entry.cadence} · {entry.minTier}
+      </div>
+      <h3 className="mt-2 font-serif italic text-xl text-[var(--pq-ivory)]">
+        {entry.title}
+      </h3>
+      <p className="mt-3 text-xs text-[rgba(245,240,232,0.5)]">
+        Last generated — <span className="tabular-nums">{lastGenerated}</span>
+      </p>
+
+      {/* Actions */}
+      <div className="mt-5 flex items-center gap-2">
+        {locked ? (
+          <Link
+            href="/pricing"
+            className="pq-ink-btn-bronze inline-flex items-center gap-1.5"
+          >
+            Upgrade to {entry.minTier}
+          </Link>
+        ) : (
+          <>
+            <a
+              href={viewHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pq-ink-btn-ghost inline-flex items-center gap-1.5"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Open
+            </a>
+            <a
+              href={downloadHref}
+              download
+              className="pq-ink-btn-ghost inline-flex items-center gap-1.5"
+            >
+              <Download className="h-3.5 w-3.5" />
+              PDF
+            </a>
+          </>
+        )}
+      </div>
+    </article>
+  );
+}
+
+/* ── Page ── */
+
+function ReportsPageInner() {
+  const { user } = useAuth();
+  const tier = ((user?.subscription_tier as Tier) || "free") as Tier;
+  const { artifacts, isLoading } = useArtifacts({ type: "all", since: "all" });
+  const [filter, setFilter] = useState<"all" | Tier>("all");
+
+  // Index live artifacts by type for quick lookup
+  const liveByType = useMemo(() => {
+    const map = new Map<string, Artifact>();
+    for (const a of artifacts) {
+      if (!map.has(a.type)) map.set(a.type, a); // keep most recent (list is desc)
+    }
+    return map;
+  }, [artifacts]);
+
+  const visible = useMemo(() => {
+    if (filter === "all") return CATALOG;
+    return CATALOG.filter((c) => c.minTier === filter);
+  }, [filter]);
+
+  return (
+    <div className="space-y-8">
+      {/* ── Header ── */}
+      <header>
+        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          Artifact library · Generated PDFs
+        </div>
+        <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
+          Reports
         </h1>
-        <p className="mt-2 text-sm text-slate-500 sm:text-base">
-          {t("reports.subtitle")}
+        <p className="mt-2 text-sm text-[rgba(245,240,232,0.5)] max-w-2xl">
+          Every artifact the desk can deliver — from the weekly memo to the
+          year-end letter. Free tier samples are public; Pro and Premium
+          catalog items are generated against your real portfolio.
         </p>
       </header>
 
-      <DisclaimerBanner type="ai-analysis" className="mb-6" />
+      <DisclaimerBanner type="ai-analysis" />
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            {t("reports.filters.type")}
-          </span>
-          {TYPE_FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setTypeFilter(f.key)}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200",
-                typeFilter === f.key
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
-              )}
-            >
-              {t(f.labelKey)}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            {t("reports.filters.period")}
-          </span>
-          {PERIOD_FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setPeriodFilter(f.key)}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200",
-                periodFilter === f.key
-                  ? "border-slate-900 bg-slate-900 text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900",
-              )}
-            >
-              {t(f.labelKey)}
-            </button>
-          ))}
-        </div>
+      {/* ── Tier filter ── */}
+      <div className="pq-ink-tabs flex gap-6 border-b border-[rgba(245,240,232,0.08)]">
+        {(["all", "free", "pro", "premium"] as const).map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setFilter(k)}
+            data-active={filter === k}
+            className="pq-ink-tab capitalize"
+          >
+            {k === "all" ? "All tiers" : k}
+          </button>
+        ))}
       </div>
 
-      {/* Content */}
-      {showSkeleton ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {/* ── Grid ── */}
+      {isLoading && artifacts.length === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <CardSkeleton key={i} />
+            <div
+              key={i}
+              className="h-48 rounded-[2px] bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] animate-pulse"
+            />
           ))}
         </div>
-      ) : error ? (
-        <EmptyState
-          icon={<FileText className="h-7 w-7" strokeWidth={1.5} />}
-          title={t("reports.empty.title")}
-          description={t("reports.empty.description")}
-        />
-      ) : filteredArtifacts.length === 0 ? (
-        <EmptyState
-          icon={<FileText className="h-7 w-7" strokeWidth={1.5} />}
-          title={t("reports.empty.title")}
-          description={t("reports.empty.description")}
-        />
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredArtifacts.map((artifact) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {visible.map((entry) => (
             <ArtifactCard
-              key={artifact.id}
-              artifact={artifact}
-              onPreview={setPreview}
-              onDownload={handleDownload}
+              key={entry.slug}
+              entry={entry}
+              live={liveByType.get(entry.type)}
+              locked={!hasAccess(tier, entry.minTier)}
             />
           ))}
         </div>
       )}
 
-      {/* Preview modal */}
-      {preview && (
-        <PreviewModal
-          artifact={preview}
-          onClose={() => setPreview(null)}
-          onDownload={handleDownload}
-        />
-      )}
+      {/* ── Footer note ── */}
+      <div className="pt-6 border-t border-[rgba(245,240,232,0.08)] flex items-center gap-2 text-xs text-[rgba(245,240,232,0.4)]">
+        <FileText className="h-3.5 w-3.5" />
+        {visible.length} artifacts · tier: <span className="text-[var(--pq-bronze)] uppercase tracking-wider">{tier}</span>
+      </div>
     </div>
   );
 }

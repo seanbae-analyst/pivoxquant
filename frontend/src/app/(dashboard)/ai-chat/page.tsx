@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * AI Chat — Vantablack ink assistant console.
+ *
+ * Claude-powered conversational observation assistant. Streams SSE
+ * from /api/ai/chat. No advice/recommendation language — the model
+ * is constrained to neutral observation.
+ */
+
 import {
   useState,
   useRef,
@@ -8,12 +16,11 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { Send, Bot, User, Sparkles, StopCircle } from "lucide-react";
+import { Send, Sparkles, StopCircle } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { API } from "@/lib/endpoints";
-import { cn } from "@/lib/utils";
 
 /* ── Types ── */
 
@@ -38,64 +45,68 @@ function getCsrfToken(): string | undefined {
   return match ? decodeURIComponent(match.split("=")[1]) : undefined;
 }
 
+function weekTag(): string {
+  const d = new Date();
+  const first = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d.getTime() - first.getTime()) / 86400000);
+  const w = Math.ceil((days + first.getDay() + 1) / 7);
+  return `${d.getFullYear()} · W${String(w).padStart(2, "0")}`;
+}
+
 /* ── Suggested prompts ── */
 
 const SUGGESTIONS = [
-  "Why did my portfolio drop today?",
-  "Analyze AAPL for me",
-  "What's the market outlook this week?",
+  "Summarize my portfolio risk exposure",
+  "What observations stand out on AAPL?",
+  "Explain the current market regime",
+  "Walk me through my largest drawdown",
 ] as const;
 
-/* ── Streaming Dots ── */
+/* ── Streaming indicator ── */
 
 function StreamingDots() {
   return (
-    <span className="inline-flex items-center gap-1" aria-label="AI is thinking">
-      <span className="h-1.5 w-1.5 rounded-full bg-[var(--sp-accent)] animate-[pulse-dot_1.4s_ease-in-out_infinite]" />
-      <span className="h-1.5 w-1.5 rounded-full bg-[var(--sp-accent)] animate-[pulse-dot_1.4s_ease-in-out_0.2s_infinite]" />
-      <span className="h-1.5 w-1.5 rounded-full bg-[var(--sp-accent)] animate-[pulse-dot_1.4s_ease-in-out_0.4s_infinite]" />
+    <span className="inline-flex items-center gap-1" aria-label="Thinking">
+      <span className="h-1 w-1 rounded-full bg-[var(--pq-bronze)] animate-pulse" />
+      <span
+        className="h-1 w-1 rounded-full bg-[var(--pq-bronze)] animate-pulse"
+        style={{ animationDelay: "0.2s" }}
+      />
+      <span
+        className="h-1 w-1 rounded-full bg-[var(--pq-bronze)] animate-pulse"
+        style={{ animationDelay: "0.4s" }}
+      />
     </span>
   );
 }
 
-/* ── Message Bubble ── */
+/* ── Message ── */
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
 
   return (
     <div
-      className={cn(
-        "flex gap-3 max-w-[85%] sm:max-w-[75%]",
-        isUser ? "ml-auto flex-row-reverse" : "mr-auto",
-      )}
+      className={"flex w-full " + (isUser ? "justify-end" : "justify-start")}
     >
-      {/* Avatar */}
       <div
-        className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-          isUser
-            ? "bg-slate-900 text-white"
-            : "bg-[var(--sp-accent-light)] text-[var(--sp-accent)]",
-        )}
+        className={
+          "max-w-[85%] px-4 py-3 font-serif text-[14px] leading-relaxed " +
+          (isUser
+            ? "border-l-[2px] border-[var(--pq-bronze)] bg-[rgba(245,240,232,0.04)] text-[var(--pq-ivory)]"
+            : "text-[rgba(245,240,232,0.85)]")
+        }
       >
-        {isUser ? (
-          <User className="h-4 w-4" />
-        ) : (
-          <Bot className="h-4 w-4" />
+        {!isUser && (
+          <div className="mb-2 flex items-center gap-2">
+            <span className="pq-ink-label" style={{ fontSize: "9px" }}>
+              Assistant
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.35)]">
+              Claude · Observation
+            </span>
+          </div>
         )}
-      </div>
-
-      {/* Bubble */}
-      <div
-        className={cn(
-          "rounded-2xl px-4 py-3 text-sm leading-relaxed",
-          isUser
-            ? "bg-slate-100 text-slate-900"
-            : "bg-white border border-slate-200 text-slate-800 shadow-sm",
-          !isUser && "border-l-[3px] border-l-[var(--sp-accent)]",
-        )}
-      >
         {message.content ? (
           <div className="whitespace-pre-wrap break-words">{message.content}</div>
         ) : (
@@ -106,44 +117,35 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   );
 }
 
-/* ── Welcome Card ── */
+/* ── Welcome ── */
 
-function WelcomeCard({
-  onSuggestionClick,
-}: {
-  onSuggestionClick: (text: string) => void;
-}) {
+function Welcome({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div className="mx-auto max-w-lg">
-      <div className="sp-card p-6 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--sp-accent-light)]">
-          <Sparkles className="h-7 w-7 text-[var(--sp-accent)]" />
-        </div>
-        <h2 className="mb-2 text-lg font-bold text-slate-900">
-          AI Investment Assistant
-        </h2>
-        <p className="mb-5 text-sm text-slate-500 leading-relaxed">
-          I can help you understand market data, analyze stocks, and review your portfolio metrics.
-          Ask me a question to get started.
-        </p>
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Try asking
-          </p>
-          {SUGGESTIONS.map((text) => (
-            <button
-              key={text}
-              type="button"
-              onClick={() => onSuggestionClick(text)}
-              className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-left text-sm text-slate-700 transition-all duration-200 hover:border-[var(--sp-accent)] hover:bg-[var(--sp-accent-light)] hover:text-[var(--sp-accent-hover)] active:scale-[0.99]"
-              style={{
-                transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-              }}
-            >
-              &ldquo;{text}&rdquo;
-            </button>
-          ))}
-        </div>
+    <div className="mx-auto max-w-xl text-center">
+      <Sparkles
+        className="mx-auto h-7 w-7 text-[var(--pq-bronze)]"
+        strokeWidth={1.25}
+      />
+      <div className="mt-4 pq-ink-label">Assistant · Observation</div>
+      <h2 className="mt-2 font-serif italic text-[28px] text-[var(--pq-ivory)]">
+        Ask about your portfolio observation.
+      </h2>
+      <p className="mt-3 font-serif italic text-[14px] leading-relaxed text-[rgba(245,240,232,0.55)]">
+        Powered by Claude. Responses are informational observations, not
+        investment advice.
+      </p>
+
+      <div className="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {SUGGESTIONS.map((text) => (
+          <button
+            key={text}
+            type="button"
+            onClick={() => onPick(text)}
+            className="border border-[rgba(245,240,232,0.1)] px-4 py-3 text-left font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.7)] transition-colors hover:border-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+          >
+            &ldquo;{text}&rdquo;
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -151,7 +153,7 @@ function WelcomeCard({
 
 /* ── Main Page ── */
 
-export default function AiChatPage() {
+function ChatInner() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -159,20 +161,17 @@ export default function AiChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  /* Auto-scroll to bottom when new messages arrive */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  /* Auto-resize textarea */
   const handleTextareaInput = useCallback(() => {
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, []);
 
-  /* Send message with SSE streaming */
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -184,7 +183,6 @@ export default function AiChatPage() {
         content: trimmed,
         timestamp: new Date(),
       };
-
       const aiMsg: ChatMessage = {
         id: generateId(),
         role: "assistant",
@@ -196,7 +194,6 @@ export default function AiChatPage() {
       setInput("");
       setStreaming(true);
 
-      // Reset textarea height
       if (inputRef.current) {
         inputRef.current.style.height = "auto";
       }
@@ -209,9 +206,7 @@ export default function AiChatPage() {
         const headers: Record<string, string> = {
           "Content-Type": "application/json",
         };
-        if (csrfToken) {
-          headers["X-CSRF-Token"] = csrfToken;
-        }
+        if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
 
         const response = await fetch(API.ai.chat, {
           method: "POST",
@@ -239,9 +234,7 @@ export default function AiChatPage() {
         }
 
         const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error("No response body");
-        }
+        if (!reader) throw new Error("No response body");
 
         const decoder = new TextDecoder();
         let accumulated = "";
@@ -250,10 +243,8 @@ export default function AiChatPage() {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
-          // Keep the last potentially incomplete line in the buffer
           buffer = lines.pop() ?? "";
 
           for (const line of lines) {
@@ -263,9 +254,8 @@ export default function AiChatPage() {
               accumulated += data;
               setMessages((prev) => {
                 const updated = [...prev];
-                const lastMsg = updated[updated.length - 1];
                 updated[updated.length - 1] = {
-                  ...lastMsg,
+                  ...updated[updated.length - 1],
                   content: accumulated,
                 };
                 return updated;
@@ -274,16 +264,14 @@ export default function AiChatPage() {
           }
         }
 
-        // Process any remaining buffer
         if (buffer.startsWith("data: ")) {
           const data = buffer.slice(6);
           if (data !== "[DONE]") {
             accumulated += data;
             setMessages((prev) => {
               const updated = [...prev];
-              const lastMsg = updated[updated.length - 1];
               updated[updated.length - 1] = {
-                ...lastMsg,
+                ...updated[updated.length - 1],
                 content: accumulated,
               };
               return updated;
@@ -292,10 +280,10 @@ export default function AiChatPage() {
         }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") {
-          // User cancelled — do nothing
+          // user cancelled
         } else {
           const errorMessage =
-            err instanceof Error ? err.message : "Something went wrong";
+            err instanceof Error ? err.message : "Request failed";
           setMessages((prev) => {
             const updated = [...prev];
             const lastMsg = updated[updated.length - 1];
@@ -316,14 +304,12 @@ export default function AiChatPage() {
     [streaming],
   );
 
-  /* Stop streaming */
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
     setStreaming(false);
   }, []);
 
-  /* Form submit */
   const handleSubmit = useCallback(
     (e: FormEvent) => {
       e.preventDefault();
@@ -332,7 +318,6 @@ export default function AiChatPage() {
     [input, sendMessage],
   );
 
-  /* Enter to send, Shift+Enter for newline */
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
@@ -346,111 +331,90 @@ export default function AiChatPage() {
   const hasMessages = messages.length > 0;
 
   return (
+    <div className="flex h-[calc(100dvh-8rem)] flex-col">
+      <header className="mb-6 flex items-center justify-between">
+        <div>
+          <div className="pq-ink-kicker">ASSISTANT · 2026 · {weekTag().split("·")[1]?.trim() ?? ""}</div>
+          <h1 className="pq-ink-h1 mt-2">Observation Assistant</h1>
+        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          {streaming ? "Streaming" : "Idle"}
+        </div>
+      </header>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto border-t border-[rgba(245,240,232,0.1)] pt-6">
+        {hasMessages ? (
+          <div className="space-y-6 pb-6">
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} />
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center py-12">
+            <Welcome onPick={sendMessage} />
+          </div>
+        )}
+      </div>
+
+      {/* Input area */}
+      <div className="shrink-0 border-t border-[rgba(245,240,232,0.1)] pt-4">
+        <DisclaimerBanner type="coaching" className="mb-3" />
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-end gap-3"
+        >
+          <div className="relative flex-1">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                handleTextareaInput();
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your portfolio observation…"
+              disabled={streaming}
+              rows={1}
+              className="pq-ink-input w-full resize-none"
+              style={{ maxHeight: 140 }}
+            />
+          </div>
+
+          {streaming ? (
+            <button
+              type="button"
+              onClick={stopStreaming}
+              className="pq-ink-btn-ghost"
+              aria-label="Stop"
+            >
+              <StopCircle className="h-4 w-4" />
+              <span>Stop</span>
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              className="pq-ink-btn-bronze disabled:opacity-40"
+              aria-label="Send"
+            >
+              <Send className="h-4 w-4" />
+              <span>Send</span>
+            </button>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function AiChatPage() {
+  return (
     <ErrorBoundary>
       <TierGate tier="pro">
-      <div className="flex h-[calc(100dvh-9rem)] flex-col md:h-[calc(100dvh-5rem)]">
-        {/* Header */}
-        <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--sp-accent-light)]">
-              <Bot className="h-5 w-5 text-[var(--sp-accent)]" />
-            </div>
-            <div>
-              <h1 className="text-base font-bold text-slate-900">
-                AI Assistant
-              </h1>
-              <p className="text-xs text-slate-500">
-                Powered by Claude AI
-              </p>
-            </div>
-            {streaming && (
-              <span className="ml-auto text-xs text-[var(--sp-accent)] font-medium">
-                Thinking...
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 scrollbar-thin">
-          {hasMessages ? (
-            <div className="space-y-4 max-w-3xl mx-auto">
-              {messages.map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          ) : (
-            <div className="flex h-full items-center justify-center py-8">
-              <WelcomeCard onSuggestionClick={sendMessage} />
-            </div>
-          )}
-        </div>
-
-        {/* Input area */}
-        <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-3 pt-3 sm:px-6">
-          {/* Disclaimer */}
-          <DisclaimerBanner type="coaching" className="mb-3" />
-
-          <form
-            onSubmit={handleSubmit}
-            className="mx-auto flex max-w-3xl items-end gap-2"
-          >
-            <div className="relative flex-1">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  handleTextareaInput();
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about your portfolio..."
-                disabled={streaming}
-                rows={1}
-                className={cn(
-                  "w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 pr-12 text-sm text-slate-900 placeholder:text-slate-400",
-                  "outline-none transition-all duration-200",
-                  "focus:border-[var(--sp-accent)] focus:ring-2 focus:ring-[var(--sp-accent)]/20 focus:bg-white",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                )}
-                style={{
-                  transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-                  maxHeight: 120,
-                }}
-              />
-            </div>
-
-            {streaming ? (
-              <button
-                type="button"
-                onClick={stopStreaming}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500 text-white transition-all duration-200 hover:bg-red-600 active:scale-95"
-                aria-label="Stop generating"
-              >
-                <StopCircle className="h-5 w-5" />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!input.trim()}
-                className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-200 active:scale-95",
-                  input.trim()
-                    ? "bg-[var(--sp-accent)] text-white hover:bg-[var(--sp-accent-hover)]"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed",
-                )}
-                style={{
-                  transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-                }}
-                aria-label="Send message"
-              >
-                <Send className="h-4 w-4" />
-              </button>
-            )}
-          </form>
-        </div>
-      </div>
+        <ChatInner />
       </TierGate>
     </ErrorBoundary>
   );

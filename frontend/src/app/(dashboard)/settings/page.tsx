@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * /settings — Account / Subscription / Broker / Notifications / Language
+ *              / Seed capital / Danger zone, all in the Vantablack ink theme.
+ *
+ * Everything SWR-wired: profile, subscription, broker status, push status.
+ * Nothing silently swallowed — all mutations toast on success/error.
+ */
+
 import React, { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -12,7 +20,6 @@ import { API } from "@/lib/endpoints";
 import { KisCard } from "@/components/broker/kis-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
 import { cn } from "@/lib/utils";
-import { Skeleton, CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { useT, useLocale } from "@/lib/locale";
@@ -23,34 +30,15 @@ import {
   getPushSubscription,
 } from "@/lib/push";
 import {
-  User,
-  CreditCard,
-  Link2,
   LogOut,
   Trash2,
-  ChevronRight,
   Crown,
   AlertTriangle,
   X,
-  Check,
   Loader2,
-  Settings as SettingsIcon,
-  Bell,
-  Sunrise,
-  Mail,
-  MessageCircle,
-  Wallet,
+  ChevronRight,
 } from "lucide-react";
 import { fmtUsd, fmtKrw } from "@/lib/format";
-
-/* ── Types ── */
-
-interface SubscriptionResponse {
-  tier: string;
-  status: string;
-  current_period_end?: string;
-  cancel_at_period_end?: boolean;
-}
 
 /* ── Fetcher ── */
 
@@ -60,88 +48,138 @@ const fetcher = async (url: string) => {
   return r.json();
 };
 
-/* ── Tabs ── */
+interface SubscriptionResponse {
+  tier: string;
+  status: string;
+  current_period_end?: string;
+  cancel_at_period_end?: boolean;
+}
 
-const TAB_CONFIG: { id: string; labelKey: string; icon: React.ElementType }[] = [
-  { id: "account", labelKey: "settings.tabs.account", icon: User },
-  { id: "subscription", labelKey: "settings.tabs.subscription", icon: CreditCard },
-  { id: "connections", labelKey: "settings.tabs.connections", icon: Link2 },
-  { id: "notifications", labelKey: "settings.tabs.notifications", icon: Bell },
-  { id: "language", labelKey: "settings.tabs.language", icon: SettingsIcon },
-];
-
-type TabId = "account" | "subscription" | "connections" | "notifications" | "language";
-
-/* ── Investor Type Labels ── */
+/* ── Investor labels ── */
 
 const INVESTOR_TYPE_LABELS: Record<string, string> = {
-  passive_index_hugger: "패시브 인덱스 추종형",
-  steady_accumulator: "꾸준한 축적형",
-  value_hunter: "가치 투자형",
-  risk_managed_growth: "리스크 관리 성장형",
-  swing_trader: "스윙 트레이더",
-  momentum_rider: "모멘텀 추종형",
-  macro_rotator: "매크로 로테이션형",
-  aggressive_scalper: "공격적 스캘퍼",
+  passive_index_hugger: "Passive index",
+  steady_accumulator: "Steady accumulator",
+  value_hunter: "Value hunter",
+  risk_managed_growth: "Risk-managed growth",
+  swing_trader: "Swing trader",
+  momentum_rider: "Momentum rider",
+  macro_rotator: "Macro rotator",
+  aggressive_scalper: "Aggressive scalper",
 };
 
-/* ── Delete Account Modal ── */
+/* ── Section shell ── */
 
-function DeleteAccountModal({ onClose }: { onClose: () => void }) {
-  const t = useT();
+function Section({
+  kicker,
+  title,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <ModalShell onClose={onClose} ariaLabel="Delete account">
-      <div className="sp-card my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-sm overflow-y-auto p-5 sm:p-6 sm:max-h-[90vh]">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-            <h3 className="text-lg font-bold text-slate-900">{t("settings.deleteAccountTitle")}</h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
+    <section className="space-y-4">
+      <header>
+        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          {kicker}
         </div>
-        <p className="text-sm text-slate-600 mb-6">
-          {t("settings.deleteAccountDesc")}
-        </p>
-        <div className="flex items-center gap-3">
-          <a
-            href="mailto:seanbae1521@gmail.com?subject=Account%20Deletion%20Request"
-            className="flex-1 rounded-full bg-red-500 px-4 py-2.5 text-center text-sm font-semibold text-white transition-all hover:bg-red-600 active:scale-[0.97]"
-          >
-            {t("settings.contactSupport")}
-          </a>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]"
-          >
-            {t("settings.cancelBtn")}
-          </button>
-        </div>
-      </div>
-    </ModalShell>
+        <h2 className="mt-1 font-serif italic text-2xl text-[var(--pq-ivory)]">
+          {title}
+        </h2>
+      </header>
+      {children}
+    </section>
   );
 }
 
-/* ── Seed Capital (분석용 시드머니) ── */
+/* ── Row ── */
 
-/** Upper bound mirrors backend MAX_CAPITAL — single source of truth in the API. */
+function Row({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-[rgba(245,240,232,0.06)] last:border-b-0">
+      <span className="text-sm text-[rgba(245,240,232,0.6)]">{label}</span>
+      <span className="text-sm text-[var(--pq-ivory)]">
+        {children ?? value ?? "—"}
+      </span>
+    </div>
+  );
+}
+
+/* ── Account section ── */
+
+function AccountSection() {
+  const { user } = useAuth();
+  const { data: profileData, isLoading: profileLoading } = useInvestmentProfile();
+  const investorType = profileData?.profile?.profile_type ?? null;
+
+  return (
+    <Section kicker="01 · Profile" title="Account">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+        <Row label="Name" value={user?.name ?? "—"} />
+        <Row label="Email" value={user?.email ?? "—"} />
+        {user?.oauth_provider && (
+          <Row
+            label="Login"
+            value={
+              <span className="capitalize">
+                {user.oauth_provider === "kakao" ? "Kakao" : user.oauth_provider}
+              </span>
+            }
+          />
+        )}
+        <Row
+          label="Investor type"
+          value={
+            profileLoading ? (
+              <span className="text-[rgba(245,240,232,0.3)]">Loading…</span>
+            ) : investorType ? (
+              INVESTOR_TYPE_LABELS[investorType] ?? investorType
+            ) : (
+              <span className="text-[rgba(245,240,232,0.3)]">Not set</span>
+            )
+          }
+        />
+      </div>
+
+      <Link
+        href="/onboarding"
+        className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] px-5 py-4 rounded-[2px] flex items-center justify-between hover:border-[var(--pq-bronze)] transition-colors group"
+      >
+        <div>
+          <div className="font-serif italic text-base text-[var(--pq-ivory)]">
+            {investorType ? "Retake assessment" : "Take investor assessment"}
+          </div>
+          <div className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">
+            20-question questionnaire — calibrates every analytical surface.
+          </div>
+        </div>
+        <ChevronRight className="h-4 w-4 text-[var(--pq-bronze)] transition-transform group-hover:translate-x-0.5" />
+      </Link>
+
+      <SeedCapitalSection />
+    </Section>
+  );
+}
+
+/* ── Seed capital ── */
+
 const MAX_SEED_CAPITAL = 1_000_000_000;
 
-/** Parse a user input string into a non-negative number. Returns null on empty/invalid. */
 function parseCapitalInput(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  // Strip thousands separators that users may type (e.g. "10,000").
-  const normalized = trimmed.replace(/,/g, "");
-  const n = Number(normalized);
-  if (!Number.isFinite(n)) return null;
-  return n;
+  const n = Number(trimmed.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
 }
 
 interface CapitalUpdateResponse {
@@ -156,11 +194,12 @@ function SeedCapitalSection() {
   const [krwInput, setKrwInput] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Initialize inputs from current user values once loaded.
   useEffect(() => {
     if (!user) return;
     setUsdInput(user.available_capital ? String(user.available_capital) : "");
-    setKrwInput(user.available_capital_krw ? String(user.available_capital_krw) : "");
+    setKrwInput(
+      user.available_capital_krw ? String(user.available_capital_krw) : "",
+    );
   }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -169,15 +208,15 @@ function SeedCapitalSection() {
     const krw = parseCapitalInput(krwInput);
 
     if (usd === null && krw === null) {
-      toast.error("USD 또는 KRW 시드머니를 입력해주세요.");
+      toast.error("Enter USD or KRW seed capital.");
       return;
     }
     if (usd !== null && (usd < 0 || usd > MAX_SEED_CAPITAL)) {
-      toast.error(`USD 시드머니는 0 ~ ${MAX_SEED_CAPITAL.toLocaleString()} 사이여야 합니다.`);
+      toast.error(`USD must be 0 – ${MAX_SEED_CAPITAL.toLocaleString()}.`);
       return;
     }
     if (krw !== null && (krw < 0 || krw > MAX_SEED_CAPITAL)) {
-      toast.error(`KRW 시드머니는 0 ~ ${MAX_SEED_CAPITAL.toLocaleString()} 사이여야 합니다.`);
+      toast.error(`KRW must be 0 – ${MAX_SEED_CAPITAL.toLocaleString()}.`);
       return;
     }
 
@@ -186,61 +225,57 @@ function SeedCapitalSection() {
       const body: Record<string, number> = {};
       if (usd !== null) body.available_capital_usd = usd;
       if (krw !== null) body.available_capital_krw = krw;
-
       await apiFetch<CapitalUpdateResponse>(API.profile.capital, {
         method: "POST",
         body: JSON.stringify(body),
       });
       await refresh();
-      toast.success("시드머니가 저장되었습니다.");
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "저장에 실패했습니다.";
-      toast.error(message);
+      toast.success("Seed capital saved.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed.");
     } finally {
       setSaving(false);
     }
   };
 
-  const currentUsd = user?.available_capital ?? 0;
-  const currentKrw = user?.available_capital_krw ?? 0;
-
   return (
-    <div className="sp-card p-4">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
-          <Wallet className="h-5 w-5 text-emerald-600" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">시드머니 설정</p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            분석에 사용될 총 투자 가능 자본. 시그널/디스커버/포트폴리오에 반영됩니다.
-          </p>
-        </div>
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        Seed capital · Analysis basis
       </div>
+      <p className="mt-2 text-xs text-[rgba(245,240,232,0.5)]">
+        Total investable capital used in signal sizing and portfolio analytics.
+      </p>
 
-      {/* Current values */}
-      <div className="mb-3 grid grid-cols-2 gap-2">
-        <div className="rounded-lg bg-slate-50 px-3 py-2">
-          <p className="text-[11px] text-slate-500">현재 USD</p>
-          <p className="text-sm font-semibold text-slate-900 tabular-nums">
-            {fmtUsd(currentUsd)}
-          </p>
-        </div>
-        <div className="rounded-lg bg-slate-50 px-3 py-2">
-          <p className="text-[11px] text-slate-500">현재 KRW</p>
-          <p className="text-sm font-semibold text-slate-900 tabular-nums">
-            {fmtKrw(currentKrw)}
-          </p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-3">
+      <div className="mt-4 grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="seed-capital-usd" className="block text-xs font-medium text-slate-600 mb-1">
-            USD ($)
+          <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+            Current USD
+          </div>
+          <div className="mt-1 font-mono text-sm text-[var(--pq-ivory)] tabular-nums">
+            {fmtUsd(user?.available_capital ?? 0)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+            Current KRW
+          </div>
+          <div className="mt-1 font-mono text-sm text-[var(--pq-ivory)] tabular-nums">
+            {fmtKrw(user?.available_capital_krw ?? 0)}
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSave} className="mt-5 space-y-3">
+        <div>
+          <label
+            htmlFor="seed-usd"
+            className="block text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] mb-1"
+          >
+            USD
           </label>
           <input
-            id="seed-capital-usd"
+            id="seed-usd"
             type="number"
             inputMode="decimal"
             min={0}
@@ -248,17 +283,19 @@ function SeedCapitalSection() {
             step="0.01"
             value={usdInput}
             onChange={(e) => setUsdInput(e.target.value)}
-            placeholder="예: 10000"
-            autoComplete="off"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors tabular-nums"
+            placeholder="10000"
+            className="pq-ink-input w-full tabular-nums"
           />
         </div>
         <div>
-          <label htmlFor="seed-capital-krw" className="block text-xs font-medium text-slate-600 mb-1">
-            KRW (₩)
+          <label
+            htmlFor="seed-krw"
+            className="block text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] mb-1"
+          >
+            KRW
           </label>
           <input
-            id="seed-capital-krw"
+            id="seed-krw"
             type="number"
             inputMode="numeric"
             min={0}
@@ -266,118 +303,24 @@ function SeedCapitalSection() {
             step="1"
             value={krwInput}
             onChange={(e) => setKrwInput(e.target.value)}
-            placeholder="예: 10000000"
-            autoComplete="off"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors tabular-nums"
+            placeholder="10000000"
+            className="pq-ink-input w-full tabular-nums"
           />
         </div>
         <button
           type="submit"
           disabled={saving}
-          className={cn(
-            "flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.97]",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-          )}
+          className="pq-ink-btn-bronze w-full flex items-center justify-center gap-1.5 disabled:opacity-50"
         >
-          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {saving ? "저장 중..." : "저장"}
+          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          {saving ? "Saving…" : "Save"}
         </button>
       </form>
     </div>
   );
 }
 
-/* ── Account Section ── */
-
-function AccountSection() {
-  const { user } = useAuth();
-  const { data: profileData, isLoading: profileLoading } = useInvestmentProfile();
-  const t = useT();
-  const { locale } = useLocale();
-
-  const joinedDate = user
-    ? new Date().toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", { month: "long", year: "numeric" })
-    : "";
-
-  const investorType = profileData?.profile?.profile_type ?? null;
-
-  return (
-    <div className="space-y-4">
-      <h2 className="text-base font-bold text-slate-900">{t("settings.account.title")}</h2>
-
-      <div className="sp-card divide-y divide-slate-100">
-        {/* Name */}
-        <div className="flex items-center justify-between px-4 py-3.5">
-          <span className="text-sm text-slate-500">{t("settings.account.name")}</span>
-          <span className="text-sm font-semibold text-slate-900">
-            {user?.name || "---"}
-          </span>
-        </div>
-
-        {/* Email */}
-        <div className="flex items-center justify-between px-4 py-3.5">
-          <span className="text-sm text-slate-500">{t("settings.account.email")}</span>
-          <span className="text-sm font-semibold text-slate-900">
-            {user?.email || "---"}
-          </span>
-        </div>
-
-        {/* Joined */}
-        <div className="flex items-center justify-between px-4 py-3.5">
-          <span className="text-sm text-slate-500">{t("settings.account.joined")}</span>
-          <span className="text-sm font-medium text-slate-700">{joinedDate}</span>
-        </div>
-
-        {/* OAuth Provider */}
-        {user?.oauth_provider && (
-          <div className="flex items-center justify-between px-4 py-3.5">
-            <span className="text-sm text-slate-500">{t("settings.account.loginMethod")}</span>
-            <span className="text-sm font-medium text-slate-700 capitalize">
-              {user.oauth_provider === "kakao" ? "카카오" : user.oauth_provider}
-            </span>
-          </div>
-        )}
-
-        {/* Investor Type */}
-        <div className="flex items-center justify-between px-4 py-3.5">
-          <span className="text-sm text-slate-500">{t("settings.account.investorType")}</span>
-          {profileLoading ? (
-            <Skeleton className="h-5 w-28" />
-          ) : investorType ? (
-            <span className="text-sm font-semibold text-slate-900">
-              {INVESTOR_TYPE_LABELS[investorType] ?? investorType}
-            </span>
-          ) : (
-            <span className="text-sm text-slate-400">{t("settings.account.notSet")}</span>
-          )}
-        </div>
-      </div>
-
-      {/* Retake Assessment */}
-      <Link
-        href="/onboarding"
-        className="sp-card flex items-center justify-between px-4 py-3.5 group"
-      >
-        <div>
-          <p className="text-sm font-semibold text-slate-900">
-            {investorType ? t("settings.account.retakeAssessment") : t("settings.account.takeAssessment")}
-          </p>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {investorType
-              ? t("settings.account.retakeSubtitle")
-              : t("settings.account.takeSubtitle")}
-          </p>
-        </div>
-        <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5" />
-      </Link>
-
-      {/* Seed Capital (분석용 시드머니) */}
-      <SeedCapitalSection />
-    </div>
-  );
-}
-
-/* ── Subscription Section ── */
+/* ── Subscription ── */
 
 function SubscriptionSection() {
   const { user } = useAuth();
@@ -386,138 +329,73 @@ function SubscriptionSection() {
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 60_000 },
   );
-  const t = useT();
-  const { locale } = useLocale();
-
-  // Prefer user.subscription_tier from auth (source of truth) over billing endpoint
   const tier = user?.subscription_tier || subData?.tier || "free";
-  const isPro = tier === "pro";
-  const isPremium = tier === "premium";
-  const isPaid = isPro || isPremium;
-
-  const dateLocale = locale === "ko" ? "ko-KR" : "en-US";
+  const isPaid = tier === "pro" || tier === "premium";
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-base font-bold text-slate-900">{t("settings.subscription.title")}</h2>
-
-      {isLoading ? (
-        <CardSkeleton />
-      ) : (
-        <>
-          <div className="sp-card p-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div
-                className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-xl",
-                  isPaid ? "bg-primary-gradient" : "bg-slate-100",
-                )}
-              >
-                <Crown
-                  className={cn(
-                    "h-5 w-5",
-                    isPaid ? "text-white" : "text-slate-400",
-                  )}
-                />
-              </div>
+    <Section kicker="02 · Tier" title="Subscription">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+        {isLoading ? (
+          <div className="h-20 animate-pulse bg-[rgba(255,255,255,0.02)]" />
+        ) : (
+          <>
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-bold text-slate-900">
-                  {tier.charAt(0).toUpperCase() + tier.slice(1)} Plan
-                </p>
-                <p className="text-xs text-slate-500">
-                  {isPaid
-                    ? t("settings.subscription.activePlan")
-                    : t("settings.subscription.freePlan")}
-                </p>
+                <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-1.5">
+                  <Crown className="h-3 w-3" />
+                  {tier} plan
+                </div>
+                <div className="mt-2 font-serif italic text-2xl text-[var(--pq-ivory)] capitalize">
+                  {tier}
+                </div>
               </div>
+              {subData?.current_period_end && isPaid && (
+                <div className="text-right">
+                  <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
+                    {subData.cancel_at_period_end ? "Cancels" : "Renews"}
+                  </div>
+                  <div className="mt-1 text-sm text-[var(--pq-ivory)] tabular-nums">
+                    {new Date(subData.current_period_end).toLocaleDateString()}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {subData?.current_period_end && isPaid && (
-              <p className="text-xs text-slate-500 mb-4">
-                {subData.cancel_at_period_end
-                  ? `${t("settings.subscription.cancelsOn")}: ${new Date(subData.current_period_end).toLocaleDateString(dateLocale)}`
-                  : `${t("settings.subscription.renewsOn")}: ${new Date(subData.current_period_end).toLocaleDateString(dateLocale)}`}
-              </p>
-            )}
-
-            {!isPaid && (
-              <Link
-                href="/pricing"
-                className="flex items-center justify-center gap-2 w-full rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.97]"
-              >
-                <Crown className="h-4 w-4" />
-                {t("settings.subscription.upgradeToPro")}
-              </Link>
-            )}
-
-            {isPaid && (
-              <div className="space-y-2">
+            <div className="mt-5 flex gap-2">
+              {!isPaid ? (
+                <Link href="/pricing" className="pq-ink-btn-bronze">
+                  Upgrade to Operator / Partner
+                </Link>
+              ) : (
                 <button
                   type="button"
                   onClick={async () => {
                     try {
-                      const result = await apiFetch<{ url: string }>(
+                      const r = await apiFetch<{ url: string }>(
                         API.billing.portal,
                         { method: "POST" },
                       );
-                      if (result.url) window.location.href = result.url;
+                      if (r.url) window.location.href = r.url;
                     } catch {
-                      // silent
+                      toast.error("Could not open billing portal.");
                     }
                   }}
-                  className="w-full rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]"
+                  className="pq-ink-btn-ghost"
                 >
-                  {t("settings.subscription.manage")}
+                  Manage billing
                 </button>
-                <p className="text-[11px] text-slate-500 leading-relaxed text-center">
-                  구독 후 14일 이내 전액 환불 가능. 결제 관리 화면에서 언제든
-                  즉시 해지할 수 있습니다. 해지 시 당기 기간 말까지 기능이
-                  유지된 후 Free 플랜으로 자동 전환됩니다.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Feature comparison teaser */}
-          {!isPaid && (
-            <div className="sp-card p-4">
-              <p className="text-xs font-semibold text-slate-900 mb-3">
-                {t("settings.subscription.proFeatures")}
-              </p>
-              <ul className="space-y-2">
-                {[
-                  t("settings.subscription.proFeaturesList.0"),
-                  t("settings.subscription.proFeaturesList.1"),
-                  t("settings.subscription.proFeaturesList.2"),
-                  t("settings.subscription.proFeaturesList.3"),
-                  t("settings.subscription.proFeaturesList.4"),
-                ].map((feat) => (
-                  <li
-                    key={feat}
-                    className="flex items-center gap-2 text-xs text-slate-600"
-                  >
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                    {feat}
-                  </li>
-                ))}
-              </ul>
+              )}
             </div>
-          )}
-        </>
-      )}
-    </div>
+          </>
+        )}
+      </div>
+    </Section>
   );
 }
 
-/* ── Connections Section ── */
+/* ── Brokers ── */
 
-/**
- * Simplified 2026-04-20 to KIS-only. Kiwoom CSV + Alpaca broker-connection
- * flows were removed. US market data still comes from Alpaca Market Data,
- * but that is a shared server-side data source, not a per-user connection.
- */
-function ConnectionsSection() {
-  const t = useT();
+function BrokersSection() {
   const { data: brokerData, mutate: refreshBrokers } = useBrokerConnections();
   const [kisModalOpen, setKisModalOpen] = useState(false);
   const [kisSyncing, setKisSyncing] = useState(false);
@@ -528,39 +406,30 @@ function ConnectionsSection() {
     try {
       await apiFetch(API.broker.kisSync, { method: "POST" });
       await refreshBrokers();
-      toast.success(t("brokerOnboarding.kis.syncSuccess"));
+      toast.success("KIS synchronized.");
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : t("brokerOnboarding.kis.syncError");
-      toast.error(msg);
+      toast.error(err instanceof Error ? err.message : "Sync failed.");
     } finally {
       setKisSyncing(false);
     }
-  }, [refreshBrokers, t]);
+  }, [refreshBrokers]);
 
   const handleKisDisconnect = useCallback(async () => {
-    if (!confirm(t("brokerOnboarding.kis.disconnectConfirm"))) return;
+    if (!confirm("Disconnect KIS?")) return;
     setKisDisconnecting(true);
     try {
       await apiFetch(API.broker.kisDisconnect, { method: "DELETE" });
       await refreshBrokers();
-      toast.success(t("brokerOnboarding.kis.disconnectSuccess"));
+      toast.success("KIS disconnected.");
     } catch (err) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : t("brokerOnboarding.kis.disconnectError");
-      toast.error(msg);
+      toast.error(err instanceof Error ? err.message : "Disconnect failed.");
     } finally {
       setKisDisconnecting(false);
     }
-  }, [refreshBrokers, t]);
+  }, [refreshBrokers]);
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-base font-bold text-slate-900">{t("settings.connections.title")}</h2>
-
-      {/* KIS (한국투자증권) — the only supported broker connection */}
+    <Section kicker="03 · Brokers" title="Connections">
       <KisCard
         connected={Boolean(brokerData?.kis_connected)}
         lastSync={brokerData?.kis_last_sync ?? null}
@@ -570,48 +439,22 @@ function ConnectionsSection() {
         syncing={kisSyncing}
         disconnecting={kisDisconnecting}
       />
-
-      <p className="text-xs text-slate-400 text-center pt-2">
-        {t("settings.connections.brokerNote")}
+      <p className="text-xs text-[rgba(245,240,232,0.4)] text-center">
+        KIS is read-only. Orders remain disabled by regulation.
       </p>
-
       {kisModalOpen && (
         <KisConnectModal
           onClose={() => setKisModalOpen(false)}
           onSuccess={() => refreshBrokers()}
         />
       )}
-    </div>
+    </Section>
   );
 }
 
-/* ── Notifications Section ── */
+/* ── Toggle ── */
 
-/** Common time options (KST) for the morning brief delivery. */
-const TIME_OPTIONS = [
-  { value: "06:00", label: "06:00" },
-  { value: "07:00", label: "07:00" },
-  { value: "08:00", label: "08:00" },
-  { value: "09:00", label: "09:00" },
-];
-
-function TierBadge({ tier }: { tier: "pro" | "premium" }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-        tier === "premium"
-          ? "bg-accent text-slate-900"
-          : "bg-amber-100 text-amber-700",
-      )}
-    >
-      <Crown className="h-2.5 w-2.5" />
-      {tier}
-    </span>
-  );
-}
-
-function ToggleSwitch({
+function Toggle({
   checked,
   onChange,
   disabled,
@@ -631,58 +474,45 @@ function ToggleSwitch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
-        checked ? "bg-accent" : "bg-slate-200",
-        disabled && "opacity-50 cursor-not-allowed",
+        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+        checked ? "bg-[var(--pq-bronze)]" : "bg-[rgba(245,240,232,0.1)]",
+        disabled && "opacity-40 cursor-not-allowed",
       )}
     >
       <span
         className={cn(
-          "inline-block h-[18px] w-[18px] transform rounded-full bg-white shadow transition-transform",
-          checked ? "translate-x-[22px]" : "translate-x-0.5",
+          "inline-block h-3.5 w-3.5 rounded-full bg-[var(--pq-ivory)] transition-transform",
+          checked ? "translate-x-[18px]" : "translate-x-0.5",
         )}
       />
     </button>
   );
 }
 
-function NotificationsSection() {
+/* ── Preferences (notifications + language) ── */
+
+function PreferencesSection() {
+  const { locale, setLocale } = useLocale();
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushSupported, setPushSupported] = useState(true);
   const [pushLoading, setPushLoading] = useState(false);
-  const [time, setTime] = useState("06:00");
   const [emailEnabled, setEmailEnabled] = useState(false);
-  const t = useT();
 
-  // Get tier for gating
-  const { data: subData } = useSWR<SubscriptionResponse>(
-    API.billing.subscription,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000 },
-  );
-  const tier = subData?.tier ?? "free";
-  const isPro = tier === "pro" || tier === "premium";
-
-  /* Initialize push state + saved time */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const supported = isPushSupported();
     setPushSupported(supported);
     if (!supported) return;
     getPushSubscription()
-      .then((sub) => setPushEnabled(!!sub))
+      .then((s) => setPushEnabled(!!s))
       .catch(() => setPushEnabled(false));
 
-    const savedTime = window.localStorage.getItem("sp_mb_time");
-    if (savedTime) setTime(savedTime);
-
-    const savedEmail = window.localStorage.getItem("sp_mb_email") === "1";
-    setEmailEnabled(savedEmail);
+    setEmailEnabled(window.localStorage.getItem("sp_mb_email") === "1");
   }, []);
 
   const handlePushToggle = async (next: boolean) => {
     if (!pushSupported) {
-      toast.error(t("settings.notifications.notSupported"));
+      toast.error("Push notifications not supported here.");
       return;
     }
     setPushLoading(true);
@@ -690,280 +520,137 @@ function NotificationsSection() {
       if (next) {
         const sub = await subscribeToPush();
         if (!sub) {
-          toast.error(t("settings.notifications.permissionDenied"));
+          toast.error("Permission denied.");
           setPushEnabled(false);
           return;
         }
         setPushEnabled(true);
-        toast.success(t("settings.notifications.pushEnabled"));
+        toast.success("Push enabled.");
       } else {
         await unsubscribeFromPush();
         setPushEnabled(false);
-        toast.success(t("settings.notifications.pushDisabled"));
+        toast.success("Push disabled.");
       }
     } catch {
-      toast.error(t("settings.notifications.pushError"));
+      toast.error("Could not update push.");
     } finally {
       setPushLoading(false);
     }
   };
 
-  const handleTimeChange = (value: string) => {
-    setTime(value);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem("sp_mb_time", value);
-    }
-    toast.success(t("settings.notifications.timeChanged"));
-  };
-
   const handleEmailToggle = (next: boolean) => {
-    if (!isPro) {
-      toast.error(t("settings.notifications.emailProRequired"));
-      return;
-    }
     setEmailEnabled(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("sp_mb_email", next ? "1" : "0");
     }
-    toast.success(next ? t("settings.notifications.emailEnabledSuccess") : t("settings.notifications.emailDisabledSuccess"));
+    toast.success(next ? "Email enabled." : "Email disabled.");
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-base font-bold text-slate-900">{t("settings.notifications.title")}</h2>
-        <p className="mt-0.5 text-xs text-slate-500">
-          {t("settings.notifications.subtitle")}
-        </p>
+    <Section kicker="04 · Preferences" title="Notifications & locale">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-serif italic text-base text-[var(--pq-ivory)]">
+              Push notifications
+            </div>
+            <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
+              Morning brief, signal changes, risk events.
+            </div>
+          </div>
+          <Toggle
+            checked={pushEnabled}
+            onChange={handlePushToggle}
+            disabled={pushLoading || !pushSupported}
+            ariaLabel="Push"
+          />
+        </div>
+
+        <div className="flex items-center justify-between pt-3 border-t border-[rgba(245,240,232,0.06)]">
+          <div>
+            <div className="font-serif italic text-base text-[var(--pq-ivory)]">
+              Email delivery
+            </div>
+            <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
+              Artifacts and digests to your inbox.
+            </div>
+          </div>
+          <Toggle
+            checked={emailEnabled}
+            onChange={handleEmailToggle}
+            ariaLabel="Email"
+          />
+        </div>
       </div>
 
-      {/* Morning Brief Push */}
-      <div className="sp-card p-4">
-        <div className="flex items-start gap-3">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500"
-            aria-hidden
-          >
-            <Sunrise className="h-5 w-5 text-white" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  {t("settings.notifications.morningBriefTitle")}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {t("settings.notifications.morningBriefDesc")}
-                </p>
-              </div>
-              <ToggleSwitch
-                checked={pushEnabled}
-                onChange={handlePushToggle}
-                disabled={pushLoading || !pushSupported}
-                ariaLabel={t("settings.notifications.morningBriefTitle")}
-              />
-            </div>
-
-            {!pushSupported && (
-              <p className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-600">
-                <AlertTriangle className="h-3 w-3" />
-                {t("settings.notifications.notSupported")}
-              </p>
-            )}
-
-            {/* Time selector */}
-            <div
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-3">
+          Language
+        </div>
+        <div className="flex gap-2">
+          {(["ko", "en"] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => {
+                setLocale(l);
+                toast.success("Language updated.");
+              }}
               className={cn(
-                "mt-3 border-t border-slate-100 pt-3 transition-opacity",
-                !pushEnabled && "opacity-40",
+                locale === l ? "pq-ink-btn-bronze" : "pq-ink-btn-ghost",
               )}
             >
-              <label
-                htmlFor="mb-time-select"
-                className="block text-xs font-medium text-slate-600"
-              >
-                {t("settings.notifications.timeLabel")}
-              </label>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {TIME_OPTIONS.map((opt) => {
-                  const active = time === opt.value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      disabled={!pushEnabled}
-                      onClick={() => handleTimeChange(opt.value)}
-                      className={cn(
-                        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors tabular-nums",
-                        active
-                          ? "bg-slate-900 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-                        !pushEnabled && "cursor-not-allowed",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-[11px] text-slate-400">
-                {t("settings.notifications.timeHelp")}
-              </p>
-            </div>
-          </div>
+              {l === "ko" ? "한국어" : "English"}
+            </button>
+          ))}
         </div>
       </div>
-
-      {/* Email (Pro+) */}
-      <div className={cn("sp-card p-4", !isPro && "bg-slate-50/30")}>
-        <div className="flex items-start gap-3">
-          <div
-            className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-              isPro ? "bg-blue-100" : "bg-slate-100",
-            )}
-            aria-hidden
-          >
-            <Mail
-              className={cn(
-                "h-5 w-5",
-                isPro ? "text-blue-600" : "text-slate-400",
-              )}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {t("settings.notifications.emailTitle")}
-                  </p>
-                  {!isPro && <TierBadge tier="pro" />}
-                </div>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {isPro
-                    ? t("morningBrief.noPositionsDesc")
-                    : t("settings.notifications.emailDesc")}
-                </p>
-              </div>
-              <ToggleSwitch
-                checked={emailEnabled}
-                onChange={handleEmailToggle}
-                disabled={!isPro}
-                ariaLabel={t("settings.notifications.emailTitle")}
-              />
-            </div>
-
-            {!isPro && (
-              <Link
-                href="/pricing"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-accent transition-colors"
-              >
-                {t("settings.subscription.upgradeToPro")}
-                <ChevronRight className="h-3 w-3" />
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Kakao (Premium, v2 — disabled) */}
-      <div className="sp-card p-4 opacity-60">
-        <div className="flex items-start gap-3">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-100"
-            aria-hidden
-          >
-            <MessageCircle className="h-5 w-5 text-yellow-600" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-900">
-                    {t("settings.notifications.kakaoTitle")}
-                  </p>
-                  <TierBadge tier="premium" />
-                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
-                    {t("settings.connections.comingSoon")}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {t("settings.notifications.kakaoDesc")}
-                </p>
-              </div>
-              <ToggleSwitch
-                checked={false}
-                onChange={() => {}}
-                disabled
-                ariaLabel={t("settings.notifications.kakaoTitle")}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <p className="pt-2 text-center text-[11px] text-slate-400">
-        {t("settings.notifications.dismissAnytime")}
-      </p>
-    </div>
+    </Section>
   );
 }
 
-/* ── Language Section ── */
+/* ── Delete modal ── */
 
-function LanguageSection() {
-  const { locale, setLocale } = useLocale();
-  const t = useT();
-
-  const handleChange = (next: "ko" | "en") => {
-    setLocale(next);
-    toast.success(t("settings.language.saved"));
-  };
-
+function DeleteAccountModal({ onClose }: { onClose: () => void }) {
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-base font-bold text-slate-900">{t("settings.language.title")}</h2>
-        <p className="mt-0.5 text-xs text-slate-500">{t("settings.language.subtitle")}</p>
-      </div>
-
-      <div className="sp-card divide-y divide-slate-100">
-        {/* Korean */}
-        <button
-          type="button"
-          onClick={() => handleChange("ko")}
-          className={cn(
-            "flex w-full items-center justify-between px-4 py-3.5 transition-colors hover:bg-slate-50",
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-lg" role="img" aria-label="Korean flag">&#x1F1F0;&#x1F1F7;</span>
-            <span className="text-sm font-medium text-slate-900">{t("settings.language.korean")}</span>
+    <ModalShell onClose={onClose} ariaLabel="Delete account">
+      <div className="my-auto w-full max-w-md bg-[var(--pq-ink)] border border-[rgba(245,240,232,0.12)] p-6 rounded-[2px]">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-400" />
+            <h3 className="font-serif italic text-xl text-[var(--pq-ivory)]">
+              Delete account
+            </h3>
           </div>
-          {locale === "ko" && (
-            <Check className="h-4 w-4 text-emerald-500" />
-          )}
-        </button>
-
-        {/* English */}
-        <button
-          type="button"
-          onClick={() => handleChange("en")}
-          className={cn(
-            "flex w-full items-center justify-between px-4 py-3.5 transition-colors hover:bg-slate-50",
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-lg" role="img" aria-label="US flag">&#x1F1FA;&#x1F1F8;</span>
-            <span className="text-sm font-medium text-slate-900">{t("settings.language.english")}</span>
-          </div>
-          {locale === "en" && (
-            <Check className="h-4 w-4 text-emerald-500" />
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)]"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <p className="text-sm text-[rgba(245,240,232,0.6)] mb-6">
+          Deletion is permanent and removes all positions, watchlists, and
+          delivered artifacts. Email support to proceed.
+        </p>
+        <div className="flex items-center gap-3">
+          <a
+            href="mailto:seanbae1521@gmail.com?subject=Account%20Deletion%20Request"
+            className="flex-1 pq-ink-btn-bronze text-center"
+          >
+            Contact support
+          </a>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 pq-ink-btn-ghost"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -972,10 +659,8 @@ function LanguageSection() {
 export default function SettingsPage() {
   const router = useRouter();
   const { logout } = useAuth();
-  const t = useT();
-  const [activeTab, setActiveTab] = useState<TabId>("account");
   const [signingOut, setSigningOut] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   const handleSignOut = useCallback(async () => {
     setSigningOut(true);
@@ -989,87 +674,50 @@ export default function SettingsPage() {
 
   return (
     <ErrorBoundary>
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="space-y-10">
         {/* ── Header ── */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
-            <SettingsIcon className="h-5 w-5 text-slate-500" />
+        <header>
+          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+            Account · Preferences
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">{t("settings.pageTitle")}</h1>
-            <p className="text-sm text-slate-500">
-              {t("settings.pageSubtitle")}
-            </p>
+          <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
+            Settings
+          </h1>
+        </header>
+
+        <AccountSection />
+        <SubscriptionSection />
+        <BrokersSection />
+        <PreferencesSection />
+
+        {/* ── Danger zone ── */}
+        <section className="pt-8 border-t border-[rgba(245,240,232,0.08)]">
+          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+            Danger zone
           </div>
-        </div>
-
-        {/* ── Tab navigation ── */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {TAB_CONFIG.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as TabId)}
-                className={cn(
-                  "filter-pill flex items-center gap-1.5 whitespace-nowrap",
-                  isActive && "active",
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {t(tab.labelKey)}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── Tab content ── */}
-        {activeTab === "account" && <AccountSection />}
-        {activeTab === "subscription" && <SubscriptionSection />}
-        {activeTab === "connections" && <ConnectionsSection />}
-        {activeTab === "notifications" && <NotificationsSection />}
-        {activeTab === "language" && <LanguageSection />}
-
-        {/* ── Danger Zone ── */}
-        <div className="space-y-3 pt-4 border-t border-slate-100">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            {t("settings.dangerZone")}
-          </h2>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            {/* Sign Out */}
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
               onClick={handleSignOut}
               disabled={signingOut}
-              className={cn(
-                "flex flex-1 items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold transition-all hover:bg-slate-50 active:scale-[0.97]",
-                "text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
+              className="pq-ink-btn-ghost flex-1 inline-flex items-center justify-center gap-1.5 disabled:opacity-40"
             >
-              <LogOut className="h-4 w-4" />
-              {signingOut ? t("settings.signingOut") : t("settings.signOut")}
+              <LogOut className="h-3.5 w-3.5" />
+              {signingOut ? "Signing out…" : "Sign out"}
             </button>
-
-            {/* Delete Account */}
             <button
               type="button"
-              onClick={() => setShowDeleteModal(true)}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-[0.97]"
+              onClick={() => setShowDelete(true)}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-red-500/30 text-red-400 text-xs tracking-[0.18em] uppercase hover:bg-red-500/10 transition-colors"
             >
-              <Trash2 className="h-4 w-4" />
-              {t("settings.deleteAccount")}
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete account
             </button>
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* Delete Account Modal */}
-      {showDeleteModal && (
-        <DeleteAccountModal onClose={() => setShowDeleteModal(false)} />
-      )}
+      {showDelete && <DeleteAccountModal onClose={() => setShowDelete(false)} />}
     </ErrorBoundary>
   );
 }

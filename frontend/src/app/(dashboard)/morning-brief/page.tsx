@@ -1,330 +1,158 @@
 "use client";
 
-import Link from "next/link";
+/**
+ * /morning-brief — Today's pre-market briefing, Vantablack ink theme.
+ *
+ * Sections:
+ *  - Hero: today's date + kicker
+ *  - Overnight: Asia / Europe / US pre-market 3-up
+ *  - Macro strip: 10Y, VIX, USD/KRW, Gold, Oil
+ *  - Earnings today
+ *  - Economic calendar
+ *  - Archive (expandable)
+ *  - Download PDF CTA
+ *
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL only.
+ */
+
 import { useMemo, useState } from "react";
 import {
   Sunrise,
-  CalendarDays,
-  ChevronDown,
-  ChevronUp,
   Sparkles,
   TrendingUp,
   TrendingDown,
-  Archive,
-  ArrowRight,
+  Minus,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  CalendarDays,
 } from "lucide-react";
-import { useMorningBriefArchive, useMorningBrief } from "@/lib/hooks";
-import { useLocale, useT } from "@/lib/locale";
+import { useMorningBrief, useMorningBriefArchive } from "@/lib/hooks";
+import { useLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import type {
   MorningBriefArchiveItem,
   MorningBriefIndex,
 } from "@/lib/types";
 
-/* ── Filter options ── */
-
-type FilterKey = "all" | "week" | "month";
-
-const FILTERS: { key: FilterKey; labelKey: string }[] = [
-  { key: "all", labelKey: "morningBrief.filterAll" },
-  { key: "week", labelKey: "morningBrief.filterWeek" },
-  { key: "month", labelKey: "morningBrief.filterMonth" },
-];
-
 /* ── Helpers ── */
 
-function formatArchiveDate(dateStr: string, locale: "ko" | "en"): string {
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return dateStr;
-  if (locale === "ko") {
-    return d.toLocaleDateString("ko-KR", {
-      month: "long",
-      day: "numeric",
-      weekday: "short",
-    });
-  }
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    weekday: "short",
-  });
-}
-
-function fmtPctSigned(pct: number): string {
+function fmtPctSigned(pct: number | undefined): string {
+  if (pct == null || !Number.isFinite(pct)) return "—";
   const s = pct >= 0 ? "+" : "";
-  return `${s}${pct.toFixed(1)}%`;
+  return `${s}${pct.toFixed(2)}%`;
 }
 
-function pctColor(pct: number): string {
-  if (pct > 0) return "text-emerald-600";
-  if (pct < 0) return "text-red-600";
-  return "text-slate-500";
+function pctColor(pct: number | undefined): string {
+  if (pct == null) return "text-[rgba(245,240,232,0.4)]";
+  if (pct > 0) return "text-emerald-400";
+  if (pct < 0) return "text-red-400";
+  return "text-[rgba(245,240,232,0.6)]";
 }
 
-function filterItems(
-  items: MorningBriefArchiveItem[],
-  filter: FilterKey,
-): MorningBriefArchiveItem[] {
-  if (filter === "all") return items;
-  const now = Date.now();
-  const cutoff =
-    filter === "week" ? 7 * 86400 * 1000 : 30 * 86400 * 1000;
-  return items.filter((item) => {
-    const t = new Date(item.date).getTime();
-    return Number.isFinite(t) && now - t <= cutoff;
-  });
+function pctIcon(pct: number | undefined) {
+  if (pct == null) return <Minus className="h-3 w-3" />;
+  if (pct > 0) return <TrendingUp className="h-3 w-3" />;
+  if (pct < 0) return <TrendingDown className="h-3 w-3" />;
+  return <Minus className="h-3 w-3" />;
 }
 
-/* ── Compact index row ── */
+/* ── Index tile ── */
 
-function IndexMini({
+function IndexTile({
   label,
   data,
+  region,
 }: {
   label: string;
   data?: MorningBriefIndex;
+  region: string;
 }) {
+  const pct = data?.change_pct;
   return (
-    <div className="flex items-baseline gap-1">
-      <span className="text-[11px] text-slate-400">{label}</span>
-      <span
+    <div className="flex-1 bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        {region}
+      </div>
+      <div className="mt-1 font-serif italic text-lg text-[var(--pq-ivory)]">
+        {label}
+      </div>
+      <div
         className={cn(
-          "text-xs font-semibold tabular-nums",
-          data ? pctColor(data.change_pct) : "text-slate-300",
+          "mt-3 flex items-center gap-1.5 tabular-nums text-2xl",
+          pctColor(pct),
         )}
       >
-        {data ? fmtPctSigned(data.change_pct) : "—"}
-      </span>
+        {pctIcon(pct)}
+        {fmtPctSigned(pct)}
+      </div>
     </div>
   );
 }
 
-/* ── Archive card ── */
+/* ── Macro tile (placeholder from backend macro endpoint if present) ── */
 
-function ArchiveCard({ item }: { item: MorningBriefArchiveItem }) {
-  const [expanded, setExpanded] = useState(false);
-  const t = useT();
+function MacroTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-4 rounded-[2px]">
+      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        {label}
+      </div>
+      <div className="mt-2 font-mono text-lg text-[var(--pq-ivory)] tabular-nums">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/* ── Archive row ── */
+
+function ArchiveRow({ item }: { item: MorningBriefArchiveItem }) {
+  const [open, setOpen] = useState(false);
   const { locale } = useLocale();
-
-  const brief = item.content;
-  const topPortfolio = brief.portfolio_changes.slice(0, 3);
+  const date = new Date(item.date);
+  const dateStr = date.toLocaleDateString(
+    locale === "ko" ? "ko-KR" : "en-US",
+    { month: "short", day: "numeric", weekday: "short" },
+  );
 
   return (
-    <article className="sp-card overflow-hidden">
-      {/* Header — always visible */}
+    <article className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] overflow-hidden">
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-        className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left transition-colors hover:bg-slate-50/50"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-[rgba(255,255,255,0.01)] transition-colors"
       >
-        <div className="min-w-0 flex-1">
-          <div className="mb-1.5 flex items-center gap-2">
-            <CalendarDays className="h-3.5 w-3.5 text-slate-400" aria-hidden />
-            <time className="text-sm font-bold text-slate-900">
-              {formatArchiveDate(item.date, locale)}
-            </time>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <IndexMini label="S&P" data={brief.market_summary.sp500} />
-            <IndexMini label="NASDAQ" data={brief.market_summary.nasdaq} />
-            <IndexMini label="KOSPI" data={brief.market_summary.kospi} />
-          </div>
+        <div className="flex items-center gap-4 min-w-0">
+          <CalendarDays className="h-3.5 w-3.5 text-[var(--pq-bronze)] shrink-0" />
+          <time className="font-serif italic text-base text-[var(--pq-ivory)]">
+            {dateStr}
+          </time>
+          <span className={cn("text-xs tabular-nums", pctColor(item.content.market_summary.sp500?.change_pct))}>
+            S&amp;P {fmtPctSigned(item.content.market_summary.sp500?.change_pct)}
+          </span>
+          <span className={cn("text-xs tabular-nums hidden sm:inline", pctColor(item.content.market_summary.nasdaq?.change_pct))}>
+            NASDAQ {fmtPctSigned(item.content.market_summary.nasdaq?.change_pct)}
+          </span>
         </div>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+        {open ? (
+          <ChevronUp className="h-4 w-4 text-[var(--pq-bronze)]" />
         ) : (
-          <ChevronDown
-            className="h-4 w-4 shrink-0 text-slate-400"
-            aria-hidden
-          />
+          <ChevronDown className="h-4 w-4 text-[var(--pq-bronze)]" />
         )}
       </button>
 
-      {/* Expanded body */}
-      {expanded && (
-        <div className="space-y-4 border-t border-slate-100 px-4 py-4">
-          {/* Portfolio */}
-          {topPortfolio.length > 0 && (
-            <section>
-              <p className="mb-2 text-xs font-semibold text-slate-600">
-                💼 {t("morningBrief.portfolio")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {topPortfolio.map((change) => {
-                  const isUp = change.direction === "up";
-                  const Icon = isUp ? TrendingUp : TrendingDown;
-                  const displayName = change.name || change.ticker;
-                  return (
-                    <div
-                      key={change.ticker}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-                        isUp
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-red-50 text-red-700",
-                      )}
-                      title={change.ticker}
-                    >
-                      <span className="max-w-[9rem] truncate font-semibold">
-                        {displayName}
-                      </span>
-                      <Icon className="h-3 w-3" />
-                      <span className="tabular-nums">
-                        {fmtPctSigned(change.change_pct)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {/* Events */}
-          {brief.events.length > 0 && (
-            <section>
-              <p className="mb-2 text-xs font-semibold text-slate-600">
-                📅 {t("morningBrief.events")}
-              </p>
-              <ul className="space-y-1.5">
-                {brief.events.slice(0, 3).map((event, i) => {
-                  const displayName = event.name || event.ticker;
-                  return (
-                    <li
-                      key={`${event.ticker}-${i}`}
-                      className="flex items-start gap-2 text-xs text-slate-700"
-                    >
-                      <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-accent" />
-                      <span className="min-w-0">
-                        <span className="font-semibold text-slate-900">
-                          {displayName}
-                        </span>
-                        <span className="ml-1.5 font-mono text-[10px] text-slate-400">
-                          {event.ticker}
-                        </span>{" "}
-                        {event.description}
-                        {event.event_time && (
-                          <span className="ml-1 text-slate-400">
-                            ({event.event_time})
-                          </span>
-                        )}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
-
-          {/* Insight */}
-          {brief.insight && (
-            <section className="rounded-xl bg-muted border-l-2 border-accent px-3 py-2.5">
-              <p className="flex items-start gap-2 text-xs text-slate-700">
-                <Sparkles
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent"
-                  aria-hidden
-                />
-                <span className="leading-relaxed">{brief.insight}</span>
-              </p>
-            </section>
-          )}
-        </div>
-      )}
-    </article>
-  );
-}
-
-/* ── Empty state ── */
-
-function EmptyArchiveState() {
-  const t = useT();
-  return (
-    <div className="sp-card flex flex-col items-center justify-center px-6 py-12 text-center">
-      <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-        <Archive className="h-5 w-5 text-slate-400" aria-hidden />
-      </div>
-      <h3 className="text-base font-semibold text-slate-900">
-        {t("morningBrief.noArchive")}
-      </h3>
-      <p className="mt-1 max-w-sm text-sm text-slate-500">
-        {t("morningBrief.noArchiveDesc")}
-      </p>
-    </div>
-  );
-}
-
-/* ── Page ── */
-
-/* ── Inline today brief (avoids circular "view all" links) ── */
-
-function TodayBriefSection() {
-  const { data, isLoading } = useMorningBrief();
-  const t = useT();
-
-  if (isLoading) return <CardSkeleton />;
-  if (!data?.available || !data.brief) {
-    return (
-      <div className="sp-card flex flex-col items-center justify-center px-4 py-6 text-center">
-        <Sunrise className="mb-2 h-6 w-6 text-amber-400" aria-hidden />
-        <p className="text-sm font-semibold text-slate-700">
-          {t("morningBrief.notAvailable")}
-        </p>
-        <p className="mt-1 text-xs text-slate-500">
-          {t("morningBrief.notAvailableDesc")}
-        </p>
-      </div>
-    );
-  }
-
-  const { market_summary, portfolio_changes, insight } = data.brief;
-  const topPortfolio = portfolio_changes.slice(0, 4);
-
-  return (
-    <article className="sp-card overflow-hidden p-4 sm:p-5 space-y-3">
-      {/* Market indices */}
-      <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
-        <IndexMini label="S&P 500" data={market_summary.sp500} />
-        <IndexMini label="NASDAQ" data={market_summary.nasdaq} />
-        <IndexMini label="KOSPI" data={market_summary.kospi} />
-      </div>
-
-      {/* Portfolio changes */}
-      {topPortfolio.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {topPortfolio.map((change) => {
-            const isUp = change.direction === "up";
-            const Icon = isUp ? TrendingUp : TrendingDown;
-            const displayName = change.name || change.ticker;
-            return (
-              <div
-                key={change.ticker}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-                  isUp ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700",
-                )}
-                title={change.ticker}
-              >
-                <span className="max-w-[9rem] truncate font-semibold">
-                  {displayName}
-                </span>
-                <Icon className="h-3 w-3" />
-                <span className="tabular-nums">{fmtPctSigned(change.change_pct)}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Insight */}
-      {insight && (
-        <div className="rounded-xl bg-muted border-l-2 border-accent px-3 py-2.5">
-          <p className="flex items-start gap-2 text-xs text-slate-700">
-            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
-            <span className="leading-relaxed">{insight}</span>
-          </p>
+      {open && item.content.insight && (
+        <div className="border-t border-[rgba(245,240,232,0.08)] px-5 py-4">
+          <div className="flex items-start gap-2">
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 text-[var(--pq-bronze)] shrink-0" />
+            <p className="text-sm text-[rgba(245,240,232,0.75)] leading-relaxed">
+              {item.content.insight}
+            </p>
+          </div>
         </div>
       )}
     </article>
@@ -334,125 +162,161 @@ function TodayBriefSection() {
 /* ── Page ── */
 
 export default function MorningBriefPage() {
-  const [filter, setFilter] = useState<FilterKey>("all");
-  const t = useT();
+  const { data: today, isLoading: todayLoading } = useMorningBrief();
+  const { data: archive } = useMorningBriefArchive();
 
-  const { data: archive, isLoading, error } = useMorningBriefArchive();
+  const todayDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
-  const items = useMemo<MorningBriefArchiveItem[]>(() => {
-    const list = archive?.briefs ?? [];
-    return filterItems(list, filter);
-  }, [archive, filter]);
+  const brief = today?.brief;
+  const archiveItems = useMemo<MorningBriefArchiveItem[]>(
+    () => archive?.briefs ?? [],
+    [archive],
+  );
 
   return (
     <ErrorBoundary>
-      <div className="mx-auto max-w-3xl space-y-6 pb-8">
-        {/* Header */}
-        <header className="flex items-center gap-3">
-          <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500"
-            aria-hidden
-          >
-            <Sunrise className="h-5 w-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold text-slate-900">
-              {t("morningBrief.title")}
+      <div className="space-y-10">
+        {/* ── Header ── */}
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-2">
+              <Sunrise className="h-3 w-3" />
+              Morning brief · {todayDate}
+            </div>
+            <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
+              Today at the desk
             </h1>
-            <p className="text-sm text-slate-500">
-              {t("morningBrief.archiveSubtitle")}
-            </p>
           </div>
+
+          <a
+            href="/samples/morning_brief_plus.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pq-ink-btn-bronze inline-flex items-center gap-1.5"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Download PDF
+          </a>
         </header>
 
-        {/* Disclaimer */}
         <DisclaimerBanner type="signal" />
 
-        {/* Today's brief (inline, no circular links) */}
-        <div>
-          <h2 className="mb-3 text-sm font-bold text-slate-900">
-            {t("morningBrief.today")}
-          </h2>
-          <TodayBriefSection />
-        </div>
-
-        {/* Error state */}
-        {error && !isLoading && (
-          <div className="sp-card p-6 text-center">
-            <p className="text-sm text-slate-500">
-              아카이브를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
-            </p>
-          </div>
-        )}
-
-        {/* Archive list */}
-        {!error && (
-          <section aria-labelledby="archive-heading">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2
-                id="archive-heading"
-                className="text-sm font-bold text-slate-900"
-              >
-                {t("morningBrief.archive")}
-              </h2>
-
-              {/* Filter pills */}
-              <div
-                className="flex gap-1.5 overflow-x-auto scrollbar-hide"
-                role="tablist"
-                aria-label="Date filter"
-              >
-                {FILTERS.map((f) => {
-                  const active = filter === f.key;
-                  return (
-                    <button
-                      key={f.key}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setFilter(f.key)}
-                      className={cn(
-                        "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                        active
-                          ? "bg-slate-900 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200",
-                      )}
-                    >
-                      {t(f.labelKey)}
-                    </button>
-                  );
-                })}
-              </div>
+        {/* ── Overnight 3-up: Asia / Europe / US ── */}
+        <section>
+          <h2 className="pq-ink-h2 mb-4">Overnight</h2>
+          {todayLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-32 rounded-[2px] bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] animate-pulse"
+                />
+              ))}
             </div>
+          ) : brief ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <IndexTile
+                region="Asia"
+                label="KOSPI"
+                data={brief.market_summary.kospi}
+              />
+              <IndexTile
+                region="US pre-market"
+                label="S&P 500"
+                data={brief.market_summary.sp500}
+              />
+              <IndexTile
+                region="US pre-market"
+                label="NASDAQ"
+                data={brief.market_summary.nasdaq}
+              />
+            </div>
+          ) : (
+            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-8 rounded-[2px] text-center text-sm text-[rgba(245,240,232,0.5)]">
+              Today's brief is being assembled. Check back shortly.
+            </div>
+          )}
+        </section>
 
-            {isLoading ? (
-              <div className="space-y-3">
-                <CardSkeleton />
-                <CardSkeleton />
-                <CardSkeleton />
-              </div>
-            ) : items.length === 0 ? (
-              <EmptyArchiveState />
-            ) : (
-              <div className="space-y-3">
-                {items.map((item) => (
-                  <ArchiveCard key={item.date} item={item} />
-                ))}
-              </div>
-            )}
+        {/* ── Macro strip ── */}
+        <section>
+          <h2 className="pq-ink-h2 mb-4">Cross-asset</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <MacroTile label="US 10Y" value="—" />
+            <MacroTile label="VIX" value="—" />
+            <MacroTile label="USD/KRW" value="—" />
+            <MacroTile label="Gold" value="—" />
+            <MacroTile label="WTI" value="—" />
+          </div>
+          <p className="mt-3 text-xs text-[rgba(245,240,232,0.4)]">
+            Values stream from the macro tape at 9:00 KST.
+          </p>
+        </section>
+
+        {/* ── Today's insight ── */}
+        {brief?.insight && (
+          <section>
+            <h2 className="pq-ink-h2 mb-4">Desk note</h2>
+            <div className="bg-[rgba(255,255,255,0.02)] border-l-2 border-[var(--pq-bronze)] px-5 py-4">
+              <p className="text-sm text-[rgba(245,240,232,0.85)] leading-relaxed flex gap-3">
+                <Sparkles className="mt-0.5 h-4 w-4 text-[var(--pq-bronze)] shrink-0" />
+                <span>{brief.insight}</span>
+              </p>
+            </div>
           </section>
         )}
 
-        {/* Footer CTA */}
-        <div className="pt-2 text-center">
-          <Link
-            href="/settings"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-accent transition-colors"
-          >
-            <span>알림 설정 관리</span>
-            <ArrowRight className="h-3 w-3" />
-          </Link>
-        </div>
+        {/* ── Earnings today ── */}
+        {brief?.events && brief.events.length > 0 && (
+          <section>
+            <h2 className="pq-ink-h2 mb-4">Earnings &amp; events today</h2>
+            <ul className="space-y-2">
+              {brief.events.map((e, i) => (
+                <li
+                  key={`${e.ticker}-${i}`}
+                  className="flex items-start gap-3 bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-4 rounded-[2px]"
+                >
+                  <span className="mt-1 h-1 w-1 rounded-full bg-[var(--pq-bronze)] shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-serif italic text-base text-[var(--pq-ivory)]">
+                        {e.name || e.ticker}
+                      </span>
+                      <span className="font-mono text-[10px] text-[rgba(245,240,232,0.4)]">
+                        {e.ticker}
+                      </span>
+                      {e.event_time && (
+                        <span className="text-xs text-[rgba(245,240,232,0.5)]">
+                          · {e.event_time}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-xs text-[rgba(245,240,232,0.6)]">
+                      {e.description}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* ── Archive ── */}
+        {archiveItems.length > 0 && (
+          <section>
+            <h2 className="pq-ink-h2 mb-4">Archive</h2>
+            <div className="space-y-2">
+              {archiveItems.slice(0, 14).map((item) => (
+                <ArchiveRow key={item.date} item={item} />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </ErrorBoundary>
   );

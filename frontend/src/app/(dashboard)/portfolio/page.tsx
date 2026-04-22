@@ -14,7 +14,6 @@ import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { TerminalSidebar } from "@/components/layout/terminal-sidebar";
 import { AddPositionModal } from "@/components/portfolio/add-position-modal";
 import { TradeModal } from "@/components/portfolio/trade-modal";
 import { MOCK_POSITIONS, MOCK_TRADES } from "@/components/portfolio/mock-data";
@@ -140,7 +139,7 @@ export default function PortfolioPage() {
 
   if (posLoading && showSkeleton) {
     return (
-      <div className="pq-ink-card animate-pulse">
+      <div className="animate-pulse">
         <div className="h-4 w-40 bg-white/10 rounded-sm" />
         <div className="mt-6 h-10 w-56 bg-white/10 rounded-sm" />
         <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -157,19 +156,15 @@ export default function PortfolioPage() {
 
   return (
     <ErrorBoundary>
-      <div className="pq-ink-card">
-        {/* Terminal header row */}
-        <header className="mb-8 flex items-center justify-between gap-4">
-          <span className="pq-ink-kicker">PIVOXQUANT · PORTFOLIO</span>
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-            {weekTag()}
-          </span>
-        </header>
+      {/* Terminal header row */}
+      <header className="mb-8 flex items-center justify-between gap-4">
+        <span className="pq-ink-kicker">PIVOXQUANT · PORTFOLIO</span>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          {weekTag()}
+        </span>
+      </header>
 
-        <div className="flex gap-8 md:gap-10">
-          <TerminalSidebar active="portfolio" />
-          <div className="flex-1 min-w-0">
-        {/* Title + CTA */}
+      {/* Title + CTA */}
         <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="pq-ink-h1">Portfolio</h1>
@@ -366,33 +361,30 @@ export default function PortfolioPage() {
           </div>
         </section>
 
-        {/* Disclaimer inside card, muted */}
-        <div className="mt-12 border-t border-[rgba(245,240,232,0.1)] pt-6">
-          <div className="text-[rgba(245,240,232,0.7)]">
-            <DisclaimerBanner type="signal" />
-          </div>
-          <p className="mt-3 text-[10px] italic text-[rgba(245,240,232,0.4)]">
-            User-entered record only. Not investment advice.
-          </p>
+      {/* Disclaimer */}
+      <div className="mt-12 border-t border-[rgba(245,240,232,0.1)] pt-6">
+        <div className="text-[rgba(245,240,232,0.7)]">
+          <DisclaimerBanner type="signal" />
         </div>
-          </div>
-        </div>
-
-        {/* Modals — overlaid, retain existing ivory styling */}
-        <AddPositionModal
-          open={addOpen}
-          onClose={() => setAddOpen(false)}
-          onSuccess={refreshAll}
-        />
-        <TradeModal
-          key={targetPosition?.id ?? "none"}
-          open={tradeAction !== null && targetPosition !== null}
-          onClose={closeTrade}
-          action={tradeAction ?? "buy"}
-          position={targetPosition}
-          onSuccess={refreshAll}
-        />
+        <p className="mt-3 text-[10px] italic text-[rgba(245,240,232,0.4)]">
+          User-entered record only. Not investment advice.
+        </p>
       </div>
+
+      {/* Modals — overlaid, retain existing ivory styling */}
+      <AddPositionModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSuccess={refreshAll}
+      />
+      <TradeModal
+        key={targetPosition?.id ?? "none"}
+        open={tradeAction !== null && targetPosition !== null}
+        onClose={closeTrade}
+        action={tradeAction ?? "buy"}
+        position={targetPosition}
+        onSuccess={refreshAll}
+      />
     </ErrorBoundary>
   );
 }

@@ -4,21 +4,24 @@
  * Market — Vantablack ink terminal card on ivory shell.
  *
  * Sections:
- *   - Tab switcher (US / KR) — Bronze active underline
- *   - Grid of inline IndexCard (level + 1D Δ + 52W range + 30-day sparkline)
- *   - KR tab: FX + derivatives summary
+ *   - Header (kicker + title + week tag)
+ *   - Region tabs (US / KR) — Bronze active underline
+ *   - Overview strip — 5-index mini-sparkline summary row
+ *   - IndexCard grid (clickable → /detail/{ticker})
+ *   - KR: Derivatives block
+ *   - Economic Calendar + News feed placeholders
  *   - DisclaimerBanner
  *
  * Neutral observation language only.
  */
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { apiFetch } from "@/lib/api";
-import { MARKET_INDICES } from "@/lib/endpoints";
+import { MARKET_INDICES, API } from "@/lib/endpoints";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { TerminalSidebar } from "@/components/layout/terminal-sidebar";
 import { fmtPct } from "@/lib/format";
 import {
   US_INDICES,
@@ -26,6 +29,7 @@ import {
   KR_DERIVATIVES,
 } from "@/components/market/mock-indices";
 import type { IndexQuote } from "@/components/market/index-card";
+import { CalendarDays, Newspaper } from "lucide-react";
 
 type MarketTab = "US" | "KR";
 
@@ -72,12 +76,21 @@ function fmtLevel(v: number, kind: IndexQuote["format"] = "en") {
 }
 
 export default function MarketPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<MarketTab>("US");
   const region = tab === "US" ? "us" : "kr";
+
   const { data, isLoading } = useSWR<BackendIndex[]>(
     `${MARKET_INDICES}?region=${region}`,
     fetcher,
     { keepPreviousData: true },
+  );
+
+  // Economic calendar (earnings endpoint as proxy)
+  const { data: earningsData } = useSWR<{ earnings?: Array<{ ticker: string; name?: string; date: string }> }>(
+    API.market.earnings,
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 60_000 },
   );
 
   const quotes: IndexQuote[] = useMemo(() => {
@@ -85,97 +98,244 @@ export default function MarketPage() {
     return tab === "US" ? US_INDICES : KR_INDICES;
   }, [data, tab]);
 
+  const handleIndexClick = (symbol: string) => {
+    router.push(`/detail/${symbol}`);
+  };
+
+  const upcomingEarnings = (earningsData?.earnings ?? []).slice(0, 6);
+
   return (
     <ErrorBoundary>
-      <div className="pq-ink-card">
-        <header className="mb-8 flex items-center justify-between gap-4">
-          <span className="pq-ink-kicker">PIVOXQUANT · MARKET</span>
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-            {weekTag()}
-          </span>
-        </header>
-
-        <div className="flex gap-8 md:gap-10">
-          <TerminalSidebar active="market" />
-          <div className="flex-1 min-w-0">
-        <div className="mb-10">
-          <h1 className="pq-ink-h1">Indices Board</h1>
+      <header className="mb-8 flex items-end justify-between gap-4">
+        <div>
+          <div className="pq-ink-kicker">MARKET · 2026 · {weekTag().split("·")[1]?.trim() ?? ""}</div>
+          <h1 className="pq-ink-h1 mt-2">Indices Board</h1>
           <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
             Major index levels across US and Korean markets — informational only.
           </p>
         </div>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          {weekTag()}
+        </span>
+      </header>
 
-        {/* Tabs */}
-        <div className="pq-ink-tabs mb-8">
-          {(["US", "KR"] as MarketTab[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              data-active={tab === t}
-              className="pq-ink-tab"
-            >
-              {t === "US" ? "United States" : "Korea"}
-            </button>
-          ))}
-        </div>
+      {/* Region tabs */}
+      <div className="pq-ink-tabs mb-8">
+        {(["US", "KR"] as MarketTab[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            data-active={tab === t}
+            className="pq-ink-tab"
+          >
+            {t === "US" ? "United States" : "Korea"}
+          </button>
+        ))}
+      </div>
 
-        {/* Index grid */}
-        <section
-          aria-label={`${tab} indices`}
-          aria-busy={isLoading}
-          className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {quotes.map((q) => (
-            <IndexCardInk key={q.symbol} quote={q} />
-          ))}
+      {/* Overview strip — mini sparklines */}
+      <section
+        aria-label="Overview strip"
+        className="mb-10 grid grid-cols-2 gap-4 border-y border-[rgba(245,240,232,0.1)] py-5 sm:grid-cols-3 lg:grid-cols-5"
+      >
+        {quotes.slice(0, 5).map((q) => (
+          <OverviewMini key={q.symbol} quote={q} onClick={() => handleIndexClick(q.symbol)} />
+        ))}
+      </section>
+
+      {/* Index grid */}
+      <section
+        aria-label={`${tab} indices`}
+        aria-busy={isLoading}
+        className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        {quotes.map((q) => (
+          <IndexCardInk
+            key={q.symbol}
+            quote={q}
+            onClick={() => handleIndexClick(q.symbol)}
+          />
+        ))}
+      </section>
+
+      {tab === "KR" && (
+        <section className="mb-12">
+          <div className="border-t border-[rgba(245,240,232,0.12)] pt-4">
+            <div className="pq-ink-label">Derivatives</div>
+            <h2 className="pq-ink-h2 mt-1">Domestic Futures &amp; Options</h2>
+            <p className="mt-1 text-[12px] text-[rgba(245,240,232,0.55)]">
+              KOSPI 200 front-month summary.
+            </p>
+          </div>
+          <ul className="mt-4 divide-y divide-[rgba(245,240,232,0.08)]">
+            {KR_DERIVATIVES.map((row) => (
+              <li
+                key={row.label}
+                className="grid grid-cols-[1fr_auto_auto] items-baseline gap-4 py-3"
+              >
+                <span className="text-[13px] text-[rgba(245,240,232,0.8)] truncate">{row.label}</span>
+                <span className="font-mono text-[15px] tabular-nums text-[var(--pq-ivory)]">
+                  {row.value}
+                </span>
+                <span className="font-mono text-[11px] tabular-nums text-[rgba(245,240,232,0.5)]">
+                  {row.note}
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
+      )}
 
-        {tab === "KR" && (
-          <section className="mb-12">
-            <div className="border-t border-[rgba(245,240,232,0.12)] pt-4">
-              <div className="pq-ink-label">Derivatives</div>
-              <h2 className="pq-ink-h2 mt-1">Domestic Futures &amp; Options</h2>
-              <p className="mt-1 text-[12px] text-[rgba(245,240,232,0.55)]">
-                KOSPI 200 front-month summary.
-              </p>
+      {/* Calendar + News strip */}
+      <section className="mb-10 grid grid-cols-1 gap-8 lg:grid-cols-2">
+        {/* Economic calendar */}
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.3} />
+            <div>
+              <div className="pq-ink-label">This Week</div>
+              <h2 className="pq-ink-h2 mt-0.5">Earnings Calendar</h2>
             </div>
-            <ul className="mt-4 divide-y divide-[rgba(245,240,232,0.08)]">
-              {KR_DERIVATIVES.map((row) => (
-                <li
-                  key={row.label}
-                  className="grid grid-cols-[1fr_auto_auto] items-baseline gap-4 py-3"
+          </div>
+          {upcomingEarnings.length === 0 ? (
+            <div className="border-t border-[rgba(245,240,232,0.1)] py-8 text-center font-serif italic text-[12px] text-[rgba(245,240,232,0.4)]">
+              No scheduled events in the window.
+            </div>
+          ) : (
+            <div className="border-t border-[rgba(245,240,232,0.1)]">
+              {upcomingEarnings.map((e, i) => (
+                <button
+                  key={`${e.ticker}-${i}`}
+                  type="button"
+                  onClick={() => router.push(`/detail/${e.ticker}`)}
+                  className="grid w-full grid-cols-[auto_1fr_auto] items-baseline gap-3 border-b border-[rgba(245,240,232,0.06)] px-2 py-3 text-left transition-colors hover:bg-[rgba(245,240,232,0.03)]"
                 >
-                  <span className="text-[13px] text-[rgba(245,240,232,0.8)] truncate">{row.label}</span>
-                  <span className="font-mono text-[15px] tabular-nums text-[var(--pq-ivory)]">
-                    {row.value}
+                  <span className="font-mono text-[11px] tabular-nums text-[var(--pq-bronze)]">
+                    {new Date(e.date).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </span>
-                  <span className="font-mono text-[11px] tabular-nums text-[rgba(245,240,232,0.5)]">
-                    {row.note}
+                  <span className="truncate font-serif text-[13px] text-[var(--pq-ivory)]">
+                    {e.name || e.ticker}
                   </span>
-                </li>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.45)]">
+                    {e.ticker}
+                  </span>
+                </button>
               ))}
-            </ul>
-          </section>
-        )}
-
-        <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
-          <DisclaimerBanner type="signal" />
+            </div>
+          )}
         </div>
+
+        {/* News feed placeholder */}
+        <div>
+          <div className="mb-3 flex items-center gap-2">
+            <Newspaper className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.3} />
+            <div>
+              <div className="pq-ink-label">Market Pulse</div>
+              <h2 className="pq-ink-h2 mt-0.5">Recent Observations</h2>
+            </div>
+          </div>
+          <div className="border-t border-[rgba(245,240,232,0.1)]">
+            {[
+              { time: "08:42", text: "VIX closed below 15 for the third consecutive session." },
+              { time: "07:18", text: "Treasury 10Y yield eased 4bp against a softer CPI print." },
+              { time: "06:05", text: "KRW/USD drifted within its 90-day band at 1,355." },
+            ].map((row) => (
+              <div
+                key={row.time}
+                className="grid grid-cols-[auto_1fr] items-baseline gap-3 border-b border-[rgba(245,240,232,0.06)] py-3"
+              >
+                <span className="font-mono text-[11px] tabular-nums text-[var(--pq-bronze)]">
+                  {row.time}
+                </span>
+                <p className="font-serif italic text-[13px] leading-relaxed text-[rgba(245,240,232,0.75)]">
+                  {row.text}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
+      </section>
+
+      <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
+        <DisclaimerBanner type="signal" />
       </div>
     </ErrorBoundary>
   );
 }
 
+/* ── mini overview card ── */
+
+function OverviewMini({ quote, onClick }: { quote: IndexQuote; onClick: () => void }) {
+  const isPositive = quote.changePct >= 0;
+  const w = 80;
+  const h = 22;
+  const pad = 1;
+  let pts = "";
+  if (quote.spark && quote.spark.length > 1) {
+    const lo = Math.min(...quote.spark);
+    const hi = Math.max(...quote.spark);
+    const range = hi - lo || 1;
+    const step = (w - pad * 2) / (quote.spark.length - 1);
+    pts = quote.spark
+      .map((v, i) => {
+        const x = pad + i * step;
+        const y = pad + ((hi - v) / range) * (h - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-3 border-l-[2px] border-transparent px-2 py-1 text-left transition-colors hover:border-[var(--pq-bronze)]"
+    >
+      <div className="min-w-0 flex-1">
+        <div className="pq-ink-label truncate" style={{ fontSize: "9px" }}>
+          {quote.name}
+        </div>
+        <div className="mt-0.5 font-mono text-[12px] tabular-nums text-[var(--pq-ivory)]">
+          {fmtLevel(quote.level, quote.format)}
+        </div>
+      </div>
+      <div className="text-right">
+        {pts ? (
+          <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} preserveAspectRatio="none">
+            <polyline
+              points={pts}
+              fill="none"
+              stroke={isPositive ? "#7db487" : "#d18888"}
+              strokeWidth="1"
+            />
+          </svg>
+        ) : null}
+        <div
+          className="mt-0.5 font-mono text-[10px] tabular-nums"
+          style={{ color: isPositive ? "#7db487" : "#d18888" }}
+        >
+          {fmtPct(quote.changePct)}
+        </div>
+      </div>
+    </button>
+  );
+}
+
 /* ── inline ink index card ── */
 
-function IndexCardInk({ quote }: { quote: IndexQuote }) {
+function IndexCardInk({
+  quote,
+  onClick,
+}: {
+  quote: IndexQuote;
+  onClick: () => void;
+}) {
   const { name, symbol, level, changePct, weekHigh52, weekLow52, spark, format = "en", unit } = quote;
   const isPositive = changePct >= 0;
 
-  // Sparkline
   const w = 220;
   const h = 40;
   const pad = 2;
@@ -194,13 +354,17 @@ function IndexCardInk({ quote }: { quote: IndexQuote }) {
       .join(" ");
   }
 
-  // 52W range position (0..1)
-  const rangePct = weekHigh52 > weekLow52
-    ? Math.max(0, Math.min(1, (level - weekLow52) / (weekHigh52 - weekLow52)))
-    : 0.5;
+  const rangePct =
+    weekHigh52 > weekLow52
+      ? Math.max(0, Math.min(1, (level - weekLow52) / (weekHigh52 - weekLow52)))
+      : 0.5;
 
   return (
-    <div className="pq-ink-stat">
+    <button
+      type="button"
+      onClick={onClick}
+      className="pq-ink-stat w-full text-left transition-colors hover:border-[var(--pq-bronze)]"
+    >
       <div className="flex items-baseline justify-between">
         <div>
           <div className="pq-ink-label">{name}</div>
@@ -213,14 +377,18 @@ function IndexCardInk({ quote }: { quote: IndexQuote }) {
       <div className="mt-3 flex items-baseline justify-between">
         <div className="font-serif italic text-[26px] tabular-nums text-[var(--pq-ivory)]">
           {fmtLevel(level, format)}
-          {unit ? <span className="ml-1 text-[11px] text-[rgba(245,240,232,0.5)]">{unit}</span> : null}
+          {unit ? (
+            <span className="ml-1 text-[11px] text-[rgba(245,240,232,0.5)]">{unit}</span>
+          ) : null}
         </div>
-        <div className={"font-mono text-[12px] " + (isPositive ? "text-[#7db487]" : "text-[#d18888]")}>
+        <div
+          className="font-mono text-[12px]"
+          style={{ color: isPositive ? "#7db487" : "#d18888" }}
+        >
           {fmtPct(changePct)}
         </div>
       </div>
 
-      {/* Sparkline */}
       {pathPts ? (
         <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 h-[36px] w-full" preserveAspectRatio="none">
           <polyline
@@ -232,7 +400,6 @@ function IndexCardInk({ quote }: { quote: IndexQuote }) {
         </svg>
       ) : null}
 
-      {/* 52W range bar */}
       <div className="mt-3">
         <div className="relative h-[3px] bg-[rgba(245,240,232,0.08)]">
           <div
@@ -246,6 +413,6 @@ function IndexCardInk({ quote }: { quote: IndexQuote }) {
           <span>{fmtLevel(weekHigh52, format)}</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }

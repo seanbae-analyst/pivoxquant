@@ -1,24 +1,31 @@
 "use client";
 
+/**
+ * Autotrade — Vantablack ink engine console.
+ *
+ * Paper execution only. Uses /api/autotrade/* endpoints:
+ *   status, start, stop, pending, approve/:id, reject/:id, sell-all (kill switch).
+ *
+ * Language is strictly neutral: "paper execution", "observed thresholds",
+ * "recorded order" — no advice / recommendation wording.
+ */
+
 import { useState, useCallback } from "react";
 import useSWR from "swr";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { TierGate } from "@/components/ui/tier-gate";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { EmptyState } from "@/components/ui/empty-state";
 import {
-  Zap,
+  Bot,
   Play,
   Square,
-  Clock,
+  AlertTriangle,
   CheckCircle2,
   XCircle,
-  ListChecks,
-  AlertTriangle,
+  Clock,
+  ShieldAlert,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -34,7 +41,6 @@ interface AutoTradeStatus {
 interface PendingTrade {
   id: string;
   ticker: string;
-  /** Company display name. Backend guarantees non-empty (falls back to ticker). */
   name?: string;
   action: string;
   shares: number;
@@ -47,9 +53,7 @@ interface PendingTrade {
 
 interface PendingResponse {
   ok?: boolean;
-  /** Canonical field. Backend returns `pending` — see routes/autotrade.py. */
   pending?: PendingTrade[];
-  /** Legacy alias kept for forward-compat in case an older handler is reintroduced. */
   trades?: PendingTrade[];
 }
 
@@ -61,9 +65,27 @@ const fetcher = async (url: string) => {
   return r.json();
 };
 
-/* ── Pending Trade Card ── */
+function weekTag(): string {
+  const d = new Date();
+  const first = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d.getTime() - first.getTime()) / 86400000);
+  const w = Math.ceil((days + first.getDay() + 1) / 7);
+  return `${d.getFullYear()} · W${String(w).padStart(2, "0")}`;
+}
 
-function PendingTradeCard({
+/* ── Circuit breakers (static ladder) ── */
+
+const CIRCUIT_BREAKERS = [
+  { name: "Daily Loss", threshold: "-3.0%", status: "nominal" as const },
+  { name: "Portfolio VaR 1D", threshold: "-5.0%", status: "nominal" as const },
+  { name: "Correlation Index", threshold: "0.85", status: "nominal" as const },
+  { name: "VIX Regime", threshold: "> 30", status: "nominal" as const },
+  { name: "Tail Ratio", threshold: "< 0.8", status: "nominal" as const },
+];
+
+/* ── Pending trade row ── */
+
+function PendingTradeRow({
   trade,
   onApprove,
   onReject,
@@ -72,74 +94,68 @@ function PendingTradeCard({
   onApprove: () => void;
   onReject: () => void;
 }) {
+  const isBuy = trade.action?.toLowerCase() === "buy";
+  const sign = trade.is_korean || trade.currency === "KRW" ? "₩" : "$";
   return (
-    <div className="sp-card p-4">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="min-w-0">
-          {/* Name (big) + ticker (small) — name is backend-guaranteed
-              (falls back to ticker when registry can't resolve). */}
-          <div className="flex items-baseline gap-2">
-            <h3 className="truncate text-base font-bold text-slate-900">
-              {trade.name || trade.ticker}
-            </h3>
-            <span className="shrink-0 font-mono text-[11px] text-slate-400">
-              {trade.ticker}
-            </span>
-          </div>
-          <div className="mt-1 flex items-center gap-2">
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                trade.action?.toLowerCase() === "buy"
-                  ? "signal-positive"
-                  : "signal-negative",
-              )}
-            >
-              {trade.action?.toLowerCase() === "buy" ? "매수 주문 기록" : "매도 주문 기록"}
-            </span>
-            <span className="text-xs text-slate-500">
-              {trade?.shares ?? 0} shares @{" "}
-              {trade.is_korean || trade.currency === "KRW" ? "₩" : "$"}
-              {trade?.price?.toLocaleString(undefined, {
-                maximumFractionDigits: 2,
-              }) ?? "\u2014"}
-            </span>
-          </div>
+    <div className="grid grid-cols-[1.4fr_auto_auto_auto] items-center gap-4 border-b border-[rgba(245,240,232,0.06)] px-4 py-3">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-serif text-[14px] text-[var(--pq-ivory)]">
+            {trade.name || trade.ticker}
+          </span>
+          <span
+            className={
+              "pq-ink-pill " +
+              (isBuy ? "pq-ink-pill--pos" : "pq-ink-pill--neg")
+            }
+          >
+            {isBuy ? "Entry order" : "Exit order"}
+          </span>
         </div>
-        <span className="text-[11px] text-slate-400 shrink-0">
-          {new Date(trade.created_at).toLocaleTimeString()}
-        </span>
+        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.45)]">
+          {trade.ticker} · {trade?.shares ?? 0} shares @ {sign}
+          {trade?.price?.toLocaleString(undefined, { maximumFractionDigits: 2 }) ??
+            "—"}
+        </div>
+        {trade.reason ? (
+          <p className="mt-1 font-serif italic text-[12px] text-[rgba(245,240,232,0.55)]">
+            Observed threshold: {trade.reason}
+          </p>
+        ) : null}
       </div>
 
-      <p className="text-xs text-slate-600 mb-3">{trade.reason}</p>
+      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.4)]">
+        {new Date(trade.created_at).toLocaleTimeString()}
+      </span>
 
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onApprove}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-full bg-emerald-500 px-3 py-2.5 text-xs font-semibold text-white transition-all hover:bg-emerald-600 active:scale-[0.97]"
-        >
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          승인
-        </button>
-        <button
-          type="button"
-          onClick={onReject}
-          className="flex-1 flex items-center justify-center gap-1.5 rounded-full border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 transition-all hover:bg-slate-50 active:scale-[0.97]"
-        >
-          <XCircle className="h-3.5 w-3.5" />
-          거부
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onApprove}
+        className="pq-ink-btn-bronze"
+        style={{ height: 32, padding: "0 14px" }}
+      >
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        <span>Log</span>
+      </button>
+      <button
+        type="button"
+        onClick={onReject}
+        className="pq-ink-btn-ghost"
+        style={{ height: 32, padding: "0 14px" }}
+      >
+        <XCircle className="h-3.5 w-3.5" />
+        <span>Skip</span>
+      </button>
     </div>
   );
 }
 
-/* ── Inner Content (behind TierGate) ── */
+/* ── Content ── */
 
 function AutoTradeContent() {
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
+  const [killing, setKilling] = useState(false);
 
   const {
     data: status,
@@ -152,15 +168,14 @@ function AutoTradeContent() {
 
   const {
     data: pendingData,
-    isLoading: pendingLoading,
     mutate: mutatePending,
   } = useSWR<PendingResponse>(API.autotrade.pending, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 10_000,
   });
 
-  // Backend returns `pending`; keep `trades` as a forward-compat fallback.
   const pendingTrades = pendingData?.pending ?? pendingData?.trades ?? [];
+  const isRunning = status?.running ?? false;
 
   const handleStart = useCallback(async () => {
     setStarting(true);
@@ -189,6 +204,23 @@ function AutoTradeContent() {
     }
   }, [mutateStatus]);
 
+  const handleKill = useCallback(async () => {
+    const confirmed = window.confirm(
+      "Kill Switch: flatten all paper positions and stop the engine?\n\nThis will log paper exit orders for every open position and halt automation.",
+    );
+    if (!confirmed) return;
+    setKilling(true);
+    try {
+      await apiFetch(API.autotrade.sellAll, { method: "POST" });
+      await apiFetch(API.autotrade.stop, { method: "POST" });
+      await Promise.all([mutateStatus(), mutatePending()]);
+    } catch {
+      // silent
+    } finally {
+      setKilling(false);
+    }
+  }, [mutateStatus, mutatePending]);
+
   const handleApprove = useCallback(
     async (tradeId: string) => {
       try {
@@ -213,147 +245,172 @@ function AutoTradeContent() {
     [mutatePending],
   );
 
-  const isRunning = status?.running ?? false;
-
   return (
-    <div className="space-y-5">
-      {/* ── Status Card ── */}
-      {statusLoading ? (
-        <CardSkeleton />
-      ) : (
-        <div className="sp-card p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-xl",
-                isRunning ? "bg-emerald-100" : "bg-slate-100",
-              )}
-            >
-              <Zap
-                className={cn(
-                  "h-5 w-5",
-                  isRunning ? "text-emerald-600" : "text-slate-400",
-                )}
-              />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-slate-900">AutoTrade</p>
-                <div
-                  className={cn(
-                    "status-dot",
-                    isRunning ? "active" : "inactive",
-                  )}
-                />
-                <span
-                  className={cn(
-                    "text-xs font-semibold",
-                    isRunning ? "text-emerald-600" : "text-slate-400",
-                  )}
-                >
-                  {isRunning ? "실행 중" : "미실행"}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {status?.mode === "paper"
-                  ? "모의투자 모드 (시뮬레이션)"
-                  : status?.mode === "live"
-                    ? "실전투자 모드"
-                    : "자동매매 엔진"}
-              </p>
-            </div>
-          </div>
-
-          {/* Stats row */}
-          {status && (
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[11px] text-slate-500 mb-0.5">
-                  오늘 체결
-                </p>
-                <p className="text-lg font-bold tabular-nums text-slate-900">
-                  {status.trades_today ?? 0}
-                </p>
-              </div>
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[11px] text-slate-500 mb-0.5">
-                  승인 대기
-                </p>
-                <p className="text-lg font-bold tabular-nums text-slate-900">
-                  {status.pending_count ?? pendingTrades.length}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-3">
-            {!isRunning ? (
-              <button
-                type="button"
-                onClick={handleStart}
-                disabled={starting}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]",
-                  "bg-slate-900 text-white hover:bg-slate-800",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                )}
-              >
-                <Play className="h-4 w-4" />
-                {starting ? "시작 중..." : "모의투자 시작"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleStop}
-                disabled={stopping}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-full border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-[0.97]",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                )}
-              >
-                <Square className="h-4 w-4" />
-                {stopping ? "중지 중..." : "자동매매 중지"}
-              </button>
-            )}
-          </div>
-
-          {status?.last_run && (
-            <p className="text-[11px] text-slate-400 mt-3 flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              마지막 실행: {new Date(status.last_run).toLocaleString("ko-KR")}
-            </p>
-          )}
+    <>
+      <header className="mb-8 flex items-end justify-between gap-4">
+        <div>
+          <div className="pq-ink-kicker">AUTOMATION · 2026 · {weekTag().split("·")[1]?.trim() ?? ""}</div>
+          <h1 className="pq-ink-h1 mt-2">Paper Execution Engine</h1>
+          <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
+            Algorithmic paper execution against observed thresholds. No live brokerage routing.
+          </p>
         </div>
+
+        <button
+          type="button"
+          onClick={handleKill}
+          disabled={killing}
+          className="inline-flex items-center gap-1.5 px-4 text-[11px] uppercase tracking-[0.18em] font-medium"
+          style={{
+            height: 36,
+            background: "transparent",
+            color: "#d18888",
+            border: "0.5px solid rgba(209, 136, 136, 0.4)",
+            borderRadius: 2,
+          }}
+        >
+          <ShieldAlert className="h-4 w-4" />
+          <span>{killing ? "Halting…" : "Kill Switch"}</span>
+        </button>
+      </header>
+
+      {/* Paper mode banner */}
+      <div
+        className="mb-8 flex items-start gap-3 border px-4 py-3"
+        style={{
+          borderColor: "rgba(139, 111, 71, 0.35)",
+          background: "rgba(139, 111, 71, 0.06)",
+        }}
+      >
+        <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--pq-bronze)] mt-0.5" strokeWidth={1.4} />
+        <div>
+          <div className="pq-ink-label" style={{ color: "var(--pq-bronze)" }}>
+            Paper Mode Only
+          </div>
+          <p className="mt-1 font-serif italic text-[13px] leading-relaxed text-[rgba(245,240,232,0.7)]">
+            All automation runs against simulated fills. No real brokerage is connected.
+            Executions are logged as observations; no advice is provided.
+          </p>
+        </div>
+      </div>
+
+      {/* Status row */}
+      {statusLoading ? (
+        <div className="py-16 text-center font-serif italic text-[13px] text-[rgba(245,240,232,0.4)]">
+          Loading engine status…
+        </div>
+      ) : (
+        <section className="mb-10 grid grid-cols-1 gap-6 border-y border-[rgba(245,240,232,0.1)] py-6 md:grid-cols-4">
+          <div>
+            <div className="pq-ink-label">Engine</div>
+            <div className="mt-1 flex items-center gap-2 font-serif italic text-[22px] text-[var(--pq-ivory)]">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{
+                  background: isRunning ? "#7db487" : "rgba(245,240,232,0.3)",
+                }}
+              />
+              {isRunning ? "Running" : "Idle"}
+            </div>
+          </div>
+          <div>
+            <div className="pq-ink-label">Mode</div>
+            <div className="mt-1 font-serif italic text-[22px] text-[var(--pq-ivory)]">
+              {status?.mode === "paper" ? "Paper" : status?.mode ?? "Paper"}
+            </div>
+          </div>
+          <div>
+            <div className="pq-ink-label">Logged Today</div>
+            <div className="mt-1 font-serif italic text-[22px] tabular-nums text-[var(--pq-ivory)]">
+              {status?.trades_today ?? 0}
+            </div>
+          </div>
+          <div>
+            <div className="pq-ink-label">Pending</div>
+            <div className="mt-1 font-serif italic text-[22px] tabular-nums text-[var(--pq-ivory)]">
+              {status?.pending_count ?? pendingTrades.length}
+            </div>
+          </div>
+        </section>
       )}
 
-      {/* ── Pending Trades ── */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <ListChecks className="h-4 w-4 text-slate-400" />
-          <h2 className="text-base font-bold text-slate-900">대기 중인 매매</h2>
+      {/* Engine controls */}
+      <section className="mb-10 flex items-center gap-3">
+        {!isRunning ? (
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={starting}
+            className="pq-ink-btn-bronze disabled:opacity-40"
+          >
+            <Play className="h-4 w-4" />
+            <span>{starting ? "Starting…" : "Start Paper Engine"}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleStop}
+            disabled={stopping}
+            className="pq-ink-btn-ghost disabled:opacity-40"
+          >
+            <Square className="h-4 w-4" />
+            <span>{stopping ? "Stopping…" : "Stop Engine"}</span>
+          </button>
+        )}
+        {status?.last_run && (
+          <span className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.45)]">
+            <Clock className="h-3 w-3" />
+            Last run · {new Date(status.last_run).toLocaleString()}
+          </span>
+        )}
+      </section>
+
+      {/* Circuit Breakers */}
+      <section className="mb-10">
+        <div className="mb-3">
+          <div className="pq-ink-label">Circuit Breakers</div>
+          <h2 className="pq-ink-h2 mt-1">Five-Layer Risk Ladder</h2>
+        </div>
+        <div className="border-t border-[rgba(245,240,232,0.1)]">
+          {CIRCUIT_BREAKERS.map((b) => (
+            <div
+              key={b.name}
+              className="grid grid-cols-[1.5fr_auto_auto] items-center gap-4 border-b border-[rgba(245,240,232,0.06)] px-4 py-3"
+            >
+              <span className="font-serif text-[13px] text-[var(--pq-ivory)]">
+                {b.name}
+              </span>
+              <span className="font-mono text-[12px] tabular-nums text-[rgba(245,240,232,0.7)]">
+                {b.threshold}
+              </span>
+              <span className="pq-ink-pill pq-ink-pill--neu">Nominal</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pending trades */}
+      <section className="mb-10">
+        <div className="mb-3 flex items-baseline justify-between">
+          <div>
+            <div className="pq-ink-label">Pending Log</div>
+            <h2 className="pq-ink-h2 mt-1">Awaiting Confirmation</h2>
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+            {pendingTrades.length}
+          </span>
         </div>
 
-        {pendingLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <CardSkeleton key={i} />
-            ))}
+        {pendingTrades.length === 0 ? (
+          <div className="border-y border-[rgba(245,240,232,0.1)] py-10 text-center font-serif italic text-[13px] text-[rgba(245,240,232,0.4)]">
+            {isRunning
+              ? "Engine running. Observed orders will appear here for manual logging."
+              : "Start the engine to surface threshold-crossed orders for review."}
           </div>
-        ) : pendingTrades.length === 0 ? (
-          <EmptyState
-            icon={<ListChecks className="h-8 w-8" />}
-            title="대기 중인 매매 없음"
-            description={
-              isRunning
-                ? "자동매매 실행 중입니다. 신규 매매 신호가 여기에 표시됩니다."
-                : "자동매매를 시작하면 매매 신호를 확인할 수 있습니다."
-            }
-          />
         ) : (
-          <div className="space-y-3">
+          <div className="border-t border-[rgba(245,240,232,0.1)]">
             {pendingTrades.map((trade) => (
-              <PendingTradeCard
+              <PendingTradeRow
                 key={trade.id}
                 trade={trade}
                 onApprove={() => handleApprove(trade.id)}
@@ -362,55 +419,25 @@ function AutoTradeContent() {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* ── Warning ── */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <div className="flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-semibold text-amber-800 mb-1">
-              모의투자 먼저 권장
-            </p>
-            <p className="text-[11px] text-amber-700 leading-relaxed">
-              실전투자 전에 반드시 모의투자로 먼저 테스트하세요.
-              자동매매는 알고리즘 신호를 사용하며 수익을 보장하지 않습니다.
-              결과를 꼼꼼히 모니터링하세요.
-            </p>
-          </div>
-        </div>
+      {/* Disclaimer */}
+      <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
+        <DisclaimerBanner type="auto-trade" alwaysExpanded />
       </div>
-    </div>
+    </>
   );
 }
-
-/* ── Page ── */
 
 export default function AutoTradePage() {
   return (
     <ErrorBoundary>
-      <div className="mx-auto max-w-3xl space-y-5">
-        {/* ── Disclaimer ── */}
-        <DisclaimerBanner type="auto-trade" alwaysExpanded />
-
-        {/* ── Header ── */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-gradient">
-            <Zap className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">자동매매</h1>
-            <p className="text-sm text-slate-500">
-              퀀트 신호 기반 자동매매 엔진
-            </p>
-          </div>
-        </div>
-
-        {/* ── TierGate wraps content ── */}
-        <TierGate tier="premium">
-          <AutoTradeContent />
-        </TierGate>
-      </div>
+      <TierGate tier="premium">
+        <AutoTradeContent />
+      </TierGate>
     </ErrorBoundary>
   );
 }
+
+// Suppress unused warning for icon used in pill-era layouts.
+void Bot;
