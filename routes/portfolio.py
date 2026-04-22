@@ -9,8 +9,7 @@ from flask_login import current_user
 from extensions import db
 from models import Position, SignalCache, TradeHistory
 from security import trade_rate_limit
-from services.serializers import serialize_user
-from services import fx_service, cache_service, kr_stock_registry
+from services import fx_service, cache_service
 from services.name_resolver import resolve_stock_name
 from services.container import engine, fetcher, realtime
 from services.price_overlay import overlay_prices
@@ -914,7 +913,7 @@ def create_trade_alias():
 @portfolio_bp.route("/history")
 @api_auth
 def portfolio_history():
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timezone
     positions = Position.query.filter_by(user_id=current_user.id).all()
     if not positions:
         return jsonify({"data": []})

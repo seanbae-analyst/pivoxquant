@@ -55,7 +55,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from extensions import db
-from models import Artifact, InvestmentProfile, Position, TradeHistory, User
+from models import Artifact, Position, TradeHistory, User
 
 # Re-use the Self Audit aggregator — we wrap, not duplicate.
 from services.artifacts.self_audit_service import (

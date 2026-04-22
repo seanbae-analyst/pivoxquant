@@ -17,7 +17,7 @@ import logging
 from datetime import timedelta
 from functools import wraps
 
-from flask import request, jsonify, make_response, g, session
+from flask import request, jsonify, session
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address

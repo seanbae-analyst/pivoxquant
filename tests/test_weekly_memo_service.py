@@ -16,13 +16,12 @@ All external I/O (FRED, FMP, DataFetcher, email providers) is mocked.
 from __future__ import annotations
 
 import os
-from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from extensions import db
-from models import Artifact, Position, User
+from models import Artifact, User
 
 
 # ─── fixtures ────────────────────────────────────────────────────────────────

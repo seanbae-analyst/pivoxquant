@@ -23,7 +23,6 @@ import re
 import math
 
 import numpy as np
-import pandas as pd
 import pytest
 
 # ── Ensure project root is on sys.path ────────────────────────────────────────

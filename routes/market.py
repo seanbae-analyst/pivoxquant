@@ -9,7 +9,7 @@ from flask_login import current_user
 from extensions import db
 from models import Position, SignalCache
 from services import fx_service
-from services.container import engine, fetcher, realtime
+from services.container import fetcher, realtime
 from services.market_status import get_market_status
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth, legal_scrub_response

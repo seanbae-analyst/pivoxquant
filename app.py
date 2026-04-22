@@ -113,7 +113,7 @@ def create_app():
     login_manager.login_view = "index"
 
     # User loader
-    from models import User, Position, SignalCache, TradeHistory
+    from models import User, Position, TradeHistory
 
     @login_manager.user_loader
     def load_user(uid):

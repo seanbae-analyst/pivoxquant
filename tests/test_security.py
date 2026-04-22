@@ -3,7 +3,6 @@ tests/test_security.py — CSRF, Rate Limit, Auth, Injection guards
 ===================================================================
 These are P0 tests. A single failure here = real user data at risk.
 """
-import pytest
 
 
 # ── CSRF Protection (double-submit cookie) ──────────────────────────────────

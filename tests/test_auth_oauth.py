@@ -10,9 +10,7 @@ Background: previously redirect_uri was hard-coded to FRONTEND_URL, so a
 user on pivoxquant.vercel.app would have their Kakao/Google callback sent
 to pivoxquant.com — and if that domain's DNS was broken, the login 500'd.
 """
-import os
 
-import pytest
 
 from routes.auth import _resolve_frontend_url
 

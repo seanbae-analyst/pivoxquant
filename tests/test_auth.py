@@ -5,7 +5,6 @@ Registration, login, logout, session, CSRF cookie.
 
 Covers /api/auth/register, /api/auth/login, /api/auth/logout, /api/auth/me.
 """
-import pytest
 
 
 # ── Registration ────────────────────────────────────────────────────────────

@@ -6,11 +6,8 @@ Real-time momentum scanning + short-term technical analysis.
 import os
 import logging
 import threading
-import time
-import json
 import numpy as np
 from datetime import datetime, timedelta, timezone
-from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +172,7 @@ class DayTradeService:
 
         # 5. Quant Models on intraday data
         try:
-            from quant_models import MeanReversion, VolatilityRegime, RegimeSwitching
+            from quant_models import MeanReversion, RegimeSwitching
             mr = MeanReversion.analyze(closes)
             if mr:
                 z = mr["z_score"]

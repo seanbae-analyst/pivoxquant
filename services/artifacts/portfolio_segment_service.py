@@ -28,7 +28,6 @@ The disclaimer partial is included on page 4.
 from __future__ import annotations
 
 import logging
-import math
 import os
 import re
 from dataclasses import dataclass

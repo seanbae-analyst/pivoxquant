@@ -6,7 +6,7 @@ import time
 from urllib.parse import urlparse
 
 from authlib.integrations.flask_client import OAuth
-from flask import Blueprint, request, jsonify, redirect, session, url_for, abort, current_app
+from flask import Blueprint, request, jsonify, redirect, session, current_app
 from flask_login import login_user, logout_user, current_user
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
@@ -428,7 +428,7 @@ def kakao_callback():
         resp = oauth.kakao.get("v2/user/me")
         resp.raise_for_status()
         profile = resp.json()
-    except Exception as e:
+    except Exception:
         logger.exception("Kakao profile fetch error")
         return redirect(f"{origin}/login?error=kakao_failed")
 
@@ -525,7 +525,7 @@ def delete_account():
         logout_user()
 
         return jsonify({"ok": True, "message": "Account and all data deleted."})
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         logger.exception("Account deletion failed for user_id=%s", user_id)
         return jsonify({"error": "An internal error occurred. Please try again."}), 500

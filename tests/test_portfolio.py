@@ -7,9 +7,8 @@ analytics, history, capital.
 External APIs are mocked — no network calls.
 """
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 
 
 # ── GET /api/portfolio ──────────────────────────────────────────────────────
