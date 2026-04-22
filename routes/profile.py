@@ -7,7 +7,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import InvestmentProfile
-from models.investment_profile import calculate_profile_type, PROFILE_PRESETS
+from models.investment_profile import calculate_profile_type
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)

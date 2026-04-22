@@ -51,8 +51,6 @@ def test_crypto_empty_ciphertext_raises():
 @pytest.fixture
 def kis_user(app, make_user):
     """Create a user with an active KIS BrokerConnection containing encrypted creds."""
-    from extensions import db
-    from models.broker_connection import BrokerConnection
     from services.broker.user_kis_service import upsert_kis_connection
 
     user = make_user(email="kisuser@test.com")
@@ -197,7 +195,6 @@ def test_get_balance_and_positions(app, kis_user):
 
 
 def test_sync_to_db_inserts_and_updates(app, kis_user, add_position):
-    from extensions import db
     from models.position import Position
     from services.broker.user_kis_service import UserKISService
 

@@ -14,8 +14,6 @@ For existing databases, run:
 
 For new databases, db.create_all() creates the schema, then stamp this.
 """
-from alembic import op
-import sqlalchemy as sa
 
 revision = '001_initial'
 down_revision = None

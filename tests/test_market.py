@@ -4,10 +4,8 @@ tests/test_market.py — Market data routes
 /api/prices, /api/market/status, /api/market/overview, /api/chart/<ticker>,
 /api/profile/<ticker>. All upstream APIs (Alpaca, FMP, KIS) are mocked.
 """
-import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 
 
 class TestMarketStatus:

@@ -26,13 +26,13 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from flask import Blueprint, Response, abort, jsonify, request
 from flask_login import current_user, login_required
 
 from services.artifacts import sample_data
-from services.artifacts.sample_data import CATALOG, get_sample_data
+from services.artifacts.sample_data import CATALOG
 
 logger = logging.getLogger(__name__)
 

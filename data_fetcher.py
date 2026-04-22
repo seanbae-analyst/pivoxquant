@@ -1135,7 +1135,7 @@ Reply ONLY in this exact JSON format, nothing else:
                     break
                 # Move cursor to day before earliest record
                 if earliest_dt:
-                    from datetime import datetime as _dt_cls, timezone
+                    from datetime import datetime as _dt_cls
                     prev = _dt_cls.strptime(earliest_dt, "%Y%m%d") - timedelta(days=1)
                     cursor_end = prev.strftime("%Y%m%d")
 

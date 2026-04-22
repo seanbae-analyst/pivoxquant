@@ -11,7 +11,6 @@ import requests
 import threading
 import pandas as pd
 from datetime import datetime, timedelta
-from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 

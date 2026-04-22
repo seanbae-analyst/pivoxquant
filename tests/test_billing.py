@@ -8,7 +8,6 @@ All Stripe SDK calls are mocked. Verifies:
 """
 from unittest.mock import patch, MagicMock
 
-import pytest
 
 
 class TestCreateCheckout:

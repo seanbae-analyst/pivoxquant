@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from extensions import db
-from models import Artifact, Position, TradeHistory, User
+from models import Artifact, TradeHistory, User
 
 logger = logging.getLogger(__name__)
 

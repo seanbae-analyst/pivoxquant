@@ -21,14 +21,13 @@ mocked so the suite runs cold without any API keys.
 """
 from __future__ import annotations
 
-import os
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from extensions import db
-from models import Artifact, Position, User
+from models import Artifact, User
 
 
 # ─── fixtures ────────────────────────────────────────────────────────────────

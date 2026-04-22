@@ -1,6 +1,45 @@
-# PivoxQuant — 인수인계서 (2026-04-22 세션 종료)
+# PivoxQuant — 인수인계서 (2026-04-22 세션 종료 · v2)
 
-## 🎯 이 세션 핵심 성과
+## 🔥 2026-04-22 오후 마라톤 세션 (7 커밋)
+
+**Commit chain**: `11262ea → bf5ff8f → 66ee6e4 → 4d0fa6b → fd981af → 21b9a94 → 8d9f138`
+
+### 이번 세션에서 솔리드하게 확정된 것 (건들지 말 것)
+
+| 영역 | 커밋 | 확정 내용 |
+|---|---|---|
+| **Market API 실데이터** | [bf5ff8f](https://github.com/seanbae-analyst/pivoxquant/commit/bf5ff8f) | `/api/market/indices` ETF proxy (SPY/QQQ/DIA/IWM/VIXY) — S&P 708.53 live. 2024 mock fallback 제거. |
+| **/detail 페이지** | [66ee6e4](https://github.com/seanbae-analyst/pivoxquant/commit/66ee6e4) | Goldman IC 3-col editorial hero + StatRow fundamentals + day-grouped news + sentiment chips + `.pq-field-label` 0.12em (CURRENTprice 공백 문제 해결) |
+| **GitHub Actions Autopilot** | [4d0fa6b](https://github.com/seanbae-analyst/pivoxquant/commit/4d0fa6b) | api-health (15분 주기) / legal-guard (PR 게이트) / post-deploy-canary (main push) — MacBook 닫혀있어도 24/7 작동 |
+| **Dead briefing 제거** | [fd981af](https://github.com/seanbae-analyst/pivoxquant/commit/fd981af) | -663 lines (SENDGRID 미설정 + 잘못된 수신 이메일) |
+| **Performance** | [21b9a94](https://github.com/seanbae-analyst/pivoxquant/commit/21b9a94) | `/api/portfolio` 17.2s→1.8s (-89%), `/api/chart` 12.8s→1.2s (-90%). fx_service 비동기화 + FMP timeout 10s→5s + ETF ticker 정규화 + 6s hard deadline. |
+| **Wave 2 Combined** | [8d9f138](https://github.com/seanbae-analyst/pivoxquant/commit/8d9f138) | Risk 500→200(demo) / SSE 12→0/page / `/portfolio/summary` 5→1 / KRW `₩` prefix / legal EN scrub (9 regex) / fundamentals quote-fallback |
+
+### 자동 운영 시스템 (두 층)
+
+**Tier A — GitHub Actions (언제나 작동)**:
+- `.github/workflows/api-health.yml` — 15분 마다 `/api/health` + frontend 핑. 실패 시 GitHub Issue 자동 생성 + seanbae1521@gmail.com 이메일.
+- `.github/workflows/legal-guard.yml` — PR/push 시 FORBIDDEN 어휘 grep, DisclaimerBanner 커버리지, KIS/Alpaca 가드 회귀 검증.
+- `.github/workflows/post-deploy-canary.yml` — main push 후 120s 대기 → 프로덕션 smoke. 실패 시 P0 Issue 자동.
+
+**Tier B — Claude CC Scheduled Tasks (MacBook 열려있을 때만)**:
+- `pivoxquant-api-sentinel` (매 47분) — mock/NaN/stale 감지 + 자동 hotfix
+- `pivoxquant-bug-hunter-daily` (03:37 KST) — 12페이지 + 6종목 전수 + P0 auto-fix
+- `pivoxquant-legal-guard` (06:42 KST) — 법적 회귀 감지 + regex 추가
+
+자세한 내역: `/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/autopilot_log.md`
+
+### 알려진 한계 (다음 세션 TODO)
+1. **FMP 24h cache stale**: AAPL/TSLA/NVDA/MSFT P/E EPS 여전히 null. Fix 코드는 있으나 cache 가 빈 값으로 영속. → Railway restart 또는 cache-bust on null logic
+2. **KR .KS fundamentals**: FMP 미커버. pykrx/KIS fallback 필요 (별도 PR)
+3. **BRK-B chart 1.2s empty**: Alpaca 가 BRK/B 심볼 자체 미지원. FMP v3 historical 시도 필요
+4. **privacy-ko.md "변호사 검토 대기 중"**: 로펌 자문 후 CEO 직접 제거
+5. **Naver News API key**: Railway env var 미설정. CEO 작업
+6. **P1-B brag_card_email.html**: 인라인 disclaimer → `{% include %}` (10분 작업)
+
+---
+
+## 🎯 이전 세션 핵심 성과 (2026-04-22 오전)
 
 **Commit chain**: `3e5d629 → a74ee76 → 1e602ce → d831c72 → 2490a99 → 7aefb68 → 08885b2 → 2f3a5e8 → 2914467`
 

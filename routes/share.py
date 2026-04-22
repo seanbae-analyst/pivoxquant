@@ -4,7 +4,7 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, jsonify, current_app
 from flask_login import current_user
 
 from extensions import db

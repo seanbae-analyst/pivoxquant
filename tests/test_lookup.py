@@ -7,7 +7,6 @@ external APIs in tests.
 """
 from unittest.mock import patch
 
-import pytest
 
 
 class TestLookup:

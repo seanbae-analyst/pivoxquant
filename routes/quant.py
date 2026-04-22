@@ -367,7 +367,6 @@ def _get_portfolio_returns(items, total_value, period="1y"):
         daily_returns: list of floats (decimal, e.g. -0.02 = -2%)
         dates: list of date strings
     """
-    import numpy as np
     from services.container import fetcher
 
     if not items or total_value <= 0:

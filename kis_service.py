@@ -5,12 +5,11 @@ Supports: real-time price, intraday bars, momentum scanning.
 """
 
 import os
-import json
 import logging
 import requests
 import time
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

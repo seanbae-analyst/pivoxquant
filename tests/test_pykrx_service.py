@@ -16,7 +16,6 @@ contract that keeps the frontend from 500-ing.
 """
 from __future__ import annotations
 
-import pytest
 
 from services.data.pykrx_service import PyKRXService, _normalize_ticker
 
