@@ -9,6 +9,16 @@ const BACKEND_URL =
   (process.env.VERCEL ? "https://RAILWAY_BACKEND_HOST.up.railway.app" : "http://localhost:5050");
 
 const nextConfig: NextConfig = {
+  images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400, // 24 h
+    remotePatterns: [
+      // Alpaca logo CDN, FMP press release images, etc.
+      { protocol: "https", hostname: "**.alpaca.markets" },
+      { protocol: "https", hostname: "financialmodelingprep.com" },
+      { protocol: "https", hostname: "**.financialmodelingprep.com" },
+    ],
+  },
   // Pin Turbopack workspace root to this dir so Hangul chars in parent path
   // (`취준/`) don't break char-boundary slicing in turbopack-core/ident.rs.
   // Also disambiguates against sibling /pivoxquant/frontend lockfile.

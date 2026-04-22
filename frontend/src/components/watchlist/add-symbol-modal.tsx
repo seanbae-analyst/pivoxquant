@@ -121,7 +121,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               Watchlist
             </div>
             <div
-              className="mt-0.5 text-xl italic"
+              className="mt-0.5 text-xl"
               style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ink)" }}
             >
               Add a symbol
@@ -236,7 +236,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               className="block text-[10px] uppercase"
               style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
             >
-              Note <span className="normal-case italic" style={{ letterSpacing: 0 }}>(optional)</span>
+              Note <span className="normal-case" style={{ letterSpacing: 0 }}>(optional)</span>
             </label>
             <textarea
               value={note}
@@ -252,7 +252,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               }}
             />
             <p
-              className="mt-1 text-[11px] italic"
+              className="mt-1 text-[11px]"
               style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-muted)" }}
             >
               Observations only — no targets, no recommendations.

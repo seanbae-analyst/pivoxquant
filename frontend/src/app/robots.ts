@@ -26,6 +26,9 @@ export default function robots(): MetadataRoute.Robots {
           "/signals/",
           "/alerts/",
           "/detail/",
+          "/morning-brief/",
+          "/reports/",
+          "/growth/",
 
           // ── Onboarding (post-signup, requires session) ─
           "/onboarding/",

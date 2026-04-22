@@ -295,7 +295,7 @@ export default function PortfolioPage() {
           {positions.length === 0 ? (
             <div className="pq-ink-empty text-center py-14">
               <Fleuron size={14} />
-              <p className="font-serif italic mt-3" style={{ fontSize: "16px", color: "var(--pq-ivory)" }}>
+              <p className="font-serif mt-3" style={{ fontSize: "16px", color: "var(--pq-ivory)" }}>
                 No positions recorded.
               </p>
               <Caption className="mt-1">Use Add Position to begin observing.</Caption>
@@ -404,7 +404,7 @@ export default function PortfolioPage() {
             {trades.length === 0 ? (
               <div className="pq-ink-empty text-center py-10">
                 <Fleuron size={13} />
-                <p className="font-serif italic mt-2" style={{ fontSize: "14px" }}>No trades recorded.</p>
+                <p className="font-serif mt-2" style={{ fontSize: "14px" }}>No trades recorded.</p>
               </div>
             ) : (
               <table className="pq-ink-table">

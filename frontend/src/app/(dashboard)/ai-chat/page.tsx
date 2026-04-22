@@ -86,7 +86,7 @@ function StreamingDots() {
 function AssistantAvatar() {
   return (
     <div className="w-7 h-7 rounded-full bg-[rgba(139,111,71,0.15)] border border-[rgba(139,111,71,0.3)] flex items-center justify-center shrink-0">
-      <span className="text-[10px] text-[var(--pq-bronze)] font-serif italic">
+      <span className="text-[10px] text-[var(--pq-bronze)] font-serif">
         PQ
       </span>
     </div>
@@ -153,7 +153,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
             onClick={() => onPick(q)}
             className="group px-5 py-4 border border-[rgba(245,240,232,0.08)] rounded-[2px] text-left text-[12.5px] leading-relaxed text-[rgba(245,240,232,0.75)] hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.03)] hover:text-[var(--pq-ivory)] transition-all duration-200 cursor-pointer"
           >
-            <span className="text-[var(--pq-bronze)] font-serif italic text-[10px] mr-2">
+            <span className="text-[var(--pq-bronze)] font-serif text-[10px] mr-2">
               →
             </span>
             {q}
@@ -350,7 +350,7 @@ function ChatInner() {
       <header className="pb-6 border-b border-[rgba(245,240,232,0.08)] flex items-start justify-between">
         <div>
           <div className="pq-ink-kicker mb-2">AI · Observation Assistant</div>
-          <h1 className="font-serif italic text-3xl text-[var(--pq-ivory)]">
+          <h1 className="font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
             What are you observing today?
           </h1>
         </div>
@@ -408,7 +408,7 @@ function ChatInner() {
           )}
         </form>
 
-        <p className="mt-3 text-[11px] text-[rgba(245,240,232,0.45)] italic font-serif">
+        <p className="mt-3 text-[11px] text-[rgba(245,240,232,0.45)] font-serif">
           Press{" "}
           <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not-italic text-[rgba(245,240,232,0.7)]">Enter</kbd> to send ·{" "}
           <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not-italic text-[rgba(245,240,232,0.7)]">Shift+Enter</kbd> for new line

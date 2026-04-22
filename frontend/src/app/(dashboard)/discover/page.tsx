@@ -410,18 +410,20 @@ function MoversBlock({
       <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
         {title}
       </div>
-      <table className="pq-ink-table">
-        <tbody>
-          {rows.slice(0, 10).map((r) => (
-            <tr key={r.ticker}>
-              <td className="font-mono text-[var(--pq-bronze)] w-16">{r.ticker}</td>
-              <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[160px]">{r.name}</td>
-              <td className="num">{r.price}</td>
-              <td className={"num " + deltaCls(r.changePct)}>{fmtPct(r.changePct)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="pq-ink-table min-w-[320px]">
+          <tbody>
+            {rows.slice(0, 10).map((r) => (
+              <tr key={r.ticker}>
+                <td className="font-mono text-[var(--pq-bronze)] w-16">{r.ticker}</td>
+                <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[160px]">{r.name}</td>
+                <td className="num">{r.price}</td>
+                <td className={"num " + deltaCls(r.changePct)}>{fmtPct(r.changePct)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

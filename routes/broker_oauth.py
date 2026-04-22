@@ -30,6 +30,12 @@ from flask_login import current_user
 
 from models.broker_connection import BrokerConnection
 from security import trade_rate_limit
+from services.broker.user_alpaca_service import (
+    UserAlpacaError,
+    UserAlpacaService,
+    delete_alpaca_connection,
+    upsert_alpaca_connection,
+)
 from services.broker.user_kis_service import (
     UserKISError,
     UserKISService,
@@ -235,17 +241,171 @@ def kis_status():
 @broker_oauth_bp.route("/connections", methods=["GET"])
 @api_auth
 def broker_connections():
-    """Return a KIS-only connection summary for the current user."""
+    """Return KIS + Alpaca (paper) connection summary for the current user.
+
+    Alpaca was re-added 2026-04-22 as a *paper-only* integration. Legacy Alpaca
+    rows predating 2026-04-20 may exist with tokens in `access_token` — those
+    are ignored here; only rows with encrypted_app_key set via the new upsert
+    flow are considered connected.
+    """
     kis_conn = BrokerConnection.query.filter_by(
         user_id=current_user.id, broker="kis"
     ).first()
+    alpaca_conn = BrokerConnection.query.filter_by(
+        user_id=current_user.id, broker="alpaca"
+    ).first()
 
-    if kis_conn is None:
-        return jsonify({"kis_connected": False, "kis_last_sync": None})
+    def _alpaca_connected(c: BrokerConnection | None) -> bool:
+        return bool(c and c.is_active and c.encrypted_app_key and c.encrypted_app_secret)
 
     return jsonify({
-        "kis_connected": bool(kis_conn.is_active),
+        "kis_connected": bool(kis_conn and kis_conn.is_active),
         "kis_last_sync": kis_conn.last_synced_at.isoformat()
-        if kis_conn.last_synced_at
+        if (kis_conn and kis_conn.last_synced_at)
         else None,
+        "alpaca_connected": _alpaca_connected(alpaca_conn),
+        "alpaca_last_sync": alpaca_conn.last_synced_at.isoformat()
+        if (alpaca_conn and alpaca_conn.last_synced_at)
+        else None,
+        "alpaca_mode": "paper",  # live trading intentionally disabled in this release
+    })
+
+
+# ── Alpaca (US, paper-only) ───────────────────────────────────────────────
+#
+# Symmetric with the KIS routes above. Credentials live in the same
+# `broker_connections` table under broker='alpaca', reusing the encrypted_app_key
+# / encrypted_app_secret columns. We NEVER accept env="live" — paper only.
+_ALPACA_KEY_RE = re.compile(r"^[A-Za-z0-9_-]{10,128}$")
+
+
+def _validate_alpaca_payload(body: dict) -> tuple[dict | None, dict | None]:
+    if not isinstance(body, dict):
+        return None, {"error": "Request body must be JSON object", "code": "INVALID_BODY"}
+
+    key_id = (body.get("key_id") or "").strip()
+    secret_key = (body.get("secret_key") or "").strip()
+    env = (body.get("env") or "paper").strip().lower()
+
+    if env != "paper":
+        return None, {
+            "error": "Live trading is disabled in this release. Use paper only.",
+            "code": "LIVE_DISABLED",
+        }
+    if not _ALPACA_KEY_RE.match(key_id):
+        return None, {
+            "error": "Alpaca API Key ID appears malformed.",
+            "code": "INVALID_KEY_ID",
+        }
+    if len(secret_key) < 20:
+        return None, {
+            "error": "Alpaca API Secret Key appears too short.",
+            "code": "INVALID_SECRET",
+        }
+    return (
+        {"key_id": key_id, "secret_key": secret_key, "env": "paper"},
+        None,
+    )
+
+
+@broker_oauth_bp.route("/alpaca/connect", methods=["POST"])
+@trade_rate_limit
+@api_auth
+def alpaca_connect():
+    """Register the user's Alpaca paper credentials and verify immediately."""
+    body = request.get_json(silent=True) or {}
+    cleaned, error = _validate_alpaca_payload(body)
+    if error:
+        return jsonify(error), 400
+
+    try:
+        conn = upsert_alpaca_connection(
+            user_id=current_user.id,
+            key_id=cleaned["key_id"],
+            secret_key=cleaned["secret_key"],
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.error(f"alpaca_connect upsert failed user_id={current_user.id}: {exc}")
+        return jsonify({
+            "error": "Could not persist Alpaca credentials.",
+            "code": "PERSIST_FAILED",
+        }), 500
+
+    try:
+        service = UserAlpacaService(current_user.id, connection=conn)
+    except UserAlpacaError as exc:
+        return jsonify({"error": exc.message, "code": exc.code}), exc.http_status
+
+    verify_result = service.verify()
+    if not verify_result.get("ok"):
+        return jsonify({
+            "error": verify_result.get("error", "Alpaca verification failed."),
+            "code": verify_result.get("code", "INVALID_CREDENTIALS"),
+            "connection_id": conn.id,
+        }), 400
+
+    return jsonify({
+        "ok": True,
+        "connection_id": conn.id,
+        "status": "connected",
+        "mode": "paper",
+        "display_name": conn.display_name,
+        "account": verify_result.get("account"),
+    }), 200
+
+
+@broker_oauth_bp.route("/alpaca/sync", methods=["POST"])
+@trade_rate_limit
+@api_auth
+def alpaca_sync():
+    """Trigger a light-touch Alpaca account refresh (paper only)."""
+    try:
+        service = UserAlpacaService(current_user.id)
+    except UserAlpacaError as exc:
+        return jsonify({"error": exc.message, "code": exc.code}), exc.http_status
+
+    result = service.sync_account()
+    if not result.get("ok"):
+        return jsonify({
+            "error": result.get("error", "Alpaca sync failed."),
+            "code": result.get("code", "SYNC_FAILED"),
+        }), 502
+    return jsonify(result), 200
+
+
+@broker_oauth_bp.route("/alpaca/disconnect", methods=["DELETE"])
+@trade_rate_limit
+@api_auth
+def alpaca_disconnect():
+    removed = delete_alpaca_connection(current_user.id)
+    if not removed:
+        return jsonify({
+            "ok": False,
+            "error": "No Alpaca account connected.",
+            "code": "NO_CONNECTION",
+        }), 404
+    return jsonify({"ok": True, "status": "disconnected"}), 200
+
+
+@broker_oauth_bp.route("/alpaca/status", methods=["GET"])
+@api_auth
+def alpaca_status():
+    conn = BrokerConnection.query.filter_by(
+        user_id=current_user.id, broker="alpaca"
+    ).first()
+    if conn is None:
+        return jsonify({"ok": True, "connected": False, "mode": "paper"})
+
+    _SAFE = {
+        "id", "broker", "is_active", "is_paper", "has_credentials",
+        "display_name", "last_synced_at", "last_sync_status",
+        "consecutive_failures",
+    }
+    full = conn.to_dict()
+    safe = {k: v for k, v in full.items() if k in _SAFE}
+    return jsonify({
+        "ok": True,
+        "connected": bool(conn.is_active and conn.encrypted_app_key),
+        "mode": "paper",  # live disabled by policy
+        **safe,
     })

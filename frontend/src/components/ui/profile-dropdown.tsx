@@ -138,7 +138,7 @@ export function ProfileDropdown() {
 
             {/* Menu items */}
             <nav className="py-1.5">
-              <MenuLink href="/settings" icon={<User className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
+              <MenuLink href="/settings/profile" icon={<User className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
                 My Profile
               </MenuLink>
               <MenuLink href="/settings" icon={<Settings className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
@@ -156,7 +156,7 @@ export function ProfileDropdown() {
               >
                 Keyboard shortcuts
               </MenuButton>
-              <MenuLink href="/terms" icon={<HelpCircle className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
+              <MenuLink href="/docs" icon={<HelpCircle className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
                 Help &amp; Docs
               </MenuLink>
             </nav>
@@ -262,7 +262,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
             Reference
           </div>
           <div
-            className="mt-0.5 text-xl italic"
+            className="mt-0.5 text-xl"
             style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ink)" }}
           >
             Keyboard shortcuts

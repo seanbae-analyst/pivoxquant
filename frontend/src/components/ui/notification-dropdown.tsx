@@ -159,7 +159,7 @@ export function NotificationDropdown() {
                 Notifications
               </div>
               <div
-                className="text-base italic"
+                className="text-base"
                 style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ink)" }}
               >
                 Observations
@@ -203,14 +203,14 @@ export function NotificationDropdown() {
               </div>
             ) : error ? (
               <div
-                className="px-4 py-10 text-center text-sm italic"
+                className="px-4 py-10 text-center text-sm"
                 style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-muted)" }}
               >
                 Unable to load alerts
               </div>
             ) : items.length === 0 ? (
               <div
-                className="px-4 py-10 text-center text-sm italic"
+                className="px-4 py-10 text-center text-sm"
                 style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-muted)" }}
               >
                 No alerts yet. Signals will appear here as we observe them.

@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 /**
  * Global error boundary.
  *
@@ -30,10 +28,10 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           padding: "24px",
-          background: "#ffffff",
-          color: "#0f172a",
+          background: "#050505",
+          color: "#F7F5EF",
           fontFamily:
-            'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            '"Source Serif 4", Georgia, "Times New Roman", serif',
           WebkitFontSmoothing: "antialiased",
         }}
       >
@@ -41,63 +39,59 @@ export default function GlobalError({
           style={{
             width: "100%",
             maxWidth: "420px",
-            padding: "32px",
-            background: "#ffffff",
-            border: "1px solid #e2e8f0",
-            borderRadius: "16px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            padding: "40px 32px",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(247,245,239,0.1)",
+            borderRadius: "2px",
             textAlign: "center",
           }}
         >
-          {/* Logo mark — Vantablack + Warm Gold accent */}
+          {/* Warm-gold accent mark */}
           <div
             style={{
-              width: "56px",
-              height: "56px",
-              borderRadius: "16px",
-              background: "#050505",
-              border: "1px solid #E2B96F",
-              margin: "0 auto 24px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              width: "8px",
+              height: "8px",
+              borderRadius: "9999px",
+              background: "#E2B96F",
+              margin: "0 auto 28px",
+            }}
+          />
+
+          <div
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "#E2B96F",
+              marginBottom: "16px",
             }}
           >
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#ffffff"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 9v2m0 4h.01M4.93 19h14.14a2 2 0 001.73-3L13.73 4a2 2 0 00-3.46 0L3.2 16a2 2 0 001.73 3z" />
-            </svg>
+            Critical error
           </div>
 
           <h1
             style={{
-              fontSize: "22px",
-              fontWeight: 700,
-              margin: "0 0 8px",
-              color: "#0f172a",
+              fontStyle: "italic",
+              fontSize: "clamp(1.5rem, 4vw, 2rem)",
+              fontWeight: 500,
+              margin: "0 0 16px",
+              color: "#F7F5EF",
+              lineHeight: 1.1,
             }}
           >
-            Application error
+            The observation went dark.
           </h1>
+
           <p
             style={{
               fontSize: "14px",
-              color: "#475569",
+              color: "rgba(247,245,239,0.55)",
               margin: "0 0 24px",
-              lineHeight: 1.5,
+              lineHeight: 1.6,
             }}
           >
-            PivoxQuant ran into a critical error and could not recover. Please
-            refresh the page — your data is safe on the server.
+            A critical error occurred. Reload to reconnect to the desk. Your
+            data is safe on the server.
           </p>
 
           {isProduction ? (
@@ -105,9 +99,8 @@ export default function GlobalError({
               <p
                 style={{
                   fontSize: "11px",
-                  fontFamily:
-                    'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                  color: "#94a3b8",
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                  color: "rgba(247,245,239,0.3)",
                   margin: "0 0 24px",
                 }}
               >
@@ -118,12 +111,11 @@ export default function GlobalError({
             <pre
               style={{
                 fontSize: "11px",
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
-                color: "#475569",
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                borderRadius: "8px",
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+                color: "rgba(247,245,239,0.5)",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(247,245,239,0.08)",
+                borderRadius: "2px",
                 padding: "12px",
                 margin: "0 0 24px",
                 maxHeight: "128px",
@@ -137,61 +129,36 @@ export default function GlobalError({
             </pre>
           )}
 
-          <div
+          <button
+            type="button"
+            onClick={() => reset()}
             style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              alignItems: "center",
+              display: "block",
+              width: "100%",
+              padding: "10px 20px",
+              border: "1px solid #E2B96F",
+              borderRadius: "2px",
+              background: "transparent",
+              color: "#E2B96F",
+              fontSize: "11px",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              fontWeight: 500,
+              cursor: "pointer",
             }}
           >
-            <button
-              type="button"
-              onClick={() => reset()}
-              style={{
-                width: "100%",
-                padding: "10px 20px",
-                borderRadius: "9999px",
-                border: "none",
-                background:
-                  "linear-gradient(135deg, #7c3aed, #3b82f6, #ec4899)",
-                color: "#ffffff",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Try again
-            </button>
-            <Link
-              href="/"
-              style={{
-                width: "100%",
-                padding: "10px 20px",
-                borderRadius: "9999px",
-                border: "1px solid #e2e8f0",
-                background: "#ffffff",
-                color: "#334155",
-                fontSize: "14px",
-                fontWeight: 600,
-                textDecoration: "none",
-                boxSizing: "border-box",
-              }}
-            >
-              Go home
-            </Link>
-          </div>
+            Reload
+          </button>
 
           <p
             style={{
               fontSize: "11px",
-              color: "#94a3b8",
+              color: "rgba(247,245,239,0.25)",
               marginTop: "24px",
               lineHeight: 1.5,
             }}
           >
-            PivoxQuant does not lose data on errors. All positions and settings
-            are saved on the server.
+            PivoxQuant · Observational research only
           </p>
         </div>
       </body>

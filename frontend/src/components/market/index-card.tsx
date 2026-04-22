@@ -149,7 +149,7 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
           <p className="text-[10px] uppercase tracking-widest text-slate-400">
             {quote.symbol}
           </p>
-          <h3 className="font-serif italic text-base font-bold text-slate-900 truncate">
+          <h3 className="font-serif text-base font-bold text-slate-900 truncate">
             {quote.name}
           </h3>
           {quote.observed_at && (
@@ -174,7 +174,7 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
           )}
         </div>
         <div className="text-right shrink-0">
-          <p className="font-serif italic text-2xl font-bold tabular-nums text-slate-900">
+          <p className="font-serif text-2xl font-bold tabular-nums text-slate-900">
             {fmtLevel(quote.level, quote.format)}
             {quote.unit && (
               <span className="ml-1 text-xs font-normal text-slate-400">

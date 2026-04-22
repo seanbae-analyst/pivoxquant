@@ -20,6 +20,7 @@ new NotificationDropdown and legacy /alerts page can share it.
 """
 import json
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
@@ -213,3 +214,45 @@ def price_check():
         # not the primary purpose of this endpoint.
 
     return jsonify({"alerts": alerts})
+
+
+# ── Admin manual trigger (2026-04-22) ──────────────────────────────────────
+# Used for smoke-testing the alert cron without waiting on Railway cron.
+# Admin gate: email must appear in DEV_PREMIUM_EMAILS. Same allowlist as
+# User.effective_tier — keeps the backdoor surface small.
+
+def _is_admin_email(email: str | None) -> bool:
+    if not email:
+        return False
+    raw = os.environ.get("DEV_PREMIUM_EMAILS", "") or ""
+    if not raw:
+        return False
+    allow = {e.strip().lower() for e in raw.split(",") if e.strip()}
+    return email.lower() in allow
+
+
+@alerts_bp.route("/admin/check", methods=["POST"])
+@api_auth
+def admin_check_alerts():
+    """Manually trigger the alert-generation cron. Admin-only.
+
+    Query params:
+      mode=price (default) | daily | full
+    """
+    if not _is_admin_email(getattr(current_user, "email", None)):
+        return jsonify({"error": "admin only"}), 403
+
+    mode = (request.args.get("mode") or "price").lower()
+    from services.alert import check_52w_highs_lows, check_concentration_alerts
+
+    result: dict = {"mode": mode}
+    try:
+        if mode in ("price", "full"):
+            result["price"] = check_52w_highs_lows()
+        if mode in ("daily", "full"):
+            result["concentration"] = check_concentration_alerts()
+    except Exception as exc:
+        logger.exception("alerts.admin_check_alerts failed mode=%s", mode)
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"ok": True, **result})

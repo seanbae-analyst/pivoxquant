@@ -202,7 +202,7 @@ export function AddPositionModal({
           </Field>
         </div>
 
-        <p className="col-span-2 text-[11px] italic text-slate-500">
+        <p className="col-span-2 text-[11px] text-slate-500">
           User-entered record only. Not investment advice.
         </p>
       </form>

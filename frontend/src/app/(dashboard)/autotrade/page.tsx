@@ -118,7 +118,7 @@ function PendingTradeRow({
             "—"}
         </div>
         {trade.reason ? (
-          <p className="mt-1 font-serif italic text-[12px] text-[rgba(245,240,232,0.55)]">
+          <p className="mt-1 font-serif text-[12px] text-[rgba(245,240,232,0.55)]">
             Observed threshold: {trade.reason}
           </p>
         ) : null}
@@ -273,7 +273,7 @@ function AutoTradeContent() {
             <ShieldAlert className="h-4 w-4" />
             <span>{killing ? "Halting…" : "Kill Switch"}</span>
           </button>
-          <p className="max-w-[240px] text-right font-serif italic text-[11px] leading-snug text-[rgba(245,240,232,0.45)]">
+          <p className="max-w-[240px] text-right font-serif text-[11px] leading-snug text-[rgba(245,240,232,0.45)]">
             Halts all observation logging and closes paper positions at the last
             observed price. Use any time.
           </p>
@@ -283,7 +283,7 @@ function AutoTradeContent() {
       {/* What is Autotrade? explainer */}
       <section className="mb-8 bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-6 md:p-8">
         <div className="pq-ink-label mb-3">What is Autotrade?</div>
-        <h2 className="font-serif italic text-xl md:text-2xl text-[var(--pq-ivory)] leading-snug mb-4">
+        <h2 className="font-serif text-xl md:text-2xl text-[var(--pq-ivory)] leading-snug mb-4">
           A hands-off execution layer that logs observation-based trades under your pre-set rules.
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-[13px] text-[rgba(245,240,232,0.75)] leading-relaxed">
@@ -333,7 +333,7 @@ function AutoTradeContent() {
           <div className="pq-ink-label" style={{ color: "var(--pq-bronze)" }}>
             Paper Mode · No real orders · Observation-based logging only
           </div>
-          <p className="mt-1 font-serif italic text-[13px] leading-relaxed text-[rgba(245,240,232,0.7)]">
+          <p className="mt-1 font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.7)]">
             All automation runs against simulated fills. No real brokerage is connected.
             Executions are logged as observations; nothing is an investment instruction.
           </p>
@@ -342,14 +342,14 @@ function AutoTradeContent() {
 
       {/* Status row */}
       {statusLoading ? (
-        <div className="py-16 text-center font-serif italic text-[13px] text-[rgba(245,240,232,0.4)]">
+        <div className="py-16 text-center font-serif text-[13px] text-[rgba(245,240,232,0.4)]">
           Loading engine status…
         </div>
       ) : (
         <section className="mb-10 grid grid-cols-1 gap-6 border-y border-[rgba(245,240,232,0.1)] py-6 md:grid-cols-4">
           <div>
             <div className="pq-ink-label">Engine State</div>
-            <div className="mt-1 flex items-center gap-2 font-serif italic text-[22px] text-[var(--pq-ivory)]">
+            <div className="mt-1 flex items-center gap-2 font-serif text-[22px] text-[var(--pq-ivory)]">
               <span
                 className="h-2 w-2 rounded-full"
                 style={{
@@ -364,7 +364,7 @@ function AutoTradeContent() {
           </div>
           <div>
             <div className="pq-ink-label">Execution Mode</div>
-            <div className="mt-1 font-serif italic text-[22px] text-[var(--pq-ivory)]">
+            <div className="mt-1 font-serif text-[22px] text-[var(--pq-ivory)]">
               {status?.mode === "paper" ? "Paper" : status?.mode ?? "Paper"}
             </div>
             <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(245,240,232,0.45)]">
@@ -373,7 +373,7 @@ function AutoTradeContent() {
           </div>
           <div>
             <div className="pq-ink-label">Observations Logged Today</div>
-            <div className="mt-1 font-serif italic text-[22px] tabular-nums text-[var(--pq-ivory)]">
+            <div className="mt-1 font-serif text-[22px] tabular-nums text-[var(--pq-ivory)]">
               {status?.trades_today ?? 0}
             </div>
             <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(245,240,232,0.45)]">
@@ -382,7 +382,7 @@ function AutoTradeContent() {
           </div>
           <div>
             <div className="pq-ink-label">Awaiting Your Review</div>
-            <div className="mt-1 font-serif italic text-[22px] tabular-nums text-[var(--pq-ivory)]">
+            <div className="mt-1 font-serif text-[22px] tabular-nums text-[var(--pq-ivory)]">
               {status?.pending_count ?? pendingTrades.length}
             </div>
             <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.2em] text-[rgba(245,240,232,0.45)]">
@@ -427,7 +427,7 @@ function AutoTradeContent() {
       <section className="mb-10">
         <div className="mb-3">
           <div className="pq-ink-label">Circuit Breakers</div>
-          <h3 className="font-serif italic text-base text-[var(--pq-ivory)] mb-2 mt-1">
+          <h3 className="font-serif text-base text-[var(--pq-ivory)] mb-2 mt-1">
             Five observed limits
           </h3>
           <p className="text-[12px] text-[rgba(245,240,232,0.6)] mb-5">
@@ -458,7 +458,7 @@ function AutoTradeContent() {
         <div className="mb-3 flex items-baseline justify-between">
           <div>
             <div className="pq-ink-label">Pending Log</div>
-            <h3 className="font-serif italic text-base text-[var(--pq-ivory)] mb-2 mt-1">
+            <h3 className="font-serif text-base text-[var(--pq-ivory)] mb-2 mt-1">
               Pending observations
             </h3>
             <p className="text-[12px] text-[rgba(245,240,232,0.6)] mb-5">
@@ -472,7 +472,7 @@ function AutoTradeContent() {
         </div>
 
         {pendingTrades.length === 0 ? (
-          <div className="border-y border-[rgba(245,240,232,0.1)] py-10 text-center font-serif italic text-[13px] text-[rgba(245,240,232,0.4)]">
+          <div className="border-y border-[rgba(245,240,232,0.1)] py-10 text-center font-serif text-[13px] text-[rgba(245,240,232,0.4)]">
             {isRunning
               ? "Engine running. Observed orders will appear here for manual logging."
               : "Start the engine to surface threshold-crossed orders for review."}
@@ -496,7 +496,7 @@ function AutoTradeContent() {
         <div className="pq-ink-label mb-6">Questions</div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-[13px] text-[rgba(245,240,232,0.75)]">
           <div>
-            <h4 className="font-serif italic text-[var(--pq-ivory)] mb-2">
+            <h4 className="font-serif text-[var(--pq-ivory)] mb-2">
               Will this buy and sell real shares?
             </h4>
             <p>
@@ -505,7 +505,7 @@ function AutoTradeContent() {
             </p>
           </div>
           <div>
-            <h4 className="font-serif italic text-[var(--pq-ivory)] mb-2">
+            <h4 className="font-serif text-[var(--pq-ivory)] mb-2">
               Who sets the rules?
             </h4>
             <p>
@@ -515,7 +515,7 @@ function AutoTradeContent() {
             </p>
           </div>
           <div>
-            <h4 className="font-serif italic text-[var(--pq-ivory)] mb-2">
+            <h4 className="font-serif text-[var(--pq-ivory)] mb-2">
               What do the five circuit breakers do?
             </h4>
             <p>
@@ -524,7 +524,7 @@ function AutoTradeContent() {
             </p>
           </div>
           <div>
-            <h4 className="font-serif italic text-[var(--pq-ivory)] mb-2">
+            <h4 className="font-serif text-[var(--pq-ivory)] mb-2">
               Can I turn it off?
             </h4>
             <p>

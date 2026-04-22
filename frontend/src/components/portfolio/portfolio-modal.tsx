@@ -41,7 +41,7 @@ export function PortfolioModal({
         <div className="px-8 pt-8 pb-6">
           <h2
             id="portfolio-modal-title"
-            className="font-serif text-[24px] leading-tight italic text-slate-900"
+            className="font-serif text-[24px] leading-tight text-slate-900"
           >
             {title}
           </h2>
