@@ -783,27 +783,6 @@
   color: rgba(10, 10, 10, 0.55);
 }
 
-/* Fleuron divider — ornamental separator between list items */
-.pq-fleuron::before {
-  content: "❦";
-  display: inline-block;
-  margin: 0 0.6em;
-  color: var(--pq-bronze);
-  font-size: 0.8em;
-  opacity: 0.7;
-  vertical-align: middle;
-  transform: translateY(-0.05em);
-}
-.pq-fleuron-tri::before {
-  content: "•—•";
-  display: inline-block;
-  margin: 0 0.75em;
-  color: var(--pq-bronze);
-  font-size: 0.7em;
-  opacity: 0.55;
-  vertical-align: middle;
-  letter-spacing: 0.25em;
-}
 
 /* Locked artifact card — Bronze seal over ivory thumbnail.
    Used on Sample Reports + Feature Explorer for Premium-tier teasers. */
@@ -874,16 +853,6 @@
   transform: scaleX(1);
 }
 
-/* Roman-numeral pricing mark — small Bronze-italic serif cap
-   floated above each tier card (I · II · III). */
-.pq-roman {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
-  font-weight: 500;
-  font-size: 12px;
-  letter-spacing: 0.32em;
-  color: var(--pq-bronze);
-}
 
 @media (prefers-reduced-motion: reduce) {
   .pq-locked-card:hover .pq-locked-shimmer,
@@ -1060,10 +1029,13 @@
   text-align: right;
 }
 
-/* Ink signal pill — POSITIVE / NEGATIVE / NEUTRAL */
+/* Ink signal pill — POSITIVE / NEGATIVE / NEUTRAL
+   Dot + glow + hover outline. Kept flat (no radius, no fill). */
 .pq-ink-pill {
-  display: inline-block;
-  padding: 2px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
   border: 1px solid;
   font-size: 9px;
   letter-spacing: 0.18em;
@@ -1071,6 +1043,19 @@
   font-family: var(--font-sans), system-ui, sans-serif;
   border-radius: 0;
   font-weight: 500;
+  position: relative;
+  transition: box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pq-ink-pill::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
 }
 .pq-ink-pill--pos {
   color: #7db487;
@@ -1083,6 +1068,38 @@
 .pq-ink-pill--neu {
   color: rgba(245, 240, 232, 0.55);
   border-color: rgba(245, 240, 232, 0.2);
+}
+/* Interactive pill — inside a clickable row.
+   Adds hover glow + expanded inset outline so click target feels alive. */
+.pq-ink-pill--active,
+button:hover > .pq-ink-pill,
+[role="button"]:hover .pq-ink-pill,
+.pq-ink-row:hover .pq-ink-pill {
+  box-shadow:
+    0 0 0 1px currentColor inset,
+    0 0 14px -4px currentColor;
+  background-color: rgba(255, 255, 255, 0.02);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pq-ink-pill { transition: none; }
+}
+
+/* Row drawer — used by /signals expandable panel */
+.pq-ink-drawer {
+  overflow: hidden;
+  transition: max-height 320ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pq-ink-drawer[data-open="false"] {
+  max-height: 0;
+  opacity: 0;
+}
+.pq-ink-drawer[data-open="true"] {
+  max-height: 420px;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pq-ink-drawer { transition: none; }
 }
 
 /* Bronze primary button on ink */
@@ -1218,6 +1235,31 @@
   font-style: italic;
 }
 
+/* ══════════════════════════════════════════════════════════
+   Interactive chart tooltip — shared by InteractiveLineChart
+   and InteractiveBarChart. Fades in on hover.
+   ══════════════════════════════════════════════════════════ */
+.pq-chart-tooltip {
+  background: rgba(10, 10, 10, 0.96);
+  border: 0.5px solid rgba(245, 240, 232, 0.15);
+  border-radius: 2px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  opacity: 0;
+  animation: pq-tooltip-fade 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  white-space: nowrap;
+}
+@keyframes pq-tooltip-fade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 6px));
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* /home — Terminal stat number (italic serif hero) */
 .pq-home-stat {
   font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
@@ -1258,4 +1300,316 @@
 }
 .pq-darkui-text {
   color: rgba(245, 240, 232, 0.85);
+}
+
+/* ══════════════════════════════════════════════════════════
+   PivoxQuant · Micro-detail polish (editorial refinement)
+   Typography nuance, spacing rhythm, hover physics, transitions.
+   Scoped, additive — never redefines app-level tokens.
+   ══════════════════════════════════════════════════════════ */
+
+/* 1. Shared motion + spacing tokens */
+:root {
+  --pq-space-1: 4px;
+  --pq-space-2: 8px;
+  --pq-space-3: 12px;
+  --pq-space-4: 16px;
+  --pq-space-5: 24px;
+  --pq-space-6: 32px;
+  --pq-space-7: 48px;
+  --pq-space-8: 64px;
+  --pq-radius: 2px;
+  --pq-radius-lg: 3px;
+  --pq-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --pq-ease-fast: cubic-bezier(0.4, 0, 0.2, 1);
+  --pq-hairline-w: 0.5px;
+}
+
+/* 2. Typography refinements — numbers get lining+tabular figures + ss01 */
+.tabular-nums,
+[class*="font-mono"],
+.numeric,
+.pq-ink-num,
+.pq-home-stat {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1, "ss01" 1;
+  letter-spacing: -0.005em;
+}
+
+/* Headings: optical kerning + legibility */
+.font-serif,
+h1, h2, h3, h4 {
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+}
+
+/* Italic Playfair / Serif — tighten tracking for editorial feel */
+.font-serif.italic,
+em.italic,
+i.italic,
+.pq-ink-h1,
+.pq-ink-h2 {
+  letter-spacing: -0.012em;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "onum" 1;
+}
+
+/* Small caps for kickers — more refined than plain uppercase */
+.pq-ink-kicker {
+  font-feature-settings: "smcp" 1, "c2sc" 1;
+  font-variant-caps: all-small-caps;
+  letter-spacing: 0.18em; /* refined from 0.22 */
+}
+
+/* 3. Bronze primary button — subtle lift + smooth shadow */
+.pq-ink-btn-bronze {
+  position: relative;
+  overflow: hidden;
+  transition:
+    background-color 220ms var(--pq-ease),
+    transform 220ms var(--pq-ease),
+    box-shadow 220ms var(--pq-ease);
+}
+.pq-ink-btn-bronze:hover:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(-0.5px);
+  box-shadow: 0 3px 12px rgba(139, 111, 71, 0.18);
+}
+.pq-ink-btn-bronze:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(139, 111, 71, 0.12);
+}
+
+/* Ghost button — bronze underline slide on hover */
+.pq-ink-btn-ghost {
+  position: relative;
+  transition:
+    background-color 220ms var(--pq-ease),
+    color 220ms var(--pq-ease),
+    border-color 220ms var(--pq-ease);
+}
+.pq-ink-btn-ghost::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 10px;
+  height: 1px;
+  background: var(--pq-bronze);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 320ms var(--pq-ease);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.pq-ink-btn-ghost:hover::after {
+  transform: scaleX(1);
+}
+
+/* 4. Stat bento + interactive ink card — hairline brightening on hover */
+.pq-ink-stat {
+  transition:
+    border-color 260ms var(--pq-ease),
+    background-color 260ms var(--pq-ease),
+    transform 260ms var(--pq-ease);
+}
+.pq-ink-card-interactive {
+  transition:
+    border-color 260ms var(--pq-ease),
+    background-color 260ms var(--pq-ease),
+    transform 260ms var(--pq-ease);
+  border: 0.5px solid rgba(245, 240, 232, 0.08);
+  border-radius: 2px;
+}
+.pq-ink-card-interactive:hover {
+  border-color: rgba(245, 240, 232, 0.16);
+  background: rgba(255, 255, 255, 0.028);
+  transform: translateY(-0.5px);
+}
+
+/* 5. Ink table rows — luxurious Bronze left-rail on hover */
+.pq-ink-table tbody tr {
+  transition:
+    background-color 200ms var(--pq-ease),
+    box-shadow 200ms var(--pq-ease);
+  position: relative;
+}
+.pq-ink-table tbody tr:hover {
+  box-shadow: inset 2px 0 0 var(--pq-bronze);
+}
+.pq-ink-table tbody tr:hover td {
+  background: rgba(139, 111, 71, 0.045);
+}
+
+/* 6. Editorial link with sliding underline */
+.pq-link {
+  position: relative;
+  color: var(--pq-bronze);
+  text-decoration: none;
+  transition: color 200ms var(--pq-ease);
+}
+.pq-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 0.5px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 300ms var(--pq-ease);
+}
+.pq-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* 7. Input focus — Bronze outline + glow */
+.pq-ink-input {
+  transition:
+    border-color 220ms var(--pq-ease),
+    background-color 220ms var(--pq-ease),
+    box-shadow 220ms var(--pq-ease);
+}
+.pq-ink-input:focus,
+.pq-ink-input:focus-visible {
+  border-color: var(--pq-bronze);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.1);
+  outline: none;
+}
+
+/* 8. Focus-visible accessibility default.
+   :where() keeps specificity (0,0,0) so existing outline:none rules
+   (.pq-model-item, .pq-ink-tab) still win. */
+:where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
+  outline: 1px solid var(--pq-bronze);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* 9. Text selection — brand on-brand */
+::selection {
+  background: rgba(139, 111, 71, 0.35);
+  color: var(--pq-ivory);
+}
+
+/* 10. Scrollbar — subtle ink, bronze on hover */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--pq-ink);
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(245, 240, 232, 0.1);
+  border-radius: 5px;
+  border: 2px solid var(--pq-ink);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 111, 71, 0.35);
+}
+
+/* 11. Dividers — three calibrated weights */
+.pq-hairline-soft {
+  border-top: 0.5px solid rgba(245, 240, 232, 0.05);
+}
+.pq-hairline-firm {
+  border-top: 0.5px solid rgba(245, 240, 232, 0.12);
+}
+.pq-hairline-bronze {
+  border-top: 0.5px solid rgba(139, 111, 71, 0.25);
+}
+
+/* 12. Fleuron — editorial separator */
+.pq-fleuron {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--pq-bronze);
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  opacity: 0.7;
+}
+.pq-fleuron::before,
+.pq-fleuron::after {
+  content: "";
+  height: 0.5px;
+  width: 24px;
+  background: rgba(139, 111, 71, 0.3);
+}
+
+/* 13. Pill — consistent transition (additive, harmless duplicate) */
+.pq-ink-pill {
+  transition:
+    box-shadow 220ms var(--pq-ease),
+    background-color 220ms var(--pq-ease),
+    color 220ms var(--pq-ease);
+}
+
+/* 14. Kicker with bronze rule prefix — refined ruled variant */
+.pq-ink-kicker--ruled {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.pq-ink-kicker--ruled::before {
+  content: "";
+  height: 0.5px;
+  width: 24px;
+  background: var(--pq-bronze);
+  display: inline-block;
+}
+
+/* 15. Caption / footnote style */
+.pq-caption {
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  font-size: 11px;
+  color: rgba(245, 240, 232, 0.55);
+  letter-spacing: -0.005em;
+  line-height: 1.5;
+}
+
+/* 16. Large display number */
+.pq-num-display {
+  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-size: 28px;
+  letter-spacing: -0.015em;
+  color: var(--pq-ivory);
+}
+
+/* 17. Editorial drop-cap utility */
+.pq-dropcap::first-letter {
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  font-size: 3.2em;
+  line-height: 0.88;
+  float: left;
+  padding: 4pt 8pt 0 0;
+  color: var(--pq-ivory);
+}
+
+/* 18. Reduced motion — respect system preference for all polish */
+@media (prefers-reduced-motion: reduce) {
+  .pq-ink-btn-bronze,
+  .pq-ink-btn-ghost,
+  .pq-ink-btn-ghost::after,
+  .pq-ink-stat,
+  .pq-ink-card-interactive,
+  .pq-ink-table tbody tr,
+  .pq-link,
+  .pq-link::after,
+  .pq-ink-input,
+  .pq-ink-pill {
+    transition: none !important;
+    animation: none !important;
+  }
+  .pq-ink-btn-bronze:hover:not(:disabled),
+  .pq-ink-card-interactive:hover {
+    transform: none !important;
+  }
 }

@@ -18,6 +18,12 @@ import { fmtPct } from "@/lib/format";
 import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import {
+  Caption,
+  Fleuron,
+  FootSignature,
+  RuledKicker,
+} from "@/components/ui/editorial";
 import { AddSymbolModal } from "@/components/watchlist/add-symbol-modal";
 
 function formatPrice(item: WatchlistItem): string {
@@ -83,7 +89,7 @@ export default function WatchlistPage() {
     <ErrorBoundary>
       {/* Terminal header */}
       <header className="mb-8 flex items-center justify-between gap-4">
-        <span className="pq-ink-kicker">PIVOXQUANT · WATCHLIST</span>
+        <RuledKicker>PivoxQuant &middot; Watchlist &middot; {weekTag()}</RuledKicker>
         <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           {weekTag()}
         </span>
@@ -93,9 +99,12 @@ export default function WatchlistPage() {
         <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="pq-ink-h1">Watchlist</h1>
-            <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
-              Symbols you have chosen to follow. Nothing here is a recommendation.
+            <p className="mt-2 font-serif italic text-[15px] text-[var(--pq-ivory)]">
+              Symbols you are observing.
             </p>
+            <Caption className="mt-1">
+              Nothing here is a recommendation. Informational only.
+            </Caption>
           </div>
           <button
             type="button"
@@ -118,9 +127,10 @@ export default function WatchlistPage() {
             ))}
           </div>
         ) : watchlist.length === 0 ? (
-          <div className="pq-ink-empty">
-            <div className="font-serif italic text-xl text-[var(--pq-ivory)]">No symbols yet.</div>
-            <div className="mt-2 text-sm">Add one to begin observing.</div>
+          <div className="pq-ink-empty text-center py-16">
+            <Fleuron size={16} />
+            <div className="font-serif italic text-xl text-[var(--pq-ivory)] mt-3">No symbols yet.</div>
+            <Caption className="mt-2">Add one to begin observing.</Caption>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -194,8 +204,9 @@ export default function WatchlistPage() {
           </div>
         )}
 
-      {/* Disclaimer */}
-      <div className="mt-12 border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
+      {/* Editorial signature + Disclaimer */}
+      <FootSignature />
+      <div className="mt-4 text-[rgba(245,240,232,0.7)]">
         <DisclaimerBanner type="signal" />
       </div>
 

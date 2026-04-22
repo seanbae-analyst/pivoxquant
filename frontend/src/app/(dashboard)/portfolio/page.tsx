@@ -9,11 +9,19 @@
  */
 
 import { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import {
+  Caption,
+  Fleuron,
+  FootSignature,
+  RuledKicker,
+} from "@/components/ui/editorial";
+import { InteractiveBarChart } from "@/components/charts/interactive-bar-chart";
 import { AddPositionModal } from "@/components/portfolio/add-position-modal";
 import { TradeModal } from "@/components/portfolio/trade-modal";
 import { MOCK_POSITIONS, MOCK_TRADES } from "@/components/portfolio/mock-data";
@@ -23,8 +31,10 @@ import {
   PORTFOLIO_TRADES,
 } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
-import { fmtUsd, fmtPct } from "@/lib/format";
+import { fmtUsd, fmtKrw, fmtPct } from "@/lib/format";
 import type { Position, Trade, TradeAction } from "@/components/portfolio/types";
+
+const FX_FALLBACK = 1342;
 
 interface PositionsResponse { positions?: Position[]; }
 interface TradesResponse { trades?: Trade[]; }
@@ -34,6 +44,7 @@ interface SummaryResponse {
   todayPnlPct?: number;
   unrealized?: number;
   realizedYtd?: number;
+  fxRate?: number;
 }
 
 const fetcher = async <T,>(url: string): Promise<T> => apiFetch<T>(url);
@@ -56,17 +67,25 @@ function weekTag(): string {
 }
 
 export default function PortfolioPage() {
+  const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
   const [tradeAction, setTradeAction] = useState<TradeAction | null>(null);
   const [targetPosition, setTargetPosition] = useState<Position | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(true);
 
+  const swrOpts = {
+    refreshInterval: 30_000,
+    revalidateOnFocus: true,
+    dedupingInterval: 10_000,
+    errorRetryCount: 2,
+  } as const;
+
   const { data: posData, error: posErr, isLoading: posLoading } =
-    useSWR<PositionsResponse>(PORTFOLIO_POSITIONS, fetcher, { revalidateOnFocus: false });
+    useSWR<PositionsResponse>(PORTFOLIO_POSITIONS, fetcher, swrOpts);
   const { data: sumData, error: sumErr } =
-    useSWR<SummaryResponse>(PORTFOLIO_SUMMARY, fetcher, { revalidateOnFocus: false });
+    useSWR<SummaryResponse>(PORTFOLIO_SUMMARY, fetcher, swrOpts);
   const { data: tradesData, error: tradesErr } =
-    useSWR<TradesResponse>(`${PORTFOLIO_TRADES}?limit=8`, fetcher, { revalidateOnFocus: false });
+    useSWR<TradesResponse>(`${PORTFOLIO_TRADES}?limit=8`, fetcher, swrOpts);
 
   useEffect(() => { if (posErr) handleApiError(posErr, "Positions"); }, [posErr]);
   useEffect(() => { if (sumErr) handleApiError(sumErr, "Summary"); }, [sumErr]);
@@ -97,6 +116,7 @@ export default function PortfolioPage() {
       cost += p.shares * p.avgCost;
     }
     const unrealized = mv - cost;
+    const fx = (sumData?.fxRate && sumData.fxRate > 0) ? sumData.fxRate : FX_FALLBACK;
     if (sumData && typeof sumData.totalNav === "number") {
       return {
         totalNav: sumData.totalNav,
@@ -104,9 +124,10 @@ export default function PortfolioPage() {
         todayPnlPct: sumData.todayPnlPct ?? 0,
         unrealized: sumData.unrealized ?? unrealized,
         realizedYtd: sumData.realizedYtd ?? 0,
+        fxRate: fx,
       };
     }
-    return { totalNav: mv, todayPnl: 0, todayPnlPct: 0, unrealized, realizedYtd: 0 };
+    return { totalNav: mv, todayPnl: 0, todayPnlPct: 0, unrealized, realizedYtd: 0, fxRate: fx };
   }, [sumData, positions]);
 
   // Sector allocation — computed inline.
@@ -158,7 +179,7 @@ export default function PortfolioPage() {
     <ErrorBoundary>
       {/* Terminal header row */}
       <header className="mb-8 flex items-center justify-between gap-4">
-        <span className="pq-ink-kicker">PIVOXQUANT · PORTFOLIO</span>
+        <RuledKicker>PivoxQuant &middot; Portfolio &middot; {weekTag()}</RuledKicker>
         <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           {weekTag()}
         </span>
@@ -169,8 +190,11 @@ export default function PortfolioPage() {
           <div>
             <h1 className="pq-ink-h1">Portfolio</h1>
             <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
-              Your self-reported book of record. Informational only.
+              Positions, performance, and sector drift as of Monday close.
             </p>
+            <Caption className="mt-1">
+              Your self-reported book of record. Informational only.
+            </Caption>
           </div>
           <button
             type="button"
@@ -185,28 +209,37 @@ export default function PortfolioPage() {
         {/* 4-stat bento */}
         <section className="mb-10 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="pq-ink-stat">
-            <div className="pq-ink-label">Total NAV</div>
-            <div className="pq-ink-num mt-2">{fmtUsd(totals.totalNav)}</div>
+            <div className="pq-ink-label">Portfolio Value</div>
+            <div className="pq-ink-num mt-2 tabular-nums">{fmtUsd(totals.totalNav)}</div>
+            <div className="mt-1 font-mono text-[11px] tabular-nums text-[rgba(245,240,232,0.55)]">
+              {fmtKrw(totals.totalNav * totals.fxRate)}
+            </div>
           </div>
           <div className="pq-ink-stat">
             <div className="pq-ink-label">Today · P&amp;L</div>
-            <div className={"pq-ink-num mt-2 " + toneClass(totals.todayPnl)}>
+            <div className={"pq-ink-num mt-2 tabular-nums " + toneClass(totals.todayPnl)}>
               {fmtUsd(totals.todayPnl)}
             </div>
-            <div className={"mt-1 font-mono text-[11px] " + toneClass(totals.todayPnlPct)}>
+            <div className={"mt-1 font-mono text-[11px] tabular-nums " + toneClass(totals.todayPnlPct)}>
               {fmtPct(totals.todayPnlPct)}
             </div>
           </div>
           <div className="pq-ink-stat">
             <div className="pq-ink-label">Unrealized</div>
-            <div className={"pq-ink-num mt-2 " + toneClass(totals.unrealized)}>
+            <div className={"pq-ink-num mt-2 tabular-nums " + toneClass(totals.unrealized)}>
               {fmtUsd(totals.unrealized)}
+            </div>
+            <div className="mt-1 font-mono text-[11px] tabular-nums text-[rgba(245,240,232,0.55)]">
+              {fmtKrw(totals.unrealized * totals.fxRate)}
             </div>
           </div>
           <div className="pq-ink-stat">
             <div className="pq-ink-label">Realized YTD</div>
-            <div className={"pq-ink-num mt-2 " + toneClass(totals.realizedYtd)}>
+            <div className={"pq-ink-num mt-2 tabular-nums " + toneClass(totals.realizedYtd)}>
               {fmtUsd(totals.realizedYtd)}
+            </div>
+            <div className="mt-1 font-mono text-[11px] tabular-nums text-[rgba(245,240,232,0.55)]">
+              {fmtKrw(totals.realizedYtd * totals.fxRate)}
             </div>
           </div>
         </section>
@@ -220,7 +253,13 @@ export default function PortfolioPage() {
             </span>
           </div>
           {positions.length === 0 ? (
-            <div className="pq-ink-empty">No positions yet. Use Add Position to begin.</div>
+            <div className="pq-ink-empty text-center py-14">
+              <Fleuron size={14} />
+              <p className="font-serif italic mt-3" style={{ fontSize: "16px", color: "var(--pq-ivory)" }}>
+                No positions recorded.
+              </p>
+              <Caption className="mt-1">Use Add Position to begin observing.</Caption>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="pq-ink-table">
@@ -242,18 +281,32 @@ export default function PortfolioPage() {
                     const mv = p.shares * p.current;
                     const unreal = (p.current - p.avgCost) * p.shares;
                     const unrealPct = p.avgCost > 0 ? ((p.current - p.avgCost) / p.avgCost) * 100 : 0;
+                    const goDetail = () => router.push(`/detail/${p.symbol}`);
                     return (
-                      <tr key={p.id}>
+                      <tr
+                        key={p.id}
+                        onClick={goDetail}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            goDetail();
+                          }
+                        }}
+                        tabIndex={0}
+                        role="link"
+                        aria-label={`Open ${p.symbol} detail`}
+                        className="cursor-pointer transition-colors hover:bg-[rgba(139,111,71,0.06)] focus:outline-none focus:bg-[rgba(139,111,71,0.08)]"
+                      >
                         <td className="font-mono text-[var(--pq-bronze)] tracking-wide">{p.symbol}</td>
                         <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[220px]">{p.name}</td>
                         <td>
                           <span className="pq-ink-pill pq-ink-pill--neu">{p.side}</span>
                         </td>
-                        <td className="num">{p.shares.toLocaleString("en-US")}</td>
-                        <td className="num">{fmtUsd(p.avgCost)}</td>
-                        <td className="num">{fmtUsd(p.current)}</td>
-                        <td className="num">{fmtUsd(mv)}</td>
-                        <td className={"num " + toneClass(unreal)}>
+                        <td className="num tabular-nums">{p.shares.toLocaleString("en-US")}</td>
+                        <td className="num tabular-nums">{fmtUsd(p.avgCost)}</td>
+                        <td className="num tabular-nums">{fmtUsd(p.current)}</td>
+                        <td className="num tabular-nums">{fmtUsd(mv)}</td>
+                        <td className={"num tabular-nums " + toneClass(unreal)}>
                           {fmtUsd(unreal)}
                           <div className="text-[10px] opacity-70">{fmtPct(unrealPct)}</div>
                         </td>
@@ -261,21 +314,24 @@ export default function PortfolioPage() {
                           <div className="flex justify-end gap-1.5">
                             <button
                               type="button"
-                              onClick={() => openAction("buy", p)}
+                              onClick={(e) => { e.stopPropagation(); openAction("buy", p); }}
+                              aria-label={`Buy more ${p.symbol}`}
                               className="text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light)]"
                             >
                               +
                             </button>
                             <button
                               type="button"
-                              onClick={() => openAction("sell", p)}
+                              onClick={(e) => { e.stopPropagation(); openAction("sell", p); }}
+                              aria-label={`Sell ${p.symbol}`}
                               className="text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-ivory)]"
                             >
                               −
                             </button>
                             <button
                               type="button"
-                              onClick={() => openAction("edit", p)}
+                              onClick={(e) => { e.stopPropagation(); openAction("edit", p); }}
+                              aria-label={`Edit ${p.symbol}`}
                               className="text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-ivory)]"
                             >
                               ✎
@@ -294,9 +350,15 @@ export default function PortfolioPage() {
         {/* Recent trades + sector allocation */}
         <section className="grid grid-cols-1 gap-10 lg:grid-cols-5">
           <div className="lg:col-span-3">
-            <h2 className="pq-ink-h2 mb-4">Recent Trades</h2>
+            <div className="mb-4">
+              <h2 className="pq-ink-h2">Recent Trades</h2>
+              <Caption className="mt-1">Last 8 transactions &middot; observed.</Caption>
+            </div>
             {trades.length === 0 ? (
-              <div className="pq-ink-empty">No trades recorded.</div>
+              <div className="pq-ink-empty text-center py-10">
+                <Fleuron size={13} />
+                <p className="font-serif italic mt-2" style={{ fontSize: "14px" }}>No trades recorded.</p>
+              </div>
             ) : (
               <table className="pq-ink-table">
                 <thead>
@@ -336,39 +398,21 @@ export default function PortfolioPage() {
 
           <div className="lg:col-span-2">
             <h2 className="pq-ink-h2 mb-4">Sector Allocation</h2>
-            {sectorAlloc.length === 0 ? (
-              <div className="pq-ink-empty">—</div>
-            ) : (
-              <ul className="space-y-3">
-                {sectorAlloc.map((s) => (
-                  <li key={s.sector}>
-                    <div className="flex items-baseline justify-between text-[12px]">
-                      <span className="text-[rgba(245,240,232,0.85)]">{s.sector}</span>
-                      <span className="font-mono tabular-nums text-[rgba(245,240,232,0.7)]">
-                        {s.pct.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-[3px] bg-[rgba(245,240,232,0.08)]">
-                      <div
-                        className="h-full bg-[var(--pq-bronze)]"
-                        style={{ width: `${Math.min(100, s.pct)}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <InteractiveBarChart
+              items={sectorAlloc.map((s) => ({
+                label: s.sector,
+                pct: s.pct,
+                value: s.mv,
+              }))}
+              valueFormatter={(v) => fmtUsd(v)}
+            />
           </div>
         </section>
 
-      {/* Disclaimer */}
-      <div className="mt-12 border-t border-[rgba(245,240,232,0.1)] pt-6">
-        <div className="text-[rgba(245,240,232,0.7)]">
-          <DisclaimerBanner type="signal" />
-        </div>
-        <p className="mt-3 text-[10px] italic text-[rgba(245,240,232,0.4)]">
-          User-entered record only. Not investment advice.
-        </p>
+      {/* Editorial foot signature + disclaimer */}
+      <FootSignature note="PivoxQuant &middot; User-entered record &middot; Not investment advice" />
+      <div className="mt-4 text-[rgba(245,240,232,0.7)]">
+        <DisclaimerBanner type="signal" />
       </div>
 
       {/* Modals — overlaid, retain existing ivory styling */}

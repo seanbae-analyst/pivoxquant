@@ -1,11 +1,14 @@
 "use client";
 
 /**
- * AI Chat — Vantablack ink assistant console.
+ * AI Chat — Vantablack ink observation assistant.
  *
  * Claude-powered conversational observation assistant. Streams SSE
  * from /api/ai/chat. No advice/recommendation language — the model
  * is constrained to neutral observation.
+ *
+ * Layout: full-height flex column. Header → Main (flex-1) → Input (footer)
+ * → DisclaimerBanner at page bottom with generous whitespace gap.
  */
 
 import {
@@ -16,7 +19,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { Send, Sparkles, StopCircle } from "lucide-react";
+import { Send, StopCircle } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
@@ -45,105 +48,115 @@ function getCsrfToken(): string | undefined {
   return match ? decodeURIComponent(match.split("=")[1]) : undefined;
 }
 
-function weekTag(): string {
-  const d = new Date();
-  const first = new Date(d.getFullYear(), 0, 1);
-  const days = Math.floor((d.getTime() - first.getTime()) / 86400000);
-  const w = Math.ceil((days + first.getDay() + 1) / 7);
-  return `${d.getFullYear()} · W${String(w).padStart(2, "0")}`;
+function formatTime(d: Date): string {
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
 }
 
 /* ── Suggested prompts ── */
 
 const SUGGESTIONS = [
-  "Summarize my portfolio risk exposure",
-  "What observations stand out on AAPL?",
-  "Explain the current market regime",
-  "Walk me through my largest drawdown",
+  "Summarize my portfolio observations this week.",
+  "Which of my holdings has the highest concentration?",
+  "What historical risk patterns apply to my sector exposure?",
+  "Observe the macro calendar ahead of next week.",
 ] as const;
 
 /* ── Streaming indicator ── */
 
 function StreamingDots() {
   return (
-    <span className="inline-flex items-center gap-1" aria-label="Thinking">
-      <span className="h-1 w-1 rounded-full bg-[var(--pq-bronze)] animate-pulse" />
+    <div className="flex items-center gap-1.5 pl-1" aria-label="Thinking">
+      <span className="w-1.5 h-1.5 rounded-full bg-[var(--pq-bronze)] animate-pulse" />
       <span
-        className="h-1 w-1 rounded-full bg-[var(--pq-bronze)] animate-pulse"
-        style={{ animationDelay: "0.2s" }}
+        className="w-1.5 h-1.5 rounded-full bg-[var(--pq-bronze)] animate-pulse"
+        style={{ animationDelay: "150ms" }}
       />
       <span
-        className="h-1 w-1 rounded-full bg-[var(--pq-bronze)] animate-pulse"
-        style={{ animationDelay: "0.4s" }}
+        className="w-1.5 h-1.5 rounded-full bg-[var(--pq-bronze)] animate-pulse"
+        style={{ animationDelay: "300ms" }}
       />
-    </span>
+    </div>
   );
 }
 
-/* ── Message ── */
+/* ── Assistant avatar ── */
+
+function AssistantAvatar() {
+  return (
+    <div className="w-7 h-7 rounded-full bg-[rgba(139,111,71,0.15)] border border-[rgba(139,111,71,0.3)] flex items-center justify-center shrink-0">
+      <span className="text-[10px] text-[var(--pq-bronze)] font-serif italic">
+        PQ
+      </span>
+    </div>
+  );
+}
+
+/* ── Message bubble ── */
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
+  const isEmpty = !message.content;
 
   return (
     <div
-      className={"flex w-full " + (isUser ? "justify-end" : "justify-start")}
+      className={`flex gap-4 ${isUser ? "justify-end" : "justify-start"}`}
     >
+      {!isUser && <AssistantAvatar />}
       <div
         className={
-          "max-w-[85%] px-4 py-3 font-serif text-[14px] leading-relaxed " +
-          (isUser
-            ? "border-l-[2px] border-[var(--pq-bronze)] bg-[rgba(245,240,232,0.04)] text-[var(--pq-ivory)]"
-            : "text-[rgba(245,240,232,0.85)]")
+          isUser
+            ? "max-w-[75%] bg-[rgba(139,111,71,0.08)] border border-[rgba(139,111,71,0.15)] rounded-[2px] px-4 py-3"
+            : "max-w-[75%] text-[rgba(245,240,232,0.85)] border-l-2 border-[rgba(139,111,71,0.3)] pl-4"
         }
       >
-        {!isUser && (
-          <div className="mb-2 flex items-center gap-2">
-            <span className="pq-ink-label" style={{ fontSize: "9px" }}>
-              Assistant
-            </span>
-            <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.35)]">
-              Claude · Observation
-            </span>
-          </div>
-        )}
-        {message.content ? (
-          <div className="whitespace-pre-wrap break-words">{message.content}</div>
-        ) : (
+        {isEmpty ? (
           <StreamingDots />
+        ) : (
+          <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">
+            {message.content}
+          </p>
+        )}
+        {message.timestamp && !isEmpty && (
+          <div className="text-[9px] tracking-[0.2em] uppercase text-[rgba(245,240,232,0.35)] mt-2 font-mono">
+            {formatTime(message.timestamp)}
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-/* ── Welcome ── */
+/* ── Welcome block ── */
 
-function Welcome({ onPick }: { onPick: (text: string) => void }) {
+function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div className="mx-auto max-w-xl text-center">
-      <Sparkles
-        className="mx-auto h-7 w-7 text-[var(--pq-bronze)]"
-        strokeWidth={1.25}
-      />
-      <div className="mt-4 pq-ink-label">Assistant · Observation</div>
-      <h2 className="mt-2 font-serif italic text-[28px] text-[var(--pq-ivory)]">
-        Ask about your portfolio observation.
-      </h2>
-      <p className="mt-3 font-serif italic text-[14px] leading-relaxed text-[rgba(245,240,232,0.55)]">
-        Powered by Claude. Responses are informational observations, not
-        investment advice.
-      </p>
+    <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="max-w-md mb-12">
+        <div className="pq-ink-kicker mb-4">Observation Assistant</div>
+        <h2 className="font-serif italic text-2xl text-[var(--pq-ivory)] mb-4">
+          Ask the desk.
+        </h2>
+        <p className="text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">
+          Claude-augmented synthesis of your portfolio, market observations,
+          and historical patterns. Every response is informational only —
+          never a directive.
+        </p>
+      </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {SUGGESTIONS.map((text) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl w-full">
+        {SUGGESTIONS.map((q) => (
           <button
-            key={text}
+            key={q}
             type="button"
-            onClick={() => onPick(text)}
-            className="border border-[rgba(245,240,232,0.1)] px-4 py-3 text-left font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.7)] transition-colors hover:border-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+            onClick={() => onPick(q)}
+            className="group px-5 py-4 border border-[rgba(245,240,232,0.08)] rounded-[2px] text-left text-[12.5px] leading-relaxed text-[rgba(245,240,232,0.75)] hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.03)] hover:text-[var(--pq-ivory)] transition-all duration-200 cursor-pointer"
           >
-            &ldquo;{text}&rdquo;
+            <span className="text-[var(--pq-bronze)] font-serif italic text-[10px] mr-2">
+              →
+            </span>
+            {q}
           </button>
         ))}
       </div>
@@ -165,12 +178,13 @@ function ChatInner() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleTextareaInput = useCallback(() => {
+  // Auto-resize textarea
+  useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
-  }, []);
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
+  }, [input]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -331,80 +345,79 @@ function ChatInner() {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex h-[calc(100dvh-8rem)] flex-col">
-      <header className="mb-6 flex items-center justify-between">
+    <div className="flex flex-col min-h-[calc(100vh-64px)] gap-0">
+      {/* Header — fixed top */}
+      <header className="pb-6 border-b border-[rgba(245,240,232,0.08)] flex items-start justify-between">
         <div>
-          <div className="pq-ink-kicker">ASSISTANT · 2026 · {weekTag().split("·")[1]?.trim() ?? ""}</div>
-          <h1 className="pq-ink-h1 mt-2">Observation Assistant</h1>
+          <div className="pq-ink-kicker mb-2">AI · Observation Assistant</div>
+          <h1 className="font-serif italic text-3xl text-[var(--pq-ivory)]">
+            What are you observing today?
+          </h1>
         </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-2">
           {streaming ? "Streaming" : "Idle"}
         </div>
       </header>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto border-t border-[rgba(245,240,232,0.1)] pt-6">
+      {/* Main chat area — flex-1 grows */}
+      <section className="flex-1 min-h-[480px] flex flex-col">
         {hasMessages ? (
-          <div className="space-y-6 pb-6">
+          <div className="flex-1 overflow-y-auto py-6 space-y-6 pr-2">
             {messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))}
             <div ref={messagesEndRef} />
           </div>
         ) : (
-          <div className="flex h-full items-center justify-center py-12">
-            <Welcome onPick={sendMessage} />
-          </div>
+          <WelcomeBlock onPick={sendMessage} />
         )}
-      </div>
+      </section>
 
-      {/* Input area */}
-      <div className="shrink-0 border-t border-[rgba(245,240,232,0.1)] pt-4">
-        <DisclaimerBanner type="coaching" className="mb-3" />
-
-        <form
-          onSubmit={handleSubmit}
-          className="flex items-end gap-3"
-        >
-          <div className="relative flex-1">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                handleTextareaInput();
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about your portfolio observation…"
-              disabled={streaming}
-              rows={1}
-              className="pq-ink-input w-full resize-none"
-              style={{ maxHeight: 140 }}
-            />
-          </div>
-
+      {/* Input — above disclaimer with breathing room */}
+      <footer className="pt-6 mt-6 border-t border-[rgba(245,240,232,0.08)]">
+        <form onSubmit={handleSubmit} className="relative">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about your portfolio observation…"
+            disabled={streaming}
+            rows={1}
+            className="pq-ink-input w-full resize-none pr-14 py-3.5 leading-relaxed text-[13px]"
+            style={{ maxHeight: 180 }}
+          />
           {streaming ? (
             <button
               type="button"
               onClick={stopStreaming}
-              className="pq-ink-btn-ghost"
-              aria-label="Stop"
+              className="absolute right-3 bottom-3 w-9 h-9 flex items-center justify-center rounded-[2px] bg-[rgba(245,240,232,0.06)] hover:bg-[rgba(245,240,232,0.1)] border border-[rgba(245,240,232,0.15)] transition-colors"
+              aria-label="Stop streaming"
             >
-              <StopCircle className="h-4 w-4" />
-              <span>Stop</span>
+              <StopCircle className="w-4 h-4 text-[rgba(245,240,232,0.75)]" />
             </button>
           ) : (
             <button
               type="submit"
               disabled={!input.trim()}
-              className="pq-ink-btn-bronze disabled:opacity-40"
-              aria-label="Send"
+              className="absolute right-3 bottom-3 w-9 h-9 flex items-center justify-center rounded-[2px] bg-[var(--pq-bronze)] hover:bg-[var(--pq-bronze-light)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              aria-label="Send message"
             >
-              <Send className="h-4 w-4" />
-              <span>Send</span>
+              <Send className="w-4 h-4 text-[var(--pq-ink)]" />
             </button>
           )}
         </form>
+
+        <p className="mt-3 text-[11px] text-[rgba(245,240,232,0.45)] italic font-serif">
+          Press{" "}
+          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not-italic text-[rgba(245,240,232,0.7)]">Enter</kbd> to send ·{" "}
+          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not-italic text-[rgba(245,240,232,0.7)]">Shift+Enter</kbd> for new line
+        </p>
+      </footer>
+
+      {/* DisclaimerBanner — page bottom, generous gap */}
+      <div className="mt-12 pt-8 border-t border-[rgba(245,240,232,0.06)]">
+        <DisclaimerBanner type="ai-analysis" />
       </div>
     </div>
   );

@@ -16,6 +16,13 @@ import Link from "next/link";
 import useSWR from "swr";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import {
+  Caption,
+  Fleuron,
+  FootSignature,
+  RuledKicker,
+} from "@/components/ui/editorial";
+import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
@@ -26,6 +33,17 @@ import {
 } from "@/lib/endpoints";
 import { fmtUsd, fmtPct } from "@/lib/format";
 import type { Position } from "@/components/portfolio/types";
+
+/** Format an ISO date or YYYY-MM-DD into a compact "Mon DD, YYYY" label. */
+function fmtChartDate(d: string): string {
+  const parsed = new Date(d);
+  if (isNaN(parsed.getTime())) return d;
+  return parsed.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 const fetcher = <T,>(url: string) => apiFetch<T>(url);
 
@@ -102,36 +120,16 @@ function signalFor(pnlPct: number | undefined): "POSITIVE" | "NEUTRAL" | "NEGATI
   return "NEUTRAL";
 }
 
-/* ── Equity observation curve — real points or sketch fallback ── */
+/* ── Equity observation curve — real points + hover, or sketch fallback ── */
 
 function EquityCurve({ points }: { points: HistoryPoint[] }) {
-  const path = useMemo(() => {
-    if (!points.length) return null;
-    const values = points.map((p) => p.value).filter((v) => isFinite(v));
-    if (values.length < 2) return null;
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const range = max - min || 1;
-    const w = 500;
-    const h = 220;
-    const padY = 10;
-    const step = w / (values.length - 1);
-    const coords = values.map((v, i) => {
-      const x = i * step;
-      const y = padY + ((max - v) / range) * (h - padY * 2);
-      return [x, y] as const;
-    });
-    const line = coords
-      .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`)
-      .join(" ");
-    const area =
-      line +
-      ` L${w} ${h} L0 ${h} Z`;
-    return { line, area, w, h };
-  }, [points]);
+  const valid = useMemo(
+    () => points.filter((p) => p && isFinite(p.value)),
+    [points],
+  );
 
-  if (!path) {
-    // Fallback sketch (same as before) when no data
+  if (valid.length < 2) {
+    // Fallback sketch (no hover) when there's no data.
     return (
       <svg
         viewBox="0 0 500 220"
@@ -147,7 +145,16 @@ function EquityCurve({ points }: { points: HistoryPoint[] }) {
           </linearGradient>
         </defs>
         {[60, 120, 180].map((y) => (
-          <line key={y} x1={0} y1={y} x2={500} y2={y} stroke="#F5F0E8" strokeOpacity={0.06} strokeWidth={0.5} />
+          <line
+            key={y}
+            x1={0}
+            y1={y}
+            x2={500}
+            y2={y}
+            stroke="#F5F0E8"
+            strokeOpacity={0.06}
+            strokeWidth={0.5}
+          />
         ))}
         <path
           d="M0 170 C60 165, 100 150, 160 138 C220 125, 260 130, 320 110 C380 90, 420 95, 500 60 L500 220 L0 220 Z"
@@ -165,25 +172,14 @@ function EquityCurve({ points }: { points: HistoryPoint[] }) {
   }
 
   return (
-    <svg
-      viewBox={`0 0 ${path.w} ${path.h}`}
-      className="h-full w-full"
-      preserveAspectRatio="none"
-      role="img"
-      aria-label="Equity observation curve"
-    >
-      <defs>
-        <linearGradient id="pqHomeCurveLive" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8B6F47" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="#8B6F47" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[55, 110, 165].map((y) => (
-        <line key={y} x1={0} y1={y} x2={path.w} y2={y} stroke="#F5F0E8" strokeOpacity={0.06} strokeWidth={0.5} />
-      ))}
-      <path d={path.area} fill="url(#pqHomeCurveLive)" />
-      <path d={path.line} fill="none" stroke="#8B6F47" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <InteractiveLineChart
+      points={valid}
+      height={220}
+      valueFormatter={(v) => fmtUsd(v)}
+      dateFormatter={fmtChartDate}
+      yLabel="Portfolio NAV"
+      ariaLabel="Equity observation curve"
+    />
   );
 }
 
@@ -193,29 +189,52 @@ export default function HomePage() {
   const { user } = useAuth();
   const [period, setPeriod] = useState<(typeof PERIODS)[number]["value"]>("6mo");
 
-  const { data: summary } = useSWR<SummaryResponse>(PORTFOLIO_SUMMARY, fetcher, {
+  // Live-refresh cadence:
+  //  - summary/positions/risk/alerts → 30s (quote-driven, user-facing numbers)
+  //  - history → 60s (aggregated series, slower-moving)
+  //  - morning brief → 10min (daily artifact, rarely changes intraday)
+  const liveOpts = {
+    refreshInterval: 30_000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 5_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 5_000,
+  } as const;
+  const historyOpts = {
+    refreshInterval: 60_000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 10_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 5_000,
+  } as const;
+  const briefOpts = {
+    refreshInterval: 600_000,
     revalidateOnFocus: false,
-  });
-  const { data: risk } = useSWR<RiskSummaryResponse>(RISK_SUMMARY, fetcher, {
-    revalidateOnFocus: false,
-  });
-  const { data: posData } = useSWR<PositionsResponse>(PORTFOLIO_POSITIONS, fetcher, {
-    revalidateOnFocus: false,
-  });
+    revalidateOnReconnect: true,
+    dedupingInterval: 60_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 10_000,
+  } as const;
+
+  const { data: summary } = useSWR<SummaryResponse>(PORTFOLIO_SUMMARY, fetcher, liveOpts);
+  const { data: risk } = useSWR<RiskSummaryResponse>(RISK_SUMMARY, fetcher, liveOpts);
+  const { data: posData } = useSWR<PositionsResponse>(PORTFOLIO_POSITIONS, fetcher, liveOpts);
   const { data: alertsData } = useSWR<AlertsResponse>(
     `${API.alerts.list}?limit=5`,
     fetcher,
-    { revalidateOnFocus: false },
+    liveOpts,
   );
   const { data: history } = useSWR<HistoryResponse>(
     API.portfolio.history(period),
     fetcher,
-    { revalidateOnFocus: false },
+    historyOpts,
   );
   const { data: brief } = useSWR<MorningBriefResponse>(
     API.market.morningBriefToday,
     fetcher,
-    { revalidateOnFocus: false },
+    briefOpts,
   );
 
   /* Derived */
@@ -273,12 +292,7 @@ export default function HomePage() {
       {/* Header */}
       <header className="mb-8 flex items-center justify-between gap-4">
         <div>
-          <div
-            className="font-serif uppercase"
-            style={{ fontSize: "10px", letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-          >
-            PivoxQuant · Monday Brief · {weekTag()}
-          </div>
+          <RuledKicker>PivoxQuant · Monday Brief · {weekTag()}</RuledKicker>
           <h1
             className="mt-2 font-serif italic"
             style={{
@@ -290,6 +304,9 @@ export default function HomePage() {
           >
             Welcome back, {displayName}.
           </h1>
+          <Caption className="mt-2">
+            What we&rsquo;ve observed across your book since last close.
+          </Caption>
         </div>
         <span
           className="font-mono hidden sm:inline"
@@ -330,10 +347,11 @@ export default function HomePage() {
             >
               {m.label}
             </p>
-            <p className="pq-home-stat mb-1.5" style={{ color: "var(--pq-ivory)" }}>
+            <div className="pq-num-display mb-1.5" style={{ color: "var(--pq-ivory)", fontFamily: "var(--font-mono), ui-monospace, monospace", fontVariantNumeric: "tabular-nums", fontSize: "28px", lineHeight: 1.05, letterSpacing: "-0.015em" }}>
               {m.value}
-            </p>
-            <p className="font-serif" style={{ fontSize: "11px", color: "rgba(245,240,232,0.55)" }}>
+            </div>
+            <p className="font-serif italic" style={{ fontSize: "11px", color: "rgba(245,240,232,0.55)" }}>
+              <span style={{ color: "var(--pq-bronze)", marginRight: 4 }}>&asymp;</span>
               {m.sub}
             </p>
           </div>
@@ -353,12 +371,7 @@ export default function HomePage() {
           }}
         >
           <div className="mb-4 flex items-center justify-between px-2">
-            <span
-              className="font-serif uppercase"
-              style={{ fontSize: "9.5px", letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-            >
-              Equity · Observation
-            </span>
+            <RuledKicker>Equity &middot; Observation</RuledKicker>
             <div className="flex gap-1">
               {PERIODS.map((p) => {
                 const active = p.value === period;
@@ -414,9 +427,13 @@ export default function HomePage() {
             </Link>
           </div>
           {alerts.length === 0 ? (
-            <p className="font-serif italic" style={{ fontSize: "12px", color: "rgba(245,240,232,0.45)" }}>
-              No alerts observed.
-            </p>
+            <div className="py-6 text-center">
+              <Fleuron size={12} />
+              <p className="font-serif italic mt-2" style={{ fontSize: "13px", color: "rgba(245,240,232,0.6)" }}>
+                No observations recorded yet.
+              </p>
+              <Caption className="mt-1">Signals will appear as we observe them.</Caption>
+            </div>
           ) : (
             <ul className="flex flex-col gap-3">
               {alerts.slice(0, 5).map((a) => (
@@ -659,13 +676,8 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* Footer — legal note and disclaimer banner */}
-      <p
-        className="mb-6 font-serif italic"
-        style={{ fontSize: "11px", color: "rgba(245,240,232,0.5)" }}
-      >
-        Observational signals. Not investment advice.
-      </p>
+      {/* Footer — editorial signature, legal note, and disclaimer banner */}
+      <FootSignature />
       <DisclaimerBanner type="signal" />
     </ErrorBoundary>
   );

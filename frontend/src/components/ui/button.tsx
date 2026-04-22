@@ -21,20 +21,33 @@ import { cn } from "@/lib/utils";
    Sizes: sm / md / lg. All share .pq-btn base (focus ring, disabled).
    ────────────────────────────────────────────────────────────── */
 
-const buttonVariants = cva("pq-btn", {
+const buttonVariants = cva(
+  [
+    "pq-btn",
+    // Micro-detail: editorial motion. Lift on hover, reset on active.
+    "transition-[transform,background-color,color,border-color,box-shadow]",
+    "duration-[220ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+    "will-change-transform",
+    "hover:-translate-y-[0.5px] active:translate-y-0",
+    "disabled:transform-none disabled:shadow-none disabled:hover:translate-y-0",
+  ].join(" "),
+  {
   variants: {
     variant: {
       primary: [
         "bg-[var(--pq-ink)] text-[var(--pq-ivory)]",
         "border border-[var(--pq-ink)]",
         "hover:bg-[var(--pq-bronze)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-ink)]",
+        "hover:shadow-[0_3px_12px_rgba(139,111,71,0.18)]",
         "active:bg-[var(--pq-bronze-deep)] active:border-[var(--pq-bronze-deep)]",
+        "active:shadow-[0_1px_3px_rgba(139,111,71,0.12)]",
       ].join(" "),
       secondary: [
         "bg-transparent text-[var(--pq-ink)]",
         "border border-[var(--pq-ink)]",
-        "hover:bg-[var(--pq-ink)] hover:text-[var(--pq-ivory)]",
-        "active:bg-[var(--pq-bronze-deep)] active:text-[var(--pq-ivory)] active:border-[var(--pq-bronze-deep)]",
+        "hover:bg-[rgba(139,111,71,0.08)] hover:border-[var(--pq-bronze)] hover:text-[var(--pq-bronze-deep)]",
+        "hover:shadow-[0_2px_8px_rgba(139,111,71,0.1)]",
+        "active:bg-[var(--pq-ink)] active:text-[var(--pq-ivory)] active:border-[var(--pq-ink)]",
       ].join(" "),
       ghost: [
         "pq-cta-underline bg-transparent text-[var(--pq-ink)]",

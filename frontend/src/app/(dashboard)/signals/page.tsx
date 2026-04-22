@@ -19,7 +19,7 @@ import { apiFetch } from "@/lib/api";
 import { fmtPct } from "@/lib/format";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { RefreshCw, Zap } from "lucide-react";
+import { RefreshCw, Zap, ChevronDown } from "lucide-react";
 
 /* ── Types ── */
 
@@ -94,55 +94,159 @@ function formatPrice(item: SignalItem): string {
 
 /* ── Row ── */
 
-function SignalRow({ item, onClick }: { item: SignalItem; onClick: () => void }) {
+function signalExplanation(sig: string) {
+  if (sig === "POSITIVE")
+    return "Observed composite score above the upper threshold. Four-pillar model noted tailwinds in trend, fundamentals, news, and quant factors.";
+  if (sig === "NEGATIVE")
+    return "Observed composite score below the lower threshold. Four-pillar model noted headwinds across the pillars.";
+  return "Observed composite score sits inside the neutral band — no pillar reading dominates.";
+}
+
+function SignalRow({
+  item,
+  expanded,
+  onToggle,
+  onOpenDetail,
+}: {
+  item: SignalItem;
+  expanded: boolean;
+  onToggle: () => void;
+  onOpenDetail: () => void;
+}) {
   const isPositive = (item?.change_pct ?? 0) >= 0;
+  const subScores: { label: string; value: number | undefined }[] = [
+    { label: "Trend", value: item.tech_score },
+    { label: "Fund.", value: item.fund_score },
+    { label: "News", value: item.news_score },
+    { label: "Quant", value: item.quant_score },
+  ];
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group w-full border-b border-[rgba(245,240,232,0.06)] px-4 py-3 text-left transition-colors hover:bg-[rgba(245,240,232,0.03)]"
-    >
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate font-serif text-[14px] text-[var(--pq-ivory)]">
-              {item.name || item.ticker}
-            </span>
-            <span className={signalPillClass(item.signal)}>
-              {signalLabel(item.signal)}
-            </span>
+    <li className="pq-ink-row border-b border-[rgba(245,240,232,0.06)]">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className="group w-full px-4 py-3 text-left transition-colors hover:bg-[rgba(139,111,71,0.05)]"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate font-serif text-[14px] text-[var(--pq-ivory)]">
+                {item.name || item.ticker}
+              </span>
+              <span className={signalPillClass(item.signal)}>
+                {signalLabel(item.signal)}
+              </span>
+            </div>
+            <div className="mt-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.45)]">
+              <span>{item.ticker}</span>
+              {item.sector ? <span>· {item.sector}</span> : null}
+            </div>
           </div>
-          <div className="mt-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.45)]">
-            <span>{item.ticker}</span>
-            {item.sector ? <span>· {item.sector}</span> : null}
-          </div>
-        </div>
 
-        <div className="text-right">
-          <div className="font-mono text-[13px] tabular-nums text-[var(--pq-ivory)]">
-            {formatPrice(item)}
+          <div className="text-right">
+            <div className="font-mono text-[13px] tabular-nums text-[var(--pq-ivory)]">
+              {formatPrice(item)}
+            </div>
+            <div
+              className="mt-0.5 font-mono text-[11px] tabular-nums"
+              style={{ color: isPositive ? "#7db487" : "#d18888" }}
+            >
+              {fmtPct(item?.change_pct ?? 0)}
+            </div>
           </div>
-          <div
-            className="mt-0.5 font-mono text-[11px] tabular-nums"
-            style={{
-              color: isPositive ? "#7db487" : "#d18888",
-            }}
-          >
-            {fmtPct(item?.change_pct ?? 0)}
-          </div>
-        </div>
 
-        {/* Composite score */}
-        <div className="w-[60px] text-right">
-          <div className="pq-ink-label" style={{ fontSize: "9px" }}>
-            Score
+          {/* Composite score */}
+          <div className="w-[60px] text-right">
+            <div className="pq-ink-label" style={{ fontSize: "9px" }}>
+              Score
+            </div>
+            <div className="mt-0.5 font-serif italic text-[18px] tabular-nums text-[var(--pq-ivory)]">
+              {Math.round(item.score ?? 0)}
+            </div>
           </div>
-          <div className="mt-0.5 font-serif italic text-[18px] tabular-nums text-[var(--pq-ivory)]">
-            {Math.round(item.score ?? 0)}
+
+          <ChevronDown
+            className={
+              "h-3.5 w-3.5 shrink-0 text-[rgba(245,240,232,0.45)] transition-transform duration-300 " +
+              (expanded ? "rotate-180 text-[var(--pq-bronze)]" : "")
+            }
+            strokeWidth={1.5}
+          />
+        </div>
+      </button>
+
+      {/* Expanded observation panel */}
+      <div className="pq-ink-drawer" data-open={expanded ? "true" : "false"}>
+        <div className="grid grid-cols-2 gap-5 border-t border-[rgba(245,240,232,0.06)] bg-[rgba(255,255,255,0.015)] px-5 pb-5 pt-4 md:grid-cols-4">
+          <div className="col-span-2 md:col-span-2">
+            <div className="pq-ink-label mb-1" style={{ fontSize: "9px" }}>
+              Observation
+            </div>
+            <p className="text-[11.5px] leading-relaxed text-[rgba(245,240,232,0.75)]">
+              {signalExplanation(item.signal)}
+            </p>
+          </div>
+
+          <div>
+            <div className="pq-ink-label mb-1" style={{ fontSize: "9px" }}>
+              Strength
+            </div>
+            <div className="font-mono text-[13px] tabular-nums text-[var(--pq-ivory)]">
+              {Math.round(item.score ?? 0)}
+              <span className="text-[rgba(245,240,232,0.4)]">/100</span>
+            </div>
+          </div>
+
+          <div>
+            <div className="pq-ink-label mb-1" style={{ fontSize: "9px" }}>
+              Action
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenDetail();
+              }}
+              className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
+            >
+              Open detail →
+            </button>
+          </div>
+
+          {/* 4-pillar breakdown */}
+          <div className="col-span-2 md:col-span-4">
+            <div className="pq-ink-label mb-2" style={{ fontSize: "9px" }}>
+              Four-Pillar Breakdown
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {subScores.map((s) => {
+                const v = Math.max(0, Math.min(100, s.value ?? 0));
+                return (
+                  <div key={s.label}>
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)]">
+                        {s.label}
+                      </span>
+                      <span className="font-mono text-[11px] tabular-nums text-[var(--pq-ivory)]">
+                        {s.value != null ? Math.round(s.value) : "—"}
+                      </span>
+                    </div>
+                    <div className="mt-1 h-[2px] w-full bg-[rgba(245,240,232,0.08)]">
+                      <div
+                        className="h-full bg-[var(--pq-bronze)] transition-[width] duration-300"
+                        style={{ width: `${v}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </button>
+    </li>
   );
 }
 
@@ -152,12 +256,16 @@ function SignalColumn({
   title,
   kicker,
   items,
-  onClick,
+  expandedId,
+  onToggle,
+  onOpenDetail,
 }: {
   title: string;
   kicker: string;
   items: SignalItem[];
-  onClick: (ticker: string) => void;
+  expandedId: string | null;
+  onToggle: (ticker: string) => void;
+  onOpenDetail: (ticker: string) => void;
 }) {
   return (
     <section>
@@ -176,15 +284,17 @@ function SignalColumn({
           No observations in this band.
         </div>
       ) : (
-        <div className="border-t border-[rgba(245,240,232,0.1)]">
+        <ul className="border-t border-[rgba(245,240,232,0.1)]">
           {items.map((item) => (
             <SignalRow
               key={item.ticker}
               item={item}
-              onClick={() => onClick(item.ticker)}
+              expanded={expandedId === item.ticker}
+              onToggle={() => onToggle(item.ticker)}
+              onOpenDetail={() => onOpenDetail(item.ticker)}
             />
           ))}
-        </div>
+        </ul>
       )}
     </section>
   );
@@ -196,11 +306,19 @@ export default function SignalsPage() {
   const router = useRouter();
   const [filter, setFilter] = useState<FilterValue>("All");
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data, isLoading, mutate } = useSWR<SignalsListResponse>(
     API.signals.all,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 30_000 },
+    {
+      refreshInterval: 60_000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10_000,
+      errorRetryCount: 2,
+      errorRetryInterval: 5_000,
+    },
   );
 
   const signals = useMemo(() => data?.signals ?? [], [data?.signals]);
@@ -235,7 +353,12 @@ export default function SignalsPage() {
     }
   }, [mutate]);
 
-  const onRowClick = useCallback(
+  const onToggle = useCallback(
+    (ticker: string) =>
+      setExpandedId((prev) => (prev === ticker ? null : ticker)),
+    [],
+  );
+  const onOpenDetail = useCallback(
     (ticker: string) => router.push(`/detail/${ticker}`),
     [router],
   );
@@ -251,9 +374,18 @@ export default function SignalsPage() {
         <div>
           <div className="pq-ink-kicker">SIGNALS · 2026 · {weekTag().split("·")[1]?.trim() ?? ""}</div>
           <h1 className="pq-ink-h1 mt-2">Observation Board</h1>
-          <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
-            Quantitative observations across {signals.length} covered tickers. Neutral language only.
+          <p className="mt-2 max-w-xl font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
+            Quantitative observations across {signals.length} covered tickers.
+            Select any row to expand a four-pillar readout.
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] text-[rgba(245,240,232,0.55)]">
+            <span className="pq-ink-pill pq-ink-pill--pos">Positive</span>
+            <span className="-ml-1">score &gt; 65</span>
+            <span className="pq-ink-pill pq-ink-pill--neu">Neutral</span>
+            <span className="-ml-1">35–65</span>
+            <span className="pq-ink-pill pq-ink-pill--neg">Negative</span>
+            <span className="-ml-1">&lt; 35</span>
+          </div>
         </div>
         <button
           type="button"
@@ -325,7 +457,9 @@ export default function SignalsPage() {
               title="Top Positive"
               kicker="Above Threshold"
               items={positive}
-              onClick={onRowClick}
+              expandedId={expandedId}
+              onToggle={onToggle}
+              onOpenDetail={onOpenDetail}
             />
           )}
           {showNeu && (
@@ -333,7 +467,9 @@ export default function SignalsPage() {
               title="Neutral Zone"
               kicker="Within Band"
               items={neutral}
-              onClick={onRowClick}
+              expandedId={expandedId}
+              onToggle={onToggle}
+              onOpenDetail={onOpenDetail}
             />
           )}
           {showNeg && (
@@ -341,7 +477,9 @@ export default function SignalsPage() {
               title="Top Negative"
               kicker="Below Threshold"
               items={negative}
-              onClick={onRowClick}
+              expandedId={expandedId}
+              onToggle={onToggle}
+              onOpenDetail={onOpenDetail}
             />
           )}
         </div>
