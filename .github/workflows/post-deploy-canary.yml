@@ -1,0 +1,94 @@
+name: Post-Deploy Canary
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for Railway + Vercel deploy window (120s)
+        run: sleep 120
+
+      - name: Backend health + data sanity
+        id: probe
+        run: |
+          set +e
+          ok=1
+          reasons=""
+
+          # /api/health
+          hbody=$(curl -sS -m 20 https://RAILWAY_BACKEND_HOST.up.railway.app/api/health)
+          if ! echo "$hbody" | grep -q '"status":"ok"'; then
+            ok=0
+            reasons+="- /api/health not ok: $hbody\n"
+          fi
+
+          # Market indices auth-required returns 401 with JSON error — that's healthy.
+          # 500/404 indicates route crash or blueprint registration failure.
+          icode=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" "https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/indices?region=us")
+          if [ "$icode" != "401" ] && [ "$icode" != "200" ]; then
+            ok=0
+            reasons+="- /api/market/indices returned unexpected HTTP $icode (expected 200 or 401)\n"
+          fi
+
+          # Frontend shell render
+          fcode=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" https://pivoxquant.com/)
+          if [ "$fcode" != "200" ] && [ "$fcode" != "307" ] && [ "$fcode" != "308" ]; then
+            ok=0
+            reasons+="- pivoxquant.com returned HTTP $fcode\n"
+          fi
+
+          # /market page shell
+          mcode=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" https://pivoxquant.com/market)
+          if [ "$mcode" != "200" ] && [ "$mcode" != "307" ] && [ "$mcode" != "308" ]; then
+            ok=0
+            reasons+="- /market page returned HTTP $mcode\n"
+          fi
+
+          echo "ok=$ok" >> $GITHUB_OUTPUT
+          {
+            echo "reasons<<EOF"
+            echo -e "$reasons"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Canary passed
+        if: steps.probe.outputs.ok == '1'
+        run: echo "✅ Canary OK — ${{ github.sha }} safe on production"
+
+      - name: Canary failed — open incident
+        if: steps.probe.outputs.ok != '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          commit="${{ github.sha }}"
+          short=$(echo "$commit" | cut -c1-7)
+          title="🚨 Canary failed for $short"
+          body=$(cat <<EOF
+          ## Post-deploy canary caught a regression
+
+          Commit: [\`$short\`](${{ github.server_url }}/${{ github.repository }}/commit/$commit)
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ### Failures
+          ${{ steps.probe.outputs.reasons }}
+
+          ### Recommended immediate action
+          1. Check Railway logs: https://railway.com/
+          2. Check Vercel deployment: https://vercel.com/
+          3. If backend broken and unclear cause: \`git revert $short --no-edit && git push\`
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" --label autopilot,canary,P0
+          exit 1
