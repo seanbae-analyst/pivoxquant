@@ -32,7 +32,6 @@ import { useDiscover } from "@/lib/hooks";
 import type { DiscoverResult } from "@/lib/types";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { TerminalSidebar } from "@/components/layout/terminal-sidebar";
 import {
   MOCK_INDICES,
   MOCK_US_GAINERS,
@@ -163,18 +162,14 @@ export default function DiscoverPage() {
 
   return (
     <ErrorBoundary>
-      <div className="pq-ink-card">
-        <header className="mb-8 flex items-center justify-between gap-4">
-          <span className="pq-ink-kicker">PIVOXQUANT · DISCOVER</span>
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-            {weekTag()}
-          </span>
-        </header>
+      <header className="mb-8 flex items-center justify-between gap-4">
+        <span className="pq-ink-kicker">PIVOXQUANT · DISCOVER</span>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          {weekTag()}
+        </span>
+      </header>
 
-        <div className="flex gap-8 md:gap-10">
-          <TerminalSidebar active="discover" />
-          <div className="flex-1 min-w-0">
-        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="pq-ink-h1">Discover</h1>
             <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
@@ -344,11 +339,8 @@ export default function DiscoverPage() {
           )}
         </section>
 
-        <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
-          <DisclaimerBanner type="signal" />
-        </div>
-          </div>
-        </div>
+      <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
+        <DisclaimerBanner type="signal" />
       </div>
     </ErrorBoundary>
   );

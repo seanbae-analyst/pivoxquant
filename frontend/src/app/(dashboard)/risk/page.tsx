@@ -25,7 +25,6 @@ import {
 } from "@/lib/endpoints";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { TerminalSidebar } from "@/components/layout/terminal-sidebar";
 import {
   SEVEN_LAYER_MOCK,
   type RiskLayer,
@@ -144,20 +143,16 @@ export default function RiskPage() {
 
   return (
     <ErrorBoundary>
-      <div className="pq-ink-card">
-        {/* Terminal header */}
-        <header className="mb-8 flex items-center justify-between gap-4">
-          <span className="pq-ink-kicker">PIVOXQUANT · RISK</span>
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-            {weekTag()}
-          </span>
-        </header>
+      {/* Terminal header */}
+      <header className="mb-8 flex items-center justify-between gap-4">
+        <span className="pq-ink-kicker">PIVOXQUANT · RISK</span>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          {weekTag()}
+        </span>
+      </header>
 
-        <div className="flex gap-8 md:gap-10">
-          <TerminalSidebar active="risk" />
-          <div className="flex-1 min-w-0">
-        {/* Title */}
-        <div className="mb-10">
+      {/* Title */}
+      <div className="mb-10">
           <h1 className="pq-ink-h1">Risk Observation Board</h1>
           <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
             Portfolio risk indicators — observational, informational only.
@@ -285,12 +280,9 @@ export default function RiskPage() {
           <RollingVarInk series={rollingVarSeries} />
         </section>
 
-        {/* Disclaimer */}
-        <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
-          <DisclaimerBanner type="signal" />
-        </div>
-          </div>
-        </div>
+      {/* Disclaimer */}
+      <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
+        <DisclaimerBanner type="signal" />
       </div>
     </ErrorBoundary>
   );

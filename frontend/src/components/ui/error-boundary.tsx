@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
 import { useT } from "@/lib/locale";
 
 interface ErrorBoundaryProps {
@@ -12,35 +13,26 @@ interface ErrorBoundaryState {
   hasError: boolean;
 }
 
-/* Functional fallback UI that can use hooks */
+/* Functional fallback UI that can use hooks. Dark themed for Vantablack dashboard. */
 function ErrorFallback({ onRetry }: { onRetry: () => void }) {
   const t = useT();
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8">
-      <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mb-5">
-        <svg
-          className="w-6 h-6 text-red-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+      <div className="w-14 h-14 rounded-[2px] bg-[rgba(139,111,71,0.12)] border border-[rgba(139,111,71,0.3)] flex items-center justify-center mb-5">
+        <AlertTriangle className="w-6 h-6 text-[var(--pq-bronze-light)]" />
       </div>
-      <h2 className="text-xl font-bold text-slate-900 mb-2">
+      <div className="text-[9px] tracking-[0.22em] uppercase text-[var(--pq-bronze-light)] mb-2">
+        Error
+      </div>
+      <h2 className="text-xl font-bold text-[var(--pq-ivory)] mb-2">
         {t("errorBoundary.title")}
       </h2>
-      <p className="text-slate-500 mb-6 max-w-sm">
+      <p className="text-[rgba(245,240,232,0.6)] mb-6 max-w-sm text-sm">
         {t("errorBoundary.description")}
       </p>
       <button
         onClick={onRetry}
-        className="px-5 py-2.5 rounded-full bg-slate-900 text-white text-sm font-semibold transition-all duration-200 hover:bg-slate-800 active:scale-[0.97]"
+        className="px-5 py-2.5 rounded-[2px] bg-[var(--pq-bronze)] text-[var(--pq-ink)] text-sm font-semibold transition-all duration-200 hover:bg-[var(--pq-bronze-light)] active:scale-[0.97]"
       >
         {t("errorBoundary.retry")}
       </button>

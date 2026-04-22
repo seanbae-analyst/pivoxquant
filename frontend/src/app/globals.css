@@ -386,6 +386,19 @@
   border-radius: var(--radius-sm);
 }
 
+/* Dark skeleton — for Vantablack dashboard surfaces. */
+.pq-skeleton-dark {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(245, 240, 232, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: 2px;
+}
+
 @keyframes marquee {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -897,147 +910,6 @@
   --pq-card-bg-ink: rgba(255, 255, 255, 0.02);
 }
 
-/* ══════════════════════════════════════════════════════════
-   Dashboard shell — Vantablack ink canvas + ivory type
-   (matches landing Dashboard Preview §6 exactly).
-   All child cells inherit the dark theme; hairlines + muted
-   text automatically re-point to the ivory-on-ink variants.
-   ══════════════════════════════════════════════════════════ */
-.pq-dash-shell {
-  background-color: var(--pq-ink);
-  color: var(--pq-ivory);
-  /* Re-point the hairline + muted tokens so every ivory-era
-     component reads correctly against ink without editing. */
-  --pq-hairline: rgba(245, 240, 232, 0.10);
-  --pq-hairline-soft: rgba(245, 240, 232, 0.06);
-  --pq-muted: rgba(245, 240, 232, 0.55);
-  min-height: 100vh;
-}
-
-.pq-dash-main {
-  background-color: var(--pq-ink);
-  color: var(--pq-ivory);
-}
-
-/* Editorial card — flat, transparent, single top hairline.
-   No radius, no shadow. Content-first spacing. */
-.pq-dash-card {
-  background: transparent;
-  border: 0;
-  border-top: 1px solid var(--pq-hairline);
-  border-radius: 0;
-  padding: 20px 0;
-}
-
-/* Bordered card — used for the observation terminal block.
-   Matches landing preview dark bento cells. */
-.pq-dash-cell {
-  background: rgba(255, 255, 255, 0.02);
-  border: 0.5px solid rgba(245, 240, 232, 0.08);
-  border-radius: 2px;
-  padding: 22px 24px;
-  color: var(--pq-ivory);
-}
-
-.pq-dash-cell--ink {
-  background: var(--pq-card-bg-ink);
-  border-color: var(--pq-hairline-ink);
-}
-
-/* Section kicker — "RESEARCH TERMINAL" style small caps with bronze rule */
-.pq-dash-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-size: 10.5px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--pq-bronze);
-}
-.pq-dash-kicker::before {
-  content: "";
-  display: inline-block;
-  width: 28px;
-  height: 1px;
-  background-color: var(--pq-bronze);
-  opacity: 0.8;
-}
-
-/* Editorial label — tiny serif uppercase tag, replaces the old slate-500 text */
-.pq-dash-label {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--pq-muted);
-}
-
-/* Stat number — large tabular mono, matches preview metric cards.
-   Ink-theme default (ivory text on black). */
-.pq-stat-num {
-  font-family: var(--font-mono), "JetBrains Mono", monospace;
-  font-variant-numeric: tabular-nums;
-  font-size: 28px;
-  line-height: 1.1;
-  letter-spacing: -0.01em;
-  color: var(--pq-ivory);
-}
-.pq-stat-num--ink {
-  color: var(--pq-ivory);
-  font-size: 22px;
-}
-.pq-stat-sub {
-  font-family: var(--font-mono), "JetBrains Mono", monospace;
-  font-variant-numeric: tabular-nums;
-  font-size: 11px;
-  color: rgba(245, 240, 232, 0.55);
-}
-
-/* Serif section heading — H2 on dashboard surfaces.
-   Ink-theme default (ivory italic). */
-.pq-dash-h2 {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-weight: 500;
-  font-style: italic;
-  font-size: clamp(1.375rem, 2.4vw, 1.75rem);
-  line-height: 1.12;
-  letter-spacing: -0.015em;
-  color: var(--pq-ivory);
-}
-
-/* Dashboard sidebar — Vantablack rail, bronze active accent */
-.pq-side-wordmark {
-  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--pq-ivory);
-}
-
-.pq-side-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-left: 2px solid transparent;
-  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-size: 13px;
-  color: rgba(245, 240, 232, 0.55);
-  transition: color 180ms cubic-bezier(0.16, 1, 0.3, 1),
-              background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.pq-side-link:hover {
-  color: var(--pq-ivory);
-}
-.pq-side-link[data-active="true"] {
-  color: var(--pq-ivory);
-  background-color: rgba(139, 111, 71, 0.12);
-  border-left-color: var(--pq-bronze);
-}
 
 /* Shared button surfaces — consumed by <Button /> variants.
    Editorial tone: no gradient, no glow, no pill. */
@@ -1065,29 +937,6 @@
   pointer-events: none;
 }
 
-/* Signal pills — POSITIVE / NEGATIVE / NEUTRAL. No BUY/SELL/HOLD.
-   Thin hairline border matches the landing observation list. */
-.pq-signal-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 2px;
-  font-family: var(--font-mono), "JetBrains Mono", monospace;
-  font-variant-numeric: tabular-nums;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  border: 1px solid rgba(10, 10, 10, 0.12);
-  color: var(--pq-muted);
-}
-.pq-signal-pill--positive {
-  color: #3C7A52;
-  border-color: rgba(60, 122, 82, 0.4);
-}
-.pq-signal-pill--negative {
-  color: #9C3B3B;
-  border-color: rgba(156, 59, 59, 0.4);
-}
 
 /* ══════════════════════════════════════════════════════════
    PivoxQuant Dashboard — Ink Terminal Cards
@@ -1378,4 +1227,35 @@
   line-height: 1.05;
   letter-spacing: -0.01em;
   font-feature-settings: "tnum" 1;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Shared Dark UI tokens — Vantablack dashboard shared widgets
+   (DisclaimerBanner, TierGate, LoadingSkeleton, ErrorBoundary,
+    EmptyState, etc. — anywhere inside (dashboard) layout.)
+   ══════════════════════════════════════════════════════════ */
+.pq-darkui-panel {
+  background: rgba(255, 255, 255, 0.02);
+  border: 0.5px solid rgba(245, 240, 232, 0.12);
+  border-radius: 2px;
+  color: rgba(245, 240, 232, 0.75);
+}
+.pq-darkui-panel--elevated {
+  background: rgba(10, 10, 10, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 0.5px solid rgba(245, 240, 232, 0.12);
+  border-radius: 2px;
+}
+.pq-darkui-label {
+  color: var(--pq-bronze-light);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.pq-darkui-muted {
+  color: rgba(245, 240, 232, 0.55);
+}
+.pq-darkui-text {
+  color: rgba(245, 240, 232, 0.85);
 }

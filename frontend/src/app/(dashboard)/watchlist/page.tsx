@@ -18,7 +18,6 @@ import { fmtPct } from "@/lib/format";
 import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { TerminalSidebar } from "@/components/layout/terminal-sidebar";
 import { AddSymbolModal } from "@/components/watchlist/add-symbol-modal";
 
 function formatPrice(item: WatchlistItem): string {
@@ -82,19 +81,15 @@ export default function WatchlistPage() {
 
   return (
     <ErrorBoundary>
-      <div className="pq-ink-card">
-        {/* Terminal header */}
-        <header className="mb-8 flex items-center justify-between gap-4">
-          <span className="pq-ink-kicker">PIVOXQUANT · WATCHLIST</span>
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-            {weekTag()}
-          </span>
-        </header>
+      {/* Terminal header */}
+      <header className="mb-8 flex items-center justify-between gap-4">
+        <span className="pq-ink-kicker">PIVOXQUANT · WATCHLIST</span>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          {weekTag()}
+        </span>
+      </header>
 
-        <div className="flex gap-8 md:gap-10">
-          <TerminalSidebar active="watchlist" />
-          <div className="flex-1 min-w-0">
-        {/* Title + CTA */}
+      {/* Title + CTA */}
         <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="pq-ink-h1">Watchlist</h1>
@@ -199,20 +194,17 @@ export default function WatchlistPage() {
           </div>
         )}
 
-        {/* Disclaimer */}
-        <div className="mt-12 border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
-          <DisclaimerBanner type="signal" />
-        </div>
-          </div>
-        </div>
-
-        {showAdd && (
-          <AddSymbolModal
-            onClose={() => setShowAdd(false)}
-            onAdded={() => mutate()}
-          />
-        )}
+      {/* Disclaimer */}
+      <div className="mt-12 border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
+        <DisclaimerBanner type="signal" />
       </div>
+
+      {showAdd && (
+        <AddSymbolModal
+          onClose={() => setShowAdd(false)}
+          onAdded={() => mutate()}
+        />
+      )}
     </ErrorBoundary>
   );
 }

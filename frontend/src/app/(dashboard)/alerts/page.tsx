@@ -1,5 +1,18 @@
 "use client";
 
+/**
+ * /alerts — Full alerts history in the Vantablack ink theme.
+ *
+ * Features preserved:
+ *  - SWR via useAlerts (`/api/alerts`)
+ *  - Unread / kind filters
+ *  - Click row → auto-read + navigate to /detail/[ticker]
+ *  - Mark all read
+ *  - Clear all (2-step confirm)
+ *
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner at top.
+ */
+
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -8,23 +21,11 @@ import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAlerts } from "@/lib/hooks";
 import type { AlertItem } from "@/lib/types";
-import { EmptyState } from "@/components/ui/empty-state";
-import { CardSkeleton } from "@/components/ui/loading-skeleton";
-import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import {
-  BellOff,
-  CheckCheck,
-  Trash2,
-  TrendingUp,
-  TrendingDown,
-  Shield,
-  AlertTriangle,
-  Zap,
-  Info,
-} from "lucide-react";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { BellOff, CheckCheck, Trash2 } from "lucide-react";
 
-/* ── Time helpers ── */
+/* ── Helpers ── */
 
 function relativeTime(dateStr: string): string {
   if (!dateStr) return "";
@@ -32,159 +33,66 @@ function relativeTime(dateStr: string): string {
   const d = new Date(dateStr).getTime();
   if (Number.isNaN(d)) return "";
   const diff = now - d;
-
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "방금 전";
-  if (mins < 60) return `${mins}분 전`;
-
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-
+  if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return "1일 전";
-  if (days < 7) return `${days}일 전`;
-
-  const weeks = Math.floor(days / 7);
-  if (weeks === 1) return "1주 전";
-  return `${weeks}주 전`;
+  if (days < 7) return `${days}d`;
+  return `${Math.floor(days / 7)}w`;
 }
 
-function dateGroup(dateStr: string): string {
-  if (!dateStr) return "이전";
-  const now = new Date();
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "이전";
-
-  // Reset to midnight for comparison
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const alertDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diffDays = Math.floor(
-    (today.getTime() - alertDay.getTime()) / 86_400_000,
-  );
-
-  if (diffDays === 0) return "오늘";
-  if (diffDays === 1) return "어제";
-  if (diffDays < 7) return "이번 주";
-  return "이전";
+function kindLabel(type: string): string {
+  if (!type) return "INFO";
+  if (type.startsWith("signal")) return "SIGNAL";
+  if (type.startsWith("risk")) return "RISK";
+  if (type.includes("trade")) return "TRADE";
+  if (type.includes("artifact")) return "ARTIFACT";
+  if (type.includes("price")) return "PRICE";
+  if (type.includes("concentration")) return "CONCENTRATION";
+  if (type.includes("macro")) return "MACRO";
+  return type.toUpperCase();
 }
 
-/* ── Alert icon by type ── */
+type FilterKey = "all" | "unread" | "read";
 
-function AlertIcon({ type }: { type: string }) {
-  switch (type) {
-    case "signal_change":
-    case "signal_positive":
-      return <TrendingUp className="h-4 w-4 text-emerald-600" />;
-    case "signal_negative":
-      return <TrendingDown className="h-4 w-4 text-red-500" />;
-    case "risk":
-    case "risk_defense":
-      return <Shield className="h-4 w-4 text-amber-500" />;
-    case "warning":
-      return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-    case "trade":
-    case "auto_trade":
-      return <Zap className="h-4 w-4 text-accent" />;
-    default:
-      return <Info className="h-4 w-4 text-blue-500" />;
-  }
-}
-
-/* ── Alert Row ── */
-
-function AlertRow({
-  alert,
-  onClick,
-}: {
-  alert: AlertItem;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors",
-        "hover:bg-slate-50 active:bg-slate-100",
-        !alert.is_read && "bg-accent/5",
-      )}
-    >
-      {/* Icon */}
-      <div className="mt-0.5 shrink-0">
-        <AlertIcon type={alert.type} />
-      </div>
-
-      {/* Content */}
-      <div className="min-w-0 flex-1">
-        {/* Company name (big) + ticker (small) — name falls back to ticker
-            on backend when unresolvable, so this is always present when
-            alert.ticker exists. */}
-        {alert.ticker && (
-          <div className="mb-1 flex items-baseline gap-2">
-            <h3 className="truncate text-base font-bold text-slate-900">
-              {alert.name || alert.ticker}
-            </h3>
-            <span className="shrink-0 font-mono text-[11px] text-slate-400">
-              {alert.ticker}
-            </span>
-          </div>
-        )}
-        <p
-          className={cn(
-            "text-sm leading-snug",
-            alert.is_read
-              ? "text-slate-600"
-              : "font-semibold text-slate-900",
-          )}
-        >
-          {alert.message}
-        </p>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-[11px] text-slate-400 tabular-nums">
-            {relativeTime(alert.created_at)}
-          </span>
-        </div>
-      </div>
-
-      {/* Unread indicator */}
-      {!alert.is_read && (
-        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-accent" />
-      )}
-    </button>
-  );
-}
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "unread", label: "Unread" },
+  { key: "read", label: "Read" },
+];
 
 /* ── Page ── */
 
 export default function AlertsPage() {
   const router = useRouter();
   const { data, isLoading, mutate } = useAlerts();
+  const [filter, setFilter] = useState<FilterKey>("all");
   const [markingRead, setMarkingRead] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
 
-  const alerts = useMemo(() => data?.alerts ?? [], [data?.alerts]);
-  const unreadCount = alerts.filter((a) => !a.is_read).length;
+  const alerts = useMemo<AlertItem[]>(() => data?.alerts ?? [], [data?.alerts]);
 
-  /* ── Group alerts by date ── */
-  const grouped = useMemo(() => {
-    const groups: Record<string, AlertItem[]> = {};
-    const order = ["오늘", "어제", "이번 주", "이전"];
-
-    for (const alert of alerts) {
-      const group = dateGroup(alert.created_at);
-      if (!groups[group]) groups[group] = [];
-      groups[group].push(alert);
-    }
-
-    // Return in order
-    return order
-      .filter((g) => groups[g]?.length)
-      .map((group) => ({
-        label: group,
-        items: groups[group],
-      }));
+  const stats = useMemo(() => {
+    const unread = alerts.filter((a) => !a.is_read).length;
+    const now = Date.now();
+    const DAY = 86_400_000;
+    const today = alerts.filter(
+      (a) => now - new Date(a.created_at).getTime() < DAY,
+    ).length;
+    const week = alerts.filter(
+      (a) => now - new Date(a.created_at).getTime() < 7 * DAY,
+    ).length;
+    return { total: alerts.length, unread, today, week };
   }, [alerts]);
+
+  const filtered = useMemo(() => {
+    if (filter === "unread") return alerts.filter((a) => !a.is_read);
+    if (filter === "read") return alerts.filter((a) => a.is_read);
+    return alerts;
+  }, [alerts, filter]);
 
   /* ── Mark all read ── */
   const handleMarkAllRead = useCallback(async () => {
@@ -192,9 +100,9 @@ export default function AlertsPage() {
     try {
       await apiFetch(API.alerts.read, { method: "POST" });
       await mutate();
-      toast.success("모든 알림을 읽음으로 표시했습니다");
+      toast.success("Marked all as read");
     } catch {
-      toast.error("알림 읽음 처리에 실패했습니다");
+      toast.error("Failed to mark as read");
     } finally {
       setMarkingRead(false);
     }
@@ -206,124 +114,212 @@ export default function AlertsPage() {
       setConfirmClear(true);
       return;
     }
-
     setClearing(true);
     try {
       await apiFetch(API.alerts.clear, { method: "POST" });
       await mutate();
-      toast.success("모든 알림이 삭제됐습니다");
+      toast.success("All alerts cleared");
     } catch {
-      toast.error("알림 삭제에 실패했습니다");
+      toast.error("Failed to clear");
     } finally {
       setClearing(false);
       setConfirmClear(false);
     }
   }, [confirmClear, mutate]);
 
-  /* ── Handle click ── */
+  /* ── Click row ── */
   const handleAlertClick = useCallback(
-    (alert: AlertItem) => {
-      if (alert.ticker) {
-        router.push(`/detail/${alert.ticker}`);
+    async (alert: AlertItem) => {
+      // Opportunistic read-mark
+      if (!alert.is_read) {
+        try {
+          await apiFetch(API.alerts.itemRead(alert.id), { method: "POST" });
+          mutate();
+        } catch {
+          /* silent */
+        }
       }
+      if (alert.ticker) router.push(`/detail/${alert.ticker}`);
     },
-    [router],
+    [mutate, router],
   );
 
   return (
     <ErrorBoundary>
-      <div className="mx-auto max-w-3xl space-y-5">
-        {/* ── Disclaimer ── */}
-        <DisclaimerBanner type="signal" />
-
+      <div className="space-y-8">
         {/* ── Header ── */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold text-slate-900">
-              알림
+        <header className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+              Signals desk · Alerts history
+            </div>
+            <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
+              Alerts
             </h1>
-            {unreadCount > 0 && (
-              <span className="inline-flex items-center rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-semibold text-accent tabular-nums">
-                {unreadCount}
-              </span>
-            )}
           </div>
-          {unreadCount > 0 && (
+
+          {stats.unread > 0 && (
             <button
               type="button"
               onClick={handleMarkAllRead}
               disabled={markingRead}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all",
-                "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
+              className="pq-ink-btn-ghost inline-flex items-center gap-1.5 disabled:opacity-50"
             >
               <CheckCheck className="h-3.5 w-3.5" />
-              모두 읽음 처리
+              Mark all as read
             </button>
           )}
+        </header>
+
+        {/* ── 4-stat strip ── */}
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Total", value: stats.total },
+            { label: "Unread", value: stats.unread },
+            { label: "Today", value: stats.today },
+            { label: "This week", value: stats.week },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]"
+            >
+              <div className="pq-ink-label text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+                {s.label}
+              </div>
+              <div className="pq-ink-num mt-2 text-2xl text-[var(--pq-ivory)] tabular-nums">
+                {s.value}
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* ── Disclaimer ── */}
+        <DisclaimerBanner type="signal" />
+
+        {/* ── Filter tabs ── */}
+        <div className="pq-ink-tabs flex gap-6 border-b border-[rgba(245,240,232,0.08)]">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              data-active={filter === f.key}
+              className="pq-ink-tab"
+            >
+              {f.label}
+              {f.key === "unread" && stats.unread > 0 && (
+                <span className="ml-1.5 text-[10px] text-[var(--pq-bronze)]">
+                  {stats.unread}
+                </span>
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* ── Loading ── */}
+        {/* ── List ── */}
         {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <CardSkeleton key={i} />
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-16 rounded-[2px] bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] animate-pulse"
+              />
             ))}
           </div>
-        ) : alerts.length === 0 ? (
-          /* ── Empty state ── */
-          <EmptyState
-            icon={<BellOff className="h-8 w-8" />}
-            title="알림 없음"
-            description="시그널이 변경되거나 리스크 이벤트가 발생하면 알림이 표시됩니다."
-          />
+        ) : filtered.length === 0 ? (
+          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-12 rounded-[2px] text-center">
+            <BellOff
+              className="mx-auto h-8 w-8 text-[var(--pq-bronze)]"
+              strokeWidth={1.2}
+            />
+            <p className="mt-4 font-serif italic text-xl text-[var(--pq-ivory)]">
+              No alerts yet
+            </p>
+            <p className="mt-2 text-sm text-[rgba(245,240,232,0.5)]">
+              Signals, risk events, and price thresholds will appear here.
+            </p>
+          </div>
         ) : (
-          /* ── Grouped alerts ── */
-          <div className="space-y-4">
-            {grouped.map((group) => (
-              <div key={group.label}>
-                {/* Group label */}
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400 px-1">
-                  {group.label}
-                </h3>
-
-                {/* Alert cards */}
-                <div className="sp-card overflow-hidden divide-y divide-slate-100">
-                  {group.items.map((alert) => (
-                    <AlertRow
-                      key={alert.id}
-                      alert={alert}
-                      onClick={() => handleAlertClick(alert)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] overflow-hidden">
+            <table className="pq-ink-table w-full">
+              <thead>
+                <tr>
+                  <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                    Time
+                  </th>
+                  <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                    Kind
+                  </th>
+                  <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                    Title
+                  </th>
+                  <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                    Ticker
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((a) => (
+                  <tr
+                    key={a.id}
+                    onClick={() => handleAlertClick(a)}
+                    className="cursor-pointer"
+                  >
+                    <td className="px-5 py-3 text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
+                      {relativeTime(a.created_at)}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+                        {kindLabel(a.type)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        {!a.is_read && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--pq-bronze)] shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <div
+                            className={cn(
+                              "font-serif italic text-base text-[var(--pq-ivory)] truncate",
+                              !a.is_read && "font-semibold",
+                            )}
+                          >
+                            {a.name || a.ticker || kindLabel(a.type)}
+                          </div>
+                          <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] truncate">
+                            {a.message}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-xs font-mono text-[rgba(245,240,232,0.5)]">
+                      {a.ticker ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
-        {/* ── Clear all button ── */}
+        {/* ── Clear all ── */}
         {alerts.length > 0 && (
-          <div className="flex justify-center pt-2 pb-4">
+          <div className="flex justify-center pt-4 border-t border-[rgba(245,240,232,0.08)]">
             <button
               type="button"
               onClick={handleClearAll}
               disabled={clearing}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-xs font-semibold transition-all",
+                "inline-flex items-center gap-1.5 px-5 py-2 text-xs tracking-[0.18em] uppercase transition-colors",
                 confirmClear
-                  ? "bg-red-500 text-white hover:bg-red-600"
-                  : "border border-slate-200 text-slate-500 hover:text-red-500 hover:border-red-200 hover:bg-red-50",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                "active:scale-[0.97]",
+                  ? "text-red-400"
+                  : "text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)]",
+                "disabled:opacity-40",
               )}
             >
               <Trash2 className="h-3.5 w-3.5" />
-              {confirmClear
-                ? "정말 전체 삭제"
-                : "전체 삭제"}
+              {confirmClear ? "Confirm · delete all" : "Clear all"}
             </button>
           </div>
         )}

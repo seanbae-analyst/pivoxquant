@@ -118,7 +118,7 @@ export default function QuantScoringPage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-20">
         {/* ── Disclaimer ── */}
-        <DisclaimerBanner type="ai-analysis" className="mb-8" />
+        <DisclaimerBanner type="ai-analysis" theme="light" className="mb-8" />
 
         {/* ── Title ── */}
         <div className="text-center mb-16">

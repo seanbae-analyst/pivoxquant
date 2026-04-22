@@ -1,12 +1,12 @@
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("skeleton", className)} />;
+  return <div className={cn("pq-skeleton-dark", className)} />;
 }
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white p-6 space-y-4">
+    <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 space-y-4">
       <Skeleton className="h-4 w-24" />
       <Skeleton className="h-8 w-32" />
       <Skeleton className="h-2 w-full" />
@@ -37,12 +37,12 @@ export function DashboardSkeleton() {
         ))}
       </div>
       {/* Chart area */}
-      <div className="rounded-2xl border border-slate-100 bg-white p-6">
+      <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6">
         <Skeleton className="h-4 w-32 mb-4" />
         <Skeleton className="h-64 w-full" />
       </div>
       {/* Table */}
-      <div className="rounded-2xl border border-slate-100 bg-white">
+      <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)]">
         {Array.from({ length: 5 }).map((_, i) => (
           <TableRowSkeleton key={i} />
         ))}

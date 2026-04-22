@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * TopBar — PivoxQuant editorial shell header.
+ * TopBar — PivoxQuant editorial shell header, Vantablack variant.
  *
  * Hosts:
- *   - Search trigger (opens <SearchCommandMenu/> command palette via Cmd+K).
+ *   - Search trigger (opens <SearchCommandMenu/> via Cmd+K).
  *   - <NotificationDropdown/> — Bronze-accent bell.
  *   - <ProfileDropdown/> — Bronze-outline avatar with tier chip.
  *
- * Height 56px, Ivory background, single hairline at the bottom.
+ * Height 56px, ink background to blend seamlessly into the new
+ * full-screen dashboard shell. Single ivory hairline at the bottom.
  */
 
 import { useEffect, useState } from "react";
@@ -31,27 +32,30 @@ export function TopBar() {
       <header
         className="flex h-14 items-center justify-between gap-4 px-6"
         style={{
-          background: "var(--pq-ivory)",
-          borderBottom: "1px solid rgba(10, 10, 10, 0.08)",
+          background: "var(--pq-ink)",
+          borderBottom: "0.5px solid rgba(245, 240, 232, 0.08)",
         }}
       >
-        {/* ── Search trigger (looks like an input, opens palette) ── */}
+        {/* ── Search trigger (opens command palette) ── */}
         <button
           type="button"
           onClick={() => openSearchCommand()}
           aria-label="Search ticker or page"
-          className="flex h-9 w-full max-w-[440px] items-center gap-3 rounded-full px-4 text-left transition-colors hover:bg-[rgba(139,111,71,0.06)]"
+          className="flex h-9 w-full max-w-[440px] items-center gap-3 rounded-full px-4 text-left transition-colors hover:bg-[rgba(139,111,71,0.08)]"
           style={{
-            border: "0.5px solid var(--pq-hairline)",
-            background: "transparent",
+            border: "0.5px solid rgba(245, 240, 232, 0.12)",
+            background: "rgba(255, 255, 255, 0.02)",
           }}
         >
-          <Search className="h-[14px] w-[14px] shrink-0" style={{ color: "var(--pq-bronze)" }} />
+          <Search
+            className="h-[14px] w-[14px] shrink-0"
+            style={{ color: "var(--pq-bronze)" }}
+          />
           <span
             className="flex-1 text-sm italic"
             style={{
               fontFamily: "var(--font-serif), serif",
-              color: "var(--pq-muted)",
+              color: "rgba(245, 240, 232, 0.45)",
             }}
           >
             Search ticker, page…
@@ -59,8 +63,8 @@ export function TopBar() {
           <kbd
             className="rounded px-1.5 py-0.5 font-mono text-[10px]"
             style={{
-              border: "0.5px solid var(--pq-hairline)",
-              color: "var(--pq-muted)",
+              border: "0.5px solid rgba(245, 240, 232, 0.15)",
+              color: "rgba(245, 240, 232, 0.55)",
               letterSpacing: "0.05em",
             }}
           >
@@ -75,7 +79,7 @@ export function TopBar() {
         </div>
       </header>
 
-      {/* Global command palette (mounted once, controlled via openSearchCommand()) */}
+      {/* Global command palette — mounted once, controlled by openSearchCommand() */}
       <SearchCommandMenu />
     </>
   );

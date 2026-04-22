@@ -1,42 +1,47 @@
 "use client";
 
 import { TopBar } from "./top-bar";
+import { TerminalSidebar } from "./terminal-sidebar";
 import { BottomNav } from "./bottom-nav";
 
 /**
- * Dashboard shell — ivory canvas only.
- * Each page renders its own Vantablack terminal card (with its own inner
- * sidebar) inside the canvas, matching the landing-preview visual.
- * The legacy outer <Sidebar /> was removed to avoid a double-sidebar on /home.
+ * Dashboard shell — full-screen Vantablack.
+ *
+ * Desktop (≥ md):
+ *   ┌────────────────────────────────────────────────────────┐
+ *   │  Sidebar rail (240px) │ TopBar (full width content col)│
+ *   │                        ├────────────────────────────────┤
+ *   │                        │   <main> flex-1 padded         │
+ *   └────────────────────────────────────────────────────────┘
+ *
+ * Mobile (< md): TopBar + main + BottomNav (stacked).
+ *
+ * Everything ink — no ivory canvas, no max-w-7xl. Content uses the full
+ * available width (sidebar-excluded on desktop, full width on mobile).
  */
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: "var(--pq-ivory)" }}
-    >
-      {/* Desktop + Tablet */}
-      <div className="hidden min-h-screen md:flex md:flex-col">
-        <TopBar />
-        <main
-          className="flex-1"
-          style={{ backgroundColor: "var(--pq-ivory)" }}
+    <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
+      {/* ── Desktop + Tablet (≥ md) ── */}
+      <div className="hidden md:flex md:min-h-screen">
+        {/* Sidebar rail — sticky full-height column */}
+        <aside
+          className="sticky top-0 h-screen w-[240px] shrink-0 border-r border-[rgba(245,240,232,0.08)] bg-[var(--pq-ink)]"
         >
-          <div className="mx-auto max-w-7xl px-6 md:px-8 py-8">
-            {children}
-          </div>
-        </main>
+          <TerminalSidebar variant="rail" />
+        </aside>
+
+        {/* Right column — TopBar + scrollable main */}
+        <div className="flex min-h-screen flex-1 flex-col min-w-0">
+          <TopBar />
+          <main className="flex-1 px-8 md:px-10 py-8">{children}</main>
+        </div>
       </div>
 
-      {/* Mobile */}
+      {/* ── Mobile (< md) ── */}
       <div className="flex min-h-screen flex-col md:hidden">
         <TopBar />
-        <main
-          className="flex-1 pb-24"
-          style={{ backgroundColor: "var(--pq-ivory)" }}
-        >
-          <div className="px-4 py-6">{children}</div>
-        </main>
+        <main className="flex-1 px-4 py-6 pb-24">{children}</main>
         <BottomNav />
       </div>
     </div>

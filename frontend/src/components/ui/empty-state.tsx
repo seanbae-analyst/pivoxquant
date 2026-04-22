@@ -11,15 +11,15 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-6 text-slate-400">
+      <div className="w-16 h-16 rounded-[2px] bg-[rgba(255,255,255,0.03)] border border-[rgba(245,240,232,0.1)] flex items-center justify-center mb-6 text-[var(--pq-bronze-light)]">
         {icon}
       </div>
-      <h3 className="text-lg font-bold text-slate-900 mb-2">{title}</h3>
-      <p className="text-slate-500 max-w-sm mb-6">{description}</p>
+      <h3 className="text-lg font-bold text-[var(--pq-ivory)] mb-2">{title}</h3>
+      <p className="text-[rgba(245,240,232,0.6)] max-w-sm mb-6 text-sm">{description}</p>
       {action && (
         <Link
           href={action.href}
-          className="px-6 py-3 rounded-full bg-slate-900 text-white text-sm font-semibold transition-all duration-200 hover:bg-slate-800 active:scale-[0.97]"
+          className="px-6 py-3 rounded-[2px] bg-[var(--pq-bronze)] text-[var(--pq-ink)] text-sm font-semibold transition-all duration-200 hover:bg-[var(--pq-bronze-light)] active:scale-[0.97]"
         >
           {action.label}
         </Link>
