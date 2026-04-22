@@ -1,0 +1,107 @@
+name: Legal Guard
+
+on:
+  pull_request:
+    branches: ['**']
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  vocab:
+    name: Forbidden vocabulary scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan production paths
+        id: scan
+        run: |
+          set +e
+          declare -a HITS
+
+          # EN advisory verbs in user-rendered paths.
+          # Excludes: tests, pycache, legal_filter.py (regex source), disclaimer files
+          # (which legitimately quote the forbidden vocab as negation), signup/pricing
+          # consent copy (which quotes them as disclaimers).
+          en_hits=$(grep -rnE '\b(should\s+(buy|sell)|recommend(ed|ing|s)?|give[s]?\s+investment\s+advice)\b' \
+            frontend/src/app frontend/src/components routes services \
+            --include='*.tsx' --include='*.ts' --include='*.py' 2>/dev/null \
+            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|consent|never\s+(recommend|give)|not\s+(recommend|give)|no\s+recommend|do\s+not\s+recommend|does\s+not\s+(recommend|give)' \
+            || true)
+
+          kr_hits=$(grep -rnE '(매수하세요|매도하세요|추천합니다|조언드립니다|이\s*종목을\s*사세요)' \
+            frontend/src routes services \
+            --include='*.tsx' --include='*.ts' --include='*.py' --include='*.md' 2>/dev/null \
+            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|금지|없음|않습니다|안\s*합니다' \
+            || true)
+
+          # Direct signal literal regressions in BE production.
+          sig_hits=$(grep -rnE 'signal\s*=\s*["\x27](BUY|SELL|HOLD)["\x27]' routes services --include='*.py' 2>/dev/null \
+            | grep -viE 'test_|__pycache__|#' \
+            || true)
+
+          total=0
+          report=""
+          if [ -n "$en_hits" ]; then
+            cnt=$(echo "$en_hits" | wc -l | tr -d ' ')
+            total=$((total + cnt))
+            report+="### EN advisory verbs ($cnt)\n\`\`\`\n$en_hits\n\`\`\`\n\n"
+          fi
+          if [ -n "$kr_hits" ]; then
+            cnt=$(echo "$kr_hits" | wc -l | tr -d ' ')
+            total=$((total + cnt))
+            report+="### KR advisory ($cnt)\n\`\`\`\n$kr_hits\n\`\`\`\n\n"
+          fi
+          if [ -n "$sig_hits" ]; then
+            cnt=$(echo "$sig_hits" | wc -l | tr -d ' ')
+            total=$((total + cnt))
+            report+="### Signal literal (BUY/SELL/HOLD) ($cnt)\n\`\`\`\n$sig_hits\n\`\`\`\n\n"
+          fi
+
+          echo "total=$total" >> $GITHUB_OUTPUT
+          {
+            echo "report<<EOF"
+            echo -e "$report"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+          if [ "$total" -gt 0 ]; then
+            echo "::error::Legal Guard found $total forbidden vocabulary hits"
+            exit 1
+          fi
+
+      - name: Disclaimer coverage check
+        run: |
+          missing=""
+          for f in frontend/src/app/\(dashboard\)/*/page.tsx frontend/src/app/\(dashboard\)/*/*/page.tsx; do
+            [ -f "$f" ] || continue
+            if ! grep -q 'DisclaimerBanner' "$f"; then
+              missing+="$f\n"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::DisclaimerBanner missing on dashboard pages:"
+            echo -e "$missing"
+            exit 1
+          fi
+          echo "✅ All dashboard pages include DisclaimerBanner"
+
+      - name: Broker safety guards
+        run: |
+          # KIS buy/sell must remain disabled
+          if ! grep -q 'KIS_READ_ONLY\|주문 기능이 비활성화' kis_service.py 2>/dev/null; then
+            echo "::error::KIS read-only guard text missing in kis_service.py"
+            exit 1
+          fi
+          # Alpaca paper=True hardcoded
+          if ! grep -q 'paper\s*=\s*True' services/broker/user_alpaca_service.py 2>/dev/null; then
+            echo "::error::Alpaca paper=True not hardcoded in user_alpaca_service.py"
+            exit 1
+          fi
+          echo "✅ Broker safety guards intact"

@@ -1,0 +1,89 @@
+name: API Health Monitor
+
+on:
+  schedule:
+    - cron: '7,23,37,53 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping backend /api/health
+        id: backend
+        run: |
+          set +e
+          body=$(curl -sS -m 15 -w "\nHTTP:%{http_code}" https://RAILWAY_BACKEND_HOST.up.railway.app/api/health)
+          code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$body" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "code=$code" >> $GITHUB_OUTPUT
+          if [ "$code" != "200" ]; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+          else
+            if ! echo "$body" | grep -q '"status":"ok"'; then
+              echo "failed=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Ping frontend root
+        id: frontend
+        run: |
+          set +e
+          code=$(curl -sS -m 15 -o /dev/null -w "%{http_code}" https://pivoxquant.com/)
+          echo "code=$code" >> $GITHUB_OUTPUT
+          if [ "$code" != "200" ] && [ "$code" != "307" ] && [ "$code" != "308" ]; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Open incident issue on failure
+        if: steps.backend.outputs.failed == 'true' || steps.frontend.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="🚨 Autopilot: API health failed @ $(date -u +%H:%M) UTC"
+          body=$(cat <<EOF
+          ## Autopilot health check failed
+
+          - Backend \`/api/health\`: HTTP **${{ steps.backend.outputs.code }}** · failed=${{ steps.backend.outputs.failed }}
+          - Frontend \`/\`: HTTP **${{ steps.frontend.outputs.code }}** · failed=${{ steps.frontend.outputs.failed }}
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - Timestamp: $(date -u +%FT%TZ)
+
+          ### Backend response
+          \`\`\`
+          ${{ steps.backend.outputs.body }}
+          \`\`\`
+
+          ### Likely causes
+          - Railway deploy failed / cold start
+          - Backend crash (check Railway logs)
+          - Vercel deploy failed (check \`vercel.com/seanbae/pivoxquant\`)
+          - DNS/SSL cert issue
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label autopilot,health --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body" --label autopilot,health
+          fi
+
+      - name: Close stale incident on recovery
+        if: steps.backend.outputs.failed != 'true' && steps.frontend.outputs.failed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for num in $(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label autopilot,health --json number --jq '.[].number'); do
+            gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body "✅ Recovered at $(date -u +%FT%TZ). Auto-closing."
+            gh issue close "$num" --repo "$GITHUB_REPOSITORY"
+          done
