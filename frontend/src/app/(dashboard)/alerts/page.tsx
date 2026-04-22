@@ -158,7 +158,7 @@ export default function AlertsPage() {
         <header className="flex items-start justify-between gap-4">
           <div>
             <RuledKicker>Signals desk &middot; Alerts history</RuledKicker>
-            <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
+            <h1 className="mt-2 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
               Alerts
             </h1>
             <Caption className="mt-1">
@@ -237,7 +237,7 @@ export default function AlertsPage() {
         ) : filtered.length === 0 ? (
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-12 rounded-[2px] text-center">
             <Fleuron size={16} />
-            <p className="mt-4 font-serif italic text-xl text-[var(--pq-ivory)]">
+            <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
               No observations recorded yet.
             </p>
             <Caption className="mt-2">
@@ -251,7 +251,8 @@ export default function AlertsPage() {
           </div>
         ) : (
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] overflow-hidden">
-            <table className="pq-ink-table w-full">
+            <div className="overflow-x-auto">
+            <table className="pq-ink-table w-full min-w-[520px]">
               <thead>
                 <tr>
                   <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
@@ -291,7 +292,7 @@ export default function AlertsPage() {
                         <div className="min-w-0">
                           <div
                             className={cn(
-                              "font-serif italic text-base text-[var(--pq-ivory)] truncate",
+                              "font-serif text-base text-[var(--pq-ivory)] truncate",
                               !a.is_read && "font-semibold",
                             )}
                           >
@@ -310,6 +311,7 @@ export default function AlertsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 

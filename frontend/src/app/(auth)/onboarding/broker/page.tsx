@@ -115,7 +115,7 @@ export default function OnboardingBrokerPage() {
       <header className="sticky top-0 z-20 border-b border-[rgba(245,240,232,0.08)] bg-[rgba(10,10,10,0.9)] backdrop-blur-xl px-4 py-3 sm:px-6">
         <div className="mx-auto max-w-3xl">
           <div className="mb-3 flex items-center justify-between">
-            <span className="font-serif italic text-base text-[var(--pq-ivory)]">
+            <span className="font-serif text-base text-[var(--pq-ivory)]">
               PivoxQuant
             </span>
             <button

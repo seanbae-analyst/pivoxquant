@@ -58,7 +58,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
 
-    // ── Auth (login/signup are crawlable entry points) ─────
+    // ── Auth (entry points but lower crawl priority) ───────
     {
       url: `${BASE_URL}/login`,
       lastModified: now,

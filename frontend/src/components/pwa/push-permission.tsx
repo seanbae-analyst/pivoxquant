@@ -3,74 +3,136 @@
 import { useState, useEffect } from "react";
 import { Bell, X } from "lucide-react";
 
+const DISMISS_KEY = "pq-push-dismissed";
+// Re-prompt after two weeks if the user said "later" — alerts are less
+// critical than install, so we ask less often.
+const DISMISS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+// Wait for the user to settle into a session before surfacing the prompt.
+const APPEAR_DELAY_MS = 30_000;
+
 export function PushPermission() {
-  const [show, setShow] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (typeof Notification === "undefined") return;
+    // If the user already granted/denied, we don't show the prompt.
+    // "granted" is a no-op; "denied" means the permission UI is gone anyway.
     if (Notification.permission !== "default") return;
-    if (localStorage.getItem("push_prompt_dismissed")) return;
 
-    const timer = setTimeout(() => setShow(true), 30000);
-    return () => clearTimeout(timer);
+    const dismissedAt = localStorage.getItem(DISMISS_KEY);
+    if (dismissedAt) {
+      const age = Date.now() - Number(dismissedAt);
+      if (Number.isFinite(age) && age < DISMISS_WINDOW_MS) return;
+    }
+
+    const timer = window.setTimeout(() => setVisible(true), APPEAR_DELAY_MS);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const enable = async () => {
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
-      try {
-        const { subscribeToPush } = await import("@/lib/push");
-        await subscribeToPush();
-      } catch {
-        // Subscription may fail if service worker is not ready
+    if (busy) return;
+    setBusy(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        try {
+          const { subscribeToPush } = await import("@/lib/push");
+          await subscribeToPush();
+        } catch {
+          // Subscription may fail if the SW isn't ready yet; the user can
+          // retry from Settings. Permission itself is already granted.
+        }
       }
+    } finally {
+      setBusy(false);
+      setVisible(false);
+      localStorage.setItem(DISMISS_KEY, String(Date.now()));
     }
-    setShow(false);
-    localStorage.setItem("push_prompt_dismissed", "1");
   };
 
   const dismiss = () => {
-    setShow(false);
-    localStorage.setItem("push_prompt_dismissed", "1");
+    setVisible(false);
+    localStorage.setItem(DISMISS_KEY, String(Date.now()));
   };
 
-  if (!show) return null;
+  if (!visible) return null;
 
   return (
-    <div className="fixed top-20 right-4 z-50 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl md:right-6">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10">
-          <Bell className="h-5 w-5 text-accent" />
-        </div>
-        <div className="flex-1">
-          <h3 className="mb-1 text-sm font-bold text-slate-900">
-            Enable Notifications
-          </h3>
-          <p className="mb-3 text-xs text-slate-500">
-            Get alerts when signals change, risk events occur, or your portfolio
-            needs attention.
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={enable}
-              className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white"
+    <div
+      role="dialog"
+      aria-labelledby="pq-push-title"
+      aria-describedby="pq-push-body"
+      className="pointer-events-auto fixed right-4 top-20 z-50 w-[340px] max-w-[calc(100vw-2rem)] md:right-6"
+    >
+      <div
+        className="relative overflow-hidden rounded-[2px] border p-5 shadow-2xl backdrop-blur-md"
+        style={{
+          background: "rgba(10, 10, 10, 0.96)",
+          borderColor: "rgba(139, 111, 71, 0.42)",
+          color: "var(--pq-ivory)",
+        }}
+      >
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[2px] border"
+              style={{
+                borderColor: "rgba(139, 111, 71, 0.5)",
+                color: "var(--pq-bronze)",
+              }}
             >
-              Enable
-            </button>
-            <button
-              onClick={dismiss}
-              className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500"
-            >
-              Later
-            </button>
+              <Bell className="h-4 w-4" />
+            </div>
+            <div>
+              <div
+                className="mb-1 text-[10px] font-medium uppercase tracking-[0.24em]"
+                style={{ color: "var(--pq-bronze)" }}
+              >
+                Observation alerts
+              </div>
+              <h3
+                id="pq-push-title"
+                className="font-serif text-[17px] leading-tight"
+                style={{ color: "var(--pq-ivory)" }}
+              >
+                Be notified when the picture changes.
+              </h3>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="Dismiss notification prompt"
+            className="-mr-1 -mt-1 rounded-full p-1"
+            style={{ color: "rgba(245, 240, 232, 0.5)" }}
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <button
-          onClick={dismiss}
-          className="text-slate-400 hover:text-slate-600"
+        <p
+          id="pq-push-body"
+          className="mb-5 text-[13px] leading-relaxed"
+          style={{ color: "rgba(245, 240, 232, 0.68)" }}
         >
-          <X className="h-4 w-4" />
-        </button>
+          Material signal shifts, risk threshold breaches, and weekly memo
+          deliveries. No marketing, no noise.
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={enable}
+            disabled={busy}
+            className="pq-ink-btn-bronze inline-flex flex-1 items-center justify-center gap-2 disabled:opacity-60"
+          >
+            <Bell className="h-3.5 w-3.5" />
+            <span>{busy ? "Enabling…" : "Enable"}</span>
+          </button>
+          <button type="button" onClick={dismiss} className="pq-ink-btn-ghost">
+            Later
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -296,7 +296,7 @@ export function SearchCommandMenu() {
 
           {!errored && hasQuery && !loading && sections.flat.length === 0 && (
             <div className="px-5 py-10 text-center text-sm" style={{ color: "var(--pq-muted)" }}>
-              No matches for <span className="italic">&ldquo;{query}&rdquo;</span>
+              No matches for <span>&ldquo;{query}&rdquo;</span>
             </div>
           )}
 
@@ -351,7 +351,7 @@ export function SearchCommandMenu() {
                     </span>
                     {p.hint && (
                       <span
-                        className="ml-3 flex-1 truncate text-xs italic"
+                        className="ml-3 flex-1 truncate text-xs"
                         style={{ color: "var(--pq-muted)", fontFamily: "var(--font-serif), serif" }}
                       >
                         {p.hint}

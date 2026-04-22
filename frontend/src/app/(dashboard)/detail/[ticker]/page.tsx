@@ -40,6 +40,7 @@ import {
   Check,
   ArrowLeft,
   FileText,
+  Eye,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -95,6 +96,24 @@ interface NewsItem {
 interface NewsResponse {
   news: NewsItem[];
 }
+// Insider Form 4 filing (from /api/alt-data/us/insider-trades/<ticker>).
+// SEC EDGAR data — US tickers only; KR tickers return empty.
+interface InsiderFiling {
+  insider?: string;
+  relationship?: string;
+  transaction_date?: string;
+  transaction_code?: string;
+  shares?: number;
+  price?: number;
+  value_usd?: number;
+  acquired?: boolean;
+}
+interface InsiderResponse {
+  ticker?: string;
+  data?: InsiderFiling[];
+  source?: string;
+}
+
 // Matches the actual /api/profile/<ticker> response shape (routes/market.py L433).
 // Fundamentals like pe_ratio/eps/beta/52W are read from signal.snapshot instead.
 interface ProfileData {
@@ -159,6 +178,23 @@ function pctColor(pct: number | undefined): string {
 
 function pillarToken(label: string): "POSITIVE" | "NEGATIVE" | "NEUTRAL" {
   return label === "POSITIVE" ? "POSITIVE" : label === "NEGATIVE" ? "NEGATIVE" : "NEUTRAL";
+}
+
+/** Short relative time — "3d ago", "2w ago", "—". Observation tone only. */
+function formatRelative(iso: string | undefined): string {
+  if (!iso) return "—";
+  const parsed = new Date(iso);
+  if (isNaN(parsed.getTime())) return "—";
+  const diffMs = Date.now() - parsed.getTime();
+  if (diffMs < 0) return "—";
+  const days = Math.floor(diffMs / 86_400_000);
+  if (days < 1) return "today";
+  if (days === 1) return "1d ago";
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return weeks === 1 ? "1w ago" : `${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? "1mo ago" : `${months}mo ago`;
 }
 
 /* ── Chart ── */
@@ -259,7 +295,7 @@ function PillarCard({
           style={{ width: `${safe}%` }}
         />
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-[rgba(245,240,232,0.55)] font-serif italic">
+      <p className="mt-3 text-[11px] leading-relaxed text-[rgba(245,240,232,0.55)] font-serif">
         {observation}
       </p>
     </div>
@@ -343,6 +379,23 @@ export default function StockDetailPage() {
       errorRetryInterval: 10_000,
     },
   );
+  // Insider Form 4 — US only. KR (6-digit.KS/.KQ) skipped: SEC EDGAR US-only source.
+  // Cache 10min — filings update daily at most.
+  const insiderEligible = ticker && !/^\d{6}\.(KS|KQ)$/i.test(ticker);
+  const { data: insiderRes } = useSWR<InsiderResponse>(
+    insiderEligible ? `/api/alt-data/us/insider-trades/${ticker}?days=90` : null,
+    fetcher,
+    {
+      refreshInterval: 600_000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 60_000,
+      shouldRetryOnError: false,
+    },
+  );
+  const insiderData: InsiderFiling[] = Array.isArray(insiderRes?.data)
+    ? (insiderRes!.data as InsiderFiling[])
+    : [];
 
   const { data: watchlistData, mutate: refreshWatchlist } = useWatchlist();
   const watchlistEntry = watchlistData?.watchlist?.find((w) => w.ticker === ticker);
@@ -384,7 +437,7 @@ export default function StockDetailPage() {
       <ErrorBoundary>
         <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-12 rounded-[2px] text-center">
           <SearchX className="mx-auto h-8 w-8 text-[var(--pq-bronze)]" strokeWidth={1.2} />
-          <p className="mt-4 font-serif italic text-xl text-[var(--pq-ivory)]">
+          <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
             No ticker specified
           </p>
           <Link
@@ -403,7 +456,7 @@ export default function StockDetailPage() {
       <ErrorBoundary>
         <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-12 rounded-[2px] text-center">
           <SearchX className="mx-auto h-8 w-8 text-[var(--pq-bronze)]" strokeWidth={1.2} />
-          <p className="mt-4 font-serif italic text-xl text-[var(--pq-ivory)]">
+          <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
             No data for &ldquo;{ticker}&rdquo;
           </p>
           <p className="mt-2 text-sm text-[rgba(245,240,232,0.5)]">
@@ -436,7 +489,7 @@ export default function StockDetailPage() {
             <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
               {signal?.sector || profile?.sector || "—"} · {krw ? "KRW" : "USD"}
             </div>
-            <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)] truncate">
+            <h1 className="mt-2 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)] truncate">
               {signal?.name || profile?.name || ticker}
             </h1>
             <div className="mt-1 font-mono text-sm text-[rgba(245,240,232,0.5)]">
@@ -507,7 +560,7 @@ export default function StockDetailPage() {
               <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
                 Signal · {pillarToken(signalToken)}
               </div>
-              <div className="mt-2 font-mono text-3xl text-[var(--pq-ivory)] tabular-nums">
+              <div className="mt-2 font-mono text-2xl md:text-3xl text-[var(--pq-ivory)] tabular-nums">
                 {signal?.score ?? "—"}
               </div>
               <div className="text-xs text-[rgba(245,240,232,0.5)] mt-1">
@@ -698,7 +751,7 @@ export default function StockDetailPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="font-serif italic text-base text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze)] transition-colors line-clamp-2">
+                        <p className="font-serif text-base text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze)] transition-colors line-clamp-2">
                           {n.title}
                         </p>
                         <div className="mt-1 flex items-center gap-2 text-xs text-[rgba(245,240,232,0.4)]">
@@ -716,29 +769,111 @@ export default function StockDetailPage() {
           )}
         </section>
 
-        {/* ── Related artifacts ── */}
+        {/* ── Related artifacts (richer grid — observation-only) ── */}
         <section>
-          <h2 className="pq-ink-h2 mb-4">Related artifacts</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <header className="mb-5 flex items-center gap-3 pb-3 border-b border-[rgba(245,240,232,0.08)]">
+            <FileText className="h-4 w-4 text-[var(--pq-bronze)]" />
+            <h2 className="font-serif text-xl text-[var(--pq-ivory)]">
+              Related observations
+            </h2>
+          </header>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { slug: "dd_checklist", title: "DD Checklist" },
-              { slug: "earnings_prebrief", title: "Earnings Pre-Brief" },
-              { slug: "weekly_memo", title: "Weekly Memo" },
-            ].map((a) => (
-              <Link
-                key={a.slug}
-                href={`/samples/${a.slug}.pdf`}
+              {
+                slug: "weekly_memo",
+                name: "Weekly Memo",
+                desc: "Portfolio-wide context, authored weekly",
+              },
+              {
+                slug: "earnings_prebrief",
+                name: "Earnings Pre-Brief",
+                desc: "Ten-day forward earnings observation",
+              },
+              {
+                slug: "dd_checklist",
+                name: "DD Checklist",
+                desc: "Structured due-diligence reference",
+              },
+            ].map((r) => (
+              <a
+                key={r.slug}
+                href={`/samples/${r.slug}.pdf`}
                 target="_blank"
-                className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-4 rounded-[2px] flex items-center gap-3 hover:border-[var(--pq-bronze)] transition-colors group"
+                rel="noopener noreferrer"
+                className="block border border-[rgba(245,240,232,0.08)] rounded-[2px] p-4 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.03)] transition-all group"
               >
-                <FileText className="h-4 w-4 text-[var(--pq-bronze)]" />
-                <span className="font-serif italic text-sm text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze)] transition-colors">
-                  {a.title}
-                </span>
-              </Link>
+                <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+                  PDF · Observational
+                </div>
+                <div className="font-serif text-[var(--pq-ivory)] mb-1">
+                  {r.name}
+                </div>
+                <div className="text-[11px] text-[rgba(245,240,232,0.55)]">
+                  {r.desc}
+                </div>
+                <div className="mt-3 text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] opacity-0 group-hover:opacity-100 transition-opacity">
+                  Open PDF →
+                </div>
+              </a>
             ))}
           </div>
         </section>
+
+        {/* ── Insider filings · last 90 days ── */}
+        {insiderEligible && (
+          <section>
+            <header className="mb-5 flex items-center gap-3 pb-3 border-b border-[rgba(245,240,232,0.08)]">
+              <Eye className="h-4 w-4 text-[var(--pq-bronze)]" />
+              <h2 className="font-serif text-xl text-[var(--pq-ivory)]">
+                Insider filings · last 90 days
+              </h2>
+            </header>
+            {insiderData.length > 0 ? (
+              <ul className="space-y-2">
+                {insiderData.slice(0, 5).map((f, i) => {
+                  const acquired = f.acquired === true;
+                  const shares = Number.isFinite(f.shares as number)
+                    ? (f.shares as number)
+                    : 0;
+                  return (
+                    <li
+                      key={i}
+                      className="flex items-center justify-between py-2 border-b border-[rgba(245,240,232,0.06)]"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[13px] text-[var(--pq-ivory)]">
+                          {f.insider || "—"}
+                        </span>
+                        {f.relationship && (
+                          <span className="ml-2 text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+                            {f.relationship}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span
+                          className={cn(
+                            "text-[11px] font-mono tabular-nums",
+                            acquired ? "text-emerald-400" : "text-red-400",
+                          )}
+                        >
+                          {acquired ? "ACQ" : "DSP"} {shares.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-[rgba(245,240,232,0.5)]">
+                          {formatRelative(f.transaction_date)}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-[12px] text-[rgba(245,240,232,0.55)]">
+                No public filings observed in the last 90 days.
+              </p>
+            )}
+          </section>
+        )}
       </div>
     </ErrorBoundary>
   );

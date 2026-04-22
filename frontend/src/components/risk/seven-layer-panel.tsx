@@ -128,7 +128,7 @@ export function SevenLayerPanel({
       <header className="mb-3 border-t border-slate-200 pt-4">
         <h2
           id="seven-layer-heading"
-          className="font-serif italic text-xl text-slate-900"
+          className="font-serif text-xl text-slate-900"
         >
           Seven-Layer Risk Defense
         </h2>
@@ -145,7 +145,7 @@ export function SevenLayerPanel({
             style={{ tableLayout: "fixed" } as React.CSSProperties}
           >
             {/* layer number */}
-            <span className="font-serif italic text-sm text-slate-400 tabular-nums w-8">
+            <span className="font-serif text-sm text-slate-400 tabular-nums w-8">
               {String(layer.no).padStart(2, "0")}
             </span>
 
@@ -153,7 +153,7 @@ export function SevenLayerPanel({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <StatusDot status={layer.status} />
-                <h3 className="font-serif italic font-bold text-[15px] text-slate-900">
+                <h3 className="font-serif font-bold text-[15px] text-slate-900">
                   {layer.name}
                 </h3>
               </div>

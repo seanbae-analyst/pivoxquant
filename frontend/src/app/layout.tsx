@@ -37,11 +37,18 @@ const serif = Source_Serif_4({
   display: "swap",
 });
 
+// Vantablack theme-color matches manifest + avoids the iOS Safari white
+// notch flash when launched from the home screen. viewportFit="cover" is
+// required so env(safe-area-inset-*) is non-zero on iPhone notch/Dynamic Island.
 export const viewport: Viewport = {
-  themeColor: "#ffffff",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#050505" },
+    { media: "(prefers-color-scheme: dark)", color: "#050505" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
 };
 
 const SITE_URL =
@@ -87,8 +94,16 @@ export const metadata: Metadata = {
   publisher: "PivoxQuant",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    // black-translucent lets the Vantablack background extend under the
+    // iOS status bar when installed, matching the editorial dark vibe.
+    statusBarStyle: "black-translucent",
     title: SITE_NAME,
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": SITE_NAME,
   },
   formatDetection: {
     telephone: false,
@@ -129,8 +144,17 @@ export const metadata: Metadata = {
       follow: true,
       "max-image-preview": "large",
       "max-snippet": -1,
+      "max-video-preview": -1,
     },
   },
+  icons: {
+    icon: [
+      { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180" },
+  },
+  manifest: "/manifest.webmanifest",
   category: "finance",
 };
 
@@ -141,7 +165,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ko"
       className={`${geist.variable} ${geistHeading.variable} ${mono.variable} ${serif.variable} h-full antialiased`}
     >
       <head>

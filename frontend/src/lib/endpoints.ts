@@ -183,12 +183,17 @@ export const API = {
   },
   broker: {
     connections: "/api/broker/connections",
-    // KIS (한국투자증권) — the only supported broker connection.
-    // Kiwoom / Alpaca connection flows were removed 2026-04-20.
+    // KIS (한국투자증권) — read-only Korean brokerage.
     kisConnect: "/api/broker/kis/connect",
     kisSync: "/api/broker/kis/sync",
     kisDisconnect: "/api/broker/kis/disconnect",
     kisStatus: "/api/broker/kis/status",
+    // Alpaca (US equity, paper-only; re-added 2026-04-22).
+    // Live trading is disabled; backend rejects env="live".
+    alpacaConnect: "/api/broker/alpaca/connect",
+    alpacaSync: "/api/broker/alpaca/sync",
+    alpacaDisconnect: "/api/broker/alpaca/disconnect",
+    alpacaStatus: "/api/broker/alpaca/status",
   },
   share: {
     create: "/api/portfolio/share",

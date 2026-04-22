@@ -314,7 +314,7 @@ export default function MarketPage() {
             </div>
           </div>
           {upcomingEarnings.length === 0 ? (
-            <div className="border-t border-[rgba(245,240,232,0.1)] py-8 text-center font-serif italic text-[12px] text-[rgba(245,240,232,0.4)]">
+            <div className="border-t border-[rgba(245,240,232,0.1)] py-8 text-center font-serif text-[12px] text-[rgba(245,240,232,0.4)]">
               No scheduled events in the window.
             </div>
           ) : (
@@ -371,7 +371,7 @@ export default function MarketPage() {
                 <span className="font-mono text-[11px] tabular-nums text-[var(--pq-bronze)]">
                   {row.time}
                 </span>
-                <p className="font-serif italic text-[13px] leading-relaxed text-[rgba(245,240,232,0.75)]">
+                <p className="font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.75)]">
                   {row.text}
                 </p>
               </div>

@@ -170,7 +170,7 @@ export default function WatchlistPage() {
         ) : watchlist.length === 0 ? (
           <div className="pq-ink-empty text-center py-16">
             <Fleuron size={16} />
-            <div className="font-serif italic text-xl text-[var(--pq-ivory)] mt-3">No symbols yet.</div>
+            <div className="font-serif text-xl text-[var(--pq-ivory)] mt-3">No symbols yet.</div>
             <Caption className="mt-2">Add one to begin observing.</Caption>
           </div>
         ) : (
@@ -221,7 +221,7 @@ export default function WatchlistPage() {
                       <td className="font-mono text-[11px] text-[rgba(245,240,232,0.55)]">
                         {mock52W(item)}
                       </td>
-                      <td className="text-[11px] italic text-[rgba(245,240,232,0.6)] truncate max-w-[220px]">
+                      <td className="text-[11px] text-[rgba(245,240,232,0.6)] truncate max-w-[220px]">
                         {item.note && item.note.length > 0
                           ? item.note
                           : item.signal === "POSITIVE"

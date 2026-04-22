@@ -587,7 +587,7 @@ export default function PricingPage() {
 
                   {/* Tagline */}
                   <p
-                    className="font-serif italic text-[13px] leading-snug mb-7 pb-6"
+                    className="font-serif text-[13px] leading-snug mb-7 pb-6"
                     style={{
                       color: isDark ? "rgba(245,240,232,0.72)" : "#2A2A2A",
                       borderBottom: isDark
@@ -677,7 +677,7 @@ export default function PricingPage() {
 
           {/* Billing footnote */}
           <p
-            className="mt-12 font-serif text-[11px] italic leading-relaxed"
+            className="mt-12 font-serif text-[11px] leading-relaxed"
             style={{ color: "rgba(245,240,232,0.45)" }}
           >
             Billed in KRW. VAT included. Cancel anytime. Informational research
@@ -705,7 +705,7 @@ export default function PricingPage() {
           </div>
 
           <h2
-            className="font-serif italic mb-10"
+            className="font-serif mb-10"
             style={{
               fontSize: "clamp(1.5rem, 2.6vw, 2rem)",
               lineHeight: 1.1,

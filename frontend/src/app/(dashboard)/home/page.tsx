@@ -410,7 +410,7 @@ export default function HomePage() {
             <div className="pq-num-display mb-1.5" style={{ color: "var(--pq-ivory)", fontFamily: "var(--font-mono), ui-monospace, monospace", fontVariantNumeric: "tabular-nums", fontSize: "28px", lineHeight: 1.05, letterSpacing: "-0.015em" }}>
               {m.value}
             </div>
-            <p className="font-serif italic" style={{ fontSize: "11px", color: "rgba(245,240,232,0.55)" }}>
+            <p className="font-serif" style={{ fontSize: "11px", color: "rgba(245,240,232,0.55)" }}>
               <span style={{ color: "var(--pq-bronze)", marginRight: 4 }}>&asymp;</span>
               {m.sub}
             </p>
@@ -489,7 +489,7 @@ export default function HomePage() {
           {alerts.length === 0 ? (
             <div className="py-6 text-center">
               <Fleuron size={12} />
-              <p className="font-serif italic mt-2" style={{ fontSize: "13px", color: "rgba(245,240,232,0.6)" }}>
+              <p className="font-serif mt-2" style={{ fontSize: "13px", color: "rgba(245,240,232,0.6)" }}>
                 No observations recorded yet.
               </p>
               <Caption className="mt-1">Signals will appear as we observe them.</Caption>
@@ -566,7 +566,7 @@ export default function HomePage() {
             </Link>
           </div>
           {topPositions.length === 0 ? (
-            <p className="font-serif italic" style={{ fontSize: "12px", color: "rgba(245,240,232,0.45)" }}>
+            <p className="font-serif" style={{ fontSize: "12px", color: "rgba(245,240,232,0.45)" }}>
               No positions yet.
             </p>
           ) : (
@@ -639,7 +639,7 @@ export default function HomePage() {
             </Link>
           </div>
           {topSignals.length === 0 ? (
-            <p className="font-serif italic" style={{ fontSize: "12px", color: "rgba(245,240,232,0.45)" }}>
+            <p className="font-serif" style={{ fontSize: "12px", color: "rgba(245,240,232,0.45)" }}>
               No observations available.
             </p>
           ) : (
@@ -730,7 +730,7 @@ export default function HomePage() {
           </p>
         ) : (
           <p
-            className="font-serif italic"
+            className="font-serif"
             style={{ fontSize: "13px", color: "rgba(245,240,232,0.5)" }}
           >
             Today&rsquo;s brief has not been dispatched yet.

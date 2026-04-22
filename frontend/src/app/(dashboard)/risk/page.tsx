@@ -361,7 +361,7 @@ export default function RiskPage() {
                 {String(l.no).padStart(2, "0")}
               </span>
               <div className="min-w-0">
-                <div className="font-serif italic text-[15px] text-[var(--pq-ivory)]">
+                <div className="font-serif text-[15px] text-[var(--pq-ivory)]">
                   {l.name}
                 </div>
                 <div className="mt-0.5 text-[11px] text-[rgba(245,240,232,0.55)]">

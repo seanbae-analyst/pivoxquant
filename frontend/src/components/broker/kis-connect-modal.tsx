@@ -77,7 +77,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
               Korea Investment &amp; Securities
             </div>
-            <h3 className="font-serif italic text-xl text-[var(--pq-ivory)]">
+            <h3 className="font-serif text-xl text-[var(--pq-ivory)]">
               Connect KIS Account
             </h3>
           </div>
@@ -233,25 +233,25 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           </summary>
           <ol className="mt-4 space-y-3 text-[12px] leading-relaxed text-[rgba(245,240,232,0.7)]">
             <li>
-              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">I.</span>
+              <span className="text-[var(--pq-bronze)] font-serif mr-2">I.</span>
               Visit the KIS OpenAPI portal (apiportal.koreainvestment.com) and sign in with your brokerage account.
             </li>
             <li>
-              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">II.</span>
+              <span className="text-[var(--pq-bronze)] font-serif mr-2">II.</span>
               Under <span className="text-[var(--pq-ivory)]">API 신청 · Manage Keys</span>, apply for an APP KEY and APP SECRET pair.
               Choose <span className="text-[var(--pq-ivory)]">국내주식 · 해외주식 · 실시간시세</span> (read scope only).
             </li>
             <li>
-              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">III.</span>
+              <span className="text-[var(--pq-bronze)] font-serif mr-2">III.</span>
               Copy your 8-digit account number in the format{" "}
               <code className="font-mono text-[var(--pq-ivory)] text-[11px] tabular-nums">12345678-01</code>.
             </li>
             <li>
-              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">IV.</span>
+              <span className="text-[var(--pq-bronze)] font-serif mr-2">IV.</span>
               Paste all three values above. We store them encrypted and never transmit orders.
             </li>
             <li>
-              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">V.</span>
+              <span className="text-[var(--pq-bronze)] font-serif mr-2">V.</span>
               Click Connect. Your first sync takes ~30 seconds.
             </li>
           </ol>

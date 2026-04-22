@@ -111,10 +111,10 @@ function ArtifactCard({
         <span aria-hidden="true" style={{ display: "inline-block", width: 16, height: 1, background: "var(--pq-bronze)", opacity: 0.6 }} />
         {entry.cadence} &middot; {entry.minTier}
       </div>
-      <h3 className="mt-2 font-serif italic text-xl text-[var(--pq-ivory)]">
+      <h3 className="mt-2 font-serif text-xl text-[var(--pq-ivory)]">
         {entry.title}
       </h3>
-      <p className="mt-2 font-serif italic text-[11.5px] text-[rgba(245,240,232,0.55)]">
+      <p className="mt-2 font-serif text-[11.5px] text-[rgba(245,240,232,0.55)]">
         Last generated &mdash; <span className="tabular-nums font-mono">{lastGenerated}</span>
       </p>
 
@@ -180,7 +180,7 @@ function ReportsPageInner() {
       {/* ── Header ── */}
       <header>
         <RuledKicker>PDF &middot; Observational archive</RuledKicker>
-        <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
+        <h1 className="mt-2 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
           Reports
         </h1>
         <p className="mt-2 font-serif italic text-[15px] text-[var(--pq-ivory)] max-w-2xl">

@@ -1,18 +1,19 @@
 "use client";
 
 import { Check, Loader2, RefreshCw, Unlink } from "lucide-react";
-import { useT } from "@/lib/locale";
 
-interface KisCardProps {
-  /** Whether a KIS credential is currently stored on the backend. */
+interface AlpacaCardProps {
+  /** Whether Alpaca credentials are currently stored on the backend. */
   connected: boolean;
-  /** Human-readable last sync timestamp (optional). */
+  /** "paper" (only option in this release). */
+  mode?: "paper" | "live";
+  /** Human-readable last sync timestamp (ISO string). */
   lastSync?: string | null;
   /** Opens the connect modal. */
   onConnect: () => void;
-  /** Triggers a manual sync; may return a Promise for spinner state. */
+  /** Triggers a manual sync. */
   onSync?: () => Promise<void> | void;
-  /** Disconnects (deletes stored credential). */
+  /** Disconnects (deletes stored credentials). */
   onDisconnect?: () => Promise<void> | void;
   /** Syncing spinner. */
   syncing?: boolean;
@@ -21,38 +22,35 @@ interface KisCardProps {
 }
 
 /**
- * KIS (한국투자증권) connection card in the Vantablack ink theme.
- *
- * Used in both onboarding (/onboarding/broker) and settings (/settings).
- * Read-only integration: observes holdings, transactions, balances.
- * Order execution is disabled by regulation — informational only.
+ * Alpaca (US equity paper) connection card — Vantablack ink theme.
+ * Symmetric with KisCard. Paper-only; live is disabled by policy.
  */
-export function KisCard({
+export function AlpacaCard({
   connected,
+  mode = "paper",
   lastSync,
   onConnect,
   onSync,
   onDisconnect,
   syncing = false,
   disconnecting = false,
-}: KisCardProps) {
-  const t = useT();
+}: AlpacaCardProps) {
   return (
     <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 sm:p-6">
-      {/* Header — kicker + name + status */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
-            Korea Investment &amp; Securities
+            Alpaca Markets · US
           </div>
           <h3 className="font-serif text-lg text-[var(--pq-ivory)]">
-            {t("brokerOnboarding.kis.name")}
+            Alpaca
           </h3>
         </div>
         {connected ? (
           <span className="inline-flex items-center gap-1 border border-[var(--pq-bronze)] px-2 py-0.5 text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] shrink-0">
             <Check className="h-2.5 w-2.5" />
-            Connected
+            {mode === "paper" ? "Paper" : "Connected"}
           </span>
         ) : (
           <span className="inline-flex items-center border border-[rgba(245,240,232,0.2)] px-2 py-0.5 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] shrink-0">
@@ -63,13 +61,17 @@ export function KisCard({
 
       {/* Description */}
       <p className="mb-5 text-[12px] leading-relaxed text-[rgba(245,240,232,0.6)]">
-        Read-only account integration. Observes holdings, transactions, and
-        balances. Order execution is disabled — informational only.
+        US equity paper trading integration. Observes holdings, historical
+        trades, and allows paper order logging. Real-money trading is
+        disabled in this release.
       </p>
 
       {connected && lastSync && (
         <p className="mb-4 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
-          Last sync · <span className="tabular-nums normal-case tracking-normal text-[rgba(245,240,232,0.6)]">{lastSync}</span>
+          Last sync ·{" "}
+          <span className="tabular-nums normal-case tracking-normal text-[rgba(245,240,232,0.6)]">
+            {new Date(lastSync).toLocaleString()}
+          </span>
         </p>
       )}
 
@@ -80,7 +82,7 @@ export function KisCard({
           onClick={onConnect}
           className="pq-ink-btn-bronze w-full"
         >
-          Connect KIS Account
+          Connect Alpaca
         </button>
       ) : (
         <div className="flex gap-2">
@@ -95,9 +97,15 @@ export function KisCard({
             ) : (
               <RefreshCw className="h-3.5 w-3.5" />
             )}
-            {syncing
-              ? t("brokerOnboarding.kis.syncing")
-              : t("brokerOnboarding.kis.sync")}
+            {syncing ? "Syncing…" : "Sync"}
+          </button>
+          <button
+            type="button"
+            onClick={onConnect}
+            disabled={syncing || disconnecting}
+            className="pq-ink-btn-ghost disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Reconnect
           </button>
           <button
             type="button"
@@ -110,48 +118,59 @@ export function KisCard({
             ) : (
               <Unlink className="h-3.5 w-3.5" />
             )}
-            {t("brokerOnboarding.kis.disconnect")}
+            Disconnect
           </button>
         </div>
       )}
 
-      {/* Issuance guide — expandable */}
+      {/* Issuance guide */}
       <details className="group mt-5 pt-4 border-t border-[rgba(245,240,232,0.08)]">
         <summary className="cursor-pointer list-none text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
-          <span>How to issue KIS API credentials</span>
-          <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>
+          <span>How to issue Alpaca paper keys</span>
+          <span
+            className="transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          >
+            ↓
+          </span>
         </summary>
         <ol className="mt-4 space-y-3 text-[12px] leading-relaxed text-[rgba(245,240,232,0.7)]">
           <li>
-            <span className="text-[var(--pq-bronze)] font-serif mr-2">I.</span>
-            Visit the KIS OpenAPI portal (
+            <span className="text-[var(--pq-bronze)] font-serif mr-2">
+              I.
+            </span>
+            Create a free paper account at{" "}
             <a
-              href="https://apiportal.koreainvestment.com"
+              href="https://alpaca.markets"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[var(--pq-bronze)] underline decoration-[rgba(197,164,114,0.4)] underline-offset-2 hover:decoration-[var(--pq-bronze)]"
             >
-              apiportal.koreainvestment.com
+              alpaca.markets
             </a>
-            ) and sign in with your brokerage account.
+            .
           </li>
           <li>
-            <span className="text-[var(--pq-bronze)] font-serif mr-2">II.</span>
-            Under <span className="text-[var(--pq-ivory)]">API 신청 · Manage Keys</span>, apply for an APP KEY and APP SECRET pair.
-            Choose <span className="text-[var(--pq-ivory)]">국내주식 · 해외주식 · 실시간시세</span> (read scope only).
+            <span className="text-[var(--pq-bronze)] font-serif mr-2">
+              II.
+            </span>
+            Dashboard →{" "}
+            <span className="text-[var(--pq-ivory)]">Paper Overview</span> →
+            &ldquo;Generate New Keys&rdquo;.
           </li>
           <li>
-            <span className="text-[var(--pq-bronze)] font-serif mr-2">III.</span>
-            Copy your 8-digit account number in the format{" "}
-            <code className="font-mono text-[var(--pq-ivory)] text-[11px] tabular-nums">12345678-01</code>.
+            <span className="text-[var(--pq-bronze)] font-serif mr-2">
+              III.
+            </span>
+            Copy <span className="text-[var(--pq-ivory)]">API Key ID</span> and{" "}
+            <span className="text-[var(--pq-ivory)]">API Secret Key</span>.
           </li>
           <li>
-            <span className="text-[var(--pq-bronze)] font-serif mr-2">IV.</span>
-            Paste all three values above. We store them encrypted and never transmit orders.
-          </li>
-          <li>
-            <span className="text-[var(--pq-bronze)] font-serif mr-2">V.</span>
-            Click Connect. Your first sync takes ~30 seconds.
+            <span className="text-[var(--pq-bronze)] font-serif mr-2">
+              IV.
+            </span>
+            Paste them above. We store them encrypted and never transmit live
+            orders.
           </li>
         </ol>
       </details>

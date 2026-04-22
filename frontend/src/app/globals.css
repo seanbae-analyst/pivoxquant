@@ -499,6 +499,65 @@
 /* PWA standalone */
 .pwa-standalone .hide-in-pwa { display: none; }
 
+/* ───────────────────────────────────────────────────────────
+   PWA standalone mode — safe-area insets.
+   Triggered both by display-mode media (modern browsers) and by the
+   .pwa-standalone class we inject in layout.tsx (belt + suspenders for
+   iOS Safari where the media query can lie during handoff).
+   viewport-fit=cover in the viewport meta is required for env() to be
+   non-zero on devices with notches / Dynamic Island. */
+@media all and (display-mode: standalone) {
+  :root {
+    --pq-safe-top: env(safe-area-inset-top, 0px);
+    --pq-safe-bottom: env(safe-area-inset-bottom, 0px);
+    --pq-safe-left: env(safe-area-inset-left, 0px);
+    --pq-safe-right: env(safe-area-inset-right, 0px);
+  }
+  body {
+    /* Vantablack under the status bar so the notch doesn't flash white. */
+    background-color: var(--pq-ink, #050505);
+  }
+  /* Never let a fixed bottom-nav slide under the home indicator. */
+  .pq-bottom-nav,
+  .pq-mobile-nav,
+  [data-pq-bottom-nav] {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  /* Dashboard shell top padding respects the status bar. */
+  .pq-dash-shell,
+  [data-pq-dash-shell] {
+    padding-top: max(8px, env(safe-area-inset-top));
+  }
+  /* Disable user-select in chrome-like surfaces when the app is launched
+     from the home screen — closer to a native app feel. Content still
+     selectable via .pq-selectable overrides. */
+  .pq-chrome,
+  [data-pq-chrome] {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .pq-selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Class-driven fallback — layout.tsx injects .pwa-standalone on <html> at
+   boot via display-mode matchMedia. Mirrors the media-query rules so
+   iOS Safari's first paint still gets safe-area padding before the media
+   query evaluates correctly. */
+.pwa-standalone body {
+  background-color: var(--pq-ink, #050505);
+}
+.pwa-standalone .pq-bottom-nav,
+.pwa-standalone [data-pq-bottom-nav] {
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+.pwa-standalone .pq-dash-shell,
+.pwa-standalone [data-pq-dash-shell] {
+  padding-top: max(8px, env(safe-area-inset-top));
+}
+
 /* What-If share card — screen-side belt-and-suspenders.
    Explicitly lock the card to normal document flow on screen so nothing
    (inherited motion transform, third-party screenshot helper, stale print
@@ -777,11 +836,10 @@
    (deck lines, fleurons, locked-card shimmer, CTA underline)
    ══════════════════════════════════════════════════════════ */
 
-/* Section deck line — serif italic 1-liner that sits above
+/* Section deck line — upright serif 1-liner that sits above
    each H2 like the kicker on an IC memo. */
 .pq-deck {
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
   font-weight: 400;
   font-size: 14.5px;
   line-height: 1.5;
@@ -1172,10 +1230,9 @@ button:hover > .pq-ink-pill,
   margin: 0;
 }
 
-/* Ink subheading — serif italic smaller */
+/* Ink subheading — upright serif, smaller */
 .pq-ink-h2 {
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
   font-weight: 500;
   font-size: 20px;
   line-height: 1.2;
@@ -1242,7 +1299,6 @@ button:hover > .pq-ink-pill,
   text-align: center;
   color: rgba(245, 240, 232, 0.55);
   font-family: var(--font-serif), Georgia, serif;
-  font-style: italic;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1572,10 +1628,9 @@ i.italic,
   display: inline-block;
 }
 
-/* 15. Caption / footnote style */
+/* 15. Caption / footnote style — upright for readability */
 .pq-caption {
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
-  font-style: italic;
   font-size: 11px;
   color: rgba(245, 240, 232, 0.55);
   letter-spacing: -0.005em;

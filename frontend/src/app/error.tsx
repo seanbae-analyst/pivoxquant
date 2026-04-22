@@ -2,17 +2,13 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { AlertTriangle, RotateCw } from "lucide-react";
 
 /**
  * App-level error boundary.
  *
  * Catches runtime errors thrown in any route segment below the root layout.
  * Root layout itself is handled by `global-error.tsx`.
- *
- * Next.js 16 prefers `unstable_retry` over `reset`, but `reset` remains
- * supported for clearing the error state without re-fetching. We keep `reset`
- * here to satisfy our declared contract and because it is the safer default
- * for boundary recovery on the client.
  */
 export default function Error({
   error,
@@ -22,9 +18,6 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Only log in the browser; never echo stack traces to users.
-    // In production, Next.js strips the original message for SSR-thrown errors,
-    // so this mostly surfaces client-component errors to the dev console.
     if (typeof window !== "undefined") {
       console.error("[PivoxQuant:error-boundary]", error);
     }
@@ -33,66 +26,86 @@ export default function Error({
   const isProduction = process.env.NODE_ENV === "production";
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-white p-6">
-      <div className="sp-card w-full max-w-md p-8 text-center">
-        {/* Brand mark — matches the landing/loading-screen logo */}
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-primary-gradient flex items-center justify-center mb-6">
-          <svg
-            className="w-7 h-7 text-white"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v2m0 4h.01M4.93 19h14.14a2 2 0 001.73-3L13.73 4a2 2 0 00-3.46 0L3.2 16a2 2 0 001.73 3z"
-            />
-          </svg>
+    <div
+      className="min-h-[100dvh] flex items-center justify-center px-6"
+      style={{ background: "#050505", color: "#F7F5EF" }}
+    >
+      <div className="w-full max-w-md text-center">
+        <AlertTriangle
+          className="mx-auto mb-6 h-8 w-8"
+          style={{ color: "#E2B96F" }}
+        />
+
+        <div
+          className="text-[11px] tracking-[0.22em] uppercase mb-4"
+          style={{ color: "#E2B96F" }}
+        >
+          Something interrupted the observation
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          Something went wrong
+        <h1
+          className="font-serif italic mb-6 leading-[1.05]"
+          style={{ fontSize: "clamp(1.75rem,4vw,2.5rem)" }}
+        >
+          The desk hit a snag.
         </h1>
-        <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">
-          We hit an unexpected error while loading this page. Your portfolio
-          data is safe — try again in a moment.
+
+        <p
+          className="text-sm leading-relaxed mb-6"
+          style={{ color: "rgba(247,245,239,0.65)" }}
+        >
+          An unexpected issue stopped the page from loading. Your data is safe.
+          Retry, or head back to the desk.
         </p>
 
-        {/* Production: only show the digest so engineers can match server logs. */}
-        {/* Development: show the error message for faster debugging. */}
         {isProduction ? (
           error.digest ? (
-            <p className="text-[11px] font-mono text-slate-400 mb-6 tabular-nums">
+            <p
+              className="text-[11px] font-mono mb-6"
+              style={{ color: "rgba(247,245,239,0.3)" }}
+            >
               ref: {error.digest}
             </p>
           ) : null
         ) : (
-          <pre className="text-left text-[11px] font-mono text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 mb-6 max-h-32 overflow-auto whitespace-pre-wrap break-words">
+          <pre
+            className="text-left text-[11px] font-mono rounded p-3 mb-6 max-h-32 overflow-auto whitespace-pre-wrap break-words"
+            style={{
+              color: "rgba(247,245,239,0.55)",
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(247,245,239,0.08)",
+            }}
+          >
             {error.message || "Unknown error"}
           </pre>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
+        <div className="flex items-center justify-center gap-3 flex-wrap">
           <button
             type="button"
             onClick={() => reset()}
-            className="px-5 py-2.5 rounded-full bg-primary-gradient text-white text-sm font-semibold transition-all duration-200 hover:opacity-90 active:scale-[0.97]"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm border text-sm font-medium tracking-wide transition-colors"
+            style={{ borderColor: "#E2B96F", color: "#E2B96F" }}
           >
+            <RotateCw className="h-3.5 w-3.5" />
             Try again
           </button>
           <Link
-            href="/"
-            className="px-5 py-2.5 rounded-full border border-slate-200 bg-white text-slate-700 text-sm font-semibold transition-all duration-200 hover:bg-slate-50 active:scale-[0.97]"
+            href="/home"
+            className="inline-flex items-center px-5 py-2.5 rounded-sm border text-sm font-medium tracking-wide"
+            style={{
+              borderColor: "rgba(247,245,239,0.15)",
+              color: "rgba(247,245,239,0.6)",
+            }}
           >
-            Go home
+            Back to desk
           </Link>
         </div>
 
-        {/* Friendly disclaimer tone — matches DisclaimerBanner voice */}
-        <p className="text-[11px] text-slate-400 mt-6 leading-relaxed">
+        <p
+          className="text-[11px] mt-8 leading-relaxed"
+          style={{ color: "rgba(247,245,239,0.3)" }}
+        >
           PivoxQuant does not lose data on errors. All positions and settings
           are saved on the server.
         </p>

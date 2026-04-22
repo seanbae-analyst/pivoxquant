@@ -82,7 +82,7 @@ export function RuledKicker({
   );
 }
 
-/** Italic serif deck line — reads as a one-sentence chapeau under the kicker. */
+/** Serif deck line — reads as a one-sentence chapeau under the kicker. Upright. */
 export function DeckLine({
   children,
   className = "",
@@ -92,10 +92,9 @@ export function DeckLine({
 }) {
   return (
     <p
-      className={`font-serif italic ${className}`}
+      className={`font-serif ${className}`}
       style={{
         fontFamily: "var(--font-serif), Georgia, serif",
-        fontStyle: "italic",
         fontSize: "clamp(1.1rem, 1.6vw, 1.35rem)",
         lineHeight: 1.25,
         color: "var(--pq-ivory)",
@@ -108,7 +107,7 @@ export function DeckLine({
   );
 }
 
-/** Small italic serif caption — descriptive annotation under a heading/stat. */
+/** Small serif caption — descriptive annotation under a heading/stat. Upright. */
 export function Caption({
   children,
   className = "",
@@ -121,7 +120,6 @@ export function Caption({
       className={`pq-caption ${className}`}
       style={{
         fontFamily: "var(--font-serif), Georgia, serif",
-        fontStyle: "italic",
         fontSize: "11.5px",
         lineHeight: 1.4,
         color: "rgba(245,240,232,0.55)",

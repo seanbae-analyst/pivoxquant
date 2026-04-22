@@ -19,7 +19,7 @@ export function ManualCard({ onSelect }: { onSelect: () => void }) {
           <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
             Manual entry · No connection
           </div>
-          <h3 className="font-serif italic text-lg text-[var(--pq-ivory)]">
+          <h3 className="font-serif text-lg text-[var(--pq-ivory)]">
             {t("brokerOnboarding.manual.title")}
           </h3>
           <p className="mt-1 text-[11px] text-[rgba(245,240,232,0.5)]">

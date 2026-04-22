@@ -83,7 +83,7 @@ function IndexTile({
       <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         {region}
       </div>
-      <div className="mt-1 font-serif italic text-lg text-[var(--pq-ivory)]">
+      <div className="mt-1 font-serif text-lg text-[var(--pq-ivory)]">
         {label}
       </div>
       <div
@@ -135,7 +135,7 @@ function ArchiveRow({ item }: { item: MorningBriefArchiveItem }) {
       >
         <div className="flex items-center gap-4 min-w-0">
           <CalendarDays className="h-3.5 w-3.5 text-[var(--pq-bronze)] shrink-0" />
-          <time className="font-serif italic text-base text-[var(--pq-ivory)]">
+          <time className="font-serif text-base text-[var(--pq-ivory)]">
             {dateStr}
           </time>
           <span className={cn("text-xs tabular-nums", pctColor(item.content.market_summary.sp500?.change_pct))}>
@@ -290,7 +290,7 @@ export default function MorningBriefPage() {
         {/* ── Today's insight ── */}
         {brief?.insight && (
           <section>
-            <h2 className="pq-ink-h2 mb-1 font-serif italic">Desk note</h2>
+            <h2 className="pq-ink-h2 mb-1 font-serif">Desk note</h2>
             <Caption className="mb-4">One paragraph, observed.</Caption>
             <div className="bg-[rgba(255,255,255,0.02)] border-l-2 border-[var(--pq-bronze)] px-6 py-5 relative">
               <span
@@ -324,7 +324,7 @@ export default function MorningBriefPage() {
                   <span className="mt-1 h-1 w-1 rounded-full bg-[var(--pq-bronze)] shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-serif italic text-base text-[var(--pq-ivory)]">
+                      <span className="font-serif text-base text-[var(--pq-ivory)]">
                         {e.name || e.ticker}
                       </span>
                       <span className="font-mono text-[10px] text-[rgba(245,240,232,0.4)]">

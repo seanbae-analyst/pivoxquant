@@ -163,7 +163,7 @@ function SignalRow({
             <div className="pq-ink-label" style={{ fontSize: "9px" }}>
               Score
             </div>
-            <div className="mt-0.5 font-serif italic text-[18px] tabular-nums text-[var(--pq-ivory)]">
+            <div className="mt-0.5 font-serif text-[18px] tabular-nums text-[var(--pq-ivory)]">
               {Math.round(item.score ?? 0)}
             </div>
           </div>
@@ -221,7 +221,7 @@ function SignalRow({
             <div className="pq-ink-label mb-2" style={{ fontSize: "9px" }}>
               Four-Pillar Breakdown
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {subScores.map((s) => {
                 const v = Math.max(0, Math.min(100, s.value ?? 0));
                 return (
@@ -281,7 +281,7 @@ function SignalColumn({
       </div>
 
       {items.length === 0 ? (
-        <div className="border-t border-[rgba(245,240,232,0.1)] py-10 text-center font-serif italic text-[12px] text-[rgba(245,240,232,0.4)]">
+        <div className="border-t border-[rgba(245,240,232,0.1)] py-10 text-center font-serif text-[12px] text-[rgba(245,240,232,0.4)]">
           No observations in this band.
         </div>
       ) : (
@@ -401,22 +401,22 @@ export default function SignalsPage() {
       </header>
 
       {/* Stats strip */}
-      <div className="mb-8 grid grid-cols-3 gap-6 border-y border-[rgba(245,240,232,0.1)] py-5">
+      <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-6 border-y border-[rgba(245,240,232,0.1)] py-5">
         <div>
           <div className="pq-ink-label">Positive</div>
-          <div className="mt-1 font-serif italic text-[28px] tabular-nums text-[#7db487]">
+          <div className="mt-1 font-serif text-[28px] tabular-nums text-[#7db487]">
             {positive.length}
           </div>
         </div>
         <div>
           <div className="pq-ink-label">Neutral</div>
-          <div className="mt-1 font-serif italic text-[28px] tabular-nums text-[var(--pq-ivory)]">
+          <div className="mt-1 font-serif text-[28px] tabular-nums text-[var(--pq-ivory)]">
             {neutral.length}
           </div>
         </div>
         <div>
           <div className="pq-ink-label">Negative</div>
-          <div className="mt-1 font-serif italic text-[28px] tabular-nums text-[#d18888]">
+          <div className="mt-1 font-serif text-[28px] tabular-nums text-[#d18888]">
             {negative.length}
           </div>
         </div>
@@ -439,13 +439,13 @@ export default function SignalsPage() {
 
       {/* Loading */}
       {isLoading && signals.length === 0 ? (
-        <div className="py-24 text-center font-serif italic text-[13px] text-[rgba(245,240,232,0.4)]">
+        <div className="py-24 text-center font-serif text-[13px] text-[rgba(245,240,232,0.4)]">
           Loading observations…
         </div>
       ) : signals.length === 0 ? (
         <div className="py-24 text-center">
           <Zap className="mx-auto h-8 w-8 text-[var(--pq-bronze)]" strokeWidth={1.3} />
-          <div className="mt-3 font-serif italic text-[14px] text-[rgba(245,240,232,0.6)]">
+          <div className="mt-3 font-serif text-[14px] text-[rgba(245,240,232,0.6)]">
             No observations on record.
           </div>
           <p className="mt-1 text-[12px] text-[rgba(245,240,232,0.4)]">

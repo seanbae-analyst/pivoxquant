@@ -19,6 +19,8 @@ import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { KisCard } from "@/components/broker/kis-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
+import { AlpacaCard } from "@/components/broker/alpaca-card";
+import { AlpacaConnectModal } from "@/components/broker/alpaca-connect-modal";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -85,7 +87,7 @@ function Section({
         <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           {kicker}
         </div>
-        <h2 className="mt-1 font-serif italic text-2xl text-[var(--pq-ivory)]">
+        <h2 className="mt-1 font-serif text-2xl text-[var(--pq-ivory)]">
           {title}
         </h2>
       </header>
@@ -156,7 +158,7 @@ function AccountSection() {
         className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] px-5 py-4 rounded-[2px] flex items-center justify-between hover:border-[var(--pq-bronze)] transition-colors group"
       >
         <div>
-          <div className="font-serif italic text-base text-[var(--pq-ivory)]">
+          <div className="font-serif text-base text-[var(--pq-ivory)]">
             {investorType ? "Retake assessment" : "Take investor assessment"}
           </div>
           <div className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">
@@ -247,7 +249,7 @@ function SeedCapitalSection() {
         Total investable capital used in signal sizing and portfolio analytics.
       </p>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)]">
             Current USD
@@ -345,7 +347,7 @@ function SubscriptionSection() {
                   <Crown className="h-3 w-3" />
                   {tier} plan
                 </div>
-                <div className="mt-2 font-serif italic text-2xl text-[var(--pq-ivory)] capitalize">
+                <div className="mt-2 font-serif text-2xl text-[var(--pq-ivory)] capitalize">
                   {tier}
                 </div>
               </div>
@@ -400,6 +402,9 @@ function BrokersSection() {
   const [kisModalOpen, setKisModalOpen] = useState(false);
   const [kisSyncing, setKisSyncing] = useState(false);
   const [kisDisconnecting, setKisDisconnecting] = useState(false);
+  const [alpacaModalOpen, setAlpacaModalOpen] = useState(false);
+  const [alpacaSyncing, setAlpacaSyncing] = useState(false);
+  const [alpacaDisconnecting, setAlpacaDisconnecting] = useState(false);
 
   const handleKisSync = useCallback(async () => {
     setKisSyncing(true);
@@ -428,6 +433,33 @@ function BrokersSection() {
     }
   }, [refreshBrokers]);
 
+  const handleAlpacaSync = useCallback(async () => {
+    setAlpacaSyncing(true);
+    try {
+      await apiFetch(API.broker.alpacaSync, { method: "POST" });
+      await refreshBrokers();
+      toast.success("Alpaca synchronized.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sync failed.");
+    } finally {
+      setAlpacaSyncing(false);
+    }
+  }, [refreshBrokers]);
+
+  const handleAlpacaDisconnect = useCallback(async () => {
+    if (!confirm("Disconnect Alpaca?")) return;
+    setAlpacaDisconnecting(true);
+    try {
+      await apiFetch(API.broker.alpacaDisconnect, { method: "DELETE" });
+      await refreshBrokers();
+      toast.success("Alpaca disconnected.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Disconnect failed.");
+    } finally {
+      setAlpacaDisconnecting(false);
+    }
+  }, [refreshBrokers]);
+
   return (
     <Section kicker="03 · Brokers" title="Connections">
       <KisCard
@@ -439,12 +471,31 @@ function BrokersSection() {
         syncing={kisSyncing}
         disconnecting={kisDisconnecting}
       />
+
+      <AlpacaCard
+        connected={Boolean(brokerData?.alpaca_connected)}
+        mode={brokerData?.alpaca_mode ?? "paper"}
+        lastSync={brokerData?.alpaca_last_sync ?? null}
+        onConnect={() => setAlpacaModalOpen(true)}
+        onSync={handleAlpacaSync}
+        onDisconnect={handleAlpacaDisconnect}
+        syncing={alpacaSyncing}
+        disconnecting={alpacaDisconnecting}
+      />
+
       <p className="text-xs text-[rgba(245,240,232,0.4)] text-center">
-        KIS is read-only. Orders remain disabled by regulation.
+        KIS is read-only; Alpaca is paper-only. Live order routing is disabled.
       </p>
+
       {kisModalOpen && (
         <KisConnectModal
           onClose={() => setKisModalOpen(false)}
+          onSuccess={() => refreshBrokers()}
+        />
+      )}
+      {alpacaModalOpen && (
+        <AlpacaConnectModal
+          onClose={() => setAlpacaModalOpen(false)}
           onSuccess={() => refreshBrokers()}
         />
       )}
@@ -551,7 +602,7 @@ function PreferencesSection() {
       <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-serif italic text-base text-[var(--pq-ivory)]">
+            <div className="font-serif text-base text-[var(--pq-ivory)]">
               Push notifications
             </div>
             <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
@@ -568,7 +619,7 @@ function PreferencesSection() {
 
         <div className="flex items-center justify-between pt-3 border-t border-[rgba(245,240,232,0.06)]">
           <div>
-            <div className="font-serif italic text-base text-[var(--pq-ivory)]">
+            <div className="font-serif text-base text-[var(--pq-ivory)]">
               Email delivery
             </div>
             <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
@@ -618,7 +669,7 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-red-400" />
-            <h3 className="font-serif italic text-xl text-[var(--pq-ivory)]">
+            <h3 className="font-serif text-xl text-[var(--pq-ivory)]">
               Delete account
             </h3>
           </div>
@@ -680,7 +731,7 @@ export default function SettingsPage() {
           <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Account · Preferences
           </div>
-          <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
+          <h1 className="mt-2 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
             Settings
           </h1>
         </header>
