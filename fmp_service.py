@@ -151,11 +151,14 @@ def _record_success(endpoint):
             _endpoint_402_counts[endpoint] = 0
 
 
-def _fmp_get(endpoint, params=None, timeout=10):
+def _fmp_get(endpoint, params=None, timeout=5):
     """Core FMP API caller with rate tracking and budget enforcement.
 
     Returns None on any failure. Callers should treat None as "try fallback source"
     rather than "no data". Use stale cache where appropriate for defensive reads.
+
+    timeout capped at 5s (was 10s) — Railway default request timeout is 30s and
+    serial FMP fallback chains were causing 10-17s endpoint latencies.
     """
     global _daily_calls
     if not FMP_KEY:

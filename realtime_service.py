@@ -167,12 +167,21 @@ class RealtimeService:
             if p:
                 results[t] = p
 
-        # Fallback for missing
+        # Fallback for missing — parallel FMP calls with 5s hard deadline.
+        # Previously this was a serial loop: N tickers * 10s FMP timeout = N*10s stall.
+        # Now all missing tickers are fetched concurrently; the whole batch times out in 5s.
         missing = [t for t in tickers if t not in results]
-        for t in missing:
-            p = self._get_fmp_price(t)
-            if p:
-                results[t] = p
+        if missing:
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            with ThreadPoolExecutor(max_workers=min(len(missing), 6)) as pool:
+                fut_map = {pool.submit(self._get_fmp_price, t): t for t in missing}
+                for fut in as_completed(fut_map, timeout=5):
+                    try:
+                        p = fut.result()
+                        if p:
+                            results[fut_map[fut]] = p
+                    except Exception:
+                        pass
 
         return results
 
