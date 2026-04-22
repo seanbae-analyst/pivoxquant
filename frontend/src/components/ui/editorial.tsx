@@ -181,6 +181,73 @@ export function HairlineSoft({ className = "" }: { className?: string }) {
 }
 
 /**
+ * Field label — tighter tracking than a section kicker, sized for
+ * in-panel data labels ("Current price", "Market cap", etc.). Replaces
+ * the old `text-[10px] tracking-[0.22em] uppercase` pattern that made
+ * labels look like "C U R R E N T  P R I C E" in the detail page.
+ *
+ * Uses OpenType small-caps + 0.12em tracking for editorial scanability.
+ */
+export function FieldLabel({
+  children,
+  className = "",
+  tone = "bronze",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  tone?: "bronze" | "muted";
+}) {
+  const color =
+    tone === "muted" ? "rgba(245,240,232,0.55)" : "var(--pq-bronze)";
+  return (
+    <span
+      className={`pq-field-label ${className}`}
+      style={{
+        display: "inline-block",
+        fontFamily: "var(--font-sans), system-ui, sans-serif",
+        fontSize: "10.5px",
+        letterSpacing: "0.12em",
+        textTransform: "uppercase",
+        color,
+        fontWeight: 500,
+        lineHeight: 1.3,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Stat row — key/value inline pair, hairline-separated. Use inside a
+ * fundamentals panel as a dense, editorial alternative to box grids.
+ */
+export function StatRow({
+  label,
+  value,
+  tone,
+}: {
+  label: React.ReactNode;
+  value: React.ReactNode;
+  tone?: "pos" | "neg" | "neu";
+}) {
+  const color =
+    tone === "pos"
+      ? "#7db487"
+      : tone === "neg"
+      ? "#d18888"
+      : "var(--pq-ivory)";
+  return (
+    <div className="pq-detail-stat-row">
+      <span className="pq-detail-stat-row-label">{label}</span>
+      <span className="pq-detail-stat-row-value" style={{ color }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/**
  * Footer signature — placed at the base of each dashboard page, just
  * above the DisclaimerBanner. Fleuron + italic caption.
  */
