@@ -71,7 +71,7 @@ const pillars = [
     icon: Brain,
     title: "Quant Models",
     count: "58 models",
-    question: "What do math models predict?",
+    question: "What do math models observe?",
     color: "bg-emerald-50 text-emerald-600",
   },
 ];

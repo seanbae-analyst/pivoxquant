@@ -70,6 +70,11 @@ export const API = {
     read: "/api/alerts/read",
     clear: "/api/alerts/clear",
     priceCheck: "/api/alerts/price-check",
+    // Bell-dropdown endpoints (added 2026-04-22)
+    unreadCount: "/api/alerts/unread-count",
+    readAll: "/api/alerts/read-all",
+    itemRead: (id: string | number) => `/api/alerts/${id}/read`,
+    itemDelete: (id: string | number) => `/api/alerts/${id}`,
   },
   trades: "/api/trades",
   autotrade: {
@@ -98,6 +103,7 @@ export const API = {
     list: "/api/watchlist",
     add: "/api/watchlist",
     remove: (id: number) => `/api/watchlist/${id}`,
+    update: (id: number) => `/api/watchlist/${id}`,
   },
   realtime: {
     stream: "/api/realtime/stream",
@@ -208,3 +214,29 @@ export const API = {
       `/api/admin/artifacts/preview/${type}?format=${format}&download=1`,
   },
 } as const;
+
+// Portfolio (added 2026-04-22) — frontend-shape aliases for the new /portfolio page.
+// Existing `API.portfolio.*` entries above remain authoritative for legacy callers.
+export const PORTFOLIO_POSITIONS = "/api/portfolio/positions";
+export const PORTFOLIO_SUMMARY = "/api/portfolio/summary";
+export const PORTFOLIO_TRADES = "/api/portfolio/trades";
+
+// Watchlist + Search (added 2026-04-22) — spec-matched aliases used by the
+// new watchlist page and the Cmd+K command palette. `API.watchlist.*` above
+// remains authoritative for existing callers; these are path-only shortcuts.
+const API_BASE = "";
+export const WATCHLIST = `${API_BASE}/api/watchlist`;
+export const WATCHLIST_ITEM = (id: string | number) => `${API_BASE}/api/watchlist/${id}`;
+export const SEARCH = `${API_BASE}/api/search`;
+
+// Risk + Discover + Market (added 2026-04-22) — observation endpoints wired to
+// the new risk/discover/market pages. Existing API.* namespace untouched.
+export const RISK_SUMMARY      = `${API_BASE}/api/risk/summary`;
+export const RISK_LAYERS       = `${API_BASE}/api/risk/layers`;
+export const RISK_CORRELATION  = `${API_BASE}/api/risk/correlation`;
+export const RISK_ROLLING_VAR  = `${API_BASE}/api/risk/rolling-var`;
+export const DISCOVER_OVERVIEW  = `${API_BASE}/api/discover/market-overview`;
+export const DISCOVER_MOVERS    = `${API_BASE}/api/discover/movers`;
+export const DISCOVER_SECTORS   = `${API_BASE}/api/discover/sectors`;
+export const DISCOVER_SCREENERS = `${API_BASE}/api/discover/screeners`;
+export const MARKET_INDICES     = `${API_BASE}/api/market/indices`;

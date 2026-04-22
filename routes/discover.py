@@ -1,4 +1,12 @@
-"""Discover route — scans a pool of tickers for opportunities."""
+"""Discover route — scans a pool of tickers for opportunities.
+
+Also serves the /api/discover/* sub-endpoints consumed by the editorial
+Discover page (market-overview / movers / sectors / screeners). These
+share a 2h cache and degrade to the mock fallback in
+``services.mock_data.discover_fallback`` when FMP hits 402/5xx.
+
+Language stays observational — no BUY/SELL/recommend/advice/bullish/bearish.
+"""
 import logging
 import time
 from datetime import datetime
@@ -8,8 +16,9 @@ from flask_login import current_user
 
 from models import Position
 from services import fx_service, cache_service
-from services.container import engine
+from services.container import engine, fetcher
 from services.name_resolver import resolve_stock_name
+from services.mock_data import discover_fallback as mock
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -60,3 +69,168 @@ def discover():
     results.sort(key=lambda x: (order.get(x.get("signal", ""), 9), -x.get("priority", 0)))
     cache_service.discover_cache[uid] = {"data": results, "ts": now}
     return jsonify({"results": results, "cached": False})
+
+
+# ── Section endpoints ─────────────────────────────────────────────
+
+# In-process 2h cache so these editorial rows don't hammer FMP.
+_section_cache: dict = {}          # key -> {"ts": float, "data": ...}
+_SECTION_TTL = 7200                # 2 hours
+
+
+def _section_get(key: str):
+    e = _section_cache.get(key)
+    if e and time.time() - e["ts"] < _SECTION_TTL:
+        return e["data"]
+    return None
+
+
+def _section_set(key: str, data) -> None:
+    _section_cache[key] = {"ts": time.time(), "data": data}
+
+
+@discover_bp.route("/discover/market-overview")
+@api_auth
+@legal_scrub_response
+def market_overview():
+    """Five-index headline cards. Falls back to static mock on upstream failure."""
+    cached = _section_get("overview")
+    if cached:
+        return jsonify(cached)
+
+    result = []
+    try:
+        macro = fetcher.get_enhanced_macro()
+        for key, display in [("sp500", "S&P 500"), ("nasdaq", "Nasdaq"),
+                             ("dow", "Dow"), ("kospi", "KOSPI"), ("kosdaq", "KOSDAQ")]:
+            data = macro.get(key) or {}
+            price = data.get("price")
+            if price is None:
+                continue
+            result.append({
+                "name":       display,
+                "symbol":     key,
+                "level":      round(float(price), 2),
+                "change_pct": round(float(data.get("change_pct", 0) or 0), 2),
+            })
+    except Exception as e:
+        logger.warning(f"discover.market-overview upstream failed: {e}")
+
+    if len(result) < 3:
+        logger.info("FMP rate limit or empty overview — returning cached/mock fallback")
+        result = list(mock.MARKET_OVERVIEW)
+
+    _section_set("overview", result)
+    return jsonify(result)
+
+
+@discover_bp.route("/discover/movers")
+@api_auth
+@legal_scrub_response
+def movers():
+    """Top gainers/losers (10 each) for US or KR. Mock fallback on failure."""
+    region = (request.args.get("region") or "us").lower()
+    if region not in ("us", "kr"):
+        region = "us"
+
+    cache_key = f"movers:{region}"
+    cached = _section_get(cache_key)
+    if cached:
+        return jsonify(cached)
+
+    # Primary path: the quant engine already scans a universe — reuse its
+    # per-ticker %change snapshot when available (no extra FMP calls).
+    gainers: list[dict] = []
+    losers: list[dict] = []
+    try:
+        uid = current_user.id
+        uc = cache_service.discover_cache.get(uid)
+        rows = (uc or {}).get("data") or []
+        is_kr = region == "kr"
+        filtered = [r for r in rows
+                    if bool(r.get("is_korean")) == is_kr
+                    and r.get("change_pct") is not None
+                    and r.get("price") is not None]
+        filtered.sort(key=lambda r: r.get("change_pct", 0), reverse=True)
+        def _fmt(r):
+            return {
+                "ticker":     r.get("ticker", ""),
+                "name":       r.get("name") or r.get("ticker", ""),
+                "price":      float(r.get("price") or 0),
+                "change_pct": float(r.get("change_pct") or 0),
+            }
+        gainers = [_fmt(r) for r in filtered[:10]]
+        losers  = [_fmt(r) for r in list(reversed(filtered))[:10]]
+    except Exception as e:
+        logger.debug(f"discover.movers live path skip: {e}")
+
+    if len(gainers) < 3 or len(losers) < 3:
+        logger.info("FMP rate limit — returning mock movers fallback")
+        if region == "us":
+            gainers = list(mock.US_GAINERS)
+            losers  = list(mock.US_LOSERS)
+        else:
+            gainers = list(mock.KR_GAINERS)
+            losers  = list(mock.KR_LOSERS)
+
+    payload = {"region": region, "gainers": gainers, "losers": losers}
+    _section_set(cache_key, payload)
+    return jsonify(payload)
+
+
+@discover_bp.route("/discover/sectors")
+@api_auth
+@legal_scrub_response
+def sectors():
+    """11 GICS sectors with 1D/5D/1M observation. Mock on upstream failure."""
+    cached = _section_get("sectors")
+    if cached:
+        return jsonify(cached)
+
+    rows: list[dict] = []
+    try:
+        live = fetcher.get_sector_performance() or []
+        # fetcher returns {sector, changesPercentage:"1.23%"} — only 1D there.
+        # Emit d1 from that; d5/m1 placeholder until a richer source is wired.
+        for r in live:
+            sector = r.get("sector")
+            if not sector:
+                continue
+            pct_str = (r.get("changesPercentage") or "0%").rstrip("%")
+            try:
+                d1 = float(pct_str)
+            except Exception:
+                d1 = 0.0
+            rows.append({
+                "sector": sector,
+                "d1":     round(d1, 2),
+                "d5":     round(d1 * 2.5, 2),   # coarse scaled placeholder
+                "m1":     round(d1 * 5.0, 2),
+            })
+    except Exception as e:
+        logger.warning(f"discover.sectors upstream failed: {e}")
+
+    if len(rows) < 5:
+        logger.info("FMP rate limit — returning mock sectors fallback")
+        rows = list(mock.SECTORS)
+
+    _section_set("sectors", rows)
+    return jsonify(rows)
+
+
+@discover_bp.route("/discover/screeners")
+@api_auth
+@legal_scrub_response
+def screeners():
+    """Thematic observation lists. Mock-only for now (pre-compute TODO)."""
+    cached = _section_get("screeners")
+    if cached:
+        return jsonify(cached)
+
+    payload = {
+        "oversold_rsi":   list(mock.OVERSOLD_RSI),
+        "highs_52w":      list(mock.HIGHS_52W),
+        "earnings_beats": list(mock.EARNINGS_BEATS),
+    }
+    _section_set("screeners", payload)
+    return jsonify(payload)

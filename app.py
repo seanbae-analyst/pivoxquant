@@ -376,6 +376,12 @@ def _do_migrations():
     _add_column_if_missing("alerts", "rec_shares", "INTEGER", default="0")
     _add_column_if_missing("alerts", "rec_investment", "FLOAT", default="0")
     _add_column_if_missing("alerts", "is_read", "BOOLEAN", default="0")
+    # 2026-04-22 — NotificationDropdown bell fields (kind/title/body/link/read_at).
+    _add_column_if_missing("alerts", "kind", "VARCHAR(40)")
+    _add_column_if_missing("alerts", "title", "VARCHAR(200)")
+    _add_column_if_missing("alerts", "body", "TEXT")
+    _add_column_if_missing("alerts", "link", "VARCHAR(300)")
+    _add_column_if_missing("alerts", "read_at", "TIMESTAMP")
 
     # Artifacts table — full coverage of Artifact model columns.
     # `share_token` was added post-initial-creation (MVP#2 Brag Card public
@@ -438,6 +444,10 @@ def _do_migrations():
 
     # User referrals — `invited_count` is the one post-create candidate.
     _add_column_if_missing("user_referrals", "invited_count", "INTEGER", default="0")
+
+    # Watchlist — `note` is a free-text memo (2026-04-22). Added post-create
+    # so legacy DBs need an idempotent ALTER here.
+    _add_column_if_missing("watchlist", "note", "VARCHAR(500)")
 
     # 2026-04-19 — position_dd_checks: create the table if absent.
     # The model is covered by `db.create_all()` on first boot, but we

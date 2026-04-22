@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import {
   PortfolioModal,
   Field,
@@ -9,24 +10,19 @@ import {
   PrimaryButton,
 } from "./portfolio-modal";
 import type { Side } from "./types";
+import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
+import { apiFetch, ApiError } from "@/lib/api";
 
 interface AddPositionModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit?: (payload: {
-    symbol: string;
-    side: Side;
-    quantity: number;
-    price: number;
-    date: string;
-    notes: string;
-  }) => void;
+  onSuccess?: () => void;
 }
 
 export function AddPositionModal({
   open,
   onClose,
-  onSubmit,
+  onSuccess,
 }: AddPositionModalProps) {
   const [symbol, setSymbol] = useState("");
   const [side, setSide] = useState<Side>("Long");
@@ -36,23 +32,45 @@ export function AddPositionModal({
     new Date().toISOString().slice(0, 10),
   );
   const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (submitting) return;
+
     const payload = {
       symbol: symbol.trim().toUpperCase(),
       side,
       quantity: Number(quantity) || 0,
       price: Number(price) || 0,
-      date,
-      notes: notes.trim(),
+      purchase_date: date,
+      note: notes.trim(),
     };
-    // Record-only UX. Parent may wire to backend later.
-    // eslint-disable-next-line no-console
-    console.log("[PortfolioRecord] add position", payload);
-    onSubmit?.(payload);
-    reset();
-    onClose();
+    if (!payload.symbol || payload.quantity <= 0 || payload.price <= 0) {
+      toast.error("Symbol, quantity, and price required.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await apiFetch(PORTFOLIO_POSITIONS, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      toast.success("Position recorded — informational only, not advice.");
+      onSuccess?.();
+      reset();
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        if (typeof window !== "undefined") window.location.href = "/login";
+        return;
+      }
+      const message = err instanceof Error ? err.message : "Failed to add position";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function reset() {
@@ -69,21 +87,20 @@ export function AddPositionModal({
       open={open}
       onClose={onClose}
       title="Add Position"
-      subtitle="Log a holding you already own. Records only — not a transaction."
+      subtitle="Log a holding you already own. User-entered record only — not investment advice."
       footer={
         <>
           <CancelButton onClick={onClose} />
           <PrimaryButton
             type="button"
             onClick={() => {
-              // Bridge the submit to the form outside the footer.
               const form = document.getElementById(
                 "add-position-form",
               ) as HTMLFormElement | null;
               form?.requestSubmit();
             }}
           >
-            Add
+            {submitting ? "Saving…" : "Add"}
           </PrimaryButton>
         </>
       }
@@ -184,6 +201,10 @@ export function AddPositionModal({
             />
           </Field>
         </div>
+
+        <p className="col-span-2 text-[11px] italic text-slate-500">
+          User-entered record only. Not investment advice.
+        </p>
       </form>
     </PortfolioModal>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import {
   PortfolioModal,
   Field,
@@ -9,40 +10,38 @@ import {
   PrimaryButton,
 } from "./portfolio-modal";
 import type { Position, TradeAction } from "./types";
+import { PORTFOLIO_POSITIONS, PORTFOLIO_TRADES } from "@/lib/endpoints";
+import { apiFetch, ApiError } from "@/lib/api";
 
 interface TradeModalProps {
   open: boolean;
   onClose: () => void;
   action: TradeAction;
   position: Position | null;
-  onSubmit?: (payload: {
-    action: TradeAction;
-    positionId: string;
-    quantity: number;
-    price: number;
-    date: string;
-    notes: string;
-  }) => void;
+  onSuccess?: () => void;
 }
 
 const COPY: Record<
   TradeAction,
-  { title: string; subtitle: string; cta: string }
+  { title: string; subtitle: string; cta: string; success: string }
 > = {
   buy: {
     title: "Add to Position",
     subtitle: "Record an additional purchase of this symbol.",
     cta: "Save",
+    success: "Trade recorded — informational only, not advice.",
   },
   sell: {
     title: "Reduce Position",
     subtitle: "Record a partial or full close of this holding.",
     cta: "Save",
+    success: "Trade recorded — informational only, not advice.",
   },
   edit: {
     title: "Edit Position",
     subtitle: "Adjust the cost basis or notes for this holding.",
     cta: "Update",
+    success: "Position updated.",
   },
 };
 
@@ -51,7 +50,7 @@ export function TradeModal({
   onClose,
   action,
   position,
-  onSubmit,
+  onSuccess,
 }: TradeModalProps) {
   const copy = COPY[action];
 
@@ -66,28 +65,72 @@ export function TradeModal({
   const [avgCost, setAvgCost] = useState(
     position?.avgCost ? String(position.avgCost) : "",
   );
+  const [submitting, setSubmitting] = useState(false);
 
-  // When the target position changes, sync local state.
-  // (Simple approach — parent remounts via key when needed.)
   if (position && action === "edit" && avgCost === "" && position.avgCost) {
     setAvgCost(String(position.avgCost));
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!position) return;
-    const payload = {
-      action,
-      positionId: position.id,
-      quantity: Number(quantity) || 0,
-      price: Number(price) || Number(avgCost) || 0,
-      date,
-      notes: notes.trim(),
-    };
-    // eslint-disable-next-line no-console
-    console.log("[PortfolioRecord] trade", payload);
-    onSubmit?.(payload);
-    onClose();
+    if (!position || submitting) return;
+    setSubmitting(true);
+
+    try {
+      if (action === "edit") {
+        const parsedCost = Number(avgCost) || 0;
+        if (parsedCost <= 0) {
+          toast.error("Average cost must be positive.");
+          setSubmitting(false);
+          return;
+        }
+        await apiFetch(`${PORTFOLIO_POSITIONS}/${position.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            avg_cost: parsedCost,
+            note: notes.trim(),
+          }),
+        });
+        toast.success(copy.success);
+      } else {
+        const parsedQty = Number(quantity) || 0;
+        const parsedPrice = Number(price) || 0;
+        if (parsedQty <= 0 || parsedPrice <= 0) {
+          toast.error("Quantity and price required.");
+          setSubmitting(false);
+          return;
+        }
+        if (action === "sell" && parsedQty > position.shares) {
+          toast.error(`Cannot sell more than ${position.shares} shares held.`);
+          setSubmitting(false);
+          return;
+        }
+        await apiFetch(PORTFOLIO_TRADES, {
+          method: "POST",
+          body: JSON.stringify({
+            position_id: position.id,
+            action,
+            quantity: parsedQty,
+            price: parsedPrice,
+            date,
+            note: notes.trim(),
+          }),
+        });
+        toast.success(copy.success);
+      }
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        if (typeof window !== "undefined") window.location.href = "/login";
+        return;
+      }
+      const message =
+        err instanceof Error ? err.message : "Failed to record trade";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (!position) return null;
@@ -112,7 +155,7 @@ export function TradeModal({
               form?.requestSubmit();
             }}
           >
-            {copy.cta}
+            {submitting ? "Saving…" : copy.cta}
           </PrimaryButton>
         </>
       }
@@ -210,6 +253,10 @@ export function TradeModal({
             />
           </Field>
         </div>
+
+        <p className="col-span-2 text-[11px] italic text-slate-500">
+          User-entered record only. Not investment advice.
+        </p>
       </form>
     </PortfolioModal>
   );

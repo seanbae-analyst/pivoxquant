@@ -56,10 +56,19 @@ def serialize_alert(a) -> dict:
     # Resolve once per alert. Cache-backed via services.name_resolver so
     # a list render costs ~O(unique tickers) DB hits at worst.
     name = _resolve_display_name(a.ticker) if a.ticker else None
+    kind = getattr(a, "kind", None)
+    title = getattr(a, "title", None) or a.message or ""
     return {
         "id": a.id,
         "ticker": a.ticker,
         "name": name or a.ticker,
+        # NotificationDropdown fields (2026-04-22)
+        "kind": kind,
+        "title": title,
+        "body": getattr(a, "body", None),
+        "link": getattr(a, "link", None),
+        "read_at": a.read_at.isoformat() if getattr(a, "read_at", None) else None,
+        # Legacy fields
         "message": a.message,
         "signal": a.signal,
         "score": a.score,
