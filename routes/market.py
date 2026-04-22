@@ -11,7 +11,6 @@ from models import Position, SignalCache
 from services import fx_service
 from services.container import engine, fetcher, realtime
 from services.market_status import get_market_status
-from services.mock_data import discover_fallback as _mock_market
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth, legal_scrub_response
 
@@ -485,22 +484,137 @@ def company_profile(ticker):
         return jsonify({"error": "Unable to fetch company profile"}), 500
 
 
+# US indices → liquid ETF proxies. FMP Starter and Alpaca both refuse to
+# serve caret-prefixed index symbols (^GSPC, ^IXIC…). The ETFs track the
+# indices within ±0.02% intraday, so level + 1d%change + 52W range +
+# sparkline are all mathematically honest when published in ETF units.
+# The UI renders a single number so the unit difference (SPY=$708 vs
+# GSPC=5800) is invisible. Do NOT attempt a "ratio conversion" — the
+# ratio drifts over time and would inject wrong values.
+_US_INDEX_PROXY = {
+    "^GSPC": ("SPY",  "S&P 500"),
+    "^IXIC": ("QQQ",  "Nasdaq 100"),
+    "^DJI":  ("DIA",  "Dow Jones"),
+    "^RUT":  ("IWM",  "Russell 2000"),
+    "^VIX":  ("VIXY", "Volatility (VIXY)"),
+}
+
+_KR_INDEX_SPEC = [
+    # ticker,    display,       kis_code, macro_key
+    ("^KS11",    "KOSPI",       "0001",   "kospi"),
+    ("^KQ11",    "KOSDAQ",      "1001",   "kosdaq"),
+    ("^KS200",   "KOSPI 200",   "2001",   None),
+    ("^KQ150",   "KOSDAQ 150",  "2203",   None),
+    # USDKRW handled separately via fx_service / macro
+]
+
+
+def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
+    """Build the standard index entry from an Alpaca ETF proxy.
+
+    Returns None if live quote unavailable — caller skips (partial data is
+    more honest than hardcoded 2024 mocks)."""
+    try:
+        from services.data import alpaca_market_adapter as ama
+    except Exception:
+        return None
+
+    q = ama.get_quote(etf)
+    if not q or q.get("price") is None:
+        return None
+    level = float(q["price"])
+    change_pct = float(q.get("changesPercentage") or 0)
+
+    sparkline: list[float] = []
+    range_52w = [0.0, 0.0]
+    try:
+        h = fetcher.get_price_history(etf, period="1y")
+        if h is not None and not h.empty and "Close" in h.columns:
+            closes = h["Close"].astype(float)
+            sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
+            range_52w = [round(float(closes.min()), 2),
+                         round(float(closes.max()), 2)]
+    except Exception as e:
+        logger.debug(f"market.indices history skip {etf}: {e}")
+
+    return {
+        "ticker":        ticker_alias,
+        "proxy_ticker":  etf,
+        "name":          display,
+        "level":         round(level, 2),
+        "change_1d_pct": round(change_pct, 2),
+        "range_52w":     range_52w,
+        "sparkline_30d": sparkline,
+        "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "is_stale":      False,
+    }
+
+
+def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None:
+    """Build standard index entry from a KIS index code.
+
+    sparkline / 52W range are best-effort via get_price_history; many KIS
+    index codes (2001/2203) lack historical endpoints, so those fields may
+    be empty. We still return level + 1d% if KIS gave us a live quote."""
+    try:
+        from services.container import realtime as _rt
+        if not getattr(_rt, "kis_available", False):
+            return None
+        from kis_service import KISService
+        idx = KISService().get_index_price(kis_code)
+    except Exception as e:
+        logger.debug(f"market.indices KIS {kis_code} failed: {e}")
+        return None
+
+    if not idx or not idx.get("price"):
+        return None
+
+    level = float(idx["price"])
+    change_pct = float(idx.get("change_pct") or 0)
+
+    sparkline: list[float] = []
+    range_52w = [0.0, 0.0]
+    try:
+        h = fetcher.get_price_history(ticker, period="1y")
+        if h is not None and not h.empty and "Close" in h.columns:
+            closes = h["Close"].astype(float)
+            sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
+            range_52w = [round(float(closes.min()), 2),
+                         round(float(closes.max()), 2)]
+    except Exception:
+        pass
+
+    return {
+        "ticker":        ticker,
+        "name":          display,
+        "level":         round(level, 2),
+        "change_1d_pct": round(change_pct, 2),
+        "range_52w":     range_52w,
+        "sparkline_30d": sparkline,
+        "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "is_stale":      False,
+    }
+
+
 @market_bp.route("/market/indices")
 @api_auth
 @legal_scrub_response
 def market_indices():
-    """Headline indices for an ``/market`` tab.
+    """Headline indices for the ``/market`` tab.
 
     Query params:
         region: "us" (default) or "kr"
 
     Response: list of index snapshots with
-        ticker, name, level, change_1d_pct, range_52w:[lo,hi], sparkline_30d:[...]
+        ticker, name, level, change_1d_pct, range_52w:[lo,hi],
+        sparkline_30d:[...], observed_at, is_stale
 
     Sources:
-        - US: FMP enhanced-macro + FMP historical for 52W + 30D sparklines
-        - KR: KIS index quotes + FMP historical fallback
-        - Any failure → static mock fallback (snapshot) so the page is never empty
+        - US: Alpaca ETF proxies (SPY/QQQ/DIA/IWM/VIXY) — FMP refuses
+          index symbols on Starter tier and Alpaca does not serve raw ^GSPC.
+        - KR: KIS index API for KOSPI/KOSDAQ (codes 0001/1001) and
+          KOSPI200/KOSDAQ150 (codes 2001/2203); fx_service / macro for USD/KRW.
+        - Partial failure: skip the failing ticker. Never mock.
     """
     region = (request.args.get("region") or "us").lower()
     if region not in ("us", "kr"):
@@ -511,85 +625,54 @@ def market_indices():
     if entry and now - entry["ts"] < _indices_ttl():
         return jsonify(entry["data"])
 
-    spec_us = [
-        ("^GSPC", "S&P 500",          "sp500"),
-        ("^IXIC", "Nasdaq Composite", "nasdaq"),
-        ("^DJI",  "Dow Jones",        "dow"),
-        ("^RUT",  "Russell 2000",     "russell2000"),
-        ("^VIX",  "CBOE Volatility",  None),
-    ]
-    spec_kr = [
-        ("^KS11",  "KOSPI",        "kospi"),
-        ("^KQ11",  "KOSDAQ",       "kosdaq"),
-        ("^KS200", "KOSPI 200",    None),
-        ("^KQ150", "KOSDAQ 150",   None),
-        ("USDKRW", "USD / KRW",    None),
-    ]
-    spec = spec_us if region == "us" else spec_kr
-
     out: list[dict] = []
-    try:
-        macro = fetcher.get_enhanced_macro() or {}
-    except Exception as e:
-        logger.warning(f"market.indices macro fetch failed: {e}")
-        macro = {}
 
-    # Build 30-day sparkline + 52W range from price history when possible.
-    for ticker, display, macro_key in spec:
-        level = None
-        change_pct = 0.0
-        if macro_key and macro_key in macro:
-            mv = macro[macro_key] or {}
-            if mv.get("price") is not None:
-                level      = float(mv["price"])
-                change_pct = float(mv.get("change_pct", 0) or 0)
-        # Special-case VIX + USDKRW + kospi200/kosdaq150 (not keyed in macro)
-        if level is None:
-            if ticker == "^VIX" and macro.get("vix") is not None:
-                level = float(macro["vix"])
-            elif ticker == "USDKRW" and macro.get("usdkrw"):
-                level = float(macro["usdkrw"].get("price") or 0)
+    if region == "us":
+        for raw_ticker, (etf, display) in _US_INDEX_PROXY.items():
+            snap = _etf_snapshot(etf, display, raw_ticker)
+            if snap is not None:
+                out.append(snap)
+    else:
+        # KR indices via KIS
+        for raw_ticker, display, kis_code, _macro_key in _KR_INDEX_SPEC:
+            snap = _kis_index_snapshot(kis_code, raw_ticker, display)
+            if snap is not None:
+                out.append(snap)
 
-        sparkline: list[float] = []
-        range_52w = [0.0, 0.0]
+        # USD/KRW — fx_service is always live (refreshed on app boot +
+        # background tick). Fall back to macro payload if fx_service empty.
+        usdkrw_level = None
         try:
-            h = fetcher.get_price_history(ticker, period="1y")
-            if h is not None and not h.empty and "Close" in h.columns:
-                closes = h["Close"].astype(float)
-                if level is None and len(closes):
-                    level = float(closes.iloc[-1])
-                sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
-                range_52w = [round(float(closes.min()), 2),
-                             round(float(closes.max()), 2)]
-        except Exception as e:
-            logger.debug(f"market.indices history skip {ticker}: {e}")
+            usdkrw_level = float(fx_service.get_rate() or 0) or None
+        except Exception:
+            usdkrw_level = None
+        if usdkrw_level is None:
+            try:
+                macro = fetcher.get_enhanced_macro() or {}
+                mv = macro.get("usdkrw") or {}
+                if mv.get("price"):
+                    usdkrw_level = float(mv["price"])
+            except Exception:
+                pass
+        if usdkrw_level:
+            out.append({
+                "ticker":        "USDKRW",
+                "name":          "USD / KRW",
+                "level":         round(usdkrw_level, 2),
+                "change_1d_pct": 0.0,  # fx_service doesn't track d/d yet
+                "range_52w":     [0.0, 0.0],
+                "sparkline_30d": [],
+                "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "is_stale":      False,
+            })
 
-        if level is None:
-            continue
+    # Only cache successful responses. Caching a thin failure for 30s locks
+    # users into mock-looking data for the whole cache window — better to
+    # re-try upstream on every request until it succeeds.
+    if out:
+        _indices_cache[region] = {"ts": now, "data": out}
 
-        out.append({
-            "ticker":         ticker,
-            "name":           display,
-            "level":          round(level, 2),
-            "change_1d_pct":  round(change_pct, 2),
-            "range_52w":      range_52w,
-            "sparkline_30d":  sparkline,
-            # Emit observation timestamp so the frontend can render
-            # "as of HH:MM" chips and detect stale tiles without a
-            # separate /status probe.
-            "observed_at":    datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        })
-
-    # Fallback to static snapshot if upstream came back too thin
-    # (spec calls for 5 headline indices per region).
-    if len(out) < 5:
-        logger.info(f"FMP/KIS rate limit — returning mock indices fallback ({region})")
-        out = list(_mock_market.US_MARKET_INDICES if region == "us"
-                   else _mock_market.KR_MARKET_INDICES)
-
-    payload = out
-    _indices_cache[region] = {"ts": now, "data": payload}
-    return jsonify(payload)
+    return jsonify(out)
 
 
 @market_bp.route("/dividend/<ticker>")

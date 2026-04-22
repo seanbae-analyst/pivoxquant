@@ -610,16 +610,24 @@ Reply ONLY in this exact JSON format, nothing else:
         btc_data = btc_future.result(timeout=15)
 
         # ── Alpaca fallback for FMP-gated symbols ────────────────────────────
-        # FMP free/starter tier returns 402 for many index/ETF quotes. Alpaca
-        # Market Data covers ETFs (GLD/USO/SLV/UUP) and several index proxies.
-        # Alpaca does NOT serve raw ^GSPC/^IXIC/^DJI/^VIX symbols — for those
-        # we rely on the ETF equivalents already in the discover pool (SPY/
-        # QQQ/DIA/VIXY) or stale cache, and skip the fallback here.
+        # FMP Starter tier returns 402 for raw index quotes (^GSPC/^IXIC/^DJI/
+        # ^RUT/^VIX) on every request. Alpaca Market Data does not serve the
+        # caret-prefixed index symbols either, but it DOES cover their ETF
+        # proxies with live pricing. Map each index to its most liquid ETF so
+        # the macro payload has real 2026 values instead of stale snapshots.
         ALPACA_STOCK_MAP = {"GLD": "GLD", "USO": "USO", "SLV": "SLV", "UUP": "UUP"}
+        INDEX_ETF_PROXY = {
+            "^GSPC": "SPY",   # S&P 500
+            "^IXIC": "QQQ",   # Nasdaq 100 (proxy for Composite)
+            "^DJI":  "DIA",   # Dow Jones
+            "^RUT":  "IWM",   # Russell 2000
+            "^VIX":  "VIXY",  # Short-term VIX futures ETF
+        }
 
         missing_stk = [s for s in stock_syms if s not in stk_data]
+        missing_idx = [s for s in index_syms if s not in idx_data]
 
-        if missing_stk:
+        if missing_stk or missing_idx:
             try:
                 from services.data import alpaca_market_adapter as ama
 
@@ -631,10 +639,24 @@ Reply ONLY in this exact JSON format, nothing else:
                     if q and q.get("price") is not None:
                         stk_data[sym] = (float(q["price"]),
                                           float(q.get("changesPercentage") or 0))
+
+                for sym in missing_idx:
+                    a_sym = INDEX_ETF_PROXY.get(sym)
+                    if not a_sym:
+                        continue
+                    q = ama.get_quote(a_sym)
+                    if q and q.get("price") is not None:
+                        idx_data[sym] = (float(q["price"]),
+                                          float(q.get("changesPercentage") or 0))
             except Exception as _ama_err:
                 logger.warning(f"Alpaca fallback failed: {_ama_err}")
 
-        # Equity indices
+        # Equity indices — the ETF proxy price IS the level we publish. The
+        # UI shows a single number + % change; using SPY=$708 instead of
+        # GSPC=5800 keeps the relative move + 52W range mathematically honest
+        # (ETFs track their index within ±0.02% intraday). Attempting a
+        # scale conversion via historical ratio would inject drift and
+        # produce subtly wrong numbers, so we publish ETF-native values.
         for sym, key in [("^GSPC","sp500"),("^IXIC","nasdaq"),("^DJI","dow"),("^RUT","russell2000")]:
             if sym in idx_data:
                 p, c = idx_data[sym]
