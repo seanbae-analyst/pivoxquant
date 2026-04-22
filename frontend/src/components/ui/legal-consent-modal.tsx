@@ -151,6 +151,7 @@ export function LegalConsentModal({
               <Link
                 href="/terms"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="underline hover:text-slate-900"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -160,6 +161,7 @@ export function LegalConsentModal({
               <Link
                 href="/privacy"
                 target="_blank"
+                rel="noopener noreferrer"
                 className="underline hover:text-slate-900"
                 onClick={(e) => e.stopPropagation()}
               >

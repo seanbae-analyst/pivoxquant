@@ -30,6 +30,7 @@ import {
 import { useMorningBrief, useMorningBriefArchive } from "@/lib/hooks";
 import { useLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import {
@@ -170,6 +171,7 @@ function ArchiveRow({ item }: { item: MorningBriefArchiveItem }) {
 export default function MorningBriefPage() {
   const { data: today, isLoading: todayLoading } = useMorningBrief();
   const { data: archive } = useMorningBriefArchive();
+  const now = useNowTick(1000);
 
   const todayDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -179,6 +181,7 @@ export default function MorningBriefPage() {
   });
 
   const brief = today?.brief;
+  const observedRel = relativeTime(today?.generated_at, now);
   const archiveItems = useMemo<MorningBriefArchiveItem[]>(
     () => archive?.briefs ?? [],
     [archive],
@@ -194,6 +197,17 @@ export default function MorningBriefPage() {
               <Sunrise className="h-3 w-3 text-[var(--pq-bronze)]" />
               <RuledKicker>Morning brief &middot; {todayDate}</RuledKicker>
             </div>
+            {today?.generated_at && (
+              <div className="mt-1 flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-1 w-1 rounded-full bg-[var(--pq-bronze)] opacity-40"
+                />
+                <span className="font-mono text-[10px] tabular-nums text-[var(--pq-bronze)]">
+                  Data observed {observedRel}
+                </span>
+              </div>
+            )}
             <h1 className="mt-3 font-serif italic text-[2.25rem] leading-tight text-[var(--pq-ivory)]" style={{ letterSpacing: "-0.015em" }}>
               Good morning.
             </h1>

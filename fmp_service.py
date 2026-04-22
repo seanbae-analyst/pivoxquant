@@ -19,14 +19,42 @@ FMP_BASE = "https://financialmodelingprep.com/stable"
 FMP_KEY = os.environ.get("FMP_API_KEY", "")
 
 # ── Cache TTL Constants ─────────────────────────────────────────
-TTL_QUOTE      = 30          # 30 seconds — near-realtime
-TTL_INTRADAY   = 60          # 1 minute
-TTL_PRICE_HIST = 3600        # 1 hour — historical bars
+# Price-adjacent TTLs (quote/intraday/fx) are market-aware at the call
+# site via ``services.cache_ttl``. The constants below are fallbacks
+# used only when the helper import fails (e.g. scheduler warm-up).
+TTL_QUOTE      = 30          # off-hours fallback — helper returns 5s intraday
+TTL_INTRADAY   = 60          # off-hours fallback — helper returns 10s intraday
+TTL_PRICE_HIST = 3600        # 1 hour — historical bars (unchanged)
 TTL_NEWS       = 6 * 3600    # 6 hours — news is low-weight (3%), no need for frequent refresh
 TTL_FUNDAMENTAL = 24 * 3600  # 24 hours — ratios, metrics, earnings
 TTL_PROFILE    = 7 * 24 * 3600  # 7 days — company profile rarely changes
 TTL_SECTOR     = 30 * 60     # 30 minutes
-TTL_FX         = 5           # 5 seconds — near-realtime
+TTL_FX         = 5           # off-hours fallback — helper returns 5s intraday, 30s closed
+
+
+def _quote_ttl() -> int:
+    """Market-aware quote TTL — helper import guarded for bootstrap paths."""
+    try:
+        from services.cache_ttl import quote_ttl
+        return quote_ttl()
+    except Exception:
+        return TTL_QUOTE
+
+
+def _intraday_ttl() -> int:
+    try:
+        from services.cache_ttl import intraday_ttl
+        return intraday_ttl()
+    except Exception:
+        return TTL_INTRADAY
+
+
+def _fx_ttl() -> int:
+    try:
+        from services.cache_ttl import fx_ttl
+        return fx_ttl()
+    except Exception:
+        return TTL_FX
 
 # ── In-memory cache ─────────────────────────────────────────────
 _cache = {}
@@ -220,7 +248,7 @@ def get_quote(ticker):
       4. Stale cache (any age)
     """
     cache_key = f"quote:{ticker}"
-    cached = _get_cache(cache_key, TTL_QUOTE)
+    cached = _get_cache(cache_key, _quote_ttl())
     if cached:
         return cached
     if _is_budget_stale():
@@ -259,7 +287,7 @@ def get_quotes_batch(tickers):
         return {}
     symbols = ",".join(tickers)
     cache_key = f"batch_quote:{symbols}"
-    cached = _get_cache(cache_key, TTL_QUOTE)
+    cached = _get_cache(cache_key, _quote_ttl())
     if cached:
         return cached
     if _is_budget_stale():
@@ -1087,7 +1115,7 @@ def get_general_news(limit=15):
 def get_fx_rate(pair="USDKRW"):
     """Get forex rate. Cache 5s for near-realtime. Stale-while-revalidate when budget low."""
     cache_key = f"fx:{pair}"
-    cached = _get_cache(cache_key, TTL_FX)
+    cached = _get_cache(cache_key, _fx_ttl())
     if cached:
         return cached
     if _is_budget_stale():
@@ -1169,7 +1197,7 @@ def get_dividends(ticker):
 def get_intraday(ticker, interval="1min"):
     """Get intraday bars. Cache 60s. Stale-while-revalidate when budget low."""
     cache_key = f"intraday:{ticker}:{interval}"
-    cached = _get_cache(cache_key, TTL_INTRADAY)
+    cached = _get_cache(cache_key, _intraday_ttl())
     if cached is not None:
         return cached
     if _is_budget_stale():

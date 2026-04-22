@@ -23,6 +23,8 @@ import { toast } from "sonner";
 import { API, WATCHLIST, WATCHLIST_ITEM } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { fmtUsd, fmtKrw } from "@/lib/format";
+import { liveRefresh } from "@/lib/market-hours";
+import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
 import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -73,6 +75,8 @@ interface SignalDetail {
   news_score?: number;
   quant_score?: number;
   snapshot?: Snapshot;
+  /** ISO 8601 timestamp of the last price observation. */
+  observed_at?: string | null;
 }
 
 interface ChartPoint {
@@ -295,10 +299,11 @@ export default function StockDetailPage() {
     ticker ? API.signals.one(ticker) : null,
     fetcher,
     {
-      refreshInterval: 15_000,
+      // Market-aware: 5s when open, 30s when closed.
+      refreshInterval: () => liveRefresh(5_000, 30_000),
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 5_000,
+      dedupingInterval: 2_000,
       errorRetryCount: 2,
       errorRetryInterval: 5_000,
     },
@@ -307,10 +312,10 @@ export default function StockDetailPage() {
     ticker ? `${API.market.chart(ticker)}?period=${PERIOD_MAP[period]}` : null,
     fetcher,
     {
-      refreshInterval: 60_000,
+      refreshInterval: () => liveRefresh(15_000, 120_000),
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 10_000,
+      dedupingInterval: 5_000,
       shouldRetryOnError: false,
     },
   );
@@ -468,10 +473,15 @@ export default function StockDetailPage() {
           <div className="flex items-end justify-between flex-wrap gap-4">
             <div>
               <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-                Current price
+                Current price · observed
               </div>
-              <div className="mt-2 font-mono text-4xl text-[var(--pq-ivory)] tabular-nums">
-                {fmtPrice(signal?.price, krw)}
+              <div className="mt-2">
+                <PriceWithTimestamp
+                  price={signal?.price}
+                  observedAt={signal?.observed_at}
+                  currency={krw ? "KRW" : "USD"}
+                  size="lg"
+                />
               </div>
               <div
                 className={cn(

@@ -357,6 +357,16 @@
   display: inline-block;
   animation: pulse-dot 2s ease-in-out infinite;
 }
+
+/* PivoxQuant live dot — brand-specific pulse for "data streaming" indicators.
+ * Softer + warmer than stock Tailwind animate-pulse; uses PQ easing curve. */
+@keyframes pq-pulse-live {
+  0%, 100% { opacity: 0.95; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(1.1); }
+}
+.pq-live-dot {
+  animation: pq-pulse-live 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
 .status-dot.active   { background: var(--success); }
 .status-dot.inactive { background: var(--neutral); }
 .status-dot.warning  { background: var(--warning); }

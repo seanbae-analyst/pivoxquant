@@ -17,6 +17,7 @@ import useSWR from "swr";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { fmtPct } from "@/lib/format";
+import { liveRefresh } from "@/lib/market-hours";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { RefreshCw, Zap, ChevronDown } from "lucide-react";
@@ -312,10 +313,11 @@ export default function SignalsPage() {
     API.signals.all,
     fetcher,
     {
-      refreshInterval: 60_000,
+      // Market-aware: 10s open / 60s closed.
+      refreshInterval: () => liveRefresh(10_000, 60_000),
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 10_000,
+      dedupingInterval: 3_000,
       errorRetryCount: 2,
       errorRetryInterval: 5_000,
     },

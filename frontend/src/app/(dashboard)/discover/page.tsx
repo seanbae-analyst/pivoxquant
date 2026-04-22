@@ -30,6 +30,7 @@ import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
 import { useDiscover } from "@/lib/hooks";
 import type { DiscoverResult } from "@/lib/types";
+import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
@@ -46,7 +47,7 @@ import {
 
 const jsonFetcher = <T,>(url: string) => apiFetch<T>(url);
 
-interface BackendOverviewItem { name: string; symbol: string; level: number; change_pct: number; }
+interface BackendOverviewItem { name: string; symbol: string; level: number; change_pct: number; observed_at?: string; is_stale?: boolean; }
 interface BackendMover { ticker: string; name: string; price: number; change_pct: number; }
 interface BackendMoversResponse { region: string; gainers: BackendMover[]; losers: BackendMover[]; }
 interface BackendSectorRow { sector: string; d1: number; d5: number; m1: number; }
@@ -97,15 +98,22 @@ export default function DiscoverPage() {
   const liveFailed = Boolean(error) && !hasLive;
 
   const overviewItems = useMemo(() => {
-    if (!overviewLive || overviewLive.length === 0) return MOCK_INDICES;
+    if (!overviewLive || overviewLive.length === 0) {
+      return MOCK_INDICES.map((m) => ({ ...m, observed_at: undefined as string | undefined, is_stale: false }));
+    }
     return overviewLive.map((o) => ({
       name: o.name,
       level: typeof o.level === "number"
         ? o.level.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         : String(o.level),
       changePct: o.change_pct,
+      observed_at: o.observed_at,
+      is_stale: Boolean(o.is_stale),
     }));
   }, [overviewLive]);
+
+  // 1s tick for re-rendering relative timestamps.
+  const nowMs = useNowTick(1000);
 
   const fmtMoverPrice = (price: number, isKr: boolean) =>
     isKr
@@ -210,6 +218,18 @@ export default function DiscoverPage() {
                 <div className={"mt-1 font-mono text-[11px] " + deltaCls(o.changePct)}>
                   {fmtPct(o.changePct)}
                 </div>
+                {o.observed_at && (
+                  <div className="mt-1 flex items-center gap-1.5 font-mono text-[9.5px] text-[rgba(245,240,232,0.4)] tabular-nums">
+                    <span>Last obs {relativeTime(o.observed_at, nowMs)}</span>
+                    {o.is_stale && (
+                      <span
+                        aria-label="Stale quote"
+                        title="Quote has not refreshed recently"
+                        className="inline-block h-1 w-1 rounded-full bg-yellow-500/70"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

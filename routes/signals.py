@@ -32,7 +32,10 @@ def get_signals():
                 d = json.loads(c.data_json)
             except json.JSONDecodeError:
                 d = {}
+            stale = c.is_stale()
             d["cached_at"] = c.updated_at.isoformat()
+            d["observed_at"] = c.updated_at.isoformat()
+            d["is_stale"] = stale
             # Backfill name: SignalCache blobs are populated by engine.analyze()
             # which may emit bare ticker when the broker snapshot lacks a name.
             # resolve_stock_name guarantees 회사명 for every KRX/US listing.
@@ -40,6 +43,34 @@ def get_signals():
                 d["name"] = resolve_stock_name(t) or t
             d.setdefault("ticker", t)
             out.append(d)
+
+            # Best-effort background refresh when stale so subsequent reads
+            # see fresh data. Never blocks the current response.
+            if stale:
+                try:
+                    from threading import Thread
+                    from flask import current_app
+                    app_obj = current_app._get_current_object()
+                    capital = current_user.available_capital
+
+                    def _refresh(ticker=t, cap=capital, app=app_obj):
+                        with app.app_context():
+                            try:
+                                cache_service.cache_ticker(ticker, cap, engine)
+                            except Exception:
+                                pass
+
+                    Thread(target=_refresh, daemon=True).start()
+                except Exception:
+                    pass
+        else:
+            # No row at all — surface as stale so the client can show "—" / skeleton.
+            out.append({
+                "ticker": t,
+                "name": resolve_stock_name(t) or t,
+                "observed_at": None,
+                "is_stale": True,
+            })
     return jsonify({"signals": out})
 
 

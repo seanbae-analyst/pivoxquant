@@ -11,7 +11,7 @@
  * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner at foot.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
@@ -32,6 +32,11 @@ import {
   RISK_SUMMARY,
 } from "@/lib/endpoints";
 import { fmtUsd, fmtPct } from "@/lib/format";
+import { liveRefresh, isMarketOpen } from "@/lib/market-hours";
+import {
+  PriceWithTimestamp,
+  relativeTime,
+} from "@/components/ui/price-with-timestamp";
 import type { Position } from "@/components/portfolio/types";
 
 /** Format an ISO date or YYYY-MM-DD into a compact "Mon DD, YYYY" label. */
@@ -189,23 +194,41 @@ export default function HomePage() {
   const { user } = useAuth();
   const [period, setPeriod] = useState<(typeof PERIODS)[number]["value"]>("6mo");
 
-  // Live-refresh cadence:
-  //  - summary/positions/risk/alerts → 30s (quote-driven, user-facing numbers)
-  //  - history → 60s (aggregated series, slower-moving)
-  //  - morning brief → 10min (daily artifact, rarely changes intraday)
+  // Live-refresh cadence — market-aware (open vs closed):
+  //  - summary/positions → 5s open / 60s closed  (quote-driven)
+  //  - risk               → 10s open / 120s closed
+  //  - alerts             → 10s open / 60s closed
+  //  - history            → 15s open / 120s closed (aggregated series)
+  //  - morning brief      → 10min always (daily artifact)
   const liveOpts = {
-    refreshInterval: 30_000,
+    refreshInterval: () => liveRefresh(5_000, 60_000),
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    dedupingInterval: 5_000,
+    dedupingInterval: 2_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 5_000,
+  } as const;
+  const riskOpts = {
+    refreshInterval: () => liveRefresh(10_000, 120_000),
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 5_000,
+  } as const;
+  const alertsOpts = {
+    refreshInterval: () => liveRefresh(10_000, 60_000),
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
   } as const;
   const historyOpts = {
-    refreshInterval: 60_000,
+    refreshInterval: () => liveRefresh(15_000, 120_000),
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    dedupingInterval: 10_000,
+    dedupingInterval: 5_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
   } as const;
@@ -218,13 +241,17 @@ export default function HomePage() {
     errorRetryInterval: 10_000,
   } as const;
 
-  const { data: summary } = useSWR<SummaryResponse>(PORTFOLIO_SUMMARY, fetcher, liveOpts);
-  const { data: risk } = useSWR<RiskSummaryResponse>(RISK_SUMMARY, fetcher, liveOpts);
+  const { data: summary } = useSWR<SummaryResponse & { observed_at?: string }>(
+    PORTFOLIO_SUMMARY,
+    fetcher,
+    liveOpts,
+  );
+  const { data: risk } = useSWR<RiskSummaryResponse>(RISK_SUMMARY, fetcher, riskOpts);
   const { data: posData } = useSWR<PositionsResponse>(PORTFOLIO_POSITIONS, fetcher, liveOpts);
   const { data: alertsData } = useSWR<AlertsResponse>(
     `${API.alerts.list}?limit=5`,
     fetcher,
-    liveOpts,
+    alertsOpts,
   );
   const { data: history } = useSWR<HistoryResponse>(
     API.portfolio.history(period),
@@ -286,6 +313,15 @@ export default function HomePage() {
 
   const displayName = user?.name?.split(" ")[0] || "Observer";
 
+  /* ── Live banner — ticks every 1s so "Xs ago" stays fresh. ── */
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const marketOpen = isMarketOpen();
+  const observedAt = summary?.observed_at;
+
   /* ── Render ── */
   return (
     <ErrorBoundary>
@@ -308,12 +344,36 @@ export default function HomePage() {
             What we&rsquo;ve observed across your book since last close.
           </Caption>
         </div>
-        <span
-          className="font-mono hidden sm:inline"
-          style={{ fontSize: "11px", letterSpacing: "0.05em", color: "rgba(245,240,232,0.5)" }}
-        >
-          07:00 KST
-        </span>
+        <div className="hidden flex-col items-end gap-1 sm:flex">
+          <div className="flex items-center gap-1.5 font-mono tabular-nums text-[10px]">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                marketOpen ? "bg-[#7db487] animate-pulse" : "bg-[var(--pq-bronze)] opacity-50"
+              }`}
+            />
+            <span
+              className="uppercase tracking-[0.22em]"
+              style={{ color: "var(--pq-bronze)" }}
+            >
+              {marketOpen ? "Live" : "Closed"}
+            </span>
+            {observedAt && (
+              <span style={{ color: "rgba(245,240,232,0.5)" }}>
+                · {relativeTime(observedAt, nowMs)}
+              </span>
+            )}
+          </div>
+          <span
+            className="font-mono"
+            style={{
+              fontSize: "11px",
+              letterSpacing: "0.05em",
+              color: "rgba(245,240,232,0.5)",
+            }}
+          >
+            07:00 KST
+          </span>
+        </div>
       </header>
 
       {/* 4-stat bento */}
@@ -530,11 +590,13 @@ export default function HomePage() {
                         {p.symbol}
                       </div>
                     </td>
-                    <td
-                      className="py-2.5 text-right font-mono tabular-nums"
-                      style={{ fontSize: "11.5px", color: "rgba(245,240,232,0.7)" }}
-                    >
-                      {fmtUsd(p.current * p.shares)}
+                    <td className="py-2.5 text-right">
+                      <PriceWithTimestamp
+                        price={p.current}
+                        observedAt={p.observed_at}
+                        currency={p.currency === "KRW" ? "KRW" : "USD"}
+                        size="sm"
+                      />
                     </td>
                     <td
                       className="py-2.5 text-right font-mono tabular-nums"

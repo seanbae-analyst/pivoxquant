@@ -7,7 +7,7 @@
  * No buy/sell/recommend. DisclaimerBanner at foot.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
@@ -25,6 +25,11 @@ import {
   RuledKicker,
 } from "@/components/ui/editorial";
 import { AddSymbolModal } from "@/components/watchlist/add-symbol-modal";
+import { isMarketOpen } from "@/lib/market-hours";
+import {
+  PriceWithTimestamp,
+  relativeTime,
+} from "@/components/ui/price-with-timestamp";
 
 function formatPrice(item: WatchlistItem): string {
   if (item.price == null) return "—";
@@ -69,6 +74,25 @@ export default function WatchlistPage() {
     [data?.watchlist],
   );
 
+  // 1s tick for the "Live" banner.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const marketOpen = isMarketOpen();
+  // Use the most recently observed price as the page-level stamp.
+  const latestObserved = useMemo(() => {
+    let latest: number | null = null;
+    for (const it of watchlist) {
+      if (it.observed_at) {
+        const t = new Date(it.observed_at).getTime();
+        if (Number.isFinite(t) && (latest == null || t > latest)) latest = t;
+      }
+    }
+    return latest ? new Date(latest).toISOString() : null;
+  }, [watchlist]);
+
   const handleRemove = useCallback(
     async (item: WatchlistItem) => {
       setRemovingId(item.id);
@@ -90,9 +114,26 @@ export default function WatchlistPage() {
       {/* Terminal header */}
       <header className="mb-8 flex items-center justify-between gap-4">
         <RuledKicker>PivoxQuant &middot; Watchlist &middot; {weekTag()}</RuledKicker>
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-          {weekTag()}
-        </span>
+        <div className="flex items-center gap-1.5 font-mono tabular-nums text-[10px]">
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              marketOpen
+                ? "bg-[#7db487] animate-pulse"
+                : "bg-[var(--pq-bronze)] opacity-50"
+            }`}
+          />
+          <span
+            className="uppercase tracking-[0.22em]"
+            style={{ color: "var(--pq-bronze)" }}
+          >
+            {marketOpen ? "Live" : "Closed"}
+          </span>
+          {latestObserved && (
+            <span style={{ color: "rgba(245,240,232,0.5)" }}>
+              · {relativeTime(latestObserved, nowMs)}
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Title + CTA */}
@@ -161,7 +202,14 @@ export default function WatchlistPage() {
                       <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[240px]">
                         {item.name || item.ticker}
                       </td>
-                      <td className="num">{formatPrice(item)}</td>
+                      <td className="num">
+                        <PriceWithTimestamp
+                          price={item.price}
+                          observedAt={item.observed_at}
+                          currency={item.currency}
+                          size="sm"
+                        />
+                      </td>
                       <td
                         className={
                           "num " +
