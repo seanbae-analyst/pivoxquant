@@ -247,16 +247,18 @@ function Row({
         {mock52W(item)}
       </span>
 
-      {/* Note (signal label, sans-marketing) */}
+      {/* Note — user-supplied memo if present, otherwise a neutral signal label. */}
       <span
         className="truncate text-xs italic"
         style={{ color: "var(--pq-muted)", fontFamily: "var(--font-serif), serif" }}
       >
-        {item.signal === "POSITIVE"
-          ? "Observed — positive signal"
-          : item.signal === "NEGATIVE"
-            ? "Observed — negative signal"
-            : "Observed — neutral"}
+        {item.note && item.note.length > 0
+          ? item.note
+          : item.signal === "POSITIVE"
+            ? "Observed — positive signal"
+            : item.signal === "NEGATIVE"
+              ? "Observed — negative signal"
+              : "Observed — neutral"}
       </span>
 
       {/* Actions */}

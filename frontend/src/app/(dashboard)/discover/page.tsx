@@ -18,8 +18,15 @@
  */
 
 import { useMemo, useState, useCallback } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
-import { API } from "@/lib/endpoints";
+import {
+  API,
+  DISCOVER_OVERVIEW,
+  DISCOVER_MOVERS,
+  DISCOVER_SECTORS,
+  DISCOVER_SCREENERS,
+} from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
@@ -121,10 +128,47 @@ function ScanRow({
   );
 }
 
+/* ── SWR fetcher ── */
+const jsonFetcher = <T,>(url: string) => apiFetch<T>(url);
+
+interface BackendOverviewItem { name: string; symbol: string; level: number; change_pct: number; }
+interface BackendMover { ticker: string; name: string; price: number; change_pct: number; }
+interface BackendMoversResponse { region: string; gainers: BackendMover[]; losers: BackendMover[]; }
+interface BackendSectorRow { sector: string; d1: number; d5: number; m1: number; }
+interface BackendScreenerItem { ticker: string; name: string; metric: string; metric_value: string; }
+interface BackendScreeners {
+  oversold_rsi: BackendScreenerItem[];
+  highs_52w: BackendScreenerItem[];
+  earnings_beats: BackendScreenerItem[];
+}
+
 export default function DiscoverPage() {
   const router = useRouter();
   const { data, isLoading, error, mutate } = useDiscover();
   const [scanning, setScanning] = useState(false);
+
+  // New section hooks — fallbackData keeps rendering stable even on 402/5xx.
+  const { data: overviewLive } = useSWR<BackendOverviewItem[]>(
+    DISCOVER_OVERVIEW,
+    jsonFetcher,
+    { fallbackData: [] },
+  );
+  const { data: usMovers } = useSWR<BackendMoversResponse>(
+    `${DISCOVER_MOVERS}?region=us`,
+    jsonFetcher,
+  );
+  const { data: krMovers } = useSWR<BackendMoversResponse>(
+    `${DISCOVER_MOVERS}?region=kr`,
+    jsonFetcher,
+  );
+  const { data: sectorsLive } = useSWR<BackendSectorRow[]>(
+    DISCOVER_SECTORS,
+    jsonFetcher,
+  );
+  const { data: screenersLive } = useSWR<BackendScreeners>(
+    DISCOVER_SCREENERS,
+    jsonFetcher,
+  );
 
   // Use live scan results when available. If endpoint errors OR returns
   // an empty list, the editorial mock sections above still give the user
@@ -132,6 +176,123 @@ export default function DiscoverPage() {
   const results = useMemo(() => data?.results ?? [], [data?.results]);
   const hasLive = results.length > 0;
   const liveFailed = Boolean(error) && !hasLive;
+
+  // Map backend overview → IndexCard shape used by IndicesRow.
+  const overviewItems = useMemo(() => {
+    if (!overviewLive || overviewLive.length === 0) return MOCK_INDICES;
+    return overviewLive.map((o) => ({
+      name: o.name,
+      level: typeof o.level === "number"
+        ? o.level.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : String(o.level),
+      changePct: o.change_pct,
+    }));
+  }, [overviewLive]);
+
+  const fmtMoverPrice = (price: number, isKr: boolean) =>
+    isKr
+      ? `₩${Math.round(price).toLocaleString("ko-KR")}`
+      : `$${price.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`;
+
+  const usGainers = useMemo(
+    () =>
+      (usMovers?.gainers?.length ? usMovers.gainers : null)?.map((r) => ({
+        ticker: r.ticker,
+        name: r.name,
+        price: fmtMoverPrice(r.price, false),
+        changePct: r.change_pct,
+      })) ?? MOCK_US_GAINERS,
+    [usMovers],
+  );
+  const usLosers = useMemo(
+    () =>
+      (usMovers?.losers?.length ? usMovers.losers : null)?.map((r) => ({
+        ticker: r.ticker,
+        name: r.name,
+        price: fmtMoverPrice(r.price, false),
+        changePct: r.change_pct,
+      })) ?? MOCK_US_LOSERS,
+    [usMovers],
+  );
+  const krGainers = useMemo(
+    () =>
+      (krMovers?.gainers?.length ? krMovers.gainers : null)?.map((r) => ({
+        ticker: r.ticker,
+        name: r.name,
+        price: fmtMoverPrice(r.price, true),
+        changePct: r.change_pct,
+      })) ?? MOCK_KR_GAINERS,
+    [krMovers],
+  );
+  const krLosers = useMemo(
+    () =>
+      (krMovers?.losers?.length ? krMovers.losers : null)?.map((r) => ({
+        ticker: r.ticker,
+        name: r.name,
+        price: fmtMoverPrice(r.price, true),
+        changePct: r.change_pct,
+      })) ?? MOCK_KR_LOSERS,
+    [krMovers],
+  );
+
+  const sectorRows = useMemo(
+    () =>
+      sectorsLive && sectorsLive.length >= 3
+        ? sectorsLive.map((s) => ({
+            sector: s.sector,
+            d1: s.d1,
+            d5: s.d5,
+            m1: s.m1,
+          }))
+        : MOCK_SECTORS,
+    [sectorsLive],
+  );
+
+  const oversold = useMemo(
+    () =>
+      (screenersLive?.oversold_rsi?.length
+        ? screenersLive.oversold_rsi
+        : null
+      )?.map((x) => ({
+        ticker: x.ticker,
+        name: x.name,
+        metric: x.metric,
+        metricValue: x.metric_value,
+      })) ?? MOCK_OVERSOLD,
+    [screenersLive],
+  );
+  const highs52w = useMemo(
+    () =>
+      (screenersLive?.highs_52w?.length
+        ? screenersLive.highs_52w
+        : null
+      )?.map((x) => ({
+        ticker: x.ticker,
+        name: x.name,
+        metric: x.metric,
+        metricValue: x.metric_value,
+      })) ?? MOCK_HIGHS_52W,
+    [screenersLive],
+  );
+  const earnings = useMemo(
+    () =>
+      (screenersLive?.earnings_beats?.length
+        ? screenersLive.earnings_beats
+        : null
+      )?.map((x) => ({
+        ticker: x.ticker,
+        name: x.name,
+        metric: x.metric,
+        metricValue: x.metric_value,
+      })) ?? MOCK_EARNINGS_BEAT,
+    [screenersLive],
+  );
 
   const handleScan = useCallback(async () => {
     setScanning(true);
@@ -185,7 +346,7 @@ export default function DiscoverPage() {
             title="Market Overview"
             subtitle="US · KR index levels (1D change)"
           />
-          <IndicesRow items={MOCK_INDICES} />
+          <IndicesRow items={overviewItems} />
         </section>
 
         {/* ── US Movers ── */}
@@ -196,8 +357,8 @@ export default function DiscoverPage() {
             subtitle="Top gainers and losers by 1-day change."
           />
           <div className="grid gap-8 sm:grid-cols-2">
-            <MoversTable title="Gainers" rows={MOCK_US_GAINERS} />
-            <MoversTable title="Losers" rows={MOCK_US_LOSERS} />
+            <MoversTable title="Gainers" rows={usGainers} />
+            <MoversTable title="Losers" rows={usLosers} />
           </div>
         </section>
 
@@ -209,8 +370,8 @@ export default function DiscoverPage() {
             subtitle="KOSPI top gainers and losers by 1-day change."
           />
           <div className="grid gap-8 sm:grid-cols-2">
-            <MoversTable title="Gainers" rows={MOCK_KR_GAINERS} />
-            <MoversTable title="Losers" rows={MOCK_KR_LOSERS} />
+            <MoversTable title="Gainers" rows={krGainers} />
+            <MoversTable title="Losers" rows={krLosers} />
           </div>
         </section>
 
@@ -221,7 +382,7 @@ export default function DiscoverPage() {
             title="Sector Rotation"
             subtitle="11 GICS sectors — 1D · 5D · 1M returns."
           />
-          <SectorRotationTable rows={MOCK_SECTORS} />
+          <SectorRotationTable rows={sectorRows} />
         </section>
 
         {/* ── Thematic Screeners ── */}
@@ -232,9 +393,9 @@ export default function DiscoverPage() {
             subtitle="Observational filters across universes."
           />
           <div className="grid gap-8 sm:grid-cols-3">
-            <ThematicBlock title="Oversold (RSI < 32)" items={MOCK_OVERSOLD} />
-            <ThematicBlock title="52-Week Highs" items={MOCK_HIGHS_52W} />
-            <ThematicBlock title="Earnings Surprise" items={MOCK_EARNINGS_BEAT} />
+            <ThematicBlock title="Oversold (RSI < 32)" items={oversold} />
+            <ThematicBlock title="52-Week Highs" items={highs52w} />
+            <ThematicBlock title="Earnings Surprise" items={earnings} />
           </div>
         </section>
 

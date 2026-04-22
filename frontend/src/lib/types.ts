@@ -66,59 +66,6 @@ export interface HistoryResponse {
   data: HistoryPoint[];
 }
 
-/* ── Market ── */
-
-export interface IndexData {
-  price: number;
-  change_pct: number;
-}
-
-export interface YieldCurve {
-  t3m: number;
-  t5y: number;
-  t10y: number;
-  t30y: number;
-  spread: number;
-  inverted: boolean;
-}
-
-export interface MarketOverviewResponse {
-  macro: {
-    sp500: IndexData;
-    nasdaq: IndexData;
-    dow: IndexData;
-    russell2000: IndexData;
-    kospi: IndexData;
-    kosdaq: IndexData;
-    usdkrw: IndexData;
-    vix: number;
-    treasury_10y: number;
-    treasury_5y: number;
-    dxy: IndexData;
-    eurusd: IndexData;
-    oil_wti: IndexData;
-    gold: IndexData;
-    silver: IndexData;
-    btc: IndexData;
-    fear_greed: { value: number; label: string };
-    yield_curve: YieldCurve;
-  };
-  gs_view: {
-    bias: string;
-    bias_note: string;
-    themes: string[];
-  };
-  cached_at: string;
-}
-
-export interface SectorItem {
-  sector: string;
-  price: number;
-  change_pct: number;
-  volume: number;
-  top_movers: string[];
-}
-
 /* ── Discover ── */
 
 export interface DiscoverResult {
@@ -215,8 +162,13 @@ export interface WatchlistItem {
   id: number;
   ticker: string;
   name: string;
+  note?: string;
   price: number;
+  /** Alias of `price` (backend serializer sends both). */
+  last_price?: number;
   change_pct: number;
+  /** Alias of `change_pct` (backend serializer sends both). */
+  change_1d_pct?: number;
   signal: string;
   score: number;
   currency: "USD" | "KRW";
@@ -410,30 +362,6 @@ export interface WhatIfErrorResponse {
 }
 
 export type WhatIfResponse = WhatIfSuccessResponse | WhatIfErrorResponse;
-
-/* ── FX Rate ── */
-
-/**
- * Response shape for GET /api/market/fx.
- * Backend scheduler refreshes the underlying rate every 1 minute; frontend
- * should poll at ~30s intervals with `useFxRate()` to stay near-realtime.
- */
-export interface FxRateResponse {
-  ok: true;
-  usd_krw: number;
-  /** ISO-8601 UTC timestamp of the last successful upstream fetch. Null when never fetched. */
-  last_updated: string | null;
-  /** Unix epoch timestamp (float) of the last successful fetch. 0 when never fetched. */
-  last_updated_ts: number;
-  /** Seconds since last successful fetch. -1 when never fetched. */
-  age_seconds: number;
-  /** True when the cached rate is older than 10 minutes (degraded display recommended). */
-  is_stale: boolean;
-  /** Deprecated alias for is_stale — kept for backward compatibility. */
-  stale: boolean;
-  /** Expected refresh cadence hint (seconds). */
-  ttl_seconds: number;
-}
 
 /* ── Growth OS ── */
 

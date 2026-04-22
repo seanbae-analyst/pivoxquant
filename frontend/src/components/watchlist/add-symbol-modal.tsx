@@ -4,16 +4,21 @@
  * AddSymbolModal — Editorial modal to add a symbol + optional note to the
  * watchlist. Uses the same Ivory/Bronze treatment as the rest of the shell.
  *
- * POSTs to API.watchlist.add with { ticker, note }. Also lets the user launch
- * the global Cmd+K search palette to pick a ticker first.
+ * POSTs to API.watchlist.add with { ticker, note }. The ticker field also
+ * runs a debounced /api/search autocomplete so the user can pick from a
+ * live suggestion list rather than typing a symbol blindly. The global
+ * Cmd+K palette remains available as an escape hatch.
+ *
+ * Legal: footnote stays "Observations only — no targets, no recommendations."
+ * to match the rest of the watchlist surface area.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Search, X } from "lucide-react";
+import { Search, X, Loader2 } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
-import { apiFetch } from "@/lib/api";
-import { API } from "@/lib/endpoints";
+import { apiFetch, ApiError } from "@/lib/api";
+import { API, SEARCH } from "@/lib/endpoints";
 import { openSearchCommand } from "@/components/ui/search-command";
 
 interface Props {
@@ -21,10 +26,56 @@ interface Props {
   onAdded: () => void;
 }
 
+interface Suggestion {
+  ticker: string;
+  name: string;
+  exchange?: string;
+  is_korean?: boolean;
+}
+
 export function AddSymbolModal({ onClose, onAdded }: Props) {
   const [ticker, setTicker] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [picked, setPicked] = useState(false); // user selected a suggestion; suppress popover
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Debounced autocomplete. Pre-empts stale requests like the palette does.
+  useEffect(() => {
+    const q = ticker.trim();
+    if (picked || q.length < 1) {
+      setSuggestions([]);
+      setLoading(false);
+      abortRef.current?.abort();
+      return;
+    }
+    setLoading(true);
+    const ctrl = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = ctrl;
+    const t = window.setTimeout(async () => {
+      try {
+        const res = await fetch(`${SEARCH}?q=${encodeURIComponent(q)}&limit=6`, {
+          credentials: "include",
+          signal: ctrl.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body: { results?: Suggestion[] } = await res.json();
+        setSuggestions(body.results ?? []);
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        setSuggestions([]);
+      } finally {
+        if (abortRef.current === ctrl) setLoading(false);
+      }
+    }, 300);
+    return () => {
+      window.clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [ticker, picked]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,8 +90,12 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
       toast.success(`${clean} added to watchlist`);
       onAdded();
       onClose();
-    } catch {
-      toast.error(`Could not add ${clean}`);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        toast.error("Already in watchlist");
+      } else {
+        toast.error(`Could not add ${clean}`);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -86,7 +141,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
         {/* Body */}
         <div className="space-y-5 px-5 py-5">
           {/* Ticker input */}
-          <div>
+          <div className="relative">
             <label
               className="block text-[10px] uppercase"
               style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
@@ -100,12 +155,22 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               <input
                 type="text"
                 value={ticker}
-                onChange={(e) => setTicker(e.target.value)}
+                onChange={(e) => {
+                  setTicker(e.target.value);
+                  setPicked(false);
+                }}
                 placeholder="AAPL, NVDA, 005930.KS"
                 autoFocus
                 className="flex-1 bg-transparent font-mono text-sm uppercase outline-none placeholder:normal-case"
                 style={{ color: "var(--pq-ink)", letterSpacing: "0.02em" }}
               />
+              {loading && (
+                <Loader2
+                  className="h-3.5 w-3.5 animate-spin"
+                  style={{ color: "var(--pq-muted)" }}
+                  aria-label="Searching"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => openSearchCommand()}
@@ -117,6 +182,52 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
                 Search
               </button>
             </div>
+
+            {/* Autocomplete popover */}
+            {!picked && ticker.trim().length > 0 && suggestions.length > 0 && (
+              <div
+                className="absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-y-auto rounded-md"
+                style={{
+                  background: "var(--pq-ivory)",
+                  border: "0.5px solid var(--pq-hairline)",
+                  boxShadow: "0 12px 32px -16px rgba(10,10,10,0.25)",
+                }}
+              >
+                {suggestions.map((s) => (
+                  <button
+                    key={s.ticker}
+                    type="button"
+                    onClick={() => {
+                      setTicker(s.ticker);
+                      setPicked(true);
+                      setSuggestions([]);
+                    }}
+                    className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+                  >
+                    <span
+                      className="w-24 truncate font-mono text-xs font-semibold"
+                      style={{ color: "var(--pq-bronze)" }}
+                    >
+                      {s.ticker}
+                    </span>
+                    <span
+                      className="flex-1 truncate text-sm"
+                      style={{ color: "var(--pq-ink)" }}
+                    >
+                      {s.name}
+                    </span>
+                    {s.exchange && (
+                      <span
+                        className="text-[10px] uppercase"
+                        style={{ letterSpacing: "0.12em", color: "var(--pq-muted)" }}
+                      >
+                        {s.exchange}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Note */}
@@ -132,6 +243,7 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               placeholder="Why this symbol? What to observe?"
+              maxLength={500}
               className="mt-2 w-full resize-none rounded-md bg-transparent px-3 py-2 text-sm outline-none"
               style={{
                 border: "0.5px solid var(--pq-hairline)",

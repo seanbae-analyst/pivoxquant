@@ -9,14 +9,19 @@
  *   - KR tab also shows USD/KRW and a short domestic derivatives summary
  *   - DisclaimerBanner
  *
- * Neutral observation language only throughout.
+ * Wired to /api/market/indices?region=us|kr via SWR (2026-04-22). Falls back
+ * to the hand-crafted mock snapshot on upstream failure so the page is
+ * never empty. Neutral observation language only throughout.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import useSWR from "swr";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { MARKET_INDICES } from "@/lib/endpoints";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { IndexCard } from "@/components/market/index-card";
+import { IndexCard, type IndexQuote } from "@/components/market/index-card";
 import {
   US_INDICES,
   KR_INDICES,
@@ -25,9 +30,50 @@ import {
 
 type MarketTab = "US" | "KR";
 
+interface BackendIndex {
+  ticker: string;
+  name: string;
+  level: number;
+  change_1d_pct: number;
+  range_52w: [number, number];
+  sparkline_30d: number[];
+}
+
+const fetcher = <T,>(url: string) => apiFetch<T>(url);
+
+/** Map the server payload → the IndexCard-shaped quote the component expects. */
+function toQuote(b: BackendIndex, region: MarketTab): IndexQuote {
+  const [lo, hi] = b.range_52w ?? [0, 0];
+  return {
+    symbol: b.ticker,
+    name: b.name,
+    level: b.level,
+    changePct: b.change_1d_pct,
+    weekHigh52: hi,
+    weekLow52: lo,
+    spark: (b.sparkline_30d ?? []).slice(-30),
+    format: region === "KR" ? "kr" : "en",
+    unit: b.ticker === "USDKRW" ? "KRW" : undefined,
+  };
+}
+
 export default function MarketPage() {
   const [tab, setTab] = useState<MarketTab>("US");
-  const quotes = tab === "US" ? US_INDICES : KR_INDICES;
+
+  const region = tab === "US" ? "us" : "kr";
+  const { data, isLoading } = useSWR<BackendIndex[]>(
+    `${MARKET_INDICES}?region=${region}`,
+    fetcher,
+    { keepPreviousData: true },
+  );
+
+  const quotes: IndexQuote[] = useMemo(() => {
+    if (Array.isArray(data) && data.length >= 3) {
+      return data.map((b) => toQuote(b, tab));
+    }
+    // Loading / upstream failure → keep the hand-crafted snapshot visible.
+    return tab === "US" ? US_INDICES : KR_INDICES;
+  }, [data, tab]);
 
   return (
     <ErrorBoundary>
@@ -72,6 +118,7 @@ export default function MarketPage() {
         {/* ── Index grid ── */}
         <section
           aria-label={`${tab} indices`}
+          aria-busy={isLoading}
           className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3"
         >
           {quotes.map((q) => (
@@ -90,7 +137,7 @@ export default function MarketPage() {
                 Domestic Futures & Options
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                KOSPI 200 front-month summary (mock).
+                KOSPI 200 front-month summary.
               </p>
             </header>
             <ul className="divide-y divide-slate-100">

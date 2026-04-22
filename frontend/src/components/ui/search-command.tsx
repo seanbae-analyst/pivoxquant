@@ -8,13 +8,17 @@
  * Fires a custom window event `pq:search:open` that top-bar listens to,
  * so any button on any page can trigger it.
  *
+ * Backend: live search via GET /api/search?q=&limit=10. Debounce 300ms.
+ * Recent selections are stored in localStorage (last 5).
+ *
  * Legal: result labels use "observe" / "view" / "open" only — no buy/sell/recommend.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, TrendingUp, LayoutGrid, Clock, CornerDownLeft } from "lucide-react";
+import { Search, X, TrendingUp, LayoutGrid, Clock, CornerDownLeft, Loader2 } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { SEARCH } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
 
 type StockItem = { kind: "stock"; ticker: string; name: string; market: string };
@@ -22,20 +26,7 @@ type PageItem = { kind: "page"; label: string; path: string; hint?: string };
 type RecentItem = { kind: "recent"; label: string; path: string };
 export type CommandItem = StockItem | PageItem | RecentItem;
 
-const STOCKS: StockItem[] = [
-  { kind: "stock", ticker: "AAPL", name: "Apple Inc.", market: "NASDAQ" },
-  { kind: "stock", ticker: "MSFT", name: "Microsoft Corp.", market: "NASDAQ" },
-  { kind: "stock", ticker: "NVDA", name: "NVIDIA Corp.", market: "NASDAQ" },
-  { kind: "stock", ticker: "GOOGL", name: "Alphabet Inc. Class A", market: "NASDAQ" },
-  { kind: "stock", ticker: "META", name: "Meta Platforms Inc.", market: "NASDAQ" },
-  { kind: "stock", ticker: "TSLA", name: "Tesla Inc.", market: "NASDAQ" },
-  { kind: "stock", ticker: "SPY", name: "SPDR S&P 500 ETF Trust", market: "NYSE ARCA" },
-  { kind: "stock", ticker: "QQQ", name: "Invesco QQQ Trust", market: "NASDAQ" },
-  { kind: "stock", ticker: "005930.KS", name: "Samsung Electronics", market: "KRX" },
-  { kind: "stock", ticker: "000660.KS", name: "SK Hynix", market: "KRX" },
-  { kind: "stock", ticker: "035720.KS", name: "Kakao Corp.", market: "KRX" },
-];
-
+// Static Pages list — not backed by search (always returned for empty query).
 const PAGES: PageItem[] = [
   { kind: "page", label: "Home", path: "/home", hint: "Dashboard overview" },
   { kind: "page", label: "Portfolio", path: "/portfolio", hint: "Positions & analytics" },
@@ -47,13 +38,43 @@ const PAGES: PageItem[] = [
   { kind: "page", label: "Settings", path: "/settings", hint: "Account & broker" },
 ];
 
-const RECENTS: RecentItem[] = [
-  { kind: "recent", label: "NVDA", path: "/detail/NVDA" },
-  { kind: "recent", label: "Portfolio", path: "/portfolio" },
-  { kind: "recent", label: "005930.KS", path: "/detail/005930.KS" },
-];
-
 const EVT_OPEN = "pq:search:open";
+const RECENTS_KEY = "pq:search:recents";
+const RECENTS_MAX = 5;
+
+/** Read recently selected tickers from localStorage. */
+function loadRecents(): RecentItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(RECENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((r): r is { label: string; path: string } =>
+        r && typeof r.label === "string" && typeof r.path === "string",
+      )
+      .slice(0, RECENTS_MAX)
+      .map((r) => ({ kind: "recent" as const, label: r.label, path: r.path }));
+  } catch {
+    return [];
+  }
+}
+
+function saveRecent(item: { label: string; path: string }) {
+  if (typeof window === "undefined") return;
+  try {
+    const current = loadRecents();
+    const without = current.filter((r) => r.path !== item.path);
+    const next = [{ kind: "recent" as const, ...item }, ...without].slice(0, RECENTS_MAX);
+    window.localStorage.setItem(
+      RECENTS_KEY,
+      JSON.stringify(next.map(({ label, path }) => ({ label, path }))),
+    );
+  } catch {
+    /* ignore quota / private-mode failures */
+  }
+}
 
 /** Public helper — call from anywhere (button, keyboard shortcut, etc.). */
 export function openSearchCommand() {
@@ -62,20 +83,37 @@ export function openSearchCommand() {
   }
 }
 
+interface BackendSearchResult {
+  ticker: string;
+  name: string;
+  exchange?: string;
+  currency?: string;
+  is_korean?: boolean;
+}
+
 export function SearchCommandMenu() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
+  const [stocks, setStocks] = useState<StockItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errored, setErrored] = useState(false);
+  const [recents, setRecents] = useState<RecentItem[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const close = useCallback(() => {
     setOpen(false);
     setQuery("");
     setActiveIdx(0);
+    setStocks([]);
+    setErrored(false);
+    setLoading(false);
+    abortRef.current?.abort();
   }, []);
 
-  // Cmd/Ctrl+K toggle + custom event listener
+  // Cmd/Ctrl+K toggle + custom event listener.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -94,41 +132,92 @@ export function SearchCommandMenu() {
     };
   }, []);
 
+  // Hydrate recents whenever the palette opens — fresh each time in case
+  // another tab updated them.
   useEffect(() => {
     if (open) {
+      setRecents(loadRecents());
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [open]);
 
-  // Filter sections
+  // Debounced backend search. Cancels any in-flight request before firing
+  // a new one so stale responses can't overwrite fresh results.
+  useEffect(() => {
+    if (!open) return;
+    const q = query.trim();
+    if (q.length === 0) {
+      setStocks([]);
+      setErrored(false);
+      setLoading(false);
+      abortRef.current?.abort();
+      return;
+    }
+
+    setLoading(true);
+    setErrored(false);
+    const ctrl = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = ctrl;
+
+    const t = window.setTimeout(async () => {
+      try {
+        const url = `${SEARCH}?q=${encodeURIComponent(q)}&limit=10`;
+        const res = await fetch(url, { credentials: "include", signal: ctrl.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body: { results?: BackendSearchResult[] } = await res.json();
+        const list = (body.results ?? []).map<StockItem>((r) => ({
+          kind: "stock",
+          ticker: r.ticker,
+          name: r.name || r.ticker,
+          market: r.exchange || (r.is_korean ? "KRX" : "—"),
+        }));
+        setStocks(list);
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") return;
+        setStocks([]);
+        setErrored(true);
+      } finally {
+        // Guard: only clear loading for the request that actually fired.
+        if (abortRef.current === ctrl) setLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      window.clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [query, open]);
+
+  // Flat order (keyboard nav) mirrors the on-screen section order.
   const sections = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const match = (haystack: string) => haystack.toLowerCase().includes(q);
-
-    const stocks = q
-      ? STOCKS.filter((s) => match(s.ticker) || match(s.name))
-      : STOCKS.slice(0, 5);
-    const pages = q
-      ? PAGES.filter((p) => match(p.label) || (p.hint ? match(p.hint) : false))
+    const q = query.trim();
+    const hasQuery = q.length > 0;
+    const pages = hasQuery
+      ? PAGES.filter(
+          (p) =>
+            p.label.toLowerCase().includes(q.toLowerCase()) ||
+            (p.hint ? p.hint.toLowerCase().includes(q.toLowerCase()) : false),
+        )
       : PAGES;
-    const recents = q ? [] : RECENTS;
-
-    const ordered: CommandItem[] = [...stocks, ...pages, ...recents];
-    return { stocks, pages, recents, flat: ordered };
-  }, [query]);
+    const recentSection = hasQuery ? [] : recents;
+    const ordered: CommandItem[] = [...stocks, ...pages, ...recentSection];
+    return { stocks, pages, recents: recentSection, flat: ordered };
+  }, [query, stocks, recents]);
 
   useEffect(() => {
     setActiveIdx(0);
-  }, [query]);
+  }, [query, stocks]);
 
   const runItem = useCallback(
     (item: CommandItem) => {
-      close();
       if (item.kind === "stock") {
+        saveRecent({ label: item.ticker, path: `/detail/${item.ticker}` });
         router.push(`/detail/${item.ticker}`);
       } else {
         router.push(item.path);
       }
+      close();
     },
     [close, router],
   );
@@ -155,6 +244,7 @@ export function SearchCommandMenu() {
 
   let runningIdx = 0;
   const nextIdx = () => runningIdx++;
+  const hasQuery = query.trim().length > 0;
 
   return (
     <ModalShell onClose={close} ariaLabel="Search palette" className="!items-start !pt-[12vh]">
@@ -178,6 +268,13 @@ export function SearchCommandMenu() {
             className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[color:var(--pq-muted)]"
             style={{ color: "var(--pq-ink)" }}
           />
+          {loading && (
+            <Loader2
+              className="h-4 w-4 animate-spin"
+              style={{ color: "var(--pq-muted)" }}
+              aria-label="Searching"
+            />
+          )}
           <button
             onClick={close}
             type="button"
@@ -191,9 +288,21 @@ export function SearchCommandMenu() {
 
         {/* Body */}
         <div className="max-h-[360px] overflow-y-auto">
-          {sections.flat.length === 0 && (
+          {errored && (
+            <div className="px-5 py-10 text-center text-sm" style={{ color: "var(--pq-muted)" }}>
+              Search temporarily unavailable
+            </div>
+          )}
+
+          {!errored && hasQuery && !loading && sections.flat.length === 0 && (
             <div className="px-5 py-10 text-center text-sm" style={{ color: "var(--pq-muted)" }}>
               No matches for <span className="italic">&ldquo;{query}&rdquo;</span>
+            </div>
+          )}
+
+          {hasQuery && loading && sections.flat.length === 0 && (
+            <div className="px-5 py-10 text-center text-sm" style={{ color: "var(--pq-muted)" }}>
+              Searching…
             </div>
           )}
 
@@ -208,7 +317,7 @@ export function SearchCommandMenu() {
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => runItem(s)}
                   >
-                    <span className="w-14 font-mono text-xs font-semibold" style={{ color: "var(--pq-bronze)" }}>
+                    <span className="w-24 font-mono text-xs font-semibold" style={{ color: "var(--pq-bronze)" }}>
                       {s.ticker}
                     </span>
                     <span className="flex-1 truncate text-sm" style={{ color: "var(--pq-ink)" }}>

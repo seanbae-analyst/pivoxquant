@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # ── In-memory caches ──
 discover_cache: dict = {}  # user_id -> {ts, data}
-DISCOVER_TTL = 600         # 10 minutes
+DISCOVER_TTL = 7200        # 2 hours — extended 2026-04-22 to absorb FMP 402 bursts
 
 ca_cache: dict = {}        # cross-asset cache
 

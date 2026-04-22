@@ -11,14 +11,19 @@ from models import Position, SignalCache
 from services import fx_service
 from services.container import engine, fetcher, realtime
 from services.market_status import get_market_status
+from services.mock_data import discover_fallback as _mock_market
 from services.name_resolver import resolve_stock_name
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
 
 market_bp = Blueprint("market", __name__, url_prefix="/api")
 
 _macro_cache: dict = {"data": None, "ts": 0.0}
+
+# 2h cache for /api/market/indices (upstream 402 / rate-limit absorber).
+_indices_cache: dict = {}  # region -> {"ts": float, "data": [...]}
+_INDICES_TTL = 7200
 
 
 @market_bp.route("/search")
@@ -27,6 +32,13 @@ def search_stocks():
     """Fuzzy stock search — supports company names, partial tickers, Korean names.
     Uses FMP search API for US + local KOREAN_NAMES registry for KR stocks."""
     query = (request.args.get("q") or "").strip()
+    # Client-supplied limit (Cmd+K palette asks for 10). Clamp so a malformed
+    # or hostile value can't blow the response size.
+    try:
+        limit = int(request.args.get("limit", "15"))
+    except (TypeError, ValueError):
+        limit = 15
+    limit = max(1, min(limit, 25))
     if len(query) < 1:
         return jsonify({"results": []})
     ql = query.lower()  # used by US fallback matcher below
@@ -122,7 +134,7 @@ def search_stocks():
                 })
                 seen.add(sym)
 
-    return jsonify({"results": results[:15]})
+    return jsonify({"results": results[:limit]})
 
 
 @market_bp.route("/lookup/<ticker>")
@@ -447,6 +459,109 @@ def company_profile(ticker):
     except Exception as e:
         logger.error(f"Profile error {ticker}: {e}")
         return jsonify({"error": "Unable to fetch company profile"}), 500
+
+
+@market_bp.route("/market/indices")
+@api_auth
+@legal_scrub_response
+def market_indices():
+    """Headline indices for an ``/market`` tab.
+
+    Query params:
+        region: "us" (default) or "kr"
+
+    Response: list of index snapshots with
+        ticker, name, level, change_1d_pct, range_52w:[lo,hi], sparkline_30d:[...]
+
+    Sources:
+        - US: FMP enhanced-macro + FMP historical for 52W + 30D sparklines
+        - KR: KIS index quotes + FMP historical fallback
+        - Any failure → static mock fallback (snapshot) so the page is never empty
+    """
+    region = (request.args.get("region") or "us").lower()
+    if region not in ("us", "kr"):
+        region = "us"
+
+    entry = _indices_cache.get(region)
+    now = _time.time()
+    if entry and now - entry["ts"] < _INDICES_TTL:
+        return jsonify(entry["data"])
+
+    spec_us = [
+        ("^GSPC", "S&P 500",          "sp500"),
+        ("^IXIC", "Nasdaq Composite", "nasdaq"),
+        ("^DJI",  "Dow Jones",        "dow"),
+        ("^RUT",  "Russell 2000",     "russell2000"),
+        ("^VIX",  "CBOE Volatility",  None),
+    ]
+    spec_kr = [
+        ("^KS11",  "KOSPI",        "kospi"),
+        ("^KQ11",  "KOSDAQ",       "kosdaq"),
+        ("^KS200", "KOSPI 200",    None),
+        ("^KQ150", "KOSDAQ 150",   None),
+        ("USDKRW", "USD / KRW",    None),
+    ]
+    spec = spec_us if region == "us" else spec_kr
+
+    out: list[dict] = []
+    try:
+        macro = fetcher.get_enhanced_macro() or {}
+    except Exception as e:
+        logger.warning(f"market.indices macro fetch failed: {e}")
+        macro = {}
+
+    # Build 30-day sparkline + 52W range from price history when possible.
+    for ticker, display, macro_key in spec:
+        level = None
+        change_pct = 0.0
+        if macro_key and macro_key in macro:
+            mv = macro[macro_key] or {}
+            if mv.get("price") is not None:
+                level      = float(mv["price"])
+                change_pct = float(mv.get("change_pct", 0) or 0)
+        # Special-case VIX + USDKRW + kospi200/kosdaq150 (not keyed in macro)
+        if level is None:
+            if ticker == "^VIX" and macro.get("vix") is not None:
+                level = float(macro["vix"])
+            elif ticker == "USDKRW" and macro.get("usdkrw"):
+                level = float(macro["usdkrw"].get("price") or 0)
+
+        sparkline: list[float] = []
+        range_52w = [0.0, 0.0]
+        try:
+            h = fetcher.get_price_history(ticker, period="1y")
+            if h is not None and not h.empty and "Close" in h.columns:
+                closes = h["Close"].astype(float)
+                if level is None and len(closes):
+                    level = float(closes.iloc[-1])
+                sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
+                range_52w = [round(float(closes.min()), 2),
+                             round(float(closes.max()), 2)]
+        except Exception as e:
+            logger.debug(f"market.indices history skip {ticker}: {e}")
+
+        if level is None:
+            continue
+
+        out.append({
+            "ticker":         ticker,
+            "name":           display,
+            "level":          round(level, 2),
+            "change_1d_pct":  round(change_pct, 2),
+            "range_52w":      range_52w,
+            "sparkline_30d":  sparkline,
+        })
+
+    # Fallback to static snapshot if upstream came back too thin
+    # (spec calls for 5 headline indices per region).
+    if len(out) < 5:
+        logger.info(f"FMP/KIS rate limit — returning mock indices fallback ({region})")
+        out = list(_mock_market.US_MARKET_INDICES if region == "us"
+                   else _mock_market.KR_MARKET_INDICES)
+
+    payload = out
+    _indices_cache[region] = {"ts": now, "data": payload}
+    return jsonify(payload)
 
 
 @market_bp.route("/dividend/<ticker>")
