@@ -11,7 +11,7 @@ import numpy as np
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 simulate_bp = Blueprint("simulate", __name__, url_prefix="/api/portfolio/simulate")
 
@@ -138,6 +138,7 @@ def _cache_set(cache: dict, uid: int, key: str, data: dict):
 
 @simulate_bp.route("/hrp")
 @api_auth
+@legal_scrub_response
 def simulate_hrp():
     """Run Hierarchical Risk Parity on user's portfolio positions.
 
@@ -202,6 +203,7 @@ def simulate_hrp():
 
 @simulate_bp.route("/trp")
 @api_auth
+@legal_scrub_response
 def simulate_trp():
     """Run Tail Risk Parity on user's portfolio positions.
 
@@ -272,6 +274,7 @@ def simulate_trp():
 
 @simulate_bp.route("/mdp")
 @api_auth
+@legal_scrub_response
 def simulate_mdp():
     """Run Maximum Diversification Portfolio on user's portfolio positions.
 
@@ -338,6 +341,7 @@ _erc_cache: dict = {}
 
 @simulate_bp.route("/erc")
 @api_auth
+@legal_scrub_response
 def simulate_erc():
     """Run Equal Risk Contribution on user's portfolio positions.
 
@@ -404,6 +408,7 @@ _minvar_cache: dict = {}
 
 @simulate_bp.route("/min-variance")
 @api_auth
+@legal_scrub_response
 def simulate_min_variance():
     """Run Minimum Variance Portfolio on user's portfolio positions.
 

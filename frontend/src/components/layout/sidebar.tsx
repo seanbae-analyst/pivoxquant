@@ -23,6 +23,15 @@ import { useT } from "@/lib/locale";
 import { useArtifacts } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
 
+/* ──────────────────────────────────────────────────────────────
+   Sidebar — Vantablack rail, Bronze active accent.
+   Palette + motion lifted from the landing page's Research
+   Terminal preview (landing-page.tsx §6, lines 3088–3128) so
+   users hitting /home land in the exact surface they saw on
+   the marketing site. All Nexora purple/pink gradient legacy
+   tokens removed.
+   ────────────────────────────────────────────────────────────── */
+
 type NavKey =
   | "home"
   | "morningBrief"
@@ -57,29 +66,31 @@ const NAV_ITEMS: { href: string; key: NavKey; icon: React.ElementType }[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const t = useT();
-  // Unread artifact badge — tiny dot next to Reports link when >0 unread.
-  // Fails silently if the backend isn't up yet (hook returns 0).
+  // Unread artifact badge — tiny bronze dot next to Reports when >0 unread.
   const { unreadCount } = useArtifacts();
   const { user } = useAuth();
-  // Hide upgrade CTA for paid users — effective_tier is resolved server-side
-  // (DEV_PREMIUM_EMAILS override applied). Free users still see the button.
-  const isPaid = user?.subscription_tier === "premium" || user?.subscription_tier === "pro";
+  // Hide upgrade CTA for paid users.
+  const isPaid =
+    user?.subscription_tier === "premium" || user?.subscription_tier === "pro";
 
   return (
-    <aside className="flex h-screen w-[220px] flex-col border-r border-slate-200 bg-white">
-      {/* Logo */}
+    <aside
+      className="flex h-screen w-[220px] flex-col"
+      style={{
+        backgroundColor: "var(--pq-ink)",
+        borderRight: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+      }}
+    >
+      {/* Wordmark — matches landing top-left PIVOX QUANT mark */}
       <Link
         href="/home"
-        aria-label="Go to home"
-        className="flex h-16 items-center gap-2.5 px-5 transition-opacity hover:opacity-80"
+        aria-label="Go to PivoxQuant home"
+        className="flex h-16 items-center px-5 transition-opacity hover:opacity-80"
       >
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-900">
-          <TrendingUp className="h-4 w-4 text-white" strokeWidth={1.75} />
-        </div>
-        <span className="text-base font-semibold text-slate-900 tracking-tight">PivoxQuant</span>
+        <span className="pq-side-wordmark">PIVOX&nbsp;QUANT</span>
       </Link>
 
-      {/* Navigation */}
+      {/* Navigation rail */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2 scrollbar-thin">
         {NAV_ITEMS.map((item) => {
           const isActive =
@@ -91,25 +102,20 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150",
-                isActive
-                  ? "bg-slate-100 text-slate-900"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
-              )}
+              data-active={isActive}
+              className={cn("pq-side-link rounded-[2px]")}
             >
               <Icon
-                className={cn(
-                  "h-[18px] w-[18px] shrink-0",
-                  isActive ? "text-slate-900" : "text-slate-400",
-                )}
-                strokeWidth={1.75}
+                className="h-[16px] w-[16px] shrink-0"
+                strokeWidth={1.5}
+                aria-hidden
               />
-              <span className="flex-1">{t(`nav.${item.key}`)}</span>
+              <span className="flex-1 truncate">{t(`nav.${item.key}`)}</span>
               {showUnreadDot && (
                 <span
                   aria-label={`${unreadCount} unread`}
-                  className="inline-flex h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                  className="inline-flex h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: "var(--pq-bronze)" }}
                 />
               )}
             </Link>
@@ -117,15 +123,25 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Upgrade CTA — hidden for paid tiers */}
+      {/* Upgrade CTA — bronze fill on ink (matches landing primary CTA) */}
       {!isPaid && (
-        <div className="p-3">
+        <div className="p-4">
           <Link
             href="/pricing"
-            className="flex items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+            className="flex items-center justify-center gap-2 rounded-[2px] px-4 py-2.5 font-serif text-[12px] tracking-[0.05em] transition-colors"
+            style={{
+              backgroundColor: "var(--pq-bronze)",
+              color: "var(--pq-ink)",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = "var(--pq-bronze-light)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = "var(--pq-bronze)")
+            }
           >
-            <Crown className="h-4 w-4" strokeWidth={1.75} />
-            <span>{t("nav.upgrade")}</span>
+            <Crown className="h-3.5 w-3.5" strokeWidth={1.5} />
+            <span className="uppercase">{t("nav.upgrade")}</span>
           </Link>
         </div>
       )}

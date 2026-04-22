@@ -1,0 +1,134 @@
+{#
+  ═══════════════════════════════════════════════════════════════════════════
+  PivoxQuant Brand System v2 — Goldman IC / NYT Masthead Typography
+  ═══════════════════════════════════════════════════════════════════════════
+  Typographic identity, SVG-drawn (engine-independent). Three variants:
+
+    kind = 'wordmark'  (default)  — Full NYT-style horizontal masthead with
+                                    fleuron divider, tagline, double rule.
+                                    Use: cover page hero, page-1 header.
+
+    kind = 'monogram'              — Stacked "P·Q" IC-seal. Twin concentric
+                                    rings, Source-Serif P + Bronze italic Q
+                                    with tail. Use: closing signature,
+                                    running-head left, business card.
+
+    kind = 'submark'               — Minimal 14pt circle emblem (one P).
+                                    Use: page corners, footer end.
+
+  ALL three are pure SVG <path>/<line>/<rect>, no <text> — renders identically
+  on Chrome headless, WeasyPrint, and every PDF viewer regardless of font
+  availability.
+
+  Params:
+    brand_kind    'wordmark' | 'monogram' | 'submark'
+    brand_size    int (pt)   — wordmark: total width; mono/sub: side length
+    brand_color   hex        — primary ink (default '#0A0A0A')
+    brand_accent  hex        — Bronze accent (default '#8B6F47')
+
+  Usage:
+    {% include '_brand_mark.html' %}
+    {% with brand_kind='monogram', brand_size=40 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+  ═══════════════════════════════════════════════════════════════════════════
+#}
+{% set _kind   = brand_kind   | default('wordmark') %}
+{% set _size   = brand_size   | default(0) %}
+{% set _color  = brand_color  | default('#0A0A0A') %}
+{% set _accent = brand_accent | default('#8B6F47') %}
+
+{# ══════════════════════════ WORDMARK ════════════════════════════════════
+   Landing-parity wordmark. Matches the top-left logo in landing-page.tsx:
+     - Plain "PIVOXQUANT" uppercase
+     - letter-spacing 0.22em, weight 500, serif
+     - no fleuron, no rules, no tagline
+   SVG-drawn for engine-independent rendering. The single Bronze Q accent is
+   preserved as a subtle color swap on the 6th glyph.
+   ──────────────────────────────────────────────────────────────────────── #}
+{% if _kind == 'wordmark' %}
+{% set _w = _size if _size else 220 %}
+{# Slimmer, landing-match aspect. viewBox uses typographic proportions. #}
+<svg class="pq-brand-wordmark" xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 560 40" width="{{ _w }}" height="{{ (_w * 40 / 560)|round(2) }}"
+     aria-label="PivoxQuant" role="img"
+     style="display:block; margin: 0 auto;">
+  <!-- PIVOX — ink -->
+  <g transform="translate(85,28)" fill="{{ _color }}"
+     font-family="Playfair Display, 'Source Serif 4', Georgia, serif"
+     font-weight="500" font-size="22" letter-spacing="4.84">
+    <text text-anchor="start">PIVOX</text>
+  </g>
+  <!-- Q — bronze accent, same weight/size so rhythm is unbroken -->
+  <g transform="translate(253,28)" fill="{{ _accent }}"
+     font-family="Playfair Display, 'Source Serif 4', Georgia, serif"
+     font-weight="500" font-size="22" letter-spacing="4.84">
+    <text text-anchor="start">Q</text>
+  </g>
+  <!-- UANT — ink -->
+  <g transform="translate(287,28)" fill="{{ _color }}"
+     font-family="Playfair Display, 'Source Serif 4', Georgia, serif"
+     font-weight="500" font-size="22" letter-spacing="4.84">
+    <text text-anchor="start">UANT</text>
+  </g>
+</svg>
+
+{# ══════════════════════════ MONOGRAM ════════════════════════════════════ #}
+{% elif _kind == 'monogram' %}
+{% set _s = _size if _size else 48 %}
+<svg class="pq-brand-monogram" xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 64 64" width="{{ _s }}" height="{{ _s }}"
+     aria-label="PivoxQuant monogram" role="img"
+     style="display:inline-block; vertical-align:middle;">
+
+  <!-- twin concentric rings (IC-seal) -->
+  <circle cx="32" cy="32" r="30.5" fill="none" stroke="{{ _color }}" stroke-width="0.4" opacity="0.9"/>
+  <circle cx="32" cy="32" r="27.8" fill="none" stroke="{{ _color }}" stroke-width="0.18" opacity="0.4"/>
+
+  <!-- P: serif vertical stem + round bowl + top/bottom serifs -->
+  <g stroke="{{ _color }}" fill="none" stroke-linecap="butt">
+    <!-- stem -->
+    <line x1="20" y1="17" x2="20" y2="47" stroke-width="2.2"/>
+    <!-- bowl (half-circle right of stem) -->
+    <path d="M 20 17 L 29 17 Q 35 17 35 24 Q 35 31 29 31 L 20 31" stroke-width="1.5"/>
+    <!-- top serif -->
+    <line x1="16" y1="17" x2="24" y2="17" stroke-width="1"/>
+    <!-- bottom serif -->
+    <line x1="16" y1="47" x2="24" y2="47" stroke-width="1"/>
+  </g>
+
+  <!-- center small dot (IC motif) -->
+  <circle cx="32" cy="32" r="0.5" fill="{{ _color }}" opacity="0.6"/>
+
+  <!-- Q in Bronze: italic bowl + tail -->
+  <g stroke="{{ _accent }}" fill="none">
+    <!-- bowl (oval italicized) -->
+    <ellipse cx="44" cy="38" rx="7.5" ry="8" transform="rotate(-12 44 38)" stroke-width="1.6"/>
+    <!-- diagonal tail -->
+    <line x1="47" y1="42" x2="53" y2="50" stroke-width="1.6" stroke-linecap="square"/>
+    <!-- tail terminal serif -->
+    <line x1="51" y1="51" x2="55" y2="49" stroke-width="0.9"/>
+  </g>
+</svg>
+
+{# ══════════════════════════ SUBMARK ═════════════════════════════════════ #}
+{% else %}
+{% set _s = _size if _size else 18 %}
+<svg class="pq-brand-submark" xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 24 24" width="{{ _s }}" height="{{ _s }}"
+     aria-label="PivoxQuant" role="img"
+     style="display:inline-block; vertical-align:middle;">
+  <circle cx="12" cy="12" r="11" fill="none" stroke="{{ _color }}" stroke-width="0.35" opacity="0.85"/>
+  <circle cx="12" cy="12" r="9.2" fill="none" stroke="{{ _color }}" stroke-width="0.18" opacity="0.4"/>
+  <g stroke="{{ _color }}" fill="none">
+    <line x1="8" y1="7" x2="8" y2="17" stroke-width="1.1"/>
+    <path d="M 8 7 L 12 7 Q 14.5 7 14.5 9.6 Q 14.5 12.2 12 12.2 L 8 12.2" stroke-width="0.85"/>
+    <line x1="6.5" y1="7" x2="9.5" y2="7" stroke-width="0.5"/>
+    <line x1="6.5" y1="17" x2="9.5" y2="17" stroke-width="0.5"/>
+  </g>
+  <g stroke="{{ _accent }}" fill="none">
+    <circle cx="16.5" cy="15" r="1.9" stroke-width="0.75"/>
+    <line x1="17.7" y1="16.2" x2="19" y2="17.6" stroke-width="0.75" stroke-linecap="square"/>
+  </g>
+</svg>
+{% endif %}

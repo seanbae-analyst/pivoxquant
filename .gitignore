@@ -51,3 +51,6 @@ Untitled*.canvas
 *.log
 agent_worker/logs/
 logs/
+
+# Exclude heavy UI-UX skill CSV DB (16MB, local-only runtime asset)
+.claude/skills/ui-ux-pro-max/

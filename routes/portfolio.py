@@ -13,7 +13,7 @@ from services.serializers import serialize_user
 from services import fx_service, cache_service, kr_stock_registry
 from services.name_resolver import resolve_stock_name
 from services.container import engine, fetcher, realtime
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ def _cache_ticker_async(app, ticker: str, capital: float):
 
 @portfolio_bp.route("")
 @api_auth
+@legal_scrub_response
 def get_portfolio():
     fx_service.refresh()
     positions = Position.query.filter_by(user_id=current_user.id).all()
@@ -428,6 +429,7 @@ def set_capital():
 
 @portfolio_bp.route("/analytics")
 @api_auth
+@legal_scrub_response
 def portfolio_analytics():
     positions = Position.query.filter_by(user_id=current_user.id).all()
 

@@ -99,411 +99,950 @@ def sample_weekly_memo() -> dict[str, Any]:
             "Information Technology 섹터 비중 42%로 집중도 높음 관찰",
             "GOOGL, 035420.KS 주간 하락, 최저 -2.85% 기록",
         ],
+        # Flagship narrative fields (optional, empty-safe).
+        "narrative_exec_line": (
+            "A week where the Korean semis quietly carried the book, and the "
+            "S&P drift politely cooperated — a pattern the desk has observed "
+            "three weeks running."
+        ),
+        "narrative_week_summary": [
+            (
+                "The book advanced 2.14% against the S&P 500's 1.37%, "
+                "settling alpha at +0.77 percentage points. Read "
+                "descriptively, this is the third consecutive week the spread "
+                "has landed in the positive half of its ninety-day "
+                "distribution."
+            ),
+            (
+                "Semiconductor exposure did the heavy lifting. NVDA and "
+                "SK하이닉스 together contributed the majority of the weekly "
+                "delta, consistent with their combined weight in the book. "
+                "GOOGL and NAVER moved in sympathy with platform-cohort "
+                "softness."
+            ),
+            (
+                "The observation worth naming is concentration: Information "
+                "Technology carries 42% of invested capital — above the "
+                "forty-percent guideline the desk tracks."
+            ),
+        ],
+        "narrative_what_next": (
+            "Two scheduled earnings prints sit inside the held book this week "
+            "— AAPL on day three and 005930.KS on day five. Macro prints on "
+            "the calendar are the FOMC statement mid-week and the Korean KRW "
+            "/ USD fix. The desk tracks these against the same tail bands, "
+            "not against a projection."
+        ),
+        "equity_series": [
+            {"x": "Mon", "y":  0.00},
+            {"x": "Tue", "y":  0.41},
+            {"x": "Wed", "y":  0.92},
+            {"x": "Thu", "y":  1.52},
+            {"x": "Fri", "y":  1.88},
+            {"x": "Mon", "y":  2.04},
+            {"x": "Tue", "y":  2.14},
+        ],
+        "benchmark_series": [
+            {"x": "Mon", "y":  0.00},
+            {"x": "Tue", "y":  0.22},
+            {"x": "Wed", "y":  0.58},
+            {"x": "Thu", "y":  0.91},
+            {"x": "Fri", "y":  1.12},
+            {"x": "Mon", "y":  1.24},
+            {"x": "Tue", "y":  1.37},
+        ],
+        "equity_x_labels": ["Mon", "Tue", "Wed", "Thu", "Fri", "Mon", "Tue"],
+        "daily_walk_rows": [
+            {"label": "Mon", "value":  0.28, "tone": "pos"},
+            {"label": "Tue", "value":  0.41, "tone": "pos"},
+            {"label": "Wed", "value":  0.60, "tone": "pos"},
+            {"label": "Thu", "value": -0.24, "tone": "neg"},
+            {"label": "Fri", "value":  0.36, "tone": "pos"},
+            {"label": "Mon", "value":  0.16, "tone": "pos"},
+            {"label": "Tue", "value":  0.57, "tone": "pos"},
+        ],
+        "risk_metrics": [
+            {"label": "VaR 95%",                    "value": "-2.14%",
+             "gloss": "The loss the book was historically exceeded by on only 5% of daily sessions, based on the last 90 trading days of close-to-close returns."},
+            {"label": "Expected Shortfall (ES 95%)", "value": "-3.12%",
+             "gloss": "The mean loss on the worst 5% of historical days — the tail the VaR line does not see."},
+            {"label": "Tail Ratio",                  "value": "1.08",
+             "gloss": "Ratio of the 95th to the 5th return percentile. Above one suggests the right tail is doing more work than the left."},
+            {"label": "Sortino · annualised",        "value": "1.96",
+             "gloss": "Return per unit of downside deviation. Higher readings indicate the book asymmetrically tolerates upside volatility."},
+            {"label": "Max Drawdown · 12-week",      "value": "-8.14%",
+             "gloss": "Largest peak-to-trough decline in the last twelve weeks of marked prices."},
+        ],
+        "corr_matrix": [
+            [1.00, 0.62, 0.41, 0.28, 0.18],
+            [0.62, 1.00, 0.58, 0.22, 0.14],
+            [0.41, 0.58, 1.00, 0.33, 0.20],
+            [0.28, 0.22, 0.33, 1.00, 0.51],
+            [0.18, 0.14, 0.20, 0.51, 1.00],
+        ],
+        "corr_labels": ["NVDA", "000660", "AAPL", "GOOGL", "035420"],
+        # Flagship v2 editorial fields (optional, additive — empty-safe)
+        "issue_number": 12,
+        "hero_headline": [
+            "A week",
+            "where the index",
+            "restrained itself.",
+        ],
+        "equity_annotation": {
+            "day_label": "Thu 14:30 KST",
+            "delta_text": "+0.82%",
+            "anchor_index": 3,
+        },
+        "pull_quote": (
+            "A quiet week is not a boring one. It is a disciplined one."
+        ),
+        "pull_quote_attribution": "The Editorial Voice",
+        "what_to_watch": [
+            {"category": "Earnings", "detail": "AAPL · Tue after the close."},
+            {"category": "Earnings", "detail": "005930.KS · Thu before the open."},
+            {"category": "Macro",    "detail": "FOMC minutes · Wed 21:00 KST."},
+            {"category": "Macro",    "detail": "US CPI · Fri 22:30 KST."},
+            {"category": "Observation","detail": "0.62 correlation between the top-2 semis remains the week's structural read."},
+        ],
+        "data_sources": ["KIS", "Alpaca", "FMP v4", "SEC EDGAR", "FRED"],
+        "typeset_in":   "Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR",
+        "engine_note":  "58 quant models · 7-Layer Risk Defense",
+        "doc_ref":      None,  # computed in template if missing
         "disclaimer": DISCLAIMER,
     }
 
 
 def sample_earnings_prebrief() -> dict[str, Any]:
-    today = _today()
-    earnings_dt = datetime.combine(today + timedelta(days=2), datetime.min.time()).replace(hour=21, minute=0)
-    mv = 12 * 189.42
+    """Earnings Pre-Brief — Goldman IC v2 editorial — 6-page pre-read.
+
+    Returns every field the redesigned `earnings_prebrief.html` template reads.
+    Tone: 24-hour pre-read before the earnings call. Observation only, no
+    predictions, no advice. Historical record + calendar.
+    """
     return {
-        "user_id":         SAMPLE_USER_ID,
-        "user_name":       SAMPLE_USER_NAME,
-        "ticker":          "AAPL",
-        "company_name":    "Apple Inc.",
-        "earnings_datetime": earnings_dt.isoformat() + "Z",
-        "fiscal_period":   "FY25 Q2",
-        "generated_at":    _now_iso(),
-        "consensus_eps":   1.54,
-        "consensus_eps_low":  1.48,
-        "consensus_eps_high": 1.61,
-        "consensus_revenue":  94.3,  # $M in template display
-        "current_price":      189.42,
+        # ── meta ────────────────────────────────────────────────────────
+        "user_id":       SAMPLE_USER_ID,
+        "user_name":     SAMPLE_USER_NAME,
+        "ticker":        "AAPL",
+        "company_name":  "Apple Inc.",
+        "fiscal_period": "Q2 FY26",
+        "reporting_date":  "2026-04-30",
+        "reporting_time":  "After the close (AMC)",
+        "issue_number":  1,
+        "doc_ref":       "PQ-EB-01 · v2026.04.21",
+        "generated_at":  _now_iso(),
+        "typeset_in":    "Source Serif 4 · Geist · JetBrains Mono",
+        "engine_note":   "58 quant models · 7-Layer Risk Defense",
+        "LICENSE_NUMBER": None,
+
+        # ── P1 cover KPIs ───────────────────────────────────────────────
+        "consensus_eps":     1.62,
+        "consensus_eps_low": 1.48,
+        "consensus_eps_high": 1.76,
+        "implied_move_pct":  4.2,
+        "consensus_as_of":   "2026-04-19",
+        "option_as_of":      "2026-04-20",
+        "hero_headline": [
+            "A quiet hour before the call.",
+            "Facts observed. Calendar noted.",
+            "The company will speak \u2014 we listen.",
+        ],
+
+        # ── P2 company snapshot — 8-quarter revenue history ─────────────
+        "revenue_history": [
+            {"q": "Q1 FY24", "rev":  97.3, "yoy": -5.2},
+            {"q": "Q2 FY24", "rev":  94.8, "yoy": -4.1},
+            {"q": "Q3 FY24", "rev":  93.2, "yoy": -1.9},
+            {"q": "Q4 FY24", "rev": 119.6, "yoy":  2.1},
+            {"q": "Q1 FY25", "rev": 124.3, "yoy":  2.8},
+            {"q": "Q2 FY25", "rev":  95.4, "yoy":  0.6},
+            {"q": "Q3 FY25", "rev":  94.9, "yoy":  1.8},
+            {"q": "Q4 FY25", "rev": 124.3, "yoy":  3.9},
+        ],
+        "company_prose": [
+            "The company's revenue pace has held between roughly $93B and $125B across the observed eight-quarter window, with the familiar fourth-quarter seasonal peak appearing in both FY24 Q4 and FY25 Q4. YoY change has moved from mid-single-digit negative at the start of the window to low-single-digit positive by its end. These are observed print readings \u2014 not a shape claim about the quarter to come.",
+            "Across the four most recent reports, the surprise magnitude \u2014 reported EPS against the consensus observed on the day of each report \u2014 has averaged near the low-single-digit positive range, with one quarter sitting close to flat and none of the four landing below the consensus by more than a narrow margin. Three of four reports printed a positive surprise; one printed within a tenth of a cent of consensus. Record, not a pattern claim.",
+            "The analyst estimate range for the quarter now approaching is a factual band. The low end of the sampled observations sits at $1.48; the high end at $1.76; the median at $1.62. The band is a reading of analyst observations \u2014 informational only, and not a target of any kind.",
+        ],
+
+        # ── P3 historical surprise ladder (8 quarters) ──────────────────
         "surprise_history": [
-            {"date": "2026-01-28", "actual_eps": 2.18, "estimate_eps": 2.10, "surprise_pct":  3.8},
-            {"date": "2025-10-30", "actual_eps": 1.64, "estimate_eps": 1.60, "surprise_pct":  2.5},
-            {"date": "2025-07-31", "actual_eps": 1.40, "estimate_eps": 1.35, "surprise_pct":  3.7},
-            {"date": "2025-05-02", "actual_eps": 1.53, "estimate_eps": 1.50, "surprise_pct":  2.0},
+            {"quarter": "Q1 FY24", "consensus": 1.42, "actual": 1.52, "surprise_pct":  7.04, "reaction_pct":  2.1, "spark": [0, 0.4, 1.0, 1.6, 2.0, 2.1, 2.1]},
+            {"quarter": "Q2 FY24", "consensus": 1.50, "actual": 1.53, "surprise_pct":  2.00, "reaction_pct":  0.8, "spark": [0, 0.2, 0.4, 0.5, 0.7, 0.8, 0.8]},
+            {"quarter": "Q3 FY24", "consensus": 1.35, "actual": 1.40, "surprise_pct":  3.70, "reaction_pct": -0.6, "spark": [0, -0.1, -0.3, -0.5, -0.6, -0.6, -0.6]},
+            {"quarter": "Q4 FY24", "consensus": 2.10, "actual": 2.18, "surprise_pct":  3.81, "reaction_pct":  1.6, "spark": [0, 0.3, 0.8, 1.2, 1.5, 1.6, 1.6]},
+            {"quarter": "Q1 FY25", "consensus": 2.34, "actual": 2.40, "surprise_pct":  2.56, "reaction_pct": -1.2, "spark": [0, -0.3, -0.7, -1.0, -1.1, -1.2, -1.2]},
+            {"quarter": "Q2 FY25", "consensus": 1.54, "actual": 1.55, "surprise_pct":  0.65, "reaction_pct":  0.2, "spark": [0, 0.05, 0.1, 0.15, 0.18, 0.2, 0.2]},
+            {"quarter": "Q3 FY25", "consensus": 1.47, "actual": 1.48, "surprise_pct":  0.68, "reaction_pct": -0.4, "spark": [0, -0.1, -0.2, -0.3, -0.35, -0.4, -0.4]},
+            {"quarter": "Q4 FY25", "consensus": 2.22, "actual": 2.28, "surprise_pct":  2.70, "reaction_pct":  1.8, "spark": [0, 0.4, 0.9, 1.3, 1.6, 1.8, 1.8]},
         ],
-        "expected_questions": [
-            "iPhone 16 선주문 추이와 중국 시장 수요 회복 여부",
-            "Services 매출 성장률이 15%대를 유지할 수 있는가",
-            "Apple Intelligence 도입 효과가 ASP 인상에 기여하는가",
-            "Mac/iPad 사이클 전망과 재고 수준",
-            "자사주 매입 + 배당 확대 가이던스",
+        "surprise_bins": [
+            {"range": "\u22124 to \u22122", "count": 0},
+            {"range": "\u22122 to  0",       "count": 0},
+            {"range": " 0 to  2",             "count": 3},
+            {"range": " 2 to  4",             "count": 3},
+            {"range": " 4 to  6",             "count": 1},
+            {"range": " 6 to  8",             "count": 1},
         ],
-        "position_shares":   12,
-        "position_avg_cost": 172.40,
-        "position_mv":       mv,
-        "sensitivity_beat":  round(mv * 0.03, 2),
-        "sensitivity_miss": -round(mv * 0.03, 2),
-        "risk_notes": [
-            "변동성 ±4% 구간 관찰",
-            "해당 포지션이 포트폴리오의 16.3% 비중",
+
+        # ── P4 observation quad ─────────────────────────────────────────
+        "beat_rate_pct":   88,
+        "beat_timeline":   [1, 1, 1, 1, 1, 1, 1, 1],
+        "drift_bars": [
+            {"window": "1D",  "avg":  0.5},
+            {"window": "5D",  "avg":  0.8},
+            {"window": "21D", "avg":  1.4},
         ],
+        "implied_realised_r": 0.82,
+        "implied_vs_realised": [
+            {"implied": 4.0, "realised": 2.1},
+            {"implied": 3.5, "realised": 0.8},
+            {"implied": 3.8, "realised": 0.6},
+            {"implied": 4.6, "realised": 1.6},
+            {"implied": 4.2, "realised": 1.2},
+            {"implied": 3.2, "realised": 0.2},
+            {"implied": 3.0, "realised": 0.4},
+            {"implied": 4.4, "realised": 1.8},
+        ],
+        "peer_group": "Megacap Tech",
+        "peer_eps_comp": [
+            {"ticker": "AAPL", "eps": 1.62},
+            {"ticker": "MSFT", "eps": 3.34},
+            {"ticker": "GOOG", "eps": 1.81},
+            {"ticker": "META", "eps": 5.12},
+        ],
+        "reading_notes": [
+            {"term": "Consensus is a sampling",      "def": "Consensus is a sampling of analyst observations \u2014 historical record only, not a collective target."},
+            {"term": "Implied move",                 "def": "Option-market pricing of uncertainty around the print. It is market-implied, not market-determined."},
+            {"term": "Past surprise pattern",        "def": "The surprise history is a historical record only. It does not speak to the current quarter."},
+            {"term": "Post-earnings drift",          "def": "The drift bars record observed reactions. Causation is not claimed."},
+            {"term": "Brief is informational only",  "def": "Nothing on these pages constitutes investment guidance. The document is for pre-read reference only."},
+        ],
+
+        # ── P5 editorial ────────────────────────────────────────────────
+        "pull_quote":      "The market rehearses every call. The call tells us only how well the market listened.",
+        "pull_quote_attr": "PivoxQuant \u00b7 Earnings Desk",
+        "cannot_tell": [
+            "Which way the print will land.",
+            "What to do before or after the call.",
+            "Management's unspoken intent on the call.",
+            "Private order flow around the event.",
+            "Tax or personal timing of any action.",
+        ],
+
+        # ── P6 colophon ─────────────────────────────────────────────────
+        "data_sources": [
+            {"key": "Consensus EPS",       "note": "FMP v4 Stable."},
+            {"key": "Option chain",        "note": "CBOE via Alpaca."},
+            {"key": "Historical EPS",      "note": "SEC EDGAR."},
+            {"key": "Reporting calendar",  "note": "Company Investor Relations."},
+        ],
+
         "disclaimer": DISCLAIMER,
     }
 
 
 def sample_monthly_finance() -> dict[str, Any]:
+    """Monthly Finance — Goldman IC v2 editorial — 6-page personal ledger.
+
+    Returns every field the redesigned `monthly_finance.html` template reads.
+    Tone: a private-bank monthly statement. Observation only; no directives,
+    no targets, no forecasts.
+    """
     today = _today()
-    month_start = today.replace(day=1) - timedelta(days=1)
-    month_start = month_start.replace(day=1)
-    fx_rate = 1356.2
-    cash_usd = 2_400.00
-    cash_krw = 5_000_000
-    mv_usd  = 21_800.00
-    mv_krw  = 13_200_000
     return {
-        "user_id":        SAMPLE_USER_ID,
-        "user_name":      SAMPLE_USER_NAME,
-        "month_label":    month_start.strftime("%Y-%m"),
-        "period_start":   month_start.isoformat(),
-        "period_end":     (today.replace(day=1) - timedelta(days=1)).isoformat(),
-        "next_month_label": today.strftime("%Y-%m"),
-        "generated_at":   _now_iso(),
-        "fx_rate":        fx_rate,
-        "cash": {
-            "cash_usd":   cash_usd,
-            "cash_krw":   cash_krw,
-            "total_krw":  cash_krw + cash_usd * fx_rate,
+        "user_id":      SAMPLE_USER_ID,
+        "user_name":    SAMPLE_USER_NAME,
+        "month_label":  "April 2026",
+        "generated_at": _now_iso(),
+        "issue_number": 4,
+        "doc_ref":      "PQ-MF-04 · v2026.04.21",
+        "hero_headline": [
+            "A month ends.",
+            "Ledgers settle their",
+            "quiet arithmetic.",
+        ],
+        "kpis_cover": {
+            "month_pnl_pct":   2.4,
+            "ytd_pnl_pct":     8.7,
+            "realized_usd":    3420,
+            "unrealized_usd":  8210,
         },
-        "positions_mv": {
-            "mv_usd":    mv_usd,
-            "mv_krw":    mv_krw,
-            "total_krw": mv_krw + mv_usd * fx_rate,
+        "equity_walk": [
+            0.00, 0.12, 0.31, 0.22, 0.45, 0.68, 0.81, 0.92, 1.10,
+            1.28, -0.20, 1.14, 1.33, 1.52, 1.71, 1.84, 1.92, 1.88,
+            2.04, 2.21, 2.38, 2.30, 2.40,
+        ],
+        "ledger_prose": [
+            (
+                "April recorded a net gain of 2.4% on invested capital, "
+                "against a month that ran cool through the first week and "
+                "accelerated through the middle ten sessions. The drawdown "
+                "trough on Day 11 of -0.20% was shallow relative to the "
+                "ninety-day envelope and recovered inside two sessions."
+            ),
+            (
+                "Of the month gain, realised P&L from closed lots contributed "
+                "$3,420 across ten exits; unrealised P&L on open positions "
+                "carries $8,210 at the month-end mark. Eight dividend events "
+                "posted during the month for a combined $264 gross receipt. "
+                "Fees and costs totalled $58, FIFO lot-matched."
+            ),
+        ],
+        "ledger_margin": {
+            "cash_on_hand":  18450,
+            "margin_used":   0,
+            "net_deposits":  2000,
+            "account_nav":   51820,
         },
-        "liquidity_ratio": 16.1,
-        "position_count": 7,
-        "burn_rate_krw":  214_000,
-        "runway_months":  38.3,
-        "cost_breakdown": {
-            "trade_count":            18,
-            "us_notional_usd":        21_000.00,
-            "us_commission_usd":         52.00,
-            "kr_notional_krw":        11_500_000,
-            "kr_commission_krw":          30_000,
-            "kr_transaction_tax_krw":     45_000,
-            "fx_spread_krw":              28_000,
-            "total_krw":                 174_000,
+        "closed_lots": [
+            {"ticker": "NVDA",      "entry": "2026-02-14", "exit": "2026-04-08", "qty": 4,  "cost":  2540.00, "proceeds":  3180.00, "pnl":  640.00, "spark": [0.20, 0.30, 0.40, 0.55, 0.65, 0.72, 0.80, 0.88]},
+            {"ticker": "MSFT",      "entry": "2026-03-12", "exit": "2026-04-11", "qty": 8,  "cost":  2682.00, "proceeds":  2940.00, "pnl":  258.00, "spark": [0.30, 0.36, 0.42, 0.44, 0.52, 0.58, 0.62, 0.66]},
+            {"ticker": "AAPL",      "entry": "2026-01-28", "exit": "2026-04-14", "qty": 6,  "cost":  1034.40, "proceeds":  1182.00, "pnl":  147.60, "spark": [0.40, 0.42, 0.48, 0.52, 0.58, 0.60, 0.64, 0.66]},
+            {"ticker": "005930.KS", "entry": "2026-03-03", "exit": "2026-04-16", "qty": 20, "cost":  1440.00, "proceeds":  1596.00, "pnl":  156.00, "spark": [0.50, 0.52, 0.56, 0.58, 0.62, 0.64, 0.68, 0.72]},
+            {"ticker": "GOOGL",     "entry": "2026-02-20", "exit": "2026-04-03", "qty": 5,  "cost":   745.00, "proceeds":   812.00, "pnl":   67.00, "spark": [0.30, 0.28, 0.34, 0.38, 0.42, 0.46, 0.48, 0.52]},
+            {"ticker": "AVGO",      "entry": "2026-03-20", "exit": "2026-04-18", "qty": 2,  "cost":  2560.00, "proceeds":  2748.00, "pnl":  188.00, "spark": [0.40, 0.42, 0.48, 0.52, 0.58, 0.62, 0.66, 0.72]},
+            {"ticker": "NFLX",      "entry": "2026-02-05", "exit": "2026-04-09", "qty": 3,  "cost":  1890.00, "proceeds":  2022.00, "pnl":  132.00, "spark": [0.40, 0.44, 0.48, 0.50, 0.54, 0.58, 0.60, 0.64]},
+            {"ticker": "QCOM",      "entry": "2026-03-18", "exit": "2026-04-12", "qty": 10, "cost":  1580.00, "proceeds":  1492.00, "pnl":  -88.00, "spark": [0.50, 0.48, 0.46, 0.44, 0.42, 0.40, 0.38, 0.36]},
+            {"ticker": "INTC",      "entry": "2026-02-22", "exit": "2026-04-05", "qty": 15, "cost":   585.00, "proceeds":   536.25, "pnl":  -48.75, "spark": [0.50, 0.48, 0.46, 0.44, 0.42, 0.40, 0.38, 0.38]},
+            {"ticker": "000660.KS", "entry": "2026-03-28", "exit": "2026-04-19", "qty": 5,  "cost":   725.00, "proceeds":   831.00, "pnl":  106.00, "spark": [0.50, 0.52, 0.54, 0.58, 0.62, 0.66, 0.70, 0.74]},
+        ],
+        "cash_flow": {
+            "deposits":           2000.00,
+            "withdrawals":           0.00,
+            "dividends_received":  264.00,
+            "interest_received":    24.50,
+            "fees_paid":           -58.00,
+            "taxes_withheld":      -39.60,
+            "net_cash_change":    2190.90,
         },
-        "tax_estimate": {
-            "realised_us_gain_usd":       1_908.00,
-            "us_capital_gains_krw":         569_640,
-            "realised_kr_gain_krw":         420_000,
-            "forward_12m_dividend_krw":   1_100_000,
-            "dividend_withholding_krw":     169_400,
-            "total_estimated_krw":          739_040,
-        },
-        "watch": {
-            "ex_dividends": [
-                {"date": (today + timedelta(days=4)).isoformat(),  "ticker": "AAPL",  "amount": 0.25},
-                {"date": (today + timedelta(days=12)).isoformat(), "ticker": "MSFT",  "amount": 0.75},
-            ],
-            "earnings": [
-                {"date": (today + timedelta(days=3)).isoformat(),  "ticker": "AAPL"},
-                {"date": (today + timedelta(days=9)).isoformat(),  "ticker": "005930.KS"},
-            ],
-        },
+        "sector_attribution": [
+            {"n": "Tech",     "v":  1850},
+            {"n": "Semis",    "v":  1380},
+            {"n": "Comms",    "v":   420},
+            {"n": "Cons.D",   "v":  -180},
+            {"n": "Cons.S",   "v":   140},
+            {"n": "Health",   "v":   210},
+            {"n": "Indus",    "v":   380},
+            {"n": "Fin",      "v":    92},
+            {"n": "Util",     "v":   -48},
+            {"n": "Energy",   "v":   560},
+            {"n": "Real Est", "v":  -120},
+        ],
+        "contrib_detract": [
+            {"t": "NVDA",      "v":  1420},
+            {"t": "MSFT",      "v":   860},
+            {"t": "AAPL",      "v":   540},
+            {"t": "005930.KS", "v":   380},
+            {"t": "AVGO",      "v":   320},
+            {"t": "QCOM",      "v":   -88},
+            {"t": "INTC",      "v":   -49},
+            {"t": "BABA",      "v":   -68},
+            {"t": "META",      "v":  -112},
+            {"t": "TSLA",      "v":  -190},
+        ],
+        "dividend_events": [
+            {"day":  3, "t": "AAPL",      "amt":  12.00},
+            {"day":  8, "t": "MSFT",      "amt":  48.00},
+            {"day": 12, "t": "AVGO",      "amt":  42.00},
+            {"day": 15, "t": "KO",        "amt":  18.00},
+            {"day": 18, "t": "005930.KS", "amt":  68.00},
+            {"day": 21, "t": "JNJ",       "amt":  22.00},
+            {"day": 24, "t": "PG",        "amt":  16.00},
+            {"day": 28, "t": "XOM",       "amt":  38.00},
+        ],
+        "cost_breakdown_q": [
+            {"n": "Commission",  "v": 22.40},
+            {"n": "Spread",      "v": 18.60},
+            {"n": "Borrow",      "v":  0.00},
+            {"n": "FX spread",   "v":  9.20},
+            {"n": "Reg. fees",   "v":  4.80},
+            {"n": "SEC fee",     "v":  3.00},
+        ],
+        "reconciliation_notes": [
+            "Figures are observed from broker statements, month-end close.",
+            "Dividends are gross of withholding tax.",
+            "Realised P&L uses FIFO lot matching.",
+            "Unrealised P&L uses month-end mark.",
+            "Not tax guidance — consult a professional for your own filing.",
+        ],
+        "pull_quote": (
+            "A ledger is not a verdict. It is the month's handwriting — "
+            "plain, careful, indifferent to meaning."
+        ),
+        "pull_quote_attribution": "PivoxQuant Finance Desk",
+        "typeset_in": "Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR",
+        "engine_note": "Historical record only. Monthly ledger pipeline.",
         "disclaimer": DISCLAIMER,
+        # unused by template but kept for any legacy callers:
+        "period_start": today.replace(day=1).isoformat(),
+        "period_end":   today.isoformat(),
     }
 
 
 def sample_risk_board() -> dict[str, Any]:
+    """Goldman Risk Committee v2 editorial — 6-page Risk Board deck.
+
+    Returns every field the redesigned `risk_board.html` template reads.
+    All numbers are descriptive observations; no recommendations or targets.
+    """
     today = _today()
     return {
+        # ── meta ─────────────────────────────────────────────────────────
         "user_id":       SAMPLE_USER_ID,
         "user_name":     SAMPLE_USER_NAME,
-        "period_label":  today.strftime("%Y-%m-%d"),
-        "trigger":       "scheduled",
+        "period_label":  "April 2026",
         "generated_at":  _now_iso(),
-        "portfolio_value":  51_000_000,
-        "portfolio_ccy":   "KRW",
-        "position_count":   7,
-        "var95_pct":       -2.3,
-        "var99_pct":       -3.8,
-        "sharpe_annual":    1.42,
-        "sortino_annual":   1.88,
-        "calmar":           1.10,
-        "max_drawdown_pct": -11.6,
-        "sector_breakdown": [
-            {"sector": "Information Technology", "weight_pct": 42.3},
-            {"sector": "Semiconductors",          "weight_pct": 27.8},
-            {"sector": "Communication Services",  "weight_pct": 14.1},
-            {"sector": "Consumer Discretionary",  "weight_pct":  9.5},
-            {"sector": "Financials",              "weight_pct":  6.3},
+        "issue_number":  4,
+        "doc_ref":       "PQ-RB-04 · v2026.04.21",
+        "trigger":       "monthly",
+
+        # ── P1 · cover KPIs ──────────────────────────────────────────────
+        "kpi_var_1d":     -2.14,
+        "kpi_es_1d":      -3.42,
+        "kpi_maxdd_90d":  -8.70,
+        "kpi_corr_index":  0.58,
+        "hero_headline": [
+            "Risk is observed, not eliminated.",
+            "Numbers are companions, not captains.",
+            "This is a record — not a route.",
         ],
-        "tail_ratio":     1.63,
-        "component_es": [
-            {"ticker": "NVDA",       "sector": "Semiconductors",          "es_contrib": -1.842},
-            {"ticker": "AAPL",       "sector": "Information Technology",  "es_contrib": -1.104},
-            {"ticker": "005930.KS",  "sector": "Semiconductors",          "es_contrib": -0.891},
+
+        # ── P2 · 10×10 correlation heatmap ───────────────────────────────
+        "corr_matrix": {
+            "labels": ["AAPL", "MSFT", "NVDA", "GOOG", "META",
+                       "AMZN", "TSLA", "JPM",  "XOM",  "UNH"],
+            "values": [
+                [1.00, 0.82, 0.68, 0.71, 0.64, 0.66, 0.47, 0.32, 0.18, 0.24],
+                [0.82, 1.00, 0.72, 0.74, 0.68, 0.69, 0.44, 0.35, 0.21, 0.26],
+                [0.68, 0.72, 1.00, 0.62, 0.58, 0.60, 0.52, 0.28, 0.11, 0.19],
+                [0.71, 0.74, 0.62, 1.00, 0.67, 0.65, 0.41, 0.30, 0.17, 0.22],
+                [0.64, 0.68, 0.58, 0.67, 1.00, 0.61, 0.39, 0.27, 0.15, 0.20],
+                [0.66, 0.69, 0.60, 0.65, 0.61, 1.00, 0.43, 0.29, 0.16, 0.21],
+                [0.47, 0.44, 0.52, 0.41, 0.39, 0.43, 1.00, 0.22, 0.14, 0.17],
+                [0.32, 0.35, 0.28, 0.30, 0.27, 0.29, 0.22, 1.00, 0.34, 0.28],
+                [0.18, 0.21, 0.11, 0.17, 0.15, 0.16, 0.14, 0.34, 1.00, 0.19],
+                [0.24, 0.26, 0.19, 0.22, 0.20, 0.21, 0.17, 0.28, 0.19, 1.00],
+            ],
+        },
+
+        # ── P3 · risk ladder (10 positions) ──────────────────────────────
+        # Each position's 1D VaR is a single-asset historical observation;
+        # the portfolio-level number on the cover reflects diversification.
+        "positions_ladder": [
+            # ticker,    weight, var_1d, es_1d, maxdd_90d, beta, vol_ann, spark
+            {"ticker": "AAPL", "weight": 12.8, "var_1d": -1.84, "es_1d": -2.71,
+             "maxdd_90d": -6.42, "beta": 1.08, "vol_ann": 22.4,
+             "spark": [0, -0.4, -0.9, -1.4, -0.8, -1.6, -1.84]},
+            {"ticker": "MSFT", "weight": 11.2, "var_1d": -1.72, "es_1d": -2.58,
+             "maxdd_90d": -5.88, "beta": 1.02, "vol_ann": 21.1,
+             "spark": [0, -0.3, -0.8, -1.2, -0.7, -1.4, -1.72]},
+            {"ticker": "NVDA", "weight": 14.4, "var_1d": -3.41, "es_1d": -5.12,
+             "maxdd_90d": -14.2, "beta": 1.68, "vol_ann": 42.6,
+             "spark": [0, -0.8, -1.9, -2.8, -1.4, -2.9, -3.41]},
+            {"ticker": "GOOG", "weight": 9.6,  "var_1d": -1.92, "es_1d": -2.84,
+             "maxdd_90d": -7.11, "beta": 1.12, "vol_ann": 23.8,
+             "spark": [0, -0.4, -0.9, -1.5, -0.9, -1.7, -1.92]},
+            {"ticker": "META", "weight": 8.4,  "var_1d": -2.44, "es_1d": -3.62,
+             "maxdd_90d": -9.88, "beta": 1.28, "vol_ann": 28.9,
+             "spark": [0, -0.6, -1.2, -2.0, -1.1, -2.1, -2.44]},
+            {"ticker": "AMZN", "weight": 8.8,  "var_1d": -2.08, "es_1d": -3.11,
+             "maxdd_90d": -8.24, "beta": 1.18, "vol_ann": 25.4,
+             "spark": [0, -0.5, -1.1, -1.7, -0.9, -1.8, -2.08]},
+            {"ticker": "TSLA", "weight": 7.2,  "var_1d": -4.12, "es_1d": -6.04,
+             "maxdd_90d": -18.6, "beta": 1.84, "vol_ann": 48.2,
+             "spark": [0, -1.0, -2.4, -3.2, -1.8, -3.4, -4.12]},
+            {"ticker": "JPM",  "weight": 6.4,  "var_1d": -1.28, "es_1d": -1.94,
+             "maxdd_90d": -4.12, "beta": 0.88, "vol_ann": 16.8,
+             "spark": [0, -0.3, -0.6, -1.0, -0.6, -1.1, -1.28]},
+            {"ticker": "XOM",  "weight": 4.8,  "var_1d": -1.04, "es_1d": -1.56,
+             "maxdd_90d": -3.82, "beta": 0.74, "vol_ann": 18.2,
+             "spark": [0, -0.2, -0.5, -0.8, -0.5, -0.9, -1.04]},
+            {"ticker": "UNH",  "weight": 5.4,  "var_1d": -1.18, "es_1d": -1.78,
+             "maxdd_90d": -4.48, "beta": 0.82, "vol_ann": 17.6,
+             "spark": [0, -0.3, -0.6, -0.9, -0.6, -1.0, -1.18]},
         ],
-        "vix_current":   14.8,
-        "defense_score": 78,
-        "defense_status": "GREEN",
-        "layer_status": [
-            {"label": "VaR 95",        "passed": True,  "note": "일일 VaR -2.3% — 임계 -3% 이내"},
-            {"label": "Correlation",   "passed": True,  "note": "평균 상관 0.42"},
-            {"label": "VIX Filter",    "passed": True,  "note": "VIX 14.8 — 정상 구간"},
-            {"label": "Tail Ratio",    "passed": True,  "note": "1.63 — 상방 꼬리 우세"},
-            {"label": "Daily Loss",    "passed": True,  "note": "당일 -0.4%"},
-            {"label": "Sector Concentration", "passed": False, "note": "IT 섹터 42% — 40% 기준 초과 관찰"},
-            {"label": "Cash Buffer",   "passed": True,  "note": "현금 12.3%"},
+
+        # ── P4 · tail / drawdown quad ────────────────────────────────────
+        "var_histogram": {
+            "bins":   [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+            "counts": [ 1,  3,  8, 18, 42, 68, 52, 32, 14,  6,  2],
+        },
+        "underwater": [
+            0.0, -0.4, -1.2, -2.8, -4.4, -6.2, -7.8, -8.7,
+            -8.2, -7.1, -5.4, -3.1, -1.6, -0.8, -0.4, 0.0,
         ],
-        "top_risks": (
-            "IT 섹터 비중 42%로 단일 이벤트 리스크가 확대된 구간으로 관찰됩니다. "
-            "VIX 14.8로 저변동성 구간이나 Tail Ratio 1.63은 과거 평균 대비 다소 "
-            "낮은 수준입니다. 유동성과 현금 버퍼는 임계 이내로 관찰됩니다."
+        "tail_dist": {
+            "empirical": [0.4, 1.2, 3.4, 6.8, 9.2, 11.8, 9.4, 5.8, 2.8, 0.9],
+            "normal":    [0.9, 2.4, 4.6, 7.4, 9.6, 10.1, 8.2, 4.9, 2.1, 0.6],
+        },
+        "tail_ratio":        1.08,
+        "liquidity_label":   "1.2x avg",
+        "liquidity_heat": [
+            [0.08, 0.09, 0.11, 0.09, 0.10],  # AAPL
+            [0.12, 0.14, 0.13, 0.15, 0.12],  # MSFT
+            [0.22, 0.28, 0.31, 0.26, 0.24],  # NVDA
+            [0.06, 0.07, 0.06, 0.08, 0.07],  # GOOG
+            [0.18, 0.21, 0.19, 0.20, 0.22],  # META
+            [0.09, 0.10, 0.12, 0.09, 0.11],  # AMZN
+            [0.34, 0.38, 0.32, 0.36, 0.40],  # TSLA
+            [0.14, 0.16, 0.15, 0.13, 0.14],  # JPM
+            [0.05, 0.06, 0.05, 0.07, 0.05],  # XOM
+            [0.11, 0.13, 0.12, 0.10, 0.14],  # UNH
+        ],
+
+        # ── P5 · editorial ───────────────────────────────────────────────
+        "pull_quote": (
+            "Observations of risk do not subtract it. "
+            "They shape the room we stand in while the weather turns."
         ),
-        "disclaimer": DISCLAIMER,
+        "pull_quote_attribution": "PivoxQuant Risk Desk",
+        "not_answered": [
+            "Tax consequences of rebalancing.",
+            "Individual liquidity events.",
+            "Regime shifts not in the 252D window.",
+            "Correlated news shocks not priced in.",
+            "Personal cash-flow timing.",
+        ],
+
+        # ── P6 · colophon ────────────────────────────────────────────────
+        "data_sources": [
+            {"key": "Price",             "value": "Alpaca Market Data (IEX consolidated)"},
+            {"key": "Corporate actions", "value": "FMP v4 Stable"},
+            {"key": "Risk-free",         "value": "3-Month T-Bill (FRED DGS3MO)"},
+            {"key": "Window",            "value": "252 trading days, rolling"},
+        ],
+        "typeset_in":  "Source Serif 4 · Geist · JetBrains Mono",
+        "engine_note": "58 quant models · 7-Layer Risk Defense",
+        "disclaimer":  DISCLAIMER,
+        "LICENSE_NUMBER": None,
     }
 
 
 def sample_quarterly_self_report() -> dict[str, Any]:
+    """Quarterly Self-Report — Goldman IC v2 editorial — 6-page PM self-review.
+
+    Returns every field the redesigned `quarterly_self_report.html` template reads.
+    Tone: Buffett's quarterly partner letter — self-observation only, no advice.
+    """
     today = _today()
     quarter_label = f"{today.year} Q{(today.month - 1) // 3 + 1}"
     return {
+        # ── meta ────────────────────────────────────────────────────────
         "user_id":       SAMPLE_USER_ID,
         "user_name":     SAMPLE_USER_NAME,
         "quarter_label": quarter_label,
+        "issue_number":  1,
+        "doc_ref":       "PQ-QSR-01 · v2026.04.21",
         "period_start":  (today - timedelta(days=90)).isoformat(),
         "period_end":    today.isoformat(),
         "generated_at":  _now_iso(),
-        "opening_value":  45_000_000,
-        "closing_value":  51_000_000,
-        "net_cash_flow":   2_000_000,
-        "quarterly_return_pct": 8.9,
-        "mdna": (
-            "분기 전반에 걸쳐 반도체 섹터 리드. NVIDIA 추가 매수가 기여도 1위 "
-            "였으며, 삼성전자는 HBM 기대감으로 리레이팅. 분산이 부족하다는 "
-            "사전 식별에도 불구 IT 비중 40%를 유지한 것은 기록용으로 남김."
-        ),
-        "segments": [
-            {"sector": "Information Technology", "trade_count": 11, "pnl":  2_180_000},
-            {"sector": "Semiconductors",          "trade_count":  7, "pnl":  1_420_000},
-            {"sector": "Communication Services",  "trade_count":  5, "pnl":    180_000},
-            {"sector": "Consumer Discretionary",  "trade_count":  3, "pnl":   -120_000},
-            {"sector": "Financials",              "trade_count":  2, "pnl":     62_000},
+        "typeset_in":    "Source Serif 4 · Geist · JetBrains Mono",
+        "engine_note":   "58 quant models · 7-Layer Risk Defense",
+        "LICENSE_NUMBER": None,
+
+        # ── P1 cover KPIs (4-up) ────────────────────────────────────────
+        "quarterly_return_pct": 6.40,
+        "kpi_benchmark":        4.20,
+        "kpi_alpha":            2.20,
+        "kpi_hit_rate":        58,
+        "hero_headline": [
+            "Three months observed.",
+            "One hand, ten decisions.",
+            "A self-review \u2014 not a verdict.",
         ],
-        "risk_factors": [
-            {"factor": "IT 섹터 집중",  "note": "42% 유지 — 단일 이벤트 리스크 확대 관찰"},
-            {"factor": "단일 종목",      "note": "NVDA 11.2% 비중 — 변동성 노출 확대"},
-            {"factor": "현금 버퍼",      "note": "12.3% — 임계 10% 이상"},
+
+        # ── P2 self-review letter (6 paragraphs) ────────────────────────
+        "signoff_line": "In observation,",
+        "review_paragraphs": [
+            "Three months, in the hand. The quarter opened with the market reading its own quiet \u2014 a stretched week of thin prints, a calmer second week, and then the sort of mid-quarter acceleration that looks, in the book, like momentum and, on the tape, like catching up. I watched. I did little. The doing, when it came, came later.",
+            "Position changes were fewer than the quarter before. Semiconductor weight held at a little over a quarter of the book through the period. Consumer discretionary was trimmed in February \u2014 a small reduction, not a closure \u2014 on a reading that exit pace was outrunning the thesis I had written down. The adjustment was clean; the reasoning was dated; the execution took ninety seconds. That is not a strategy. It is a habit.",
+            "The largest single-day drawdown of the quarter printed on the Thursday in mid-March. It was 2.1% on the book. I remember the morning because I had slept poorly the night before and opened the screen later than usual. The book recovered by the following Tuesday. The note I wrote to myself on the Thursday afternoon \u2014 two sentences in the running file \u2014 is the record that no Sharpe ratio preserves. I keep the note.",
+            "What I misread, I misread at the edges. I read one small position as a story of operating leverage and the thesis I had written, three lines long, required a footnote on customer concentration that I had read in October and then, quietly, stopped reading. The position is still in the book, at a smaller weight. I have not closed it. I have reread the footnote. These are the decisions that do not appear in a P&L column. The P&L is where the decision lives. The decision is not where the P&L lives.",
+            "The habits held, with one exception. Monthly rebalance on the last trading day \u2014 kept. Reading on Saturday mornings \u2014 kept, except for the one Sunday evening in February I chose instead to finish a book, and the Tuesday that followed it was my least clean trading day of the quarter. The reading is not superstition. The reading is the shelter. I note the exception. I do not punish the Sunday.",
+            "Quarters end. Observation continues. There is nothing to claim here, and no conclusion I would put in italics if I were writing for anyone else. I am writing for the person who has to make the next ten decisions. That person will be, again, me.",
         ],
-        "internal_controls": [
-            {"layer": "Weekly Checklist", "label": "주간 자기 점검",   "status": "3건 누락"},
-            {"layer": "Stop Loss",         "label": "손절선 재설정",    "status": "1건 미이행 (GOOGL)"},
-            {"layer": "MDNA",              "label": "분기 MDNA 작성",   "status": "OK"},
+        "margin_notes": [
+            {"eyebrow": "Sharpe \u00b7 quarter", "note": "Observed at 1.08 over the window. Not annualised into the future."},
+            {"eyebrow": "Beta \u00b7 90D",        "note": "Book-to-SPY beta 0.92 over trailing 90 sessions. Quietly below one."},
+            {"eyebrow": "Turnover",               "note": "28% in the quarter. Monthly rebalance on the last trading day, held without exception."},
         ],
-        "legal_matters": [],
-        "principal_positions": [
-            {"ticker": "NVDA",       "sector": "Semiconductors",          "shares":  5,  "avg_cost": 610.00, "last": 728.40,  "mv":  3_642.00,  "weight_pct": 11.2, "return_pct": 22.4},
-            {"ticker": "AAPL",       "sector": "Information Technology",  "shares": 12,  "avg_cost": 172.40, "last": 189.42,  "mv":  2_273.04,  "weight_pct": 10.8, "return_pct":  6.3},
-            {"ticker": "005930.KS",  "sector": "Semiconductors",          "shares": 50,  "avg_cost": 72_000, "last": 79_000,  "mv": 3_950_000,  "weight_pct":  9.4, "return_pct": 10.1},
+
+        # ── P3 decision ladder (10 rows) ────────────────────────────────
+        "decision_ladder": [
+            {"date": "2026-01-08", "action": "Open",    "ticker": "NVDA", "weight_delta":  4.2, "rationale": "Sizing per plan",                  "pnl_pct":  12.4, "spark": [0, 0.6, 1.8, 3.2, 4.8, 7.6, 12.4]},
+            {"date": "2026-01-14", "action": "Trim",    "ticker": "TSLA", "weight_delta": -1.8, "rationale": "Position size reduction",          "pnl_pct":  -2.1, "spark": [0, 0.3, -0.4, -1.2, -1.8, -2.0, -2.1]},
+            {"date": "2026-01-22", "action": "Add",     "ticker": "AAPL", "weight_delta":  2.0, "rationale": "Rebalance per plan",               "pnl_pct":   5.8, "spark": [0, 0.4, 1.2, 2.4, 3.8, 5.0, 5.8]},
+            {"date": "2026-02-04", "action": "Open",    "ticker": "AVGO", "weight_delta":  3.0, "rationale": "New thesis entry",                 "pnl_pct":   9.1, "spark": [0, 0.8, 2.2, 4.1, 6.2, 8.0, 9.1]},
+            {"date": "2026-02-11", "action": "Trim",    "ticker": "XLY",  "weight_delta": -2.4, "rationale": "Sector weight reduction",          "pnl_pct":   1.2, "spark": [0, 0.2, 0.5, 0.8, 1.0, 1.1, 1.2]},
+            {"date": "2026-02-19", "action": "Cash",    "ticker": "CASH", "weight_delta":  2.4, "rationale": "Cash buffer increase",             "pnl_pct":   0.4, "spark": [0, 0.1, 0.1, 0.2, 0.3, 0.3, 0.4]},
+            {"date": "2026-02-27", "action": "Add",     "ticker": "MSFT", "weight_delta":  1.5, "rationale": "Rebalance per plan",               "pnl_pct":   3.2, "spark": [0, 0.3, 0.8, 1.6, 2.4, 2.9, 3.2]},
+            {"date": "2026-03-06", "action": "Close",   "ticker": "NKE",  "weight_delta": -2.2, "rationale": "Thesis marked stale",              "pnl_pct":  -5.8, "spark": [0, -0.4, -1.2, -2.4, -3.8, -4.9, -5.8]},
+            {"date": "2026-03-14", "action": "Observe", "ticker": "BOOK", "weight_delta":  0.0, "rationale": "Drawdown day (\u22122.1% print)",  "pnl_pct":  -2.1, "spark": [0, -0.2, -0.8, -1.6, -2.0, -2.1, -2.1]},
+            {"date": "2026-03-27", "action": "Rebal",   "ticker": "BOOK", "weight_delta":  0.0, "rationale": "Monthly rebalance (per plan)",     "pnl_pct":   0.6, "spark": [0, 0.1, 0.2, 0.3, 0.5, 0.6, 0.6]},
         ],
-        "thesis_entries": [
-            {"ticker": "NVDA",       "thesis": "AI 인프라 수요 지속",  "created_at": "2025-12-10"},
-            {"ticker": "005930.KS",  "thesis": "HBM 점유율 회복",      "created_at": "2026-01-22"},
+
+        # ── P4 diagnostic quad ──────────────────────────────────────────
+        "sharpe_rolling":  1.08,
+        "sharpe_series":   [0.42, 0.58, 0.68, 0.74, 0.82, 0.91, 0.95, 1.02, 1.08, 1.12, 1.08, 1.04],
+        "hit_rate_overall": 58,
+        "hit_rate_by_action": [
+            {"action": "Open",  "rate": 62, "count": 4},
+            {"action": "Add",   "rate": 67, "count": 3},
+            {"action": "Trim",  "rate": 50, "count": 2},
+            {"action": "Close", "rate": 50, "count": 2},
         ],
-        "thesis_checks": [
-            {"ticker": "NVDA",       "verdict": "on_track",  "note": "수요 가이던스 상향"},
-            {"ticker": "005930.KS",  "verdict": "watch",     "note": "HBM3E 램프업 지연 관찰"},
+        "holding_median_days": 14,
+        "holding_hist": [2, 4, 6, 7, 5, 3, 2, 1, 0, 1],
+        "top_sector": "Semiconductors",
+        "sector_attribution": [
+            {"sector": "Semis",    "pnl":  3.8},
+            {"sector": "Platform", "pnl":  1.6},
+            {"sector": "Consumer", "pnl": -0.4},
+            {"sector": "Fin",      "pnl":  0.8},
+            {"sector": "Cash",     "pnl":  0.6},
         ],
-        "decision_quality": {
-            "trades_total":     28,
-            "wins":             18,
-            "losses":           10,
-            "win_rate_pct":     64.3,
-            "avg_return_pct":    3.7,
-            "pattern_summary":  "실적 직후 48시간 이내 매매의 승률이 체계적으로 높게 관찰됩니다. 뉴스 단독 근거 매매는 승률이 크게 하락한 구간입니다.",
-            "best_decisions": [
-                {"ticker": "NVDA",      "buy_date": "2026-02-05", "buy_price": 612.00, "sell_price": 728.40, "return_pct": 19.0},
-                {"ticker": "005930.KS", "buy_date": "2026-02-18", "buy_price": 72_000, "sell_price": None,    "return_pct": 11.2},
-            ],
-            "worst_decisions": [
-                {"ticker": "TSLA",       "buy_date": "2026-01-11", "buy_price": 214.00, "sell_price": 188.20, "return_pct": -12.1},
-                {"ticker": "035420.KS",  "buy_date": "2026-03-02", "buy_price": 210_000, "sell_price": None,    "return_pct":  -6.1},
-            ],
-        },
-        "thesis_checklist": [
-            {"ticker": "NVDA",       "question": "AI 자본지출 서프라이즈 지속?"},
-            {"ticker": "005930.KS",  "question": "HBM3E 양산 가이던스?"},
-            {"ticker": "AAPL",       "question": "iPhone 16 선주문 가이드?"},
+        "self_review_notes": [
+            {"term": "Sharpe \u00b7 rolling",   "def": "Excess-of-cash return per unit of realised volatility, computed on a rolling 90-session window. A historical record only."},
+            {"term": "Hit Rate",                "def": "Closed decisions with a positive print, divided by closed decisions. Counts events, not conviction."},
+            {"term": "Holding period",          "def": "Calendar days from entry to last change or close. The mode sits at the monthly rebalance rhythm, by design."},
+            {"term": "Sector attribution",      "def": "Share of quarter P&L observed in each sector cohort. Not a causal claim about sector rotation."},
+            {"term": "Not predictive",          "def": "None of the four readings is predictive. They are artefacts of the quarter already lived, kept for review."},
         ],
-        "watch_items": [
-            {"date": (today + timedelta(days=14)).isoformat(), "label": "Fed FOMC 결정"},
-            {"date": (today + timedelta(days=21)).isoformat(), "label": "NVDA 실적 컨퍼런스콜"},
+
+        # ── P5 editorial ────────────────────────────────────────────────
+        "pull_quote": "Self-review is the small hinge on which large habits turn.",
+        "pull_quote_attr": "PivoxQuant \u00b7 Quarterly Desk",
+        "cannot_settle": [
+            "Tax consequences of the quarter's closed positions.",
+            "Personal liquidity events not visible in the book.",
+            "A regime shift that falls outside the 90-session sample.",
+            "Private decisions made for reasons not written down.",
+            "Any outcome of decisions not yet made.",
         ],
+        "does_record": [
+            "Ten decisions, in the order they were made.",
+            "Four diagnostic readings over the 90-session window.",
+            "Three margin notes \u2014 Sharpe, beta, turnover.",
+            "One largest single-day drawdown, with its date.",
+            "One written sign-off, to the person who made the quarter.",
+        ],
+
+        # ── P6 colophon ─────────────────────────────────────────────────
+        "data_sources": [
+            {"key": "Price observations", "note": "Alpaca Market Data (IEX consolidated)."},
+            {"key": "Corporate actions",  "note": "FMP v4 Stable."},
+            {"key": "Risk-free",          "note": "3-Month T-Bill via FRED (DGS3MO)."},
+            {"key": "Benchmark",          "note": "S&P 500 total return, with dividends."},
+        ],
+
         "disclaimer": DISCLAIMER,
     }
 
 
 def sample_year_end_letter() -> dict[str, Any]:
     today = _today()
+    year = today.year - 1
     return {
         "user_id":      SAMPLE_USER_ID,
         "user_name":    SAMPLE_USER_NAME,
-        "year":         today.year - 1,
-        "period_start": date(today.year - 1, 1, 1).isoformat(),
-        "period_end":   date(today.year - 1, 12, 31).isoformat(),
+        "year":         year,
+        "issue_number": 1,
+        "doc_ref":      "PQ-YEL-01 · v2026.04.21",
+        "period_start": date(year, 1, 1).isoformat(),
+        "period_end":   date(year, 12, 31).isoformat(),
         "generated_at": _now_iso(),
-        "opening_value": 32_000_000,
-        "closing_value": 48_500_000,
-        "ytd_return_pct":  18.7,
-        "benchmark_pct":   13.2,
-        "alpha_pct":        5.5,
-        "total_trades":    47,
-        "win_rate_pct":    63.8,
-        "sector_contribution": [
-            {"sector": "Information Technology", "trade_count": 22, "avg_return_pct":  9.1},
-            {"sector": "Semiconductors",          "trade_count": 14, "avg_return_pct": 11.4},
-            {"sector": "Communication Services",  "trade_count":  6, "avg_return_pct":  1.8},
-            {"sector": "Consumer Discretionary",  "trade_count":  3, "avg_return_pct":  0.9},
-            {"sector": "Financials",              "trade_count":  2, "avg_return_pct":  0.5},
+        # ── P1 cover KPIs (Buffett letter — 4 plain metrics)
+        "kpi_pnl":       16.8,
+        "kpi_benchmark": 11.2,
+        "kpi_alpha":      5.6,
+        "kpi_mdd":      -12.4,
+        "hero_headline": [
+            "A letter written at year's end.",
+            "Twelve months, six hundred prints, one quiet hand.",
+            "A record, not a verdict.",
         ],
-        "best_decisions": [
-            {"ticker": "NVDA",       "buy_date": "2025-03-15", "buy_price": 450.00, "sell_price": 758.10, "return_pct": 68.4},
-            {"ticker": "005930.KS",  "buy_date": "2025-07-22", "buy_price": 62_000, "sell_price": 76_900, "return_pct": 24.1},
-            {"ticker": "AAPL",       "buy_date": "2025-11-04", "buy_price": 168.20, "sell_price": None,    "return_pct": 12.6},
+        # ── P2 letter body (7 paragraphs, first-person reflective)
+        "letter_paragraphs": [
+            "This letter is not a forecast. It is a record of what happened, and — where I can manage it — a record of what I noticed while it happened. The numbers on the cover are what they are. The question worth a letter is what the numbers were made of.",
+            "The market in question moved, on the whole, as markets do — in a stretched summer, a frightened autumn, and a quiet close. The benchmark drifted upward through a corridor of minor shocks, none of which proved durable enough to name. I have nothing useful to say about the shocks. I have a little to say about what the book did in their company.",
+            "The book carried a weight in the semiconductor cohort through the first three quarters, and in the platform cohort through the fourth. The communications-and-consumer pair lagged the others by a wide margin in the second quarter, and the small adjustment made in July — a reduction of exposure, not a closure — was the cleanest single decision of the year. Two positions that had been noisy for months simply calmed. I take no credit for this. I kept the names. The names did the work.",
+            "The largest single-day drawdown arrived on March 14, a Friday, and it was 3.2%. I remember it because I was writing another letter — an unrelated one, to someone unrelated — when it printed, and the text I had been composing on a different subject became harder to finish. This is the human record that no Sharpe ratio preserves. The book was back at prior high by the following Wednesday. The other letter, I finished the next week, poorly.",
+            "What I misread, I misread with some confidence. I read one mid-cap as a story of operating leverage and missed that the story required a customer-concentration footnote I had read and promptly forgotten. The position was closed in June at a small loss. I keep the position sheet in a folder, dated, as a note to myself. Not to punish. To remember the texture of being wrong.",
+            "The habits held. Monthly rebalance on the last trading day. Reading on weekends, not weekdays. Sleep before midnight, market-side screens dark by 10pm KST. A single quiet Sunday in September I skipped the reading and paid for it on Tuesday with a decision I would not have made rested. These are not strategies. They are shelters.",
+            "Markets are weather. Portfolios are shelters. Neither makes promises. Records are all we keep.",
         ],
-        "worst_decisions": [
-            {"ticker": "TSLA",       "buy_date": "2025-05-18", "buy_price": 254.00, "sell_price": 207.80, "return_pct": -18.2},
-            {"ticker": "PYPL",       "buy_date": "2025-08-04", "buy_price":  72.40, "sell_price":  64.10, "return_pct": -11.5},
+        "margin_notes": [
+            {"eyebrow": "Sharpe",           "note": "Observed at 0.91 over the window. Not annualised into the future."},
+            {"eyebrow": "Turnover",         "note": "41%. Monthly rebalance on the last trading day, without exception."},
+            {"eyebrow": "Worst Day",        "note": "Largest single-day drawdown −3.2%, March 14. Book back at prior high by the following Wednesday."},
+            {"eyebrow": "Book composition", "note": "Seven positions held through the full year. Three entered mid-year. Two closed in June."},
         ],
-        "risk_profile":    "Moderate-Aggressive",
-        "realized_style":  "Growth-tilted with Quant overlay",
-        "consistency_score": 74,
-        "consistency_notes": (
-            "월별 수익률 표준편차 3.8%, 최대 낙폭 -11.6%. 온보딩 시 선택하신 "
-            "Moderate-Aggressive 성향과 실제 거래 패턴이 대체로 일치합니다. "
-            "다만 IT 섹터 비중이 의도보다 10%p 높았던 월이 3개월 관찰되었습니다."
+        # ── P3 equity ribbon + 12-row monthly ladder (annual sum ≈ +16.8%)
+        "equity_ribbon_pts": [
+            {"m": "Jan", "v": 100_000}, {"m": "Feb", "v": 101_800}, {"m": "Mar", "v":  98_600},
+            {"m": "Apr", "v": 103_400}, {"m": "May", "v": 106_200}, {"m": "Jun", "v": 108_900},
+            {"m": "Jul", "v": 110_400}, {"m": "Aug", "v": 112_800}, {"m": "Sep", "v": 111_900},
+            {"m": "Oct", "v": 114_600}, {"m": "Nov", "v": 116_200}, {"m": "Dec", "v": 116_800},
+        ],
+        "monthly_rows": [
+            {"month": "Jan", "pnl":  1.8, "spy":  0.9, "alpha":  0.9, "dd": -1.2, "trades": 5,
+             "sparkline_pts": [0, 0.4, 0.8, 1.2, 1.6, 1.8]},
+            {"month": "Feb", "pnl":  1.8, "spy":  1.4, "alpha":  0.4, "dd": -0.9, "trades": 4,
+             "sparkline_pts": [0, 0.5, 0.9, 1.3, 1.6, 1.8]},
+            {"month": "Mar", "pnl": -3.1, "spy": -1.8, "alpha": -1.3, "dd": -3.2, "trades": 7,
+             "sparkline_pts": [0, -0.6, -1.4, -2.2, -2.8, -3.1]},
+            {"month": "Apr", "pnl":  4.8, "spy":  2.6, "alpha":  2.2, "dd": -1.1, "trades": 3,
+             "sparkline_pts": [0, 0.8, 1.9, 3.2, 4.1, 4.8]},
+            {"month": "May", "pnl":  2.7, "spy":  1.8, "alpha":  0.9, "dd": -0.8, "trades": 4,
+             "sparkline_pts": [0, 0.6, 1.2, 1.8, 2.3, 2.7]},
+            {"month": "Jun", "pnl":  2.5, "spy":  1.4, "alpha":  1.1, "dd": -1.4, "trades": 6,
+             "sparkline_pts": [0, 0.4, 1.0, 1.6, 2.1, 2.5]},
+            {"month": "Jul", "pnl":  1.4, "spy":  1.2, "alpha":  0.2, "dd": -0.6, "trades": 2,
+             "sparkline_pts": [0, 0.3, 0.7, 1.0, 1.2, 1.4]},
+            {"month": "Aug", "pnl":  2.2, "spy":  0.8, "alpha":  1.4, "dd": -0.9, "trades": 3,
+             "sparkline_pts": [0, 0.5, 1.0, 1.5, 1.9, 2.2]},
+            {"month": "Sep", "pnl": -0.8, "spy": -1.4, "alpha":  0.6, "dd": -1.8, "trades": 5,
+             "sparkline_pts": [0, -0.2, -0.5, -0.7, -0.8, -0.8]},
+            {"month": "Oct", "pnl":  2.4, "spy":  1.4, "alpha":  1.0, "dd": -1.1, "trades": 4,
+             "sparkline_pts": [0, 0.6, 1.1, 1.7, 2.1, 2.4]},
+            {"month": "Nov", "pnl":  1.4, "spy":  1.1, "alpha":  0.3, "dd": -0.5, "trades": 2,
+             "sparkline_pts": [0, 0.4, 0.7, 1.0, 1.2, 1.4]},
+            {"month": "Dec", "pnl":  0.5, "spy":  0.8, "alpha": -0.3, "dd": -0.4, "trades": 1,
+             "sparkline_pts": [0, 0.2, 0.3, 0.4, 0.5, 0.5]},
+        ],
+        # ── P4 reflections quad (2×2 editorial)
+        "reflection_blocks": [
+            {
+                "roman": "I",
+                "title": "What I held onto",
+                "paragraph": "The positions I held through the year were held not because I was confident, but because the theses I had written down for them continued to describe the world I was in. Conviction is a noun that does poorly in public. Written theses age better.",
+                "bullets": [
+                    "The semiconductor cohort — held on the operating-leverage thesis, which stayed intact.",
+                    "The platform cohort — trimmed once in July, otherwise left alone.",
+                    "Cash at a steady 9–11% through the year — not strategy, a shelter.",
+                ],
+            },
+            {
+                "roman": "II",
+                "title": "What I let go of",
+                "paragraph": "Two positions were closed in June, both at small losses. Neither had produced a single print that surprised me on the upside for four months. I had kept them on the theory that quiet is a prelude. Quiet was just quiet.",
+                "bullets": [
+                    "A mid-cap industrial whose customer-concentration note I had read and forgotten.",
+                    "A consumer name whose thesis required a margin expansion that never arrived.",
+                    "Two commentary subscriptions that, on review, added no signal beyond the news.",
+                ],
+            },
+            {
+                "roman": "III",
+                "title": "What I got wrong",
+                "paragraph": "I read one position as a story of operating leverage and missed a footnote that was not hidden — only, I had read it once and not reread it. The position was closed at a small loss. The error worth naming is not the loss. It is the confidence. I had been sure.",
+                "bullets": [
+                    "Over-weighting a thesis I had read once and treated as digested.",
+                    "Reading weekend research on Sunday evening rather than Saturday morning.",
+                    "Confusing a quiet six weeks with a constructive six weeks.",
+                ],
+            },
+            {
+                "roman": "IV",
+                "title": "What I will keep watching",
+                "paragraph": "Nothing here is a plan for the coming year. The items below are things I mean to keep observing — not because observing them will produce a return, but because not observing them has, in the past, produced regret.",
+                "bullets": [
+                    "Whether the semiconductor operating-leverage story survives a demand normalisation.",
+                    "Whether the quiet stretches of August–September recur and how I spend them.",
+                    "Whether the monthly-rebalance discipline survives a January without a print.",
+                ],
+            },
+        ],
+        # ── P5 editorial
+        "pull_quote": (
+            "The year did not arrive. It was made, decision by small decision — "
+            "most of them unremarkable, a few regrettable, none forecast."
         ),
-        "watch_items": [
-            {"date": (today + timedelta(days=30)).isoformat(),  "label": "Fed 3월 FOMC 점도표 발표"},
-            {"date": (today + timedelta(days=45)).isoformat(),  "label": "한국 실적 시즌 개시 — 5월 공시"},
-            {"date": (today + timedelta(days=80)).isoformat(),  "label": "NVDA 실적"},
+        "pull_quote_attr": f"PivoxQuant · Year {year}",
+        "not_claimed": [
+            "A thesis for the coming year.",
+            "A blueprint for replication.",
+            "A professional service or advisory.",
+            "A guarantee of future observation quality.",
+            "Tax or legal guidance.",
         ],
-        "shareholder_letter": (
-            f"친애하는 {SAMPLE_USER_NAME}님, 올해 한 해 포트폴리오는 벤치마크를 "
-            "5.5%p 상회했습니다. 다만 IT 섹터 의존도가 높다는 점은 분산 관점에서 "
-            "보완할 필요가 있습니다. 내년에는 규율 기반 리밸런싱과 현금 비중 10% "
-            "하한을 유지하는 것을 목표로 합니다."
-        ),
+        # ── P6 colophon
+        "data_sources": [
+            {"key": "Price observations", "note": "Alpaca Market Data (IEX consolidated)."},
+            {"key": "Corporate actions",  "note": "FMP v4 Stable."},
+            {"key": "Risk-free",          "note": "3-Month T-Bill via FRED (DGS3MO)."},
+            {"key": "Benchmark",          "note": "SPY total return, with dividends."},
+        ],
+        "typeset_in": "Source Serif 4 · Geist · JetBrains Mono",
         "disclaimer": DISCLAIMER,
+        "LICENSE_NUMBER": None,
     }
 
 
 def sample_capital_allocation() -> dict[str, Any]:
     return {
-        "calc_token":    "demo-allocation-abc123",
         "user_id":       SAMPLE_USER_ID,
         "user_name":     SAMPLE_USER_NAME,
-        "cash_amount":   5_000_000.0,
-        "portfolio_ccy": "KRW",
         "generated_at":  _now_iso(),
-        "scenarios": [
-            {
-                "label":       "Scenario 1 — Diversify Existing",
-                "type":        "diversify_existing",
-                "tickers":     ["AAPL", "NVDA", "MSFT", "GOOGL", "005930.KS", "000660.KS", "035420.KS"],
-                "weights":     [0.143, 0.143, 0.143, 0.143, 0.143, 0.143, 0.142],
-                "return_cagr": 15.4,
-                "volatility":  19.8,
-                "max_dd":      -11.2,
-                "sharpe":       0.78,
-                "note":        "과거 5년 관찰 · 기존 7종목 균등 분배",
-            },
-            {
-                "label":       "Scenario 2 — New Ticker (NVDA 집중)",
-                "type":        "new_ticker",
-                "tickers":     ["NVDA"],
-                "weights":     [1.0],
-                "return_cagr": 68.4,
-                "volatility":  42.1,
-                "max_dd":      -28.3,
-                "sharpe":       1.62,
-                "note":        "과거 5년 관찰 · 단일 종목 집중",
-            },
-            {
-                "label":       "Scenario 3 — Hold Cash",
-                "type":        "cash",
-                "tickers":     [],
-                "weights":     [],
-                "return_cagr":  0.0,
-                "volatility":   0.0,
-                "max_dd":       0.0,
-                "sharpe":       None,
-                "note":        "현금 보유 · 수익률/변동성 0 가정",
-            },
-            {
-                "label":       "Scenario 4 — Dividend ETF (SCHD)",
-                "type":        "dividend_etf",
-                "tickers":     ["SCHD"],
-                "weights":     [1.0],
-                "return_cagr": 11.2,
-                "volatility":  14.6,
-                "max_dd":      -14.8,
-                "sharpe":       0.77,
-                "note":        "과거 5년 관찰 · 배당 ETF",
-            },
+        "issue_number":  1,
+        "doc_ref":       "PQ-CA-01 \u00b7 v2026.04.22",
+        "hero_headline": [
+            "Capital is attention",
+            "made durable. Every line",
+            "is a quiet sentence.",
         ],
-        "etf_whitelist": {
-            "SCHD": "Schwab U.S. Dividend Equity ETF",
-            "VYM":  "Vanguard High Dividend Yield ETF",
+        "kpis_cover": {
+            "equity_pct": 58.0, "bonds_pct": 24.0,
+            "cash_pct": 12.0,   "alt_pct": 6.0,
         },
-        "disclaimer": (
-            "본 결과는 과거 5년 가격 데이터에 기반한 통계적 관찰이며, 향후 수익률을 "
-            "보장하지 않습니다. PivoxQuant은 어떠한 배분도 권유·추천하지 않으며, "
-            "본 계산은 이용자가 직접 입력한 시나리오의 과거 사실만 요약합니다. "
-            "투자 판단과 그 결과는 전적으로 이용자 본인의 책임입니다."
-        ),
+        "months_labels": ["May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb","Mar","Apr"],
+        "allocation_stack": {
+            "equity": [54,55,56,57,57,58,58,59,60,59,58,58],
+            "bonds":  [26,26,26,25,25,25,25,24,23,24,24,24],
+            "cash":   [14,13,12,12,12,12,12,11,11,11,12,12],
+            "alt":    [ 6, 6, 6, 6, 6, 5, 5, 6, 6, 6, 6, 6],
+        },
+        "allocation_margin": {
+            "rebalances_ytd": 2, "largest_drift_pp": 3.4,
+            "target_band_pp": 5.0, "tracking_err": 1.12,
+        },
+        "ladder_rows": [
+            {"sleeve":"US Equity",       "target":35.0, "current":38.0, "drift": 3.0, "delta3m": 1.2, "delta12m": 4.8, "note":"Large-cap index + factor tilt.",  "spark":[0.50,0.52,0.54,0.56,0.58,0.60,0.61,0.63]},
+            {"sleeve":"International Eq.","target":18.0, "current":16.5, "drift":-1.5, "delta3m":-0.6, "delta12m":-1.8, "note":"Developed-market index.",          "spark":[0.50,0.52,0.52,0.51,0.50,0.49,0.48,0.48]},
+            {"sleeve":"Emerging Eq.",    "target": 5.0, "current": 3.5, "drift":-1.5, "delta3m":-0.4, "delta12m":-1.4, "note":"Broad EM index.",                 "spark":[0.50,0.50,0.49,0.48,0.47,0.46,0.45,0.44]},
+            {"sleeve":"US IG Bonds",     "target":15.0, "current":14.2, "drift":-0.8, "delta3m":-0.2, "delta12m":-1.1, "note":"Aggregate index, intermediate.",  "spark":[0.50,0.51,0.52,0.52,0.52,0.52,0.51,0.50]},
+            {"sleeve":"US HY Bonds",     "target": 5.0, "current": 5.8, "drift": 0.8, "delta3m": 0.3, "delta12m": 1.0, "note":"HY index, ex-energy.",            "spark":[0.50,0.51,0.53,0.55,0.57,0.58,0.59,0.60]},
+            {"sleeve":"TIPS",            "target": 4.0, "current": 4.1, "drift": 0.1, "delta3m": 0.0, "delta12m": 0.2, "note":"Short-duration TIPS.",            "spark":[0.50,0.50,0.50,0.51,0.51,0.51,0.51,0.52]},
+            {"sleeve":"Cash",            "target":10.0, "current":12.0, "drift": 2.0, "delta3m": 0.4, "delta12m": 1.2, "note":"Money market + short T-bills.",   "spark":[0.50,0.52,0.54,0.56,0.57,0.58,0.59,0.60]},
+            {"sleeve":"Real Assets",     "target": 6.0, "current": 5.9, "drift":-0.1, "delta3m": 0.0, "delta12m":-0.3, "note":"REIT index + gold sleeve.",       "spark":[0.50,0.50,0.49,0.48,0.48,0.48,0.49,0.49]},
+        ],
+        "contribution_bars": [
+            {"n":"US Eq.",       "v": 6.2},
+            {"n":"Intl Eq.",     "v": 1.1},
+            {"n":"EM Eq.",       "v":-0.3},
+            {"n":"US IG",        "v": 0.6},
+            {"n":"US HY",        "v": 0.9},
+            {"n":"TIPS",         "v": 0.2},
+            {"n":"Cash",         "v": 0.4},
+            {"n":"Real Assets",  "v": 0.8},
+        ],
+        "drift_lines": {
+            "equity": [0.0,0.2,0.6,0.8,1.2,1.6,2.0,2.4,2.8,2.6,2.4,3.0],
+            "bonds":  [0.0,-0.2,-0.4,-0.4,-0.6,-0.8,-1.0,-1.2,-1.4,-1.2,-1.0,-0.8],
+            "cash":   [0.0,0.0,-0.2,-0.4,-0.6,-0.8,-1.0,-1.2,-1.4,-1.4,-1.4,-1.2],
+            "alt":    [0.0,0.0,0.0,0.0,0.0,-0.2,-0.2,0.0,0.0,0.0,0.0,-0.1],
+        },
+        "rebalance_events": [
+            {"m": 2, "sl":"US Eq.",  "dir":"trim", "amt":1.2},
+            {"m": 5, "sl":"US HY",   "dir":"add",  "amt":0.8},
+            {"m": 8, "sl":"Cash",    "dir":"add",  "amt":1.4},
+            {"m":10, "sl":"Intl Eq.","dir":"trim", "amt":0.6},
+            {"m":11, "sl":"Bonds",   "dir":"add",  "amt":0.9},
+        ],
+        "portfolio_vs_6040_p": [0.0,0.4,0.9,1.2,1.8,2.2,2.6,3.0,3.6,4.1,4.6,5.2],
+        "portfolio_vs_6040_b": [0.0,0.5,1.1,1.4,1.9,2.2,2.5,2.8,3.4,3.8,4.2,4.6],
+        "allocation_notes": [
+            "Weights are month-end marks.",
+            "The 60/40 benchmark uses SPY/AGG, total return.",
+            "Real assets combine REIT index and a 2% gold sleeve.",
+            "Alternatives held for diversification.",
+            "Rebalance events are observed, not prescribed by the document.",
+        ],
+        "pull_quote": "An allocation is not a verdict on the future \u2014 it is the shelter you choose before the weather changes.",
+        "pull_quote_attribution": "PivoxQuant Allocation Desk",
+        "disclaimer": DISCLAIMER,
     }
 
 
 def sample_insider_mirror() -> dict[str, Any]:
-    today = _today()
     return {
         "user_id":      SAMPLE_USER_ID,
         "user_name":    SAMPLE_USER_NAME,
-        "period_label": f"{(today - timedelta(days=7)).isoformat()} — {today.isoformat()}",
+        "period_label": "April 2026",
+        "period_end":   "2026-04-22",
         "generated_at": _now_iso(),
-        "transactions": [
-            {
-                "transaction_date": (today - timedelta(days=2)).isoformat(),
-                "ticker":       "NVDA",
-                "company":      "NVIDIA Corp.",
-                "insider":      "Jensen Huang",
-                "relationship": "CEO",
-                "direction":    "sell",
-                "transaction_code": "S",
-                "shares":       120_000,
-                "price":        910.42,
-                "value":        109_250_400,
-                "currency":     "USD",
-                "region":       "US",
-                "source":       "SEC Form 4",
-                "disclosure_url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001045810",
-            },
-            {
-                "transaction_date": (today - timedelta(days=5)).isoformat(),
-                "ticker":       "005930.KS",
-                "company":      "삼성전자",
-                "insider":      "이재용",
-                "relationship": "Chairman",
-                "direction":    "buy",
-                "transaction_code": "P",
-                "shares":       300_000,
-                "price":        74_500,
-                "value":        22_350_000_000,
-                "currency":     "KRW",
-                "region":       "KR",
-                "source":       "DART",
-                "disclosure_url": "https://dart.fss.or.kr/dsaf001/main.do",
-            },
+        "issue_number": 4,
+        "doc_ref":      "PQ-IM-04 \u00b7 v2026.04.22",
+        "hero_headline": [
+            "Insiders leave paperwork.",
+            "The market reads it",
+            "after the fact.",
         ],
-        "held_overlap": ["NVDA", "005930.KS"],
+        "kpis_cover": {
+            "filings_observed": 142,
+            "net_buy_companies": 38,
+            "net_sell_companies": 54,
+            "top_sector": "Technology",
+        },
+        "filings_timeline": [
+            {"d":1,"buy":2,"sell":1},{"d":2,"buy":1,"sell":3},{"d":3,"buy":4,"sell":2},
+            {"d":4,"buy":2,"sell":4},{"d":5,"buy":1,"sell":6},{"d":6,"buy":3,"sell":2},
+            {"d":7,"buy":5,"sell":3},{"d":8,"buy":2,"sell":7},{"d":9,"buy":1,"sell":5},
+            {"d":10,"buy":4,"sell":3},{"d":11,"buy":2,"sell":4},{"d":12,"buy":6,"sell":2},
+            {"d":13,"buy":3,"sell":5},{"d":14,"buy":1,"sell":8},{"d":15,"buy":4,"sell":3},
+            {"d":16,"buy":2,"sell":4},{"d":17,"buy":5,"sell":2},{"d":18,"buy":3,"sell":6},
+            {"d":19,"buy":1,"sell":5},{"d":20,"buy":4,"sell":3},{"d":21,"buy":2,"sell":7},
+            {"d":22,"buy":6,"sell":2},{"d":23,"buy":3,"sell":4},{"d":24,"buy":1,"sell":5},
+            {"d":25,"buy":4,"sell":3},{"d":26,"buy":2,"sell":6},{"d":27,"buy":5,"sell":3},
+            {"d":28,"buy":3,"sell":7},{"d":29,"buy":2,"sell":4},{"d":30,"buy":4,"sell":2},
+        ],
+        "filings_margin": {
+            "rule_10b5_1_share": 62.4,
+            "avg_filing_lag_d":  1.8,
+            "form4_pct":         88.0,
+            "krx_share_pct":      4.2,
+        },
+        "filings": [
+            {"tkr":"NVDA",  "filer":"Huang, Jen-Hsun",     "role":"CEO / Director", "form":"Form 4",   "action":"sell", "shares": 120000, "value":137774400, "date":"2026-04-18", "spark":[0.50,0.48,0.47,0.46,0.44,0.43,0.41,0.40]},
+            {"tkr":"META",  "filer":"Zuckerberg, Mark",    "role":"CEO / 10% Owner","form":"Form 4",   "action":"sell", "shares": 200000, "value":124200000, "date":"2026-04-15", "spark":[0.50,0.49,0.48,0.47,0.46,0.45,0.43,0.42]},
+            {"tkr":"MSFT",  "filer":"Nadella, Satya",      "role":"CEO",            "form":"Form 4",   "action":"sell", "shares":  40000, "value": 17641200, "date":"2026-04-17", "spark":[0.50,0.49,0.48,0.48,0.47,0.46,0.46,0.45]},
+            {"tkr":"TSLA",  "filer":"Taneja, Vaibhav",     "role":"CFO",            "form":"Form 4",   "action":"sell", "shares":  15000, "value":  3492000, "date":"2026-04-16", "spark":[0.50,0.48,0.47,0.45,0.44,0.42,0.41,0.40]},
+            {"tkr":"AAPL",  "filer":"Maestri, Luca",       "role":"CFO",            "form":"Form 4",   "action":"buy",  "shares":   5000, "value":  1074400, "date":"2026-04-14", "spark":[0.50,0.51,0.52,0.54,0.56,0.58,0.60,0.62]},
+            {"tkr":"AMZN",  "filer":"Olsavsky, Brian",     "role":"CFO",            "form":"Form 4",   "action":"sell", "shares":   8000, "value":  1580000, "date":"2026-04-13", "spark":[0.50,0.50,0.49,0.49,0.48,0.47,0.47,0.46]},
+            {"tkr":"GOOGL", "filer":"Porat, Ruth",         "role":"President",      "form":"Form 4",   "action":"sell", "shares":  12000, "value":  2014800, "date":"2026-04-11", "spark":[0.50,0.49,0.48,0.48,0.47,0.47,0.46,0.46]},
+            {"tkr":"AVGO",  "filer":"Tan, Hock E.",        "role":"CEO",            "form":"Form 144", "action":"sell", "shares":   4000, "value":  5496000, "date":"2026-04-10", "spark":[0.50,0.49,0.49,0.48,0.47,0.47,0.46,0.45]},
+            {"tkr":"BRK.B", "filer":"Buffett, Warren",     "role":"CEO / Chair",    "form":"Form 4",   "action":"buy",  "shares":   2500, "value":  1092500, "date":"2026-04-09", "spark":[0.50,0.51,0.52,0.53,0.54,0.55,0.56,0.57]},
+            {"tkr":"005930","filer":"Lee, Jae-Yong",       "role":"Chair",          "form":"DART",     "action":"buy",  "shares": 100000, "value":  5680000, "date":"2026-04-07", "spark":[0.50,0.50,0.51,0.52,0.53,0.54,0.55,0.56]},
+        ],
+        "sector_filings": [
+            {"s":"Technology",   "v":42},{"s":"Financials",   "v":24},
+            {"s":"Healthcare",   "v":18},{"s":"Cons. Disc.",  "v":16},
+            {"s":"Industrials",  "v":14},{"s":"Comm.",        "v":10},
+            {"s":"Staples",      "v": 8},{"s":"Energy",       "v": 6},
+            {"s":"Materials",    "v": 2},{"s":"Real Estate",  "v": 1},
+            {"s":"Utilities",    "v": 1},
+        ],
+        "net_buy_top": [
+            {"t":"AAPL",  "v": 1074400},{"t":"BRK.B", "v": 1092500},
+            {"t":"005930","v": 5680000},{"t":"HD",    "v":  840000},
+            {"t":"UNH",   "v":  620000},{"t":"JPM",   "v":  540000},
+            {"t":"KO",    "v":  420000},{"t":"PG",    "v":  380000},
+            {"t":"COST",  "v":  312000},{"t":"LLY",   "v":  282000},
+        ],
+        "net_sell_top": [
+            {"t":"NVDA",  "v":137774400},{"t":"META",  "v":124200000},
+            {"t":"MSFT",  "v": 17641200},{"t":"AVGO",  "v":  5496000},
+            {"t":"TSLA",  "v":  3492000},{"t":"GOOGL", "v":  2014800},
+            {"t":"AMZN",  "v":  1580000},{"t":"ORCL",  "v":  1220000},
+            {"t":"CRM",   "v":   960000},{"t":"NFLX",  "v":   780000},
+        ],
+        "form_types": [
+            {"f":"Form 4",   "v":125, "c":"#0A0A0A"},
+            {"f":"Form 144", "v": 10, "c":"#8B6F47"},
+            {"f":"Form 5",   "v":  4, "c":"#A84C4C"},
+            {"f":"DART",     "v":  3, "c":"#6B6B6B"},
+        ],
+        "reading_notes": [
+            "Filings are public record; no action is advised.",
+            "Insiders may file for many reasons \u2014 liquidity, diversification, option expiry.",
+            "Causation is not claimed by this document.",
+            "Rule 10b5-1 plans are pre-arranged; the tape does not separate them in the headline count.",
+            "Form 4 requires filing within two business days of the transaction.",
+            "KRX DART filings are merged in where available.",
+        ],
+        "pull_quote": "Insider activity is a confession made in public \u2014 legible, late, and only ever partial.",
+        "pull_quote_attribution": "PivoxQuant Research Desk",
         "disclaimer":  DISCLAIMER,
     }
 
@@ -517,11 +1056,120 @@ def sample_self_audit() -> dict[str, Any]:
         "period_start":  (today - timedelta(days=90)).isoformat(),
         "period_end":    today.isoformat(),
         "generated_at":  _now_iso(),
+        "issue_number":  5,
+        "doc_ref":       "PQ-SA-05 · v2026.04.21",
+        "review_date":   today.isoformat(),
+        "audit_score":   8.2,
+        "red_flags":     0,
+        "yellow_flags":  2,
+        "positions_reviewed": 14,
+        "journal_entries":    28,
+        "audit_duration_min": 38,
+        "prior_audit_score":  "7.8",
+        "hero_headline": [
+            "Ten questions.",
+            "Ten answers, honest",
+            "or otherwise.",
+        ],
         "trades_total":   28,
         "wins":           18,
         "losses":         10,
         "win_rate_pct":   64.3,
         "avg_return_pct":  3.7,
+        "audit_letter": [
+            (
+                "This is the fifth quarterly audit of the book, and the first "
+                "to open with no red flag. Position sizing held inside the "
+                "self-set bound on every day of the quarter; the largest "
+                "single name peaked at 9.2% of NAV on one session, still "
+                "below the 10% ceiling."
+            ),
+            (
+                "Cash reserve sat between 14% and 22% throughout, comfortably "
+                "above the self-set floor of 10%. Trading frequency ran at "
+                "1.8 closes per week, near the trailing four-quarter "
+                "baseline. The observation journal carries an entry for every "
+                "closed lot, with one gap of two sessions noted in early March."
+            ),
+            (
+                "Two yellow flags are opened this quarter. First, the "
+                "watchlist has grown to 41 names without a pruning pass. "
+                "Second, dividend receipts were posted to the ledger within "
+                "two weeks rather than the standard three sessions."
+            ),
+            (
+                "The book's pattern this quarter is one of quiet composure. "
+                "Mistakes were of omission, not of commission; none of them "
+                "were structural."
+            ),
+            (
+                "This letter is a self-reading of the account's surface. It "
+                "names no future and claims no insight beyond what the "
+                "statements already quietly confirm."
+            ),
+        ],
+        "checklist": [
+            {"q": "Is position sizing within observed bounds?",
+             "a": "Yes — largest single position peaked at 9.2% of NAV.",
+             "flag": "green", "note": "Inside the 10% self-set ceiling on every session."},
+            {"q": "Has any single position exceeded 10% of NAV?",
+             "a": "No exceedance recorded.",
+             "flag": "green", "note": "Concentration stayed below the self-set bound."},
+            {"q": "Are stop-observation levels documented?",
+             "a": "Documented for all 14 open positions.",
+             "flag": "green", "note": "Journal entries tagged with level and rationale."},
+            {"q": "Is cash reserve above the self-set threshold?",
+             "a": "Yes — between 14% and 22% across the quarter.",
+             "flag": "green", "note": "Floor of 10% held comfortably."},
+            {"q": "Has trading frequency increased beyond baseline?",
+             "a": "1.8 closes per week, near trailing 4Q baseline of 1.7.",
+             "flag": "green", "note": "No meaningful acceleration observed."},
+            {"q": "Are observed losses documented with context?",
+             "a": "Eight closed lots at a loss; each with a journal note.",
+             "flag": "green", "note": "Context includes thesis, exit reason, lesson field."},
+            {"q": "Has the watchlist been pruned this quarter?",
+             "a": "Watchlist at 41 names; last pruning pass 140 days ago.",
+             "flag": "yellow", "note": "Pass overdue — schedule in the next fortnight."},
+            {"q": "Are broker statements reconciled?",
+             "a": "Reconciled to the cent through the quarter-end cutoff.",
+             "flag": "green", "note": "Alpaca and KIS statements matched to the ledger."},
+            {"q": "Are dividend receipts recorded?",
+             "a": "Eight events recorded, two with posting lag beyond three sessions.",
+             "flag": "yellow", "note": "Recording lag is a small process hygiene item."},
+            {"q": "Has the observation journal been updated?",
+             "a": "28 entries this quarter; one two-session gap in early March.",
+             "flag": "green", "note": "Gap noted and closed with a retrospective entry."},
+        ],
+        "flag_dist": {"green": 8, "yellow": 2, "red": 0},
+        "score_trend": [7.0, 7.4, 7.8, 8.2],
+        "cat_flags": [
+            {"cat": "Process",     "count": 2},
+            {"cat": "Sizing",      "count": 1},
+            {"cat": "Recording",   "count": 1},
+            {"cat": "Watchlist",   "count": 1},
+            {"cat": "Reconcile",   "count": 0},
+        ],
+        "audit_duration": [
+            {"cat": "Review",   "min": 12},
+            {"cat": "Ledger",   "min":  8},
+            {"cat": "Letter",   "min": 10},
+            {"cat": "Flagging", "min":  8},
+        ],
+        "pull_quote": (
+            "An audit is a mirror held quietly — not a judge's bench."
+        ),
+        "pull_quote_attribution": "The Audit Voice",
+        "not_verified": [
+            {"category": "Tax correctness",       "detail": "Filings, withholding, and allowable deductions sit outside this ladder."},
+            {"category": "Regulatory compliance", "detail": "Broker-side rule compliance is assumed, not checked row by row."},
+            {"category": "Future conduct",        "detail": "A self-audit records the quarter past, never the one ahead."},
+            {"category": "Personal integrity",    "detail": "Honesty is a prerequisite of the exercise, not its output."},
+            {"category": "Market outcomes",       "detail": "The account owns the decisions; the market owns the weather."},
+        ],
+        "data_sources": ["Broker statements", "Observation journal", "Rebalance log"],
+        "typeset_in": "Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR",
+        "engine_note": "Historical record only. Quarterly self-observation ladder",
+        "LICENSE_NUMBER": None,
         "best_decisions": [
             {"ticker": "NVDA",       "buy_date": (today - timedelta(days=68)).isoformat(), "buy_price": 612.00, "sell_price": 728.40, "return_pct":  19.0},
             {"ticker": "005930.KS",  "buy_date": (today - timedelta(days=52)).isoformat(), "buy_price": 72_000, "sell_price": None,    "return_pct":  11.2},
@@ -532,7 +1180,7 @@ def sample_self_audit() -> dict[str, Any]:
             {"ticker": "035420.KS",  "buy_date": (today - timedelta(days=20)).isoformat(), "buy_price": 210_000, "sell_price": None,    "return_pct":  -6.1},
         ],
         "pattern_summary": (
-            "실적 직후 48시간 이내 매매의 승률은 72%로 관찰됩니다. 반면 뉴스 단독 "
+            "실적 직후 48시간 이내 매매의 승률은 72%로 관찰됩니다. 뉴스 단독 "
             "근거 매매는 41%로 체계적으로 낮았습니다. 손절선 이탈 후에도 홀딩한 "
             "포지션의 평균 손실이 -8.2%로 기록되었습니다."
         ),
@@ -546,9 +1194,104 @@ def sample_burn_rate() -> dict[str, Any]:
         "user_id":        SAMPLE_USER_ID,
         "user_name":      SAMPLE_USER_NAME,
         "period_label":   today.strftime("%Y-%m"),
+        "period_label_long": today.strftime("%B %Y"),
         "period_start":   today.replace(day=1).isoformat(),
         "period_end":     today.isoformat(),
         "generated_at":   _now_iso(),
+        "issue_number":   12,
+        "doc_ref":        "PQ-BR-12 · v2026.04.21",
+        "hero_headline": [
+            "A slow arithmetic.",
+            "Money walks out,",
+            "seldom in crowds.",
+        ],
+        # Personal household burn (new v2 editorial ledger)
+        "monthly_burn_usd":     2480,
+        "runway_months":          32,
+        "savings_rate_pct":     62.0,
+        "fixed_cost_ratio_pct": 41.0,
+        "housing_share_pct":    48,
+        "yoy_burn_pct":       "+3.2",
+        "variance_usd":       "180",
+        "burn_series": [
+            {"m": "May", "housing": 1180, "food": 420, "transport": 210, "leisure": 310, "other": 240},
+            {"m": "Jun", "housing": 1180, "food": 380, "transport": 240, "leisure": 360, "other": 210},
+            {"m": "Jul", "housing": 1180, "food": 460, "transport": 220, "leisure": 520, "other": 180},
+            {"m": "Aug", "housing": 1180, "food": 470, "transport": 200, "leisure": 480, "other": 220},
+            {"m": "Sep", "housing": 1180, "food": 390, "transport": 230, "leisure": 290, "other": 260},
+            {"m": "Oct", "housing": 1180, "food": 420, "transport": 250, "leisure": 310, "other": 240},
+            {"m": "Nov", "housing": 1180, "food": 450, "transport": 270, "leisure": 380, "other": 280},
+            {"m": "Dec", "housing": 1180, "food": 520, "transport": 320, "leisure": 480, "other": 340},
+            {"m": "Jan", "housing": 1180, "food": 440, "transport": 280, "leisure": 220, "other": 240},
+            {"m": "Feb", "housing": 1180, "food": 410, "transport": 230, "leisure": 240, "other": 220},
+            {"m": "Mar", "housing": 1180, "food": 430, "transport": 260, "leisure": 280, "other": 230},
+            {"m": "Apr", "housing": 1180, "food": 420, "transport": 240, "leisure": 360, "other": 280},
+        ],
+        "burn_prose": [
+            (
+                "Twelve months of burn sit between $2,260 and $3,100, with the "
+                "median close to $2,480. Housing runs as the invariant base — "
+                "unchanged over the year, so a flat bronze band at the bottom "
+                "of the stack."
+            ),
+            (
+                "Seasonality arrives in leisure and, to a lesser extent, food. "
+                "The December lift is familiar and benign; January's quiet "
+                "close is equally familiar. The shape of the year is a rhythm, "
+                "not a trend."
+            ),
+        ],
+        "cat_rows": [
+            {"cat": "Housing",       "this": 1180, "last": 1180, "avg3": 1180, "yoy":  0.0, "spark": [0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50]},
+            {"cat": "Food",          "this":  420, "last":  430, "avg3":  420, "yoy":  4.2, "spark": [0.38, 0.42, 0.40, 0.44, 0.48, 0.46, 0.50, 0.42]},
+            {"cat": "Transport",     "this":  240, "last":  260, "avg3":  243, "yoy": -2.1, "spark": [0.40, 0.48, 0.50, 0.52, 0.46, 0.44, 0.42, 0.40]},
+            {"cat": "Leisure",       "this":  360, "last":  280, "avg3":  293, "yoy":  8.4, "spark": [0.28, 0.32, 0.36, 0.40, 0.44, 0.48, 0.54, 0.62]},
+            {"cat": "Other",         "this":  280, "last":  230, "avg3":  250, "yoy":  6.2, "spark": [0.40, 0.42, 0.46, 0.44, 0.48, 0.50, 0.54, 0.56]},
+            {"cat": "Subscriptions", "this":   84, "last":   78, "avg3":   80, "yoy": 12.0, "spark": [0.30, 0.34, 0.36, 0.38, 0.40, 0.42, 0.46, 0.52]},
+            {"cat": "Utilities",     "this":  152, "last":  148, "avg3":  150, "yoy":  1.3, "spark": [0.45, 0.46, 0.48, 0.50, 0.48, 0.50, 0.52, 0.50]},
+            {"cat": "Health",        "this":  118, "last":   84, "avg3":  102, "yoy":  4.0, "spark": [0.30, 0.32, 0.34, 0.40, 0.42, 0.46, 0.50, 0.54]},
+        ],
+        "share_quad": [
+            {"n": "Housing",   "v": 1180},
+            {"n": "Food",      "v":  420},
+            {"n": "Transport", "v":  240},
+            {"n": "Leisure",   "v":  360},
+            {"n": "Other",     "v":  280},
+        ],
+        "fixed_variable": [
+            {"m": "May", "fix": 1332, "var":  958},
+            {"m": "Jun", "fix": 1332, "var":  958},
+            {"m": "Jul", "fix": 1332, "var": 1288},
+            {"m": "Aug", "fix": 1332, "var": 1218},
+            {"m": "Sep", "fix": 1332, "var":  828},
+            {"m": "Oct", "fix": 1332, "var":  868},
+            {"m": "Nov", "fix": 1332, "var": 1078},
+            {"m": "Dec", "fix": 1332, "var": 1328},
+            {"m": "Jan", "fix": 1332, "var":  848},
+            {"m": "Feb", "fix": 1332, "var":  768},
+            {"m": "Mar", "fix": 1332, "var":  868},
+            {"m": "Apr", "fix": 1332, "var": 1088},
+        ],
+        "runway_scenarios": {
+            "base":  [32, 32, 31, 31, 30, 30, 29, 28, 28, 27, 27, 26],
+            "plus":  [32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21],
+            "minus": [32, 32, 32, 32, 32, 32, 33, 33, 33, 34, 34, 34],
+        },
+        "save_rate_series": [58, 61, 63, 62, 65, 64, 60, 55, 62, 64, 63, 62],
+        "pull_quote": "Frugality is not a strategy. It is the floor on which every strategy stands.",
+        "pull_quote_attribution": "The Ledger Voice",
+        "not_verified": [
+            {"category": "Tax deductibility",       "detail": "Allowability of line items under local tax code sits outside this ledger."},
+            {"category": "Insurance coverage",      "detail": "Protection against unrecorded contingencies is a separate conversation."},
+            {"category": "Lifestyle inflation",     "detail": "Upward drift in baseline spending is a year-over-year reading, not a monthly one."},
+            {"category": "Debt servicing",          "detail": "Obligations held outside the household ledger are not included here."},
+            {"category": "Life events",             "detail": "Planned or unplanned events will redraw the stack overnight."},
+        ],
+        "data_sources": ["Bank statements", "Credit card statements", "Manual ledger", "Budget app export"],
+        "typeset_in": "Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR",
+        "engine_note": "Historical record only. Household burn ledger",
+        "LICENSE_NUMBER": None,
+        # Legacy trading-burn fields retained for back-compat callers.
         "trades_total":   18,
         "notional_total": 32_500_000,
         "commission_total":  82_000,
@@ -574,169 +1317,495 @@ def sample_credit_rating() -> dict[str, Any]:
         "user_name":    SAMPLE_USER_NAME,
         "as_of":        today.isoformat(),
         "generated_at": _now_iso(),
-        "diversification":       {"score": 72, "weight": 0.25, "note": "7종목 / 5섹터"},
-        "liquidity":             {"score": 88, "weight": 0.15, "note": "대형주 비중 94%"},
-        "risk_adjusted_return":  {"score": 81, "weight": 0.30, "note": "Sharpe 1.42"},
-        "drawdown_discipline":   {"score": 68, "weight": 0.20, "note": "MDD -11.6%"},
-        "cash_buffer":           {"score": 62, "weight": 0.10, "note": "현금 12.3%"},
-        "composite_score":       76,
-        "grade":                 "A",
-        "prev_grade":            "BBB",
-        "change":                "upgrade",
-        "factor_details": [
-            {"name": "분산",           "weight": 0.25, "score": 72, "note": "섹터 5개, 상위 비중 42%"},
-            {"name": "유동성",          "weight": 0.15, "score": 88, "note": "평균 거래대금 $1.2B"},
-            {"name": "리스크 조정 수익", "weight": 0.30, "score": 81, "note": "Sharpe 1.42 / Sortino 1.88"},
-            {"name": "낙폭 규율",        "weight": 0.20, "score": 68, "note": "MDD -11.6% 재진입 시간 24일"},
-            {"name": "현금 버퍼",        "weight": 0.10, "score": 62, "note": "현금 12.3% 유지"},
+        "issue_number": 2,
+        "doc_ref":      "PQ-CR-02 \u00b7 v2026.04.22",
+        "hero_headline": [
+            "Credit is an obligation",
+            "to repay. Ratings are",
+            "the weather around it.",
         ],
-        "position_count": 7,
+        "kpis_cover": {
+            "avg_rating": "A-",
+            "ig_share_pct": 78.0,
+            "hy_share_pct": 22.0,
+            "weighted_spread_bps": 185,
+        },
+        "rating_distribution": [
+            {"g": "AAA", "w":  4.0},
+            {"g": "AA",  "w": 10.0},
+            {"g": "A",   "w": 28.0},
+            {"g": "BBB", "w": 36.0},
+            {"g": "BB",  "w": 12.0},
+            {"g": "B",   "w":  6.0},
+            {"g": "CCC", "w":  3.0},
+            {"g": "CC",  "w":  0.6},
+            {"g": "C",   "w":  0.3},
+            {"g": "D",   "w":  0.1},
+        ],
+        "rating_margin": {
+            "upgrades_24m": 3, "downgrades_24m": 1,
+            "watch_neg": 2, "watch_pos": 1,
+        },
+        "spread_prose": [
+            "The book clusters tightly around the A and BBB rungs.",
+            "Below the dashed divider, the BB rung carries 12%.",
+        ],
+        "positions": [
+            {"sym":"US-TSY-10Y",     "issuer":"U.S. Treasury",      "rating":"AAA", "weight":12.0, "ytm":4.20, "dur":8.4, "spread":  0, "spark":[0.50,0.52,0.54,0.56,0.58,0.60,0.62,0.64]},
+            {"sym":"MSFT 2.52 2031", "issuer":"Microsoft",          "rating":"AAA", "weight": 8.0, "ytm":4.65, "dur":6.2, "spread": 45, "spark":[0.50,0.51,0.53,0.55,0.57,0.58,0.60,0.61]},
+            {"sym":"AAPL 3.35 2029", "issuer":"Apple",              "rating":"AA",  "weight": 7.2, "ytm":4.78, "dur":4.9, "spread": 58, "spark":[0.50,0.52,0.54,0.55,0.57,0.59,0.60,0.62]},
+            {"sym":"JNJ 2.90 2028",  "issuer":"Johnson & J.",       "rating":"AA",  "weight": 6.8, "ytm":4.82, "dur":4.1, "spread": 62, "spark":[0.50,0.51,0.53,0.55,0.56,0.58,0.60,0.61]},
+            {"sym":"GS 4.25 2030",   "issuer":"Goldman Sachs",      "rating":"A",   "weight":10.4, "ytm":5.12, "dur":5.6, "spread": 92, "spark":[0.50,0.52,0.55,0.57,0.60,0.62,0.64,0.65]},
+            {"sym":"F 5.40 2029",    "issuer":"Ford Motor Co.",     "rating":"BBB", "weight":11.2, "ytm":5.88, "dur":4.3, "spread":168, "spark":[0.50,0.52,0.54,0.57,0.60,0.64,0.66,0.69]},
+            {"sym":"T 4.90 2030",    "issuer":"AT&T",               "rating":"BBB", "weight": 9.6, "ytm":5.64, "dur":5.2, "spread":144, "spark":[0.50,0.51,0.53,0.55,0.58,0.60,0.62,0.63]},
+            {"sym":"CCL 6.00 2029",  "issuer":"Carnival",           "rating":"BB",  "weight": 6.4, "ytm":7.20, "dur":3.8, "spread":300, "spark":[0.50,0.52,0.54,0.56,0.59,0.62,0.66,0.68]},
+            {"sym":"RIG 7.50 2031",  "issuer":"Transocean",         "rating":"B",   "weight": 4.2, "ytm":9.12, "dur":4.4, "spread":492, "spark":[0.50,0.53,0.55,0.58,0.62,0.66,0.70,0.73]},
+            {"sym":"UHC 8.00 2028",  "issuer":"Utility Holdings",   "rating":"CCC", "weight": 2.4, "ytm":11.40,"dur":3.2, "spread":720, "spark":[0.50,0.52,0.56,0.60,0.65,0.70,0.74,0.78]},
+        ],
+        "credit_curve": [
+            {"r":"AAA","s": 22},{"r":"AA","s": 48},{"r":"A","s": 92},{"r":"BBB","s":164},
+            {"r":"BB","s":310},{"r":"B","s":492},{"r":"CCC","s":720},
+        ],
+        "duration_histogram": [
+            {"b":"0-2", "w": 8.0},{"b":"2-4", "w":22.0},{"b":"4-6", "w":32.0},
+            {"b":"6-8", "w":18.0},{"b":"8-10","w":12.0},{"b":"10+", "w": 8.0},
+        ],
+        "rating_migration": [
+            {"k":"Stable",    "v": 9, "c":"#8B6F47"},
+            {"k":"Upgraded",  "v": 3, "c":"#8B6F47"},
+            {"k":"Downgraded","v": 1, "c":"#A84C4C"},
+            {"k":"Withdrawn", "v": 1, "c":"#8a8a8a"},
+        ],
+        "sector_concentration": [
+            {"s":"Financials",   "w":24.0},{"s":"Treasury",     "w":18.0},
+            {"s":"Technology",   "w":14.0},{"s":"Healthcare",   "w":12.0},
+            {"s":"Industrials",  "w":10.0},{"s":"Energy",       "w": 8.0},
+            {"s":"Cons. Disc.",  "w": 6.0},{"s":"Other",        "w": 8.0},
+        ],
+        "reading_notes": [
+            "Ratings are observations from Moody's, S&P, and Fitch.",
+            "OAS values from FINRA TRACE tape, end-of-day mid marks.",
+            "Duration computed on modified basis.",
+            "IG/HY line at BBB-/Baa3 per agency convention.",
+            "Migrations are counted per issuer.",
+        ],
+        "pull_quote": "A credit rating is a letter the market writes about itself \u2014 read with interest, never as instruction.",
+        "pull_quote_attribution": "PivoxQuant Credit Desk",
+        "position_count": 10,
         "disclaimer":     DISCLAIMER,
     }
 
 
 def sample_dividend_income() -> dict[str, Any]:
     today = _today()
-    month_start = today.replace(day=1)
     return {
         "user_id":      SAMPLE_USER_ID,
         "user_name":    SAMPLE_USER_NAME,
-        "month_label":  month_start.strftime("%Y-%m"),
-        "period_start": month_start.isoformat(),
-        "period_end":   today.isoformat(),
-        "next_month_label": (month_start.replace(day=28) + timedelta(days=4)).strftime("%Y-%m"),
+        "month_label":  "April 2026",
         "generated_at": _now_iso(),
-        "fx_rate":      1356.2,
-        "received_rows": [
-            {"ticker": "AAPL",       "shares": 12, "per_share": 0.2400,   "ex_dates": [(today - timedelta(days=10)).isoformat()], "ccy": "USD", "gross":   2.88},
-            {"ticker": "MSFT",       "shares":  8, "per_share": 0.7500,   "ex_dates": [(today - timedelta(days=18)).isoformat()], "ccy": "USD", "gross":   6.00},
-            {"ticker": "005930.KS",  "shares": 50, "per_share": 361.0000, "ex_dates": [(today - timedelta(days=22)).isoformat()], "ccy": "KRW", "gross": 18_050},
+        "issue_number": 4,
+        "doc_ref":      "PQ-DI-04 \u00b7 v2026.04.22",
+        "hero_headline": [
+            "Dividends are slow letters.",
+            "Written quarterly,",
+            "opened monthly.",
         ],
-        "received_totals": {"gross_usd": 8.88, "gross_krw": 30_100},
-        "position_count": 7,
-        "monthly_series": [
-            {"label": "2025-05", "gross_usd":  4.10, "gross_krw":  5_400},
-            {"label": "2025-06", "gross_usd":  5.40, "gross_krw":  7_300},
-            {"label": "2025-07", "gross_usd":  6.20, "gross_krw":  8_300},
-            {"label": "2025-08", "gross_usd":  5.80, "gross_krw":  7_900},
-            {"label": "2025-09", "gross_usd":  6.50, "gross_krw":  8_800},
-            {"label": "2025-10", "gross_usd":  7.20, "gross_krw":  9_700},
-            {"label": "2025-11", "gross_usd":  6.90, "gross_krw":  9_300},
-            {"label": "2025-12", "gross_usd":  7.80, "gross_krw": 10_500},
-            {"label": "2026-01", "gross_usd":  7.20, "gross_krw":  9_700},
-            {"label": "2026-02", "gross_usd":  8.10, "gross_krw": 10_900},
-            {"label": "2026-03", "gross_usd":  8.40, "gross_krw": 11_400},
-            {"label": "2026-04", "gross_usd":  8.88, "gross_krw": 12_040},
+        "kpis_cover": {
+            "ytd_usd": 3240, "monthly_usd": 412,
+            "yield_pct": 2.8, "yoy_growth_pct": 6.4,
+        },
+        "monthly_bars": [
+            {"m":"May","v":172},{"m":"Jun","v":318},{"m":"Jul","v":164},
+            {"m":"Aug","v":242},{"m":"Sep","v":188},{"m":"Oct","v":272},
+            {"m":"Nov","v":196},{"m":"Dec","v":412},{"m":"Jan","v":214},
+            {"m":"Feb","v":324},{"m":"Mar","v":226},{"m":"Apr","v":412},
         ],
-        "yoy_growth_pct": 22.4,
-        "forward_rows": [
-            {"ticker": "AAPL",  "shares": 12, "per_share": 0.2500,  "ccy": "USD", "gross":  3.00},
-            {"ticker": "MSFT",  "shares":  8, "per_share": 0.7700,  "ccy": "USD", "gross":  6.16},
+        "dividend_margin": {
+            "positions_paying": 14, "positions_total": 22,
+            "largest_payer_pct": 18.4, "withholding_pct": 11.2,
+        },
+        "dividend_rows": [
+            {"sym":"MSFT","shares": 18, "per_sh":0.83, "freq":"Q", "ex":"2026-04-10", "pay":"2026-04-14", "total":14.94, "spark":[0.50,0.52,0.54,0.56,0.58,0.60,0.62,0.64]},
+            {"sym":"AAPL","shares": 35, "per_sh":0.24, "freq":"Q", "ex":"2026-04-08", "pay":"2026-04-12", "total":8.40,  "spark":[0.50,0.51,0.52,0.53,0.54,0.55,0.56,0.58]},
+            {"sym":"KO",  "shares": 60, "per_sh":0.49, "freq":"Q", "ex":"2026-04-22", "pay":"2026-04-26", "total":29.40, "spark":[0.50,0.51,0.52,0.53,0.54,0.55,0.56,0.57]},
+            {"sym":"JNJ", "shares": 22, "per_sh":1.19, "freq":"Q", "ex":"2026-04-18", "pay":"2026-04-22", "total":26.18, "spark":[0.50,0.51,0.53,0.54,0.55,0.56,0.58,0.60]},
+            {"sym":"PG",  "shares": 25, "per_sh":0.94, "freq":"Q", "ex":"2026-04-15", "pay":"2026-04-19", "total":23.50, "spark":[0.50,0.52,0.53,0.54,0.56,0.57,0.58,0.60]},
+            {"sym":"XOM", "shares": 40, "per_sh":0.95, "freq":"Q", "ex":"2026-04-24", "pay":"2026-04-28", "total":38.00, "spark":[0.50,0.52,0.54,0.56,0.58,0.60,0.62,0.64]},
+            {"sym":"VZ",  "shares": 30, "per_sh":0.66, "freq":"Q", "ex":"2026-04-09", "pay":"2026-04-13", "total":19.80, "spark":[0.50,0.50,0.51,0.51,0.52,0.52,0.53,0.54]},
+            {"sym":"JPM", "shares": 12, "per_sh":1.15, "freq":"Q", "ex":"2026-04-11", "pay":"2026-04-15", "total":13.80, "spark":[0.50,0.51,0.53,0.54,0.56,0.58,0.60,0.62]},
+            {"sym":"T",   "shares": 50, "per_sh":0.28, "freq":"Q", "ex":"2026-04-10", "pay":"2026-04-14", "total":14.00, "spark":[0.50,0.50,0.50,0.49,0.49,0.49,0.48,0.48]},
+            {"sym":"MCD", "shares":  8, "per_sh":1.67, "freq":"Q", "ex":"2026-04-02", "pay":"2026-04-08", "total":13.36, "spark":[0.50,0.51,0.52,0.53,0.54,0.55,0.57,0.59]},
         ],
-        "forward_totals": {"gross_krw": 12_430, "net_krw": 10_515},
-        "annual_yield_est": 1.18,
+        "sector_mix": [
+            {"s":"Staples",    "w":28.0},{"s":"Financials", "w":19.0},
+            {"s":"Energy",     "w":14.0},{"s":"Healthcare", "w":12.0},
+            {"s":"Comm.",      "w": 9.0},{"s":"Industrials","w": 8.0},
+            {"s":"Tech",       "w": 6.0},{"s":"Other",      "w": 4.0},
+        ],
+        "yoy_growth": [
+            {"t":"MCD", "v":  9.8},{"t":"JPM", "v":  8.4},
+            {"t":"JNJ", "v":  6.2},{"t":"MSFT","v": 10.2},
+            {"t":"PG",  "v":  4.9},{"t":"KO",  "v":  4.1},
+            {"t":"XOM", "v":  3.2},{"t":"AAPL","v":  4.0},
+            {"t":"VZ",  "v":  1.8},{"t":"T",   "v": -0.6},
+        ],
+        "yield_scatter": [
+            {"t":"KO",   "y":3.0, "p": 64, "sz":60},
+            {"t":"JNJ",  "y":3.2, "p":152, "sz":26},
+            {"t":"VZ",   "y":6.2, "p": 42, "sz":30},
+            {"t":"T",    "y":6.6, "p": 17, "sz":50},
+            {"t":"XOM",  "y":3.4, "p":112, "sz":40},
+            {"t":"PG",   "y":2.6, "p":146, "sz":25},
+            {"t":"MSFT", "y":0.7, "p":412, "sz":18},
+            {"t":"AAPL", "y":0.5, "p":188, "sz":35},
+            {"t":"JPM",  "y":2.8, "p":206, "sz":12},
+            {"t":"MCD",  "y":2.4, "p":278, "sz": 8},
+        ],
+        "pull_quote": "A dividend is a kindness from a company to its owners \u2014 unremarkable until counted, cumulative once you do.",
+        "pull_quote_attribution": "PivoxQuant Dividend Desk",
         "disclaimer": DISCLAIMER,
     }
 
 
 def sample_portfolio_segment() -> dict[str, Any]:
+    """Portfolio Segment — Goldman IC v2 6-page observational report.
+
+    Rewritten for template contract: treemap on P2, 10-row segment ladder on
+    P3, 2×2 quad (style box / region donut / sector rotation / corr heatmap)
+    on P4, editorial quote on P5, colophon on P6.
+    """
     today = _today()
-    sector_rows = [
-        {"label": "Information Technology", "weight_pct": 42.3, "return_pct": 11.8, "pnl":  4_100_000},
-        {"label": "Semiconductors",          "weight_pct": 27.8, "return_pct":  9.2, "pnl":  2_160_000},
-        {"label": "Communication Services",  "weight_pct": 14.1, "return_pct":  1.4, "pnl":    280_000},
-        {"label": "Consumer Discretionary",  "weight_pct":  9.5, "return_pct": -0.8, "pnl":    -60_000},
-        {"label": "Financials",              "weight_pct":  6.3, "return_pct":  1.2, "pnl":     62_000},
-    ]
-    region_rows = [
-        {"label": "US",    "weight_pct": 62.5, "return_pct": 11.3, "pnl":  5_080_000},
-        {"label": "KR",    "weight_pct": 27.8, "return_pct":  9.2, "pnl":  2_160_000},
-        {"label": "Cash",  "weight_pct":  9.7, "return_pct":  0.2, "pnl":     14_000},
-    ]
-    style_rows = [
-        {"label": "Growth",    "weight_pct": 58.2, "return_pct": 12.8, "pnl":  4_900_000},
-        {"label": "Dividend",   "weight_pct": 18.4, "return_pct":  2.1, "pnl":    380_000},
-        {"label": "Cyclical",   "weight_pct": 13.6, "return_pct":  0.5, "pnl":     60_000},
-        {"label": "Value",      "weight_pct":  9.8, "return_pct":  3.2, "pnl":    180_000},
-    ]
-    best = [
-        {"dim": "Sector", "label": "Information Technology", "weight_pct": 42.3, "return_pct": 11.8},
-        {"dim": "Region", "label": "US",                       "weight_pct": 62.5, "return_pct": 11.3},
-        {"dim": "Style",  "label": "Growth",                   "weight_pct": 58.2, "return_pct": 12.8},
-    ]
-    worst = [
-        {"dim": "Sector", "label": "Consumer Discretionary",   "weight_pct":  9.5, "return_pct": -0.8},
-        {"dim": "Style",  "label": "Cyclical",                  "weight_pct": 13.6, "return_pct":  0.5},
-        {"dim": "Region", "label": "Cash",                      "weight_pct":  9.7, "return_pct":  0.2},
-    ]
     return {
         "user_id":        SAMPLE_USER_ID,
         "user_name":      SAMPLE_USER_NAME,
-        "quarter_label":  f"{today.year} Q{(today.month - 1) // 3 + 1}",
-        "period_start":   (today - timedelta(days=90)).isoformat(),
-        "period_end":     today.isoformat(),
+        "period_label":   f"{today.strftime('%B %Y')}",
+        "issue_number":   4,
+        "doc_ref":        "PQ-PS-04",
         "generated_at":   _now_iso(),
-        "portfolio_value": 51_000_000,
-        "portfolio_ccy":  "KRW",
-        "sector_rows":    sector_rows,
-        "region_rows":    region_rows,
-        "style_rows":     style_rows,
-        "best_segments":  best,
-        "worst_segments": worst,
-        "narrative": (
-            "분기 전반에 걸쳐 Growth 스타일과 US 지역 비중이 수익 기여도 상위를 "
-            "차지했습니다. Sector 레벨에서는 IT가 +11.8%로 주도적이었습니다. "
-            "Consumer Discretionary는 -0.8%로 유일한 마이너스 기여 섹터입니다."
+        "typeset_in":     "Source Serif 4 · Geist · JetBrains Mono",
+        "LICENSE_NUMBER": None,
+
+        "hero_headline": [
+            "A portfolio is a choir.",
+            "Each voice a sector, style, or region.",
+            "We listen, then write down what we hear.",
+        ],
+
+        # Cover KPIs
+        "kpi_sectors":        8,
+        "kpi_styles_label":   "Growth · Value · Core",
+        "kpi_regions_label":  "US · International",
+        "kpi_hhi":            1840,
+
+        # P2 — Treemap segments (sector -> % weight, size of rectangle)
+        "treemap_segments": [
+            {"name": "Technology",        "weight": 32.5, "ret": 11.8},
+            {"name": "Healthcare",        "weight": 14.2, "ret":  3.5},
+            {"name": "Financials",        "weight": 12.8, "ret":  4.8},
+            {"name": "Consumer Disc.",    "weight":  9.5, "ret": -2.1},
+            {"name": "Consumer Staples",  "weight":  8.1, "ret":  1.4},
+            {"name": "Industrials",       "weight":  7.2, "ret":  5.2},
+            {"name": "Energy",            "weight":  5.6, "ret":  8.2},
+            {"name": "REITs",             "weight":  4.8, "ret": -0.8},
+            {"name": "Cash",              "weight":  3.1, "ret":  0.2},
+            {"name": "International",     "weight":  2.2, "ret":  3.1},
+        ],
+
+        # P3 — 10-row segment ladder
+        "segment_ladder": [
+            {"segment": "Technology",       "weight": 32.5, "target": 30.0, "drift": "+2.5", "ret_contrib": "+3.84", "vol_contrib": "42%", "beta": 1.28, "spark": [0, 2.1, 4.2, 6.8, 8.1, 10.2, 11.4, 11.8]},
+            {"segment": "Healthcare",       "weight": 14.2, "target": 15.0, "drift": "-0.8", "ret_contrib": "+0.50", "vol_contrib": "10%", "beta": 0.74, "spark": [0, 0.4, 1.2, 1.8, 2.4, 2.9, 3.2, 3.5]},
+            {"segment": "Financials",       "weight": 12.8, "target": 12.0, "drift": "+0.8", "ret_contrib": "+0.61", "vol_contrib": "12%", "beta": 1.14, "spark": [0, 0.8, 1.6, 2.1, 2.9, 3.8, 4.4, 4.8]},
+            {"segment": "Consumer Disc.",   "weight":  9.5, "target": 10.0, "drift": "-0.5", "ret_contrib": "-0.20", "vol_contrib":  "9%", "beta": 1.22, "spark": [0, -0.2, -0.8, -1.1, -1.5, -1.8, -1.9, -2.1]},
+            {"segment": "Consumer Staples", "weight":  8.1, "target":  8.0, "drift": "+0.1", "ret_contrib": "+0.11", "vol_contrib":  "4%", "beta": 0.58, "spark": [0, 0.2, 0.4, 0.6, 0.9, 1.1, 1.2, 1.4]},
+            {"segment": "Industrials",      "weight":  7.2, "target":  7.0, "drift": "+0.2", "ret_contrib": "+0.37", "vol_contrib":  "7%", "beta": 1.05, "spark": [0, 1.1, 2.0, 2.8, 3.4, 4.2, 4.8, 5.2]},
+            {"segment": "Energy",           "weight":  5.6, "target":  6.0, "drift": "-0.4", "ret_contrib": "+0.46", "vol_contrib":  "6%", "beta": 0.92, "spark": [0, 1.4, 3.2, 4.8, 5.9, 7.1, 7.8, 8.2]},
+            {"segment": "REITs",            "weight":  4.8, "target":  5.0, "drift": "-0.2", "ret_contrib": "-0.04", "vol_contrib":  "3%", "beta": 0.81, "spark": [0, -0.1, -0.3, -0.5, -0.6, -0.7, -0.8, -0.8]},
+            {"segment": "Cash",             "weight":  3.1, "target":  5.0, "drift": "-1.9", "ret_contrib": "+0.01", "vol_contrib":  "0%", "beta": 0.00, "spark": [0, 0.05, 0.08, 0.12, 0.15, 0.18, 0.20, 0.20]},
+            {"segment": "International",    "weight":  2.2, "target":  2.0, "drift": "+0.2", "ret_contrib": "+0.07", "vol_contrib":  "7%", "beta": 0.88, "spark": [0, 0.6, 1.2, 1.8, 2.2, 2.6, 2.9, 3.1]},
+        ],
+
+        # P4 quad — style box 3×3 (large/mid/small × growth/core/value)
+        "style_box": [
+            [0.08, 0.12, 0.04],
+            [0.06, 0.14, 0.06],
+            [0.24, 0.18, 0.08],
+        ],
+        "style_box_labels": {
+            "rows": ["Small", "Mid", "Large"],
+            "cols": ["Value", "Core", "Growth"],
+        },
+
+        # P4 — region donut (bar representation)
+        "region_split": [
+            {"name": "US",         "v": 72.5},
+            {"name": "Intl Dev.",  "v": 18.4},
+            {"name": "EM",         "v":  6.0},
+            {"name": "Cash",       "v":  3.1},
+        ],
+
+        # P4 — sector rotation 12M (top 4 sectors)
+        "sector_rotation": [
+            {"name": "Technology",  "series": [0, 1.2, 2.8, 3.4, 4.1, 5.2, 6.1, 7.4, 8.8, 9.6, 10.8, 11.8]},
+            {"name": "Energy",      "series": [0, 0.8, 1.4, 2.2, 2.8, 3.6, 4.4, 5.2, 6.1, 6.8, 7.6, 8.2]},
+            {"name": "Financials",  "series": [0, 0.4, 0.8, 1.2, 1.8, 2.2, 2.8, 3.2, 3.8, 4.2, 4.6, 4.8]},
+            {"name": "Healthcare",  "series": [0, 0.2, 0.6, 0.9, 1.3, 1.6, 2.1, 2.4, 2.8, 3.1, 3.3, 3.5]},
+        ],
+
+        # P4 — correlation among segments 5x5
+        "segment_corr_labels": ["Tech", "Fin", "Health", "Energy", "REITs"],
+        "segment_corr_matrix": [
+            [1.00, 0.54, 0.38, 0.22, 0.41],
+            [0.54, 1.00, 0.32, 0.28, 0.48],
+            [0.38, 0.32, 1.00, 0.18, 0.36],
+            [0.22, 0.28, 0.18, 1.00, 0.24],
+            [0.41, 0.48, 0.36, 0.24, 1.00],
+        ],
+
+        "pull_quote": (
+            "Segments are not strategies — they are the chairs your decisions "
+            "happened to sit in."
         ),
-        "disclaimer":     DISCLAIMER,
+        "pull_quote_attribution": "PivoxQuant Research Desk",
+
+        "right_rail_notes": [
+            "Segmentation is a lens, not a prescription.",
+            "Boundaries are conventions — GICS, MSCI, or style-box.",
+            "Weights are observed month-end, not intra-month.",
+            "Concentration is surfaced for transparency.",
+            "Informational only — not a portfolio instruction.",
+        ],
+
+        "not_answered": [
+            "Whether any single weight is appropriate for a given household.",
+            "Tax consequences of rebalancing between segments.",
+            "Forward-looking style or sector rotation.",
+            "Correlated news shocks outside the observation window.",
+            "Personal liquidity needs by segment.",
+        ],
+
+        "data_sources": [
+            {"key": "Holdings",         "value": "Broker statements · month-end"},
+            {"key": "Style taxonomy",   "value": "FactSet / MSCI style classification"},
+            {"key": "Region taxonomy",  "value": "MSCI region · developed / emerging"},
+            {"key": "Fundamentals",     "value": "FMP v4 Stable · sector ratios"},
+        ],
+        "engine_note": "Historical record only. Portfolio segmentation pipeline.",
+        "disclaimer":  DISCLAIMER,
     }
 
 
 def sample_kpi_dashboard() -> dict[str, Any]:
+    """KPI Dashboard — Goldman IC v2 6-page monthly portfolio KPI report."""
     today = _today()
     return {
         "user_id":     SAMPLE_USER_ID,
         "user_name":   SAMPLE_USER_NAME,
-        "as_of":       today.isoformat(),
+        "period_label": f"{today.strftime('%B %Y')}",
+        "issue_number": 4,
+        "doc_ref":     "PQ-KPI-04",
         "generated_at": _now_iso(),
-        "portfolio_value": 51_000_000,
-        "portfolio_ccy":   "KRW",
-        "ytd_return_pct":   8.9,
-        "sharpe_annual":    1.42,
-        "max_drawdown_pct": -11.6,
-        "turnover_ratio":    0.82,
-        "cash_pct":         12.3,
-        "position_count":    7,
-        "disclaimer":       DISCLAIMER,
+        "typeset_in":  "Source Serif 4 · Geist · JetBrains Mono",
+        "LICENSE_NUMBER": None,
+
+        "hero_headline": [
+            "Numbers are the vocabulary.",
+            "Observation is the grammar.",
+            "This is a month's sentence.",
+        ],
+
+        # Cover KPIs
+        "kpi_nav_label":     "$127,450",
+        "kpi_mtd_pct":        2.4,
+        "kpi_ytd_pct":        8.7,
+        "kpi_sharpe":         0.94,
+
+        # P2 — NAV equity curve (MTD daily)
+        "nav_curve": [
+            124440, 124680, 124920, 125110, 124880, 124940, 125220,
+            125480, 125710, 125940, 126220, 126040, 125810, 126110,
+            126480, 126820, 127110, 127380, 127210, 127450,
+        ],
+        "nav_best_day_index":  15,
+        "nav_worst_day_index":  4,
+        "nav_best_day_delta":  "+0.81%",
+        "nav_worst_day_delta": "-0.24%",
+
+        # P3 — 10-row KPI table
+        "kpi_ladder": [
+            {"metric": "NAV",              "current": "$127,450", "last_mo": "$124,440", "avg_3m": "$122,900", "ytd": "+8.7%",  "range": "$115k — $127k", "spark": [0, 0.4, 0.9, 1.3, 1.8, 2.2, 2.4]},
+            {"metric": "Cash Ratio",       "current": "8.1%",     "last_mo": "9.4%",     "avg_3m": "10.2%",    "ytd": "-2.1pp", "range": "6.4 — 12.8%",   "spark": [10.2, 10.0, 9.7, 9.4, 9.1, 8.6, 8.1]},
+            {"metric": "Avg Position Size","current": "4.2%",     "last_mo": "4.0%",     "avg_3m": "3.9%",     "ytd": "+0.3pp", "range": "3.4 — 4.6%",    "spark": [3.9, 3.9, 4.0, 4.0, 4.1, 4.1, 4.2]},
+            {"metric": "Win Rate",         "current": "58%",      "last_mo": "54%",      "avg_3m": "56%",      "ytd": "+4pp",   "range": "48 — 62%",      "spark": [54, 55, 55, 56, 57, 57, 58]},
+            {"metric": "Avg Holding Days", "current": "24",       "last_mo": "22",       "avg_3m": "23",       "ytd": "+2",     "range": "18 — 28",       "spark": [22, 22, 23, 23, 23, 24, 24]},
+            {"metric": "Turnover",         "current": "28%",      "last_mo": "34%",      "avg_3m": "31%",      "ytd": "-6pp",   "range": "24 — 42%",      "spark": [34, 33, 31, 30, 29, 28, 28]},
+            {"metric": "Beta",             "current": "0.94",     "last_mo": "0.98",     "avg_3m": "0.96",     "ytd": "-0.04",  "range": "0.88 — 1.04",   "spark": [0.98, 0.97, 0.96, 0.95, 0.95, 0.94, 0.94]},
+            {"metric": "Vol · Ann.",       "current": "14.2%",    "last_mo": "15.1%",    "avg_3m": "14.8%",    "ytd": "-0.9pp", "range": "12.4 — 17.1%",  "spark": [15.1, 14.9, 14.7, 14.5, 14.4, 14.3, 14.2]},
+            {"metric": "Sharpe · Ann.",    "current": "0.94",     "last_mo": "0.81",     "avg_3m": "0.86",     "ytd": "+0.13",  "range": "0.62 — 1.04",   "spark": [0.81, 0.82, 0.84, 0.88, 0.91, 0.93, 0.94]},
+            {"metric": "Max Drawdown",     "current": "-6.2%",    "last_mo": "-7.1%",    "avg_3m": "-7.8%",    "ytd": "-8.7%",  "range": "-9.4 — -4.1%",  "spark": [-7.1, -6.9, -6.6, -6.4, -6.3, -6.2, -6.2]},
+        ],
+
+        # P4 quad
+        "return_attribution": [
+            {"name": "Technology",  "v":  3.84},
+            {"name": "Healthcare",  "v":  0.50},
+            {"name": "Financials",  "v":  0.61},
+            {"name": "Energy",      "v":  0.46},
+            {"name": "Industrials", "v":  0.37},
+            {"name": "Staples",     "v":  0.11},
+            {"name": "Cons. Disc.", "v": -0.20},
+            {"name": "REITs",       "v": -0.04},
+        ],
+        # win/loss distribution histogram (returns in %)
+        "winloss_bins":   [-6, -4, -2, 0, 2, 4, 6],
+        "winloss_counts": [2, 4, 8, 14, 18, 10, 4],
+        # holding-period distribution (days bins)
+        "hold_bins":   ["0-7", "8-14", "15-30", "31-60", "61+"],
+        "hold_counts": [6, 10, 22, 14, 8],
+        # rolling 30D Sharpe
+        "rolling_sharpe": [0.52, 0.58, 0.61, 0.68, 0.72, 0.78, 0.82, 0.86, 0.88, 0.91, 0.93, 0.94],
+
+        "pull_quote": (
+            "A dashboard is a room's mirror — it shows the shape you've "
+            "taken today, not the shape you intend."
+        ),
+        "pull_quote_attribution": "PivoxQuant Research Desk",
+
+        "right_rail_notes": [
+            "All metrics are observed ex-post, from realised statements.",
+            "Thresholds are self-set, not universal.",
+            "Metrics describe behaviour; they do not direct it.",
+            "Rolling windows are 30 trading days.",
+            "Informational only — not a portfolio instruction.",
+        ],
+
+        "not_answered": [
+            "Whether any metric is appropriate for a given objective.",
+            "Forward-looking projections of NAV or Sharpe.",
+            "Tax consequences of realised trades.",
+            "Regime shifts outside the observation window.",
+            "Personal cash-flow timing.",
+        ],
+
+        "data_sources": [
+            {"key": "Broker",     "value": "Alpaca · Paper account statements"},
+            {"key": "Engine",     "value": "Portfolio observation pipeline"},
+            {"key": "Risk-free",  "value": "3-Month T-Bill (FRED DGS3MO)"},
+            {"key": "Window",     "value": "Monthly marks · trailing 12 months"},
+        ],
+        "engine_note": "Historical record only. Monthly KPI observation pipeline.",
+        "disclaimer":  DISCLAIMER,
     }
 
 
 def sample_dd_checklist() -> dict[str, Any]:
+    """DD Checklist — Goldman IC v2 6-page single-ticker observational report."""
     today = _today()
     return {
         "user_id":     SAMPLE_USER_ID,
         "user_name":   SAMPLE_USER_NAME,
-        "as_of":       today.isoformat(),
+        "ticker":      "AAPL",
+        "period_label": "Q2 2026",
+        "issue_number": 2,
+        "doc_ref":     "PQ-DD-AAPL-Q2",
         "generated_at": _now_iso(),
-        "pending": [
-            {
-                "position_id": 10001,
-                "ticker":      "NVDA",
-                "shares":      5,
-                "avg_cost":    610.00,
-                "added_at":   (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=5)).isoformat() + "Z",
-                "days_since":  5,
-            },
-            {
-                "position_id": 10002,
-                "ticker":      "035420.KS",
-                "shares":      8,
-                "avg_cost":    210_000,
-                "added_at":   (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=4)).isoformat() + "Z",
-                "days_since":  4,
-            },
+        "typeset_in":  "Source Serif 4 · Geist · JetBrains Mono",
+        "LICENSE_NUMBER": None,
+
+        "hero_headline": [
+            "Questions, patiently asked.",
+            "Answers, honestly recorded.",
+            "A checklist is not a verdict.",
         ],
-        "disclaimer": DISCLAIMER,
+
+        # Cover KPIs
+        "completeness_text": "24 / 30",
+        "red_flags":         0,
+        "review_date":       "2026-04-21",
+
+        # P2 — 5-axis fundamentals pentagon (normalised 0..1 against sector median)
+        "fundamentals_axes": [
+            {"label": "Revenue Growth",   "value": 0.78, "raw": "+6.1% · 5Y CAGR"},
+            {"label": "Operating Margin", "value": 0.88, "raw": "30.2% · TTM"},
+            {"label": "Return on Equity", "value": 0.92, "raw": "154% · TTM"},
+            {"label": "FCF Yield",        "value": 0.62, "raw": "3.4% · TTM"},
+            {"label": "Debt Ratio",       "value": 0.55, "raw": "1.97× · D/E"},
+        ],
+
+        # P3 — 10-row checklist ladder
+        "checklist_items": [
+            {"no": "01", "q": "Is revenue growth consistent over 5 years?",
+             "a": "5Y revenue CAGR 6.1%. Positive in 4 of 5 years.",
+             "flag": "green",  "src": "10-K FY25 · Item 7"},
+            {"no": "02", "q": "Is operating margin above industry median?",
+             "a": "TTM op. margin 30.2% vs sector median 22.4%.",
+             "flag": "green",  "src": "10-K FY25 · MD&A"},
+            {"no": "03", "q": "Is free cash flow positive in each of the last 3 years?",
+             "a": "FY23 · FY24 · FY25 all positive FCF.",
+             "flag": "green",  "src": "10-K cash-flow statement"},
+            {"no": "04", "q": "Is debt-to-equity below 2×?",
+             "a": "D/E 1.97×, at threshold.",
+             "flag": "yellow", "src": "10-K balance sheet"},
+            {"no": "05", "q": "Has senior management changed in last 12 months?",
+             "a": "CFO transition disclosed 2025-11.",
+             "flag": "yellow", "src": "8-K 2025-11-12"},
+            {"no": "06", "q": "Are SEC filings current (10-K / 10-Q)?",
+             "a": "Last 10-Q filed 2026-02-01. Current.",
+             "flag": "green",  "src": "SEC EDGAR"},
+            {"no": "07", "q": "Is insider activity disclosed in Form 4?",
+             "a": "6 Form 4 filings in last 90 days. Net sales.",
+             "flag": "yellow", "src": "SEC EDGAR · Form 4"},
+            {"no": "08", "q": "Is dividend history consistent?",
+             "a": "13 consecutive years of dividend payments.",
+             "flag": "green",  "src": "IR dividend history"},
+            {"no": "09", "q": "Is total liquidity (cash + ST) adequate?",
+             "a": "Cash + ST investments cover 1.9× current liabilities.",
+             "flag": "green",  "src": "10-K balance sheet"},
+            {"no": "10", "q": "Are segment revenues disclosed by geography & product?",
+             "a": "5 geographic · 5 product segments disclosed.",
+             "flag": "green",  "src": "10-K segment footnote"},
+        ],
+
+        # P4 quad
+        "quarterly_label":  "$94.9B · Q4 FY25",
+        "quarterly_revenue": [78.4, 81.2, 85.5, 89.5, 82.9, 90.8, 94.9, 119.6],
+        "margin_label":  "46.2% · 30.2% · 24.4%",
+        "margin_gross": [38.2, 39.8, 41.1, 43.4, 46.2],
+        "margin_op":    [24.1, 25.4, 26.8, 28.1, 30.2],
+        "margin_net":   [20.1, 21.2, 22.4, 23.1, 24.4],
+        "fcf_label":    "$99.8B · FY25",
+        "fcf_history": [73.4, 80.2, 92.9, 96.4, 99.8],
+        "peer_label":   "28.4 · 32.1 · 24.8 · 26.2",
+        "peer_bars": [
+            {"name": "AAPL", "v": 28.4},
+            {"name": "MSFT", "v": 32.1},
+            {"name": "GOOG", "v": 24.8},
+            {"name": "META", "v": 26.2},
+        ],
+
+        "pull_quote": (
+            "Due diligence is the act of asking questions patient enough to "
+            "wait for answers."
+        ),
+        "pull_quote_attribution": "PivoxQuant Research Desk",
+
+        "not_answered": [
+            "Future revenue trajectory beyond filings.",
+            "Qualitative management quality beyond disclosures.",
+            "Competitive dynamics observed after the filing date.",
+            "Regulatory or litigation outcomes not yet recorded.",
+            "Individual investor tax or liquidity constraints.",
+            "Appropriate position sizing for any portfolio.",
+        ],
+
+        "data_sources": [
+            {"key": "Filings",         "value": "SEC EDGAR · 10-K, 10-Q, 8-K, Form 4"},
+            {"key": "Fundamentals",    "value": "FMP v4 Stable · ratios, peer medians"},
+            {"key": "Company IR",      "value": "Investor Relations pages · dividend history"},
+            {"key": "Macro reference", "value": "FRED · sector & rates context"},
+        ],
+        "engine_note": "Checklist observation pipeline · public filings only",
+        "disclaimer":  DISCLAIMER,
     }
 
 
@@ -754,15 +1823,67 @@ def sample_brag_card() -> dict[str, Any]:
         "month_start":     month_start.isoformat(),
         "month_end":       month_end.isoformat(),
         "generated_at":    _now_iso(),
+        "issue_number":    4,
+        "doc_ref":         "PQ-BC-04 · v2026.04.21",
         "return_pct":       8.9,
         "trade_count":     18,
         "best_ticker":     "NVDA",
         "best_return_pct":  22.4,
+        "best_pnl_usd":    1240,
+        "win_rate_pct":    67.0,
+        "hold_days":        8,
+        "entry_date":      "April 3",
+        "exit_date":       "April 11",
+        "entry_price":     "842",
+        "exit_price":      "879",
+        "position_size_pct": "3.2",
         "worst_ticker":    "TSLA",
         "worst_return_pct": -6.1,
         "anonymous":       False,
         "is_empty":        False,
         "share_token":     "demo-share-token",
+        "hero_headline":   [
+            "A small note to self.",
+            "One month, one",
+            "observation.",
+        ],
+        "hero_narrative": [
+            (
+                "Entered NVDA on April 3 at $842. Closed April 11 at $879. "
+                "The thesis held three sessions, then handed off to the market's "
+                "own weather. The gain was observed; the decision, imperfect as "
+                "always, was your own."
+            ),
+            (
+                "This is a record — not a pattern, not a plan, not a claim about "
+                "tomorrow."
+            ),
+        ],
+        "top_lots": [
+            {"ticker": "NVDA",      "days":  8, "entry":  842.00, "exit":  879.00, "pnl": 1240, "spark": [0.20, 0.34, 0.46, 0.52, 0.60, 0.70, 0.82, 0.92]},
+            {"ticker": "MSFT",      "days": 12, "entry":  412.00, "exit":  428.40, "pnl":  656, "spark": [0.30, 0.36, 0.42, 0.44, 0.52, 0.58, 0.62, 0.66]},
+            {"ticker": "AAPL",      "days": 10, "entry":  172.50, "exit":  178.20, "pnl":  342, "spark": [0.40, 0.42, 0.48, 0.52, 0.58, 0.60, 0.64, 0.66]},
+            {"ticker": "AVGO",      "days":  6, "entry": 1280.00, "exit": 1304.00, "pnl":  192, "spark": [0.40, 0.44, 0.48, 0.54, 0.56, 0.60, 0.62, 0.66]},
+            {"ticker": "005930.KS", "days": 14, "entry":72000,    "exit":73400,    "pnl":  112, "spark": [0.50, 0.52, 0.56, 0.58, 0.62, 0.64, 0.66, 0.70]},
+        ],
+        "ledger_narrative": [
+            (
+                "Five lots cleared the month's realised-P&L threshold. The top two "
+                "together contributed the majority of the monthly record — a "
+                "concentration noted here for transparency rather than as a "
+                "pattern to lean on. Hold windows clustered between six and "
+                "fourteen sessions; none ran longer than a month."
+            ),
+            (
+                "The bronze end-dot on each sparkline is the mark at exit "
+                "relative to the row's own in-hold range. A single month is a "
+                "small sample; this is a record, not a pattern."
+            ),
+        ],
+        "data_sources": ["Broker statements", "Alpaca", "KIS", "Observation journal"],
+        "typeset_in": "Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR",
+        "engine_note": "Historical record only. No directive, no target, no promise",
+        "LICENSE_NUMBER": None,
         "disclaimer":      DISCLAIMER,
     }
 
@@ -794,10 +1915,274 @@ def sample_monthly_brag() -> dict[str, Any]:
 
 # ── dispatch table ───────────────────────────────────────────────────────────
 
+def sample_sp500_backtest() -> dict[str, Any]:
+    """Ten-Year Observation backtest record — Strategy C (TSMOM + MeanReversion).
+
+    All headline numbers come from docs/BACKTEST_RESULTS.md (2021-12-01 →
+    2026-04-17 observation window). Monthly anchors simulated so they roll up
+    to the published annual totals, never around them.
+    """
+    return {
+        "issue_number": 1,
+        "doc_ref": "PQ-BT-01 · v2026.04.21",
+        "generated_at": "2026-04-21",
+        "period_start": "2021-12-01",
+        "period_end": "2026-04-17",
+        "typeset_in": "Source Serif 4 · Geist · JetBrains Mono",
+        "LICENSE_NUMBER": None,
+
+        # Cover — hero KPIs (all numbers from BACKTEST_RESULTS.md)
+        "hero_headline": [
+            "Four years, four hundred names.",
+            "One rule, measured in the open.",
+            "Observations — historical, not forward-looking.",
+        ],
+        "hero_cagr": 21.19,
+        "hero_sharpe": 0.94,
+        "hero_alpha": 9.66,
+        "hero_2022_spread": 23.2,
+
+        # P2 — equity walk. Monthly marks; end values match Strategy C CAGR
+        # compounded on $100K seed through 4.38 years → $218,240. SPY end
+        # compounds from CAGR 12.55% → $151,100.
+        "equity_series": [
+            {"x": "2021-12", "y": 100000},
+            {"x": "2022-04", "y": 103200},
+            {"x": "2022-10", "y": 104600},
+            {"x": "2023-04", "y": 115100},
+            {"x": "2023-10", "y": 132200},
+            {"x": "2024-04", "y": 151800},
+            {"x": "2024-10", "y": 169600},
+            {"x": "2025-04", "y": 188900},
+            {"x": "2025-10", "y": 205100},
+            {"x": "2026-04", "y": 218240},
+        ],
+        "benchmark_series": [
+            {"x": "2021-12", "y": 100000},
+            {"x": "2022-04", "y":  92400},
+            {"x": "2022-10", "y":  81400},
+            {"x": "2023-04", "y":  92100},
+            {"x": "2023-10", "y": 101100},
+            {"x": "2024-04", "y": 119800},
+            {"x": "2024-10", "y": 131200},
+            {"x": "2025-04", "y": 143600},
+            {"x": "2025-10", "y": 147900},
+            {"x": "2026-04", "y": 151100},
+        ],
+        "bear_band_start": 1,
+        "bear_band_end":   2,
+
+        # P3 — annual ladder
+        "annual_rows": [
+            {"year": "2022",     "strategy":  4.6, "spy": -18.6, "alpha": 23.2, "mdd": -19.8, "sharpe": 0.72,
+             "spark": [0, -1.2, -2.8, -1.1, 1.4, 2.1, 3.2, 4.0, 4.6]},
+            {"year": "2023",     "strategy": 26.4, "spy":  24.2, "alpha":  2.2, "mdd":  -8.1, "sharpe": 1.24,
+             "spark": [0, 2.8, 5.1, 9.4, 12.2, 16.8, 19.1, 22.4, 26.4]},
+            {"year": "2024",     "strategy": 28.1, "spy":  23.3, "alpha":  4.8, "mdd":  -9.4, "sharpe": 1.18,
+             "spark": [0, 3.4, 7.8, 11.2, 14.8, 18.2, 21.8, 24.9, 28.1]},
+            {"year": "2025",     "strategy": 22.7, "spy":  12.8, "alpha":  9.9, "mdd": -13.2, "sharpe": 0.98,
+             "spark": [0, 1.8, 4.4, 7.1, 10.8, 14.2, 17.8, 20.4, 22.7]},
+            {"year": "YTD 2026", "strategy":  6.3, "spy":   2.1, "alpha":  4.2, "mdd":  -6.4, "sharpe": 0.88,
+             "spark": [0, 1.2, 2.4, 3.8, 4.9, 5.6, 6.0, 6.2, 6.3]},
+        ],
+
+        # P3 — 6×6 correlation heatmap (observed)
+        "corr_labels": ["Strategy C", "SPY", "QQQ", "TLT", "Gold", "VIX"],
+        "corr_matrix": [
+            [ 1.00,  0.78,  0.74, -0.12,  0.18, -0.42],
+            [ 0.78,  1.00,  0.92, -0.32,  0.08, -0.68],
+            [ 0.74,  0.92,  1.00, -0.28,  0.04, -0.62],
+            [-0.12, -0.32, -0.28,  1.00,  0.22,  0.14],
+            [ 0.18,  0.08,  0.04,  0.22,  1.00, -0.08],
+            [-0.42, -0.68, -0.62,  0.14, -0.08,  1.00],
+        ],
+
+        # P4 — rolling 12M Sharpe, stepped through window
+        "rolling_sharpe": [0.42, 0.58, 0.71, 0.68, 0.82, 0.94, 1.12, 1.24, 1.18, 1.02, 0.98, 0.88, 0.94],
+
+        # P4 — underwater series (MDD reading −23.82% occurs in 2022 bear)
+        "underwater": [
+            0, -2.1, -8.4, -14.2, -19.6, -23.82, -18.4, -11.2, -4.8, 0,
+            -3.2, -8.1, -4.4, 0, -2.8, -6.1, -9.4, -4.8, 0, -5.2,
+            -11.4, -13.2, -6.8, 0, -3.4, -6.4,
+        ],
+
+        # P4 — monthly return histogram (53 months)
+        "histogram_bins": [
+            {"edge": -15, "count":  0},
+            {"edge": -12, "count":  1},
+            {"edge":  -9, "count":  2},
+            {"edge":  -6, "count":  4},
+            {"edge":  -3, "count":  6},
+            {"edge":   0, "count":  8},
+            {"edge":   3, "count": 12},
+            {"edge":   6, "count": 10},
+            {"edge":   9, "count":  6},
+            {"edge":  12, "count":  3},
+            {"edge":  15, "count":  1},
+        ],
+
+        # P4 — empirical vs normal distribution overlay
+        "empirical_dist": [
+            {"x": -15, "y":  0.1}, {"x": -12, "y":  0.4}, {"x":  -9, "y":  1.2},
+            {"x":  -6, "y":  3.4}, {"x":  -3, "y":  6.8}, {"x":   0, "y":  9.2},
+            {"x":   3, "y": 11.8}, {"x":   6, "y":  9.4}, {"x":   9, "y":  5.8},
+            {"x":  12, "y":  2.8}, {"x":  15, "y":  0.9},
+        ],
+        "normal_dist": [
+            {"x": -15, "y":  0.3}, {"x": -12, "y":  0.9}, {"x":  -9, "y":  2.4},
+            {"x":  -6, "y":  4.6}, {"x":  -3, "y":  7.4}, {"x":   0, "y":  9.6},
+            {"x":   3, "y": 10.1}, {"x":   6, "y":  8.2}, {"x":   9, "y":  4.9},
+            {"x":  12, "y":  2.1}, {"x":  15, "y":  0.6},
+        ],
+
+        # P5 — editorial pull quote + limits
+        "pull_quote": "A backtest is a memoir of markets past — not a map of markets to come.",
+        "pull_quote_attribution": "PivoxQuant Research Desk",
+        "limits_left": [
+            {"n": "01", "text": "Tax drag on realised gains — the record is pre-tax."},
+            {"n": "02", "text": "Personal withdrawals or deposits that alter the compounding path."},
+            {"n": "03", "text": "Slippage in thinly-traded constituents beyond the 10 bps assumption."},
+        ],
+        "limits_right": [
+            {"n": "04", "text": "Regime shifts not present in the observation window — the next four years are not the last four."},
+            {"n": "05", "text": "Live execution latency and partial fills, which the monthly-close record cannot see."},
+        ],
+    }
+
+
+def sample_morning_brief_plus() -> dict[str, Any]:
+    """Morning Brief Plus — Goldman IC v2 editorial — 6-page morning pack.
+
+    Returns every field the redesigned `morning_brief_plus.html` template
+    reads. Tone: Bloomberg Terminal morning note × NYT morning briefing —
+    observation only, no predictions, no directives.
+    """
+    today = _today()
+    return {
+        "user_id":      SAMPLE_USER_ID,
+        "user_name":    SAMPLE_USER_NAME,
+        "as_of":        today.isoformat(),
+        "as_of_short":  today.isoformat(),
+        "generated_at": _now_iso(),
+        "issue_number": 87,
+        "doc_ref":      "PQ-MB-087 · v2026.04.21",
+        "hero_headline": [
+            "A morning is only",
+            "what it shows —",
+            "markets open, we watch.",
+        ],
+        "kpis_cover": {
+            "sp_futures_pct":  0.12,
+            "vix_level":      15.8,
+            "us10y_pct":       4.32,
+            "usdkrw":         1342,
+        },
+        "overnight_tape": [
+            -0.08, -0.05, -0.03, -0.01,  0.02,  0.05,  0.06,  0.04,
+             0.00,  0.03,  0.07,  0.09,  0.11,  0.14,  0.12,  0.10,
+             0.08,  0.05,  0.07,  0.10,  0.11,  0.12,  0.12,  0.12,
+        ],
+        "overnight_events": [
+            {"i":  3, "label": "Nikkei close"},
+            {"i": 11, "label": "DAX open"},
+            {"i": 19, "label": "US pre-mkt tick"},
+        ],
+        "overnight_prose": {
+            "asia": (
+                "Asia observed a measured session — KOSPI held near flat at "
+                "2,684, Nikkei closed 0.41% lower against a firmer yen, and "
+                "Hang Seng recorded a 0.28% gain concentrated in the "
+                "platform cohort."
+            ),
+            "europe": (
+                "Europe opened with the Stoxx 600 up 0.14%, led by "
+                "industrials. The DAX tracked sideways around prior close "
+                "while autos recorded a small drag. Gilt yields drifted two "
+                "basis points higher in early trade."
+            ),
+            "premkt": (
+                "US pre-market observation shows S&P futures quoting +0.12% "
+                "and Nasdaq futures +0.21%, with the largest pre-open tick "
+                "recorded in the semiconductor cohort. Volumes remain thin "
+                "through the first hour of the US pre-open window."
+            ),
+        },
+        "macro_ladder": [
+            {"name": "DXY",            "level": "99.42",   "d1": "-0.14", "d5": "-0.62", "range": "97.8 — 106.5",  "spark": [0.20, 0.40, 0.30, 0.50, 0.60, 0.55, 0.45, 0.40]},
+            {"name": "Oil · WTI",      "level": "82.14",   "d1": "+0.42", "d5": "+1.28", "range": "66.1 — 87.4",   "spark": [0.30, 0.38, 0.48, 0.52, 0.58, 0.65, 0.70, 0.72]},
+            {"name": "Gold",           "level": "2,384",   "d1": "+0.18", "d5": "+0.94", "range": "1,992 — 2,421", "spark": [0.55, 0.60, 0.62, 0.68, 0.72, 0.78, 0.82, 0.86]},
+            {"name": "10Y Treasury",   "level": "4.32%",   "d1": "-0.02", "d5": "-0.08", "range": "3.86 — 4.74",   "spark": [0.62, 0.60, 0.58, 0.56, 0.55, 0.54, 0.53, 0.52]},
+            {"name": "2Y Treasury",    "level": "4.88%",   "d1": "-0.01", "d5": "-0.04", "range": "4.42 — 5.02",   "spark": [0.72, 0.70, 0.68, 0.66, 0.65, 0.64, 0.63, 0.62]},
+            {"name": "VIX",            "level": "15.80",   "d1": "+0.42", "d5": "-1.20", "range": "12.1 — 23.4",   "spark": [0.50, 0.45, 0.40, 0.38, 0.36, 0.38, 0.42, 0.40]},
+            {"name": "MOVE",           "level": "102.4",   "d1": "-0.80", "d5": "-3.10", "range": "88.2 — 128.7",  "spark": [0.58, 0.56, 0.52, 0.50, 0.48, 0.46, 0.44, 0.42]},
+            {"name": "HY Credit OAS",  "level": "348 bps", "d1": "+1",    "d5": "-4",    "range": "298 — 412",     "spark": [0.45, 0.46, 0.48, 0.48, 0.46, 0.44, 0.42, 0.40]},
+        ],
+        "today_calendar": [
+            {"time": "08:30 ET", "event": "Initial Jobless Claims",   "prior": "215 k",   "consensus": "218 k",    "note": "Weekly release, schedule item"},
+            {"time": "08:30 ET", "event": "Philadelphia Fed Index",   "prior": "3.2",     "consensus": "2.0",      "note": "Monthly, regional observation"},
+            {"time": "10:00 ET", "event": "Existing Home Sales",      "prior": "4.22M",   "consensus": "4.19M",    "note": "Monthly, seasonally adjusted"},
+            {"time": "10:30 ET", "event": "EIA Natural Gas Storage",  "prior": "+24 bcf", "consensus": "+30 bcf",  "note": "Weekly, informational"},
+            {"time": "13:00 ET", "event": "US 20Y Bond Auction",      "prior": "4.68%",   "consensus": "—",        "note": "Scheduled issuance"},
+            {"time": "AMC",      "event": "NFLX Q1 earnings",         "prior": "—",       "consensus": "EPS 4.54", "note": "Watchlist, informational only"},
+        ],
+        "sector_premkt": [
+            {"n": "Tech",     "v":  0.48},
+            {"n": "Semis",    "v":  0.72},
+            {"n": "Comms",    "v":  0.18},
+            {"n": "Cons.D",   "v": -0.14},
+            {"n": "Cons.S",   "v":  0.08},
+            {"n": "Health",   "v":  0.12},
+            {"n": "Indus",    "v":  0.22},
+            {"n": "Fin",      "v": -0.04},
+            {"n": "Util",     "v": -0.21},
+            {"n": "Energy",   "v":  0.34},
+            {"n": "Real Est", "v": -0.28},
+        ],
+        "fx_crosses": [
+            {"p": "EUR/USD", "l": "1.0842", "d": "+0.14"},
+            {"p": "USD/JPY", "l": "154.28", "d": "-0.08"},
+            {"p": "USD/KRW", "l": "1,342",  "d": "-0.22"},
+            {"p": "USD/CNH", "l": "7.242",  "d": "+0.04"},
+            {"p": "GBP/USD", "l": "1.2642", "d": "+0.18"},
+            {"p": "AUD/USD", "l": "0.6521", "d": "+0.11"},
+        ],
+        "rates_curve": [
+            {"t": "2Y",  "y": 4.88},
+            {"t": "5Y",  "y": 4.48},
+            {"t": "10Y", "y": 4.32},
+            {"t": "30Y", "y": 4.52},
+        ],
+        "vix_term": [
+            {"t": "VIX9D", "y": 14.2},
+            {"t": "VIX",   "y": 15.8},
+            {"t": "VIX3M", "y": 17.1},
+            {"t": "VIX6M", "y": 18.4},
+        ],
+        "observation_notes": [
+            "Morning quotes are snapshots — they will change by the bell.",
+            "Futures imply — they do not determine.",
+            "The calendar shows schedule, not outcome.",
+            "Correlation today is not causation tomorrow.",
+            "This page is informational only.",
+        ],
+        "pull_quote": (
+            "A morning brief is a lantern carried across wet streets — it "
+            "shows the next few steps, nothing beyond."
+        ),
+        "pull_quote_attribution": "PivoxQuant Morning Desk",
+        "typeset_in": "Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR",
+        "engine_note": "Historical record only. Morning observation pipeline.",
+        "disclaimer": DISCLAIMER,
+    }
+
+
 _BUILDERS: dict[str, Callable[[], dict[str, Any]]] = {
     "weekly_memo":            sample_weekly_memo,
+    "sp500_backtest":         sample_sp500_backtest,
     "earnings_prebrief":      sample_earnings_prebrief,
     "monthly_finance":        sample_monthly_finance,
+    "morning_brief_plus":     sample_morning_brief_plus,
     "risk_board":             sample_risk_board,
     "quarterly_self_report":  sample_quarterly_self_report,
     "year_end_letter":        sample_year_end_letter,

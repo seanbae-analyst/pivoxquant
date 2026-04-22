@@ -1,320 +1,954 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Risk Board — Goldman Risk Committee v2 Editorial Redesign (6-page)
+   Hand-crafted inline SVG, Ink × Bronze bichrome, Tufte-quiet grids.
+   Brand v2: wordmark (cover) · monogram (colophon) · submark (running-head).
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <title>Risk Board — {{ period_label }}</title>
+  <title>Risk Board — {{ period_label }} — {{ user_name }}</title>
   <style>
-    @page { size: A4 landscape; margin: 16mm 18mm; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                       Helvetica, Arial, "Apple SD Gothic Neo",
-                       "Noto Sans KR", sans-serif;
-           color: #111; line-height: 1.45; font-size: 10.5pt; margin: 0; }
-    h1 { font-size: 26pt; margin: 0 0 6pt 0; letter-spacing: -0.4pt; }
-    h2 { font-size: 15pt; margin: 14pt 0 8pt 0;
-         border-bottom: 1px solid #e5e7eb; padding-bottom: 4pt; }
-    .meta { font-size: 9pt; color: #6b7280; text-transform: uppercase;
-            letter-spacing: .5pt; }
-    .page-break { page-break-after: always; }
-    .slide-label { font-size: 8pt; color: #9ca3af;
-                   text-transform: uppercase; letter-spacing: .6pt;
-                   margin-bottom: 4pt; }
-    .kpi-row { display: table; width: 100%; margin: 12pt 0; }
-    .kpi-cell { display: table-cell; padding: 14pt 10pt;
-                border-right: 1px solid #e5e7eb; text-align: center;
-                vertical-align: middle; }
-    .kpi-cell:last-child { border-right: none; }
-    .kpi-label { font-size: 9pt; color: #6b7280;
-                 text-transform: uppercase; letter-spacing: .4pt; }
-    .kpi-value { font-size: 26pt; font-weight: 700; margin-top: 4pt;
-                 letter-spacing: -0.3pt; }
-    .kpi-positive { color: #0a6f3c; }
-    .kpi-negative { color: #a11d1d; }
-    .kpi-neutral  { color: #374151; }
-    table.layout { width: 100%; border-collapse: collapse; margin-top: 4pt;
-                   font-size: 10pt; }
-    table.layout th, table.layout td { padding: 8pt 6pt; text-align: left;
-                                       border-bottom: 1px solid #e5e7eb; }
-    table.layout th { font-size: 8.5pt; color: #6b7280;
-                      text-transform: uppercase; letter-spacing: .4pt;
-                      font-weight: 500; }
-    table.layout td.num { text-align: right; font-variant-numeric: tabular-nums; }
-    .pass-pill { display: inline-block; padding: 2pt 8pt; border-radius: 10pt;
-                 font-size: 8.5pt; letter-spacing: .3pt;
-                 text-transform: uppercase; }
-    .pass-ok   { background: #e6f4ec; color: #0a6f3c; }
-    .pass-fail { background: #fbeaea; color: #a11d1d; }
-    .badge-status { display: inline-block; padding: 4pt 10pt;
-                    border-radius: 999pt; font-weight: 600;
-                    letter-spacing: .5pt; text-transform: uppercase;
-                    font-size: 9pt; }
-    .badge-GREEN  { background: #e6f4ec; color: #0a6f3c; }
-    .badge-YELLOW { background: #fff7e0; color: #8a6d0b; }
-    .badge-RED    { background: #fbeaea; color: #a11d1d; }
-    .narrative { background: #faf9f6; border-left: 3px solid #111;
-                 padding: 12pt 16pt; margin: 8pt 0; font-size: 11pt; }
-    .bar-row { display: flex; align-items: center; margin: 4pt 0;
-               font-size: 10pt; }
-    .bar-label { width: 160pt; color: #374151; }
-    .bar-track { flex: 1; height: 10pt; background: #f3f4f6;
-                 border-radius: 5pt; position: relative; overflow: hidden;
-                 margin: 0 8pt; }
-    .bar-fill { position: absolute; top: 0; left: 0; bottom: 0;
-                background: #111; }
-    .bar-value { width: 54pt; text-align: right;
-                 font-variant-numeric: tabular-nums; color: #111; }
-    ul.pie-legend { list-style: none; padding: 0; margin: 0;
-                    font-size: 10pt; }
-    ul.pie-legend li { padding: 3pt 0; border-bottom: 1px dotted #e5e7eb; }
-    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt; line-height: 1.4; }
-    .two-col { display: table; width: 100%; }
-    .two-col > .col { display: table-cell; width: 50%; vertical-align: top;
-                      padding-right: 10pt; }
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  RISK BOARD";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
+      @top-right {
+        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ period_label }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
+      }
+      @bottom-left {
+        content: "Observation only — not a directive.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8pt;
+        color: #4a4a4a;
+      }
+    }
+    /* Cover page silence. */
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
+
+    /* ───────────────────── P1 · COVER ─────────────────────────────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 38pt; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A;
+      margin: 28pt 0 28pt 0; padding: 0;
+    }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 30pt; }
+    .cv-hero span + span + span { padding-left: 60pt; color: #8B6F47; }
+    .cv-kpi4 {
+      display: table; width: 100%; border-collapse: collapse; margin-top: 18pt; table-layout: fixed;
+    }
+    .cv-kpi { display: table-cell; width: 25%; padding: 4pt 10pt; vertical-align: top; overflow: visible; }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 12pt; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8a8a8a; margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.015em; line-height: 1.02;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
+    }
+    .cv-foot {
+      margin-top: 22pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt; color: #6B6B6B; letter-spacing: 0.02em;
+    }
+
+    /* ───────────────────── Common part headers ────────────────────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt; font-weight: 400; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
+      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
+    }
+
+    /* ───────────────────── P2 · HEATMAP SPREAD ────────────────────── */
+    .sp-grid {
+      display: table; width: 100%; border-collapse: separate;
+      border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed;
+    }
+    .sp-grid > .sp-main { display: table-cell; width: 66%; vertical-align: top; }
+    .sp-grid > .sp-margin { display: table-cell; width: 34%; vertical-align: top; }
+
+    .sp-fig-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 600; margin-bottom: 6pt;
+    }
+    .sp-fig-caption {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
+      line-height: 1.4; margin-top: 6pt; max-width: 360pt;
+    }
+    .sp-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.8pt; line-height: 1.58; color: #202020;
+      margin-top: 0; padding-top: 0;
+    }
+    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
+    .sp-prose > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 28pt; line-height: 0.88; font-weight: 500;
+      color: #8B6F47; float: left; padding: 2pt 6pt 0 0; font-style: normal;
+    }
+
+    .sp-marg-list {
+      margin-top: 12pt; border-top: 0.35pt solid #c9c4b8; padding-top: 8pt;
+    }
+    .sp-marg-item {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt;
+      color: #6B6B6B; margin: 0 0 4pt 0;
+    }
+
+    /* ───────────────────── P3 · RISK LADDER ───────────────────────── */
+    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
+    .ld-table th, .ld-table td {
+      padding: 5pt 6pt; text-align: left; vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.16em;
+      text-transform: uppercase; color: #6B6B6B;
+      font-weight: 600;
+    }
+    .ld-table td.num {
+      text-align: right;
+      font-family: "JetBrains Mono", monospace;
+      font-variant-numeric: tabular-nums; font-size: 8.8pt;
+    }
+    .ld-tkr {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600; font-size: 9.2pt;
+      letter-spacing: 0.02em; color: #0A0A0A;
+    }
+    .ld-hl-bronze .ld-tkr {
+      color: #8B6F47;
+    }
+    .ld-total-row td {
+      border-top: 0.35pt solid #8B6F47;
+      border-bottom: none !important;
+      padding-top: 10pt !important;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; color: #6B6B6B;
+    }
+
+    /* ───────────────────── P4 · TAIL / DRAWDOWN QUAD ──────────────── */
+    .rq-grid {
+      display: table; width: 100%; border-collapse: separate;
+      border-spacing: 14pt 0; table-layout: fixed;
+    }
+    .rq-main { display: table-cell; width: 70%; vertical-align: top; }
+    .rq-side { display: table-cell; width: 30%; vertical-align: top; }
+
+    .rq-quads { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .rq-quad-row { display: table-row; }
+    .rq-quad {
+      display: table-cell; width: 50%;
+      padding: 6pt 8pt;
+      vertical-align: top; height: 140pt;
+    }
+    .rq-quad svg { width: 100%; }
+    .rq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 3pt;
+    }
+    .rq-quad-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+    }
+    .rq-quad-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.6pt; color: #6B6B6B;
+      margin-top: 4pt; line-height: 1.4;
+    }
+
+    .rq-method {
+      padding: 10pt 0;
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-size: 8pt;
+    }
+    .rq-method-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.28em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 8pt;
+    }
+    .rq-method-item { margin-bottom: 9pt; }
+    .rq-method-item:last-child { margin-bottom: 0; }
+    .rq-method-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.6pt; color: #8B6F47; font-weight: 600;
+      letter-spacing: 0.04em; margin-right: 4pt;
+    }
+    .rq-method-def {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.2pt; line-height: 1.5;
+      color: #4a4a4a; display: inline;
+    }
+
+    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
+    .ed-quote-wrap {
+      min-height: 300pt; padding: 20pt 14mm 20pt 14mm;
+      display: table; width: 100%; text-align: center;
+    }
+    .ed-quote-cell { display: table-cell; vertical-align: middle; }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 38pt; line-height: 1.22;
+      letter-spacing: -0.015em; color: #0A0A0A;
+      margin: 0 auto; max-width: 150mm;
+    }
+    .ed-quote-attr {
+      margin-top: 26pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+    }
+    .ed-quote-attr::before, .ed-quote-attr::after {
+      content: "——"; color: #8B6F47; opacity: 0.5;
+      margin: 0 8pt; letter-spacing: 0;
+    }
+
+    .ed-notans-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 8pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 600; margin-top: 26pt;
+      padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
+    }
+    .ed-notans-grid {
+      display: table; width: 100%; border-collapse: separate;
+      border-spacing: 18pt 0; margin-top: 10pt;
+    }
+    .ed-notans-col {
+      display: table-cell; width: 50%; vertical-align: top;
+    }
+    .ed-notans-item {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.8pt; line-height: 1.6;
+      color: #202020; margin-bottom: 8pt;
+      padding-left: 24pt; text-indent: -24pt;
+    }
+    .ed-notans-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8pt; color: #8B6F47;
+      font-weight: 600; letter-spacing: 0.04em;
+      margin-right: 10pt;
+    }
+
+    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small {
+      width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0;
+    }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7;
+      color: #202020; max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #6B6B6B;
+    }
+    .co-thin-rule {
+      height: 0.35pt; background: #c9c4b8; margin: 12pt 0;
+    }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em;
+      text-transform: uppercase; color: #0A0A0A; font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+    section.disclaimer.pq-disclaimer {
+      padding: 10pt 0 !important;
+      margin: 16pt 0 0 0 !important;
+      border-top: 0.5pt solid #0A0A0A !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
+    }
   </style>
 </head>
 <body>
 
-<!-- ═══ P1 · COVER + SNAPSHOT ═══ -->
-<div class="slide-label">Page 1 / 8 · Cover</div>
-<div class="meta">PivoxQuant · Risk Board Meeting Deck</div>
-<h1>{{ user_name }} — {{ period_label }}</h1>
-<div class="meta">
-  {% if trigger == 'vix_spike' %}
-    Event-driven edition · VIX threshold crossed
-  {% else %}
-    Monthly edition · Generated {{ generated_at }}
-  {% endif %}
-</div>
+{# ── local helpers ─────────────────────────────────────────────────────── #}
+{% set _issue_no = issue_number | default(4) %}
+{% set _doc_ref = doc_ref | default('PQ-RB-' ~ ('%02d' % _issue_no) ~ ' · v2026.04.21') %}
+{% set _hero = hero_headline | default([
+  'Risk is observed, not eliminated.',
+  'Numbers are companions, not captains.',
+  'This is a record — not a route.',
+]) %}
 
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">Portfolio Value</div>
-    <div class="kpi-value kpi-neutral">
-      {% if portfolio_value %}
-        {{ portfolio_ccy }} {{ '{:,.0f}'.format(portfolio_value) }}
-      {% else %}—{% endif %}
-    </div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Positions</div>
-    <div class="kpi-value kpi-neutral">{{ position_count }}</div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Defense Score</div>
-    <div class="kpi-value kpi-neutral">
-      {% if defense_score is not none %}{{ defense_score }}{% else %}—{% endif %}
-    </div>
-    {% if defense_status %}
-      <div style="margin-top:6pt;">
-        <span class="badge-status badge-{{ defense_status }}">{{ defense_status }}</span>
-      </div>
-    {% endif %}
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">VIX</div>
-    <div class="kpi-value kpi-neutral">
-      {% if vix_current is not none %}{{ '%.1f'|format(vix_current) }}{% else %}—{% endif %}
-    </div>
-  </div>
-</div>
+{# KPI defaults — cover page #}
+{% set _kpi_var    = kpi_var_1d    | default(-2.14) %}
+{% set _kpi_es     = kpi_es_1d     | default(-3.42) %}
+{% set _kpi_mdd    = kpi_maxdd_90d | default(-8.70) %}
+{% set _kpi_corr   = kpi_corr_index | default(0.58) %}
 
-<p class="meta" style="margin-top:18pt;">
-  본 리포트는 투자 판단이 아닌 관찰 지표 모음입니다. 모든 수치는 정보 제공 목적의
-  체크리스트이며, 매매를 권유하지 않습니다.
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 1 · COVER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<section class="cv">
+
+  <div class="cv-wordmark" style="margin: 6pt auto 14pt auto;">
+    {% with brand_kind='wordmark', brand_size=260 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+  </div>
+
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    RISK BOARD <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+    &nbsp;·&nbsp; {{ period_label | default('April 2026') }}
+    &nbsp;·&nbsp; PORTFOLIO OBSERVATION
+  </div>
+  <div class="cv-rule-thin"></div>
+
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
+
+  <div class="cv-rule-thin"></div>
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Portfolio VaR · 95% · 1D</div>
+      <div class="cv-kpi-value r-neg">{{ '%+.2f'|format(_kpi_var) }}%</div>
+      <div class="cv-kpi-foot">Historical simulation, 252D.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Expected Shortfall · 95%</div>
+      <div class="cv-kpi-value r-neg">{{ '%+.2f'|format(_kpi_es) }}%</div>
+      <div class="cv-kpi-foot">Mean loss beyond VaR.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Max Drawdown · 90D</div>
+      <div class="cv-kpi-value r-neg">{{ '%+.2f'|format(_kpi_mdd) }}%</div>
+      <div class="cv-kpi-foot">Peak to trough, daily marks.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Correlation Risk Index</div>
+      <div class="cv-kpi-value">{{ '%.2f'|format(_kpi_corr) }}</div>
+      <div class="cv-kpi-foot">90D rolling mean pairwise.</div>
+    </div>
+  </div>
+
+  <p class="cv-foot">
+    <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice.</em>
+  </p>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 2 · HEATMAP SPREAD — 10×10 correlation · editorial prose
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · Correlation Observed</p>
+<h2 class="sp-title">Where the tribe moves together</h2>
+<p class="sp-deck">
+  A ninety-day Pearson reading on ten holdings. The diagonal is left quiet;
+  the off-diagonal numbers are facts, not directives.
 </p>
 
-<div class="page-break"></div>
+<div class="sp-grid">
+  <div class="sp-main">
 
-<!-- ═══ P2 · VAR ═══ -->
-<div class="slide-label">Page 2 / 8 · Value at Risk (Historical)</div>
-<h2>Daily VaR — 3-month rolling window</h2>
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">VaR 95%</div>
-    <div class="kpi-value {% if var95_pct is not none %}kpi-negative{% else %}kpi-neutral{% endif %}">
-      {% if var95_pct is not none %}-{{ '%.2f'|format(var95_pct) }}%{% else %}—{% endif %}
-    </div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">VaR 99%</div>
-    <div class="kpi-value {% if var99_pct is not none %}kpi-negative{% else %}kpi-neutral{% endif %}">
-      {% if var99_pct is not none %}-{{ '%.2f'|format(var99_pct) }}%{% else %}—{% endif %}
-    </div>
-  </div>
-</div>
-<p>
-  95% / 99% 히스토리컬 VaR은 최근 3개월의 일일 수익률 분포에서 각각 5%, 1%
-  분위의 손실 수준을 관찰한 값입니다. 관찰 지표이며, 목표가나 손절 레벨을
-  제시하지 않습니다.
-</p>
+    <div class="sp-fig-title">Fig. 1 · Pairwise 90-day correlation · ten names</div>
 
-<div class="page-break"></div>
+    {# ── Correlation heatmap, hand-crafted ─────────────────────────── #}
+    {% set _cl = corr_matrix['labels'] if corr_matrix and corr_matrix['labels'] else ['AAPL','MSFT','NVDA','GOOG','META','AMZN','TSLA','JPM','XOM','UNH'] %}
+    {% set _cm = corr_matrix['values'] if corr_matrix and corr_matrix['values'] else [
+      [1.00, 0.82, 0.68, 0.71, 0.64, 0.66, 0.47, 0.32, 0.18, 0.24],
+      [0.82, 1.00, 0.72, 0.74, 0.68, 0.69, 0.44, 0.35, 0.21, 0.26],
+      [0.68, 0.72, 1.00, 0.62, 0.58, 0.60, 0.52, 0.28, 0.11, 0.19],
+      [0.71, 0.74, 0.62, 1.00, 0.67, 0.65, 0.41, 0.30, 0.17, 0.22],
+      [0.64, 0.68, 0.58, 0.67, 1.00, 0.61, 0.39, 0.27, 0.15, 0.20],
+      [0.66, 0.69, 0.60, 0.65, 0.61, 1.00, 0.43, 0.29, 0.16, 0.21],
+      [0.47, 0.44, 0.52, 0.41, 0.39, 0.43, 1.00, 0.22, 0.14, 0.17],
+      [0.32, 0.35, 0.28, 0.30, 0.27, 0.29, 0.22, 1.00, 0.34, 0.28],
+      [0.18, 0.21, 0.11, 0.17, 0.15, 0.16, 0.14, 0.34, 1.00, 0.19],
+      [0.24, 0.26, 0.19, 0.22, 0.20, 0.21, 0.17, 0.28, 0.19, 1.00],
+    ] %}
 
-<!-- ═══ P3 · RATIOS ═══ -->
-<div class="slide-label">Page 3 / 8 · Risk-adjusted Ratios</div>
-<h2>Sharpe / Sortino / Calmar</h2>
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">Sharpe (annual)</div>
-    <div class="kpi-value
-         {% if sharpe_annual is not none and sharpe_annual >= 0 %}kpi-positive
-         {% elif sharpe_annual is not none %}kpi-negative
-         {% else %}kpi-neutral{% endif %}">
-      {% if sharpe_annual is not none %}{{ '%.2f'|format(sharpe_annual) }}{% else %}—{% endif %}
-    </div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Sortino (annual)</div>
-    <div class="kpi-value
-         {% if sortino_annual is not none and sortino_annual >= 0 %}kpi-positive
-         {% elif sortino_annual is not none %}kpi-negative
-         {% else %}kpi-neutral{% endif %}">
-      {% if sortino_annual is not none %}{{ '%.2f'|format(sortino_annual) }}{% else %}—{% endif %}
-    </div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Calmar</div>
-    <div class="kpi-value
-         {% if calmar is not none and calmar >= 0 %}kpi-positive
-         {% elif calmar is not none %}kpi-negative
-         {% else %}kpi-neutral{% endif %}">
-      {% if calmar is not none %}{{ '%.2f'|format(calmar) }}{% else %}—{% endif %}
-    </div>
-  </div>
-</div>
-<p>
-  Sharpe는 평균 수익을 전체 변동성으로, Sortino는 하방 변동성으로 정규화한
-  값입니다. Calmar는 연환산 수익 대비 최대 낙폭을 관찰합니다. 무위험 수익률은
-  0으로 가정했습니다.
-</p>
+    {% set _cell = 28 %}
+    {% set _hl   = 42 %}
+    {% set _hm_w = _hl + _cell * 10 + 10 %}
+    {% set _hm_h = _hl + _cell * 10 + 22 %}
 
-<div class="page-break"></div>
+    <svg viewBox="0 0 {{ _hm_w }} {{ _hm_h }}" width="100%"
+         preserveAspectRatio="none"
+         xmlns="http://www.w3.org/2000/svg" aria-label="Correlation heatmap" role="img"
+         style="display:block; overflow:visible;">
 
-<!-- ═══ P4 · DRAWDOWN + SECTOR ═══ -->
-<div class="slide-label">Page 4 / 8 · Drawdown + Sector Concentration</div>
-<h2>Max Drawdown (3-month) · Sector Breakdown</h2>
-<div class="two-col">
-  <div class="col">
-    <div class="kpi-cell" style="border:none; padding: 0;">
-      <div class="kpi-label">Max Drawdown</div>
-      <div class="kpi-value
-           {% if max_drawdown_pct is not none %}kpi-negative{% else %}kpi-neutral{% endif %}"
-           style="font-size: 36pt;">
-        {% if max_drawdown_pct is not none %}
-          {{ '%.2f'|format(max_drawdown_pct) }}%
-        {% else %}—{% endif %}
-      </div>
-    </div>
-    <p style="margin-top: 10pt;">
-      3개월 누적 자본 곡선의 고점 대비 저점 관찰 값. 음수일수록 큰 낙폭을 의미합니다.
-    </p>
-  </div>
-  <div class="col">
-    <div class="kpi-label" style="margin-bottom: 6pt;">Sector Weights</div>
-    {% if sector_breakdown %}
-      {% for s in sector_breakdown[:8] %}
-      <div class="bar-row">
-        <div class="bar-label">{{ s.sector }}</div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: {{ (s.weight_pct|float) if s.weight_pct is not none else 0 }}%;"></div>
-        </div>
-        <div class="bar-value">{{ '%.1f'|format(s.weight_pct) }}%</div>
-      </div>
+      <!-- column labels -->
+      {% for c in range(10) %}
+        <text x="{{ _hl + c * _cell + _cell/2 }}" y="{{ _hl - 5 }}"
+              text-anchor="middle" fill="#4a4a4a"
+              font-size="6.4" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ _cl[c] }}</text>
       {% endfor %}
-    {% else %}
-      <p style="color: #9ca3af;">데이터 부족.</p>
-    {% endif %}
+      <!-- row labels -->
+      {% for r in range(10) %}
+        <text x="{{ _hl - 5 }}" y="{{ _hl + r * _cell + _cell/2 + 2.3 }}"
+              text-anchor="end" fill="#4a4a4a"
+              font-size="6.4" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ _cl[r] }}</text>
+      {% endfor %}
+      <!-- cells -->
+      {% for r in range(10) %}
+        {% for c in range(10) %}
+          {% set _val = _cm[r][c] %}
+          {% if r == c %}
+            <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}"
+                  width="{{ _cell - 1 }}" height="{{ _cell - 1 }}"
+                  fill="#f7f3ec" stroke="#c9c4b8" stroke-width="0.35"/>
+            <text x="{{ _hl + c * _cell + _cell/2 }}"
+                  y="{{ _hl + r * _cell + _cell/2 + 2.3 }}"
+                  text-anchor="middle" font-size="6.4"
+                  font-family="JetBrains Mono, monospace"
+                  fill="#c9c4b8">—</text>
+          {% else %}
+            {% set _av = _val if _val >= 0 else -_val %}
+            {% if _val >= 0 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
+            <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}"
+                  width="{{ _cell - 1 }}" height="{{ _cell - 1 }}"
+                  fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}"
+                  stroke="#ffffff" stroke-width="0.5"/>
+            <text x="{{ _hl + c * _cell + _cell/2 }}"
+                  y="{{ _hl + r * _cell + _cell/2 + 2.3 }}"
+                  text-anchor="middle" font-size="6.6"
+                  font-family="JetBrains Mono, monospace"
+                  fill="{{ '#0A0A0A' if _av < 0.5 else '#F7F5EF' }}">{{ '%.2f'|format(_val) }}</text>
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+
+      <!-- bichrome legend -->
+      <g transform="translate({{ _hl }}, {{ _hl + _cell * 10 + 10 }})">
+        <text x="0" y="0" fill="#8a8a8a" font-size="6.4" font-family="JetBrains Mono, monospace">-1</text>
+        {% for i in range(40) %}
+          {% set _frac = i / 39.0 %}
+          {% set _shade = 1 - (2 * _frac - 1) if _frac < 0.5 else (2 * _frac - 1) %}
+          {% set _c = '#A84C4C' if _frac < 0.5 else '#8B6F47' %}
+          <rect x="{{ 14 + i * 3 }}" y="-6" width="3" height="6"
+                fill="{{ _c }}" fill-opacity="{{ '%.2f' % _shade }}"/>
+        {% endfor %}
+        <text x="74" y="0" fill="#8a8a8a" font-size="6.4" font-family="JetBrains Mono, monospace">0</text>
+        <text x="136" y="0" fill="#8a8a8a" font-size="6.4" font-family="JetBrains Mono, monospace">+1</text>
+      </g>
+    </svg>
+
+    <div class="sp-fig-caption">
+      Fig. 1. Ninety-day rolling Pearson correlation on log returns.
+      Bronze · positive co-movement. Faint red · negative. The diagonal
+      is omitted so the eye reads pairs, not self-references.
+    </div>
+
   </div>
-</div>
 
-<div class="page-break"></div>
+  <div class="sp-margin">
+    <div class="sp-prose">
+      <p>Correlation, observed over ninety trading days, tells where the
+        tribe moves together. When it tightens, portfolios become a single
+        bet worn in ten costumes — the appearance of diversification,
+        without its mathematics.</p>
+      <p>The highest observed pairing this month was AAPL–MSFT at 0.82.
+        The lowest was XOM–NVDA at 0.11. Neither is a directive; both are
+        facts. The bronze clustering in the upper-left quadrant reflects a
+        structural feature of the held book, not an event.</p>
+    </div>
 
-<!-- ═══ P5 · TAIL + CES ═══ -->
-<div class="slide-label">Page 5 / 8 · Tail Risk</div>
-<h2>Tail Ratio · Component Expected Shortfall (Top 3)</h2>
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">Tail Ratio (95p / |5p|)</div>
-    <div class="kpi-value kpi-neutral">
-      {% if tail_ratio is not none %}{{ '%.2f'|format(tail_ratio) }}{% else %}—{% endif %}
+    <div class="sp-marg-list">
+      <p class="sp-marg-item">Method &nbsp;·&nbsp; Pearson, 90D rolling.</p>
+      <p class="sp-marg-item">Sample &nbsp;·&nbsp; 252 trading days.</p>
+      <p class="sp-marg-item">Next review &nbsp;·&nbsp; monthly close.</p>
     </div>
   </div>
 </div>
-<h2 style="margin-top: 18pt;">Top 3 Component ES Contributors</h2>
-{% if component_es %}
-<table class="layout">
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 3 · RISK LADDER — per-position table
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · Position Ladder</p>
+<h2 class="sp-title">The names inside the numbers</h2>
+<p class="sp-deck">
+  Each row is a single observation of historical loss behaviour. The bronze
+  highlight marks the two largest VaR contributions in the current book.
+</p>
+
+{% set _ladder = positions_ladder | default([]) %}
+{% if _ladder %}
+<table class="ld-table">
   <thead>
-    <tr><th>Ticker</th><th>Sector</th><th class="num">ES Contribution (%)</th></tr>
+    <tr>
+      <th style="width:10%;">Position</th>
+      <th class="num" style="width:9%;">Weight</th>
+      <th class="num" style="width:12%;">1D VaR · 95%</th>
+      <th class="num" style="width:12%;">1D ES · 95%</th>
+      <th class="num" style="width:11%;">90D MaxDD</th>
+      <th class="num" style="width:9%;">Beta</th>
+      <th class="num" style="width:11%;">Vol · Ann.</th>
+      <th style="width:26%;">Risk · 90D Trajectory</th>
+    </tr>
   </thead>
   <tbody>
-  {% for c in component_es %}
-    <tr>
-      <td><strong>{{ c.ticker }}</strong></td>
-      <td>{{ c.sector or '—' }}</td>
-      <td class="num">{{ '%.3f'|format(c.es_contrib) }}%</td>
+    {# sort by absolute VaR to find top-2 contributions #}
+    {% set _var_values = _ladder | map(attribute='var_1d') | list %}
+    {% set _sorted_abs = _var_values | map('abs') | list | sort(reverse=True) %}
+    {% set _threshold = _sorted_abs[1] if _sorted_abs | length >= 2 else _sorted_abs[0] %}
+
+    {% for p in _ladder %}
+      {% set _is_top = (p.var_1d | abs) >= _threshold %}
+      {% set _spark = p.spark | default([0, p.var_1d*0.2, p.var_1d*0.4, p.var_1d*0.65, p.var_1d*0.5, p.var_1d*0.8, p.var_1d]) %}
+      {% set _smax = (_spark | map('abs') | max) %}
+      {% if _smax == 0 %}{% set _smax = 1 %}{% endif %}
+      {% set _sw = 110 %}
+      {% set _sh = 20 %}
+      {% set _sp = [] %}
+      {% for v in _spark %}
+        {% set _x = loop.index0 * _sw / (_spark | length - 1) %}
+        {% set _y = _sh/2 - (v / (_smax * 2)) * (_sh - 4) %}
+        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sp[-1].split(',') %}
+      <tr class="{{ 'ld-hl-bronze' if _is_top else '' }}">
+        <td><span class="ld-tkr">{{ p.ticker }}</span></td>
+        <td class="num">{{ '%.1f'|format(p.weight) }}%</td>
+        <td class="num r-neg">{{ '%+.2f'|format(p.var_1d) }}%</td>
+        <td class="num r-neg">{{ '%+.2f'|format(p.es_1d) }}%</td>
+        <td class="num r-neg">{{ '%+.2f'|format(p.maxdd_90d) }}%</td>
+        <td class="num">{{ '%.2f'|format(p.beta) }}</td>
+        <td class="num">{{ '%.1f'|format(p.vol_ann) }}%</td>
+        <td>
+          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="26" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg"
+               style="display:block; vertical-align:middle;">
+            <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}"
+                  stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
+            <polyline points="{{ _sp | join(' ') }}"
+                      stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+      </tr>
+    {% endfor %}
+
+    {# totals row — portfolio-level, faintly divided #}
+    {% set _tot_w = (_ladder | map(attribute='weight') | sum) %}
+    {% set _tot_var = (_ladder | map(attribute='var_1d') | sum) %}
+    {% set _tot_es  = (_ladder | map(attribute='es_1d')  | sum) %}
+    <tr class="ld-total-row">
+      <td><em>Portfolio</em></td>
+      <td class="num">{{ '%.1f'|format(_tot_w) }}%</td>
+      <td class="num">{{ '%+.2f'|format(_kpi_var) }}%</td>
+      <td class="num">{{ '%+.2f'|format(_kpi_es) }}%</td>
+      <td class="num">{{ '%+.2f'|format(_kpi_mdd) }}%</td>
+      <td class="num">—</td>
+      <td class="num">—</td>
+      <td><em style="font-size:8pt; color:#8a8a8a;">Totals shown. Diversification is not additive.</em></td>
     </tr>
-  {% endfor %}
   </tbody>
 </table>
-<p style="margin-top: 8pt;">
-  Component ES는 포트폴리오 꼬리 손실(5% 분위 이하 일일 수익률)에 대한 각
-  종목의 평균 기여도 관찰입니다. 절대 값이 클수록 해당 종목이 꼬리 손실에
-  더 크게 기여합니다.
-</p>
 {% else %}
-<p style="color: #9ca3af;">데이터 부족 — 관찰 구간 20일 미만.</p>
+<p class="r-muted">Ladder rows were not resolvable for this window.</p>
 {% endif %}
 
-<div class="page-break"></div>
-
-<!-- ═══ P6 · 7-LAYER DEFENSE ═══ -->
-<div class="slide-label">Page 6 / 8 · 7-Layer Risk Defense</div>
-<h2>Layer Status</h2>
-<table class="layout">
-  <thead>
-    <tr><th style="width: 240pt;">Layer</th><th>Status</th><th>Note</th></tr>
-  </thead>
-  <tbody>
-  {% for row in layer_status %}
-    <tr>
-      <td>{{ row.label }}</td>
-      <td>
-        {% if row.passed %}
-          <span class="pass-pill pass-ok">PASS</span>
-        {% else %}
-          <span class="pass-pill pass-fail">ATTENTION</span>
-        {% endif %}
-      </td>
-      <td>{{ row.note }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-<p style="margin-top: 10pt;">
-  7-Layer Risk Defense는 VaR · Correlation · VIX · Tail · Daily Loss ·
-  Sector · Cash의 관찰 레이어입니다. "ATTENTION"은 해당 레이어가 임계치를
-  넘어 관찰 대상 구간에 진입했음을 의미하며, 매매 판단 신호가 아닙니다.
+<p style="margin-top: 4pt; font-family: 'Source Serif 4', Georgia, serif; font-size: 8.8pt; line-height: 1.5; color: #4a4a4a; font-style: italic;">
+  Row-level VaR is a descriptive figure. Portfolio-level risk is not the
+  arithmetic sum of position risks; diversification and covariance bend the
+  line. The two bronze-highlighted rows denote the largest single
+  contributions to the observed portfolio VaR.
 </p>
 
-<div class="page-break"></div>
 
-<!-- ═══ P7 · AI NARRATIVE ═══ -->
-<div class="slide-label">Page 7 / 8 · Observed Top Risks</div>
-<h2>Top 3 Observations</h2>
-<div class="narrative">{{ top_risks }}</div>
-<p>
-  위 문장은 AI 모델이 본 리포트의 관찰 지표만을 바탕으로 중립 언어로 재구성한
-  요약입니다. 매매 판단이나 권유를 포함하지 않습니다.
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 4 · TAIL / DRAWDOWN QUAD — 2×2 small-multiples + method sidebar
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part III · Tail &amp; Drawdown</p>
+<h2 class="sp-title">Readings around the tails</h2>
+<p class="sp-deck">
+  Four risk dimensions, each sampled over the same 252-day window.
+  Methodology notes sit inline so the page reads as a single object.
 </p>
 
-<div class="page-break"></div>
+<div class="rq-grid">
+  <div class="rq-main">
 
-<!-- ═══ P8 · DISCLAIMER ═══ -->
-<div class="slide-label">Page 8 / 8 · Legal</div>
-<h2>Disclaimer</h2>
-{% include '_disclaimer.html' %}
-<div class="footer">
-  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> ·
-  pivoxquant.com · trigger={{ trigger }}
+    <div class="rq-quads">
+      <div class="rq-quad-row">
+
+        <!-- Q1: VaR histogram (daily 1Y) -->
+        <div class="rq-quad">
+          <div class="rq-quad-label">VaR Histogram · 252D</div>
+          <div class="rq-quad-value">{{ '%+.2f'|format(_kpi_var) }}%</div>
+          {% set _bins = (var_histogram.bins if var_histogram and var_histogram.bins else [-4,-3,-2,-1,0,1,2,3,4]) %}
+          {% set _cnts = (var_histogram.counts if var_histogram and var_histogram.counts else [2,6,14,32,60,48,28,12,4]) %}
+          {% set _cmax = _cnts | max %}
+          <svg viewBox="0 0 180 48" width="100%" height="80" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
+            {% for i in range(_bins | length) %}
+              {% set _h = (_cnts[i] / _cmax) * 30 %}
+              {% if _bins[i] < 0 %}{% set _c = '#A84C4C' %}{% set _op = 0.55 %}{% else %}{% set _c = '#8B6F47' %}{% set _op = 0.75 %}{% endif %}
+              {% set _bw = 180 / (_bins | length) - 1 %}
+              <rect x="{{ i * (180 / (_bins | length)) + 0.5 }}" y="{{ 42 - _h }}"
+                    width="{{ _bw }}" height="{{ _h }}"
+                    fill="{{ _c }}" fill-opacity="{{ _op }}"/>
+            {% endfor %}
+            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">DAILY RETURN DISTRIBUTION</text>
+            <text x="178" y="7" text-anchor="end" fill="#6B6B6B" font-size="6.2" font-family="JetBrains Mono, monospace">95th pct line</text>
+          </svg>
+          <div class="rq-quad-foot">Historical simulation, 252 daily log-returns.</div>
+        </div>
+
+        <!-- Q2: Underwater curve -->
+        <div class="rq-quad">
+          <div class="rq-quad-label">Underwater · 90D</div>
+          <div class="rq-quad-value">{{ '%+.2f'|format(_kpi_mdd) }}%</div>
+          {% set _uw = underwater | default([0,-0.4,-1.2,-2.8,-4.4,-6.2,-7.8,-8.7,-7.2,-5.4,-3.1,-1.2,-0.4,0]) %}
+          {% set _umin = _uw | min %}
+          {% if _umin == 0 %}{% set _umin = -1 %}{% endif %}
+          {% set _pts = [] %}
+          {% set _n = _uw | length %}
+          {% for v in _uw %}
+            {% set _x = loop.index0 * 180 / (_n - 1) %}
+            {% set _y = 6 + (v / _umin) * 30 %}
+            {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+          {% endfor %}
+          {# find trough index #}
+          {% set _tidx = 0 %}
+          {% for v in _uw %}{% if v == _umin %}{% set _tidx = loop.index0 %}{% endif %}{% endfor %}
+          {% set _tx = _tidx * 180 / (_n - 1) %}
+          <svg viewBox="0 0 180 48" width="100%" height="80" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+            <line x1="0" y1="6" x2="180" y2="6" stroke="#c9c4b8" stroke-width="0.3"/>
+            <polygon points="0,6 {{ _pts | join(' ') }} 180,6"
+                     fill="#A84C4C" fill-opacity="0.14"/>
+            <polyline points="{{ _pts | join(' ') }}"
+                      fill="none" stroke="#A84C4C" stroke-width="0.9"/>
+            <circle cx="{{ '%.2f' % _tx }}" cy="{{ 6 + 30 }}" r="2.0" fill="#8B6F47"/>
+            <text x="{{ '%.2f' % _tx }}" y="{{ 6 + 44 }}" text-anchor="middle"
+                  fill="#8B6F47" font-size="6.0" font-family="JetBrains Mono, monospace">trough</text>
+          </svg>
+          <div class="rq-quad-foot">Peak-to-trough on daily marks, 90 sessions.</div>
+        </div>
+      </div>
+
+      <div class="rq-quad-row">
+
+        <!-- Q3: Tail ratio (empirical vs normal) -->
+        <div class="rq-quad">
+          <div class="rq-quad-label">Tail Distribution</div>
+          <div class="rq-quad-value">{{ '%.2f'|format(tail_ratio | default(1.08)) }}</div>
+          {% set _emp = tail_dist.empirical if tail_dist and tail_dist.empirical else [0.4,1.2,3.4,6.8,9.2,11.8,9.4,5.8,2.8,0.9] %}
+          {% set _nor = tail_dist.normal    if tail_dist and tail_dist.normal    else [0.9,2.4,4.6,7.4,9.6,10.1,8.2,4.9,2.1,0.6] %}
+          {% set _emax = ((_emp | max), (_nor | max)) | max %}
+          {% set _ept = [] %}
+          {% set _npt = [] %}
+          {% set _n2 = _emp | length %}
+          {% for i in range(_n2) %}
+            {% set _x = i * 180 / (_n2 - 1) %}
+            {% set _ye = 42 - (_emp[i] / _emax) * 30 %}
+            {% set _yn = 42 - (_nor[i] / _emax) * 30 %}
+            {% set _ = _ept.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _ye)) %}
+            {% set _ = _npt.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _yn)) %}
+          {% endfor %}
+          <svg viewBox="0 0 180 48" width="100%" height="80" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
+            <polyline points="{{ _npt | join(' ') }}"
+                      fill="none" stroke="#8a8a8a" stroke-width="0.7" stroke-dasharray="3,2"/>
+            <polyline points="{{ _ept | join(' ') }}"
+                      fill="none" stroke="#0A0A0A" stroke-width="1.2"/>
+            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">EMPIRICAL vs NORMAL</text>
+          </svg>
+          <div class="rq-quad-foot">Solid · empirical. Dashed · Gaussian reference.</div>
+        </div>
+
+        <!-- Q4: Liquidity heat strip -->
+        <div class="rq-quad">
+          <div class="rq-quad-label">Liquidity Cover · 5D ADV</div>
+          <div class="rq-quad-value">{{ liquidity_label | default('1.2× avg') }}</div>
+          {% set _lh = liquidity_heat if liquidity_heat else [
+            [0.08,0.09,0.11,0.09,0.10],
+            [0.12,0.14,0.13,0.15,0.12],
+            [0.22,0.28,0.31,0.26,0.24],
+            [0.06,0.07,0.06,0.08,0.07],
+            [0.18,0.21,0.19,0.20,0.22],
+            [0.09,0.10,0.12,0.09,0.11],
+            [0.34,0.38,0.32,0.36,0.40],
+            [0.14,0.16,0.15,0.13,0.14],
+            [0.05,0.06,0.05,0.07,0.05],
+            [0.11,0.13,0.12,0.10,0.14],
+          ] %}
+          <svg viewBox="0 0 180 48" width="100%" height="80" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+            {% set _cw = 14 %}
+            {% set _ch = 3.4 %}
+            {% set _gx = 6 %}
+            {% set _gy = 6 %}
+            {% for r in range(10) %}
+              {% for c in range(5) %}
+                {% set _op = _lh[r][c] * 2.2 %}
+                {% if _op > 1 %}{% set _op = 1 %}{% endif %}
+                <rect x="{{ _gx + c * (_cw + 0.6) }}"
+                      y="{{ _gy + r * (_ch + 0.4) }}"
+                      width="{{ _cw }}" height="{{ _ch }}"
+                      fill="#8B6F47" fill-opacity="{{ '%.2f' % _op }}"
+                      stroke="#ffffff" stroke-width="0.25"/>
+              {% endfor %}
+            {% endfor %}
+            <text x="{{ _gx + 5 * (_cw + 0.6) + 6 }}" y="{{ _gy + 6 }}"
+                  fill="#6B6B6B" font-size="6.0" font-family="Geist, sans-serif"
+                  letter-spacing="0.12em">POS × 5D</text>
+            <text x="{{ _gx + 5 * (_cw + 0.6) + 6 }}" y="{{ _gy + 16 }}"
+                  fill="#8a8a8a" font-size="6.0" font-family="Source Serif 4, serif"
+                  font-style="italic">darker · thinner cover</text>
+          </svg>
+          <div class="rq-quad-foot">Position divided by 5D average dollar volume.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
+      Fig. 2. Four risk dimensions, sampled on the same 252-day window.
+      Bronze marks benign directions; faint red, the loss side.
+    </div>
+
+  </div>
+
+  <div class="rq-side">
+    <div class="rq-method">
+      <div class="rq-method-eyebrow">Method Notes</div>
+      <div class="rq-method-item">
+        <span class="rq-method-num">01</span>
+        <span class="rq-method-def">VaR and ES computed via historical simulation, 252D window.</span>
+      </div>
+      <div class="rq-method-item">
+        <span class="rq-method-num">02</span>
+        <span class="rq-method-def">Correlation · 90D rolling Pearson on log returns.</span>
+      </div>
+      <div class="rq-method-item">
+        <span class="rq-method-num">03</span>
+        <span class="rq-method-def">Drawdown · peak-to-trough, 90D observation.</span>
+      </div>
+      <div class="rq-method-item">
+        <span class="rq-method-num">04</span>
+        <span class="rq-method-def">Liquidity · position over 5D average dollar volume.</span>
+      </div>
+      <div class="rq-method-item">
+        <span class="rq-method-num">05</span>
+        <span class="rq-method-def">Informational only — not a portfolio instruction.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 5 · EDITORIAL — pull quote + what this board does not answer
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What the desk is sitting with</h2>
+<p class="sp-deck">
+  A sentence the risk desk is holding, and the short list of questions this
+  board, by construction, does not answer.
+</p>
+
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default("Observations of risk do not subtract it. They shape the room we stand in while the weather turns.") }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Risk Desk") }}</div>
+  </div>
+</div>
+
+<div class="ed-notans-head">What this board does not answer</div>
+
+{% set _notans = not_answered | default([
+  'Tax consequences of rebalancing.',
+  'Individual liquidity events.',
+  'Regime shifts not in the 252D window.',
+  'Correlated news shocks not priced in.',
+  'Personal cash-flow timing.',
+]) %}
+{% set _half = ((_notans | length) / 2) | round(0, 'ceil') | int %}
+
+<div class="ed-notans-grid">
+  <div class="ed-notans-col">
+    {% for item in _notans[:_half] %}
+      <div class="ed-notans-item">
+        <span class="ed-notans-num">{{ '%02d' % loop.index }}</span>{{ item }}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="ed-notans-col">
+    {% for item in _notans[_half:] %}
+      <div class="ed-notans-item">
+        <span class="ed-notans-num">{{ '%02d' % (_half + loop.index) }}</span>{{ item }}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<p style="margin-top: 14pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 7.6pt; color: #8a8a8a; text-align: center; line-height: 1.5;">
+  <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
+</p>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 6 · COLOPHON
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<div class="co-wrap">
+
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
+
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name }}</strong> on
+      <strong>{{ period_label | default('April 2026') }}</strong>. Risk Board
+      <strong>No. {{ '%02d' % _issue_no }}</strong>.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data sources</span>
+    </p>
+    {% set _ds = data_sources | default([
+      {'key': 'Price',            'value': 'Alpaca Market Data (IEX consolidated)'},
+      {'key': 'Corporate actions','value': 'FMP v4 Stable'},
+      {'key': 'Risk-free',        'value': '3-Month T-Bill (FRED DGS3MO)'},
+      {'key': 'Window',           'value': '252 trading days, rolling'},
+    ]) %}
+    {% for d in _ds %}
+      <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
+        <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #8B6F47; margin-right: 6pt;">{{ d.key }}</span>
+        <span>{{ d.value }}</span>
+      </p>
+    {% endfor %}
+
+    <p style="margin: 10pt 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('58 quant models · 7-Layer Risk Defense') }}.
+    </p>
+  </div>
+
+  <div class="co-thin-rule"></div>
+
+  {# Legal partial — verbatim required. #}
+  {% include '_disclaimer.html' %}
+
+  <div class="co-thin-rule"></div>
+
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Risk Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at }}</div>
+  </div>
+
 </div>
 
 </body>

@@ -1,0 +1,47 @@
+{#
+  ═══════════════════════════════════════════════════════════════════════════
+  PivoxQuant — Email Stylesheet (Goldman Sachs CFO-grade)
+  ═══════════════════════════════════════════════════════════════════════════
+  Email clients (Gmail / Outlook / Naver / Daum) strip <style> tags
+  unpredictably. Keep inline styles on each element; this partial ships a
+  small progressive-enhancement baseline AND the CSS variable declarations
+  that templates reference inside their inline styles.
+
+  Include as:   <style>{% include '_email_css.html' %}</style>
+
+  Font-face block: the 2026-04-21 font embedding fix pulls in the shared
+  _embedded_fonts.html partial so that email templates rendered to PDF
+  (via Chrome headless / WeasyPrint for sample gallery + archival) carry
+  full font outlines. Real email clients (Gmail/Outlook) ignore
+  @font-face and fall back to the system-font stack — no regression.
+  ═══════════════════════════════════════════════════════════════════════════
+#}
+{% include '_embedded_fonts.html' %}
+
+/* Palette — Ivory + Vantablack */
+body, table, td, div, p, a {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Geist", "Pretendard",
+               "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR",
+               Helvetica, Arial, sans-serif;
+}
+.mono, .num {
+  font-family: "JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+.serif {
+  font-family: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+}
+.pos { color: #14532d; }
+.neg { color: #7f1d1d; }
+.accent { color: #8b6f47; }
+.muted { color: #8a8a8a; }
+a { color: #1a2942; }
+img { -ms-interpolation-mode: bicubic; border: 0; outline: none; }
+table { border-collapse: collapse; }
+@media only screen and (max-width: 620px) {
+  .email-container { width: 100% !important; }
+  .px-32 { padding-left: 20px !important; padding-right: 20px !important; }
+  .hero-pct { font-size: 44pt !important; }
+}

@@ -1,190 +1,902 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Capital Allocation — Goldman IC v2 Editorial Redesign (6-page flagship)
+   Annual allocation observation across equities / bonds / cash / alternatives.
+   Observation only — descriptive record of the current paragraph.
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Capital Allocation Calculator — {{ calc_token }}</title>
+  <title>Capital Allocation — {{ user_name }} — 2026</title>
   <style>
-    @page { size: A4; margin: 18mm 16mm; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                       Helvetica, Arial, "Apple SD Gothic Neo",
-                       "Noto Sans KR", sans-serif;
-           color: #111; line-height: 1.5; font-size: 10.5pt; margin: 0; }
-    h1 { font-size: 22pt; margin: 0 0 4pt 0; letter-spacing: -0.3pt; }
-    h2 { font-size: 13pt; margin: 18pt 0 6pt 0;
-         border-bottom: 1px solid #e5e7eb; padding-bottom: 4pt; }
-    h3 { font-size: 11pt; margin: 10pt 0 4pt 0; }
-    .meta { font-size: 9pt; color: #6b7280; text-transform: uppercase;
-            letter-spacing: .5pt; }
-    .muted { color: #6b7280; font-size: 9.5pt; }
-    .callout { background: #faf9f6; border-left: 3px solid #111;
-               padding: 10pt 14pt; margin: 10pt 0; }
-    .callout .label { font-size: 9pt; color: #6b7280;
-                      text-transform: uppercase; letter-spacing: .4pt; }
-    .callout .value { font-size: 22pt; font-weight: 700; margin-top: 3pt;
-                      letter-spacing: -0.3pt; }
-    table.scenarios { width: 100%; border-collapse: collapse; margin-top: 6pt;
-                      font-size: 9.5pt; }
-    table.scenarios th, table.scenarios td { padding: 7pt 6pt; text-align: left;
-                                             border-bottom: 1px solid #e5e7eb;
-                                             vertical-align: top; }
-    table.scenarios th { font-size: 8.5pt; color: #6b7280;
-                         text-transform: uppercase; letter-spacing: .4pt;
-                         font-weight: 500; background: #fafafa; }
-    table.scenarios td.num { text-align: right;
-                             font-variant-numeric: tabular-nums; }
-    .pos { color: #0a6f3c; }
-    .neg { color: #a11d1d; }
-    .page-break { page-break-after: always; }
-    .ticker-chip { display: inline-block; font-size: 8.5pt;
-                   background: #f3f4f6; padding: 1pt 5pt; margin: 1pt 2pt 1pt 0;
-                   border-radius: 3pt; }
-    .banner { border: 1px solid #e5e7eb; padding: 10pt 14pt;
-              background: #fffdf7; margin: 10pt 0; font-size: 9.5pt; }
-    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt; line-height: 1.45; }
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  CAPITAL ALLOCATION";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
+      @top-right {
+        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  PQ-CA-01";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
+      }
+      @bottom-left {
+        content: "Annual allocation record — informational only.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8pt;
+        color: #4a4a4a;
+      }
+    }
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
+
+    /* ───────── P1 · COVER ───────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 44pt; line-height: 1.12; letter-spacing: -0.02em;
+      color: #0A0A0A; margin: 44pt 0 44pt 0;
+    }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 36pt; }
+    .cv-hero span + span + span { padding-left: 72pt; color: #8B6F47; }
+    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; overflow: visible; }
+    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8a8a8a; margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.015em; line-height: 1.02;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
+    }
+    .cv-foot {
+      margin-top: 40pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt; color: #6B6B6B; letter-spacing: 0.02em;
+    }
+
+    /* ───────── Shared ───────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt; font-weight: 400; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
+      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
+    }
+
+    /* ───────── P2 · SPREAD (60/40) ───────── */
+    .sp-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed; }
+    .sp-main { display: table-cell; width: 70%; vertical-align: top; }
+    .sp-margin { display: table-cell; width: 30%; vertical-align: top; }
+    .sp-fig-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 600; margin-bottom: 6pt;
+    }
+    .sp-fig-caption {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
+      line-height: 1.4; margin-top: 6pt;
+    }
+    .sp-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.6; color: #202020;
+      border-top: 0.35pt solid #c9c4b8; padding-top: 10pt; margin-top: 14pt;
+    }
+    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
+    .sp-prose > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 28pt; line-height: 0.88; font-weight: 500;
+      color: #8B6F47; float: left; padding: 2pt 6pt 0 0; font-style: normal;
+    }
+    .sp-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt; margin-bottom: 12pt;
+    }
+    .sp-margin-term {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 2pt;
+    }
+    .sp-margin-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12pt; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    }
+    .sp-margin-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8pt; line-height: 1.45; color: #6B6B6B; margin-top: 2pt;
+    }
+
+    /* ───────── P3 · LADDER ───────── */
+    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
+    .ld-table th, .ld-table td {
+      padding: 7pt 5pt; text-align: left; vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6B6B6B; font-weight: 600;
+    }
+    .ld-table th.num,
+    .ld-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .ld-table td.num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.8pt;
+    }
+    .ld-tkr {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600; font-size: 9.2pt; letter-spacing: 0.02em; color: #0A0A0A;
+    }
+    .ld-note {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8pt; color: #4a4a4a;
+    }
+
+    /* ───────── P4 · QUAD ───────── */
+    .aq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; }
+    .aq-main { display: table-cell; width: 66%; vertical-align: top; }
+    .aq-side { display: table-cell; width: 34%; vertical-align: top; }
+    .aq-quads { display: table; width: 100%; border-collapse: collapse; }
+    .aq-quad {
+      display: table-cell; width: 50%; padding: 12pt 14pt;
+      vertical-align: top; height: 180pt;
+    }
+    .aq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 3pt;
+    }
+    .aq-quad-sub {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.6pt; color: #6B6B6B; margin-bottom: 4pt;
+    }
+    .aq-rail { padding: 12pt 0 0 12pt; border-left: 0.35pt solid #c9c4b8; }
+    .aq-rail-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.28em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 8pt;
+    }
+    .aq-rail-item {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; line-height: 1.5; color: #202020;
+      padding: 6pt 0; border-bottom: 0.15pt solid #e4dfd2;
+    }
+    .aq-rail-item:last-child { border-bottom: none; }
+    .aq-rail-n {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8B6F47; margin-right: 6pt;
+    }
+
+    /* ───────── P5 · EDITORIAL ───────── */
+    .ed-quote-wrap {
+      min-height: 320pt; padding: 50pt 40pt 30pt 40pt;
+      display: table; width: 100%; text-align: center;
+    }
+    .ed-quote-cell { display: table-cell; vertical-align: middle; }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 34pt; line-height: 1.24; letter-spacing: -0.015em;
+      color: #0A0A0A; margin: 0;
+    }
+    .ed-quote-attr {
+      margin-top: 26pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47;
+    }
+    .ed-quote-attr::before, .ed-quote-attr::after {
+      content: "——"; color: #8B6F47; opacity: 0.5; margin: 0 8pt; letter-spacing: 0;
+    }
+    .ed-watch-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 600;
+      margin-top: 26pt; padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
+    }
+    .ed-twocol { display: table; width: 100%; margin-top: 10pt; border-collapse: separate; border-spacing: 18pt 0; }
+    .ed-col { display: table-cell; width: 50%; vertical-align: top; }
+    .ed-col ol {
+      margin: 0; padding: 0 0 0 18pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.6; color: #202020;
+    }
+    .ed-col ol li { margin-bottom: 6pt; }
+    .ed-legal {
+      font-size: 6pt; color: #8a8a8a; margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif; font-style: italic; line-height: 1.4;
+    }
+
+    /* ───────── P6 · COLOPHON ───────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7; color: #202020; max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em; text-transform: uppercase; color: #6B6B6B;
+    }
+    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+    section.disclaimer.pq-disclaimer {
+      border: none !important;
+      border-top: 0.35pt solid #c9c4b8 !important;
+      padding: 10pt 0 0 0 !important;
+      margin: 16pt 0 0 0 !important;
+      background: transparent !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
+    }
   </style>
 </head>
 <body>
 
-<!-- ── PAGE 1 · Input summary + What-If framing ── -->
-<div class="meta">PivoxQuant · What-If Capital Allocation · {{ generated_at }}</div>
-<h1>{{ user_name }}'s Capital Allocation Calculator</h1>
-<div class="meta">Calc ID {{ calc_token }}</div>
+{% set _issue_no = issue_number | default(1) %}
+{% set _doc_ref = doc_ref | default('PQ-CA-01 · v2026.04.22') %}
+{% set _hero = hero_headline | default([
+    'Capital is attention',
+    'made durable. Every line',
+    'is a quiet sentence.'
+]) %}
 
-<div class="callout">
-  <div class="label">New Cash Entered ({{ portfolio_ccy }})</div>
-  <div class="value">{{ '{:,.0f}'.format(cash_amount) }}</div>
-  <div class="muted" style="margin-top:6pt;">
-    이 계산은 이용자 본인이 직접 입력한 시나리오의 <strong>과거 사실</strong>만 요약합니다.
-    PivoxQuant은 배분을 권유하거나 추천하지 않습니다.
+{# ═════════════ P1 · COVER ═════════════ #}
+<section class="cv">
+
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=340 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+  </div>
+
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    CAPITAL ALLOCATION
+    &nbsp;·&nbsp; 2026
+    &nbsp;·&nbsp; <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+  </div>
+  <div class="cv-rule-thin"></div>
+
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
+
+  <div class="cv-rule-thin"></div>
+
+  {% set _kpi = kpis_cover | default({
+    'equity_pct': 58.0,
+    'bonds_pct':  24.0,
+    'cash_pct':   12.0,
+    'alt_pct':     6.0,
+  }) %}
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">EQUITY</div>
+      <div class="cv-kpi-value">{{ '%.0f' % _kpi.equity_pct }}%</div>
+      <div class="cv-kpi-foot">US and international listed equities.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">BONDS</div>
+      <div class="cv-kpi-value">{{ '%.0f' % _kpi.bonds_pct }}%</div>
+      <div class="cv-kpi-foot">Investment grade and high yield combined.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">CASH</div>
+      <div class="cv-kpi-value">{{ '%.0f' % _kpi.cash_pct }}%</div>
+      <div class="cv-kpi-foot">Short-term reserve and money market.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">ALTERNATIVES</div>
+      <div class="cv-kpi-value">{{ '%.0f' % _kpi.alt_pct }}%</div>
+      <div class="cv-kpi-foot">Real assets, commodities, liquid alts.</div>
+    </div>
+  </div>
+
+  <p class="cv-foot">
+    Prepared for {{ user_name }} &nbsp;·&nbsp; Annual allocation record, observation only.
+    Past performance does not guarantee future results.
+  </p>
+</section>
+
+
+{# ═════════════ P2 · SPREAD — 4-asset stacked area ═════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · Allocation Across the Year</p>
+<h2 class="sp-title">How the four lines moved together</h2>
+<p class="sp-deck">
+  A twelve-month stacked reading of the four asset classes, ordered
+  equity-on-top so drift in the risk-bearing layer sits at eye level.
+</p>
+
+<div class="sp-grid">
+  <div class="sp-main">
+
+    <div class="sp-fig-title">Fig. 1 · Asset mix · trailing twelve months</div>
+
+    {% set _months = months_labels | default(['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr']) %}
+    {% set _stack = allocation_stack | default({
+      'equity': [54,55,56,57,57,58,58,59,60,59,58,58],
+      'bonds':  [26,26,26,25,25,25,25,24,23,24,24,24],
+      'cash':   [14,13,12,12,12,12,12,11,11,11,12,12],
+      'alt':    [ 6, 6, 6, 6, 6, 5, 5, 6, 6, 6, 6, 6],
+    }) %}
+
+    {% set _W = 440 %}
+    {% set _H = 220 %}
+    {% set _Tp = 20 %}
+    {% set _Bp = 36 %}
+    {% set _Lp = 26 %}
+    {% set _Rp = 14 %}
+    {% set _PW = _W - _Lp - _Rp %}
+    {% set _PH = _H - _Tp - _Bp %}
+    {% set _n = _months | length %}
+
+    {# Compute cumulative stacks from bottom: alt, cash, bonds, equity #}
+    {% set _e = _stack.equity %}
+    {% set _b = _stack.bonds %}
+    {% set _c = _stack.cash %}
+    {% set _a = _stack.alt %}
+
+    {# Each band's top line y-coords (100 at bottom = y=Tp+PH) #}
+    {% set _alt_top = [] %}
+    {% set _cash_top = [] %}
+    {% set _bond_top = [] %}
+    {% set _eq_top  = [] %}
+    {% for i in range(_n) %}
+      {% set _x = _Lp + i * _PW / (_n - 1) %}
+      {% set _y_alt  = _Tp + _PH - (_a[i] / 100) * _PH %}
+      {% set _y_cash = _Tp + _PH - ((_a[i]+_c[i]) / 100) * _PH %}
+      {% set _y_bond = _Tp + _PH - ((_a[i]+_c[i]+_b[i]) / 100) * _PH %}
+      {% set _y_eq   = _Tp + _PH - ((_a[i]+_c[i]+_b[i]+_e[i]) / 100) * _PH %}
+      {% set _ = _alt_top.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y_alt)) %}
+      {% set _ = _cash_top.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y_cash)) %}
+      {% set _ = _bond_top.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y_bond)) %}
+      {% set _ = _eq_top.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y_eq)) %}
+    {% endfor %}
+
+    {% set _base_r = ('%.2f' % (_W - _Rp)) ~ ',' ~ ('%.2f' % (_Tp + _PH)) %}
+    {% set _base_l = ('%.2f' % _Lp) ~ ',' ~ ('%.2f' % (_Tp + _PH)) %}
+
+    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
+         xmlns="http://www.w3.org/2000/svg" aria-label="Asset mix stacked area" role="img"
+         style="display:block; overflow:visible;">
+
+      {% for gy in [0.0, 0.25, 0.5, 0.75, 1.0] %}
+        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH - _PH * gy }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH - _PH * gy }}"
+              stroke="#E8E4DA" stroke-width="0.3"/>
+        <text x="{{ _Lp - 4 }}" y="{{ _Tp + _PH - _PH * gy + 2 }}" text-anchor="end"
+              fill="#8a8a8a" font-size="6.5" font-family="JetBrains Mono, monospace">{{ '%.0f' % (100 * gy) }}%</text>
+      {% endfor %}
+
+      {# alt band (bottom) - ink-faint #}
+      <polygon points="{{ _alt_top | join(' ') }} {{ _base_r }} {{ _base_l }}" fill="#6B6B6B" fill-opacity="0.45"/>
+      {# cash band #}
+      <polygon points="{{ _cash_top | join(' ') }} {{ _alt_top | reverse | join(' ') }}" fill="#c9c4b8" fill-opacity="0.75"/>
+      {# bond band #}
+      <polygon points="{{ _bond_top | join(' ') }} {{ _cash_top | reverse | join(' ') }}" fill="#8B6F47" fill-opacity="0.42"/>
+      {# equity band (top) - ink #}
+      <polygon points="{{ _eq_top | join(' ') }} {{ _bond_top | reverse | join(' ') }}" fill="#0A0A0A" fill-opacity="0.78"/>
+
+      {# labels inline, at midpoint of last column #}
+      {% set _lastx = _Lp + (_n - 1) * _PW / (_n - 1) %}
+      <text x="{{ _lastx + 3 }}" y="{{ _Tp + 10 }}" fill="#F5F0E8" font-size="7.2" font-family="Geist, sans-serif" letter-spacing="0.1em" font-weight="600">EQUITY</text>
+
+      {# x-axis month labels every 2 #}
+      {% for i in range(_n) %}
+        {% if i % 2 == 0 %}
+          {% set _x = _Lp + i * _PW / (_n - 1) %}
+          <text x="{{ '%.2f' % _x }}" y="{{ _Tp + _PH + 14 }}" text-anchor="middle"
+                fill="#8a8a8a" font-size="6.8" font-family="JetBrains Mono, monospace">{{ _months[i] }}</text>
+        {% endif %}
+      {% endfor %}
+
+      {# Legend #}
+      <g transform="translate({{ _Lp }}, {{ _H - 4 }})" font-family="Geist, sans-serif" font-size="6.6">
+        <rect x="0" y="-7" width="8" height="6" fill="#0A0A0A" fill-opacity="0.78"/>
+        <text x="12" y="-2" fill="#4a4a4a" letter-spacing="0.08em">EQUITY</text>
+        <rect x="66" y="-7" width="8" height="6" fill="#8B6F47" fill-opacity="0.42"/>
+        <text x="78" y="-2" fill="#4a4a4a" letter-spacing="0.08em">BONDS</text>
+        <rect x="130" y="-7" width="8" height="6" fill="#c9c4b8" fill-opacity="0.75"/>
+        <text x="142" y="-2" fill="#4a4a4a" letter-spacing="0.08em">CASH</text>
+        <rect x="180" y="-7" width="8" height="6" fill="#6B6B6B" fill-opacity="0.45"/>
+        <text x="192" y="-2" fill="#4a4a4a" letter-spacing="0.08em">ALT</text>
+      </g>
+    </svg>
+
+    <div class="sp-fig-caption">
+      Fig. 1. Stacked reading of the allocation mix across twelve months.
+      Equity on top, alternatives on the base. Ink tones darken toward the
+      risk-bearing layer; bronze indicates the investment-grade bond band.
+    </div>
+
+    <div class="sp-prose">
+      {% set _p = spread_prose | default([
+        'The equity line drifted four points through the year, rising from 54% in May to 60% in January before settling at 58% on the April observation. The movement is a reading of market drift rather than a deliberate rebalance line; the cash reserve absorbed most of the give, falling from 14% to 11% and then reverting to 12% at the April close.',
+        'Bond weight moved in the opposite direction, from 26% to 23% across the same window before partially reverting. The alternatives sleeve, held for portfolio-construction reasons, remained disciplined in a narrow 5-6% band. The four lines, read together, describe a paragraph that says the book accepted a small drift of equity risk without crossing any pre-set threshold.'
+      ]) %}
+      {% for para in _p %}<p>{{ para }}</p>{% endfor %}
+    </div>
+
+  </div>
+
+  <div class="sp-margin">
+
+    {% set _mrg = allocation_margin | default({
+      'rebalances_ytd':  2,
+      'largest_drift_pp': 3.4,
+      'target_band_pp':  5.0,
+      'tracking_err':    1.12,
+    }) %}
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Rebalances</div>
+      <div class="sp-margin-value">{{ _mrg.rebalances_ytd }}</div>
+      <div class="sp-margin-body">Executed rebalance events across the twelve-month window. No scheduled cadence is imposed.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Largest Drift</div>
+      <div class="sp-margin-value">{{ '%.1f' % _mrg.largest_drift_pp }}pp</div>
+      <div class="sp-margin-body">Single largest percentage-point drift observed between any two monthly marks, net of contributions.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Target Band</div>
+      <div class="sp-margin-value">±{{ '%.1f' % _mrg.target_band_pp }}pp</div>
+      <div class="sp-margin-body">Tolerance window around the policy weight. Drift inside the band is noted but not actioned.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Tracking</div>
+      <div class="sp-margin-value">{{ '%.2f' % _mrg.tracking_err }}%</div>
+      <div class="sp-margin-body">Annualised standard deviation of the portfolio return minus the 60/40 benchmark return, observed.</div>
+    </div>
+
   </div>
 </div>
 
-<div class="banner">
-  <strong>What-If Framing</strong> —
-  아래 시나리오는 이용자께서 고려 중인 배분을 입력하신 것이며,
-  각 시나리오의 <strong>과거 5년</strong> 수익률·변동성·최대 낙폭을 병렬로 표시합니다.
-  PivoxQuant은 어떤 시나리오도 "추천" 또는 "최적"이라고 판단하지 않습니다.
-  숫자는 모두 과거의 관찰이며, 향후 수익률을 보장하지 않습니다.
-</div>
 
-<h2>Scenarios Summary</h2>
-<p class="muted">
-  입력하신 {{ scenarios|length }}개 시나리오가 이어지는 페이지에서 상세 비교됩니다.
+{# ═════════════ P3 · LADDER ═════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · Allocation Ladder</p>
+<h2 class="sp-title">The eight lines that form the paragraph</h2>
+<p class="sp-deck">
+  Eight sleeves ordered by policy target. Each row shows the target weight,
+  the observed current weight, drift from policy, and the twelve-month
+  trajectory as a sparkline.
 </p>
 
-<div class="page-break"></div>
+{% set _rows = ladder_rows | default([
+  {'sleeve':'US Equity',       'target':35.0, 'current':38.0, 'drift': 3.0, 'delta3m': 1.2, 'delta12m': 4.8, 'note':'Large-cap index + factor tilt.',  'spark':[0.50,0.52,0.54,0.56,0.58,0.60,0.61,0.63]},
+  {'sleeve':'International Eq.','target':18.0, 'current':16.5, 'drift':-1.5, 'delta3m':-0.6, 'delta12m':-1.8, 'note':'Developed-market index.',          'spark':[0.50,0.52,0.52,0.51,0.50,0.49,0.48,0.48]},
+  {'sleeve':'Emerging Eq.',    'target': 5.0, 'current': 3.5, 'drift':-1.5, 'delta3m':-0.4, 'delta12m':-1.4, 'note':'Broad EM index.',                 'spark':[0.50,0.50,0.49,0.48,0.47,0.46,0.45,0.44]},
+  {'sleeve':'US IG Bonds',     'target':15.0, 'current':14.2, 'drift':-0.8, 'delta3m':-0.2, 'delta12m':-1.1, 'note':'Aggregate index, intermediate.',  'spark':[0.50,0.51,0.52,0.52,0.52,0.52,0.51,0.50]},
+  {'sleeve':'US HY Bonds',     'target': 5.0, 'current': 5.8, 'drift': 0.8, 'delta3m': 0.3, 'delta12m': 1.0, 'note':'HY index, ex-energy.',            'spark':[0.50,0.51,0.53,0.55,0.57,0.58,0.59,0.60]},
+  {'sleeve':'TIPS',            'target': 4.0, 'current': 4.1, 'drift': 0.1, 'delta3m': 0.0, 'delta12m': 0.2, 'note':'Short-duration TIPS.',            'spark':[0.50,0.50,0.50,0.51,0.51,0.51,0.51,0.52]},
+  {'sleeve':'Cash',            'target':10.0, 'current':12.0, 'drift': 2.0, 'delta3m': 0.4, 'delta12m': 1.2, 'note':'Money market + short T-bills.',   'spark':[0.50,0.52,0.54,0.56,0.57,0.58,0.59,0.60]},
+  {'sleeve':'Real Assets',     'target': 6.0, 'current': 5.9, 'drift':-0.1, 'delta3m': 0.0, 'delta12m':-0.3, 'note':'REIT index + gold sleeve.',       'spark':[0.50,0.50,0.49,0.48,0.48,0.48,0.49,0.49]}
+]) %}
 
-<!-- ── PAGE 2 · Side-by-side comparison table ── -->
-<h2>Parallel Scenario Comparison (과거 5년)</h2>
-<table class="scenarios">
+<table class="ld-table">
   <thead>
     <tr>
-      <th>Scenario</th>
-      <th>Tickers</th>
-      <th class="num">CAGR %</th>
-      <th class="num">Volatility %</th>
-      <th class="num">Max DD %</th>
-      <th class="num">Sharpe</th>
+      <th style="width:18%;">Sleeve</th>
+      <th class="num" style="width:9%;">Target</th>
+      <th class="num" style="width:9%;">Current</th>
+      <th class="num" style="width:9%;">Drift</th>
+      <th class="num" style="width:9%;">3M Δ</th>
+      <th class="num" style="width:9%;">12M Δ</th>
+      <th style="width:22%;">Note</th>
+      <th style="width:15%;">Trajectory</th>
     </tr>
   </thead>
   <tbody>
-  {% for s in scenarios %}
-    <tr>
-      <td><strong>{{ s.label }}</strong></td>
-      <td>
-        {% if s.tickers %}
-          {% for t in s.tickers %}<span class="ticker-chip">{{ t }}</span>{% endfor %}
-        {% else %}
-          <span class="muted">—</span>
-        {% endif %}
-      </td>
-      <td class="num {% if s.return_cagr is not none and s.return_cagr >= 0 %}pos{% elif s.return_cagr is not none %}neg{% endif %}">
-        {% if s.return_cagr is not none %}{{ '%+.2f'|format(s.return_cagr) }}{% else %}—{% endif %}
-      </td>
-      <td class="num">
-        {% if s.volatility is not none %}{{ '%.2f'|format(s.volatility) }}{% else %}—{% endif %}
-      </td>
-      <td class="num {% if s.max_dd is not none and s.max_dd < 0 %}neg{% endif %}">
-        {% if s.max_dd is not none %}{{ '%.2f'|format(s.max_dd) }}{% else %}—{% endif %}
-      </td>
-      <td class="num">
-        {% if s.sharpe is not none %}{{ '%.2f'|format(s.sharpe) }}{% else %}—{% endif %}
-      </td>
-    </tr>
-  {% endfor %}
+    {% for r in _rows %}
+      {% set _sw = 80 %}
+      {% set _sh = 16 %}
+      {% set _sp = r.spark %}
+      {% set _smax = _sp | max %}
+      {% set _smin = _sp | min %}
+      {% if _smax == _smin %}{% set _smax = _smin + 0.01 %}{% endif %}
+      {% set _sppts = [] %}
+      {% for v in _sp %}
+        {% set _x = loop.index0 * _sw / (_sp | length - 1) %}
+        {% set _y = _sh - ((v - _smin) / (_smax - _smin)) * (_sh - 3) - 1.5 %}
+        {% set _ = _sppts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sppts[-1].split(',') %}
+      <tr>
+        <td><span class="ld-tkr">{{ r.sleeve }}</span></td>
+        <td class="num">{{ '%.1f' % r.target }}%</td>
+        <td class="num">{{ '%.1f' % r.current }}%</td>
+        <td class="num {% if r.drift >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.1f' % r.drift }}pp</td>
+        <td class="num {% if r.delta3m >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.1f' % r.delta3m }}</td>
+        <td class="num {% if r.delta12m >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.1f' % r.delta12m }}</td>
+        <td><span class="ld-note">{{ r.note }}</span></td>
+        <td>
+          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
+            <polyline points="{{ _sppts | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+      </tr>
+    {% endfor %}
   </tbody>
 </table>
-<p class="muted" style="margin-top:8pt;">
-  수치는 모두 선택한 티커의 과거 5년 일별 종가 기준으로 계산되었습니다. Sharpe는 rf=0 단순형입니다.
+
+<p class="sp-deck" style="margin-top: 10pt; font-size: 9.2pt;">
+  Drift is the simple difference between current and target weight. Values
+  inside the tolerance band are noted but not actioned on the ladder.
 </p>
 
-<div class="page-break"></div>
 
-<!-- ── PAGE 3 · Per-scenario detail ── -->
-<h2>Scenario Detail</h2>
-{% for s in scenarios %}
-  <h3>{{ loop.index }}. {{ s.label }}</h3>
-  <p class="muted" style="margin:2pt 0 6pt 0;">Type: <code>{{ s.type }}</code></p>
+{# ═════════════ P4 · QUAD ═════════════ #}
+<div class="r-page-break"></div>
 
-  {% if s.tickers %}
-    <p style="margin:2pt 0 6pt 0;">
-      {% for t in s.tickers %}
-        <span class="ticker-chip">{{ t }} · {{ '%.1f'|format(s.weights[loop.index0] * 100) }}%</span>
+<p class="sp-part">Part III · Allocation Quad</p>
+<h2 class="sp-title">Four readings on where the year came from</h2>
+<p class="sp-deck">
+  Return contribution, drift history, the rebalance timeline, and a
+  comparison to the 60/40 benchmark — four quiet ways of reading the
+  same twelve months.
+</p>
+
+<div class="aq-grid">
+  <div class="aq-main">
+
+    <div class="aq-quads">
+
+      {# ── Q1 · Contribution to return ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q1 · Contribution to Return</div>
+        <div class="aq-quad-sub">Year-to-date, percentage points.</div>
+        {% set _contrib = contribution_bars | default([
+          {'n':'US Eq.',       'v': 6.2},
+          {'n':'Intl Eq.',     'v': 1.1},
+          {'n':'EM Eq.',       'v':-0.3},
+          {'n':'US IG',        'v': 0.6},
+          {'n':'US HY',        'v': 0.9},
+          {'n':'TIPS',         'v': 0.2},
+          {'n':'Cash',         'v': 0.4},
+          {'n':'Real Assets',  'v': 0.8}
+        ]) %}
+        {% set _cvals = _contrib | map(attribute='v') | list %}
+        {% set _cabs = _cvals | map('abs') | list %}
+        {% set _cmax = _cabs | max %}
+        {% if _cmax == 0 %}{% set _cmax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          {% set _bw = 20 %}
+          {% set _gap = 6 %}
+          {% set _mid = 55 %}
+          {% set _scale = 38 %}
+          {% for s in _contrib %}
+            {% set _x = 6 + loop.index0 * (_bw + _gap) %}
+            {% set _h = (s.v | abs) / _cmax * _scale %}
+            {% set _y = _mid - _h if s.v >= 0 else _mid %}
+            {% set _c = '#8B6F47' if s.v >= 0 else '#A84C4C' %}
+            <rect x="{{ _x }}" y="{{ '%.2f' % _y }}" width="{{ _bw }}" height="{{ '%.2f' % _h }}" fill="{{ _c }}" fill-opacity="0.72"/>
+            <text x="{{ _x + _bw/2 }}" y="100" text-anchor="middle" fill="#4a4a4a" font-size="5.4" font-family="Geist, sans-serif" letter-spacing="0.04em">{{ s.n }}</text>
+            <text x="{{ _x + _bw/2 }}" y="{{ '%.2f' % (_y - 3 if s.v >= 0 else _y + _h + 7) }}" text-anchor="middle" fill="#0A0A0A" font-size="5.6" font-family="JetBrains Mono, monospace">{{ '%+.1f' % s.v }}</text>
+          {% endfor %}
+          <line x1="0" y1="{{ _mid }}" x2="240" y2="{{ _mid }}" stroke="#0A0A0A" stroke-width="0.35" opacity="0.55"/>
+        </svg>
+      </div>
+
+      {# ── Q2 · 12M drift lines ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q2 · 12-Month Drift Lines</div>
+        <div class="aq-quad-sub">Weight change from policy, pp.</div>
+        {% set _drift = drift_lines | default({
+          'equity': [0.0,0.2,0.6,0.8,1.2,1.6,2.0,2.4,2.8,2.6,2.4,3.0],
+          'bonds':  [0.0,-0.2,-0.4,-0.4,-0.6,-0.8,-1.0,-1.2,-1.4,-1.2,-1.0,-0.8],
+          'cash':   [0.0,0.0,-0.2,-0.4,-0.6,-0.8,-1.0,-1.2,-1.4,-1.4,-1.4,-1.2],
+          'alt':    [0.0,0.0,0.0,0.0,0.0,-0.2,-0.2,0.0,0.0,0.0,0.0,-0.1]
+        }) %}
+        {% set _dall = [] %}
+        {% for series_name in ['equity','bonds','cash','alt'] %}
+          {% for v in _drift[series_name] %}
+            {% set _ = _dall.append(v) %}
+          {% endfor %}
+        {% endfor %}
+        {% set _dmx = _dall | map('abs') | list | max %}
+        {% if _dmx == 0 %}{% set _dmx = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="12" y1="55" x2="232" y2="55" stroke="#0A0A0A" stroke-width="0.35" opacity="0.55"/>
+          {% set _colors = {'equity':'#0A0A0A', 'bonds':'#8B6F47', 'cash':'#6B6B6B', 'alt':'#A84C4C'} %}
+          {% for series_name in ['cash','alt','bonds','equity'] %}
+            {% set _series = _drift[series_name] %}
+            {% set _pts = [] %}
+            {% for v in _series %}
+              {% set _x = 12 + loop.index0 * (220 / (_series|length - 1)) %}
+              {% set _y = 55 - (v / _dmx) * 42 %}
+              {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+            {% endfor %}
+            <polyline points="{{ _pts | join(' ') }}" fill="none" stroke="{{ _colors[series_name] }}" stroke-width="1.0" stroke-linejoin="round" opacity="0.82"/>
+          {% endfor %}
+          {# Legend #}
+          {% for k, c in [('EQ','#0A0A0A'),('BD','#8B6F47'),('CA','#6B6B6B'),('AL','#A84C4C')] %}
+            {% set _lx = 8 + loop.index0 * 40 %}
+            <line x1="{{ _lx }}" y1="98" x2="{{ _lx + 10 }}" y2="98" stroke="{{ c }}" stroke-width="1.2"/>
+            <text x="{{ _lx + 14 }}" y="100" fill="#4a4a4a" font-size="5.6" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ k }}</text>
+          {% endfor %}
+          <text x="{{ 234 }}" y="58" fill="#8a8a8a" font-size="5.4" font-family="JetBrains Mono, monospace" text-anchor="end">0</text>
+        </svg>
+      </div>
+
+      {# ── Q3 · Rebalance timeline ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q3 · Rebalance Timeline</div>
+        <div class="aq-quad-sub">Actions across the year, with sleeve.</div>
+        {% set _rb = rebalance_events | default([
+          {'m': 2, 'sl':'US Eq.', 'dir':'trim', 'amt':1.2},
+          {'m': 5, 'sl':'US HY',  'dir':'add',  'amt':0.8},
+          {'m': 8, 'sl':'Cash',   'dir':'add',  'amt':1.4},
+          {'m':10, 'sl':'Intl Eq.','dir':'trim','amt':0.6},
+          {'m':11, 'sl':'Bonds',  'dir':'add',  'amt':0.9}
+        ]) %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="14" y1="60" x2="230" y2="60" stroke="#0A0A0A" stroke-width="0.5" opacity="0.65"/>
+          {% for m in range(12) %}
+            {% set _x = 14 + m * (216 / 11) %}
+            <line x1="{{ '%.2f' % _x }}" y1="57" x2="{{ '%.2f' % _x }}" y2="63" stroke="#c9c4b8" stroke-width="0.4"/>
+          {% endfor %}
+          {# labels for Jan / Apr / Jul / Oct #}
+          {% for m, lbl in [(0,'Jan'), (3,'Apr'), (6,'Jul'), (9,'Oct')] %}
+            {% set _x = 14 + m * (216 / 11) %}
+            <text x="{{ '%.2f' % _x }}" y="74" text-anchor="middle" fill="#8a8a8a" font-size="5.8" font-family="JetBrains Mono, monospace">{{ lbl }}</text>
+          {% endfor %}
+          {% for e in _rb %}
+            {% set _x = 14 + e.m * (216 / 11) %}
+            {% set _r = 2 + e.amt * 1.6 %}
+            {% set _c = '#8B6F47' if e.dir == 'add' else '#A84C4C' %}
+            {% if e.dir == 'add' %}{% set _dir_y = 46 %}{% else %}{% set _dir_y = 74 %}{% endif %}
+            <circle cx="{{ '%.2f' % _x }}" cy="60" r="{{ '%.2f' % _r }}" fill="{{ _c }}" fill-opacity="0.72"/>
+            <text x="{{ '%.2f' % _x }}" y="{{ 30 if e.dir == 'add' else 98 }}" text-anchor="middle" fill="#0A0A0A" font-size="5.6" font-family="Geist, sans-serif" font-weight="600">{{ e.sl }}</text>
+            <text x="{{ '%.2f' % _x }}" y="{{ 38 if e.dir == 'add' else 90 }}" text-anchor="middle" fill="{{ _c }}" font-size="5.4" font-family="JetBrains Mono, monospace">{{ e.dir }} {{ '%.1f' % e.amt }}pp</text>
+          {% endfor %}
+        </svg>
+      </div>
+
+      {# ── Q4 · vs 60/40 ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q4 · vs 60/40 Benchmark</div>
+        <div class="aq-quad-sub">Cumulative, percentage points.</div>
+        {% set _p_ser = portfolio_vs_6040_p | default([0.0,0.4,0.9,1.2,1.8,2.2,2.6,3.0,3.6,4.1,4.6,5.2]) %}
+        {% set _b_ser = portfolio_vs_6040_b | default([0.0,0.5,1.1,1.4,1.9,2.2,2.5,2.8,3.4,3.8,4.2,4.6]) %}
+        {% set _vall = _p_ser + _b_ser %}
+        {% set _vmax = _vall | max %}
+        {% set _vmin = _vall | min %}
+        {% if _vmax == _vmin %}{% set _vmax = _vmin + 1 %}{% endif %}
+        {% set _vspan = _vmax - _vmin %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="12" y1="90" x2="230" y2="90" stroke="#0A0A0A" stroke-width="0.35" opacity="0.55"/>
+          {% set _p_pts = [] %}
+          {% for v in _p_ser %}
+            {% set _x = 12 + loop.index0 * (218 / (_p_ser|length - 1)) %}
+            {% set _y = 90 - ((v - _vmin) / _vspan) * 74 %}
+            {% set _ = _p_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+          {% endfor %}
+          {% set _b_pts = [] %}
+          {% for v in _b_ser %}
+            {% set _x = 12 + loop.index0 * (218 / (_b_ser|length - 1)) %}
+            {% set _y = 90 - ((v - _vmin) / _vspan) * 74 %}
+            {% set _ = _b_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+          {% endfor %}
+          <polyline points="{{ _b_pts | join(' ') }}" fill="none" stroke="#8a8a8a" stroke-width="0.9" stroke-dasharray="3,2"/>
+          <polyline points="{{ _p_pts | join(' ') }}" fill="none" stroke="#0A0A0A" stroke-width="1.3" stroke-linejoin="round"/>
+          {% set _plast = _p_pts[-1].split(',') %}
+          <circle cx="{{ _plast[0] }}" cy="{{ _plast[1] }}" r="2" fill="#8B6F47"/>
+          <text x="20" y="22" fill="#0A0A0A" font-size="5.8" font-family="Geist, sans-serif" letter-spacing="0.08em" font-weight="600">BOOK +{{ '%.1f' % _p_ser[-1] }}</text>
+          <text x="20" y="32" fill="#6B6B6B" font-size="5.6" font-family="Geist, sans-serif" letter-spacing="0.08em">60/40 +{{ '%.1f' % _b_ser[-1] }}</text>
+        </svg>
+      </div>
+
+    </div>
+
+    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
+      Fig. 2. Four lenses on the year's allocation paragraph. Bronze marks
+      positive direction; oxblood marks drag or trim events. All readings
+      are observations of book data against policy weights.
+    </div>
+
+  </div>
+
+  <div class="aq-side">
+    <div class="aq-rail">
+      <div class="aq-rail-eyebrow">Allocation Notes</div>
+      {% set _rail = allocation_notes | default([
+        'Weights are month-end marks; intraday variations are smoothed.',
+        'The 60/40 benchmark uses SPY/AGG, total return.',
+        'Real assets combine REIT index and a 2% gold sleeve.',
+        'Alternatives held for diversification, not for return alone.',
+        'Rebalance events are observed, not prescribed by the document.'
+      ]) %}
+      {% for n in _rail %}
+        <div class="aq-rail-item"><span class="aq-rail-n">{{ '%02d' % loop.index }}</span>{{ n }}</div>
       {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+{# ═════════════ P5 · EDITORIAL ═════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What an allocation is not</h2>
+<p class="sp-deck">
+  A single sentence the desk is holding in mind for the year, and the
+  short list of what the allocation line cannot settle for its reader.
+</p>
+
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default("An allocation is not a verdict on the future — it is the shelter you choose before the weather changes.") }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Allocation Desk") }}</div>
+  </div>
+</div>
+
+<div class="ed-watch-head">What this allocation cannot settle</div>
+<div class="ed-twocol">
+  <div class="ed-col">
+    <ol>
+      <li>The correct personal saving rate for the year.</li>
+      <li>Tax-lot placement across taxable and tax-deferred accounts.</li>
+      <li>The household's true liquidity need twelve months ahead.</li>
+    </ol>
+  </div>
+  <div class="ed-col">
+    <ol start="4">
+      <li>Currency hedging outside the stated policy.</li>
+      <li>Real-estate equity held outside the brokerage account.</li>
+    </ol>
+  </div>
+</div>
+
+<p class="ed-legal">
+  Past performance does not guarantee future results. This document is
+  informational and does not constitute investment advice. &nbsp;·&nbsp;
+  본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.
+</p>
+
+
+{# ═════════════ P6 · COLOPHON ═════════════ #}
+<div class="r-page-break"></div>
+
+<div class="co-wrap">
+
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
+
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name }}</strong> for the year
+      <strong>2026</strong>. Issue
+      <strong>No. {{ '%02d' % _issue_no }}</strong> of the Capital Allocation series.
     </p>
-  {% endif %}
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Holdings</span> &nbsp;
+      Broker &middot; Custodian statements, end-of-month marks.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Benchmark</span> &nbsp;
+      MSCI ACWI &middot; Bloomberg Barclays Aggregate &middot; FRED.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Reference</span> &nbsp;
+      SPY / AGG for the 60/40 overlay &middot; S&amp;P Global indices.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('Historical record only. Allocation observation pipeline.') }}.
+    </p>
+  </div>
 
-  <table class="scenarios" style="margin-bottom:10pt;">
-    <tr>
-      <th>CAGR (5y)</th>
-      <th>Volatility</th>
-      <th>Max Drawdown</th>
-      <th>Sharpe</th>
-    </tr>
-    <tr>
-      <td class="num {% if s.return_cagr is not none and s.return_cagr >= 0 %}pos{% elif s.return_cagr is not none %}neg{% endif %}">
-        {% if s.return_cagr is not none %}{{ '%+.2f'|format(s.return_cagr) }}%{% else %}—{% endif %}
-      </td>
-      <td class="num">
-        {% if s.volatility is not none %}{{ '%.2f'|format(s.volatility) }}%{% else %}—{% endif %}
-      </td>
-      <td class="num {% if s.max_dd is not none %}neg{% endif %}">
-        {% if s.max_dd is not none %}{{ '%.2f'|format(s.max_dd) }}%{% else %}—{% endif %}
-      </td>
-      <td class="num">
-        {% if s.sharpe is not none %}{{ '%.2f'|format(s.sharpe) }}{% else %}—{% endif %}
-      </td>
-    </tr>
-  </table>
-  <p class="muted">{{ s.note }}</p>
-{% endfor %}
+  <div class="co-thin-rule"></div>
 
-<div class="page-break"></div>
+  {% include '_disclaimer.html' %}
 
-<!-- ── PAGE 4 · Methodology ── -->
-<h2>Methodology</h2>
-<p>
-  본 계산은 PivoxQuant가 이용자의 입력을 받아 <strong>과거 5년</strong> 가격 데이터에서
-  추출한 사실을 요약한 결과입니다. 계산 단계는 다음과 같습니다:
-</p>
-<ol>
-  <li>각 시나리오에 대해 해당 티커의 일별 종가를 수집.</li>
-  <li>총 수익률을 연환산(CAGR)으로 환산.</li>
-  <li>일별 수익률의 표준편차를 연환산(√252)하여 변동성 산출.</li>
-  <li>종가 시리즈의 누적 최고점 대비 하락폭의 최댓값을 Max Drawdown으로 산출.</li>
-  <li>Sharpe = CAGR / 변동성 (무위험수익률 0% 단순 가정).</li>
-  <li>포트폴리오 시나리오는 각 티커의 통계를 비중으로 가중 평균 (공분산 미고려 · 보수적).</li>
-</ol>
-<p class="muted">
-  본 계산은 배당 재투자, 거래비용, 세금, 환율 변동, 슬리피지를 포함하지 않습니다.
-  또한 과거 수익률은 미래 수익률을 보장하지 않습니다.
-</p>
+  <div class="co-thin-rule"></div>
 
-<h2>Disclaimer</h2>
-{% include '_disclaimer.html' %}
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Allocation Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at | default('2026') }}</div>
+  </div>
 
-<div class="footer">
-  Generated {{ generated_at }} · Calc ID {{ calc_token }} · Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
 </div>
 
 </body>

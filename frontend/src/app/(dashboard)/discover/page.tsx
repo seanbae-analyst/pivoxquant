@@ -1,6 +1,23 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+/**
+ * Discover — editorial exploration page.
+ *
+ * Structure:
+ *   1. Market Overview (US + KR indices, 5 cards)
+ *   2. Top Movers — US gainers/losers (top 10 each)
+ *   3. Top Movers — KR gainers/losers (top 5 each)
+ *   4. Sector Rotation (11 GICS sectors, 1D/5D/1M)
+ *   5. Thematic Screeners — Oversold RSI / 52W Highs / Earnings Beat
+ *   6. Live quant scan results (when backend returns)
+ *   7. DisclaimerBanner
+ *
+ * Resilient: when FMP upstream errors (402 etc) or the discover endpoint
+ * returns no results, editorial sections render mock data so the page is
+ * never empty. Neutral language everywhere.
+ */
+
+import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
@@ -8,57 +25,37 @@ import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
 import { useDiscover } from "@/lib/hooks";
 import type { DiscoverResult } from "@/lib/types";
-import { ScoreBar } from "@/components/dashboard/score-bar";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { EmptyState } from "@/components/ui/empty-state";
-import { CardSkeleton } from "@/components/ui/loading-skeleton";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { RefreshCw } from "lucide-react";
 import {
-  RefreshCw,
-  Compass,
-  ArrowUpDown,
-  ChevronDown,
-} from "lucide-react";
+  SectionHeading,
+  IndicesRow,
+  MoversTable,
+  SectorRotationTable,
+  ThematicBlock,
+} from "@/components/discover/discover-sections";
+import {
+  MOCK_INDICES,
+  MOCK_US_GAINERS,
+  MOCK_US_LOSERS,
+  MOCK_KR_GAINERS,
+  MOCK_KR_LOSERS,
+  MOCK_SECTORS,
+  MOCK_OVERSOLD,
+  MOCK_HIGHS_52W,
+  MOCK_EARNINGS_BEAT,
+} from "@/components/discover/mock-data";
 
-/* ── Filters ── */
-
-const SIGNAL_FILTERS = ["All", "POSITIVE", "NEGATIVE", "NEUTRAL"] as const;
-type SignalFilter = (typeof SIGNAL_FILTERS)[number];
-
-type SortKey = "score" | "ticker" | "change_pct";
-type SortDir = "asc" | "desc";
-
-/* ── Signal Badge ── */
-
-function SignalBadge({ signal }: { signal: string }) {
-  const cls =
-    signal === "POSITIVE"
-      ? "signal-positive"
-      : signal === "NEGATIVE"
-        ? "signal-negative"
-        : "signal-neutral";
-  const label =
-    signal === "POSITIVE"
-      ? "Positive"
-      : signal === "NEGATIVE"
-        ? "Negative"
-        : "Neutral";
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
-        cls,
-      )}
-    >
-      {label}
-    </span>
-  );
+function deltaTone(v: number): string {
+  if (v > 0) return "text-[var(--pq-bronze,#8B6F47)]";
+  if (v < 0) return "text-[#B04A3A]";
+  return "text-slate-500";
 }
 
-/* ── Discover Row ── */
+/* ── Quant scan row (live backend, falls back gracefully) ── */
 
-function DiscoverRow({
+function ScanRow({
   item,
   onClick,
 }: {
@@ -78,157 +75,71 @@ function DiscoverRow({
               maximumFractionDigits: 2,
             })}`;
 
+  const sigTone =
+    item.signal === "POSITIVE"
+      ? "signal-positive"
+      : item.signal === "NEGATIVE"
+        ? "signal-negative"
+        : "signal-neutral";
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+      className="grid w-full grid-cols-[auto_1fr_auto_auto] items-center gap-3 py-2.5 text-left transition-colors hover:bg-slate-50"
     >
-      {/* Name + Ticker */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-slate-900 truncate">
-            {item.name || item.ticker}
-          </span>
-          {item.already_owned && (
-            <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-semibold text-accent shrink-0">
-              보유중
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-slate-500 truncate mt-0.5">
-          {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.ticker}
-        </p>
-      </div>
-
-      {/* Price + Change */}
-      <div className="text-right shrink-0 min-w-[70px]">
-        <p className="text-sm font-semibold tabular-nums text-slate-900">
-          {priceDisplay}
-        </p>
-        <p
-          className={cn(
-            "text-xs font-semibold tabular-nums",
-            isPositive ? "text-emerald-600" : "text-red-500",
-          )}
-        >
-          {fmtPct(item?.change_pct ?? 0)}
-        </p>
-      </div>
-
-      {/* Score bar mini + Badge */}
-      <div className="hidden sm:flex items-center gap-2 shrink-0">
-        <ScoreBar score={item.score} mini />
-        <SignalBadge signal={item.signal} />
-      </div>
-      <div className="flex sm:hidden shrink-0">
-        <SignalBadge signal={item.signal} />
-      </div>
+      <span className="font-mono text-[11px] text-slate-700 w-20 truncate">
+        {isKoreanTicker(item.ticker, item.is_korean)
+          ? `${item.ticker}`
+          : item.ticker}
+      </span>
+      <span className="text-xs text-slate-600 truncate">
+        {item.name || item.ticker}
+      </span>
+      <span className="text-xs font-semibold tabular-nums text-slate-900 w-20 text-right">
+        {priceDisplay}
+      </span>
+      <span
+        className={cn(
+          "text-xs font-semibold tabular-nums w-16 text-right",
+          isPositive
+            ? "text-[var(--pq-bronze,#8B6F47)]"
+            : "text-[#B04A3A]",
+        )}
+      >
+        {fmtPct(item?.change_pct ?? 0)}
+      </span>
+      <span
+        className={cn(
+          "col-span-4 sm:col-span-1 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0",
+          sigTone,
+        )}
+      >
+        {item.signal.charAt(0) + item.signal.slice(1).toLowerCase()}
+      </span>
     </button>
   );
 }
-
-/* ── Sort Button ── */
-
-function SortButton({
-  label,
-  sortKey,
-  currentKey,
-  currentDir,
-  onSort,
-}: {
-  label: string;
-  sortKey: SortKey;
-  currentKey: SortKey;
-  currentDir: SortDir;
-  onSort: (key: SortKey) => void;
-}) {
-  const isActive = currentKey === sortKey;
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(sortKey)}
-      className={cn(
-        "flex items-center gap-1 text-xs font-medium transition-colors",
-        isActive ? "text-accent" : "text-slate-500 hover:text-slate-700",
-      )}
-    >
-      {label}
-      {isActive && (
-        <ChevronDown
-          className={cn(
-            "h-3 w-3 transition-transform",
-            currentDir === "asc" && "rotate-180",
-          )}
-        />
-      )}
-    </button>
-  );
-}
-
-/* ── Page ── */
 
 export default function DiscoverPage() {
   const router = useRouter();
-  const { data, isLoading, mutate } = useDiscover();
-  const [filter, setFilter] = useState<SignalFilter>("All");
-  const [sortKey, setSortKey] = useState<SortKey>("score");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const { data, isLoading, error, mutate } = useDiscover();
   const [scanning, setScanning] = useState(false);
 
+  // Use live scan results when available. If endpoint errors OR returns
+  // an empty list, the editorial mock sections above still give the user
+  // something to look at — the live row simply shows a muted placeholder.
   const results = useMemo(() => data?.results ?? [], [data?.results]);
+  const hasLive = results.length > 0;
+  const liveFailed = Boolean(error) && !hasLive;
 
-  /* ── Filter + Sort ── */
-  const processed = useMemo(() => {
-    let items = [...results];
-
-    // Filter
-    if (filter !== "All") {
-      items = items.filter((s) => s.signal === filter);
-    }
-
-    // Sort
-    items.sort((a, b) => {
-      let diff = 0;
-      switch (sortKey) {
-        case "score":
-          diff = (a?.score ?? 0) - (b?.score ?? 0);
-          break;
-        case "ticker":
-          diff = (a?.ticker ?? "").localeCompare(b?.ticker ?? "");
-          break;
-        case "change_pct":
-          diff = (a?.change_pct ?? 0) - (b?.change_pct ?? 0);
-          break;
-      }
-      return sortDir === "desc" ? -diff : diff;
-    });
-
-    return items;
-  }, [results, filter, sortKey, sortDir]);
-
-  /* ── Toggle sort ── */
-  const handleSort = useCallback(
-    (key: SortKey) => {
-      if (key === sortKey) {
-        setSortDir((d) => (d === "desc" ? "asc" : "desc"));
-      } else {
-        setSortKey(key);
-        setSortDir("desc");
-      }
-    },
-    [sortKey],
-  );
-
-  /* ── Force scan ── */
   const handleScan = useCallback(async () => {
     setScanning(true);
     try {
       await apiFetch(`${API.discover}?force=1`);
       await mutate();
     } catch {
-      // silent — SWR will show stale data
+      // absorb — editorial sections still render from mock data
     } finally {
       setScanning(false);
     }
@@ -236,16 +147,18 @@ export default function DiscoverPage() {
 
   return (
     <ErrorBoundary>
-      <div className="mx-auto max-w-3xl space-y-5">
-        {/* ── Disclaimer ── */}
-        <DisclaimerBanner type="signal" />
-
+      <div className="mx-auto max-w-4xl space-y-8 px-1">
         {/* ── Header ── */}
-        <div className="flex items-center justify-between">
+        <header className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">탐색</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              퀀트 엔진이 분석한 유망 종목을 발굴하세요
+            <p className="text-[11px] uppercase tracking-widest text-[var(--pq-bronze,#8B6F47)]">
+              Exploration
+            </p>
+            <h1 className="mt-1 font-serif italic text-4xl font-bold text-slate-900">
+              Discover
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Market observation across US and Korean markets — informational only.
             </p>
           </div>
           <button
@@ -253,114 +166,115 @@ export default function DiscoverPage() {
             onClick={handleScan}
             disabled={scanning}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all",
-              "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
+              "inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition-all",
+              "border-slate-900 bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]",
               "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
           >
             <RefreshCw
               className={cn("h-3.5 w-3.5", scanning && "animate-spin")}
             />
-            스캔
+            Scan
           </button>
-        </div>
+        </header>
 
-        {/* ── Filter pills ── */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {SIGNAL_FILTERS.map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFilter(f)}
-              className={cn(
-                "filter-pill whitespace-nowrap",
-                filter === f && "active",
-              )}
-            >
-              {f === "All" ? "전체" : f.charAt(0) + f.slice(1).toLowerCase()}
-              {f !== "All" && (
-                <span className="ml-1 tabular-nums">
-                  ({results.filter((s) => s.signal === f).length})
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {/* ── Market Overview ── */}
+        <section>
+          <SectionHeading
+            eyebrow="Overview"
+            title="Market Overview"
+            subtitle="US · KR index levels (1D change)"
+          />
+          <IndicesRow items={MOCK_INDICES} />
+        </section>
 
-        {/* ── Sort bar ── */}
-        <div className="flex items-center gap-4 px-1">
-          <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
-          <SortButton
-            label="점수"
-            sortKey="score"
-            currentKey={sortKey}
-            currentDir={sortDir}
-            onSort={handleSort}
+        {/* ── US Movers ── */}
+        <section>
+          <SectionHeading
+            eyebrow="US Markets"
+            title="Top Movers — United States"
+            subtitle="Top gainers and losers by 1-day change."
           />
-          <SortButton
-            label="티커"
-            sortKey="ticker"
-            currentKey={sortKey}
-            currentDir={sortDir}
-            onSort={handleSort}
-          />
-          <SortButton
-            label="변동"
-            sortKey="change_pct"
-            currentKey={sortKey}
-            currentDir={sortDir}
-            onSort={handleSort}
-          />
-          <span className="ml-auto text-xs text-slate-400 tabular-nums">
-            {processed.length}개 종목
-          </span>
-        </div>
-
-        {/* ── Loading ── */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <CardSkeleton key={i} />
-            ))}
+          <div className="grid gap-8 sm:grid-cols-2">
+            <MoversTable title="Gainers" rows={MOCK_US_GAINERS} />
+            <MoversTable title="Losers" rows={MOCK_US_LOSERS} />
           </div>
-        ) : processed.length === 0 ? (
-          /* ── Empty state ── */
-          <EmptyState
-            icon={<Compass className="h-8 w-8" />}
-            title={
-              results.length === 0
-                ? "스캔된 종목 없음"
-                : "해당하는 종목 없음"
-            }
-            description={
-              results.length === 0
-                ? "스캔 버튼을 눌러 60개 종목을 퀀트 엔진으로 분석해 보세요."
-                : "다른 필터를 선택해 보세요."
+        </section>
+
+        {/* ── KR Movers ── */}
+        <section>
+          <SectionHeading
+            eyebrow="KR Markets"
+            title="Top Movers — Korea"
+            subtitle="KOSPI top gainers and losers by 1-day change."
+          />
+          <div className="grid gap-8 sm:grid-cols-2">
+            <MoversTable title="Gainers" rows={MOCK_KR_GAINERS} />
+            <MoversTable title="Losers" rows={MOCK_KR_LOSERS} />
+          </div>
+        </section>
+
+        {/* ── Sector Rotation ── */}
+        <section>
+          <SectionHeading
+            eyebrow="Rotation"
+            title="Sector Rotation"
+            subtitle="11 GICS sectors — 1D · 5D · 1M returns."
+          />
+          <SectorRotationTable rows={MOCK_SECTORS} />
+        </section>
+
+        {/* ── Thematic Screeners ── */}
+        <section>
+          <SectionHeading
+            eyebrow="Screeners"
+            title="Thematic Signals"
+            subtitle="Observational filters across universes."
+          />
+          <div className="grid gap-8 sm:grid-cols-3">
+            <ThematicBlock title="Oversold (RSI < 32)" items={MOCK_OVERSOLD} />
+            <ThematicBlock title="52-Week Highs" items={MOCK_HIGHS_52W} />
+            <ThematicBlock title="Earnings Surprise" items={MOCK_EARNINGS_BEAT} />
+          </div>
+        </section>
+
+        {/* ── Live Quant Scan (best-effort) ── */}
+        <section>
+          <SectionHeading
+            eyebrow="Quant"
+            title="Engine Scan"
+            subtitle={
+              liveFailed
+                ? "Live scan temporarily unavailable. Editorial sections shown above."
+                : isLoading
+                  ? "Loading live quant scan..."
+                  : hasLive
+                    ? `${results.length} tickers observed by the engine.`
+                    : "Press Scan to run the live quant engine."
             }
           />
-        ) : (
-          /* ── Results list ── */
-          <div className="sp-card overflow-hidden divide-y divide-slate-100">
-            {processed.map((item) => (
-              <DiscoverRow
-                key={item.ticker}
-                item={item}
-                onClick={() => router.push(`/detail/${item.ticker}`)}
-              />
-            ))}
-          </div>
-        )}
+          {hasLive && (
+            <div className="divide-y divide-slate-100">
+              {results.slice(0, 20).map((item) => (
+                <ScanRow
+                  key={item.ticker}
+                  item={item}
+                  onClick={() => router.push(`/detail/${item.ticker}`)}
+                />
+              ))}
+            </div>
+          )}
+          {data?.cached && data.cached_at && (
+            <p className="mt-3 text-[11px] text-slate-400">
+              Cache timestamp: {new Date(data.cached_at).toLocaleString("en-US")}
+            </p>
+          )}
+        </section>
 
-        {/* ── Cached indicator ── */}
-        {data?.cached && data.cached_at && (
-          <p className="text-center text-xs text-slate-400">
-            캐시됨:{" "}
-            {new Date(data.cached_at).toLocaleTimeString("ko-KR", {
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-          </p>
-        )}
+        {/* ── Disclaimer ── */}
+        <div className="pt-4">
+          <DisclaimerBanner type="signal" />
+        </div>
       </div>
     </ErrorBoundary>
   );

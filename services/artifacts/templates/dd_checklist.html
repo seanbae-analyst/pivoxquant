@@ -1,98 +1,1002 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   DD Checklist — Goldman IC v2 Editorial Redesign (6-page)
+   Single-ticker Due Diligence observational checklist.
+   Brand v2: wordmark (cover) · monogram (colophon) · submark (running-head).
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Due-Diligence Checklist — {{ as_of }}</title>
+  <title>DD Checklist — {{ ticker }} — {{ period_label }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  DD CHECKLIST";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
+      @top-right {
+        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ ticker }}  ·  {{ period_label }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
+      }
+      @bottom-left {
+        content: "Observation only — not a directive.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8pt;
+        color: #4a4a4a;
+      }
+    }
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
+
+    /* ───────────────────── P1 · COVER ─────────────────────────────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 6pt auto 14pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 38pt; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A;
+      margin: 30pt 0 30pt 0; padding: 0;
+    }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 30pt; }
+    .cv-hero span + span + span { padding-left: 60pt; color: #8B6F47; }
+    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 18pt; table-layout: fixed; overflow: visible; }
+    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8a8a8a; margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.015em; line-height: 1.02;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
+    }
+    .cv-slug {
+      margin-top: 22pt; text-align: center;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.38em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600;
+    }
+    .cv-foot {
+      margin-top: 18pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt; color: #6B6B6B; letter-spacing: 0.02em;
+    }
+
+    /* ───────────────────── Common part headers ────────────────────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt; font-weight: 400; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
+      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
+    }
+
+    /* ───────────────────── P2 · SPIDER SPREAD ─────────────────────── */
+    .sp-grid {
+      display: table; width: 100%; border-collapse: separate;
+      border-spacing: 14pt 0; margin-top: 6pt;
+      table-layout: fixed;
+    }
+    .sp-grid > .sp-main   { display: table-cell; width: 70%; vertical-align: top; }
+    .sp-grid > .sp-margin { display: table-cell; width: 30%; vertical-align: top; }
+    .sp-fig-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 600; margin-bottom: 6pt;
+    }
+    .sp-fig-caption {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
+      line-height: 1.4; margin-top: 6pt; max-width: 360pt;
+    }
+    .sp-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.8pt; line-height: 1.58; color: #202020;
+      margin-top: 0; padding-top: 0;
+    }
+    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
+    .sp-prose > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 28pt; line-height: 0.88; font-weight: 500;
+      color: #8B6F47; float: left; padding: 2pt 6pt 0 0; font-style: normal;
+    }
+    .sp-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt;
+      margin-bottom: 12pt;
+    }
+    .sp-margin-term {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 2pt;
+    }
+    .sp-margin-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12pt; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    }
+    .sp-margin-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8pt; line-height: 1.42; color: #6B6B6B; margin-top: 2pt;
+    }
+
+    /* ───────────────────── P3 · DD LADDER ─────────────────────────── */
+    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
+    .ld-table th, .ld-table td {
+      padding: 6pt 6pt; text-align: left; vertical-align: top;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.16em;
+      text-transform: uppercase; color: #6B6B6B;
+      font-weight: 600;
+    }
+    .ld-table th.num,
+    .ld-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .ld-no {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8pt; color: #8B6F47;
+      font-weight: 600; letter-spacing: 0.04em;
+    }
+    .ld-q {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.4pt; color: #0A0A0A; line-height: 1.4;
+    }
+    .ld-a {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.8pt; color: #4a4a4a; line-height: 1.45;
+    }
+    .ld-flag {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.14em;
+      text-transform: uppercase; font-weight: 600;
+      padding: 2pt 6pt; display: inline-block; line-height: 1.1;
+    }
+    .ld-flag.green  { color: #14532d; background: transparent; border: 0.4pt solid #14532d; }
+    .ld-flag.yellow { color: #8B6F47; background: transparent; border: 0.4pt solid #8B6F47; }
+    .ld-flag.red    { color: #A84C4C; background: transparent; border: 0.4pt solid #A84C4C; }
+    .ld-src {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; color: #8a8a8a; letter-spacing: 0.02em;
+    }
+
+    /* ───────────────────── P4 · QUAD ──────────────────────────────── */
+    .rq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; }
+    .rq-main { display: table-cell; width: 66%; vertical-align: top; }
+    .rq-side { display: table-cell; width: 34%; vertical-align: top; }
+    .rq-quads { display: table; width: 100%; border-collapse: collapse; }
+    .rq-quad-row { display: table-row; }
+    .rq-quad {
+      display: table-cell; width: 50%;
+      padding: 12pt 14pt;
+      vertical-align: top; height: 165pt;
+    }
+    .rq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 3pt;
+    }
+    .rq-quad-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 13pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+    }
+    .rq-quad-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.6pt; color: #6B6B6B;
+      margin-top: 4pt; line-height: 1.4;
+    }
+    .rq-notes {
+      padding: 12pt 0 0 12pt; font-size: 8pt;
+      border-left: 0.35pt solid #c9c4b8;
+    }
+    .rq-notes-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.28em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 8pt;
+    }
+    .rq-notes-item { margin-bottom: 8pt; padding-left: 16pt; text-indent: -16pt; }
+    .rq-notes-item:last-child { margin-bottom: 0; }
+    .rq-notes-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.6pt; color: #8B6F47; font-weight: 600;
+      letter-spacing: 0.04em; margin-right: 6pt;
+    }
+    .rq-notes-def {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.2pt; line-height: 1.5; color: #4a4a4a; display: inline;
+    }
+
+    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
+    .ed-quote-wrap {
+      min-height: 300pt; padding: 40pt 40pt 20pt 40pt;
+      display: table; width: 100%; text-align: center;
+    }
+    .ed-quote-cell { display: table-cell; vertical-align: middle; }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 38pt; line-height: 1.22;
+      letter-spacing: -0.015em; color: #0A0A0A; margin: 0;
+    }
+    .ed-quote-attr {
+      margin-top: 26pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+    }
+    .ed-quote-attr::before, .ed-quote-attr::after {
+      content: "——"; color: #8B6F47; opacity: 0.5;
+      margin: 0 8pt; letter-spacing: 0;
+    }
+    .ed-notans-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 8pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 600; margin-top: 26pt;
+      padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
+    }
+    .ed-notans-grid {
+      display: table; width: 100%; border-collapse: separate;
+      border-spacing: 18pt 0; margin-top: 10pt;
+    }
+    .ed-notans-col { display: table-cell; width: 50%; vertical-align: top; }
+    .ed-notans-item {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.8pt; line-height: 1.6;
+      color: #202020; margin-bottom: 8pt;
+      padding-left: 24pt; text-indent: -24pt;
+    }
+    .ed-notans-num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8pt; color: #8B6F47;
+      font-weight: 600; letter-spacing: 0.04em;
+      margin-right: 10pt;
+    }
+
+    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small {
+      width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0;
+    }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7;
+      color: #202020; max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #6B6B6B;
+    }
+    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em;
+      text-transform: uppercase; color: #0A0A0A; font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+    section.disclaimer.pq-disclaimer {
+      border: none !important;
+      border-top: 0.35pt solid #c9c4b8 !important;
+      padding: 10pt 0 0 0 !important;
+      margin: 16pt 0 0 0 !important;
+      background: transparent !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;color:#111;">
+<body>
 
-<!-- Preview text (hidden) -->
-<div style="display:none;max-height:0;overflow:hidden;">
-  최근 추가된 {{ pending|length }}개 포지션 점검 체크리스트
-</div>
+{# ── local helpers ─────────────────────────────────────────────────────── #}
+{% set _issue_no = issue_number | default(2) %}
+{% set _doc_ref = doc_ref | default('PQ-DD-' ~ ticker ~ '-' ~ (period_label | default('Q2-2026'))) %}
+{% set _hero = hero_headline | default([
+  'Questions, patiently asked.',
+  'Answers, honestly recorded.',
+  'A checklist is not a verdict.',
+]) %}
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 0;">
-  <tr><td align="center">
+{% set _kpi_ticker       = ticker | default('AAPL') %}
+{% set _kpi_completeness = completeness_text | default('24 / 30') %}
+{% set _kpi_redflags     = red_flags | default(0) %}
+{% set _kpi_review       = review_date | default('2026-04-21') %}
 
-    <table role="presentation" width="600" cellpadding="0" cellspacing="0"
-           style="background:#ffffff;border-radius:8px;overflow:hidden;
-                  box-shadow:0 1px 2px rgba(0,0,0,0.06);max-width:600px;">
 
-      <!-- Masthead -->
-      <tr><td style="padding:24px 32px 8px 32px;border-bottom:1px solid #e5e7eb;">
-        <div style="font-size:10pt;color:#6b7280;letter-spacing:.5pt;text-transform:uppercase;">
-          PivoxQuant · DD Checklist · {{ as_of }}
-        </div>
-        <h1 style="margin:8px 0 0 0;font-size:20pt;font-weight:700;letter-spacing:-0.3pt;">
-          {{ user_name }}, 최근 추가 포지션 점검 체크리스트
-        </h1>
-        <p style="margin:8px 0 0 0;font-size:10.5pt;color:#4b5563;line-height:1.55;">
-          3일 전 이상 추가한 포지션 <strong>{{ pending|length }}개</strong>에 대해
-          본인 점검 항목을 기록할 수 있습니다. 본 체크리스트는
-          <strong>이용자 본인의 사후 기록용</strong>이며, PivoxQuant는
-          매수·매도 판단을 제공하지 않습니다.
-        </p>
-      </td></tr>
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 1 · COVER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<section class="cv">
 
-      <!-- Pending positions -->
-      {% for p in pending %}
-      <tr><td style="padding:16px 32px 8px 32px;
-                     {% if not loop.first %}border-top:1px solid #e5e7eb;{% endif %}">
-        <div style="font-size:14pt;font-weight:700;color:#111827;">
-          {{ p.ticker }}
-        </div>
-        <div style="font-size:9pt;color:#6b7280;margin-top:3px;">
-          {{ '%.4f'|format(p.shares) }} shares @ {{ '%.2f'|format(p.avg_cost) }}
-          · {{ p.days_since }}일 경과
-        </div>
-        <!-- Five Y/N items -->
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-               style="margin-top:10px;font-size:10.5pt;color:#374151;line-height:1.6;">
-          <tr><td style="padding:3px 0;">
-            ☐ <strong>재무 건전성</strong> 확인 (공시/실적 1개 이상 검토)
-          </td></tr>
-          <tr><td style="padding:3px 0;">
-            ☐ <strong>Moat / 경쟁 우위</strong> 파악
-          </td></tr>
-          <tr><td style="padding:3px 0;">
-            ☐ <strong>경영진 트랙 레코드</strong> 확인
-          </td></tr>
-          <tr><td style="padding:3px 0;">
-            ☐ <strong>Valuation</strong> (PER / PBR / PSR) 체크
-          </td></tr>
-          <tr><td style="padding:3px 0;">
-            ☐ <strong>리스크 요인</strong> 인지
-          </td></tr>
-        </table>
-      </td></tr>
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=260 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+  </div>
+
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    DD CHECKLIST <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+    &nbsp;·&nbsp; {{ _kpi_ticker }}
+    &nbsp;·&nbsp; {{ period_label | default('Q2 2026') }}
+  </div>
+  <div class="cv-rule-thin"></div>
+
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
+
+  <div class="cv-rule-thin"></div>
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Ticker</div>
+      <div class="cv-kpi-value">{{ _kpi_ticker }}</div>
+      <div class="cv-kpi-foot">Subject of observation.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Completeness</div>
+      <div class="cv-kpi-value">{{ _kpi_completeness }}</div>
+      <div class="cv-kpi-foot">Items with recorded answer.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Red Flags</div>
+      <div class="cv-kpi-value">{{ _kpi_redflags }}</div>
+      <div class="cv-kpi-foot">Items flagged for follow-up.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Review Date</div>
+      <div class="cv-kpi-value" style="font-size:14pt;">{{ _kpi_review }}</div>
+      <div class="cv-kpi-foot">Next scheduled re-reading.</div>
+    </div>
+  </div>
+
+  <div class="cv-slug">DD CHECKLIST &middot; {{ _kpi_ticker }} &middot; {{ period_label | default('Q2 2026') }}</div>
+
+  <p class="cv-foot">
+    <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
+  </p>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 2 · SPIDER SPREAD — 5-axis fundamentals pentagon
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · Fundamentals Shape</p>
+<h2 class="sp-title">The pentagon the filings draw</h2>
+<p class="sp-deck">
+  Five axes — each a public-filings ratio — plotted as a single observed
+  shape. The reading is descriptive. No axis ranks names; each compares the
+  subject against the sector median over the trailing five years.
+</p>
+
+<div class="sp-grid">
+  <div class="sp-main">
+
+    <div class="sp-fig-title">Fig. 1 · Fundamentals pentagon · 5-axis</div>
+
+    {# ── pentagon data (values 0..1, normalised against sector median) ── #}
+    {% set _axes = fundamentals_axes | default([
+      {'label': 'Revenue Growth',  'value': 0.78, 'raw': '+6.1% · 5Y CAGR'},
+      {'label': 'Operating Margin','value': 0.88, 'raw': '30.2% · TTM'},
+      {'label': 'Return on Equity','value': 0.92, 'raw': '154% · TTM'},
+      {'label': 'FCF Yield',       'value': 0.62, 'raw': '3.4% · TTM'},
+      {'label': 'Debt Ratio',      'value': 0.55, 'raw': '1.97× · D/E'},
+    ]) %}
+
+    {% set _W = 420 %}
+    {% set _H = 300 %}
+    {% set _cx = _W / 2 %}
+    {% set _cy = _H / 2 %}
+    {% set _R = 110 %}
+    {% set _n = 5 %}
+
+    {# precompute vertex coords for rings (0.25, 0.5, 0.75, 1.0) and data polygon #}
+    {% set _angles = [-90, -18, 54, 126, 198] %}
+    {% set _PI = 3.14159265 %}
+
+    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%"
+         preserveAspectRatio="none"
+         xmlns="http://www.w3.org/2000/svg" aria-label="Fundamentals pentagon" role="img"
+         style="display:block; overflow:visible;">
+
+      <!-- concentric rings -->
+      {% for ring in [0.25, 0.5, 0.75, 1.0] %}
+        {% set _ring_pts = [] %}
+        {% for a in _angles %}
+          {% set _rad = a * _PI / 180 %}
+          {% set _rr = _R * ring %}
+          {% set _x = _cx + _rr * (((_rad) | string) | float) %}
+        {% endfor %}
+        {# use Jinja math via polygon below — construct with numbers #}
       {% endfor %}
 
-      <!-- CTA -->
-      <tr><td align="center" style="padding:20px 32px 24px 32px;border-top:1px solid #e5e7eb;">
-        <a href="https://pivoxquant.com/portfolio?dd=1"
-           style="display:inline-block;background:#111827;color:#ffffff;
-                  text-decoration:none;font-weight:600;padding:12px 28px;
-                  border-radius:6px;font-size:11pt;">
-          앱에서 체크리스트 기록 →
-        </a>
-        <div style="margin-top:10px;font-size:9pt;color:#9ca3af;">
-          기록된 체크는 이후 Self Audit 리포트에 반영됩니다.
-        </div>
-      </td></tr>
+      <!-- ring 1 (25%) -->
+      <polygon points="
+        {{ _cx }},{{ _cy - _R * 0.25 }}
+        {{ _cx + _R * 0.25 * 0.9511 }},{{ _cy - _R * 0.25 * 0.3090 }}
+        {{ _cx + _R * 0.25 * 0.5878 }},{{ _cy + _R * 0.25 * 0.8090 }}
+        {{ _cx - _R * 0.25 * 0.5878 }},{{ _cy + _R * 0.25 * 0.8090 }}
+        {{ _cx - _R * 0.25 * 0.9511 }},{{ _cy - _R * 0.25 * 0.3090 }}
+      " fill="none" stroke="#E8E4DA" stroke-width="0.3"/>
 
-      <!-- Disclaimer -->
-      <tr><td style="padding:16px 32px 22px 32px;border-top:1px solid #e5e7eb;
-                     font-size:8.5pt;color:#9ca3af;line-height:1.5;">
-        {% include '_disclaimer.html' %}
-        <div style="margin-top:10px;">
-          Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
-        </div>
-      </td></tr>
-    </table>
+      <!-- ring 2 (50%) -->
+      <polygon points="
+        {{ _cx }},{{ _cy - _R * 0.50 }}
+        {{ _cx + _R * 0.50 * 0.9511 }},{{ _cy - _R * 0.50 * 0.3090 }}
+        {{ _cx + _R * 0.50 * 0.5878 }},{{ _cy + _R * 0.50 * 0.8090 }}
+        {{ _cx - _R * 0.50 * 0.5878 }},{{ _cy + _R * 0.50 * 0.8090 }}
+        {{ _cx - _R * 0.50 * 0.9511 }},{{ _cy - _R * 0.50 * 0.3090 }}
+      " fill="none" stroke="#E8E4DA" stroke-width="0.3"/>
 
-  </td></tr>
+      <!-- ring 3 (75%) -->
+      <polygon points="
+        {{ _cx }},{{ _cy - _R * 0.75 }}
+        {{ _cx + _R * 0.75 * 0.9511 }},{{ _cy - _R * 0.75 * 0.3090 }}
+        {{ _cx + _R * 0.75 * 0.5878 }},{{ _cy + _R * 0.75 * 0.8090 }}
+        {{ _cx - _R * 0.75 * 0.5878 }},{{ _cy + _R * 0.75 * 0.8090 }}
+        {{ _cx - _R * 0.75 * 0.9511 }},{{ _cy - _R * 0.75 * 0.3090 }}
+      " fill="none" stroke="#E8E4DA" stroke-width="0.3"/>
+
+      <!-- ring 4 (100%) — outer, darker -->
+      <polygon points="
+        {{ _cx }},{{ _cy - _R }}
+        {{ _cx + _R * 0.9511 }},{{ _cy - _R * 0.3090 }}
+        {{ _cx + _R * 0.5878 }},{{ _cy + _R * 0.8090 }}
+        {{ _cx - _R * 0.5878 }},{{ _cy + _R * 0.8090 }}
+        {{ _cx - _R * 0.9511 }},{{ _cy - _R * 0.3090 }}
+      " fill="none" stroke="#c9c4b8" stroke-width="0.5"/>
+
+      <!-- spokes -->
+      {% set _spokes = [
+        [0.0,     -1.0],
+        [0.9511,  -0.3090],
+        [0.5878,   0.8090],
+        [-0.5878,  0.8090],
+        [-0.9511, -0.3090],
+      ] %}
+      {% for s in _spokes %}
+        <line x1="{{ _cx }}" y1="{{ _cy }}"
+              x2="{{ _cx + _R * s[0] }}" y2="{{ _cy + _R * s[1] }}"
+              stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
+      {% endfor %}
+
+      <!-- data polygon -->
+      {% set _v0 = _axes[0].value %}
+      {% set _v1 = _axes[1].value %}
+      {% set _v2 = _axes[2].value %}
+      {% set _v3 = _axes[3].value %}
+      {% set _v4 = _axes[4].value %}
+      <polygon points="
+        {{ _cx + _R * _v0 * 0.0 }},{{ _cy + _R * _v0 * -1.0 }}
+        {{ _cx + _R * _v1 * 0.9511 }},{{ _cy + _R * _v1 * -0.3090 }}
+        {{ _cx + _R * _v2 * 0.5878 }},{{ _cy + _R * _v2 * 0.8090 }}
+        {{ _cx + _R * _v3 * -0.5878 }},{{ _cy + _R * _v3 * 0.8090 }}
+        {{ _cx + _R * _v4 * -0.9511 }},{{ _cy + _R * _v4 * -0.3090 }}
+      " fill="#8B6F47" fill-opacity="0.18"
+        stroke="#0A0A0A" stroke-width="1.2" stroke-linejoin="round"/>
+
+      <!-- vertex dots -->
+      <circle cx="{{ _cx + _R * _v0 * 0.0 }}"    cy="{{ _cy + _R * _v0 * -1.0 }}"    r="2.2" fill="#8B6F47"/>
+      <circle cx="{{ _cx + _R * _v1 * 0.9511 }}" cy="{{ _cy + _R * _v1 * -0.3090 }}" r="2.2" fill="#8B6F47"/>
+      <circle cx="{{ _cx + _R * _v2 * 0.5878 }}" cy="{{ _cy + _R * _v2 * 0.8090 }}"  r="2.2" fill="#8B6F47"/>
+      <circle cx="{{ _cx + _R * _v3 * -0.5878 }}" cy="{{ _cy + _R * _v3 * 0.8090 }}" r="2.2" fill="#8B6F47"/>
+      <circle cx="{{ _cx + _R * _v4 * -0.9511 }}" cy="{{ _cy + _R * _v4 * -0.3090 }}" r="2.2" fill="#8B6F47"/>
+
+      <!-- axis labels -->
+      <text x="{{ _cx }}" y="{{ _cy - _R - 14 }}" text-anchor="middle"
+            fill="#0A0A0A" font-family="Geist, sans-serif" font-size="8"
+            letter-spacing="0.10em" font-weight="600">{{ _axes[0].label | upper }}</text>
+      <text x="{{ _cx + _R * 0.9511 + 10 }}" y="{{ _cy - _R * 0.3090 - 2 }}"
+            fill="#0A0A0A" font-family="Geist, sans-serif" font-size="8"
+            letter-spacing="0.10em" font-weight="600">{{ _axes[1].label | upper }}</text>
+      <text x="{{ _cx + _R * 0.5878 + 10 }}" y="{{ _cy + _R * 0.8090 + 10 }}"
+            fill="#0A0A0A" font-family="Geist, sans-serif" font-size="8"
+            letter-spacing="0.10em" font-weight="600">{{ _axes[2].label | upper }}</text>
+      <text x="{{ _cx - _R * 0.5878 - 10 }}" y="{{ _cy + _R * 0.8090 + 10 }}"
+            text-anchor="end" fill="#0A0A0A" font-family="Geist, sans-serif" font-size="8"
+            letter-spacing="0.10em" font-weight="600">{{ _axes[3].label | upper }}</text>
+      <text x="{{ _cx - _R * 0.9511 - 10 }}" y="{{ _cy - _R * 0.3090 - 2 }}"
+            text-anchor="end" fill="#0A0A0A" font-family="Geist, sans-serif" font-size="8"
+            letter-spacing="0.10em" font-weight="600">{{ _axes[4].label | upper }}</text>
+
+      <!-- raw reading next to each axis -->
+      <text x="{{ _cx }}" y="{{ _cy - _R - 2 }}" text-anchor="middle"
+            fill="#8a8a8a" font-family="JetBrains Mono, monospace" font-size="6.6">{{ _axes[0].raw }}</text>
+      <text x="{{ _cx + _R * 0.9511 + 10 }}" y="{{ _cy - _R * 0.3090 + 9 }}"
+            fill="#8a8a8a" font-family="JetBrains Mono, monospace" font-size="6.6">{{ _axes[1].raw }}</text>
+      <text x="{{ _cx + _R * 0.5878 + 10 }}" y="{{ _cy + _R * 0.8090 + 21 }}"
+            fill="#8a8a8a" font-family="JetBrains Mono, monospace" font-size="6.6">{{ _axes[2].raw }}</text>
+      <text x="{{ _cx - _R * 0.5878 - 10 }}" y="{{ _cy + _R * 0.8090 + 21 }}"
+            text-anchor="end" fill="#8a8a8a" font-family="JetBrains Mono, monospace" font-size="6.6">{{ _axes[3].raw }}</text>
+      <text x="{{ _cx - _R * 0.9511 - 10 }}" y="{{ _cy - _R * 0.3090 + 9 }}"
+            text-anchor="end" fill="#8a8a8a" font-family="JetBrains Mono, monospace" font-size="6.6">{{ _axes[4].raw }}</text>
+    </svg>
+
+    <div class="sp-fig-caption">
+      Fig. 1. Values normalised against the GICS sub-industry median over
+      the trailing five fiscal years. The outer ring marks the 75th sector
+      percentile; the inner rings mark 25th, 50th, and 75th.
+    </div>
+
+  </div>
+
+  <div class="sp-margin">
+    <div class="sp-prose">
+      <p>The shape reads with two wide points — Operating Margin and Return on
+        Equity — and a narrower base at FCF Yield, where the name carries a
+        capital-return tilt relative to its peers. The pentagon as drawn is a
+        historical record of five ratios; it does not score the subject.</p>
+      <p>Debt Ratio sits near the sector median. The margin of safety on this
+        axis is observed, not assumed. The reading is offered to inform the
+        reader's own due diligence work, not to replace it.</p>
+    </div>
+
+    <div class="sp-margin-block" style="margin-top:10pt;">
+      <div class="sp-margin-term">Window</div>
+      <div class="sp-margin-value">5 fiscal years</div>
+      <div class="sp-margin-body">Trailing five fiscal years of 10-K / 10-Q filings.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Benchmark</div>
+      <div class="sp-margin-value">GICS median</div>
+      <div class="sp-margin-body">Sub-industry median, recomputed each filing.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Scope</div>
+      <div class="sp-margin-value">5 axes</div>
+      <div class="sp-margin-body">
+        The axes are conventions, not a complete valuation model.
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 3 · DD LADDER — 10-row checklist
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · Checklist Ladder</p>
+<h2 class="sp-title">Ten questions, answered in filings</h2>
+<p class="sp-deck">
+  Each row is a standard DD question. Answers are the filer's own language,
+  condensed. Flags are observational — green, neutral, or attention —
+  never a directive.
+</p>
+
+{% set _items = checklist_items | default([
+  {'no':'01','q':'Is revenue growth consistent over 5 years?',
+   'a':'5Y revenue CAGR 6.1%. Positive in 4 of 5 years.',
+   'flag':'green','src':'10-K FY25 · Item 7'},
+  {'no':'02','q':'Is operating margin above industry median?',
+   'a':'TTM op. margin 30.2% vs sector median 22.4%.',
+   'flag':'green','src':'10-K FY25 · MD&A'},
+  {'no':'03','q':'Is free cash flow positive in each of the last 3 years?',
+   'a':'FY23 · FY24 · FY25 all positive FCF.',
+   'flag':'green','src':'10-K cash-flow statement'},
+  {'no':'04','q':'Is debt-to-equity below 2×?',
+   'a':'D/E 1.97×, at threshold.',
+   'flag':'yellow','src':'10-K balance sheet'},
+  {'no':'05','q':'Has senior management changed in last 12 months?',
+   'a':'CFO transition disclosed 2025-11.',
+   'flag':'yellow','src':'8-K 2025-11-12'},
+  {'no':'06','q':'Are SEC filings current (10-K / 10-Q)?',
+   'a':'Last 10-Q filed 2026-02-01. Current.',
+   'flag':'green','src':'SEC EDGAR'},
+  {'no':'07','q':'Is insider activity disclosed in Form 4?',
+   'a':'6 Form 4 filings in last 90 days. Net sales.',
+   'flag':'yellow','src':'SEC EDGAR · Form 4'},
+  {'no':'08','q':'Is dividend history consistent?',
+   'a':'13 consecutive years of dividend payments.',
+   'flag':'green','src':'IR dividend history'},
+  {'no':'09','q':'Is total liquidity (cash + short-term) adequate?',
+   'a':'Cash + ST investments cover 1.9× current liabilities.',
+   'flag':'green','src':'10-K balance sheet'},
+  {'no':'10','q':'Are segment revenues disclosed by geography & product?',
+   'a':'5 geographic · 5 product segments disclosed.',
+   'flag':'green','src':'10-K segment footnote'},
+]) %}
+
+<table class="ld-table">
+  <thead>
+    <tr>
+      <th style="width:6%;">No.</th>
+      <th style="width:34%;">Question</th>
+      <th style="width:32%;">Observed Answer</th>
+      <th style="width:12%;">Flag</th>
+      <th style="width:16%;">Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for it in _items %}
+      <tr>
+        <td><span class="ld-no">{{ it.no }}</span></td>
+        <td><span class="ld-q">{{ it.q }}</span></td>
+        <td><span class="ld-a">{{ it.a }}</span></td>
+        <td><span class="ld-flag {{ it.flag }}">{{ it.flag }}</span></td>
+        <td><span class="ld-src">{{ it.src }}</span></td>
+      </tr>
+    {% endfor %}
+  </tbody>
 </table>
+
+<p style="margin-top: 4pt; font-family: 'Source Serif 4', Georgia, serif; font-size: 8.8pt; line-height: 1.5; color: #4a4a4a; font-style: italic;">
+  Flags are observational shorthand. Green &mdash; the recorded answer falls
+  within the question's expected band. Yellow &mdash; the answer warrants a
+  follow-up reading at the next filing. Red &mdash; the answer falls outside
+  the band. The flag is not a directive.
+</p>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 4 · FINANCIAL QUAD — 2×2 small-multiples + right-rail notes
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part III · Financial History</p>
+<h2 class="sp-title">The shape of the books, in four frames</h2>
+<p class="sp-deck">
+  Four frames, each drawn from public filings. Bars and lines are the
+  filer's own numbers; the reading is historical only.
+</p>
+
+<div class="rq-grid">
+  <div class="rq-main">
+
+    <div class="rq-quads">
+      <div class="rq-quad-row">
+
+        <!-- Q1: Quarterly revenue 8Q bar -->
+        <div class="rq-quad">
+          <div class="rq-quad-label">Quarterly Revenue · 8Q</div>
+          <div class="rq-quad-value">{{ quarterly_label | default('$94.9B · Q4 FY25') }}</div>
+          {% set _qr = quarterly_revenue | default([78.4, 81.2, 85.5, 89.5, 82.9, 90.8, 94.9, 119.6]) %}
+          {% set _qmax = _qr | max %}
+          <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
+            {% for v in _qr %}
+              {% set _h = (v / _qmax) * 30 %}
+              {% set _bw = 180 / (_qr | length) - 2 %}
+              {% set _bx = loop.index0 * (180 / (_qr | length)) + 1 %}
+              <rect x="{{ _bx }}" y="{{ 42 - _h }}"
+                    width="{{ _bw }}" height="{{ _h }}"
+                    fill="#8B6F47" fill-opacity="{{ 0.45 + loop.index0 * 0.06 }}"/>
+            {% endfor %}
+            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">REVENUE · $B · QUARTERLY</text>
+          </svg>
+          <div class="rq-quad-foot">Trailing eight fiscal quarters. Filings only.</div>
+        </div>
+
+        <!-- Q2: Margin trend lines (gross / op / net) -->
+        <div class="rq-quad">
+          <div class="rq-quad-label">Margin Trend · 5Y</div>
+          <div class="rq-quad-value">{{ margin_label | default('46.2% · 30.2% · 24.4%') }}</div>
+          {% set _mg = margin_gross | default([38.2, 39.8, 41.1, 43.4, 46.2]) %}
+          {% set _mo = margin_op    | default([24.1, 25.4, 26.8, 28.1, 30.2]) %}
+          {% set _mn = margin_net   | default([20.1, 21.2, 22.4, 23.1, 24.4]) %}
+          {% set _mmax = 50 %}
+          {% set _gp = [] %}{% set _op_ = [] %}{% set _np = [] %}
+          {% for i in range(_mg | length) %}
+            {% set _x = i * 180 / (_mg | length - 1) %}
+            {% set _yg = 42 - (_mg[i] / _mmax) * 30 %}
+            {% set _yo = 42 - (_mo[i] / _mmax) * 30 %}
+            {% set _yn = 42 - (_mn[i] / _mmax) * 30 %}
+            {% set _ = _gp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _yg)) %}
+            {% set _ = _op_.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _yo)) %}
+            {% set _ = _np.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _yn)) %}
+          {% endfor %}
+          <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
+            <polyline points="{{ _gp  | join(' ') }}" fill="none" stroke="#0A0A0A" stroke-width="1.1"/>
+            <polyline points="{{ _op_ | join(' ') }}" fill="none" stroke="#8B6F47" stroke-width="1.1"/>
+            <polyline points="{{ _np  | join(' ') }}" fill="none" stroke="#8a8a8a" stroke-width="0.9" stroke-dasharray="2,2"/>
+            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">GROSS · OP · NET</text>
+          </svg>
+          <div class="rq-quad-foot">Solid ink · gross. Bronze · operating. Dashed · net.</div>
+        </div>
+      </div>
+
+      <div class="rq-quad-row">
+
+        <!-- Q3: FCF 5Y bar -->
+        <div class="rq-quad">
+          <div class="rq-quad-label">Free Cash Flow · 5Y</div>
+          <div class="rq-quad-value">{{ fcf_label | default('$99.8B · FY25') }}</div>
+          {% set _fcf = fcf_history | default([73.4, 80.2, 92.9, 96.4, 99.8]) %}
+          {% set _fmax = _fcf | max %}
+          <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
+            {% for v in _fcf %}
+              {% set _h = (v / _fmax) * 30 %}
+              {% set _bw = 180 / (_fcf | length) - 8 %}
+              {% set _bx = loop.index0 * (180 / (_fcf | length)) + 4 %}
+              <rect x="{{ _bx }}" y="{{ 42 - _h }}"
+                    width="{{ _bw }}" height="{{ _h }}"
+                    fill="#8B6F47" fill-opacity="0.70"/>
+              <text x="{{ _bx + _bw/2 }}" y="{{ 40 - _h }}"
+                    text-anchor="middle" fill="#8B6F47"
+                    font-size="6" font-family="JetBrains Mono, monospace">{{ v }}</text>
+            {% endfor %}
+            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">FCF · $B · ANNUAL</text>
+          </svg>
+          <div class="rq-quad-foot">Five fiscal years. Operating − capex, as reported.</div>
+        </div>
+
+        <!-- Q4: Peer comparison bar -->
+        <div class="rq-quad">
+          <div class="rq-quad-label">Peer Comparison · P/E TTM</div>
+          <div class="rq-quad-value">{{ peer_label | default('28.4 · 32.1 · 24.8 · 26.2') }}</div>
+          {% set _peers = peer_bars | default([
+            {'name': 'AAPL', 'v': 28.4},
+            {'name': 'MSFT', 'v': 32.1},
+            {'name': 'GOOG', 'v': 24.8},
+            {'name': 'META', 'v': 26.2},
+          ]) %}
+          {% set _pmax = (_peers | map(attribute='v') | max) %}
+          <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
+            {% for p in _peers %}
+              {% set _h = (p.v / _pmax) * 28 %}
+              {% set _bw = 180 / (_peers | length) - 10 %}
+              {% set _bx = loop.index0 * (180 / (_peers | length)) + 5 %}
+              {% set _fill = '#0A0A0A' if p.name == ticker else '#8B6F47' %}
+              {% set _op = 0.85 if p.name == ticker else 0.40 %}
+              <rect x="{{ _bx }}" y="{{ 42 - _h }}"
+                    width="{{ _bw }}" height="{{ _h }}"
+                    fill="{{ _fill }}" fill-opacity="{{ _op }}"/>
+              <text x="{{ _bx + _bw/2 }}" y="{{ 47 }}"
+                    text-anchor="middle" fill="#6B6B6B"
+                    font-size="6" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ p.name }}</text>
+            {% endfor %}
+            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">P/E · TTM · SUBJECT vs PEERS</text>
+          </svg>
+          <div class="rq-quad-foot">Ink bar · subject. Bronze bars · sector peers.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
+      Fig. 2. Four frames drawn from the most recent 10-K / 10-Q filings.
+      Bronze marks the subject axis; ink marks the within-frame focus.
+    </div>
+
+  </div>
+
+  <div class="rq-side">
+    <div class="rq-notes">
+      <div class="rq-notes-eyebrow">Right Rail · Notes</div>
+      <div class="rq-notes-item">
+        <span class="rq-notes-num">01</span>
+        <span class="rq-notes-def">A checklist observes; it does not prescribe.</span>
+      </div>
+      <div class="rq-notes-item">
+        <span class="rq-notes-num">02</span>
+        <span class="rq-notes-def">Sources are public filings — 10-K, 10-Q, 8-K, and Form 4.</span>
+      </div>
+      <div class="rq-notes-item">
+        <span class="rq-notes-num">03</span>
+        <span class="rq-notes-def">Questions are standard DD; responses are the filer's own language.</span>
+      </div>
+      <div class="rq-notes-item">
+        <span class="rq-notes-num">04</span>
+        <span class="rq-notes-def">Yellow flags are items for follow-up at the next filing, not alarms.</span>
+      </div>
+      <div class="rq-notes-item">
+        <span class="rq-notes-num">05</span>
+        <span class="rq-notes-def">Informational only — not a portfolio instruction.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 5 · EDITORIAL — full-bleed pull quote + what this checklist does not answer
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What the desk is sitting with</h2>
+<p class="sp-deck">
+  A sentence the research desk is holding this quarter, and the short list of
+  questions this checklist, by construction, does not answer.
+</p>
+
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default("Due diligence is the act of asking questions patient enough to wait for answers.") }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Research Desk") }}</div>
+  </div>
+</div>
+
+<div class="ed-notans-head">What this checklist does not answer</div>
+
+{% set _notans = not_answered | default([
+  'Future revenue trajectory beyond filings.',
+  'Qualitative management quality beyond disclosures.',
+  'Competitive dynamics observed after the filing date.',
+  'Regulatory or litigation outcomes not yet recorded.',
+  'Individual investor tax or liquidity constraints.',
+  'Appropriate position sizing for any portfolio.',
+]) %}
+{% set _half = ((_notans | length) / 2) | round(0, 'ceil') | int %}
+
+<div class="ed-notans-grid">
+  <div class="ed-notans-col">
+    {% for item in _notans[:_half] %}
+      <div class="ed-notans-item">
+        <span class="ed-notans-num">{{ '%02d' % loop.index }}</span>{{ item }}
+      </div>
+    {% endfor %}
+  </div>
+  <div class="ed-notans-col">
+    {% for item in _notans[_half:] %}
+      <div class="ed-notans-item">
+        <span class="ed-notans-num">{{ '%02d' % (_half + loop.index) }}</span>{{ item }}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<p style="margin-top: 14pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 7.6pt; color: #8a8a8a; text-align: center; line-height: 1.5;">
+  <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
+</p>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 6 · COLOPHON
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<div class="co-wrap">
+
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
+
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name }}</strong> on
+      <strong>{{ generated_at }}</strong>. DD Checklist
+      <strong>No. {{ '%02d' % _issue_no }}</strong> &middot;
+      Subject <strong>{{ _kpi_ticker }}</strong> &middot;
+      Period <strong>{{ period_label | default('Q2 2026') }}</strong>.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data sources</span>
+    </p>
+    {% set _ds = data_sources | default([
+      {'key': 'Filings',         'value': 'SEC EDGAR · 10-K, 10-Q, 8-K, Form 4'},
+      {'key': 'Fundamentals',    'value': 'FMP v4 Stable · ratios, peer medians'},
+      {'key': 'Company IR',      'value': 'Investor Relations pages · dividend history'},
+      {'key': 'Macro reference', 'value': 'FRED · sector & rates context'},
+    ]) %}
+    {% for d in _ds %}
+      <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
+        <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #8B6F47; margin-right: 6pt;">{{ d.key }}</span>
+        <span>{{ d.value }}</span>
+      </p>
+    {% endfor %}
+
+    <p style="margin: 10pt 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('Checklist observation pipeline · public filings only') }}.
+    </p>
+  </div>
+
+  <div class="co-thin-rule"></div>
+
+  {% include '_disclaimer.html' %}
+
+  <div class="co-thin-rule"></div>
+
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Research Desk</div>
+    <div class="co-sign-ref">Doc ref &middot; {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated &middot; {{ generated_at }}</div>
+  </div>
+
+</div>
 
 </body>
 </html>

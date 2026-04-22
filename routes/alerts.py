@@ -9,7 +9,7 @@ from extensions import db
 from models import Position, Alert, SignalCache
 from services.serializers import serialize_alert
 from services.name_resolver import resolve_stock_name
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ alerts_bp = Blueprint("alerts", __name__, url_prefix="/api/alerts")
 
 @alerts_bp.route("")
 @api_auth
+@legal_scrub_response
 def get_alerts():
     cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
     # TTL cleanup — best-effort. Must never break the GET if the delete fails
@@ -66,6 +67,7 @@ def clear():
 
 @alerts_bp.route("/price-check")
 @api_auth
+@legal_scrub_response
 def price_check():
     positions = Position.query.filter_by(user_id=current_user.id).all()
     alerts = []

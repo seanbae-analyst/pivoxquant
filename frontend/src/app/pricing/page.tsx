@@ -7,57 +7,81 @@ import { API } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
-import {
-  Check,
-  X,
-  Crown,
-  Zap,
-  Sparkles,
-  BarChart3,
-  ChevronDown,
-  ShieldAlert,
-  ArrowLeft,
-  Info,
-  X as IconClose,
-} from "lucide-react";
+import { Check, ChevronDown, ArrowLeft, Info, X as IconClose } from "lucide-react";
 
-/* ── Tier data (4 tiers confirmed 2026-04-19) ── */
+/* ── Tier data (3 tiers — matched to landing Pricing section) ── */
 
-type TierKey = "free" | "pro" | "premium" | "elite";
+type TierKey = "observer" | "operator" | "partner";
 
-interface PlanFeature {
-  label: string;
-  free: string | boolean;
-  pro: string | boolean;
-  premium: string | boolean;
-  elite: string | boolean;
+interface Tier {
+  key: TierKey;
+  name: string;
+  price: string; // numeric string with thousands separator, no symbol
+  unit: string; // "KRW"
+  period: string; // "forever" or "per month"
+  tagline: string;
+  features: string[];
+  cta: string;
+  dark: boolean;
+  recommended: boolean;
+  href?: string; // free tier goes straight to /signup
 }
 
-const PLAN_FEATURES: PlanFeature[] = [
-  { label: "Brag Card (인스타 9:16)", free: "월 1회", pro: true, premium: true, elite: true },
-  { label: "실적 캘린더 iCal", free: true, pro: true, premium: true, elite: true },
-  { label: "관심종목 핫리스트", free: true, pro: true, premium: true, elite: true },
-  { label: "Morning Brief (매일 6시)", free: false, pro: true, premium: true, elite: true },
-  { label: "Evening Wrap (장마감 정리)", free: false, pro: true, premium: true, elite: true },
-  { label: "Weekly Investor Memo (PDF)", free: false, pro: true, premium: true, elite: true },
-  { label: "Earnings Pre-Brief (실적 30분 전)", free: false, pro: true, premium: true, elite: true },
-  { label: "Thesis Tracker", free: false, pro: true, premium: true, elite: true },
-  { label: "Red/Green Alert", free: false, pro: true, premium: true, elite: true },
-  { label: "FOMC Playbook", free: false, pro: false, premium: true, elite: true },
-  { label: "CPI Brief", free: false, pro: false, premium: true, elite: true },
-  { label: "Sector Monthly", free: false, pro: false, premium: true, elite: true },
-  { label: "Tax Lot Harvest", free: false, pro: false, premium: true, elite: true },
-  { label: "IPO Radar", free: false, pro: false, premium: true, elite: true },
-  { label: "Yearly Wrapped", free: false, pro: false, premium: true, elite: true },
-  { label: "10-K Personal (분기 사업보고서)", free: false, pro: false, premium: false, elite: true },
-  { label: "Annual Letter to Self", free: false, pro: false, premium: false, elite: true },
-  { label: "Commute Podcast (음성)", free: false, pro: false, premium: false, elite: true },
-  { label: "Quarterly Self-Interview", free: false, pro: false, premium: false, elite: true },
-  { label: "Peer Benchmark 리포트", free: false, pro: false, premium: false, elite: true },
-  { label: "Stress Test", free: false, pro: false, premium: false, elite: true },
+const TIERS: Tier[] = [
+  {
+    key: "observer",
+    name: "Observer",
+    price: "0",
+    unit: "KRW",
+    period: "forever",
+    tagline: "Read-only observation. 1 artifact per week.",
+    features: [
+      "Weekly Memo (abridged)",
+      "Portfolio observation dashboard",
+      "1 broker connection",
+    ],
+    cta: "Create free account",
+    dark: false,
+    recommended: false,
+    href: "/signup",
+  },
+  {
+    key: "operator",
+    name: "Operator",
+    price: "9,900",
+    unit: "KRW",
+    period: "per month",
+    tagline: "Full desk access. 17 artifacts. Weekly ship.",
+    features: [
+      "Everything in Observer",
+      "7 Operator artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Burn Rate, Credit Rating, AI Suite, Weekly Memo (full)",
+      "2 broker connections",
+      "Risk Board — 7-layer observation",
+    ],
+    cta: "Start 7-day trial",
+    dark: true,
+    recommended: true,
+  },
+  {
+    key: "partner",
+    name: "Partner",
+    price: "19,900",
+    unit: "KRW",
+    period: "per month",
+    tagline: "Concierge research. Priority renders. Quarterly 1:1 notes.",
+    features: [
+      "Everything in Operator",
+      "10 Partner artifacts — Risk Board Deck, Year-End Letter, Quarterly Self-Report, Capital Allocation, Insider Mirror, Portfolio Segment, Dividend Income, Monthly Finance, Self-Audit, Brag Card",
+      "Priority render queue",
+      "Quarterly 1:1 desk notes",
+    ],
+    cta: "Start 7-day trial",
+    dark: false,
+    recommended: false,
+  },
 ];
 
-/* ── FAQ data ── */
+/* ── FAQ ── */
 
 interface FaqItem {
   q: string;
@@ -66,60 +90,65 @@ interface FaqItem {
 
 const FAQ_ITEMS: FaqItem[] = [
   {
-    q: "PivoxQuant은 ChatGPT와 뭐가 다른가요?",
-    a: "ChatGPT Plus는 ₩27,000/월, PivoxQuant Elite는 ₩29,900/월 — 거의 같은 가격대입니다. 차이는 결과물 형태입니다. ChatGPT는 당신이 물어야 답합니다. PivoxQuant는 당신이 자는 동안 Morning Brief·Weekly Memo·10-K Personal을 이메일·PDF·음성으로 만들어 둡니다.",
+    q: "What does a PivoxQuant subscription include?",
+    a: "A research desk that writes for you. Observer receives an abridged Weekly Memo. Operator adds the full seventeen-artifact desk — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Credit Rating, and more, shipped on a weekly cadence. Partner adds ten additional artifacts and priority render queue.",
   },
   {
-    q: "어느 플랜이 나에게 맞나요?",
-    a: "개인 투자자 대부분은 Premium(₩19,900)이 적정선입니다. Morning·Evening·Weekly 데일리 리포트에 FOMC·CPI·Sector Monthly·IPO Radar·Yearly Wrapped 같은 이벤트/분기 리포트까지 모두 포함됩니다. Elite(₩29,900)는 연례 주주서한 포맷·팟캐스트·Peer Benchmark 같은 헤비 유저용입니다.",
+    q: "Can I cancel at any time?",
+    a: "Yes. Cancel from Settings › Subscription at any time. Your plan remains active until the next billing date, then converts automatically to Observer.",
   },
   {
-    q: "리포트는 어떻게 받나요?",
-    a: "Pro 이상 구독 시 매일 아침 6시 Morning Brief 이메일, 매주 일요일 Weekly Memo PDF, 보유 종목 실적 30분 전 Pre-Brief가 자동 발송됩니다. 웹 대시보드 아카이브에서도 언제든 다시 열람할 수 있습니다.",
+    q: "Is this investment advice?",
+    a: "No. PivoxQuant is an informational research tool. Artifacts organize market data, financials, and observation points. We do not solicit or recommend the purchase or sale of any security. All decisions are the user's own.",
   },
   {
-    q: "무료 플랜에는 무엇이 포함되나요?",
-    a: "월간 Brag Card(인스타 9:16 카드), 실적 캘린더 iCal 구독, 관심종목 핫리스트를 제공합니다. 데일리 리포트는 Pro부터 시작합니다.",
-  },
-  {
-    q: "언제든 해지할 수 있나요?",
-    a: "네, 언제든 해지 가능합니다. 다음 결제일까지 기능이 유지되며, 이후 자동으로 Free 플랜으로 전환됩니다.",
-  },
-  {
-    q: "리포트는 투자 자문인가요?",
-    a: "아닙니다. PivoxQuant는 정보 제공 도구입니다. 리포트는 시장 데이터·재무 지표·관찰 포인트를 정리한 분석물이며, 특정 종목의 매수·매도를 추천하거나 권유하지 않습니다. 모든 투자 판단은 이용자 본인의 책임입니다.",
-  },
-  {
-    q: "VAT 포함 가격인가요?",
-    a: "네, 표시 가격은 VAT 포함입니다. 숨겨진 수수료는 없습니다.",
+    q: "Is VAT included in the price shown?",
+    a: "Yes. Prices are displayed in KRW with VAT included. No hidden fees.",
   },
 ];
 
-/* ── FAQ Accordion Item ── */
+/* ── FAQ Accordion ── */
 
 function FaqAccordion({ item }: { item: FaqItem }) {
   const [open, setOpen] = useState(false);
-
   return (
-    <div className="border-b border-slate-100 last:border-0">
+    <div
+      className="border-b"
+      style={{ borderColor: "rgba(245,240,232,0.10)" }}
+    >
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between py-4 text-left"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between py-5 text-left"
         aria-expanded={open}
       >
-        <span className="text-sm font-semibold text-slate-900 pr-4">
+        <span
+          className="font-serif pr-4"
+          style={{
+            fontSize: "15px",
+            color: "var(--pq-ivory)",
+            letterSpacing: "-0.005em",
+          }}
+        >
           {item.q}
         </span>
         <ChevronDown
           className={cn(
-            "h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200",
+            "h-4 w-4 shrink-0 transition-transform duration-200",
             open && "rotate-180",
           )}
+          style={{ color: "rgba(245,240,232,0.55)" }}
         />
       </button>
       {open && (
-        <p className="pb-4 text-sm text-slate-600 leading-relaxed">
+        <p
+          className="font-serif pb-5 leading-relaxed"
+          style={{
+            fontSize: "14px",
+            color: "rgba(245,240,232,0.72)",
+            lineHeight: 1.7,
+          }}
+        >
           {item.a}
         </p>
       )}
@@ -127,253 +156,13 @@ function FaqAccordion({ item }: { item: FaqItem }) {
   );
 }
 
-/* ── Key Info Sheet (금소법 §19 핵심설명서) ── */
+/* ── Consent modal (legal — 금소법 §19 + 전자상거래법 §22의2) ── */
 
-interface KeyInfoData {
-  tier: TierKey;
-  name: string;
-  priceMonthly: string;
-}
-
-const KEY_INFO: Record<TierKey, KeyInfoData> = {
-  free: { tier: "free", name: "Free", priceMonthly: "₩0" },
-  pro: { tier: "pro", name: "Pro", priceMonthly: "₩9,900" },
-  premium: { tier: "premium", name: "Premium", priceMonthly: "₩19,900" },
-  elite: { tier: "elite", name: "Elite", priceMonthly: "₩29,900" },
+const PRICE_LABEL: Record<TierKey, string> = {
+  observer: "0 KRW",
+  operator: "9,900 KRW",
+  partner: "19,900 KRW",
 };
-
-function KeyInfoModal({
-  tier,
-  onClose,
-}: {
-  tier: TierKey;
-  onClose: () => void;
-}) {
-  const info = KEY_INFO[tier];
-
-  return (
-    <ModalShell onClose={onClose} ariaLabel="핵심 설명서">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
-        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">
-              핵심 설명서 · {info.name}
-            </h2>
-            <p className="mt-0.5 text-[11px] text-slate-500">
-              금융소비자보호법 §19 — 구독 전 확인사항
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="닫기"
-            className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-          >
-            <IconClose className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
-          <dl className="space-y-4 text-sm">
-            <Row label="상품명">PivoxQuant {info.name}</Row>
-            <Row label="가격">{info.priceMonthly} / 월 (VAT 포함)</Row>
-            <Row label="결제 주기">매월 자동 결제 (해지 시까지)</Row>
-            <Row label="제공 기능">
-              데일리/주간 리포트 이메일·PDF 자동 발송, 웹 대시보드 아카이브 열람. 자세한
-              목록은 이 페이지의 기능 비교표를 참조하세요.
-            </Row>
-            <Row label="환불 규정">
-              결제일로부터 <strong>14일 이내</strong> 전액 환불 가능 (실제 이용 여부
-              무관). 15일 이후에는 당기 결제분 환불 불가, 다음 결제일부터 자동 중지.
-            </Row>
-            <Row label="해지 방법">
-              Settings › Subscription 탭에서 즉시 해지 가능. 해지 시 다음 결제일까지
-              기능 유지 후 Free 플랜으로 자동 전환.
-            </Row>
-            <Row label="개인정보 처리">
-              결제 카드 정보는 Stripe, Inc.(미국)에 저장되며 PivoxQuant 서버에는
-              저장되지 않습니다. 상세 내용은{" "}
-              <Link
-                href="/privacy"
-                target="_blank"
-                className="underline hover:text-slate-900"
-              >
-                개인정보처리방침
-              </Link>
-              을 참조.
-            </Row>
-            <Row label="국외이전">
-              결제 처리를 위해 카드 정보가 미국 Stripe로 이전됩니다 (개인정보보호법 §28
-              국외이전 동의 대상).
-            </Row>
-            <Row label="투자 성과 보장">
-              본 서비스는 정보 제공 도구이며 특정 종목의 매수·매도를 권유하지 않습니다.
-              과거 성과는 미래 수익을 보장하지 않으며, 모든 투자 판단 책임은 이용자에게
-              있습니다.
-            </Row>
-          </dl>
-        </div>
-
-        <div className="border-t border-slate-100 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.97]"
-          >
-            확인했습니다
-          </button>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid grid-cols-[110px_1fr] gap-3">
-      <dt className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-        {label}
-      </dt>
-      <dd className="text-sm text-slate-700 leading-relaxed">{children}</dd>
-    </div>
-  );
-}
-
-/* ── Billing Consent Modal (결제 전 법적 동의) ── */
-
-function BillingConsentModal({
-  tier,
-  onClose,
-  onConfirm,
-  submitting,
-}: {
-  tier: TierKey;
-  onClose: () => void;
-  onConfirm: () => void;
-  submitting: boolean;
-}) {
-  const [showKeyInfo, setShowKeyInfo] = useState(false);
-  const [agreeKey, setAgreeKey] = useState(false);
-  const [agreeRecurring, setAgreeRecurring] = useState(false);
-  const [agreeStripe, setAgreeStripe] = useState(false);
-
-  const info = KEY_INFO[tier];
-  const allAgreed = agreeKey && agreeRecurring && agreeStripe;
-
-  return (
-    <>
-      <ModalShell onClose={onClose} ariaLabel="구독 전 동의">
-        <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl">
-          <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                {info.name} 구독 전 확인
-              </h2>
-              <p className="mt-0.5 text-[11px] text-slate-500">
-                {info.priceMonthly} / 월 · VAT 포함
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="닫기"
-              className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            >
-              <IconClose className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="space-y-3 px-6 py-5">
-            {/* A. 핵심설명서 */}
-            <label className="flex cursor-pointer items-start gap-2">
-              <CheckboxBtn
-                checked={agreeKey}
-                onChange={() => setAgreeKey((v) => !v)}
-              />
-              <span className="text-xs leading-relaxed text-slate-600">
-                <strong className="text-slate-900">[필수]</strong> 본 구독 상품의
-                핵심 내용(가격, 기간, 제공 기능, 환불 규정, 해지 방법)을 확인했으며
-                이에 동의합니다.{" "}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setShowKeyInfo(true);
-                  }}
-                  className="inline-flex items-center gap-0.5 text-slate-900 underline hover:text-slate-700"
-                >
-                  <Info className="h-3 w-3" />
-                  핵심설명 보기
-                </button>
-              </span>
-            </label>
-
-            {/* B. 정기결제 (전자상거래법 §22의2) */}
-            <label className="flex cursor-pointer items-start gap-2">
-              <CheckboxBtn
-                checked={agreeRecurring}
-                onChange={() => setAgreeRecurring((v) => !v)}
-              />
-              <span className="text-xs leading-relaxed text-slate-600">
-                <strong className="text-slate-900">[필수]</strong> 매월 자동결제에
-                동의합니다. 해지 시까지 매월 {info.priceMonthly}이 결제되며, Settings
-                에서 언제든 해지할 수 있습니다.
-              </span>
-            </label>
-
-            {/* D. Stripe 해외 결제 대행사 */}
-            <label className="flex cursor-pointer items-start gap-2">
-              <CheckboxBtn
-                checked={agreeStripe}
-                onChange={() => setAgreeStripe((v) => !v)}
-              />
-              <span className="text-xs leading-relaxed text-slate-600">
-                <strong className="text-slate-900">[필수]</strong> 결제는 Stripe, Inc.
-                (미국)가 처리하며, 카드 정보가 미국으로 이전·저장된다는 점에 동의합니다.
-                (개인정보보호법 §28 국외이전)
-              </span>
-            </label>
-
-            {/* C. 14일 청약철회권 고지 */}
-            <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                <strong className="text-slate-900">청약철회권:</strong> 구독 시작 후
-                14일 이내에는 실제 콘텐츠 제공 이력과 무관하게 전액 환불이 가능합니다.
-                15일 이후에는 당기 결제분 환불이 불가하며 다음 결제일부터 중지됩니다.
-                (전자상거래법 §17)
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-100 px-6 py-4 space-y-2">
-            <button
-              type="button"
-              disabled={!allAgreed || submitting}
-              onClick={onConfirm}
-              className={cn(
-                "w-full rounded-full px-4 py-3 text-sm font-semibold transition-all",
-                allAgreed && !submitting
-                  ? "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]"
-                  : "cursor-not-allowed bg-slate-100 text-slate-400",
-              )}
-            >
-              {submitting ? "이동 중…" : "동의하고 결제로 이동"}
-            </button>
-            <p className="text-center text-[10px] text-slate-400">
-              결제 처리: Stripe, Inc. (미국) · 카드 정보는 Stripe에 저장되며
-              PivoxQuant는 저장하지 않습니다.
-            </p>
-          </div>
-        </div>
-      </ModalShell>
-
-      {showKeyInfo && (
-        <KeyInfoModal tier={tier} onClose={() => setShowKeyInfo(false)} />
-      )}
-    </>
-  );
-}
 
 function CheckboxBtn({
   checked,
@@ -388,11 +177,11 @@ function CheckboxBtn({
       role="checkbox"
       aria-checked={checked}
       onClick={onChange}
-      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-200 ${
-        checked
-          ? "border-slate-900 bg-slate-900"
-          : "border-slate-300 bg-white hover:border-slate-400"
-      }`}
+      className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-all duration-200"
+      style={{
+        borderColor: checked ? "var(--pq-bronze)" : "rgba(245,240,232,0.30)",
+        backgroundColor: checked ? "var(--pq-bronze)" : "transparent",
+      }}
     >
       {checked && (
         <svg
@@ -400,8 +189,8 @@ function CheckboxBtn({
           height="10"
           viewBox="0 0 12 12"
           fill="none"
-          stroke="white"
-          strokeWidth="2"
+          stroke="#0A0A0A"
+          strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
         >
@@ -412,107 +201,180 @@ function CheckboxBtn({
   );
 }
 
-/* ── Feature check/cross ── */
-
-function FeatureValue({ value }: { value: string | boolean }) {
-  if (value === true)
-    return <Check className="h-4 w-4 text-emerald-500 mx-auto" />;
-  if (value === false)
-    return <X className="h-4 w-4 text-slate-300 mx-auto" />;
-  return (
-    <span className="text-xs font-medium text-slate-700 text-center block">
-      {value}
-    </span>
-  );
-}
-
-/* ── Plan Card ── */
-
-function PlanCard({
-  name,
-  price,
-  period,
-  description,
-  features,
-  cta,
-  ctaHref,
-  onCtaClick,
-  highlighted,
-  badge,
-  icon,
+function ConsentModal({
+  tier,
+  onClose,
+  onConfirm,
+  submitting,
 }: {
-  name: string;
-  price: string;
-  period: string;
-  description: string;
-  features: string[];
-  cta: string;
-  ctaHref?: string;
-  onCtaClick?: () => void;
-  highlighted?: boolean;
-  badge?: string;
-  icon: React.ReactNode;
+  tier: TierKey;
+  onClose: () => void;
+  onConfirm: () => void;
+  submitting: boolean;
 }) {
-  const buttonClass = highlighted
-    ? "w-full rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.97]"
-    : "w-full rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97]";
+  const [agreeKey, setAgreeKey] = useState(false);
+  const [agreeRecurring, setAgreeRecurring] = useState(false);
+  const [agreeStripe, setAgreeStripe] = useState(false);
+  const allAgreed = agreeKey && agreeRecurring && agreeStripe;
+  const name = TIERS.find((t) => t.key === tier)?.name ?? "";
+  const price = PRICE_LABEL[tier];
 
   return (
-    <div
-      className={cn(
-        "sp-card relative flex flex-col p-6",
-        highlighted && "ring-2 ring-accent/40 border-l-2 border-l-accent",
-      )}
-    >
-      {badge && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[11px] font-bold text-slate-900">
-            {badge}
-          </span>
-        </div>
-      )}
-
-      <div className="flex items-center gap-3 mb-4">
+    <ModalShell onClose={onClose} ariaLabel="Subscription consent">
+      <div
+        className="w-full max-w-md overflow-hidden rounded-sm"
+        style={{
+          backgroundColor: "#0A0A0A",
+          border: "1px solid rgba(245,240,232,0.14)",
+        }}
+      >
         <div
-          className={cn(
-            "flex h-10 w-10 items-center justify-center rounded-xl",
-            highlighted ? "bg-accent text-slate-900" : "bg-slate-100 text-slate-500",
-          )}
+          className="flex items-start justify-between px-6 py-5"
+          style={{ borderBottom: "0.5pt solid rgba(245,240,232,0.10)" }}
         >
-          {icon}
+          <div>
+            <h2
+              className="font-serif"
+              style={{
+                fontSize: "16px",
+                color: "var(--pq-ivory)",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {name} — confirm subscription
+            </h2>
+            <p
+              className="font-mono tabular-nums mt-1"
+              style={{
+                fontSize: "11px",
+                color: "var(--pq-bronze)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              {price} · PER MONTH · VAT INCLUDED
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-sm p-1 transition-colors"
+            style={{ color: "rgba(245,240,232,0.55)" }}
+          >
+            <IconClose className="h-4 w-4" />
+          </button>
         </div>
-        <div>
-          <p className="text-base font-bold text-slate-900">{name}</p>
-          <p className="text-xs text-slate-500">{description}</p>
+
+        <div className="space-y-4 px-6 py-5">
+          <label className="flex cursor-pointer items-start gap-3">
+            <CheckboxBtn
+              checked={agreeKey}
+              onChange={() => setAgreeKey((v) => !v)}
+            />
+            <span
+              className="font-serif leading-relaxed"
+              style={{ fontSize: "12.5px", color: "rgba(245,240,232,0.80)" }}
+            >
+              <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
+              I have reviewed the key terms — price, billing period, features,
+              refund policy, and cancellation method — and agree to subscribe.
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3">
+            <CheckboxBtn
+              checked={agreeRecurring}
+              onChange={() => setAgreeRecurring((v) => !v)}
+            />
+            <span
+              className="font-serif leading-relaxed"
+              style={{ fontSize: "12.5px", color: "rgba(245,240,232,0.80)" }}
+            >
+              <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
+              I agree to automatic monthly billing of {price} until I cancel in
+              Settings.
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3">
+            <CheckboxBtn
+              checked={agreeStripe}
+              onChange={() => setAgreeStripe((v) => !v)}
+            />
+            <span
+              className="font-serif leading-relaxed"
+              style={{ fontSize: "12.5px", color: "rgba(245,240,232,0.80)" }}
+            >
+              <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
+              I understand that payment is processed by Stripe, Inc. (United
+              States), and that card information is transferred and stored
+              abroad.
+            </span>
+          </label>
+
+          <div
+            className="mt-2 rounded-sm p-3"
+            style={{
+              backgroundColor: "rgba(139,111,71,0.08)",
+              border: "0.5pt solid rgba(139,111,71,0.25)",
+            }}
+          >
+            <p
+              className="font-serif leading-relaxed"
+              style={{
+                fontSize: "11.5px",
+                color: "rgba(245,240,232,0.70)",
+              }}
+            >
+              <Info
+                className="inline h-3 w-3 mr-1 -mt-0.5"
+                style={{ color: "var(--pq-bronze)" }}
+              />
+              <strong style={{ color: "var(--pq-ivory)" }}>
+                Refund window
+              </strong>{" "}
+              — Full refund available within 14 days of first payment, regardless of usage. After 14 days the current period is non-refundable and service stops at the next billing date.
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="px-6 py-5"
+          style={{ borderTop: "0.5pt solid rgba(245,240,232,0.10)" }}
+        >
+          <button
+            type="button"
+            disabled={!allAgreed || submitting}
+            onClick={onConfirm}
+            className="w-full py-3 font-serif transition-all"
+            style={{
+              fontSize: "13.5px",
+              letterSpacing: "0.02em",
+              borderRadius: "2px",
+              backgroundColor: allAgreed && !submitting
+                ? "var(--pq-bronze)"
+                : "rgba(245,240,232,0.10)",
+              color: allAgreed && !submitting
+                ? "var(--pq-ink)"
+                : "rgba(245,240,232,0.40)",
+              cursor: allAgreed && !submitting ? "pointer" : "not-allowed",
+            }}
+          >
+            {submitting ? "Redirecting…" : "Agree and continue to checkout"}
+          </button>
+          <p
+            className="mt-3 text-center font-mono tabular-nums"
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.16em",
+              color: "rgba(245,240,232,0.40)",
+            }}
+          >
+            PROCESSED BY STRIPE, INC. (UNITED STATES)
+          </p>
         </div>
       </div>
-
-      <div className="mb-5">
-        <div className="flex items-baseline gap-1">
-          <span className="font-mono text-3xl font-bold text-slate-900 tabular-nums">{price}</span>
-          <span className="text-sm text-slate-500">{period}</span>
-        </div>
-      </div>
-
-      <ul className="flex-1 space-y-2.5 mb-6">
-        {features.map((feat) => (
-          <li key={feat} className="flex items-start gap-2 text-sm text-slate-600">
-            <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-            <span>{feat}</span>
-          </li>
-        ))}
-      </ul>
-
-      {ctaHref ? (
-        <Link href={ctaHref} className={buttonClass}>
-          {cta}
-        </Link>
-      ) : (
-        <button type="button" onClick={onCtaClick} className={buttonClass}>
-          {cta}
-        </button>
-      )}
-    </div>
+    </ModalShell>
   );
 }
 
@@ -520,14 +382,8 @@ function PlanCard({
 
 export default function PricingPage() {
   const [loadingCheckout, setLoadingCheckout] = useState<TierKey | null>(null);
-  // Tier whose consent modal is currently open. Null means no modal.
   const [consentTier, setConsentTier] = useState<TierKey | null>(null);
 
-  /**
-   * Open the consent modal first. Actual checkout is triggered by the modal's
-   * "동의하고 결제로 이동" button, which calls `proceedToCheckout` below.
-   * Free tier skips this flow entirely (no payment).
-   */
   const handleCheckout = useCallback((plan: TierKey) => {
     setConsentTier(plan);
   }, []);
@@ -543,7 +399,6 @@ export default function PricingPage() {
           method: "POST",
           body: JSON.stringify({
             plan,
-            // Legal consent snapshot — backend may log per 전자상거래법 §22의2
             consent: {
               key_info: true,
               recurring: true,
@@ -557,7 +412,6 @@ export default function PricingPage() {
         window.location.href = result.url;
       }
     } catch {
-      // If user is not authenticated, redirect to signup
       window.location.href = "/signup";
     } finally {
       setLoadingCheckout(null);
@@ -567,210 +421,355 @@ export default function PricingPage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#fafafa]">
-        {/* ── Top navigation ── */}
-        <div className="mx-auto max-w-6xl px-4 py-4">
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: "#0A0A0A", color: "var(--pq-ivory)" }}
+      >
+        {/* ── Top nav ── */}
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-2 font-serif transition-opacity hover:opacity-70"
+            style={{
+              fontSize: "12px",
+              letterSpacing: "0.08em",
+              color: "rgba(245,240,232,0.55)",
+            }}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-3.5 w-3.5" />
             Back to home
           </Link>
         </div>
 
-        <div className="mx-auto max-w-6xl px-4 pb-20">
-          {/* ── Hero ── */}
-          <div className="text-center mb-12">
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
-              받아보는 리포트로 고르세요.
+        {/* ── Hero eyebrow + title ── */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-16 md:pb-24">
+          <div className="max-w-3xl">
+            <div className="mb-6 inline-flex items-center gap-2.5">
+              <span
+                aria-hidden
+                className="h-px w-7"
+                style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
+              />
+              <span
+                className="font-serif text-[11px] uppercase"
+                style={{
+                  letterSpacing: "0.22em",
+                  color: "var(--pq-bronze)",
+                }}
+              >
+                Membership
+              </span>
+            </div>
+
+            <h1
+              className="font-serif italic mb-6"
+              style={{
+                fontSize: "clamp(2rem, 4.2vw, 3.25rem)",
+                lineHeight: 1.08,
+                letterSpacing: "-0.02em",
+                fontWeight: 400,
+                color: "var(--pq-ivory)",
+              }}
+            >
+              Pick the tier that matches your cadence.
             </h1>
-            <p className="text-lg text-slate-500 max-w-xl mx-auto leading-relaxed">
-              같은 가격, 다른 제품. ChatGPT는 물어야 답하고, PivoxQuant는 매일 만듭니다.
+
+            <p
+              className="font-serif"
+              style={{
+                fontSize: "clamp(15px, 1.3vw, 17px)",
+                lineHeight: 1.65,
+                color: "rgba(245,240,232,0.65)",
+                maxWidth: "56ch",
+              }}
+            >
+              Flat monthly fee. No trading commissions. No performance cut. We
+              are never paid when you trade. We are paid when you stay
+              subscribed.
             </p>
           </div>
+        </section>
 
-          {/* ── Plan Cards (4 tiers) ── */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-16">
-            <PlanCard
-              name="Free"
-              price="₩0"
-              period="/월"
-              description="맛보기 · 월 3개"
-              icon={<BarChart3 className="h-5 w-5" />}
-              features={[
-                "Brag Card (월 1회)",
-                "실적 캘린더 iCal",
-                "관심종목 핫리스트",
-              ]}
-              cta="무료 시작"
-              ctaHref="/signup"
-            />
-
-            <PlanCard
-              name="Pro"
-              price="₩9,900"
-              period="/월"
-              description="데일리 리서치 데스크"
-              icon={<Sparkles className="h-5 w-5" />}
-              features={[
-                "Morning Brief · Evening Wrap",
-                "Weekly Investor Memo (PDF)",
-                "Earnings Pre-Brief",
-                "Thesis Tracker",
-                "Red/Green Alert",
-              ]}
-              cta={loadingCheckout === "pro" ? "로딩..." : "Pro로 구독"}
-              onCtaClick={() => handleCheckout("pro")}
-            />
-
-            <PlanCard
-              name="Premium"
-              price="₩19,900"
-              period="/월"
-              description="분기 리포트 + 시장 이벤트"
-              icon={<Crown className="h-5 w-5" />}
-              highlighted
-              badge="가장 많이 선택"
-              features={[
-                "Pro 전부 포함",
-                "FOMC Playbook · CPI Brief",
-                "Sector Monthly",
-                "Tax Lot Harvest · IPO Radar",
-                "Yearly Wrapped",
-              ]}
-              cta={
-                loadingCheckout === "premium" ? "로딩..." : "Premium으로 구독"
-              }
-              onCtaClick={() => handleCheckout("premium")}
-            />
-
-            <PlanCard
-              name="Elite"
-              price="₩29,900"
-              period="/월"
-              description="ChatGPT Plus 가격, 다른 제품"
-              icon={<Zap className="h-5 w-5" />}
-              features={[
-                "Premium 전부 포함",
-                "10-K Personal",
-                "Annual Letter to Self",
-                "Commute Podcast (음성)",
-                "Quarterly Self-Interview",
-                "Peer Benchmark · Stress Test",
-              ]}
-              cta={
-                loadingCheckout === "elite" ? "로딩..." : "Elite로 구독"
-              }
-              onCtaClick={() => handleCheckout("elite")}
-            />
-          </div>
-
-          {/* ── Value Anchor Note ── */}
-          <div className="mx-auto max-w-2xl mb-16 rounded-2xl border border-slate-200 bg-white p-5 text-center">
-            <p className="text-sm font-semibold text-slate-900 mb-1">
-              ChatGPT Plus ₩27,000 · PivoxQuant Elite ₩29,900
-            </p>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              챗봇은 당신이 물어야 답합니다. 리서치 데스크는 매일 스스로 만듭니다.
-            </p>
-          </div>
-
-          {/* ── Feature Comparison Table ── */}
-          <div className="sp-card overflow-hidden mb-16">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h2 className="font-serif text-base font-bold text-slate-900">
-                받아보는 리포트 비교
-              </h2>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    <th className="px-6 py-3 text-left font-semibold text-slate-500 text-xs uppercase tracking-wider">
-                      Feature
-                    </th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-24">
-                      Free
-                    </th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-24">
-                      Pro
-                    </th>
-                    <th className="px-4 py-3 text-center font-semibold text-accent text-xs uppercase tracking-wider w-24">
-                      Premium
-                    </th>
-                    <th className="px-4 py-3 text-center font-semibold text-slate-500 text-xs uppercase tracking-wider w-24">
-                      Elite
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PLAN_FEATURES.map((feat, idx) => (
-                    <tr
-                      key={feat.label}
-                      className={cn(
-                        "border-b border-slate-50",
-                        idx % 2 === 1 && "bg-slate-50/30",
-                      )}
+        {/* ── Tier Cards (matches landing Pricing section) ── */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 md:pb-28">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
+            {TIERS.map((p) => {
+              const isDark = p.dark;
+              return (
+                <div
+                  key={p.key}
+                  className="relative rounded-sm p-8 md:p-9 flex flex-col"
+                  style={{
+                    backgroundColor: isDark ? "#111111" : "var(--pq-ivory)",
+                    border: p.recommended
+                      ? "1px solid var(--pq-bronze)"
+                      : isDark
+                        ? "0.5pt solid rgba(245,240,232,0.10)"
+                        : "0.5pt solid rgba(10,10,10,0.10)",
+                    boxShadow: p.recommended
+                      ? "0 40px 80px -40px rgba(139,111,71,0.35)"
+                      : "none",
+                  }}
+                >
+                  {p.recommended && (
+                    <span
+                      className="absolute -top-2.5 left-8 px-2.5 py-[3px] font-serif text-[9.5px] uppercase"
+                      style={{
+                        backgroundColor: "#0A0A0A",
+                        color: "var(--pq-bronze)",
+                        letterSpacing: "0.3em",
+                        border: "1px solid var(--pq-bronze)",
+                        borderRadius: "2px",
+                      }}
                     >
-                      <td className="px-6 py-3 text-sm font-medium text-slate-700">
-                        {feat.label}
-                      </td>
-                      <td className="px-4 py-3">
-                        <FeatureValue value={feat.free} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <FeatureValue value={feat.pro} />
-                      </td>
-                      <td className="px-4 py-3 bg-accent/5">
-                        <FeatureValue value={feat.premium} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <FeatureValue value={feat.elite} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      Most chosen
+                    </span>
+                  )}
+
+                  {/* Tier name + bronze hairline */}
+                  <div className="mb-6 flex items-center gap-3">
+                    <span
+                      className="font-serif text-[11px] uppercase"
+                      style={{
+                        letterSpacing: "0.26em",
+                        color: "var(--pq-bronze)",
+                      }}
+                    >
+                      {p.name}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="h-px flex-1"
+                      style={{
+                        backgroundColor: p.recommended
+                          ? "var(--pq-bronze)"
+                          : isDark
+                            ? "rgba(245,240,232,0.14)"
+                            : "rgba(10,10,10,0.12)",
+                        opacity: p.recommended ? 0.9 : 0.6,
+                      }}
+                    />
+                  </div>
+
+                  {/* Price — KRW suffix, no symbol, tabular nums */}
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <span
+                      className="font-mono tabular-nums"
+                      style={{
+                        fontSize: "clamp(44px, 4.6vw, 56px)",
+                        lineHeight: 1,
+                        letterSpacing: "-0.03em",
+                        fontWeight: 400,
+                        color: isDark ? "var(--pq-ivory)" : "var(--pq-ink)",
+                      }}
+                    >
+                      {p.price}
+                    </span>
+                    <span
+                      className="font-serif text-[11px] uppercase"
+                      style={{
+                        letterSpacing: "0.2em",
+                        color: isDark ? "rgba(245,240,232,0.55)" : "#6B6B6B",
+                      }}
+                    >
+                      {p.unit}
+                    </span>
+                  </div>
+                  <p
+                    className="font-serif text-[12px] mb-7"
+                    style={{
+                      color: isDark ? "rgba(245,240,232,0.48)" : "#6B6B6B",
+                      letterSpacing: "0.02em",
+                    }}
+                  >
+                    {p.period}
+                  </p>
+
+                  {/* Tagline */}
+                  <p
+                    className="font-serif italic text-[13px] leading-snug mb-7 pb-6"
+                    style={{
+                      color: isDark ? "rgba(245,240,232,0.72)" : "#2A2A2A",
+                      borderBottom: isDark
+                        ? "0.5pt solid rgba(245,240,232,0.10)"
+                        : "0.5pt solid rgba(10,10,10,0.08)",
+                    }}
+                  >
+                    {p.tagline}
+                  </p>
+
+                  <ul className="space-y-3 mb-10 flex-1">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5">
+                        <Check
+                          className="w-3.5 h-3.5 mt-[3px] shrink-0"
+                          strokeWidth={2}
+                          style={{
+                            color: p.recommended
+                              ? "var(--pq-bronze)"
+                              : isDark
+                                ? "var(--pq-ivory)"
+                                : "var(--pq-ink)",
+                          }}
+                        />
+                        <span
+                          className="font-serif text-[13.5px] leading-snug"
+                          style={{
+                            color: isDark
+                              ? "rgba(245,240,232,0.78)"
+                              : "#2A2A2A",
+                          }}
+                        >
+                          {f}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {p.href ? (
+                    <Link
+                      href={p.href}
+                      className="block text-center w-full py-3 px-4 font-serif text-[13.5px] transition-colors"
+                      style={{
+                        backgroundColor: p.recommended
+                          ? "var(--pq-bronze)"
+                          : isDark
+                            ? "var(--pq-ivory)"
+                            : "var(--pq-ink)",
+                        color: p.recommended
+                          ? "var(--pq-ink)"
+                          : isDark
+                            ? "var(--pq-ink)"
+                            : "var(--pq-ivory)",
+                        letterSpacing: "0.02em",
+                        borderRadius: "2px",
+                      }}
+                    >
+                      {p.cta}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleCheckout(p.key)}
+                      className="block text-center w-full py-3 px-4 font-serif text-[13.5px] transition-colors"
+                      style={{
+                        backgroundColor: p.recommended
+                          ? "var(--pq-bronze)"
+                          : isDark
+                            ? "var(--pq-ivory)"
+                            : "var(--pq-ink)",
+                        color: p.recommended
+                          ? "var(--pq-ink)"
+                          : isDark
+                            ? "var(--pq-ink)"
+                            : "var(--pq-ivory)",
+                        letterSpacing: "0.02em",
+                        borderRadius: "2px",
+                      }}
+                    >
+                      {loadingCheckout === p.key ? "Loading…" : p.cta}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          {/* ── FAQ ── */}
-          <div className="max-w-2xl mx-auto mb-16">
-            <h2 className="font-serif text-xl font-bold text-slate-900 text-center mb-8">
-              자주 묻는 질문
-            </h2>
-            <div className="sp-card px-6">
-              {FAQ_ITEMS.map((item) => (
-                <FaqAccordion key={item.q} item={item} />
-              ))}
-            </div>
+          {/* Billing footnote */}
+          <p
+            className="mt-12 font-serif text-[11px] italic leading-relaxed"
+            style={{ color: "rgba(245,240,232,0.45)" }}
+          >
+            Billed in KRW. VAT included. Cancel anytime. Informational research
+            tool — no trade instructions issued.
+          </p>
+        </section>
+
+        {/* ── FAQ ── */}
+        <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 md:pb-28">
+          <div className="mb-10 inline-flex items-center gap-2.5">
+            <span
+              aria-hidden
+              className="h-px w-7"
+              style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
+            />
+            <span
+              className="font-serif text-[11px] uppercase"
+              style={{
+                letterSpacing: "0.22em",
+                color: "var(--pq-bronze)",
+              }}
+            >
+              Frequently asked
+            </span>
           </div>
 
-          {/* ── VAT & Disclaimer ── */}
-          <div className="text-center space-y-3">
-            <p className="text-xs text-slate-500">
-              KRW 기준 · VAT 포함 · 구독 후 14일 이내 전액 환불 가능 · 언제든 해지 가능
-            </p>
-            <div className="mx-auto max-w-xl rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="flex items-start gap-2">
-                <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  과거 성과는 미래 수익을 보장하지 않습니다. PivoxQuant는 정보 제공 도구이며 투자 자문이 아닙니다.
-                  리포트는 시장 데이터·관찰 포인트를 정리한 분석물이며, 특정 종목 매수·매도를 권유하지 않습니다.
-                  모든 투자 판단의 책임은 이용자 본인에게 있습니다.
-                </p>
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-400">
-              결제 처리: Stripe, Inc. (미국) · 카드 정보는 Stripe에 저장되며 PivoxQuant는 저장하지 않습니다.
+          <h2
+            className="font-serif italic mb-10"
+            style={{
+              fontSize: "clamp(1.5rem, 2.6vw, 2rem)",
+              lineHeight: 1.1,
+              letterSpacing: "-0.015em",
+              color: "var(--pq-ivory)",
+              fontWeight: 400,
+            }}
+          >
+            Questions, answered plainly.
+          </h2>
+
+          <div
+            className="rounded-sm"
+            style={{
+              backgroundColor: "#111111",
+              border: "0.5pt solid rgba(245,240,232,0.10)",
+              padding: "0 24px",
+            }}
+          >
+            {FAQ_ITEMS.map((item) => (
+              <FaqAccordion key={item.q} item={item} />
+            ))}
+          </div>
+        </section>
+
+        {/* ── Disclaimer ── */}
+        <section className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+          <div
+            className="rounded-sm p-5"
+            style={{
+              backgroundColor: "rgba(139,111,71,0.06)",
+              border: "0.5pt solid rgba(139,111,71,0.20)",
+            }}
+          >
+            <p
+              className="font-serif leading-relaxed"
+              style={{
+                fontSize: "11.5px",
+                color: "rgba(245,240,232,0.60)",
+                lineHeight: 1.7,
+              }}
+            >
+              Past performance does not guarantee future results. PivoxQuant is
+              an informational research tool, not an investment adviser.
+              Artifacts organize market data and observation points; they do
+              not solicit or recommend the purchase or sale of any security.
+              All investment decisions are the sole responsibility of the
+              user.
             </p>
           </div>
-        </div>
+          <p
+            className="mt-4 text-center font-mono tabular-nums"
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.18em",
+              color: "rgba(245,240,232,0.35)",
+            }}
+          >
+            PAYMENT PROCESSED BY STRIPE, INC. (UNITED STATES)
+          </p>
+        </section>
 
         {consentTier && (
-          <BillingConsentModal
+          <ConsentModal
             tier={consentTier}
             onClose={() => setConsentTier(null)}
             onConfirm={proceedToCheckout}

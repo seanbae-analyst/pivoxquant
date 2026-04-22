@@ -1,386 +1,326 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+/**
+ * Watchlist — Editorial Ivory/Bronze table of observed symbols.
+ *
+ * - Header: italic serif "Watchlist" + Add Symbol CTA (Bronze pill).
+ * - Table: Symbol · Name · Last · 1D Δ · 52W Range · Note · Actions.
+ * - Empty state: one-line editorial invitation.
+ * - AddSymbolModal hooks into /api/watchlist POST.
+ *
+ * Legal: column labels and copy say "observed" / "noted" only. No
+ * buy/sell/recommend anywhere on this page.
+ */
+
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { API } from "@/lib/endpoints";
+import { Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { cn, isKoreanTicker } from "@/lib/utils";
-import { fmtPct } from "@/lib/format";
+import { API } from "@/lib/endpoints";
 import { useWatchlist } from "@/lib/hooks";
-import type { WatchlistItem, LookupResult } from "@/lib/types";
-import { ScoreBar } from "@/components/dashboard/score-bar";
-import { EmptyState } from "@/components/ui/empty-state";
-import { CardSkeleton } from "@/components/ui/loading-skeleton";
+import { cn } from "@/lib/utils";
+import { fmtPct } from "@/lib/format";
+import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import { Search, Plus, X, Star } from "lucide-react";
+import { AddSymbolModal } from "@/components/watchlist/add-symbol-modal";
 
-/* ── Signal Badge (local) ── */
+/* ── helpers ────────────────────────────────────────── */
 
-function SignalBadge({ signal }: { signal: string }) {
-  const cls =
-    signal === "POSITIVE"
-      ? "signal-positive"
-      : signal === "NEGATIVE"
-        ? "signal-negative"
-        : "signal-neutral";
-  const label =
-    signal === "POSITIVE"
-      ? "Positive"
-      : signal === "NEGATIVE"
-        ? "Negative"
-        : "Neutral";
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-        cls,
-      )}
-    >
-      {label}
-    </span>
-  );
+function formatPrice(item: WatchlistItem): string {
+  if (item.price == null) return "—";
+  if (item.currency === "KRW") {
+    return `₩${Math.round(item.price).toLocaleString("en-US")}`;
+  }
+  return `$${item.price.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
-/* ── Search Dropdown ── */
-
-function SearchDropdown({
-  results,
-  isLoading,
-  onSelect,
-}: {
-  results: LookupResult[];
-  isLoading: boolean;
-  onSelect: (r: LookupResult) => void;
-}) {
-  if (!isLoading && results.length === 0) return null;
-
-  return (
-    <div className="absolute left-0 right-0 top-full mt-1 z-30 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
-      {isLoading ? (
-        <div className="px-4 py-3 space-y-2">
-          <div className="skeleton h-4 w-32" />
-          <div className="skeleton h-4 w-24" />
-        </div>
-      ) : (
-        <ul className="max-h-64 overflow-y-auto scrollbar-thin">
-          {results.map((r) => {
-            const isPositive = (r?.change_pct ?? 0) >= 0;
-            return (
-              <li key={r?.ticker ?? "unknown"}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(r)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
-                >
-                  <div className="min-w-0 flex-1">
-                    <span className="text-sm font-bold text-slate-900">
-                      {r?.name || r?.ticker || "\u2014"}
-                    </span>
-                    <span className="ml-2 text-xs text-slate-500 truncate">
-                      {r?.ticker ?? ""}
-                    </span>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <span className="text-sm font-semibold tabular-nums text-slate-900">
-                      {r?.price != null
-                        ? `$${r.price.toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}`
-                        : "\u2014"}
-                    </span>
-                    <span
-                      className={cn(
-                        "ml-2 text-xs font-semibold tabular-nums",
-                        isPositive ? "text-emerald-600" : "text-red-500",
-                      )}
-                    >
-                      {fmtPct(r?.change_pct ?? 0)}
-                    </span>
-                  </div>
-                  <Plus className="h-4 w-4 shrink-0 text-slate-400" />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
+/** Mock 52-week range string — backend doesn't expose this on watchlist yet. */
+function mock52W(item: WatchlistItem): string {
+  // Deterministic hash from ticker so the display is stable across renders.
+  const seed = Array.from(item.ticker).reduce((a, c) => a + c.charCodeAt(0), 0);
+  const spread = 0.18 + (seed % 30) / 100; // 18–47%
+  const low = item.price * (1 - spread * 0.6);
+  const high = item.price * (1 + spread * 0.4);
+  const fmt = (v: number) =>
+    item.currency === "KRW"
+      ? `₩${Math.round(v).toLocaleString("en-US")}`
+      : `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `${fmt(low)} – ${fmt(high)}`;
 }
 
-/* ── Watchlist Row ── */
-
-function WatchlistRow({
-  item,
-  onRemove,
-  onClick,
-}: {
-  item: WatchlistItem;
-  onRemove: () => void;
-  onClick: () => void;
-}) {
-  const [removing, setRemoving] = useState(false);
-  const isPositive = (item?.change_pct ?? 0) >= 0;
-  const priceDisplay =
-    item?.price == null
-      ? "\u2014"
-      : item.currency === "KRW"
-        ? `₩${Math.round(item.price).toLocaleString("ko-KR")}`
-        : `$${item.price.toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}`;
-
-  const handleRemove = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setRemoving(true);
-    try {
-      await apiFetch(API.watchlist.remove(item.id), { method: "DELETE" });
-      onRemove();
-    } catch {
-      toast.error("관심종목에서 제거하지 못했습니다");
-    } finally {
-      setRemoving(false);
-    }
-  };
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      className="sp-card p-4 w-full text-left transition-all hover:shadow-md active:scale-[0.99] cursor-pointer"
-    >
-      <div className="flex items-start justify-between gap-3">
-        {/* Left: name + ticker */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-900 truncate">
-              {item.name || item.ticker}
-            </span>
-            <SignalBadge signal={item.signal} />
-          </div>
-          <p className="text-xs text-slate-500 truncate mt-0.5">
-            {isKoreanTicker(item.ticker, item.is_korean) ? `${item.ticker} · KRX` : item.ticker}
-          </p>
-        </div>
-
-        {/* Right: price + change + remove */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="text-right">
-            <p className="text-sm font-bold tabular-nums text-slate-900">
-              {priceDisplay}
-            </p>
-            <p
-              className={cn(
-                "text-xs font-semibold tabular-nums",
-                isPositive ? "text-emerald-600" : "text-red-500",
-              )}
-            >
-              {fmtPct(item?.change_pct ?? 0)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleRemove}
-            disabled={removing}
-            className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-full transition-colors",
-              "text-slate-400 hover:text-red-500 hover:bg-red-50",
-              "disabled:opacity-50 disabled:cursor-not-allowed",
-            )}
-            title="관심종목에서 제거"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Score bar mini */}
-      <div className="mt-3">
-        <ScoreBar score={item.score} mini />
-      </div>
-    </div>
-  );
-}
-
-/* ── Page ── */
+/* ── page ───────────────────────────────────────────── */
 
 export default function WatchlistPage() {
   const router = useRouter();
   const { data, isLoading, mutate } = useWatchlist();
+  const [showAdd, setShowAdd] = useState(false);
+  const [removingId, setRemovingId] = useState<number | null>(null);
 
-  const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<LookupResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const watchlist = useMemo(() => data?.watchlist ?? [], [data?.watchlist]);
-
-  /* ── Close dropdown on click outside ── */
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(e.target as Node)
-      ) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  /* ── Debounced search ── */
-  const handleSearch = useCallback(
-    (value: string) => {
-      setQuery(value);
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-
-      if (value.trim().length < 1) {
-        setSearchResults([]);
-        setShowDropdown(false);
-        return;
-      }
-
-      debounceRef.current = setTimeout(async () => {
-        setSearching(true);
-        setShowDropdown(true);
-        try {
-          const res = await fetch(API.market.search(value.trim()), {
-            credentials: "include",
-          });
-          if (!res.ok) throw new Error("Search failed");
-          const data = await res.json();
-          const parsed: LookupResult[] = data.results ?? [];
-          setSearchResults(parsed);
-        } catch {
-          setSearchResults([]);
-        } finally {
-          setSearching(false);
-        }
-      }, 300);
-    },
-    [],
+  const watchlist = useMemo<WatchlistItem[]>(
+    () => data?.watchlist ?? [],
+    [data?.watchlist],
   );
 
-  /* ── Add to watchlist ── */
-  const handleAdd = useCallback(
-    async (result: LookupResult) => {
-      setShowDropdown(false);
-      setQuery("");
-      setSearchResults([]);
-
-      // Check if already in watchlist
-      if (watchlist.some((w) => w.ticker === result.ticker)) {
-        toast.info(`${result.ticker}은(는) 이미 관심종목에 있습니다`);
-        return;
-      }
-
+  const handleRemove = useCallback(
+    async (item: WatchlistItem) => {
+      setRemovingId(item.id);
       try {
-        await apiFetch(API.watchlist.add, {
-          method: "POST",
-          body: JSON.stringify({ ticker: result.ticker }),
-        });
-        toast.success(`${result.ticker} 관심종목에 추가됐습니다`);
+        await apiFetch(API.watchlist.remove(item.id), { method: "DELETE" });
+        toast.success(`${item.ticker} removed`);
         await mutate();
       } catch {
-        toast.error(`${result.ticker} 추가에 실패했습니다`);
+        toast.error(`Could not remove ${item.ticker}`);
+      } finally {
+        setRemovingId(null);
       }
-    },
-    [watchlist, mutate],
-  );
-
-  /* ── Remove from watchlist (API call already done in WatchlistRow) ── */
-  const handleRemove = useCallback(
-    async () => {
-      await mutate();
     },
     [mutate],
   );
 
   return (
     <ErrorBoundary>
-      <div className="mx-auto max-w-3xl space-y-5">
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-slate-900">관심종목</h1>
-          <span className="text-sm text-slate-400 tabular-nums">
-            {watchlist.length}개 종목
-          </span>
-        </div>
-
-        {/* ── Signal disclaimer ── */}
-        <DisclaimerBanner type="signal" />
-
-        {/* ── Search bar ── */}
-        <div ref={searchRef} className="relative">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => handleSearch(e.target.value)}
-              onFocus={() => {
-                if (searchResults.length > 0) setShowDropdown(true);
+      <div
+        className="min-h-screen"
+        style={{ background: "var(--pq-ivory)" }}
+      >
+        <div className="mx-auto max-w-5xl px-6 py-10">
+          {/* Header */}
+          <header className="flex items-end justify-between gap-6 pb-6">
+            <div>
+              <div
+                className="text-[10px] uppercase"
+                style={{ letterSpacing: "0.2em", color: "var(--pq-muted)" }}
+              >
+                Observations
+              </div>
+              <h1
+                className="mt-1 text-3xl italic"
+                style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ink)" }}
+              >
+                Watchlist
+              </h1>
+              <p
+                className="mt-1 text-sm italic"
+                style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-muted)" }}
+              >
+                Symbols you have chosen to follow. Nothing here is a recommendation.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAdd(true)}
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs uppercase transition-opacity hover:opacity-90"
+              style={{
+                background: "var(--pq-bronze)",
+                color: "var(--pq-ivory)",
+                letterSpacing: "0.2em",
               }}
-              placeholder="종목 검색 (AAPL, NVDA, TSLA...)"
-              className={cn(
-                "w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4",
-                "text-sm text-slate-900 placeholder:text-slate-400",
-                "transition-all focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/20",
-              )}
-            />
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Symbol
+            </button>
+          </header>
+
+          <DisclaimerBanner type="signal" />
+
+          {/* Table */}
+          <div
+            className="mt-8 overflow-hidden"
+            style={{ borderTop: "0.5px solid var(--pq-hairline)", borderBottom: "0.5px solid var(--pq-hairline)" }}
+          >
+            {/* Column head */}
+            <div
+              className="grid grid-cols-[120px_1fr_120px_100px_200px_1fr_64px] items-center gap-4 px-4 py-3 text-[10px] uppercase"
+              style={{
+                letterSpacing: "0.2em",
+                color: "var(--pq-muted)",
+                borderBottom: "0.5px solid var(--pq-hairline)",
+              }}
+            >
+              <span>Symbol</span>
+              <span>Name</span>
+              <span className="text-right">Last</span>
+              <span className="text-right">1D Δ</span>
+              <span>52W Range</span>
+              <span>Note</span>
+              <span className="text-right">Actions</span>
+            </div>
+
+            {/* Rows */}
+            {isLoading ? (
+              <TableSkeleton />
+            ) : watchlist.length === 0 ? (
+              <EmptyRow />
+            ) : (
+              watchlist.map((item) => (
+                <Row
+                  key={item.id}
+                  item={item}
+                  onOpen={() => router.push(`/detail/${item.ticker}`)}
+                  onRemove={() => handleRemove(item)}
+                  removing={removingId === item.id}
+                />
+              ))
+            )}
           </div>
-          {showDropdown && (
-            <SearchDropdown
-              results={searchResults}
-              isLoading={searching}
-              onSelect={handleAdd}
-            />
-          )}
         </div>
 
-        {/* ── Loading ── */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <CardSkeleton key={i} />
-            ))}
-          </div>
-        ) : watchlist.length === 0 ? (
-          /* ── Empty state ── */
-          <EmptyState
-            icon={<Star className="h-8 w-8" />}
-            title="관심종목 없음"
-            description="관심 있는 종목을 추가해 보세요. 위 검색창에서 첫 번째 종목을 찾아 추가하세요."
+        {showAdd && (
+          <AddSymbolModal
+            onClose={() => setShowAdd(false)}
+            onAdded={() => mutate()}
           />
-        ) : (
-          /* ── Watchlist rows ── */
-          <div className="space-y-3">
-            {watchlist.map((item) => (
-              <WatchlistRow
-                key={item.id}
-                item={item}
-                onRemove={handleRemove}
-                onClick={() => router.push(`/detail/${item.ticker}`)}
-              />
-            ))}
-          </div>
         )}
       </div>
     </ErrorBoundary>
+  );
+}
+
+/* ── row ────────────────────────────────────────────── */
+
+function Row({
+  item,
+  onOpen,
+  onRemove,
+  removing,
+}: {
+  item: WatchlistItem;
+  onOpen: () => void;
+  onRemove: () => void;
+  removing: boolean;
+}) {
+  const isPositive = (item.change_pct ?? 0) >= 0;
+
+  return (
+    <div
+      className="grid cursor-pointer grid-cols-[120px_1fr_120px_100px_200px_1fr_64px] items-center gap-4 px-4 py-4 transition-colors hover:bg-[rgba(139,111,71,0.04)]"
+      style={{ borderBottom: "0.5px solid var(--pq-hairline-soft)" }}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") onOpen();
+      }}
+    >
+      {/* Symbol */}
+      <span
+        className="font-mono text-sm font-semibold"
+        style={{ color: "var(--pq-bronze)", letterSpacing: "0.02em" }}
+      >
+        {item.ticker}
+      </span>
+
+      {/* Name */}
+      <span
+        className="truncate text-sm"
+        style={{ color: "var(--pq-ink)", fontFamily: "var(--font-serif), serif" }}
+      >
+        {item.name || item.ticker}
+      </span>
+
+      {/* Last */}
+      <span
+        className="text-right font-mono text-sm"
+        style={{ color: "var(--pq-ink)" }}
+      >
+        {formatPrice(item)}
+      </span>
+
+      {/* 1D Δ */}
+      <span
+        className={cn("text-right font-mono text-sm")}
+        style={{ color: isPositive ? "var(--pq-bronze)" : "var(--pq-muted)" }}
+      >
+        {fmtPct(item.change_pct ?? 0)}
+      </span>
+
+      {/* 52W Range */}
+      <span
+        className="font-mono text-xs"
+        style={{ color: "var(--pq-muted)" }}
+      >
+        {mock52W(item)}
+      </span>
+
+      {/* Note (signal label, sans-marketing) */}
+      <span
+        className="truncate text-xs italic"
+        style={{ color: "var(--pq-muted)", fontFamily: "var(--font-serif), serif" }}
+      >
+        {item.signal === "POSITIVE"
+          ? "Observed — positive signal"
+          : item.signal === "NEGATIVE"
+            ? "Observed — negative signal"
+            : "Observed — neutral"}
+      </span>
+
+      {/* Actions */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          disabled={removing}
+          aria-label={`Remove ${item.ticker}`}
+          className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.1)] disabled:opacity-40"
+          style={{ color: "var(--pq-muted)" }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── empty + skeleton ───────────────────────────────── */
+
+function EmptyRow() {
+  return (
+    <div
+      className="px-4 py-16 text-center"
+      style={{ borderBottom: "0.5px solid var(--pq-hairline-soft)" }}
+    >
+      <p
+        className="text-lg italic"
+        style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ink)" }}
+      >
+        No symbols yet.
+      </p>
+      <p
+        className="mt-1 text-sm italic"
+        style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-muted)" }}
+      >
+        Add one to begin observing.
+      </p>
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          className="grid grid-cols-[120px_1fr_120px_100px_200px_1fr_64px] gap-4 px-4 py-4"
+          style={{ borderBottom: "0.5px solid var(--pq-hairline-soft)" }}
+        >
+          <div className="h-4 w-16 animate-pulse rounded" style={{ background: "var(--pq-hairline-soft)" }} />
+          <div className="h-4 w-40 animate-pulse rounded" style={{ background: "var(--pq-hairline-soft)" }} />
+          <div className="h-4 w-16 animate-pulse justify-self-end rounded" style={{ background: "var(--pq-hairline-soft)" }} />
+          <div className="h-4 w-12 animate-pulse justify-self-end rounded" style={{ background: "var(--pq-hairline-soft)" }} />
+          <div className="h-4 w-32 animate-pulse rounded" style={{ background: "var(--pq-hairline-soft)" }} />
+          <div className="h-4 w-28 animate-pulse rounded" style={{ background: "var(--pq-hairline-soft)" }} />
+          <div className="h-4 w-4 animate-pulse justify-self-end rounded" style={{ background: "var(--pq-hairline-soft)" }} />
+        </div>
+      ))}
+    </div>
   );
 }

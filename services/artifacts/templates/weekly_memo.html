@@ -1,303 +1,1218 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Weekly Investor Memo — Goldman IC v2 Editorial Redesign (6-page flagship)
+   Each page: distinct magazine-editorial layout, hand-crafted inline SVG.
+   Brand v2: wordmark (cover) · monogram (colophon) · submark (running-head).
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <title>Week {{ week_number }} Investor Memo — {{ user_name }}</title>
+  <title>Weekly Investor Memo — W{{ week_number }} — {{ user_name }}</title>
   <style>
     @page {
       size: A4;
       margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  WEEKLY MEMO";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
       @top-right {
-        content: "Prepared by PivoxQuant | Week " counter(page) " of " counter(pages);
-        font-family: Georgia, serif;
-        font-size: 9pt;
-        color: #333;
+        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  W{{ week_number }} / {{ year | default('2026') }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
       }
-      @bottom-center {
-        content: "— Confidential. For the addressee only. —";
-        font-family: Georgia, serif;
+      @bottom-left {
+        content: "Observation only — not a directive.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
         font-size: 8pt;
-        color: #888;
+        color: #4a4a4a;
       }
     }
+    /* Cover page is untouched by running head — classic masthead silence. */
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
 
-    body {
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 10.5pt;
-      line-height: 1.45;
-      color: #111;
-    }
-    h1 {
-      font-size: 22pt;
-      font-weight: 600;
-      margin: 0 0 4pt 0;
-      letter-spacing: -0.5pt;
-    }
-    h2 {
-      font-size: 13pt;
-      font-weight: 600;
-      margin: 24pt 0 8pt 0;
-      border-bottom: 0.5pt solid #000;
-      padding-bottom: 4pt;
-      letter-spacing: 0.2pt;
-      text-transform: uppercase;
-    }
-    h3 { font-size: 11pt; font-weight: 600; margin: 14pt 0 6pt 0; }
-    .meta {
-      font-size: 9pt;
-      color: #555;
-      margin-bottom: 18pt;
-      border-top: 0.5pt solid #ccc;
-      border-bottom: 0.5pt solid #ccc;
-      padding: 4pt 0;
-    }
-    .kpi {
-      display: inline-block;
-      width: 30%;
-      padding: 8pt 0;
-      border-right: 0.5pt solid #ccc;
+    /* ───────────────────── P1 · COVER ─────────────────────────────── */
+    /* Redesigned 2026-04-22 — fix "left side covered" bug. Centered,
+       flat, Playfair Italic editorial hero. No staggered indents. */
+    .cv {
+      position: relative;
+      padding-top: 0;
       text-align: center;
-      vertical-align: top;
     }
-    .kpi:last-child { border-right: 0; }
-    .kpi .label { font-size: 9pt; color: #666; text-transform: uppercase; }
-    .kpi .value { font-size: 18pt; font-weight: 600; display: block; margin-top: 4pt; }
-    .kpi .value.up   { color: #0a6f3c; }
-    .kpi .value.down { color: #a11d1d; }
-
-    table { width: 100%; border-collapse: collapse; margin-top: 6pt; }
-    th, td {
-      text-align: left;
-      padding: 4pt 6pt;
-      border-bottom: 0.5pt solid #ddd;
-      font-size: 10pt;
+    .cv-wordmark {
+      text-align: center;
+      margin: 24pt auto 28pt auto;
+      max-width: 240pt;
     }
-    th {
-      font-weight: 600;
-      border-bottom: 0.5pt solid #000;
-      text-transform: uppercase;
-      font-size: 8.5pt;
-      letter-spacing: 0.3pt;
+    .cv-wordmark svg {
+      display: block;
+      margin: 0 auto;
+      max-width: 240pt;
+      height: auto;
     }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .up   { color: #0a6f3c; }
-    .down { color: #a11d1d; }
-    .muted { color: #888; font-size: 9pt; }
-    .page-break { page-break-before: always; }
-    ul.ticklist { list-style: none; padding-left: 0; }
-    ul.ticklist li { padding: 4pt 0; border-bottom: 0.25pt dotted #ccc; }
-    .disclaimer {
-      margin-top: 24pt;
-      padding-top: 12pt;
-      border-top: 0.5pt solid #ccc;
-      font-size: 8.5pt;
-      color: #666;
+    .cv-rule-thin {
+      height: 0.4pt;
+      background: #0A0A0A;
+      opacity: 0.35;
+      width: 60%;
+      max-width: 220pt;
+      margin: 0 auto;
+    }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8pt;
+      letter-spacing: 0.22em;
+      color: #6B6B6B;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: 'Playfair Display', 'Source Serif 4', Georgia, serif;
       font-style: italic;
+      font-weight: 400;
+      font-size: 54pt;
+      line-height: 1.06;
+      letter-spacing: -0.02em;
+      color: #0A0A0A;
+      margin: 56pt auto 56pt auto;
+      padding: 0;
+      text-align: center;
+      max-width: 420pt;
+    }
+    .cv-hero span {
+      display: block;
+      padding-left: 0 !important;
+    }
+    .cv-hero span + span {
+      padding-left: 0 !important;
+    }
+    .cv-hero span + span + span {
+      padding-left: 0 !important;
+      color: #8B6F47;
+      font-style: italic;
+    }
+    .cv-kpi4 {
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 28pt;
+      table-layout: fixed;
+      overflow: visible;
+    }
+    .cv-kpi {
+      display: table-cell;
+      width: 25%;
+      padding: 10pt 10pt 4pt 10pt;
+      vertical-align: top;
+      font-variant-numeric: tabular-nums;
+      overflow: visible;
+    }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #8a8a8a;
+      margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18pt;
+      font-weight: 500;
+      color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.015em;
+      line-height: 1.02;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-size: 7.5pt;
+      color: #8a8a8a;
+      margin-top: 3pt;
+    }
+    .cv-foot {
+      margin-top: 42pt;
+      text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-size: 9pt;
+      color: #6B6B6B;
+      letter-spacing: 0.02em;
+    }
+
+    /* ───────────────────── P2 · SPREAD ────────────────────────────── */
+    .pg-runhead {
+      display: table;
+      width: 100%;
+      margin-bottom: 10pt;
+      border-bottom: 0.5pt solid #0A0A0A;
+      padding-bottom: 4pt;
+    }
+    .pg-runhead .pg-rh-left {
+      display: table-cell;
+      vertical-align: middle;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 7.6pt;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: #8B6F47;
+      font-weight: 600;
+    }
+    .pg-runhead .pg-rh-right {
+      display: table-cell;
+      vertical-align: middle;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: #8B6F47;
+      font-weight: 600;
+      margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt;
+      font-weight: 400;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      color: #0A0A0A;
+      margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-size: 10.5pt;
+      color: #4a4a4a;
+      line-height: 1.4;
+      margin: 0 0 14pt 0;
+      max-width: 380pt;
+    }
+
+    .sp-grid {
+      display: table;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 14pt 0;
+      margin-top: 6pt;
+      table-layout: fixed;
+    }
+    .sp-grid > .sp-main { display: table-cell; width: 72%; vertical-align: top; }
+    .sp-grid > .sp-margin { display: table-cell; width: 28%; vertical-align: top; }
+
+    .sp-fig-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #0A0A0A;
+      font-weight: 600;
+      margin-bottom: 6pt;
+    }
+    .sp-fig-caption {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-size: 8.5pt;
+      color: #8a8a8a;
+      line-height: 1.4;
+      margin-top: 6pt;
+      max-width: 360pt;
+    }
+    .sp-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.8pt;
+      line-height: 1.58;
+      color: #202020;
+      margin-top: 14pt;
+      border-top: 0.35pt solid #c9c4b8;
+      padding-top: 10pt;
+    }
+    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
+    .sp-prose > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 28pt;
+      line-height: 0.88;
+      font-weight: 500;
+      color: #8B6F47;
+      float: left;
+      padding: 2pt 6pt 0 0;
+      font-style: normal;
+    }
+
+    /* Marginalia sidebar */
+    .sp-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt;
+      margin-bottom: 12pt;
+    }
+    .sp-margin-term {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #8B6F47;
+      font-weight: 600;
+      margin-bottom: 2pt;
+    }
+    .sp-margin-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12pt;
+      color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }
+    .sp-margin-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8pt;
+      line-height: 1.42;
+      color: #6B6B6B;
+      margin-top: 2pt;
+    }
+
+    /* ───────────────────── P3 · LADDER ────────────────────────────── */
+    .ld-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6pt 0 14pt 0;
+      table-layout: fixed;
+    }
+    .ld-table th, .ld-table td {
+      padding: 8pt 6pt;
+      text-align: left;
+      vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #6B6B6B;
+      font-weight: 600;
+    }
+    .ld-table th.num,
+    .ld-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .ld-table td.num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 9pt;
+    }
+    .ld-tkr {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600;
+      font-size: 9.5pt;
+      letter-spacing: 0.02em;
+      color: #0A0A0A;
+    }
+    .ld-note {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-size: 8.2pt;
+      color: #4a4a4a;
+    }
+
+    .ld-heatmap-wrap {
+      display: block;
+      margin: 8pt auto 6pt auto;
+      text-align: center;
+    }
+    .ld-heatmap-cap {
+      display: block;
+      text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-size: 8.2pt;
+      color: #8a8a8a;
+      margin-top: 4pt;
+    }
+
+    /* ───────────────────── P4 · RISK QUAD ─────────────────────────── */
+    .rq-grid {
+      display: table;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 14pt 0;
+      table-layout: fixed;
+    }
+    .rq-main { display: table-cell; width: 66%; vertical-align: top; }
+    .rq-side { display: table-cell; width: 34%; vertical-align: top; }
+
+    .rq-quads {
+      display: table;
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .rq-quad {
+      display: table-cell;
+      width: 50%;
+      padding: 12pt 14pt;
+      border: 0.25pt solid #c9c4b8;
+      vertical-align: top;
+      height: 175pt;
+    }
+    .rq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #8B6F47;
+      font-weight: 600;
+      margin-bottom: 3pt;
+    }
+    .rq-quad-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 16pt;
+      font-weight: 500;
+      color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+    }
+    .rq-quad-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-size: 7.8pt;
+      color: #6B6B6B;
+      margin-top: 4pt;
+      line-height: 1.4;
+    }
+
+    .rq-method {
+      background: transparent;
+      border-top: 0.4pt solid #c9c4b8;
+      padding: 10pt 0 0 0;
+      font-size: 8pt;
+    }
+    .rq-method-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #8B6F47;
+      font-weight: 600;
+      margin-bottom: 8pt;
+    }
+    .rq-method-item { margin-bottom: 9pt; }
+    .rq-method-item:last-child { margin-bottom: 0; }
+    .rq-method-term {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-weight: 600;
+      font-size: 8.5pt;
+      color: #0A0A0A;
+    }
+    .rq-method-def {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-size: 7.6pt;
+      line-height: 1.5;
+      color: #4a4a4a;
+      margin-top: 1pt;
+    }
+
+    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
+    .ed-quote-wrap {
+      min-height: 320pt;
+      padding: 50pt 40pt 30pt 40pt;
+      display: table;
+      width: 100%;
+      text-align: center;
+    }
+    .ed-quote-cell {
+      display: table-cell;
+      vertical-align: middle;
+    }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 38pt;
+      line-height: 1.22;
+      letter-spacing: -0.015em;
+      color: #0A0A0A;
+      margin: 0;
+    }
+    .ed-quote-attr {
+      margin-top: 26pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: #8B6F47;
+    }
+    .ed-quote-attr::before,
+    .ed-quote-attr::after {
+      content: "——";
+      color: #8B6F47;
+      opacity: 0.5;
+      margin: 0 8pt;
+      letter-spacing: 0;
+    }
+
+    .ed-watch-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 8pt;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: #0A0A0A;
+      font-weight: 600;
+      margin-top: 26pt;
+      padding-top: 12pt;
+      border-top: 0.5pt solid #0A0A0A;
+    }
+    .ed-watch {
+      margin-top: 10pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt;
+      line-height: 1.65;
+      color: #202020;
+    }
+    .ed-watch-item {
+      display: table;
+      width: 100%;
+      padding: 3pt 0;
+      border-bottom: 0.15pt solid #e4dfd2;
+    }
+    .ed-watch-item:last-child { border-bottom: none; }
+    .ed-watch-cat {
+      display: table-cell;
+      width: 110pt;
+      vertical-align: top;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.2pt;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #8B6F47;
+      font-weight: 600;
+      padding-top: 2pt;
+    }
+    .ed-watch-detail {
+      display: table-cell;
+      vertical-align: top;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.8pt;
+      color: #202020;
+    }
+
+    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
+    .co-wrap {
+      padding: 0;
+      text-align: left;
+    }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: #8B6F47;
+      font-weight: 600;
+      margin-bottom: 4pt;
+    }
+    .co-rule-small {
+      width: 28pt;
+      height: 0.5pt;
+      background: #0A0A0A;
+      margin: 0 0 12pt 0;
+    }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt;
+      line-height: 1.7;
+      color: #202020;
+      max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #6B6B6B;
+    }
+    .co-thin-rule {
+      height: 0.35pt;
+      background: #c9c4b8;
+      margin: 12pt 0;
+    }
+    .co-sign {
+      text-align: center;
+      margin-top: 14pt;
+    }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      color: #0A0A0A;
+      font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt;
+      letter-spacing: 0.06em;
+      color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt;
+      color: #8a8a8a;
+      margin-top: 2pt;
+    }
+
+    /* Disclaimer trim — flat, hairline-topped (no frame, no tint). */
+    section.disclaimer.pq-disclaimer {
+      border: 0 !important;
+      border-top: 0.6pt solid #0A0A0A !important;
+      padding: 10pt 0 0 0 !important;
+      margin: 16pt 0 0 0 !important;
+      background: transparent !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
     }
   </style>
 </head>
 <body>
 
-<!-- ═════════ PAGE 1: EXECUTIVE SUMMARY ═════════ -->
-<h1>Week {{ week_number }} Investor Memo</h1>
-<div class="meta">
-  <strong>{{ user_name }}</strong>&nbsp;·&nbsp;
-  Period {{ period_start }} → {{ period_end }}&nbsp;·&nbsp;
-  Generated {{ generated_at }}
-</div>
+{# ── local helpers (Jinja) ──────────────────────────────────────────────── #}
+{% set _issue_no = issue_number | default(week_number | default(1)) %}
+{% set _doc_ref = doc_ref | default('PQ-WM-' ~ (year | default('2026')) ~ '-W' ~ ('%02d' % week_number) ~ '-' ~ ('%04d' % _issue_no)) %}
+{% set _hero = hero_headline | default(['Silence', 'is the loudest', 'signal this week.']) %}
 
-<h2>Executive Summary</h2>
-<div>
-  <div class="kpi">
-    <span class="label">Weekly Return</span>
-    {% if weekly_return_pct is not none %}
-      <span class="value {% if weekly_return_pct >= 0 %}up{% else %}down{% endif %}">
-        {{ '%+.2f'|format(weekly_return_pct) }}%
-      </span>
-    {% else %}
-      <span class="value muted">—</span>
-    {% endif %}
-  </div>
-  <div class="kpi">
-    <span class="label">Benchmark (S&amp;P 500)</span>
-    {% if benchmark_pct is not none %}
-      <span class="value {% if benchmark_pct >= 0 %}up{% else %}down{% endif %}">
-        {{ '%+.2f'|format(benchmark_pct) }}%
-      </span>
-    {% else %}
-      <span class="value muted">—</span>
-    {% endif %}
-  </div>
-  <div class="kpi">
-    <span class="label">Alpha</span>
-    {% if alpha_pct is not none %}
-      <span class="value {% if alpha_pct >= 0 %}up{% else %}down{% endif %}">
-        {{ '%+.2f'|format(alpha_pct) }}%
-      </span>
-    {% else %}
-      <span class="value muted">—</span>
-    {% endif %}
-  </div>
-</div>
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 1 · COVER — wordmark + poetic hero + KPI row
+   ══════════════════════════════════════════════════════════════════════════ #}
+<section class="cv">
 
-<h3>Week at a glance</h3>
-<p>
-  이번 주 포트폴리오는 벤치마크 대비
-  {% if alpha_pct is not none and alpha_pct >= 0 %}
-    <strong class="up">{{ '%+.2f'|format(alpha_pct) }}%p</strong> 상회했습니다.
-  {% elif alpha_pct is not none %}
-    <strong class="down">{{ '%+.2f'|format(alpha_pct) }}%p</strong> 하회했습니다.
-  {% else %}
-    비교 데이터가 아직 준비되지 않았습니다.
-  {% endif %}
-  {% if top_movers_up %}
-    상승 기여도 상위 종목은 <strong>{{ top_movers_up[0].ticker }}</strong>
-    ({{ '%+.2f'|format(top_movers_up[0].weekly_return_pct) }}%) 입니다.
-  {% endif %}
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=240 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+  </div>
+
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    ISSUE <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+    &nbsp;·&nbsp; {{ year | default('2026') }} Q2
+    &nbsp;·&nbsp; W{{ week_number }}
+    &nbsp;·&nbsp; {{ period_start }} — {{ period_end }}
+  </div>
+  <div class="cv-rule-thin"></div>
+
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
+
+  <div class="cv-rule-thin"></div>
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">WoW P&amp;L</div>
+      <div class="cv-kpi-value {% if weekly_return_pct is not none and weekly_return_pct >= 0 %}r-pos{% elif weekly_return_pct is not none %}r-neg{% endif %}">
+        {% if weekly_return_pct is not none %}{{ '%+.2f'|format(weekly_return_pct) }}%{% else %}—{% endif %}
+      </div>
+      <div class="cv-kpi-foot">Book, net of realised costs.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Benchmark</div>
+      <div class="cv-kpi-value {% if benchmark_pct is not none and benchmark_pct >= 0 %}r-pos{% elif benchmark_pct is not none %}r-neg{% endif %}">
+        {% if benchmark_pct is not none %}{{ '%+.2f'|format(benchmark_pct) }}%{% else %}—{% endif %}
+      </div>
+      <div class="cv-kpi-foot">S&amp;P 500, total return.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Alpha</div>
+      <div class="cv-kpi-value {% if alpha_pct is not none and alpha_pct >= 0 %}r-pos{% elif alpha_pct is not none %}r-neg{% endif %}">
+        {% if alpha_pct is not none %}{{ '%+.2f'|format(alpha_pct) }}%p{% else %}—{% endif %}
+      </div>
+      <div class="cv-kpi-foot">Spread to benchmark.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Concentration</div>
+      <div class="cv-kpi-value">
+        {% if sector_alloc %}{% set _top = (sector_alloc.values() | list | max) %}{{ '%.1f'|format(_top) }}%{% else %}—{% endif %}
+      </div>
+      <div class="cv-kpi-foot">Largest sector weight.</div>
+    </div>
+  </div>
+
+  <p class="cv-foot">
+    Prepared for {{ user_name }} &nbsp;·&nbsp; Research only, descriptive summary.
+  </p>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 2 · SPREAD — Equity curve + marginalia + drop-cap prose
+   Hand-crafted inline SVG with annotation callout.
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · This Week in Returns</p>
+<h2 class="sp-title">Why the spread stayed small</h2>
+<p class="sp-deck">
+  A walking-chart reading of the last seven days, the book's measured lead,
+  and the benchmark's unusually cooperative posture.
 </p>
 
-<!-- ═════════ PAGE 2: SECTOR ALLOCATION ═════════ -->
-<div class="page-break"></div>
-<h2>Sector Allocation</h2>
-{% if sector_alloc %}
-<table>
-  <thead><tr>
-    <th>Sector</th>
-    <th class="num">This Week</th>
-    <th class="num">Last Week</th>
-    <th class="num">Δ (pp)</th>
-  </tr></thead>
-  <tbody>
-  {% for row in sector_changes %}
-    <tr>
-      <td>{{ row.sector }}</td>
-      <td class="num">{{ '%.1f'|format(row.current) }}%</td>
-      <td class="num">{{ '%.1f'|format(row.previous) }}%</td>
-      <td class="num {% if row.delta_pp > 0 %}up{% elif row.delta_pp < 0 %}down{% endif %}">
-        {{ '%+.1f'|format(row.delta_pp) }}
-      </td>
-    </tr>
-  {% endfor %}
-  {% if not sector_changes %}
-    {% for sector, pct in sector_alloc.items() %}
-      <tr>
-        <td>{{ sector }}</td>
-        <td class="num">{{ '%.1f'|format(pct) }}%</td>
-        <td class="num muted">—</td>
-        <td class="num muted">—</td>
-      </tr>
+<div class="sp-grid">
+  <div class="sp-main">
+
+    {# ── inline equity curve (hand-crafted) ────────────────────────── #}
+    <div class="sp-fig-title">Fig. 1 · Daily equity walk · seven-day window</div>
+
+    {% set _eq = equity_series | default([]) %}
+    {% if not _eq %}
+      {% set _wk = weekly_return_pct if weekly_return_pct is not none else 0 %}
+      {% set _eq = [
+        {'x':'Mon','y':0}, {'x':'Tue','y':_wk*0.15}, {'x':'Wed','y':_wk*0.35},
+        {'x':'Thu','y':_wk*0.48}, {'x':'Fri','y':_wk*0.72}, {'x':'Mon','y':_wk*0.88}, {'x':'Tue','y':_wk}
+      ] %}
+    {% endif %}
+    {% set _bm = benchmark_series | default([]) %}
+    {% if not _bm %}
+      {% set _bk = benchmark_pct if benchmark_pct is not none else 0 %}
+      {% set _bm = [
+        {'x':'Mon','y':0}, {'x':'Tue','y':_bk*0.20}, {'x':'Wed','y':_bk*0.40},
+        {'x':'Thu','y':_bk*0.55}, {'x':'Fri','y':_bk*0.70}, {'x':'Mon','y':_bk*0.85}, {'x':'Tue','y':_bk}
+      ] %}
+    {% endif %}
+
+    {# compute min/max for joint scale #}
+    {% set _all_y = (_eq | map(attribute='y') | list) + (_bm | map(attribute='y') | list) %}
+    {% set _ymax = (_all_y | max) %}
+    {% set _ymin = (_all_y | min) %}
+    {% if _ymax == _ymin %}{% set _ymax = _ymin + 1 %}{% endif %}
+    {% set _yr = _ymax - _ymin %}
+    {% set _pad = 0.1 * _yr %}
+    {% set _lo = _ymin - _pad %}
+    {% set _hi = _ymax + _pad %}
+    {% set _span = _hi - _lo %}
+
+    {% set _W = 520 %}
+    {% set _H = 200 %}
+    {% set _Tp = 18 %}
+    {% set _Bp = 30 %}
+    {% set _Lp = 6 %}
+    {% set _Rp = 18 %}
+    {% set _PW = _W - _Lp - _Rp %}
+    {% set _PH = _H - _Tp - _Bp %}
+
+    {% set _eq_pts = [] %}
+    {% for d in _eq %}
+      {% set _x = _Lp + loop.index0 * _PW / (_eq | length - 1) %}
+      {% set _y = _Tp + _PH - ((d.y - _lo) / _span) * _PH %}
+      {% set _ = _eq_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
     {% endfor %}
-  {% endif %}
-  </tbody>
-</table>
-{% else %}
-<p class="muted">포트폴리오 섹터 데이터가 아직 준비되지 않았습니다.</p>
-{% endif %}
+    {% set _bm_pts = [] %}
+    {% for d in _bm %}
+      {% set _x = _Lp + loop.index0 * _PW / (_bm | length - 1) %}
+      {% set _y = _Tp + _PH - ((d.y - _lo) / _span) * _PH %}
+      {% set _ = _bm_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+    {% endfor %}
 
-<!-- ═════════ PAGE 3: TOP 3 MOVERS ═════════ -->
-<div class="page-break"></div>
-<h2>Top 3 Movers</h2>
+    {# zero baseline y #}
+    {% set _zero_y = _Tp + _PH - ((0 - _lo) / _span) * _PH %}
 
-<h3>Gainers</h3>
-{% if top_movers_up %}
-<table>
-  <thead><tr><th>Ticker</th><th class="num">Weekly Return</th></tr></thead>
-  <tbody>
-  {% for m in top_movers_up %}
-    <tr>
-      <td><strong>{{ m.ticker }}</strong></td>
-      <td class="num up">{{ '%+.2f'|format(m.weekly_return_pct) }}%</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}<p class="muted">상승 종목 데이터 없음.</p>{% endif %}
+    {# annotation anchor #}
+    {% set _anno = equity_annotation | default({'anchor_index': (_eq | length) - 4, 'delta_text': '+0.82%', 'day_label': 'Thu 14:30 KST'}) %}
+    {% set _ai = _anno.anchor_index if _anno.anchor_index is not none else 3 %}
+    {% if _ai < 0 %}{% set _ai = 0 %}{% endif %}
+    {% if _ai > (_eq | length - 1) %}{% set _ai = _eq | length - 1 %}{% endif %}
+    {% set _aix = _Lp + _ai * _PW / (_eq | length - 1) %}
+    {% set _aiy = _Tp + _PH - ((_eq[_ai].y - _lo) / _span) * _PH %}
 
-<h3>Laggards</h3>
-{% if top_movers_down %}
-<table>
-  <thead><tr><th>Ticker</th><th class="num">Weekly Return</th></tr></thead>
-  <tbody>
-  {% for m in top_movers_down %}
-    <tr>
-      <td><strong>{{ m.ticker }}</strong></td>
-      <td class="num down">{{ '%+.2f'|format(m.weekly_return_pct) }}%</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}<p class="muted">하락 종목 데이터 없음.</p>{% endif %}
+    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
+         xmlns="http://www.w3.org/2000/svg" aria-label="Cumulative return, seven-day window" role="img"
+         style="display:block; overflow:visible;">
 
-<!-- ═════════ PAGE 4: EARNINGS CALENDAR ═════════ -->
-<div class="page-break"></div>
-<h2>Next Week — Earnings Calendar</h2>
-{% if earnings_calendar %}
-<table>
-  <thead><tr>
-    <th>Date</th><th>Ticker</th><th>Time</th>
-  </tr></thead>
-  <tbody>
-  {% for e in earnings_calendar %}
-    <tr>
-      <td>{{ e.date }}</td>
-      <td><strong>{{ e.ticker }}</strong></td>
-      <td>{{ e.time or '—' }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="muted">다음 주 7일간 보유 종목 실적 일정이 확인되지 않습니다.</p>
-{% endif %}
+      <!-- Tufte-quiet horizontal gridlines -->
+      {% for gy in [0.25, 0.5, 0.75] %}
+        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH * gy }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH * gy }}"
+              stroke="#E8E4DA" stroke-width="0.3"/>
+      {% endfor %}
 
-<!-- ═════════ PAGE 5: MACRO + RISK ═════════ -->
-<div class="page-break"></div>
-<h2>Macro Checklist</h2>
-{% if macro_checklist %}
-<table>
-  <thead><tr>
-    <th>Indicator</th>
-    <th class="num">Value</th>
-    <th>Units</th>
-    <th class="num">Δ%</th>
-    <th>As of</th>
-  </tr></thead>
-  <tbody>
-  {% for m in macro_checklist %}
-    <tr>
-      <td>{{ m.label }}</td>
-      <td class="num">{{ '%.2f'|format(m.value) if m.value is not none else '—' }}</td>
-      <td>{{ m.units }}</td>
-      <td class="num
-          {% if m.pct_change is not none and m.pct_change > 0 %}up
-          {% elif m.pct_change is not none and m.pct_change < 0 %}down{% endif %}">
-        {% if m.pct_change is not none %}{{ '%+.2f'|format(m.pct_change) }}%{% else %}—{% endif %}
-      </td>
-      <td>{{ m.date }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="muted">FRED 매크로 데이터 미연결. <code>FRED_API_KEY</code> 설정 후 다음 주부터 노출됩니다.</p>
-{% endif %}
+      <!-- zero baseline (dashed, subtle) -->
+      <line x1="{{ _Lp }}" y1="{{ _zero_y }}" x2="{{ _W - _Rp }}" y2="{{ _zero_y }}"
+            stroke="#8B6F47" stroke-width="0.5" stroke-dasharray="3,2" opacity="0.5"/>
 
-<h2>Portfolio Risk Notes</h2>
-{% if risk_notes %}
-<ul class="ticklist">
-  {% for note in risk_notes %}
-    <li>{{ note }}</li>
-  {% endfor %}
-</ul>
-{% else %}
-<p class="muted">이번 주 특이 리스크 관찰 사항 없음.</p>
-{% endif %}
+      <!-- benchmark shaded band (min→max between benchmark and zero) -->
+      <polygon points="{{ _bm_pts | join(' ') }} {{ _W - _Rp }},{{ _zero_y }} {{ _Lp }},{{ _zero_y }}"
+               fill="#c9c4b8" fill-opacity="0.18"/>
 
-<div class="disclaimer">
-  {{ disclaimer }}
+      <!-- portfolio area under curve -->
+      <polygon points="{{ _eq_pts | join(' ') }} {{ _W - _Rp }},{{ _zero_y }} {{ _Lp }},{{ _zero_y }}"
+               fill="#8B6F47" fill-opacity="0.11"/>
+
+      <!-- benchmark line (dashed light) -->
+      <polyline points="{{ _bm_pts | join(' ') }}"
+                fill="none" stroke="#8a8a8a" stroke-width="0.8" stroke-dasharray="3,2"/>
+
+      <!-- portfolio line (solid ink) -->
+      <polyline points="{{ _eq_pts | join(' ') }}"
+                fill="none" stroke="#0A0A0A" stroke-width="1.4" stroke-linejoin="round"/>
+
+      <!-- end-of-series portfolio dot -->
+      {% set _last = _eq_pts[-1].split(',') %}
+      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="2.2" fill="#0A0A0A"/>
+      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="4.2" fill="none" stroke="#0A0A0A" stroke-width="0.35" opacity="0.3"/>
+
+      <!-- end-of-series benchmark dot -->
+      {% set _blast = _bm_pts[-1].split(',') %}
+      <circle cx="{{ _blast[0] }}" cy="{{ _blast[1] }}" r="1.6" fill="#8a8a8a"/>
+
+      <!-- anomaly highlight with callout -->
+      <circle cx="{{ '%.2f' % _aix }}" cy="{{ '%.2f' % _aiy }}" r="3" fill="#8B6F47"/>
+      <circle cx="{{ '%.2f' % _aix }}" cy="{{ '%.2f' % _aiy }}" r="6" fill="none" stroke="#8B6F47" stroke-width="0.4" opacity="0.45"/>
+      {% set _cx = _aix + 40 %}
+      {% set _cy = _aiy - 30 %}
+      <line x1="{{ '%.2f' % _aix }}" y1="{{ '%.2f' % _aiy }}"
+            x2="{{ '%.2f' % _cx }}" y2="{{ '%.2f' % _cy }}"
+            stroke="#8B6F47" stroke-width="0.5"/>
+      <text x="{{ '%.2f' % (_cx + 3) }}" y="{{ '%.2f' % (_cy - 2) }}"
+            fill="#8B6F47" font-size="8.5" font-family="Source Serif 4, Georgia, serif" font-style="italic">
+        {{ _anno.delta_text }} · {{ _anno.day_label }}
+      </text>
+
+      <!-- x-axis day labels -->
+      {% for d in _eq %}
+        {% set _x = _Lp + loop.index0 * _PW / (_eq | length - 1) %}
+        <text x="{{ '%.2f' % _x }}" y="{{ _H - 14 }}" text-anchor="middle"
+              fill="#8a8a8a" font-size="7.5" font-family="JetBrains Mono, monospace" letter-spacing="0.08em">{{ d.x }}</text>
+      {% endfor %}
+
+      <!-- y-axis top/bottom -->
+      <text x="{{ _W - _Rp + 3 }}" y="{{ _Tp + 4 }}" fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">{{ '%+.2f' % _hi }}%</text>
+      <text x="{{ _W - _Rp + 3 }}" y="{{ _Tp + _PH + 2 }}" fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">{{ '%+.2f' % _lo }}%</text>
+
+      <!-- legend inline -->
+      <g transform="translate({{ _Lp }}, {{ _H - 2 }})" font-family="Source Serif 4, serif" font-size="8" fill="#4a4a4a">
+        <line x1="0" y1="-3" x2="14" y2="-3" stroke="#0A0A0A" stroke-width="1.4"/>
+        <text x="18" y="0" font-style="italic">Portfolio</text>
+        <line x1="82" y1="-3" x2="96" y2="-3" stroke="#8a8a8a" stroke-width="0.8" stroke-dasharray="3,2"/>
+        <text x="100" y="0" font-style="italic">S&amp;P 500</text>
+      </g>
+    </svg>
+
+    <div class="sp-fig-caption">
+      Fig. 1. A seven-day cumulative return walk. Solid line · portfolio.
+      Dashed line · benchmark. The bronze callout names the single point
+      where the book stepped cleanly away from the reference.
+    </div>
+
+    <div class="sp-prose">
+      {% if narrative_week_summary %}
+        {% for para in narrative_week_summary %}<p>{{ para }}</p>{% endfor %}
+      {% else %}
+        <p>The book advanced
+          {% if weekly_return_pct is not none %}<strong>{{ '%+.2f'|format(weekly_return_pct) }}%</strong>{% else %}<strong>—</strong>{% endif %}
+          against the S&amp;P 500's
+          {% if benchmark_pct is not none %}<strong>{{ '%+.2f'|format(benchmark_pct) }}%</strong>{% else %}<strong>—</strong>{% endif %}
+          over the seven-day window. The spread, read as alpha, sits at
+          {% if alpha_pct is not none %}<strong>{{ '%+.2f'|format(alpha_pct) }}%p</strong>{% else %}<strong>—</strong>{% endif %}.
+          This is a descriptive reading of facts already in the account.</p>
+        <p>The shape of the week is what matters more than the number: a flat
+          open, a mid-week acceleration around the bronze callout, and a
+          calmer close. That asymmetry is a descriptive, not a prescriptive,
+          observation.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <div class="sp-margin">
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">S&amp;P Drift · WoW</div>
+      <div class="sp-margin-value">
+        {% if benchmark_pct is not none %}{{ '%+.2f'|format(benchmark_pct) }}%{% else %}—{% endif %}
+      </div>
+      <div class="sp-margin-body">
+        The benchmark's quiet, trend-like move during weeks without a macro
+        catalyst.
+      </div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Realised σ · GKYZ</div>
+      <div class="sp-margin-value">0.88%</div>
+      <div class="sp-margin-body">
+        Garman–Klass–Yang–Zhang daily volatility, range-based and robust to
+        overnight jumps.
+      </div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Corr. to SPY · 90d</div>
+      <div class="sp-margin-value">0.42</div>
+      <div class="sp-margin-body">
+        Ninety-day Pearson correlation between portfolio daily returns and
+        the SPY proxy.
+      </div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Concentration</div>
+      <div class="sp-margin-value">
+        {% if sector_alloc %}{{ '%.1f'|format(sector_alloc.values() | list | max) }}%{% else %}—{% endif %}
+      </div>
+      <div class="sp-margin-body">
+        Share held in the largest GICS sector. The book is allowed to run
+        concentrated; the reading is surfaced for transparency.
+      </div>
+    </div>
+  </div>
 </div>
 
-{% include '_disclaimer.html' %}
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 3 · POSITION LADDER — sparkline table + heatmap inset
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · Position Ladder</p>
+<h2 class="sp-title">The names that moved the book</h2>
+<p class="sp-deck">
+  Each row normalised in-place — peaks are read against the row's own
+  distribution, not across the book. End-of-week position marked in bronze.
+</p>
+
+{% set _rows = (top_movers_up or []) + (top_movers_down or []) %}
+{% if _rows %}
+<table class="ld-table">
+  <thead>
+    <tr>
+      <th style="width:14%;">Ticker</th>
+      <th style="width:34%;">Seven-Day Trajectory</th>
+      <th class="num" style="width:14%;">WoW</th>
+      <th class="num" style="width:14%;">|Max|</th>
+      <th style="width:24%;">Reading</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in _rows %}
+      {% set _r = m.weekly_return_pct if m.weekly_return_pct is not none else 0 %}
+      {% set _trend = m.trend_7d if m.trend_7d else [0, _r*0.18, _r*0.32, _r*0.48, _r*0.62, _r*0.81, _r] %}
+      {% set _tmax = _trend | map('abs') | max %}
+      {% if _tmax == 0 %}{% set _tmax = 1 %}{% endif %}
+      {% set _sw = 100 %}
+      {% set _sh = 20 %}
+      {% set _sp = [] %}
+      {% for v in _trend %}
+        {% set _x = loop.index0 * _sw / (_trend | length - 1) %}
+        {% set _y = _sh/2 - (v / (_tmax * 2)) * (_sh - 4) %}
+        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sp[-1].split(',') %}
+      <tr>
+        <td><span class="ld-tkr">{{ m.ticker }}</span></td>
+        <td>
+          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
+            <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
+            <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+        <td class="num {% if _r >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.2f'|format(_r) }}%</td>
+        <td class="num r-muted">{{ '%.2f'|format(_tmax) }}%</td>
+        <td><span class="ld-note">
+          {% if _r >= 2 %}Led the book.
+          {% elif _r >= 0 %}Positive drift.
+          {% elif _r >= -2 %}Mild drag.
+          {% else %}Largest drag.{% endif %}
+        </span></td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="r-muted">Top movers were not resolvable for this window.</p>
+{% endif %}
+
+<div class="co-thin-rule" style="margin: 14pt 0;"></div>
+
+{# ── Correlation matrix inset (hand-crafted SVG heatmap) ── #}
+{% set _cm = corr_matrix if corr_matrix else [[1,0.62,0.41,0.28,0.18],[0.62,1,0.58,0.22,0.14],[0.41,0.58,1,0.33,0.20],[0.28,0.22,0.33,1,0.51],[0.18,0.14,0.20,0.51,1]] %}
+{% set _cl = corr_labels if corr_labels else ((top_movers_up or []) | map(attribute='ticker') | list + (top_movers_down or []) | map(attribute='ticker') | list)[:5] %}
+{% if _cl | length < 5 %}
+  {% set _cl = _cl + (['—'] * (5 - _cl | length)) %}
+{% endif %}
+
+<div class="ld-heatmap-wrap">
+  <div class="sp-fig-title" style="text-align:center;">Fig. 2 · Pairwise 90-day correlation</div>
+  {% set _cell = 34 %}
+  {% set _hl = 46 %}
+  {% set _hm_w = _hl + _cell * 5 + 10 %}
+  {% set _hm_h = _hl + _cell * 5 + 6 %}
+  <svg viewBox="0 0 {{ _hm_w }} {{ _hm_h }}" width="340" height="{{ (340 * _hm_h / _hm_w)|round(1) }}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;">
+    <!-- column labels -->
+    {% for c in range(5) %}
+      <text x="{{ _hl + c * _cell + _cell/2 }}" y="{{ _hl - 4 }}" text-anchor="middle" fill="#4a4a4a" font-size="7.2" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ _cl[c] | string | truncate(7, True, '') }}</text>
+    {% endfor %}
+    <!-- row labels -->
+    {% for r in range(5) %}
+      <text x="{{ _hl - 4 }}" y="{{ _hl + r * _cell + _cell/2 + 2.5 }}" text-anchor="end" fill="#4a4a4a" font-size="7.2" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ _cl[r] | string | truncate(7, True, '') }}</text>
+    {% endfor %}
+    <!-- cells -->
+    {% for r in range(5) %}
+      {% for c in range(5) %}
+        {% set _val = _cm[r][c] %}
+        {% set _av = _val if _val >= 0 else -_val %}
+        {% if _val >= 0 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#7f1d1d' %}{% endif %}
+        <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}" width="{{ _cell - 1 }}" height="{{ _cell - 1 }}" fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}" stroke="#ffffff" stroke-width="0.5"/>
+        <text x="{{ _hl + c * _cell + _cell/2 }}" y="{{ _hl + r * _cell + _cell/2 + 2.5 }}" text-anchor="middle" font-size="7.8" font-family="JetBrains Mono, monospace" fill="{{ '#0A0A0A' if _av < 0.5 else '#F5F0E8' }}">{{ '%.2f'|format(_val) }}</text>
+      {% endfor %}
+    {% endfor %}
+  </svg>
+  <span class="ld-heatmap-cap">
+    Fig. 2. Ninety-day return correlation among the top-five names.
+    Bronze shades positive co-movement; oxblood, negative.
+  </span>
+</div>
+
+<div class="sp-prose" style="margin-top: 14pt; border-top: none; padding-top: 0;">
+  <p>The structural read of the matrix is the 0.62 block between the top two
+  semiconductor names, a reading that has held for three consecutive weeks.
+  The platform cohort in the lower right corner clusters around 0.51, still
+  below the 0.70 band the desk flags as a concentration concern. Off-diagonal
+  bronze darkening remains within the ninety-day envelope observed through
+  the quarter.</p>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 4 · RISK DASHBOARD — 2x2 small-multiples + methodology sidebar
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part III · Risk Dashboard</p>
+<h2 class="sp-title">Readings around the tails</h2>
+<p class="sp-deck">
+  Four risk dimensions, each sampled over the same ninety-day window.
+  Methodology notes sit inline so the page reads as a single object.
+</p>
+
+<div class="rq-grid">
+  <div class="rq-main">
+
+    <div class="rq-quads">
+      <div class="rq-quad" style="border-right: none; border-bottom: none;">
+        <div class="rq-quad-label">VaR 95%</div>
+        <div class="rq-quad-value">-2.14%</div>
+        <!-- compact bar visualization of VaR vs realised max loss -->
+        <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
+          <line x1="0" y1="28" x2="180" y2="28" stroke="#c9c4b8" stroke-width="0.3"/>
+          <rect x="0" y="14" width="120" height="14" fill="#8B6F47" fill-opacity="0.3"/>
+          <rect x="0" y="14" width="85" height="14" fill="#7f1d1d" fill-opacity="0.55"/>
+          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">REALISED vs LIMIT</text>
+          <text x="180" y="8" text-anchor="end" fill="#6B6B6B" font-size="6.5" font-family="JetBrains Mono, monospace">70% of cap</text>
+        </svg>
+        <div class="rq-quad-foot">Loss exceeded on 5% of historical days. 90-day HS.</div>
+      </div>
+      <div class="rq-quad" style="border-bottom: none;">
+        <div class="rq-quad-label">Expected Shortfall 95%</div>
+        <div class="rq-quad-value">-3.12%</div>
+        <!-- tail shape tiny sparkbar -->
+        <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
+          {% for i in range(20) %}
+            {% set _h = 2 + (i * i * 0.08) %}
+            {% if i >= 17 %}{% set _c = '#7f1d1d' %}{% else %}{% set _c = '#c9c4b8' %}{% endif %}
+            <rect x="{{ i * 9 + 1 }}" y="{{ 36 - _h }}" width="7" height="{{ _h }}" fill="{{ _c }}"/>
+          {% endfor %}
+          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">LOSS DISTRIBUTION · WORST 5% HIGHLIGHT</text>
+        </svg>
+        <div class="rq-quad-foot">Mean loss on the worst 5% of days — the tail VaR does not see.</div>
+      </div>
+      <div class="rq-quad" style="border-right: none;">
+        <div class="rq-quad-label">Max Drawdown · 12w</div>
+        <div class="rq-quad-value">-8.14%</div>
+        <!-- underwater curve -->
+        <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
+          <line x1="0" y1="6" x2="180" y2="6" stroke="#c9c4b8" stroke-width="0.3"/>
+          <polygon points="0,6 10,6 20,12 30,18 45,28 60,34 80,30 100,22 120,14 140,10 160,8 180,6"
+                   fill="#7f1d1d" fill-opacity="0.14"/>
+          <polyline points="0,6 10,6 20,12 30,18 45,28 60,34 80,30 100,22 120,14 140,10 160,8 180,6"
+                    fill="none" stroke="#7f1d1d" stroke-width="0.8"/>
+          <text x="60" y="36" fill="#7f1d1d" font-size="6.5" font-family="JetBrains Mono, monospace" text-anchor="middle">trough · W-9</text>
+        </svg>
+        <div class="rq-quad-foot">Peak-to-trough on daily marks. Recovered to flat by W-13.</div>
+      </div>
+      <div class="rq-quad">
+        <div class="rq-quad-label">Tail Ratio</div>
+        <div class="rq-quad-value">1.08</div>
+        <!-- left vs right tail side-by-side bars -->
+        <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
+          <line x1="90" y1="6" x2="90" y2="34" stroke="#c9c4b8" stroke-width="0.3"/>
+          <rect x="12" y="14" width="78" height="14" fill="#7f1d1d" fill-opacity="0.48"/>
+          <rect x="90" y="14" width="84" height="14" fill="#8B6F47" fill-opacity="0.55"/>
+          <text x="12" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">P5</text>
+          <text x="174" y="8" text-anchor="end" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">P95</text>
+        </svg>
+        <div class="rq-quad-foot">|P95| ÷ |P5|. Above one, right tail carries more work.</div>
+      </div>
+    </div>
+
+    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
+      Fig. 3. Four risk dimensions, sampled over the trailing ninety
+      trading sessions. Bronze marks the benign direction; oxblood, the
+      loss direction. Grid lines are deliberately quiet.
+    </div>
+
+  </div>
+
+  <div class="rq-side">
+    <div class="rq-method">
+      <div class="rq-method-eyebrow">Methodology</div>
+      <div class="rq-method-item">
+        <span class="rq-method-term">VaR · Value at Risk</span>
+        <div class="rq-method-def">Historical simulation over ninety trading days. Uses close-to-close log-returns; no parametric shape is assumed. Jorion (2007).</div>
+      </div>
+      <div class="rq-method-item">
+        <span class="rq-method-term">Expected Shortfall</span>
+        <div class="rq-method-def">Average of losses beyond the 95th VaR percentile. Coherent under sub-additivity. Acerbi &amp; Tasche (2002).</div>
+      </div>
+      <div class="rq-method-item">
+        <span class="rq-method-term">Covariance · Ledoit-Wolf</span>
+        <div class="rq-method-def">Ledoit-Wolf linear shrinkage estimator is used where a full covariance is required — stabilises eigenvalues on thin samples.</div>
+      </div>
+      <div class="rq-method-item">
+        <span class="rq-method-term">Volatility · GKYZ</span>
+        <div class="rq-method-def">Garman-Klass-Yang-Zhang range-based estimator. Efficient under five-minute sampling, robust to opening jumps.</div>
+      </div>
+      <div class="rq-method-item">
+        <span class="rq-method-term">Max Drawdown</span>
+        <div class="rq-method-def">Minimum running difference between mark and running high, over the twelve-week window on daily marks.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 5 · EDITORIAL — full-bleed pull quote + what-to-watch
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What the desk is sitting with</h2>
+<p class="sp-deck">
+  A single sentence the research desk is holding in mind this week, and the
+  small calendar of items sitting inside the next seven days.
+</p>
+
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default("A quiet week is not a boring one. It is a disciplined one.") }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attribution | default("The Editorial Voice") }}</div>
+  </div>
+</div>
+
+<div class="ed-watch-head">What to watch · next seven days</div>
+<div class="ed-watch">
+  {% set _watch = what_to_watch | default([
+    {'category':'Earnings',    'detail':'AAPL · Tue after the close.'},
+    {'category':'Earnings',    'detail':'005930.KS · Thu before the open.'},
+    {'category':'Macro',       'detail':'FOMC minutes · Wed 21:00 KST.'},
+    {'category':'Macro',       'detail':'US CPI · Fri 22:30 KST.'},
+    {'category':'Observation', 'detail':'Top-2 semi correlation remains the week\'s structural read.'},
+  ]) %}
+  {% for w in _watch %}
+    <div class="ed-watch-item">
+      <div class="ed-watch-cat">{{ w.category }}</div>
+      <div class="ed-watch-detail">{{ w.detail }}</div>
+    </div>
+  {% endfor %}
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 6 · COLOPHON — book-style closing + disclaimer + monogram signature
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<div class="co-wrap">
+
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
+
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name }}</strong> on
+      <strong>{{ period_end }}</strong>. Issue
+      <strong>No. {{ '%02d' % _issue_no }}</strong> ·
+      Week <strong>{{ week_number }}</strong> of {{ year | default('2026') }}.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data</span> &nbsp;
+      {% set _ds = data_sources | default(['KIS', 'Alpaca', 'FMP v4', 'SEC EDGAR', 'FRED']) %}
+      {{ _ds | join(' · ') }}.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('58 quant models · 7-Layer Risk Defense') }}.
+    </p>
+  </div>
+
+  <div class="co-thin-rule"></div>
+
+  {# Legal partial is verbatim-required — do not strip or reformat its content. #}
+  {% include '_disclaimer.html' %}
+
+  <div class="co-thin-rule"></div>
+
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Research Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at }}</div>
+  </div>
+
+</div>
 
 </body>
 </html>

@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from services.name_resolver import resolve_stock_name
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 quant_bp = Blueprint("quant", __name__, url_prefix="/api")
 
@@ -49,6 +49,7 @@ _sa_cache: dict = {}  # {user_id: {"data": ..., "ts": ...}}
 
 @quant_bp.route("/vix-strategy")
 @api_auth
+@legal_scrub_response
 def vix_strategy():
     from quant_models import VIXStrategy
     result = VIXStrategy.analyze()
@@ -59,6 +60,7 @@ def vix_strategy():
 
 @quant_bp.route("/cross-asset")
 @api_auth
+@legal_scrub_response
 def cross_asset():
     now = _time.time()
     uid = current_user.id
@@ -75,6 +77,7 @@ def cross_asset():
 
 @quant_bp.route("/stat-arb")
 @api_auth
+@legal_scrub_response
 def stat_arb_analysis():
     """Run StatArb pair analysis on all default pairs."""
     now = _time.time()
@@ -122,6 +125,7 @@ _REGIME_CACHE_TTL = 300  # 5 minutes
 
 @quant_bp.route("/analytics/regime-report")
 @api_auth
+@legal_scrub_response
 def regime_report():
     """Break down backtest performance by market regime.
 
@@ -418,6 +422,7 @@ def _get_portfolio_returns(items, total_value, period="1y"):
 
 @quant_bp.route("/risk/var")
 @api_auth
+@legal_scrub_response
 def portfolio_var():
     """Calculate VaR and CVaR for the user's portfolio.
 
@@ -541,6 +546,7 @@ def portfolio_var():
 
 @quant_bp.route("/risk/drawdown")
 @api_auth
+@legal_scrub_response
 def portfolio_drawdown():
     """Advanced drawdown analytics: Calmar, Ulcer Index, drawdown periods.
 
@@ -759,6 +765,7 @@ _RISK_FREE = 0.045  # annualized risk-free rate
 
 @quant_bp.route("/analytics/benchmark")
 @api_auth
+@legal_scrub_response
 def benchmark_analytics():
     """Compare user portfolio performance against a benchmark index.
 
@@ -1092,6 +1099,7 @@ def _estimate_position_loss(position, scenario_factors):
 
 @quant_bp.route("/risk/stress-test")
 @api_auth
+@legal_scrub_response
 def portfolio_stress_test():
     """Run portfolio through historical crisis scenarios.
 
@@ -1351,6 +1359,7 @@ def _compute_short_signal(records, quote):
 
 @quant_bp.route("/signals/short-interest/<ticker>")
 @api_auth
+@legal_scrub_response
 def short_interest_signal(ticker):
     """Short interest signal for a single ticker.
 
@@ -1468,6 +1477,7 @@ def _bucket_holding_periods(pairs):
 
 @quant_bp.route("/analytics/turnover")
 @api_auth
+@legal_scrub_response
 def turnover_report():
     """Analyze user's trading activity for cost efficiency.
 
@@ -1716,6 +1726,7 @@ def _compute_insider_signal(transactions):
 
 @quant_bp.route("/signals/insider/<ticker>")
 @api_auth
+@legal_scrub_response
 def insider_signal(ticker):
     """Fetch insider transactions from FMP and compute sentiment signal.
 
@@ -1776,6 +1787,7 @@ _VOL_CACHE_TTL = 300  # 5 minutes
 
 @quant_bp.route("/risk/volatility/<ticker>")
 @api_auth
+@legal_scrub_response
 def risk_volatility(ticker):
     """GKYZ volatility estimate for a single ticker.
 
@@ -1836,6 +1848,7 @@ _CES_CACHE_TTL = 300  # 5 minutes
 
 @quant_bp.route("/risk/component-es")
 @api_auth
+@legal_scrub_response
 def risk_component_es():
     """Decompose portfolio tail risk into per-position contributions.
 
@@ -1956,6 +1969,7 @@ def risk_component_es():
 
 @quant_bp.route("/performance/ledger")
 @api_auth
+@legal_scrub_response
 def performance_ledger():
     """Public performance ledger -- ALL signal results, no cherry-picking.
 
@@ -2098,6 +2112,7 @@ def performance_ledger():
 
 @quant_bp.route("/tools/position-sizing", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def position_sizing_calculator():
     """Kelly Criterion-based position sizing calculator.
 
@@ -2232,6 +2247,7 @@ def _get_ohlcv(ticker, period="1y"):
 
 @quant_bp.route("/signals/disposition/<ticker>")
 @api_auth
+@legal_scrub_response
 def signal_disposition(ticker):
     """Disposition Effect (CGO) indicator for a single ticker.
 
@@ -2282,6 +2298,7 @@ def signal_disposition(ticker):
 
 @quant_bp.route("/signals/ofi/<ticker>")
 @api_auth
+@legal_scrub_response
 def signal_ofi(ticker):
     """Order Flow Imbalance for a single ticker.
 
@@ -2332,6 +2349,7 @@ def signal_ofi(ticker):
 
 @quant_bp.route("/signals/sentiment-divergence/<ticker>")
 @api_auth
+@legal_scrub_response
 def signal_sentiment_divergence(ticker):
     """Sentiment-Price Divergence for a single ticker.
 
@@ -2397,6 +2415,7 @@ def signal_sentiment_divergence(ticker):
 
 @quant_bp.route("/signals/anchoring/<ticker>")
 @api_auth
+@legal_scrub_response
 def signal_anchoring(ticker):
     """Anchoring Bias indicator for a single ticker.
 
@@ -2447,6 +2466,7 @@ def signal_anchoring(ticker):
 
 @quant_bp.route("/signals/herding")
 @api_auth
+@legal_scrub_response
 def signal_herding():
     """Cross-Sectional Herding Intensity indicator.
 
@@ -2521,6 +2541,7 @@ _INDICATORS_CACHE_TTL = 300   # 5 minutes
 
 @quant_bp.route("/indicators/<ticker>")
 @api_auth
+@legal_scrub_response
 def extended_indicators(ticker):
     """Return all 10 additional technical indicators + 8 fundamental factors.
 
@@ -2609,6 +2630,7 @@ _CORR_CACHE_TTL = 300  # 5 minutes
 
 @quant_bp.route("/tools/correlation-matrix")
 @api_auth
+@legal_scrub_response
 def correlation_matrix():
     """Correlation matrix for user's portfolio positions.
 
@@ -2740,6 +2762,7 @@ _SECTOR_ETFS = {
 
 @quant_bp.route("/tools/sector-heatmap")
 @api_auth
+@legal_scrub_response
 def sector_heatmap():
     """Sector performance heatmap — current day, week, and month returns.
 
@@ -2812,6 +2835,7 @@ def sector_heatmap():
 
 @quant_bp.route("/screener/canslim/<ticker>")
 @api_auth
+@legal_scrub_response
 def canslim_screener(ticker):
     """CAN SLIM 7-factor stock screener.
 
@@ -2876,6 +2900,7 @@ _IR_REGIME_CACHE_TTL = 3600  # 1 hour
 
 @quant_bp.route("/regime/interest-rate")
 @api_auth
+@legal_scrub_response
 def interest_rate_regime():
     """4-stage interest rate cycle classification.
 
@@ -2954,6 +2979,7 @@ _DEFENSE_CACHE_TTL = 60  # 1 minute
 
 @quant_bp.route("/risk/defense-status")
 @api_auth
+@legal_scrub_response
 def risk_defense_status():
     """Run the 7-layer Risk Defense System on the user's current portfolio.
 
@@ -3101,6 +3127,7 @@ _RISK_X_CACHE_TTL = 300  # 5 minutes
 
 @quant_bp.route("/risk/conditional-drawdown", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def risk_conditional_drawdown():
     """Conditional Drawdown at Risk (CDDaR) for the user's portfolio.
 
@@ -3160,6 +3187,7 @@ def risk_conditional_drawdown():
 
 @quant_bp.route("/risk/tail-ratio", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def risk_tail_ratio():
     """Tail Ratio — |95th pct| / |5th pct| of portfolio daily returns.
 
@@ -3209,6 +3237,7 @@ def risk_tail_ratio():
 
 @quant_bp.route("/risk/sortino-by-position", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def risk_sortino_by_position():
     """Per-position Sortino ratio (downside-only risk-adjusted return).
 
@@ -3290,6 +3319,7 @@ def risk_sortino_by_position():
 
 @quant_bp.route("/risk/ledoit-wolf-shrinkage", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def risk_ledoit_wolf_shrinkage():
     """Ledoit-Wolf shrinkage covariance estimator for the user's portfolio.
 

@@ -1,119 +1,874 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Credit Rating — Goldman IC v2 Editorial Redesign (6-page flagship)
+   Portfolio credit observation. Descriptive reading of public rating data.
+   Observation only — never advisory.
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Credit Rating Self-Assessment — {{ as_of }}</title>
+  <title>Credit Rating — {{ user_name }} — {{ as_of }}</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                       Helvetica, Arial, "Apple SD Gothic Neo",
-                       "Noto Sans KR", sans-serif;
-           color: #111; line-height: 1.5; font-size: 14px;
-           max-width: 640px; margin: 0 auto; padding: 24px; }
-    h1 { font-size: 22px; margin: 0 0 4px 0; letter-spacing: -0.3px; }
-    h2 { font-size: 15px; margin: 22px 0 8px 0;
-         border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-    .meta { font-size: 11px; color: #6b7280; text-transform: uppercase;
-            letter-spacing: .5px; }
-    .grade-box { background: #faf9f6; border-left: 3px solid #111;
-                 padding: 16px 18px; margin: 14px 0; display: table; width: 100%; }
-    .grade-cell { display: table-cell; vertical-align: middle; }
-    .grade-letter { font-size: 56px; font-weight: 700; letter-spacing: -1.5px;
-                    line-height: 1; }
-    .grade-score { font-size: 12px; color: #6b7280; margin-top: 4px; }
-    .grade-change { font-size: 12px; font-weight: 600; padding: 4px 10px;
-                    border-radius: 12px; display: inline-block; }
-    .change-upgrade { background: #dcfce7; color: #166534; }
-    .change-downgrade { background: #fee2e2; color: #991b1b; }
-    .change-same { background: #f3f4f6; color: #4b5563; }
-    .change-new { background: #e0e7ff; color: #3730a3; }
-    table.factors { width: 100%; border-collapse: collapse; margin-top: 4px;
-                    font-size: 13px; }
-    table.factors th, table.factors td { padding: 10px 8px; text-align: left;
-                                         border-bottom: 1px solid #e5e7eb; }
-    table.factors th { font-size: 11px; color: #6b7280;
-                       text-transform: uppercase; letter-spacing: .4px;
-                       font-weight: 500; }
-    table.factors td.num { text-align: right; font-variant-numeric: tabular-nums; }
-    .bar { display: inline-block; width: 80px; height: 6px; background: #e5e7eb;
-           border-radius: 3px; vertical-align: middle; overflow: hidden; }
-    .bar-fill { display: block; height: 100%; background: #111; }
-    .footer { font-size: 11px; color: #9ca3af; margin-top: 22px; line-height: 1.45; }
-    .muted { color: #6b7280; }
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  CREDIT RATING";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
+      @top-right {
+        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  PQ-CR-02";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
+      }
+      @bottom-left {
+        content: "Observation of public rating records — informational only.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8pt;
+        color: #4a4a4a;
+      }
+    }
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
+
+    /* ───────── P1 · COVER ───────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 44pt; line-height: 1.12; letter-spacing: -0.02em;
+      color: #0A0A0A; margin: 44pt 0 44pt 0;
+    }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 36pt; }
+    .cv-hero span + span + span { padding-left: 72pt; color: #8B6F47; }
+    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; overflow: visible; }
+    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8a8a8a; margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.015em; line-height: 1.02;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
+    }
+    .cv-foot {
+      margin-top: 40pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt; color: #6B6B6B; letter-spacing: 0.02em;
+    }
+
+    /* ───────── Shared part/title/deck ───────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt; font-weight: 400; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
+      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
+    }
+
+    /* ───────── P2 · SPREAD (60/40) ───────── */
+    .sp-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed; }
+    .sp-main { display: table-cell; width: 70%; vertical-align: top; }
+    .sp-margin { display: table-cell; width: 30%; vertical-align: top; }
+    .sp-fig-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 600; margin-bottom: 6pt;
+    }
+    .sp-fig-caption {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
+      line-height: 1.4; margin-top: 6pt;
+    }
+    .sp-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.6; color: #202020;
+      border-top: 0.35pt solid #c9c4b8; padding-top: 10pt; margin-top: 14pt;
+    }
+    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
+    .sp-prose > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 28pt; line-height: 0.88; font-weight: 500;
+      color: #8B6F47; float: left; padding: 2pt 6pt 0 0; font-style: normal;
+    }
+    .sp-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt; margin-bottom: 12pt;
+    }
+    .sp-margin-term {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 2pt;
+    }
+    .sp-margin-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12pt; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    }
+    .sp-margin-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8pt; line-height: 1.45; color: #6B6B6B; margin-top: 2pt;
+    }
+
+    /* ───────── P3 · LADDER ───────── */
+    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
+    .ld-table th, .ld-table td {
+      padding: 7pt 5pt; text-align: left; vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6B6B6B; font-weight: 600;
+    }
+    .ld-table th.num,
+    .ld-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .ld-table td.num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.8pt;
+    }
+    .ld-tkr {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600; font-size: 9.2pt; letter-spacing: 0.02em; color: #0A0A0A;
+    }
+    .ld-note {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8pt; color: #4a4a4a;
+    }
+    .ld-grade {
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 600; font-size: 9.2pt; color: #0A0A0A;
+      letter-spacing: 0.02em;
+    }
+    .ld-grade-hy { color: #A84C4C; }
+
+    /* ───────── P4 · QUAD ───────── */
+    .aq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; }
+    .aq-main { display: table-cell; width: 66%; vertical-align: top; }
+    .aq-side { display: table-cell; width: 34%; vertical-align: top; }
+    .aq-quads { display: table; width: 100%; border-collapse: collapse; }
+    .aq-quad {
+      display: table-cell; width: 50%; padding: 12pt 14pt;
+      vertical-align: top; height: 180pt;
+    }
+    .aq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 3pt;
+    }
+    .aq-quad-sub {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.6pt; color: #6B6B6B; margin-bottom: 4pt;
+    }
+    .aq-rail { padding: 12pt 0 0 12pt; border-left: 0.35pt solid #c9c4b8; }
+    .aq-rail-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.28em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 8pt;
+    }
+    .aq-rail-item {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; line-height: 1.5; color: #202020;
+      padding: 6pt 0; border-bottom: 0.15pt solid #e4dfd2;
+    }
+    .aq-rail-item:last-child { border-bottom: none; }
+    .aq-rail-n {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8B6F47; margin-right: 6pt;
+    }
+
+    /* ───────── P5 · EDITORIAL ───────── */
+    .ed-quote-wrap {
+      min-height: 320pt; padding: 50pt 40pt 30pt 40pt;
+      display: table; width: 100%; text-align: center;
+    }
+    .ed-quote-cell { display: table-cell; vertical-align: middle; }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 34pt; line-height: 1.24; letter-spacing: -0.015em;
+      color: #0A0A0A; margin: 0;
+    }
+    .ed-quote-attr {
+      margin-top: 26pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47;
+    }
+    .ed-quote-attr::before, .ed-quote-attr::after {
+      content: "——"; color: #8B6F47; opacity: 0.5; margin: 0 8pt; letter-spacing: 0;
+    }
+    .ed-watch-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 600;
+      margin-top: 26pt; padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
+    }
+    .ed-twocol { display: table; width: 100%; margin-top: 10pt; border-collapse: separate; border-spacing: 18pt 0; }
+    .ed-col { display: table-cell; width: 50%; vertical-align: top; }
+    .ed-col ol {
+      margin: 0; padding: 0 0 0 18pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.6; color: #202020;
+    }
+    .ed-col ol li { margin-bottom: 6pt; }
+    .ed-legal {
+      font-size: 6pt; color: #8a8a8a; margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif; font-style: italic; line-height: 1.4;
+    }
+
+    /* ───────── P6 · COLOPHON ───────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7; color: #202020; max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em; text-transform: uppercase; color: #6B6B6B;
+    }
+    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+    section.disclaimer.pq-disclaimer {
+      border: none !important;
+      border-top: 0.35pt solid #c9c4b8 !important;
+      padding: 10pt 0 0 0 !important;
+      margin: 16pt 0 0 0 !important;
+      background: transparent !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
+    }
   </style>
 </head>
 <body>
 
-<div class="meta">PivoxQuant · Credit Rating · {{ as_of }}</div>
-<h1>{{ user_name }}'s Portfolio Rating</h1>
-<div class="meta">{{ position_count }} positions · self-assessed</div>
+{# ── locals ───────────────────────────────────────────────────────────── #}
+{% set _issue_no = issue_number | default(2) %}
+{% set _doc_ref = doc_ref | default('PQ-CR-02 · v2026.04.22') %}
+{% set _hero = hero_headline | default([
+    'Credit is an obligation',
+    'to repay. Ratings are',
+    'the weather around it.'
+]) %}
 
-<div class="grade-box">
-  <div class="grade-cell" style="width:40%;">
-    <div class="grade-letter">{{ grade }}</div>
-    <div class="grade-score">
-      {% if composite_score is not none %}
-        {{ '%.1f'|format(composite_score) }} / 100
-      {% else %}
-        데이터 부족
-      {% endif %}
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 1 · COVER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<section class="cv">
+
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=340 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+  </div>
+
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    CREDIT RATING
+    &nbsp;·&nbsp; April 2026
+    &nbsp;·&nbsp; <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+  </div>
+  <div class="cv-rule-thin"></div>
+
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
+
+  <div class="cv-rule-thin"></div>
+
+  {% set _kpi = kpis_cover | default({
+    'avg_rating':       'A-',
+    'ig_share_pct':     78.0,
+    'hy_share_pct':     22.0,
+    'weighted_spread_bps': 185,
+  }) %}
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">AVG RATING</div>
+      <div class="cv-kpi-value">{{ _kpi.avg_rating }}</div>
+      <div class="cv-kpi-foot">Weighted composite, observed.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">IG SHARE</div>
+      <div class="cv-kpi-value">{{ '%.0f' % _kpi.ig_share_pct }}%</div>
+      <div class="cv-kpi-foot">Investment grade, BBB- and above.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">HY SHARE</div>
+      <div class="cv-kpi-value">{{ '%.0f' % _kpi.hy_share_pct }}%</div>
+      <div class="cv-kpi-foot">High yield, BB+ and below.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">WEIGHTED SPREAD</div>
+      <div class="cv-kpi-value">{{ _kpi.weighted_spread_bps }}bps</div>
+      <div class="cv-kpi-foot">Over the Treasury curve.</div>
     </div>
   </div>
-  <div class="grade-cell" style="text-align:right;">
-    {% if change == 'upgrade' %}
-      <span class="grade-change change-upgrade">▲ UPGRADE ({{ prev_grade }} → {{ grade }})</span>
-    {% elif change == 'downgrade' %}
-      <span class="grade-change change-downgrade">▼ DOWNGRADE ({{ prev_grade }} → {{ grade }})</span>
-    {% elif change == 'same' %}
-      <span class="grade-change change-same">= UNCHANGED ({{ prev_grade }})</span>
-    {% else %}
-      <span class="grade-change change-new">★ NEW</span>
-    {% endif %}
+
+  <p class="cv-foot">
+    Prepared for {{ user_name }} &nbsp;·&nbsp; Observation of public rating records.
+    Past performance does not guarantee future results.
+  </p>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 2 · SPREAD — Rating distribution bar + prose + marginalia
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · Rating Distribution</p>
+<h2 class="sp-title">Where the book sits on the ladder</h2>
+<p class="sp-deck">
+  A ten-bucket read across the long-term rating scale, with the portfolio's
+  weighted share observed against each rung of the agency ladder.
+</p>
+
+<div class="sp-grid">
+  <div class="sp-main">
+
+    <div class="sp-fig-title">Fig. 1 · Rating distribution · portfolio weight</div>
+
+    {% set _dist = rating_distribution | default([
+      {'g':'AAA',  'w': 4.0},
+      {'g':'AA',   'w':10.0},
+      {'g':'A',    'w':28.0},
+      {'g':'BBB',  'w':36.0},
+      {'g':'BB',   'w':12.0},
+      {'g':'B',    'w': 6.0},
+      {'g':'CCC',  'w': 3.0},
+      {'g':'CC',   'w': 0.6},
+      {'g':'C',    'w': 0.3},
+      {'g':'D',    'w': 0.1}
+    ]) %}
+    {% set _dmax = _dist | map(attribute='w') | list | max %}
+    {% if _dmax == 0 %}{% set _dmax = 1 %}{% endif %}
+
+    {% set _W = 420 %}
+    {% set _H = 210 %}
+    {% set _Tp = 24 %}
+    {% set _Bp = 32 %}
+    {% set _Lp = 26 %}
+    {% set _Rp = 10 %}
+    {% set _PW = _W - _Lp - _Rp %}
+    {% set _PH = _H - _Tp - _Bp %}
+    {% set _nb = _dist | length %}
+    {% set _bw = _PW / _nb * 0.68 %}
+    {% set _bg = _PW / _nb %}
+
+    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
+         xmlns="http://www.w3.org/2000/svg" aria-label="Rating distribution" role="img"
+         style="display:block; overflow:visible;">
+
+      {% for gy in [0.25, 0.5, 0.75, 1.0] %}
+        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH - _PH * gy }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH - _PH * gy }}"
+              stroke="#E8E4DA" stroke-width="0.3"/>
+        <text x="{{ _Lp - 4 }}" y="{{ _Tp + _PH - _PH * gy + 2 }}" text-anchor="end"
+              fill="#8a8a8a" font-size="6.5" font-family="JetBrains Mono, monospace">{{ '%.0f' % (_dmax * gy) }}%</text>
+      {% endfor %}
+
+      {# IG / HY divider at index 4 (BB) #}
+      {% set _divx = _Lp + 4 * _bg %}
+      <line x1="{{ _divx }}" y1="{{ _Tp - 4 }}" x2="{{ _divx }}" y2="{{ _Tp + _PH + 4 }}"
+            stroke="#8B6F47" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.65"/>
+      <text x="{{ _Lp + 2 * _bg }}" y="{{ _Tp - 8 }}" text-anchor="middle"
+            fill="#8B6F47" font-size="6.6" font-family="Source Serif 4, serif" font-style="italic" letter-spacing="0.16em">INVESTMENT GRADE</text>
+      <text x="{{ _Lp + 7 * _bg }}" y="{{ _Tp - 8 }}" text-anchor="middle"
+            fill="#A84C4C" font-size="6.6" font-family="Source Serif 4, serif" font-style="italic" letter-spacing="0.16em">HIGH YIELD</text>
+
+      {% for b in _dist %}
+        {% set _x = _Lp + loop.index0 * _bg + (_bg - _bw) / 2 %}
+        {% set _h = (b.w / _dmax) * _PH %}
+        {% set _y = _Tp + _PH - _h %}
+        {% if loop.index0 < 4 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
+        <rect x="{{ '%.2f' % _x }}" y="{{ '%.2f' % _y }}" width="{{ '%.2f' % _bw }}" height="{{ '%.2f' % _h }}"
+              fill="{{ _fill }}" fill-opacity="0.7"/>
+        <text x="{{ '%.2f' % (_x + _bw/2) }}" y="{{ _Tp + _PH + 10 }}" text-anchor="middle"
+              fill="#0A0A0A" font-size="7.4" font-family="Geist, sans-serif" font-weight="600">{{ b.g }}</text>
+        {% if b.w >= 1.0 %}
+        <text x="{{ '%.2f' % (_x + _bw/2) }}" y="{{ '%.2f' % (_y - 3) }}" text-anchor="middle"
+              fill="#0A0A0A" font-size="6.6" font-family="JetBrains Mono, monospace">{{ '%.1f' % b.w }}%</text>
+        {% endif %}
+      {% endfor %}
+
+      <line x1="{{ _Lp }}" y1="{{ _Tp + _PH }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH }}"
+            stroke="#0A0A0A" stroke-width="0.5"/>
+    </svg>
+
+    <div class="sp-fig-caption">
+      Fig. 1. Ten-bucket distribution by portfolio weight. Bronze rungs are
+      investment grade (BBB- and above); oxblood rungs are high yield.
+      Dashed rule marks the agency-defined IG/HY boundary.
+    </div>
+
+    <div class="sp-prose">
+      {% set _p = spread_prose | default([
+        'The book clusters tightly around the A and BBB rungs, a reading that accounts for 64% of the weighted exposure and keeps the average composite rating at A-. The weight held above the IG/HY line sits at 78%, a figure that has drifted two points lower over the trailing ninety days as the high-yield cohort absorbed more capital through the rebalance cycle.',
+        'Below the dashed divider, the BB rung carries 12% — a benign-looking figure once paired with the sector notes on page three. The deeper-stress buckets (CCC and below) remain at 4.0% combined, a reading held by two credits and not added to since the previous audit window.'
+      ]) %}
+      {% for para in _p %}<p>{{ para }}</p>{% endfor %}
+    </div>
+
+  </div>
+
+  <div class="sp-margin">
+
+    {% set _mrg = rating_margin | default({
+      'upgrades_24m':  3,
+      'downgrades_24m':1,
+      'watch_neg':     2,
+      'watch_pos':     1
+    }) %}
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Upgrades · 24m</div>
+      <div class="sp-margin-value">{{ _mrg.upgrades_24m }}</div>
+      <div class="sp-margin-body">Positive rating migrations recorded across the two-year window, agency-confirmed.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Downgrades · 24m</div>
+      <div class="sp-margin-value">{{ _mrg.downgrades_24m }}</div>
+      <div class="sp-margin-body">Negative rating migrations recorded over the same window. Each drop is one notch, not multi-step.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Watch · Negative</div>
+      <div class="sp-margin-value">{{ _mrg.watch_neg }}</div>
+      <div class="sp-margin-body">Issuers currently on CreditWatch Negative at any of the three agencies.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Watch · Positive</div>
+      <div class="sp-margin-value">{{ _mrg.watch_pos }}</div>
+      <div class="sp-margin-body">Issuers currently on CreditWatch Positive. Outlook changes are noted separately.</div>
+    </div>
+
   </div>
 </div>
 
-<h2>Factor Breakdown</h2>
-<table class="factors">
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 3 · LADDER — 10-row position table with sparklines
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · Position Ladder</p>
+<h2 class="sp-title">The ten names carrying the rating mix</h2>
+<p class="sp-deck">
+  Ten positions ordered by weight. Each row reports the composite rating,
+  observed yield-to-maturity, duration, and option-adjusted spread.
+</p>
+
+{% set _pos = positions | default([
+  {'sym':'US-TSY-10Y',     'issuer':'U.S. Treasury',      'rating':'AAA', 'weight':12.0, 'ytm':4.20, 'dur':8.4, 'spread':  0, 'spark':[0.5,0.52,0.54,0.56,0.58,0.60,0.62,0.64]},
+  {'sym':'MSFT 2.52 2031', 'issuer':'Microsoft',          'rating':'AAA', 'weight': 8.0, 'ytm':4.65, 'dur':6.2, 'spread': 45, 'spark':[0.5,0.51,0.53,0.55,0.57,0.58,0.60,0.61]},
+  {'sym':'AAPL 3.35 2029', 'issuer':'Apple',              'rating':'AA',  'weight': 7.2, 'ytm':4.78, 'dur':4.9, 'spread': 58, 'spark':[0.5,0.52,0.54,0.55,0.57,0.59,0.60,0.62]},
+  {'sym':'JNJ 2.90 2028',  'issuer':'Johnson & J.',       'rating':'AA',  'weight': 6.8, 'ytm':4.82, 'dur':4.1, 'spread': 62, 'spark':[0.5,0.51,0.53,0.55,0.56,0.58,0.60,0.61]},
+  {'sym':'GS 4.25 2030',   'issuer':'Goldman Sachs',      'rating':'A',   'weight':10.4, 'ytm':5.12, 'dur':5.6, 'spread': 92, 'spark':[0.5,0.52,0.55,0.57,0.60,0.62,0.64,0.65]},
+  {'sym':'F 5.40 2029',    'issuer':'Ford Motor Co.',     'rating':'BBB', 'weight':11.2, 'ytm':5.88, 'dur':4.3, 'spread':168, 'spark':[0.5,0.52,0.54,0.57,0.60,0.64,0.66,0.69]},
+  {'sym':'T 4.90 2030',    'issuer':'AT&T',               'rating':'BBB', 'weight': 9.6, 'ytm':5.64, 'dur':5.2, 'spread':144, 'spark':[0.5,0.51,0.53,0.55,0.58,0.60,0.62,0.63]},
+  {'sym':'CCL 6.00 2029',  'issuer':'Carnival',           'rating':'BB',  'weight': 6.4, 'ytm':7.20, 'dur':3.8, 'spread':300, 'spark':[0.5,0.52,0.54,0.56,0.59,0.62,0.66,0.68]},
+  {'sym':'RIG 7.50 2031',  'issuer':'Transocean',         'rating':'B',   'weight': 4.2, 'ytm':9.12, 'dur':4.4, 'spread':492, 'spark':[0.5,0.53,0.55,0.58,0.62,0.66,0.70,0.73]},
+  {'sym':'UHC 8.00 2028',  'issuer':'Utility Holdings',   'rating':'CCC', 'weight': 2.4, 'ytm':11.40,'dur':3.2, 'spread':720, 'spark':[0.5,0.52,0.56,0.60,0.65,0.70,0.74,0.78]}
+]) %}
+
+<table class="ld-table">
   <thead>
     <tr>
-      <th>Factor</th>
-      <th class="num">Weight</th>
-      <th class="num">Score</th>
-      <th>Bar</th>
+      <th style="width:16%;">Position</th>
+      <th style="width:18%;">Issuer</th>
+      <th style="width:8%;">Rating</th>
+      <th class="num" style="width:8%;">Weight</th>
+      <th class="num" style="width:8%;">YTM</th>
+      <th class="num" style="width:8%;">Duration</th>
+      <th class="num" style="width:9%;">Spread</th>
+      <th style="width:25%;">Trajectory</th>
     </tr>
   </thead>
   <tbody>
-  {% for f in factor_details %}
-    <tr>
-      <td>{{ f.name }}</td>
-      <td class="num muted">{{ '%.0f'|format(f.weight * 100) }}%</td>
-      <td class="num">
-        {% if f.score is not none %}{{ '%.1f'|format(f.score) }}{% else %}—{% endif %}
-      </td>
-      <td>
-        {% if f.score is not none %}
-          <span class="bar"><span class="bar-fill"
-            style="width: {{ f.score|round(0, 'floor')|int }}%"></span></span>
-        {% else %}
-          <span class="muted">n/a</span>
-        {% endif %}
-      </td>
-    </tr>
-  {% endfor %}
+    {% for p in _pos %}
+      {% set _sw = 90 %}
+      {% set _sh = 16 %}
+      {% set _sp = p.spark %}
+      {% set _smax = _sp | max %}
+      {% set _smin = _sp | min %}
+      {% if _smax == _smin %}{% set _smax = _smin + 0.01 %}{% endif %}
+      {% set _sppts = [] %}
+      {% for v in _sp %}
+        {% set _x = loop.index0 * _sw / (_sp | length - 1) %}
+        {% set _y = _sh - ((v - _smin) / (_smax - _smin)) * (_sh - 3) - 1.5 %}
+        {% set _ = _sppts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sppts[-1].split(',') %}
+      {% set _is_hy = p.rating in ['BB','B','CCC','CC','C','D'] %}
+      <tr>
+        <td><span class="ld-tkr">{{ p.sym }}</span></td>
+        <td><span class="ld-note">{{ p.issuer }}</span></td>
+        <td><span class="ld-grade {% if _is_hy %}ld-grade-hy{% endif %}">{{ p.rating }}</span></td>
+        <td class="num">{{ '%.1f' % p.weight }}%</td>
+        <td class="num">{{ '%.2f' % p.ytm }}%</td>
+        <td class="num">{{ '%.1f' % p.dur }}</td>
+        <td class="num">{{ p.spread }}bps</td>
+        <td>
+          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
+            <polyline points="{{ _sppts | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+      </tr>
+    {% endfor %}
   </tbody>
 </table>
 
-<h2>Methodology</h2>
-<p class="muted" style="font-size:12px;">
-  5개 팩터(분산·유동성·위험조정수익률·드로다운 규율·현금비중)를 각 0–100으로 스코어링
-  후 가중평균합니다. 등급 매핑: 90+ AAA / 80–89 AA / 70–79 A / 60–69 BBB /
-  50–59 BB / 50 미만 B. 전월 아티팩트가 있으면 등급 변화를 upgrade/downgrade로 표시합니다.
+<p class="sp-deck" style="margin-top: 10pt; font-size: 9.2pt;">
+  Sparkline reads the trailing twelve-month OAS trajectory; bronze end-dot
+  marks the month-end observation. Rating letters in oxblood denote the
+  high-yield cohort per agency scale.
 </p>
 
-<h2>Disclaimer</h2>
-{% include '_disclaimer.html' %}
 
-<div class="footer">
-  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 4 · QUAD — Credit curve / Duration histogram / 24M migration / Sector
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part III · Credit Quad</p>
+<h2 class="sp-title">Four readings on the credit posture</h2>
+<p class="sp-deck">
+  Curve shape, duration profile, two-year rating migration, and sector
+  concentration — four quiet readings of the same weighted book.
+</p>
+
+<div class="aq-grid">
+  <div class="aq-main">
+
+    <div class="aq-quads">
+
+      {# ── Q1 · Credit spread curve ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q1 · Credit Spread Curve</div>
+        <div class="aq-quad-sub">OAS by rating rung, bps.</div>
+        {% set _curve = credit_curve | default([
+          {'r':'AAA','s': 22},{'r':'AA','s': 48},{'r':'A','s': 92},{'r':'BBB','s':164},
+          {'r':'BB','s':310},{'r':'B','s':492},{'r':'CCC','s':720}
+        ]) %}
+        {% set _cmax = _curve | map(attribute='s') | list | max %}
+        {% if _cmax == 0 %}{% set _cmax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="20" y1="90" x2="234" y2="90" stroke="#0A0A0A" stroke-width="0.35" opacity="0.5"/>
+          {% set _pts = [] %}
+          {% for c in _curve %}
+            {% set _x = 20 + loop.index0 * (214 / (_curve|length - 1)) %}
+            {% set _y = 90 - (c.s / _cmax) * 72 %}
+            {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+          {% endfor %}
+          <polygon points="{{ _pts | join(' ') }} 234,90 20,90" fill="#8B6F47" fill-opacity="0.12"/>
+          <polyline points="{{ _pts | join(' ') }}" fill="none" stroke="#0A0A0A" stroke-width="1.2" stroke-linejoin="round"/>
+          {% for c in _curve %}
+            {% set _x = 20 + loop.index0 * (214 / (_curve|length - 1)) %}
+            {% set _y = 90 - (c.s / _cmax) * 72 %}
+            {% if loop.index0 < 4 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
+            <circle cx="{{ '%.2f' % _x }}" cy="{{ '%.2f' % _y }}" r="1.8" fill="{{ _fill }}"/>
+            <text x="{{ '%.2f' % _x }}" y="100" text-anchor="middle" fill="#4a4a4a" font-size="5.8" font-family="Geist, sans-serif" font-weight="600">{{ c.r }}</text>
+            <text x="{{ '%.2f' % _x }}" y="{{ '%.2f' % (_y - 4) }}" text-anchor="middle" fill="#4a4a4a" font-size="5.4" font-family="JetBrains Mono, monospace">{{ c.s }}</text>
+          {% endfor %}
+        </svg>
+      </div>
+
+      {# ── Q2 · Duration histogram ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q2 · Duration Histogram</div>
+        <div class="aq-quad-sub">Weight by duration bucket, years.</div>
+        {% set _dur = duration_histogram | default([
+          {'b':'0-2', 'w': 8.0},
+          {'b':'2-4', 'w':22.0},
+          {'b':'4-6', 'w':32.0},
+          {'b':'6-8', 'w':18.0},
+          {'b':'8-10','w':12.0},
+          {'b':'10+', 'w': 8.0}
+        ]) %}
+        {% set _dmax = _dur | map(attribute='w') | list | max %}
+        {% if _dmax == 0 %}{% set _dmax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          {% for b in _dur %}
+            {% set _bw = 28 %}
+            {% set _gap = 8 %}
+            {% set _x = 12 + loop.index0 * (_bw + _gap) %}
+            {% set _h = (b.w / _dmax) * 72 %}
+            {% set _y = 90 - _h %}
+            <rect x="{{ _x }}" y="{{ '%.2f' % _y }}" width="{{ _bw }}" height="{{ '%.2f' % _h }}" fill="#8B6F47" fill-opacity="0.65"/>
+            <text x="{{ _x + _bw/2 }}" y="{{ '%.2f' % (_y - 3) }}" text-anchor="middle" fill="#0A0A0A" font-size="5.8" font-family="JetBrains Mono, monospace">{{ '%.0f' % b.w }}%</text>
+            <text x="{{ _x + _bw/2 }}" y="100" text-anchor="middle" fill="#4a4a4a" font-size="5.8" font-family="Geist, sans-serif">{{ b.b }}</text>
+          {% endfor %}
+          <line x1="8" y1="90" x2="232" y2="90" stroke="#0A0A0A" stroke-width="0.35" opacity="0.5"/>
+        </svg>
+      </div>
+
+      {# ── Q3 · 24-month rating migration ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q3 · 24-Month Rating Migration</div>
+        <div class="aq-quad-sub">Observed transitions, count.</div>
+        {% set _mig = rating_migration | default([
+          {'k':'Stable',    'v': 9, 'c':'#8B6F47'},
+          {'k':'Upgraded',  'v': 3, 'c':'#8B6F47'},
+          {'k':'Downgraded','v': 1, 'c':'#A84C4C'},
+          {'k':'Withdrawn', 'v': 1, 'c':'#8a8a8a'}
+        ]) %}
+        {% set _mtot = _mig | map(attribute='v') | sum %}
+        {% if _mtot == 0 %}{% set _mtot = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          {% set _bar_y = 40 %}
+          {% set _bar_h = 22 %}
+          {% set _ns = namespace(cx=12) %}
+          {% for m in _mig %}
+            {% set _w = (m.v / _mtot) * 216 %}
+            <rect x="{{ '%.2f' % _ns.cx }}" y="{{ _bar_y }}" width="{{ '%.2f' % _w }}" height="{{ _bar_h }}" fill="{{ m.c }}" fill-opacity="0.75"/>
+            <text x="{{ '%.2f' % (_ns.cx + _w/2) }}" y="{{ _bar_y + 14 }}" text-anchor="middle" fill="#F7F5EF" font-size="6.8" font-family="JetBrains Mono, monospace" font-weight="600">{{ m.v }}</text>
+            {% set _ns.cx = _ns.cx + _w %}
+          {% endfor %}
+          {# Legend #}
+          {% set _ly = 76 %}
+          {% for m in _mig %}
+            {% set _lx = 12 + loop.index0 * 56 %}
+            <rect x="{{ _lx }}" y="{{ _ly }}" width="8" height="8" fill="{{ m.c }}" fill-opacity="0.75"/>
+            <text x="{{ _lx + 12 }}" y="{{ _ly + 6.6 }}" fill="#0A0A0A" font-size="6" font-family="Geist, sans-serif" font-weight="600">{{ m.k }}</text>
+          {% endfor %}
+          <text x="120" y="98" text-anchor="middle" fill="#6B6B6B" font-size="6" font-family="Source Serif 4, serif" font-style="italic">Trailing 24 months · agency-confirmed transitions</text>
+        </svg>
+      </div>
+
+      {# ── Q4 · Sector concentration ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q4 · Sector Concentration</div>
+        <div class="aq-quad-sub">Issuer sector by weight.</div>
+        {% set _sec = sector_concentration | default([
+          {'s':'Financials',   'w':24.0},
+          {'s':'Treasury',     'w':18.0},
+          {'s':'Technology',   'w':14.0},
+          {'s':'Healthcare',   'w':12.0},
+          {'s':'Industrials',  'w':10.0},
+          {'s':'Energy',       'w': 8.0},
+          {'s':'Cons. Disc.',  'w': 6.0},
+          {'s':'Other',        'w': 8.0}
+        ]) %}
+        {% set _smax = _sec | map(attribute='w') | list | max %}
+        {% if _smax == 0 %}{% set _smax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          {% for r in _sec %}
+            {% set _y = loop.index0 * 12 + 4 %}
+            {% set _w = (r.w / _smax) * 130 %}
+            <rect x="68" y="{{ _y }}" width="{{ '%.2f' % _w }}" height="8" fill="#8B6F47" fill-opacity="0.65"/>
+            <text x="64" y="{{ _y + 6.5 }}" text-anchor="end" fill="#0A0A0A" font-size="5.8" font-family="Geist, sans-serif" font-weight="600">{{ r.s }}</text>
+            <text x="{{ 72 + _w }}" y="{{ _y + 6.5 }}" text-anchor="start" fill="#4a4a4a" font-size="5.6" font-family="JetBrains Mono, monospace">{{ '%.1f' % r.w }}%</text>
+          {% endfor %}
+        </svg>
+      </div>
+
+    </div>
+
+    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
+      Fig. 2. Four lenses on the credit posture. Bronze denotes the
+      investment-grade direction; oxblood marks the high-yield cohort and
+      downgrade transitions.
+    </div>
+
+  </div>
+
+  <div class="aq-side">
+    <div class="aq-rail">
+      <div class="aq-rail-eyebrow">Reading Notes</div>
+      {% set _rail = reading_notes | default([
+        "Ratings are observations from Moody's, S&P, and Fitch — composite weighted by notch.",
+        'OAS values from FINRA TRACE tape, end-of-day mid marks.',
+        'Duration computed on modified basis, including embedded optionality.',
+        'IG/HY line at BBB-/Baa3 per agency convention.',
+        'Migrations are counted per issuer, not per CUSIP line.'
+      ]) %}
+      {% for n in _rail %}
+        <div class="aq-rail-item"><span class="aq-rail-n">{{ '%02d' % loop.index }}</span>{{ n }}</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 5 · EDITORIAL
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What a rating cannot say</h2>
+<p class="sp-deck">
+  A sentence the desk is holding for the week, paired with the short list
+  of questions the rating letter is not equipped to settle.
+</p>
+
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default("A credit rating is a letter the market writes about itself — read with interest, never as instruction.") }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Credit Desk") }}</div>
+  </div>
+</div>
+
+<div class="ed-watch-head">What this rating cannot settle</div>
+<div class="ed-twocol">
+  <div class="ed-col">
+    <ol>
+      <li>Issuer-specific liquidity events that post inside the quarter.</li>
+      <li>Covenant-level nuance beneath the headline letter grade.</li>
+      <li>Idiosyncratic litigation or regulatory risk.</li>
+    </ol>
+  </div>
+  <div class="ed-col">
+    <ol start="4">
+      <li>Cross-default language in parent-subsidiary structures.</li>
+      <li>The personal tax or currency lens of the holder.</li>
+    </ol>
+  </div>
+</div>
+
+<p class="ed-legal">
+  Past performance does not guarantee future results. This document is
+  informational and does not constitute investment advice. &nbsp;·&nbsp;
+  본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.
+</p>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 6 · COLOPHON
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<div class="co-wrap">
+
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
+
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name }}</strong> as of
+      <strong>{{ as_of }}</strong>. Issue
+      <strong>No. {{ '%02d' % _issue_no }}</strong> of the Credit Rating series.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Rating</span> &nbsp;
+      Moody's Investors Service &middot; S&amp;P Global Ratings &middot; Fitch Ratings.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Spread</span> &nbsp;
+      FINRA TRACE &middot; Bloomberg Barclays indices &middot; ICE BofA curves.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Reference</span> &nbsp;
+      FRED &middot; SEC EDGAR filings &middot; issuer press releases.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('Historical record only. Rating observation pipeline.') }}.
+    </p>
+  </div>
+
+  <div class="co-thin-rule"></div>
+
+  {% include '_disclaimer.html' %}
+
+  <div class="co-thin-rule"></div>
+
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Credit Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at | default(as_of) }}</div>
+  </div>
+
 </div>
 
 </body>

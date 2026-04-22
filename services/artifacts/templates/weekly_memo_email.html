@@ -1,84 +1,86 @@
+{# ══ Weekly Investor Memo — email companion (PDF attached) ══ #}
 <!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Week {{ week_number }} Investor Memo — {{ user_name }}</title>
+  <style>{% include '_email_css.html' %}</style>
 </head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111;">
+<body style="margin:0;padding:0;background:#f4f2ec;font-family:'Geist','Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Noto Sans KR',Helvetica,Arial,sans-serif;color:#0a0a0a;">
 
-<!-- Preview text (hidden) — shown after subject in inbox previews -->
-<div style="display:none;max-height:0;overflow:hidden;">
+<!-- Preview text -->
+<div style="display:none;max-height:0;overflow:hidden;color:transparent;">
   Week {{ week_number }} portfolio review
   {% if weekly_return_pct is not none %}· {{ '%+.2f'|format(weekly_return_pct) }}%{% endif %}
   {% if top_movers_up and top_movers_up|length > 0 %}· Top: {{ top_movers_up[0].ticker }}{% endif %}
 </div>
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ec;padding:28px 0;">
   <tr><td align="center">
 
     <table role="presentation" width="600" cellpadding="0" cellspacing="0"
-           style="background:#ffffff;border-radius:8px;overflow:hidden;
-                  box-shadow:0 1px 2px rgba(0,0,0,0.06);max-width:600px;">
+           class="email-container"
+           style="background:#ffffff;border:0.5px solid #e8e5dc;max-width:600px;">
 
       <!-- Masthead -->
-      <tr><td style="padding:24px 32px 8px 32px;border-bottom:1px solid #e5e7eb;">
-        <div style="font-size:10pt;color:#6b7280;letter-spacing:.5pt;text-transform:uppercase;">
-          PivoxQuant · Week {{ week_number }} · {{ period_end }}
+      <tr><td class="px-32" style="padding:28px 36px 16px 36px;border-bottom:1px solid #e8e5dc;">
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-size:9pt;letter-spacing:0.26em;text-transform:uppercase;color:#8b6f47;font-weight:600;">
+          PivoxQuant · Research Desk
         </div>
-        <h1 style="margin:8px 0 0 0;font-size:22pt;font-weight:700;letter-spacing:-0.3pt;">
-          {{ user_name }}'s Portfolio
+        <div style="font-family:'Geist',sans-serif;font-size:8pt;letter-spacing:0.14em;text-transform:uppercase;color:#8a8a8a;margin-top:6px;">
+          Weekly Investor Memo · W{{ week_number }} · {{ period_end }}
+        </div>
+        <h1 class="serif" style="margin:14px 0 4px 0;font-family:'Source Serif 4',Georgia,serif;font-size:28pt;font-weight:500;letter-spacing:-0.01em;color:#0a0a0a;line-height:1.1;">
+          {{ user_name }}'s Week
         </h1>
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:11pt;color:#4a4a4a;margin-top:4px;">
+          A private letter from your Research Desk
+        </div>
       </td></tr>
 
-      <!-- Three-up KPI -->
-      <tr><td style="padding:20px 32px 12px 32px;">
+      <!-- Three-up KPI strip -->
+      <tr><td class="px-32" style="padding:22px 36px 14px 36px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td align="center" style="width:33%;padding:12px 0;border-right:1px solid #e5e7eb;">
-              <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;">Weekly</div>
-              {% if weekly_return_pct is not none %}
-                <div style="font-size:20pt;font-weight:700;margin-top:4px;
-                            color:{% if weekly_return_pct >= 0 %}#0a6f3c{% else %}#a11d1d{% endif %};">
-                  {{ '%+.2f'|format(weekly_return_pct) }}%
-                </div>
-              {% else %}<div style="font-size:20pt;color:#9ca3af;margin-top:4px;">—</div>{% endif %}
+            <td align="center" style="width:33%;padding:14px 0;border-right:0.5px solid #e8e5dc;">
+              <div style="font-family:'Geist',sans-serif;font-size:7.5pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">Weekly</div>
+              <div class="mono" style="font-family:'JetBrains Mono',monospace;font-size:22pt;font-weight:500;margin-top:8px;color:{% if weekly_return_pct is not none and weekly_return_pct >= 0 %}#14532d{% elif weekly_return_pct is not none %}#7f1d1d{% else %}#8a8a8a{% endif %};">
+                {% if weekly_return_pct is not none %}{{ '%+.2f'|format(weekly_return_pct) }}%{% else %}—{% endif %}
+              </div>
             </td>
-            <td align="center" style="width:33%;padding:12px 0;border-right:1px solid #e5e7eb;">
-              <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;">S&amp;P 500</div>
-              {% if benchmark_pct is not none %}
-                <div style="font-size:20pt;font-weight:700;margin-top:4px;
-                            color:{% if benchmark_pct >= 0 %}#0a6f3c{% else %}#a11d1d{% endif %};">
-                  {{ '%+.2f'|format(benchmark_pct) }}%
-                </div>
-              {% else %}<div style="font-size:20pt;color:#9ca3af;margin-top:4px;">—</div>{% endif %}
+            <td align="center" style="width:33%;padding:14px 0;border-right:0.5px solid #e8e5dc;">
+              <div style="font-family:'Geist',sans-serif;font-size:7.5pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">S&amp;P 500</div>
+              <div class="mono" style="font-family:'JetBrains Mono',monospace;font-size:22pt;font-weight:500;margin-top:8px;color:{% if benchmark_pct is not none and benchmark_pct >= 0 %}#14532d{% elif benchmark_pct is not none %}#7f1d1d{% else %}#8a8a8a{% endif %};">
+                {% if benchmark_pct is not none %}{{ '%+.2f'|format(benchmark_pct) }}%{% else %}—{% endif %}
+              </div>
             </td>
-            <td align="center" style="width:33%;padding:12px 0;">
-              <div style="font-size:9pt;color:#6b7280;text-transform:uppercase;">Alpha</div>
-              {% if alpha_pct is not none %}
-                <div style="font-size:20pt;font-weight:700;margin-top:4px;
-                            color:{% if alpha_pct >= 0 %}#0a6f3c{% else %}#a11d1d{% endif %};">
-                  {{ '%+.2f'|format(alpha_pct) }}%
-                </div>
-              {% else %}<div style="font-size:20pt;color:#9ca3af;margin-top:4px;">—</div>{% endif %}
+            <td align="center" style="width:33%;padding:14px 0;">
+              <div style="font-family:'Geist',sans-serif;font-size:7.5pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">Alpha</div>
+              <div class="mono" style="font-family:'JetBrains Mono',monospace;font-size:22pt;font-weight:500;margin-top:8px;color:{% if alpha_pct is not none and alpha_pct >= 0 %}#14532d{% elif alpha_pct is not none %}#7f1d1d{% else %}#8a8a8a{% endif %};">
+                {% if alpha_pct is not none %}{{ '%+.2f'|format(alpha_pct) }}%{% else %}—{% endif %}
+              </div>
             </td>
           </tr>
         </table>
       </td></tr>
 
       <!-- Three-line brief -->
-      <tr><td style="padding:8px 32px 4px 32px;font-size:11pt;line-height:1.6;color:#374151;">
-        <ol style="margin:0;padding-left:18px;">
+      <tr><td class="px-32" style="padding:14px 36px 8px 36px;border-top:1px solid #e8e5dc;">
+        <div style="font-family:'Geist',sans-serif;font-size:7.5pt;letter-spacing:0.18em;text-transform:uppercase;color:#8b6f47;font-weight:600;margin-bottom:10px;">
+          Three Things
+        </div>
+        <ol style="margin:0;padding-left:20px;font-size:11pt;line-height:1.75;color:#0a0a0a;font-family:'Source Serif 4',Georgia,serif;">
           {% if top_movers_up %}
-            <li>이번 주 상승 기여 1위: <strong>{{ top_movers_up[0].ticker }}</strong>
-              ({{ '%+.2f'|format(top_movers_up[0].weekly_return_pct) }}%)</li>
+            <li style="margin-bottom:8px;">이번 주 상승 기여 1위: <strong>{{ top_movers_up[0].ticker }}</strong>
+              (<span class="pos mono">{{ '%+.2f'|format(top_movers_up[0].weekly_return_pct) }}%</span>)</li>
           {% endif %}
           {% if top_movers_down %}
-            <li>이번 주 하락 기여 1위: <strong>{{ top_movers_down[0].ticker }}</strong>
-              ({{ '%+.2f'|format(top_movers_down[0].weekly_return_pct) }}%)</li>
+            <li style="margin-bottom:8px;">이번 주 하락 기여 1위: <strong>{{ top_movers_down[0].ticker }}</strong>
+              (<span class="neg mono">{{ '%+.2f'|format(top_movers_down[0].weekly_return_pct) }}%</span>)</li>
           {% endif %}
           {% if earnings_calendar %}
-            <li>다음 주 실적 일정: <strong>{{ earnings_calendar|length }}건</strong> 관찰</li>
+            <li style="margin-bottom:8px;">다음 주 실적 일정: <strong>{{ earnings_calendar|length }}건</strong> 관찰</li>
           {% endif %}
           {% if not top_movers_up and not top_movers_down and not earnings_calendar %}
             <li>이번 주 주요 관찰 사항 없음 — 전체 PDF에서 상세 참고.</li>
@@ -87,23 +89,22 @@
       </td></tr>
 
       <!-- CTA -->
-      <tr><td align="center" style="padding:20px 32px 24px 32px;">
+      <tr><td align="center" class="px-32" style="padding:26px 36px 30px 36px;">
         <a href="{{ download_url|default('#') }}"
-           style="display:inline-block;background:#111827;color:#ffffff;
-                  text-decoration:none;font-weight:600;padding:12px 28px;
-                  border-radius:6px;font-size:11pt;">
-          전체 PDF 다운로드 →
+           style="display:inline-block;background:#0a0a0a;color:#fafaf7;text-decoration:none;font-family:'Geist',sans-serif;font-weight:600;padding:14px 32px;font-size:10.5pt;letter-spacing:0.14em;text-transform:uppercase;border-radius:0;">
+          Download Full PDF
         </a>
-        <div style="margin-top:12px;font-size:9pt;color:#9ca3af;">
-          PDF는 이 이메일에 첨부되어 있습니다.
+        <div style="margin-top:14px;font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:9pt;color:#8a8a8a;">
+          The full 5-page memo is attached to this email.
         </div>
       </td></tr>
 
       <!-- Footer -->
-      <tr><td style="padding:16px 32px 22px 32px;border-top:1px solid #e5e7eb;
-                     font-size:8.5pt;color:#9ca3af;line-height:1.5;">
-        {{ disclaimer }}<br/>
-        Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
+      <tr><td class="px-32" style="padding:22px 36px 28px 36px;border-top:1px solid #e8e5dc;background:#fafaf7;font-size:8pt;color:#4a4a4a;line-height:1.6;">
+        <em>{{ disclaimer }}</em>
+        <div style="margin-top:14px;font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:9pt;color:#8a8a8a;">
+          — Prepared by <strong>PivoxQuant</strong> Research Desk · pivoxquant.com
+        </div>
       </td></tr>
     </table>
 

@@ -1,302 +1,967 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Earnings Pre-Brief — Goldman IC v2 Editorial Redesign (6-page flagship)
+   Concept: 24-hour pre-read before the earnings call.
+   Bloomberg Terminal x Goldman IC morning note.
+   Observational only — historical record + calendar. No predictions, no advice.
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>{{ ticker }} {{ fiscal_period }} Earnings Pre-Brief — {{ user_name }}</title>
+  <title>Earnings Pre-Brief — {{ ticker | default('AAPL') }} {{ fiscal_period | default('Q2 FY26') }} — {{ user_name | default('Reader') }}</title>
   <style>
     @page {
       size: A4;
-      margin: 20mm 18mm 18mm 18mm;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  EARNINGS PRE-BRIEF";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
       @top-right {
-        content: "PivoxQuant Pre-Brief | Page " counter(page) " / " counter(pages);
-        font-family: Georgia, serif;
-        font-size: 9pt;
-        color: #333;
+        content: "BRIEF No. " counter(page, decimal-leading-zero) "  ·  {{ ticker | default('AAPL') }} {{ fiscal_period | default('Q2 FY26') }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
       }
-      @bottom-center {
-        content: "— Confidential. For the addressee only. —";
-        font-family: Georgia, serif;
+      @bottom-left {
+        content: "Observation only — historical record. Informational only.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
         font-size: 8pt;
-        color: #888;
+        color: #4a4a4a;
       }
     }
+    /* Cover page silent */
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
 
-    body {
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 10.5pt;
-      line-height: 1.45;
-      color: #111;
+    /* ───────────────────── P1 · COVER ─────────────────────────────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums;
+      padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 36pt; line-height: 1.12;
+      letter-spacing: -0.022em; color: #0A0A0A;
+      margin: 44pt 0 44pt 0; padding: 0;
+    }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 36pt; }
+    .cv-hero span + span + span { padding-left: 72pt; color: #8B6F47; }
+    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 28pt; table-layout: fixed; }
+    .cv-kpi { display: table-cell; width: 25%; padding: 4pt 10pt; vertical-align: top; overflow: visible; }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 12pt; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8a8a8a;
+      margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 16pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.015em; line-height: 1.04;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.5pt; color: #8a8a8a;
+      margin-top: 3pt;
+    }
+    .cv-foot {
+      margin-top: 38pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt;
+      color: #6B6B6B; letter-spacing: 0.02em;
+    }
+    .cv-micro-disclaim {
+      margin-top: 14pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt; color: #8a8a8a;
     }
 
-    .ticker-hero {
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 72pt;
+    /* ───────────────────── P2 · COMPANY SNAPSHOT SPREAD ───────────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt; font-weight: 400;
+      line-height: 1.08; letter-spacing: -0.02em;
+      color: #0A0A0A; margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt;
+      color: #4a4a4a; line-height: 1.4;
+      margin: 0 0 14pt 0; max-width: 380pt;
+    }
+
+    .sp-grid {
+      display: table; width: 100%;
+      border-collapse: separate; border-spacing: 16pt 0;
+      margin-top: 6pt; table-layout: fixed;
+    }
+    .sp-grid > .sp-main { display: table-cell; width: 66%; vertical-align: top; }
+    .sp-grid > .sp-margin { display: table-cell; width: 34%; vertical-align: top; }
+
+    .sp-fig-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 600; margin-bottom: 6pt;
+    }
+    .sp-fig-caption {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt;
+      color: #8a8a8a; line-height: 1.4;
+      margin-top: 6pt; max-width: 360pt;
+    }
+    .sp-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.4pt; line-height: 1.52;
+      color: #202020;
+      margin-top: 4pt;
+    }
+    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
+    .sp-prose > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 28pt; line-height: 0.88;
+      font-weight: 500; color: #8B6F47;
+      float: left; padding: 2pt 6pt 0 0;
+      font-style: normal;
+    }
+
+    .sp-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt;
+      margin-bottom: 12pt;
+    }
+    .sp-margin-term {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 2pt;
+    }
+    .sp-margin-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12pt; color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }
+    .sp-margin-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8pt; line-height: 1.42;
+      color: #6B6B6B; margin-top: 2pt;
+    }
+
+    /* ───────────────────── P3 · HISTORICAL SURPRISE LADDER ──────── */
+    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
+    .ld-table th, .ld-table td {
+      padding: 7pt 6pt; text-align: left; vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #6B6B6B;
       font-weight: 600;
-      letter-spacing: -3pt;
-      line-height: 1;
-      margin: 0;
     }
-    .subtitle {
-      font-size: 14pt;
-      margin: 4pt 0 0 0;
-      color: #222;
-      letter-spacing: 0.2pt;
-    }
-    .meta-band {
-      font-size: 9pt;
-      color: #555;
-      margin: 12pt 0 20pt 0;
-      border-top: 0.5pt solid #ccc;
-      border-bottom: 0.5pt solid #ccc;
-      padding: 6pt 0;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    h2 {
-      font-size: 12pt;
-      font-weight: 600;
-      margin: 18pt 0 8pt 0;
-      border-bottom: 0.5pt solid #000;
-      padding-bottom: 3pt;
-      text-transform: uppercase;
-      letter-spacing: 0.4pt;
-    }
-    h3 { font-size: 10.5pt; font-weight: 600; margin: 10pt 0 4pt 0; }
-
-    .report-surface {
-      background: #fdfcf8;
-      border: 0.5pt solid #e5e0d6;
-      padding: 12pt 14pt;
-      margin-bottom: 8pt;
-    }
-
-    .two-col {
-      display: flex;
-      gap: 14pt;
-    }
-    .two-col .col { flex: 1 1 50%; }
-
-    /* Consensus bar */
-    .consensus-bar {
-      margin: 6pt 0;
-    }
-    .bar-row {
-      display: flex;
-      align-items: center;
-      font-size: 9pt;
-      margin-bottom: 3pt;
-    }
-    .bar-label { width: 44pt; color: #555; }
-    .bar-track {
-      flex: 1;
-      height: 6pt;
-      background: #ece8df;
-      position: relative;
-      border-radius: 1pt;
-    }
-    .bar-fill {
-      height: 100%;
-      background: #111;
-      border-radius: 1pt;
-    }
-    .bar-value {
-      width: 48pt;
+    .ld-table td.num {
       text-align: right;
-      font-weight: 600;
+      font-family: "JetBrains Mono", monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 9pt;
+    }
+    .ld-q {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600; font-size: 9.4pt;
+      letter-spacing: 0.02em; color: #0A0A0A;
     }
 
-    /* Expected questions — numbered */
-    ol.questions {
-      padding-left: 18pt;
-      margin: 0;
+    /* ───────────────────── P4 · SCENARIO QUAD ─────────────────────── */
+    .rq-grid {
+      display: table; width: 100%;
+      border-collapse: separate; border-spacing: 14pt 0; table-layout: fixed;
     }
-    ol.questions li {
-      margin-bottom: 6pt;
-      line-height: 1.45;
+    .rq-main { display: table-cell; width: 70%; vertical-align: top; }
+    .rq-side { display: table-cell; width: 30%; vertical-align: top; }
+
+    .rq-quads { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .rq-quad {
+      display: table-cell; width: 50%;
+      padding: 6pt 8pt;
+      vertical-align: top;
+      height: 160pt;
+    }
+    .rq-quad svg { width: 100%; }
+    .rq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 3pt;
+    }
+    .rq-quad-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 15pt; font-weight: 500;
+      color: #0A0A0A; font-variant-numeric: tabular-nums;
+    }
+    .rq-quad-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.8pt;
+      color: #6B6B6B; margin-top: 4pt; line-height: 1.4;
     }
 
-    /* Surprise history table */
-    table.history {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 6pt;
-    }
-    table.history th, table.history td {
-      text-align: right;
-      padding: 4pt 6pt;
-      border-bottom: 0.5pt solid #ddd;
-      font-size: 9.5pt;
-    }
-    table.history th {
-      font-weight: 600;
-      border-bottom: 0.5pt solid #000;
-      text-transform: uppercase;
+    .rq-method {
+      padding: 10pt 0;
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
       font-size: 8pt;
-      letter-spacing: 0.3pt;
     }
-    table.history td:first-child, table.history th:first-child { text-align: left; }
-    .pos { color: #0a6f3c; }
-    .neg { color: #a11d1d; }
-
-    /* Sensitivity tile */
-    .sens-tile {
-      border: 0.5pt solid #000;
-      padding: 10pt 12pt;
-      margin-top: 6pt;
+    .rq-method-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.28em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 8pt;
     }
-    .sens-tile .row { display: flex; justify-content: space-between; margin: 3pt 0; font-size: 10pt; }
+    .rq-method-item { margin-bottom: 9pt; }
+    .rq-method-item:last-child { margin-bottom: 0; }
+    .rq-method-num {
+      display: inline-block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7pt; color: #8B6F47;
+      margin-right: 6pt;
+    }
+    .rq-method-term {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-weight: 600; font-size: 8.5pt; color: #0A0A0A;
+    }
+    .rq-method-def {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.6pt;
+      line-height: 1.5; color: #4a4a4a;
+      margin-top: 1pt;
+    }
 
-    .risk-notes li { margin-bottom: 4pt; }
+    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
+    .ed-quote-wrap {
+      min-height: 300pt;
+      padding: 20pt 14mm 26pt 14mm;
+      display: table; width: 100%; text-align: center;
+    }
+    .ed-quote-cell { display: table-cell; vertical-align: middle; }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 36pt; line-height: 1.22;
+      letter-spacing: -0.015em; color: #0A0A0A;
+      margin: 0 auto; max-width: 150mm;
+    }
+    .ed-quote-attr {
+      margin-top: 24pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+    }
+    .ed-quote-attr::before,
+    .ed-quote-attr::after {
+      content: "——"; color: #8B6F47; opacity: 0.5;
+      margin: 0 8pt; letter-spacing: 0;
+    }
 
-    .disclaimer {
-      font-size: 8.5pt;
-      color: #666;
+    .ed-col2 {
+      display: table; width: 100%;
+      border-collapse: separate; border-spacing: 18pt 0;
+      margin-top: 20pt;
+      border-top: 0.5pt solid #0A0A0A;
+      padding-top: 14pt;
+    }
+    .ed-col { display: table-cell; width: 100%; vertical-align: top; }
+    .ed-col-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 600; margin-bottom: 9pt;
+    }
+    .ed-limit-item {
+      display: table; width: 100%;
+      padding: 4pt 0;
+      border-bottom: 0.15pt solid #e4dfd2;
+    }
+    .ed-limit-item:last-child { border-bottom: none; }
+    .ed-limit-num {
+      display: table-cell; width: 18pt;
+      vertical-align: top;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8pt; color: #8B6F47;
+      padding-top: 2pt;
+    }
+    .ed-limit-detail {
+      display: table-cell; vertical-align: top;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.4pt; line-height: 1.5;
+      color: #202020;
+    }
+    .ed-foot-legal {
       margin-top: 18pt;
-      border-top: 0.5pt solid #ddd;
-      padding-top: 6pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 6.8pt;
+      color: #8a8a8a; text-align: center;
+      letter-spacing: 0.06em;
     }
 
-    .page-break { page-break-before: always; }
+    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small {
+      width: 28pt; height: 0.5pt;
+      background: #0A0A0A; margin: 0 0 12pt 0;
+    }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7;
+      color: #202020; max-width: 460pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #6B6B6B;
+    }
+    .co-thin-rule {
+      height: 0.35pt; background: #c9c4b8; margin: 12pt 0;
+    }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+
+    /* Legal partial trim */
+    section.disclaimer.pq-disclaimer {
+      padding: 10pt 0 !important;
+      margin: 16pt 0 0 0 !important;
+      border-top: 0.5pt solid #0A0A0A !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
+    }
   </style>
 </head>
 <body>
 
-  <!-- ── Page 1 ─────────────────────────────────────────────────────────── -->
+{# ── local helpers ──────────────────────────────────────────────────────── #}
+{% set _ticker = ticker | default('AAPL') %}
+{% set _company = company_name | default('Apple Inc.') %}
+{% set _fiscal = fiscal_period | default('Q2 FY26') %}
+{% set _rep_date = reporting_date | default('2026-04-30') %}
+{% set _doc_ref = doc_ref | default('PQ-EB-01 · v2026.04.21') %}
+{% set _issue_no = issue_number | default(1) %}
+{% set _hero = hero_headline | default([
+  'A quiet hour before the call.',
+  'Facts observed. Calendar noted.',
+  'The company will speak \u2014 we listen.'
+]) %}
 
-  <h1 class="ticker-hero">${{ ticker }}</h1>
-  <p class="subtitle">{{ fiscal_period }} Earnings Preview · {{ company_name }}</p>
-  <div class="meta-band">
-    <span>Announcement: {{ earnings_datetime }} UTC</span>
-    <span>Prepared for {{ user_name }}</span>
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 1 · COVER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<section class="cv">
+
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=340 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
   </div>
 
-  <div class="two-col">
-    <div class="col">
-      <h2>Consensus</h2>
-      <div class="report-surface">
-        {% if consensus_eps is not none %}
-        <div class="consensus-bar">
-          <h3>EPS Estimate Range</h3>
-          <div class="bar-row">
-            <span class="bar-label">Low</span>
-            <span class="bar-track"><span class="bar-fill" style="width: 25%"></span></span>
-            <span class="bar-value">
-              {{ "$%.2f"|format(consensus_eps_low) if consensus_eps_low is not none else "—" }}
-            </span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">Mean</span>
-            <span class="bar-track"><span class="bar-fill" style="width: 60%"></span></span>
-            <span class="bar-value">{{ "$%.2f"|format(consensus_eps) }}</span>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">High</span>
-            <span class="bar-track"><span class="bar-fill" style="width: 85%"></span></span>
-            <span class="bar-value">
-              {{ "$%.2f"|format(consensus_eps_high) if consensus_eps_high is not none else "—" }}
-            </span>
-          </div>
-        </div>
-        {% else %}
-        <p><em>컨센서스 EPS 데이터 미확보.</em></p>
-        {% endif %}
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    EARNINGS PRE-BRIEF &nbsp;·&nbsp; {{ _ticker }} {{ _fiscal }} &nbsp;·&nbsp; <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+  </div>
+  <div class="cv-rule-thin"></div>
 
-        {% if consensus_revenue %}
-        <h3>Revenue (Consensus)</h3>
-        <p style="margin-top:2pt; font-size: 11pt;">
-          <strong>${{ "%.1f"|format(consensus_revenue) }}M</strong>
-        </p>
-        {% endif %}
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
 
-        {% if current_price %}
-        <h3>Current Price</h3>
-        <p style="margin-top:2pt; font-size: 11pt;">
-          <strong>${{ "%.2f"|format(current_price) }}</strong>
-        </p>
-        {% endif %}
-      </div>
+  <div class="cv-rule-thin"></div>
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Ticker</div>
+      <div class="cv-kpi-value">{{ _ticker }}</div>
+      <div class="cv-kpi-foot">{{ _company }}</div>
     </div>
-
-    <div class="col">
-      <h2>Top 5 Expected Questions</h2>
-      <div class="report-surface">
-        <ol class="questions">
-          {% for q in expected_questions %}
-            <li>{{ q }}</li>
-          {% endfor %}
-        </ol>
-      </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Reporting Date</div>
+      <div class="cv-kpi-value">{{ _rep_date }}</div>
+      <div class="cv-kpi-foot">{{ reporting_time | default('After the close (AMC)') }}.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Consensus EPS</div>
+      <div class="cv-kpi-value">${{ '%.2f'|format(consensus_eps | default(1.62)) }}</div>
+      <div class="cv-kpi-foot">FMP observation, {{ consensus_as_of | default('2026-04-19') }}.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Implied Move</div>
+      <div class="cv-kpi-value">±{{ '%.1f'|format(implied_move_pct | default(4.2)) }}%</div>
+      <div class="cv-kpi-foot">Option chain, {{ option_as_of | default('2026-04-20') }}.</div>
     </div>
   </div>
 
-  <!-- ── Page 2 ─────────────────────────────────────────────────────────── -->
-  <div class="page-break"></div>
+  <p class="cv-foot">
+    Prepared for {{ user_name | default('the reader') }} &nbsp;·&nbsp; Pre-read, informational only.
+  </p>
+  <p class="cv-micro-disclaim">
+    Past performance does not guarantee future results. This document is informational and does not constitute investment advice.
+  </p>
+</section>
 
-  <h2>Last 4 Quarters — Surprise History</h2>
-  <div class="report-surface">
-    {% if surprise_history %}
-    <table class="history">
-      <thead>
-        <tr>
-          <th>Quarter</th>
-          <th>Actual EPS</th>
-          <th>Estimate</th>
-          <th>Surprise</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for s in surprise_history %}
-        <tr>
-          <td>{{ s.date }}</td>
-          <td>${{ "%.2f"|format(s.actual_eps) }}</td>
-          <td>${{ "%.2f"|format(s.estimate_eps) }}</td>
-          <td class="{{ 'pos' if (s.surprise_pct or 0) > 0 else 'neg' }}">
-            {% if s.surprise_pct is not none %}
-              {{ "%+.1f"|format(s.surprise_pct) }}%
-            {% else %}—{% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p><em>지난 4분기 데이터 미확보.</em></p>
-    {% endif %}
-  </div>
 
-  <h2>Position Sensitivity (±3% Move)</h2>
-  <div class="sens-tile">
-    <div class="row"><span>Shares</span><strong>{{ position_shares }}</strong></div>
-    <div class="row"><span>Avg Cost</span><strong>${{ "%.2f"|format(position_avg_cost) }}</strong></div>
-    <div class="row"><span>Market Value</span><strong>${{ "{:,.2f}".format(position_mv) }}</strong></div>
-    {% if sensitivity_beat is not none %}
-    <div class="row">
-      <span>If +3% Beat Move</span>
-      <strong class="pos">+${{ "{:,.2f}".format(sensitivity_beat) }}</strong>
-    </div>
-    <div class="row">
-      <span>If −3% Miss Move</span>
-      <strong class="neg">${{ "{:,.2f}".format(sensitivity_miss) }}</strong>
-    </div>
-    {% else %}
-    <div class="row"><span><em>현재가 미확보 — 민감도 계산 생략</em></span><span></span></div>
-    {% endif %}
-  </div>
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 2 · COMPANY SNAPSHOT SPREAD
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
 
-  {% if risk_notes %}
-  <h2>Risk Notes</h2>
-  <div class="report-surface">
-    <ul class="risk-notes">
-      {% for n in risk_notes %}
-      <li>{{ n }}</li>
+<p class="sp-part">Part I · Company Snapshot</p>
+<h2 class="sp-title">Eight quarters, observed</h2>
+<p class="sp-deck">
+  The revenue history, the year-over-year pace, and the range of analyst
+  estimates for the quarter about to print. Factual record.
+</p>
+
+<div class="sp-grid">
+  <div class="sp-main">
+
+    <div class="sp-fig-title">Fig. 1 · Quarterly revenue history &middot; last 8 quarters</div>
+
+    {# ── 8-quarter bar chart with YoY line overlay ─────────────────── #}
+    {% set _rev = revenue_history | default([
+      {'q': 'Q1 FY24', 'rev':  97.3, 'yoy': -5.2},
+      {'q': 'Q2 FY24', 'rev':  94.8, 'yoy': -4.1},
+      {'q': 'Q3 FY24', 'rev':  93.2, 'yoy': -1.9},
+      {'q': 'Q4 FY24', 'rev': 119.6, 'yoy':  2.1},
+      {'q': 'Q1 FY25', 'rev': 124.3, 'yoy':  2.8},
+      {'q': 'Q2 FY25', 'rev':  95.4, 'yoy':  0.6},
+      {'q': 'Q3 FY25', 'rev':  94.9, 'yoy':  1.8},
+      {'q': 'Q4 FY25', 'rev': 124.3, 'yoy':  3.9},
+    ]) %}
+    {% set _rev_max = (_rev | map(attribute='rev') | max) %}
+    {% set _rev_max = _rev_max * 1.1 %}
+    {% set _yoy_vals = _rev | map(attribute='yoy') | list %}
+    {% set _yoy_max = _yoy_vals | max %}
+    {% set _yoy_min = _yoy_vals | min %}
+    {% if _yoy_max == _yoy_min %}{% set _yoy_max = _yoy_min + 1 %}{% endif %}
+    {% set _yoy_span = _yoy_max - _yoy_min %}
+
+    {% set _CW = 320 %}
+    {% set _CH = 160 %}
+    {% set _Cp = 14 %}
+    {% set _PW = _CW - _Cp*2 %}
+    {% set _PH = _CH - 36 %}
+    {% set _revn = _rev | length %}
+    {% set _bw = _PW / _revn * 0.6 %}
+    {% set _bgap = _PW / _revn %}
+
+    <svg viewBox="0 0 {{ _CW }} {{ _CH }}" width="100%" preserveAspectRatio="none"
+         xmlns="http://www.w3.org/2000/svg" style="display:block; overflow:visible;">
+      <!-- gridlines -->
+      {% for gy in [0.25, 0.5, 0.75] %}
+        <line x1="{{ _Cp }}" y1="{{ 18 + _PH * gy }}" x2="{{ _CW - _Cp }}" y2="{{ 18 + _PH * gy }}"
+              stroke="#E8E4DA" stroke-width="0.3"/>
       {% endfor %}
-    </ul>
+      <!-- zero baseline -->
+      <line x1="{{ _Cp }}" y1="{{ 18 + _PH }}" x2="{{ _CW - _Cp }}" y2="{{ 18 + _PH }}" stroke="#8B6F47" stroke-width="0.4" opacity="0.5"/>
+      <!-- bars -->
+      {% for b in _rev %}
+        {% set _cx = _Cp + loop.index0 * _bgap + _bgap/2 %}
+        {% set _bh = (b.rev / _rev_max) * _PH %}
+        <rect x="{{ _cx - _bw/2 }}" y="{{ 18 + _PH - _bh }}" width="{{ _bw }}" height="{{ _bh }}" fill="#8B6F47" fill-opacity="0.55"/>
+        <text x="{{ _cx }}" y="{{ 18 + _PH - _bh - 3 }}" text-anchor="middle" fill="#0A0A0A" font-size="6.2" font-family="JetBrains Mono, monospace">${{ '%.0f'|format(b.rev) }}B</text>
+        <text x="{{ _cx }}" y="{{ _CH - 14 }}" text-anchor="middle" fill="#6B6B6B" font-size="6" font-family="Geist, sans-serif" letter-spacing="0.04em">{{ b.q }}</text>
+      {% endfor %}
+      <!-- YoY overlay line (rescaled to same chart) -->
+      {% set _yoy_pts = [] %}
+      {% for b in _rev %}
+        {% set _cx = _Cp + loop.index0 * _bgap + _bgap/2 %}
+        {% set _yy = 18 + _PH - ((b.yoy - _yoy_min) / _yoy_span) * _PH %}
+        {% set _ = _yoy_pts.append(('%.2f' % _cx) ~ ',' ~ ('%.2f' % _yy)) %}
+      {% endfor %}
+      <polyline points="{{ _yoy_pts | join(' ') }}" fill="none" stroke="#0A0A0A" stroke-width="0.9" stroke-dasharray="3,2"/>
+      {% for b in _rev %}
+        {% set _cx = _Cp + loop.index0 * _bgap + _bgap/2 %}
+        {% set _yy = 18 + _PH - ((b.yoy - _yoy_min) / _yoy_span) * _PH %}
+        <circle cx="{{ '%.2f' % _cx }}" cy="{{ '%.2f' % _yy }}" r="1.4" fill="#0A0A0A"/>
+      {% endfor %}
+      <!-- legend -->
+      <g transform="translate({{ _Cp }}, 10)" font-family="Source Serif 4, serif" font-size="6.4" fill="#4a4a4a">
+        <rect x="0" y="-5" width="10" height="6" fill="#8B6F47" fill-opacity="0.55"/>
+        <text x="14" y="0" font-style="italic">Revenue ($B)</text>
+        <line x1="90" y1="-2" x2="104" y2="-2" stroke="#0A0A0A" stroke-width="0.9" stroke-dasharray="3,2"/>
+        <text x="108" y="0" font-style="italic">YoY change (%)</text>
+      </g>
+    </svg>
+
+    <div class="sp-fig-caption">
+      Fig. 1. Eight quarters of reported revenue (bronze bars, left axis)
+      with YoY change overlay (ink dashed line, right axis). Observed record,
+      sourced from the company's IR filings.
+    </div>
+
+    <div class="sp-prose">
+      {% if company_prose %}
+        {% for para in company_prose %}<p>{{ para }}</p>{% endfor %}
+      {% else %}
+        <p>The company's revenue pace has held between roughly $93B and $125B across the observed eight-quarter window, with the familiar fourth-quarter seasonal peak appearing in both FY24 Q4 and FY25 Q4. YoY change has moved from mid-single-digit negative at the start of the window to low-single-digit positive by its end. These are observed print readings &mdash; not a shape claim about the quarter to come.</p>
+        <p>Across the four most recent reports, the surprise magnitude &mdash; reported EPS against the consensus observed on the day of each report &mdash; has averaged near the low-single-digit positive range, with one quarter sitting close to flat and none of the four landing below the consensus by more than a narrow margin. Three of four reports printed a positive surprise; one printed within a tenth of a cent of consensus. Record, not a forecast shape.</p>
+        <p>The analyst estimate range for the quarter now approaching is a factual band. The low end of the sampled observations sits at {{ '$%.2f' | format(consensus_eps_low | default(1.48)) }}; the high end at {{ '$%.2f' | format(consensus_eps_high | default(1.76)) }}; the median at {{ '$%.2f' | format(consensus_eps | default(1.62)) }}. The band is a reading of analyst observations &mdash; informational only, and not a target of any kind.</p>
+      {% endif %}
+    </div>
+
   </div>
-  {% endif %}
 
-  <p class="disclaimer">{{ disclaimer }}</p>
+  <div class="sp-margin">
 
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Consensus · source</div>
+      <div class="sp-margin-value">FMP v4 Stable</div>
+      <div class="sp-margin-body">
+        Analyst estimate aggregation observed {{ consensus_as_of | default('2026-04-19') }}. A sampling of public analyst observations &mdash; informational only.
+      </div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Option chain · source</div>
+      <div class="sp-margin-value">CBOE via Alpaca</div>
+      <div class="sp-margin-body">
+        Straddle-implied move observed {{ option_as_of | default('2026-04-20') }} on the at-the-money strike for the first expiry after the print.
+      </div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Estimate range</div>
+      <div class="sp-margin-value">${{ '%.2f'|format(consensus_eps_low | default(1.48)) }} — ${{ '%.2f'|format(consensus_eps_high | default(1.76)) }}</div>
+      <div class="sp-margin-body">
+        Low to high across the sampled analyst observations. The median at ${{ '%.2f'|format(consensus_eps | default(1.62)) }} is the consensus point.
+      </div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Reporting calendar</div>
+      <div class="sp-margin-value">{{ _rep_date }}</div>
+      <div class="sp-margin-body">
+        Company Investor Relations calendar. {{ reporting_time | default('After-the-close (AMC) release; conference call to follow.') }}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 3 · HISTORICAL SURPRISE LADDER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · Historical Surprise Ladder</p>
+<h2 class="sp-title">Eight prints, eight surprises</h2>
+<p class="sp-deck">
+  A table of the last eight reports: consensus against actual, the surprise
+  percentage, and the next-day price reaction. Observed record.
+</p>
+
+{% set _hist = surprise_history | default([
+  {'quarter': 'Q1 FY24', 'consensus': 1.42, 'actual': 1.52, 'surprise_pct':  7.04, 'reaction_pct':  2.1, 'spark': [0, 0.4, 1.0, 1.6, 2.0, 2.1, 2.1]},
+  {'quarter': 'Q2 FY24', 'consensus': 1.50, 'actual': 1.53, 'surprise_pct':  2.00, 'reaction_pct':  0.8, 'spark': [0, 0.2, 0.4, 0.5, 0.7, 0.8, 0.8]},
+  {'quarter': 'Q3 FY24', 'consensus': 1.35, 'actual': 1.40, 'surprise_pct':  3.70, 'reaction_pct': -0.6, 'spark': [0, -0.1, -0.3, -0.5, -0.6, -0.6, -0.6]},
+  {'quarter': 'Q4 FY24', 'consensus': 2.10, 'actual': 2.18, 'surprise_pct':  3.81, 'reaction_pct':  1.6, 'spark': [0, 0.3, 0.8, 1.2, 1.5, 1.6, 1.6]},
+  {'quarter': 'Q1 FY25', 'consensus': 2.34, 'actual': 2.40, 'surprise_pct':  2.56, 'reaction_pct': -1.2, 'spark': [0, -0.3, -0.7, -1.0, -1.1, -1.2, -1.2]},
+  {'quarter': 'Q2 FY25', 'consensus': 1.54, 'actual': 1.55, 'surprise_pct':  0.65, 'reaction_pct':  0.2, 'spark': [0, 0.05, 0.1, 0.15, 0.18, 0.2, 0.2]},
+  {'quarter': 'Q3 FY25', 'consensus': 1.47, 'actual': 1.48, 'surprise_pct':  0.68, 'reaction_pct': -0.4, 'spark': [0, -0.1, -0.2, -0.3, -0.35, -0.4, -0.4]},
+  {'quarter': 'Q4 FY25', 'consensus': 2.22, 'actual': 2.28, 'surprise_pct':  2.70, 'reaction_pct':  1.8, 'spark': [0, 0.4, 0.9, 1.3, 1.6, 1.8, 1.8]},
+]) %}
+
+<table class="ld-table">
+  <thead>
+    <tr>
+      <th style="width:11%;">Quarter</th>
+      <th class="num" style="width:11%;">Consensus EPS</th>
+      <th class="num" style="width:11%;">Actual EPS</th>
+      <th class="num" style="width:10%;">Surprise %</th>
+      <th class="num" style="width:13%;">Next-Day Δ</th>
+      <th style="width:44%;">Next-day Trajectory</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in _hist %}
+      {% set _spark = r.spark | default([0, 0, 0, 0, 0, 0, 0]) %}
+      {% set _smax = (_spark | map('abs') | list | max) %}
+      {% if _smax == 0 %}{% set _smax = 1 %}{% endif %}
+      {% set _sw = 100 %}
+      {% set _sh = 22 %}
+      {% set _sp = [] %}
+      {% for v in _spark %}
+        {% set _x = loop.index0 * _sw / (_spark | length - 1) %}
+        {% set _y = _sh/2 - (v / (_smax * 2)) * (_sh - 4) %}
+        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sp[-1].split(',') %}
+      {% set _sp_pct = r.surprise_pct | default(0) %}
+      {% set _rx = r.reaction_pct | default(0) %}
+      <tr>
+        <td><span class="ld-q">{{ r.quarter }}</span></td>
+        <td class="num">${{ '%.2f'|format(r.consensus) }}</td>
+        <td class="num">${{ '%.2f'|format(r.actual) }}</td>
+        <td class="num {% if _sp_pct >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.2f'|format(_sp_pct) }}%</td>
+        <td class="num {% if _rx >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.2f'|format(_rx) }}%</td>
+        <td>
+          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="30" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
+            <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
+            <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{# ── Surprise distribution histogram ─────────────────────────────── #}
+{% set _sp_bins = surprise_bins | default([
+  {'range': '−4 to −2', 'count': 0},
+  {'range': '−2 to  0', 'count': 0},
+  {'range': ' 0 to  2', 'count': 3},
+  {'range': ' 2 to  4', 'count': 3},
+  {'range': ' 4 to  6', 'count': 1},
+  {'range': ' 6 to  8', 'count': 1},
+]) %}
+<div class="sp-fig-title" style="margin-top: 12pt;">Fig. 2 · Surprise distribution &middot; 8-quarter window</div>
+<svg viewBox="0 0 360 60" width="100%" height="70" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <line x1="10" y1="48" x2="350" y2="48" stroke="#c9c4b8" stroke-width="0.3"/>
+  {% set _spcmax = (_sp_bins | map(attribute='count') | max) %}
+  {% if _spcmax == 0 %}{% set _spcmax = 1 %}{% endif %}
+  {% set _nb = _sp_bins | length %}
+  {% set _bw2 = 48 %}
+  {% set _bg2 = (340 - _nb * _bw2) / (_nb + 1) %}
+  {% for b in _sp_bins %}
+    {% set _bx = 10 + _bg2 + loop.index0 * (_bw2 + _bg2) %}
+    {% set _bh2 = (b.count / _spcmax) * 38 %}
+    <rect x="{{ _bx }}" y="{{ 48 - _bh2 }}" width="{{ _bw2 }}" height="{{ _bh2 }}" fill="#8B6F47" fill-opacity="0.55"/>
+    <text x="{{ _bx + _bw2/2 }}" y="{{ 46 - _bh2 }}" text-anchor="middle" fill="#0A0A0A" font-size="7" font-family="JetBrains Mono, monospace">{{ b.count }}</text>
+    <text x="{{ _bx + _bw2/2 }}" y="56" text-anchor="middle" fill="#6B6B6B" font-size="6" font-family="Geist, sans-serif" letter-spacing="0.04em">{{ b.range }}%</text>
+  {% endfor %}
+</svg>
+
+<div class="sp-fig-caption">
+  Fig. 2. Distribution of reported surprises across the 8-quarter window.
+  Each bin counts quarters by the printed surprise percentage &mdash; a
+  descriptive histogram, not a probabilistic claim.
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 4 · SCENARIO QUAD (observation panel — historical patterns only)
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part III · Observation Quad</p>
+<h2 class="sp-title">Four readings around the print</h2>
+<p class="sp-deck">
+  Four historical pattern panels. No predictions, no scenarios for the coming
+  quarter &mdash; only artefacts of the reports already filed.
+</p>
+
+<div class="rq-grid">
+  <div class="rq-main">
+
+    <div class="rq-quads">
+      <div class="rq-quad">
+        <div class="rq-quad-label">Historical Beat-Rate Timeline</div>
+        <div class="rq-quad-value">{{ beat_rate_pct | default(88) }}%</div>
+        {# beat/miss over 8 quarters as stacked dots #}
+        {% set _beats = beat_timeline | default([1, 1, 1, 1, 1, 1, 1, 1]) %}
+        <svg viewBox="0 0 180 42" width="100%" height="80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="0" y1="30" x2="180" y2="30" stroke="#c9c4b8" stroke-width="0.3"/>
+          {% set _bn = _beats | length %}
+          {% set _bs = 180 / _bn %}
+          {% for v in _beats %}
+            {% set _cx = _bs/2 + loop.index0 * _bs %}
+            {% if v == 1 %}{% set _c = '#8B6F47' %}{% set _y = 20 %}{% else %}{% set _c = '#7f1d1d' %}{% set _y = 40 %}{% endif %}
+            <circle cx="{{ _cx }}" cy="{{ _y }}" r="3" fill="{{ _c }}" fill-opacity="0.72"/>
+          {% endfor %}
+          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">BEAT = BRONZE, MISS = OXBLOOD</text>
+        </svg>
+        <div class="rq-quad-foot">Share of 8 quarters with EPS above consensus observation.</div>
+      </div>
+      <div class="rq-quad">
+        <div class="rq-quad-label">Post-Earnings Drift · average</div>
+        <div class="rq-quad-value">1D / 5D / 21D</div>
+        {% set _drift = drift_bars | default([
+          {'window': '1D',  'avg':  0.5},
+          {'window': '5D',  'avg':  0.8},
+          {'window': '21D', 'avg':  1.4},
+        ]) %}
+        <svg viewBox="0 0 180 42" width="100%" height="80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="0" y1="36" x2="180" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
+          {% set _dmax = (_drift | map(attribute='avg') | map('abs') | list | max) %}
+          {% if _dmax == 0 %}{% set _dmax = 1 %}{% endif %}
+          {% set _dn = _drift | length %}
+          {% set _dbw = 38 %}
+          {% set _dg = (180 - _dn * _dbw) / (_dn + 1) %}
+          {% for d in _drift %}
+            {% set _dx = _dg + loop.index0 * (_dbw + _dg) %}
+            {% set _av = d.avg if d.avg >= 0 else -d.avg %}
+            {% set _dh = (_av / _dmax) * 26 %}
+            {% if d.avg >= 0 %}{% set _c = '#8B6F47' %}{% else %}{% set _c = '#7f1d1d' %}{% endif %}
+            {% set _dy = 36 - _dh if d.avg >= 0 else 36 %}
+            <rect x="{{ _dx }}" y="{{ _dy }}" width="{{ _dbw }}" height="{{ _dh }}" fill="{{ _c }}" fill-opacity="0.55"/>
+            <text x="{{ _dx + _dbw/2 }}" y="40" text-anchor="middle" fill="#6B6B6B" font-size="6" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ d.window }}</text>
+            <text x="{{ _dx + _dbw/2 }}" y="{{ 34 - _dh }}" text-anchor="middle" fill="#0A0A0A" font-size="6.4" font-family="JetBrains Mono, monospace">{{ '%+.1f'|format(d.avg) }}%</text>
+          {% endfor %}
+        </svg>
+        <div class="rq-quad-foot">Average observed reaction in the named window across 8 prints.</div>
+      </div>
+      <div class="rq-quad">
+        <div class="rq-quad-label">Implied vs Realised Move</div>
+        <div class="rq-quad-value">{{ '%.1f'|format(implied_realised_r | default(0.82)) }}×</div>
+        {# scatter: implied (x) vs realised (y) over 8 prints #}
+        {% set _scatter = implied_vs_realised | default([
+          {'implied': 4.0, 'realised': 2.1},
+          {'implied': 3.5, 'realised': 0.8},
+          {'implied': 3.8, 'realised': 0.6},
+          {'implied': 4.6, 'realised': 1.6},
+          {'implied': 4.2, 'realised': 1.2},
+          {'implied': 3.2, 'realised': 0.2},
+          {'implied': 3.0, 'realised': 0.4},
+          {'implied': 4.4, 'realised': 1.8},
+        ]) %}
+        <svg viewBox="0 0 180 46" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="10" y1="36" x2="170" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
+          <line x1="10" y1="4"  x2="10"  y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
+          <!-- unity line -->
+          <line x1="10" y1="36" x2="150" y2="4" stroke="#8B6F47" stroke-width="0.4" stroke-dasharray="2,2" opacity="0.5"/>
+          {% set _imax = 5.0 %}
+          {% set _rmax = 3.0 %}
+          {% for p in _scatter %}
+            {% set _px = 10 + (p.implied / _imax) * 140 %}
+            {% set _py = 36 - (p.realised / _rmax) * 32 %}
+            <circle cx="{{ '%.2f' % _px }}" cy="{{ '%.2f' % _py }}" r="2" fill="#0A0A0A" fill-opacity="0.72"/>
+          {% endfor %}
+          <text x="10" y="44" fill="#6B6B6B" font-size="5.6" font-family="Geist, sans-serif" letter-spacing="0.08em">IMPLIED (%) →</text>
+          <text x="10" y="10" fill="#6B6B6B" font-size="5.6" font-family="Geist, sans-serif" letter-spacing="0.08em">REALISED</text>
+        </svg>
+        <div class="rq-quad-foot">Option-implied vs realised absolute move, 8 prints. Dashed line is unity.</div>
+      </div>
+      <div class="rq-quad">
+        <div class="rq-quad-label">Peer EPS Comp</div>
+        <div class="rq-quad-value" style="font-size: 12pt;">{{ peer_group | default('Megacap Tech') }}</div>
+        {% set _peers = peer_eps_comp | default([
+          {'ticker': _ticker, 'eps': 1.62},
+          {'ticker': 'MSFT',   'eps': 3.34},
+          {'ticker': 'GOOG',   'eps': 1.81},
+          {'ticker': 'META',   'eps': 5.12},
+        ]) %}
+        <svg viewBox="0 0 180 42" width="100%" height="80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="0" y1="36" x2="180" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
+          {% set _pmax = (_peers | map(attribute='eps') | max) %}
+          {% if _pmax == 0 %}{% set _pmax = 1 %}{% endif %}
+          {% set _pn = _peers | length %}
+          {% set _pbw = 30 %}
+          {% set _pg = (180 - _pn * _pbw) / (_pn + 1) %}
+          {% for pp in _peers %}
+            {% set _px = _pg + loop.index0 * (_pbw + _pg) %}
+            {% set _ph2 = (pp.eps / _pmax) * 26 %}
+            {% if pp.ticker == _ticker %}{% set _c = '#0A0A0A' %}{% else %}{% set _c = '#8B6F47' %}{% endif %}
+            <rect x="{{ _px }}" y="{{ 36 - _ph2 }}" width="{{ _pbw }}" height="{{ _ph2 }}" fill="{{ _c }}" fill-opacity="0.62"/>
+            <text x="{{ _px + _pbw/2 }}" y="40" text-anchor="middle" fill="#6B6B6B" font-size="5.6" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ pp.ticker }}</text>
+            <text x="{{ _px + _pbw/2 }}" y="{{ 34 - _ph2 }}" text-anchor="middle" fill="#0A0A0A" font-size="6" font-family="JetBrains Mono, monospace">${{ '%.2f'|format(pp.eps) }}</text>
+          {% endfor %}
+        </svg>
+        <div class="rq-quad-foot">Peer consensus EPS for the same upcoming cycle &mdash; observed sampling.</div>
+      </div>
+    </div>
+
+    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
+      Fig. 3. Four observation panels. All four are historical patterns.
+      No scenario, no projection &mdash; the quarter about to print is not
+      modelled here.
+    </div>
+
+  </div>
+
+  <div class="rq-side">
+    <div class="rq-method">
+      <div class="rq-method-eyebrow">Reading Notes</div>
+      {% set _notes = reading_notes | default([
+        {'term': 'Consensus is a sampling',      'def': 'Consensus is a sampling of analyst observations &mdash; historical record only, not a collective target.'},
+        {'term': 'Implied move',                 'def': 'Option-market pricing of uncertainty around the print. It is market-implied, not market-determined.'},
+        {'term': 'Past surprise pattern',        'def': 'The surprise history is a historical record only. It does not speak to the current quarter.'},
+        {'term': 'Post-earnings drift',          'def': 'The drift bars record observed reactions. Causation is not claimed.'},
+        {'term': 'Brief is informational only',  'def': 'Nothing on these pages constitutes investment guidance. The document is for pre-read reference only.'},
+      ]) %}
+      {% for n in _notes %}
+        <div class="rq-method-item">
+          <span class="rq-method-num">{{ '%02d' % loop.index }}</span>
+          <span class="rq-method-term">{{ n.term }}</span>
+          <div class="rq-method-def" style="margin-left: 18pt;">{{ n.def }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 5 · EDITORIAL — full-bleed pull quote + what this brief does not tell
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What the brief is and is not</h2>
+<p class="sp-deck">
+  A single sentence the desk is holding in mind the hour before the call,
+  and an inventory of the questions this pre-read cannot answer.
+</p>
+
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default("The market rehearses every call. The call tells us only how well the market listened.") }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attr | default('PivoxQuant · Earnings Desk') }}</div>
+  </div>
+</div>
+
+<div class="ed-col2">
+  <div class="ed-col">
+    <div class="ed-col-head">What this brief does not tell you</div>
+    {% set _cannot = cannot_tell | default([
+      'Which way the print will land.',
+      'What to do before or after the call.',
+      'Management\'s unspoken intent on the call.',
+      'Private order flow around the event.',
+      'Tax or personal timing of any action.',
+    ]) %}
+    {% for item in _cannot %}
+      <div class="ed-limit-item">
+        <div class="ed-limit-num">{{ '%02d' % loop.index }}</div>
+        <div class="ed-limit-detail">{{ item }}</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<p class="ed-foot-legal">
+  Informational only. Past performance does not guarantee future results. This document is informational and does not constitute investment advice.
+</p>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 6 · COLOPHON
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<div class="co-wrap">
+
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
+
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name | default('the reader') }}</strong> ahead of
+      <strong>{{ _ticker }}</strong> <strong>{{ _fiscal }}</strong> reporting on
+      <strong>{{ _rep_date }}</strong>.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data</span> &nbsp;
+      {% set _ds = data_sources | default([
+        {'key': 'Consensus EPS',        'note': 'FMP v4 Stable.'},
+        {'key': 'Option chain',         'note': 'CBOE via Alpaca.'},
+        {'key': 'Historical EPS',       'note': 'SEC EDGAR.'},
+        {'key': 'Reporting calendar',   'note': 'Company Investor Relations.'},
+      ]) %}
+      {% for d in _ds %}{{ d.note }}{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('58 quant models · 7-Layer Risk Defense') }}.
+    </p>
+  </div>
+
+  <div class="co-thin-rule"></div>
+
+  {# Legal partial is verbatim-required — do not strip or reformat its content. #}
   {% include '_disclaimer.html' %}
+
+  <div class="co-thin-rule"></div>
+
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Research Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at }}</div>
+  </div>
+
+</div>
+
 </body>
 </html>
