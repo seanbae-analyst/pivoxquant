@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { API } from "./endpoints";
+import { liveRefresh } from "./market-hours";
 import type {
   DiscoverResponse,
   ProfileResponse,
@@ -43,10 +44,11 @@ export function useInvestmentProfile() {
 
 export function useWatchlist() {
   return useSWR<WatchlistResponse>(API.watchlist.list, fetcher, {
-    refreshInterval: 30_000,
+    // Market-aware: 5s when any market is open, 60s when all closed.
+    refreshInterval: () => liveRefresh(5_000, 60_000),
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    dedupingInterval: 5_000,
+    dedupingInterval: 2_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
   });
@@ -56,10 +58,10 @@ export function useWatchlist() {
 
 export function useAlerts() {
   return useSWR<AlertsResponse>(API.alerts.list, fetcher, {
-    refreshInterval: 30_000,
+    refreshInterval: () => liveRefresh(10_000, 60_000),
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    dedupingInterval: 5_000,
+    dedupingInterval: 2_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
   });

@@ -21,9 +21,18 @@ market_bp = Blueprint("market", __name__, url_prefix="/api")
 
 _macro_cache: dict = {"data": None, "ts": 0.0}
 
-# 2h cache for /api/market/indices (upstream 402 / rate-limit absorber).
+# Market-aware cache for /api/market/indices. Intraday: 15s so the KOSPI /
+# S&P tiles feel live. Off-hours: 300s so we don't spin upstreams while
+# levels aren't moving. See services.cache_ttl.indices_ttl().
 _indices_cache: dict = {}  # region -> {"ts": float, "data": [...]}
-_INDICES_TTL = 7200
+
+
+def _indices_ttl() -> int:
+    try:
+        from services.cache_ttl import indices_ttl
+        return indices_ttl()
+    except Exception:
+        return 300
 
 
 @market_bp.route("/search")
@@ -176,7 +185,15 @@ def get_prices_fast():
         _logging.getLogger(__name__).exception(
             "market.get_prices_fast cache-update commit failed"
         )
-    return jsonify({"prices": prices, "updated_at": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Ensure every ticker payload carries observed_at so the frontend
+    # can render per-row freshness chips without a separate lookup.
+    for t, pdata in prices.items():
+        if isinstance(pdata, dict) and not pdata.get("observed_at"):
+            pdata["observed_at"] = pdata.get("timestamp") or now_iso
+    return jsonify({"prices": prices,
+                    "updated_at": now_iso,
+                    "observed_at": now_iso,
                     "sources": {t: p.get("source", "?") for t, p in prices.items()}})
 
 
@@ -313,7 +330,12 @@ def chart_data(ticker):
                      "close": round(float(bar.close), 2),
                      "volume": int(bar.volume)} for bar in bars[ticker]]
             if data:
-                return jsonify({"ticker": ticker, "period": period, "data": data, "source": "alpaca"})
+                return jsonify({
+                    "ticker": ticker, "period": period, "data": data,
+                    "source": "alpaca",
+                    # Last-bar timestamp is the true observation time.
+                    "observed_at": data[-1]["date"] if data else None,
+                })
         except Exception as e:
             logger.warning(f"Alpaca intraday chart failed {ticker}: {e}")
 
@@ -330,7 +352,8 @@ def chart_data(ticker):
                 # Identify source: Alpaca for US, KIS for KR, FMP fallback otherwise
                 source = "alpaca" if not is_kr else "kis"
                 return jsonify({"ticker": ticker, "period": period,
-                                "data": data, "source": source})
+                                "data": data, "source": source,
+                                "observed_at": data[-1]["date"] if data else None})
         except Exception as e:
             logger.warning(f"Primary chart source failed {ticker}: {e}")
 
@@ -351,7 +374,8 @@ def chart_data(ticker):
         data = [{"date": date.strftime("%Y-%m-%d"),
                  "close": round(float(row["Close"]), 2),
                  "volume": int(row.get("Volume", 0))} for date, row in h.iterrows()]
-        return jsonify({"ticker": ticker, "period": period, "data": data, "source": "fmp"})
+        return jsonify({"ticker": ticker, "period": period, "data": data, "source": "fmp",
+                        "observed_at": data[-1]["date"] if data else None})
     except Exception as e:
         logger.error(f"Chart error {ticker}: {e}")
         return jsonify({
@@ -484,7 +508,7 @@ def market_indices():
 
     entry = _indices_cache.get(region)
     now = _time.time()
-    if entry and now - entry["ts"] < _INDICES_TTL:
+    if entry and now - entry["ts"] < _indices_ttl():
         return jsonify(entry["data"])
 
     spec_us = [
@@ -550,6 +574,10 @@ def market_indices():
             "change_1d_pct":  round(change_pct, 2),
             "range_52w":      range_52w,
             "sparkline_30d":  sparkline,
+            # Emit observation timestamp so the frontend can render
+            # "as of HH:MM" chips and detect stale tiles without a
+            # separate /status probe.
+            "observed_at":    datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         })
 
     # Fallback to static snapshot if upstream came back too thin

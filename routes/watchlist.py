@@ -10,6 +10,7 @@ from models import Watchlist, SignalCache
 from services import cache_service
 from services.container import engine
 from services.name_resolver import resolve_stock_name
+from services.price_overlay import overlay_prices
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -17,29 +18,23 @@ logger = logging.getLogger(__name__)
 watchlist_bp = Blueprint("watchlist", __name__, url_prefix="/api/watchlist")
 
 
-def _serialize(w: Watchlist) -> dict:
+def _serialize(w: Watchlist, overlay_entry: dict | None = None) -> dict:
     """Build the response payload for a watchlist row.
 
-    Pulls last-price + 1D% from the SignalCache row (warmed on add) so we
-    don't burn an FMP quote call on every list render. Falls back to a
-    live `get_quote` only when the cache is empty.
+    Preferred price source: realtime/non-stale overlay (Alpaca/KIS/SignalCache).
+    Falls back to the blob-only cache (even stale) for non-price metadata like
+    name / signal / score. Price fields stay 0 when no fresh source exists —
+    we never render a days-old number as "current".
     """
     c = db.session.get(SignalCache, w.ticker)
     sd = json.loads(c.data_json) if c and c.data_json else {}
     is_kr = w.ticker.upper().endswith(".KS") or w.ticker.upper().endswith(".KQ")
 
-    last_price = sd.get("price")
-    change_1d_pct = sd.get("change_pct")
-    # Best-effort fill from FMP quote if the cache row is missing price data.
-    # Never raise — watchlist must render even when FMP is budget-capped.
-    if last_price is None:
-        try:
-            import fmp_service
-            q = fmp_service.get_quote(w.ticker) or {}
-            last_price = q.get("price")
-            change_1d_pct = q.get("changesPercentage")
-        except Exception:
-            logger.exception("watchlist serialize quote fallback failed (ticker=%s)", w.ticker)
+    o = overlay_entry or {}
+    last_price = o.get("price")
+    change_1d_pct = o.get("change_pct")
+    observed_at = o.get("observed_at")
+    price_source = o.get("source") or "stale"
 
     return {
         "id": w.id,
@@ -52,6 +47,8 @@ def _serialize(w: Watchlist) -> dict:
         "price_display": sd.get("price_display", "—"),
         "change_pct": change_1d_pct or 0,
         "change_1d_pct": change_1d_pct or 0,
+        "observed_at": observed_at,
+        "price_source": price_source,
         "signal": sd.get("signal", "—"),
         "score": sd.get("score", 0),
         "currency": sd.get("currency", "KRW" if is_kr else "USD"),
@@ -66,7 +63,8 @@ def get_watchlist():
              .filter_by(user_id=current_user.id)
              .order_by(Watchlist.added_at.desc())
              .all())
-    out = [_serialize(w) for w in items]
+    overlay = overlay_prices([w.ticker for w in items])
+    out = [_serialize(w, overlay.get(w.ticker)) for w in items]
     return jsonify({"watchlist": out})
 
 
@@ -98,7 +96,8 @@ def add():
         cache_service.cache_ticker(ticker, current_user.available_capital, engine)
     except Exception:
         logger.exception("watchlist.add cache_ticker failed (ticker=%s)", ticker)
-    return jsonify({"ok": True, "ticker": ticker, "item": _serialize(row)})
+    overlay = overlay_prices([ticker])
+    return jsonify({"ok": True, "ticker": ticker, "item": _serialize(row, overlay.get(ticker))})
 
 
 @watchlist_bp.route("/<int:wid>", methods=["DELETE"])
@@ -145,4 +144,5 @@ def update(wid):
         db.session.rollback()
         logger.exception("watchlist.update commit failed (wid=%s)", wid)
         return jsonify({"error": "Failed to update watchlist"}), 500
-    return jsonify({"ok": True, "item": _serialize(w)})
+    overlay = overlay_prices([w.ticker])
+    return jsonify({"ok": True, "item": _serialize(w, overlay.get(w.ticker))})

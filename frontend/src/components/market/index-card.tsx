@@ -5,6 +5,7 @@
  * Inline SVG, hand-crafted, no chart lib dependency.
  */
 
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
@@ -22,6 +23,38 @@ export interface IndexQuote {
   format?: "en" | "kr" | "int";
   /** Unit suffix (e.g. " KRW") */
   unit?: string;
+  /** ISO8601 from backend — last observation time for this level */
+  observed_at?: string;
+  /** Backend-flagged stale (quote older than freshness policy) */
+  is_stale?: boolean;
+}
+
+/**
+ * Render an ISO8601 timestamp as a short relative string.
+ * Observational language only — "Xs ago", "Xm ago", "just now".
+ * Returns "—" when no timestamp is present.
+ */
+export function relativeTime(iso: string | undefined, nowMs?: number): string {
+  if (!iso) return "—";
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return "—";
+  const now = nowMs ?? Date.now();
+  const diff = Math.max(0, Math.floor((now - t) / 1000));
+  if (diff < 3) return "just now";
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+/** 1s tick for re-rendering relative timestamps. */
+export function useNowTick(intervalMs = 1000): number {
+  const [now, setNow] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
 }
 
 function fmtLevel(v: number, kind: IndexQuote["format"] = "en"): string {
@@ -106,6 +139,9 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
       : quote.changePct < 0
         ? "text-[#B04A3A]"
         : "text-slate-500";
+  const now = useNowTick(1000);
+  const rel = relativeTime(quote.observed_at, now);
+  const stale = Boolean(quote.is_stale);
   return (
     <article className="border-t border-slate-200 pt-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -116,6 +152,26 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
           <h3 className="font-serif italic text-base font-bold text-slate-900 truncate">
             {quote.name}
           </h3>
+          {quote.observed_at && (
+            <div className="mt-1 flex items-center gap-2">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-slate-400 tabular-nums">
+                {rel}
+              </span>
+              {stale ? (
+                <span
+                  aria-label="Stale quote"
+                  title="Quote has not refreshed recently"
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-yellow-500/70"
+                />
+              ) : (
+                <span
+                  aria-label="Live"
+                  title="Live"
+                  className="pq-live-dot inline-block h-1.5 w-1.5 rounded-full bg-[#7db487]"
+                />
+              )}
+            </div>
+          )}
         </div>
         <div className="text-right shrink-0">
           <p className="font-serif italic text-2xl font-bold tabular-nums text-slate-900">

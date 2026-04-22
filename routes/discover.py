@@ -73,14 +73,24 @@ def discover():
 
 # ── Section endpoints ─────────────────────────────────────────────
 
-# In-process 2h cache so these editorial rows don't hammer FMP.
+# Market-aware cache: intraday we tighten to 10min so movers/sectors
+# visibly refresh while users watch; off-hours we hold 2h so we don't
+# churn FMP for data that isn't moving.
 _section_cache: dict = {}          # key -> {"ts": float, "data": ...}
-_SECTION_TTL = 7200                # 2 hours
+_SECTION_TTL = 7200                # off-hours fallback — see _section_ttl()
+
+
+def _section_ttl() -> int:
+    try:
+        from services.cache_ttl import discover_ttl
+        return discover_ttl()
+    except Exception:
+        return _SECTION_TTL
 
 
 def _section_get(key: str):
     e = _section_cache.get(key)
-    if e and time.time() - e["ts"] < _SECTION_TTL:
+    if e and time.time() - e["ts"] < _section_ttl():
         return e["data"]
     return None
 
@@ -173,7 +183,13 @@ def movers():
             gainers = list(mock.KR_GAINERS)
             losers  = list(mock.KR_LOSERS)
 
-    payload = {"region": region, "gainers": gainers, "losers": losers}
+    observed_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    payload = {
+        "region": region,
+        "gainers": gainers,
+        "losers": losers,
+        "observed_at": observed_at,
+    }
     _section_set(cache_key, payload)
     return jsonify(payload)
 

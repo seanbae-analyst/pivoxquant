@@ -13,6 +13,7 @@ from services.serializers import serialize_user
 from services import fx_service, cache_service, kr_stock_registry
 from services.name_resolver import resolve_stock_name
 from services.container import engine, fetcher, realtime
+from services.price_overlay import overlay_prices
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -53,13 +54,18 @@ def get_portfolio():
         c.ticker: c
         for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
     } if tickers else {}
+    # Freshness overlay — never let this endpoint emit a stale "current price".
+    overlay = overlay_prices(tickers)
 
     out = []
     for p in positions:
         cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-        cur_px = sd.get("price", p.avg_cost)
+        o = overlay.get(p.ticker) or {}
+        cur_px = float(o.get("price") or sd.get("price") or p.avg_cost or 0)
+        observed_at = o.get("observed_at")
+        price_source = o.get("source") or ("stale" if sd.get("price") else "avg_cost")
         pnl = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
         cur = sd.get("currency", "KRW" if is_kr else "USD")
 
@@ -89,6 +95,8 @@ def get_portfolio():
             "id": p.id, "ticker": p.ticker, "shares": p.shares,
             "avg_cost": p.avg_cost, "price": cur_px, "current_price": cur_px,
             "price_display": sd.get("price_display", f"${cur_px:.2f}"),
+            "observed_at": observed_at,
+            "price_source": price_source,
             "pnl_pct": round(pnl, 2), "pnl_krw_pct": krw_pnl_pct,
             "buy_fx_rate": buy_fx,
             "cur_fx_rate": fx_service.get_rate() if not is_kr else 0,
@@ -479,13 +487,27 @@ def _build_positions_list():
         c.ticker: c
         for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
     } if tickers else {}
+    # Freshness overlay: realtime (Alpaca/KIS) first, then non-stale cache.
+    # Ensures "current" never shows a price older than the SignalCache TTL.
+    overlay = overlay_prices(tickers)
 
     out = []
     for p in positions:
         cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-        cur_px = sd.get("price", p.avg_cost) or p.avg_cost
+        o = overlay.get(p.ticker) or {}
+        if o.get("price"):
+            cur_px = float(o["price"])
+            price_source = o.get("source") or "realtime"
+            observed_at = o.get("observed_at")
+            change_pct = float(o.get("change_pct") or 0)
+        else:
+            # Overlay has no fresh price — fall back to avg_cost (never stale cache).
+            cur_px = float(p.avg_cost or 0)
+            price_source = "stale"
+            observed_at = None
+            change_pct = 0.0
         currency = sd.get("currency", "KRW" if is_kr else "USD")
         name = _position_display_name(p, sd)
         opened_at = p.added_at.isoformat() if p.added_at else None
@@ -498,6 +520,9 @@ def _build_positions_list():
             "shares": p.shares,
             "avgCost": round(p.avg_cost, 4),
             "current": round(cur_px, 4),
+            "change_pct": round(change_pct, 4),
+            "observed_at": observed_at,
+            "price_source": price_source,
             "sector": _sector_for(sd),
             "purchaseDate": opened_at[:10] if opened_at else "",
             "notes": p.thesis or "",
@@ -532,6 +557,9 @@ def portfolio_summary_alias():
             for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
         } if tickers else {}
 
+        # Freshness overlay — ensures NAV/P&L use the latest price, not stale cache.
+        overlay = overlay_prices([p.ticker for p in positions])
+
         total_nav_usd = 0.0
         unrealized_usd = 0.0
         today_pnl_usd = 0.0
@@ -540,7 +568,8 @@ def portfolio_summary_alias():
             cached = cache_map.get(p.ticker)
             sd = json.loads(cached.data_json) if cached and cached.data_json else {}
             is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-            cur_px = sd.get("price", p.avg_cost) or p.avg_cost
+            o = overlay.get(p.ticker) or {}
+            cur_px = float(o.get("price") or p.avg_cost or 0)
             mv = cur_px * p.shares
             cost = p.avg_cost * p.shares
 
@@ -555,8 +584,12 @@ def portfolio_summary_alias():
             total_nav_usd += mv_usd
             unrealized_usd += mv_usd - cost_usd
 
-            # Today's P&L from SignalCache change_pct when available.
-            chg_pct = sd.get("change_pct") or sd.get("changePct") or 0
+            # Today's P&L: prefer fresh overlay change_pct, fall back to cache blob.
+            chg_pct = (
+                o.get("change_pct")
+                if o.get("change_pct") is not None
+                else (sd.get("change_pct") or sd.get("changePct") or 0)
+            )
             try:
                 today_pnl_usd += mv_usd * (float(chg_pct) / 100.0)
             except (TypeError, ValueError):

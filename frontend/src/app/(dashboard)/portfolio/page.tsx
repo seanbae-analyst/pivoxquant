@@ -32,6 +32,11 @@ import {
 } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 import { fmtUsd, fmtKrw, fmtPct } from "@/lib/format";
+import { liveRefresh, isMarketOpen } from "@/lib/market-hours";
+import {
+  PriceWithTimestamp,
+  relativeTime,
+} from "@/components/ui/price-with-timestamp";
 import type { Position, Trade, TradeAction } from "@/components/portfolio/types";
 
 const FX_FALLBACK = 1342;
@@ -73,19 +78,37 @@ export default function PortfolioPage() {
   const [targetPosition, setTargetPosition] = useState<Position | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(true);
 
+  // Market-aware refresh — 5s when open, 60s when closed.
   const swrOpts = {
-    refreshInterval: 30_000,
+    refreshInterval: () => liveRefresh(5_000, 60_000),
     revalidateOnFocus: true,
-    dedupingInterval: 10_000,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2_000,
+    errorRetryCount: 2,
+  } as const;
+  // Trades are append-only and don't need sub-minute refresh.
+  const tradesOpts = {
+    refreshInterval: () => liveRefresh(15_000, 60_000),
+    revalidateOnFocus: true,
+    dedupingInterval: 5_000,
     errorRetryCount: 2,
   } as const;
 
   const { data: posData, error: posErr, isLoading: posLoading } =
     useSWR<PositionsResponse>(PORTFOLIO_POSITIONS, fetcher, swrOpts);
   const { data: sumData, error: sumErr } =
-    useSWR<SummaryResponse>(PORTFOLIO_SUMMARY, fetcher, swrOpts);
+    useSWR<SummaryResponse & { observed_at?: string }>(PORTFOLIO_SUMMARY, fetcher, swrOpts);
   const { data: tradesData, error: tradesErr } =
-    useSWR<TradesResponse>(`${PORTFOLIO_TRADES}?limit=8`, fetcher, swrOpts);
+    useSWR<TradesResponse>(`${PORTFOLIO_TRADES}?limit=8`, fetcher, tradesOpts);
+
+  // 1s tick for the "Live · Xs ago" header banner.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const marketOpen = isMarketOpen();
+  const observedAt = sumData?.observed_at;
 
   useEffect(() => { if (posErr) handleApiError(posErr, "Positions"); }, [posErr]);
   useEffect(() => { if (sumErr) handleApiError(sumErr, "Summary"); }, [sumErr]);
@@ -180,9 +203,26 @@ export default function PortfolioPage() {
       {/* Terminal header row */}
       <header className="mb-8 flex items-center justify-between gap-4">
         <RuledKicker>PivoxQuant &middot; Portfolio &middot; {weekTag()}</RuledKicker>
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-          {weekTag()}
-        </span>
+        <div className="flex items-center gap-1.5 font-mono tabular-nums text-[10px]">
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              marketOpen
+                ? "bg-[#7db487] animate-pulse"
+                : "bg-[var(--pq-bronze)] opacity-50"
+            }`}
+          />
+          <span
+            className="uppercase tracking-[0.22em]"
+            style={{ color: "var(--pq-bronze)" }}
+          >
+            {marketOpen ? "Live" : "Closed"}
+          </span>
+          {observedAt && (
+            <span style={{ color: "rgba(245,240,232,0.5)" }}>
+              · {relativeTime(observedAt, nowMs)}
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Title + CTA */}
@@ -304,7 +344,14 @@ export default function PortfolioPage() {
                         </td>
                         <td className="num tabular-nums">{p.shares.toLocaleString("en-US")}</td>
                         <td className="num tabular-nums">{fmtUsd(p.avgCost)}</td>
-                        <td className="num tabular-nums">{fmtUsd(p.current)}</td>
+                        <td className="num">
+                          <PriceWithTimestamp
+                            price={p.current}
+                            observedAt={p.observed_at}
+                            currency={p.currency === "KRW" ? "KRW" : "USD"}
+                            size="sm"
+                          />
+                        </td>
                         <td className="num tabular-nums">{fmtUsd(mv)}</td>
                         <td className={"num tabular-nums " + toneClass(unreal)}>
                           {fmtUsd(unreal)}

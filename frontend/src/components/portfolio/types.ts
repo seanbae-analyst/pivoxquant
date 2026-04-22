@@ -13,6 +13,10 @@ export interface Position {
   notes?: string;
   sector: string;
   purchaseDate: string; // ISO (YYYY-MM-DD)
+  /** ISO 8601 timestamp the backend observed the last `current` price. */
+  observed_at?: string | null;
+  /** Display currency. Defaults to USD when absent. */
+  currency?: "USD" | "KRW";
 }
 
 export interface Trade {

@@ -174,6 +174,8 @@ export interface WatchlistItem {
   currency: "USD" | "KRW";
   is_korean: boolean;
   added_at: string;
+  /** ISO 8601 timestamp the backend observed the last `price`. */
+  observed_at?: string | null;
 }
 
 export interface WatchlistResponse {

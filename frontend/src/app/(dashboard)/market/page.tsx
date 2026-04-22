@@ -29,6 +29,7 @@ interface FxResponse {
 }
 import { apiFetch } from "@/lib/api";
 import { MARKET_INDICES, API } from "@/lib/endpoints";
+import { isMarketOpen, liveRefresh } from "@/lib/market-hours";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import {
@@ -37,6 +38,7 @@ import {
   FootSignature,
   RuledKicker,
 } from "@/components/ui/editorial";
+import { cn } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
 import {
   US_INDICES,
@@ -44,6 +46,7 @@ import {
   KR_DERIVATIVES,
 } from "@/components/market/mock-indices";
 import type { IndexQuote } from "@/components/market/index-card";
+import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { CalendarDays, Newspaper } from "lucide-react";
 
 type MarketTab = "US" | "KR";
@@ -55,6 +58,8 @@ interface BackendIndex {
   change_1d_pct: number;
   range_52w: [number, number];
   sparkline_30d: number[];
+  observed_at?: string;
+  is_stale?: boolean;
 }
 
 const fetcher = <T,>(url: string) => apiFetch<T>(url);
@@ -71,6 +76,8 @@ function toQuote(b: BackendIndex, region: MarketTab): IndexQuote {
     spark: (b.sparkline_30d ?? []).slice(-30),
     format: region === "KR" ? "kr" : "en",
     unit: b.ticker === "USDKRW" ? "KRW" : undefined,
+    observed_at: b.observed_at,
+    is_stale: b.is_stale,
   };
 }
 
@@ -100,10 +107,11 @@ export default function MarketPage() {
     fetcher,
     {
       keepPreviousData: true,
-      refreshInterval: 15_000,
+      // Market open → 5s aggressive refresh; closed → 60s relaxed.
+      refreshInterval: () => liveRefresh(5_000, 60_000),
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 5_000,
+      dedupingInterval: 2_000,
       errorRetryCount: 2,
       errorRetryInterval: 5_000,
     },
@@ -123,15 +131,15 @@ export default function MarketPage() {
     },
   );
 
-  // FX — independent 60s poll (backend refreshes every 60s).
+  // FX — market-aware refresh; open 5s, closed 60s.
   const { data: fxData } = useSWR<FxResponse>(
     API.market.fx,
     fetcher,
     {
-      refreshInterval: 60_000,
+      refreshInterval: () => liveRefresh(5_000, 60_000),
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
-      dedupingInterval: 30_000,
+      dedupingInterval: 2_000,
       errorRetryCount: 2,
       errorRetryInterval: 10_000,
     },
@@ -161,8 +169,19 @@ export default function MarketPage() {
       label: `Last observed ${hh} KST`,
       rate: fxData.usd_krw,
       stale,
+      hh,
     };
   }, [fxData]);
+
+  // Live status — recompute on each render via a 30s tick so cadence label flips
+  // across the open/close boundary without a reload.
+  useNowTick(30_000);
+  const marketOpen = isMarketOpen();
+  const liveLabel = marketOpen
+    ? "Live · refreshing every 5s"
+    : fxStatus?.hh
+      ? `Market closed · last observed ${fxStatus.hh} KST`
+      : "Market closed";
 
   return (
     <ErrorBoundary>
@@ -179,6 +198,20 @@ export default function MarketPage() {
           <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
             {weekTag()}
           </span>
+          <div className="flex items-center gap-2">
+            <span
+              aria-label={marketOpen ? "Live" : "Market closed"}
+              className={cn(
+                "inline-block h-2 w-2 rounded-full",
+                marketOpen
+                  ? "pq-live-dot bg-[#7db487]"
+                  : "bg-yellow-500/60",
+              )}
+            />
+            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+              {liveLabel}
+            </span>
+          </div>
           {fxStatus ? (
             <div className="flex items-center gap-2">
               {fxStatus.stale ? (
@@ -417,8 +450,12 @@ function IndexCardInk({
 }: {
   quote: IndexQuote;
 }) {
-  const { name, symbol, level, changePct, weekHigh52, weekLow52, spark, format = "en", unit } = quote;
+  const { name, symbol, level, changePct, weekHigh52, weekLow52, spark, format = "en", unit, observed_at, is_stale } = quote;
   const isPositive = changePct >= 0;
+  const now = useNowTick(1000);
+  const rel = relativeTime(observed_at, now);
+  const stale = Boolean(is_stale);
+  const marketOpenNow = isMarketOpen();
 
   const w = 220;
   const h = 40;
@@ -453,6 +490,26 @@ function IndexCardInk({
           <div className="mt-0.5 font-mono text-[9px] text-[rgba(245,240,232,0.4)]">
             {symbol}
           </div>
+          {observed_at && (
+            <div className="mt-1 flex items-center gap-2">
+              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[rgba(245,240,232,0.5)] tabular-nums">
+                {rel}
+              </span>
+              {stale ? (
+                <span
+                  aria-label="Stale quote"
+                  title="Quote has not refreshed recently"
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-yellow-500/70"
+                />
+              ) : marketOpenNow ? (
+                <span
+                  aria-label="Live"
+                  title="Live"
+                  className="pq-live-dot inline-block h-1.5 w-1.5 rounded-full bg-[#7db487]"
+                />
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
 

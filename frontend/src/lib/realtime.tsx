@@ -27,7 +27,7 @@ import {
 } from "react";
 import useSWR, { mutate as globalMutate } from "swr";
 import { useAuth } from "./auth";
-import { API } from "./endpoints";
+import { API, PORTFOLIO_POSITIONS, PORTFOLIO_SUMMARY } from "./endpoints";
 import type { PortfolioResponse } from "./types";
 
 /* ── Types ── */
@@ -149,7 +149,16 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       try {
         const data = JSON.parse(event.data) as {
           prices?: Record<string, number>;
-          details?: Record<string, RealtimePriceDetail>;
+          details?: Record<string, RealtimePriceDetail & { observed_at?: string }>;
+          positions?: Array<{
+            ticker?: string;
+            symbol?: string;
+            price?: number;
+            current_price?: number;
+            change_pct?: number | null;
+            timestamp?: string;
+            observed_at?: string;
+          }>;
           error?: string;
         };
 
@@ -158,7 +167,8 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         }
 
         const prices: Record<string, number> = data.prices ?? {};
-        const details: Record<string, RealtimePriceDetail> = data.details ?? {};
+        const details: Record<string, RealtimePriceDetail & { observed_at?: string }> =
+          data.details ?? {};
 
         // Determine direction per ticker
         const directionMap = new Map<string, PriceDirection>();
@@ -189,7 +199,8 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           }, FLASH_DURATION_MS);
         }
 
-        // Merge into SWR portfolio cache
+        // Merge into the legacy SWR portfolio cache (API.portfolio.list →
+        // /api/portfolio). This keeps existing consumers working.
         globalMutate(
           API.portfolio.list,
           (current: PortfolioResponse | undefined) => {
@@ -202,6 +213,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
                 price: detail.price,
                 current_price: detail.price,
                 price_display: detail.price_display,
+                observed_at: detail.observed_at,
                 pnl_pct:
                   pos.avg_cost > 0
                     ? ((detail.price - pos.avg_cost) / pos.avg_cost) * 100
@@ -212,6 +224,50 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
             return { ...current, positions: updated };
           },
           { revalidate: false },
+        );
+
+        // P0-A: Home / /portfolio pages consume /api/portfolio/positions
+        // (alias shape). Mutate that cache key so SSE pushes reflect in UI.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        globalMutate(
+          PORTFOLIO_POSITIONS,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (current: any) => {
+            if (!current || !Array.isArray(current.positions)) return current;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const positions = current.positions.map((p: any) => {
+              const key = p.symbol || p.ticker;
+              const detail = details[key];
+              if (!detail) return p;
+              const chg =
+                detail.change_pct != null ? detail.change_pct : p.change_pct;
+              return {
+                ...p,
+                current: detail.price,
+                current_price: detail.price,
+                price: detail.price,
+                change_pct: chg,
+                observed_at: detail.observed_at || new Date().toISOString(),
+                price_source: "realtime",
+              };
+            });
+            return { ...current, positions };
+          },
+          { revalidate: false },
+        );
+
+        // Optimistic summary refresh — backend totalNav = Σ(price × shares);
+        // we bump observed_at so the UI "updated Xs ago" chip refreshes even
+        // when the raw numbers round-trip identical.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        globalMutate(
+          PORTFOLIO_SUMMARY,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (current: any) =>
+            current
+              ? { ...current, observed_at: new Date().toISOString() }
+              : current,
+          { revalidate: true },
         );
       } catch {
         // Ignore JSON parse errors from heartbeat comments
