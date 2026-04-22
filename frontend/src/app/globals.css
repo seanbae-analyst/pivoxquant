@@ -897,10 +897,26 @@
   --pq-card-bg-ink: rgba(255, 255, 255, 0.02);
 }
 
-/* Dashboard shell — Ivory canvas + bronze accents (light surface variant). */
+/* ══════════════════════════════════════════════════════════
+   Dashboard shell — Vantablack ink canvas + ivory type
+   (matches landing Dashboard Preview §6 exactly).
+   All child cells inherit the dark theme; hairlines + muted
+   text automatically re-point to the ivory-on-ink variants.
+   ══════════════════════════════════════════════════════════ */
 .pq-dash-shell {
-  background-color: var(--pq-ivory);
-  color: var(--pq-ink);
+  background-color: var(--pq-ink);
+  color: var(--pq-ivory);
+  /* Re-point the hairline + muted tokens so every ivory-era
+     component reads correctly against ink without editing. */
+  --pq-hairline: rgba(245, 240, 232, 0.10);
+  --pq-hairline-soft: rgba(245, 240, 232, 0.06);
+  --pq-muted: rgba(245, 240, 232, 0.55);
+  min-height: 100vh;
+}
+
+.pq-dash-main {
+  background-color: var(--pq-ink);
+  color: var(--pq-ivory);
 }
 
 /* Editorial card — flat, transparent, single top hairline.
@@ -914,12 +930,13 @@
 }
 
 /* Bordered card — used for the observation terminal block.
-   1px hairline matches the landing preview exactly. */
+   Matches landing preview dark bento cells. */
 .pq-dash-cell {
-  background: transparent;
-  border: 1px solid var(--pq-hairline);
+  background: rgba(255, 255, 255, 0.02);
+  border: 0.5px solid rgba(245, 240, 232, 0.08);
   border-radius: 2px;
-  padding: 20px;
+  padding: 22px 24px;
+  color: var(--pq-ivory);
 }
 
 .pq-dash-cell--ink {
@@ -957,28 +974,37 @@
   color: var(--pq-muted);
 }
 
-/* Stat number — large tabular mono, matches preview metric cards */
+/* Stat number — large tabular mono, matches preview metric cards.
+   Ink-theme default (ivory text on black). */
 .pq-stat-num {
   font-family: var(--font-mono), "JetBrains Mono", monospace;
   font-variant-numeric: tabular-nums;
   font-size: 28px;
   line-height: 1.1;
   letter-spacing: -0.01em;
-  color: var(--pq-ink);
+  color: var(--pq-ivory);
 }
 .pq-stat-num--ink {
   color: var(--pq-ivory);
   font-size: 22px;
 }
+.pq-stat-sub {
+  font-family: var(--font-mono), "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: rgba(245, 240, 232, 0.55);
+}
 
-/* Serif section heading — H2 on dashboard surfaces */
+/* Serif section heading — H2 on dashboard surfaces.
+   Ink-theme default (ivory italic). */
 .pq-dash-h2 {
   font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
   font-weight: 500;
+  font-style: italic;
   font-size: clamp(1.375rem, 2.4vw, 1.75rem);
   line-height: 1.12;
   letter-spacing: -0.015em;
-  color: var(--pq-ink);
+  color: var(--pq-ivory);
 }
 
 /* Dashboard sidebar — Vantablack rail, bronze active accent */
@@ -1061,4 +1087,295 @@
 .pq-signal-pill--negative {
   color: #9C3B3B;
   border-color: rgba(156, 59, 59, 0.4);
+}
+
+/* ══════════════════════════════════════════════════════════
+   PivoxQuant Dashboard — Ink Terminal Cards
+   Vantablack content surface dropped inside the ivory dashboard
+   shell. Matches the landing Dashboard Preview §6 aesthetic:
+   flat, borderless, hairline rules only, Bronze kickers,
+   mono tabular numerics.
+   ══════════════════════════════════════════════════════════ */
+
+.pq-ink-card {
+  background: var(--pq-ink);
+  color: var(--pq-ivory);
+  border-radius: 4px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  .pq-ink-card {
+    padding: 22px 20px;
+    border-radius: 2px;
+  }
+}
+
+/* Bronze kicker eyebrow — "● PIVOXQUANT · PAGE" */
+.pq-ink-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pq-bronze);
+  font-weight: 500;
+}
+.pq-ink-kicker::before {
+  content: "●";
+  font-size: 6px;
+  color: var(--pq-bronze);
+}
+
+/* Editorial H1 — Playfair/serif italic ivory on ink */
+.pq-ink-h1 {
+  font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(1.75rem, 3.2vw, 2.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  color: var(--pq-ivory);
+}
+
+/* Stat bento cell — tinted dark with ivory hairline */
+.pq-ink-stat {
+  background: rgba(255, 255, 255, 0.02);
+  border: 0.5px solid rgba(245, 240, 232, 0.08);
+  border-radius: 2px;
+  padding: 18px 22px;
+}
+
+/* Tiny uppercase serif label on ink */
+.pq-ink-label {
+  color: var(--pq-bronze);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 500;
+}
+
+/* Large tabular mono number on ink */
+.pq-ink-num {
+  color: var(--pq-ivory);
+  font-family: var(--font-mono), "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+/* Caption under stat number */
+.pq-ink-caption {
+  color: rgba(245, 240, 232, 0.55);
+  font-size: 11px;
+  line-height: 1.45;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Ink data table — hairline divided rows, bronze headers */
+.pq-ink-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.pq-ink-table th {
+  color: var(--pq-bronze);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  padding: 10px 8px;
+  border-bottom: 0.5px solid rgba(245, 240, 232, 0.12);
+  text-align: left;
+  background: transparent;
+}
+.pq-ink-table td {
+  color: var(--pq-ivory);
+  padding: 12px 8px;
+  border-bottom: 0.5px solid rgba(245, 240, 232, 0.06);
+  font-size: 13px;
+}
+.pq-ink-table tr:hover td {
+  background: rgba(139, 111, 71, 0.04);
+}
+.pq-ink-table td.num {
+  font-family: var(--font-mono), "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  text-align: right;
+}
+.pq-ink-table th.num {
+  text-align: right;
+}
+
+/* Ink signal pill — POSITIVE / NEGATIVE / NEUTRAL */
+.pq-ink-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 1px solid;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  border-radius: 0;
+  font-weight: 500;
+}
+.pq-ink-pill--pos {
+  color: #7db487;
+  border-color: rgba(125, 180, 135, 0.4);
+}
+.pq-ink-pill--neg {
+  color: #d18888;
+  border-color: rgba(209, 136, 136, 0.4);
+}
+.pq-ink-pill--neu {
+  color: rgba(245, 240, 232, 0.55);
+  border-color: rgba(245, 240, 232, 0.2);
+}
+
+/* Bronze primary button on ink */
+.pq-ink-btn-bronze {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 18px;
+  background: var(--pq-bronze);
+  color: var(--pq-ivory);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+  border: 0;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pq-ink-btn-bronze:hover {
+  background: var(--pq-bronze-deep);
+}
+.pq-ink-btn-bronze:focus-visible {
+  outline: 1px solid var(--pq-bronze-light);
+  outline-offset: 2px;
+}
+
+/* Ghost button on ink — ivory hairline border */
+.pq-ink-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 16px;
+  background: transparent;
+  color: var(--pq-ivory);
+  border: 0.5px solid rgba(245, 240, 232, 0.2);
+  border-radius: 2px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 180ms, background-color 180ms;
+}
+.pq-ink-btn-ghost:hover {
+  border-color: var(--pq-bronze);
+  background: rgba(139, 111, 71, 0.08);
+}
+
+/* Hairline divider (ink) */
+.pq-ink-rule {
+  border: 0;
+  border-top: 0.5px solid rgba(245, 240, 232, 0.12);
+  margin: 0;
+}
+
+/* Ink subheading — serif italic smaller */
+.pq-ink-h2 {
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--pq-ivory);
+}
+
+/* Ink tab bar — bronze active underline */
+.pq-ink-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 0.5px solid rgba(245, 240, 232, 0.12);
+}
+.pq-ink-tab {
+  position: relative;
+  padding: 10px 2px;
+  background: transparent;
+  border: 0;
+  color: rgba(245, 240, 232, 0.55);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 180ms;
+}
+.pq-ink-tab[data-active="true"] {
+  color: var(--pq-ivory);
+}
+.pq-ink-tab[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.5px;
+  height: 1.5px;
+  background: var(--pq-bronze);
+}
+.pq-ink-tab:hover:not([data-active="true"]) {
+  color: var(--pq-ivory);
+}
+
+/* Ink input / text field */
+.pq-ink-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 0.5px solid rgba(245, 240, 232, 0.12);
+  border-radius: 2px;
+  color: var(--pq-ivory);
+  padding: 8px 12px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 13px;
+  transition: border-color 180ms;
+}
+.pq-ink-input::placeholder {
+  color: rgba(245, 240, 232, 0.35);
+}
+.pq-ink-input:focus {
+  outline: none;
+  border-color: var(--pq-bronze);
+}
+
+/* Empty state block on ink */
+.pq-ink-empty {
+  padding: 56px 24px;
+  text-align: center;
+  color: rgba(245, 240, 232, 0.55);
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+}
+
+/* /home — Terminal stat number (italic serif hero) */
+.pq-home-stat {
+  font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  font-feature-settings: "tnum" 1;
 }
