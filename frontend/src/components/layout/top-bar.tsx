@@ -32,7 +32,7 @@ export function TopBar() {
         className="flex h-14 items-center justify-between gap-4 px-6"
         style={{
           background: "var(--pq-ivory)",
-          borderBottom: "0.5px solid var(--pq-hairline)",
+          borderBottom: "1px solid rgba(10, 10, 10, 0.08)",
         }}
       >
         {/* ── Search trigger (looks like an input, opens palette) ── */}
