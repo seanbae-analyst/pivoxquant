@@ -7,6 +7,7 @@
 
 import { cn } from "@/lib/utils";
 import { fmtPct } from "@/lib/format";
+import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
 
 export interface IndexQuote {
   symbol: string;
@@ -67,32 +68,34 @@ function RangeBar({
 }
 
 function Sparkline({ points }: { points: number[] }) {
-  const w = 200;
-  const h = 36;
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  const step = w / (points.length - 1);
-  const path = points
-    .map((v, i) => {
-      const x = i * step;
-      const y = h - ((v - min) / range) * h;
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  if (!points || points.length < 2) return null;
   const isUp = points[points.length - 1] >= points[0];
   const stroke = isUp ? "#8B6F47" : "#B04A3A";
+
+  // Back-date a synthetic series: we don't have real dates for the 30-pt
+  // mini array, so we render day indices from today minus N. Observational.
+  const today = new Date();
+  const dated = points.map((v, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (points.length - 1 - i));
+    return { date: d.toISOString().slice(0, 10), value: v };
+  });
+
   return (
-    <svg
-      width={w}
-      height={h}
-      viewBox={`0 0 ${w} ${h}`}
-      className="block w-full"
-      role="img"
-      aria-label="30-day sparkline"
-    >
-      <path d={path} fill="none" stroke={stroke} strokeWidth={1.25} />
-    </svg>
+    <InteractiveLineChart
+      points={dated}
+      height={36}
+      color={stroke}
+      compact
+      ariaLabel="30-day sparkline"
+      valueFormatter={(val) => val.toFixed(2)}
+      dateFormatter={(d) => {
+        const parsed = new Date(d);
+        return isNaN(parsed.getTime())
+          ? d
+          : parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      }}
+    />
   );
 }
 

@@ -26,6 +26,7 @@ import { fmtUsd, fmtKrw } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
 import { useWatchlist } from "@/lib/hooks";
 import {
   TrendingUp,
@@ -40,6 +41,20 @@ import {
 } from "lucide-react";
 
 /* ── Types ── */
+
+interface Snapshot {
+  pe_ratio?: number | null;
+  eps?: number | null;
+  beta?: number | null;
+  market_cap?: number | null;
+  avg_volume?: number | null;
+  week52_high?: number | null;
+  week52_low?: number | null;
+  industry?: string;
+  profit_margin?: number | null;
+  revenue_growth?: number | null;
+  debt_equity?: number | null;
+}
 
 interface SignalDetail {
   ticker: string;
@@ -57,6 +72,7 @@ interface SignalDetail {
   fund_score?: number;
   news_score?: number;
   quant_score?: number;
+  snapshot?: Snapshot;
 }
 
 interface ChartPoint {
@@ -75,19 +91,19 @@ interface NewsItem {
 interface NewsResponse {
   news: NewsItem[];
 }
+// Matches the actual /api/profile/<ticker> response shape (routes/market.py L433).
+// Fundamentals like pe_ratio/eps/beta/52W are read from signal.snapshot instead.
 interface ProfileData {
-  name: string;
-  sector: string;
-  industry: string;
-  description: string;
-  market_cap: number;
-  pe_ratio: number | null;
-  eps: number | null;
-  dividend_yield: number | null;
-  beta: number | null;
-  avg_volume: number;
-  week52_high: number;
-  week52_low: number;
+  ticker?: string;
+  name?: string;
+  summary?: string;
+  sector?: string;
+  industry?: string;
+  website?: string;
+  employees?: number | null;
+  country?: string;
+  market_cap?: number | null;
+  currency?: "USD" | "KRW";
 }
 
 /* ── Fetcher ── */
@@ -143,17 +159,25 @@ function pillarToken(label: string): "POSITIVE" | "NEGATIVE" | "NEUTRAL" {
 
 /* ── Chart ── */
 
-const PERIODS = ["1M", "3M", "6M", "1Y", "5Y"] as const;
+// Period tabs. Backend accepts 1mo,3mo,6mo,1y,2y,1d,5d (routes/market.py L295).
+// Max historical period supported server-side is 2Y.
+const PERIODS = ["1M", "3M", "6M", "1Y", "2Y"] as const;
 type Period = typeof PERIODS[number];
 const PERIOD_MAP: Record<Period, string> = {
   "1M": "1mo",
   "3M": "3mo",
   "6M": "6mo",
   "1Y": "1y",
-  "5Y": "5y",
+  "2Y": "2y",
 };
 
-function SparkChart({ data }: { data: ChartPoint[] }) {
+function SparkChart({
+  data,
+  currency = "USD",
+}: {
+  data: ChartPoint[];
+  currency?: "USD" | "KRW";
+}) {
   if (!data || data.length < 2) {
     return (
       <div className="h-48 flex items-center justify-center text-xs text-[rgba(245,240,232,0.4)]">
@@ -161,33 +185,26 @@ function SparkChart({ data }: { data: ChartPoint[] }) {
       </div>
     );
   }
-  const values = data.map((d) => d.close);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const w = 800;
-  const h = 200;
-  const points = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * w;
-    const y = h - ((v - min) / range) * h;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  const path = `M ${points.join(" L ")}`;
-
+  const series = data.map((d) => ({ date: d.date, value: d.close }));
+  const priceFmt = currency === "KRW" ? fmtKrw : fmtUsd;
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      className="w-full h-48"
-      preserveAspectRatio="none"
-    >
-      <path
-        d={path}
-        fill="none"
-        stroke="var(--pq-bronze)"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <InteractiveLineChart
+      points={series}
+      height={200}
+      valueFormatter={(v) => priceFmt(v)}
+      dateFormatter={(d) => {
+        const parsed = new Date(d);
+        return isNaN(parsed.getTime())
+          ? d
+          : parsed.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            });
+      }}
+      yLabel="Last observed"
+      ariaLabel="Price observation chart"
+    />
   );
 }
 
@@ -196,13 +213,22 @@ function SparkChart({ data }: { data: ChartPoint[] }) {
 function PillarCard({
   label,
   score,
+  observation,
 }: {
   label: string;
   score: number;
+  observation: string;
 }) {
-  const token =
-    score >= 65 ? "POSITIVE" : score <= 35 ? "NEGATIVE" : "NEUTRAL";
-  const color =
+  const safe = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
+  const token: "POSITIVE" | "NEGATIVE" | "NEUTRAL" =
+    safe >= 65 ? "POSITIVE" : safe <= 35 ? "NEGATIVE" : "NEUTRAL";
+  const barColor =
+    token === "POSITIVE"
+      ? "bg-emerald-400"
+      : token === "NEGATIVE"
+        ? "bg-red-400"
+        : "bg-[var(--pq-bronze)]";
+  const textColor =
     token === "POSITIVE"
       ? "text-emerald-400"
       : token === "NEGATIVE"
@@ -210,15 +236,28 @@ function PillarCard({
         : "text-[rgba(245,240,232,0.7)]";
   return (
     <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-        {label}
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          {label}
+        </div>
+        <div className={cn("text-[10px] tracking-[0.18em] uppercase", textColor)}>
+          {token}
+        </div>
       </div>
-      <div className={cn("mt-3 font-mono text-2xl tabular-nums", color)}>
-        {score}
+      <div className={cn("mt-3 font-mono text-2xl tabular-nums", textColor)}>
+        {safe.toFixed(0)}
+        <span className="text-xs text-[rgba(245,240,232,0.4)] ml-1">/ 100</span>
       </div>
-      <div className="mt-2 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)]">
-        {token}
+      {/* Horizontal score bar */}
+      <div className="mt-3 h-1 bg-[rgba(245,240,232,0.08)] overflow-hidden">
+        <div
+          className={cn("h-full transition-all", barColor)}
+          style={{ width: `${safe}%` }}
+        />
       </div>
+      <p className="mt-3 text-[11px] leading-relaxed text-[rgba(245,240,232,0.55)] font-serif italic">
+        {observation}
+      </p>
     </div>
   );
 }
@@ -247,25 +286,57 @@ export default function StockDetailPage() {
   const ticker = /^\d{6}$/.test(raw) ? `${raw}.KS` : raw;
   const [period, setPeriod] = useState<Period>("1M");
 
+  // Detail page live tiers:
+  //  signal/quote    → 15s (near-realtime quote-driven)
+  //  chart           → 60s (intraday bars)
+  //  news            → 2min (news refresh cadence)
+  //  profile         → 5min (company profile rarely changes)
   const { data: signal, isLoading: loadingSignal } = useSWR<SignalDetail>(
     ticker ? API.signals.one(ticker) : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 30_000 },
+    {
+      refreshInterval: 15_000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5_000,
+      errorRetryCount: 2,
+      errorRetryInterval: 5_000,
+    },
   );
   const { data: chartRes, isLoading: loadingChart } = useSWR<ChartResponse>(
     ticker ? `${API.market.chart(ticker)}?period=${PERIOD_MAP[period]}` : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000, shouldRetryOnError: false },
+    {
+      refreshInterval: 60_000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 10_000,
+      shouldRetryOnError: false,
+    },
   );
   const { data: newsRes, isLoading: loadingNews } = useSWR<NewsResponse>(
     ticker ? API.market.news(ticker) : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 120_000 },
+    {
+      refreshInterval: 120_000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 30_000,
+      errorRetryCount: 2,
+      errorRetryInterval: 10_000,
+    },
   );
   const { data: profile, isLoading: loadingProfile } = useSWR<ProfileData>(
     ticker ? API.market.profile(ticker) : null,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 300_000 },
+    {
+      refreshInterval: 300_000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 60_000,
+      errorRetryCount: 2,
+      errorRetryInterval: 10_000,
+    },
   );
 
   const { data: watchlistData, mutate: refreshWatchlist } = useWatchlist();
@@ -435,12 +506,12 @@ export default function StockDetailPage() {
             </div>
           </div>
 
-          {/* 52W range */}
-          {profile?.week52_low != null && profile?.week52_high != null && (
+          {/* 52W range — sourced from signal.snapshot (primary data source) */}
+          {signal?.snapshot?.week52_low != null && signal?.snapshot?.week52_high != null && (
             <div className="mt-6 pt-4 border-t border-[rgba(245,240,232,0.08)]">
               <div className="flex items-center justify-between text-xs text-[rgba(245,240,232,0.5)] mb-2">
-                <span>52W low · {fmtPrice(profile.week52_low, krw)}</span>
-                <span>52W high · {fmtPrice(profile.week52_high, krw)}</span>
+                <span>52W low · {fmtPrice(signal.snapshot.week52_low, krw)}</span>
+                <span>52W high · {fmtPrice(signal.snapshot.week52_high, krw)}</span>
               </div>
               <div className="h-0.5 bg-[rgba(245,240,232,0.08)] relative">
                 {signal?.price && (
@@ -451,8 +522,8 @@ export default function StockDetailPage() {
                         100,
                         Math.max(
                           0,
-                          ((signal.price - profile.week52_low) /
-                            (profile.week52_high - profile.week52_low)) *
+                          ((signal.price - signal.snapshot.week52_low) /
+                            (signal.snapshot.week52_high - signal.snapshot.week52_low)) *
                             100,
                         ),
                       )}%`,
@@ -491,53 +562,66 @@ export default function StockDetailPage() {
             {loadingChart ? (
               <div className="h-48 animate-pulse bg-[rgba(255,255,255,0.02)]" />
             ) : (
-              <SparkChart data={chartRes?.data ?? []} />
+              <SparkChart
+                data={chartRes?.data ?? []}
+                currency={signal?.currency ?? "USD"}
+              />
             )}
           </div>
         </section>
 
-        {/* ── Fundamentals ── */}
+        {/* ── Fundamentals — sourced from signal.snapshot, profile as fallback ── */}
         <section>
           <h2 className="pq-ink-h2 mb-4">Fundamentals</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <Fund
               label="P/E"
               value={
-                profile?.pe_ratio != null
-                  ? Number(profile.pe_ratio).toFixed(1)
+                signal?.snapshot?.pe_ratio != null &&
+                Number.isFinite(signal.snapshot.pe_ratio)
+                  ? Number(signal.snapshot.pe_ratio).toFixed(1)
                   : "—"
               }
             />
             <Fund
               label="Market cap"
-              value={fmtMcap(profile?.market_cap, krw)}
+              value={fmtMcap(
+                signal?.snapshot?.market_cap ?? profile?.market_cap ?? null,
+                krw,
+              )}
             />
             <Fund
-              label="Dividend"
+              label="EPS"
               value={
-                profile?.dividend_yield != null
-                  ? `${(profile.dividend_yield * 100).toFixed(2)}%`
+                signal?.snapshot?.eps != null &&
+                Number.isFinite(signal.snapshot.eps)
+                  ? Number(signal.snapshot.eps).toFixed(2)
                   : "—"
               }
             />
             <Fund
               label="Beta"
               value={
-                profile?.beta != null ? Number(profile.beta).toFixed(2) : "—"
-              }
-            />
-            <Fund
-              label="EPS"
-              value={
-                profile?.eps != null ? Number(profile.eps).toFixed(2) : "—"
+                signal?.snapshot?.beta != null &&
+                Number.isFinite(signal.snapshot.beta)
+                  ? Number(signal.snapshot.beta).toFixed(2)
+                  : "—"
               }
             />
             <Fund
               label="Avg volume"
               value={
-                profile?.avg_volume
-                  ? profile.avg_volume.toLocaleString()
+                signal?.snapshot?.avg_volume
+                  ? signal.snapshot.avg_volume.toLocaleString()
                   : "—"
+              }
+            />
+            <Fund
+              label="Industry"
+              value={
+                signal?.snapshot?.industry ||
+                profile?.industry ||
+                "—"
               }
             />
           </div>
@@ -547,11 +631,27 @@ export default function StockDetailPage() {
         <section>
           <h2 className="pq-ink-h2 mb-4">Quant breakdown</h2>
           {hasPillars ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <PillarCard label="Technical" score={signal?.tech_score ?? 0} />
-              <PillarCard label="Fundamental" score={signal?.fund_score ?? 0} />
-              <PillarCard label="Sentiment" score={signal?.news_score ?? 0} />
-              <PillarCard label="Quant" score={signal?.quant_score ?? 0} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <PillarCard
+                label="Technical"
+                score={signal?.tech_score ?? 0}
+                observation="Price action, momentum, moving averages"
+              />
+              <PillarCard
+                label="Fundamental"
+                score={signal?.fund_score ?? 0}
+                observation="Earnings, margins, debt, growth"
+              />
+              <PillarCard
+                label="Sentiment"
+                score={signal?.news_score ?? 0}
+                observation="News tone and media coverage"
+              />
+              <PillarCard
+                label="Quant"
+                score={signal?.quant_score ?? 0}
+                observation="Variance ratio, momentum, 52W position"
+              />
             </div>
           ) : (
             <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-6 rounded-[2px] text-center text-sm text-[rgba(245,240,232,0.5)]">

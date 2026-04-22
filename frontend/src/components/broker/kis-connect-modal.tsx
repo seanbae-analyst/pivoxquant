@@ -15,7 +15,7 @@ interface KisConnectModalProps {
 }
 
 /**
- * Form-based KIS connection modal.
+ * Form-based KIS connection modal — Vantablack ink theme.
  * POSTs { app_key, app_secret, account_no, account_prod } → /api/broker/kis/connect.
  * Backend stores credentials encrypted (routes/broker_oauth.py).
  */
@@ -26,6 +26,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
   const [accountNo, setAccountNo] = useState("");
   const [accountProd, setAccountProd] = useState("01");
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const accountNoValid = /^\d{6,12}$/.test(accountNo);
   const accountProdValid = /^\d{2}$/.test(accountProd);
@@ -40,6 +41,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
     e.preventDefault();
     if (!canSubmit) return;
     setSubmitting(true);
+    setErrorMsg(null);
     try {
       await apiFetch(API.broker.kisConnect, {
         method: "POST",
@@ -50,12 +52,13 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           account_prod: accountProd.trim(),
         }),
       });
-      toast.success(t("brokerOnboarding.kis.connectSuccess"));
+      toast.success("KIS connected · observing only");
       onSuccess?.();
       onClose();
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : t("brokerOnboarding.kis.connectError");
+      setErrorMsg(msg);
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -63,54 +66,77 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
   };
 
   return (
-    <ModalShell onClose={onClose} ariaLabel="KIS 연결">
-      <div className="sp-card my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto p-5 sm:p-6 sm:max-h-[90vh]">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">
-              {t("brokerOnboarding.kis.modalTitle")}
+    <ModalShell onClose={onClose} ariaLabel="Connect Korea Investment & Securities">
+      <div
+        className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[2px] border border-[rgba(245,240,232,0.12)] p-5 sm:p-6 sm:max-h-[90vh]"
+        style={{ background: "rgba(10,10,10,0.96)" }}
+      >
+        {/* Header */}
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
+              Korea Investment &amp; Securities
+            </div>
+            <h3 className="font-serif italic text-xl text-[var(--pq-ivory)]">
+              Connect KIS Account
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              {t("brokerOnboarding.kis.modalSubtitle")}
-            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            className="rounded-[2px] p-1.5 text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] hover:bg-[rgba(245,240,232,0.04)] transition-colors"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Description */}
+        <p className="mb-5 text-[12px] leading-relaxed text-[rgba(245,240,232,0.65)]">
+          Enter your KIS API credentials to link your brokerage account. This is
+          read-only — we observe holdings and transactions without trading.
+        </p>
+
+        {/* Help link */}
+        <a
+          href="https://apiportal.koreainvestment.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-5 inline-flex items-center gap-1.5 text-[11px] tracking-[0.15em] uppercase text-[var(--pq-bronze)] hover:opacity-80 transition-opacity"
+        >
+          <ExternalLink className="h-3 w-3" />
+          KIS OpenAPI portal
+        </a>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* APP KEY */}
           <div>
             <label
               htmlFor="kis-app-key"
-              className="block text-xs font-medium text-slate-600 mb-1"
+              className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
             >
-              {t("brokerOnboarding.kis.appKey")}
+              App Key
             </label>
             <input
               id="kis-app-key"
               type="text"
               value={appKey}
               onChange={(e) => setAppKey(e.target.value)}
-              placeholder="PSxxxxxxxxxxxxxx..."
+              placeholder="PSabc123def456..."
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
+              className="pq-ink-input w-full"
             />
           </div>
 
+          {/* APP SECRET */}
           <div>
             <label
               htmlFor="kis-app-secret"
-              className="block text-xs font-medium text-slate-600 mb-1"
+              className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
             >
-              {t("brokerOnboarding.kis.appSecret")}
+              App Secret
             </label>
             <input
               id="kis-app-secret"
@@ -119,17 +145,18 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
               onChange={(e) => setAppSecret(e.target.value)}
               placeholder="••••••••••••••••••••"
               autoComplete="off"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
+              className="pq-ink-input w-full"
             />
           </div>
 
+          {/* ACCOUNT NUMBER */}
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
               <label
                 htmlFor="kis-account-no"
-                className="block text-xs font-medium text-slate-600 mb-1"
+                className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
               >
-                {t("brokerOnboarding.kis.accountNo")}
+                Account No.
               </label>
               <input
                 id="kis-account-no"
@@ -141,10 +168,10 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
                 }
                 placeholder="XXXXXXXX"
                 autoComplete="off"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm tabular-nums text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
+                className="pq-ink-input w-full tabular-nums"
               />
               {accountNo.length > 0 && !accountNoValid && (
-                <p className="mt-1 text-[10px] text-red-500">
+                <p className="mt-1.5 text-[10px] text-[#d18888]">
                   {t("brokerOnboarding.kis.accountNoHint")}
                 </p>
               )}
@@ -152,9 +179,9 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
             <div>
               <label
                 htmlFor="kis-account-prod"
-                className="block text-xs font-medium text-slate-600 mb-1"
+                className="mb-1.5 block text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]"
               >
-                {t("brokerOnboarding.kis.accountProd")}
+                Product
               </label>
               <input
                 id="kis-account-prod"
@@ -166,42 +193,74 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
                 }
                 placeholder="01"
                 autoComplete="off"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm tabular-nums text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 transition-colors"
+                className="pq-ink-input w-full tabular-nums"
               />
             </div>
           </div>
 
-          <a
-            href="https://apiportal.koreainvestment.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors"
-          >
-            <ExternalLink className="h-3 w-3" />
-            {t("brokerOnboarding.kis.helpLink")}
-          </a>
+          {errorMsg && (
+            <p className="text-[11px] text-[#d18888] leading-relaxed">
+              {errorMsg}
+            </p>
+          )}
 
+          {/* Actions */}
           <div className="flex gap-2 pt-2">
             <button
               type="submit"
               disabled={!canSubmit}
-              className="flex-1 flex items-center justify-center gap-2 rounded-full bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="pq-ink-btn-bronze flex-1 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {submitting
-                ? t("brokerOnboarding.kis.connecting")
-                : t("brokerOnboarding.kis.connectBtn")}
+              {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {submitting ? "Connecting…" : "Connect"}
             </button>
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="pq-ink-btn-ghost disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {t("brokerOnboarding.cancel")}
             </button>
           </div>
         </form>
+
+        {/* Issuance guide */}
+        <details className="group mt-6 pt-5 border-t border-[rgba(245,240,232,0.08)]">
+          <summary className="cursor-pointer list-none text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
+            <span>How to issue KIS API credentials</span>
+            <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>
+          </summary>
+          <ol className="mt-4 space-y-3 text-[12px] leading-relaxed text-[rgba(245,240,232,0.7)]">
+            <li>
+              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">I.</span>
+              Visit the KIS OpenAPI portal (apiportal.koreainvestment.com) and sign in with your brokerage account.
+            </li>
+            <li>
+              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">II.</span>
+              Under <span className="text-[var(--pq-ivory)]">API 신청 · Manage Keys</span>, apply for an APP KEY and APP SECRET pair.
+              Choose <span className="text-[var(--pq-ivory)]">국내주식 · 해외주식 · 실시간시세</span> (read scope only).
+            </li>
+            <li>
+              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">III.</span>
+              Copy your 8-digit account number in the format{" "}
+              <code className="font-mono text-[var(--pq-ivory)] text-[11px] tabular-nums">12345678-01</code>.
+            </li>
+            <li>
+              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">IV.</span>
+              Paste all three values above. We store them encrypted and never transmit orders.
+            </li>
+            <li>
+              <span className="text-[var(--pq-bronze)] font-serif italic mr-2">V.</span>
+              Click Connect. Your first sync takes ~30 seconds.
+            </li>
+          </ol>
+        </details>
+
+        {/* Disclaimer */}
+        <p className="mt-5 pt-4 border-t border-[rgba(245,240,232,0.08)] text-[10px] leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
+          KIS integration is read-only. Orders are disabled in this release.
+        </p>
       </div>
     </ModalShell>
   );

@@ -76,11 +76,21 @@ export default function DiscoverPage() {
   const { data, isLoading, error, mutate } = useDiscover();
   const [scanning, setScanning] = useState(false);
 
-  const { data: overviewLive } = useSWR<BackendOverviewItem[]>(DISCOVER_OVERVIEW, jsonFetcher, { fallbackData: [] });
-  const { data: usMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=us`, jsonFetcher);
-  const { data: krMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=kr`, jsonFetcher);
-  const { data: sectorsLive } = useSWR<BackendSectorRow[]>(DISCOVER_SECTORS, jsonFetcher);
-  const { data: screenersLive } = useSWR<BackendScreeners>(DISCOVER_SCREENERS, jsonFetcher);
+  // Discover is editorial; backend 2h-caches to absorb FMP 402 bursts.
+  // Client refresh at 5min so users see fresh content without stampeding upstream.
+  const discoverOpts = {
+    refreshInterval: 300_000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 60_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 10_000,
+  } as const;
+  const { data: overviewLive } = useSWR<BackendOverviewItem[]>(DISCOVER_OVERVIEW, jsonFetcher, { ...discoverOpts, fallbackData: [] });
+  const { data: usMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=us`, jsonFetcher, discoverOpts);
+  const { data: krMovers } = useSWR<BackendMoversResponse>(`${DISCOVER_MOVERS}?region=kr`, jsonFetcher, discoverOpts);
+  const { data: sectorsLive } = useSWR<BackendSectorRow[]>(DISCOVER_SECTORS, jsonFetcher, discoverOpts);
+  const { data: screenersLive } = useSWR<BackendScreeners>(DISCOVER_SCREENERS, jsonFetcher, discoverOpts);
 
   const results = useMemo(() => data?.results ?? [], [data?.results]);
   const hasLive = results.length > 0;

@@ -1,9 +1,6 @@
 import useSWR from "swr";
 import { API } from "./endpoints";
 import type {
-  PortfolioResponse,
-  AnalyticsResponse,
-  HistoryResponse,
   DiscoverResponse,
   ProfileResponse,
   WatchlistResponse,
@@ -26,30 +23,6 @@ const fetcher = async (url: string) => {
   return r.json();
 };
 
-/* ── Portfolio ── */
-
-export function usePortfolio() {
-  return useSWR<PortfolioResponse>(API.portfolio.list, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30_000,
-  });
-}
-
-export function useAnalytics() {
-  return useSWR<AnalyticsResponse>(API.portfolio.analytics, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 60_000,
-  });
-}
-
-export function useHistory(period = "5d") {
-  return useSWR<HistoryResponse>(
-    API.portfolio.history(period),
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000 },
-  );
-}
-
 /* ── Market ── */
 
 export function useDiscover() {
@@ -70,8 +43,12 @@ export function useInvestmentProfile() {
 
 export function useWatchlist() {
   return useSWR<WatchlistResponse>(API.watchlist.list, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30_000,
+    refreshInterval: 30_000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 5_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 5_000,
   });
 }
 
@@ -79,8 +56,12 @@ export function useWatchlist() {
 
 export function useAlerts() {
   return useSWR<AlertsResponse>(API.alerts.list, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 30_000,
+    refreshInterval: 30_000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 5_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 5_000,
   });
 }
 

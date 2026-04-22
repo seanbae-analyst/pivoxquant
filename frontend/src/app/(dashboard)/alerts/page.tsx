@@ -23,6 +23,13 @@ import { useAlerts } from "@/lib/hooks";
 import type { AlertItem } from "@/lib/types";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import {
+  Caption,
+  Fleuron,
+  FootSignature,
+  NumDisplay,
+  RuledKicker,
+} from "@/components/ui/editorial";
 import { BellOff, CheckCheck, Trash2 } from "lucide-react";
 
 /* ── Helpers ── */
@@ -150,12 +157,13 @@ export default function AlertsPage() {
         {/* ── Header ── */}
         <header className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-              Signals desk · Alerts history
-            </div>
+            <RuledKicker>Signals desk &middot; Alerts history</RuledKicker>
             <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
               Alerts
             </h1>
+            <Caption className="mt-1">
+              Every observation the desk has dispatched. Informational only.
+            </Caption>
           </div>
 
           {stats.unread > 0 && (
@@ -186,8 +194,8 @@ export default function AlertsPage() {
               <div className="pq-ink-label text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
                 {s.label}
               </div>
-              <div className="pq-ink-num mt-2 text-2xl text-[var(--pq-ivory)] tabular-nums">
-                {s.value}
+              <div className="mt-2">
+                <NumDisplay size={26}>{s.value}</NumDisplay>
               </div>
             </div>
           ))}
@@ -228,16 +236,18 @@ export default function AlertsPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-12 rounded-[2px] text-center">
-            <BellOff
-              className="mx-auto h-8 w-8 text-[var(--pq-bronze)]"
-              strokeWidth={1.2}
-            />
+            <Fleuron size={16} />
             <p className="mt-4 font-serif italic text-xl text-[var(--pq-ivory)]">
-              No alerts yet
+              No observations recorded yet.
             </p>
-            <p className="mt-2 text-sm text-[rgba(245,240,232,0.5)]">
-              Signals, risk events, and price thresholds will appear here.
-            </p>
+            <Caption className="mt-2">
+              Signals, risk events, and price thresholds will appear here as we observe them.
+            </Caption>
+            <BellOff
+              className="mx-auto mt-4 h-5 w-5 text-[var(--pq-bronze)]"
+              strokeWidth={1.2}
+              aria-hidden="true"
+            />
           </div>
         ) : (
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] overflow-hidden">
@@ -302,6 +312,9 @@ export default function AlertsPage() {
             </table>
           </div>
         )}
+
+        {/* Editorial foot signature */}
+        <FootSignature />
 
         {/* ── Clear all ── */}
         {alerts.length > 0 && (

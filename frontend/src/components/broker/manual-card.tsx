@@ -7,40 +7,39 @@ import { useT } from "@/lib/locale";
  * Option 2 on the broker-onboarding screen: skip broker linking entirely
  * and manage positions by hand (same flow as /portfolio "add position").
  *
- * Users who don't use KIS (e.g. foreign broker, not disclosed, or just
- * testing) land here.
+ * Vantablack ink theme — paired alongside KisCard.
  */
 export function ManualCard({ onSelect }: { onSelect: () => void }) {
   const t = useT();
   return (
-    <div className="sp-card flex flex-col gap-4 p-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-          <PencilLine size={18} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-slate-900">
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 sm:p-6 flex flex-col gap-4">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-1">
+            Manual entry · No connection
+          </div>
+          <h3 className="font-serif italic text-lg text-[var(--pq-ivory)]">
             {t("brokerOnboarding.manual.title")}
           </h3>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-1 text-[11px] text-[rgba(245,240,232,0.5)]">
             {t("brokerOnboarding.manual.subtitle")}
           </p>
         </div>
+        <span className="inline-flex items-center gap-1 border border-[rgba(245,240,232,0.2)] px-2 py-0.5 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.5)] shrink-0">
+          <PencilLine className="h-2.5 w-2.5" />
+          Manual
+        </span>
       </div>
 
-      <div className="inline-flex self-start items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-400" />
-        {t("brokerOnboarding.manual.badge")}
-      </div>
-
-      <p className="text-xs leading-relaxed text-slate-500">
+      <p className="text-[12px] leading-relaxed text-[rgba(245,240,232,0.6)]">
         {t("brokerOnboarding.manual.description")}
       </p>
 
       <button
         type="button"
         onClick={onSelect}
-        className="mt-auto flex items-center justify-center rounded-full bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+        className="pq-ink-btn-ghost mt-auto w-full"
       >
         {t("brokerOnboarding.manual.cta")}
       </button>

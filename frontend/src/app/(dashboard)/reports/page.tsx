@@ -20,6 +20,12 @@ import { API } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import {
+  Caption,
+  Fleuron,
+  FootSignature,
+  RuledKicker,
+} from "@/components/ui/editorial";
 import type { Artifact } from "@/lib/types";
 import Link from "next/link";
 
@@ -101,14 +107,15 @@ function ArtifactCard({
         </div>
       )}
 
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-        {entry.cadence} · {entry.minTier}
+      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-2">
+        <span aria-hidden="true" style={{ display: "inline-block", width: 16, height: 1, background: "var(--pq-bronze)", opacity: 0.6 }} />
+        {entry.cadence} &middot; {entry.minTier}
       </div>
       <h3 className="mt-2 font-serif italic text-xl text-[var(--pq-ivory)]">
         {entry.title}
       </h3>
-      <p className="mt-3 text-xs text-[rgba(245,240,232,0.5)]">
-        Last generated — <span className="tabular-nums">{lastGenerated}</span>
+      <p className="mt-2 font-serif italic text-[11.5px] text-[rgba(245,240,232,0.55)]">
+        Last generated &mdash; <span className="tabular-nums font-mono">{lastGenerated}</span>
       </p>
 
       {/* Actions */}
@@ -172,17 +179,16 @@ function ReportsPageInner() {
     <div className="space-y-8">
       {/* ── Header ── */}
       <header>
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-          Artifact library · Generated PDFs
-        </div>
+        <RuledKicker>PDF &middot; Observational archive</RuledKicker>
         <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
           Reports
         </h1>
-        <p className="mt-2 text-sm text-[rgba(245,240,232,0.5)] max-w-2xl">
-          Every artifact the desk can deliver — from the weekly memo to the
-          year-end letter. Free tier samples are public; Pro and Premium
-          catalog items are generated against your real portfolio.
+        <p className="mt-2 font-serif italic text-[15px] text-[var(--pq-ivory)] max-w-2xl">
+          Every artifact the desk can deliver &mdash; from the weekly memo to the year-end letter.
         </p>
+        <Caption className="mt-1 max-w-2xl">
+          Free-tier samples are public; Pro and Premium items are generated against your portfolio.
+        </Caption>
       </header>
 
       <DisclaimerBanner type="ai-analysis" />
@@ -228,8 +234,11 @@ function ReportsPageInner() {
       {/* ── Footer note ── */}
       <div className="pt-6 border-t border-[rgba(245,240,232,0.08)] flex items-center gap-2 text-xs text-[rgba(245,240,232,0.4)]">
         <FileText className="h-3.5 w-3.5" />
-        {visible.length} artifacts · tier: <span className="text-[var(--pq-bronze)] uppercase tracking-wider">{tier}</span>
+        {visible.length} artifacts &middot; tier: <span className="text-[var(--pq-bronze)] uppercase tracking-wider">{tier}</span>
       </div>
+
+      {/* Editorial signature */}
+      <FootSignature note="PivoxQuant &middot; Observational archive &middot; Not investment advice" />
     </div>
   );
 }

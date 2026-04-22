@@ -32,6 +32,12 @@ import { useLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import {
+  Caption,
+  Fleuron,
+  FootSignature,
+  RuledKicker,
+} from "@/components/ui/editorial";
 import type {
   MorningBriefArchiveItem,
   MorningBriefIndex,
@@ -184,13 +190,17 @@ export default function MorningBriefPage() {
         {/* ── Header ── */}
         <header className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] flex items-center gap-2">
-              <Sunrise className="h-3 w-3" />
-              Morning brief · {todayDate}
+            <div className="flex items-center gap-2">
+              <Sunrise className="h-3 w-3 text-[var(--pq-bronze)]" />
+              <RuledKicker>Morning brief &middot; {todayDate}</RuledKicker>
             </div>
-            <h1 className="mt-2 font-serif italic text-3xl text-[var(--pq-ivory)]">
-              Today at the desk
+            <h1 className="mt-3 font-serif italic text-[2.25rem] leading-tight text-[var(--pq-ivory)]" style={{ letterSpacing: "-0.015em" }}>
+              Good morning.
             </h1>
+            <p className="mt-2 font-serif italic text-[15px] text-[var(--pq-ivory)]">
+              Today at the desk.
+            </p>
+            <Caption className="mt-1">Overnight marks, macro tape, and the week&rsquo;s events.</Caption>
           </div>
 
           <a
@@ -243,6 +253,11 @@ export default function MorningBriefPage() {
           )}
         </section>
 
+        {/* Fleuron divider */}
+        <div className="flex justify-center" aria-hidden="true">
+          <Fleuron size={14} />
+        </div>
+
         {/* ── Macro strip ── */}
         <section>
           <h2 className="pq-ink-h2 mb-4">Cross-asset</h2>
@@ -261,12 +276,23 @@ export default function MorningBriefPage() {
         {/* ── Today's insight ── */}
         {brief?.insight && (
           <section>
-            <h2 className="pq-ink-h2 mb-4">Desk note</h2>
-            <div className="bg-[rgba(255,255,255,0.02)] border-l-2 border-[var(--pq-bronze)] px-5 py-4">
-              <p className="text-sm text-[rgba(245,240,232,0.85)] leading-relaxed flex gap-3">
-                <Sparkles className="mt-0.5 h-4 w-4 text-[var(--pq-bronze)] shrink-0" />
-                <span>{brief.insight}</span>
+            <h2 className="pq-ink-h2 mb-1 font-serif italic">Desk note</h2>
+            <Caption className="mb-4">One paragraph, observed.</Caption>
+            <div className="bg-[rgba(255,255,255,0.02)] border-l-2 border-[var(--pq-bronze)] px-6 py-5 relative">
+              <span
+                aria-hidden="true"
+                className="absolute top-2 left-3 font-serif"
+                style={{ fontSize: "36px", lineHeight: 1, color: "var(--pq-bronze)", opacity: 0.35 }}
+              >
+                &ldquo;
+              </span>
+              <p
+                className="font-serif italic pl-5"
+                style={{ fontSize: "15px", lineHeight: 1.6, color: "rgba(245,240,232,0.88)" }}
+              >
+                {brief.insight}
               </p>
+              <Sparkles className="absolute bottom-3 right-3 h-3.5 w-3.5 text-[var(--pq-bronze)] opacity-60" />
             </div>
           </section>
         )}
@@ -309,7 +335,10 @@ export default function MorningBriefPage() {
         {/* ── Archive ── */}
         {archiveItems.length > 0 && (
           <section>
-            <h2 className="pq-ink-h2 mb-4">Archive</h2>
+            <div className="mb-4">
+              <h2 className="pq-ink-h2">Archive</h2>
+              <Caption className="mt-1">Prior editions of the morning brief.</Caption>
+            </div>
             <div className="space-y-2">
               {archiveItems.slice(0, 14).map((item) => (
                 <ArchiveRow key={item.date} item={item} />
@@ -317,6 +346,9 @@ export default function MorningBriefPage() {
             </div>
           </section>
         )}
+
+        {/* Editorial foot signature */}
+        <FootSignature note="PivoxQuant &middot; Morning brief &middot; Observational only &middot; Not investment advice" />
       </div>
     </ErrorBoundary>
   );
