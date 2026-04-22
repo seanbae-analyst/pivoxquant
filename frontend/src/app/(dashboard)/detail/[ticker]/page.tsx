@@ -1,18 +1,18 @@
 "use client";
 
 /**
- * /detail/[ticker] — Stock detail, Vantablack ink theme.
+ * /detail/[ticker] — Stock detail, Vantablack editorial (v2).
  *
- * Sections:
- *  - Header: ticker / name / sector / watchlist toggle
- *  - Price + intraday change + 52W range
- *  - Chart with period tabs (1M / 3M / 6M / 1Y / 5Y)
- *  - Fundamentals (P/E, Market Cap, Dividend, Beta, EPS, 52W hi/lo)
- *  - 4-pillar Quant Breakdown (Technical / Fundamental / Sentiment / Quant)
- *  - News feed
- *  - Related artifacts (tier-gated links)
+ * Redesigned 2026-04-22 to "Goldman IC desk" standard:
+ *  - 3-column editorial hero (identity / price / signal)
+ *  - Typography trinity: Source Serif 4 italic H1, JetBrains Mono numbers,
+ *    Geist sans-serif small-caps kickers (0.12em instead of 0.22em).
+ *  - Hairline editorial rules + bronze accent; no radius > 2px.
+ *  - Grouped news (date headers + sentiment chips), stat-row fundamentals.
+ *  - Editorial "Data unavailable" fallbacks instead of bare em-dashes.
  *
- * Signals: POSITIVE / NEGATIVE / NEUTRAL only.
+ * Signals: POSITIVE / NEGATIVE / NEUTRAL only — BUY/SELL banned by law.
+ * DisclaimerBanner(signal) retained inside the hero block.
  */
 
 import { useMemo, useState, useCallback } from "react";
@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
+import { FieldLabel, StatRow } from "@/components/ui/editorial";
 import { useWatchlist } from "@/lib/hooks";
 import {
   TrendingUp,
@@ -76,7 +77,6 @@ interface SignalDetail {
   news_score?: number;
   quant_score?: number;
   snapshot?: Snapshot;
-  /** ISO 8601 timestamp of the last price observation. */
   observed_at?: string | null;
 }
 
@@ -96,8 +96,7 @@ interface NewsItem {
 interface NewsResponse {
   news: NewsItem[];
 }
-// Insider Form 4 filing (from /api/alt-data/us/insider-trades/<ticker>).
-// SEC EDGAR data — US tickers only; KR tickers return empty.
+// Insider Form 4 — SEC EDGAR, US tickers only.
 interface InsiderFiling {
   insider?: string;
   relationship?: string;
@@ -114,8 +113,6 @@ interface InsiderResponse {
   source?: string;
 }
 
-// Matches the actual /api/profile/<ticker> response shape (routes/market.py L433).
-// Fundamentals like pe_ratio/eps/beta/52W are read from signal.snapshot instead.
 interface ProfileData {
   ticker?: string;
   name?: string;
@@ -145,7 +142,7 @@ function isKrw(signal: SignalDetail | undefined, ticker: string): boolean {
   return /^\d{6}\.(KS|KQ)$/i.test(ticker);
 }
 
-function fmtPrice(value: number | undefined, krw: boolean): string {
+function fmtPrice(value: number | undefined | null, krw: boolean): string {
   if (value == null || !Number.isFinite(value)) return "—";
   return krw ? fmtKrw(value) : fmtUsd(value);
 }
@@ -163,13 +160,13 @@ function fmtMcap(value: number | null | undefined, krw: boolean): string {
   return `$${value.toLocaleString()}`;
 }
 
-function fmtSignedPct(pct: number | undefined): string {
+function fmtSignedPct(pct: number | null | undefined): string {
   if (pct == null || !Number.isFinite(pct)) return "—";
   const sign = pct >= 0 ? "+" : "";
   return `${sign}${pct.toFixed(2)}%`;
 }
 
-function pctColor(pct: number | undefined): string {
+function pctColor(pct: number | null | undefined): string {
   if (pct == null) return "text-[rgba(245,240,232,0.5)]";
   if (pct > 0) return "text-emerald-400";
   if (pct < 0) return "text-red-400";
@@ -197,10 +194,60 @@ function formatRelative(iso: string | undefined): string {
   return months === 1 ? "1mo ago" : `${months}mo ago`;
 }
 
+/** Lightweight keyword-based news sentiment — editorial classifier, observation-only. */
+function classifyNewsSentiment(title: string): "pos" | "neg" | "neu" {
+  const t = title.toLowerCase();
+  const pos = [
+    "beat", "beats", "surge", "surges", "rally", "rallies", "record high",
+    "upgrade", "raised", "strong", "growth", "profit", "buyback",
+    "partnership", "approval", "wins", "boost", "breakthrough",
+    "outperform", "exceeds", "milestone", "expands",
+  ];
+  const neg = [
+    "miss", "misses", "plunge", "plunges", "drop", "drops", "decline",
+    "downgrade", "cut", "weak", "lawsuit", "probe", "investigation",
+    "recall", "loss", "fraud", "bankruptcy", "warns", "warning",
+    "layoffs", "halt", "suspends", "scandal", "subpoena", "underperform",
+  ];
+  for (const w of pos) if (t.includes(w)) return "pos";
+  for (const w of neg) if (t.includes(w)) return "neg";
+  return "neu";
+}
+
+/** Bucket news items by human day label ("Today", "Yesterday", "Apr 18"). */
+function bucketNewsByDay(items: NewsItem[]): Array<{ label: string; items: NewsItem[] }> {
+  const buckets = new Map<string, NewsItem[]>();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dayMs = 86_400_000;
+
+  for (const n of items) {
+    const dt = new Date(n.published);
+    const ts = isNaN(dt.getTime()) ? NaN : dt.getTime();
+    let label: string;
+    if (!Number.isFinite(ts)) {
+      label = "Undated";
+    } else {
+      const local = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+      const delta = today - local;
+      if (delta <= 0) label = "Today";
+      else if (delta < dayMs * 1.5) label = "Yesterday";
+      else if (delta < dayMs * 7) {
+        label = dt.toLocaleDateString("en-US", { weekday: "long" });
+      } else {
+        label = dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      }
+    }
+    const arr = buckets.get(label) ?? [];
+    arr.push(n);
+    buckets.set(label, arr);
+  }
+  return Array.from(buckets.entries()).map(([label, items]) => ({ label, items }));
+}
+
 /* ── Chart ── */
 
-// Period tabs. Backend accepts 1mo,3mo,6mo,1y,2y,1d,5d (routes/market.py L295).
-// Max historical period supported server-side is 2Y.
+// Backend accepts 1mo/3mo/6mo/1y/2y (routes/market.py L295). 2Y is server max.
 const PERIODS = ["1M", "3M", "6M", "1Y", "2Y"] as const;
 type Period = typeof PERIODS[number];
 const PERIOD_MAP: Record<Period, string> = {
@@ -220,8 +267,8 @@ function SparkChart({
 }) {
   if (!data || data.length < 2) {
     return (
-      <div className="h-48 flex items-center justify-center text-xs text-[rgba(245,240,232,0.4)]">
-        No chart data
+      <div className="h-64 flex items-center justify-center pq-detail-empty-note">
+        Chart data unavailable for this window.
       </div>
     );
   }
@@ -230,7 +277,7 @@ function SparkChart({
   return (
     <InteractiveLineChart
       points={series}
-      height={200}
+      height={260}
       valueFormatter={(v) => priceFmt(v)}
       dateFormatter={(d) => {
         const parsed = new Date(d);
@@ -275,44 +322,31 @@ function PillarCard({
         ? "text-red-400"
         : "text-[rgba(245,240,232,0.7)]";
   return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] pq-ink-card-interactive">
       <div className="flex items-center justify-between">
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-          {label}
-        </div>
-        <div className={cn("text-[10px] tracking-[0.18em] uppercase", textColor)}>
+        <FieldLabel>{label}</FieldLabel>
+        <span
+          className={cn(
+            "text-[9px] tracking-[0.18em] uppercase font-medium",
+            textColor,
+          )}
+        >
           {token}
-        </div>
+        </span>
       </div>
-      <div className={cn("mt-3 font-mono text-2xl tabular-nums", textColor)}>
+      <div className={cn("mt-3 font-mono text-[28px] tabular-nums leading-none", textColor)}>
         {safe.toFixed(0)}
-        <span className="text-xs text-[rgba(245,240,232,0.4)] ml-1">/ 100</span>
+        <span className="text-xs text-[rgba(245,240,232,0.4)] ml-1.5">/ 100</span>
       </div>
-      {/* Horizontal score bar */}
-      <div className="mt-3 h-1 bg-[rgba(245,240,232,0.08)] overflow-hidden">
+      <div className="mt-3 h-[2px] bg-[rgba(245,240,232,0.08)] overflow-hidden">
         <div
           className={cn("h-full transition-all", barColor)}
           style={{ width: `${safe}%` }}
         />
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-[rgba(245,240,232,0.55)] font-serif">
+      <p className="mt-3 pq-detail-body text-[13px]">
         {observation}
       </p>
-    </div>
-  );
-}
-
-/* ── Fundamentals cell ── */
-
-function Fund({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-4 rounded-[2px]">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-        {label}
-      </div>
-      <div className="mt-2 font-mono text-base text-[var(--pq-ivory)] tabular-nums">
-        {value}
-      </div>
     </div>
   );
 }
@@ -324,18 +358,12 @@ export default function StockDetailPage() {
   const router = useRouter();
   const raw = (params.ticker ?? "").toUpperCase();
   const ticker = /^\d{6}$/.test(raw) ? `${raw}.KS` : raw;
-  const [period, setPeriod] = useState<Period>("1M");
+  const [period, setPeriod] = useState<Period>("3M");
 
-  // Detail page live tiers:
-  //  signal/quote    → 15s (near-realtime quote-driven)
-  //  chart           → 60s (intraday bars)
-  //  news            → 2min (news refresh cadence)
-  //  profile         → 5min (company profile rarely changes)
   const { data: signal, isLoading: loadingSignal } = useSWR<SignalDetail>(
     ticker ? API.signals.one(ticker) : null,
     fetcher,
     {
-      // Market-aware: 5s when open, 30s when closed.
       refreshInterval: () => liveRefresh(5_000, 30_000),
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
@@ -379,8 +407,6 @@ export default function StockDetailPage() {
       errorRetryInterval: 10_000,
     },
   );
-  // Insider Form 4 — US only. KR (6-digit.KS/.KQ) skipped: SEC EDGAR US-only source.
-  // Cache 10min — filings update daily at most.
   const insiderEligible = ticker && !/^\d{6}\.(KS|KQ)$/i.test(ticker);
   const { data: insiderRes } = useSWR<InsiderResponse>(
     insiderEligible ? `/api/alt-data/us/insider-trades/${ticker}?days=90` : null,
@@ -431,6 +457,11 @@ export default function StockDetailPage() {
     [signal],
   );
 
+  const newsGroups = useMemo(
+    () => (newsRes?.news ? bucketNewsByDay(newsRes.news.slice(0, 12)) : []),
+    [newsRes],
+  );
+
   /* ── No ticker / not-found ── */
   if (!ticker) {
     return (
@@ -440,10 +471,7 @@ export default function StockDetailPage() {
           <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
             No ticker specified
           </p>
-          <Link
-            href="/discover"
-            className="mt-6 inline-block pq-ink-btn-bronze"
-          >
+          <Link href="/discover" className="mt-6 inline-block pq-ink-btn-bronze">
             Browse discover
           </Link>
         </div>
@@ -480,136 +508,240 @@ export default function StockDetailPage() {
       ? signal.signal
       : "NEUTRAL";
 
+  const sectorLine = signal?.sector || profile?.sector || "—";
+  const displayName = signal?.name || profile?.name || ticker;
+  const mcap = signal?.snapshot?.market_cap ?? profile?.market_cap ?? null;
+  const week52Low = signal?.snapshot?.week52_low;
+  const week52High = signal?.snapshot?.week52_high;
+  const hasRange =
+    week52Low != null && week52High != null && week52High > week52Low;
+
+  // 52W position percent (guarded)
+  const rangePos =
+    hasRange && signal?.price != null
+      ? Math.min(
+          100,
+          Math.max(
+            0,
+            ((signal.price - (week52Low as number)) /
+              ((week52High as number) - (week52Low as number))) *
+              100,
+          ),
+        )
+      : null;
+
+  const signalTone: "pos" | "neg" | "neu" =
+    signalToken === "POSITIVE" ? "pos" : signalToken === "NEGATIVE" ? "neg" : "neu";
+  const signalChipClass =
+    signalToken === "POSITIVE"
+      ? "pq-ink-pill pq-ink-pill--pos"
+      : signalToken === "NEGATIVE"
+        ? "pq-ink-pill pq-ink-pill--neg"
+        : "pq-ink-pill pq-ink-pill--neu";
+
   return (
     <ErrorBoundary>
-      <div className="space-y-8">
-        {/* ── Header ── */}
-        <header className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="min-w-0">
-            <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-              {signal?.sector || profile?.sector || "—"} · {krw ? "KRW" : "USD"}
+      <div className="space-y-10">
+        {/* ── Back nav ── */}
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.14em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
+        </button>
+
+        {/* ══════════════════════════════════════════════════
+            Editorial Hero — 3-column "IC cover" layout
+           ══════════════════════════════════════════════════ */}
+        <section className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px]">
+          {/* Kicker strip */}
+          <div className="flex items-center justify-between gap-3 px-6 md:px-8 pt-6 md:pt-7 flex-wrap">
+            <div className="inline-flex items-center gap-3 text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] font-medium">
+              <span
+                aria-hidden="true"
+                className="inline-block w-6 h-[0.5px] bg-[var(--pq-bronze)] opacity-70"
+              />
+              <span>Pivoxquant · Equity Dossier</span>
+              <span className="text-[rgba(245,240,232,0.35)]">·</span>
+              <span className="text-[rgba(245,240,232,0.55)]">
+                {new Date().toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
             </div>
-            <h1 className="mt-2 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)] truncate">
-              {signal?.name || profile?.name || ticker}
-            </h1>
-            <div className="mt-1 font-mono text-sm text-[rgba(245,240,232,0.5)]">
-              {ticker}
-            </div>
+
+            <button
+              type="button"
+              onClick={handleWatchlistToggle}
+              className={cn(
+                "inline-flex items-center gap-1.5",
+                inWatchlist ? "pq-ink-btn-ghost" : "pq-ink-btn-bronze",
+              )}
+            >
+              {inWatchlist ? (
+                <>
+                  <Check className="h-3.5 w-3.5" />
+                  In watchlist
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5" />
+                  Add to watchlist
+                </>
+              )}
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleWatchlistToggle}
-            className={cn(
-              "inline-flex items-center gap-1.5",
-              inWatchlist ? "pq-ink-btn-ghost" : "pq-ink-btn-bronze",
-            )}
-          >
-            {inWatchlist ? (
-              <>
-                <Check className="h-3.5 w-3.5" />
-                In watchlist
-              </>
-            ) : (
-              <>
-                <Plus className="h-3.5 w-3.5" />
-                Add to watchlist
-              </>
-            )}
-          </button>
-        </header>
+          {/* Hero body */}
+          <div className="px-6 md:px-8 pt-5 pb-6 md:pb-7">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+              {/* Identity column */}
+              <div className="lg:col-span-5">
+                <div className="pq-field-label">Ticker</div>
+                <h1 className="pq-detail-ticker-display mt-2">
+                  {ticker}
+                </h1>
+                <p className="mt-2 font-serif italic text-[15px] text-[rgba(245,240,232,0.68)] leading-snug">
+                  {displayName}
+                </p>
+                <div className="mt-4 flex items-center gap-2 flex-wrap">
+                  <span className="pq-sent-chip pq-sent-chip--neu">
+                    {sectorLine}
+                  </span>
+                  <span className="pq-sent-chip pq-sent-chip--neu">
+                    {krw ? "KRW · KOSPI" : "USD · US Listed"}
+                  </span>
+                  {signal?.snapshot?.industry && (
+                    <span className="pq-sent-chip pq-sent-chip--neu">
+                      {signal.snapshot.industry}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4">
+                  <FieldLabel tone="muted">Market cap</FieldLabel>
+                  <div className="mt-1 font-mono tabular-nums text-[18px] text-[var(--pq-ivory)]">
+                    {fmtMcap(mcap, krw)}
+                  </div>
+                </div>
+              </div>
 
-        <DisclaimerBanner type="signal" />
-
-        {/* ── Price hero ── */}
-        <section className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-6 rounded-[2px]">
-          <div className="flex items-end justify-between flex-wrap gap-4">
-            <div>
-              <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-                Current price · observed
-              </div>
-              <div className="mt-2">
-                <PriceWithTimestamp
-                  price={signal?.price}
-                  observedAt={signal?.observed_at}
-                  currency={krw ? "KRW" : "USD"}
-                  size="lg"
-                />
-              </div>
-              <div
-                className={cn(
-                  "mt-2 flex items-center gap-1.5 tabular-nums",
-                  pctColor(signal?.change_pct),
-                )}
-              >
-                {signal?.change_pct == null ? (
-                  <Minus className="h-3.5 w-3.5" />
-                ) : signal.change_pct >= 0 ? (
-                  <TrendingUp className="h-3.5 w-3.5" />
-                ) : (
-                  <TrendingDown className="h-3.5 w-3.5" />
-                )}
-                {fmtSignedPct(signal?.change_pct)}
-                <span className="text-xs text-[rgba(245,240,232,0.4)] ml-1">
-                  · 1D
-                </span>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-                Signal · {pillarToken(signalToken)}
-              </div>
-              <div className="mt-2 font-mono text-2xl md:text-3xl text-[var(--pq-ivory)] tabular-nums">
-                {signal?.score ?? "—"}
-              </div>
-              <div className="text-xs text-[rgba(245,240,232,0.5)] mt-1">
-                / 100
-              </div>
-            </div>
-          </div>
-
-          {/* 52W range — sourced from signal.snapshot (primary data source) */}
-          {signal?.snapshot?.week52_low != null && signal?.snapshot?.week52_high != null && (
-            <div className="mt-6 pt-4 border-t border-[rgba(245,240,232,0.08)]">
-              <div className="flex items-center justify-between text-xs text-[rgba(245,240,232,0.5)] mb-2">
-                <span>52W low · {fmtPrice(signal.snapshot.week52_low, krw)}</span>
-                <span>52W high · {fmtPrice(signal.snapshot.week52_high, krw)}</span>
-              </div>
-              <div className="h-0.5 bg-[rgba(245,240,232,0.08)] relative">
-                {signal?.price && (
-                  <div
-                    className="absolute top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-[var(--pq-bronze)]"
-                    style={{
-                      left: `${Math.min(
-                        100,
-                        Math.max(
-                          0,
-                          ((signal.price - signal.snapshot.week52_low) /
-                            (signal.snapshot.week52_high - signal.snapshot.week52_low)) *
-                            100,
-                        ),
-                      )}%`,
-                    }}
+              {/* Price column */}
+              <div className="lg:col-span-4 lg:border-l lg:border-[rgba(245,240,232,0.08)] lg:pl-8">
+                <FieldLabel>Current price</FieldLabel>
+                <div className="mt-2">
+                  <PriceWithTimestamp
+                    price={signal?.price}
+                    observedAt={signal?.observed_at}
+                    currency={krw ? "KRW" : "USD"}
+                    size="lg"
                   />
+                </div>
+                <div
+                  className={cn(
+                    "mt-3 inline-flex items-center gap-1.5 tabular-nums font-mono text-[15px]",
+                    pctColor(signal?.change_pct),
+                  )}
+                >
+                  {signal?.change_pct == null ? (
+                    <Minus className="h-4 w-4" />
+                  ) : signal.change_pct >= 0 ? (
+                    <TrendingUp className="h-4 w-4" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4" />
+                  )}
+                  {fmtSignedPct(signal?.change_pct)}
+                  <span className="ml-2 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)] font-sans">
+                    · 1D Δ
+                  </span>
+                </div>
+
+                {/* 52W range rail */}
+                {hasRange && (
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-[rgba(245,240,232,0.55)]">
+                      <span>{fmtPrice(week52Low, krw)}</span>
+                      <span className="text-[9px] tracking-[0.18em] uppercase text-[var(--pq-bronze)]">
+                        52W Range
+                      </span>
+                      <span>{fmtPrice(week52High, krw)}</span>
+                    </div>
+                    <div className="mt-2 h-[2px] bg-[rgba(245,240,232,0.08)] relative">
+                      {rangePos != null && (
+                        <div
+                          className="absolute top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-[var(--pq-bronze)] shadow-[0_0_8px_rgba(139,111,71,0.5)]"
+                          style={{ left: `${rangePos}%`, transform: `translate(-50%, -50%)` }}
+                        />
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
+
+              {/* Signal column */}
+              <div className="lg:col-span-3 lg:border-l lg:border-[rgba(245,240,232,0.08)] lg:pl-8">
+                <FieldLabel>Signal</FieldLabel>
+                <div className="mt-2">
+                  <span className={signalChipClass}>
+                    {pillarToken(signalToken)}
+                  </span>
+                </div>
+                <div
+                  className={cn(
+                    "mt-4 font-mono tabular-nums text-[40px] leading-none",
+                    signalTone === "pos"
+                      ? "text-emerald-400"
+                      : signalTone === "neg"
+                        ? "text-red-400"
+                        : "text-[var(--pq-ivory)]",
+                  )}
+                >
+                  {signal?.score != null && Number.isFinite(signal.score)
+                    ? signal.score
+                    : "—"}
+                  <span className="text-[13px] text-[rgba(245,240,232,0.4)] ml-1.5 font-sans tracking-[0.08em]">
+                    / 100
+                  </span>
+                </div>
+                <p className="mt-3 pq-detail-caption">
+                  Composite score — 4-pillar observational blend.
+                </p>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Disclaimer docked at hero base */}
+          <div className="px-6 md:px-8 pb-6 md:pb-7">
+            <DisclaimerBanner type="signal" />
+          </div>
         </section>
 
-        {/* ── Chart ── */}
+        {/* ══════════════════════════════════════════════════
+            Chart — Price observation
+           ══════════════════════════════════════════════════ */}
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="pq-ink-h2">Price history</h2>
-            <div className="flex gap-1">
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+            <div>
+              <div className="pq-section-kicker">Price observation</div>
+              <h2 className="pq-detail-h2 mt-1.5">Price history</h2>
+            </div>
+            <div
+              role="tablist"
+              aria-label="Chart period"
+              className="flex gap-1 items-center"
+            >
               {PERIODS.map((p) => (
                 <button
                   key={p}
                   type="button"
+                  role="tab"
+                  aria-selected={period === p}
                   onClick={() => setPeriod(p)}
                   className={cn(
-                    "px-3 py-1 text-xs tracking-[0.18em] uppercase transition-colors",
+                    "px-3 py-1 text-[10px] tracking-[0.18em] uppercase transition-all",
                     period === p
                       ? "text-[var(--pq-ivory)] border-b border-[var(--pq-bronze)]"
                       : "text-[rgba(245,240,232,0.4)] hover:text-[var(--pq-bronze)]",
@@ -621,9 +753,9 @@ export default function StockDetailPage() {
             </div>
           </div>
 
-          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 md:p-6 rounded-[2px]">
             {loadingChart ? (
-              <div className="h-48 animate-pulse bg-[rgba(255,255,255,0.02)]" />
+              <div className="h-64 pq-skeleton-dark" />
             ) : (
               <SparkChart
                 data={chartRes?.data ?? []}
@@ -633,66 +765,127 @@ export default function StockDetailPage() {
           </div>
         </section>
 
-        {/* ── Fundamentals — sourced from signal.snapshot, profile as fallback ── */}
+        {/* ══════════════════════════════════════════════════
+            Fundamentals — editorial StatRow table
+           ══════════════════════════════════════════════════ */}
         <section>
-          <h2 className="pq-ink-h2 mb-4">Fundamentals</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Fund
-              label="P/E"
-              value={
-                signal?.snapshot?.pe_ratio != null &&
-                Number.isFinite(signal.snapshot.pe_ratio)
-                  ? Number(signal.snapshot.pe_ratio).toFixed(1)
-                  : "—"
-              }
-            />
-            <Fund
-              label="Market cap"
-              value={fmtMcap(
-                signal?.snapshot?.market_cap ?? profile?.market_cap ?? null,
-                krw,
+          <div className="mb-5">
+            <div className="pq-section-kicker">Fundamentals</div>
+            <h2 className="pq-detail-h2 mt-1.5">Key ratios & valuation</h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Column 1 — Valuation */}
+            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 md:p-6 rounded-[2px]">
+              <FieldLabel>Valuation · Earnings</FieldLabel>
+              <div className="mt-3">
+                <StatRow
+                  label="P/E ratio"
+                  value={
+                    signal?.snapshot?.pe_ratio != null &&
+                    Number.isFinite(signal.snapshot.pe_ratio)
+                      ? Number(signal.snapshot.pe_ratio).toFixed(1)
+                      : "—"
+                  }
+                />
+                <StatRow
+                  label="EPS (ttm)"
+                  value={
+                    signal?.snapshot?.eps != null &&
+                    Number.isFinite(signal.snapshot.eps)
+                      ? Number(signal.snapshot.eps).toFixed(2)
+                      : "—"
+                  }
+                />
+                <StatRow
+                  label="Market cap"
+                  value={fmtMcap(mcap, krw)}
+                />
+                <StatRow
+                  label="Beta (vs S&P 500)"
+                  value={
+                    signal?.snapshot?.beta != null &&
+                    Number.isFinite(signal.snapshot.beta)
+                      ? Number(signal.snapshot.beta).toFixed(2)
+                      : "—"
+                  }
+                />
+              </div>
+              {(signal?.snapshot?.pe_ratio == null &&
+                signal?.snapshot?.eps == null) && (
+                <p className="mt-4 pq-detail-empty-note">
+                  Financials pending next filing — snapshot refreshes after EDGAR/DART publish.
+                </p>
               )}
-            />
-            <Fund
-              label="EPS"
-              value={
-                signal?.snapshot?.eps != null &&
-                Number.isFinite(signal.snapshot.eps)
-                  ? Number(signal.snapshot.eps).toFixed(2)
-                  : "—"
-              }
-            />
-            <Fund
-              label="Beta"
-              value={
-                signal?.snapshot?.beta != null &&
-                Number.isFinite(signal.snapshot.beta)
-                  ? Number(signal.snapshot.beta).toFixed(2)
-                  : "—"
-              }
-            />
-            <Fund
-              label="Avg volume"
-              value={
-                signal?.snapshot?.avg_volume
-                  ? signal.snapshot.avg_volume.toLocaleString()
-                  : "—"
-              }
-            />
-            <Fund
-              label="Industry"
-              value={
-                signal?.snapshot?.industry ||
-                profile?.industry ||
-                "—"
-              }
-            />
+            </div>
+
+            {/* Column 2 — Liquidity / Quality */}
+            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 md:p-6 rounded-[2px]">
+              <FieldLabel>Liquidity · Quality</FieldLabel>
+              <div className="mt-3">
+                <StatRow
+                  label="Avg volume (3mo)"
+                  value={
+                    signal?.snapshot?.avg_volume &&
+                    Number.isFinite(signal.snapshot.avg_volume)
+                      ? signal.snapshot.avg_volume.toLocaleString()
+                      : "—"
+                  }
+                />
+                <StatRow
+                  label="Profit margin"
+                  value={
+                    signal?.snapshot?.profit_margin != null &&
+                    Number.isFinite(signal.snapshot.profit_margin)
+                      ? `${(Number(signal.snapshot.profit_margin) * 100).toFixed(1)}%`
+                      : "—"
+                  }
+                  tone={
+                    signal?.snapshot?.profit_margin != null
+                      ? signal.snapshot.profit_margin > 0
+                        ? "pos"
+                        : "neg"
+                      : "neu"
+                  }
+                />
+                <StatRow
+                  label="Revenue growth (YoY)"
+                  value={
+                    signal?.snapshot?.revenue_growth != null &&
+                    Number.isFinite(signal.snapshot.revenue_growth)
+                      ? `${(Number(signal.snapshot.revenue_growth) * 100).toFixed(1)}%`
+                      : "—"
+                  }
+                  tone={
+                    signal?.snapshot?.revenue_growth != null
+                      ? signal.snapshot.revenue_growth > 0
+                        ? "pos"
+                        : "neg"
+                      : "neu"
+                  }
+                />
+                <StatRow
+                  label="Debt / Equity"
+                  value={
+                    signal?.snapshot?.debt_equity != null &&
+                    Number.isFinite(signal.snapshot.debt_equity)
+                      ? Number(signal.snapshot.debt_equity).toFixed(2)
+                      : "—"
+                  }
+                />
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* ── Quant pillars ── */}
+        {/* ══════════════════════════════════════════════════
+            Quant breakdown — 4 pillars
+           ══════════════════════════════════════════════════ */}
         <section>
-          <h2 className="pq-ink-h2 mb-4">Quant breakdown</h2>
+          <div className="mb-5">
+            <div className="pq-section-kicker">Quant breakdown</div>
+            <h2 className="pq-detail-h2 mt-1.5">Four-pillar composite</h2>
+          </div>
           {hasPillars ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <PillarCard
@@ -717,82 +910,186 @@ export default function StockDetailPage() {
               />
             </div>
           ) : (
-            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-6 rounded-[2px] text-center text-sm text-[rgba(245,240,232,0.5)]">
-              Pillar breakdown pending for this ticker.
+            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-8 rounded-[2px] text-center">
+              <p className="pq-detail-empty-note">
+                Pillar breakdown pending — composite calibration in progress.
+              </p>
             </div>
           )}
         </section>
 
-        {/* ── News ── */}
+        {/* ══════════════════════════════════════════════════
+            News — grouped by day with sentiment chips
+           ══════════════════════════════════════════════════ */}
         <section>
-          <h2 className="pq-ink-h2 mb-4">News</h2>
+          <div className="mb-5">
+            <div className="pq-section-kicker">Recent coverage</div>
+            <h2 className="pq-detail-h2 mt-1.5">News feed</h2>
+          </div>
           {loadingNews ? (
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
-                  className="h-16 rounded-[2px] bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] animate-pulse"
+                  className="h-16 rounded-[2px] pq-skeleton-dark"
                 />
               ))}
             </div>
-          ) : !newsRes?.news?.length ? (
-            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-6 rounded-[2px] text-center text-sm text-[rgba(245,240,232,0.5)]">
-              No recent news.
+          ) : !newsGroups.length ? (
+            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-8 rounded-[2px] text-center">
+              <p className="pq-detail-empty-note">
+                No headlines observed in the last 14 days — re-checking every 2 minutes.
+              </p>
             </div>
           ) : (
-            <ul className="space-y-2">
-              {newsRes.news.slice(0, 8).map((n, i) => (
-                <li key={i}>
-                  <a
-                    href={n.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-4 rounded-[2px] hover:border-[var(--pq-bronze)] transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-serif text-base text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze)] transition-colors line-clamp-2">
-                          {n.title}
-                        </p>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-[rgba(245,240,232,0.4)]">
-                          <span>{n.source}</span>
-                          <span>·</span>
-                          <span>{n.published}</span>
-                        </div>
-                      </div>
-                      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[rgba(245,240,232,0.3)] group-hover:text-[var(--pq-bronze)]" />
-                    </div>
-                  </a>
-                </li>
+            <div className="space-y-6">
+              {newsGroups.map((group) => (
+                <div key={group.label}>
+                  <div className="pq-news-date-header">{group.label}</div>
+                  <ul className="space-y-2">
+                    {group.items.map((n, i) => {
+                      const sent = classifyNewsSentiment(n.title);
+                      const chipClass =
+                        sent === "pos"
+                          ? "pq-sent-chip pq-sent-chip--pos"
+                          : sent === "neg"
+                            ? "pq-sent-chip pq-sent-chip--neg"
+                            : "pq-sent-chip pq-sent-chip--neu";
+                      const chipLabel =
+                        sent === "pos" ? "Positive" : sent === "neg" ? "Negative" : "Neutral";
+                      return (
+                        <li key={`${group.label}-${i}`}>
+                          <a
+                            href={n.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-4 rounded-[2px] hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all"
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-serif text-[15px] leading-snug text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors line-clamp-2">
+                                  {n.title}
+                                </p>
+                                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                  <span className={chipClass}>{chipLabel}</span>
+                                  <span className="text-[11px] text-[rgba(245,240,232,0.45)] font-mono tracking-tight">
+                                    {n.source}
+                                  </span>
+                                  <span className="text-[11px] text-[rgba(245,240,232,0.3)]">·</span>
+                                  <span className="text-[11px] text-[rgba(245,240,232,0.45)] font-mono tracking-tight">
+                                    {n.published}
+                                  </span>
+                                </div>
+                              </div>
+                              <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1 text-[rgba(245,240,232,0.3)] group-hover:text-[var(--pq-bronze)]" />
+                            </div>
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
 
-        {/* ── Related artifacts (richer grid — observation-only) ── */}
+        {/* ══════════════════════════════════════════════════
+            Insider filings · US only
+           ══════════════════════════════════════════════════ */}
+        {insiderEligible && (
+          <section>
+            <div className="mb-5 flex items-center gap-3">
+              <Eye className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+              <div>
+                <div className="pq-section-kicker">Form 4 · 90 days</div>
+                <h2 className="pq-detail-h2 mt-1.5">Insider activity</h2>
+              </div>
+            </div>
+            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] overflow-hidden">
+              {insiderData.length > 0 ? (
+                <ul className="divide-y divide-[rgba(245,240,232,0.06)]">
+                  {insiderData.slice(0, 6).map((f, i) => {
+                    const acquired = f.acquired === true;
+                    const shares = Number.isFinite(f.shares as number)
+                      ? (f.shares as number)
+                      : 0;
+                    return (
+                      <li
+                        key={i}
+                        className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-[rgba(139,111,71,0.03)] transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[13.5px] text-[var(--pq-ivory)] font-serif">
+                            {f.insider || "—"}
+                          </span>
+                          {f.relationship && (
+                            <span className="ml-2.5 pq-field-label">
+                              {f.relationship}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span
+                            className={cn(
+                              "pq-sent-chip",
+                              acquired ? "pq-sent-chip--pos" : "pq-sent-chip--neg",
+                            )}
+                          >
+                            {acquired ? "Acquired" : "Disposed"}
+                          </span>
+                          <span className="font-mono tabular-nums text-[12px] text-[var(--pq-ivory)]">
+                            {shares.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] tracking-[0.14em] uppercase text-[rgba(245,240,232,0.45)]">
+                            {formatRelative(f.transaction_date)}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="p-6 text-center">
+                  <p className="pq-detail-empty-note">
+                    No public Form 4 filings observed in the last 90 days.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ══════════════════════════════════════════════════
+            Related observations — Artifact links
+           ══════════════════════════════════════════════════ */}
         <section>
-          <header className="mb-5 flex items-center gap-3 pb-3 border-b border-[rgba(245,240,232,0.08)]">
-            <FileText className="h-4 w-4 text-[var(--pq-bronze)]" />
-            <h2 className="font-serif text-xl text-[var(--pq-ivory)]">
-              Related observations
-            </h2>
-          </header>
+          <div className="mb-5 flex items-center gap-3">
+            <FileText className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+            <div>
+              <div className="pq-section-kicker">Research library</div>
+              <h2 className="pq-detail-h2 mt-1.5">Related observations</h2>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               {
                 slug: "weekly_memo",
                 name: "Weekly Memo",
-                desc: "Portfolio-wide context, authored weekly",
+                desc: "Portfolio-wide context, authored every Sunday.",
+                kind: "PDF · 2 pages",
               },
               {
                 slug: "earnings_prebrief",
                 name: "Earnings Pre-Brief",
-                desc: "Ten-day forward earnings observation",
+                desc: "Ten-day forward earnings observation playbook.",
+                kind: "PDF · 4 pages",
               },
               {
                 slug: "dd_checklist",
                 name: "DD Checklist",
-                desc: "Structured due-diligence reference",
+                desc: "Structured due-diligence reference and markers.",
+                kind: "PDF · 3 pages",
               },
             ].map((r) => (
               <a
@@ -800,80 +1097,28 @@ export default function StockDetailPage() {
                 href={`/samples/${r.slug}.pdf`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block border border-[rgba(245,240,232,0.08)] rounded-[2px] p-4 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.03)] transition-all group"
+                className="block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"
               >
-                <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
-                  PDF · Observational
-                </div>
-                <div className="font-serif text-[var(--pq-ivory)] mb-1">
+                <FieldLabel>{r.kind}</FieldLabel>
+                <div className="mt-2 font-serif italic text-[17px] text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors">
                   {r.name}
                 </div>
-                <div className="text-[11px] text-[rgba(245,240,232,0.55)]">
-                  {r.desc}
-                </div>
-                <div className="mt-3 text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] opacity-0 group-hover:opacity-100 transition-opacity">
-                  Open PDF →
+                <p className="mt-2 pq-detail-caption">{r.desc}</p>
+                <div className="mt-4 text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] opacity-60 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5">
+                  Open PDF
+                  <ExternalLink className="h-3 w-3" />
                 </div>
               </a>
             ))}
           </div>
         </section>
 
-        {/* ── Insider filings · last 90 days ── */}
-        {insiderEligible && (
-          <section>
-            <header className="mb-5 flex items-center gap-3 pb-3 border-b border-[rgba(245,240,232,0.08)]">
-              <Eye className="h-4 w-4 text-[var(--pq-bronze)]" />
-              <h2 className="font-serif text-xl text-[var(--pq-ivory)]">
-                Insider filings · last 90 days
-              </h2>
-            </header>
-            {insiderData.length > 0 ? (
-              <ul className="space-y-2">
-                {insiderData.slice(0, 5).map((f, i) => {
-                  const acquired = f.acquired === true;
-                  const shares = Number.isFinite(f.shares as number)
-                    ? (f.shares as number)
-                    : 0;
-                  return (
-                    <li
-                      key={i}
-                      className="flex items-center justify-between py-2 border-b border-[rgba(245,240,232,0.06)]"
-                    >
-                      <div className="min-w-0">
-                        <span className="text-[13px] text-[var(--pq-ivory)]">
-                          {f.insider || "—"}
-                        </span>
-                        {f.relationship && (
-                          <span className="ml-2 text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-                            {f.relationship}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span
-                          className={cn(
-                            "text-[11px] font-mono tabular-nums",
-                            acquired ? "text-emerald-400" : "text-red-400",
-                          )}
-                        >
-                          {acquired ? "ACQ" : "DSP"} {shares.toLocaleString()}
-                        </span>
-                        <span className="text-[10px] text-[rgba(245,240,232,0.5)]">
-                          {formatRelative(f.transaction_date)}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-[12px] text-[rgba(245,240,232,0.55)]">
-                No public filings observed in the last 90 days.
-              </p>
-            )}
-          </section>
-        )}
+        {/* ── Footer fleuron ── */}
+        <footer className="pt-6 mt-4 border-t border-[rgba(245,240,232,0.06)] text-center">
+          <p className="pq-detail-caption italic">
+            PivoxQuant · Observational research only · Not investment advice
+          </p>
+        </footer>
       </div>
     </ErrorBoundary>
   );
