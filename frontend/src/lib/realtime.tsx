@@ -259,6 +259,10 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         // Optimistic summary refresh — backend totalNav = Σ(price × shares);
         // we bump observed_at so the UI "updated Xs ago" chip refreshes even
         // when the raw numbers round-trip identical.
+        // P0-2 FIX: revalidate: false. Previously `revalidate: true` triggered
+        // SWR to refetch /api/portfolio/summary on every SSE message, which
+        // cascaded into RealtimeProvider remount → new EventSource → onerror
+        // loop → ∞. In-place data update is sufficient.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         globalMutate(
           PORTFOLIO_SUMMARY,
@@ -267,7 +271,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
             current
               ? { ...current, observed_at: new Date().toISOString() }
               : current,
-          { revalidate: true },
+          { revalidate: false },
         );
       } catch {
         // Ignore JSON parse errors from heartbeat comments
@@ -303,6 +307,19 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     connectRef.current = connect;
   });
 
+  // P0-2 FIX: track whether the document is visible. Background tabs open
+  // an SSE connection that the browser may starve or throttle, producing
+  // errors that burn through our retry budget before the user returns.
+  const [visible, setVisible] = useState<boolean>(() =>
+    typeof document === "undefined" ? true : !document.hidden,
+  );
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVis = () => setVisible(!document.hidden);
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
   useEffect(() => {
     // Only connect SSE when user is authenticated AND owns >=1 position.
     // B6: portfolio-stream returns 400 for users with no positions, which
@@ -329,6 +346,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // P0-2 FIX: don't open SSE from a background tab. When the tab becomes
+    // visible again, this effect re-runs and we connect fresh.
+    if (!visible) {
+      abortRef.current?.abort();
+      esRef.current?.close();
+      esRef.current = null;
+      return;
+    }
+
     // Reset retry counter whenever we (re-)enter the "should connect"
     // state — a prior streak of failures shouldn't carry forward.
     retryRef.current = 0;
@@ -339,7 +365,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       esRef.current = null;
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     };
-  }, [user, hasPositions, connect]);
+  }, [user, hasPositions, visible, connect]);
 
   return (
     <RealtimeContext.Provider value={state}>

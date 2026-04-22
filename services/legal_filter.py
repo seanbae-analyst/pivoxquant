@@ -134,6 +134,18 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"(?<![투자])자문(?!을?\s*제공하지|업\s*등록|업체|하지)"), "정보 제공"),
     # 단독 "제안" — 방어 부정 제외
     (re.compile(r"제안(?!드리지\s*않|하지\s*않)"), "정보 제공"),
+
+    # ── Group 9: Wave 2 — EN advisory verbs from engine.py _reason() / alerts ──
+    # 순서 주의: 복합 구문(Consider reducing N% of position)이 단독 \bConsider\b 보다 앞에 와야 함.
+    (re.compile(r"\bScale\s+in\s+with\s+defined\s+risk\b", re.IGNORECASE), "positive indicator observed"),
+    (re.compile(r"\bScale\s+in(to)?\s+(quality\s+)?longs?\s+with\s+defined\s+stops?\b", re.IGNORECASE), "positive indicator observed"),
+    (re.compile(r"\bScale\s+in\s+aggressively\s+over\s+the\s+week\b", re.IGNORECASE), "positive indicator observed"),
+    (re.compile(r"\bConsider\s+reducing\s+\d+%?\s+of\s+position\b", re.IGNORECASE), "indicator change observed"),
+    (re.compile(r"\bConsider\s+reducing\s+or\s+exiting\s+position\b", re.IGNORECASE), "indicator change observed"),
+    (re.compile(r"\bConsider\s+(reducing|exiting|trimming|adding|selling|buying)\b", re.IGNORECASE), "indicator change observed"),
+    (re.compile(r"\bHold\s+current\s+position\b", re.IGNORECASE), "stable indicator observed"),
+    (re.compile(r"\bAwait\s+stronger\s+signal(s)?\s+before\s+adding\b", re.IGNORECASE), "awaiting indicator change"),
+    (re.compile(r"\bAwait\s+stronger\s+signal(s)?\b", re.IGNORECASE), "awaiting indicator change"),
 ]
 
 # ── Prohibited patterns (log only, 설계 오류 조기 발견용) ─────────────────

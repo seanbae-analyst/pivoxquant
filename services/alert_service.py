@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from extensions import db
 from models import Alert
+from services.legal_filter import safe_scrub
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,10 @@ def maybe_generate(user_id: int, r: dict):
         sell_pct = r.get("sell_pct", 50)
         msg = (f"[NEGATIVE] {name} ({ticker}) — Score {score:.0f}/100. "
                f"Quant flags weakness. Consider reducing {sell_pct}% of position.")
+
+    # Legal scrub — rewrite advisory verbs (Consider reducing, Scale in, etc.)
+    # before the message is persisted or pushed to the user.
+    msg = safe_scrub(msg, context="alert.message") or msg
 
     db.session.add(Alert(user_id=user_id, ticker=ticker, message=msg,
                          signal=sig, score=score))
