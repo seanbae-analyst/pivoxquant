@@ -3,6 +3,59 @@ from functools import wraps
 from flask import jsonify
 from flask_login import current_user
 
+from services.legal_filter import safe_scrub
+
+
+def _deep_scrub(obj):
+    """Recursively walk a JSON-shaped structure, scrubbing every string leaf.
+
+    Used by :func:`legal_scrub_response` to enforce the legal boundary on
+    risk/quant endpoint responses without touching engine code.
+    """
+    if isinstance(obj, dict):
+        return {k: _deep_scrub(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_deep_scrub(x) for x in obj]
+    if isinstance(obj, str):
+        return safe_scrub(obj, context="legal_scrub_response")
+    return obj
+
+
+def legal_scrub_response(f):
+    """Scrub legally risky phrases out of a JSON response before it ships.
+
+    Wraps any route that may surface engine-generated ``action`` / ``message``
+    / ``recommendation`` fields (risk_defense.py, quant_models.py, etc.) and
+    rewrites them to information-only wording. No-op for non-JSON responses.
+
+    Layering: place AFTER ``@api_auth`` so auth still short-circuits 401s
+    unscrubbed, but the happy-path body is always filtered::
+
+        @quant_bp.route("/risk/defense-status")
+        @api_auth
+        @legal_scrub_response
+        def risk_defense_status():
+            ...
+    """
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        result = f(*args, **kwargs)
+        # Normalize to (response, status) — Flask view returns vary.
+        if isinstance(result, tuple):
+            resp = result[0]
+            status = result[1] if len(result) > 1 else 200
+        else:
+            resp = result
+            status = 200
+        if hasattr(resp, "get_json") and getattr(resp, "is_json", False):
+            try:
+                data = resp.get_json()
+            except Exception:
+                return result
+            return jsonify(_deep_scrub(data)), status
+        return result
+    return wrapped
+
 
 def api_auth(f):
     """Require authenticated user for API endpoints."""

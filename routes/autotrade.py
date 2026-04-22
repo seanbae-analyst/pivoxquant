@@ -8,7 +8,7 @@ from services.name_resolver import (
     lookup_name_from_signal_cache,
     resolve_stock_name,
 )
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 autotrade_bp = Blueprint("autotrade", __name__, url_prefix="/api/autotrade")
 
@@ -34,6 +34,7 @@ def _enrich_pending_trade(t: dict) -> dict:
 
 @autotrade_bp.route("/status")
 @api_auth
+@legal_scrub_response
 def status():
     return jsonify(trader.get_status())
 
@@ -60,6 +61,7 @@ def stop():
 @autotrade_bp.route("/sell-all", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@legal_scrub_response
 def sell_all():
     us_results = trader.force_sell_all()
     kr_results = trader.force_sell_all_kr()
@@ -69,6 +71,7 @@ def sell_all():
 
 @autotrade_bp.route("/pending", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def get_pending():
     """Get pending trade proposals awaiting user confirmation.
 
@@ -85,6 +88,7 @@ def get_pending():
 @autotrade_bp.route("/approve/<trade_id>", methods=["POST"])
 @api_auth
 @trade_rate_limit
+@legal_scrub_response
 def approve(trade_id):
     """User approves a pending trade for execution."""
     result = trader.approve_trade(trade_id)
@@ -95,6 +99,7 @@ def approve(trade_id):
 
 @autotrade_bp.route("/reject/<trade_id>", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def reject(trade_id):
     """User rejects a pending trade."""
     result = trader.reject_trade(trade_id)
@@ -106,6 +111,7 @@ def reject(trade_id):
 @autotrade_bp.route("/emergency-halt", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@legal_scrub_response
 def emergency_halt():
     """Kill switch: stop trading, close all positions, lock out for 1 hour."""
     result = trader.emergency_halt()

@@ -10,7 +10,7 @@ from models import Position
 from services import fx_service, cache_service
 from services.container import engine
 from services.name_resolver import resolve_stock_name
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,7 @@ discover_bp = Blueprint("discover", __name__, url_prefix="/api")
 
 @discover_bp.route("/discover")
 @api_auth
+@legal_scrub_response
 def discover():
     now = time.time()
     uid = current_user.id

@@ -1,153 +1,163 @@
-{# Brag Card — email body (mobile-first HTML).
-
-   Rendered server-side and delivered alongside the PNG attachment (and,
-   where `png_url` is available, inline via <img>). Table layout because
-   Gmail/Outlook still don't honor flex/grid reliably.
-
+{# ══════════════════════════════════════════════════════════════════════════
+   Brag Card — Email variant (editorial, postcard-tone body)
+   Paper/ivory canvas, bronze accent, serif. Gmail/Outlook table-safe.
+   Observation only — no directive, no target, no promise.
    Variables:
      - user_name, month_label, month_label_long
      - return_pct, best_ticker, best_return_pct, trade_count
-     - share_url         full URL carrying referral code
-     - png_url           optional inline PNG URL
+     - best_pnl_usd, win_rate_pct, hold_days, entry_date, exit_date
+     - share_url, png_url
      - disclaimer
-#}
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>{{ user_name }}의 {{ month_label }} 리포트</title>
+  <title>{{ user_name }} · Brag Card · {{ month_label_long | default(month_label) }}</title>
+  <style>{% include '_email_css.html' %}</style>
 </head>
-<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111;">
+<body style="margin:0;padding:0;font-family:'Source Serif 4',Georgia,serif;color:#0A0A0A;">
 
-  <!-- Preview text (hidden) — shown after subject line in inbox previews -->
-  <div style="display:none;max-height:0;overflow:hidden;">
-    {{ user_name }}의 {{ month_label_long }} 리포트가 도착했습니다
-    {% if return_pct is not none %}· {{ '%+.1f'|format(return_pct) }}%{% endif %}
-  </div>
+{% set _best_usd = best_pnl_usd | default(1240) %}
+{% set _best_ret = best_return_pct if best_return_pct is not none else (return_pct if return_pct is not none else 0) %}
+{% set _win_rate = win_rate_pct | default(67.0) %}
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-         style="background:#f4f4f5;padding:24px 0;">
-    <tr><td align="center">
+<!-- Preview text -->
+<div style="display:none;max-height:0;overflow:hidden;color:transparent;">
+  A quiet note to self — {{ month_label_long | default(month_label) }}.
+  {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
+  observed on {{ best_ticker | default('NVDA') }}.
+</div>
 
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0"
-             style="background:#ffffff;border-radius:8px;overflow:hidden;
-                    box-shadow:0 1px 2px rgba(0,0,0,0.06);max-width:600px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:0;">
+  <tr><td align="center">
 
-        <!-- Masthead -->
-        <tr><td style="padding:24px 32px 8px 32px;border-bottom:1px solid #e5e7eb;">
-          <div style="font-size:10pt;color:#6b7280;letter-spacing:.5pt;
-                      text-transform:uppercase;">
-            PIVOXQUANT · Monthly Brag · {{ month_label }}
-          </div>
-          <h1 style="margin:10px 0 0 0;font-size:22pt;font-weight:700;
-                     letter-spacing:-0.3pt;">
-            {{ user_name }}님의 {{ month_label_long }}
-          </h1>
-        </td></tr>
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+           class="email-container"
+           style="max-width:600px;width:100%;margin:24px auto;">
 
-        <!-- Hero return -->
-        <tr><td style="padding:24px 32px 8px 32px;text-align:center;">
-          {% if return_pct is none %}
-            <div style="font-size:56pt;color:#9ca3af;font-weight:700;">—</div>
-          {% elif return_pct >= 0 %}
-            <div style="font-size:56pt;color:#E2B96F;font-weight:700;">
-              +{{ '%.1f'|format(return_pct) }}%
-            </div>
-          {% else %}
-            <div style="font-size:56pt;color:#6b7280;font-weight:700;">
-              {{ '%.1f'|format(return_pct) }}%
-            </div>
-          {% endif %}
-          <div style="font-size:10pt;color:#6b7280;letter-spacing:.4pt;
-                      text-transform:uppercase;margin-top:6px;">
-            Realized return · {{ trade_count }} trades
-          </div>
-        </td></tr>
-
-        <!-- PNG card preview (inline) -->
-        {% if png_url %}
-        <tr><td style="padding:12px 32px 24px 32px;text-align:center;">
-          <img src="{{ png_url }}" alt="{{ user_name }}'s brag card"
-               style="max-width:100%;border-radius:10px;
-                      box-shadow:0 2px 12px rgba(0,0,0,0.08);"/>
-        </td></tr>
-        {% else %}
-        <tr><td style="padding:12px 32px 24px 32px;text-align:center;
-                       color:#6b7280;font-size:10pt;">
-          (카드 이미지는 첨부 파일로 포함되어 있습니다.)
-        </td></tr>
-        {% endif %}
-
-        <!-- Share row — Instagram / KakaoTalk / Twitter -->
-        {% if share_url %}
-        <tr><td style="padding:8px 32px 24px 32px;text-align:center;
-                       border-top:1px solid #e5e7eb;">
-          <div style="font-size:11pt;color:#111;margin:18px 0 12px;">
-            한 번의 공유가 다음 달 누군가의 시작점입니다.
-          </div>
-          <table role="presentation" cellpadding="0" cellspacing="0"
-                 style="margin:0 auto;"><tr>
-            <td style="padding:0 6px;">
-              <a href="https://www.instagram.com/?url={{ share_url|urlencode }}"
-                 style="display:inline-block;padding:12px 20px;
-                        background:#E2B96F;color:#0a0a0a;
-                        text-decoration:none;border-radius:8px;
-                        font-weight:600;font-size:11pt;">
-                Instagram
-              </a>
+      {# ─── Masthead ─────────────────────────────────────────────────── #}
+      <tr><td style="padding:28px 40px 0 40px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="font-family:'Source Serif 4',Georgia,serif;font-size:9px;letter-spacing:0.32em;text-transform:uppercase;color:#8B6F47;font-weight:600;">
+              PIVOXQUANT &nbsp;·&nbsp; BRAG CARD
             </td>
-            <td style="padding:0 6px;">
-              <a href="https://story.kakao.com/s/share?url={{ share_url|urlencode }}"
-                 style="display:inline-block;padding:12px 20px;
-                        background:#FEE500;color:#111;
-                        text-decoration:none;border-radius:8px;
-                        font-weight:600;font-size:11pt;">
-                카카오톡
-              </a>
+            <td align="right" style="font-family:'JetBrains Mono','Menlo',monospace;font-size:9px;letter-spacing:0.12em;color:#6B6B6B;">
+              {{ month_label_long | default(month_label) }}
             </td>
-            <td style="padding:0 6px;">
-              <a href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}"
-                 style="display:inline-block;padding:12px 20px;
-                        background:#111;color:#fff;
-                        text-decoration:none;border-radius:8px;
-                        font-weight:600;font-size:11pt;">
-                X
-              </a>
+          </tr>
+        </table>
+        <div style="height:1px;background:#0A0A0A;opacity:0.55;margin:10px 0 0 0;line-height:1px;font-size:1px;">&nbsp;</div>
+      </td></tr>
+
+      {# ─── Salutation (italic serif drop-cap letter) ────────────────── #}
+      <tr><td style="padding:28px 40px 8px 40px;">
+        <p style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:17px;line-height:1.4;color:#0A0A0A;letter-spacing:-0.01em;">
+          Dear {{ user_name }},
+        </p>
+      </td></tr>
+
+      <tr><td style="padding:6px 40px 0 40px;">
+        <p style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-size:15px;line-height:1.62;color:#202020;text-align:justify;">
+          A month ends, and with it a handful of closed lots worth placing
+          under glass for a moment. This is a small record — not a pattern,
+          not a plan, not a claim about tomorrow.
+        </p>
+      </td></tr>
+
+      {# ─── Hero figure card ────────────────────────────────────────── #}
+      <tr><td style="padding:28px 40px 0 40px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+               style="border-top:0.5pt solid #0A0A0A;border-bottom:0.5pt solid #0A0A0A;">
+          <tr>
+            <td align="center" style="padding:28px 0 18px 0;">
+              <div style="font-family:'Source Serif 4',Georgia,serif;font-size:10px;letter-spacing:0.42em;text-transform:uppercase;color:#8B6F47;margin-bottom:14px;">
+                —— The Moment Worth Noting ——
+              </div>
+              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:44px;font-weight:500;color:{% if _best_usd >= 0 %}#1B5E20{% else %}#A84C4C{% endif %};letter-spacing:-0.025em;line-height:1.0;padding-bottom:8px;border-bottom:1px solid #8B6F47;display:inline-block;">
+                {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
+              </div>
+              <div style="margin-top:14px;font-family:'Geist',-apple-system,sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#6B6B6B;font-weight:600;">
+                {{ best_ticker | default('NVDA') }} &nbsp;·&nbsp; <span style="color:#0A0A0A;">{{ '%+.2f'|format(_best_ret) }}%</span> &nbsp;·&nbsp; {{ hold_days | default(8) }}-day hold
+              </div>
             </td>
-          </tr></table>
-        </td></tr>
-        {% endif %}
+          </tr>
+        </table>
+      </td></tr>
 
-        <!-- Archive CTA -->
-        <tr><td style="padding:16px 32px 28px 32px;text-align:center;
-                       border-top:1px solid #e5e7eb;">
-          <a href="https://pivoxquant.com/artifacts"
-             style="display:inline-block;padding:10px 18px;
-                    background:#ffffff;color:#111;
-                    border:1px solid #d1d5db;border-radius:6px;
-                    text-decoration:none;font-size:11pt;">
-            전체 리포트 아카이브 →
-          </a>
-        </td></tr>
+      {# ─── Editorial narrative ─────────────────────────────────────── #}
+      <tr><td style="padding:24px 40px 0 40px;">
+        <p style="margin:0 0 10px 0;font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:15px;line-height:1.65;color:#202020;text-align:justify;">
+          Entered {{ best_ticker | default('NVDA') }} on {{ entry_date | default('April 3') }}
+          at ${{ entry_price | default('842') }}. Closed
+          {{ exit_date | default('April 11') }} at ${{ exit_price | default('879') }}.
+          The thesis held three sessions, then handed off to the market's own
+          weather. The gain was observed; the decision, imperfect as always, was
+          your own.
+        </p>
+      </td></tr>
 
-        <!-- Disclaimer -->
-        <tr><td style="padding:16px 32px 24px 32px;
-                       background:#fafafa;color:#6b7280;font-size:9pt;
-                       line-height:1.5;border-top:1px solid #e5e7eb;">
-          <em>{{ disclaimer }}</em>
-        </td></tr>
+      {# ─── Three small observations (tabular-num side strip) ───────── #}
+      <tr><td style="padding:24px 40px 0 40px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+               style="border-top:0.5pt solid #0A0A0A;border-bottom:0.5pt solid #0A0A0A;">
+          <tr>
+            <td style="padding:14px 0 14px 0;width:33%;vertical-align:top;border-right:0.25pt solid #c9c4b8;">
+              <div style="font-family:'Geist',-apple-system,sans-serif;font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:#8B6F47;font-weight:600;margin-bottom:4px;">Best Lot P&amp;L</div>
+              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:18px;color:#0A0A0A;letter-spacing:-0.015em;">
+                {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
+              </div>
+            </td>
+            <td style="padding:14px 0 14px 14px;width:33%;vertical-align:top;border-right:0.25pt solid #c9c4b8;">
+              <div style="font-family:'Geist',-apple-system,sans-serif;font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:#8B6F47;font-weight:600;margin-bottom:4px;">Win Rate</div>
+              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:18px;color:#0A0A0A;letter-spacing:-0.015em;">{{ '%.0f'|format(_win_rate) }}%</div>
+            </td>
+            <td style="padding:14px 0 14px 14px;width:33%;vertical-align:top;">
+              <div style="font-family:'Geist',-apple-system,sans-serif;font-size:8px;letter-spacing:0.22em;text-transform:uppercase;color:#8B6F47;font-weight:600;margin-bottom:4px;">Trades Closed</div>
+              <div style="font-family:'JetBrains Mono','Menlo',monospace;font-size:18px;color:#0A0A0A;letter-spacing:-0.015em;">{{ trade_count | default(8) }}</div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
 
-      </table>
+      {# ─── Full-card CTA (web view of the 4-page PDF) ───────────────── #}
+      {% if share_url %}
+      <tr><td align="center" style="padding:28px 40px 8px 40px;">
+        <a href="{{ share_url }}"
+           style="display:inline-block;padding:12px 28px;background:#0A0A0A;color:#F7F5EF;font-family:'Geist',-apple-system,sans-serif;font-size:10px;letter-spacing:0.32em;text-transform:uppercase;text-decoration:none;font-weight:600;">
+          Open the full card
+        </a>
+      </td></tr>
+      {% endif %}
 
-      <div style="margin-top:16px;font-size:9pt;color:#9ca3af;">
-        PivoxQuant · reports@pivoxquant.com
-      </div>
+      {# ─── Quiet signature ─────────────────────────────────────────── #}
+      <tr><td style="padding:28px 40px 0 40px;">
+        <p style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:12px;line-height:1.55;color:#6B6B6B;text-align:right;">
+          — a quiet record,<br>
+          PivoxQuant Research Desk
+        </p>
+      </td></tr>
 
-      {% include '_disclaimer.html' %}
+      {# ─── Disclaimer strip ────────────────────────────────────────── #}
+      <tr><td style="padding:28px 40px 28px 40px;">
+        <div style="height:0.35pt;background:#c9c4b8;margin-bottom:14px;line-height:1px;font-size:1px;">&nbsp;</div>
+        <p style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:10px;line-height:1.55;color:#8a8a8a;">
+          This card is a descriptive summary of observed trades. Past performance
+          does not guarantee future results. This document is informational and
+          does not constitute investment advice. 본 자료는 과거 관찰 기록이며
+          투자자문이 아닙니다.
+        </p>
+        <p style="margin:8px 0 0 0;font-family:'JetBrains Mono','Menlo',monospace;font-size:8px;letter-spacing:0.08em;color:#8a8a8a;">
+          PivoxQuant &nbsp;·&nbsp; pivoxquant.com &nbsp;·&nbsp; informational use only &nbsp;·&nbsp; © 2026
+        </p>
+      </td></tr>
 
-    </td></tr>
-  </table>
+    </table>
+
+  </td></tr>
+</table>
 
 </body>
 </html>

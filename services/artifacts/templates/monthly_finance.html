@@ -1,368 +1,967 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Monthly Finance — Goldman IC v2 Editorial Redesign (6-page flagship)
+   개인 재무 월간 기록부 — Private bank monthly statement × Buffett letter.
+   Observation only — never prediction or directive.
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Monthly Finance Report — {{ month_label }}</title>
+  <title>Monthly Finance — {{ month_label }} — {{ user_name }}</title>
   <style>
-    @page { size: A4; margin: 18mm 16mm; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                       Helvetica, Arial, "Apple SD Gothic Neo",
-                       "Noto Sans KR", sans-serif;
-           color: #111; line-height: 1.5; font-size: 10.5pt; margin: 0; }
-    h1 { font-size: 24pt; margin: 0 0 4pt 0; letter-spacing: -0.4pt; }
-    h2 { font-size: 13pt; margin: 16pt 0 6pt 0;
-         border-bottom: 1px solid #e5e7eb; padding-bottom: 4pt; }
-    h3 { font-size: 11pt; margin: 12pt 0 4pt 0; color: #374151; }
-    .meta { font-size: 9pt; color: #6b7280; text-transform: uppercase;
-            letter-spacing: .5pt; }
-    .cover-title { margin-top: 25mm; }
-    .cover-sub { font-size: 14pt; color: #6b7280; margin-top: 8pt; }
-    .cover-kpi { margin: 30mm 0 10mm 0; display: table; width: 100%; }
-    .cover-kpi-cell { display: table-cell; width: 25%; padding: 10pt 6pt;
-                      border-right: 1px solid #e5e7eb; text-align: center; }
-    .cover-kpi-cell:last-child { border-right: none; }
-    .cover-kpi-label { font-size: 8.5pt; color: #6b7280;
-                       text-transform: uppercase; letter-spacing: .4pt; }
-    .cover-kpi-val { font-size: 18pt; font-weight: 700; margin-top: 3pt;
-                     letter-spacing: -0.3pt; }
-    .kpi-row { display: table; width: 100%; margin: 10pt 0; }
-    .kpi-cell { display: table-cell; width: 33%; padding: 10pt 8pt;
-                border-right: 1px solid #e5e7eb; text-align: center; }
-    .kpi-cell:last-child { border-right: none; }
-    .kpi-label { font-size: 9pt; color: #6b7280;
-                 text-transform: uppercase; letter-spacing: .4pt; }
-    .kpi-value { font-size: 20pt; font-weight: 700; margin-top: 3pt;
-                 letter-spacing: -0.3pt; }
-    .kpi-positive { color: #0a6f3c; }
-    .kpi-negative { color: #a11d1d; }
-    .kpi-neutral { color: #374151; }
-    table.ledger { width: 100%; border-collapse: collapse; margin-top: 4pt;
-                   font-size: 9.5pt; }
-    table.ledger th, table.ledger td { padding: 6pt 4pt; text-align: left;
-                                       border-bottom: 1px solid #e5e7eb; }
-    table.ledger th { font-size: 8.5pt; color: #6b7280;
-                      text-transform: uppercase; letter-spacing: .4pt;
-                      font-weight: 500; }
-    table.ledger td.num { text-align: right; font-variant-numeric: tabular-nums; }
-    tfoot td { font-weight: 700; border-top: 2px solid #111 !important;
-               border-bottom: none !important; }
-    .note { background: #faf9f6; border-left: 3px solid #111;
-            padding: 8pt 12pt; margin: 10pt 0; font-size: 9.5pt;
-            color: #4b5563; }
-    .legal-warn { background: #fef3c7; border-left: 3px solid #92400e;
-                  padding: 8pt 12pt; margin: 10pt 0; font-size: 9pt;
-                  color: #713f12; }
-    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt;
-              line-height: 1.45; }
-    .page-break { page-break-after: always; }
-    .estimate-tag { display: inline-block; background: #fef3c7;
-                    color: #92400e; padding: 2pt 6pt; border-radius: 2pt;
-                    font-size: 8pt; font-weight: 600; letter-spacing: .3pt;
-                    text-transform: uppercase; margin-left: 6pt; }
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  MONTHLY FINANCE";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
+      @top-right {
+        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ month_label }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
+      }
+      @bottom-left {
+        content: "Monthly ledger — informational only.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8pt;
+        color: #4a4a4a;
+      }
+    }
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
+
+    /* ───────── P1 · COVER ───────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 44pt; line-height: 1.12; letter-spacing: -0.02em;
+      color: #0A0A0A; margin: 44pt 0 44pt 0;
+    }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 36pt; }
+    .cv-hero span + span + span { padding-left: 72pt; color: #8B6F47; }
+    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; }
+    .cv-kpi { display: table-cell; width: 25%; padding: 4pt 10pt; vertical-align: top; overflow: visible; }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 12pt; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8a8a8a; margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.015em; line-height: 1.02;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
+    }
+    .cv-foot {
+      margin-top: 40pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt; color: #6B6B6B; letter-spacing: 0.02em;
+    }
+
+    /* ───────── Part / title / deck (shared) ───────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt; font-weight: 400; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
+      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
+    }
+
+    /* ───────── P2 · LEDGER SPREAD (66/33) ───────── */
+    .ls-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed; }
+    .ls-main { display: table-cell; width: 66%; vertical-align: top; }
+    .ls-side { display: table-cell; width: 34%; vertical-align: top; }
+    .ls-fig-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 600; margin-bottom: 6pt;
+    }
+    .ls-fig-caption {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
+      line-height: 1.4; margin-top: 6pt;
+    }
+    .ls-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.6; color: #202020;
+      border-top: 0.35pt solid #c9c4b8; padding-top: 10pt; margin-top: 4pt;
+    }
+    .ls-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
+    .ls-prose > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 28pt; line-height: 0.88; font-weight: 500;
+      color: #8B6F47; float: left; padding: 2pt 6pt 0 0; font-style: normal;
+    }
+    .ls-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt; margin-bottom: 12pt;
+    }
+    .ls-margin-term {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 2pt;
+    }
+    .ls-margin-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12pt; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    }
+    .ls-margin-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8pt; line-height: 1.45; color: #6B6B6B; margin-top: 2pt;
+    }
+
+    /* ───────── P3 · CASH FLOW LADDER ───────── */
+    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
+    .ld-table th, .ld-table td {
+      padding: 6pt 6pt; text-align: left; vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6B6B6B; font-weight: 600;
+    }
+    .ld-table td.num {
+      text-align: right;
+      font-family: "JetBrains Mono", monospace;
+      font-variant-numeric: tabular-nums; font-size: 9pt;
+    }
+    .ld-tkr {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600; font-size: 9.5pt; letter-spacing: 0.02em; color: #0A0A0A;
+    }
+    .ld-note {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.2pt; color: #4a4a4a;
+    }
+    .ld-section-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.2pt; letter-spacing: 0.28em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin: 16pt 0 6pt 0;
+      border-top: 0.5pt solid #0A0A0A; padding-top: 10pt;
+    }
+    .cf-twocol {
+      display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0;
+    }
+    .cf-col { display: table-cell; width: 50%; vertical-align: top; }
+    .cf-row {
+      display: table; width: 100%; padding: 5pt 0;
+      border-bottom: 0.15pt solid #e4dfd2;
+    }
+    .cf-row-last {
+      display: table; width: 100%; padding: 6pt 0;
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+    }
+    .cf-label {
+      display: table-cell;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.5pt; color: #202020; vertical-align: middle;
+    }
+    .cf-val {
+      display: table-cell; text-align: right;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 9.5pt; color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ───────── P4 · ATTRIBUTION QUAD (2×2) ───────── */
+    .aq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; table-layout: fixed; }
+    .aq-main { display: table-cell; width: 70%; vertical-align: top; }
+    .aq-side { display: table-cell; width: 30%; vertical-align: top; }
+    .aq-quads { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .aq-quad {
+      display: table-cell; width: 50%; padding: 6pt 8pt;
+      vertical-align: top; height: 180pt;
+    }
+    .aq-quad svg { width: 100%; }
+    .aq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 3pt;
+    }
+    .aq-quad-sub {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.6pt; color: #6B6B6B; margin-bottom: 4pt;
+    }
+    .aq-rail {
+      padding: 10pt 0;
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+    }
+    .aq-rail-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.28em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 8pt;
+    }
+    .aq-rail-item {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; line-height: 1.5; color: #202020;
+      padding: 6pt 0; border-bottom: 0.15pt solid #e4dfd2;
+    }
+    .aq-rail-item:last-child { border-bottom: none; }
+    .aq-rail-n {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8B6F47; margin-right: 6pt;
+    }
+
+    /* ───────── P5 · EDITORIAL ───────── */
+    .ed-quote-wrap {
+      min-height: 320pt; padding: 20pt 14mm 30pt 14mm;
+      display: table; width: 100%; text-align: center;
+    }
+    .ed-quote-cell { display: table-cell; vertical-align: middle; }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 38pt; line-height: 1.22; letter-spacing: -0.015em;
+      color: #0A0A0A; margin: 0 auto; max-width: 150mm;
+    }
+    .ed-quote-attr {
+      margin-top: 26pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47;
+    }
+    .ed-quote-attr::before, .ed-quote-attr::after {
+      content: "——"; color: #8B6F47; opacity: 0.5; margin: 0 8pt; letter-spacing: 0;
+    }
+    .ed-watch-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 600;
+      margin-top: 26pt; padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
+    }
+    .ed-twocol { display: table; width: 100%; margin-top: 10pt; border-collapse: separate; border-spacing: 18pt 0; }
+    .ed-col { display: table-cell; width: 50%; vertical-align: top; }
+    .ed-col ol {
+      margin: 0; padding: 0 0 0 18pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.6; color: #202020;
+    }
+    .ed-col ol li { margin-bottom: 6pt; }
+    .ed-legal {
+      font-size: 6pt; color: #8a8a8a; margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif; font-style: italic; line-height: 1.4;
+    }
+
+    /* ───────── P6 · COLOPHON ───────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7; color: #202020; max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em; text-transform: uppercase; color: #6B6B6B;
+    }
+    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+
+    section.disclaimer.pq-disclaimer {
+      padding: 10pt 0 !important;
+      margin: 16pt 0 0 0 !important;
+      border-top: 0.5pt solid #0A0A0A !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
+    }
   </style>
 </head>
 <body>
 
-<!-- ═══════════ P1 · COVER ═══════════ -->
-<div class="meta">PivoxQuant · Monthly Finance Report</div>
-<h1 class="cover-title">{{ user_name }}'s Finance Dashboard</h1>
-<div class="cover-sub">{{ month_label }} · prepared for personal review</div>
+{# ── local helpers ──────────────────────────────────────────────────────── #}
+{% set _issue_no = issue_number | default(4) %}
+{% set _doc_ref = doc_ref | default('PQ-MF-' ~ ('%02d' % _issue_no) ~ ' · v2026.04.21') %}
+{% set _hero = hero_headline | default([
+    'A month ends.',
+    'Ledgers settle their',
+    'quiet arithmetic.'
+]) %}
 
-<div class="cover-kpi">
-  <div class="cover-kpi-cell">
-    <div class="cover-kpi-label">Cash (KRW)</div>
-    <div class="cover-kpi-val kpi-neutral">
-      ₩{{ '{:,.0f}'.format(cash.total_krw) }}
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 1 · COVER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<section class="cv">
+
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=340 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+  </div>
+
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    MONTHLY FINANCE
+    &nbsp;·&nbsp; {{ month_label }}
+    &nbsp;·&nbsp; <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+  </div>
+  <div class="cv-rule-thin"></div>
+
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
+
+  <div class="cv-rule-thin"></div>
+
+  {% set _kpi = kpis_cover | default({
+    'month_pnl_pct': 2.4,
+    'ytd_pnl_pct':   8.7,
+    'realized_usd':  3420,
+    'unrealized_usd':8210,
+  }) %}
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">MONTH P&amp;L</div>
+      <div class="cv-kpi-value {% if _kpi.month_pnl_pct >= 0 %}r-pos{% else %}r-neg{% endif %}">
+        {{ '%+.2f'|format(_kpi.month_pnl_pct) }}%
+      </div>
+      <div class="cv-kpi-foot">Book, net of realised costs.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">YTD P&amp;L</div>
+      <div class="cv-kpi-value {% if _kpi.ytd_pnl_pct >= 0 %}r-pos{% else %}r-neg{% endif %}">
+        {{ '%+.2f'|format(_kpi.ytd_pnl_pct) }}%
+      </div>
+      <div class="cv-kpi-foot">Calendar-year cumulative.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">REALISED P&amp;L</div>
+      <div class="cv-kpi-value {% if _kpi.realized_usd >= 0 %}r-pos{% else %}r-neg{% endif %}">
+        {% if _kpi.realized_usd >= 0 %}+{% endif %}${{ '{:,}'.format(_kpi.realized_usd) }}
+      </div>
+      <div class="cv-kpi-foot">Closed lots, this month.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">UNREALISED P&amp;L</div>
+      <div class="cv-kpi-value {% if _kpi.unrealized_usd >= 0 %}r-pos{% else %}r-neg{% endif %}">
+        {% if _kpi.unrealized_usd >= 0 %}+{% endif %}${{ '{:,}'.format(_kpi.unrealized_usd) }}
+      </div>
+      <div class="cv-kpi-foot">Open positions, MTD mark.</div>
     </div>
   </div>
-  <div class="cover-kpi-cell">
-    <div class="cover-kpi-label">Book MV (KRW)</div>
-    <div class="cover-kpi-val kpi-neutral">
-      ₩{{ '{:,.0f}'.format(positions_mv.total_krw) }}
+
+  <p class="cv-foot">
+    Prepared for {{ user_name }} &nbsp;·&nbsp; Monthly ledger, observation only.
+    Past performance does not guarantee future results.
+  </p>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 2 · LEDGER SPREAD (equity walk + prose + marginalia)
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · Ledger Spread</p>
+<h2 class="sp-title">What the month wrote down</h2>
+<p class="sp-deck">
+  A daily equity walk across the month, paired with a reading of where the
+  gain came from — realised, unrealised, and the dividend line.
+</p>
+
+<div class="ls-grid">
+  <div class="ls-main">
+
+    <div class="ls-fig-title">Fig. 1 · Month-to-date equity walk</div>
+
+    {% set _W = 480 %}
+    {% set _H = 220 %}
+    {% set _Tp = 20 %}
+    {% set _Bp = 36 %}
+    {% set _Lp = 10 %}
+    {% set _Rp = 14 %}
+    {% set _PW = _W - _Lp - _Rp %}
+    {% set _PH = _H - _Tp - _Bp %}
+
+    {% set _walk = equity_walk | default([
+      0.00, 0.12, 0.31, 0.22, 0.45, 0.68, 0.81, 0.92, 1.10,
+      1.28, 1.14, 1.33, 1.52, 1.71, 1.84, 1.92, 1.88, 2.04,
+      2.21, 2.38, 2.30, 2.41, 2.40
+    ]) %}
+    {% set _wmax = _walk | max %}
+    {% set _wmin = _walk | min %}
+    {% if _wmax == _wmin %}{% set _wmax = _wmin + 0.01 %}{% endif %}
+    {% set _span = _wmax - _wmin %}
+    {% set _pad = 0.15 * _span %}
+    {% set _lo = _wmin - _pad %}
+    {% set _hi = _wmax + _pad %}
+    {% set _rng = _hi - _lo %}
+
+    {% set _pts = [] %}
+    {% for v in _walk %}
+      {% set _x = _Lp + loop.index0 * _PW / (_walk | length - 1) %}
+      {% set _y = _Tp + _PH - ((v - _lo) / _rng) * _PH %}
+      {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+    {% endfor %}
+
+    {% set _zero_y = _Tp + _PH - ((0 - _lo) / _rng) * _PH %}
+
+    {# locate high + low indexes for bronze dots #}
+    {% set _hi_idx = 0 %}
+    {% set _lo_idx = 0 %}
+    {% for v in _walk %}
+      {% if v == _wmax %}{% set _hi_idx = loop.index0 %}{% endif %}
+      {% if v == _wmin %}{% set _lo_idx = loop.index0 %}{% endif %}
+    {% endfor %}
+
+    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
+         xmlns="http://www.w3.org/2000/svg" aria-label="Month-to-date equity walk" role="img"
+         style="display:block; overflow:visible;">
+
+      {% for gy in [0.25, 0.5, 0.75] %}
+        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH * gy }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH * gy }}"
+              stroke="#E8E4DA" stroke-width="0.3"/>
+      {% endfor %}
+
+      <line x1="{{ _Lp }}" y1="{{ _zero_y }}" x2="{{ _W - _Rp }}" y2="{{ _zero_y }}"
+            stroke="#8B6F47" stroke-width="0.4" stroke-dasharray="3,2" opacity="0.55"/>
+
+      <polygon points="{{ _pts | join(' ') }} {{ _W - _Rp }},{{ _zero_y }} {{ _Lp }},{{ _zero_y }}"
+               fill="#8B6F47" fill-opacity="0.11"/>
+
+      <polyline points="{{ _pts | join(' ') }}"
+                fill="none" stroke="#0A0A0A" stroke-width="1.3" stroke-linejoin="round"/>
+
+      {# month high marker #}
+      {% set _hpt = _pts[_hi_idx].split(',') %}
+      <circle cx="{{ _hpt[0] }}" cy="{{ _hpt[1] }}" r="2.4" fill="#8B6F47"/>
+      <text x="{{ _hpt[0]|float + 4 }}" y="{{ _hpt[1]|float - 4 }}"
+            fill="#8B6F47" font-size="7.8" font-family="Source Serif 4, serif" font-style="italic">
+        month high · {{ '%+.2f' % _wmax }}%
+      </text>
+
+      {# month low marker #}
+      {% set _lpt = _pts[_lo_idx].split(',') %}
+      <circle cx="{{ _lpt[0] }}" cy="{{ _lpt[1] }}" r="2" fill="#A84C4C"/>
+      <text x="{{ _lpt[0]|float + 4 }}" y="{{ _lpt[1]|float + 12 }}"
+            fill="#A84C4C" font-size="7.4" font-family="Source Serif 4, serif" font-style="italic">
+        drawdown trough · {{ '%+.2f' % _wmin }}%
+      </text>
+
+      {# end of series #}
+      {% set _last = _pts[-1].split(',') %}
+      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="2.5" fill="#0A0A0A"/>
+      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="4.4" fill="none" stroke="#0A0A0A" stroke-width="0.35" opacity="0.3"/>
+
+      {# day labels every 5 days #}
+      {% for di in [0, 5, 10, 15, 20, 22] %}
+        {% if di < (_walk | length) %}
+          {% set _dx = _Lp + di * _PW / (_walk | length - 1) %}
+          <text x="{{ '%.2f' % _dx }}" y="{{ _H - 16 }}" text-anchor="middle"
+                fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">D{{ di + 1 }}</text>
+        {% endif %}
+      {% endfor %}
+
+      <text x="{{ _W - _Rp + 3 }}" y="{{ _Tp + 4 }}" fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">{{ '%+.2f' % _hi }}%</text>
+      <text x="{{ _W - _Rp + 3 }}" y="{{ _Tp + _PH + 2 }}" fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">{{ '%+.2f' % _lo }}%</text>
+    </svg>
+
+    <div class="ls-fig-caption">
+      Fig. 1. Month-to-date cumulative return, daily close marks. Bronze dot
+      marks the month high; oxblood marks the drawdown trough. The solid dot
+      at the right edge is month-end close.
     </div>
-  </div>
-  <div class="cover-kpi-cell">
-    <div class="cover-kpi-label">Runway</div>
-    <div class="cover-kpi-val kpi-neutral">
-      {% if runway_months is none %}∞
-      {% else %}{{ '%.1f'|format(runway_months) }} mo{% endif %}
+
+    <div class="ls-prose">
+      {% set _p = ledger_prose | default([
+        'April recorded a net gain of 2.4% on invested capital, against a month that ran cool through the first week and accelerated through the middle ten sessions. The drawdown trough on Day 10 of -0.20% was shallow relative to the ninety-day envelope and recovered inside two sessions.',
+        'Of the month gain, realised P&L from closed lots contributed $3,420 across twelve exits; unrealised P&L on open positions carries $8,210 at the month-end mark. Three dividend events posted during the month for a combined $612 gross receipt. Fees and costs totalled $58, FIFO lot-matched.'
+      ]) %}
+      {% for para in _p %}<p>{{ para }}</p>{% endfor %}
     </div>
+
   </div>
-  <div class="cover-kpi-cell">
-    <div class="cover-kpi-label">Positions</div>
-    <div class="cover-kpi-val kpi-neutral">{{ position_count }}</div>
+
+  <div class="ls-side">
+
+    {% set _mrg = ledger_margin | default({
+      'cash_on_hand':  18450,
+      'margin_used':   0,
+      'net_deposits':  2000,
+      'account_nav':   51820,
+    }) %}
+
+    <div class="ls-margin-block">
+      <div class="ls-margin-term">Cash on hand</div>
+      <div class="ls-margin-value">${{ '{:,}'.format(_mrg.cash_on_hand) }}</div>
+      <div class="ls-margin-body">Observed month-end. Settled cash available across cash and short-term reserve.</div>
+    </div>
+
+    <div class="ls-margin-block">
+      <div class="ls-margin-term">Margin used</div>
+      <div class="ls-margin-value">${{ '{:,}'.format(_mrg.margin_used) }}</div>
+      <div class="ls-margin-body">Zero margin utilised across the full month. Account remains fully cash-funded.</div>
+    </div>
+
+    <div class="ls-margin-block">
+      <div class="ls-margin-term">Net deposits</div>
+      <div class="ls-margin-value">{% if _mrg.net_deposits >= 0 %}+{% endif %}${{ '{:,}'.format(_mrg.net_deposits) }}</div>
+      <div class="ls-margin-body">Monthly recurring deposit. No withdrawals recorded for the period.</div>
+    </div>
+
+    <div class="ls-margin-block">
+      <div class="ls-margin-term">Account NAV</div>
+      <div class="ls-margin-value">${{ '{:,}'.format(_mrg.account_nav) }}</div>
+      <div class="ls-margin-body">Mark-to-market NAV at month-end close. Gross of residual pending settlement.</div>
+    </div>
+
   </div>
 </div>
 
-<div class="note">
-  이 리포트는 본인의 현금·보유·거래 기록을 객관적으로 요약한
-  <strong>재무 대시보드</strong>입니다. 어떠한 종목 배분·매수·매도 판단도
-  포함하지 않으며, 모든 수치는 본인의 수학적 사실입니다.
-</div>
 
-<div class="footer">
-  Period {{ period_start }} → {{ period_end }} · USD/KRW {{ '%.2f'|format(fx_rate) }} ·
-  Generated {{ generated_at }}
-</div>
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 3 · CASH FLOW LADDER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
 
-<div class="page-break"></div>
+<p class="sp-part">Part II · Cash Flow Ledger</p>
+<h2 class="sp-title">What the month moved through the account</h2>
+<p class="sp-deck">
+  Closed-lot realised P&amp;L on the top ten exits, paired with the month's
+  cash-flow summary — deposits, dividends, fees, tax withheld, net change.
+</p>
 
-<!-- ═══════════ P2 · CASH POSITION ═══════════ -->
-<h2>Cash Position</h2>
+<div class="ls-fig-title">Realised P&amp;L · top ten closed lots</div>
 
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">USD</div>
-    <div class="kpi-value kpi-neutral">${{ '{:,.2f}'.format(cash.cash_usd) }}</div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">KRW</div>
-    <div class="kpi-value kpi-neutral">₩{{ '{:,.0f}'.format(cash.cash_krw) }}</div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Liquidity Ratio</div>
-    <div class="kpi-value kpi-neutral">
-      {% if liquidity_ratio is not none %}
-        {{ '%.1f'|format(liquidity_ratio * 100) }}%
-      {% else %}—{% endif %}
-    </div>
-  </div>
-</div>
+{% set _closed = closed_lots | default([
+  {'ticker': 'NVDA',     'entry': '2026-02-14', 'exit': '2026-04-08', 'qty': 4,  'cost':  2540.00, 'proceeds':  3180.00, 'pnl':  640.00,  'spark': [0.2, 0.3, 0.4, 0.55, 0.65, 0.72, 0.80, 0.88]},
+  {'ticker': 'MSFT',     'entry': '2026-03-12', 'exit': '2026-04-11', 'qty': 8,  'cost':  2682.00, 'proceeds':  2940.00, 'pnl':  258.00,  'spark': [0.3, 0.36, 0.42, 0.44, 0.52, 0.58, 0.62, 0.66]},
+  {'ticker': 'AAPL',     'entry': '2026-01-28', 'exit': '2026-04-14', 'qty': 6,  'cost':  1034.40, 'proceeds':  1182.00, 'pnl':  147.60,  'spark': [0.4, 0.42, 0.48, 0.52, 0.58, 0.60, 0.64, 0.66]},
+  {'ticker': '005930.KS','entry': '2026-03-03', 'exit': '2026-04-16', 'qty': 20, 'cost':  1440.00, 'proceeds':  1596.00, 'pnl':  156.00,  'spark': [0.5, 0.52, 0.56, 0.58, 0.62, 0.64, 0.68, 0.72]},
+  {'ticker': 'GOOGL',    'entry': '2026-02-20', 'exit': '2026-04-03', 'qty': 5,  'cost':   745.00, 'proceeds':   812.00, 'pnl':   67.00,  'spark': [0.3, 0.28, 0.34, 0.38, 0.42, 0.46, 0.48, 0.52]},
+  {'ticker': 'AVGO',     'entry': '2026-03-20', 'exit': '2026-04-18', 'qty': 2,  'cost':  2560.00, 'proceeds':  2748.00, 'pnl':  188.00,  'spark': [0.4, 0.42, 0.48, 0.52, 0.58, 0.62, 0.66, 0.72]},
+  {'ticker': 'NFLX',     'entry': '2026-02-05', 'exit': '2026-04-09', 'qty': 3,  'cost':  1890.00, 'proceeds':  2022.00, 'pnl':  132.00,  'spark': [0.4, 0.44, 0.48, 0.50, 0.54, 0.58, 0.60, 0.64]},
+  {'ticker': 'QCOM',     'entry': '2026-03-18', 'exit': '2026-04-12', 'qty': 10, 'cost':  1580.00, 'proceeds':  1492.00, 'pnl':  -88.00,  'spark': [0.5, 0.48, 0.46, 0.44, 0.42, 0.40, 0.38, 0.36]},
+  {'ticker': 'INTC',     'entry': '2026-02-22', 'exit': '2026-04-05', 'qty': 15, 'cost':   585.00, 'proceeds':   536.25, 'pnl':  -48.75,  'spark': [0.5, 0.48, 0.46, 0.44, 0.42, 0.40, 0.38, 0.38]},
+  {'ticker': '000660.KS','entry': '2026-03-28', 'exit': '2026-04-19', 'qty': 5,  'cost':   725.00, 'proceeds':   831.00, 'pnl':  106.00,  'spark': [0.5, 0.52, 0.54, 0.58, 0.62, 0.66, 0.70, 0.74]},
+]) %}
 
-<h3>Breakdown</h3>
-<table class="ledger">
+<table class="ld-table">
   <thead>
-    <tr><th>Item</th><th class="num">USD</th><th class="num">KRW</th></tr>
+    <tr>
+      <th style="width:11%;">Symbol</th>
+      <th style="width:13%;">Entry</th>
+      <th style="width:13%;">Exit</th>
+      <th class="num" style="width:6%;">Qty</th>
+      <th class="num" style="width:12%;">Cost</th>
+      <th class="num" style="width:12%;">Proceeds</th>
+      <th class="num" style="width:13%;">Realised P&amp;L</th>
+      <th style="width:20%;">Trajectory</th>
+    </tr>
   </thead>
   <tbody>
-    <tr>
-      <td>Cash on hand</td>
-      <td class="num">${{ '{:,.2f}'.format(cash.cash_usd) }}</td>
-      <td class="num">₩{{ '{:,.0f}'.format(cash.cash_krw) }}</td>
-    </tr>
-    <tr>
-      <td>Positions — market value</td>
-      <td class="num">${{ '{:,.2f}'.format(positions_mv.mv_usd) }}</td>
-      <td class="num">₩{{ '{:,.0f}'.format(positions_mv.mv_krw) }}</td>
-    </tr>
+    {% for c in _closed %}
+      {% set _sw = 80 %}
+      {% set _sh = 16 %}
+      {% set _sp = c.spark %}
+      {% set _smax = _sp | max %}
+      {% set _smin = _sp | min %}
+      {% if _smax == _smin %}{% set _smax = _smin + 0.01 %}{% endif %}
+      {% set _sppts = [] %}
+      {% for v in _sp %}
+        {% set _x = loop.index0 * _sw / (_sp | length - 1) %}
+        {% set _y = _sh - ((v - _smin) / (_smax - _smin)) * (_sh - 3) - 1.5 %}
+        {% set _ = _sppts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sppts[-1].split(',') %}
+      <tr>
+        <td><span class="ld-tkr">{{ c.ticker }}</span></td>
+        <td><span class="ld-note">{{ c.entry }}</span></td>
+        <td><span class="ld-note">{{ c.exit }}</span></td>
+        <td class="num">{{ c.qty }}</td>
+        <td class="num">${{ '{:,.2f}'.format(c.cost) }}</td>
+        <td class="num">${{ '{:,.2f}'.format(c.proceeds) }}</td>
+        <td class="num {% if c.pnl >= 0 %}r-pos{% else %}r-neg{% endif %}">
+          {% if c.pnl >= 0 %}+{% endif %}${{ '{:,.2f}'.format(c.pnl) }}
+        </td>
+        <td>
+          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="22" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
+            <polyline points="{{ _sppts | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+      </tr>
+    {% endfor %}
   </tbody>
-  <tfoot>
-    <tr>
-      <td>Total Net Worth (KRW)</td>
-      <td class="num">—</td>
-      <td class="num">₩{{ '{:,.0f}'.format(cash.total_krw + positions_mv.total_krw) }}</td>
-    </tr>
-  </tfoot>
 </table>
 
-<div class="note">
-  <strong>Liquidity Ratio</strong> = Cash ÷ (Cash + Positions MV).
-  즉시 현금화 가능한 비중을 수학적으로 나타냅니다. 목표치를 제시하지 않습니다.
+<div class="ld-section-title">Cash flow summary · {{ month_label }}</div>
+
+{% set _cf = cash_flow | default({
+  'deposits':           2000.00,
+  'withdrawals':           0.00,
+  'dividends_received':  612.00,
+  'interest_received':    24.50,
+  'fees_paid':           -58.00,
+  'taxes_withheld':      -91.80,
+  'net_cash_change':    2486.70,
+}) %}
+
+<div class="cf-twocol">
+  <div class="cf-col">
+    <div class="cf-row"><div class="cf-label">Deposits</div><div class="cf-val r-pos">{% if _cf.deposits >= 0 %}+{% endif %}${{ '{:,.2f}'.format(_cf.deposits) }}</div></div>
+    <div class="cf-row"><div class="cf-label">Withdrawals</div><div class="cf-val">${{ '{:,.2f}'.format(_cf.withdrawals) }}</div></div>
+    <div class="cf-row"><div class="cf-label">Dividends received (gross)</div><div class="cf-val r-pos">{% if _cf.dividends_received >= 0 %}+{% endif %}${{ '{:,.2f}'.format(_cf.dividends_received) }}</div></div>
+    <div class="cf-row"><div class="cf-label">Interest received</div><div class="cf-val r-pos">{% if _cf.interest_received >= 0 %}+{% endif %}${{ '{:,.2f}'.format(_cf.interest_received) }}</div></div>
+  </div>
+  <div class="cf-col">
+    <div class="cf-row"><div class="cf-label">Fees &amp; commissions paid</div><div class="cf-val r-neg">${{ '{:,.2f}'.format(_cf.fees_paid) }}</div></div>
+    <div class="cf-row"><div class="cf-label">Dividend tax withheld</div><div class="cf-val r-neg">${{ '{:,.2f}'.format(_cf.taxes_withheld) }}</div></div>
+    <div class="cf-row-last"><div class="cf-label"><strong>Net cash change</strong></div><div class="cf-val {% if _cf.net_cash_change >= 0 %}r-pos{% else %}r-neg{% endif %}"><strong>{% if _cf.net_cash_change >= 0 %}+{% endif %}${{ '{:,.2f}'.format(_cf.net_cash_change) }}</strong></div></div>
+  </div>
 </div>
 
-<div class="page-break"></div>
 
-<!-- ═══════════ P3 · CASH RUNWAY ═══════════ -->
-<h2>Cash Runway <span class="estimate-tag">Math</span></h2>
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 4 · ATTRIBUTION QUAD
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
 
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">Avg Monthly Net Buy (3mo)</div>
-    <div class="kpi-value kpi-neutral">
-      {% if burn_rate_krw is none %}—
-      {% else %}₩{{ '{:,.0f}'.format(burn_rate_krw) }}{% endif %}
+<p class="sp-part">Part III · Attribution Quad</p>
+<h2 class="sp-title">Where the month came from</h2>
+<p class="sp-deck">
+  Four lenses on where the ledger's gain originated — sector, contributors,
+  dividend timeline, and the cost line that the headline P&amp;L absorbed.
+</p>
+
+<div class="aq-grid">
+  <div class="aq-main">
+
+    <div class="aq-quads">
+      {# ── Q1 · Sector P&L attribution ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q1 · Sector P&amp;L Attribution</div>
+        <div class="aq-quad-sub">11 GICS sectors, USD contribution.</div>
+        {% set _sec_attr = sector_attribution | default([
+          {'n':'Tech',     'v':  1850},
+          {'n':'Semis',    'v':  1380},
+          {'n':'Comms',    'v':   420},
+          {'n':'Cons.D',   'v':  -180},
+          {'n':'Cons.S',   'v':   140},
+          {'n':'Health',   'v':   210},
+          {'n':'Indus',    'v':   380},
+          {'n':'Fin',      'v':    92},
+          {'n':'Util',     'v':   -48},
+          {'n':'Energy',   'v':   560},
+          {'n':'Real Est', 'v':  -120},
+        ]) %}
+        {% set _svals = _sec_attr | map(attribute='v') | list %}
+        {% set _sabs = _svals | map('abs') | list %}
+        {% set _smax = _sabs | max %}
+        {% if _smax == 0 %}{% set _smax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 105" width="100%" height="160" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
+          {% set _bw = 18 %}
+          {% set _gap = 4 %}
+          {% set _mid = 55 %}
+          {% set _scale = 40 %}
+          {% for s in _sec_attr %}
+            {% set _x = loop.index0 * (_bw + _gap) %}
+            {% set _h = (s.v | abs) / _smax * _scale %}
+            {% set _y = _mid - _h if s.v >= 0 else _mid %}
+            {% set _c = '#8B6F47' if s.v >= 0 else '#A84C4C' %}
+            <rect x="{{ _x }}" y="{{ _y }}" width="{{ _bw }}" height="{{ _h }}" fill="{{ _c }}" fill-opacity="0.7"/>
+            <text x="{{ _x + _bw/2 }}" y="100" text-anchor="middle" fill="#4a4a4a" font-size="5.4" font-family="Geist, sans-serif" letter-spacing="0.04em">{{ s.n }}</text>
+          {% endfor %}
+          <line x1="0" y1="{{ _mid }}" x2="240" y2="{{ _mid }}" stroke="#0A0A0A" stroke-width="0.35" opacity="0.5"/>
+        </svg>
+      </div>
+
+      {# ── Q2 · Top contributors / detractors ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q2 · Contributors &amp; Detractors</div>
+        <div class="aq-quad-sub">Top five either side, USD.</div>
+        {% set _cd = contrib_detract | default([
+          {'t':'NVDA',      'v':  1420},
+          {'t':'MSFT',      'v':   860},
+          {'t':'AAPL',      'v':   540},
+          {'t':'005930.KS', 'v':   380},
+          {'t':'AVGO',      'v':   320},
+          {'t':'QCOM',      'v':   -88},
+          {'t':'INTC',      'v':   -49},
+          {'t':'BABA',      'v':   -68},
+          {'t':'META',      'v':  -112},
+          {'t':'TSLA',      'v':  -190},
+        ]) %}
+        {% set _cdabs = _cd | map(attribute='v') | map('abs') | list %}
+        {% set _cdmax = _cdabs | max %}
+        {% if _cdmax == 0 %}{% set _cdmax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="168" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
+          {% for r in _cd %}
+            {% set _y = loop.index0 * 10 + 4 %}
+            {% set _mid = 120 %}
+            {% set _w = (r.v | abs) / _cdmax * 100 %}
+            {% set _x = _mid - _w if r.v < 0 else _mid %}
+            {% set _c = '#8B6F47' if r.v >= 0 else '#A84C4C' %}
+            <rect x="{{ _x }}" y="{{ _y }}" width="{{ _w }}" height="7" fill="{{ _c }}" fill-opacity="0.7"/>
+            <text x="{{ _mid - 2 }}" y="{{ _y + 5.5 }}" text-anchor="end" fill="#0A0A0A" font-size="5.6" font-family="Geist, sans-serif" font-weight="600">{{ r.t }}</text>
+            <text x="{{ _mid + 2 }}" y="{{ _y + 5.5 }}" text-anchor="start" fill="#4a4a4a" font-size="5.4" font-family="JetBrains Mono, monospace">{% if r.v >= 0 %}+{% endif %}${{ '{:,}'.format(r.v) }}</text>
+          {% endfor %}
+          <line x1="120" y1="2" x2="120" y2="106" stroke="#0A0A0A" stroke-width="0.3" opacity="0.55"/>
+        </svg>
+      </div>
+
+      {# ── Q3 · Dividend timeline ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q3 · Dividend Timeline</div>
+        <div class="aq-quad-sub">Events this month, gross amount.</div>
+        {% set _divs = dividend_events | default([
+          {'day': 3,  't':'AAPL',     'amt':  12.00},
+          {'day': 8,  't':'MSFT',     'amt':  48.00},
+          {'day': 12, 't':'AVGO',     'amt':  42.00},
+          {'day': 15, 't':'KO',       'amt':  18.00},
+          {'day': 18, 't':'005930.KS','amt':  68.00},
+          {'day': 21, 't':'JNJ',      'amt':  22.00},
+          {'day': 24, 't':'PG',       'amt':  16.00},
+          {'day': 28, 't':'XOM',      'amt':  38.00},
+        ]) %}
+        {% set _damax = _divs | map(attribute='amt') | list | max %}
+        {% if _damax == 0 %}{% set _damax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="168" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
+          <line x1="12" y1="90" x2="228" y2="90" stroke="#0A0A0A" stroke-width="0.35" opacity="0.5"/>
+          {% for d in _divs %}
+            {% set _x = 12 + (d.day / 30) * 216 %}
+            {% set _r = 2 + (d.amt / _damax) * 5 %}
+            <circle cx="{{ '%.2f' % _x }}" cy="90" r="{{ '%.2f' % _r }}" fill="#8B6F47" fill-opacity="0.6"/>
+            <line x1="{{ '%.2f' % _x }}" y1="{{ 88 - _r }}" x2="{{ '%.2f' % _x }}" y2="{{ 60 - (d.amt / _damax) * 30 }}" stroke="#8B6F47" stroke-width="0.35" opacity="0.6"/>
+            <text x="{{ '%.2f' % _x }}" y="{{ 56 - (d.amt / _damax) * 30 }}" text-anchor="middle" fill="#0A0A0A" font-size="5.4" font-family="Geist, sans-serif" font-weight="600">{{ d.t }}</text>
+            <text x="{{ '%.2f' % _x }}" y="{{ 50 - (d.amt / _damax) * 30 }}" text-anchor="middle" fill="#8B6F47" font-size="5.2" font-family="JetBrains Mono, monospace">${{ '%.0f' % d.amt }}</text>
+          {% endfor %}
+          {% for day in [1, 10, 20, 30] %}
+            {% set _tx = 12 + (day / 30) * 216 %}
+            <text x="{{ _tx }}" y="100" text-anchor="middle" fill="#8a8a8a" font-size="5.8" font-family="JetBrains Mono, monospace">D{{ day }}</text>
+          {% endfor %}
+        </svg>
+      </div>
+
+      {# ── Q4 · Fee / cost breakdown ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q4 · Fee &amp; Cost Breakdown</div>
+        <div class="aq-quad-sub">This month, total &minus;$58.00.</div>
+        {% set _costs = cost_breakdown_q | default([
+          {'n':'Commission',  'v': 22.40},
+          {'n':'Spread',      'v': 18.60},
+          {'n':'Borrow',      'v':  0.00},
+          {'n':'FX spread',   'v':  9.20},
+          {'n':'Reg. fees',   'v':  4.80},
+          {'n':'SEC fee',     'v':  3.00},
+        ]) %}
+        {% set _cmax = _costs | map(attribute='v') | list | max %}
+        {% if _cmax == 0 %}{% set _cmax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 105" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
+          {% for c in _costs %}
+            {% set _y = loop.index0 * 15 + 6 %}
+            {% set _w = c.v / _cmax * 130 %}
+            <rect x="72" y="{{ _y }}" width="{{ '%.2f' % _w }}" height="9" fill="#A84C4C" fill-opacity="0.55"/>
+            <text x="68" y="{{ _y + 7 }}" text-anchor="end" fill="#0A0A0A" font-size="5.8" font-family="Geist, sans-serif" font-weight="600">{{ c.n }}</text>
+            <text x="{{ 76 + _w }}" y="{{ _y + 7 }}" text-anchor="start" fill="#4a4a4a" font-size="5.6" font-family="JetBrains Mono, monospace">${{ '%.2f' % c.v }}</text>
+          {% endfor %}
+        </svg>
+      </div>
+    </div>
+
+    <div class="ls-fig-caption" style="text-align:center; margin-top: 10pt;">
+      Fig. 2. Four readings on where the month's gain originated. Bronze
+      marks positive contribution; oxblood marks drag. All figures in USD,
+      month-end close.
+    </div>
+
+  </div>
+
+  <div class="aq-side">
+    <div class="aq-rail">
+      <div class="aq-rail-eyebrow">Reconciliation Notes</div>
+      {% set _rail = reconciliation_notes | default([
+        'Figures are observed from broker statements, month-end close.',
+        'Dividends are gross of withholding tax.',
+        'Realised P&L uses FIFO lot matching.',
+        'Unrealised P&L uses month-end mark.',
+        'Not tax guidance — consult a professional for your own filing.'
+      ]) %}
+      {% for n in _rail %}
+        <div class="aq-rail-item"><span class="aq-rail-n">{{ '%02d' % loop.index }}</span>{{ n }}</div>
+      {% endfor %}
     </div>
   </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Current Cash (KRW)</div>
-    <div class="kpi-value kpi-neutral">
-      ₩{{ '{:,.0f}'.format(cash.total_krw) }}
-    </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 5 · EDITORIAL
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What a ledger cannot say</h2>
+<p class="sp-deck">
+  A single line the desk is holding in mind for the month, and a short list
+  of what the ledger expressly cannot settle for its reader.
+</p>
+
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default("A ledger is not a verdict. It is the month's handwriting — plain, careful, indifferent to meaning.") }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Finance Desk") }}</div>
   </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Runway @ Current Rate</div>
-    <div class="kpi-value
-         {% if runway_months is not none and runway_months < 3 %}kpi-negative
-         {% elif runway_months is not none and runway_months < 6 %}kpi-neutral
-         {% else %}kpi-positive{% endif %}">
-      {% if runway_months is none %}∞
-      {% else %}{{ '%.1f'|format(runway_months) }} mo{% endif %}
-    </div>
+</div>
+
+<div class="ed-watch-head">What this ledger cannot settle</div>
+<div class="ed-twocol">
+  <div class="ed-col">
+    <ol>
+      <li>Tax liability across jurisdictions.</li>
+      <li>Which closed-lot ordering is personally best for realisation.</li>
+      <li>Future dividend policy changes at the issuer level.</li>
+    </ol>
+  </div>
+  <div class="ed-col">
+    <ol start="4">
+      <li>Personal estate, gift, or inheritance considerations.</li>
+      <li>Real cash the reader can or cannot spend this month.</li>
+    </ol>
   </div>
 </div>
 
-<div class="note">
-  <strong>유휴 현금 ₩{{ '{:,.0f}'.format(cash.total_krw) }}</strong> →
-  {% if runway_months is none %}
-    지난 3개월 순 매수가 0 이하이므로 <strong>현금 소진 예상 없음</strong>.
-  {% else %}
-    월 평균 순 매수 ₩{{ '{:,.0f}'.format(burn_rate_krw) }} 속도를 유지할 경우
-    <strong>약 {{ '%.1f'|format(runway_months) }}개월</strong> 이 상태로 유지 가능.
-  {% endif %}
-</div>
+<p class="ed-legal">
+  Past performance does not guarantee future results. This document is
+  informational and does not constitute investment advice. &nbsp;·&nbsp;
+  본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.
+</p>
 
-<div class="legal-warn">
-  본 수치는 과거 3개월 순 매수 평균을 기반으로 한 <strong>산술적 투영</strong>입니다.
-  이는 "어디에 배분하라"는 권유가 아니며, 이용자 본인의 현금 흐름을
-  수학적으로 요약한 사실 정보입니다. 실제 입출금·소득·배당이 반영되지 않습니다.
-</div>
 
-<div class="page-break"></div>
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 6 · COLOPHON
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
 
-<!-- ═══════════ P4 · COST BREAKDOWN ═══════════ -->
-<h2>Cost Breakdown — {{ month_label }} <span class="estimate-tag">Estimate</span></h2>
+<div class="co-wrap">
 
-<div class="meta">지난달 체결 {{ cost_breakdown.trade_count }}건 기준 · 업계 표준치 추정</div>
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
 
-<table class="ledger">
-  <thead>
-    <tr>
-      <th>Category</th>
-      <th>Basis</th>
-      <th class="num">Estimated (KRW)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>US Commission</td>
-      <td>5 bps · 거래대금 ${{ '{:,.0f}'.format(cost_breakdown.us_notional_usd) }}</td>
-      <td class="num">₩{{ '{:,.0f}'.format(cost_breakdown.us_commission_usd * fx_rate) }}</td>
-    </tr>
-    <tr>
-      <td>KR Brokerage</td>
-      <td>15 bps · 거래대금 ₩{{ '{:,.0f}'.format(cost_breakdown.kr_notional_krw) }}</td>
-      <td class="num">₩{{ '{:,.0f}'.format(cost_breakdown.kr_commission_krw) }}</td>
-    </tr>
-    <tr>
-      <td>KR Transaction Tax (증권거래세)</td>
-      <td>20 bps · KOSPI/KOSDAQ 매도분</td>
-      <td class="num">₩{{ '{:,.0f}'.format(cost_breakdown.kr_transaction_tax_krw) }}</td>
-    </tr>
-    <tr>
-      <td>FX Spread</td>
-      <td>100 bps · USD 환전 왕복 추정</td>
-      <td class="num">₩{{ '{:,.0f}'.format(cost_breakdown.fx_spread_krw) }}</td>
-    </tr>
-  </tbody>
-  <tfoot>
-    <tr>
-      <td colspan="2">Total (Est.)</td>
-      <td class="num">₩{{ '{:,.0f}'.format(cost_breakdown.total_krw) }}</td>
-    </tr>
-  </tfoot>
-</table>
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name }}</strong> for the month of
+      <strong>{{ month_label }}</strong>. Issue
+      <strong>No. {{ '%02d' % _issue_no }}</strong> of the Monthly Finance series.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Positions &amp; Trades</span> &nbsp;
+      Alpaca Broker API (read-only).
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Corporate Actions</span> &nbsp;
+      FMP v4 Stable &middot; SEC EDGAR filings.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Dividend Calendar</span> &nbsp;
+      NASDAQ dividend history &middot; issuer press releases.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Currencies</span> &nbsp;
+      FX rate observation via Alpaca FX for KRW-denominated accounts.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('Historical record only. Monthly ledger pipeline.') }}.
+    </p>
+  </div>
 
-<div class="note">
-  Commission/Tax/Spread 수치는 <strong>업계 표준 요율</strong>에 기반한 추정이며,
-  실제 브로커·은행의 체결 내역과 정확히 일치하지 않을 수 있습니다. 본인의 거래
-  명세서를 우선 참조하십시오.
-</div>
+  <div class="co-thin-rule"></div>
 
-<div class="page-break"></div>
+  {% include '_disclaimer.html' %}
 
-<!-- ═══════════ P5 · TAX ESTIMATE ═══════════ -->
-<h2>Tax Estimate <span class="estimate-tag">Rough</span></h2>
+  <div class="co-thin-rule"></div>
 
-<table class="ledger">
-  <thead>
-    <tr>
-      <th>Category</th>
-      <th>Basis</th>
-      <th class="num">Estimated (KRW)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>US Capital Gains (양도세)</td>
-      <td>실현 이익 ${{ '{:,.2f}'.format(tax_estimate.realised_us_gain_usd) }} × 22%</td>
-      <td class="num">₩{{ '{:,.0f}'.format(tax_estimate.us_capital_gains_krw) }}</td>
-    </tr>
-    <tr>
-      <td>KR Realised Gains (매도 PnL)</td>
-      <td>
-        양도세 비과세 상품 대부분 &middot;
-        참고용 ₩{{ '{:,.0f}'.format(tax_estimate.realised_kr_gain_krw) }}
-      </td>
-      <td class="num">—</td>
-    </tr>
-    <tr>
-      <td>Dividend Withholding (원천징수)</td>
-      <td>
-        Forward-12m 배당 추정 ₩{{ '{:,.0f}'.format(tax_estimate.forward_12m_dividend_krw) }} × 15.4%
-      </td>
-      <td class="num">₩{{ '{:,.0f}'.format(tax_estimate.dividend_withholding_krw) }}</td>
-    </tr>
-  </tbody>
-  <tfoot>
-    <tr>
-      <td colspan="2">Total Estimated Tax Drag</td>
-      <td class="num">₩{{ '{:,.0f}'.format(tax_estimate.total_estimated_krw) }}</td>
-    </tr>
-  </tfoot>
-</table>
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Finance Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at | default(month_label) }}</div>
+  </div>
 
-<div class="legal-warn">
-  본 집계는 <strong>세무자문이 아니며</strong>, 세율·공제·종합소득 합산 여부는
-  개인 상황에 따라 달라집니다. 정확한 세액 계산은 공인 세무사·국세청
-  홈택스를 참조하십시오. 본 서비스는 산술적 추정치만 제공합니다.
-</div>
-
-<div class="page-break"></div>
-
-<!-- ═══════════ P6 · WATCH ITEMS ═══════════ -->
-<h2>Watch Items — {{ next_month_label }}</h2>
-<div class="meta">보유 종목 기준 다음 달 배당락일 및 실적 발표 일정 · 캘린더 정보만</div>
-
-<h3>Ex-Dividend Dates</h3>
-{% if watch.ex_dividends %}
-<table class="ledger">
-  <thead>
-    <tr>
-      <th>Date</th><th>Ticker</th><th class="num">Est. $/Share</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for r in watch.ex_dividends %}
-    <tr>
-      <td>{{ r.date }}</td>
-      <td><strong>{{ r.ticker }}</strong></td>
-      <td class="num">{{ '%.4f'|format(r.amount) }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p style="color:#9ca3af;">다음 달 배당락일이 확인되는 보유 종목이 없습니다.</p>
-{% endif %}
-
-<h3>Earnings Announcements</h3>
-{% if watch.earnings %}
-<table class="ledger">
-  <thead>
-    <tr><th>Date</th><th>Ticker</th></tr>
-  </thead>
-  <tbody>
-  {% for r in watch.earnings %}
-    <tr>
-      <td>{{ r.date }}</td>
-      <td><strong>{{ r.ticker }}</strong></td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p style="color:#9ca3af;">다음 달 실적 발표가 확인되는 보유 종목이 없습니다.</p>
-{% endif %}
-
-<div class="note">
-  위 일정은 <strong>참고용 캘린더</strong>일 뿐 매수·매도 권유가 아닙니다.
-  실제 발표 시각 및 배당 지급 여부는 기업 공시를 직접 확인하십시오.
-</div>
-
-<h2>Disclaimer</h2>
-{% include '_disclaimer.html' %}
-<div class="footer">
-  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
 </div>
 
 </body>

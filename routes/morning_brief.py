@@ -26,13 +26,14 @@ from services.morning_brief_service import (
     render_brief_email,
 )
 
-from .decorators import api_auth, require_tier
+from .decorators import api_auth, legal_scrub_response, require_tier
 
 morning_brief_bp = Blueprint("morning_brief", __name__, url_prefix="/api/brief")
 
 
 @morning_brief_bp.route("/today", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def get_today_brief():
     """Return today's brief or an {available:false} shell."""
     today = date.today()
@@ -59,6 +60,7 @@ def get_today_brief():
 
 @morning_brief_bp.route("/archive", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def get_archive():
     """Last 30 days of briefs for the current user, newest first."""
     cutoff = date.today() - timedelta(days=30)
@@ -86,6 +88,7 @@ def get_archive():
 
 @morning_brief_bp.route("/preview-email", methods=["GET"])
 @api_auth
+@legal_scrub_response
 def preview_email():
     """Return the integrated Morning Brief Plus HTML email.
 
@@ -125,6 +128,7 @@ def preview_email():
 @morning_brief_bp.route("/generate-now", methods=["POST", "GET"])
 @api_auth
 @require_tier("pro")
+@legal_scrub_response
 def generate_now():
     """Force-regenerate today's brief. Pro+ only.
 

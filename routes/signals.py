@@ -8,7 +8,7 @@ from models import Position, SignalCache, InvestmentProfile
 from services import fx_service, cache_service, alert_service
 from services.container import engine
 from services.name_resolver import resolve_stock_name
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 
 def _get_profile_params():
@@ -21,6 +21,7 @@ signals_bp = Blueprint("signals", __name__, url_prefix="/api")
 
 @signals_bp.route("/signals")
 @api_auth
+@legal_scrub_response
 def get_signals():
     tickers = {p.ticker for p in Position.query.filter_by(user_id=current_user.id).all()}
     out = []
@@ -44,6 +45,7 @@ def get_signals():
 
 @signals_bp.route("/signals/<ticker>")
 @api_auth
+@legal_scrub_response
 def signal_detail(ticker):
     t_up = ticker.upper()
     r = engine.analyze(t_up, current_user.available_capital,
@@ -66,6 +68,7 @@ def signal_detail(ticker):
 
 @signals_bp.route("/signals/refresh", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def refresh():
     positions = Position.query.filter_by(user_id=current_user.id).all()
     pos_map = {p.ticker: p for p in positions}
@@ -87,6 +90,7 @@ def refresh():
 
 @signals_bp.route("/scan", methods=["POST"])
 @api_auth
+@legal_scrub_response
 def scan():
     ticker = ((request.get_json() or {}).get("ticker") or "").strip().upper()
     if not ticker:

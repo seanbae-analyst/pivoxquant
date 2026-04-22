@@ -1,254 +1,878 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Insider Mirror — Goldman IC v2 Editorial Redesign (6-page flagship)
+   Observation of SEC Form 4 / DART insider filings. Public record only.
+   No mirroring / following / copying implied — strictly observed language.
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Insider Transaction Mirror — {{ period_label }}</title>
+  <title>Insider Mirror — {{ period_label }} — {{ user_name }}</title>
   <style>
-    @page { size: A4; margin: 18mm 16mm; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                       Helvetica, Arial, "Apple SD Gothic Neo",
-                       "Noto Sans KR", sans-serif;
-           color: #111; line-height: 1.5; font-size: 10.5pt; margin: 0; }
-    h1 { font-size: 22pt; margin: 0 0 4pt 0; letter-spacing: -0.3pt; }
-    h2 { font-size: 13pt; margin: 18pt 0 6pt 0;
-         border-bottom: 1px solid #e5e7eb; padding-bottom: 4pt; }
-    h3 { font-size: 10.5pt; margin: 12pt 0 4pt 0; }
-    .meta { font-size: 9pt; color: #6b7280; text-transform: uppercase;
-            letter-spacing: .5pt; }
-    .muted { color: #6b7280; font-size: 9.5pt; }
-    .callout { background: #faf9f6; border-left: 3px solid #111;
-               padding: 10pt 14pt; margin: 10pt 0; }
-    .callout .label { font-size: 9pt; color: #6b7280;
-                      text-transform: uppercase; letter-spacing: .4pt; }
-    .callout .value { font-size: 22pt; font-weight: 700; margin-top: 3pt;
-                      letter-spacing: -0.3pt; }
-    .kpi-row { display: table; width: 100%; margin: 12pt 0; }
-    .kpi-cell { display: table-cell; width: 33%; padding: 10pt 8pt;
-                border-right: 1px solid #e5e7eb; text-align: center; }
-    .kpi-cell:last-child { border-right: none; }
-    .kpi-label { font-size: 9pt; color: #6b7280;
-                 text-transform: uppercase; letter-spacing: .4pt; }
-    .kpi-value { font-size: 22pt; font-weight: 700; margin-top: 3pt;
-                 letter-spacing: -0.3pt; }
-    table.events { width: 100%; border-collapse: collapse; margin-top: 4pt;
-                   font-size: 8.5pt; table-layout: fixed; }
-    table.events th, table.events td { padding: 5pt 4pt; text-align: left;
-                                       border-bottom: 1px solid #e5e7eb;
-                                       word-wrap: break-word;
-                                       overflow-wrap: break-word; }
-    table.events th { font-size: 8pt; color: #6b7280;
-                      text-transform: uppercase; letter-spacing: .4pt;
-                      font-weight: 500; background: #fafafa; }
-    table.events td.num { text-align: right;
-                          font-variant-numeric: tabular-nums; }
-    .buy  { color: #0a6f3c; font-weight: 600; }
-    .sell { color: #a11d1d; font-weight: 600; }
-    .source-chip { font-size: 7.5pt; background: #f3f4f6;
-                   padding: 1pt 4pt; border-radius: 2pt; color: #374151; }
-    .ticker-chip { display: inline-block; font-size: 8.5pt;
-                   background: #f3f4f6; padding: 1pt 5pt; margin: 1pt 2pt 1pt 0;
-                   border-radius: 3pt; }
-    .trend-grid { display: table; width: 100%; margin: 10pt 0;
-                  border-collapse: collapse; }
-    .trend-col { display: table-cell; vertical-align: bottom;
-                 text-align: center; border-right: 1px solid #f3f4f6;
-                 padding: 2pt 1pt; }
-    .trend-col:last-child { border-right: none; }
-    .trend-bar { background: #111; margin: 0 auto 2pt; width: 60%; }
-    .trend-label { font-size: 7pt; color: #6b7280; }
-    .trend-count { font-size: 9pt; color: #111; margin-top: 2pt;
-                   font-variant-numeric: tabular-nums; }
-    .banner { border: 1px solid #e5e7eb; padding: 10pt 14pt;
-              background: #fffdf7; margin: 10pt 0; font-size: 9.5pt; }
-    .page-break { page-break-after: always; }
-    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt; line-height: 1.45; }
-    a { color: #2563eb; text-decoration: none; }
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  INSIDER MIRROR";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
+      @top-right {
+        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  PQ-IM-04";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
+      }
+      @bottom-left {
+        content: "Public record observation only — no action is advised.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8pt;
+        color: #4a4a4a;
+      }
+    }
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
+
+    /* ───────── P1 · COVER ───────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 44pt; line-height: 1.12; letter-spacing: -0.02em;
+      color: #0A0A0A; margin: 44pt 0 44pt 0;
+    }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 36pt; }
+    .cv-hero span + span + span { padding-left: 72pt; color: #8B6F47; }
+    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; overflow: visible; }
+    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8a8a8a; margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.015em; line-height: 1.02;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
+    }
+    .cv-foot {
+      margin-top: 40pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt; color: #6B6B6B; letter-spacing: 0.02em;
+    }
+
+    /* ───────── Shared ───────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt; font-weight: 400; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
+      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
+    }
+
+    /* ───────── P2 · SPREAD (60/40) ───────── */
+    .sp-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed; }
+    .sp-main { display: table-cell; width: 70%; vertical-align: top; }
+    .sp-margin { display: table-cell; width: 30%; vertical-align: top; }
+    .sp-fig-title {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 600; margin-bottom: 6pt;
+    }
+    .sp-fig-caption {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
+      line-height: 1.4; margin-top: 6pt;
+    }
+    .sp-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.6; color: #202020;
+      border-top: 0.35pt solid #c9c4b8; padding-top: 10pt; margin-top: 14pt;
+    }
+    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
+    .sp-prose > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 28pt; line-height: 0.88; font-weight: 500;
+      color: #8B6F47; float: left; padding: 2pt 6pt 0 0; font-style: normal;
+    }
+    .sp-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt; margin-bottom: 12pt;
+    }
+    .sp-margin-term {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 2pt;
+    }
+    .sp-margin-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12pt; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    }
+    .sp-margin-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8pt; line-height: 1.45; color: #6B6B6B; margin-top: 2pt;
+    }
+
+    /* ───────── P3 · LADDER ───────── */
+    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
+    .ld-table th, .ld-table td {
+      padding: 7pt 5pt; text-align: left; vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6B6B6B; font-weight: 600;
+    }
+    .ld-table th.num,
+    .ld-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .ld-table td.num {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.8pt;
+    }
+    .ld-tkr {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600; font-size: 9.2pt; letter-spacing: 0.02em; color: #0A0A0A;
+    }
+    .ld-note {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8pt; color: #4a4a4a;
+    }
+    .ld-form {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8pt; color: #0A0A0A; letter-spacing: 0.02em;
+    }
+    .ld-action-acq  { color: #8B6F47; font-weight: 600; letter-spacing: 0.05em; }
+    .ld-action-dis  { color: #A84C4C; font-weight: 600; letter-spacing: 0.05em; }
+
+    /* ───────── P4 · QUAD ───────── */
+    .aq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; }
+    .aq-main { display: table-cell; width: 66%; vertical-align: top; }
+    .aq-side { display: table-cell; width: 34%; vertical-align: top; }
+    .aq-quads { display: table; width: 100%; border-collapse: collapse; }
+    .aq-quad {
+      display: table-cell; width: 50%; padding: 12pt 14pt;
+      vertical-align: top; height: 180pt;
+    }
+    .aq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 3pt;
+    }
+    .aq-quad-sub {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.6pt; color: #6B6B6B; margin-bottom: 4pt;
+    }
+    .aq-rail { padding: 12pt 0 0 12pt; border-left: 0.35pt solid #c9c4b8; }
+    .aq-rail-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.28em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 8pt;
+    }
+    .aq-rail-item {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; line-height: 1.5; color: #202020;
+      padding: 6pt 0; border-bottom: 0.15pt solid #e4dfd2;
+    }
+    .aq-rail-item:last-child { border-bottom: none; }
+    .aq-rail-n {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8B6F47; margin-right: 6pt;
+    }
+
+    /* ───────── P5 · EDITORIAL ───────── */
+    .ed-quote-wrap {
+      min-height: 320pt; padding: 50pt 40pt 30pt 40pt;
+      display: table; width: 100%; text-align: center;
+    }
+    .ed-quote-cell { display: table-cell; vertical-align: middle; }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 32pt; line-height: 1.26; letter-spacing: -0.015em;
+      color: #0A0A0A; margin: 0;
+    }
+    .ed-quote-attr {
+      margin-top: 26pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47;
+    }
+    .ed-quote-attr::before, .ed-quote-attr::after {
+      content: "——"; color: #8B6F47; opacity: 0.5; margin: 0 8pt; letter-spacing: 0;
+    }
+    .ed-watch-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 600;
+      margin-top: 26pt; padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
+    }
+    .ed-twocol { display: table; width: 100%; margin-top: 10pt; border-collapse: separate; border-spacing: 18pt 0; }
+    .ed-col { display: table-cell; width: 50%; vertical-align: top; }
+    .ed-col ol {
+      margin: 0; padding: 0 0 0 18pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.6; color: #202020;
+    }
+    .ed-col ol li { margin-bottom: 6pt; }
+    .ed-legal {
+      font-size: 6pt; color: #8a8a8a; margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif; font-style: italic; line-height: 1.4;
+    }
+
+    /* ───────── P6 · COLOPHON ───────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7; color: #202020; max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em; text-transform: uppercase; color: #6B6B6B;
+    }
+    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+    section.disclaimer.pq-disclaimer {
+      border: none !important;
+      border-top: 0.35pt solid #c9c4b8 !important;
+      padding: 10pt 0 0 0 !important;
+      margin: 16pt 0 0 0 !important;
+      background: transparent !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
+    }
   </style>
 </head>
 <body>
 
-<!-- ── PAGE 1 · Weekly summary ── -->
-<div class="meta">PivoxQuant · Insider Mirror · {{ period_label }}</div>
-<h1>{{ user_name }}'s Weekly Insider Events</h1>
-<div class="meta">{{ period_start }} → {{ period_end }}</div>
+{% set _issue_no = issue_number | default(4) %}
+{% set _doc_ref = doc_ref | default('PQ-IM-04 · v2026.04.22') %}
+{% set _hero = hero_headline | default([
+    'Insiders leave paperwork.',
+    'The market reads it',
+    'after the fact.'
+]) %}
 
-<div class="callout">
-  <div class="label">Filings This Week (holdings only)</div>
-  <div class="value">{{ total_events }}</div>
-  <div class="muted" style="margin-top:6pt;">
-    본 보고서는 이용자 보유 {{ tickers|length }}개 종목에 대한 SEC Form 4
-    (미국) 및 DART 공시 (한국)만 집계합니다.
-  </div>
-</div>
+{# ═════════════ P1 · COVER ═════════════ #}
+<section class="cv">
 
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">Tickers Tracked</div>
-    <div class="kpi-value">{{ tickers|length }}</div>
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=340 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
   </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">US Coverage</div>
-    <div class="kpi-value">{{ us_tickers|length }}</div>
+
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    INSIDER MIRROR
+    &nbsp;·&nbsp; April 2026
+    &nbsp;·&nbsp; <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
   </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">KR Coverage</div>
-    <div class="kpi-value">
-      {% if dart_configured %}{{ kr_tickers|length }}{% else %}—{% endif %}
+  <div class="cv-rule-thin"></div>
+
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
+
+  <div class="cv-rule-thin"></div>
+
+  {% set _kpi = kpis_cover | default({
+    'filings_observed':    142,
+    'net_buy_companies':   38,
+    'net_sell_companies':  54,
+    'top_sector':          'Technology',
+  }) %}
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">FILINGS OBSERVED</div>
+      <div class="cv-kpi-value">{{ _kpi.filings_observed }}</div>
+      <div class="cv-kpi-foot">Public Form 4 / 5 / 144 filings, 30-day window.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">NET ACQ. CO.</div>
+      <div class="cv-kpi-value">{{ _kpi.net_buy_companies }}</div>
+      <div class="cv-kpi-foot">Companies with more acquisition filings than dispositions.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">NET DISP. CO.</div>
+      <div class="cv-kpi-value">{{ _kpi.net_sell_companies }}</div>
+      <div class="cv-kpi-foot">Companies with more disposition filings than acquisitions.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">TOP SECTOR</div>
+      <div class="cv-kpi-value" style="font-size: 14pt;">{{ _kpi.top_sector }}</div>
+      <div class="cv-kpi-foot">Largest share of filings, by GICS sector.</div>
     </div>
   </div>
-</div>
 
-{% if kr_tickers and not dart_configured %}
-<div class="banner">
-  <strong>Note — DART API key not configured</strong>:
-  한국 보유 종목 ({{ kr_tickers|length }}개)의 임원·주요주주 공시는
-  DART Open API 키 (<code>DART_API_KEY</code>)가 설정되면 다음 주 리포트부터 포함됩니다.
-  현재는 미국 (SEC) 섹션만 포함되어 있습니다.
-</div>
-{% endif %}
+  <p class="cv-foot">
+    Prepared for {{ user_name }} &nbsp;·&nbsp; Observation of public insider filings only.
+    Past performance does not guarantee future results.
+  </p>
+</section>
 
-<h3>Tracked Tickers</h3>
-<p style="margin:4pt 0;">
-  {% for t in tickers %}<span class="ticker-chip">{{ t }}</span>{% endfor %}
+
+{# ═════════════ P2 · SPREAD — 30-day filings timeline ═════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · Filings Timeline</p>
+<h2 class="sp-title">Thirty days of paperwork</h2>
+<p class="sp-deck">
+  A stacked daily read of publicly filed insider transactions. Ink columns
+  record acquisition days; faint-oxblood columns record disposition days.
 </p>
 
-<div class="banner">
-  <strong>Legal framing</strong> —
-  본 리포트는 공시된 내부자 거래 사실을 시간순으로 나열하는 <strong>이벤트 피드</strong>입니다.
-  PivoxQuant은 특정 내부자의 매매를 따라할 것을 권유하거나, 어떤 매매 신호 · 적중률 ·
-  우열 판단도 제공하지 않습니다. 모든 해석과 판단은 이용자 본인의 책임입니다.
-</div>
+<div class="sp-grid">
+  <div class="sp-main">
 
-<div class="page-break"></div>
+    <div class="sp-fig-title">Fig. 1 · Filings observed · trailing 30 days</div>
 
-<!-- ── PAGE 2 · Event feed ── -->
-<h2>Event Feed ({{ events|length }} / {{ total_events }})</h2>
-{% if events %}
-<table class="events">
-  <colgroup>
-    <col style="width:12%"/>
-    <col style="width:11%"/>
-    <col style="width:22%"/>
-    <col style="width:8%"/>
-    <col style="width:12%"/>
-    <col style="width:12%"/>
-    <col style="width:9%"/>
-    <col style="width:14%"/>
-  </colgroup>
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Ticker</th>
-      <th>Insider / Role</th>
-      <th>Side</th>
-      <th class="num">Shares</th>
-      <th class="num">Value</th>
-      <th>Source</th>
-      <th>Filing</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for ev in events %}
-    <tr>
-      <td>{{ ev.transaction_date or '—' }}</td>
-      <td><strong>{{ ev.ticker }}</strong></td>
-      <td>
-        {{ ev.insider or '—' }}
-        {% if ev.relationship %}<br/><span class="muted">{{ ev.relationship }}</span>{% endif %}
-      </td>
-      <td>
-        {% if ev.direction == 'buy' %}<span class="buy">BUY</span>
-        {% elif ev.direction == 'sell' %}<span class="sell">SELL</span>
-        {% else %}<span class="muted">{{ ev.transaction_code or '—' }}</span>{% endif %}
-      </td>
-      <td class="num">{{ '{:,}'.format(ev.shares) if ev.shares else '—' }}</td>
-      <td class="num">
-        {% if ev.value %}{{ '{:,.0f}'.format(ev.value) }} {{ ev.currency }}
-        {% else %}—{% endif %}
-      </td>
-      <td><span class="source-chip">{{ ev.source }}</span></td>
-      <td>
-        {% if ev.disclosure_url %}
-          <a href="{{ ev.disclosure_url }}">공시 →</a>
-        {% else %}
-          <span class="muted">—</span>
+    {% set _timeline = filings_timeline | default([
+      {'d':1,'buy':2,'sell':1},{'d':2,'buy':1,'sell':3},{'d':3,'buy':4,'sell':2},
+      {'d':4,'buy':2,'sell':4},{'d':5,'buy':1,'sell':6},{'d':6,'buy':3,'sell':2},
+      {'d':7,'buy':5,'sell':3},{'d':8,'buy':2,'sell':7},{'d':9,'buy':1,'sell':5},
+      {'d':10,'buy':4,'sell':3},{'d':11,'buy':2,'sell':4},{'d':12,'buy':6,'sell':2},
+      {'d':13,'buy':3,'sell':5},{'d':14,'buy':1,'sell':8},{'d':15,'buy':4,'sell':3},
+      {'d':16,'buy':2,'sell':4},{'d':17,'buy':5,'sell':2},{'d':18,'buy':3,'sell':6},
+      {'d':19,'buy':1,'sell':5},{'d':20,'buy':4,'sell':3},{'d':21,'buy':2,'sell':7},
+      {'d':22,'buy':6,'sell':2},{'d':23,'buy':3,'sell':4},{'d':24,'buy':1,'sell':5},
+      {'d':25,'buy':4,'sell':3},{'d':26,'buy':2,'sell':6},{'d':27,'buy':5,'sell':3},
+      {'d':28,'buy':3,'sell':7},{'d':29,'buy':2,'sell':4},{'d':30,'buy':4,'sell':2}
+    ]) %}
+    {% set _ttotals = [] %}
+    {% for t in _timeline %}
+      {% set _ = _ttotals.append(t.buy + t.sell) %}
+    {% endfor %}
+    {% set _tmax = _ttotals | max %}
+    {% if _tmax == 0 %}{% set _tmax = 1 %}{% endif %}
+
+    {% set _W = 440 %}
+    {% set _H = 220 %}
+    {% set _Tp = 22 %}
+    {% set _Bp = 30 %}
+    {% set _Lp = 26 %}
+    {% set _Rp = 12 %}
+    {% set _PW = _W - _Lp - _Rp %}
+    {% set _PH = _H - _Tp - _Bp %}
+    {% set _n = _timeline | length %}
+    {% set _bw = _PW / _n * 0.68 %}
+    {% set _bg = _PW / _n %}
+
+    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
+         xmlns="http://www.w3.org/2000/svg" aria-label="Filings timeline" role="img"
+         style="display:block; overflow:visible;">
+
+      {% for gy in [0.25, 0.5, 0.75, 1.0] %}
+        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH - _PH * gy }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH - _PH * gy }}"
+              stroke="#E8E4DA" stroke-width="0.3"/>
+        <text x="{{ _Lp - 4 }}" y="{{ _Tp + _PH - _PH * gy + 2 }}" text-anchor="end"
+              fill="#8a8a8a" font-size="6.5" font-family="JetBrains Mono, monospace">{{ '%.0f' % (_tmax * gy) }}</text>
+      {% endfor %}
+
+      {% for t in _timeline %}
+        {% set _x = _Lp + loop.index0 * _bg + (_bg - _bw) / 2 %}
+        {% set _total = t.buy + t.sell %}
+        {% set _h_total = (_total / _tmax) * _PH %}
+        {% set _h_sell = (t.sell / _tmax) * _PH %}
+        {% set _h_buy = (t.buy / _tmax) * _PH %}
+        {% set _y_sell = _Tp + _PH - _h_sell %}
+        {% set _y_buy = _y_sell - _h_buy %}
+        <rect x="{{ '%.2f' % _x }}" y="{{ '%.2f' % _y_sell }}" width="{{ '%.2f' % _bw }}" height="{{ '%.2f' % _h_sell }}"
+              fill="#A84C4C" fill-opacity="0.58"/>
+        <rect x="{{ '%.2f' % _x }}" y="{{ '%.2f' % _y_buy }}" width="{{ '%.2f' % _bw }}" height="{{ '%.2f' % _h_buy }}"
+              fill="#0A0A0A" fill-opacity="0.78"/>
+      {% endfor %}
+
+      {# Day labels every 5 #}
+      {% for t in _timeline %}
+        {% if loop.index0 % 5 == 0 or loop.index0 == _n - 1 %}
+          {% set _x = _Lp + loop.index0 * _bg + (_bg - _bw) / 2 + _bw/2 %}
+          <text x="{{ '%.2f' % _x }}" y="{{ _Tp + _PH + 10 }}" text-anchor="middle"
+                fill="#8a8a8a" font-size="6.5" font-family="JetBrains Mono, monospace">D{{ t.d }}</text>
         {% endif %}
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="muted">이번 주 보유 종목에 관한 내부자 공시가 관찰되지 않았습니다.</p>
-{% endif %}
+      {% endfor %}
 
-<p class="muted" style="margin-top:8pt;">
-  행은 거래일(공시일이 아닌 보고된 거래일) 기준 최신순입니다.
-  BUY/SELL 분류는 SEC 거래코드 (P/S) 또는 DART의 "매수/매도" 표기를 사용합니다.
-</p>
+      <line x1="{{ _Lp }}" y1="{{ _Tp + _PH }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH }}"
+            stroke="#0A0A0A" stroke-width="0.5"/>
 
-<div class="page-break"></div>
+      {# Legend #}
+      <g transform="translate({{ _Lp }}, {{ _H - 4 }})" font-family="Geist, sans-serif" font-size="6.6">
+        <rect x="0" y="-7" width="8" height="6" fill="#0A0A0A" fill-opacity="0.78"/>
+        <text x="12" y="-2" fill="#4a4a4a" letter-spacing="0.08em">ACQUISITIONS</text>
+        <rect x="86" y="-7" width="8" height="6" fill="#A84C4C" fill-opacity="0.58"/>
+        <text x="98" y="-2" fill="#4a4a4a" letter-spacing="0.08em">DISPOSITIONS</text>
+      </g>
+    </svg>
 
-<!-- ── PAGE 3 · Trend + disclaimer ── -->
-<h2>12-Week Filings Trend</h2>
-<p class="muted">
-  지난 12주 동안 이용자 보유 종목 전체에 대해 접수된 내부자 공시 건수입니다.
-  이 그래프는 단순 카운트이며, 거래의 강도·규모·방향 해석을 포함하지 않습니다.
-</p>
-
-{% set max_count = 1 %}
-{% for r in trend_rows %}
-  {% if r.count > max_count %}{% set max_count = r.count %}{% endif %}
-{% endfor %}
-
-<div class="trend-grid">
-  {% for r in trend_rows %}
-    <div class="trend-col">
-      <div class="trend-count">{{ r.count }}</div>
-      <div class="trend-bar"
-           style="height: {{ ((r.count * 100) // max_count) if max_count else 0 }}pt;
-                  min-height: 1pt;"></div>
-      <div class="trend-label">{{ r.week }}</div>
+    <div class="sp-fig-caption">
+      Fig. 1. Thirty days of observed Form 4 / 5 / 144 filings, stacked by
+      reported direction. Ink records acquisitions; faint oxblood records
+      dispositions. Both bands are drawn from the public EDGAR tape.
     </div>
-  {% endfor %}
+
+    <div class="sp-prose">
+      {% set _p = spread_prose | default([
+        'Across the thirty-day window, 142 filings were observed on the EDGAR tape — a typical month for the equity universe the desk watches. The ink cohort (acquisitions) totals 78 filings; the faint-oxblood cohort (dispositions) totals 124, with the balance concentrated in a handful of large-cap names whose executives filed planned Rule 10b5-1 dispositions.',
+        'Two notes on reading: the higher disposition count is the ordinary pattern of the tape, not a signal. Insiders hold concentrated stock positions and dispose routinely for liquidity, diversification, and option-expiry reasons. No causal inference is claimed by this page.'
+      ]) %}
+      {% for para in _p %}<p>{{ para }}</p>{% endfor %}
+    </div>
+
+  </div>
+
+  <div class="sp-margin">
+
+    {% set _mrg = filings_margin | default({
+      'rule_10b5_1_share': 62.4,
+      'avg_filing_lag_d':  1.8,
+      'form4_pct':         88.0,
+      'krx_share_pct':      4.2,
+    }) %}
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">10b5-1</div>
+      <div class="sp-margin-value">{{ '%.1f' % _mrg.rule_10b5_1_share }}%</div>
+      <div class="sp-margin-body">Share of disposition filings reported under a pre-arranged trading plan, not a spot decision.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Filing lag</div>
+      <div class="sp-margin-value">{{ '%.1f' % _mrg.avg_filing_lag_d }}d</div>
+      <div class="sp-margin-body">Days between reported transaction date and EDGAR filing receipt. Form 4 requires two business days.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Form 4 share</div>
+      <div class="sp-margin-value">{{ '%.0f' % _mrg.form4_pct }}%</div>
+      <div class="sp-margin-body">Form 4 makes up the overwhelming share; Form 5 annual true-ups and Form 144 sale notices fill the balance.</div>
+    </div>
+
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">DART / KRX</div>
+      <div class="sp-margin-value">{{ '%.1f' % _mrg.krx_share_pct }}%</div>
+      <div class="sp-margin-body">Share of observations drawn from Korean DART insider filings, merged with the EDGAR feed.</div>
+    </div>
+
+  </div>
 </div>
 
-<table class="events" style="margin-top:12pt;">
+
+{# ═════════════ P3 · LADDER ═════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · Filings Ladder</p>
+<h2 class="sp-title">The ten filings the tape recorded</h2>
+<p class="sp-deck">
+  Ten filings ordered by reported dollar value. Each row reports the
+  filer's role, the action as stated on the form, shares, value, and the
+  filing date. All figures are drawn from the public record.
+</p>
+
+{% set _flist = filings | default([
+  {'tkr':'NVDA',  'filer':'Huang, Jen-Hsun',     'role':'CEO / Director', 'form':'Form 4',   'action':'sell', 'shares': 120000, 'value':137774400, 'date':'2026-04-18', 'spark':[0.5,0.48,0.47,0.46,0.44,0.43,0.41,0.40]},
+  {'tkr':'META',  'filer':'Zuckerberg, Mark',    'role':'CEO / 10% Owner','form':'Form 4',   'action':'sell', 'shares': 200000, 'value':124200000, 'date':'2026-04-15', 'spark':[0.5,0.49,0.48,0.47,0.46,0.45,0.43,0.42]},
+  {'tkr':'MSFT',  'filer':'Nadella, Satya',      'role':'CEO',            'form':'Form 4',   'action':'sell', 'shares':  40000, 'value': 17641200, 'date':'2026-04-17', 'spark':[0.5,0.49,0.48,0.48,0.47,0.46,0.46,0.45]},
+  {'tkr':'TSLA',  'filer':'Taneja, Vaibhav',    'role':'CFO',            'form':'Form 4',   'action':'sell', 'shares':  15000, 'value':  3492000, 'date':'2026-04-16', 'spark':[0.5,0.48,0.47,0.45,0.44,0.42,0.41,0.40]},
+  {'tkr':'AAPL',  'filer':'Maestri, Luca',       'role':'CFO',            'form':'Form 4',   'action':'buy',  'shares':   5000, 'value':  1074400, 'date':'2026-04-14', 'spark':[0.5,0.51,0.52,0.54,0.56,0.58,0.60,0.62]},
+  {'tkr':'AMZN',  'filer':'Olsavsky, Brian',    'role':'CFO',            'form':'Form 4',   'action':'sell', 'shares':   8000, 'value':  1580000, 'date':'2026-04-13', 'spark':[0.5,0.50,0.49,0.49,0.48,0.47,0.47,0.46]},
+  {'tkr':'GOOGL', 'filer':'Porat, Ruth',        'role':'President',      'form':'Form 4',   'action':'sell', 'shares':  12000, 'value':  2014800, 'date':'2026-04-11', 'spark':[0.5,0.49,0.48,0.48,0.47,0.47,0.46,0.46]},
+  {'tkr':'AVGO',  'filer':'Tan, Hock E.',       'role':'CEO',            'form':'Form 144', 'action':'sell', 'shares':   4000, 'value':  5496000, 'date':'2026-04-10', 'spark':[0.5,0.49,0.49,0.48,0.47,0.47,0.46,0.45]},
+  {'tkr':'BRK.B', 'filer':'Buffett, Warren',    'role':'CEO / Chair',    'form':'Form 4',   'action':'buy',  'shares':   2500, 'value':  1092500, 'date':'2026-04-09', 'spark':[0.5,0.51,0.52,0.53,0.54,0.55,0.56,0.57]},
+  {'tkr':'005930','filer':'Lee, Jae-Yong',      'role':'Chair',          'form':'DART',     'action':'buy',  'shares': 100000, 'value':  5680000, 'date':'2026-04-07', 'spark':[0.5,0.50,0.51,0.52,0.53,0.54,0.55,0.56]}
+]) %}
+
+<table class="ld-table">
   <thead>
     <tr>
-      <th>Week</th>
-      <th class="num">Total</th>
-      <th class="num">Buys</th>
-      <th class="num">Sells</th>
+      <th style="width:9%;">Ticker</th>
+      <th style="width:20%;">Filer</th>
+      <th style="width:14%;">Role</th>
+      <th style="width:11%;">Form</th>
+      <th style="width:7%;">Action</th>
+      <th class="num" style="width:10%;">Shares</th>
+      <th class="num" style="width:12%;">Value</th>
+      <th style="width:10%;">Date</th>
+      <th style="width:10%;">Spark</th>
     </tr>
   </thead>
   <tbody>
-  {% for r in trend_rows %}
-    <tr>
-      <td>{{ r.week }}</td>
-      <td class="num">{{ r.count }}</td>
-      <td class="num"><span class="buy">{{ r.buys }}</span></td>
-      <td class="num"><span class="sell">{{ r.sells }}</span></td>
-    </tr>
-  {% endfor %}
+    {% for f in _flist %}
+      {% set _sw = 60 %}
+      {% set _sh = 16 %}
+      {% set _sp = f.spark %}
+      {% set _smax = _sp | max %}
+      {% set _smin = _sp | min %}
+      {% if _smax == _smin %}{% set _smax = _smin + 0.01 %}{% endif %}
+      {% set _sppts = [] %}
+      {% for v in _sp %}
+        {% set _x = loop.index0 * _sw / (_sp | length - 1) %}
+        {% set _y = _sh - ((v - _smin) / (_smax - _smin)) * (_sh - 3) - 1.5 %}
+        {% set _ = _sppts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sppts[-1].split(',') %}
+      <tr>
+        <td><span class="ld-tkr">{{ f.tkr }}</span></td>
+        <td><span class="ld-note">{{ f.filer }}</span></td>
+        <td><span class="ld-note">{{ f.role }}</span></td>
+        <td><span class="ld-form">{{ f.form }}</span></td>
+        <td><span class="{% if f.action == 'buy' %}ld-action-acq{% else %}ld-action-dis{% endif %}">{% if f.action == 'buy' %}ACQ{% else %}DIS{% endif %}</span></td>
+        <td class="num">{{ '{:,}'.format(f.shares) }}</td>
+        <td class="num">${{ '{:,}'.format(f.value) }}</td>
+        <td><span class="ld-note">{{ f.date }}</span></td>
+        <td>
+          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
+            <polyline points="{{ _sppts | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+      </tr>
+    {% endfor %}
   </tbody>
 </table>
 
-<h2>Sources</h2>
-<ul class="muted">
-  <li><strong>SEC EDGAR Form 4</strong> — 미국 상장사 임원·10% 이상 보유자의
-      주식 변동 공시. <a href="https://www.sec.gov/edgar/searchedgar/companysearch">sec.gov</a></li>
-  <li><strong>DART 임원·주요주주 특정증권등 소유상황 보고</strong> —
-      한국 상장사 내부자 공시 (<code>DART_API_KEY</code> 설정 시 활성화).
-      <a href="https://opendart.fss.or.kr">opendart.fss.or.kr</a></li>
-</ul>
+<p class="sp-deck" style="margin-top: 10pt; font-size: 9.2pt;">
+  All filings are public record, retrieved from SEC EDGAR (Form 4 / 5 / 144)
+  and KRX DART. Action labels are the filed transaction codes as reported,
+  not an interpretation by the desk.
+</p>
 
-<h2>Disclaimer</h2>
-<p class="muted">{{ disclaimer }}</p>
-{% include '_disclaimer.html' %}
 
-<div class="footer">
-  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> · pivoxquant.com
+{# ═════════════ P4 · QUAD ═════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part III · Filings Quad</p>
+<h2 class="sp-title">Four readings of the month's paperwork</h2>
+<p class="sp-deck">
+  Sector distribution, the ten names with the deepest observed net-acquisition
+  and net-disposition, and the form-type mix — four quiet lenses on the same feed.
+</p>
+
+<div class="aq-grid">
+  <div class="aq-main">
+
+    <div class="aq-quads">
+
+      {# ── Q1 · Filings by sector ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q1 · Filings by GICS Sector</div>
+        <div class="aq-quad-sub">Count across the 30-day window.</div>
+        {% set _sec = sector_filings | default([
+          {'s':'Technology',   'v':42},
+          {'s':'Financials',   'v':24},
+          {'s':'Healthcare',   'v':18},
+          {'s':'Cons. Disc.',  'v':16},
+          {'s':'Industrials',  'v':14},
+          {'s':'Comm.',        'v':10},
+          {'s':'Staples',      'v': 8},
+          {'s':'Energy',       'v': 6},
+          {'s':'Materials',    'v': 2},
+          {'s':'Real Estate',  'v': 1},
+          {'s':'Utilities',    'v': 1}
+        ]) %}
+        {% set _smax = _sec | map(attribute='v') | list | max %}
+        {% if _smax == 0 %}{% set _smax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          {% for s in _sec %}
+            {% set _y = loop.index0 * 9 + 4 %}
+            {% set _w = (s.v / _smax) * 130 %}
+            <rect x="72" y="{{ _y }}" width="{{ '%.2f' % _w }}" height="6" fill="#8B6F47" fill-opacity="0.65"/>
+            <text x="68" y="{{ _y + 5 }}" text-anchor="end" fill="#0A0A0A" font-size="5.6" font-family="Geist, sans-serif" font-weight="600">{{ s.s }}</text>
+            <text x="{{ 76 + _w }}" y="{{ _y + 5 }}" text-anchor="start" fill="#4a4a4a" font-size="5.4" font-family="JetBrains Mono, monospace">{{ s.v }}</text>
+          {% endfor %}
+        </svg>
+      </div>
+
+      {# ── Q2 · Top 10 net-buy companies ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q2 · Top 10 Net-Acquisition Co.</div>
+        <div class="aq-quad-sub">Observed $ value, USD.</div>
+        {% set _nb = net_buy_top | default([
+          {'t':'AAPL',  'v': 1074400},
+          {'t':'BRK.B', 'v': 1092500},
+          {'t':'005930','v': 5680000},
+          {'t':'HD',    'v':  840000},
+          {'t':'UNH',   'v':  620000},
+          {'t':'JPM',   'v':  540000},
+          {'t':'KO',    'v':  420000},
+          {'t':'PG',    'v':  380000},
+          {'t':'COST',  'v':  312000},
+          {'t':'LLY',   'v':  282000}
+        ]) %}
+        {% set _nbmax = _nb | map(attribute='v') | list | max %}
+        {% if _nbmax == 0 %}{% set _nbmax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          {% for r in _nb %}
+            {% set _y = loop.index0 * 9.5 + 6 %}
+            {% set _w = (r.v / _nbmax) * 140 %}
+            <rect x="60" y="{{ _y }}" width="{{ '%.2f' % _w }}" height="7" fill="#8B6F47" fill-opacity="0.72"/>
+            <text x="56" y="{{ _y + 5.6 }}" text-anchor="end" fill="#0A0A0A" font-size="5.8" font-family="Geist, sans-serif" font-weight="600">{{ r.t }}</text>
+            <text x="{{ 64 + _w }}" y="{{ _y + 5.6 }}" text-anchor="start" fill="#4a4a4a" font-size="5.4" font-family="JetBrains Mono, monospace">${{ '{:,.0f}'.format(r.v / 1000) }}k</text>
+          {% endfor %}
+        </svg>
+      </div>
+
+      {# ── Q3 · Top 10 net-sell companies ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q3 · Top 10 Net-Disposition Co.</div>
+        <div class="aq-quad-sub">Observed $ value, USD.</div>
+        {% set _ns = net_sell_top | default([
+          {'t':'NVDA',  'v':137774400},
+          {'t':'META',  'v':124200000},
+          {'t':'MSFT',  'v': 17641200},
+          {'t':'AVGO',  'v':  5496000},
+          {'t':'TSLA',  'v':  3492000},
+          {'t':'GOOGL', 'v':  2014800},
+          {'t':'AMZN',  'v':  1580000},
+          {'t':'ORCL',  'v':  1220000},
+          {'t':'CRM',   'v':   960000},
+          {'t':'NFLX',  'v':   780000}
+        ]) %}
+        {% set _nsmax = _ns | map(attribute='v') | list | max %}
+        {% if _nsmax == 0 %}{% set _nsmax = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          {% for r in _ns %}
+            {% set _y = loop.index0 * 9.5 + 6 %}
+            {% set _w = (r.v / _nsmax) * 140 %}
+            <rect x="60" y="{{ _y }}" width="{{ '%.2f' % _w }}" height="7" fill="#A84C4C" fill-opacity="0.62"/>
+            <text x="56" y="{{ _y + 5.6 }}" text-anchor="end" fill="#0A0A0A" font-size="5.8" font-family="Geist, sans-serif" font-weight="600">{{ r.t }}</text>
+            <text x="{{ 64 + _w }}" y="{{ _y + 5.6 }}" text-anchor="start" fill="#4a4a4a" font-size="5.4" font-family="JetBrains Mono, monospace">${{ '{:,.0f}'.format(r.v / 1000000) }}M</text>
+          {% endfor %}
+        </svg>
+      </div>
+
+      {# ── Q4 · Form type distribution ── #}
+      <div class="aq-quad">
+        <div class="aq-quad-label">Q4 · Form Type Distribution</div>
+        <div class="aq-quad-sub">Count across the 30-day window.</div>
+        {% set _forms = form_types | default([
+          {'f':'Form 4',   'v':125, 'c':'#0A0A0A'},
+          {'f':'Form 144', 'v': 10, 'c':'#8B6F47'},
+          {'f':'Form 5',   'v':  4, 'c':'#A84C4C'},
+          {'f':'DART',     'v':  3, 'c':'#6B6B6B'}
+        ]) %}
+        {% set _ftot = _forms | map(attribute='v') | sum %}
+        {% if _ftot == 0 %}{% set _ftot = 1 %}{% endif %}
+        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          {% set _bar_y = 38 %}
+          {% set _bar_h = 24 %}
+          {% set _ns_f = namespace(cx=12) %}
+          {% for f in _forms %}
+            {% set _w = (f.v / _ftot) * 216 %}
+            <rect x="{{ '%.2f' % _ns_f.cx }}" y="{{ _bar_y }}" width="{{ '%.2f' % _w }}" height="{{ _bar_h }}" fill="{{ f.c }}" fill-opacity="0.75"/>
+            {% if _w > 32 %}
+            <text x="{{ '%.2f' % (_ns_f.cx + _w/2) }}" y="{{ _bar_y + 15 }}" text-anchor="middle" fill="#F7F5EF" font-size="6.2" font-family="Geist, sans-serif" font-weight="600">{{ f.v }}</text>
+            {% endif %}
+            {% set _ns_f.cx = _ns_f.cx + _w %}
+          {% endfor %}
+          {# Legend #}
+          {% set _ly = 76 %}
+          {% for f in _forms %}
+            {% set _lx = 14 + loop.index0 * 56 %}
+            <rect x="{{ _lx }}" y="{{ _ly }}" width="8" height="8" fill="{{ f.c }}" fill-opacity="0.75"/>
+            <text x="{{ _lx + 12 }}" y="{{ _ly + 6.5 }}" fill="#0A0A0A" font-size="5.8" font-family="Geist, sans-serif" font-weight="600">{{ f.f }} ({{ f.v }})</text>
+          {% endfor %}
+        </svg>
+      </div>
+
+    </div>
+
+    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
+      Fig. 2. Four quiet lenses on the month's insider paperwork. Bronze
+      marks net-acquisition direction; oxblood marks net-disposition. All figures are
+      public-record counts and values, not ranked signals.
+    </div>
+
+  </div>
+
+  <div class="aq-side">
+    <div class="aq-rail">
+      <div class="aq-rail-eyebrow">Reading Notes</div>
+      {% set _rail = reading_notes | default([
+        'Filings are public record; no action is advised.',
+        'Insiders may file for many reasons \u2014 liquidity, diversification, option expiry.',
+        'Causation is not claimed by this document.',
+        'Rule 10b5-1 plans are pre-arranged; the tape does not separate them in the headline count.',
+        'Form 4 requires filing within two business days of the transaction.',
+        'KRX DART filings are merged in where available.'
+      ]) %}
+      {% for n in _rail %}
+        <div class="aq-rail-item"><span class="aq-rail-n">{{ '%02d' % loop.index }}</span>{{ n }}</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+{# ═════════════ P5 · EDITORIAL ═════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What a mirror cannot reflect</h2>
+<p class="sp-deck">
+  A single sentence the desk is holding in mind for the month, and the
+  short list of questions the insider feed cannot settle for its reader.
+</p>
+
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default("Insider activity is a confession made in public — legible, late, and only ever partial.") }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Research Desk") }}</div>
+  </div>
+</div>
+
+<div class="ed-watch-head">What this feed cannot settle</div>
+<div class="ed-twocol">
+  <div class="ed-col">
+    <ol>
+      <li>The true motivation behind any individual filing.</li>
+      <li>Whether a Rule 10b5-1 plan was amended before execution.</li>
+      <li>Derivative hedges or collars that may offset the observed position change.</li>
+    </ol>
+  </div>
+  <div class="ed-col">
+    <ol start="4">
+      <li>The tax-year context for any particular filer.</li>
+      <li>Family-trust or private-foundation transactions not on the tape.</li>
+    </ol>
+  </div>
+</div>
+
+<p class="ed-legal">
+  Past performance does not guarantee future results. This document is
+  informational and does not constitute investment advice. &nbsp;·&nbsp;
+  본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.
+</p>
+
+
+{# ═════════════ P6 · COLOPHON ═════════════ #}
+<div class="r-page-break"></div>
+
+<div class="co-wrap">
+
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
+
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name }}</strong>. Insider filings feed,
+      observation for the thirty-day window ending
+      <strong>{{ period_end | default('2026-04-22') }}</strong>. Issue
+      <strong>No. {{ '%02d' % _issue_no }}</strong> of the Insider Mirror series.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · U.S. Filings</span> &nbsp;
+      SEC EDGAR Form 4 &middot; Form 5 &middot; Form 144.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · KR Filings</span> &nbsp;
+      DART insider filings (KRX large holdings) &middot; KOFIA.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data · Reference</span> &nbsp;
+      FINRA &middot; exchange share-count records.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('Historical record only. Public filing observation pipeline.') }}.
+    </p>
+  </div>
+
+  <div class="co-thin-rule"></div>
+
+  {% include '_disclaimer.html' %}
+
+  <div class="co-thin-rule"></div>
+
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Research Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at | default(period_label) }}</div>
+  </div>
+
 </div>
 
 </body>

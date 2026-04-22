@@ -1,451 +1,880 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Quarterly Self-Report — Goldman IC v2 Editorial Redesign (6-page flagship)
+   Concept: PM's three-month self-review — a letter to oneself, in observation.
+   Buffett's quarterly partner letter tone. No advice — only self-review.
+   Each page: distinct magazine-editorial layout, hand-crafted inline SVG.
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Quarterly Self Report — {{ quarter_label }} — {{ user_name }}</title>
+  <title>Quarterly Self-Report — {{ quarter_label | default('Q1 2026') }} — {{ user_name | default('Reader') }}</title>
   <style>
     @page {
       size: A4;
-      margin: 22mm 20mm;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  QUARTERLY SELF-REPORT";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
       @top-right {
-        content: "PivoxQuant · Quarterly Self Report · {{ quarter_label }} · p." counter(page) " / " counter(pages);
-        font-family: Georgia, serif; font-size: 9pt; color: #555;
+        content: "REVIEW No. " counter(page, decimal-leading-zero) "  ·  {{ quarter_label | default('Q1 2026') }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
       }
-      @bottom-center {
-        content: "Confidential — for the addressee only.";
-        font-family: Georgia, serif; font-size: 8pt; color: #888;
+      @bottom-left {
+        content: "Self-review — not a verdict. Informational only.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8pt;
+        color: #4a4a4a;
       }
     }
-    body {
-      font-family: Georgia, "Times New Roman", "Apple SD Gothic Neo",
-                   "Noto Sans KR", serif;
-      font-size: 10.5pt; line-height: 1.5; color: #111; margin: 0;
+    /* Cover page stays silent */
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
     }
-    h1 { font-size: 22pt; font-weight: 600; margin: 0 0 4pt 0;
-         letter-spacing: -0.3pt; }
-    h2 { font-size: 13pt; font-weight: 600; margin: 22pt 0 8pt 0;
-         border-bottom: 0.5pt solid #000; padding-bottom: 4pt;
-         letter-spacing: 0.2pt; text-transform: uppercase; }
-    h3 { font-size: 11pt; font-weight: 600; margin: 14pt 0 6pt 0; }
-    .meta { font-size: 9pt; color: #555; margin-bottom: 16pt;
-            border-top: 0.5pt solid #ccc; border-bottom: 0.5pt solid #ccc;
-            padding: 4pt 0; }
-    .part-label { font-size: 9pt; letter-spacing: 3pt; color: #888;
-                  text-transform: uppercase; margin-bottom: 4pt; }
-    .kpi-row { display: table; width: 100%; margin: 12pt 0; }
-    .kpi-cell { display: table-cell; width: 25%; padding: 10pt 8pt;
-                border-right: 0.5pt solid #ccc; text-align: center; }
-    .kpi-cell:last-child { border-right: none; }
-    .kpi-label { font-size: 8.5pt; color: #666;
-                 text-transform: uppercase; letter-spacing: .4pt; }
-    .kpi-value { font-size: 18pt; font-weight: 600; margin-top: 3pt; }
-    .kpi-pos { color: #0a6f3c; } .kpi-neg { color: #a11d1d; }
-    .kpi-neu { color: #333; }
-    table.rep { width: 100%; border-collapse: collapse; margin-top: 6pt;
-                font-size: 9.5pt; }
-    table.rep th, table.rep td { padding: 5pt 4pt; text-align: left;
-                                 border-bottom: 0.5pt solid #e5e7eb; }
-    table.rep th { font-size: 8pt; color: #555; text-transform: uppercase;
-                   letter-spacing: .4pt; font-weight: 500; }
-    table.rep td.num { text-align: right; font-variant-numeric: tabular-nums; }
-    .mdna { background: #faf9f6; border-left: 3px solid #111;
-            padding: 10pt 14pt; margin: 10pt 0; font-size: 10.5pt;
-            line-height: 1.6; white-space: pre-wrap; }
-    .note { background: #fafafa; border: 0.5pt solid #e5e7eb;
-            padding: 8pt 10pt; margin: 8pt 0; font-size: 9.5pt;
-            color: #333; }
-    .control-ok { color: #0a6f3c; font-weight: 600; }
-    .control-warn { color: #a11d1d; font-weight: 600; }
-    .verdict-valid { color: #0a6f3c; font-weight: 600; }
-    .verdict-warning { color: #b45309; font-weight: 600; }
-    .verdict-invalid { color: #a11d1d; font-weight: 600; }
-    .verdict-pending { color: #666; }
-    .footer { font-size: 8pt; color: #9ca3af; margin-top: 18pt;
-              line-height: 1.45; }
-    .page-break { page-break-after: always; }
-    .checkbox { display: inline-block; width: 14pt; height: 14pt;
-                border: 1pt solid #555; vertical-align: middle;
-                margin-right: 6pt; }
-    ul.watch { padding-left: 18pt; margin: 6pt 0 0 0; }
-    ul.watch li { margin: 5pt 0; font-size: 10pt; }
+    {% include '_report_css.html' %}
+
+    /* ───────────────────── P1 · COVER ─────────────────────────────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums;
+      padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 36pt; line-height: 1.12;
+      letter-spacing: -0.022em; color: #0A0A0A;
+      margin: 44pt 0 44pt 0; padding: 0;
+    }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 36pt; }
+    .cv-hero span + span + span { padding-left: 72pt; color: #8B6F47; }
+    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 28pt; table-layout: fixed; }
+    .cv-kpi { display: table-cell; width: 25%; padding: 4pt 10pt; vertical-align: top; overflow: visible; }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 12pt; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8a8a8a;
+      margin-bottom: 4pt;
+    }
+    .cv-kpi-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 18pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.015em; line-height: 1.02;
+    }
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.5pt; color: #8a8a8a;
+      margin-top: 3pt;
+    }
+    .cv-foot {
+      margin-top: 38pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt;
+      color: #6B6B6B; letter-spacing: 0.02em;
+    }
+    .cv-micro-disclaim {
+      margin-top: 14pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt; color: #8a8a8a;
+    }
+
+    /* ───────────────────── P2 · SELF-REVIEW LETTER SPREAD ─────────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 26pt; font-weight: 400;
+      line-height: 1.08; letter-spacing: -0.02em;
+      color: #0A0A0A; margin: 0 0 6pt 0;
+    }
+    .sp-deck {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt;
+      color: #4a4a4a; line-height: 1.4;
+      margin: 0 0 14pt 0; max-width: 380pt;
+    }
+
+    .le-letter {
+      display: table; width: 100%;
+      border-collapse: separate; border-spacing: 18pt 0;
+      margin-top: 4pt; table-layout: fixed;
+    }
+    .le-letter > .le-body { display: table-cell; width: 70%; vertical-align: top; }
+    .le-letter > .le-margin { display: table-cell; width: 30%; vertical-align: top; }
+
+    .le-salute {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10.5pt;
+      color: #0A0A0A; margin: 2pt 0 6pt 0;
+      letter-spacing: -0.005em;
+    }
+    .le-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; line-height: 1.45;
+      color: #1a1a1a;
+    }
+    .le-prose p { margin: 0 0 5pt 0; text-align: justify; hyphens: auto; }
+    .le-prose > p:first-of-type::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 32pt; line-height: 0.88;
+      font-weight: 500; color: #8B6F47;
+      float: left; padding: 2pt 6pt 0 0;
+      font-style: normal;
+    }
+    .le-prose strong { font-weight: 600; color: #0A0A0A; }
+
+    .le-signoff {
+      margin-top: 12pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 10pt;
+      color: #0A0A0A;
+    }
+    .le-signoff-house {
+      display: block; margin-top: 4pt;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-style: normal; font-weight: 600;
+      font-size: 7.4pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+    }
+
+    .le-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt;
+      margin-bottom: 14pt;
+    }
+    .le-margin-note {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.5pt;
+      line-height: 1.5; color: #4a4a4a;
+    }
+    .le-margin-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 3pt;
+      font-style: normal;
+    }
+
+    /* ───────────────────── P3 · DECISION LADDER ─────────────────── */
+    .ld-table { width: 100%; border-collapse: collapse; margin: 10pt 0 0 0; table-layout: fixed; }
+    .ld-table th, .ld-table td {
+      padding: 7pt 6pt; text-align: left; vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #6B6B6B;
+      font-weight: 600;
+    }
+    .ld-table td.num {
+      text-align: right;
+      font-family: "JetBrains Mono", monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 9pt;
+    }
+    .ld-tkr {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600; font-size: 9.5pt;
+      letter-spacing: 0.02em; color: #0A0A0A;
+    }
+    .ld-note {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 8.2pt;
+      color: #4a4a4a;
+    }
+    .ld-date {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.8pt; color: #6B6B6B;
+      letter-spacing: 0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+    .ld-action {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600;
+    }
+
+    /* ───────────────────── P4 · DIAGNOSTIC QUAD ──────────────────── */
+    .rq-grid {
+      display: table; width: 100%;
+      border-collapse: separate; border-spacing: 14pt 0; table-layout: fixed;
+    }
+    .rq-main { display: table-cell; width: 70%; vertical-align: top; }
+    .rq-side { display: table-cell; width: 30%; vertical-align: top; }
+
+    .rq-quads { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .rq-quad {
+      display: table-cell; width: 50%;
+      padding: 6pt 8pt;
+      vertical-align: top;
+      height: 160pt;
+    }
+    .rq-quad svg { width: 100%; }
+    .rq-quad-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 3pt;
+    }
+    .rq-quad-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 16pt; font-weight: 500;
+      color: #0A0A0A; font-variant-numeric: tabular-nums;
+    }
+    .rq-quad-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.8pt;
+      color: #6B6B6B; margin-top: 4pt; line-height: 1.4;
+    }
+
+    .rq-method {
+      padding: 10pt 0;
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-size: 8pt;
+    }
+    .rq-method-eyebrow {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.6pt; letter-spacing: 0.28em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 8pt;
+    }
+    .rq-method-item { margin-bottom: 9pt; }
+    .rq-method-item:last-child { margin-bottom: 0; }
+    .rq-method-term {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-weight: 600; font-size: 8.5pt; color: #0A0A0A;
+    }
+    .rq-method-def {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.6pt;
+      line-height: 1.5; color: #4a4a4a;
+      margin-top: 1pt;
+    }
+
+    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
+    .ed-quote-wrap {
+      min-height: 300pt;
+      padding: 20pt 14mm 26pt 14mm;
+      display: table; width: 100%; text-align: center;
+    }
+    .ed-quote-cell { display: table-cell; vertical-align: middle; }
+    .ed-quote {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 36pt; line-height: 1.22;
+      letter-spacing: -0.015em; color: #0A0A0A;
+      margin: 0 auto; max-width: 150mm;
+    }
+    .ed-quote-attr {
+      margin-top: 24pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #8B6F47;
+    }
+    .ed-quote-attr::before,
+    .ed-quote-attr::after {
+      content: "——"; color: #8B6F47; opacity: 0.5;
+      margin: 0 8pt; letter-spacing: 0;
+    }
+
+    .ed-col2 {
+      display: table; width: 100%;
+      border-collapse: separate; border-spacing: 18pt 0;
+      margin-top: 20pt;
+      border-top: 0.5pt solid #0A0A0A;
+      padding-top: 14pt;
+    }
+    .ed-col { display: table-cell; width: 50%; vertical-align: top; }
+    .ed-col-head {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.6pt; letter-spacing: 0.32em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 600; margin-bottom: 9pt;
+    }
+    .ed-limit-item {
+      display: table; width: 100%;
+      padding: 4pt 0;
+      border-bottom: 0.15pt solid #e4dfd2;
+    }
+    .ed-limit-item:last-child { border-bottom: none; }
+    .ed-limit-num {
+      display: table-cell; width: 18pt;
+      vertical-align: top;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8pt; color: #8B6F47;
+      padding-top: 2pt;
+    }
+    .ed-limit-detail {
+      display: table-cell; vertical-align: top;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.4pt; line-height: 1.5;
+      color: #202020;
+    }
+    .ed-foot-legal {
+      margin-top: 18pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 6.8pt;
+      color: #8a8a8a; text-align: center;
+      letter-spacing: 0.06em;
+    }
+
+    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em;
+      text-transform: uppercase; color: #8B6F47;
+      font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small {
+      width: 28pt; height: 0.5pt;
+      background: #0A0A0A; margin: 0 0 12pt 0;
+    }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7;
+      color: #202020; max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #6B6B6B;
+    }
+    .co-thin-rule {
+      height: 0.35pt; background: #c9c4b8; margin: 12pt 0;
+    }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em;
+      text-transform: uppercase; color: #0A0A0A;
+      font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+
+    /* Legal partial trim */
+    section.disclaimer.pq-disclaimer {
+      padding: 10pt 0 !important;
+      margin: 16pt 0 0 0 !important;
+      border-top: 0.5pt solid #0A0A0A !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
+    }
   </style>
 </head>
 <body>
 
-<!-- ── P1 · Masthead + Quarterly Financial Summary ─────────────────── -->
-<div class="part-label">Part 1 · Self 10-K</div>
-<h1>{{ user_name }} — Quarterly Self Report</h1>
-<div class="meta">
-  {{ quarter_label }} &nbsp;·&nbsp;
-  {{ period_start }} &rarr; {{ period_end }} &nbsp;·&nbsp;
-  Generated {{ generated_at }}
+{# ── local helpers ──────────────────────────────────────────────────────── #}
+{% set _quarter = quarter_label | default('Q1 2026') %}
+{% set _issue_no = issue_number | default(1) %}
+{% set _doc_ref = doc_ref | default('PQ-QSR-01 · v2026.04.21') %}
+{% set _hero = hero_headline | default([
+  'Three months observed.',
+  'One hand, ten decisions.',
+  'A self-review — not a verdict.'
+]) %}
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 1 · COVER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<section class="cv">
+
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=340 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+  </div>
+
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    QUARTERLY SELF-REPORT &nbsp;·&nbsp; {{ _quarter }} &nbsp;·&nbsp; <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+    &nbsp;·&nbsp; {{ period_start }} — {{ period_end }}
+  </div>
+  <div class="cv-rule-thin"></div>
+
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
+
+  <div class="cv-rule-thin"></div>
+
+  <div class="cv-kpi4">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Quarter P&amp;L</div>
+      <div class="cv-kpi-value {% if quarterly_return_pct is defined and quarterly_return_pct is not none and quarterly_return_pct >= 0 %}r-pos{% elif quarterly_return_pct is defined and quarterly_return_pct is not none %}r-neg{% endif %}">
+        {% if quarterly_return_pct is defined and quarterly_return_pct is not none %}{{ '%+.2f'|format(quarterly_return_pct) }}%{% else %}+6.40%{% endif %}
+      </div>
+      <div class="cv-kpi-foot">Book, descriptive record.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Benchmark</div>
+      <div class="cv-kpi-value {% if kpi_benchmark is defined and kpi_benchmark is not none and kpi_benchmark >= 0 %}r-pos{% elif kpi_benchmark is defined and kpi_benchmark is not none %}r-neg{% endif %}">
+        {% if kpi_benchmark is defined and kpi_benchmark is not none %}{{ '%+.2f'|format(kpi_benchmark) }}%{% else %}+4.20%{% endif %}
+      </div>
+      <div class="cv-kpi-foot">S&amp;P 500, total return.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Spread</div>
+      <div class="cv-kpi-value {% if kpi_alpha is defined and kpi_alpha is not none and kpi_alpha >= 0 %}r-pos{% elif kpi_alpha is defined and kpi_alpha is not none %}r-neg{% endif %}">
+        {% if kpi_alpha is defined and kpi_alpha is not none %}{{ '%+.2f'|format(kpi_alpha) }}pp{% else %}+2.20pp{% endif %}
+      </div>
+      <div class="cv-kpi-foot">Book minus benchmark.</div>
+    </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Hit Rate</div>
+      <div class="cv-kpi-value">
+        {% if kpi_hit_rate is defined and kpi_hit_rate is not none %}{{ '%.0f'|format(kpi_hit_rate) }}%{% else %}58%{% endif %}
+      </div>
+      <div class="cv-kpi-foot">Closed trades with positive print.</div>
+    </div>
+  </div>
+
+  <p class="cv-foot">
+    Written for {{ user_name | default('the reader') }} &nbsp;·&nbsp; Self-review, informational only.
+  </p>
+  <p class="cv-micro-disclaim">
+    Past performance does not guarantee future results. This document is informational and does not constitute investment advice.
+  </p>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 2 · SELF-REVIEW LETTER SPREAD
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · Self-Review</p>
+<h2 class="sp-title">What the three months were made of</h2>
+<p class="sp-deck">
+  A quiet letter to the person who made the decisions. Six paragraphs,
+  one hand, no verdict. Numbers sit in the margin; prose holds the page.
+</p>
+
+<div class="le-letter">
+  <div class="le-body">
+
+    <div class="le-salute">To the reader, once removed — myself —</div>
+
+    <div class="le-prose">
+      {% if review_paragraphs %}
+        {% for para in review_paragraphs %}<p>{{ para }}</p>{% endfor %}
+      {% else %}
+        <p>Three months, in the hand. The quarter opened with the market reading its own quiet — a stretched week of thin prints, a calmer second week, and then the sort of mid-quarter acceleration that looks, in the book, like momentum and, on the tape, like catching up. I watched. I did little. The doing, when it came, came later.</p>
+        <p>Position changes were fewer than the quarter before. Semiconductor weight held at a little over a quarter of the book through the period. Consumer discretionary was trimmed in February — a small reduction, not a closure — on a reading that exit pace was outrunning the thesis I had written down. The adjustment was clean; the reasoning was dated; the execution took ninety seconds. That is not a strategy. It is a habit.</p>
+        <p>The largest single-day drawdown of the quarter printed on the Thursday in mid-March. It was 2.1% on the book. I remember the morning because I had slept poorly the night before and opened the screen later than usual. The book recovered by the following Tuesday. The note I wrote to myself on the Thursday afternoon — two sentences in the running file — is the record that no Sharpe ratio preserves. I keep the note.</p>
+        <p>What I misread, I misread at the edges. I read one small position as a story of operating leverage and the thesis I had written, three lines long, required a footnote on customer concentration that I had read in October and then, quietly, stopped reading. The position is still in the book, at a smaller weight. I have not closed it. I have reread the footnote. These are the decisions that do not appear in a P&amp;L column. The P&amp;L is where the decision lives. The decision is not where the P&amp;L lives.</p>
+        <p>The habits held, with one exception. Monthly rebalance on the last trading day — kept. Reading on Saturday mornings — kept, except for the one Sunday evening in February I chose instead to finish a book, and the Tuesday that followed it was my least clean trading day of the quarter. The reading is not superstition. The reading is the shelter. I note the exception. I do not punish the Sunday.</p>
+        <p>Quarters end. Observation continues. There is nothing to claim here, and no conclusion I would put in italics if I were writing for anyone else. I am writing for the person who has to make the next ten decisions. That person will be, again, me.</p>
+      {% endif %}
+    </div>
+
+    <div class="le-signoff">
+      {{ signoff_line | default('In observation,') }}<br/>
+      — {{ user_name | default('the reader') }}
+      <span class="le-signoff-house">PivoxQuant Research Desk</span>
+    </div>
+  </div>
+
+  <div class="le-margin">
+    {% set _margin = margin_notes | default([
+      {'eyebrow': 'Sharpe · quarter',  'note': 'Observed at 1.08 over the window. Not annualised into the future.'},
+      {'eyebrow': 'Beta · 90D',        'note': 'Book-to-SPY beta 0.92 over trailing 90 sessions. Quietly below one.'},
+      {'eyebrow': 'Turnover',          'note': '28% in the quarter. Monthly rebalance on the last trading day, held without exception.'},
+    ]) %}
+    {% for m in _margin %}
+      <div class="le-margin-block">
+        <div class="le-margin-eyebrow">{{ m.eyebrow }}</div>
+        <div class="le-margin-note">{{ m.note }}</div>
+      </div>
+    {% endfor %}
+  </div>
 </div>
 
-<h2>P1 · 분기 재무 요약</h2>
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">기초 가치</div>
-    <div class="kpi-value kpi-neu">
-      {% if opening_value is not none %}{{ '{:,.0f}'.format(opening_value) }}{% else %}—{% endif %}
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 3 · DECISION LADDER — 10-row table with sparklines
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · Decision Ladder</p>
+<h2 class="sp-title">Ten decisions, in the order they were made</h2>
+<p class="sp-deck">
+  Each row is a single decision kept in the quarter's log. Rationale columns
+  are descriptive — factual record, not a directive.
+</p>
+
+{% set _ladder = decision_ladder | default([
+  {'date': '2026-01-08', 'action': 'Open',    'ticker': 'NVDA', 'weight_delta':  4.2, 'rationale': 'Sizing per plan',                'pnl_pct':  12.4, 'spark': [0, 0.6, 1.8, 3.2, 4.8, 7.6, 12.4]},
+  {'date': '2026-01-14', 'action': 'Trim',    'ticker': 'TSLA', 'weight_delta': -1.8, 'rationale': 'Position size reduction',        'pnl_pct':  -2.1, 'spark': [0, 0.3, -0.4, -1.2, -1.8, -2.0, -2.1]},
+  {'date': '2026-01-22', 'action': 'Add',     'ticker': 'AAPL', 'weight_delta':  2.0, 'rationale': 'Rebalance per plan',             'pnl_pct':   5.8, 'spark': [0, 0.4, 1.2, 2.4, 3.8, 5.0, 5.8]},
+  {'date': '2026-02-04', 'action': 'Open',    'ticker': 'AVGO', 'weight_delta':  3.0, 'rationale': 'New thesis entry',               'pnl_pct':   9.1, 'spark': [0, 0.8, 2.2, 4.1, 6.2, 8.0, 9.1]},
+  {'date': '2026-02-11', 'action': 'Trim',    'ticker': 'XLY',  'weight_delta': -2.4, 'rationale': 'Sector weight reduction',        'pnl_pct':   1.2, 'spark': [0, 0.2, 0.5, 0.8, 1.0, 1.1, 1.2]},
+  {'date': '2026-02-19', 'action': 'Cash',    'ticker': 'CASH', 'weight_delta':  2.4, 'rationale': 'Cash buffer increase',           'pnl_pct':   0.4, 'spark': [0, 0.1, 0.1, 0.2, 0.3, 0.3, 0.4]},
+  {'date': '2026-02-27', 'action': 'Add',     'ticker': 'MSFT', 'weight_delta':  1.5, 'rationale': 'Rebalance per plan',             'pnl_pct':   3.2, 'spark': [0, 0.3, 0.8, 1.6, 2.4, 2.9, 3.2]},
+  {'date': '2026-03-06', 'action': 'Close',   'ticker': 'NKE',  'weight_delta': -2.2, 'rationale': 'Thesis marked stale',            'pnl_pct':  -5.8, 'spark': [0, -0.4, -1.2, -2.4, -3.8, -4.9, -5.8]},
+  {'date': '2026-03-14', 'action': 'Observe', 'ticker': 'BOOK', 'weight_delta':  0.0, 'rationale': 'Drawdown day (\u22122.1% print)', 'pnl_pct': -2.1, 'spark': [0, -0.2, -0.8, -1.6, -2.0, -2.1, -2.1]},
+  {'date': '2026-03-27', 'action': 'Rebal',   'ticker': 'BOOK', 'weight_delta':  0.0, 'rationale': 'Monthly rebalance (per plan)',   'pnl_pct':   0.6, 'spark': [0, 0.1, 0.2, 0.3, 0.5, 0.6, 0.6]},
+]) %}
+
+<table class="ld-table">
+  <thead>
+    <tr>
+      <th style="width:11%;">Date</th>
+      <th style="width:9%;">Action</th>
+      <th style="width:9%;">Name</th>
+      <th class="num" style="width:9%;">Weight Δ</th>
+      <th style="width:30%;">Rationale (descriptive)</th>
+      <th class="num" style="width:10%;">P&amp;L to date</th>
+      <th style="width:22%;">Trajectory</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in _ladder %}
+      {% set _spark = r.spark | default([0, 0, 0, 0, 0, 0, 0]) %}
+      {% set _smax = (_spark | map('abs') | list | max) %}
+      {% if _smax == 0 %}{% set _smax = 1 %}{% endif %}
+      {% set _sw = 100 %}
+      {% set _sh = 20 %}
+      {% set _sp = [] %}
+      {% for v in _spark %}
+        {% set _x = loop.index0 * _sw / (_spark | length - 1) %}
+        {% set _y = _sh/2 - (v / (_smax * 2)) * (_sh - 4) %}
+        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sp[-1].split(',') %}
+      {% set _pnl = r.pnl_pct | default(0) %}
+      {% set _wd = r.weight_delta | default(0) %}
+      <tr>
+        <td><span class="ld-date">{{ r.date }}</span></td>
+        <td><span class="ld-action">{{ r.action }}</span></td>
+        <td><span class="ld-tkr">{{ r.ticker }}</span></td>
+        <td class="num {% if _wd > 0 %}r-pos{% elif _wd < 0 %}r-neg{% else %}r-muted{% endif %}">{{ '%+.1f'|format(_wd) }}pp</td>
+        <td><span class="ld-note">{{ r.rationale }}</span></td>
+        <td class="num {% if _pnl >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.2f'|format(_pnl) }}%</td>
+        <td>
+          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="26" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
+            <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
+            <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div style="margin-top: 10pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 8.5pt; color: #8a8a8a;">
+  Ten decisions in the order made. Bronze end-dot marks the most recent read
+  on each row. Rationale column is the quarter's own written record.
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 4 · DIAGNOSTIC QUAD
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part III · Diagnostic Quad</p>
+<h2 class="sp-title">Four readings around the quarter</h2>
+<p class="sp-deck">
+  Four dimensions sampled over the same ninety-day window. Small multiples,
+  quiet grids, and a note column on the right — what these readings are,
+  and what they are not.
+</p>
+
+<div class="rq-grid">
+  <div class="rq-main">
+
+    <div class="rq-quads">
+      <div class="rq-quad">
+        <div class="rq-quad-label">Rolling Sharpe · 90D</div>
+        <div class="rq-quad-value">{{ '%.2f'|format(sharpe_rolling | default(1.08)) }}</div>
+        {% set _sh_data = sharpe_series | default([0.42, 0.58, 0.68, 0.74, 0.82, 0.91, 0.95, 1.02, 1.08, 1.12, 1.08, 1.04]) %}
+        {% set _sh_max = (_sh_data | max) %}
+        {% set _sh_min = (_sh_data | min) %}
+        {% if _sh_max == _sh_min %}{% set _sh_max = _sh_min + 1 %}{% endif %}
+        {% set _sh_span = _sh_max - _sh_min %}
+        {% set _sh_pts = [] %}
+        {% for v in _sh_data %}
+          {% set _x = loop.index0 * 180 / (_sh_data | length - 1) %}
+          {% set _y = 36 - ((v - _sh_min) / _sh_span) * 28 %}
+          {% set _ = _sh_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+        {% endfor %}
+        <svg viewBox="0 0 180 42" width="100%" height="76" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="0" y1="36" x2="180" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
+          <polyline points="{{ _sh_pts | join(' ') }}" stroke="#0A0A0A" stroke-width="1.0" fill="none" stroke-linejoin="round"/>
+          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">RISK-ADJUSTED WALK · 90D</text>
+        </svg>
+        <div class="rq-quad-foot">Excess return over realised vol, rolling. Historical record.</div>
+      </div>
+      <div class="rq-quad">
+        <div class="rq-quad-label">Hit Rate by Action</div>
+        <div class="rq-quad-value">{{ '%.0f'|format(hit_rate_overall | default(58)) }}%</div>
+        {% set _hr = hit_rate_by_action | default([
+          {'action': 'Open',  'rate': 62, 'count': 4},
+          {'action': 'Add',   'rate': 67, 'count': 3},
+          {'action': 'Trim',  'rate': 50, 'count': 2},
+          {'action': 'Close', 'rate': 50, 'count': 2},
+        ]) %}
+        <svg viewBox="0 0 180 42" width="100%" height="76" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="0" y1="36" x2="180" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
+          {% set _hrn = _hr | length %}
+          {% set _barw = 32 %}
+          {% set _gap = (180 - (_hrn * _barw)) / (_hrn + 1) %}
+          {% for h in _hr %}
+            {% set _bx = _gap + loop.index0 * (_barw + _gap) %}
+            {% set _bh = (h.rate / 100) * 26 %}
+            <rect x="{{ _bx }}" y="{{ 36 - _bh }}" width="{{ _barw }}" height="{{ _bh }}" fill="#8B6F47" fill-opacity="0.55"/>
+            <text x="{{ _bx + _barw/2 }}" y="40" text-anchor="middle" fill="#6B6B6B" font-size="5.6" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ h.action | upper }}</text>
+            <text x="{{ _bx + _barw/2 }}" y="{{ 34 - _bh }}" text-anchor="middle" fill="#0A0A0A" font-size="6.4" font-family="JetBrains Mono, monospace">{{ h.rate }}%</text>
+          {% endfor %}
+        </svg>
+        <div class="rq-quad-foot">Share of closed decisions with positive print, by action type.</div>
+      </div>
+      <div class="rq-quad">
+        <div class="rq-quad-label">Holding Period · histogram</div>
+        <div class="rq-quad-value">{{ holding_median_days | default(14) }}<span style="font-size:10pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; color: #8a8a8a;"> &nbsp;med. days</span></div>
+        {% set _hp = holding_hist | default([2, 4, 6, 7, 5, 3, 2, 1, 0, 1]) %}
+        <svg viewBox="0 0 180 42" width="100%" height="76" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="0" y1="36" x2="180" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
+          {% set _hpmax = (_hp | max) %}
+          {% if _hpmax == 0 %}{% set _hpmax = 1 %}{% endif %}
+          {% for v in _hp %}
+            {% set _bx = loop.index0 * 17 + 3 %}
+            {% set _bh = (v / _hpmax) * 26 %}
+            {% if loop.index0 == 3 %}{% set _c = '#7f1d1d' %}{% else %}{% set _c = '#c9c4b8' %}{% endif %}
+            <rect x="{{ _bx }}" y="{{ 36 - _bh }}" width="14" height="{{ _bh }}" fill="{{ _c }}" fill-opacity="0.65"/>
+          {% endfor %}
+          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">DAYS HELD · QUARTER DISTRIBUTION</text>
+        </svg>
+        <div class="rq-quad-foot">Distribution of holding periods. The mode sits at the monthly rebalance rhythm.</div>
+      </div>
+      <div class="rq-quad">
+        <div class="rq-quad-label">Attribution · by sector</div>
+        <div class="rq-quad-value" style="font-size: 12pt;">{{ top_sector | default('Semiconductors') }}</div>
+        {% set _attr = sector_attribution | default([
+          {'sector': 'Semis',    'pnl':  3.8},
+          {'sector': 'Platform', 'pnl':  1.6},
+          {'sector': 'Consumer', 'pnl': -0.4},
+          {'sector': 'Fin',      'pnl':  0.8},
+          {'sector': 'Cash',     'pnl':  0.6},
+        ]) %}
+        <svg viewBox="0 0 180 42" width="100%" height="76" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
+          <line x1="0" y1="36" x2="180" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
+          {% set _apmax = _attr | map(attribute='pnl') | map('abs') | list | max %}
+          {% if _apmax == 0 %}{% set _apmax = 1 %}{% endif %}
+          {% set _attrn = _attr | length %}
+          {% set _abw = 26 %}
+          {% set _agap = (180 - (_attrn * _abw)) / (_attrn + 1) %}
+          {% for a in _attr %}
+            {% set _bx = _agap + loop.index0 * (_abw + _agap) %}
+            {% set _av = a.pnl if a.pnl >= 0 else -a.pnl %}
+            {% set _ah = (_av / _apmax) * 26 %}
+            {% if a.pnl >= 0 %}{% set _c = '#8B6F47' %}{% else %}{% set _c = '#7f1d1d' %}{% endif %}
+            {% set _ay = 36 - _ah if a.pnl >= 0 else 36 %}
+            <rect x="{{ _bx }}" y="{{ _ay }}" width="{{ _abw }}" height="{{ _ah }}" fill="{{ _c }}" fill-opacity="0.55"/>
+            <text x="{{ _bx + _abw/2 }}" y="40" text-anchor="middle" fill="#6B6B6B" font-size="5.4" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ a.sector | upper }}</text>
+          {% endfor %}
+        </svg>
+        <div class="rq-quad-foot">Contribution to quarter P&amp;L by sector cohort. Descriptive — no causal claim.</div>
+      </div>
     </div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">기말 가치</div>
-    <div class="kpi-value kpi-neu">
-      {% if closing_value is not none %}{{ '{:,.0f}'.format(closing_value) }}{% else %}—{% endif %}
+
+    <div style="text-align:center; margin-top: 10pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 8.5pt; color: #8a8a8a;">
+      Fig. 3. Four diagnostic readings, sampled over the quarter's ninety
+      sessions. Bronze is benign; oxblood is loss or mode. Grids are quiet.
     </div>
+
   </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">순현금흐름</div>
-    <div class="kpi-value
-      {% if net_cash_flow is not none and net_cash_flow >= 0 %}kpi-pos
-      {% elif net_cash_flow is not none %}kpi-neg
-      {% else %}kpi-neu{% endif %}">
-      {% if net_cash_flow is not none %}{{ '{:+,.0f}'.format(net_cash_flow) }}{% else %}—{% endif %}
-    </div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Q 수익률(관찰)</div>
-    <div class="kpi-value
-      {% if quarterly_return_pct is not none and quarterly_return_pct >= 0 %}kpi-pos
-      {% elif quarterly_return_pct is not none %}kpi-neg
-      {% else %}kpi-neu{% endif %}">
-      {% if quarterly_return_pct is not none %}{{ '%+.2f'|format(quarterly_return_pct) }}%{% else %}—{% endif %}
+
+  <div class="rq-side">
+    <div class="rq-method">
+      <div class="rq-method-eyebrow">Self-Review Notes</div>
+      {% set _notes = self_review_notes | default([
+        {'term': 'Sharpe · rolling',   'def': 'Excess-of-cash return per unit of realised volatility, computed on a rolling 90-session window. A historical record only.'},
+        {'term': 'Hit Rate',           'def': 'Closed decisions with a positive print, divided by closed decisions. Counts events, not conviction.'},
+        {'term': 'Holding period',     'def': 'Calendar days from entry to last change or close. The mode sits at the monthly rebalance rhythm, by design.'},
+        {'term': 'Sector attribution', 'def': 'Share of quarter P&L observed in each sector cohort. Not a causal claim about sector rotation.'},
+        {'term': 'Not predictive',     'def': 'None of the four readings is predictive. They are artefacts of the quarter already lived, kept for review.'},
+      ]) %}
+      {% for n in _notes %}
+        <div class="rq-method-item">
+          <span class="rq-method-term">{{ n.term }}</span>
+          <div class="rq-method-def">{{ n.def }}</div>
+        </div>
+      {% endfor %}
     </div>
   </div>
 </div>
 
-<div class="page-break"></div>
 
-<!-- ── P2 · MD&A ─────────────────────────────────────────────────────── -->
-<h2>P2 · MD&amp;A (Management Discussion &amp; Analysis)</h2>
-<div class="mdna">{{ mdna }}</div>
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 5 · EDITORIAL — pull quote + what this review cannot settle
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
 
-<div class="page-break"></div>
-
-<!-- ── P3 · Segment Performance ─────────────────────────────────────── -->
-<h2>P3 · 세그먼트 퍼포먼스 (섹터별 P/L)</h2>
-{% if segments %}
-<table class="rep">
-  <thead>
-    <tr><th>섹터</th><th class="num">거래 수</th><th class="num">P/L</th></tr>
-  </thead>
-  <tbody>
-  {% for s in segments %}
-    <tr>
-      <td>{{ s.sector }}</td>
-      <td class="num">{{ s.trade_count }}</td>
-      <td class="num {% if s.pnl >= 0 %}kpi-pos{% else %}kpi-neg{% endif %}">
-        {{ '{:+,.0f}'.format(s.pnl) }}
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">분기 내 거래가 없거나 섹터 분류가 어려워 세그먼트를 생략합니다.</p>
-{% endif %}
-
-<div class="page-break"></div>
-
-<!-- ── P4 · Risk Factors ────────────────────────────────────────────── -->
-<h2>P4 · 리스크 팩터</h2>
-{% if risk_factors %}
-<table class="rep">
-  <thead>
-    <tr><th>팩터</th><th>관찰 메모</th></tr>
-  </thead>
-  <tbody>
-  {% for r in risk_factors %}
-    <tr><td><strong>{{ r.factor }}</strong></td><td>{{ r.note }}</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">주요 집중도 또는 분산 관련 관찰 지표가 임계값 이내입니다.</p>
-{% endif %}
-
-<div class="page-break"></div>
-
-<!-- ── P5 · Internal Controls ───────────────────────────────────────── -->
-<h2>P5 · 내부 통제 (Risk Defense 7-Layer)</h2>
-<table class="rep">
-  <thead>
-    <tr><th>Layer</th><th>구성 요소</th><th>상태</th></tr>
-  </thead>
-  <tbody>
-  {% for c in internal_controls %}
-    <tr>
-      <td><strong>{{ c.layer }}</strong></td>
-      <td>{{ c.label }}</td>
-      <td class="{% if c.status == 'active' %}control-ok{% else %}control-warn{% endif %}">
-        {{ c.status }}
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-<p style="color:#555; font-size:9.5pt;">
-  본 란은 PivoxQuant 플랫폼이 보유하고 있는 7-layer Risk Defense 모듈의 로드 상태
-  스냅샷입니다. 각 레이어의 정책 트리거는 서비스 운영 시점에 동작하며, 본 리포트는
-  해당 통제가 분기 동안 시스템에 <em>설치/가용</em>했는지를 기록합니다.
+<p class="sp-part">Part IV · Editorial</p>
+<h2 class="sp-title">What a quarterly review is and is not</h2>
+<p class="sp-deck">
+  A single sentence the desk is holding in mind at quarter's end, and a
+  short inventory of the questions this document cannot answer.
 </p>
 
-<div class="page-break"></div>
-
-<!-- ── P6 · Legal Matters ──────────────────────────────────────────── -->
-<h2>P6 · 법적 사항 (분기 이벤트 로그)</h2>
-<p style="color:#555; font-size:9.5pt;">
-  <strong>주의:</strong> 본 란은 이용자에게 <strong>법적 문제가 있다는 뜻이 아닙니다</strong>.
-  Self 10-K 포맷의 관례상, 분기 동안 발생한 <em>기록 가능한 이벤트</em>(거래 집계, 계정 연결 등)를
-  나열하기 위한 섹션입니다.
-</p>
-{% if legal_matters %}
-<table class="rep">
-  <thead><tr><th>Date</th><th>Event</th></tr></thead>
-  <tbody>
-  {% for e in legal_matters %}
-    <tr><td>{{ e.date }}</td><td>{{ e.label }}</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">기록할 이벤트가 없습니다.</p>
-{% endif %}
-
-<div class="page-break"></div>
-
-<!-- ── P7 · Principal Positions ─────────────────────────────────────── -->
-<h2>P7 · 주요 포지션 상세</h2>
-{% if principal_positions %}
-<table class="rep">
-  <thead>
-    <tr>
-      <th>Ticker</th><th>Sector</th>
-      <th class="num">Shares</th>
-      <th class="num">Avg Cost</th>
-      <th class="num">Last</th>
-      <th class="num">MV</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for p in principal_positions %}
-    <tr>
-      <td><strong>{{ p.ticker }}</strong></td>
-      <td>{{ p.sector }}</td>
-      <td class="num">{{ '{:,.2f}'.format(p.shares) }}</td>
-      <td class="num">{{ '{:,.2f}'.format(p.avg_cost) }}</td>
-      <td class="num">{{ '{:,.2f}'.format(p.last) }}</td>
-      <td class="num">{{ '{:,.0f}'.format(p.mv) }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">현재 보유 포지션이 없습니다.</p>
-{% endif %}
-
-<div class="page-break"></div>
-
-<!-- ── P8 · Thesis Reality Check · opening theses ─────────────────── -->
-<div class="part-label">Part 2 · Thesis Reality Check</div>
-<h2>P8 · 분기 초 Thesis</h2>
-{% if thesis_entries %}
-<table class="rep">
-  <thead>
-    <tr><th>Ticker</th><th>Thesis</th><th>Recorded</th></tr>
-  </thead>
-  <tbody>
-  {% for e in thesis_entries %}
-    <tr>
-      <td><strong>{{ e.ticker }}</strong></td>
-      <td>{{ e.thesis }}</td>
-      <td>{{ e.created_at or '—' }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">기록된 thesis가 없습니다. 포지션 상세에서 thesis 필드를 채우면 다음 분기부터 추적됩니다.</p>
-{% endif %}
-
-<div class="page-break"></div>
-
-<!-- ── P9 · Thesis validity (AI) ────────────────────────────────────── -->
-<h2>P9 · Thesis 검증 상태</h2>
-{% if thesis_checks %}
-<table class="rep">
-  <thead>
-    <tr><th>Ticker</th><th>Verdict</th><th>Note</th></tr>
-  </thead>
-  <tbody>
-  {% for c in thesis_checks %}
-    <tr>
-      <td><strong>{{ c.ticker }}</strong></td>
-      <td class="verdict-{{ c.verdict }}">{{ c.verdict }}</td>
-      <td>{{ c.note }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">검증할 thesis가 없습니다.</p>
-{% endif %}
-
-<div class="page-break"></div>
-
-<!-- ── P10 · Decision quality · Self Audit re-used ─────────────────── -->
-<h2>P10 · 매수 결정 품질 스코어</h2>
-<div class="kpi-row">
-  <div class="kpi-cell">
-    <div class="kpi-label">Trades</div>
-    <div class="kpi-value kpi-neu">{{ decision_quality.trades_total or 0 }}</div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Win Rate</div>
-    <div class="kpi-value kpi-neu">
-      {% if decision_quality.win_rate_pct is not none %}{{ '%.0f'|format(decision_quality.win_rate_pct) }}%{% else %}—{% endif %}
-    </div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">Avg Return</div>
-    <div class="kpi-value
-      {% if decision_quality.avg_return_pct is not none and decision_quality.avg_return_pct >= 0 %}kpi-pos
-      {% elif decision_quality.avg_return_pct is not none %}kpi-neg
-      {% else %}kpi-neu{% endif %}">
-      {% if decision_quality.avg_return_pct is not none %}{{ '%+.2f'|format(decision_quality.avg_return_pct) }}%{% else %}—{% endif %}
-    </div>
-  </div>
-  <div class="kpi-cell">
-    <div class="kpi-label">W / L</div>
-    <div class="kpi-value kpi-neu">
-      {{ decision_quality.wins or 0 }} / {{ decision_quality.losses or 0 }}
-    </div>
+<div class="ed-quote-wrap">
+  <div class="ed-quote-cell">
+    <blockquote class="ed-quote">
+      {{ pull_quote | default('Self-review is the small hinge on which large habits turn.') }}
+    </blockquote>
+    <div class="ed-quote-attr">{{ pull_quote_attr | default('PivoxQuant · Quarterly Desk') }}</div>
   </div>
 </div>
-{% if decision_quality.pattern_summary %}
-<div class="note">{{ decision_quality.pattern_summary }}</div>
-{% endif %}
 
-<div class="page-break"></div>
+<div class="ed-col2">
+  <div class="ed-col">
+    <div class="ed-col-head">What this review cannot settle</div>
+    {% set _cannot = cannot_settle | default([
+      'Tax consequences of the quarter\'s closed positions.',
+      'Personal liquidity events not visible in the book.',
+      'A regime shift that falls outside the 90-session sample.',
+      'Private decisions made for reasons not written down.',
+      'Any outcome of decisions not yet made.',
+    ]) %}
+    {% for item in _cannot %}
+      <div class="ed-limit-item">
+        <div class="ed-limit-num">{{ '%02d' % loop.index }}</div>
+        <div class="ed-limit-detail">{{ item }}</div>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="ed-col">
+    <div class="ed-col-head">What this review does record</div>
+    {% set _does = does_record | default([
+      'Ten decisions, in the order they were made.',
+      'Four diagnostic readings over the 90-session window.',
+      'Three margin notes — Sharpe, beta, turnover.',
+      'One largest single-day drawdown, with its date.',
+      'One written sign-off, to the person who made the quarter.',
+    ]) %}
+    {% for item in _does %}
+      <div class="ed-limit-item">
+        <div class="ed-limit-num">{{ '%02d' % loop.index }}</div>
+        <div class="ed-limit-detail">{{ item }}</div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
 
-<!-- ── P11 · Thesis change checklist ────────────────────────────────── -->
-<h2>P11 · 변화 필요한 Thesis 체크리스트</h2>
-<p style="color:#555; font-size:9.5pt;">
-  각 thesis가 여전히 유효한지 본인이 체크하십시오. 본 란은 AI 판단을 반영하지 않습니다.
+<p class="ed-foot-legal">
+  Informational only. Past observation does not guarantee future results. This document is informational and does not constitute investment advice.
 </p>
-{% if thesis_checklist %}
-<table class="rep">
-  <thead>
-    <tr><th>Ticker</th><th>Still valid? (Y/N)</th><th>Question</th></tr>
-  </thead>
-  <tbody>
-  {% for c in thesis_checklist %}
-    <tr>
-      <td><strong>{{ c.ticker }}</strong></td>
-      <td><span class="checkbox"></span> Y &nbsp;&nbsp; <span class="checkbox"></span> N</td>
-      <td>{{ c.question }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">체크할 thesis가 없습니다.</p>
-{% endif %}
 
-<div class="page-break"></div>
 
-<!-- ── P12 · Best decisions ─────────────────────────────────────────── -->
-<h2>P12 · 베스트 결정 (Top 3)</h2>
-{% if decision_quality.best_decisions %}
-<table class="rep">
-  <thead>
-    <tr>
-      <th>Ticker</th><th>Bought</th>
-      <th class="num">Buy</th><th class="num">Outcome</th>
-      <th class="num">Return</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for s in decision_quality.best_decisions %}
-    <tr>
-      <td><strong>{{ s.ticker }}</strong></td>
-      <td>{{ s.buy_date or '—' }}</td>
-      <td class="num">{{ '%.2f'|format(s.buy_price) }}</td>
-      <td class="num">
-        {% if s.sell_price %}sold @ {{ '%.2f'|format(s.sell_price) }}
-        {% else %}forward price{% endif %}
-      </td>
-      <td class="num
-           {% if s.return_pct is not none and s.return_pct >= 0 %}kpi-pos
-           {% else %}kpi-neg{% endif %}">
-        {% if s.return_pct is not none %}{{ '%+.2f'|format(s.return_pct) }}%{% else %}—{% endif %}
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">데이터가 충분하지 않습니다.</p>
-{% endif %}
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 6 · COLOPHON
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
 
-<div class="page-break"></div>
+<div class="co-wrap">
 
-<!-- ── P13 · Worst decisions ───────────────────────────────────────── -->
-<h2>P13 · 워스트 결정 (Bottom 3)</h2>
-{% if decision_quality.worst_decisions %}
-<table class="rep">
-  <thead>
-    <tr>
-      <th>Ticker</th><th>Bought</th>
-      <th class="num">Buy</th><th class="num">Outcome</th>
-      <th class="num">Return</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for s in decision_quality.worst_decisions %}
-    <tr>
-      <td><strong>{{ s.ticker }}</strong></td>
-      <td>{{ s.buy_date or '—' }}</td>
-      <td class="num">{{ '%.2f'|format(s.buy_price) }}</td>
-      <td class="num">
-        {% if s.sell_price %}sold @ {{ '%.2f'|format(s.sell_price) }}
-        {% else %}forward price{% endif %}
-      </td>
-      <td class="num
-           {% if s.return_pct is not none and s.return_pct >= 0 %}kpi-pos
-           {% else %}kpi-neg{% endif %}">
-        {% if s.return_pct is not none %}{{ '%+.2f'|format(s.return_pct) }}%{% else %}—{% endif %}
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p class="note">데이터가 충분하지 않습니다.</p>
-{% endif %}
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
 
-<div class="page-break"></div>
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name | default('the reader') }}</strong> at the close of
+      <strong>{{ _quarter }}</strong>, period
+      <strong>{{ period_start }}</strong> — <strong>{{ period_end }}</strong>.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data</span> &nbsp;
+      {% set _ds = data_sources | default([
+        {'key': 'Price observations', 'note': 'Alpaca Market Data (IEX consolidated).'},
+        {'key': 'Corporate actions',  'note': 'FMP v4 Stable.'},
+        {'key': 'Risk-free',          'note': '3-Month T-Bill via FRED (DGS3MO).'},
+        {'key': 'Benchmark',          'note': 'S&P 500 total return, with dividends.'},
+      ]) %}
+      {% for d in _ds %}{{ d.note }}{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('58 quant models · 7-Layer Risk Defense') }}.
+    </p>
+  </div>
 
-<!-- ── P14 · Next-quarter watch items ──────────────────────────────── -->
-<h2>P14 · 다음 분기 Watch Items (캘린더)</h2>
-<p style="color:#555; font-size:9.5pt;">
-  아래는 <strong>관찰 구간</strong> 캘린더이며, 매매 권유가 아닙니다.
-</p>
-<ul class="watch">
-{% for w in watch_items %}
-  <li><strong>{{ w.date }}</strong> — {{ w.label }}</li>
-{% endfor %}
-</ul>
+  <div class="co-thin-rule"></div>
 
-<div class="page-break"></div>
+  {# Legal partial is verbatim-required — do not strip or reformat its content. #}
+  {% include '_disclaimer.html' %}
 
-<!-- ── P15 · Disclaimer ─────────────────────────────────────────────── -->
-<h2>P15 · Disclaimer</h2>
-{% include '_disclaimer.html' %}
-<div class="footer">
-  Generated {{ generated_at }} · Prepared by <strong>PivoxQuant</strong> ·
-  pivoxquant.com · For the addressee only — not for distribution.
+  <div class="co-thin-rule"></div>
+
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Research Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at }}</div>
+  </div>
+
 </div>
 
 </body>

@@ -1,21 +1,21 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pricing — Free, Pro, Premium",
+  title: "Pricing — Observer, Operator, Partner",
   description:
-    "Three tiers — Free, Pro at ₩9,900/month, Premium at ₩19,900/month. Quant scoring, risk defense, AI Assistant, and paper trading.",
+    "Three tiers — Observer (free), Operator at 9,900 KRW / month, Partner at 19,900 KRW / month. Flat monthly fee. No trading commissions. No performance cut.",
   keywords: [
-    "PivoxQuant 가격",
-    "주식 분석 구독",
-    "AI 투자 가격",
-    "pivoxquant pricing",
+    "PivoxQuant pricing",
     "subscription",
+    "research desk",
+    "artifact membership",
+    "Observer Operator Partner",
   ],
   alternates: { canonical: "/pricing" },
   openGraph: {
-    title: "PivoxQuant Pricing — Free, Pro, Premium",
+    title: "PivoxQuant Pricing — Observer, Operator, Partner",
     description:
-      "AI Quant Research Tool pricing. Start free; upgrade for full quant scoring, AI Assistant, and risk dashboard.",
+      "Flat monthly fee. No trading commissions. No performance cut. Observer is free; Operator is 9,900 KRW / month; Partner is 19,900 KRW / month.",
     url: "/pricing",
     type: "website",
   },

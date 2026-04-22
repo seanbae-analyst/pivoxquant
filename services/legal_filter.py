@@ -106,6 +106,34 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bforecast(ed|ing|s)?\b", re.IGNORECASE), "observation"),
     (re.compile(r"\bbest\s+opportunity\b", re.IGNORECASE), "highest indicator"),
     (re.compile(r"\bmost\s+attractive\b", re.IGNORECASE), "highest indicator"),
+
+    # ── Group 8: Wave 1 — LEGAL_GUARDRAILS §2-2 strict-list additions ────
+    # 기준: 방어 부정 문맥(뒤에 "하지", "을 제공하지") 는 lookahead 로 제외.
+    # 이미 Group 2 에서 "매수/매도 추천/권고/권장" 구문은 처리되므로 여기선
+    # 단독 명사/동사 형태만 보강.
+    # 순서 주의: 복합 구문(Should buy, Must sell 등) 이 단독 \bShould\b 보다 앞에 와야 함.
+    (re.compile(r"\bShould\s+(buy|sell|hold|consider|avoid)\b", re.IGNORECASE), "note"),
+    (re.compile(r"\bMust\s+(buy|sell|hold|consider|avoid)\b", re.IGNORECASE), "note"),
+    (re.compile(r"리밸런싱(?!하지\s*않|하지\s*맙)"), "포트폴리오 재점검"),
+    # 금융 문맥의 "최적화" 만 치환 — "성능/SEO/프로세스 최적화" 는 scope 밖 (선행 negative lookbehind).
+    (re.compile(r"(?<![최저성능SEO프로세스UX])최적화(?!하지\s*않)"), "재구성"),
+    (re.compile(r"Target\s*Weight", re.IGNORECASE), "Reference Weight"),
+    # Suggest / Optimize — 단독 동사/명사 형태. 케이스 보존 위해 suffix capture.
+    (re.compile(r"\bSuggest(s|ed|ion|ions)?\b"), r"Observe\1"),
+    (re.compile(r"\bsuggest(s|ed|ion|ions)?\b"), r"observe\1"),
+    (re.compile(r"\bOptimize(s|d)?\b"), r"Reconfigure\1"),
+    (re.compile(r"\boptimize(s|d)?\b"), r"reconfigure\1"),
+    # 단독 \bShould\b / \bMust\b — 복합 구문 이후에 잔존하는 케이스만 매치.
+    # 방어 부정 (Should not, Must not) 은 lookahead 로 제외.
+    (re.compile(r"\bShould\b(?!\s+not)", re.IGNORECASE), "is observed to"),
+    (re.compile(r"\bMust\b(?!\s+not)", re.IGNORECASE), "is recorded as"),
+    # 단독 "권유" / "가이드" / "자문" — 방어 부정 문맥 제외
+    (re.compile(r"권유(?!하지|가\s*아닙니다|를\s*제공하지)"), "안내"),
+    (re.compile(r"(?<![명\s])가이드(?!하지|를\s*제공하지|라인)"), "참고 정보"),
+    # 자문: "자문을 제공하지 않습니다" / "자문업 등록" 문맥 제외.
+    (re.compile(r"(?<![투자])자문(?!을?\s*제공하지|업\s*등록|업체|하지)"), "정보 제공"),
+    # 단독 "제안" — 방어 부정 제외
+    (re.compile(r"제안(?!드리지\s*않|하지\s*않)"), "정보 제공"),
 ]
 
 # ── Prohibited patterns (log only, 설계 오류 조기 발견용) ─────────────────

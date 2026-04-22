@@ -1,193 +1,573 @@
-{# Monthly Brag Card — 1080 x 1920 (Instagram Story, 9:16).
-
-   Fixed viewport; no responsive logic. Rendered by Playwright + headless
-   Chromium. All type is loaded from Google Fonts CDN so the image is
-   byte-identical across machines.
-
-   Variables expected (BragCardService.generate_for_user):
-     - return_pct          Optional[float]   (None → em-dash hero)
-     - month_label         str               "Mar 2026"  (mono-friendly short)
-     - month_label_long    str               "March 2026" (serif headline)
-     - user_name           str
-     - best_ticker         Optional[str]     anonymous mode masks to "A 종목"
-     - best_return_pct     Optional[float]
-     - anonymous           bool
-     - is_empty            bool
-     - disclaimer          str
-#}
+{# ══════════════════════════════════════════════════════════════════════════
+   Brag Card — Goldman IC v2 Editorial Redesign (4-page postcard)
+   Monthly private self-note. Single editorial moment, no directive, no claim.
+   Observation only — a small celebration held quietly.
+   ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>{{ month_label }} — PivoxQuant</title>
-  <!-- Google Fonts CDN: Source Serif 4 (serif) + JetBrains Mono (numeric). -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <meta charset="utf-8"/>
+  <title>Brag Card — {{ month_label }} — {{ user_name }}</title>
   <style>
-    /* ── Reset & canvas ─────────────────────────────────────────── */
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0; padding: 0;
-      width: 1080px; height: 1920px;
-      background: #0a0a0a;
-      color: #F6F3EC;
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
+    @page {
+      size: A4;
+      margin: 22mm 20mm 22mm 20mm;
+      @top-left {
+        content: "PIVOXQUANT  ·  BRAG CARD";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7.2pt;
+        letter-spacing: 0.36em;
+        text-transform: uppercase;
+        color: #8B6F47;
+      }
+      @top-right {
+        content: "CARD No. " counter(page, decimal-leading-zero) "  ·  {{ month_label }}";
+        font-family: "JetBrains Mono", monospace;
+        font-size: 7pt;
+        letter-spacing: 0.14em;
+        color: #6B6B6B;
+      }
+      @bottom-left {
+        content: "A note to self — informational only.";
+        font-family: "Source Serif 4", Georgia, serif;
+        font-size: 7pt;
+        font-style: italic;
+        color: #8a8a8a;
+      }
+      @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 8pt;
+        color: #4a4a4a;
+      }
+    }
+    @page :first {
+      @top-left { content: none; }
+      @top-right { content: none; }
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+    {% include '_report_css.html' %}
+
+    /* ───────── P1 · COVER (postcard scale) ───────── */
+    .cv { position: relative; padding-top: 0; }
+    .cv-wordmark { text-align: center; margin: 22pt auto 22pt auto; }
+    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
+    .cv-issue {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
+      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
+    }
+    .cv-issue .cv-issue-key { color: #0A0A0A; }
+    .cv-hero {
       font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-weight: 400;
+      font-size: 36pt; line-height: 1.18; letter-spacing: -0.015em;
+      color: #0A0A0A; margin: 52pt 0 52pt 0;
+      text-align: left;
     }
+    .cv-hero span { display: block; }
+    .cv-hero span + span { padding-left: 30pt; }
+    .cv-hero span + span + span { padding-left: 60pt; color: #8B6F47; }
 
-    /* ── Layout grid (absolute, pixel-exact) ───────────────────── */
-    .frame { position: relative; width: 1080px; height: 1920px; }
-
-    /* Header — masthead */
-    .mast {
-      position: absolute; top: 120px; left: 0; right: 0;
-      text-align: center;
+    .cv-kpi2 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; }
+    .cv-kpi {
+      display: table-cell; width: 50%; padding: 6pt 12pt; vertical-align: top; overflow: visible;
+    }
+    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 16pt; }
+    .cv-kpi-label {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8a8a8a; margin-bottom: 5pt;
+    }
+    .cv-kpi-value {
       font-family: "JetBrains Mono", monospace;
-      font-size: 26px;
-      letter-spacing: 0.32em;
-      text-transform: uppercase;
-      color: rgba(246, 243, 236, 0.45);
+      font-size: 22pt; font-weight: 500; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.015em; line-height: 1.02;
     }
-
-    /* Hero return % — dominant visual */
-    .hero {
-      position: absolute;
-      top: 540px; left: 0; right: 0;
-      text-align: center;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 220px;
-      font-weight: 700;
-      line-height: 1;
-      letter-spacing: -0.05em;
+    .cv-kpi-foot {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 7.8pt; color: #8a8a8a; margin-top: 4pt;
     }
-    .hero.gain  { color: #E2B96F; }   /* Warm Gold */
-    .hero.loss  { color: #8C8B87; }   /* Neutral — we don't punish losses */
-    .hero.empty { color: #8C8B87; }
-
-    /* Month label (serif, mid-card) */
-    .month {
-      position: absolute;
-      top: 860px; left: 0; right: 0;
-      text-align: center;
+    .cv-foot {
+      margin-top: 46pt; text-align: center;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt; color: #6B6B6B; letter-spacing: 0.02em;
+    }
+    .cv-micro {
+      margin-top: 14pt;
       font-family: "Source Serif 4", Georgia, serif;
       font-style: italic;
-      font-weight: 400;
-      font-size: 72px;
-      letter-spacing: -0.01em;
-      color: #F6F3EC;
+      font-size: 7.6pt;
+      color: #8a8a8a;
+      text-align: center;
+      line-height: 1.5;
+      max-width: 420pt;
+      margin-left: auto;
+      margin-right: auto;
     }
 
-    /* Sub-line (Long View on loss, user handle on gain) */
-    .sub {
-      position: absolute;
-      top: 990px; left: 0; right: 0;
-      text-align: center;
+    /* ───────── Part / title / deck (shared) ───────── */
+    .sp-part {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin: 0 0 2pt 0;
+    }
+    .sp-title {
       font-family: "Source Serif 4", Georgia, serif;
-      font-size: 34px;
-      letter-spacing: 0.01em;
-      color: rgba(246, 243, 236, 0.65);
+      font-size: 26pt; font-weight: 400; line-height: 1.08;
+      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
     }
-
-    /* Top holding meta (ticker + contribution) */
-    .top-holding {
-      position: absolute;
-      top: 1240px; left: 0; right: 0;
-      text-align: center;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 30px;
-      letter-spacing: 0.08em;
-      color: rgba(246, 243, 236, 0.75);
-    }
-    .top-holding .tkr  { color: #E2B96F; }
-
-    /* Divider (tiny rule) */
-    .rule {
-      position: absolute;
-      top: 1700px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 120px; height: 1px;
-      background: rgba(246, 243, 236, 0.18);
-    }
-
-    /* Watermark — uppercase serif, widely letter-spaced */
-    .watermark {
-      position: absolute;
-      top: 1750px;
-      left: 0; right: 0;
-      text-align: center;
+    .sp-deck {
       font-family: "Source Serif 4", Georgia, serif;
-      font-weight: 600;
-      font-size: 42px;
-      letter-spacing: 0.42em;
-      text-transform: uppercase;
-      color: rgba(246, 243, 236, 0.70);
+      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
+      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
     }
 
-    /* Compliance disclaimer — tiny, bottom */
-    .disclaimer {
-      position: absolute;
-      bottom: 60px; left: 0; right: 0;
-      text-align: center;
+    /* ───────── P2 · HERO CARD ───────── */
+    .hc-wrap {
+      margin: 4pt 0 0 0;
+      display: table;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 16pt 0;
+      table-layout: fixed;
+    }
+    .hc-card-cell { display: table-cell; width: 70%; vertical-align: top; }
+    .hc-margin-cell { display: table-cell; width: 30%; vertical-align: top; }
+    .hc-card {
+      padding: 20pt 0 24pt 0;
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      position: relative;
+    }
+    .hc-corner-tl, .hc-corner-tr, .hc-corner-bl, .hc-corner-br { display: none; }
+
+    .hc-label {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #8B6F47; text-align: center; margin-bottom: 18pt;
+    }
+    .hc-label::before, .hc-label::after {
+      content: "——"; color: #8B6F47; opacity: 0.5;
+      margin: 0 10pt; letter-spacing: 0;
+    }
+    .hc-figure {
       font-family: "JetBrains Mono", monospace;
-      font-size: 18px;
-      letter-spacing: 0.06em;
-      color: rgba(246, 243, 236, 0.35);
+      font-size: 54pt; font-weight: 500; color: #0A0A0A;
+      letter-spacing: -0.025em; font-variant-numeric: tabular-nums;
+      line-height: 1.0; padding-bottom: 10pt;
+      border-bottom: 0.8pt solid #8B6F47;
+      display: inline-block; margin: 0 auto 18pt auto;
+    }
+    .hc-figure-wrap { text-align: center; margin: 0 0 4pt 0; }
+    .hc-ticker {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 9pt; letter-spacing: 0.28em; text-transform: uppercase;
+      color: #6B6B6B; font-weight: 600; text-align: center; margin-bottom: 24pt;
+    }
+    .hc-ticker .hc-ticker-name { color: #0A0A0A; }
+    .hc-narrative {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 11.5pt; line-height: 1.62;
+      color: #202020; margin: 0 0 22pt 0; padding: 0 10pt;
+      text-align: justify; hyphens: auto;
+    }
+    .hc-narrative p { margin: 0 0 8pt 0; }
+    .hc-narrative p:last-child { margin-bottom: 0; }
+    .hc-narrative > p:first-child::first-letter {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 30pt; line-height: 0.88; font-weight: 500;
+      color: #8B6F47; float: left; padding: 2pt 8pt 0 0; font-style: normal;
+    }
+    .hc-signature {
+      margin-top: 8pt; text-align: right;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-style: italic; font-size: 9pt; color: #6B6B6B;
+    }
+
+    .sp-margin-block {
+      border-left: 0.35pt solid #8B6F47;
+      padding: 2pt 0 2pt 9pt;
+      margin-bottom: 14pt;
+    }
+    .sp-margin-term {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 2pt;
+    }
+    .sp-margin-value {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 12pt; color: #0A0A0A;
+      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+    }
+    .sp-margin-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8pt; line-height: 1.42; color: #6B6B6B; margin-top: 3pt;
+    }
+
+    /* ───────── P3 · LEDGER ───────── */
+    .ld-table {
+      width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed;
+    }
+    .ld-table th, .ld-table td {
+      padding: 8pt 6pt; text-align: left; vertical-align: middle;
+      border-bottom: 0.25pt solid #e4dfd2;
+    }
+    .ld-table thead th {
+      border-top: 0.5pt solid #0A0A0A;
+      border-bottom: 0.5pt solid #0A0A0A;
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 6.8pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6B6B6B; font-weight: 600;
+    }
+    .ld-table td.num {
+      text-align: right;
+      font-family: "JetBrains Mono", monospace;
+      font-variant-numeric: tabular-nums; font-size: 9pt;
+    }
+    .ld-tkr {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-weight: 600; font-size: 9.5pt; letter-spacing: 0.02em; color: #0A0A0A;
+    }
+
+    .ld-foot-prose {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9.6pt; line-height: 1.58; color: #202020;
+      margin-top: 14pt; border-top: 0.35pt solid #c9c4b8; padding-top: 10pt;
+    }
+    .ld-foot-prose p { margin: 0 0 6pt 0; text-align: justify; hyphens: auto; }
+
+    /* ───────── P4 · COLOPHON ───────── */
+    .co-wrap { padding: 0; text-align: left; }
+    .co-body p { margin: 0 0 8pt 0 !important; }
+    .co-head {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #8B6F47; font-weight: 600; margin-bottom: 4pt;
+    }
+    .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
+    .co-body {
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 10pt; line-height: 1.7; color: #202020; max-width: 440pt;
+    }
+    .co-body .co-key {
+      font-family: "Geist", -apple-system, sans-serif;
+      font-size: 7.4pt; letter-spacing: 0.18em; text-transform: uppercase;
+      color: #6B6B6B;
+    }
+    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
+    .co-sign { text-align: center; margin-top: 14pt; }
+    .co-sign-house {
+      margin-top: 16pt;
+      font-family: "Source Serif 4", Georgia, serif;
+      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
+      color: #0A0A0A; font-weight: 500;
+    }
+    .co-sign-ref {
+      margin-top: 10pt;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
+    }
+    .co-sign-time {
+      font-family: "JetBrains Mono", monospace;
+      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
+    }
+
+    section.disclaimer.pq-disclaimer {
+      padding: 10pt 0 !important;
+      margin: 16pt 0 0 0 !important;
+      border-top: 0.5pt solid #0A0A0A !important;
+      font-size: 7.6pt !important;
+      line-height: 1.5 !important;
+    }
+    section.disclaimer.pq-disclaimer h5.disclaimer__title {
+      font-family: "Geist", -apple-system, sans-serif !important;
+      font-size: 7pt !important;
+      letter-spacing: 0.32em !important;
+      text-transform: uppercase !important;
+      color: #8B6F47 !important;
+      margin: 0 0 6pt 0 !important;
     }
   </style>
 </head>
 <body>
-<div class="frame">
 
-  <!-- Masthead: "PIVOXQUANT · MONTHLY BRAG · MAR 2026" -->
-  <div class="mast">
-    PIVOXQUANT &nbsp;·&nbsp; MONTHLY BRAG &nbsp;·&nbsp; {{ month_label|upper }}
+{% set _issue_no = issue_number | default(4) %}
+{% set _doc_ref = doc_ref | default('PQ-BC-' ~ ('%02d' % _issue_no) ~ ' · v2026.04.21') %}
+{% set _hero = hero_headline | default(['A small note to self.', 'One month, one', 'observation.']) %}
+{% set _best_ret = best_return_pct if best_return_pct is not none else (return_pct if return_pct is not none else 0) %}
+{% set _win_rate = win_rate_pct | default(67.0) %}
+{% set _best_usd = best_pnl_usd | default(1240) %}
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 1 · COVER
+   ══════════════════════════════════════════════════════════════════════════ #}
+<section class="cv">
+
+  <div class="cv-wordmark">
+    {% with brand_kind='wordmark', brand_size=280 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
   </div>
 
-  <!-- Hero: the return % (or — for empty months) -->
-  {% if return_pct is none or is_empty %}
-    <div class="hero empty">—</div>
-  {% else %}
-    {% if return_pct >= 0 %}
-      <div class="hero gain">+{{ '%.1f'|format(return_pct) }}%</div>
-    {% else %}
-      <div class="hero loss">{{ '%.1f'|format(return_pct) }}%</div>
-    {% endif %}
-  {% endif %}
+  <div class="cv-rule-thin"></div>
+  <div class="cv-issue">
+    CARD <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+    &nbsp;·&nbsp; BRAG CARD
+    &nbsp;·&nbsp; {{ month_label_long | default(month_label) }}
+  </div>
+  <div class="cv-rule-thin"></div>
 
-  <!-- Month: serif italic headline -->
-  <div class="month">{{ month_label_long }}</div>
+  <h1 class="cv-hero">
+    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
+  </h1>
 
-  <!-- Sub: Long View on loss months, user handle on gain months -->
-  {% if return_pct is not none and return_pct < 0 %}
-    <div class="sub">Long View</div>
-  {% elif is_empty %}
-    <div class="sub">Welcome aboard</div>
-  {% else %}
-    <div class="sub">{{ user_name }}</div>
-  {% endif %}
+  <div class="cv-rule-thin"></div>
 
-  <!-- Top holding — best performer + contribution -->
-  {% if best_ticker and best_return_pct is not none %}
-    <div class="top-holding">
-      TOP &nbsp;
-      <span class="tkr">{{ best_ticker }}</span>
-      &nbsp;
-      {% if best_return_pct >= 0 %}+{% endif %}{{ '%.1f'|format(best_return_pct) }}%
+  <div class="cv-kpi2">
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Best Lot P&amp;L</div>
+      <div class="cv-kpi-value {% if _best_usd >= 0 %}r-pos{% else %}r-neg{% endif %}">
+        {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
+      </div>
+      <div class="cv-kpi-foot">Realised, the month's single best close.</div>
     </div>
+    <div class="cv-kpi">
+      <div class="cv-kpi-label">Win Rate</div>
+      <div class="cv-kpi-value">{{ '%.0f'|format(_win_rate) }}%</div>
+      <div class="cv-kpi-foot">Closed lots ending above cost, this month.</div>
+    </div>
+  </div>
+
+  <p class="cv-foot">
+    Prepared for {{ user_name }} &nbsp;·&nbsp; A quiet private record.
+  </p>
+  <p class="cv-micro">
+    This card is a descriptive summary of observed trades. Past performance does not
+    guarantee future results. 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.
+  </p>
+</section>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 2 · HERO CARD
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part I · The Moment Worth Noting</p>
+<h2 class="sp-title">One trade, observed quietly</h2>
+<p class="sp-deck">
+  A month rarely belongs to a single entry and a single exit, but the
+  handwriting of this one is worth placing under glass for a page.
+</p>
+
+<div class="hc-wrap">
+  <div class="hc-card-cell">
+
+    <div class="hc-card">
+      <span class="hc-corner-tl"></span>
+      <span class="hc-corner-tr"></span>
+      <span class="hc-corner-bl"></span>
+      <span class="hc-corner-br"></span>
+
+      <div class="hc-label">The Moment Worth Noting</div>
+
+      <div class="hc-figure-wrap">
+        <div class="hc-figure {% if _best_usd >= 0 %}r-pos{% else %}r-neg{% endif %}">
+          {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
+        </div>
+      </div>
+      <div class="hc-ticker">
+        {{ best_ticker | default('NVDA') }} &nbsp;·&nbsp;
+        <span class="hc-ticker-name">{{ '%+.2f'|format(_best_ret) }}%</span>
+        &nbsp;·&nbsp; {{ hold_days | default(8) }}-day hold
+      </div>
+
+      <div class="hc-narrative">
+        {% if hero_narrative %}
+          {% for para in hero_narrative %}<p>{{ para }}</p>{% endfor %}
+        {% else %}
+          <p>
+            Entered {{ best_ticker | default('NVDA') }} on
+            {{ entry_date | default('April 3') }} at ${{ entry_price | default('842') }}.
+            Closed {{ exit_date | default('April 11') }} at ${{ exit_price | default('879') }}.
+            The thesis held three sessions, then handed off to the market's own
+            weather. The gain was observed; the decision, imperfect as always, was
+            your own. This is a record — not a pattern, not a plan, not a claim
+            about tomorrow.
+          </p>
+        {% endif %}
+      </div>
+
+      <div class="hc-signature">— a quiet record, {{ month_label_long | default(month_label) }}</div>
+    </div>
+
+  </div>
+
+  <div class="hc-margin-cell">
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Hold Duration</div>
+      <div class="sp-margin-value">{{ hold_days | default(8) }} days</div>
+      <div class="sp-margin-body">
+        Calendar days between entry and exit. The month's most common hold sat at
+        six to ten sessions.
+      </div>
+    </div>
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Position Size</div>
+      <div class="sp-margin-value">{{ position_size_pct | default('3.2') }}%</div>
+      <div class="sp-margin-body">
+        Share of month-start NAV committed to the position. Well inside the
+        self-set 5% ceiling.
+      </div>
+    </div>
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Path Variance</div>
+      <div class="sp-margin-value">0.62%</div>
+      <div class="sp-margin-body">
+        Daily GKYZ estimate across the hold window. The position moved with the
+        session, not against it.
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 3 · LEDGER — top 5 closed lots
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<p class="sp-part">Part II · The Month's Top Lots</p>
+<h2 class="sp-title">Five closed lots, in order of P&amp;L</h2>
+<p class="sp-deck">
+  A cleanly ordered reading of the month's best-realised closes. Each row's
+  bronze dot marks the end-of-hold mark relative to entry.
+</p>
+
+{% set _top_lots = top_lots | default([
+  {'ticker':'NVDA','days':8,'entry':842.00,'exit':879.00,'pnl':1240,'spark':[0.20,0.34,0.46,0.52,0.60,0.70,0.82,0.92]},
+  {'ticker':'MSFT','days':12,'entry':412.00,'exit':428.40,'pnl':656,'spark':[0.30,0.36,0.42,0.44,0.52,0.58,0.62,0.66]},
+  {'ticker':'AAPL','days':10,'entry':172.50,'exit':178.20,'pnl':342,'spark':[0.40,0.42,0.48,0.52,0.58,0.60,0.64,0.66]},
+  {'ticker':'AVGO','days':6,'entry':1280.00,'exit':1304.00,'pnl':192,'spark':[0.40,0.44,0.48,0.54,0.56,0.60,0.62,0.66]},
+  {'ticker':'005930.KS','days':14,'entry':72000,'exit':73400,'pnl':112,'spark':[0.50,0.52,0.56,0.58,0.62,0.64,0.66,0.70]}
+]) %}
+
+<table class="ld-table">
+  <thead>
+    <tr>
+      <th style="width:14%;">Ticker</th>
+      <th class="num" style="width:10%;">Days</th>
+      <th class="num" style="width:16%;">Entry</th>
+      <th class="num" style="width:16%;">Exit</th>
+      <th style="width:28%;">Hold Trajectory</th>
+      <th class="num" style="width:16%;">P&amp;L (USD)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in _top_lots %}
+      {% set _sp_w = 100 %}
+      {% set _sp_h = 20 %}
+      {% set _trend = r.spark %}
+      {% set _tmax = _trend | max %}
+      {% set _tmin = _trend | min %}
+      {% if _tmax == _tmin %}{% set _tmax = _tmin + 1 %}{% endif %}
+      {% set _sp = [] %}
+      {% for v in _trend %}
+        {% set _x = loop.index0 * _sp_w / (_trend | length - 1) %}
+        {% set _y = _sp_h - ((v - _tmin) / (_tmax - _tmin)) * (_sp_h - 4) - 2 %}
+        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {% endfor %}
+      {% set _lastpt = _sp[-1].split(',') %}
+      <tr>
+        <td><span class="ld-tkr">{{ r.ticker }}</span></td>
+        <td class="num r-muted">{{ r.days }}d</td>
+        <td class="num">{% if r.entry < 1000 %}${{ '%.2f'|format(r.entry) }}{% else %}${{ '{:,.0f}'.format(r.entry) }}{% endif %}</td>
+        <td class="num">{% if r.exit < 1000 %}${{ '%.2f'|format(r.exit) }}{% else %}${{ '{:,.0f}'.format(r.exit) }}{% endif %}</td>
+        <td>
+          <svg viewBox="0 0 {{ _sp_w }} {{ _sp_h }}" width="100%" height="26" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
+            <line x1="0" y1="{{ _sp_h/2 }}" x2="{{ _sp_w }}" y2="{{ _sp_h/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
+            <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+          </svg>
+        </td>
+        <td class="num {% if r.pnl >= 0 %}r-pos{% else %}r-neg{% endif %}">
+          {% if r.pnl >= 0 %}+${{ '{:,}'.format(r.pnl) }}{% else %}-${{ '{:,}'.format(-r.pnl) }}{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="ld-foot-prose">
+  {% if ledger_narrative %}
+    {% for para in ledger_narrative %}<p>{{ para }}</p>{% endfor %}
+  {% else %}
+    <p>
+      Five lots cleared the month's realised-P&amp;L threshold. The top two together
+      contributed the majority of the monthly record — a concentration noted here
+      for transparency rather than as a pattern to lean on. Hold windows clustered
+      between six and fourteen sessions; none ran longer than a month.
+    </p>
+    <p>
+      The bronze end-dot on each sparkline is the mark at exit relative to the row's
+      own in-hold range. It is a compact, row-local visual — peaks should not be
+      read across rows. A single month is a small sample; this is a record, not a
+      pattern.
+    </p>
   {% endif %}
+</div>
 
-  <!-- Rule + watermark -->
-  <div class="rule"></div>
-  <div class="watermark">PIVOXQUANT</div>
 
-  <!-- Compliance -->
-  <div class="disclaimer">{{ disclaimer }}</div>
+{# ══════════════════════════════════════════════════════════════════════════
+   PAGE 4 · COLOPHON
+   ══════════════════════════════════════════════════════════════════════════ #}
+<div class="r-page-break"></div>
+
+<div class="co-wrap">
+
+  <div class="co-head">Colophon</div>
+  <div class="co-rule-small"></div>
+
+  <div class="co-body">
+    <p style="margin: 0 0 10pt 0;">
+      Prepared for <strong>{{ user_name }}</strong> on
+      <strong>{{ generated_at | default('2026-04-21') }}</strong>. Card
+      <strong>No. {{ '%02d' % _issue_no }}</strong> ·
+      {{ month_label_long | default(month_label) }}.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Data sources</span> &nbsp;
+      {% set _ds = data_sources | default(['Broker statements', 'Alpaca', 'KIS', 'Observation journal']) %}
+      {{ _ds | join(' · ') }}.
+    </p>
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Typeset in</span> &nbsp;
+      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
+    </p>
+    <p style="margin: 0 0 0 0;">
+      <span class="co-key">Engine</span> &nbsp;
+      {{ engine_note | default('Historical record only. No directive, no target, no promise') }}.
+    </p>
+  </div>
+
+  <div class="co-thin-rule"></div>
+
+  {% include '_disclaimer.html' %}
+
+  <div class="co-thin-rule"></div>
+
+  <div class="co-sign">
+    {% with brand_kind='monogram', brand_size=64 %}
+      {% include '_brand_mark.html' %}
+    {% endwith %}
+    <div class="co-sign-house">PivoxQuant Research Desk</div>
+    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
+    <div class="co-sign-time">Generated · {{ generated_at | default('2026-04-21') }}</div>
+  </div>
 
 </div>
 
-{% include '_disclaimer.html' %}
 </body>
 </html>

@@ -1,12 +1,13 @@
 """Backtest route."""
 from flask import Blueprint, request, jsonify
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 backtest_bp = Blueprint("backtest", __name__, url_prefix="/api")
 
 
 @backtest_bp.route("/backtest/<ticker>")
 @api_auth
+@legal_scrub_response
 def run_backtest(ticker):
     from backtester import Backtester
     period = request.args.get("period", "1y")

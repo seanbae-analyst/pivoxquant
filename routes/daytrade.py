@@ -8,7 +8,7 @@ from flask_login import current_user
 from models import Position
 from services.container import daytrade
 from services.name_resolver import resolve_stock_name
-from .decorators import api_auth
+from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ def status():
 
 @daytrade_bp.route("/scan")
 @api_auth
+@legal_scrub_response
 def scan():
     results = []
     if daytrade.available:
@@ -68,6 +69,7 @@ def scan():
 
 @daytrade_bp.route("/analyze/<ticker>")
 @api_auth
+@legal_scrub_response
 def analyze(ticker):
     if ticker.isdigit() and len(ticker) == 6:
         try:
