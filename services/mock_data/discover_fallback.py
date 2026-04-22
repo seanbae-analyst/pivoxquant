@@ -127,30 +127,31 @@ def _sparkline(base: float, amp: float, seed: int) -> list[float]:
     ]
 
 
+# NOTE: These snapshots are no longer consumed by /api/market/indices as of
+# 2026-04-22 — that route now uses Alpaca ETF proxies (SPY/QQQ/DIA/IWM/VIXY)
+# with the failing-ticker-skip strategy. Kept only as a schema reference and
+# for potential future consumers; values are ETF-native (not raw index
+# levels) and flagged is_mock=True so callers know not to trust them.
 US_MARKET_INDICES = [
-    {"ticker": "^GSPC", "name": "S&P 500",          "level":  5218.42, "change_1d_pct":  0.31,
-     "range_52w": [4103.78, 5264.85], "sparkline_30d": _sparkline(5200, 24, 1)},
-    {"ticker": "^IXIC", "name": "Nasdaq Composite", "level": 16342.18, "change_1d_pct":  0.58,
-     "range_52w": [12543.86, 16538.86], "sparkline_30d": _sparkline(16250, 120, 2)},
-    {"ticker": "^DJI",  "name": "Dow Jones",        "level": 38912.55, "change_1d_pct": -0.12,
-     "range_52w": [32327.20, 39889.05], "sparkline_30d": _sparkline(38900, 180, 3)},
-    {"ticker": "^RUT",  "name": "Russell 2000",     "level":  2042.18, "change_1d_pct": -0.28,
-     "range_52w": [1636.94, 2134.20], "sparkline_30d": _sparkline(2038, 18, 4)},
-    {"ticker": "^VIX",  "name": "CBOE Volatility",  "level":    15.80, "change_1d_pct": -2.14,
-     "range_52w": [11.81, 28.32], "sparkline_30d": _sparkline(16, 0.8, 5)},
+    {"ticker": "^GSPC", "proxy_ticker": "SPY", "name": "S&P 500",      "level":  708.53, "change_1d_pct":  0.00,
+     "range_52w": [480.00, 715.00], "sparkline_30d": _sparkline(700, 4, 1),  "is_mock": True},
+    {"ticker": "^IXIC", "proxy_ticker": "QQQ", "name": "Nasdaq 100",   "level":  649.30, "change_1d_pct":  0.00,
+     "range_52w": [420.00, 660.00], "sparkline_30d": _sparkline(645, 5, 2),  "is_mock": True},
+    {"ticker": "^DJI",  "proxy_ticker": "DIA", "name": "Dow Jones",    "level":  494.50, "change_1d_pct":  0.00,
+     "range_52w": [360.00, 500.00], "sparkline_30d": _sparkline(490, 3, 3),  "is_mock": True},
+    {"ticker": "^RUT",  "proxy_ticker": "IWM", "name": "Russell 2000", "level":  277.00, "change_1d_pct":  0.00,
+     "range_52w": [185.00, 285.00], "sparkline_30d": _sparkline(275, 2, 4),  "is_mock": True},
+    {"ticker": "^VIX",  "proxy_ticker": "VIXY","name": "Volatility (VIXY)", "level": 27.98, "change_1d_pct": 0.00,
+     "range_52w": [22.00, 48.00], "sparkline_30d": _sparkline(28, 1, 5),     "is_mock": True},
 ]
 
 KR_MARKET_INDICES = [
-    {"ticker": "^KS11",    "name": "KOSPI",        "level":  2612.34, "change_1d_pct":  0.42,
-     "range_52w": [2280.63, 2780.14], "sparkline_30d": _sparkline(2605, 18, 6)},
-    {"ticker": "^KQ11",    "name": "KOSDAQ",       "level":   847.91, "change_1d_pct": -0.18,
-     "range_52w": [782.17, 932.40], "sparkline_30d": _sparkline(848, 6, 7)},
-    {"ticker": "^KS200",   "name": "KOSPI 200",    "level":   355.20, "change_1d_pct":  0.35,
-     "range_52w": [308.44, 378.12], "sparkline_30d": _sparkline(354, 3, 8)},
-    {"ticker": "^KQ150",   "name": "KOSDAQ 150",   "level":  1248.60, "change_1d_pct": -0.24,
-     "range_52w": [1108.92, 1382.45], "sparkline_30d": _sparkline(1250, 10, 9)},
-    {"ticker": "USDKRW",   "name": "USD / KRW",    "level":  1342.50, "change_1d_pct":  0.12,
-     "range_52w": [1264.20, 1398.80], "sparkline_30d": _sparkline(1340, 8, 10)},
+    {"ticker": "^KS11",    "name": "KOSPI",       "level":  6417.93, "change_1d_pct": 0.00,
+     "range_52w": [0.0, 0.0], "sparkline_30d": [], "is_mock": True},
+    {"ticker": "^KQ11",    "name": "KOSDAQ",      "level":  1181.12, "change_1d_pct": 0.00,
+     "range_52w": [0.0, 0.0], "sparkline_30d": [], "is_mock": True},
+    {"ticker": "USDKRW",   "name": "USD / KRW",   "level":  1350.00, "change_1d_pct": 0.00,
+     "range_52w": [0.0, 0.0], "sparkline_30d": [], "is_mock": True},
 ]
 
 KR_DERIVATIVES = [

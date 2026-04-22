@@ -128,7 +128,9 @@ def market_overview():
 
     if len(result) < 3:
         logger.info("FMP rate limit or empty overview — returning cached/mock fallback")
-        result = list(mock.MARKET_OVERVIEW)
+        # Flag mock rows so the frontend can surface a "stale data" banner
+        # instead of silently showing 2024 snapshots.
+        result = [{**r, "is_mock": True} for r in mock.MARKET_OVERVIEW]
 
     _section_set("overview", result)
     return jsonify(result)
@@ -177,11 +179,11 @@ def movers():
     if len(gainers) < 3 or len(losers) < 3:
         logger.info("FMP rate limit — returning mock movers fallback")
         if region == "us":
-            gainers = list(mock.US_GAINERS)
-            losers  = list(mock.US_LOSERS)
+            gainers = [{**r, "is_mock": True} for r in mock.US_GAINERS]
+            losers  = [{**r, "is_mock": True} for r in mock.US_LOSERS]
         else:
-            gainers = list(mock.KR_GAINERS)
-            losers  = list(mock.KR_LOSERS)
+            gainers = [{**r, "is_mock": True} for r in mock.KR_GAINERS]
+            losers  = [{**r, "is_mock": True} for r in mock.KR_LOSERS]
 
     observed_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     payload = {
