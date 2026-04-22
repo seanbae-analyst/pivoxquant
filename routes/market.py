@@ -510,32 +510,62 @@ _KR_INDEX_SPEC = [
 
 
 def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
-    """Build the standard index entry from an Alpaca ETF proxy.
+    """Build the standard index entry from a liquid ETF proxy.
 
-    Returns None if live quote unavailable — caller skips (partial data is
-    more honest than hardcoded 2024 mocks)."""
+    Uses the SAME fallback chain as ``/api/lookup/<ticker>`` — namely
+    ``fetcher.quick_lookup`` (Alpaca realtime → FMP quote → FMP profile)
+    for the live level, then ``fetcher.get_price_history`` (same engine
+    as ``/api/chart/<ticker>``) for the sparkline + 52W range + the 1d%
+    fallback when the live quote payload lacks it.
+
+    Previous implementation used ``services.data.alpaca_market_adapter.get_quote``
+    which hits Alpaca's ``get_stock_bars`` daily endpoint — on the free IEX
+    tier this returns empty bars for many sessions and silently drops the
+    whole index payload (regression #80c7d26). The ``/api/lookup`` path
+    already survives that case via Alpaca realtime trade/quote/bar →
+    FMP → FMP profile chain, so we reuse it verbatim.
+
+    Returns None only when BOTH live quote AND history are unavailable —
+    partial data is more honest than hardcoded mocks.
+    """
+    level: float | None = None
+    change_pct: float = 0.0
+
+    # 1) Live quote — identical code path as /api/lookup/<ticker>.
     try:
-        from services.data import alpaca_market_adapter as ama
-    except Exception:
-        return None
+        q = fetcher.quick_lookup(etf)
+        if q and q.get("price"):
+            level = float(q["price"])
+    except Exception as e:
+        logger.debug(f"market.indices lookup {etf} failed: {e}")
 
-    q = ama.get_quote(etf)
-    if not q or q.get("price") is None:
-        return None
-    level = float(q["price"])
-    change_pct = float(q.get("changesPercentage") or 0)
-
+    # 2) History for sparkline + 52W + fallback level / change.
+    #    Same engine as /api/chart/<ticker>?period=1y.
     sparkline: list[float] = []
     range_52w = [0.0, 0.0]
     try:
         h = fetcher.get_price_history(etf, period="1y")
         if h is not None and not h.empty and "Close" in h.columns:
-            closes = h["Close"].astype(float)
-            sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
-            range_52w = [round(float(closes.min()), 2),
-                         round(float(closes.max()), 2)]
+            closes = h["Close"].astype(float).dropna()
+            if len(closes):
+                if level is None:
+                    level = float(closes.iloc[-1])
+                if len(closes) >= 2:
+                    prev = float(closes.iloc[-2])
+                    if prev:
+                        last = float(closes.iloc[-1])
+                        # Prefer history-derived change: even when live quote
+                        # has a value, lookup doesn't surface a d/d%, so
+                        # closes.iloc[-1]/[-2] is our only source.
+                        change_pct = (last - prev) / prev * 100.0
+                sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
+                range_52w = [round(float(closes.min()), 2),
+                             round(float(closes.max()), 2)]
     except Exception as e:
-        logger.debug(f"market.indices history skip {etf}: {e}")
+        logger.debug(f"market.indices history {etf} failed: {e}")
+
+    if level is None:
+        return None  # truly nothing to show — caller skips this entry
 
     return {
         "ticker":        ticker_alias,
@@ -553,36 +583,49 @@ def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
 def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None:
     """Build standard index entry from a KIS index code.
 
-    sparkline / 52W range are best-effort via get_price_history; many KIS
-    index codes (2001/2203) lack historical endpoints, so those fields may
-    be empty. We still return level + 1d% if KIS gave us a live quote."""
+    Strategy mirrors ``_etf_snapshot``: live KIS quote if available,
+    otherwise fall back to price history for level + sparkline + 52W.
+    Many KIS index codes (2001/2203) lack historical endpoints so
+    sparkline may be empty, but we still return a valid entry as long as
+    EITHER the KIS quote OR the history engine produced a level.
+    """
+    level: float | None = None
+    change_pct: float = 0.0
+
+    # 1) Live KIS quote (best — includes native d/d%).
     try:
         from services.container import realtime as _rt
-        if not getattr(_rt, "kis_available", False):
-            return None
-        from kis_service import KISService
-        idx = KISService().get_index_price(kis_code)
+        if getattr(_rt, "kis_available", False):
+            from kis_service import KISService
+            idx = KISService().get_index_price(kis_code)
+            if idx and idx.get("price"):
+                level = float(idx["price"])
+                change_pct = float(idx.get("change_pct") or 0)
     except Exception as e:
         logger.debug(f"market.indices KIS {kis_code} failed: {e}")
-        return None
 
-    if not idx or not idx.get("price"):
-        return None
-
-    level = float(idx["price"])
-    change_pct = float(idx.get("change_pct") or 0)
-
+    # 2) History for sparkline + 52W + fallback level / change.
     sparkline: list[float] = []
     range_52w = [0.0, 0.0]
     try:
         h = fetcher.get_price_history(ticker, period="1y")
         if h is not None and not h.empty and "Close" in h.columns:
-            closes = h["Close"].astype(float)
-            sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
-            range_52w = [round(float(closes.min()), 2),
-                         round(float(closes.max()), 2)]
+            closes = h["Close"].astype(float).dropna()
+            if len(closes):
+                if level is None:
+                    level = float(closes.iloc[-1])
+                if change_pct == 0.0 and len(closes) >= 2:
+                    prev = float(closes.iloc[-2])
+                    if prev:
+                        change_pct = (float(closes.iloc[-1]) - prev) / prev * 100.0
+                sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
+                range_52w = [round(float(closes.min()), 2),
+                             round(float(closes.max()), 2)]
     except Exception:
         pass
+
+    if level is None:
+        return None
 
     return {
         "ticker":        ticker,
@@ -620,7 +663,12 @@ def market_indices():
     if region not in ("us", "kr"):
         region = "us"
 
-    entry = _indices_cache.get(region)
+    # Cache-key version bump: the v1 key may contain an empty-array payload
+    # produced by the regressed ``ama.get_quote``-only snapshot (commit
+    # 80c7d26). Versioning the key guarantees we bypass any poisoned entry
+    # instead of waiting for the TTL to expire.
+    cache_key = f"{region}_v2"
+    entry = _indices_cache.get(cache_key)
     now = _time.time()
     if entry and now - entry["ts"] < _indices_ttl():
         return jsonify(entry["data"])
@@ -670,7 +718,7 @@ def market_indices():
     # users into mock-looking data for the whole cache window — better to
     # re-try upstream on every request until it succeeds.
     if out:
-        _indices_cache[region] = {"ts": now, "data": out}
+        _indices_cache[cache_key] = {"ts": now, "data": out}
 
     return jsonify(out)
 
