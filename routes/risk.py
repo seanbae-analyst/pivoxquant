@@ -144,59 +144,109 @@ def _score_to_status(score: int) -> str:
     return "RED"
 
 
+def _demo_summary_response() -> dict:
+    """Neutral fallback for /summary when upstream data is unavailable."""
+    return {
+        "var_1d_pct":       0.0,
+        "es_1d_pct":        0.0,
+        "max_dd_90d_pct":   0.0,
+        "corr_risk_index":  0.0,
+        "is_demo":          True,
+        "message":          "Risk data temporarily unavailable",
+    }
+
+
+def _demo_layers_response() -> dict:
+    """Neutral fallback for /layers — 7 GREEN placeholder entries."""
+    layers = [
+        {"no": 1, "name": "VaR Layer",          "metric_label": "Daily 1-day 95% VaR",
+         "metric_value": "—", "status": "GREEN",
+         "observation": "Risk data temporarily unavailable."},
+        {"no": 2, "name": "Correlation Layer",  "metric_label": "Avg pairwise correlation",
+         "metric_value": "—", "status": "GREEN",
+         "observation": "Risk data temporarily unavailable."},
+        {"no": 3, "name": "VIX Regime",         "metric_label": "VIX",
+         "metric_value": "—", "status": "GREEN",
+         "observation": "Risk data temporarily unavailable."},
+        {"no": 4, "name": "Tail Risk",          "metric_label": "Tail imbalance",
+         "metric_value": "—", "status": "GREEN",
+         "observation": "Risk data temporarily unavailable."},
+        {"no": 5, "name": "Daily Loss Guard",   "metric_label": "Today's P&L",
+         "metric_value": "0.00%", "status": "GREEN",
+         "observation": "Risk data temporarily unavailable."},
+        {"no": 6, "name": "Sector Exposure",    "metric_label": "Max sector weight",
+         "metric_value": "—", "status": "GREEN",
+         "observation": "Risk data temporarily unavailable."},
+        {"no": 7, "name": "Cash Buffer",        "metric_label": "Cash weight",
+         "metric_value": "—", "status": "GREEN",
+         "observation": "Risk data temporarily unavailable."},
+    ]
+    return {
+        "layers":         layers,
+        "defense_score":  100,
+        "overall_status": "GREEN",
+        "is_demo":        True,
+        "message":        "Risk data temporarily unavailable",
+    }
+
+
 # ── Endpoints ──────────────────────────────────────────────────────
 
 @risk_bp.route("/summary")
 @api_auth
 @legal_scrub_response
 def risk_summary():
-    """Return top-line risk metrics. Zeros on empty portfolio."""
-    state, _, matrix, df_close = _portfolio_snapshot()
-    payload = {
-        "var_1d_pct":       0.0,
-        "es_1d_pct":        0.0,
-        "max_dd_90d_pct":   0.0,
-        "corr_risk_index":  0.0,
-    }
+    """Return top-line risk metrics. Zeros on empty portfolio, demo fallback on failure."""
+    try:
+        state, _, matrix, df_close = _portfolio_snapshot()
+        payload = {
+            "var_1d_pct":       0.0,
+            "es_1d_pct":        0.0,
+            "max_dd_90d_pct":   0.0,
+            "corr_risk_index":  0.0,
+        }
 
-    if state is None or matrix is None or matrix.shape[0] < 20:
+        if state is None or matrix is None or matrix.shape[0] < 20:
+            return jsonify(payload)
+
+        weights = np.array([p["weight"] or (1.0 / len(state["positions"]))
+                            for p in state["positions"]], dtype=float)
+        # Align weights to matrix columns when some tickers were dropped
+        if weights.shape[0] != matrix.shape[1]:
+            n = matrix.shape[1]
+            weights = np.ones(n, dtype=float) / n
+        else:
+            s = weights.sum()
+            if s > 0:
+                weights = weights / s
+
+        port_rets = matrix @ weights
+        var_1d_pct = -float(np.percentile(port_rets, 5)) * 100
+        tail = port_rets[port_rets <= np.percentile(port_rets, 5)]
+        es_1d_pct = -float(np.mean(tail)) * 100 if tail.size else 0.0
+
+        # Max drawdown over the same 90-day window using portfolio equity curve
+        eq = np.cumprod(1.0 + port_rets)
+        peak = np.maximum.accumulate(eq)
+        dd = (eq / peak) - 1.0
+        max_dd_pct = -float(np.min(dd)) * 100 if dd.size else 0.0
+
+        # Correlation risk index — avg pairwise correlation on 20-day window
+        corr_idx = 0.0
+        if matrix.shape[1] >= 2 and matrix.shape[0] >= 20:
+            recent = matrix[-20:]
+            c = np.corrcoef(recent.T)
+            mask = ~np.eye(c.shape[0], dtype=bool)
+            corr_idx = float(np.nanmean(c[mask]))
+
+        payload["var_1d_pct"]      = round(var_1d_pct, 2)
+        payload["es_1d_pct"]       = round(es_1d_pct, 2)
+        payload["max_dd_90d_pct"]  = round(max_dd_pct, 2)
+        payload["corr_risk_index"] = round(corr_idx, 2)
         return jsonify(payload)
-
-    weights = np.array([p["weight"] or (1.0 / len(state["positions"]))
-                        for p in state["positions"]], dtype=float)
-    # Align weights to matrix columns when some tickers were dropped
-    if weights.shape[0] != matrix.shape[1]:
-        n = matrix.shape[1]
-        weights = np.ones(n, dtype=float) / n
-    else:
-        s = weights.sum()
-        if s > 0:
-            weights = weights / s
-
-    port_rets = matrix @ weights
-    var_1d_pct = -float(np.percentile(port_rets, 5)) * 100
-    tail = port_rets[port_rets <= np.percentile(port_rets, 5)]
-    es_1d_pct = -float(np.mean(tail)) * 100 if tail.size else 0.0
-
-    # Max drawdown over the same 90-day window using portfolio equity curve
-    eq = np.cumprod(1.0 + port_rets)
-    peak = np.maximum.accumulate(eq)
-    dd = (eq / peak) - 1.0
-    max_dd_pct = -float(np.min(dd)) * 100 if dd.size else 0.0
-
-    # Correlation risk index — avg pairwise correlation on 20-day window
-    corr_idx = 0.0
-    if matrix.shape[1] >= 2 and matrix.shape[0] >= 20:
-        recent = matrix[-20:]
-        c = np.corrcoef(recent.T)
-        mask = ~np.eye(c.shape[0], dtype=bool)
-        corr_idx = float(np.nanmean(c[mask]))
-
-    payload["var_1d_pct"]      = round(var_1d_pct, 2)
-    payload["es_1d_pct"]       = round(es_1d_pct, 2)
-    payload["max_dd_90d_pct"]  = round(max_dd_pct, 2)
-    payload["corr_risk_index"] = round(corr_idx, 2)
-    return jsonify(payload)
+    except Exception as e:
+        logger.warning(f"risk.summary failed: {e}", exc_info=True)
+        return jsonify(_demo_summary_response())
 
 
 @risk_bp.route("/layers")
@@ -204,7 +254,15 @@ def risk_summary():
 @legal_scrub_response
 def risk_layers():
     """7-Layer observation ladder. Always returns 7 entries, even when
-    portfolio empty (all GREEN with placeholder metrics)."""
+    portfolio empty (all GREEN with placeholder metrics). Demo fallback on failure."""
+    try:
+        return _risk_layers_impl()
+    except Exception as e:
+        logger.warning(f"risk.layers failed: {e}", exc_info=True)
+        return jsonify(_demo_layers_response())
+
+
+def _risk_layers_impl():
     state, _, matrix, _ = _portfolio_snapshot()
 
     # Default layers when portfolio is empty
@@ -360,21 +418,26 @@ def risk_layers():
 @legal_scrub_response
 def risk_correlation():
     """Return a <= 10x10 correlation matrix over the last 20 trading days."""
-    _, tickers, matrix, _ = _portfolio_snapshot()
-    if matrix is None or matrix.shape[1] < 2:
-        return jsonify({"labels": [], "matrix": []})
-
-    labels = tickers[:10]
-    sub = matrix[-20:, :len(labels)]
     try:
-        c = np.corrcoef(sub.T)
-    except Exception as e:
-        logger.warning(f"corr compute failed: {e}")
-        return jsonify({"labels": [], "matrix": []})
+        _, tickers, matrix, _ = _portfolio_snapshot()
+        if matrix is None or matrix.shape[1] < 2:
+            return jsonify({"labels": [], "matrix": []})
 
-    matrix_out = [[round(float(v), 2) if np.isfinite(v) else 0.0 for v in row]
-                  for row in c]
-    return jsonify({"labels": labels, "matrix": matrix_out})
+        labels = tickers[:10]
+        sub = matrix[-20:, :len(labels)]
+        try:
+            c = np.corrcoef(sub.T)
+        except Exception as e:
+            logger.warning(f"corr compute failed: {e}")
+            return jsonify({"labels": [], "matrix": []})
+
+        matrix_out = [[round(float(v), 2) if np.isfinite(v) else 0.0 for v in row]
+                      for row in c]
+        return jsonify({"labels": labels, "matrix": matrix_out})
+    except Exception as e:
+        logger.warning(f"risk.correlation failed: {e}", exc_info=True)
+        return jsonify({"labels": [], "matrix": [], "is_demo": True,
+                        "message": "Risk data temporarily unavailable"})
 
 
 @risk_bp.route("/rolling-var")
@@ -382,40 +445,44 @@ def risk_correlation():
 @legal_scrub_response
 def rolling_var():
     """Return rolling 20-day historical 95% VaR for the portfolio, last ~30 days."""
-    state, _, matrix, df_close = _portfolio_snapshot()
-    if state is None or matrix is None or matrix.shape[0] < 25 or df_close is None:
-        return jsonify([])
-
-    n_pos = len(state["positions"])
-    weights = np.array([p["weight"] or (1.0 / max(n_pos, 1))
-                        for p in state["positions"]], dtype=float)
-    if weights.shape[0] != matrix.shape[1]:
-        weights = np.ones(matrix.shape[1], dtype=float) / matrix.shape[1]
-    s = weights.sum()
-    if s > 0:
-        weights = weights / s
-
-    port_rets = matrix @ weights
-    window = 20
-    if len(port_rets) < window + 5:
-        return jsonify([])
-
-    # Match back to the tail of df_close index for dates
     try:
-        dates = list(df_close.index[-len(port_rets):])
-    except Exception:
-        dates = [datetime.now(timezone.utc) - timedelta(days=i)
-                 for i in range(len(port_rets) - 1, -1, -1)]
+        state, _, matrix, df_close = _portfolio_snapshot()
+        if state is None or matrix is None or matrix.shape[0] < 25 or df_close is None:
+            return jsonify([])
 
-    out = []
-    for i in range(window, len(port_rets)):
-        w = port_rets[i - window:i]
-        var_pct = -float(np.percentile(w, 5)) * 100
-        d = dates[i]
+        n_pos = len(state["positions"])
+        weights = np.array([p["weight"] or (1.0 / max(n_pos, 1))
+                            for p in state["positions"]], dtype=float)
+        if weights.shape[0] != matrix.shape[1]:
+            weights = np.ones(matrix.shape[1], dtype=float) / matrix.shape[1]
+        s = weights.sum()
+        if s > 0:
+            weights = weights / s
+
+        port_rets = matrix @ weights
+        window = 20
+        if len(port_rets) < window + 5:
+            return jsonify([])
+
+        # Match back to the tail of df_close index for dates
         try:
-            date_str = d.strftime("%Y-%m-%d")
+            dates = list(df_close.index[-len(port_rets):])
         except Exception:
-            date_str = str(d)[:10]
-        out.append({"date": date_str, "var_pct": round(var_pct, 2)})
+            dates = [datetime.now(timezone.utc) - timedelta(days=i)
+                     for i in range(len(port_rets) - 1, -1, -1)]
 
-    return jsonify(out[-30:])
+        out = []
+        for i in range(window, len(port_rets)):
+            w = port_rets[i - window:i]
+            var_pct = -float(np.percentile(w, 5)) * 100
+            d = dates[i]
+            try:
+                date_str = d.strftime("%Y-%m-%d")
+            except Exception:
+                date_str = str(d)[:10]
+            out.append({"date": date_str, "var_pct": round(var_pct, 2)})
+
+        return jsonify(out[-30:])
+    except Exception as e:
+        logger.warning(f"risk.rolling_var failed: {e}", exc_info=True)
+        return jsonify([])

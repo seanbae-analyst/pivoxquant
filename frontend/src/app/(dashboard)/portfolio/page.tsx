@@ -79,11 +79,16 @@ export default function PortfolioPage() {
   const [showSkeleton, setShowSkeleton] = useState(true);
 
   // Market-aware refresh — 5s when open, 60s when closed.
+  // P0-3 FIX: bumped dedupingInterval 2s → 10s and added focusThrottleInterval
+  // + revalidateIfStale:false so we don't pile 5+ in-flight requests when
+  // RealtimeProvider + SSE handlers + sibling components race mount.
   const swrOpts = {
     refreshInterval: () => liveRefresh(5_000, 60_000),
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    dedupingInterval: 2_000,
+    revalidateIfStale: false,
+    dedupingInterval: 10_000,
+    focusThrottleInterval: 5_000,
     errorRetryCount: 2,
   } as const;
   // Trades are append-only and don't need sub-minute refresh.
@@ -343,7 +348,9 @@ export default function PortfolioPage() {
                           <span className="pq-ink-pill pq-ink-pill--neu">{p.side}</span>
                         </td>
                         <td className="num tabular-nums">{p.shares.toLocaleString("en-US")}</td>
-                        <td className="num tabular-nums">{fmtUsd(p.avgCost)}</td>
+                        <td className="num tabular-nums">
+                          {p.currency === "KRW" ? fmtKrw(p.avgCost) : fmtUsd(p.avgCost)}
+                        </td>
                         <td className="num">
                           <PriceWithTimestamp
                             price={p.current}
@@ -352,9 +359,11 @@ export default function PortfolioPage() {
                             size="sm"
                           />
                         </td>
-                        <td className="num tabular-nums">{fmtUsd(mv)}</td>
+                        <td className="num tabular-nums">
+                          {p.currency === "KRW" ? fmtKrw(mv) : fmtUsd(mv)}
+                        </td>
                         <td className={"num tabular-nums " + toneClass(unreal)}>
-                          {fmtUsd(unreal)}
+                          {p.currency === "KRW" ? fmtKrw(unreal) : fmtUsd(unreal)}
                           <div className="text-[10px] opacity-70">{fmtPct(unrealPct)}</div>
                         </td>
                         <td className="num">

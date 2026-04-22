@@ -1,5 +1,5 @@
 import useSWR from "swr";
-import { API } from "./endpoints";
+import { API, PORTFOLIO_SUMMARY, PORTFOLIO_POSITIONS } from "./endpoints";
 import { liveRefresh } from "./market-hours";
 import type {
   DiscoverResponse,
@@ -165,6 +165,53 @@ export function useBrokerConnections() {
     fetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 },
   );
+}
+
+/* ── Portfolio Summary / Positions (shared dedupe) ──
+ *
+ * P0-3 FIX: Multiple dashboard pages (home, portfolio, risk) plus the
+ * RealtimeProvider all subscribed to /api/portfolio/summary with low
+ * dedupingInterval (2s), producing 5+ concurrent requests on mount.
+ * This shared hook enforces a 10s dedupe window + throttled focus
+ * revalidation and does NOT revalidate if the cache is fresh.
+ */
+
+export interface PortfolioSummary {
+  totalNav?: number;
+  todayPnl?: number;
+  todayPnlPct?: number;
+  unrealized?: number;
+  realizedYtd?: number;
+  fxRate?: number;
+  observed_at?: string;
+}
+
+export const PORTFOLIO_DEDUPE_MS = 10_000;
+export const PORTFOLIO_FOCUS_THROTTLE_MS = 5_000;
+
+export function usePortfolioSummary() {
+  return useSWR<PortfolioSummary>(PORTFOLIO_SUMMARY, fetcher, {
+    refreshInterval: () => liveRefresh(5_000, 60_000),
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    revalidateIfStale: false,
+    dedupingInterval: PORTFOLIO_DEDUPE_MS,
+    focusThrottleInterval: PORTFOLIO_FOCUS_THROTTLE_MS,
+    errorRetryCount: 2,
+  });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function usePortfolioPositions<T = any>() {
+  return useSWR<T>(PORTFOLIO_POSITIONS, fetcher, {
+    refreshInterval: () => liveRefresh(5_000, 60_000),
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    revalidateIfStale: false,
+    dedupingInterval: PORTFOLIO_DEDUPE_MS,
+    focusThrottleInterval: PORTFOLIO_FOCUS_THROTTLE_MS,
+    errorRetryCount: 2,
+  });
 }
 
 /* ── Real-time Portfolio Prices (SSE) ── */

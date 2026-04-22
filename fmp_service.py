@@ -592,6 +592,27 @@ def get_info(ticker):
             "revenuePerShare": rev_per_share,
         })
 
+    # ── Fundamentals fallback ──────────────────────────────────────
+    # FMP Starter occasionally returns partial /ratios-ttm responses where
+    # peRatioTTM / priceToEarningsRatioTTM are absent (observed on mega-cap
+    # US tickers like AAPL/TSLA/NVDA/MSFT while BRK-B works). When that
+    # happens, fall back to the /quote payload's `pe` + `eps` fields which
+    # derive from the same underlying TTM series.
+    if not info.get("trailingPE") or not info.get("trailingEps"):
+        try:
+            q = _fmp_get("/quote", {"symbol": ticker})
+            if q and isinstance(q, list) and len(q) > 0:
+                qr = q[0] or {}
+                q_pe = qr.get("pe") or qr.get("peRatio")
+                q_eps = qr.get("eps") or qr.get("earningsPerShare")
+                if q_pe and not info.get("trailingPE"):
+                    info["trailingPE"] = q_pe
+                    info["forwardPE"] = info.get("forwardPE") or q_pe
+                if q_eps and not info.get("trailingEps"):
+                    info["trailingEps"] = q_eps
+        except Exception as e:
+            logger.debug(f"fundamentals quote-fallback failed for {ticker}: {e}")
+
     _set_cache(cache_key, info)
     return info
 
