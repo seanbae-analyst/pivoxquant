@@ -45,7 +45,11 @@ def _cache_ticker_async(app, ticker: str, capital: float):
 @api_auth
 @legal_scrub_response
 def get_portfolio():
-    fx_service.refresh()
+    # Refresh FX rate in background so a slow/unavailable upstream (FMP 402,
+    # exchangerate-api timeout) does not add 5-15s to every portfolio load.
+    # The stale cached rate (default 1380.0) is accurate enough for display;
+    # the scheduler refreshes it every 5 minutes via APScheduler.
+    threading.Thread(target=fx_service.refresh, daemon=True).start()
     positions = Position.query.filter_by(user_id=current_user.id).all()
 
     # Batch-load all SignalCache rows in a single query to avoid N+1.
@@ -480,7 +484,7 @@ def _position_display_name(p, sd):
 
 
 def _build_positions_list():
-    fx_service.refresh()
+    threading.Thread(target=fx_service.refresh, daemon=True).start()
     positions = Position.query.filter_by(user_id=current_user.id).all()
     tickers = [p.ticker for p in positions]
     cache_map = {
@@ -548,7 +552,7 @@ def list_positions_alias():
 def portfolio_summary_alias():
     """KPI summary: NAV, today's P&L, unrealized, realized YTD."""
     try:
-        fx_service.refresh()
+        threading.Thread(target=fx_service.refresh, daemon=True).start()
         rate = fx_service.get_rate() or 0
         positions = Position.query.filter_by(user_id=current_user.id).all()
         tickers = [p.ticker for p in positions]

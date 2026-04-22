@@ -304,6 +304,16 @@ def market_status_route():
     return jsonify(get_market_status())
 
 
+def _normalize_ticker_for_alpaca(ticker: str) -> str:
+    """Alpaca uses slash notation for share classes (BRK/B, BF/B).
+    Convert hyphenated tickers like BRK-B → BRK/B so Alpaca resolves correctly.
+    FMP accepts both BRK-B and BRK.B — we leave the original for FMP paths.
+    """
+    if "-" in ticker and not ticker.startswith("^"):
+        return ticker.replace("-", "/")
+    return ticker
+
+
 @market_bp.route("/chart/<ticker>")
 @api_auth
 def chart_data(ticker):
@@ -315,75 +325,97 @@ def chart_data(ticker):
         ticker += ".KS"
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
 
-    # US intraday (1d/5d) — Alpaca primary, FMP fallback
-    if not is_kr and realtime.alpaca_available and period in ("1d", "5d"):
-        try:
-            from alpaca.data.requests import StockBarsRequest
-            from alpaca.data.timeframe import TimeFrame
-            tf = TimeFrame.Minute if period == "1d" else TimeFrame(5, "Min")
-            days = 1 if period == "1d" else 5
-            start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
-            req = StockBarsRequest(symbol_or_symbols=ticker, timeframe=tf, start=start, limit=500)
-            bars = realtime.alpaca_client.get_stock_bars(req)
-            data = [{"date": bar.timestamp.strftime("%Y-%m-%d %H:%M"),
-                     "close": round(float(bar.close), 2),
-                     "volume": int(bar.volume)} for bar in bars[ticker]]
-            if data:
-                return jsonify({
-                    "ticker": ticker, "period": period, "data": data,
-                    "source": "alpaca",
-                    # Last-bar timestamp is the true observation time.
-                    "observed_at": data[-1]["date"] if data else None,
-                })
-        except Exception as e:
-            logger.warning(f"Alpaca intraday chart failed {ticker}: {e}")
+    # Normalize hyphenated class-share tickers for Alpaca (BRK-B → BRK/B).
+    # Alpaca rejects BRK-B silently, causing a full Alpaca timeout before FMP fallback.
+    # FMP path still receives the original ticker (hyphen form is accepted by FMP stable).
+    alpaca_ticker = _normalize_ticker_for_alpaca(ticker)
 
-    # US daily (1mo+) — Alpaca primary via fetcher.get_price_history() (which already
-    # routes Alpaca -> FMP fallback). For KR, same fetcher routes KIS -> FMP fallback.
-    if not ticker.startswith("^"):
-        try:
-            h = fetcher.get_price_history(ticker, period=period)
-            if h is not None and not h.empty:
-                data = [{"date": (date.strftime("%Y-%m-%d %H:%M") if hasattr(date, 'hour')
-                                  and (date.hour or date.minute) else date.strftime("%Y-%m-%d")),
-                         "close": round(float(row["Close"]), 2),
-                         "volume": int(row.get("Volume", 0))} for date, row in h.iterrows()]
-                # Identify source: Alpaca for US, KIS for KR, FMP fallback otherwise
-                source = "alpaca" if not is_kr else "kis"
-                return jsonify({"ticker": ticker, "period": period,
-                                "data": data, "source": source,
-                                "observed_at": data[-1]["date"] if data else None})
-        except Exception as e:
-            logger.warning(f"Primary chart source failed {ticker}: {e}")
+    def _fetch_chart():
+        """Inner fetch — called inside a 6s hard-timeout thread."""
+        # US intraday (1d/5d) — Alpaca primary, FMP fallback
+        if not is_kr and realtime.alpaca_available and period in ("1d", "5d"):
+            try:
+                from alpaca.data.requests import StockBarsRequest
+                from alpaca.data.timeframe import TimeFrame
+                tf = TimeFrame.Minute if period == "1d" else TimeFrame(5, "Min")
+                days = 1 if period == "1d" else 5
+                start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+                req = StockBarsRequest(symbol_or_symbols=alpaca_ticker, timeframe=tf, start=start, limit=500)
+                bars = realtime.alpaca_client.get_stock_bars(req)
+                raw = bars.get(alpaca_ticker) or bars.get(ticker) or []
+                data = [{"date": bar.timestamp.strftime("%Y-%m-%d %H:%M"),
+                         "close": round(float(bar.close), 2),
+                         "volume": int(bar.volume)} for bar in raw]
+                if data:
+                    return {
+                        "ticker": ticker, "period": period, "data": data,
+                        "source": "alpaca",
+                        "observed_at": data[-1]["date"] if data else None,
+                    }
+            except Exception as e:
+                logger.warning(f"Alpaca intraday chart failed {ticker}: {e}")
 
-    # Final fallback — FMP directly (indices, or when primaries failed)
+        # US daily (1mo+) — Alpaca primary via fetcher.get_price_history() (which already
+        # routes Alpaca -> FMP fallback). For KR, same fetcher routes KIS -> FMP fallback.
+        if not ticker.startswith("^"):
+            try:
+                # Pass normalized ticker for Alpaca path; fetcher handles routing internally.
+                h = fetcher.get_price_history(alpaca_ticker if alpaca_ticker != ticker else ticker, period=period)
+                if h is not None and not h.empty:
+                    data = [{"date": (date.strftime("%Y-%m-%d %H:%M") if hasattr(date, 'hour')
+                                      and (date.hour or date.minute) else date.strftime("%Y-%m-%d")),
+                             "close": round(float(row["Close"]), 2),
+                             "volume": int(row.get("Volume", 0))} for date, row in h.iterrows()]
+                    source = "alpaca" if not is_kr else "kis"
+                    return {"ticker": ticker, "period": period,
+                            "data": data, "source": source,
+                            "observed_at": data[-1]["date"] if data else None}
+            except Exception as e:
+                logger.warning(f"Primary chart source failed {ticker}: {e}")
+
+        # Final fallback — FMP directly (indices, or when primaries failed).
+        # Use original ticker — FMP stable accepts BRK-B and BRK.B forms.
+        try:
+            import fmp_service as fmp
+            h = fmp.get_history(ticker, period=period)
+            if h is None or h.empty:
+                return {
+                    "ticker": ticker, "period": period, "data": [],
+                    "source": "none", "message": "Chart data temporarily unavailable",
+                }
+            data = [{"date": date.strftime("%Y-%m-%d"),
+                     "close": round(float(row["Close"]), 2),
+                     "volume": int(row.get("Volume", 0))} for date, row in h.iterrows()]
+            return {"ticker": ticker, "period": period, "data": data, "source": "fmp",
+                    "observed_at": data[-1]["date"] if data else None}
+        except Exception as e:
+            logger.error(f"Chart FMP fallback error {ticker}: {e}")
+            return None
+
+    # Run chart fetch with a 6s hard wall-clock deadline.
+    # Without this, Alpaca timeout (default ~10s) + FMP timeout (5s) stacks to 15s+.
+    # On deadline miss we return an empty-data friendly payload immediately.
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
     try:
-        import fmp_service as fmp
-        h = fmp.get_history(ticker, period=period)
-        if h is None or h.empty:
-            # Return friendly empty state rather than 404 so frontend can show
-            # "No chart data available" instead of an error card.
-            return jsonify({
-                "ticker": ticker,
-                "period": period,
-                "data": [],
-                "source": "none",
-                "message": "Chart data temporarily unavailable",
-            })
-        data = [{"date": date.strftime("%Y-%m-%d"),
-                 "close": round(float(row["Close"]), 2),
-                 "volume": int(row.get("Volume", 0))} for date, row in h.iterrows()]
-        return jsonify({"ticker": ticker, "period": period, "data": data, "source": "fmp",
-                        "observed_at": data[-1]["date"] if data else None})
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            fut = pool.submit(_fetch_chart)
+            result = fut.result(timeout=6)
+    except FuturesTimeout:
+        logger.warning(f"chart_data hard timeout (6s) for {ticker}/{period}")
+        result = None
     except Exception as e:
         logger.error(f"Chart error {ticker}: {e}")
-        return jsonify({
-            "ticker": ticker,
-            "period": period,
-            "data": [],
-            "source": "none",
-            "message": "Unable to fetch chart data",
-        })
+        result = None
+
+    if result:
+        return jsonify(result)
+    return jsonify({
+        "ticker": ticker,
+        "period": period,
+        "data": [],
+        "source": "none",
+        "message": "Unable to fetch chart data",
+    })
 
 
 @market_bp.route("/earnings")
