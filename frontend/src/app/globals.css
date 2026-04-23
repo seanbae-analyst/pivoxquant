@@ -2580,21 +2580,26 @@ i.italic,
    사이트 왼쪽위에 있는 것 그 문구만 넣고"
    ══════════════════════════════════════════════ */
 
-/* Wordmark — reuses .pq-silver-matte for fill, adds breath pulse */
+/* Wordmark — full opacity always (CEO asked for clearer text); keep subtle
+   scale breath so it still feels alive. No silver-matte gradient — pure ivory
+   on Vantablack for maximum legibility. */
 .pq-splash-wordmark {
   animation: pq-splash-breath 4s ease-in-out infinite;
-  will-change: opacity, transform;
+  will-change: transform;
+  /* Subtle text shadow bumps edges against the dark desk so letterforms
+     read crisply at a glance. */
+  text-shadow: 0 0 24px rgba(245, 240, 232, 0.06);
 }
 
 @keyframes pq-splash-breath {
   0%,
   100% {
-    opacity: 0.92;
+    opacity: 1;
     transform: translateZ(0) scale(1);
   }
   50% {
     opacity: 1;
-    transform: translateZ(0) scale(1.008);
+    transform: translateZ(0) scale(1.006);
   }
 }
 
@@ -2628,5 +2633,69 @@ i.italic,
 .pq-flip-dots__btn--splash .pq-flip-dots__mark {
   border-radius: 0 !important;
   transform: rotate(45deg);
+}
+
+/* ══════════════════════════════════════════════
+   Native-scroll landing (2026-04-23 — replaces flip hijack)
+   Revolut + Apple sticky-pin, scroll-scrub, fade-up.
+   ══════════════════════════════════════════════ */
+
+/* Smooth scroll for anchor jumps. Respects reduced-motion automatically. */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Section fallback for SSR + pre-hydration (fade-up initial state).
+   FadeUp component overrides with motion; this is the rest state. */
+.pq-fade-up {
+  opacity: 1;
+}
+
+/* Subtle perspective entry — used on deck / bento card containers. */
+.pq-section-enter {
+  perspective: 1200px;
+}
+
+/* Sticky visual anchor — for Feature Explorer pinning. */
+.pq-sticky-visual {
+  position: sticky;
+  top: 10vh;
+  align-self: start;
+}
+@media (max-width: 1023.98px) {
+  .pq-sticky-visual {
+    position: static;
+  }
+}
+
+/* Subtle color wash bands per section — bronze tint, barely visible. */
+.pq-wash-bronze {
+  background-image:
+    radial-gradient(
+      1200px 600px at 50% 0%,
+      rgba(139, 111, 71, 0.045) 0%,
+      transparent 65%
+    );
+}
+
+/* Horizontal scroll rail (optional Feature Explorer layout). */
+.pq-hscroll-rail {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.pq-hscroll-rail::-webkit-scrollbar {
+  display: none;
+}
+.pq-hscroll-rail > * {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
 }
 
