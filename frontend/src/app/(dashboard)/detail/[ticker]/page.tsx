@@ -160,10 +160,14 @@ function fmtMcap(value: number | null | undefined, krw: boolean): string {
   return `$${value.toLocaleString()}`;
 }
 
-function fmtSignedPct(pct: number | null | undefined): string {
-  if (pct == null || !Number.isFinite(pct)) return "—";
-  const sign = pct >= 0 ? "+" : "";
-  return `${sign}${pct.toFixed(2)}%`;
+function fmtSignedPct(pct: number | string | null | undefined): string {
+  if (pct == null) return "—";
+  // Signals cache sometimes returns numeric strings — coerce defensively
+  // so a valid value doesn't fall through to the em-dash branch.
+  const n = typeof pct === "number" ? pct : Number(pct);
+  if (!Number.isFinite(n)) return "—";
+  const sign = n >= 0 ? "+" : "";
+  return `${sign}${n.toFixed(2)}%`;
 }
 
 function pctColor(pct: number | null | undefined): string {
@@ -508,7 +512,18 @@ export default function StockDetailPage() {
       ? signal.signal
       : "NEUTRAL";
 
-  const sectorLine = signal?.sector || profile?.sector || "—";
+  // Sector resolution — some upstream paths emit the string literal
+  // "UNKNOWN" / "Unknown" instead of null when a vendor (e.g. KIS for KR
+  // equities) doesn't publish a sector. Treat those as absent so the
+  // profile API fallback gets a chance before we fall through to em-dash.
+  const sectorRaw = (signal?.sector || profile?.sector || "").trim();
+  const sectorLine =
+    sectorRaw && sectorRaw.toUpperCase() !== "UNKNOWN"
+      ? sectorRaw
+      : (profile?.sector &&
+         profile.sector.toUpperCase() !== "UNKNOWN"
+          ? profile.sector
+          : "—");
   const displayName = signal?.name || profile?.name || ticker;
   const mcap = signal?.snapshot?.market_cap ?? profile?.market_cap ?? null;
   const week52Low = signal?.snapshot?.week52_low;
