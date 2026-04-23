@@ -1,28 +1,33 @@
 "use client";
 
 /**
- * Hero — PivoxQuant landing Hero v2 (Goldman IC / Linear / Stripe tier).
+ * Hero — PivoxQuant landing Hero v3 (Cinematic).
  * -----------------------------------------------------------------------
- * Composition:
- *   - HeroSpotlight: bronze cursor-follow radial (aceternity pattern, motion v12)
- *   - FilmGrain: SVG fractalNoise overlay
- *   - Silver-matte headline (CSS, no GSAP)
- *   - PdfStackMockup: three real PivoxQuant artifact pages fanned out
+ * v3 upgrades on top of v2:
+ *   1. MarketTicker (top strip, seamless marquee)
+ *   2. CFO word — ivory → bronze glow via CSS keyframe (.pq-cfo-word)
+ *   3. ReportFlipDeck (right column) — 3D Y-axis flip through 3 artifacts
+ *   4. Scroll hint (bottom-center, "Continue dossier")
+ *   5. Tighter Vantablack — narrower spotlight, deeper bottom fade,
+ *      stronger film grain.
  *
- * Palette: Vantablack #0A0A0A · Ivory #F5F0E8 · Bronze #8B6F47 (single accent).
- * Type:    Source Serif 4 (masthead, H1, body) · JetBrains Mono (stat numbers).
+ * Palette: Vantablack #050505/#0A0A0A · Ivory #F5F0E8 · Bronze #8B6F47.
+ * Type:    Source Serif 4 (masthead, H1, body) · JetBrains Mono (data).
  * Copy:    English, research-framed. NO BUY/SELL/HOLD/recommend/advice.
- * Disclaimer: rendered inline (Bronze italic) per legal requirement.
+ * Disclaimer: inline (Bronze italic) per legal requirement.
+ * A11y:    <h1> static for SEO; ticker/deck/hint are aria-hidden.
+ * Perf:    CLS reserved (ticker 32px, H1 clamped, deck aspect 4:5).
  */
 
 import Link from "next/link";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
-import { ArrowRight, FileText } from "lucide-react";
+import { ArrowRight, FileText, ChevronDown } from "lucide-react";
 
 import { HeroSpotlight } from "./hero-spotlight";
 import { FilmGrain } from "./film-grain";
-import { PdfStackMockup } from "./pdf-stack-mockup";
+import { MarketTicker } from "./market-ticker";
+import { ReportFlipDeck } from "./report-flip-deck";
 
 /* ────────────────────────────────────────────────
    Motion
@@ -51,53 +56,62 @@ const STATS: readonly { label: string; value: string; tone?: "pos" }[] = [
 ] as const;
 
 /* ══════════════════════════════════════════════════
-   HERO
+   HERO v3
    ══════════════════════════════════════════════════ */
 export function Hero() {
+  const reduceMotion = useReducedMotion();
+
+  const smoothScroll = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const target = document.getElementById("pq-hero-anchor");
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <section
       aria-labelledby="pq-hero-heading"
       className="relative isolate overflow-hidden"
       style={{
-        backgroundColor: "var(--pq-ink)",
+        backgroundColor: "#050505",
         color: "var(--pq-ivory)",
       }}
     >
-      {/* ─── L1: Vantablack fill ─── already via inline style ─── */}
+      {/* ─── Ticker (v3) ─── thin strip at very top */}
+      <MarketTicker />
 
-      {/* ─── L2: Dot pattern (16px, ivory @ 4%) ─── */}
+      {/* ─── L2: Dot pattern ─── tighter mask (55% → 40%) */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage:
-            "radial-gradient(circle, rgba(245, 240, 232, 0.045) 1px, transparent 1px)",
+            "radial-gradient(circle, rgba(245, 240, 232, 0.05) 1px, transparent 1px)",
           backgroundSize: "16px 16px",
           maskImage:
-            "radial-gradient(ellipse at center, black 55%, transparent 100%)",
+            "radial-gradient(ellipse at center, black 40%, transparent 100%)",
           WebkitMaskImage:
-            "radial-gradient(ellipse at center, black 55%, transparent 100%)",
+            "radial-gradient(ellipse at center, black 40%, transparent 100%)",
         }}
       />
 
-      {/* ─── L3: Film grain ─── */}
-      <FilmGrain opacity={0.035} blendMode="overlay" />
+      {/* ─── L3: Film grain ─── slightly filmier */}
+      <FilmGrain opacity={0.05} blendMode="overlay" />
 
-      {/* ─── L4: Bottom fade into ink ─── */}
+      {/* ─── L4: Bottom fade into ink ─── deeper (h-40 → h-56) */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-56 z-[2]"
         style={{
           background:
-            "linear-gradient(to bottom, transparent 0%, var(--pq-ink) 92%)",
+            "linear-gradient(to bottom, transparent 0%, #050505 92%)",
         }}
       />
 
       {/* ─── Spotlight wrapper ─── content inside ─── */}
       <HeroSpotlight className="relative">
-        <div className="relative mx-auto max-w-7xl px-5 pb-20 pt-28 sm:px-8 sm:pb-28 sm:pt-32 lg:px-10 lg:pb-32 lg:pt-36">
+        <div className="relative mx-auto max-w-7xl px-5 pb-24 pt-24 sm:px-8 sm:pb-32 sm:pt-28 lg:px-10 lg:pb-36 lg:pt-32">
           <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.22fr)_minmax(0,1fr)] lg:gap-16">
-            {/* ─── LEFT: Copy column (55%) ─── */}
+            {/* ─── LEFT: Copy column ─── */}
             <motion.div
               variants={stagger}
               initial="hidden"
@@ -125,7 +139,8 @@ export function Hero() {
                 </span>
               </motion.div>
 
-              {/* H1 — silver-matte */}
+              {/* H1 — silver-matte, with "CFO's" word glowing bronze.
+                  Static HTML text remains crawlable. */}
               <motion.h1
                 id="pq-hero-heading"
                 variants={fadeUp}
@@ -138,7 +153,18 @@ export function Hero() {
               >
                 Your portfolio,
                 <br />
-                briefed like a&nbsp;CFO&rsquo;s.
+                briefed like a&nbsp;
+                <span
+                  className={reduceMotion ? "" : "pq-cfo-word"}
+                  style={
+                    reduceMotion
+                      ? { color: "var(--pq-bronze-light)" }
+                      : undefined
+                  }
+                >
+                  CFO&rsquo;s
+                </span>
+                .
               </motion.h1>
 
               {/* Subcopy */}
@@ -155,7 +181,7 @@ export function Hero() {
                 boards, year-end letters — drawn from your own holdings.
               </motion.p>
 
-              {/* Italic deck line — sits under the subcopy like an IC masthead. */}
+              {/* Italic deck line */}
               <motion.p
                 variants={fadeUp}
                 className="mb-9 max-w-xl font-serif italic"
@@ -170,10 +196,7 @@ export function Hero() {
               </motion.p>
 
               {/* ─── Stat strip ─── */}
-              <motion.div
-                variants={fadeUp}
-                className="mb-10"
-              >
+              <motion.div variants={fadeUp} className="mb-10">
                 <div
                   aria-hidden
                   className="mb-4 h-px w-full"
@@ -256,7 +279,7 @@ export function Hero() {
                 </a>
               </motion.div>
 
-              {/* ─── Disclaimer footer (Bronze italic 10pt) ─── */}
+              {/* ─── Disclaimer footer ─── */}
               <motion.p
                 variants={fadeUp}
                 className="mt-10 border-t pt-6 font-serif text-[11px] italic leading-relaxed tracking-wide"
@@ -271,22 +294,57 @@ export function Hero() {
               </motion.p>
             </motion.div>
 
-            {/* ─── RIGHT: PDF stack (45%) ─── */}
+            {/* ─── RIGHT: 3D Flip Deck ─── */}
             <motion.div
-              initial={{ opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               transition={{
                 duration: 0.9,
                 ease: [0.16, 1, 0.3, 1],
-                delay: 0.15,
+                delay: 0.1,
               }}
               className="relative order-first flex w-full items-center justify-center lg:order-none"
             >
-              <PdfStackMockup />
+              <ReportFlipDeck />
             </motion.div>
           </div>
         </div>
+
+        {/* ─── Scroll hint (v3) ─── bottom-center, editorial ─── */}
+        <a
+          href="#pq-hero-anchor"
+          onClick={smoothScroll}
+          aria-label="Continue to next section"
+          className="
+            absolute bottom-8 left-1/2 z-[3] -translate-x-1/2
+            flex flex-col items-center gap-2
+            group
+          "
+        >
+          <span
+            className={`${reduceMotion ? "" : "pq-scroll-hint"} flex flex-col items-center gap-1.5`}
+          >
+            <span
+              className="font-serif italic"
+              style={{
+                fontSize: "10.5px",
+                letterSpacing: "0.05em",
+                color: "rgba(139, 111, 71, 0.65)",
+              }}
+            >
+              Continue dossier
+            </span>
+            <ChevronDown
+              className="h-3.5 w-3.5"
+              style={{ color: "rgba(139, 111, 71, 0.7)" }}
+              aria-hidden
+            />
+          </span>
+        </a>
       </HeroSpotlight>
+
+      {/* Anchor for smooth scroll target — reserves no layout space */}
+      <div id="pq-hero-anchor" aria-hidden className="h-0 w-0" />
     </section>
   );
 }

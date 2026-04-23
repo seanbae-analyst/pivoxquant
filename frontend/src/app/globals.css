@@ -933,6 +933,81 @@
 }
 
 /* ══════════════════════════════════════════════════════════
+   Hero v3 Cinematic — ticker marquee, CFO glow, scroll hint,
+   3D flip deck. Additive only. Respects reduced-motion.
+   ══════════════════════════════════════════════════════════ */
+
+/* Live ticker — seamless left drift. 60s loop. */
+@keyframes pq-marquee {
+  0%   { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+.pq-marquee-track {
+  animation: pq-marquee 60s linear infinite;
+  will-change: transform;
+}
+.pq-marquee-track:hover { animation-play-state: paused; }
+
+/* CFO word glow — ivory → bronze. Static-safe: keyframe 0% matches static text. */
+@keyframes pq-cfo-glow {
+  0% {
+    color: var(--pq-ivory);
+    text-shadow: 0 0 0 rgba(163, 132, 92, 0);
+    letter-spacing: -0.02em;
+  }
+  100% {
+    color: var(--pq-bronze-light);
+    text-shadow: 0 0 28px rgba(163, 132, 92, 0.42);
+    letter-spacing: -0.01em;
+  }
+}
+.pq-cfo-word {
+  display: inline-block;
+  color: var(--pq-ivory);
+  animation: pq-cfo-glow 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.9s forwards;
+}
+
+/* Scroll hint bob. */
+@keyframes pq-scroll-hint {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50%      { transform: translateY(6px); opacity: 0.85; }
+}
+.pq-scroll-hint {
+  animation: pq-scroll-hint 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* Report flip deck — paper+grain surface. */
+.pq-flip-surface {
+  background: #FAF8F3;
+  position: relative;
+}
+.pq-flip-surface::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(139, 111, 71, 0.04) 0%, transparent 65%),
+    repeating-linear-gradient(
+      0deg,
+      rgba(10, 10, 10, 0.012) 0px, rgba(10, 10, 10, 0.012) 1px,
+      transparent 1px, transparent 3px
+    );
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  border-radius: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pq-marquee-track,
+  .pq-cfo-word,
+  .pq-scroll-hint {
+    animation: none !important;
+  }
+  .pq-cfo-word {
+    color: var(--pq-bronze-light);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    PivoxQuant Dashboard — Editorial surfaces
    Vantablack terminal chrome matching the landing preview.
    Used across (dashboard)/* pages. Flat, borderless, hairline
