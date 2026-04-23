@@ -3,7 +3,7 @@
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import LandingPage from "@/components/landing/landing-page";
+import LandingV2 from "@/components/landing/landing-v2";
 
 function LoadingScreen() {
   return (
@@ -42,5 +42,5 @@ export default function Page() {
   if (loading) return <LoadingScreen />;
   if (user) return <LoadingScreen />;
 
-  return <LandingPage />;
+  return <LandingV2 />;
 }

@@ -34,6 +34,7 @@ import { PersonaShowcase } from "./persona-showcase";
 import { DepositionTeaser } from "./deposition-teaser";
 import { KoreaUsDesk } from "./korea-us-desk";
 import { LivingCfoLoop } from "./living-cfo-loop";
+import { CompanionTeaser } from "./companion-teaser";
 
 /* ──────────────────────────────────────────────
    Animation variants
@@ -3276,6 +3277,9 @@ export default function LandingPage() {
       {/* ─── PAGE 10: PRICING ─── */}
       {/* ─── PAGE 6b: LIVING CFO LOOP (new) ─── */}
       <LivingCfoLoop />
+
+      {/* ─── PAGE 6c: PERSONAL JOURNAL COMPANION (Closed Beta teaser) ─── */}
+      <CompanionTeaser />
 
       {/* ─── 7. PRICING — Vantablack, 4 tiers + Founding Lifetime (Living CFO edition) ─── */}
       <section
