@@ -1,14 +1,26 @@
 "use client";
 
 /**
- * Signals — Vantablack ink terminal on dashboard shell.
+ * /signals — The Clip Board.
  *
- * Quantitative observations (POSITIVE / NEGATIVE / NEUTRAL). No advice
- * language. Signals are fetched from /api/signals and segmented into
- * three columns: Top Positive, Neutral zone, Top Negative.
+ * Cascades the /home + /market + /portfolio Dossier concept onto the
+ * signals terminal. Three clipboard papers on the Vantablack desk, one
+ * per tone:
  *
- * Filters: All / Positive / Negative / Neutral (pill row).
- * Each row is clickable → /detail/{ticker}.
+ *   Paper 1 — Top Positive   — front sheet (above threshold)
+ *   Paper 2 — Neutral Zone   — mid sheet rotated (within band)
+ *   Paper 3 — Top Negative   — back sheet tilted further (below threshold)
+ *
+ * Each paper renders a list of SignalMemoStrip rows; clicking a row
+ * unfolds an in-place memo with the observation + four-pillar breakdown.
+ * Clicking a paper itself lifts the whole clipboard forward on desktop.
+ *
+ * All SWR hooks, real-time cadence (liveRefresh 10s open / 60s closed),
+ * filter pills, refresh endpoint, and DisclaimerBanner are preserved
+ * verbatim. Only the render layer has been redesigned.
+ *
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL language only. No BUY/SELL/HOLD,
+ * no advice/recommend language. DisclaimerBanner type="signal" preserved.
  */
 
 import { useState, useMemo, useCallback } from "react";
@@ -16,29 +28,20 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { fmtPct } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { RefreshCw, Zap, ChevronDown } from "lucide-react";
+import { FootSignature } from "@/components/ui/editorial";
+import { RefreshCw, Zap } from "lucide-react";
+
+import { DossierDesk } from "@/components/home/dossier-desk";
+import { PaperDocument } from "@/components/home/paper-document";
+import { ClipboardPaper } from "@/components/signals/clipboard-paper";
+import type { MemoSignalItem } from "@/components/signals/signal-memo-strip";
 
 /* ── Types ── */
 
-interface SignalItem {
-  ticker: string;
-  name: string;
-  signal: string;
-  score: number;
-  price: number;
-  change_pct: number;
-  sector: string;
-  currency: "USD" | "KRW";
-  is_korean: boolean;
-  tech_score?: number;
-  fund_score?: number;
-  news_score?: number;
-  quant_score?: number;
-}
+type SignalItem = MemoSignalItem;
 
 interface SignalsListResponse {
   signals: SignalItem[];
@@ -68,237 +71,6 @@ function weekTag(): string {
   const days = Math.floor((d.getTime() - first.getTime()) / 86400000);
   const w = Math.ceil((days + first.getDay() + 1) / 7);
   return `${d.getFullYear()} · W${String(w).padStart(2, "0")}`;
-}
-
-function signalPillClass(sig: string) {
-  if (sig === "POSITIVE") return "pq-ink-pill pq-ink-pill--pos";
-  if (sig === "NEGATIVE") return "pq-ink-pill pq-ink-pill--neg";
-  return "pq-ink-pill pq-ink-pill--neu";
-}
-
-function signalLabel(sig: string) {
-  if (sig === "POSITIVE") return "Positive";
-  if (sig === "NEGATIVE") return "Negative";
-  return "Neutral";
-}
-
-function formatPrice(item: SignalItem): string {
-  if (item?.price == null) return "—";
-  if (item.currency === "KRW") {
-    return `₩${Math.round(item.price).toLocaleString("ko-KR")}`;
-  }
-  return `$${item.price.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-/* ── Row ── */
-
-function signalExplanation(sig: string) {
-  if (sig === "POSITIVE")
-    return "Observed composite score above the upper threshold. Four-pillar model noted tailwinds in trend, fundamentals, news, and quant factors.";
-  if (sig === "NEGATIVE")
-    return "Observed composite score below the lower threshold. Four-pillar model noted headwinds across the pillars.";
-  return "Observed composite score sits inside the neutral band — no pillar reading dominates.";
-}
-
-function SignalRow({
-  item,
-  expanded,
-  onToggle,
-  onOpenDetail,
-}: {
-  item: SignalItem;
-  expanded: boolean;
-  onToggle: () => void;
-  onOpenDetail: () => void;
-}) {
-  const isPositive = (item?.change_pct ?? 0) >= 0;
-  const subScores: { label: string; value: number | undefined }[] = [
-    { label: "Trend", value: item.tech_score },
-    { label: "Fund.", value: item.fund_score },
-    { label: "News", value: item.news_score },
-    { label: "Quant", value: item.quant_score },
-  ];
-
-  return (
-    <li className="pq-ink-row border-b border-[rgba(245,240,232,0.06)]">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="group w-full px-4 py-3 text-left transition-colors hover:bg-[rgba(139,111,71,0.05)]"
-      >
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="truncate font-serif text-[14px] text-[var(--pq-ivory)]">
-                {item.name || item.ticker}
-              </span>
-              <span className={signalPillClass(item.signal)}>
-                {signalLabel(item.signal)}
-              </span>
-            </div>
-            <div className="mt-1 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.45)]">
-              <span>{item.ticker}</span>
-              {item.sector ? <span>· {item.sector}</span> : null}
-            </div>
-          </div>
-
-          <div className="text-right">
-            <div className="font-mono text-[13px] tabular-nums text-[var(--pq-ivory)]">
-              {formatPrice(item)}
-            </div>
-            <div
-              className="mt-0.5 font-mono text-[11px] tabular-nums"
-              style={{ color: isPositive ? "#7db487" : "#d18888" }}
-            >
-              {fmtPct(item?.change_pct ?? 0)}
-            </div>
-          </div>
-
-          {/* Composite score */}
-          <div className="w-[60px] text-right">
-            <div className="pq-ink-label" style={{ fontSize: "9px" }}>
-              Score
-            </div>
-            <div className="mt-0.5 font-serif text-[18px] tabular-nums text-[var(--pq-ivory)]">
-              {Math.round(item.score ?? 0)}
-            </div>
-          </div>
-
-          <ChevronDown
-            className={
-              "h-3.5 w-3.5 shrink-0 text-[rgba(245,240,232,0.45)] transition-transform duration-300 " +
-              (expanded ? "rotate-180 text-[var(--pq-bronze)]" : "")
-            }
-            strokeWidth={1.5}
-          />
-        </div>
-      </button>
-
-      {/* Expanded observation panel */}
-      <div className="pq-ink-drawer" data-open={expanded ? "true" : "false"}>
-        <div className="grid grid-cols-2 gap-5 border-t border-[rgba(245,240,232,0.06)] bg-[rgba(255,255,255,0.015)] px-5 pb-5 pt-4 md:grid-cols-4">
-          <div className="col-span-2 md:col-span-2">
-            <div className="pq-ink-label mb-1" style={{ fontSize: "9px" }}>
-              Observation
-            </div>
-            <p className="text-[11.5px] leading-relaxed text-[rgba(245,240,232,0.75)]">
-              {signalExplanation(item.signal)}
-            </p>
-          </div>
-
-          <div>
-            <div className="pq-ink-label mb-1" style={{ fontSize: "9px" }}>
-              Strength
-            </div>
-            <div className="font-mono text-[13px] tabular-nums text-[var(--pq-ivory)]">
-              {Math.round(item.score ?? 0)}
-              <span className="text-[rgba(245,240,232,0.4)]">/100</span>
-            </div>
-          </div>
-
-          <div>
-            <div className="pq-ink-label mb-1" style={{ fontSize: "9px" }}>
-              Action
-            </div>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenDetail();
-              }}
-              className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
-            >
-              Open detail →
-            </button>
-          </div>
-
-          {/* 4-pillar breakdown */}
-          <div className="col-span-2 md:col-span-4">
-            <div className="pq-ink-label mb-2" style={{ fontSize: "9px" }}>
-              Four-Pillar Breakdown
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {subScores.map((s) => {
-                const v = Math.max(0, Math.min(100, s.value ?? 0));
-                return (
-                  <div key={s.label}>
-                    <div className="flex items-baseline justify-between">
-                      <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)]">
-                        {s.label}
-                      </span>
-                      <span className="font-mono text-[11px] tabular-nums text-[var(--pq-ivory)]">
-                        {s.value != null ? Math.round(s.value) : "—"}
-                      </span>
-                    </div>
-                    <div className="mt-1 h-[2px] w-full bg-[rgba(245,240,232,0.08)]">
-                      <div
-                        className="h-full bg-[var(--pq-bronze)] transition-[width] duration-300"
-                        style={{ width: `${v}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-    </li>
-  );
-}
-
-/* ── Column ── */
-
-function SignalColumn({
-  title,
-  kicker,
-  items,
-  expandedId,
-  onToggle,
-  onOpenDetail,
-}: {
-  title: string;
-  kicker: string;
-  items: SignalItem[];
-  expandedId: string | null;
-  onToggle: (ticker: string) => void;
-  onOpenDetail: (ticker: string) => void;
-}) {
-  return (
-    <section>
-      <div className="mb-3 flex items-baseline justify-between">
-        <div>
-          <div className="pq-ink-label">{kicker}</div>
-          <h2 className="pq-ink-h2 mt-1">{title}</h2>
-        </div>
-        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
-          {items.length}
-        </span>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="border-t border-[rgba(245,240,232,0.1)] py-10 text-center font-serif text-[12px] text-[rgba(245,240,232,0.4)]">
-          No observations in this band.
-        </div>
-      ) : (
-        <ul className="border-t border-[rgba(245,240,232,0.1)]">
-          {items.map((item) => (
-            <SignalRow
-              key={item.ticker}
-              item={item}
-              expanded={expandedId === item.ticker}
-              onToggle={() => onToggle(item.ticker)}
-              onOpenDetail={() => onOpenDetail(item.ticker)}
-            />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
 }
 
 /* ── Page ── */
@@ -370,15 +142,24 @@ export default function SignalsPage() {
   const showNeu = showAll || filter === "NEUTRAL";
   const showNeg = showAll || filter === "NEGATIVE";
 
+  /* ── Active-paper controller ── */
+  type PaperId = "positive" | "neutral" | "negative";
+  const [active, setActive] = useState<PaperId | null>(null);
+  const onSelect = (id: PaperId) =>
+    setActive((cur) => (cur === id ? null : id));
+
   return (
     <ErrorBoundary>
-      <header className="mb-8 flex items-end justify-between gap-4">
+      {/* ═══════════ HEADER ═══════════ */}
+      <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="pq-ink-kicker">SIGNALS · 2026 · {weekTag().split("·")[1]?.trim() ?? ""}</div>
-          <h1 className="pq-ink-h1 mt-2">Observation Board</h1>
+          <div className="pq-ink-kicker">
+            SIGNALS · {weekTag()}
+          </div>
+          <h1 className="pq-ink-h1 mt-2">The Clip Board</h1>
           <p className="mt-2 max-w-xl font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
             Quantitative observations across {signals.length} covered tickers.
-            Select any row to expand a four-pillar readout.
+            Clip any memo to unfold its four-pillar readout in place.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] text-[rgba(245,240,232,0.55)]">
             <span className="pq-ink-pill pq-ink-pill--pos">Positive</span>
@@ -393,42 +174,48 @@ export default function SignalsPage() {
           type="button"
           onClick={handleRefresh}
           disabled={refreshing}
-          className="pq-ink-btn-ghost disabled:opacity-40"
+          className="pq-ink-btn-ghost disabled:opacity-40 self-start md:self-auto"
         >
-          <RefreshCw className={"h-3.5 w-3.5 " + (refreshing ? "animate-spin" : "")} />
+          <RefreshCw
+            className={"h-3.5 w-3.5 " + (refreshing ? "animate-spin" : "")}
+          />
           <span>Refresh</span>
         </button>
       </header>
 
-      {/* Stats strip */}
-      <div className="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-6 border-y border-[rgba(245,240,232,0.1)] py-5">
+      {/* Tally strip */}
+      <div className="mb-6 grid grid-cols-3 gap-6 border-y border-[rgba(245,240,232,0.1)] py-4">
         <div>
           <div className="pq-ink-label">Positive</div>
-          <div className="mt-1 font-serif text-[28px] tabular-nums text-[#7db487]">
+          <div className="mt-1 font-serif italic text-[26px] tabular-nums text-[#7db487]">
             {positive.length}
           </div>
         </div>
         <div>
           <div className="pq-ink-label">Neutral</div>
-          <div className="mt-1 font-serif text-[28px] tabular-nums text-[var(--pq-ivory)]">
+          <div className="mt-1 font-serif italic text-[26px] tabular-nums text-[var(--pq-ivory)]">
             {neutral.length}
           </div>
         </div>
         <div>
           <div className="pq-ink-label">Negative</div>
-          <div className="mt-1 font-serif text-[28px] tabular-nums text-[#d18888]">
+          <div className="mt-1 font-serif italic text-[26px] tabular-nums text-[#d18888]">
             {negative.length}
           </div>
         </div>
       </div>
 
       {/* Filter pills */}
-      <div className="pq-ink-tabs mb-8">
+      <div className="pq-ink-tabs mb-6">
         {FILTERS.map((f) => (
           <button
             key={f}
             type="button"
-            onClick={() => setFilter(f)}
+            onClick={() => {
+              setFilter(f);
+              setActive(null);
+              setExpandedId(null);
+            }}
             data-active={filter === f}
             className="pq-ink-tab"
           >
@@ -437,57 +224,217 @@ export default function SignalsPage() {
         ))}
       </div>
 
-      {/* Loading */}
+      {/* ═══════════ LOADING / EMPTY ═══════════ */}
       {isLoading && signals.length === 0 ? (
-        <div className="py-24 text-center font-serif text-[13px] text-[rgba(245,240,232,0.4)]">
+        <div className="py-24 text-center font-serif italic text-[13px] text-[rgba(245,240,232,0.4)]">
           Loading observations…
         </div>
       ) : signals.length === 0 ? (
         <div className="py-24 text-center">
-          <Zap className="mx-auto h-8 w-8 text-[var(--pq-bronze)]" strokeWidth={1.3} />
-          <div className="mt-3 font-serif text-[14px] text-[rgba(245,240,232,0.6)]">
+          <Zap
+            className="mx-auto h-8 w-8 text-[var(--pq-bronze)]"
+            strokeWidth={1.3}
+          />
+          <div className="mt-3 font-serif italic text-[14px] text-[rgba(245,240,232,0.6)]">
             No observations on record.
           </div>
           <p className="mt-1 text-[12px] text-[rgba(245,240,232,0.4)]">
-            Add positions or tickers to your watchlist to generate signals.
+            Add positions or tickers to your watchlist to surface memos.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-8">
-          {showPos && (
-            <SignalColumn
-              title="Top Positive"
-              kicker="Above Threshold"
-              items={positive}
-              expandedId={expandedId}
-              onToggle={onToggle}
-              onOpenDetail={onOpenDetail}
-            />
-          )}
-          {showNeu && (
-            <SignalColumn
-              title="Neutral Zone"
-              kicker="Within Band"
-              items={neutral}
-              expandedId={expandedId}
-              onToggle={onToggle}
-              onOpenDetail={onOpenDetail}
-            />
-          )}
-          {showNeg && (
-            <SignalColumn
-              title="Top Negative"
-              kicker="Below Threshold"
-              items={negative}
-              expandedId={expandedId}
-              onToggle={onToggle}
-              onOpenDetail={onOpenDetail}
-            />
-          )}
-        </div>
+        /* ═══════════ THE DESK ═══════════ */
+        <DossierDesk>
+          {/* ── Desktop: 3D stacked clipboard papers ── */}
+          <div
+            className="hidden md:block relative"
+            style={{
+              margin: "0 auto",
+              maxWidth: 1020,
+              padding: "56px 0 36px",
+            }}
+          >
+            {/* Paper 3 — Negative (deepest, left fan) */}
+            {showNeg && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  top: 90,
+                  zIndex: active === "negative" ? 30 : 1,
+                }}
+              >
+                <PaperDocument
+                  rotation={-6.5}
+                  zOffset={-90}
+                  xOffset={-70}
+                  active={active === "negative"}
+                  dimmed={active !== null && active !== "negative"}
+                  onClick={() => onSelect("negative")}
+                  ariaLabel="Top negative signals clipboard"
+                >
+                  <ClipboardPaper
+                    kicker="Clip Board · III"
+                    title="Top Negative"
+                    tone="neg"
+                    items={negative}
+                    expandedId={expandedId}
+                    onToggle={onToggle}
+                    onOpenDetail={onOpenDetail}
+                  />
+                </PaperDocument>
+              </div>
+            )}
+
+            {/* Paper 2 — Neutral (mid, right fan) */}
+            {showNeu && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  top: 44,
+                  zIndex: active === "neutral" ? 30 : 2,
+                }}
+              >
+                <PaperDocument
+                  rotation={-3.5}
+                  zOffset={-40}
+                  xOffset={52}
+                  active={active === "neutral"}
+                  dimmed={active !== null && active !== "neutral"}
+                  onClick={() => onSelect("neutral")}
+                  ariaLabel="Neutral zone signals clipboard"
+                >
+                  <ClipboardPaper
+                    kicker="Clip Board · II"
+                    title="Neutral Zone"
+                    tone="neu"
+                    items={neutral}
+                    expandedId={expandedId}
+                    onToggle={onToggle}
+                    onOpenDetail={onOpenDetail}
+                  />
+                </PaperDocument>
+              </div>
+            )}
+
+            {/* Paper 1 — Positive (front) */}
+            {showPos && (
+              <div
+                style={{
+                  position: "relative",
+                  zIndex:
+                    active === "positive" || active === null ? 20 : 10,
+                }}
+              >
+                <PaperDocument
+                  rotation={0}
+                  zOffset={0}
+                  xOffset={0}
+                  active={active === "positive"}
+                  dimmed={active !== null && active !== "positive"}
+                  onClick={() => onSelect("positive")}
+                  ariaLabel="Top positive signals clipboard"
+                >
+                  <ClipboardPaper
+                    kicker="Clip Board · I"
+                    title="Top Positive"
+                    tone="pos"
+                    items={positive}
+                    expandedId={expandedId}
+                    onToggle={onToggle}
+                    onOpenDetail={onOpenDetail}
+                  />
+                </PaperDocument>
+              </div>
+            )}
+
+            {/* Spacer reserves footprint for the deepest paper */}
+            <div aria-hidden style={{ height: 640 }} />
+
+            <p
+              style={{
+                textAlign: "center",
+                fontFamily: "var(--font-serif), Georgia, serif",
+                fontStyle: "italic",
+                fontSize: 11.5,
+                color: "rgba(245,240,232,0.4)",
+                letterSpacing: "0.02em",
+                marginTop: 28,
+              }}
+            >
+              {active
+                ? "Click the surfaced clipboard again to return it to the stack."
+                : "Click any clipboard to draw it forward."}
+            </p>
+          </div>
+
+          {/* ── Mobile: vertical flat stack ── */}
+          <div
+            className="md:hidden flex flex-col gap-5"
+            style={{ padding: "12px 0 24px" }}
+          >
+            {showPos && (
+              <PaperDocument
+                rotation={0}
+                zOffset={0}
+                xOffset={0}
+                ariaLabel="Top positive signals clipboard"
+              >
+                <ClipboardPaper
+                  kicker="Clip Board · I"
+                  title="Top Positive"
+                  tone="pos"
+                  items={positive}
+                  expandedId={expandedId}
+                  onToggle={onToggle}
+                  onOpenDetail={onOpenDetail}
+                />
+              </PaperDocument>
+            )}
+            {showNeu && (
+              <PaperDocument
+                rotation={0}
+                zOffset={0}
+                xOffset={0}
+                ariaLabel="Neutral zone signals clipboard"
+              >
+                <ClipboardPaper
+                  kicker="Clip Board · II"
+                  title="Neutral Zone"
+                  tone="neu"
+                  items={neutral}
+                  expandedId={expandedId}
+                  onToggle={onToggle}
+                  onOpenDetail={onOpenDetail}
+                />
+              </PaperDocument>
+            )}
+            {showNeg && (
+              <PaperDocument
+                rotation={0}
+                zOffset={0}
+                xOffset={0}
+                ariaLabel="Top negative signals clipboard"
+              >
+                <ClipboardPaper
+                  kicker="Clip Board · III"
+                  title="Top Negative"
+                  tone="neg"
+                  items={negative}
+                  expandedId={expandedId}
+                  onToggle={onToggle}
+                  onOpenDetail={onOpenDetail}
+                />
+              </PaperDocument>
+            )}
+          </div>
+        </DossierDesk>
       )}
 
-      <div className="mt-12 border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
+      {/* Foot signature + legal */}
+      <FootSignature />
+      <div className="mt-4 text-[rgba(245,240,232,0.7)]">
         <DisclaimerBanner type="signal" />
       </div>
     </ErrorBoundary>
