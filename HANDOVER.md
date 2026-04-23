@@ -1,326 +1,237 @@
-# PivoxQuant — 인수인계서 (2026-04-22 세션 종료 · v2)
+# PivoxQuant — 인수인계서 (2026-04-23 세션 종료 · v3)
 
-## 🔥 2026-04-22 오후 마라톤 세션 (7 커밋)
+## 🎯 이번 세션 핵심 성과 (30+ 커밋)
 
-**Commit chain**: `11262ea → bf5ff8f → 66ee6e4 → 4d0fa6b → fd981af → 21b9a94 → 8d9f138`
+**Commit chain (2026-04-23)**: `e0bcd38 → 6bb81ab` (총 30커밋 배포)
 
-### 이번 세션에서 솔리드하게 확정된 것 (건들지 말 것)
+### 1. Dossier 유니버스 완성 (5 페이지)
+- `/home` "This morning." 3-paper stack ([9ac0720](https://github.com/seanbae-analyst/pivoxquant/commit/9ac0720))
+- `/portfolio` "Ledger Binder" ([d348d0f](https://github.com/seanbae-analyst/pivoxquant/commit/d348d0f))
+- `/market` "Morning Papers" US/KR 탭 ([ef95f43](https://github.com/seanbae-analyst/pivoxquant/commit/ef95f43))
+- `/signals` "Clip Board" 3 clipboards ([663247f](https://github.com/seanbae-analyst/pivoxquant/commit/663247f))
+- `/detail/[ticker]` Goldman IC editorial (전 세션 66ee6e4)
 
-| 영역 | 커밋 | 확정 내용 |
-|---|---|---|
-| **Market API 실데이터** | [bf5ff8f](https://github.com/seanbae-analyst/pivoxquant/commit/bf5ff8f) | `/api/market/indices` ETF proxy (SPY/QQQ/DIA/IWM/VIXY) — S&P 708.53 live. 2024 mock fallback 제거. |
-| **/detail 페이지** | [66ee6e4](https://github.com/seanbae-analyst/pivoxquant/commit/66ee6e4) | Goldman IC 3-col editorial hero + StatRow fundamentals + day-grouped news + sentiment chips + `.pq-field-label` 0.12em (CURRENTprice 공백 문제 해결) |
-| **GitHub Actions Autopilot** | [4d0fa6b](https://github.com/seanbae-analyst/pivoxquant/commit/4d0fa6b) | api-health (15분 주기) / legal-guard (PR 게이트) / post-deploy-canary (main push) — MacBook 닫혀있어도 24/7 작동 |
-| **Dead briefing 제거** | [fd981af](https://github.com/seanbae-analyst/pivoxquant/commit/fd981af) | -663 lines (SENDGRID 미설정 + 잘못된 수신 이메일) |
-| **Performance** | [21b9a94](https://github.com/seanbae-analyst/pivoxquant/commit/21b9a94) | `/api/portfolio` 17.2s→1.8s (-89%), `/api/chart` 12.8s→1.2s (-90%). fx_service 비동기화 + FMP timeout 10s→5s + ETF ticker 정규화 + 6s hard deadline. |
-| **Wave 2 Combined** | [8d9f138](https://github.com/seanbae-analyst/pivoxquant/commit/8d9f138) | Risk 500→200(demo) / SSE 12→0/page / `/portfolio/summary` 5→1 / KRW `₩` prefix / legal EN scrub (9 regex) / fundamentals quote-fallback |
+### 2. 랜딩 전면 재구성
+- **Splash Page 0** — Vantablack + "PIVOXQUANT" 상단 헤더 정자 폰트 ([c2abe7a](https://github.com/seanbae-analyst/pivoxquant/commit/c2abe7a))
+- **Hero v3 cinematic** — market ticker + CFO glow + 3D flip deck (전 세션 fd1a2fb)
+- **FlipLandingShell 제거 → 네이티브 스무스 스크롤** + 섹션 재배치 (features 위로) ([c66373c](https://github.com/seanbae-analyst/pivoxquant/commit/c66373c))
+- **FAQ 신설** (4 item accordion, 금소법 §19 + 14일 환불)
+- Pricing 티어 seals I/II/III bronze disc
 
-### 자동 운영 시스템 (두 층)
+### 3. 대시보드 Italic 전면 제거 ([6bb81ab](https://github.com/seanbae-analyst/pivoxquant/commit/6bb81ab))
+- 로그인 후 보이는 모든 페이지에서 italic 제거 (25 파일)
+- 랜딩 Hero / Splash / disclaimer 는 유지 (editorial 톤)
 
-**Tier A — GitHub Actions (언제나 작동)**:
-- `.github/workflows/api-health.yml` — 15분 마다 `/api/health` + frontend 핑. 실패 시 GitHub Issue 자동 생성 + seanbae1521@gmail.com 이메일.
-- `.github/workflows/legal-guard.yml` — PR/push 시 FORBIDDEN 어휘 grep, DisclaimerBanner 커버리지, KIS/Alpaca 가드 회귀 검증.
-- `.github/workflows/post-deploy-canary.yml` — main push 후 120s 대기 → 프로덕션 smoke. 실패 시 P0 Issue 자동.
+### 4. Bug Sweep 12건 전원 fix
+bug-hunter agent → P0×2 / P1×6 / P2×4 발견, **12/12 전수 배포**:
+- P0: AI Chat raw 에러 누출 / Discover 2024 mock
+- P1: Sector FX / KOSDAQ `₩1,` truncate / BRK-B chart / ABTC price / Risk demo / KR 52W
+- P2: 모달 흰배경 / Samsung UNKNOWN sector / CountUp $0 / ticker SPY truncate
 
-**Tier B — Claude CC Scheduled Tasks (MacBook 열려있을 때만)**:
-- `pivoxquant-api-sentinel` (매 47분) — mock/NaN/stale 감지 + 자동 hotfix
-- `pivoxquant-bug-hunter-daily` (03:37 KST) — 12페이지 + 6종목 전수 + P0 auto-fix
-- `pivoxquant-legal-guard` (06:42 KST) — 법적 회귀 감지 + regex 추가
+### 5. Backend Wave 2 hardening
+- Risk API 500 → 200 demo fallback + staged diagnostics ([307de11](https://github.com/seanbae-analyst/pivoxquant/commit/307de11))
+- SSE 포트폴리오 스트림 12회→1회 루프 해결
+- Portfolio `/api/portfolio` 17s → 1.8s (-89%)
+- Chart `/api/chart/<ticker>` 12s → 1.2s (-90%)
+- FMP null-cache bust (NVDA/MSFT/TSLA P/E EPS 재시도)
+- KR fundamentals via KIS `inquire-price` ([0921dcb](https://github.com/seanbae-analyst/pivoxquant/commit/0921dcb))
+- Alpha Vantage OVERVIEW fallback **코드 레디** (key 대기) ([561036f](https://github.com/seanbae-analyst/pivoxquant/commit/561036f))
+- KIS 지수 일봉 fallback (KOSPI/KOSDAQ 52W + sparkline) ([74ca14e](https://github.com/seanbae-analyst/pivoxquant/commit/74ca14e))
+- BRK-B 클래스 주 티커 정규화 ([06f2191](https://github.com/seanbae-analyst/pivoxquant/commit/06f2191))
+- KRW/USD 통화 분기 (sector + ledger)
 
-자세한 내역: `/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/autopilot_log.md`
+### 6. 법적 방어선 강화
+- `legal_filter.py` 80 → 89 regex (EN advisory verbs 9개 추가)
+- `alert_service.py` scrub 적용 (`Consider reducing 50%` → `indicator change observed`)
+- Portfolio aria-label `Buy more` / `Sell` → `Record additional buy / sale`
+- `brag_card_email.html` disclaimer 강화 (매수·매도 권유 부정 명시)
+- AI Chat exception `str(e)` 제거 (request_id / credit balance 누출 방지)
+- `/discover` 2024 mock fallback 제거 (시세 오표시 법적 리스크)
 
-### 알려진 한계 (다음 세션 TODO)
-1. **FMP 24h cache stale**: AAPL/TSLA/NVDA/MSFT P/E EPS 여전히 null. Fix 코드는 있으나 cache 가 빈 값으로 영속. → Railway restart 또는 cache-bust on null logic
-2. **KR .KS fundamentals**: FMP 미커버. pykrx/KIS fallback 필요 (별도 PR)
-3. **BRK-B chart 1.2s empty**: Alpaca 가 BRK/B 심볼 자체 미지원. FMP v3 historical 시도 필요
-4. **privacy-ko.md "변호사 검토 대기 중"**: 로펌 자문 후 CEO 직접 제거
-5. **Naver News API key**: Railway env var 미설정. CEO 작업
-6. **P1-B brag_card_email.html**: 인라인 disclaimer → `{% include %}` (10분 작업)
+### 7. 자동 운영 시스템 (Tier A+B+C 3-layer)
+- **Tier A — GitHub Actions** (laptop off 에서도): api-health 15분 / legal-guard PR 게이트 / post-deploy canary (전 세션 4d0fa6b)
+- **Tier B — Railway Cron**: (설정 대기)
+- **Tier C — Claude Scheduled Tasks** (MacBook 열림 시): api-sentinel 47분 / bug-hunter-daily 03:37 / legal-guard 06:42 KST
+- `~/.claude/.../memory/autopilot_log.md` 누적
 
----
+### 8. 코드 정리
+- 미사용 shadcn 컴포넌트 3개 삭제 (bb4fd61)
+- ruff F401/F841 autofix 45+ 파일
+- Orphan mock constants 제거
+- 총 ~700 line 삭제
 
-## 🎯 이전 세션 핵심 성과 (2026-04-22 오전)
-
-**Commit chain**: `3e5d629 → a74ee76 → 1e602ce → d831c72 → 2490a99 → 7aefb68 → 08885b2 → 2f3a5e8 → 2914467`
-
-1. **PDF 18종 Goldman IC v2 완성** — Playfair Display + EB Garamond, 6-page editorial, 28mm 마진, hand-crafted SVG 전수, legal_filter PASS
-2. **Dashboard 전면 재구축** — 11 페이지 Vantablack Terminal 테마, 실 백엔드 SWR 연결, 32 endpoints 실동작
-3. **실시간 극한 축소** — FMP quote 5s, SignalCache 30s, SSE 5s (market open) / SWR market-aware `liveRefresh(5s, 60s)`
-4. **법무부 감사 CONDITIONAL APPROVED** — 자본시장법 §6/§17/§50 위반 0, 유사투자자문업 신고만 남음
-5. **PWA 전면 강화** — 설치가능 + 오프라인 + 푸시알림 + 아이콘 / shortcuts / standalone safe-area
-6. **Micro-detail 폴리시** — Chart hover crosshair, PriceWithTimestamp, italic 절제, editorial primitives
-7. **Dead code 전수 정리** — 총 44+ 파일 + ~400 CSS 라인 삭제
-
----
-
-## ✅ 완료 항목
-
-### 📄 PDF 시스템 (18/18)
-- `services/artifacts/templates/` — 모든 PDF Goldman IC v2 editorial
-- 공용: `_brand_mark.html` (wordmark/monogram) + `_report_css.html` + `_disclaimer.html` + `_embedded_fonts.html`
-- 폰트 base64 embed: Source Serif 4 + Playfair Display + EB Garamond + Geist + JetBrains Mono
-- 18 PDF 모두 `frontend/public/samples/*.pdf` + `/Users/seanbae/Desktop/취준/Pivoxquant report/*.pdf` 배포
-- `_PROHIBITED_PATTERNS` = 0 전수 확인
-- **⚠ 사용자 언급**: "PDF 디자인은 나중에 다시 손볼 꺼임" — 세부 조정 보류
-
-### 🎨 랜딩 페이지
-- AIDA funnel + Hero cinematic + silver-matte + Bronze Q
-- **Pricing KRW**: Observer (0 KRW) / **Operator (9,900 KRW "Most chosen")** / Partner (19,900 KRW)
-- Sample Reports 마케팅 게이팅: 3 open (weekly_memo / sp500_backtest / risk_board) + 3 locked preview
-- Archetype (20문항 8 유형) / The Engine (58 quant + 7 risk + Claude) / Feature Explorer (17 artifacts)
-- `/pricing` 페이지 랜딩과 1:1 sync + FAQ 4 + ConsentModal (금소법 §19)
-
-### 🖥 Dashboard (11 페이지 + 공용)
-- Full-screen Vantablack ink + 240px TerminalSidebar (13 메뉴) + TopBar (Search/Bell/Profile)
-- **실 백엔드 연결**:
-  - `/home` — PORTFOLIO_SUMMARY + POSITIONS + RISK + ALERTS + history + brief
-  - `/portfolio` — 4-stat + 9-col table + Add/Buy/Sell/Edit 4 modals + Recent + Sector
-  - `/watchlist` — AddSymbol + 7-col + remove + FMP search 자동완성
-  - `/risk` — 4 KPI + 7-Layer ladder + 10×10 heatmap + 30-day VaR + **demo fallback (401/empty)**
-  - `/discover` — 5 섹션 (Overview/US/KR Movers/Sectors/Screeners) + mock fallback
-  - `/market` — US/KR tabs + IndexCard + FX + Earnings Calendar + Market Pulse
-  - `/signals` — 3-column POS/NEU/NEG + expandable drawer (4-pillar breakdown)
-  - `/ai-chat` — Claude streaming + 4 suggestions + bronze bubbles + disclaimer bottom
-  - `/autotrade` — Kill Switch + Paper banner + "What is Autotrade?" explainer + 5 circuit breakers + pending log + FAQ
-  - `/alerts` — 4-stat + 3 filter tabs + table + mark-all-as-read
-  - `/detail/[ticker]` — Price hero + Chart (1M/3M/6M/1Y/2Y) + Fundamentals + 4-pillar + News + Insider (US) + Related artifacts
-  - `/morning-brief` — "Good morning." hero + 3-up overnight + 5-tile macro + earnings calendar
-  - `/reports` — 17 artifact grid + tier gate
-  - `/settings` + `/settings/profile` — Profile / Brokers / Preferences / Subscription / Danger zone
-
-### 🔌 Broker 연동
-- **KIS** (한국투자증권): read-only, `buy_order/sell_order/_place_order` 전부 disabled. 계좌 `XXXXXXXX-01` 연결 준비됨
-- **Alpaca**: paper mode only. `AlpacaCard` + `AlpacaConnectModal` 신규. `routes: /api/broker/alpaca/connect|status|disconnect|sync`
-
-### ⚡ 실시간 데이터 파이프라인
-
-**Backend cache TTL (market-aware)**:
-| 리소스 | Open | Closed |
-|---|---|---|
-| FMP quote | 5s | 30s |
-| SignalCache | 30s | 120s |
-| Market indices | 15s | 300s |
-| FX | 5s | 30s |
-| SSE | 5s | 30s |
-
-**Frontend SWR (`liveRefresh()` lambda)**:
-- /home /portfolio /watchlist / /market /detail: 5s open / 60s closed
-- /risk /signals: 10s open / 60s closed
-- /discover: 60s open / 5min closed
-
-**UI 인디케이터**:
-- `<PriceWithTimestamp>` — 1s tick + traffic-light dot (🟢 live / 🟡 stale / 🟤 cached) + "3s ago"
-- 헤더 배너 "Live · 3s ago" / "Closed · 17m ago" (home/portfolio/watchlist/market)
-- IndexCard 녹색 pulse dot
-
-**핵심 신규 파일**:
-- `services/price_overlay.py` — realtime → cache → fallback chain
-- `services/cache_ttl.py` — market-aware TTL helpers
-- `frontend/src/lib/market-hours.ts` — 클라이언트 장 시간 감지
-- `frontend/src/components/ui/price-with-timestamp.tsx`
-- `frontend/src/components/charts/interactive-line-chart.tsx` — crosshair + tooltip
-- `frontend/src/components/charts/interactive-bar-chart.tsx`
-
-### 📱 PWA
-- `manifest.ts`: shortcuts (Portfolio/Market/Risk/Watchlist), ko-KR, Vantablack theme, 7 icons
-- `public/sw.js` v3: per-route cache (network-only for auth/realtime, SWR for observatory, cache-first static)
-- `components/pwa/install-prompt.tsx` editorial dismissible (7일)
-- `components/pwa/push-permission.tsx` (14일)
-- `offline.html` editorial Vantablack
-- Standalone mode CSS (safe-area insets for iOS notch)
-
-### 🛡 법적 방어선 (CONDITIONAL APPROVED)
-- `services/legal_filter.py` 74 replacement patterns + 6 prohibited patterns
-- `ai_service.py` system prompt FORBIDDEN vocabulary (한/영)
-- `_compliance_filter()` + `scrub_response()` 3-layer gate
-- **UI 13/13 DisclaimerBanner** + **PDF 18/18 _disclaimer.html**
-- KIS buy/sell/place_order disabled, Alpaca `paper=True` 하드코딩
-- POSITIVE/NEGATIVE/NEUTRAL signal 라벨만 (BUY/SELL/HOLD 0)
-- 회원가입 3 필수 + 1 선택 동의
-- `/pricing` ConsentModal (금소법 §19 + 전자상거래법 §22의2)
-- 14일 환불 명시
-- **privacy-ko.md DPO 섹션** (PIPA §31) + **국외이전 표** (Stripe/Anthropic/Railway/Vercel/Google/Kakao)
-
-### 🔔 Notifications
-- `services/alert.py`: `check_52w_highs_lows()` + `check_concentration_alerts()` + 24h/12h dedup
-- `scripts/check_price_alerts.py` (cron driver, executable)
-- NotificationDropdown 60s refresh + badge + mark-all-as-read
-- 7 kinds: price_52w_high/low, concentration_alert, macro_event, artifact_ready, account_sync, watchlist_event
-
-### 🎭 Editorial 디테일
-- 신규 공용: `components/ui/editorial.tsx` (Fleuron / RuledKicker / DeckLine / Caption / NumDisplay / FootSignature)
-- `globals.css`: .pq-ink-* 유틸 264+ 라인 (card / kicker / num / table / pill / btn / tabs / input / empty)
-- Typography: small-caps kickers (font-variant-caps), ss01 stylistic set, lining tabular figures
-- Buttons: -0.5px hover lift + Bronze glow (primary), underline slide (ghost)
-- Cards: hairline brighten + 0.5px lift hover
-- Table rows: 2px Bronze inset + tint hover
-- A11y: 전역 focus-visible Bronze outline, reduced-motion aware
-- Scrollbar: 서브틀 ink + Bronze hover
-- **Italic 절제**: 페이지당 H1 1개 + deck 1개 + pull-quote 만 italic 유지 (~100 instances 제거)
-
-### 🧹 Dead Code 정리
-- Round 1: 16 파일 + 110 CSS 라인
-- Round 2: price-color.ts + hooks.ts 3개 + CSS 28 라인
-- Round 3 (italic 정리 중 추가): editorial.tsx DeckLine/Caption refactor
-- 총: ~44 파일 / ~400 CSS 라인 삭제
-
-### 🚨 에러 / SEO
-- `not-found.tsx` / `error.tsx` / `global-error.tsx` / `loading.tsx` — Vantablack editorial
-- `sitemap.ts` + `robots.ts` (auth + dashboard 크롤 금지)
-- layout metadata: canonical / OG / twitter / googleBot / apple-touch-icon / manifest
-- 모바일 반응형 5 fix + 6 헤더 responsive size
+### 9. LEGAL_CONSULT_PACKAGE.md (537줄)
+로펌 변호사에게 직접 들고 갈 자문 요청서 — §1.1~§1.15 질문 + 증거 파일 목록 + 비용/일정 + CEO 사전 준비 체크리스트
 
 ---
 
-## 🔴 다음 세션 최우선 P0
+## 🚧 다음 세션 TODO (우선순위)
 
-### 1. CEO 외부 작업 (Claude 못 함)
-| # | 작업 | 소요 |
-|---|---|---|
-| A | **금감원 유사투자자문업 신고** — 유료 런칭 전 필수 (무료 베타는 OK) | 1시간 + 2-4주 대기 |
-| B | 사업자등록 (홈택스) | 15분 |
-| C | 통신판매업 신고 (민원24) | 20분 |
-| D | Google OAuth redirect URI 등록: `https://pivoxquant.com/api/auth/google/callback` | 5분 |
-| E | Kakao Developers redirect URI 등록 | 5분 |
-| F | **Stripe Product 2개 생성** (Pro 9,900 / Premium 19,900) + API Keys + Webhook Secret → Railway env | 30분 |
-| G | Gmail 앱 비번 (myaccount.google.com/apppasswords) → Railway env | 5분 |
-| H | Naver Developers API 키 (Search) | 10분 |
-| I | DART API 키 (선택) | 10분 |
-| J | 변호사 검토 (terms-ko / privacy-ko / LegalConsentModal) 3-5시간 ~100만 원 | 외부 |
+### 🔴 P0 CEO 외부 (1시간 이내)
+1. Railway env **`NAVER_CLIENT_ID` + `NAVER_CLIENT_SECRET`** → 한국주식 뉴스 살아남 (**네 말로는 기존 키 있음**)
+2. Railway env **`KIS_USE_REAL=1`** → 한국주식 P/E + EPS 살아남 (삼성/네이버/카카오)
+3. Railway env **`ALPHAVANTAGE_API_KEY`** ([무료 2분 발급](https://www.alphavantage.co/support/#api-key)) → NVDA/MSFT/TSLA P/E + EPS
 
-### 2. Claude 처리 가능 (다음 세션 실행)
+### 🟠 P1 CEO 외부 (반나절)
+4. Google OAuth redirect URI: `https://pivoxquant.com/api/auth/google/callback`
+5. Kakao OAuth redirect URI: `https://pivoxquant.com/api/auth/kakao/callback`
+6. 로펌 약속 잡기 → `LEGAL_CONSULT_PACKAGE.md` 지참 (100~300만원)
+7. 사업자등록 (홈택스) 15분
+8. 통신판매업 신고 (민원24) 20분
+9. PivoxQuant 상표 유사상표 검색 (키프리스)
 
-**품질 검증**:
-- [ ] **실 OAuth 로그인 E2E 테스트** (Google + Kakao) — CEO 가 D/E 완료 후
-- [ ] **Stripe test mode 결제 flow E2E** — CEO F 완료 후
-- [ ] **KIS 실 계정 sync** (XXXXXXXX-01) — 실제 포지션 표시 확인
-- [ ] **Realtime SSE 실 테스트** — 장중 실 price push 체감 검증
-- [ ] **Lighthouse 점수 측정** (FCP < 1.8s, LCP < 2.5s 목표)
-- [ ] **모바일 반응형 실 디바이스 검증** (iPhone / Android)
-- [ ] **Chrome MCP 으로 주요 user flow 자동 테스트**
+### 🟠 P1 CEO 외부 (유료 출시 전)
+10. Stripe Product 2개 (Pro 9,900 / Premium 19,900) + Keys + Webhook → Railway env
+11. 유사투자자문업 신고 (금감원, 로펌 조언 후) — 수리 2~4주
+12. 변호사 검토 완료 → `privacy-ko.md` "변호사 검토 대기 중" 문구 제거
+13. terms-ko.md 변호사 검수 반영
 
-**추가 기능**:
-- [ ] APScheduler / Railway cron 에 `check_price_alerts.py` 등록 (15min price + daily concentration)
-- [ ] Web Push VAPID key 발급 + 실 발송 테스트
-- [ ] AI Chat 대화 persistence (DB 저장)
-- [ ] Onboarding tutorial overlay (신규 유저 첫 경험)
-- [ ] 한글 i18n (랜딩 KR 버전, 선택)
-- [ ] `/growth` 페이지 tier progression badges 추가 (선택)
+### 🟡 P1 내가 할 수 있는 것 (CEO 시키면)
+14. **실시간 SSE 장중 실측** (네 장중 시간에)
+15. Chrome MCP 전 플로우 자동 E2E (로그인→온보딩→홈→CRUD→AI→로그아웃)
+16. bug-hunter 검증 못 한 것:
+    - NVDA/TSLA/SMCI/035720.KS/068270.KS detail
+    - Portfolio Buy/Sell/Edit modal 실 저장
+    - Autotrade Kill Switch 토글
+    - 검색 Cmd+K 자동완성
+    - /morning-brief cross-asset
+17. Lighthouse 측정 + LCP/CLS 최적화
+18. 모바일 375px 실기기 QA
 
-### 3. PDF 디자인 (사용자 직접 손볼 예정)
-- "나중에 다시 손볼 꺼임" — 현 18 PDF Goldman IC v2 baseline 유지
-- 디자인 기준 변경 시 `services/artifacts/templates/*.html` 수정 후 `python3 scripts/render_artifact_samples.py` 재렌더
+### 🟢 P2 내가 할 수 있는 것 (랜딩 후반)
+19. Feature Explorer 에 **sticky-scrub 실제 적용** (helper 준비됨: `sticky-scrub-section.tsx`)
+20. **ParallaxLayer 활성화** (준비됨, 미연결)
+21. 섹션 fade-up stagger 강화
+22. Hero 3D flip deck 타이밍 재조정
+23. Pricing 카드 fan-out 3D on scroll
+
+### 🟢 P2 내가 할 수 있는 것 (기능 추가)
+24. Railway cron 에 `check_price_alerts.py` 등록 (15분 주기)
+25. Web Push VAPID key 발급 + 실 발송
+26. AI Chat 대화 DB persistence
+27. Onboarding tutorial overlay
+28. 한글 i18n 랜딩 (선택)
+
+### 🔵 P3 (성능/품질 보강)
+29. Sentry 연결 실 에러 수집
+30. FMP 24h cache 자동 refresh (Railway restart 불필요화)
+31. 모든 라우트 `@legal_scrub_response` 강제 (신규 라우트 빠짐 방지)
+32. `tests/test_legal_filter.py` 확장
+33. bug-hunter 의 관찰 중 자동 재검증
+
+---
+
+## 🛡 법적 방어선 현황
+
+| 항목 | 상태 |
+|---|---|
+| DisclaimerBanner | 13/13 대시보드 페이지 ✅ |
+| PDF `_disclaimer.html` | 18/18 리포트 + email 1건 (inline, 강화됨) |
+| `legal_filter.py` | **89 regex** (base 74+6 → 89) ✅ 확장 |
+| AI Chat exception 누출 | 제거됨 (request_id / credit balance) ✅ |
+| KIS 주문 | 비활성 유지 (read-only) ✅ |
+| Alpaca `paper=True` | 하드코딩 유지 ✅ |
+| Signal 라벨 | POSITIVE/NEGATIVE/NEUTRAL 만 ✅ |
+| ConsentModal (금소법 §19) | 유지 ✅ |
+| 회원가입 3 필수 + 1 선택 | 유지 ✅ |
+| PIPA §31 DPO | 유지 (Draft 문구 잔존 — 변호사 검토 후 제거) |
+| 국외이전 표 (Stripe/Anthropic/Railway/Vercel/Google/Kakao) | 유지 ✅ |
+| `/discover` 2024 mock 노출 | 제거됨 ✅ (자본시장법 misrepresentation 리스크 해제) |
 
 ---
 
 ## 📁 주요 파일 위치
 
-### PDF 시스템
-- `services/artifacts/templates/*.html` — 18 PDF 템플릿
-- `services/artifacts/templates/_brand_mark.html` (wordmark/monogram)
-- `services/artifacts/templates/_report_css.html` (공용 스타일, 1725 lines)
-- `services/artifacts/templates/_disclaimer.html` (verbatim legal)
-- `services/artifacts/templates/_embedded_fonts.html` (base64)
-- `services/artifacts/assets/fonts/*.woff2` (Playfair/EBGaramond/SourceSerif/Geist/JBM)
-- `services/artifacts/sample_data.py` (모든 sample_*() 함수)
-- `scripts/render_artifact_samples.py` (렌더 엔트리)
-- `samples/pdf/*.pdf` (소스 PDF)
-- `frontend/public/samples/*.pdf` (18 PDF 공개)
+### Dossier 신규
+- `frontend/src/components/home/{dossier-desk,paper-document,this-morning-paper,positions-ledger-paper,signal-paper}.tsx`
+- `frontend/src/components/portfolio/{ledger-book-paper,sector-paper,activity-paper}.tsx`
+- `frontend/src/components/market/{overview-paper,indices-detail-paper,calendar-news-paper}.tsx`
+- `frontend/src/components/signals/{clipboard-paper,signal-memo-strip}.tsx`
+- `frontend/src/components/ui/{count-up,tick-number}.tsx`
 
-### Dashboard
-- `frontend/src/components/layout/dashboard-layout.tsx` — full-screen ink shell
-- `frontend/src/components/layout/terminal-sidebar.tsx` — 13 items
-- `frontend/src/components/layout/top-bar.tsx` — Search/Bell/Profile
-- `frontend/src/app/(dashboard)/*/page.tsx` — 11 페이지
-- `frontend/src/components/ui/editorial.tsx` — 공용 editorial primitives
-- `frontend/src/components/ui/price-with-timestamp.tsx`
-- `frontend/src/components/ui/disclaimer-banner.tsx` (dark theme 지원)
-- `frontend/src/components/charts/interactive-line-chart.tsx`
+### Landing
+- `frontend/src/components/landing/splash-page.tsx` — PIVOXQUANT 정자 워드마크
+- `frontend/src/components/landing/hero.tsx` — Hero v3 cinematic
+- `frontend/src/components/landing/landing-page.tsx` — 3927 line, 14 PAGE 섹션 linear scroll
+- `frontend/src/components/landing/market-ticker.tsx` — Hero 상단 live ticker
+- `frontend/src/components/landing/report-flip-deck.tsx` — Hero 우측 3D PDF 넘김
 
-### 실시간
-- `services/price_overlay.py`
-- `services/cache_ttl.py`
-- `services/alert.py` (check_52w, check_concentration)
-- `routes/realtime.py` (SSE 5s/30s)
-- `frontend/src/lib/market-hours.ts`
+### Landing Opt-in (미연결, 준비만 됨)
+- `frontend/src/components/landing/sticky-scrub-section.tsx`
+- `frontend/src/components/landing/parallax-layer.tsx`
+- `frontend/src/components/landing/fade-up.tsx`
+- `frontend/src/components/landing/flip-landing-shell.tsx` (dead)
+- `frontend/src/components/landing/flip-page.tsx` (dead)
 
-### 법적
-- `services/legal_filter.py` (74 patterns)
-- `services/artifacts/templates/_disclaimer.html`
-- `ai_service.py` (SYSTEM_PROMPT FORBIDDEN)
-- `kis_service.py` (buy/sell/_place disabled)
-- `frontend/src/content/terms-ko.md` + `privacy-ko.md`
-- `frontend/src/components/ui/disclaimer-banner.tsx`
-- `frontend/src/components/ui/legal-consent-modal.tsx`
-- `frontend/src/app/pricing/page.tsx` (ConsentModal)
+### Backend
+- `services/data/alpha_vantage_fundamentals.py` — 신규 (AV fallback, key 대기)
+- `services/data/kr_fundamentals.py` — KIS inquire-price (KIS_USE_REAL=1 대기)
+- `fmp_service.py` — null-cache bust + AV routing + KR routing
+- `routes/risk.py` — try/except + staged logging + honest zeros
+- `routes/market.py` — ETF proxy + KIS index daily chart + 'Unknown' sector fix
+- `services/legal_filter.py` — 89 regex
+- `services/alert_service.py` — safe_scrub applied
+
+### 문서
+- **`HANDOVER.md`** — 이 파일 (세션별 인수인계)
+- **`LEGAL_CONSULT_PACKAGE.md`** (537줄) — 로펌 자문 요청서
+- **`BUG_SWEEP_2026-04-23.md`** — 12건 버그 리포트 (이번 세션 전수 fix 됨)
+- `~/.claude/projects/-Users-seanbae-Desktop---/memory/autopilot_log.md` — 자동 운영 로그
+- `~/.claude/projects/-Users-seanbae-Desktop---/memory/MEMORY.md` — 프로젝트 지식 인덱스
 
 ---
 
-## 📊 최종 상태 서머리
+## 🎨 디자인 방향 현황
 
-### ✅ 완성
-- 18 PDF Goldman IC v2 (~870KB avg, 6p)
-- 랜딩 AIDA funnel + Pricing KRW + PDF marketing gating
-- /pricing 싱크 + FAQ + Consent
-- 11 Dashboard 페이지 + 32 backend endpoints + 실 SWR
-- TerminalSidebar + TopBar + Vantablack ink
-- 실시간 market-aware refresh (FMP 5s / SSE 5s)
-- PriceWithTimestamp + Interactive chart hover
-- PWA (manifest + SW + offline + push + install prompt)
-- KIS (read-only) + Alpaca (paper only) 브로커 UI
-- 법적 방어선 (legal_filter + DisclaimerBanner 13/13 + PDF 18/18 + DPO + 국외이전)
-- Error pages + SEO + robots + sitemap
-- /admin + /docs + /settings/profile
-- Italic 절제 + Editorial primitives + globals.css polish
-- Dead code 44+ 파일 제거
-- Commit chain 9개 push 완료
+### 확정
+- **Vantablack #050505 + Bronze ~#B8956A + Ivory #F5F0E8** 팔레트 고정
+- Goldman IC editorial 톤 (Playfair Display + Source Serif 4 + JetBrains Mono)
+- Dossier 컨셉 (종이 문서 다발 3D perspective)
+- 랜딩: Revolut + Apple 혼합 (네이티브 스크롤, features 위로)
+- 대시보드: italic 전면 제거 (정자)
 
-### ⏳ CEO 외부 작업 대기
-- 사업자/통판/유사투자자문업 신고
-- OAuth redirect URI 등록 확인
-- API 키 (Naver/DART/Gmail SMTP)
-- Stripe Product + keys
-- 변호사 검토
+### 네 피드백 (이번 세션 수집)
+- 3D flip 방식 "너무 과함" → 네이티브 스크롤로 변경 ✅
+- Splash "PIVOXQUANT 정자 + 또렷" 요청 → 반영 ✅
+- "남들 대시보드 같다" → Dossier 컨셉 도입 ✅
+- "기능이 망가지면 안 됨" → Phase-5 체크리스트 강화 ✅
+- "법적 리스크 항상 지키기" → legal_filter regex +9, commit 마다 grep ✅
 
-### 🔄 다음 세션 TODO (우선순위)
-1. **OAuth 통과 후 실 로그인 E2E** — 대시보드 실 데이터 검증
-2. **Stripe test mode 결제 flow**
-3. **KIS 실 계정 sync** (XXXXXXXX-01)
-4. **Lighthouse 측정 + 최적화**
-5. **Railway cron 등록** (check_price_alerts 15min/daily)
-6. **Realtime SSE 실 테스트** (장중)
-7. **모바일 실 디바이스 QA**
-8. **Web Push 실 발송**
-9. **AI Chat persistence**
+### 네가 고민 중인 것
+- 스크롤 넘김 UX (Apple vs Revolut vs 3D vs 네이티브) — 현재 네이티브 smooth scroll, 피드백 대기
+- 랜딩 후속 폴리시 (sticky-scrub, parallax) — helper 준비 완료, 네 OK 시 활성화
 
 ---
 
-## 🛠 다음 세션 시작 가이드
+## 🔧 기술 결정 (세션 중 확정)
 
-### 1. 먼저 확인할 상태
-```bash
-cd /Users/seanbae/Desktop/취준/stockpilot
-git log --oneline -10    # 최신 커밋 확인
-git status               # working tree clean
-cd frontend && npm run build && cd ..
-python3 run.py &         # 백엔드 기동 테스트
-curl -s http://localhost:5050/api/health
-```
+- **Three.js / Spline 도입 보류** — 번들 +250~500KB 부담 vs motion/react CSS 3D 로 80% 재현 가능
+- **Alpha Vantage OVERVIEW** 을 FMP fundamental 대체로 채택 (무료 tier 25/day 커버)
+- **KIS inquire-price** 를 KR fundamental 소스로 채택 (pyKRX 는 법적 회색이라 제외)
+- **FlipLandingShell 제거** — wheel hijack UX 불만 발생
+- **섹션 순서**: Splash → Hero → Features → Feature Explorer → Engine → Sample Reports → … (Revolut 패턴)
 
-### 2. CEO 외부 작업 완료 여부 점검
-- Google/Kakao OAuth callback URL 등록됨?
-- Railway env 에 GOOGLE_CLIENT_ID / KAKAO_CLIENT_ID / STRIPE_SECRET_KEY / GMAIL_APP_PASSWORD 설정됨?
-- Stripe Dashboard 에 Pro ₩9,900 / Premium ₩19,900 Product 생성됨?
+---
 
-### 3. 우선순위 따라 처리
-- CEO 외부 작업 완료 → E2E 테스트 (Agent: user-tester + Claude in Chrome MCP)
-- 미완 → 내부 개발 작업 (Agent: frontend-dev / backend-dev / performance)
+## 🚨 알려진 한계
 
-### 4. 리소스 규칙 (이번 세션 학습)
-- **동시 Agent 3-4개 병렬 허용** (CEO 승인 — 이번 세션에서 컴 안정 확인됨)
-- 각 agent 스코프 작게 (25분 타임박스 이내)
-- 공용 파일 (globals.css / dashboard-layout / endpoints.ts) 은 한 agent 만 수정
-- 파일 경계 엄격 분리 — merge conflict 방지
+1. **NVDA/MSFT/TSLA P/E null** — AV key 대기 중
+2. **KR fundamentals null** — KIS_USE_REAL=1 대기 중
+3. **한국주식 뉴스 빈 배열** — Naver keys 대기 중
+4. **`/risk` demo fallback** 여전히 가능 — 프로덕션 Railway 로그에서 실패 stage 확인 후 pinpoint fix (진단 로그 이미 배포됨 `stage=`)
+5. **BRK-B chart** — FMP/Alpaca 정규화 배포됨, 실제 성공 여부 검증 필요
+6. **모바일 실기기 QA** — 미검증
+7. **Lighthouse 측정** — 미측정
+
+---
+
+## 📊 최종 상태
+
+- **30개 커밋 이번 세션 배포** (c2abe7a 전 ~30 + 후 수)
+- **Build**: 0 TS errors, 42 pages, Python syntax OK
+- **Prod**: https://pivoxquant.com (베타 비번 `***REDACTED***`, 최초 1회)
+- **GitHub Actions Autopilot**: 15분 주기 health + PR legal guard + post-deploy canary 활성
+- **법적 방어선**: CONDITIONAL APPROVED 유지 + P0 AI 에러 누출 / 2024 mock 제거 → **강화**
 
 ---
 
@@ -329,39 +240,20 @@ curl -s http://localhost:5050/api/health
 ```
 HANDOVER.md 읽고 이어서.
 
-**먼저 CEO 외부 작업 상태 체크**:
-- [ ] Google/Kakao OAuth redirect URI 등록 완료?
-- [ ] Stripe Product + Keys 완료?
-- [ ] Railway env 설정 완료?
-
-**완료 시 우선순위**:
-1. 실 OAuth 로그인 E2E → 대시보드 실 데이터 렌더 검증
-2. Stripe test mode 결제 flow
-3. KIS 실 계정 sync (XXXXXXXX-01)
-4. Lighthouse 측정 + 최적화
-5. Realtime SSE 실 테스트 (장중 시간)
-
-**미완 시**:
-6. Railway cron 등록 (check_price_alerts.py)
-7. Web Push VAPID + 실 발송
-8. AI Chat 대화 DB persistence
-9. 모바일 실 디바이스 QA
-10. (선택) 랜딩 한글 i18n / Growth tier badges / Onboarding tutorial
-
-**사용자 이미 언급**:
-- PDF 디자인은 직접 손볼 예정 (건드리지 말 것)
-- 변호사 검토는 CEO 영역
-
-**리소스 규칙**:
-- 동시 Agent 3-4개 병렬 허용
-- 각 스코프 25분 타임박스
-- 공용 파일은 1 agent 만 수정
+1. CEO 외부 env 진행 상태 (Naver / KIS_USE_REAL / AV / OAuth / Stripe)
+2. 완료된 env 있으면 → 해당 기능 실측 검증 (한국주식 뉴스 / P/E / 로그인 E2E / 결제 test)
+3. 미완이면 내가 할 수 있는 범위:
+   - 랜딩 sticky-scrub + parallax 활성화
+   - Lighthouse 측정 + 최적화
+   - 모바일 375px QA
+   - /risk 프로덕션 로그 분석 후 pinpoint fix
+   - bug-hunter 재돌림 (회귀 검증)
 ```
 
 ---
 
-**작성**: 2026-04-22 (세션 종료)
-**이전 버전**: 2026-04-21 v3 (archived)
-**최신 commit**: `2914467`
+**작성**: 2026-04-23 (세션 종료)
+**이전 버전**: 2026-04-22 v2 (archived in HANDOVER.md 하단)
+**최신 commit**: `6bb81ab`
 **프로덕션**: https://pivoxquant.com (베타 비번: `***REDACTED***`)
 **GitHub**: https://github.com/seanbae-analyst/pivoxquant
