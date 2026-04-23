@@ -21,12 +21,19 @@ import type { Position } from "@/components/portfolio/types";
 
 interface Props {
   positions: Position[];
-  /** Limit rows displayed. Defaults to 6 so the paper stays calm. */
+  /** Limit rows displayed. Defaults to 12 so all typical books fit without hiding KRW positions. */
   limit?: number;
 }
 
-export function PositionsLedgerPaper({ positions, limit = 6 }: Props) {
-  const rows = positions.slice(0, limit);
+export function PositionsLedgerPaper({ positions, limit = 12 }: Props) {
+  // Sort: USD first by abs(pnl%), then KRW — keeps KR positions always visible
+  // without burying USD positions that matter most. Both present.
+  const sorted = [...positions].sort((a, b) => {
+    if (a.currency !== b.currency) return a.currency === "KRW" ? 1 : -1;
+    return Math.abs(b.pnlPct ?? 0) - Math.abs(a.pnlPct ?? 0);
+  });
+  const rows = sorted.slice(0, limit);
+  const hidden = positions.length - rows.length;
 
   return (
     <div
@@ -53,7 +60,7 @@ export function PositionsLedgerPaper({ positions, limit = 6 }: Props) {
             textDecoration: "none",
           }}
         >
-          Full ledger →
+          {hidden > 0 ? `+${hidden} more · Full ledger →` : "Full ledger →"}
         </Link>
       </div>
 
