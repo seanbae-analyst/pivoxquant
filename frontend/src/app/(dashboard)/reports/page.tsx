@@ -49,20 +49,20 @@ const CATALOG: CatalogEntry[] = [
   { slug: "weekly_memo",           type: "weekly_memo",          title: "Weekly Memo",             cadence: "Every Sunday",   minTier: "free",    personas: ["all"] },
   { slug: "morning_brief_plus",    type: "morning_brief",        title: "Morning Brief Plus",      cadence: "Every weekday",  minTier: "free",    personas: ["all"] },
   { slug: "brag_card",             type: "monthly_brag",         title: "Brag Card",               cadence: "Monthly",        minTier: "free",    personas: ["all"] },
-  { slug: "earnings_prebrief",     type: "earnings_prebrief",    title: "Earnings Pre-Brief",      cadence: "Per event",      minTier: "pro",     personas: ["growth", "momentum"] },
-  { slug: "risk_board",            type: "risk_report",          title: "Risk Board",              cadence: "Weekly",         minTier: "pro",     personas: ["conservative", "balanced"] },
+  { slug: "earnings_prebrief",     type: "earnings_prebrief",    title: "Earnings Pre-Brief",      cadence: "Per event",      minTier: "pro",     personas: ["growth", "quant"] },
+  { slug: "risk_board",            type: "risk_report",          title: "Risk Board",              cadence: "Weekly",         minTier: "pro",     personas: ["beginner", "balanced"] },
   { slug: "quarterly_self_report", type: "quarterly_review",     title: "Quarterly Self Report",   cadence: "Quarterly",      minTier: "pro",     personas: ["all"] },
   { slug: "self_audit",            type: "custom",               title: "Self Audit",              cadence: "On demand",      minTier: "pro",     personas: ["all"] },
   { slug: "dd_checklist",          type: "custom",               title: "DD Checklist",            cadence: "On demand",      minTier: "pro",     personas: ["value", "growth"] },
   { slug: "dividend_income",       type: "custom",               title: "Dividend Income",         cadence: "Monthly",        minTier: "pro",     personas: ["income"] },
   { slug: "insider_mirror",        type: "custom",               title: "Insider Mirror",          cadence: "Weekly",         minTier: "pro",     personas: ["value", "growth"] },
-  { slug: "sp500_backtest",        type: "custom",               title: "S&P 500 Backtest",        cadence: "On demand",      minTier: "pro",     personas: ["balanced", "conservative"] },
+  { slug: "sp500_backtest",        type: "custom",               title: "S&P 500 Backtest",        cadence: "On demand",      minTier: "pro",     personas: ["balanced", "beginner"] },
   { slug: "portfolio_segment",     type: "custom",               title: "Portfolio Segment",       cadence: "Monthly",        minTier: "pro",     personas: ["all"] },
   { slug: "capital_allocation",    type: "custom",               title: "Capital Allocation",      cadence: "Quarterly",      minTier: "premium", personas: ["value", "balanced"] },
-  { slug: "credit_rating",         type: "custom",               title: "Credit Rating",           cadence: "Quarterly",      minTier: "premium", personas: ["conservative", "income"] },
+  { slug: "credit_rating",         type: "custom",               title: "Credit Rating",           cadence: "Quarterly",      minTier: "premium", personas: ["beginner", "income"] },
   { slug: "burn_rate",             type: "custom",               title: "Burn Rate",               cadence: "Monthly",        minTier: "premium", personas: ["growth"] },
   { slug: "monthly_finance",       type: "custom",               title: "Monthly Finance",         cadence: "Monthly",        minTier: "premium", personas: ["all"] },
-  { slug: "kpi_dashboard",         type: "custom",               title: "KPI Dashboard",           cadence: "Weekly",         minTier: "premium", personas: ["growth", "momentum"] },
+  { slug: "kpi_dashboard",         type: "custom",               title: "KPI Dashboard",           cadence: "Weekly",         minTier: "premium", personas: ["growth", "quant"] },
   { slug: "year_end_letter",       type: "custom",               title: "Year-End Letter",         cadence: "Annual",         minTier: "premium", personas: ["all"] },
 ];
 
@@ -255,8 +255,8 @@ function ReportsPageInner() {
             "value",
             "balanced",
             "income",
-            "momentum",
-            "conservative",
+            "quant",
+            "beginner",
           ] as const
         ).map((p) => {
           const active = personaFilter === p;

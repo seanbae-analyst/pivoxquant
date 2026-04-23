@@ -104,6 +104,14 @@ ADVICE_PATTERNS: tuple[tuple[str, str], ...] = (
      "cross-user-reference"),
     (r"(다른 유저|비슷한 투자자들|네 그룹의 다른)",
      "kr-cross-user"),
+
+    # Soft advisory vocabulary — 2026-04-23 legal sweep addition. These slip
+    # past the stricter "recommend/should/must" set but are still advisory
+    # in tone when referring to a security.
+    (r"\b(promising|attractive|worth (?:a )?look|worth watching|keep an eye on)\b",
+     "soft-advisory-en"),
+    (r"(유망|가능성이 높|주목할|지켜볼|눈여겨볼)",
+     "soft-advisory-kr"),
 )
 
 

@@ -200,10 +200,25 @@ def scrub_text(text: str | None) -> str | None:
 
 
 def detect_prohibited(text: str | None) -> list[str]:
-    """Return list of prohibited pattern names found. Empty list if clean."""
+    """Return list of prohibited pattern names found. Empty list if clean.
+
+    This checks only ``_PROHIBITED_PATTERNS`` — the 6 structural violations
+    (BUY/SELL imperatives, direct advisory verbs in imperative form) that a
+    scrub cannot recover from.
+
+    **Do not expand this to include ``_REPLACEMENTS``.** Those 89 rules are
+    for silent *scrubbing* of common advisory phrasing at output assembly
+    time. They match legitimate disclaimer text like "not investment advice"
+    or "your record, your decision" — treating them as deny signals would
+    refuse every legal-safe Template (T1~T6) in ``services/agents/legal_gate``.
+
+    Gate-specific advice detection lives in
+    ``services/agents/legal_gate.py::ADVICE_PATTERNS`` (20 precision rules
+    tuned so the required disclaimer footer survives).
+    """
     if not text or not isinstance(text, str):
         return []
-    hits = []
+    hits: list[str] = []
     for pattern in _PROHIBITED_PATTERNS:
         if pattern.search(text):
             hits.append(pattern.pattern)
