@@ -214,10 +214,14 @@ export default function HomePage() {
             )}
           </div>
         </div>
+        {/* Bleed the ticker to the viewport edges. Negative margins must match
+            the <main> padding at each breakpoint (mobile: px-4 = 16px,
+            desktop md: px-10 = 40px). Previously fixed to -32/-40 which
+            produced +14px horizontal scroll on 614px viewports because the
+            -40px right margin exceeded the mobile 16px gutter. */}
         <div
+          className="-mx-4 md:-ml-8 md:-mr-10 max-w-[100vw] overflow-x-clip"
           style={{
-            marginLeft: -32,
-            marginRight: -40,
             borderTop: "0.5px solid rgba(184,149,106,0.18)",
             borderBottom: "0.5px solid rgba(184,149,106,0.18)",
           }}
