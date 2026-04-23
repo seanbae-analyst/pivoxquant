@@ -1,43 +1,61 @@
 "use client";
 
 /**
- * <LivingCFOStatusBar /> — sticky hairline bar showing the three layers of
+ * <LivingCFOStatusBar /> — sticky hairline bar showing the four layers of
  * the Living CFO product:
  *
  *   Layer 1 · Identity    → InvestmentProfile onboarding (green when set)
  *   Layer 2 · Learning    → Drift + Pulse + Feedback (yellow while training)
  *   Layer 3 · Artifacts   → Delivered PDFs / emails
+ *   Layer 4 · Companion   → Personal Journal Companion (Premium Plus)
  *
  * Click opens a modal explaining what the CFO has learned so far and what
- * it's still learning.
+ * it's still learning. Clicking a single dot scrolls the modal to the
+ * matching layer for a quick "what is this?" read.
  *
  * No data writes. Purely informational. Uses `usePersona` + `usePulse` +
  * existing `useInvestmentProfile` + `useArtifacts` to compute the three
- * readiness signals. Gracefully degrades when any of those endpoints 404.
+ * first readiness signals; the fourth (Companion) is driven by
+ * `useCompanionStatus` + entitlement.
  */
 
 import * as React from "react";
-import { X, Check, Circle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { X, Check, Circle, Loader2, Lock } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useInvestmentProfile, useArtifacts } from "@/lib/hooks";
+import { useAuth } from "@/lib/auth";
 import { usePersona, usePulse, PERSONA_LABELS } from "@/lib/cfo/hooks";
+import {
+  hasCompanionEntitlement,
+  useCompanionStatus,
+  useCompanionHistory,
+} from "@/lib/cfo/useCompanion";
 
-type Readiness = "ready" | "learning" | "missing";
+type Readiness = "ready" | "learning" | "missing" | "locked";
 
 interface LayerState {
-  id: 1 | 2 | 3;
+  id: 1 | 2 | 3 | 4;
   name: string;
   state: Readiness;
   summary: string;
+  /** Optional CTA anchor shown inside the modal row. */
+  cta?: { label: string; href: string };
 }
 
 export function LivingCFOStatusBar() {
   const [open, setOpen] = React.useState(false);
+  const [focusedLayer, setFocusedLayer] = React.useState<LayerState["id"] | null>(
+    null,
+  );
 
+  const { user } = useAuth();
   const { data: profile } = useInvestmentProfile();
   const { data: persona } = usePersona();
   const { data: pulse } = usePulse();
   const { artifacts } = useArtifacts({ type: "all", since: "all" });
+  const { data: companionStatus } = useCompanionStatus();
+  const { messages: companionMessages } = useCompanionHistory();
 
   const layer1State: Readiness = profile?.profile?.profile_type
     ? "ready"
@@ -57,6 +75,19 @@ export function LivingCFOStatusBar() {
   const layer3State: Readiness =
     artifacts.length >= 3 ? "ready" : artifacts.length >= 1 ? "learning" : "missing";
 
+  const companionEntitled = hasCompanionEntitlement(
+    user?.subscription_tier,
+    companionStatus?.entitlement_plans,
+  );
+  const companionTurns = companionMessages.filter((m) => m.role === "user").length;
+  const layer4State: Readiness = !companionEntitled
+    ? "locked"
+    : companionTurns >= 3
+      ? "ready"
+      : companionTurns >= 1
+        ? "learning"
+        : "missing";
+
   const layers: LayerState[] = [
     {
       id: 1,
@@ -66,6 +97,10 @@ export function LivingCFOStatusBar() {
         layer1State === "ready"
           ? `Declared persona · ${profile?.profile?.profile_type ?? "set"}.`
           : "20-question assessment not yet taken.",
+      cta:
+        layer1State === "ready"
+          ? undefined
+          : { label: "Take assessment", href: "/onboarding" },
     },
     {
       id: 2,
@@ -80,6 +115,25 @@ export function LivingCFOStatusBar() {
       name: "Artifacts",
       state: layer3State,
       summary: `${artifacts.length} delivered to your inbox.`,
+      cta:
+        artifacts.length === 0
+          ? { label: "Read the brief", href: "/morning-brief" }
+          : undefined,
+    },
+    {
+      id: 4,
+      name: "Companion",
+      state: layer4State,
+      summary:
+        layer4State === "locked"
+          ? "Premium Plus — Closed Beta."
+          : companionTurns === 0
+            ? "Open a reflection to begin."
+            : `${companionTurns} conversation${companionTurns === 1 ? "" : "s"} with your CFO.`,
+      cta:
+        layer4State === "locked"
+          ? { label: "Unlock", href: "/pricing?plan=plus" }
+          : { label: "Open Companion", href: "/companion" },
     },
   ];
 
@@ -101,26 +155,52 @@ export function LivingCFOStatusBar() {
         >
           Living CFO
         </span>
-        <div className="flex items-center gap-5 ml-auto">
+        <div className="flex items-center gap-3 sm:gap-5 ml-auto">
           {layers.map((l) => (
-            <LayerDot key={l.id} layer={l} />
+            <LayerDot
+              key={l.id}
+              layer={l}
+              onClick={(e) => {
+                e.stopPropagation();
+                setFocusedLayer(l.id);
+                setOpen(true);
+              }}
+            />
           ))}
         </div>
       </button>
 
       <AnimatePresence>
-        {open && <StatusModal onClose={() => setOpen(false)} layers={layers} personaLabel={personaBarLabel(persona?.declared?.persona)} />}
+        {open && (
+          <StatusModal
+            onClose={() => {
+              setOpen(false);
+              setFocusedLayer(null);
+            }}
+            layers={layers}
+            personaLabel={personaBarLabel(persona?.declared?.persona)}
+            focusedLayer={focusedLayer}
+          />
+        )}
       </AnimatePresence>
     </>
   );
 }
 
-function LayerDot({ layer }: { layer: LayerState }) {
+function LayerDot({
+  layer,
+  onClick,
+}: {
+  layer: LayerState;
+  onClick: (e: React.MouseEvent) => void;
+}) {
   const icon =
     layer.state === "ready" ? (
       <Check className="h-2.5 w-2.5" strokeWidth={3} />
     ) : layer.state === "learning" ? (
       <Loader2 className="h-2.5 w-2.5 animate-spin" />
+    ) : layer.state === "locked" ? (
+      <Lock className="h-2.5 w-2.5" />
     ) : (
       <Circle className="h-2.5 w-2.5" />
     );
@@ -130,20 +210,25 @@ function LayerDot({ layer }: { layer: LayerState }) {
       ? "#7db487"
       : layer.state === "learning"
         ? "var(--pq-bronze)"
-        : "rgba(245,240,232,0.35)";
+        : layer.state === "locked"
+          ? "var(--pq-bronze-deep, #6F5636)"
+          : "rgba(245,240,232,0.35)";
 
   return (
-    <span
-      className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.22em]"
-      style={{ color }}
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.22em] px-1 py-0.5 rounded-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
+      style={{ color, background: "transparent" }}
       title={layer.summary}
+      aria-label={`Layer ${layer.id} ${layer.name} — ${layer.state}`}
     >
       <span aria-hidden>{icon}</span>
       <span className="hidden sm:inline">
         L{layer.id} · {layer.name}
       </span>
       <span className="sm:hidden">L{layer.id}</span>
-    </span>
+    </button>
   );
 }
 
@@ -156,11 +241,15 @@ function StatusModal({
   onClose,
   layers,
   personaLabel,
+  focusedLayer,
 }: {
   onClose: () => void;
   layers: LayerState[];
   personaLabel: string | null;
+  focusedLayer: LayerState["id"] | null;
 }) {
+  const focusedRowRef = React.useRef<HTMLLIElement | null>(null);
+
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -168,6 +257,15 @@ function StatusModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  React.useEffect(() => {
+    if (focusedLayer && focusedRowRef.current) {
+      focusedRowRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [focusedLayer]);
 
   return (
     <motion.div
@@ -218,33 +316,66 @@ function StatusModal({
         </p>
 
         <ul className="mt-5 space-y-3">
-          {layers.map((l) => (
-            <li
-              key={l.id}
-              className="flex items-start gap-3 p-3 rounded-[2px] border border-[rgba(245,240,232,0.08)]"
-            >
-              <span
-                className="mt-[3px] h-2 w-2 rounded-full shrink-0"
+          {layers.map((l) => {
+            const focused = focusedLayer === l.id;
+            return (
+              <li
+                key={l.id}
+                ref={focused ? focusedRowRef : null}
+                className="flex items-start gap-3 p-3 rounded-[2px] border transition-colors"
                 style={{
-                  background:
-                    l.state === "ready"
-                      ? "#7db487"
-                      : l.state === "learning"
-                        ? "var(--pq-bronze)"
-                        : "rgba(245,240,232,0.3)",
+                  borderColor: focused
+                    ? "rgba(184,149,106,0.42)"
+                    : "rgba(245,240,232,0.08)",
+                  background: focused
+                    ? "rgba(184,149,106,0.06)"
+                    : "transparent",
                 }}
-                aria-hidden
-              />
-              <div>
-                <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-                  Layer {l.id} · {l.name}
+              >
+                <span
+                  className="mt-[3px] h-2 w-2 rounded-full shrink-0"
+                  style={{
+                    background:
+                      l.state === "ready"
+                        ? "#7db487"
+                        : l.state === "learning"
+                          ? "var(--pq-bronze)"
+                          : l.state === "locked"
+                            ? "var(--pq-bronze-deep, #6F5636)"
+                            : "rgba(245,240,232,0.3)",
+                  }}
+                  aria-hidden
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+                      Layer {l.id} · {l.name}
+                    </span>
+                    {l.state === "locked" && (
+                      <Lock
+                        className="h-3 w-3 text-[var(--pq-bronze-deep,#6F5636)]"
+                        aria-hidden
+                      />
+                    )}
+                  </div>
+                  <div className="mt-1 text-sm text-[var(--pq-ivory)]">
+                    {l.summary}
+                  </div>
+                  {l.cta && (
+                    <Link
+                      href={l.cta.href}
+                      onClick={onClose}
+                      className="mt-2 inline-flex items-center gap-1 text-[10.5px] uppercase tracking-[0.22em]"
+                      style={{ color: "var(--pq-bronze)" }}
+                    >
+                      {l.cta.label}
+                      <span aria-hidden>→</span>
+                    </Link>
+                  )}
                 </div>
-                <div className="mt-1 text-sm text-[var(--pq-ivory)]">
-                  {l.summary}
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
 
         <p className="mt-5 text-[10.5px] text-[rgba(245,240,232,0.4)]">

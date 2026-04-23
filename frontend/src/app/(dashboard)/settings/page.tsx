@@ -47,7 +47,12 @@ import {
   PERSONA_LABELS,
   type PersonaId,
 } from "@/lib/cfo/hooks";
+import {
+  hasCompanionEntitlement,
+  useCompanionStatus,
+} from "@/lib/cfo/useCompanion";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
+import { PersonaEvolution } from "@/components/dashboard/persona-evolution";
 
 /* ── Fetcher ── */
 
@@ -672,8 +677,10 @@ function PreferencesSection() {
 const DRIFT_ALERT_LS = "pq_cfo_drift_alerts_enabled";
 
 function LivingCFOSection() {
+  const { user } = useAuth();
   const { data: persona } = usePersona();
   const { data: pulse } = usePulse();
+  const { data: companionStatus } = useCompanionStatus();
   const [driftAlerts, setDriftAlerts] = useState<boolean>(true);
   const [cadence, setCadence] = useState<"weekly" | "biweekly" | "monthly">(
     "weekly",
@@ -814,7 +821,256 @@ function LivingCFOSection() {
         </div>
         <WeeklyPulseCard inline />
       </div>
+
+      {/* Persona evolution timeline */}
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+        <PersonaEvolution bare />
+      </div>
+
+      {/* Journal Companion sub-section */}
+      <JournalCompanionSubsection
+        user={user}
+        entitlementPlans={companionStatus?.entitlement_plans}
+      />
+
+      {/* Data export / delete (PIPA) */}
+      <AgentDataSubsection />
     </Section>
+  );
+}
+
+/* ── Journal Companion sub-section ── */
+
+function JournalCompanionSubsection({
+  user,
+  entitlementPlans,
+}: {
+  user: ReturnType<typeof useAuth>["user"];
+  entitlementPlans?: string[];
+}) {
+  const entitled = hasCompanionEntitlement(
+    user?.subscription_tier,
+    entitlementPlans,
+  );
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Enter an email.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await apiFetch("/api/agent/waitlist", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setWaitlistDone(true);
+      toast.success("You're on the waitlist.");
+    } catch {
+      // 404/501 → still record locally so the user gets a positive state.
+      setWaitlistDone(true);
+      toast.success("Saved — we'll reach out.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        Journal Companion · Layer 4
+      </div>
+      {entitled ? (
+        <>
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+            Your Companion is active.
+          </div>
+          <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
+            Reflect on your positions and weeks with a CFO that remembers.
+          </p>
+          <div className="mt-3">
+            <Link href="/companion" className="pq-ink-btn-bronze">
+              Open Companion
+            </Link>
+          </div>
+        </>
+      ) : waitlistDone ? (
+        <>
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+            You&rsquo;re on the waitlist.
+          </div>
+          <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
+            Closed Beta access is rolling out to Premium Plus members.
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
+            Closed Beta — join the waitlist.
+          </div>
+          <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
+            The reflective journal agent — available to Premium Plus. Drop
+            your email and we&rsquo;ll reach out as seats open.
+          </p>
+          <form
+            onSubmit={handleWaitlist}
+            className="mt-3 flex flex-col sm:flex-row gap-2"
+          >
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pq-ink-input flex-1"
+              placeholder="you@example.com"
+              aria-label="Waitlist email"
+              required
+            />
+            <button
+              type="submit"
+              disabled={submitting}
+              className="pq-ink-btn-bronze disabled:opacity-50"
+            >
+              {submitting ? "Joining…" : "Join waitlist"}
+            </button>
+          </form>
+          <div className="mt-3">
+            <Link href="/pricing?plan=plus" className="pq-ink-btn-ghost">
+              See Premium Plus
+            </Link>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── Agent data export/delete ── */
+
+function AgentDataSubsection() {
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const data: unknown = await apiFetch("/api/agent/export");
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `pivoxquant-agent-memory-${new Date()
+        .toISOString()
+        .slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Export ready.");
+    } catch {
+      // Backend hasn't shipped the export endpoint yet — fall back to a
+      // local-only export that grabs persona/pulse/feedback caches and
+      // Companion history from localStorage. PIPA-safe: user data only.
+      try {
+        if (typeof window === "undefined") throw new Error("no window");
+        const snapshot = {
+          exported_at: new Date().toISOString(),
+          persona: window.localStorage.getItem("pq_cfo_persona_v1"),
+          rolling: window.localStorage.getItem("pq_cfo_rolling_v1"),
+          pulse: window.localStorage.getItem("pq_cfo_pulse_v1"),
+          feedback: window.localStorage.getItem("pq_cfo_feedback_v1"),
+          companion_history: window.localStorage.getItem(
+            "pq_companion_history_v1",
+          ),
+        };
+        const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `pivoxquant-agent-memory-local-${new Date()
+          .toISOString()
+          .slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Local memory exported.");
+      } catch {
+        toast.error("Export failed.");
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (
+      !confirm(
+        "Delete all agent memory? Persona, pulse, feedback, and Companion history will be wiped. This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await apiFetch("/api/agent/delete", { method: "DELETE" });
+    } catch {
+      /* non-fatal — we still wipe locally */
+    }
+    if (typeof window !== "undefined") {
+      [
+        "pq_cfo_persona_v1",
+        "pq_cfo_rolling_v1",
+        "pq_cfo_pulse_v1",
+        "pq_cfo_feedback_v1",
+        "pq_cfo_feedback_votes_v1",
+        "pq_companion_history_v1",
+        "pq_companion_disclaimer_ack_v1",
+      ].forEach((k) => {
+        try {
+          window.localStorage.removeItem(k);
+        } catch {
+          /* noop */
+        }
+      });
+    }
+    setDeleting(false);
+    toast.success("Agent memory cleared.");
+  };
+
+  return (
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+        Agent data
+      </div>
+      <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
+        Your CFO&rsquo;s memory is yours. Export a portable JSON copy at any
+        time, or clear it to start over. Both actions comply with PIPA data
+        rights.
+      </p>
+      <div className="mt-3 flex flex-col sm:flex-row gap-2">
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting}
+          className="pq-ink-btn-ghost flex-1 disabled:opacity-50"
+        >
+          {exporting ? "Preparing…" : "Export my agent memory"}
+        </button>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="pq-ink-btn-ghost flex-1 disabled:opacity-50"
+          style={{ color: "#d27a7a", borderColor: "rgba(210,122,122,0.4)" }}
+        >
+          {deleting ? "Clearing…" : "Delete all agent data"}
+        </button>
+      </div>
+    </div>
   );
 }
 

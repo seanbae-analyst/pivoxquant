@@ -38,9 +38,12 @@ import { PaperDocument } from "@/components/home/paper-document";
 import { ThisMorningPaper } from "@/components/home/this-morning-paper";
 import { PositionsLedgerPaper } from "@/components/home/positions-ledger-paper";
 import { SignalPaper } from "@/components/home/signal-paper";
+import { TodayHero } from "@/components/home/today-hero";
+import { ArtifactQueue } from "@/components/home/artifact-queue";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { PersonaCard } from "@/components/dashboard/persona-card";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
+import { UpsellPlus } from "@/components/dashboard/upsell-plus";
 
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -167,15 +170,24 @@ export default function HomePage() {
 
   return (
     <ErrorBoundary>
+      {/* ═══════════ TODAY HERO — cinematic opener ═══════════ */}
+      <div
+        className="pq-dash-stage mb-5 md:mb-6"
+        style={{ ["--pq-dash-stage-delay" as string]: "0s" }}
+      >
+        <TodayHero />
+      </div>
+
       {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════ */}
       <div
-        className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10"
+        className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10 pq-dash-stage"
         style={{
           top: 0,
           background: "rgba(10,10,10,0.78)",
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",
           marginBottom: 8,
+          ["--pq-dash-stage-delay" as string]: "0.08s",
         }}
       >
         <LivingCFOStatusBar />
@@ -183,12 +195,13 @@ export default function HomePage() {
 
       {/* ═══════════ TOP STRIP — embossed seal + ticker ═══════════ */}
       <header
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-3 pq-dash-stage"
         style={{
           marginTop: "-8px",
           marginBottom: 28,
           borderBottom: "0.5px solid rgba(184,149,106,0.22)",
           paddingBottom: 14,
+          ["--pq-dash-stage-delay" as string]: "0.16s",
         }}
       >
         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -248,11 +261,18 @@ export default function HomePage() {
       </header>
 
       {/* ═══════════ PERSONA CARD — Layer 1 identity ═══════════ */}
-      <div className="mb-6 md:mb-8">
+      <div
+        className="mb-6 md:mb-8 pq-dash-stage"
+        style={{ ["--pq-dash-stage-delay" as string]: "0.24s" }}
+      >
         <PersonaCard />
       </div>
 
       {/* ═══════════ THE DESK ═══════════ */}
+      <div
+        className="pq-dash-stage"
+        style={{ ["--pq-dash-stage-delay" as string]: "0.32s" }}
+      >
       <DossierDesk>
         {/* ── Desktop: 3D stacked papers ── */}
         <div
@@ -393,10 +413,29 @@ export default function HomePage() {
           </PaperDocument>
         </div>
       </DossierDesk>
+      </div>
+
+      {/* ═══════════ TODAY'S ARTIFACT QUEUE ═══════════ */}
+      <div
+        className="mt-8 md:mt-10 pq-dash-stage"
+        style={{ ["--pq-dash-stage-delay" as string]: "0.40s" }}
+      >
+        <ArtifactQueue />
+      </div>
+
+      {/* ═══════════ PREMIUM PLUS UPSELL — conditional ═══════════ */}
+      <div
+        className="mt-6 pq-dash-stage"
+        style={{ ["--pq-dash-stage-delay" as string]: "0.48s" }}
+      >
+        <UpsellPlus />
+      </div>
 
       {/* Foot signature + legal */}
-      <FootSignature />
-      <DisclaimerBanner type="signal" />
+      <div className="mt-8">
+        <FootSignature />
+        <DisclaimerBanner type="signal" />
+      </div>
 
       {/* ═══════════ WEEKLY PULSE — auto-triggers Monday 07:00 KST ═══════════ */}
       <WeeklyPulseCard />
