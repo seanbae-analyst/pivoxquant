@@ -118,6 +118,7 @@ class MemoContext:
     earnings_calendar: list[dict[str, Any]]
     macro_checklist:   list[dict[str, Any]]
     risk_notes:        list[str]
+    risk_kpi:          dict[str, Any]
     disclaimer:        str
 
     def to_dict(self) -> dict[str, Any]:
@@ -138,6 +139,7 @@ class MemoContext:
             "earnings_calendar": self.earnings_calendar,
             "macro_checklist":   self.macro_checklist,
             "risk_notes":        self.risk_notes,
+            "risk_kpi":          self.risk_kpi,
             "disclaimer":        self.disclaimer,
         }
 
@@ -398,6 +400,225 @@ def _risk_notes(positions: list[Position],
     return [n for n in notes if is_compliant(n)]
 
 
+# ── Risk KPI helpers (Risk Dashboard — Part III) ─────────────────────────────
+
+def _position_price_history(ticker: str, period: str = "6mo"):
+    """Fetch full OHLC price history for a ticker. Returns pandas.DataFrame or None.
+
+    We re-use the project's data fetcher container so KR/US routing is free.
+    """
+    try:
+        from services.container import fetcher
+        return fetcher.get_price_history(ticker, period=period)
+    except Exception as exc:
+        logger.debug("price history (6mo) fetch failed for %s: %s", ticker, exc)
+        return None
+
+
+def _build_returns_matrix(positions: list["Position"],
+                          lookback_days: int = 90):
+    """Assemble an (n_obs, n_assets) simple-return matrix + weights.
+
+    Returns `(returns_matrix, weights, tickers, ohlc_map, portfolio_values)`
+    or `None` when any precondition fails. All inputs are numpy arrays.
+
+    - rows are aligned across tickers by trimming to the shortest common tail
+    - weights are market-value proxies (shares × avg_cost), normalised to 1
+    - `portfolio_values` is the equal-weighted cumulative equity curve used
+      for the drawdown / trough calculations
+    """
+    try:
+        import numpy as np  # type: ignore
+    except Exception:
+        return None
+
+    if not positions:
+        return None
+
+    tickers: list[str] = []
+    weights_raw: list[float] = []
+    closes_map: dict[str, list[float]] = {}
+    ohlc_map: dict[str, dict[str, list[float]]] = {}
+
+    for p in positions:
+        hist = _position_price_history(p.ticker, "6mo")
+        if hist is None:
+            continue
+        try:
+            closes = hist["Close"] if "Close" in hist else None
+            if closes is None or len(closes) < lookback_days + 1:
+                # Still accept what we have if it's at least 30 bars — short
+                # lookbacks still give a KPI snapshot, just less stable.
+                if closes is None or len(closes) < 30:
+                    continue
+            opens = hist["Open"] if "Open" in hist else None
+            highs = hist["High"] if "High" in hist else None
+            lows = hist["Low"] if "Low" in hist else None
+
+            closes_list = [float(x) for x in closes.tail(lookback_days + 1)]
+            closes_map[p.ticker] = closes_list
+            if opens is not None and highs is not None and lows is not None:
+                ohlc_map[p.ticker] = {
+                    "open":  [float(x) for x in opens.tail(lookback_days + 1)],
+                    "high":  [float(x) for x in highs.tail(lookback_days + 1)],
+                    "low":   [float(x) for x in lows.tail(lookback_days + 1)],
+                    "close": closes_list,
+                }
+            tickers.append(p.ticker)
+            weights_raw.append(float(p.shares or 0) * float(p.avg_cost or 0))
+        except Exception as exc:
+            logger.debug("price-history parse failed for %s: %s", p.ticker, exc)
+            continue
+
+    if len(tickers) < 1:
+        return None
+    total_w = sum(weights_raw)
+    if total_w <= 0:
+        return None
+
+    # Align to the shortest common tail so every column has the same length.
+    shortest = min(len(closes_map[t]) for t in tickers)
+    if shortest < 21:  # need at least 20 returns → 21 closes
+        return None
+
+    closes_matrix = np.array(
+        [closes_map[t][-shortest:] for t in tickers], dtype=np.float64
+    )  # shape: (n_assets, n_obs_closes)
+    # Simple returns, aligned across tickers
+    returns_matrix = np.diff(closes_matrix, axis=1) / closes_matrix[:, :-1]
+    returns_matrix = returns_matrix.T  # (n_obs, n_assets)
+
+    weights = np.array(weights_raw, dtype=np.float64) / total_w
+
+    # Equal-weighted equity curve using portfolio returns (for drawdown).
+    port_returns = returns_matrix @ weights
+    portfolio_values = np.cumprod(1.0 + port_returns) * 100.0  # arbitrary base
+
+    return returns_matrix, weights, tickers, ohlc_map, portfolio_values
+
+
+def _risk_kpi(positions: list["Position"]) -> dict[str, Any]:
+    """Compute Risk Dashboard KPIs using risk_models.py.
+
+    Returns a dict with as many of the following keys as we can compute:
+        var_1d_pct, es_1d_pct, mdd_pct, tail_ratio,
+        trough_week, recovered_week, as_of, method_label, n_positions,
+        window_days
+
+    Returns `{}` on insufficient data — the template hides the section.
+    Partial-success is allowed; individual template fields default safely.
+    """
+    try:
+        import numpy as np  # type: ignore
+    except Exception as exc:
+        logger.debug("numpy unavailable for risk_kpi: %s", exc)
+        return {}
+
+    built = _build_returns_matrix(positions, lookback_days=90)
+    if built is None:
+        return {}
+
+    returns_matrix, weights, tickers, ohlc_map, portfolio_values = built
+    n_obs = returns_matrix.shape[0]
+
+    kpi: dict[str, Any] = {
+        "as_of": datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
+        "method_label": "Historical simulation · 90d",
+        "n_positions": len(tickers),
+        "window_days": int(n_obs),
+    }
+
+    # 1. VaR + ES (Component ES returns both).
+    try:
+        from risk_models import ComponentES
+        es_out = ComponentES.decompose(returns_matrix, weights, alpha=0.05)
+        if es_out.get("portfolio_var") is not None:
+            kpi["var_1d_pct"] = round(float(es_out["portfolio_var"]), 2)
+        if es_out.get("portfolio_es") is not None:
+            kpi["es_1d_pct"] = round(float(es_out["portfolio_es"]), 2)
+    except Exception as exc:
+        logger.debug("ComponentES failed: %s", exc)
+
+    # 2. Max Drawdown + trough / recovery weeks.
+    try:
+        from risk_models import ConditionalDrawdown
+        dd_out = ConditionalDrawdown.calculate(portfolio_values, alpha=0.05)
+        if dd_out.get("max_dd") is not None:
+            kpi["mdd_pct"] = round(float(dd_out["max_dd"]), 2)
+
+        # Trough/recovered identification — on the equity curve we built.
+        pv = np.asarray(portfolio_values, dtype=float)
+        if pv.size >= 5:
+            peak = np.maximum.accumulate(pv)
+            dd = (pv - peak) / peak
+            trough_idx = int(np.argmin(dd))
+            # Convert index (days, newest at end) to W-X label.
+            days_from_end_trough = int((pv.size - 1) - trough_idx)
+            week_trough = max(1, (days_from_end_trough // 5) + 1)
+            kpi["trough_week"] = f"W-{week_trough}"
+
+            # "Recovered" = first bar after trough whose value ≥ peak-at-trough.
+            target = peak[trough_idx]
+            recovered_idx = None
+            for i in range(trough_idx + 1, pv.size):
+                if pv[i] >= target:
+                    recovered_idx = i
+                    break
+            if recovered_idx is not None:
+                days_from_end_rec = int((pv.size - 1) - recovered_idx)
+                week_rec = max(1, (days_from_end_rec // 5) + 1)
+                kpi["recovered_week"] = f"W-{week_rec}"
+            else:
+                # Still underwater at the end of the window.
+                kpi["recovered_week"] = "ongoing"
+    except Exception as exc:
+        logger.debug("ConditionalDrawdown failed: %s", exc)
+
+    # 3. Tail Ratio — on portfolio returns.
+    try:
+        from risk_models import TailRatio
+        port_returns = returns_matrix @ weights
+        tr_out = TailRatio.calculate(port_returns)
+        if tr_out.get("tail_ratio") is not None:
+            kpi["tail_ratio"] = round(float(tr_out["tail_ratio"]), 2)
+    except Exception as exc:
+        logger.debug("TailRatio failed: %s", exc)
+
+    # 4. GKYZ volatility — portfolio-weighted, only if every held ticker has OHLC.
+    try:
+        from risk_models import GKYZVolatility
+        gkyz_parts: list[tuple[float, float]] = []
+        for t, w in zip(tickers, weights):
+            ohlc = ohlc_map.get(t)
+            if not ohlc:
+                continue
+            if (len(ohlc["close"]) < 21 or len(ohlc["open"]) < 21
+                    or len(ohlc["high"]) < 21 or len(ohlc["low"]) < 21):
+                continue
+            r = GKYZVolatility.estimate(
+                ohlc["open"], ohlc["high"], ohlc["low"], ohlc["close"],
+                window=20,
+            )
+            vg = r.get("vol_gkyz")
+            if vg is not None:
+                gkyz_parts.append((float(w), float(vg)))
+        if gkyz_parts:
+            total_w = sum(w for w, _ in gkyz_parts)
+            if total_w > 0:
+                vol = sum(w * v for w, v in gkyz_parts) / total_w
+                kpi["gkyz_vol_pct"] = round(vol, 2)
+                kpi["method_label"] = "GKYZ · Historical simulation · 90d"
+    except Exception as exc:
+        logger.debug("GKYZVolatility failed: %s", exc)
+
+    # Require at least one real KPI — an empty kpi dict hides the section.
+    headline_fields = ("var_1d_pct", "es_1d_pct", "mdd_pct", "tail_ratio")
+    if not any(k in kpi for k in headline_fields):
+        return {}
+
+    return kpi
+
+
 # ── The service ──────────────────────────────────────────────────────────────
 
 class WeeklyMemoService:
@@ -447,6 +668,12 @@ class WeeklyMemoService:
         earnings = _next_week_earnings(positions)
         macro = _macro_checklist()
         risk = _risk_notes(positions, sector_alloc, top_down)
+        try:
+            risk_kpi = _risk_kpi(positions)
+        except Exception as exc:
+            logger.warning("risk_kpi computation failed for user %s: %s",
+                           user_id, exc)
+            risk_kpi = {}
 
         ctx = MemoContext(
             user_id=user_id,
@@ -465,6 +692,7 @@ class WeeklyMemoService:
             earnings_calendar=earnings,
             macro_checklist=macro,
             risk_notes=risk,
+            risk_kpi=risk_kpi,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
         )
         return ctx.to_dict()
@@ -505,7 +733,7 @@ class WeeklyMemoService:
             return self._fallback_html(data, email=True)
         try:
             tpl = env.get_template("weekly_memo_email.html")
-            return tpl.render(**data)
+            return tpl.render(**self._with_persona(data))
         except Exception as exc:
             logger.warning("email template render failed: %s", exc)
             return self._fallback_html(data, email=True)
@@ -517,10 +745,47 @@ class WeeklyMemoService:
             return self._fallback_html(data, email=False)
         try:
             tpl = env.get_template("weekly_memo.html")
-            return tpl.render(**data)
+            return tpl.render(**self._with_persona(data))
         except Exception as exc:
             logger.warning("pdf template render failed: %s", exc)
             return self._fallback_html(data, email=False)
+
+    def _with_persona(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Inject `persona` field into the render context.
+
+        Resolves from the user's `InvestmentProfile` when available; falls
+        back to the default persona otherwise. Never raises — rendering
+        must stay resilient to missing profile rows.
+        """
+        ctx = dict(data)
+        if "persona" in ctx:
+            # Already supplied by caller — validate and pass through.
+            from services.artifacts.persona_resolver import (
+                resolve_persona_from_code,
+            )
+            ctx["persona"] = resolve_persona_from_code(ctx.get("persona"))
+            return ctx
+        try:
+            from services.artifacts.persona_resolver import (
+                DEFAULT_PERSONA, resolve_persona,
+            )
+            user_id = ctx.get("user_id")
+            profile = None
+            if user_id is not None:
+                try:
+                    from models import InvestmentProfile
+                    profile = (
+                        InvestmentProfile.query
+                        .filter_by(user_id=user_id)
+                        .first()
+                    )
+                except Exception:
+                    profile = None
+            ctx["persona"] = resolve_persona(profile) if profile else DEFAULT_PERSONA
+        except Exception as exc:
+            logger.debug("persona resolution failed: %s", exc)
+            ctx["persona"] = "balanced"
+        return ctx
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         """HTML → PDF via WeasyPrint. None when WeasyPrint is unavailable."""
