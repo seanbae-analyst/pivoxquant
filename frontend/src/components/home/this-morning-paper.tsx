@@ -134,6 +134,7 @@ export function ThisMorningPaper({
             currency={currency}
             decimals={currency === "KRW" ? 0 : 2}
             className="pq-paper-hero-num"
+            storageKey={`home-total-nav:${currency}`}
           />
         )}
 

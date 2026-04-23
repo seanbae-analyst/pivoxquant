@@ -24,6 +24,14 @@ interface Props {
   durationMs?: number;
   /** Whether to animate. Default true. When false, final value renders instantly. */
   animate?: boolean;
+  /**
+   * Optional storage key — when set, the most recent final value is cached in
+   * sessionStorage under this key so subsequent mounts (navigating home →
+   * detail → home) animate from last-seen value rather than `$0`. Without a
+   * key, we still avoid the $0 flash by skipping the intro animation when the
+   * first-observed value is already numeric (e.g. SWR cache hit).
+   */
+  storageKey?: string;
   className?: string;
 }
 
@@ -47,19 +55,55 @@ function fmt(
   return `${sign}${prefix}${body}`;
 }
 
+/** Read the last-seen value for a storage key. Returns null on any failure. */
+function readLastSeen(key: string | undefined): number | null {
+  if (!key || typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(`pq-count-up:${key}`);
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLastSeen(key: string | undefined, value: number): void {
+  if (!key || typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(`pq-count-up:${key}`, String(value));
+  } catch {
+    // sessionStorage disabled — safe to ignore.
+  }
+}
+
 export function CountUp({
   value,
   currency = "USD",
   decimals,
   durationMs = 1500,
   animate = true,
+  storageKey,
   className,
 }: Props) {
   const dec = decimals ?? (currency === "KRW" ? 0 : 2);
-  const target =
-    typeof value === "number" && Number.isFinite(value) ? value : 0;
+  // If value is absent (undefined/null/NaN) treat as "not yet loaded" and
+  // hold previous/cached number. Only coerce to 0 when an explicit 0 arrives.
+  const hasValue = typeof value === "number" && Number.isFinite(value);
+  const target = hasValue ? (value as number) : 0;
 
-  const [current, setCurrent] = useState<number>(() => (animate ? 0 : target));
+  // Initial paint: prefer sessionStorage cache → target (if we have one) → 0.
+  // This avoids the TOTAL BOOK "$0.00 → animate" flash on every navigation
+  // when the caller hasn't yet handed us a number (SWR still loading).
+  const [current, setCurrent] = useState<number>(() => {
+    if (!animate) return target;
+    const cached = readLastSeen(storageKey);
+    if (cached != null) return cached;
+    // If the first value is already known on mount, skip intro animation —
+    // the $0 flash is the user-visible regression we're fixing.
+    if (hasValue) return target;
+    return 0;
+  });
   const frameRef = useRef<number | null>(null);
   const ranRef = useRef(false);
 
@@ -77,14 +121,25 @@ export function CountUp({
       setCurrent(target);
       return;
     }
+
+    // If we already have a cached or first-paint value that equals target,
+    // nothing to animate — mark as ran so future updates snap.
+    const cached = readLastSeen(storageKey);
+    const startValue = cached != null ? cached : hasValue ? target : 0;
+    if (startValue === target) {
+      ranRef.current = true;
+      setCurrent(target);
+      return;
+    }
     ranRef.current = true;
 
     const start = performance.now();
+    const delta = target - startValue;
     const tick = (now: number) => {
       const elapsed = now - start;
       const t = Math.min(1, elapsed / durationMs);
       const eased = easeOutExpo(t);
-      setCurrent(target * eased);
+      setCurrent(startValue + delta * eased);
       if (t < 1) {
         frameRef.current = requestAnimationFrame(tick);
       } else {
@@ -100,10 +155,12 @@ export function CountUp({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Snap to new target after the initial animation completes.
+  // Snap to new target after the initial animation completes, and persist
+  // the latest observed value so the next mount starts from a sane place.
   useEffect(() => {
-    if (ranRef.current) setCurrent(target);
-  }, [target]);
+    if (ranRef.current && hasValue) setCurrent(target);
+    if (hasValue) writeLastSeen(storageKey, target);
+  }, [target, hasValue, storageKey]);
 
   return <span className={className}>{fmt(current, currency, dec)}</span>;
 }
