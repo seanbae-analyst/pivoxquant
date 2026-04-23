@@ -18,7 +18,7 @@
         font-size: 7.2pt;
         letter-spacing: 0.36em;
         text-transform: uppercase;
-        color: #8B6F47;
+        color: #B8956A;
       }
       @top-right {
         content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  PQ-BT-01  ·  v2026.04.21";
@@ -69,7 +69,7 @@
     }
     .cv-hero span { display: block; }
     .cv-hero span + span { padding-left: 40pt; }
-    .cv-hero span + span + span { padding-left: 80pt; color: #8B6F47; }
+    .cv-hero span + span + span { padding-left: 80pt; color: #B8956A; }
     .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 28pt; table-layout: fixed; }
     .cv-kpi { display: table-cell; width: 25%; padding: 4pt 10pt; vertical-align: top; overflow: visible; }
     .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 12pt; }
@@ -108,7 +108,7 @@
     .sp-part {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin: 0 0 2pt 0;
     }
     .sp-title {
@@ -148,19 +148,19 @@
     .sp-prose > p:first-child::first-letter {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 28pt; line-height: 0.88;
-      font-weight: 500; color: #8B6F47;
+      font-weight: 500; color: #B8956A;
       float: left; padding: 2pt 6pt 0 0;
       font-style: normal;
     }
     .sp-margin-block {
-      border-left: 0.35pt solid #8B6F47;
+      border-left: 0.35pt solid #B8956A;
       padding: 2pt 0 2pt 9pt;
       margin-bottom: 12pt;
     }
     .sp-margin-term {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.4pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 2pt;
     }
     .sp-margin-value {
@@ -231,7 +231,7 @@
     .rq-quad-label {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 3pt;
     }
     .rq-quad-value {
@@ -254,7 +254,7 @@
     .rq-method-eyebrow {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.6pt; letter-spacing: 0.28em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 8pt;
     }
     .rq-method-item { margin-bottom: 9pt; }
@@ -288,11 +288,11 @@
       margin-top: 22pt;
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 8.5pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
     }
     .ed-quote-attr::before,
     .ed-quote-attr::after {
-      content: "——"; color: #8B6F47; opacity: 0.5;
+      content: "——"; color: #B8956A; opacity: 0.5;
       margin: 0 8pt; letter-spacing: 0;
     }
     .ed-col2 {
@@ -321,7 +321,7 @@
       display: table-cell; width: 18pt;
       vertical-align: top;
       font-family: "JetBrains Mono", monospace;
-      font-size: 8pt; color: #8B6F47;
+      font-size: 8pt; color: #B8956A;
       padding-top: 2pt;
     }
     .ed-limit-detail {
@@ -344,7 +344,7 @@
     .co-head {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 9pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 4pt;
     }
     .co-rule-small {
@@ -394,7 +394,7 @@
       font-size: 7pt !important;
       letter-spacing: 0.32em !important;
       text-transform: uppercase !important;
-      color: #8B6F47 !important;
+      color: #B8956A !important;
       margin: 0 0 6pt 0 !important;
     }
   </style>
@@ -553,13 +553,13 @@
       <!-- Bear 2022 vertical band -->
       <rect x="{{ '%.2f' % _band_x0 }}" y="{{ _Tp }}"
             width="{{ '%.2f' % (_band_x1 - _band_x0) }}" height="{{ _PH }}"
-            fill="#8B6F47" fill-opacity="0.09"/>
+            fill="#B8956A" fill-opacity="0.09"/>
       <line x1="{{ '%.2f' % _band_x0 }}" y1="{{ _Tp }}"
             x2="{{ '%.2f' % _band_x0 }}" y2="{{ _Tp + _PH }}"
-            stroke="#8B6F47" stroke-width="0.45" stroke-dasharray="2,2" opacity="0.6"/>
+            stroke="#B8956A" stroke-width="0.45" stroke-dasharray="2,2" opacity="0.6"/>
       <line x1="{{ '%.2f' % _band_x1 }}" y1="{{ _Tp }}"
             x2="{{ '%.2f' % _band_x1 }}" y2="{{ _Tp + _PH }}"
-            stroke="#8B6F47" stroke-width="0.45" stroke-dasharray="2,2" opacity="0.6"/>
+            stroke="#B8956A" stroke-width="0.45" stroke-dasharray="2,2" opacity="0.6"/>
 
       <!-- SPY dashed, faint -->
       <polyline points="{{ _bm_pts | join(' ') }}"
@@ -589,9 +589,9 @@
       {% set _cy = _Tp + 18 %}
       <line x1="{{ '%.2f' % _ann_x }}" y1="{{ '%.2f' % (_Tp + 4) }}"
             x2="{{ '%.2f' % (_cx - 2) }}" y2="{{ '%.2f' % _cy }}"
-            stroke="#8B6F47" stroke-width="0.5"/>
+            stroke="#B8956A" stroke-width="0.5"/>
       <text x="{{ '%.2f' % _cx }}" y="{{ '%.2f' % (_cy - 2) }}"
-            fill="#8B6F47" font-size="8.2" font-family="Source Serif 4, Georgia, serif" font-style="italic">
+            fill="#B8956A" font-size="8.2" font-family="Source Serif 4, Georgia, serif" font-style="italic">
         Bear 2022 &nbsp;·&nbsp; Strategy +4.6 &nbsp;/&nbsp; SPY −18.6
       </text>
 
@@ -744,7 +744,7 @@
           <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
             <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
             <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.95" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="2.0" fill="#8B6F47"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="2.0" fill="#B8956A"/>
           </svg>
         </td>
       </tr>
@@ -795,7 +795,7 @@
       {% for c in range(6) %}
         {% set _val = _cm[r][c] %}
         {% set _av = _val if _val >= 0 else -_val %}
-        {% if _val >= 0 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
+        {% if _val >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
         <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}"
               width="{{ _cell - 1 }}" height="{{ _cell - 1 }}"
               fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}"
@@ -849,7 +849,7 @@
           {% endfor %}
           <polyline points="{{ _rs_pts | join(' ') }}" fill="none" stroke="#0A0A0A" stroke-width="1.1" stroke-linejoin="round"/>
           {% set _rse = _rs_pts[-1].split(',') %}
-          <circle cx="{{ _rse[0] }}" cy="{{ _rse[1] }}" r="1.8" fill="#8B6F47"/>
+          <circle cx="{{ _rse[0] }}" cy="{{ _rse[1] }}" r="1.8" fill="#B8956A"/>
         </svg>
         <div class="rq-quad-foot">Twelve-month rolling Sharpe, stepped monthly over the observation window.</div>
       </div>
@@ -900,7 +900,7 @@
           {# zero tick #}
           {% set _zx = 4 + (_hist | length / 2) * _bw %}
           <line x1="{{ '%.2f' % _zx }}" y1="6" x2="{{ '%.2f' % _zx }}" y2="72"
-                stroke="#8B6F47" stroke-width="0.35" stroke-dasharray="2,2" opacity="0.5"/>
+                stroke="#B8956A" stroke-width="0.35" stroke-dasharray="2,2" opacity="0.5"/>
           <text x="4" y="78" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">-15%</text>
           <text x="176" y="78" text-anchor="end" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">+15%</text>
         </svg>
@@ -938,7 +938,7 @@
                   width="{{ '%.2f' % (_bw - 1.2) }}" height="{{ '%.2f' % _h }}"
                   fill="#0A0A0A" fill-opacity="0.18"/>
           {% endfor %}
-          <polyline points="{{ _nrm_pts | join(' ') }}" fill="none" stroke="#8B6F47" stroke-width="1.0"/>
+          <polyline points="{{ _nrm_pts | join(' ') }}" fill="none" stroke="#B8956A" stroke-width="1.0"/>
           <text x="4" y="78" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">-15%</text>
           <text x="176" y="78" text-anchor="end" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">+15%</text>
         </svg>

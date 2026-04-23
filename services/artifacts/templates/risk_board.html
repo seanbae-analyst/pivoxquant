@@ -18,7 +18,7 @@
         font-size: 7.2pt;
         letter-spacing: 0.36em;
         text-transform: uppercase;
-        color: #8B6F47;
+        color: #B8956A;
       }
       @top-right {
         content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ period_label }}";
@@ -69,7 +69,7 @@
     }
     .cv-hero span { display: block; }
     .cv-hero span + span { padding-left: 30pt; }
-    .cv-hero span + span + span { padding-left: 60pt; color: #8B6F47; }
+    .cv-hero span + span + span { padding-left: 60pt; color: #B8956A; }
     .cv-kpi4 {
       display: table; width: 100%; border-collapse: collapse; margin-top: 18pt; table-layout: fixed;
     }
@@ -100,7 +100,7 @@
     .sp-part {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin: 0 0 2pt 0;
     }
     .sp-title {
@@ -142,7 +142,7 @@
     .sp-prose > p:first-child::first-letter {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 28pt; line-height: 0.88; font-weight: 500;
-      color: #8B6F47; float: left; padding: 2pt 6pt 0 0; font-style: normal;
+      color: #B8956A; float: left; padding: 2pt 6pt 0 0; font-style: normal;
     }
 
     .sp-marg-list {
@@ -179,10 +179,10 @@
       letter-spacing: 0.02em; color: #0A0A0A;
     }
     .ld-hl-bronze .ld-tkr {
-      color: #8B6F47;
+      color: #B8956A;
     }
     .ld-total-row td {
-      border-top: 0.35pt solid #8B6F47;
+      border-top: 0.35pt solid #B8956A;
       border-bottom: none !important;
       padding-top: 10pt !important;
       font-family: "Source Serif 4", Georgia, serif;
@@ -208,7 +208,7 @@
     .rq-quad-label {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 3pt;
     }
     .rq-quad-value {
@@ -231,14 +231,14 @@
     .rq-method-eyebrow {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.6pt; letter-spacing: 0.28em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 8pt;
     }
     .rq-method-item { margin-bottom: 9pt; }
     .rq-method-item:last-child { margin-bottom: 0; }
     .rq-method-num {
       font-family: "JetBrains Mono", monospace;
-      font-size: 7.6pt; color: #8B6F47; font-weight: 600;
+      font-size: 7.6pt; color: #B8956A; font-weight: 600;
       letter-spacing: 0.04em; margin-right: 4pt;
     }
     .rq-method-def {
@@ -264,10 +264,10 @@
       margin-top: 26pt;
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 8.5pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
     }
     .ed-quote-attr::before, .ed-quote-attr::after {
-      content: "——"; color: #8B6F47; opacity: 0.5;
+      content: "——"; color: #B8956A; opacity: 0.5;
       margin: 0 8pt; letter-spacing: 0;
     }
 
@@ -293,7 +293,7 @@
     }
     .ed-notans-num {
       font-family: "JetBrains Mono", monospace;
-      font-size: 8pt; color: #8B6F47;
+      font-size: 8pt; color: #B8956A;
       font-weight: 600; letter-spacing: 0.04em;
       margin-right: 10pt;
     }
@@ -304,7 +304,7 @@
     .co-head {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 9pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 4pt;
     }
     .co-rule-small {
@@ -351,7 +351,7 @@
       font-size: 7pt !important;
       letter-spacing: 0.32em !important;
       text-transform: uppercase !important;
-      color: #8B6F47 !important;
+      color: #B8956A !important;
       margin: 0 0 6pt 0 !important;
     }
   </style>
@@ -496,7 +496,7 @@
                   fill="#c9c4b8">—</text>
           {% else %}
             {% set _av = _val if _val >= 0 else -_val %}
-            {% if _val >= 0 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
+            {% if _val >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
             <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}"
                   width="{{ _cell - 1 }}" height="{{ _cell - 1 }}"
                   fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}"
@@ -516,7 +516,7 @@
         {% for i in range(40) %}
           {% set _frac = i / 39.0 %}
           {% set _shade = 1 - (2 * _frac - 1) if _frac < 0.5 else (2 * _frac - 1) %}
-          {% set _c = '#A84C4C' if _frac < 0.5 else '#8B6F47' %}
+          {% set _c = '#A84C4C' if _frac < 0.5 else '#B8956A' %}
           <rect x="{{ 14 + i * 3 }}" y="-6" width="3" height="6"
                 fill="{{ _c }}" fill-opacity="{{ '%.2f' % _shade }}"/>
         {% endfor %}
@@ -617,7 +617,7 @@
                   stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
             <polyline points="{{ _sp | join(' ') }}"
                       stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
           </svg>
         </td>
       </tr>
@@ -681,7 +681,7 @@
             <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
             {% for i in range(_bins | length) %}
               {% set _h = (_cnts[i] / _cmax) * 30 %}
-              {% if _bins[i] < 0 %}{% set _c = '#A84C4C' %}{% set _op = 0.55 %}{% else %}{% set _c = '#8B6F47' %}{% set _op = 0.75 %}{% endif %}
+              {% if _bins[i] < 0 %}{% set _c = '#A84C4C' %}{% set _op = 0.55 %}{% else %}{% set _c = '#B8956A' %}{% set _op = 0.75 %}{% endif %}
               {% set _bw = 180 / (_bins | length) - 1 %}
               <rect x="{{ i * (180 / (_bins | length)) + 0.5 }}" y="{{ 42 - _h }}"
                     width="{{ _bw }}" height="{{ _h }}"
@@ -718,9 +718,9 @@
                      fill="#A84C4C" fill-opacity="0.14"/>
             <polyline points="{{ _pts | join(' ') }}"
                       fill="none" stroke="#A84C4C" stroke-width="0.9"/>
-            <circle cx="{{ '%.2f' % _tx }}" cy="{{ 6 + 30 }}" r="2.0" fill="#8B6F47"/>
+            <circle cx="{{ '%.2f' % _tx }}" cy="{{ 6 + 30 }}" r="2.0" fill="#B8956A"/>
             <text x="{{ '%.2f' % _tx }}" y="{{ 6 + 44 }}" text-anchor="middle"
-                  fill="#8B6F47" font-size="6.0" font-family="JetBrains Mono, monospace">trough</text>
+                  fill="#B8956A" font-size="6.0" font-family="JetBrains Mono, monospace">trough</text>
           </svg>
           <div class="rq-quad-foot">Peak-to-trough on daily marks, 90 sessions.</div>
         </div>
@@ -786,7 +786,7 @@
                 <rect x="{{ _gx + c * (_cw + 0.6) }}"
                       y="{{ _gy + r * (_ch + 0.4) }}"
                       width="{{ _cw }}" height="{{ _ch }}"
-                      fill="#8B6F47" fill-opacity="{{ '%.2f' % _op }}"
+                      fill="#B8956A" fill-opacity="{{ '%.2f' % _op }}"
                       stroke="#ffffff" stroke-width="0.25"/>
               {% endfor %}
             {% endfor %}
@@ -918,7 +918,7 @@
     ]) %}
     {% for d in _ds %}
       <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-        <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #8B6F47; margin-right: 6pt;">{{ d.key }}</span>
+        <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key }}</span>
         <span>{{ d.value }}</span>
       </p>
     {% endfor %}

@@ -18,7 +18,7 @@
         font-size: 7.2pt;
         letter-spacing: 0.36em;
         text-transform: uppercase;
-        color: #8B6F47;
+        color: #B8956A;
       }
       @top-right {
         content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  W{{ week_number }} / {{ year | default('2026') }}";
@@ -109,7 +109,7 @@
     }
     .cv-hero span + span + span {
       padding-left: 0 !important;
-      color: #8B6F47;
+      color: #B8956A;
       font-style: italic;
     }
     .cv-kpi4 {
@@ -178,7 +178,7 @@
       font-size: 7.6pt;
       letter-spacing: 0.32em;
       text-transform: uppercase;
-      color: #8B6F47;
+      color: #B8956A;
       font-weight: 600;
     }
     .pg-runhead .pg-rh-right {
@@ -193,7 +193,7 @@
       font-size: 6.8pt;
       letter-spacing: 0.32em;
       text-transform: uppercase;
-      color: #8B6F47;
+      color: #B8956A;
       font-weight: 600;
       margin: 0 0 2pt 0;
     }
@@ -260,7 +260,7 @@
       font-size: 28pt;
       line-height: 0.88;
       font-weight: 500;
-      color: #8B6F47;
+      color: #B8956A;
       float: left;
       padding: 2pt 6pt 0 0;
       font-style: normal;
@@ -268,7 +268,7 @@
 
     /* Marginalia sidebar */
     .sp-margin-block {
-      border-left: 0.35pt solid #8B6F47;
+      border-left: 0.35pt solid #B8956A;
       padding: 2pt 0 2pt 9pt;
       margin-bottom: 12pt;
     }
@@ -277,7 +277,7 @@
       font-size: 6.4pt;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: #8B6F47;
+      color: #B8956A;
       font-weight: 600;
       margin-bottom: 2pt;
     }
@@ -386,7 +386,7 @@
       font-size: 6.8pt;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: #8B6F47;
+      color: #B8956A;
       font-weight: 600;
       margin-bottom: 3pt;
     }
@@ -417,7 +417,7 @@
       font-size: 6.6pt;
       letter-spacing: 0.28em;
       text-transform: uppercase;
-      color: #8B6F47;
+      color: #B8956A;
       font-weight: 600;
       margin-bottom: 8pt;
     }
@@ -466,12 +466,12 @@
       font-size: 8.5pt;
       letter-spacing: 0.32em;
       text-transform: uppercase;
-      color: #8B6F47;
+      color: #B8956A;
     }
     .ed-quote-attr::before,
     .ed-quote-attr::after {
       content: "——";
-      color: #8B6F47;
+      color: #B8956A;
       opacity: 0.5;
       margin: 0 8pt;
       letter-spacing: 0;
@@ -510,7 +510,7 @@
       font-size: 7.2pt;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: #8B6F47;
+      color: #B8956A;
       font-weight: 600;
       padding-top: 2pt;
     }
@@ -533,7 +533,7 @@
       font-size: 9pt;
       letter-spacing: 0.42em;
       text-transform: uppercase;
-      color: #8B6F47;
+      color: #B8956A;
       font-weight: 600;
       margin-bottom: 4pt;
     }
@@ -604,7 +604,7 @@
       font-size: 7pt !important;
       letter-spacing: 0.32em !important;
       text-transform: uppercase !important;
-      color: #8B6F47 !important;
+      color: #B8956A !important;
       margin: 0 0 6pt 0 !important;
     }
   </style>
@@ -771,7 +771,7 @@
 
       <!-- zero baseline (dashed, subtle) -->
       <line x1="{{ _Lp }}" y1="{{ _zero_y }}" x2="{{ _W - _Rp }}" y2="{{ _zero_y }}"
-            stroke="#8B6F47" stroke-width="0.5" stroke-dasharray="3,2" opacity="0.5"/>
+            stroke="#B8956A" stroke-width="0.5" stroke-dasharray="3,2" opacity="0.5"/>
 
       <!-- benchmark shaded band (min→max between benchmark and zero) -->
       <polygon points="{{ _bm_pts | join(' ') }} {{ _W - _Rp }},{{ _zero_y }} {{ _Lp }},{{ _zero_y }}"
@@ -779,7 +779,7 @@
 
       <!-- portfolio area under curve -->
       <polygon points="{{ _eq_pts | join(' ') }} {{ _W - _Rp }},{{ _zero_y }} {{ _Lp }},{{ _zero_y }}"
-               fill="#8B6F47" fill-opacity="0.11"/>
+               fill="#B8956A" fill-opacity="0.11"/>
 
       <!-- benchmark line (dashed light) -->
       <polyline points="{{ _bm_pts | join(' ') }}"
@@ -799,15 +799,15 @@
       <circle cx="{{ _blast[0] }}" cy="{{ _blast[1] }}" r="1.6" fill="#8a8a8a"/>
 
       <!-- anomaly highlight with callout -->
-      <circle cx="{{ '%.2f' % _aix }}" cy="{{ '%.2f' % _aiy }}" r="3" fill="#8B6F47"/>
-      <circle cx="{{ '%.2f' % _aix }}" cy="{{ '%.2f' % _aiy }}" r="6" fill="none" stroke="#8B6F47" stroke-width="0.4" opacity="0.45"/>
+      <circle cx="{{ '%.2f' % _aix }}" cy="{{ '%.2f' % _aiy }}" r="3" fill="#B8956A"/>
+      <circle cx="{{ '%.2f' % _aix }}" cy="{{ '%.2f' % _aiy }}" r="6" fill="none" stroke="#B8956A" stroke-width="0.4" opacity="0.45"/>
       {% set _cx = _aix + 40 %}
       {% set _cy = _aiy - 30 %}
       <line x1="{{ '%.2f' % _aix }}" y1="{{ '%.2f' % _aiy }}"
             x2="{{ '%.2f' % _cx }}" y2="{{ '%.2f' % _cy }}"
-            stroke="#8B6F47" stroke-width="0.5"/>
+            stroke="#B8956A" stroke-width="0.5"/>
       <text x="{{ '%.2f' % (_cx + 3) }}" y="{{ '%.2f' % (_cy - 2) }}"
-            fill="#8B6F47" font-size="8.5" font-family="Source Serif 4, Georgia, serif" font-style="italic">
+            fill="#B8956A" font-size="8.5" font-family="Source Serif 4, Georgia, serif" font-style="italic">
         {{ _anno.delta_text }} · {{ _anno.day_label }}
       </text>
 
@@ -947,7 +947,7 @@
           <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
             <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
             <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
           </svg>
         </td>
         <td class="num {% if _r >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.2f'|format(_r) }}%</td>
@@ -995,7 +995,7 @@
       {% for c in range(5) %}
         {% set _val = _cm[r][c] %}
         {% set _av = _val if _val >= 0 else -_val %}
-        {% if _val >= 0 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#7f1d1d' %}{% endif %}
+        {% if _val >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#7f1d1d' %}{% endif %}
         <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}" width="{{ _cell - 1 }}" height="{{ _cell - 1 }}" fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}" stroke="#ffffff" stroke-width="0.5"/>
         <text x="{{ _hl + c * _cell + _cell/2 }}" y="{{ _hl + r * _cell + _cell/2 + 2.5 }}" text-anchor="middle" font-size="7.8" font-family="JetBrains Mono, monospace" fill="{{ '#0A0A0A' if _av < 0.5 else '#F5F0E8' }}">{{ '%.2f'|format(_val) }}</text>
       {% endfor %}
@@ -1039,7 +1039,7 @@
         <!-- compact bar visualization of VaR vs realised max loss -->
         <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
           <line x1="0" y1="28" x2="180" y2="28" stroke="#c9c4b8" stroke-width="0.3"/>
-          <rect x="0" y="14" width="120" height="14" fill="#8B6F47" fill-opacity="0.3"/>
+          <rect x="0" y="14" width="120" height="14" fill="#B8956A" fill-opacity="0.3"/>
           <rect x="0" y="14" width="85" height="14" fill="#7f1d1d" fill-opacity="0.55"/>
           <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">REALISED vs LIMIT</text>
           <text x="180" y="8" text-anchor="end" fill="#6B6B6B" font-size="6.5" font-family="JetBrains Mono, monospace">70% of cap</text>
@@ -1081,7 +1081,7 @@
         <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
           <line x1="90" y1="6" x2="90" y2="34" stroke="#c9c4b8" stroke-width="0.3"/>
           <rect x="12" y="14" width="78" height="14" fill="#7f1d1d" fill-opacity="0.48"/>
-          <rect x="90" y="14" width="84" height="14" fill="#8B6F47" fill-opacity="0.55"/>
+          <rect x="90" y="14" width="84" height="14" fill="#B8956A" fill-opacity="0.55"/>
           <text x="12" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">P5</text>
           <text x="174" y="8" text-anchor="end" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">P95</text>
         </svg>

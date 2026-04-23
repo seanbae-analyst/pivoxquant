@@ -24,7 +24,7 @@
     brand_kind    'wordmark' | 'monogram' | 'submark'
     brand_size    int (pt)   — wordmark: total width; mono/sub: side length
     brand_color   hex        — primary ink (default '#0A0A0A')
-    brand_accent  hex        — Bronze accent (default '#8B6F47')
+    brand_accent  hex        — Bronze accent (default '#B8956A')
 
   Usage:
     {% include '_brand_mark.html' %}
@@ -36,7 +36,7 @@
 {% set _kind   = brand_kind   | default('wordmark') %}
 {% set _size   = brand_size   | default(0) %}
 {% set _color  = brand_color  | default('#0A0A0A') %}
-{% set _accent = brand_accent | default('#8B6F47') %}
+{% set _accent = brand_accent | default('#B8956A') %}
 
 {# ══════════════════════════ WORDMARK ════════════════════════════════════
    Landing-parity wordmark. Matches the top-left logo in landing-page.tsx:
