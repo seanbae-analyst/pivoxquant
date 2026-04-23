@@ -160,18 +160,23 @@ export default function PortfolioPage() {
   }, [sumData, positions]);
 
   // Sector allocation — computed inline.
+  // KRW positions are converted to USD via fxRate so that mixed-currency
+  // books don't sum raw won values into the dollar bucket (previously a
+  // ₩1,389,100 KRW position rendered as $1,389,100 in the sector chart).
   const sectorAlloc = useMemo(() => {
     const byS: Record<string, number> = {};
     let total = 0;
+    const fx = totals.fxRate && totals.fxRate > 0 ? totals.fxRate : FX_FALLBACK;
     for (const p of positions) {
-      const mv = p.shares * p.current;
-      byS[p.sector] = (byS[p.sector] ?? 0) + mv;
-      total += mv;
+      const rawMv = p.shares * p.current;
+      const mvUsd = p.currency === "KRW" ? rawMv / fx : rawMv;
+      byS[p.sector] = (byS[p.sector] ?? 0) + mvUsd;
+      total += mvUsd;
     }
     return Object.entries(byS)
       .map(([sector, mv]) => ({ sector, mv, pct: total > 0 ? (mv / total) * 100 : 0 }))
       .sort((a, b) => b.mv - a.mv);
-  }, [positions]);
+  }, [positions, totals.fxRate]);
 
   function openAction(action: TradeAction, position: Position) {
     setTargetPosition(position);

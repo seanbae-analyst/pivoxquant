@@ -290,17 +290,19 @@ export function LedgerBookPaper({
             <table
               style={{
                 width: "100%",
-                minWidth: 720,
+                minWidth: 780,
                 borderCollapse: "collapse",
               }}
             >
               <colgroup>
-                <col style={{ width: "26%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "9%" }} />
+                {/* Widened market-value + unrealized cols so 7-digit KRW
+                    values (₩1,389,100 etc.) don't truncate to "₩1,". */}
+                <col style={{ width: "22%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "11%" }} />
                 <col style={{ width: "12%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "13%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "14%" }} />
                 <col style={{ width: "13%" }} />
                 <col style={{ width: "6%" }} />
               </colgroup>

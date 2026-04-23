@@ -98,8 +98,12 @@ export default function DiscoverPage() {
   const liveFailed = Boolean(error) && !hasLive;
 
   const overviewItems = useMemo(() => {
+    // Never fall back to MOCK_INDICES (2024 hardcoded values) — displaying
+    // stale 2024 prices as if they were live misleads users and creates a
+    // capital-markets-law misrepresentation risk. Return empty so the UI
+    // renders a "data unavailable" editorial state instead of fake numbers.
     if (!overviewLive || overviewLive.length === 0) {
-      return MOCK_INDICES.map((m) => ({ ...m, observed_at: undefined as string | undefined, is_stale: false }));
+      return [] as Array<{ name: string; level: string; changePct: number; observed_at: string | undefined; is_stale: boolean }>;
     }
     return overviewLive.map((o) => ({
       name: o.name,

@@ -283,8 +283,15 @@ class AIService:
                     + _DISCLAIMER_KR
                 )
         except Exception as e:
-            logger.error(f"Chat stream error: {e}")
-            yield f"죄송합니다. AI 응답 중 오류가 발생했습니다: {str(e)}"
+            # Never leak raw exception text (Anthropic SDK errors embed
+            # request_id / credit balance / internal error codes that
+            # must not surface to end-users). Log full detail, yield a
+            # fixed generic message.
+            logger.error(f"Chat stream error: {e}", exc_info=True)
+            yield (
+                "AI 서비스에 일시적인 문제가 발생했습니다. "
+                "잠시 후 다시 시도해주세요."
+            )
 
     # ── One-shot Generations ─────────────────────────────────────
 
