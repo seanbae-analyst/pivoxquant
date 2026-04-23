@@ -151,8 +151,13 @@ export function MarketTicker() {
         </span>
       </div>
 
-      {/* Marquee track — duplicated content for seamless wrap */}
-      <div className="pq-marquee-track flex h-full w-max items-center pl-40">
+      {/* Marquee track — duplicated content for seamless wrap.
+          `pl-56` (224px) matches the kicker width ("● As observed" ≈ 150px +
+          gradient mask fade + breathing room). Previous `pl-40` (160px) was
+          too narrow on wider kicker rendering and clipped the first SPY
+          entry into "AS OBSERVE+0.12%". `shrink-0` on each Row prevents
+          flex-container width calculations from shrinking the symbol pills. */}
+      <div className="pq-marquee-track flex h-full w-max items-center pl-56">
         <Row ticks={SNAPSHOT} />
         <Row ticks={SNAPSHOT} ariaHidden />
       </div>
