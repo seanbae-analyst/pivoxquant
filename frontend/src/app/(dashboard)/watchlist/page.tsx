@@ -140,7 +140,7 @@ export default function WatchlistPage() {
         <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="pq-ink-h1">Watchlist</h1>
-            <p className="mt-2 font-serif italic text-[15px] text-[var(--pq-ivory)]">
+            <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)]">
               Symbols you are observing.
             </p>
             <Caption className="mt-1">

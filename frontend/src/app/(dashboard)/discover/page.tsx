@@ -194,7 +194,7 @@ export default function DiscoverPage() {
       <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="pq-ink-h1">Discover</h1>
-            <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
+            <p className="mt-2 font-serif text-sm text-[rgba(245,240,232,0.55)]">
               Market observation across US and Korean markets — informational only.
             </p>
           </div>

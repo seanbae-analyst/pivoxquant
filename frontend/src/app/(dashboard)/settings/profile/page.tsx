@@ -206,7 +206,7 @@ export default function ProfilePage() {
             <ArrowLeft className="h-3 w-3" />
             Back to settings
           </Link>
-          <h1 className="mt-3 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
+          <h1 className="mt-3 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
             My Profile
           </h1>
           <p className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">

@@ -53,7 +53,6 @@ export function SignalPaper({ positions }: Props) {
         <p
           className="pq-paper-body"
           style={{
-            fontStyle: "italic",
             color: "rgba(20,20,20,0.55)",
             fontSize: 14,
           }}
@@ -110,7 +109,6 @@ export function SignalPaper({ positions }: Props) {
         <div
           style={{
             fontFamily: "var(--font-serif), Georgia, serif",
-            fontStyle: "italic",
             fontSize: "clamp(1.5rem, 3vw, 2.25rem)",
             lineHeight: 1.1,
             color: "#1a1a1a",
@@ -184,7 +182,6 @@ export function SignalPaper({ positions }: Props) {
         <span
           style={{
             fontFamily: "var(--font-serif), Georgia, serif",
-            fontStyle: "italic",
             fontSize: 11.5,
             color: "rgba(20,20,20,0.45)",
           }}

@@ -269,7 +269,6 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
         <h2
           style={{
             fontFamily: "var(--font-serif), Georgia, serif",
-            fontStyle: "italic",
             fontWeight: 400,
             fontSize: "clamp(1.4rem, 2.4vw, 1.9rem)",
             letterSpacing: "-0.01em",
@@ -282,7 +281,6 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
         <div
           style={{
             fontFamily: "var(--font-serif), Georgia, serif",
-            fontStyle: "italic",
             fontSize: 12,
             color: "rgba(20,20,20,0.55)",
           }}

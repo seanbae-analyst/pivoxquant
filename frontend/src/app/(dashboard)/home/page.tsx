@@ -313,7 +313,6 @@ export default function HomePage() {
             style={{
               textAlign: "center",
               fontFamily: "var(--font-serif), Georgia, serif",
-              fontStyle: "italic",
               fontSize: 11.5,
               color: "rgba(245,240,232,0.4)",
               letterSpacing: "0.02em",

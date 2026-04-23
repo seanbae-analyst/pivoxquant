@@ -102,7 +102,6 @@ export function ClipboardPaper({
             style={{
               fontFamily:
                 "var(--font-serif), 'Source Serif 4', Georgia, serif",
-              fontStyle: "italic",
               fontSize: "clamp(1.35rem, 2.2vw, 1.7rem)",
               lineHeight: 1.05,
               letterSpacing: "-0.02em",
@@ -115,7 +114,6 @@ export function ClipboardPaper({
           <div
             style={{
               fontFamily: "var(--font-serif), Georgia, serif",
-              fontStyle: "italic",
               fontSize: 11.5,
               color: "rgba(20,20,20,0.48)",
               marginTop: 2,
@@ -141,7 +139,6 @@ export function ClipboardPaper({
             style={{
               fontFamily:
                 "var(--font-serif), 'Source Serif 4', Georgia, serif",
-              fontStyle: "italic",
               fontSize: 22,
               fontVariantNumeric: "tabular-nums",
               color: "#141414",
@@ -174,7 +171,6 @@ export function ClipboardPaper({
             padding: "40px 0",
             textAlign: "center",
             fontFamily: "var(--font-serif), Georgia, serif",
-            fontStyle: "italic",
             fontSize: 13,
             color: "rgba(20,20,20,0.42)",
             borderTop: "0.5px solid rgba(184,149,106,0.22)",

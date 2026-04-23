@@ -220,7 +220,6 @@ export function LedgerBookPaper({
               className={s.tone ?? ""}
               style={{
                 fontFamily: "var(--font-serif), Georgia, serif",
-                fontStyle: "italic",
                 fontSize: "clamp(1.6rem, 3vw, 2rem)",
                 lineHeight: 1.05,
                 letterSpacing: "-0.02em",
@@ -274,7 +273,6 @@ export function LedgerBookPaper({
           <p
             className="pq-paper-body"
             style={{
-              fontStyle: "italic",
               color: "rgba(20,20,20,0.55)",
               fontSize: 13.5,
               padding: "32px 0",

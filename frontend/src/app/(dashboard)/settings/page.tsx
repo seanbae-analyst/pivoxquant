@@ -731,7 +731,7 @@ export default function SettingsPage() {
           <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Account · Preferences
           </div>
-          <h1 className="mt-2 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
+          <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
             Settings
           </h1>
         </header>

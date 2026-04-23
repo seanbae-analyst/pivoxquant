@@ -251,7 +251,7 @@ function AutoTradeContent() {
         <div>
           <div className="pq-ink-kicker">AUTOMATION · 2026 · {weekTag().split("·")[1]?.trim() ?? ""}</div>
           <h1 className="pq-ink-h1 mt-2">Autotrade</h1>
-          <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
+          <p className="mt-2 font-serif text-sm text-[rgba(245,240,232,0.55)]">
             Algorithmic paper execution against observed thresholds. No live brokerage routing.
           </p>
         </div>

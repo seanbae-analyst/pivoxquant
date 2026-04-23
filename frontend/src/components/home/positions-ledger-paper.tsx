@@ -70,7 +70,6 @@ export function PositionsLedgerPaper({ positions, limit = 12 }: Props) {
         <p
           className="pq-paper-body"
           style={{
-            fontStyle: "italic",
             color: "rgba(20,20,20,0.55)",
             fontSize: 13.5,
           }}
@@ -223,7 +222,6 @@ export function PositionsLedgerPaper({ positions, limit = 12 }: Props) {
           style={{
             marginTop: 8,
             fontFamily: "var(--font-serif), Georgia, serif",
-            fontStyle: "italic",
             fontSize: 11.5,
             color: "rgba(20,20,20,0.48)",
             letterSpacing: "0.01em",

@@ -115,8 +115,7 @@ export function SignalMemoStrip({
                   fontSize: 14,
                   color: "#1a1a1a",
                   letterSpacing: "-0.01em",
-                  fontStyle: "italic",
-                }}
+                  }}
                 className="truncate"
               >
                 {item.name || item.ticker}
@@ -199,7 +198,6 @@ export function SignalMemoStrip({
               style={{
                 fontFamily:
                   "var(--font-serif), 'Source Serif 4', Georgia, serif",
-                fontStyle: "italic",
                 fontSize: 18,
                 fontVariantNumeric: "tabular-nums",
                 color: "#141414",
@@ -353,7 +351,6 @@ export function SignalMemoStrip({
             <span
               style={{
                 fontFamily: "var(--font-serif), Georgia, serif",
-                fontStyle: "italic",
                 fontSize: 11,
                 color: "rgba(20,20,20,0.5)",
               }}

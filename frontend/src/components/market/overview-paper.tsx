@@ -153,7 +153,7 @@ export function OverviewPaper({
     return (
       <div style={{ padding: "clamp(24px, 3vw, 40px)", minHeight: 320 }}>
         <div className="pq-paper-kicker">Morning Papers</div>
-        <p className="pq-paper-body" style={{ marginTop: 16, fontStyle: "italic" }}>
+        <p className="pq-paper-body" style={{ marginTop: 16, }}>
           No observation available for this region.
         </p>
       </div>
@@ -192,7 +192,6 @@ export function OverviewPaper({
           <div
             style={{
               fontFamily: "var(--font-serif), Georgia, serif",
-              fontStyle: "italic",
               fontSize: 13,
               color: "rgba(20,20,20,0.55)",
               marginTop: 3,
@@ -243,7 +242,6 @@ export function OverviewPaper({
           <h2
             style={{
               fontFamily: "var(--font-serif), Georgia, serif",
-              fontStyle: "italic",
               fontWeight: 400,
               fontSize: "clamp(1.75rem, 3.2vw, 2.6rem)",
               lineHeight: 1.08,
@@ -272,8 +270,7 @@ export function OverviewPaper({
             className="pq-paper-hero-num"
             style={{
               fontSize: "clamp(2.4rem, 5.2vw, 3.6rem)",
-              fontStyle: "italic",
-            }}
+              }}
           >
             {fmtLevel(hero.level, hero.format)}
             {hero.unit ? (

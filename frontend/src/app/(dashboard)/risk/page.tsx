@@ -271,7 +271,7 @@ export default function RiskPage() {
       {/* Title */}
       <div className="mb-8">
         <h1 className="pq-ink-h1">Risk Observation Board</h1>
-        <p className="mt-2 font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
+        <p className="mt-2 font-serif text-sm text-[rgba(245,240,232,0.55)]">
           Portfolio risk indicators — observational, informational only.
         </p>
       </div>
@@ -487,23 +487,23 @@ export default function RiskPage() {
         <ul className="space-y-2 border-t border-[rgba(245,240,232,0.12)] pt-4 text-[12px] text-[rgba(245,240,232,0.7)]">
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">01</span>
-            <span><em className="font-serif not-italic text-[var(--pq-ivory)]">VaR (1-day, 95%)</em> — historical percentile on the 90-day return window, weighted by position size.</span>
+            <span><em className="font-serif not- text-[var(--pq-ivory)]">VaR (1-day, 95%)</em> — historical percentile on the 90-day return window, weighted by position size.</span>
           </li>
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">02</span>
-            <span><em className="font-serif not-italic text-[var(--pq-ivory)]">Expected Shortfall</em> — mean of returns below the VaR cutoff (5% left tail).</span>
+            <span><em className="font-serif not- text-[var(--pq-ivory)]">Expected Shortfall</em> — mean of returns below the VaR cutoff (5% left tail).</span>
           </li>
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">03</span>
-            <span><em className="font-serif not-italic text-[var(--pq-ivory)]">Max Drawdown (90D)</em> — peak-to-trough of the portfolio equity curve over the trailing window.</span>
+            <span><em className="font-serif not- text-[var(--pq-ivory)]">Max Drawdown (90D)</em> — peak-to-trough of the portfolio equity curve over the trailing window.</span>
           </li>
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">04</span>
-            <span><em className="font-serif not-italic text-[var(--pq-ivory)]">Correlation Index</em> — average pairwise correlation across holdings on the last 20 sessions.</span>
+            <span><em className="font-serif not- text-[var(--pq-ivory)]">Correlation Index</em> — average pairwise correlation across holdings on the last 20 sessions.</span>
           </li>
           <li className="flex gap-3">
             <span className="font-mono text-[var(--pq-bronze)]">05</span>
-            <span><em className="font-serif not-italic text-[var(--pq-ivory)]">Seven-Layer Ladder</em> — soft-limit observations across VaR, correlation, VIX, tail, daily loss, concentration, and cash buffer.</span>
+            <span><em className="font-serif not- text-[var(--pq-ivory)]">Seven-Layer Ladder</em> — soft-limit observations across VaR, correlation, VIX, tail, daily loss, concentration, and cash buffer.</span>
           </li>
         </ul>
       </section>
