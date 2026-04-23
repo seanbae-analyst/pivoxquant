@@ -1943,3 +1943,292 @@ i.italic,
   color: rgba(245, 240, 232, 0.5);
   letter-spacing: -0.005em;
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   DOSSIER DESK — /home editorial redesign (2026-04-23)
+   Vantablack surface + three stacked ivory paper documents.
+   All tokens are additive; existing .pq-* tokens untouched.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Desk base — receives the 3D perspective + spotlight/vignette layers */
+.pq-dossier-desk {
+  position: relative;
+  isolation: isolate;
+  background-color: #050505;
+  /* Bleed past dashboard content padding so the desk reaches the viewport edges */
+  margin-left: -32px;
+  margin-right: -40px;
+  padding: 16px 40px 24px 32px;
+  perspective: 1600px;
+  perspective-origin: 50% 22%;
+  overflow: hidden;
+}
+
+/* Ivory spotlight — faint pool of light across the upper centre */
+.pq-dossier-spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse 78% 55% at 50% -5%,
+    rgba(245, 240, 232, 0.06),
+    rgba(245, 240, 232, 0.02) 35%,
+    transparent 60%
+  );
+}
+
+/* Four-corner vignette so the desk reads lit-from-centre */
+.pq-dossier-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 0% 100%, rgba(0, 0, 0, 0.55), transparent 55%),
+    radial-gradient(circle at 100% 100%, rgba(0, 0, 0, 0.55), transparent 55%),
+    radial-gradient(circle at 0% 0%, rgba(0, 0, 0, 0.35), transparent 55%),
+    radial-gradient(circle at 100% 0%, rgba(0, 0, 0, 0.35), transparent 55%);
+}
+
+/* Tilt frame — receives the pointer-driven micro-rotation via CSS vars */
+.pq-dossier-tilt {
+  position: relative;
+  z-index: 1;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--pq-tilt-x, 0deg)) rotateY(var(--pq-tilt-y, 0deg));
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* Reduced motion + mobile — freeze the tilt frame flat */
+@media (prefers-reduced-motion: reduce) {
+  .pq-dossier-tilt {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+@media (max-width: 767px) {
+  .pq-dossier-desk {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding: 8px 16px 16px 16px;
+    perspective: none;
+  }
+  .pq-dossier-tilt {
+    transform: none !important;
+  }
+}
+
+/* PivoxQuant wordmark seal — embossed bronze on the top strip */
+.pq-emboss-seal {
+  display: inline-block;
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+  color: var(--pq-bronze, #8B6F47);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05),
+    0 -1px 0 rgba(0, 0, 0, 0.4);
+  line-height: 1;
+}
+
+/* ── Paper primitive ── */
+.pq-paper {
+  position: relative;
+  display: block;
+  /* Ivory sheet — warm off-white that reads as printed paper */
+  background:
+    linear-gradient(180deg, #F5F0E8 0%, #EDE7DB 100%);
+  color: #1a1a1a;
+  border-radius: 4px;
+  padding: 0; /* children supply their own padding */
+  transform-style: preserve-3d;
+  transform-origin: 50% 60%;
+  transform:
+    translate3d(var(--pq-paper-x, 0), 0, var(--pq-paper-z, 0))
+    rotateZ(var(--pq-paper-r, 0deg));
+  transition:
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 300ms ease,
+    opacity 400ms ease,
+    filter 400ms ease;
+  box-shadow:
+    6px 20px 40px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(184, 149, 106, 0.08);
+  will-change: transform, box-shadow;
+  outline: none;
+}
+/* Subtle paper grain using an inline radial dot pattern */
+.pq-paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: radial-gradient(
+    rgba(20, 20, 20, 0.85) 0.5px,
+    transparent 0.5px
+  );
+  background-size: 4px 4px;
+}
+.pq-paper > * {
+  position: relative;
+  z-index: 1;
+}
+
+.pq-paper--active {
+  transform: translate3d(0, 0, 20px) rotateZ(0deg);
+  box-shadow:
+    0 28px 60px rgba(0, 0, 0, 0.6),
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(184, 149, 106, 0.16);
+}
+.pq-paper--dimmed {
+  opacity: 0.55;
+  filter: saturate(0.88) brightness(0.94);
+}
+.pq-paper[role="button"] {
+  cursor: pointer;
+}
+.pq-paper[role="button"]:focus-visible {
+  box-shadow:
+    6px 20px 40px rgba(0, 0, 0, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(184, 149, 106, 0.08),
+    0 0 0 2px rgba(184, 149, 106, 0.5);
+}
+
+/* Hover micro-lift for interactive papers (desktop only) */
+@media (hover: hover) and (pointer: fine) {
+  .pq-paper[role="button"]:not(.pq-paper--active):not(.pq-paper--dimmed):hover {
+    transform:
+      translate3d(var(--pq-paper-x, 0), -2px, calc(var(--pq-paper-z, 0) + 6px))
+      rotateZ(var(--pq-paper-r, 0deg));
+  }
+}
+
+/* Mobile — flatten all papers so they stack vertically */
+@media (max-width: 767px) {
+  .pq-paper {
+    transform: none !important;
+  }
+  .pq-paper--active {
+    transform: none !important;
+  }
+}
+
+/* ── Paper typography (reads on ivory, not ink) ── */
+.pq-paper-kicker {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(20, 20, 20, 0.55);
+  font-weight: 600;
+}
+
+.pq-paper-hero-title {
+  font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.pq-paper-body {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: clamp(14px, 1.5vw, 16px);
+  line-height: 1.55;
+  color: rgba(20, 20, 20, 0.78);
+  letter-spacing: -0.003em;
+  margin: 0;
+}
+
+.pq-paper-hero-num {
+  display: inline-block;
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(3.5rem, 7vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: #141414;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.pq-paper-pos { color: #4a7a52; }
+.pq-paper-neg { color: #a34a4a; }
+.pq-paper-neu { color: rgba(20, 20, 20, 0.55); }
+
+/* Ledger row — hairline separator + hover lift */
+.pq-paper-row {
+  border-bottom: 0.5px solid rgba(184, 149, 106, 0.22);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 220ms ease;
+}
+.pq-paper-row:last-child {
+  border-bottom: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pq-paper-row:hover {
+    background-color: rgba(184, 149, 106, 0.06);
+  }
+}
+
+/* Wax seal — bronze circular emboss with monogram */
+.pq-wax-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #a3845c 0%, #6f5636 55%, #4a3820 100%);
+  color: #2a1f10;
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.18),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.12);
+  user-select: none;
+}
+
+/* Tick flash — brief bronze pulse + 3px slide on value change */
+@keyframes pq-tick-flash-kf {
+  0% {
+    transform: translateY(0);
+    color: inherit;
+  }
+  30% {
+    transform: translateY(-3px);
+    color: var(--pq-bronze, #8B6F47);
+  }
+  100% {
+    transform: translateY(0);
+    color: inherit;
+  }
+}
+.pq-tick-flash {
+  animation: pq-tick-flash-kf 220ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pq-tick-flash {
+    animation: none;
+  }
+}
