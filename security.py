@@ -97,8 +97,21 @@ _CSRF_SECRET = os.environ.get("CSRF_SECRET") or os.environ.get("SECRET_KEY") or 
 _CSRF_COOKIE_NAME = "csrf_token"
 _CSRF_HEADER_NAME = "X-CSRF-Token"
 _CSRF_SAFE_METHODS = frozenset(["GET", "HEAD", "OPTIONS"])
-# Endpoints exempt from CSRF (webhooks verified by their own signatures)
-_CSRF_EXEMPT_PREFIXES = ("/api/billing/webhook", "/api/auth/dev-login")
+# Endpoints exempt from CSRF:
+#   - `/api/billing/webhook` — Stripe webhook, verified by signature
+#   - `/api/auth/dev-login`  — dev-only shortcut, never mounted in prod
+#   - `/api/auth/logout`, `/api/logout` — logout is idempotent and the worst a
+#     CSRF attack can do is sign a user out (no data exposure / state change).
+#     The endpoint itself verifies Origin/Referer to reject cross-origin POSTs
+#     from hostile pages. Keeping it CSRF-exempt unblocks clients that can't
+#     attach the double-submit token (e.g. cookie-partitioning browsers,
+#     tools/tests that call the endpoint directly with just the session cookie).
+_CSRF_EXEMPT_PREFIXES = (
+    "/api/billing/webhook",
+    "/api/auth/dev-login",
+    "/api/auth/logout",
+    "/api/logout",
+)
 
 
 def _get_session_bind_id():

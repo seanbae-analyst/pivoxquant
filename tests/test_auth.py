@@ -98,16 +98,63 @@ class TestMe:
 # ── Logout ──────────────────────────────────────────────────────────────────
 
 class TestLogout:
-    def test_logout_unauthenticated_returns_401(self, client):
+    def test_logout_unauthenticated_is_idempotent_200(self, client):
+        """Logout is idempotent: calling it while already logged out is a no-op
+        that still returns 200 OK. HttpOnly session cookies can't be cleared
+        client-side, so the endpoint must never refuse with 401 or the user
+        is stuck with partially-invalid credentials they can't flush.
+        """
         r = client.post("/api/auth/logout")
-        assert r.status_code == 401
+        assert r.status_code == 200
+        body = r.get_json()
+        assert body["ok"] is True
+        assert body["was_authenticated"] is False
 
     def test_logout_then_me_shows_logged_out(self, client, auth_user):
         r = client.post("/api/auth/logout")
         assert r.status_code == 200
+        assert r.get_json()["was_authenticated"] is True
         # Now /me should show logged out.
         me = client.get("/api/auth/me")
         assert me.get_json()["authenticated"] is False
+
+    def test_logout_alias_root_path_works(self, client, auth_user):
+        """`/api/logout` is the shorter alias for `/api/auth/logout`."""
+        r = client.post("/api/logout")
+        assert r.status_code == 200
+        assert r.get_json()["ok"] is True
+        me = client.get("/api/auth/me")
+        assert me.get_json()["authenticated"] is False
+
+    def test_logout_clears_session_cookie(self, raw_client, make_user):
+        """Logout response must explicitly expire the session cookie so the
+        browser drops it even if the client didn't clear cookies itself.
+        """
+        u = make_user(email="cookielogout@test.com", password="pass1234")
+        login = raw_client.post("/api/auth/login", json={
+            "email": u["email"], "password": u["password"],
+        })
+        assert login.status_code == 200
+        # Logout — no CSRF header on raw_client, but logout is CSRF-exempt.
+        r = raw_client.post("/api/auth/logout")
+        assert r.status_code == 200
+        set_cookies = r.headers.getlist("Set-Cookie")
+        # Session cookie must be emitted with an expiry in the past (deletion).
+        assert any(
+            "session=" in h and ("Expires=" in h or "Max-Age=0" in h)
+            for h in set_cookies
+        ), f"session cookie not expired; headers={set_cookies}"
+
+    def test_logout_rejects_cross_origin_post(self, raw_client):
+        """A POST with a disallowed Origin header must be rejected with 403.
+        No login needed — the origin gate fires before we look at the session.
+        """
+        r = raw_client.post(
+            "/api/auth/logout",
+            headers={"Origin": "https://evil.example.com"},
+        )
+        assert r.status_code == 403
+        assert r.get_json()["code"] == "UNTRUSTED_ORIGIN"
 
 
 # ── CSRF cookie issuance ────────────────────────────────────────────────────

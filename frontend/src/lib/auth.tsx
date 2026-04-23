@@ -81,8 +81,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await apiFetch(API.auth.logout, { method: "POST" });
-    setUser(null);
+    // Logout is idempotent server-side and must never leave the user stuck.
+    // Even if the network request fails (offline, 5xx), we clear local
+    // auth state so the UI transitions to the logged-out shell — the
+    // session cookie will be rejected on the next authenticated call.
+    try {
+      await apiFetch(API.auth.logout, { method: "POST" });
+    } catch (err) {
+      // Swallow logout errors — user intent is clear, and the server-side
+      // session will either already be gone or expire naturally.
+      if (typeof console !== "undefined") {
+        console.warn("logout request failed (clearing local state anyway):", err);
+      }
+    } finally {
+      setUser(null);
+    }
   }, []);
 
   return (

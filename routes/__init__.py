@@ -4,7 +4,7 @@ import os
 
 
 def register_blueprints(app):
-    from .auth import auth_bp
+    from .auth import auth_bp, auth_alias_bp
     from .portfolio import portfolio_bp
     from .signals import signals_bp
     from .discover import discover_bp
@@ -51,7 +51,7 @@ def register_blueprints(app):
 
     blueprints = [
         health_bp,
-        auth_bp, portfolio_bp, signals_bp, discover_bp,
+        auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, daytrade_bp, alerts_bp, trades_bp,
         autotrade_bp, ai_bp, watchlist_bp, backtest_bp,
         quant_bp, realtime_bp, profile_bp, broker_oauth_bp,
