@@ -2,7 +2,15 @@
    Weekly Investor Memo — Goldman IC v2 Editorial Redesign (6-page flagship)
    Each page: distinct magazine-editorial layout, hand-crafted inline SVG.
    Brand v2: wordmark (cover) · monogram (colophon) · submark (running-head).
+
+   Persona branching (2026-04-23):
+   • `persona` context variable (growth/value/balanced/income/quant/
+     speculator/daytrader/beginner) steers 3 sections: opener, data focus,
+     risk block. Unknown persona → balanced (macro enforces fallback).
+   • Spec: reports/product/PERSONA_SPEC_2026-04-23.md §6.3
    ══════════════════════════════════════════════════════════════════════════ #}
+{% import 'partials/_persona_macros.html' as pm %}
+{% set persona = persona | default('balanced') %}
 <!doctype html>
 <html lang="ko">
 <head>
@@ -685,6 +693,9 @@
    ══════════════════════════════════════════════════════════════════════════ #}
 <div class="r-page-break"></div>
 
+{# Persona opener — branches on {{ persona }} (spec §6.3). #}
+{{ pm.persona_opener(persona, user_name) }}
+
 <p class="sp-part">Part I · This Week in Returns</p>
 <h2 class="sp-title">Why the spread stayed small</h2>
 <p class="sp-deck">
@@ -907,6 +918,9 @@
    ══════════════════════════════════════════════════════════════════════════ #}
 <div class="r-page-break"></div>
 
+{# Persona data focus — signal list by persona (spec §6.3). #}
+{{ pm.persona_data_focus(persona, risk_kpi | default({})) }}
+
 <p class="sp-part">Part II · Position Ladder</p>
 <h2 class="sp-title">The names that moved the book</h2>
 <p class="sp-deck">
@@ -1019,8 +1033,13 @@
 
 {# ══════════════════════════════════════════════════════════════════════════
    PAGE 4 · RISK DASHBOARD — 2x2 small-multiples + methodology sidebar
+   Rendered only when the service computed real KPIs from live positions.
    ══════════════════════════════════════════════════════════════════════════ #}
+{% if risk_kpi %}
 <div class="r-page-break"></div>
+
+{# Persona risk block — persona-tailored risk narrative (spec §6.3). #}
+{{ pm.persona_risk_block(persona, risk_kpi | default({})) }}
 
 <p class="sp-part">Part III · Risk Dashboard</p>
 <h2 class="sp-title">Readings around the tails</h2>
@@ -1035,7 +1054,7 @@
     <div class="rq-quads">
       <div class="rq-quad" style="border-right: none; border-bottom: none;">
         <div class="rq-quad-label">VaR 95%</div>
-        <div class="rq-quad-value">-2.14%</div>
+        <div class="rq-quad-value">{% if risk_kpi.var_1d_pct is not none %}{{ risk_kpi.var_1d_pct | round(2) }}%{% else %}—{% endif %}</div>
         <!-- compact bar visualization of VaR vs realised max loss -->
         <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
           <line x1="0" y1="28" x2="180" y2="28" stroke="#c9c4b8" stroke-width="0.3"/>
@@ -1048,7 +1067,7 @@
       </div>
       <div class="rq-quad" style="border-bottom: none;">
         <div class="rq-quad-label">Expected Shortfall 95%</div>
-        <div class="rq-quad-value">-3.12%</div>
+        <div class="rq-quad-value">{% if risk_kpi.es_1d_pct is not none %}{{ risk_kpi.es_1d_pct | round(2) }}%{% else %}—{% endif %}</div>
         <!-- tail shape tiny sparkbar -->
         <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
           {% for i in range(20) %}
@@ -1062,7 +1081,7 @@
       </div>
       <div class="rq-quad" style="border-right: none;">
         <div class="rq-quad-label">Max Drawdown · 12w</div>
-        <div class="rq-quad-value">-8.14%</div>
+        <div class="rq-quad-value">{% if risk_kpi.mdd_pct is not none %}{{ risk_kpi.mdd_pct | round(2) }}%{% else %}—{% endif %}</div>
         <!-- underwater curve -->
         <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
           <line x1="0" y1="6" x2="180" y2="6" stroke="#c9c4b8" stroke-width="0.3"/>
@@ -1070,13 +1089,13 @@
                    fill="#7f1d1d" fill-opacity="0.14"/>
           <polyline points="0,6 10,6 20,12 30,18 45,28 60,34 80,30 100,22 120,14 140,10 160,8 180,6"
                     fill="none" stroke="#7f1d1d" stroke-width="0.8"/>
-          <text x="60" y="36" fill="#7f1d1d" font-size="6.5" font-family="JetBrains Mono, monospace" text-anchor="middle">trough · W-9</text>
+          <text x="60" y="36" fill="#7f1d1d" font-size="6.5" font-family="JetBrains Mono, monospace" text-anchor="middle">trough · {{ risk_kpi.trough_week | default('—') }}</text>
         </svg>
-        <div class="rq-quad-foot">Peak-to-trough on daily marks. Recovered to flat by W-13.</div>
+        <div class="rq-quad-foot">Peak-to-trough on daily marks. Recovered to flat by {{ risk_kpi.recovered_week | default('—') }}.</div>
       </div>
       <div class="rq-quad">
         <div class="rq-quad-label">Tail Ratio</div>
-        <div class="rq-quad-value">1.08</div>
+        <div class="rq-quad-value">{% if risk_kpi.tail_ratio is not none %}{{ risk_kpi.tail_ratio | round(2) }}{% else %}—{% endif %}</div>
         <!-- left vs right tail side-by-side bars -->
         <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
           <line x1="90" y1="6" x2="90" y2="34" stroke="#c9c4b8" stroke-width="0.3"/>
@@ -1123,6 +1142,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 
 {# ══════════════════════════════════════════════════════════════════════════
