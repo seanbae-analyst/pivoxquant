@@ -371,7 +371,7 @@ export default function PortfolioPage() {
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); openAction("buy", p); }}
-                              aria-label={`Buy more ${p.symbol}`}
+                              aria-label={`Record additional buy for ${p.symbol}`}
                               className="text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light)]"
                             >
                               +
@@ -379,7 +379,7 @@ export default function PortfolioPage() {
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); openAction("sell", p); }}
-                              aria-label={`Sell ${p.symbol}`}
+                              aria-label={`Record sale for ${p.symbol}`}
                               className="text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-ivory)]"
                             >
                               −

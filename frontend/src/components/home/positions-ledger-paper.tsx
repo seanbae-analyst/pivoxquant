@@ -28,9 +28,11 @@ interface Props {
 export function PositionsLedgerPaper({ positions, limit = 12 }: Props) {
   // Sort: USD first by abs(pnl%), then KRW — keeps KR positions always visible
   // without burying USD positions that matter most. Both present.
+  const pnlPctOf = (p: Position) =>
+    p.avgCost > 0 ? ((p.current - p.avgCost) / p.avgCost) * 100 : 0;
   const sorted = [...positions].sort((a, b) => {
     if (a.currency !== b.currency) return a.currency === "KRW" ? 1 : -1;
-    return Math.abs(b.pnlPct ?? 0) - Math.abs(a.pnlPct ?? 0);
+    return Math.abs(pnlPctOf(b)) - Math.abs(pnlPctOf(a));
   });
   const rows = sorted.slice(0, limit);
   const hidden = positions.length - rows.length;
