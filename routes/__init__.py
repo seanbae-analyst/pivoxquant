@@ -32,6 +32,8 @@ def register_blueprints(app):
     from .admin_fmp import admin_fmp_bp
     from .admin_preview import admin_preview_bp
     from .risk import risk_bp
+    from .agent import agent_bp
+    from .agent_admin import agent_admin_bp
 
     # agent_worker is a sibling package and may be absent in some deploys
     # (it ships a Procfile + its own requirements). When it's unavailable
@@ -58,7 +60,7 @@ def register_blueprints(app):
         billing_bp, push_bp, share_bp, simulate_bp,
         counterfactual_bp, morning_brief_bp, alt_data_bp,
         artifacts_bp, admin_fmp_bp, admin_preview_bp,
-        risk_bp,
+        risk_bp, agent_bp, agent_admin_bp,
     ]
     if growth_bp is not None:
         blueprints.append(growth_bp)
