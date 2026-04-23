@@ -180,10 +180,10 @@ function ReportsPageInner() {
       {/* ── Header ── */}
       <header>
         <RuledKicker>PDF &middot; Observational archive</RuledKicker>
-        <h1 className="mt-2 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
+        <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
           Reports
         </h1>
-        <p className="mt-2 font-serif italic text-[15px] text-[var(--pq-ivory)] max-w-2xl">
+        <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)] max-w-2xl">
           Every artifact the desk can deliver &mdash; from the weekly memo to the year-end letter.
         </p>
         <Caption className="mt-1 max-w-2xl">

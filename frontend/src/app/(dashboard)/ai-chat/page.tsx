@@ -135,7 +135,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
     <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="max-w-md mb-12">
         <div className="pq-ink-kicker mb-4">Observation Assistant</div>
-        <h2 className="font-serif italic text-2xl text-[var(--pq-ivory)] mb-4">
+        <h2 className="font-serif text-2xl text-[var(--pq-ivory)] mb-4">
           Ask the desk.
         </h2>
         <p className="text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">
@@ -350,7 +350,7 @@ function ChatInner() {
       <header className="pb-6 border-b border-[rgba(245,240,232,0.08)] flex items-start justify-between">
         <div>
           <div className="pq-ink-kicker mb-2">AI · Observation Assistant</div>
-          <h1 className="font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
+          <h1 className="font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
             What are you observing today?
           </h1>
         </div>
@@ -410,8 +410,8 @@ function ChatInner() {
 
         <p className="mt-3 text-[11px] text-[rgba(245,240,232,0.45)] font-serif">
           Press{" "}
-          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not-italic text-[rgba(245,240,232,0.7)]">Enter</kbd> to send ·{" "}
-          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not-italic text-[rgba(245,240,232,0.7)]">Shift+Enter</kbd> for new line
+          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not- text-[rgba(245,240,232,0.7)]">Enter</kbd> to send ·{" "}
+          <kbd className="inline-block px-1.5 py-[1px] bg-[rgba(245,240,232,0.05)] border border-[rgba(245,240,232,0.15)] rounded-[2px] font-mono text-[10px] not- text-[rgba(245,240,232,0.7)]">Shift+Enter</kbd> for new line
         </p>
       </footer>
 

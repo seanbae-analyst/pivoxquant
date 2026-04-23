@@ -157,7 +157,7 @@ export default function SignalsPage() {
             SIGNALS · {weekTag()}
           </div>
           <h1 className="pq-ink-h1 mt-2">The Clip Board</h1>
-          <p className="mt-2 max-w-xl font-serif italic text-sm text-[rgba(245,240,232,0.55)]">
+          <p className="mt-2 max-w-xl font-serif text-sm text-[rgba(245,240,232,0.55)]">
             Quantitative observations across {signals.length} covered tickers.
             Clip any memo to unfold its four-pillar readout in place.
           </p>
@@ -187,19 +187,19 @@ export default function SignalsPage() {
       <div className="mb-6 grid grid-cols-3 gap-6 border-y border-[rgba(245,240,232,0.1)] py-4">
         <div>
           <div className="pq-ink-label">Positive</div>
-          <div className="mt-1 font-serif italic text-[26px] tabular-nums text-[#7db487]">
+          <div className="mt-1 font-serif text-[26px] tabular-nums text-[#7db487]">
             {positive.length}
           </div>
         </div>
         <div>
           <div className="pq-ink-label">Neutral</div>
-          <div className="mt-1 font-serif italic text-[26px] tabular-nums text-[var(--pq-ivory)]">
+          <div className="mt-1 font-serif text-[26px] tabular-nums text-[var(--pq-ivory)]">
             {neutral.length}
           </div>
         </div>
         <div>
           <div className="pq-ink-label">Negative</div>
-          <div className="mt-1 font-serif italic text-[26px] tabular-nums text-[#d18888]">
+          <div className="mt-1 font-serif text-[26px] tabular-nums text-[#d18888]">
             {negative.length}
           </div>
         </div>
@@ -226,7 +226,7 @@ export default function SignalsPage() {
 
       {/* ═══════════ LOADING / EMPTY ═══════════ */}
       {isLoading && signals.length === 0 ? (
-        <div className="py-24 text-center font-serif italic text-[13px] text-[rgba(245,240,232,0.4)]">
+        <div className="py-24 text-center font-serif text-[13px] text-[rgba(245,240,232,0.4)]">
           Loading observations…
         </div>
       ) : signals.length === 0 ? (
@@ -235,7 +235,7 @@ export default function SignalsPage() {
             className="mx-auto h-8 w-8 text-[var(--pq-bronze)]"
             strokeWidth={1.3}
           />
-          <div className="mt-3 font-serif italic text-[14px] text-[rgba(245,240,232,0.6)]">
+          <div className="mt-3 font-serif text-[14px] text-[rgba(245,240,232,0.6)]">
             No observations on record.
           </div>
           <p className="mt-1 text-[12px] text-[rgba(245,240,232,0.4)]">
@@ -356,7 +356,6 @@ export default function SignalsPage() {
               style={{
                 textAlign: "center",
                 fontFamily: "var(--font-serif), Georgia, serif",
-                fontStyle: "italic",
                 fontSize: 11.5,
                 color: "rgba(245,240,232,0.4)",
                 letterSpacing: "0.02em",

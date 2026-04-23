@@ -65,7 +65,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
               ))}
             </ul>
             {today.briefing.motivation && (
-              <p className="mt-2 text-sm italic text-slate-500">
+              <p className="mt-2 text-sm text-slate-500">
                 {today.briefing.motivation}
               </p>
             )}
@@ -232,7 +232,7 @@ export default function GrowthPage() {
               ))}
             </ul>
             {todayData.briefing.motivation && (
-              <p className="mt-3 border-t border-slate-100 pt-3 text-sm italic text-slate-500">
+              <p className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-500">
                 {todayData.briefing.motivation}
               </p>
             )}

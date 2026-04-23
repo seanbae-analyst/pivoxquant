@@ -219,7 +219,7 @@ export default function MarketPage() {
               Morning Papers &middot; Indices
             </h1>
             <p
-              className="mt-1 font-serif italic"
+              className="mt-1 font-serif"
               style={{ fontSize: 14, color: "rgba(245,240,232,0.68)" }}
             >
               Levels across US and Korean markets, observed at last print.
@@ -408,7 +408,6 @@ export default function MarketPage() {
             style={{
               textAlign: "center",
               fontFamily: "var(--font-serif), Georgia, serif",
-              fontStyle: "italic",
               fontSize: 11.5,
               color: "rgba(245,240,232,0.4)",
               letterSpacing: "0.02em",

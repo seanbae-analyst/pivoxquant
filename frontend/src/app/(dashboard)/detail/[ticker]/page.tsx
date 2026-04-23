@@ -620,7 +620,7 @@ export default function StockDetailPage() {
                 <h1 className="pq-detail-ticker-display mt-2">
                   {ticker}
                 </h1>
-                <p className="mt-2 font-serif italic text-[15px] text-[rgba(245,240,232,0.68)] leading-snug">
+                <p className="mt-2 font-serif text-[15px] text-[rgba(245,240,232,0.68)] leading-snug">
                   {displayName}
                 </p>
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
@@ -1115,7 +1115,7 @@ export default function StockDetailPage() {
                 className="block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"
               >
                 <FieldLabel>{r.kind}</FieldLabel>
-                <div className="mt-2 font-serif italic text-[17px] text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors">
+                <div className="mt-2 font-serif text-[17px] text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors">
                   {r.name}
                 </div>
                 <p className="mt-2 pq-detail-caption">{r.desc}</p>
@@ -1130,7 +1130,7 @@ export default function StockDetailPage() {
 
         {/* ── Footer fleuron ── */}
         <footer className="pt-6 mt-4 border-t border-[rgba(245,240,232,0.06)] text-center">
-          <p className="pq-detail-caption italic">
+          <p className="pq-detail-caption">
             PivoxQuant · Observational research only · Not investment advice
           </p>
         </footer>

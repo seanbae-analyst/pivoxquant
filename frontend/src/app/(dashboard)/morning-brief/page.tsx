@@ -208,10 +208,10 @@ export default function MorningBriefPage() {
                 </span>
               </div>
             )}
-            <h1 className="mt-3 font-serif italic text-[2.25rem] leading-tight text-[var(--pq-ivory)]" style={{ letterSpacing: "-0.015em" }}>
+            <h1 className="mt-3 font-serif text-[2.25rem] leading-tight text-[var(--pq-ivory)]" style={{ letterSpacing: "-0.015em" }}>
               Good morning.
             </h1>
-            <p className="mt-2 font-serif italic text-[15px] text-[var(--pq-ivory)]">
+            <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)]">
               Today at the desk.
             </p>
             <Caption className="mt-1">Overnight marks, macro tape, and the week&rsquo;s events.</Caption>
@@ -301,7 +301,7 @@ export default function MorningBriefPage() {
                 &ldquo;
               </span>
               <p
-                className="font-serif italic pl-5"
+                className="font-serif pl-5"
                 style={{ fontSize: "15px", lineHeight: 1.6, color: "rgba(245,240,232,0.88)" }}
               >
                 {brief.insight}

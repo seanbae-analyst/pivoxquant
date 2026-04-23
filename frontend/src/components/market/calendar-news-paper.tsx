@@ -66,7 +66,6 @@ export function CalendarNewsPaper({
         <h2
           style={{
             fontFamily: "var(--font-serif), Georgia, serif",
-            fontStyle: "italic",
             fontWeight: 400,
             fontSize: "clamp(1.3rem, 2.2vw, 1.7rem)",
             letterSpacing: "-0.01em",
@@ -95,7 +94,6 @@ export function CalendarNewsPaper({
             <span
               style={{
                 fontFamily: "var(--font-serif), Georgia, serif",
-                fontStyle: "italic",
                 fontWeight: 500,
                 fontSize: "clamp(1.6rem, 3vw, 2.1rem)",
                 color: "#141414",
@@ -140,7 +138,7 @@ export function CalendarNewsPaper({
         ) : (
           <p
             className="pq-paper-body"
-            style={{ fontStyle: "italic", fontSize: 13 }}
+            style={{ fontSize: 13 }}
           >
             No FX observation available.
           </p>
@@ -160,7 +158,7 @@ export function CalendarNewsPaper({
         {upcomingEarnings.length === 0 ? (
           <p
             className="pq-paper-body"
-            style={{ fontStyle: "italic", fontSize: 12.5 }}
+            style={{ fontSize: 12.5 }}
           >
             No scheduled events in the window.
           </p>

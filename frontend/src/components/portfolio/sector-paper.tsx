@@ -54,7 +54,6 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
       <h2
         style={{
           fontFamily: "var(--font-serif), Georgia, serif",
-          fontStyle: "italic",
           fontSize: "clamp(1.5rem, 2.4vw, 1.9rem)",
           lineHeight: 1.05,
           color: "#1a1a1a",
@@ -70,7 +69,6 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
         <p
           className="pq-paper-body"
           style={{
-            fontStyle: "italic",
             color: "rgba(20,20,20,0.55)",
             fontSize: 13.5,
           }}
@@ -161,7 +159,6 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
           bottom: 18,
           right: 22,
           fontFamily: "var(--font-serif), Georgia, serif",
-          fontStyle: "italic",
           fontSize: 10,
           color: "rgba(139,111,71,0.55)",
           letterSpacing: "0.06em",

@@ -158,7 +158,7 @@ export default function AlertsPage() {
         <header className="flex items-start justify-between gap-4">
           <div>
             <RuledKicker>Signals desk &middot; Alerts history</RuledKicker>
-            <h1 className="mt-2 font-serif italic text-2xl md:text-3xl text-[var(--pq-ivory)]">
+            <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
               Alerts
             </h1>
             <Caption className="mt-1">
