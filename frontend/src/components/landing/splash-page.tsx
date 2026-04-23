@@ -65,18 +65,21 @@ export default function SplashPage() {
         }}
       >
         <span
-          className="pq-silver-matte pq-splash-wordmark font-serif"
+          className="pq-splash-wordmark font-serif"
           style={{
-            fontSize: "clamp(2.5rem, 7vw, 5.5rem)",
-            letterSpacing: "0.06em",
+            // Matches the landing header wordmark (top-left) — same font
+            // family, weight, tracking, casing. Only the size is scaled up
+            // since this is the full-viewport cover treatment.
+            fontSize: "clamp(2rem, 6.5vw, 5rem)",
+            letterSpacing: "0.22em",
             lineHeight: 1,
             fontWeight: 500,
-            textTransform: "none",
+            textTransform: "uppercase",
             textAlign: "center",
-            fontStyle: "italic",
+            color: "var(--pq-ivory)",
           }}
         >
-          PivoxQuant
+          PIVOXQUANT
         </span>
       </div>
 
