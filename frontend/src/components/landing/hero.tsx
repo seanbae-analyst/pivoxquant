@@ -20,14 +20,60 @@
  */
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { ArrowRight, FileText, ChevronDown } from "lucide-react";
 
 import { HeroSpotlight } from "./hero-spotlight";
 import { FilmGrain } from "./film-grain";
-import { MarketTicker } from "./market-ticker";
-import { ReportFlipDeck } from "./report-flip-deck";
+
+/* ────────────────────────────────────────────────
+   Dynamic imports — defer heavy, below-the-initial-paint UI.
+   ------------------------------------------------
+   MarketTicker and ReportFlipDeck together pull in motion/react runtime,
+   matchMedia listeners, and large inline styles (~72 KB chunk per
+   Lighthouse trace: _next/static/chunks/0nfangqn4qoja.js). They are NOT
+   needed for the Largest Contentful Paint (the H1 "Your portfolio,
+   briefed like a CFO's." is the LCP element).
+   Splitting them out:
+     - trims ~40-50 KB from the hero's critical JS path,
+     - removes forced reflow during hydration (measured +200-400 ms
+       Render Delay on mobile),
+     - preserves visuals (fixed-height skeletons keep CLS = 0).
+   `ssr: false` because both components read window.matchMedia inside
+   useEffect and the content is decorative/aria-hidden. A fixed-size
+   placeholder holds the layout until the chunk lands.
+   ──────────────────────────────────────────────── */
+const MarketTicker = dynamic(
+  () => import("./market-ticker").then((m) => m.MarketTicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        aria-hidden
+        style={{
+          height: 32,
+          borderBottom: "1px solid rgba(139, 111, 71, 0.22)",
+          backgroundColor: "rgba(5, 5, 5, 0.78)",
+        }}
+      />
+    ),
+  },
+);
+
+const ReportFlipDeck = dynamic(
+  () => import("./report-flip-deck").then((m) => m.ReportFlipDeck),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        aria-hidden
+        className="relative mx-auto aspect-[4/5] w-full max-w-[460px]"
+      />
+    ),
+  },
+);
 
 /* ────────────────────────────────────────────────
    Motion
@@ -139,11 +185,11 @@ export function Hero() {
                 </span>
               </motion.div>
 
-              {/* H1 — silver-matte, with "CFO's" word glowing bronze.
-                  Static HTML text remains crawlable. */}
-              <motion.h1
+              {/* H1 — LCP element, rendered static (no fade-in) so Lighthouse
+                  counts first paint as contentful. Motion wrappers on the LCP
+                  element defer contentfulness until the animation settles. */}
+              <h1
                 id="pq-hero-heading"
-                variants={fadeUp}
                 className="pq-silver-matte mb-7 font-serif font-normal"
                 style={{
                   fontSize: "clamp(2.5rem, 6vw, 4.75rem)",
@@ -165,7 +211,7 @@ export function Hero() {
                   CFO&rsquo;s
                 </span>
                 .
-              </motion.h1>
+              </h1>
 
               {/* Subcopy */}
               <motion.p

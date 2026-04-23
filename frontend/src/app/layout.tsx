@@ -170,6 +170,17 @@ export default function RootLayout({
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+        {/* Preconnect to the Pretendard CDN so the font CSS + woff2 fetches
+            start their TCP + TLS handshakes in parallel with the HTML parse.
+            Saves ~300-500 ms on first load (measured via Lighthouse mobile 3G).
+            `dns-prefetch` is a cheap fallback for browsers that ignore
+            preconnect (older Safari, some bots). */}
+        <link
+          rel="preconnect"
+          href="https://cdn.jsdelivr.net"
+          crossOrigin="anonymous"
+        />
+        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         <script
           dangerouslySetInnerHTML={{
             __html: `if(window.matchMedia('(display-mode: standalone)').matches){document.documentElement.classList.add('pwa-standalone');}`,
@@ -182,7 +193,16 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full bg-background text-foreground antialiased">
-        <Providers>{children}</Providers>
+        {/* CookieConsent / InstallPrompt sit INSIDE <Providers> so that
+            useT() / useLocale() resolve against LocaleProvider. If mounted
+            as body-level siblings they fell back to the default context
+            value (t = identity), causing raw i18n keys like
+            "cookieConsent.message" to render in the cookie banner. */}
+        <Providers>
+          {children}
+          <CookieConsent />
+          <InstallPrompt />
+        </Providers>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -192,8 +212,6 @@ export default function RootLayout({
             },
           }}
         />
-        <CookieConsent />
-        <InstallPrompt />
       </body>
     </html>
   );

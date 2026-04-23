@@ -97,11 +97,20 @@ function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boole
 
 export function MarketTicker() {
   // Doubled row so the CSS -50% translate wraps seamlessly.
+  //
+  // Overflow hygiene:
+  //   - Outer wrapper uses `w-full max-w-full overflow-x-clip` so the inner
+  //     `w-max` track can never push `document.body.scrollWidth` past the
+  //     viewport. `overflow-x-clip` (Tailwind 4) is stricter than
+  //     `overflow-hidden` in border-box math and prevents 1–2px border
+  //     leaks that produced the +14px horizontal scroll on 614px.
+  //   - `box-border` pins border-width inside the width budget so the
+  //     `border-b` hairline never contributes to scrollWidth.
   return (
     <div
       role="marquee"
       aria-label="Global market observation ticker"
-      className="relative overflow-hidden border-b"
+      className="relative w-full max-w-full overflow-x-clip overflow-y-hidden border-b box-border"
       style={{
         height: 32,
         borderColor: "rgba(139, 111, 71, 0.22)",
@@ -110,15 +119,9 @@ export function MarketTicker() {
         WebkitBackdropFilter: "blur(6px)",
       }}
     >
-      {/* Edge masks — editorial fade at both ends so text dissolves into the void */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24"
-        style={{
-          background:
-            "linear-gradient(to right, var(--pq-ink) 0%, transparent 100%)",
-        }}
-      />
+      {/* Edge masks — editorial fade at both ends so text dissolves into the void.
+          Left edge mask is intentionally smaller than the kicker zone below so
+          it does not compete with the kicker's opaque backdrop. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32"
@@ -128,16 +131,33 @@ export function MarketTicker() {
         }}
       />
 
-      {/* Kicker — "Live observation" editorial label, pinned left over the gradient */}
+      {/* Kicker — "Live observation" editorial label, pinned left.
+          Backdrop is a FIXED-WIDTH solid ink block (not a partial gradient)
+          followed by a short gradient tail. This guarantees no ticker glyph
+          bleeds through behind the "As observed" text on any viewport —
+          previously the 60% gradient-stop left the right half of the kicker
+          transparent, so tickers were visible behind "OBSERVED". */}
       <div
-        className="absolute inset-y-0 left-0 z-20 flex items-center pl-4 pr-3"
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 z-20"
         style={{
-          background:
-            "linear-gradient(to right, var(--pq-ink) 60%, transparent 100%)",
+          width: 180,
+          backgroundColor: "var(--pq-ink)",
         }}
-      >
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 z-20"
+        style={{
+          left: 180,
+          width: 48,
+          background:
+            "linear-gradient(to right, var(--pq-ink) 0%, transparent 100%)",
+        }}
+      />
+      <div className="absolute inset-y-0 left-0 z-30 flex items-center pl-4 pr-3">
         <span
-          className="font-serif text-[9.5px] uppercase"
+          className="font-serif text-[9.5px] uppercase whitespace-nowrap"
           style={{
             letterSpacing: "0.24em",
             color: "var(--pq-bronze)",
@@ -152,12 +172,12 @@ export function MarketTicker() {
       </div>
 
       {/* Marquee track — duplicated content for seamless wrap.
-          `pl-56` (224px) matches the kicker width ("● As observed" ≈ 150px +
-          gradient mask fade + breathing room). Previous `pl-40` (160px) was
-          too narrow on wider kicker rendering and clipped the first SPY
-          entry into "AS OBSERVE+0.12%". `shrink-0` on each Row prevents
-          flex-container width calculations from shrinking the symbol pills. */}
-      <div className="pq-marquee-track flex h-full w-max items-center pl-56">
+          `pl-[15rem]` (240px) clears the 180px opaque kicker block + 48px
+          gradient tail + breathing room. `shrink-0` on each Row prevents
+          flex-container width calculations from shrinking the symbol pills.
+          Track sits at z-0 so both the kicker zone (z-20) and right fade
+          mask (z-10) render above it. */}
+      <div className="pq-marquee-track relative z-0 flex h-full w-max items-center pl-[15rem]">
         <Row ticks={SNAPSHOT} />
         <Row ticks={SNAPSHOT} ariaHidden />
       </div>
