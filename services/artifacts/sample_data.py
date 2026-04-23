@@ -1029,7 +1029,7 @@ def sample_insider_mirror() -> dict[str, Any]:
         ],
         "form_types": [
             {"f":"Form 4",   "v":125, "c":"#0A0A0A"},
-            {"f":"Form 144", "v": 10, "c":"#8B6F47"},
+            {"f":"Form 144", "v": 10, "c":"#B8956A"},
             {"f":"Form 5",   "v":  4, "c":"#A84C4C"},
             {"f":"DART",     "v":  3, "c":"#6B6B6B"},
         ],
@@ -1371,8 +1371,8 @@ def sample_credit_rating() -> dict[str, Any]:
             {"b":"6-8", "w":18.0},{"b":"8-10","w":12.0},{"b":"10+", "w": 8.0},
         ],
         "rating_migration": [
-            {"k":"Stable",    "v": 9, "c":"#8B6F47"},
-            {"k":"Upgraded",  "v": 3, "c":"#8B6F47"},
+            {"k":"Stable",    "v": 9, "c":"#B8956A"},
+            {"k":"Upgraded",  "v": 3, "c":"#B8956A"},
             {"k":"Downgraded","v": 1, "c":"#A84C4C"},
             {"k":"Withdrawn", "v": 1, "c":"#8a8a8a"},
         ],

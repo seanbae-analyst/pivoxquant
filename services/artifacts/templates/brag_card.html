@@ -18,7 +18,7 @@
         font-size: 7.2pt;
         letter-spacing: 0.36em;
         text-transform: uppercase;
-        color: #8B6F47;
+        color: #B8956A;
       }
       @top-right {
         content: "CARD No. " counter(page, decimal-leading-zero) "  ·  {{ month_label }}";
@@ -68,7 +68,7 @@
     }
     .cv-hero span { display: block; }
     .cv-hero span + span { padding-left: 30pt; }
-    .cv-hero span + span + span { padding-left: 60pt; color: #8B6F47; }
+    .cv-hero span + span + span { padding-left: 60pt; color: #B8956A; }
 
     .cv-kpi2 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; }
     .cv-kpi {
@@ -111,7 +111,7 @@
     .sp-part {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #8B6F47; font-weight: 600; margin: 0 0 2pt 0;
+      color: #B8956A; font-weight: 600; margin: 0 0 2pt 0;
     }
     .sp-title {
       font-family: "Source Serif 4", Georgia, serif;
@@ -146,10 +146,10 @@
     .hc-label {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
-      color: #8B6F47; text-align: center; margin-bottom: 18pt;
+      color: #B8956A; text-align: center; margin-bottom: 18pt;
     }
     .hc-label::before, .hc-label::after {
-      content: "——"; color: #8B6F47; opacity: 0.5;
+      content: "——"; color: #B8956A; opacity: 0.5;
       margin: 0 10pt; letter-spacing: 0;
     }
     .hc-figure {
@@ -157,7 +157,7 @@
       font-size: 54pt; font-weight: 500; color: #0A0A0A;
       letter-spacing: -0.025em; font-variant-numeric: tabular-nums;
       line-height: 1.0; padding-bottom: 10pt;
-      border-bottom: 0.8pt solid #8B6F47;
+      border-bottom: 0.8pt solid #B8956A;
       display: inline-block; margin: 0 auto 18pt auto;
     }
     .hc-figure-wrap { text-align: center; margin: 0 0 4pt 0; }
@@ -178,7 +178,7 @@
     .hc-narrative > p:first-child::first-letter {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 30pt; line-height: 0.88; font-weight: 500;
-      color: #8B6F47; float: left; padding: 2pt 8pt 0 0; font-style: normal;
+      color: #B8956A; float: left; padding: 2pt 8pt 0 0; font-style: normal;
     }
     .hc-signature {
       margin-top: 8pt; text-align: right;
@@ -187,14 +187,14 @@
     }
 
     .sp-margin-block {
-      border-left: 0.35pt solid #8B6F47;
+      border-left: 0.35pt solid #B8956A;
       padding: 2pt 0 2pt 9pt;
       margin-bottom: 14pt;
     }
     .sp-margin-term {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #8B6F47; font-weight: 600; margin-bottom: 2pt;
+      color: #B8956A; font-weight: 600; margin-bottom: 2pt;
     }
     .sp-margin-value {
       font-family: "JetBrains Mono", monospace;
@@ -244,7 +244,7 @@
     .co-head {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
-      color: #8B6F47; font-weight: 600; margin-bottom: 4pt;
+      color: #B8956A; font-weight: 600; margin-bottom: 4pt;
     }
     .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
     .co-body {
@@ -286,7 +286,7 @@
       font-size: 7pt !important;
       letter-spacing: 0.32em !important;
       text-transform: uppercase !important;
-      color: #8B6F47 !important;
+      color: #B8956A !important;
       margin: 0 0 6pt 0 !important;
     }
   </style>
@@ -489,7 +489,7 @@
           <svg viewBox="0 0 {{ _sp_w }} {{ _sp_h }}" width="100%" height="26" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
             <line x1="0" y1="{{ _sp_h/2 }}" x2="{{ _sp_w }}" y2="{{ _sp_h/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
             <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
           </svg>
         </td>
         <td class="num {% if r.pnl >= 0 %}r-pos{% else %}r-neg{% endif %}">

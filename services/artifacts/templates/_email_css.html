@@ -9,14 +9,15 @@
 
   Include as:   <style>{% include '_email_css.html' %}</style>
 
-  Font-face block: the 2026-04-21 font embedding fix pulls in the shared
-  _embedded_fonts.html partial so that email templates rendered to PDF
-  (via Chrome headless / WeasyPrint for sample gallery + archival) carry
-  full font outlines. Real email clients (Gmail/Outlook) ignore
-  @font-face and fall back to the system-font stack — no regression.
+  Font-face: email clients ignore @font-face and fall back to system fonts.
+  For PDF rendering (WeasyPrint), font registration is now handled via
+  `FontConfiguration` at the renderer level, not inline base64 embedding.
+  The 2026-04-23 refactor removed the 10.6MB `_embedded_fonts.html` include
+  because it bloated every artifact to ~10.5MB (Gmail 25MB attachment limit
+  risk) and was the #1 structural debt flagged by the PDF design audit.
+  See: reports/design/PDF_REDESIGN_SPEC_2026-04-23.md §Phase-A-1.
   ═══════════════════════════════════════════════════════════════════════════
 #}
-{% include '_embedded_fonts.html' %}
 
 /* Palette — Ivory + Vantablack */
 body, table, td, div, p, a {
@@ -35,7 +36,7 @@ body, table, td, div, p, a {
 }
 .pos { color: #14532d; }
 .neg { color: #7f1d1d; }
-.accent { color: #8b6f47; }
+.accent { color: #B8956A; }
 .muted { color: #8a8a8a; }
 a { color: #1a2942; }
 img { -ms-interpolation-mode: bicubic; border: 0; outline: none; }

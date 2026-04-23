@@ -184,6 +184,12 @@ class YearEndContext:
             "consistency_notes":  self.consistency_notes,
             "watch_items":        self.watch_items,
             "shareholder_letter": self.shareholder_letter,
+            # CRITICAL: Template reads `letter_paragraphs` (list), service generates
+            # `shareholder_letter` (str). Without this bridge the AI-generated
+            # Buffett-tone letter never reaches the PDF — every Premium user
+            # receives the same hardcoded default fiction letter.
+            # See: reports/product/PDF_CONTENT_AUDIT_2026-04-23.md §Year-End.
+            "letter_paragraphs":  [p.strip() for p in (self.shareholder_letter or "").split("\n\n") if p.strip()],
             "disclaimer":         self.disclaimer,
         }
 

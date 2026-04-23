@@ -18,7 +18,7 @@
         font-size: 7.2pt;
         letter-spacing: 0.36em;
         text-transform: uppercase;
-        color: #8B6F47;
+        color: #B8956A;
       }
       @top-right {
         content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ period_label }}";
@@ -68,7 +68,7 @@
     }
     .cv-hero span { display: block; }
     .cv-hero span + span { padding-left: 30pt; }
-    .cv-hero span + span + span { padding-left: 60pt; color: #8B6F47; }
+    .cv-hero span + span + span { padding-left: 60pt; color: #B8956A; }
     .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 18pt; table-layout: fixed; overflow: visible; }
     .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
     .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
@@ -92,7 +92,7 @@
       margin-top: 22pt; text-align: center;
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 7.6pt; letter-spacing: 0.38em; text-transform: uppercase;
-      color: #8B6F47; font-weight: 600;
+      color: #B8956A; font-weight: 600;
     }
     .cv-foot {
       margin-top: 18pt; text-align: center;
@@ -103,7 +103,7 @@
     .sp-part {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin: 0 0 2pt 0;
     }
     .sp-title {
@@ -144,7 +144,7 @@
     .sp-prose > p:first-child::first-letter {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 28pt; line-height: 0.88; font-weight: 500;
-      color: #8B6F47; float: left; padding: 2pt 6pt 0 0; font-style: normal;
+      color: #B8956A; float: left; padding: 2pt 6pt 0 0; font-style: normal;
     }
     .sp-marg-list {
       margin-top: 12pt; border-top: 0.35pt solid #c9c4b8; padding-top: 8pt;
@@ -197,7 +197,7 @@
     .rq-quad-label {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 3pt;
     }
     .rq-quad-value {
@@ -217,14 +217,14 @@
     .rq-notes-eyebrow {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.6pt; letter-spacing: 0.28em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 8pt;
     }
     .rq-notes-item { margin-bottom: 8pt; padding-left: 16pt; text-indent: -16pt; }
     .rq-notes-item:last-child { margin-bottom: 0; }
     .rq-notes-num {
       font-family: "JetBrains Mono", monospace;
-      font-size: 7.6pt; color: #8B6F47; font-weight: 600;
+      font-size: 7.6pt; color: #B8956A; font-weight: 600;
       letter-spacing: 0.04em; margin-right: 6pt;
     }
     .rq-notes-def {
@@ -248,10 +248,10 @@
       margin-top: 26pt;
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 8.5pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
     }
     .ed-quote-attr::before, .ed-quote-attr::after {
-      content: "——"; color: #8B6F47; opacity: 0.5;
+      content: "——"; color: #B8956A; opacity: 0.5;
       margin: 0 8pt; letter-spacing: 0;
     }
     .ed-notans-head {
@@ -274,7 +274,7 @@
     }
     .ed-notans-num {
       font-family: "JetBrains Mono", monospace;
-      font-size: 8pt; color: #8B6F47;
+      font-size: 8pt; color: #B8956A;
       font-weight: 600; letter-spacing: 0.04em;
       margin-right: 10pt;
     }
@@ -285,7 +285,7 @@
     .co-head {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 9pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 4pt;
     }
     .co-rule-small {
@@ -332,7 +332,7 @@
       font-size: 7pt !important;
       letter-spacing: 0.32em !important;
       text-transform: uppercase !important;
-      color: #8B6F47 !important;
+      color: #B8956A !important;
       margin: 0 0 6pt 0 !important;
     }
   </style>
@@ -471,7 +471,7 @@
         {% set _ret_norm = (s.ret + 4) / 20 %}
         {% if _ret_norm < 0.10 %}{% set _ret_norm = 0.10 %}{% endif %}
         {% if _ret_norm > 0.90 %}{% set _ret_norm = 0.90 %}{% endif %}
-        {% if s.ret >= 0 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
+        {% if s.ret >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
         <rect x="{{ _x }}" y="0" width="{{ _w }}" height="{{ _row1_h }}"
               fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _ret_norm }}"
               stroke="#F7F5EF" stroke-width="1.4"/>
@@ -494,7 +494,7 @@
         {% set _ret_norm = (s.ret + 4) / 20 %}
         {% if _ret_norm < 0.10 %}{% set _ret_norm = 0.10 %}{% endif %}
         {% if _ret_norm > 0.90 %}{% set _ret_norm = 0.90 %}{% endif %}
-        {% if s.ret >= 0 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
+        {% if s.ret >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
         <rect x="{{ _x }}" y="{{ _y2 }}" width="{{ _w }}" height="{{ _row2_h }}"
               fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _ret_norm }}"
               stroke="#F7F5EF" stroke-width="1.4"/>
@@ -517,7 +517,7 @@
         {% set _ret_norm = (s.ret + 4) / 20 %}
         {% if _ret_norm < 0.10 %}{% set _ret_norm = 0.10 %}{% endif %}
         {% if _ret_norm > 0.90 %}{% set _ret_norm = 0.90 %}{% endif %}
-        {% if s.ret >= 0 %}{% set _fill = '#8B6F47' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
+        {% if s.ret >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
         <rect x="{{ _x }}" y="{{ _y3 }}" width="{{ _w }}" height="{{ _row3_h }}"
               fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _ret_norm }}"
               stroke="#F7F5EF" stroke-width="1.4"/>
@@ -621,7 +621,7 @@
                style="display:block; vertical-align:middle;">
             <polyline points="{{ _sp | join(' ') }}"
                       stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
           </svg>
         </td>
       </tr>
@@ -677,7 +677,7 @@
                 {% if _op > 1 %}{% set _op = 1 %}{% endif %}
                 <rect x="{{ _gx + c * _cw }}" y="{{ _gy + r * _ch }}"
                       width="{{ _cw - 1 }}" height="{{ _ch - 1 }}"
-                      fill="#8B6F47" fill-opacity="{{ '%.2f' % _op }}"
+                      fill="#B8956A" fill-opacity="{{ '%.2f' % _op }}"
                       stroke="#F7F5EF" stroke-width="0.5"/>
                 <text x="{{ _gx + c * _cw + _cw/2 }}" y="{{ _gy + r * _ch + _ch/2 + 2 }}"
                       text-anchor="middle"
@@ -719,7 +719,7 @@
               {% set _op = 0.40 + loop.index0 * 0.18 %}
               {% if _op > 0.95 %}{% set _op = 0.95 %}{% endif %}
               <rect x="{{ 5 + _cursor }}" y="28" width="{{ _w }}" height="14"
-                    fill="#8B6F47" fill-opacity="{{ _op }}"
+                    fill="#B8956A" fill-opacity="{{ _op }}"
                     stroke="#F7F5EF" stroke-width="0.6"/>
               <text x="{{ 5 + _cursor + _w/2 }}" y="52"
                     text-anchor="middle" fill="#4a4a4a"
@@ -756,7 +756,7 @@
           <svg viewBox="0 0 180 68" width="100%" height="120" preserveAspectRatio="none"
                xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
             <line x1="5" y1="58" x2="175" y2="58" stroke="#c9c4b8" stroke-width="0.3"/>
-            {% set _colors = ['#0A0A0A','#8B6F47','#6B6B6B','#A84C4C'] %}
+            {% set _colors = ['#0A0A0A','#B8956A','#6B6B6B','#A84C4C'] %}
             {% set _styles = ['','','stroke-dasharray="2,2"','stroke-dasharray="3,1"'] %}
             {% for s in _rot %}
               {% set _pts = [] %}
@@ -808,7 +808,7 @@
                         fill="#f7f3ec" stroke="#c9c4b8" stroke-width="0.3"/>
                 {% else %}
                   {% set _av = _val if _val >= 0 else -_val %}
-                  {% set _fill = '#8B6F47' if _val >= 0 else '#A84C4C' %}
+                  {% set _fill = '#B8956A' if _val >= 0 else '#A84C4C' %}
                   <rect x="{{ _gx + c * _cw }}" y="{{ _gy + r * _ch }}"
                         width="{{ _cw - 0.5 }}" height="{{ _ch - 0.5 }}"
                         fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}"
@@ -941,7 +941,7 @@
     ]) %}
     {% for d in _ds %}
       <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-        <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #8B6F47; margin-right: 6pt;">{{ d.key }}</span>
+        <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key }}</span>
         <span>{{ d.value }}</span>
       </p>
     {% endfor %}

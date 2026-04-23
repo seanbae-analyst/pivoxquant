@@ -19,7 +19,7 @@
         font-size: 7.2pt;
         letter-spacing: 0.36em;
         text-transform: uppercase;
-        color: #8B6F47;
+        color: #B8956A;
       }
       @top-right {
         content: "BRIEF No. " counter(page, decimal-leading-zero) "  ·  {{ ticker | default('AAPL') }} {{ fiscal_period | default('Q2 FY26') }}";
@@ -71,7 +71,7 @@
     }
     .cv-hero span { display: block; }
     .cv-hero span + span { padding-left: 36pt; }
-    .cv-hero span + span + span { padding-left: 72pt; color: #8B6F47; }
+    .cv-hero span + span + span { padding-left: 72pt; color: #B8956A; }
     .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 28pt; table-layout: fixed; }
     .cv-kpi { display: table-cell; width: 25%; padding: 4pt 10pt; vertical-align: top; overflow: visible; }
     .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 12pt; }
@@ -108,7 +108,7 @@
     .sp-part {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin: 0 0 2pt 0;
     }
     .sp-title {
@@ -154,20 +154,20 @@
     .sp-prose > p:first-child::first-letter {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 28pt; line-height: 0.88;
-      font-weight: 500; color: #8B6F47;
+      font-weight: 500; color: #B8956A;
       float: left; padding: 2pt 6pt 0 0;
       font-style: normal;
     }
 
     .sp-margin-block {
-      border-left: 0.35pt solid #8B6F47;
+      border-left: 0.35pt solid #B8956A;
       padding: 2pt 0 2pt 9pt;
       margin-bottom: 12pt;
     }
     .sp-margin-term {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.4pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 2pt;
     }
     .sp-margin-value {
@@ -227,7 +227,7 @@
     .rq-quad-label {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.8pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 3pt;
     }
     .rq-quad-value {
@@ -250,7 +250,7 @@
     .rq-method-eyebrow {
       font-family: "Geist", -apple-system, sans-serif;
       font-size: 6.6pt; letter-spacing: 0.28em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 8pt;
     }
     .rq-method-item { margin-bottom: 9pt; }
@@ -258,7 +258,7 @@
     .rq-method-num {
       display: inline-block;
       font-family: "JetBrains Mono", monospace;
-      font-size: 7pt; color: #8B6F47;
+      font-size: 7pt; color: #B8956A;
       margin-right: 6pt;
     }
     .rq-method-term {
@@ -290,11 +290,11 @@
       margin-top: 24pt;
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 8.5pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
     }
     .ed-quote-attr::before,
     .ed-quote-attr::after {
-      content: "——"; color: #8B6F47; opacity: 0.5;
+      content: "——"; color: #B8956A; opacity: 0.5;
       margin: 0 8pt; letter-spacing: 0;
     }
 
@@ -322,7 +322,7 @@
       display: table-cell; width: 18pt;
       vertical-align: top;
       font-family: "JetBrains Mono", monospace;
-      font-size: 8pt; color: #8B6F47;
+      font-size: 8pt; color: #B8956A;
       padding-top: 2pt;
     }
     .ed-limit-detail {
@@ -345,7 +345,7 @@
     .co-head {
       font-family: "Source Serif 4", Georgia, serif;
       font-size: 9pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #8B6F47;
+      text-transform: uppercase; color: #B8956A;
       font-weight: 600; margin-bottom: 4pt;
     }
     .co-rule-small {
@@ -396,7 +396,7 @@
       font-size: 7pt !important;
       letter-spacing: 0.32em !important;
       text-transform: uppercase !important;
-      color: #8B6F47 !important;
+      color: #B8956A !important;
       margin: 0 0 6pt 0 !important;
     }
   </style>
@@ -525,12 +525,12 @@
               stroke="#E8E4DA" stroke-width="0.3"/>
       {% endfor %}
       <!-- zero baseline -->
-      <line x1="{{ _Cp }}" y1="{{ 18 + _PH }}" x2="{{ _CW - _Cp }}" y2="{{ 18 + _PH }}" stroke="#8B6F47" stroke-width="0.4" opacity="0.5"/>
+      <line x1="{{ _Cp }}" y1="{{ 18 + _PH }}" x2="{{ _CW - _Cp }}" y2="{{ 18 + _PH }}" stroke="#B8956A" stroke-width="0.4" opacity="0.5"/>
       <!-- bars -->
       {% for b in _rev %}
         {% set _cx = _Cp + loop.index0 * _bgap + _bgap/2 %}
         {% set _bh = (b.rev / _rev_max) * _PH %}
-        <rect x="{{ _cx - _bw/2 }}" y="{{ 18 + _PH - _bh }}" width="{{ _bw }}" height="{{ _bh }}" fill="#8B6F47" fill-opacity="0.55"/>
+        <rect x="{{ _cx - _bw/2 }}" y="{{ 18 + _PH - _bh }}" width="{{ _bw }}" height="{{ _bh }}" fill="#B8956A" fill-opacity="0.55"/>
         <text x="{{ _cx }}" y="{{ 18 + _PH - _bh - 3 }}" text-anchor="middle" fill="#0A0A0A" font-size="6.2" font-family="JetBrains Mono, monospace">${{ '%.0f'|format(b.rev) }}B</text>
         <text x="{{ _cx }}" y="{{ _CH - 14 }}" text-anchor="middle" fill="#6B6B6B" font-size="6" font-family="Geist, sans-serif" letter-spacing="0.04em">{{ b.q }}</text>
       {% endfor %}
@@ -549,7 +549,7 @@
       {% endfor %}
       <!-- legend -->
       <g transform="translate({{ _Cp }}, 10)" font-family="Source Serif 4, serif" font-size="6.4" fill="#4a4a4a">
-        <rect x="0" y="-5" width="10" height="6" fill="#8B6F47" fill-opacity="0.55"/>
+        <rect x="0" y="-5" width="10" height="6" fill="#B8956A" fill-opacity="0.55"/>
         <text x="14" y="0" font-style="italic">Revenue ($B)</text>
         <line x1="90" y1="-2" x2="104" y2="-2" stroke="#0A0A0A" stroke-width="0.9" stroke-dasharray="3,2"/>
         <text x="108" y="0" font-style="italic">YoY change (%)</text>
@@ -671,7 +671,7 @@
           <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="30" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
             <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
             <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#8B6F47"/>
+            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
           </svg>
         </td>
       </tr>
@@ -699,7 +699,7 @@
   {% for b in _sp_bins %}
     {% set _bx = 10 + _bg2 + loop.index0 * (_bw2 + _bg2) %}
     {% set _bh2 = (b.count / _spcmax) * 38 %}
-    <rect x="{{ _bx }}" y="{{ 48 - _bh2 }}" width="{{ _bw2 }}" height="{{ _bh2 }}" fill="#8B6F47" fill-opacity="0.55"/>
+    <rect x="{{ _bx }}" y="{{ 48 - _bh2 }}" width="{{ _bw2 }}" height="{{ _bh2 }}" fill="#B8956A" fill-opacity="0.55"/>
     <text x="{{ _bx + _bw2/2 }}" y="{{ 46 - _bh2 }}" text-anchor="middle" fill="#0A0A0A" font-size="7" font-family="JetBrains Mono, monospace">{{ b.count }}</text>
     <text x="{{ _bx + _bw2/2 }}" y="56" text-anchor="middle" fill="#6B6B6B" font-size="6" font-family="Geist, sans-serif" letter-spacing="0.04em">{{ b.range }}%</text>
   {% endfor %}
@@ -739,7 +739,7 @@
           {% set _bs = 180 / _bn %}
           {% for v in _beats %}
             {% set _cx = _bs/2 + loop.index0 * _bs %}
-            {% if v == 1 %}{% set _c = '#8B6F47' %}{% set _y = 20 %}{% else %}{% set _c = '#7f1d1d' %}{% set _y = 40 %}{% endif %}
+            {% if v == 1 %}{% set _c = '#B8956A' %}{% set _y = 20 %}{% else %}{% set _c = '#7f1d1d' %}{% set _y = 40 %}{% endif %}
             <circle cx="{{ _cx }}" cy="{{ _y }}" r="3" fill="{{ _c }}" fill-opacity="0.72"/>
           {% endfor %}
           <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">BEAT = BRONZE, MISS = OXBLOOD</text>
@@ -765,7 +765,7 @@
             {% set _dx = _dg + loop.index0 * (_dbw + _dg) %}
             {% set _av = d.avg if d.avg >= 0 else -d.avg %}
             {% set _dh = (_av / _dmax) * 26 %}
-            {% if d.avg >= 0 %}{% set _c = '#8B6F47' %}{% else %}{% set _c = '#7f1d1d' %}{% endif %}
+            {% if d.avg >= 0 %}{% set _c = '#B8956A' %}{% else %}{% set _c = '#7f1d1d' %}{% endif %}
             {% set _dy = 36 - _dh if d.avg >= 0 else 36 %}
             <rect x="{{ _dx }}" y="{{ _dy }}" width="{{ _dbw }}" height="{{ _dh }}" fill="{{ _c }}" fill-opacity="0.55"/>
             <text x="{{ _dx + _dbw/2 }}" y="40" text-anchor="middle" fill="#6B6B6B" font-size="6" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ d.window }}</text>
@@ -792,7 +792,7 @@
           <line x1="10" y1="36" x2="170" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
           <line x1="10" y1="4"  x2="10"  y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
           <!-- unity line -->
-          <line x1="10" y1="36" x2="150" y2="4" stroke="#8B6F47" stroke-width="0.4" stroke-dasharray="2,2" opacity="0.5"/>
+          <line x1="10" y1="36" x2="150" y2="4" stroke="#B8956A" stroke-width="0.4" stroke-dasharray="2,2" opacity="0.5"/>
           {% set _imax = 5.0 %}
           {% set _rmax = 3.0 %}
           {% for p in _scatter %}
@@ -824,7 +824,7 @@
           {% for pp in _peers %}
             {% set _px = _pg + loop.index0 * (_pbw + _pg) %}
             {% set _ph2 = (pp.eps / _pmax) * 26 %}
-            {% if pp.ticker == _ticker %}{% set _c = '#0A0A0A' %}{% else %}{% set _c = '#8B6F47' %}{% endif %}
+            {% if pp.ticker == _ticker %}{% set _c = '#0A0A0A' %}{% else %}{% set _c = '#B8956A' %}{% endif %}
             <rect x="{{ _px }}" y="{{ 36 - _ph2 }}" width="{{ _pbw }}" height="{{ _ph2 }}" fill="{{ _c }}" fill-opacity="0.62"/>
             <text x="{{ _px + _pbw/2 }}" y="40" text-anchor="middle" fill="#6B6B6B" font-size="5.6" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ pp.ticker }}</text>
             <text x="{{ _px + _pbw/2 }}" y="{{ 34 - _ph2 }}" text-anchor="middle" fill="#0A0A0A" font-size="6" font-family="JetBrains Mono, monospace">${{ '%.2f'|format(pp.eps) }}</text>
