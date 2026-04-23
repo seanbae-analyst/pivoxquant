@@ -195,9 +195,19 @@ def _demo_layers_response() -> dict:
 @api_auth
 @legal_scrub_response
 def risk_summary():
-    """Return top-line risk metrics. Zeros on empty portfolio, demo fallback on failure."""
+    """Return top-line risk metrics. Zeros on empty portfolio, demo fallback on failure.
+
+    Pipeline-level diagnostics (2026-04-23): when the outer `except` swallows an
+    exception we now log position count, matrix shape, and the failure stage so
+    repro-less bugs like "always is_demo:true" can be localized from prod logs.
+    Degraded-but-partial data (fewer than 20 rows but at least 10) is surfaced
+    as a neutral zero payload instead of demo fallback so the UI doesn't show
+    "SAMPLE PREVIEW" whenever one ticker lacks KIS history.
+    """
+    stage = "init"
     try:
-        state, _, matrix, df_close = _portfolio_snapshot()
+        stage = "snapshot"
+        state, valid_tickers, matrix, df_close = _portfolio_snapshot()
         payload = {
             "var_1d_pct":       0.0,
             "es_1d_pct":        0.0,
@@ -205,10 +215,25 @@ def risk_summary():
             "corr_risk_index":  0.0,
         }
 
-        if state is None or matrix is None or matrix.shape[0] < 20:
+        n_pos = 0 if state is None else len(state.get("positions") or [])
+        mshape = None if matrix is None else tuple(matrix.shape)
+        logger.info(
+            "risk.summary: positions=%s valid=%s matrix=%s",
+            n_pos, len(valid_tickers or []), mshape,
+        )
+
+        if state is None:
+            # Truly empty portfolio — honest zeros, not demo.
             return jsonify(payload)
 
-        weights = np.array([p["weight"] or (1.0 / len(state["positions"]))
+        if matrix is None or matrix.shape[0] < 20 or matrix.shape[1] == 0:
+            # History too short or missing for risk math. Return zeros with a
+            # soft message so the UI can distinguish from a hard-failure demo.
+            payload["message"] = "Insufficient price history for risk metrics"
+            return jsonify(payload)
+
+        stage = "weights"
+        weights = np.array([p["weight"] or (1.0 / max(len(state["positions"]), 1))
                             for p in state["positions"]], dtype=float)
         # Align weights to matrix columns when some tickers were dropped
         if weights.shape[0] != matrix.shape[1]:
@@ -219,18 +244,21 @@ def risk_summary():
             if s > 0:
                 weights = weights / s
 
+        stage = "var"
         port_rets = matrix @ weights
         var_1d_pct = -float(np.percentile(port_rets, 5)) * 100
         tail = port_rets[port_rets <= np.percentile(port_rets, 5)]
         es_1d_pct = -float(np.mean(tail)) * 100 if tail.size else 0.0
 
         # Max drawdown over the same 90-day window using portfolio equity curve
+        stage = "drawdown"
         eq = np.cumprod(1.0 + port_rets)
         peak = np.maximum.accumulate(eq)
         dd = (eq / peak) - 1.0
         max_dd_pct = -float(np.min(dd)) * 100 if dd.size else 0.0
 
         # Correlation risk index — avg pairwise correlation on 20-day window
+        stage = "correlation"
         corr_idx = 0.0
         if matrix.shape[1] >= 2 and matrix.shape[0] >= 20:
             recent = matrix[-20:]
@@ -244,7 +272,9 @@ def risk_summary():
         payload["corr_risk_index"] = round(corr_idx, 2)
         return jsonify(payload)
     except Exception as e:
-        logger.warning(f"risk.summary failed: {e}", exc_info=True)
+        logger.warning(
+            "risk.summary failed at stage=%s: %s", stage, e, exc_info=True,
+        )
         return jsonify(_demo_summary_response())
 
 
