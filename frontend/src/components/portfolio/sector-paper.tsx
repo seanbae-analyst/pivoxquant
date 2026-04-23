@@ -108,7 +108,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                       fontFamily: "var(--font-mono), ui-monospace, monospace",
                       fontSize: 11.5,
                       fontVariantNumeric: "tabular-nums",
-                      color: "#8B6F47",
+                      color: "#B8956A",
                       fontWeight: 600,
                     }}
                   >

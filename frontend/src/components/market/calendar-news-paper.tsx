@@ -201,7 +201,7 @@ export function CalendarNewsPaper({
                     width: 4,
                     height: 4,
                     borderRadius: "50%",
-                    background: "var(--pq-bronze, #8B6F47)",
+                    background: "var(--pq-bronze, #B8956A)",
                     opacity: 0.75,
                     transform: "translateY(-2px)",
                   }}
@@ -211,7 +211,7 @@ export function CalendarNewsPaper({
                     fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontVariantNumeric: "tabular-nums",
                     fontSize: 10.5,
-                    color: "var(--pq-bronze, #8B6F47)",
+                    color: "var(--pq-bronze, #B8956A)",
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
                   }}
@@ -278,7 +278,7 @@ export function CalendarNewsPaper({
                   fontFamily: "var(--font-mono), ui-monospace, monospace",
                   fontVariantNumeric: "tabular-nums",
                   fontSize: 10.5,
-                  color: "var(--pq-bronze, #8B6F47)",
+                  color: "var(--pq-bronze, #B8956A)",
                   letterSpacing: "0.08em",
                 }}
               >

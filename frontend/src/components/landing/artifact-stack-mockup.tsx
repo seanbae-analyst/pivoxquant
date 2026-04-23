@@ -119,7 +119,7 @@ function PdfPreviewBody({ a }: { a: Artifact }) {
           {a.meta}
         </span>
         {a.accent === "bronze" ? (
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#8B6F47]" />
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#B8956A]" />
         ) : (
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#1A1A1A]/25" />
         )}
@@ -165,7 +165,7 @@ export function ArtifactStackMockup() {
                 absolute inset-0
                 rounded-[6px]
                 bg-[#FAF8F3]
-                border border-[#8B6F47]/35
+                border border-[#B8956A]/35
                 shadow-[0_24px_60px_-16px_rgba(0,0,0,0.7),0_2px_0_0_rgba(139,111,71,0.12)]
                 overflow-hidden
                 flex flex-col

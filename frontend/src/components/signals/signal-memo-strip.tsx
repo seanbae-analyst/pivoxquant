@@ -368,7 +368,7 @@ export function SignalMemoStrip({
                 fontSize: 10,
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
-                color: "#8B6F47",
+                color: "#B8956A",
                 fontWeight: 600,
                 background: "transparent",
                 border: "none",

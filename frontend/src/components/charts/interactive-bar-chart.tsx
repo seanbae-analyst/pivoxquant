@@ -30,7 +30,7 @@ export function InteractiveBarChart({
   barColor,
 }: InteractiveBarChartProps) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const bronze = barColor || "var(--pq-bronze, #8B6F47)";
+  const bronze = barColor || "var(--pq-bronze, #B8956A)";
 
   if (!items.length) {
     return <div className="pq-ink-empty">—</div>;
@@ -64,7 +64,7 @@ export function InteractiveBarChart({
                 className="font-mono tabular-nums"
                 style={{
                   color: isActive
-                    ? "var(--pq-bronze, #8B6F47)"
+                    ? "var(--pq-bronze, #B8956A)"
                     : "rgba(245,240,232,0.7)",
                   transition: "color 180ms cubic-bezier(0.16, 1, 0.3, 1)",
                 }}
@@ -103,7 +103,7 @@ export function InteractiveBarChart({
                   style={{
                     fontSize: "9px",
                     letterSpacing: "0.22em",
-                    color: "var(--pq-bronze, #8B6F47)",
+                    color: "var(--pq-bronze, #B8956A)",
                     marginBottom: "4px",
                   }}
                 >

@@ -11,7 +11,7 @@
  *   5. Tighter Vantablack — narrower spotlight, deeper bottom fade,
  *      stronger film grain.
  *
- * Palette: Vantablack #050505/#0A0A0A · Ivory #F5F0E8 · Bronze #8B6F47.
+ * Palette: Vantablack #050505/#0A0A0A · Ivory #F5F0E8 · Bronze #B8956A.
  * Type:    Source Serif 4 (masthead, H1, body) · JetBrains Mono (data).
  * Copy:    English, research-framed. NO BUY/SELL/HOLD/recommend/advice.
  * Disclaimer: inline (Bronze italic) per legal requirement.
@@ -181,7 +181,7 @@ export function Hero() {
                     color: "var(--pq-bronze)",
                   }}
                 >
-                  PivoxQuant · Research Desk
+                  PivoxQuant · Living CFO
                 </span>
               </motion.div>
 
@@ -197,34 +197,35 @@ export function Hero() {
                   letterSpacing: "-0.02em",
                 }}
               >
-                Your portfolio,
-                <br />
-                briefed like a&nbsp;
+                Your CFO&nbsp;
                 <span
                   className={reduceMotion ? "" : "pq-cfo-word"}
-                  style={
-                    reduceMotion
+                  style={{
+                    fontStyle: "italic",
+                    ...(reduceMotion
                       ? { color: "var(--pq-bronze-light)" }
-                      : undefined
-                  }
+                      : {}),
+                  }}
                 >
-                  CFO&rsquo;s
+                  learns
                 </span>
-                .
+                <br />
+                you.
               </h1>
 
-              {/* Subcopy */}
+              {/* Subcopy — Living CFO */}
               <motion.p
                 variants={fadeUp}
                 className="mb-3 max-w-xl font-serif"
                 style={{
-                  fontSize: "clamp(16px, 1.45vw, 18px)",
-                  lineHeight: 1.6,
+                  fontSize: "clamp(15px, 1.35vw, 17px)",
+                  lineHeight: 1.65,
                   color: "rgba(245, 240, 232, 0.72)",
                 }}
               >
-                17 institutional-grade research artifacts. Monthly memos, risk
-                boards, year-end letters — drawn from your own holdings.
+                매일 아침 두 번. 매수 전 일곱 관문. 매주 금요일 한 장의 편지.
+                2년 뒤 당신은 알게 된다. 이 앱이 당신의 투자 철학을 당신보다
+                먼저 기억한다는 것을.
               </motion.p>
 
               {/* Italic deck line */}
@@ -238,7 +239,8 @@ export function Hero() {
                   color: "rgba(139, 111, 71, 0.85)",
                 }}
               >
-                A quiet operating system for private capital.
+                Twice each morning. Seven gates before every trade. One letter
+                each Friday. A personal CFO that studies you.
               </motion.p>
 
               {/* ─── Stat strip ─── */}
@@ -303,12 +305,12 @@ export function Hero() {
                       "0 1px 0 0 rgba(245,240,232,0.3) inset, 0 8px 24px -8px rgba(245,240,232,0.25)",
                   }}
                 >
-                  Start 7-day trial
+                  Meet your CFO
                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </Link>
 
                 <a
-                  href="/samples/sp500_backtest.pdf"
+                  href="/samples/weekly_memo.pdf"
                   target="_blank"
                   rel="noopener"
                   className="
@@ -321,7 +323,7 @@ export function Hero() {
                   }}
                 >
                   <FileText className="h-4 w-4" />
-                  View backtest PDF
+                  See a sample
                 </a>
               </motion.div>
 

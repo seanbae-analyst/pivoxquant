@@ -29,6 +29,11 @@ import {
 } from "lucide-react";
 import { Hero } from "./hero";
 import SplashPage from "./splash-page";
+import { ThreeLayers } from "./three-layers";
+import { PersonaShowcase } from "./persona-showcase";
+import { DepositionTeaser } from "./deposition-teaser";
+import { KoreaUsDesk } from "./korea-us-desk";
+import { LivingCfoLoop } from "./living-cfo-loop";
 
 /* ──────────────────────────────────────────────
    Animation variants
@@ -391,8 +396,8 @@ function MiniEquityCurve() {
     >
       <defs>
         <linearGradient id="curveGradV2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8B6F47" stopOpacity="0.18" />
-          <stop offset="100%" stopColor="#8B6F47" stopOpacity="0" />
+          <stop offset="0%" stopColor="#B8956A" stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#B8956A" stopOpacity="0" />
         </linearGradient>
       </defs>
       {/* Grid dots 0.04 alpha */}
@@ -417,7 +422,7 @@ function MiniEquityCurve() {
       <path
         d="M0 60 C20 58, 30 52, 50 48 C70 44, 80 38, 100 40 C120 42, 130 26, 150 20 C170 14, 180 16, 200 10"
         fill="none"
-        stroke="#8B6F47"
+        stroke="#B8956A"
         strokeWidth="1.25"
         strokeLinecap="round"
       />
@@ -440,8 +445,8 @@ function DashboardEquityCurve() {
     >
       <defs>
         <linearGradient id="dashCurveV2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8B6F47" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="#8B6F47" stopOpacity="0" />
+          <stop offset="0%" stopColor="#B8956A" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#B8956A" stopOpacity="0" />
         </linearGradient>
       </defs>
       {/* Horizontal gridlines — ivory 0.06 */}
@@ -464,7 +469,7 @@ function DashboardEquityCurve() {
       <path
         d="M0 90 C30 88, 50 80, 80 75 C110 70, 130 65, 160 58 C190 51, 210 55, 240 48 C270 41, 290 38, 320 32 C350 26, 370 30, 400 22 C430 14, 460 18, 500 10"
         fill="none"
-        stroke="#8B6F47"
+        stroke="#B8956A"
         strokeWidth="1.25"
         strokeLinecap="round"
       />
@@ -1233,8 +1238,20 @@ export default function LandingPage() {
       <SplashPage />
 
       {/* ─── PAGE 1: HERO ─── */}
-      {/* ─── 2. HERO SECTION — Hero v2 (Vantablack + Ivory + Bronze) ─── */}
+      {/* ─── 2. HERO SECTION — Hero v4 "Your CFO learns you." ─── */}
       <Hero />
+
+      {/* ─── PAGE 1b: 3-LAYER ARCHITECTURE (new) ─── */}
+      <ThreeLayers />
+
+      {/* ─── PAGE 1c: 8 PERSONAS SHOWCASE (new) ─── */}
+      <PersonaShowcase />
+
+      {/* ─── PAGE 1d: PRE-TRADE CHECKLIST / Deposition teaser (new) ─── */}
+      <DepositionTeaser />
+
+      {/* ─── PAGE 1e: KOREA × US CFO DESK (new) ─── */}
+      <KoreaUsDesk />
 
       {/* ─── PAGE 2: FEATURES BENTO (moved up — Revolut key-features-first pattern) ─── */}
       {/* ─── 5. FEATURES BENTO — Vantablack lift ─── */}
@@ -1750,7 +1767,7 @@ export default function LandingPage() {
             >
               Beneath every report,
               <br />
-              58 models running quietly.
+              40 models running quietly.
             </h2>
             <p
               className="font-serif"
@@ -1792,14 +1809,14 @@ export default function LandingPage() {
               {
                 key: "QUANT",
                 label: "Quant",
-                numeric: 58,
-                numericLabel: "fifty-eight statistical models",
+                numeric: 40,
+                numericLabel: "forty statistical models",
                 isWord: false,
                 caption: "statistical models",
                 models: MODEL_DEFS.filter((m) => m.category === "QUANT"),
-                extra: <li style={{ color: "var(--pq-muted)" }}>(+40 more)</li>,
+                extra: <li style={{ color: "var(--pq-muted)" }}>(+regime-switching · drift detection · rolling window)</li>,
                 footnote:
-                  "Including behavioral, cross-sectional, and ML-based variants.",
+                  "Technical 22% · Fundamental 25% · News 3% · Quant 50% (대형주 기준). Regime-switching and drift detection on rolling windows.",
                 borderRight: true,
               },
               {
@@ -3257,7 +3274,10 @@ export default function LandingPage() {
 
 
       {/* ─── PAGE 10: PRICING ─── */}
-      {/* ─── 7. PRICING — Vantablack, 3 tiers (21st.dev editorial pattern, KRW) ─── */}
+      {/* ─── PAGE 6b: LIVING CFO LOOP (new) ─── */}
+      <LivingCfoLoop />
+
+      {/* ─── 7. PRICING — Vantablack, 4 tiers + Founding Lifetime (Living CFO edition) ─── */}
       <section
         id="pricing"
         className="py-20 md:py-28 lg:py-40"
@@ -3286,9 +3306,9 @@ export default function LandingPage() {
                 fontWeight: 500,
               }}
             >
-              Flat monthly fee.
+              Four tiers for a CFO
               <br />
-              No trading commissions. No performance cut.
+              that learns you.
             </h2>
             <p
               className="font-serif"
@@ -3304,7 +3324,7 @@ export default function LandingPage() {
 
           <motion.div
             {...motionProps(staggerContainer)}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-7 items-stretch"
           >
             {[
               {
@@ -3315,6 +3335,7 @@ export default function LandingPage() {
                 unit: "KRW",
                 dark: false,
                 recommended: false,
+                comingSoon: false,
                 tagline: "Read-only observation. 1 artifact per week.",
                 features: [
                   "Weekly Memo (abridged)",
@@ -3325,40 +3346,61 @@ export default function LandingPage() {
                 href: "/signup",
               },
               {
-                name: "Operator",
+                name: "Pro",
                 numeral: "II",
-                price: "9,900",
+                price: "14,900",
                 period: "per month",
                 unit: "KRW",
                 dark: true,
                 recommended: true,
-                tagline: "Full desk access. 17 artifacts. Weekly ship.",
+                comingSoon: false,
+                tagline: "Full desk. 15 artifacts. Pre-Trade Checklist unlocked.",
                 features: [
                   "Everything in Observer",
-                  "7 Operator artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Burn Rate, Credit Rating, AI Suite, Weekly Memo (full)",
-                  "2 broker connections",
-                  "Risk Board — 7-layer observation",
+                  "Morning Brief Plus, Earnings Pre-Brief, Weekly Memo (full)",
+                  "Pre-Trade Checklist — 7 gates before every trade",
+                  "2 broker connections · Risk Board",
+                ],
+                cta: "Meet your CFO",
+                href: "/signup",
+              },
+              {
+                name: "Premium",
+                numeral: "III",
+                price: "29,900",
+                period: "per month",
+                unit: "KRW",
+                dark: false,
+                recommended: false,
+                comingSoon: false,
+                tagline: "Drift detection. Persona re-classification. Priority renders.",
+                features: [
+                  "Everything in Pro",
+                  "Drift detection · weekly Pulse · Feedback loop",
+                  "Year-End Letter · Self-Audit · Brag Card",
+                  "Priority render queue",
                 ],
                 cta: "Start 7-day trial",
                 href: "/signup",
               },
               {
-                name: "Partner",
-                numeral: "III",
-                price: "19,900",
+                name: "Premium Plus",
+                numeral: "IV",
+                price: "49,900",
                 period: "per month",
                 unit: "KRW",
-                dark: false,
+                dark: true,
                 recommended: false,
-                tagline: "Concierge research. Priority renders. Quarterly 1:1 notes.",
+                comingSoon: true,
+                tagline: "CFO Suite — voice briefs, 1:1 desk notes, priority everything.",
                 features: [
-                  "Everything in Operator",
-                  "10 Partner artifacts — Risk Board Deck, Year-End Letter, Quarterly Self-Report, Capital Allocation, Insider Mirror, Portfolio Segment, Dividend Income, Monthly Finance, Self-Audit, Brag Card",
-                  "Priority render queue",
+                  "Everything in Premium",
+                  "Voice morning brief (Korean + English)",
                   "Quarterly 1:1 desk notes",
+                  "Full CFO Suite access",
                 ],
-                cta: "Start 7-day trial",
-                href: "/signup",
+                cta: "Join waitlist",
+                href: "/signup?plan=premium-plus",
               },
             ].map((p) => {
               const isDark = p.dark;
@@ -3390,7 +3432,20 @@ export default function LandingPage() {
                         borderRadius: "2px",
                       }}
                     >
-                      the operator&rsquo;s tier
+                      most chosen
+                    </span>
+                  )}
+                  {p.comingSoon && (
+                    <span
+                      className="absolute -top-3 left-8 px-3 py-[4px] font-serif italic text-[11px]"
+                      style={{
+                        backgroundColor: "var(--pq-bronze)",
+                        color: "var(--pq-ink)",
+                        letterSpacing: "0.04em",
+                        borderRadius: "2px",
+                      }}
+                    >
+                      Coming Soon · waitlist
                     </span>
                   )}
 
@@ -3523,6 +3578,115 @@ export default function LandingPage() {
             })}
           </motion.div>
 
+          {/* ── Founding Lifetime ── */}
+          <motion.div
+            {...motionProps(fadeUp)}
+            className="mt-16 md:mt-20 relative rounded-sm overflow-hidden p-8 md:p-10 lg:p-12"
+            style={{
+              backgroundColor: "#0D0D0D",
+              border: "1px solid var(--pq-bronze)",
+              boxShadow: "0 40px 80px -40px rgba(139,111,71,0.35)",
+            }}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-8 items-center">
+              <div>
+                <div className="mb-5 inline-flex items-center gap-2.5">
+                  <span aria-hidden className="h-px w-7" style={{ backgroundColor: "rgba(139, 111, 71, 0.9)" }} />
+                  <span
+                    className="font-serif text-[11px] uppercase"
+                    style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+                  >
+                    Founding Lifetime · limited to 200
+                  </span>
+                </div>
+                <h3
+                  className="pq-silver-matte font-serif mb-4"
+                  style={{
+                    fontSize: "clamp(1.5rem, 2.6vw, 2rem)",
+                    lineHeight: 1.1,
+                    letterSpacing: "-0.02em",
+                    fontWeight: 500,
+                  }}
+                >
+                  One payment. Every tier. Forever.
+                </h3>
+                <p
+                  className="font-serif mb-2"
+                  style={{
+                    fontSize: "15px",
+                    lineHeight: 1.6,
+                    color: "rgba(245,240,232,0.72)",
+                  }}
+                >
+                  Pro + Premium + Premium Plus for life. Locked before launch. First
+                  200 founding members only.
+                </p>
+                <p
+                  className="font-serif italic"
+                  style={{
+                    fontSize: "12.5px",
+                    color: "rgba(139,111,71,0.8)",
+                  }}
+                >
+                  초기 200명 한정 · 평생 이용 · Premium Plus 정식 출시 전 선예약.
+                </p>
+              </div>
+              <div className="flex flex-col items-start lg:items-end gap-5">
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className="font-mono tabular-nums"
+                      style={{
+                        fontSize: "clamp(40px, 4vw, 52px)",
+                        lineHeight: 1,
+                        letterSpacing: "-0.03em",
+                        color: "var(--pq-ivory)",
+                      }}
+                    >
+                      99,000
+                    </span>
+                    <span
+                      className="font-serif text-[11px] uppercase"
+                      style={{
+                        letterSpacing: "0.2em",
+                        color: "rgba(245,240,232,0.55)",
+                      }}
+                    >
+                      KRW
+                    </span>
+                  </div>
+                  <p
+                    className="mt-1 font-serif text-[11.5px] italic"
+                    style={{ color: "rgba(245,240,232,0.55)" }}
+                  >
+                    one-time · lifetime access
+                  </p>
+                </div>
+                <div
+                  className="font-mono tabular-nums text-[11px]"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--pq-bronze)",
+                  }}
+                >
+                  200 / 200 REMAINING
+                </div>
+                <Link
+                  href="/signup?plan=founding"
+                  className="inline-flex items-center gap-2 px-6 h-11 rounded-sm font-serif text-[13px]"
+                  style={{
+                    backgroundColor: "var(--pq-bronze)",
+                    color: "var(--pq-ink)",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Claim founding seat
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+
           <motion.p
             {...motionProps(fadeUp)}
             className="mt-12 font-serif text-[11px] italic leading-relaxed"
@@ -3633,20 +3797,32 @@ export default function LandingPage() {
           <motion.div {...motionProps(staggerContainer)}>
             {[
               {
-                q: "Is this investment advice?",
-                a: "No. PivoxQuant is an informational research tool. Every artifact is a measurement — concentration, drawdown, factor tilts, earnings posture — not a directive. We do not issue buy, sell, or hold instructions. Decisions remain entirely yours.",
+                q: "Is a personal CFO the same as investment advisory?",
+                a: "No. 자본시장법 제6조상 개인 투자자문업과 무관합니다. PivoxQuant는 당신 자신의 포트폴리오를 관측하고 기록하는 informational research tool입니다. 모든 artifact는 관측치(concentration, drawdown, factor tilts, earnings posture)이며 매수/매도 지시가 아닙니다. Labels are POSITIVE / NEGATIVE / NEUTRAL — never buy, sell, or hold. 결정은 전적으로 당신의 몫입니다.",
+              },
+              {
+                q: "How is my trade data used — what does the CFO \"learn\"?",
+                a: "당신의 온보딩 20문항과 포트폴리오 이력을 바탕으로 Layer 1 Identity를 구성합니다. Layer 2 Learning은 롤링 윈도우로 drift를 감지해 페르소나를 재조정하고, Layer 3 Artifact는 그 결과로 당신에게 맞는 리포트를 발행합니다. 원본 거래 데이터는 암호화 저장되며 광고·외부 판매에 사용되지 않습니다. 탈퇴 시 30일 내 완전 삭제됩니다.",
+              },
+              {
+                q: "How does my persona change over time?",
+                a: "Drift detection이 매주 동작합니다. 최근 90일의 거래·반응 패턴이 현재 페르소나와 유의미하게 달라지면 CFO가 \"당신이 다르게 움직이기 시작했다\"는 Pulse 리포트를 발행합니다. 재분류는 자동이 아니라 제안입니다 — 수락해야 다음 사이클부터 새 페르소나 기준으로 리포트가 나옵니다.",
+              },
+              {
+                q: "What's different about Premium Plus · CFO Suite?",
+                a: "Pro와 Premium의 모든 기능 + (1) 한국어·영어 음성 morning brief, (2) 분기 1:1 desk notes, (3) priority everything (render queue, data refresh, support). 2026년 상반기 정식 출시 예정 · 현재 waitlist 예약 중 · Founding Lifetime 200명에 한해 평생 포함.",
               },
               {
                 q: "What happens during the 7-day trial?",
-                a: "Full access to the Operator tier. Your first weekly memo, earnings pre-brief, and risk board render from your own holdings within 24 hours. Cancel anytime before day seven and you are not charged. After day seven, billing begins at ₩9,900 per month.",
+                a: "Pro 티어 풀액세스. 첫 weekly memo · earnings pre-brief · Risk Board가 24시간 내 당신의 실제 보유에서 렌더됩니다. 7일 내 취소 시 과금 없음. 이후 월 ₩14,900.",
               },
               {
                 q: "Do you have access to my brokerage account?",
-                a: "Read-only. We connect through Alpaca (US) and KIS (KR) with read-only scopes. We cannot place trades, transfer funds, or modify orders. If you disconnect the broker, artifact rendering pauses — your data is retained for 30 days, then purged.",
+                a: "Read-only. Alpaca (US) · KIS (KR) read-only scope로 연결됩니다. 주문 · 출금 · 수정 불가. 연결 해제 시 artifact 렌더링 중단, 데이터는 30일 보관 후 파기.",
               },
               {
                 q: "Can I cancel? How do refunds work?",
-                a: "Cancel anytime from settings — no email, no call. Per Korean e-commerce law, you are entitled to a full refund within 14 days of first payment if the service has not been used. After that, billing stops at the end of the current period.",
+                a: "Settings에서 언제든 취소 — 이메일·전화 없이. 전자상거래법상 첫 결제 14일 이내 미사용 시 전액 환불 대상. 이후에는 현재 주기 종료 시 청구가 멈춥니다. Founding Lifetime은 전자상거래법 7일 청약철회 후 환불 불가 (평생 상품 특성상).",
               },
             ].map((item, i) => (
               <motion.details

@@ -85,7 +85,7 @@ function RangeBar({
     <div>
       <div className="relative h-1 rounded-full bg-slate-100">
         <div
-          className="absolute top-0 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--pq-bronze,#8B6F47)]"
+          className="absolute top-0 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--pq-bronze,#B8956A)]"
           style={{ left: `${pct * 100}%` }}
         />
       </div>
@@ -103,7 +103,7 @@ function RangeBar({
 function Sparkline({ points }: { points: number[] }) {
   if (!points || points.length < 2) return null;
   const isUp = points[points.length - 1] >= points[0];
-  const stroke = isUp ? "#8B6F47" : "#B04A3A";
+  const stroke = isUp ? "#B8956A" : "#B04A3A";
 
   // Back-date a synthetic series: we don't have real dates for the 30-pt
   // mini array, so we render day indices from today minus N. Observational.
@@ -135,7 +135,7 @@ function Sparkline({ points }: { points: number[] }) {
 export function IndexCard({ quote }: { quote: IndexQuote }) {
   const tone =
     quote.changePct > 0
-      ? "text-[var(--pq-bronze,#8B6F47)]"
+      ? "text-[var(--pq-bronze,#B8956A)]"
       : quote.changePct < 0
         ? "text-[#B04A3A]"
         : "text-slate-500";

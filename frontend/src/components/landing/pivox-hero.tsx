@@ -9,7 +9,7 @@
  *
  * Rules (enforced):
  *  - Language: English only, research-framed. No BUY/SELL/HOLD/recommend/advice.
- *  - Palette: Vantablack (#0A0A0A), Ivory (#F5F0E8), Bronze (#8B6F47).
+ *  - Palette: Vantablack (#0A0A0A), Ivory (#F5F0E8), Bronze (#B8956A).
  *  - No GSAP / no 3D / no purple-violet-blue gradient.
  *  - Disclaimer footer rendered inside the section.
  */
@@ -126,13 +126,13 @@ export function PivoxHero() {
             >
               <span
                 aria-hidden
-                className="h-px w-7 bg-[#8B6F47]/70"
+                className="h-px w-7 bg-[#B8956A]/70"
               />
               <span
                 className="
                   font-sans text-[11px] uppercase
                   tracking-[0.22em]
-                  text-[#8B6F47]
+                  text-[#B8956A]
                 "
               >
                 PivoxQuant · Research Desk
@@ -210,10 +210,10 @@ export function PivoxHero() {
                   rounded-sm
                   bg-transparent
                   text-[#F5F0E8]/85
-                  border border-[#8B6F47]/50
+                  border border-[#B8956A]/50
                   text-[13.5px] font-medium tracking-wide
                   transition-colors duration-200
-                  hover:text-[#F5F0E8] hover:border-[#8B6F47]
+                  hover:text-[#F5F0E8] hover:border-[#B8956A]
                 "
               >
                 <FileText className="w-4 h-4" />
@@ -232,7 +232,7 @@ export function PivoxHero() {
                 tracking-wide
               "
             >
-              <span className="text-[#8B6F47]/80">— </span>
+              <span className="text-[#B8956A]/80">— </span>
               Not investment advice. Past performance &ne; future results.
               Research tool only. PivoxQuant is not a licensed advisor.
             </motion.p>

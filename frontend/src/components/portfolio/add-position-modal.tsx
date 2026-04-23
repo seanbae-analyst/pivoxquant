@@ -136,7 +136,7 @@ export function AddPositionModal({
                     className={
                       "flex-1 text-[13px] font-medium transition-colors " +
                       (active
-                        ? "bg-[var(--pq-bronze,#8B6F47)] text-[var(--pq-ink,#050505)]"
+                        ? "bg-[var(--pq-bronze,#B8956A)] text-[var(--pq-ink,#050505)]"
                         : "bg-[rgba(255,255,255,0.02)] text-[rgba(245,240,232,0.6)] hover:bg-[rgba(245,240,232,0.06)]")
                     }
                   >
