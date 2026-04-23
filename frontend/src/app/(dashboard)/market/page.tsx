@@ -1,23 +1,59 @@
 "use client";
 
 /**
- * Market — Vantablack ink terminal card on ivory shell.
+ * /market — Morning Papers gazette.
  *
- * Sections:
- *   - Header (kicker + title + week tag)
- *   - Region tabs (US / KR) — Bronze active underline
- *   - Overview strip — 5-index mini-sparkline summary row (non-interactive)
- *   - IndexCard grid (display-only — indices have no detail page)
- *   - KR: Derivatives block
- *   - Economic Calendar + News feed placeholders
- *   - DisclaimerBanner
+ * Cascades the /home Dossier concept into Market. The page is no longer
+ * a grid of ink cards; it is a stack of three ivory "papers" on the
+ * Vantablack desk:
  *
- * Neutral observation language only.
+ *   Paper 1 — OverviewPaper          — front sheet: hero index +
+ *                                      at-a-glance strip for the region
+ *   Paper 2 — IndicesDetailPaper     — mid sheet (rotated): full level
+ *                                      table with sparklines + 52W ranges;
+ *                                      KR tab carries the derivatives block
+ *   Paper 3 — CalendarNewsPaper      — back sheet (tilted further): FX,
+ *                                      earnings calendar, market pulse
+ *
+ * All SWR hooks, real-time cadence (liveRefresh), and observational
+ * language from the prior implementation are preserved verbatim. Only
+ * the render layer has been redesigned.
+ *
+ * Region tabs (US / KR) and the header live/closed status strip remain.
+ * DisclaimerBanner type="signal" preserved at the foot.
+ *
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL toning only. No BUY/SELL/HOLD
+ * language anywhere on the page.
  */
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
+
+import { apiFetch } from "@/lib/api";
+import { MARKET_INDICES, API } from "@/lib/endpoints";
+import { isMarketOpen, liveRefresh } from "@/lib/market-hours";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { FootSignature } from "@/components/ui/editorial";
+import { cn } from "@/lib/utils";
+
+import { DossierDesk } from "@/components/home/dossier-desk";
+import { PaperDocument } from "@/components/home/paper-document";
+
+import {
+  US_INDICES,
+  KR_INDICES,
+  KR_DERIVATIVES,
+} from "@/components/market/mock-indices";
+import type { IndexQuote } from "@/components/market/index-card";
+import { useNowTick } from "@/components/market/index-card";
+
+import { OverviewPaper } from "@/components/market/overview-paper";
+import { IndicesDetailPaper } from "@/components/market/indices-detail-paper";
+import { CalendarNewsPaper } from "@/components/market/calendar-news-paper";
+
+type MarketTab = "US" | "KR";
 
 interface FxResponse {
   ok: boolean;
@@ -27,29 +63,6 @@ interface FxResponse {
   age_seconds: number;
   is_stale: boolean;
 }
-import { apiFetch } from "@/lib/api";
-import { MARKET_INDICES, API } from "@/lib/endpoints";
-import { isMarketOpen, liveRefresh } from "@/lib/market-hours";
-import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
-import {
-  Caption,
-  Fleuron,
-  FootSignature,
-  RuledKicker,
-} from "@/components/ui/editorial";
-import { cn } from "@/lib/utils";
-import { fmtPct } from "@/lib/format";
-import {
-  US_INDICES,
-  KR_INDICES,
-  KR_DERIVATIVES,
-} from "@/components/market/mock-indices";
-import type { IndexQuote } from "@/components/market/index-card";
-import { relativeTime, useNowTick } from "@/components/market/index-card";
-import { CalendarDays, Newspaper } from "lucide-react";
-
-type MarketTab = "US" | "KR";
 
 interface BackendIndex {
   ticker: string;
@@ -89,20 +102,15 @@ function weekTag(): string {
   return `${d.getFullYear()} · W${String(w).padStart(2, "0")}`;
 }
 
-function fmtLevel(v: number, kind: IndexQuote["format"] = "en") {
-  if (kind === "int") return Math.round(v).toLocaleString("en-US");
-  if (kind === "kr") {
-    return v.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-  return v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
 export default function MarketPage() {
   const router = useRouter();
   const [tab, setTab] = useState<MarketTab>("US");
   const region = tab === "US" ? "us" : "kr";
 
-  const { data, isLoading } = useSWR<BackendIndex[]>(
+  /* ────────────────────────────────────────────────────────────────
+   * SWR — DO NOT MODIFY. Same keys, same cadence, same fallbacks.
+   * ──────────────────────────────────────────────────────────────── */
+  const { data } = useSWR<BackendIndex[]>(
     `${MARKET_INDICES}?region=${region}`,
     fetcher,
     {
@@ -117,54 +125,46 @@ export default function MarketPage() {
     },
   );
 
-  // Economic calendar (earnings endpoint as proxy) — upcoming events, 5min.
-  const { data: earningsData } = useSWR<{ earnings?: Array<{ ticker: string; name?: string; date: string }> }>(
-    API.market.earnings,
-    fetcher,
-    {
-      refreshInterval: 300_000,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true,
-      dedupingInterval: 60_000,
-      errorRetryCount: 2,
-      errorRetryInterval: 10_000,
-    },
-  );
+  const { data: earningsData } = useSWR<{
+    earnings?: Array<{ ticker: string; name?: string; date: string }>;
+  }>(API.market.earnings, fetcher, {
+    refreshInterval: 300_000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 60_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 10_000,
+  });
 
-  // FX — market-aware refresh; open 5s, closed 60s.
-  const { data: fxData } = useSWR<FxResponse>(
-    API.market.fx,
-    fetcher,
-    {
-      refreshInterval: () => liveRefresh(5_000, 60_000),
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      dedupingInterval: 2_000,
-      errorRetryCount: 2,
-      errorRetryInterval: 10_000,
-    },
-  );
+  const { data: fxData } = useSWR<FxResponse>(API.market.fx, fetcher, {
+    refreshInterval: () => liveRefresh(5_000, 60_000),
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 2_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 10_000,
+  });
 
   const quotes: IndexQuote[] = useMemo(() => {
-    if (Array.isArray(data) && data.length >= 3) return data.map((b) => toQuote(b, tab));
+    if (Array.isArray(data) && data.length >= 3)
+      return data.map((b) => toQuote(b, tab));
     return tab === "US" ? US_INDICES : KR_INDICES;
   }, [data, tab]);
 
   const upcomingEarnings = (earningsData?.earnings ?? []).slice(0, 6);
 
-  // Format FX observation timestamp for header — KST for Korean user.
+  // Format FX observation timestamp for the header and sidebar paper.
   const fxStatus = useMemo(() => {
     if (!fxData?.last_updated_ts) return null;
     const d = new Date(fxData.last_updated_ts * 1000);
-    const hh = d
-      .toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        timeZone: "Asia/Seoul",
-        hour12: false,
-      });
-    const stale = fxData.is_stale || (fxData.age_seconds > 300);
+    const hh = d.toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "Asia/Seoul",
+      hour12: false,
+    });
+    const stale = fxData.is_stale || fxData.age_seconds > 300;
     return {
       label: `Last observed ${hh} KST`,
       rate: fxData.usd_krw,
@@ -173,8 +173,7 @@ export default function MarketPage() {
     };
   }, [fxData]);
 
-  // Live status — recompute on each render via a 30s tick so cadence label flips
-  // across the open/close boundary without a reload.
+  // Live status — 30s tick so the cadence label flips across open/close.
   useNowTick(30_000);
   const marketOpen = isMarketOpen();
   const liveLabel = marketOpen
@@ -183,385 +182,299 @@ export default function MarketPage() {
       ? `Market closed · last observed ${fxStatus.hh} KST`
       : "Market closed";
 
+  /* ────────────────────────────────────────────────────────────────
+   * Active-paper controller (same pattern as /home).
+   * ──────────────────────────────────────────────────────────────── */
+  type PaperId = "overview" | "detail" | "sidebar";
+  const [active, setActive] = useState<PaperId | null>(null);
+  const onSelect = (id: PaperId) =>
+    setActive((cur) => (cur === id ? null : id));
+
+  const pulse = [
+    { time: "08:42", text: "VIX closed below 15 for the third consecutive session." },
+    { time: "07:18", text: "Treasury 10Y yield eased 4bp against a softer CPI print." },
+    { time: "06:05", text: "KRW/USD drifted within its 90-day band at 1,355." },
+  ];
+
   return (
     <ErrorBoundary>
-      <header className="mb-8 flex items-end justify-between gap-4">
-        <div>
-          <RuledKicker>Market &middot; 2026 &middot; {weekTag().split("·")[1]?.trim() ?? ""}</RuledKicker>
-          <h1 className="pq-ink-h1 mt-2">Indices Board</h1>
-          <p className="mt-2 font-serif italic text-[15px] text-[var(--pq-ivory)]">
-            Levels across US and Korean markets.
-          </p>
-          <Caption className="mt-1">Informational only &middot; observed at last close.</Caption>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-            {weekTag()}
-          </span>
-          <div className="flex items-center gap-2">
-            <span
-              aria-label={marketOpen ? "Live" : "Market closed"}
-              className={cn(
-                "inline-block h-2 w-2 rounded-full",
-                marketOpen
-                  ? "pq-live-dot bg-[#7db487]"
-                  : "bg-yellow-500/60",
-              )}
-            />
-            <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-              {liveLabel}
+      {/* ═══════════ MASTHEAD — title + region tabs + status strip ═══════════ */}
+      <header
+        style={{
+          marginTop: "-8px",
+          marginBottom: 24,
+          borderBottom: "0.5px solid rgba(184,149,106,0.22)",
+          paddingBottom: 14,
+        }}
+      >
+        <div className="flex items-end justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <span className="pq-emboss-seal" aria-hidden>
+              PivoxQuant
             </span>
+            <h1
+              className="pq-ink-h1"
+              style={{ marginTop: 8, fontSize: "clamp(1.6rem, 3vw, 2.2rem)" }}
+            >
+              Morning Papers &middot; Indices
+            </h1>
+            <p
+              className="mt-1 font-serif italic"
+              style={{ fontSize: 14, color: "rgba(245,240,232,0.68)" }}
+            >
+              Levels across US and Korean markets, observed at last print.
+            </p>
           </div>
-          {fxStatus ? (
+          <div className="flex flex-col items-end gap-1.5">
+            <span
+              className="font-mono uppercase"
+              style={{
+                fontSize: 9.5,
+                letterSpacing: "0.22em",
+                color: "var(--pq-bronze)",
+              }}
+            >
+              {weekTag()}
+            </span>
             <div className="flex items-center gap-2">
-              {fxStatus.stale ? (
-                <span
-                  aria-label="Stale data"
-                  title="FX rate has not refreshed in over 5 minutes"
-                  className="inline-block h-1.5 w-1.5 rounded-full bg-[#d1a750]"
-                />
-              ) : null}
-              <span className="font-mono text-[10px] tabular-nums text-[rgba(245,240,232,0.55)]">
-                USD/KRW {fxStatus.rate.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                {" · "}
-                {fxStatus.label}
-                {fxStatus.stale ? " · Stale" : ""}
+              <span
+                aria-label={marketOpen ? "Live" : "Market closed"}
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  marketOpen
+                    ? "pq-live-dot bg-[#7db487]"
+                    : "bg-yellow-500/60",
+                )}
+              />
+              <span
+                className="font-mono uppercase"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.22em",
+                  color: "var(--pq-bronze)",
+                }}
+              >
+                {liveLabel}
               </span>
             </div>
-          ) : null}
+            {fxStatus ? (
+              <div className="flex items-center gap-2">
+                {fxStatus.stale ? (
+                  <span
+                    aria-label="Stale data"
+                    title="FX rate has not refreshed in over 5 minutes"
+                    className="inline-block h-1.5 w-1.5 rounded-full bg-[#d1a750]"
+                  />
+                ) : null}
+                <span
+                  className="font-mono tabular-nums"
+                  style={{
+                    fontSize: 10,
+                    color: "rgba(245,240,232,0.55)",
+                  }}
+                >
+                  USD/KRW{" "}
+                  {fxStatus.rate.toLocaleString("ko-KR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}{" "}
+                  &middot; {fxStatus.label}
+                  {fxStatus.stale ? " · Stale" : ""}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Region tabs — preserved pill/underline style */}
+        <div className="pq-ink-tabs mt-6 flex items-center gap-2">
+          {(["US", "KR"] as MarketTab[]).map((t, idx) => (
+            <div key={t} className="flex items-center gap-2">
+              {idx === 1 && (
+                <span
+                  aria-hidden="true"
+                  className="mx-1 text-[var(--pq-bronze)]"
+                  style={{ opacity: 0.45, fontSize: "11px" }}
+                >
+                  &#10086;
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setTab(t);
+                  setActive(null); // reset active paper on region switch
+                }}
+                data-active={tab === t}
+                className="pq-ink-tab"
+              >
+                {t === "US" ? "United States" : "Korea"}
+              </button>
+            </div>
+          ))}
         </div>
       </header>
 
-      {/* Region tabs — fleuron divider between US and KR */}
-      <div className="pq-ink-tabs mb-8 flex items-center gap-2">
-        {(["US", "KR"] as MarketTab[]).map((t, idx) => (
-          <div key={t} className="flex items-center gap-2">
-            {idx === 1 && (
-              <span aria-hidden="true" className="mx-1 text-[var(--pq-bronze)]" style={{ opacity: 0.45, fontSize: "11px" }}>
-                &#10086;
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => setTab(t)}
-              data-active={tab === t}
-              className="pq-ink-tab"
+      {/* ═══════════ THE DESK — three stacked papers ═══════════ */}
+      <DossierDesk>
+        {/* ── Desktop: 3D stacked papers ── */}
+        <div
+          className="hidden md:block relative"
+          style={{ margin: "0 auto", maxWidth: 1040, padding: "48px 0 32px" }}
+        >
+          {/* Paper 3 — Sidebar (back, left fan) */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              top: 90,
+              zIndex: active === "sidebar" ? 30 : 1,
+            }}
+          >
+            <PaperDocument
+              rotation={-6.5}
+              zOffset={-90}
+              xOffset={-60}
+              active={active === "sidebar"}
+              dimmed={active !== null && active !== "sidebar"}
+              onClick={() => onSelect("sidebar")}
+              ariaLabel="FX, calendar and pulse paper"
             >
-              {t === "US" ? "United States" : "Korea"}
-            </button>
+              <CalendarNewsPaper
+                fxStatus={fxStatus}
+                upcomingEarnings={upcomingEarnings}
+                pulse={pulse}
+                onEarningsClick={(ticker) => router.push(`/detail/${ticker}`)}
+              />
+            </PaperDocument>
           </div>
-        ))}
-      </div>
 
-      {/* Overview strip — mini sparklines */}
-      <section
-        aria-label="Overview strip"
-        className="mb-10 grid grid-cols-2 gap-4 border-y border-[rgba(245,240,232,0.1)] py-5 sm:grid-cols-3 lg:grid-cols-5"
-      >
-        {quotes.slice(0, 5).map((q) => (
-          <OverviewMini key={q.symbol} quote={q} />
-        ))}
-      </section>
-
-      {/* Index grid */}
-      <section
-        aria-label={`${tab} indices`}
-        aria-busy={isLoading}
-        className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-      >
-        {quotes.map((q) => (
-          <IndexCardInk key={q.symbol} quote={q} />
-        ))}
-      </section>
-
-      {tab === "KR" && (
-        <section className="mb-12">
-          <div className="border-t border-[rgba(245,240,232,0.12)] pt-4">
-            <div className="pq-ink-label">Derivatives</div>
-            <h2 className="pq-ink-h2 mt-1">Domestic Futures &amp; Options</h2>
-            <p className="mt-1 text-[12px] text-[rgba(245,240,232,0.55)]">
-              KOSPI 200 front-month summary.
-            </p>
+          {/* Paper 2 — Indices detail (mid, right fan) */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              top: 44,
+              zIndex: active === "detail" ? 30 : 2,
+            }}
+          >
+            <PaperDocument
+              rotation={-3.5}
+              zOffset={-40}
+              xOffset={52}
+              active={active === "detail"}
+              dimmed={active !== null && active !== "detail"}
+              onClick={() => onSelect("detail")}
+              ariaLabel="Indices detail paper"
+            >
+              <IndicesDetailPaper
+                region={tab}
+                quotes={quotes}
+                derivatives={tab === "KR" ? KR_DERIVATIVES : undefined}
+              />
+            </PaperDocument>
           </div>
-          <ul className="mt-4 divide-y divide-[rgba(245,240,232,0.08)]">
-            {KR_DERIVATIVES.map((row) => (
-              <li
-                key={row.label}
-                className="grid grid-cols-[1fr_auto_auto] items-baseline gap-4 py-3"
-              >
-                <span className="text-[13px] text-[rgba(245,240,232,0.8)] truncate">{row.label}</span>
-                <span className="font-mono text-[15px] tabular-nums text-[var(--pq-ivory)]">
-                  {row.value}
-                </span>
-                <span className="font-mono text-[11px] tabular-nums text-[rgba(245,240,232,0.5)]">
-                  {row.note}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
-      {/* Calendar + News strip */}
-      <section className="mb-10 grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Economic calendar */}
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.3} />
-            <div>
-              <div className="pq-ink-label">This Week</div>
-              <h2 className="pq-ink-h2 mt-0.5">Earnings Calendar</h2>
-            </div>
+          {/* Paper 1 — Overview (front) */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: active === "overview" || active === null ? 20 : 10,
+            }}
+          >
+            <PaperDocument
+              rotation={0}
+              zOffset={0}
+              xOffset={0}
+              active={active === "overview"}
+              dimmed={active !== null && active !== "overview"}
+              onClick={() => onSelect("overview")}
+              ariaLabel="Overview editorial paper"
+            >
+              <OverviewPaper
+                region={tab}
+                quotes={quotes}
+                marketOpen={marketOpen}
+                liveLabel={liveLabel}
+                weekTag={weekTag()}
+              />
+            </PaperDocument>
           </div>
-          {upcomingEarnings.length === 0 ? (
-            <div className="border-t border-[rgba(245,240,232,0.1)] py-8 text-center font-serif text-[12px] text-[rgba(245,240,232,0.4)]">
-              No scheduled events in the window.
-            </div>
-          ) : (
-            <div className="border-t border-[rgba(245,240,232,0.1)]">
-              {upcomingEarnings.map((e, i) => (
-                <button
-                  key={`${e.ticker}-${i}`}
-                  type="button"
-                  onClick={() => router.push(`/detail/${e.ticker}`)}
-                  className="grid w-full grid-cols-[auto_auto_1fr_auto] items-baseline gap-3 border-b border-[rgba(245,240,232,0.06)] px-2 py-3 text-left transition-colors hover:bg-[rgba(245,240,232,0.03)]"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block"
-                    style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--pq-bronze)", opacity: 0.75, transform: "translateY(-2px)" }}
-                  />
-                  <span className="font-mono text-[11px] tabular-nums text-[var(--pq-bronze)]">
-                    {new Date(e.date).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <span className="truncate font-serif text-[13px] text-[var(--pq-ivory)]">
-                    {e.name || e.ticker}
-                  </span>
-                  <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.45)]">
-                    {e.ticker}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+
+          {/* Spacer reserves footprint for the deepest paper */}
+          <div aria-hidden style={{ height: 620 }} />
+
+          <p
+            style={{
+              textAlign: "center",
+              fontFamily: "var(--font-serif), Georgia, serif",
+              fontStyle: "italic",
+              fontSize: 11.5,
+              color: "rgba(245,240,232,0.4)",
+              letterSpacing: "0.02em",
+              marginTop: 32,
+            }}
+          >
+            {active
+              ? "Click the surfaced sheet again to return it to the stack."
+              : "Click any sheet to draw it forward."}
+          </p>
         </div>
 
-        {/* News feed placeholder */}
-        <div>
-          <div className="mb-3 flex items-center gap-2">
-            <Newspaper className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.3} />
-            <div>
-              <div className="pq-ink-label">Market Pulse</div>
-              <h2 className="pq-ink-h2 mt-0.5">Recent Observations</h2>
-            </div>
-          </div>
-          <div className="border-t border-[rgba(245,240,232,0.1)]">
-            {[
-              { time: "08:42", text: "VIX closed below 15 for the third consecutive session." },
-              { time: "07:18", text: "Treasury 10Y yield eased 4bp against a softer CPI print." },
-              { time: "06:05", text: "KRW/USD drifted within its 90-day band at 1,355." },
-            ].map((row) => (
-              <div
-                key={row.time}
-                className="grid grid-cols-[auto_1fr] items-baseline gap-3 border-b border-[rgba(245,240,232,0.06)] py-3"
-              >
-                <span className="font-mono text-[11px] tabular-nums text-[var(--pq-bronze)]">
-                  {row.time}
-                </span>
-                <p className="font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.75)]">
-                  {row.text}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        {/* ── Mobile: vertical flat stack ── */}
+        <div
+          className="md:hidden flex flex-col gap-5"
+          style={{ padding: "16px 0 24px" }}
+        >
+          <PaperDocument
+            rotation={0}
+            zOffset={0}
+            xOffset={0}
+            ariaLabel="Overview editorial paper"
+          >
+            <OverviewPaper
+              region={tab}
+              quotes={quotes}
+              marketOpen={marketOpen}
+              liveLabel={liveLabel}
+              weekTag={weekTag()}
+            />
+          </PaperDocument>
 
+          <PaperDocument
+            rotation={0}
+            zOffset={0}
+            xOffset={0}
+            ariaLabel="Indices detail paper"
+          >
+            <IndicesDetailPaper
+              region={tab}
+              quotes={quotes}
+              derivatives={tab === "KR" ? KR_DERIVATIVES : undefined}
+            />
+          </PaperDocument>
+
+          <PaperDocument
+            rotation={0}
+            zOffset={0}
+            xOffset={0}
+            ariaLabel="FX, calendar and pulse paper"
+          >
+            <CalendarNewsPaper
+              fxStatus={fxStatus}
+              upcomingEarnings={upcomingEarnings}
+              pulse={pulse}
+              onEarningsClick={(ticker) => router.push(`/detail/${ticker}`)}
+            />
+          </PaperDocument>
+        </div>
+      </DossierDesk>
+
+      {/* Foot signature + legal banner */}
       <FootSignature />
       <div className="mt-4 text-[rgba(245,240,232,0.7)]">
         <DisclaimerBanner type="signal" />
       </div>
     </ErrorBoundary>
-  );
-}
-
-/* ── mini overview card ── */
-
-function OverviewMini({ quote }: { quote: IndexQuote }) {
-  const isPositive = quote.changePct >= 0;
-  const w = 80;
-  const h = 22;
-  const pad = 1;
-  let pts = "";
-  if (quote.spark && quote.spark.length > 1) {
-    const lo = Math.min(...quote.spark);
-    const hi = Math.max(...quote.spark);
-    const range = hi - lo || 1;
-    const step = (w - pad * 2) / (quote.spark.length - 1);
-    pts = quote.spark
-      .map((v, i) => {
-        const x = pad + i * step;
-        const y = pad + ((hi - v) / range) * (h - pad * 2);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(" ");
-  }
-  return (
-    <div
-      className="flex items-center gap-3 border-l-[2px] border-transparent px-2 py-1 text-left"
-    >
-      <div className="min-w-0 flex-1">
-        <div className="pq-ink-label truncate" style={{ fontSize: "9px" }}>
-          {quote.name}
-        </div>
-        <div className="mt-0.5 font-mono text-[12px] tabular-nums text-[var(--pq-ivory)]">
-          {fmtLevel(quote.level, quote.format)}
-        </div>
-      </div>
-      <div className="text-right">
-        {pts ? (
-          <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} preserveAspectRatio="none">
-            <polyline
-              points={pts}
-              fill="none"
-              stroke={isPositive ? "#7db487" : "#d18888"}
-              strokeWidth="1"
-            />
-          </svg>
-        ) : null}
-        <div
-          className="mt-0.5 font-mono text-[10px] tabular-nums"
-          style={{ color: isPositive ? "#7db487" : "#d18888" }}
-        >
-          {fmtPct(quote.changePct)}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── inline ink index card (display-only — indices have no detail page) ── */
-
-function IndexCardInk({
-  quote,
-}: {
-  quote: IndexQuote;
-}) {
-  const { name, symbol, level, changePct, weekHigh52, weekLow52, spark, format = "en", unit, observed_at, is_stale } = quote;
-  const isPositive = changePct >= 0;
-  const now = useNowTick(1000);
-  const rel = relativeTime(observed_at, now);
-  const stale = Boolean(is_stale);
-  const marketOpenNow = isMarketOpen();
-
-  const w = 220;
-  const h = 40;
-  const pad = 2;
-  let pathPts = "";
-  if (spark && spark.length > 1) {
-    const lo = Math.min(...spark);
-    const hi = Math.max(...spark);
-    const range = hi - lo || 1;
-    const step = (w - pad * 2) / (spark.length - 1);
-    pathPts = spark
-      .map((v, i) => {
-        const x = pad + i * step;
-        const y = pad + ((hi - v) / range) * (h - pad * 2);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(" ");
-  }
-
-  const rangePct =
-    weekHigh52 > weekLow52
-      ? Math.max(0, Math.min(1, (level - weekLow52) / (weekHigh52 - weekLow52)))
-      : 0.5;
-
-  return (
-    <div
-      className="pq-ink-stat w-full text-left"
-    >
-      <div className="flex items-baseline justify-between">
-        <div>
-          <div className="pq-ink-label">{name}</div>
-          <div className="mt-0.5 font-mono text-[9px] text-[rgba(245,240,232,0.4)]">
-            {symbol}
-          </div>
-          {observed_at && (
-            <div className="mt-1 flex items-center gap-2">
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-[rgba(245,240,232,0.5)] tabular-nums">
-                {rel}
-              </span>
-              {stale ? (
-                <span
-                  aria-label="Stale quote"
-                  title="Quote has not refreshed recently"
-                  className="inline-block h-1.5 w-1.5 rounded-full bg-yellow-500/70"
-                />
-              ) : marketOpenNow ? (
-                <span
-                  aria-label="Live"
-                  title="Live"
-                  className="pq-live-dot inline-block h-1.5 w-1.5 rounded-full bg-[#7db487]"
-                />
-              ) : null}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-baseline justify-between">
-        <div
-          className="pq-num-display"
-          style={{
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
-            fontVariantNumeric: "tabular-nums",
-            fontSize: "26px",
-            lineHeight: 1.05,
-            letterSpacing: "-0.015em",
-            color: "var(--pq-ivory)",
-          }}
-        >
-          {fmtLevel(level, format)}
-          {unit ? (
-            <span className="ml-1 text-[11px] text-[rgba(245,240,232,0.5)]">{unit}</span>
-          ) : null}
-        </div>
-        <div
-          className="font-mono text-[12px]"
-          style={{ color: isPositive ? "#7db487" : "#d18888" }}
-        >
-          {fmtPct(changePct)}
-        </div>
-      </div>
-
-      {pathPts ? (
-        <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 h-[36px] w-full" preserveAspectRatio="none">
-          <polyline
-            points={pathPts}
-            fill="none"
-            stroke="var(--pq-bronze)"
-            strokeWidth="1.25"
-          />
-        </svg>
-      ) : null}
-
-      <div className="mt-3">
-        <div className="relative h-[3px] bg-[rgba(245,240,232,0.08)]">
-          <div
-            className="absolute top-[-2px] h-[7px] w-[2px] bg-[var(--pq-bronze)]"
-            style={{ left: `${rangePct * 100}%` }}
-          />
-        </div>
-        <div className="mt-1 flex justify-between font-mono text-[9px] text-[rgba(245,240,232,0.4)]">
-          <span>{fmtLevel(weekLow52, format)}</span>
-          <span className="text-[rgba(245,240,232,0.55)]">52W</span>
-          <span>{fmtLevel(weekHigh52, format)}</span>
-        </div>
-      </div>
-    </div>
   );
 }
