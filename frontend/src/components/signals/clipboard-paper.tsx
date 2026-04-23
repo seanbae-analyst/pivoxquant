@@ -79,7 +79,7 @@ export function ClipboardPaper({
           height: 14,
           borderRadius: 3,
           background:
-            "linear-gradient(180deg, #c9a874 0%, #8B6F47 55%, #5a4528 100%)",
+            "linear-gradient(180deg, #c9a874 0%, #B8956A 55%, #5a4528 100%)",
           boxShadow:
             "inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -1px 2px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.25)",
           zIndex: 2,

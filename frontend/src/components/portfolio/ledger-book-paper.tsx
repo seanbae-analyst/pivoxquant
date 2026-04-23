@@ -153,7 +153,7 @@ export function LedgerBookPaper({
           style={{
             fontSize: 10,
             letterSpacing: "0.24em",
-            color: "#8B6F47",
+            color: "#B8956A",
             background: "transparent",
             border: "0.5px solid rgba(184,149,106,0.55)",
             padding: "7px 14px",
@@ -209,7 +209,7 @@ export function LedgerBookPaper({
                 fontSize: 9.5,
                 letterSpacing: "0.26em",
                 textTransform: "uppercase",
-                color: "#8B6F47",
+                color: "#B8956A",
                 marginBottom: 8,
                 fontWeight: 600,
               }}
@@ -280,7 +280,7 @@ export function LedgerBookPaper({
             }}
           >
             No positions observed in this book yet. Use{" "}
-            <span style={{ color: "#8B6F47" }}>+ Add to book</span> to begin
+            <span style={{ color: "#B8956A" }}>+ Add to book</span> to begin
             recording.
           </p>
         ) : (
@@ -567,7 +567,7 @@ const actionBtn: React.CSSProperties = {
   height: 22,
   border: "0.5px solid rgba(184,149,106,0.45)",
   background: "transparent",
-  color: "#8B6F47",
+  color: "#B8956A",
   fontFamily: "var(--font-mono), ui-monospace, monospace",
   fontSize: 12,
   lineHeight: 1,

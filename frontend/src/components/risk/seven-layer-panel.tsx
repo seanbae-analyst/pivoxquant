@@ -87,7 +87,7 @@ function StatusDot({ status }: { status: LayerStatus }) {
     status === "green"
       ? "bg-[var(--pq-bronze-light,#A3845C)]"
       : status === "yellow"
-        ? "bg-[var(--pq-bronze,#8B6F47)]"
+        ? "bg-[var(--pq-bronze,#B8956A)]"
         : "bg-[#B04A3A]"; // faint-red editorial accent
   return (
     <span

@@ -224,7 +224,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
               left: `${rangePct * 100}%`,
               width: 2,
               height: 7,
-              background: "var(--pq-bronze, #8B6F47)",
+              background: "var(--pq-bronze, #B8956A)",
             }}
           />
         </div>

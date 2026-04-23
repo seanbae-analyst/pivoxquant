@@ -124,7 +124,7 @@ export function InteractiveLineChart({
     [resolveHover],
   );
 
-  const bronze = color || "var(--pq-bronze, #8B6F47)";
+  const bronze = color || "var(--pq-bronze, #B8956A)";
 
   const hoverPoint = hover ? sampled[hover.idx] : null;
 
@@ -262,7 +262,7 @@ export function InteractiveLineChart({
             style={{
               fontSize: "9px",
               letterSpacing: "0.22em",
-              color: "var(--pq-bronze, #8B6F47)",
+              color: "var(--pq-bronze, #B8956A)",
               marginBottom: "4px",
             }}
           >

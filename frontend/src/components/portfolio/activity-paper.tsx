@@ -117,7 +117,7 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
                   fontSize: 9.5,
                   letterSpacing: "0.26em",
                   textTransform: "uppercase",
-                  color: "#8B6F47",
+                  color: "#B8956A",
                   fontWeight: 600,
                   marginBottom: 8,
                   paddingBottom: 6,

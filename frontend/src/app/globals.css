@@ -759,7 +759,7 @@
 :root {
   --pq-ink: #0A0A0A;
   --pq-ivory: #F5F0E8;
-  --pq-bronze: #8B6F47;
+  --pq-bronze: #B8956A;
   --pq-bronze-light: #A3845C;      /* Bronze light — underlines, hover accents */
   --pq-bronze-deep:  #6F5636;      /* Bronze deep — locked overlay, embossed seal */
   --pq-muted: #6B6B6B;
@@ -2158,7 +2158,7 @@ i.italic,
   font-style: italic;
   font-size: 24px;
   letter-spacing: -0.01em;
-  color: var(--pq-bronze, #8B6F47);
+  color: var(--pq-bronze, #B8956A);
   text-shadow:
     0 1px 0 rgba(255, 255, 255, 0.05),
     0 -1px 0 rgba(0, 0, 0, 0.4);
@@ -2348,7 +2348,7 @@ i.italic,
   }
   30% {
     transform: translateY(-3px);
-    color: var(--pq-bronze, #8B6F47);
+    color: var(--pq-bronze, #B8956A);
   }
   100% {
     transform: translateY(0);
@@ -2461,7 +2461,7 @@ i.italic,
   border-radius: 999px;
 }
 .pq-flip-dots__btn:focus-visible {
-  outline: 1px solid var(--pq-bronze, #8b6f47);
+  outline: 1px solid var(--pq-bronze, #B8956A);
   outline-offset: 2px;
 }
 .pq-flip-dots__mark {
@@ -2478,7 +2478,7 @@ i.italic,
 .pq-flip-dots__btn--active .pq-flip-dots__mark {
   width: 9px;
   height: 9px;
-  background: var(--pq-bronze, #8b6f47);
+  background: var(--pq-bronze, #B8956A);
   transform: scale(1);
   box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.18);
 }
@@ -2493,7 +2493,7 @@ i.italic,
   margin-top: 0.25rem;
 }
 .pq-flip-dots__count-num {
-  color: var(--pq-bronze, #8b6f47);
+  color: var(--pq-bronze, #B8956A);
 }
 .pq-flip-dots__count-sep {
   margin: 0 0.35em;

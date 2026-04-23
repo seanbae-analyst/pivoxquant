@@ -114,7 +114,7 @@ export function ThisMorningPaper({
             fontSize: "9.5px",
             letterSpacing: "0.28em",
             textTransform: "uppercase",
-            color: "#8B6F47",
+            color: "#B8956A",
             marginBottom: 8,
             fontWeight: 600,
           }}

@@ -7,7 +7,7 @@
  * (useMotionValue + useMotionTemplate). Respects prefers-reduced-motion.
  *
  * Scope: wraps the Hero section. Reads pointer inside the wrapper only.
- * Palette: bronze (#8B6F47) at 15% max, fades to transparent.
+ * Palette: bronze (#B8956A) at 15% max, fades to transparent.
  */
 
 import { useCallback } from "react";

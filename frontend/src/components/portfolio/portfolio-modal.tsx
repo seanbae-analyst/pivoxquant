@@ -87,7 +87,7 @@ export function Field({
 }
 
 export const inputClass =
-  "h-10 rounded-[2px] border border-[rgba(245,240,232,0.15)] bg-[rgba(255,255,255,0.02)] px-3 text-[14px] text-[var(--pq-ivory,#F5F0E8)] tabular-nums outline-none transition-colors placeholder:text-[rgba(245,240,232,0.3)] focus:border-[var(--pq-bronze,#8B6F47)] focus:ring-1 focus:ring-[var(--pq-bronze,#8B6F47)]/30";
+  "h-10 rounded-[2px] border border-[rgba(245,240,232,0.15)] bg-[rgba(255,255,255,0.02)] px-3 text-[14px] text-[var(--pq-ivory,#F5F0E8)] tabular-nums outline-none transition-colors placeholder:text-[rgba(245,240,232,0.3)] focus:border-[var(--pq-bronze,#B8956A)] focus:ring-1 focus:ring-[var(--pq-bronze,#B8956A)]/30";
 
 export function CancelButton({ onClick }: { onClick: () => void }) {
   return (
@@ -114,7 +114,7 @@ export function PrimaryButton({
     <button
       type={type}
       onClick={onClick}
-      className="h-10 rounded-[2px] bg-[var(--pq-bronze,#8B6F47)] px-5 text-[13px] font-medium tracking-wide text-[var(--pq-ink,#050505)] transition-colors hover:bg-[var(--pq-bronze-light,#A88655)]"
+      className="h-10 rounded-[2px] bg-[var(--pq-bronze,#B8956A)] px-5 text-[13px] font-medium tracking-wide text-[var(--pq-ink,#050505)] transition-colors hover:bg-[var(--pq-bronze-light,#A88655)]"
     >
       {children}
     </button>
