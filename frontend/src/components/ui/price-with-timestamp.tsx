@@ -39,11 +39,18 @@ function formatPrice(
   price: number | null | undefined,
   currency: "USD" | "KRW",
 ): string {
-  if (price == null || !Number.isFinite(price)) return "—";
+  if (price == null) return "—";
+  // Backend occasionally serializes low-priced micro-caps (e.g. ABTC @ $1.30)
+  // as strings when they come through a cached SignalCache hydration path.
+  // Coerce defensively before the finiteness check so the price shows.
+  const n = typeof price === "number" ? price : Number(price);
+  if (!Number.isFinite(n)) return "—";
   if (currency === "KRW") {
-    return "₩" + Math.round(price).toLocaleString();
+    return "₩" + Math.round(n).toLocaleString();
   }
-  return "$" + price.toFixed(2);
+  // Sub-dollar equities need more decimals so "0.0125" doesn't render as "$0.01".
+  if (Math.abs(n) < 1) return "$" + n.toFixed(4);
+  return "$" + n.toFixed(2);
 }
 
 function relativeTime(
