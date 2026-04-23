@@ -218,6 +218,14 @@ export const API = {
     artifactDownload: (type: string, format: "html" | "pdf" | "email" | "png") =>
       `/api/admin/artifacts/preview/${type}?format=${format}&download=1`,
   },
+  // Personal Journal Companion — Closed Beta (Premium Plus / Founding Lifetime).
+  // Reflective-only agent: Remember · Mirror · Question. Not advice.
+  // See reports/legal/SAFE_FEATURE_SPECS_2026-04-23.md §6.
+  agent: {
+    query: "/api/agent/query",
+    status: "/api/agent/status",
+    waitlist: "/api/agent/waitlist",
+  },
 } as const;
 
 // Portfolio (added 2026-04-22) — frontend-shape aliases for the new /portfolio page.
