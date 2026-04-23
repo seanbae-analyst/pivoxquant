@@ -409,6 +409,19 @@ def get_history(ticker, period="3mo"):
         "symbol": ticker, "from": from_date, "to": to_date
     })
 
+    # Class-share retry: some FMP endpoints resolve BRK.B but not BRK-B (or
+    # vice versa). If the hyphen form returns empty, retry with the dotted
+    # form. Only applies to plain hyphen tickers (not indices or .KS/.KQ).
+    if (not data) and isinstance(ticker, str) and ("-" in ticker) \
+            and not ticker.startswith("^") \
+            and not ticker.endswith(".KS") and not ticker.endswith(".KQ"):
+        alt = ticker.replace("-", ".")
+        data = _fmp_get("/historical-price-eod/full", {
+            "symbol": alt, "from": from_date, "to": to_date
+        })
+        if data:
+            logger.info("FMP history resolved %s via class-share alt %s", ticker, alt)
+
     if not data:
         # FMP returned nothing (402 plan-gated, index symbol, or network
         # failure). Alpaca Market Data covers all US-listed equities and

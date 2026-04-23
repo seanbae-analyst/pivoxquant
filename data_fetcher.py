@@ -1000,8 +1000,22 @@ Reply ONLY in this exact JSON format, nothing else:
             days = period_map.get(period, 90)
             start = datetime.now() - timedelta(days=days)
 
+            # Class-share normalization: Alpaca expects `BRK/B` notation.
+            # Accept callers that pass `BRK-B` or `BRK.B` and convert.
+            alpaca_symbol = ticker
+            if "-" in alpaca_symbol and not alpaca_symbol.startswith("^"):
+                alpaca_symbol = alpaca_symbol.replace("-", "/")
+            elif "." in alpaca_symbol and not alpaca_symbol.endswith(".KS") \
+                    and not alpaca_symbol.endswith(".KQ") \
+                    and not alpaca_symbol.startswith("^"):
+                # Only treat a single-char suffix (e.g. BRK.B) as class share;
+                # leave real suffixes alone.
+                base, _, suf = alpaca_symbol.rpartition(".")
+                if base and len(suf) == 1:
+                    alpaca_symbol = f"{base}/{suf}"
+
             req = StockBarsRequest(
-                symbol_or_symbols=[ticker],
+                symbol_or_symbols=[alpaca_symbol],
                 timeframe=TimeFrame.Day,
                 start=start,
                 adjustment=Adjustment.ALL,  # split + dividend adjusted
@@ -1014,7 +1028,11 @@ Reply ONLY in this exact JSON format, nothing else:
 
             # Alpaca returns MultiIndex (symbol, timestamp) — flatten
             if isinstance(df.index, pd.MultiIndex):
-                df = df.xs(ticker, level="symbol")
+                # Try normalized symbol first, then original.
+                try:
+                    df = df.xs(alpaca_symbol, level="symbol")
+                except KeyError:
+                    df = df.xs(ticker, level="symbol")
 
             # Rename columns to match standard OHLCV format
             col_map = {
