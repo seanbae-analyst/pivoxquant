@@ -324,6 +324,31 @@ export default function FeaturePageShell({
             <span aria-hidden style={{ margin: "0 12px", color: "rgba(184,149,106,0.5)" }}>·</span>
             <a href="mailto:hello@pivoxquant.com" className="transition-colors hover:text-[var(--pq-bronze)]">Contact</a>
           </div>
+
+          {/* 법적 고지 — 2026-04-23 legal sweep finding: 7 feature pages shipped
+              without DisclaimerBanner. Mandatory across every analysis surface
+              per CLAUDE.md + 금투협 투자광고 규정 §4. Inline here (not the
+              dashboard DisclaimerBanner component) because /features/* runs
+              the landing shell, not the dashboard shell. */}
+          <p
+            className="mx-auto mt-8 max-w-3xl text-center font-serif italic"
+            style={{
+              fontSize: "11px",
+              lineHeight: 1.7,
+              color: "rgba(245,240,232,0.45)",
+              letterSpacing: "0.01em",
+            }}
+          >
+            PivoxQuant 는 투자자문업(자본시장법 §6②) 및 금융투자업 인가 업체가 아닙니다.
+            본 페이지의 모든 정보는 교육·연구 목적의 관찰이며 특정 종목의 매수·매도·보유를
+            권유하지 않습니다. 모든 투자 결정과 그 결과에 대한 책임은 이용자 본인에게 있습니다.
+            <br />
+            <span style={{ color: "rgba(245,240,232,0.38)" }}>
+              PivoxQuant is not a licensed investment adviser. All information on this page is
+              observational and educational only; it does not constitute a recommendation to buy,
+              sell, or hold any security. Investment decisions and their consequences are your own.
+            </span>
+          </p>
         </div>
       </footer>
     </div>

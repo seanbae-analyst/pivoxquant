@@ -29,13 +29,22 @@ import { apiFetch, ApiError } from "@/lib/api";
 
 /* ═════════════ Types ═════════════ */
 
+// Aligned to backend `services/profile/persona_analytics.PERSONA_CODES`
+// (2026-04-23 QA sweep: frontend was 6 codes, backend was 8 — 4 personas
+// (quant/speculator/daytrader/beginner) returned from API had no label
+// mapping and fell back to the generic "Your personal CFO" string.
+// This is the canonical 8-code set shared with
+// `services/artifacts/persona_resolver.VALID_PERSONAS` and
+// `reports/product/PERSONA_SPEC_2026-04-23.md` §PERSONA_CODES.
 export type PersonaId =
   | "growth"
   | "value"
   | "balanced"
   | "income"
-  | "momentum"
-  | "conservative";
+  | "quant"
+  | "speculator"
+  | "daytrader"
+  | "beginner";
 
 export interface PersonaScore {
   /** ISO date yyyy-mm-dd */
@@ -363,15 +372,19 @@ export const PERSONA_LABELS: Record<PersonaId, string> = {
   value: "Value CFO",
   balanced: "Balanced CFO",
   income: "Income CFO",
-  momentum: "Momentum CFO",
-  conservative: "Conservative CFO",
+  quant: "Quant CFO",
+  speculator: "Speculator CFO",
+  daytrader: "Daytrader CFO",
+  beginner: "Beginner CFO",
 };
 
 export const PERSONA_TAGLINES: Record<PersonaId, string> = {
-  growth: "Hunts compounding revenue; tolerates drawdown for multi-year upside.",
-  value: "Buys mispriced cashflow; patient through sentiment cycles.",
-  balanced: "Diversified across factors; optimises risk-adjusted return.",
-  income: "Prioritises durable yield and payout stability.",
-  momentum: "Rides persistent trends; tight stops, quick rotation.",
-  conservative: "Capital preservation first; upside is a bonus.",
+  growth: "내일의 승자를 오늘 담는다.",
+  value: "시장이 틀렸다는 확신에 돈을 건다.",
+  balanced: "극단이 아닌 일관성.",
+  income: "월세처럼 들어오는 배당.",
+  quant: "감이 아닌 검증된 엣지.",
+  speculator: "큰 변동성에서만 큰 수익.",
+  daytrader: "오늘 안에 답을 낸다.",
+  beginner: "이해하지 못한 것에 돈을 걸지 않는다.",
 };
