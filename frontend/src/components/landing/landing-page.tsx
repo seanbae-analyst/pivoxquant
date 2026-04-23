@@ -28,6 +28,9 @@ import {
   Lock,
 } from "lucide-react";
 import { Hero } from "./hero";
+import { FlipLandingShell } from "./flip-landing-shell";
+import { FlipPage } from "./flip-page";
+import SplashPage from "./splash-page";
 
 /* ──────────────────────────────────────────────
    Animation variants
@@ -1080,6 +1083,32 @@ export default function LandingPage() {
           variants: v,
         };
 
+  // 14 flip pages (nav stays fixed above; engine drawer renders outside shell
+  // because its fixed positioning must escape the 3D transform context).
+  // 2026-04-23: Splash added as Page 0 (CEO brief — black canvas + wordmark
+  // cover). Hero shifts to index 1; every subsequent page shifts +1.
+  const flipLabels = [
+    "Splash",
+    "Hero",
+    "Proof of discipline",
+    "Sample reports",
+    "Features",
+    "Feature explorer",
+    "How it works",
+    "Archetype",
+    "The engine",
+    "Dashboard preview",
+    "Pricing",
+    "Voice of the desk",
+    "Questions",
+    "Close",
+  ];
+  // Progress-dot kind map — index 0 gets a diamond (cover page), rest circles.
+  const flipKinds: Array<"splash" | "page"> = [
+    "splash",
+    ...(Array(flipLabels.length - 1).fill("page") as Array<"page">),
+  ];
+
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: "var(--pq-ink)", color: "var(--pq-ivory)" }}>
       {/* ─── 1. NAVIGATION — Vantablack sticky top bar ─── */}
@@ -1221,9 +1250,31 @@ export default function LandingPage() {
         )}
       </nav>
 
+      {/* ═════════════════════════════════════════════
+          FLIP SHELL — 3D page-turn scroll hijack.
+          Active on desktop (>=1024px) + motion allowed.
+          Mobile / reduced-motion → native long scroll.
+          ═════════════════════════════════════════════ */}
+      <FlipLandingShell
+        total={flipLabels.length}
+        labels={flipLabels}
+        kinds={flipKinds}
+        paused={selectedModelId !== null || mobileMenuOpen}
+      >
+
+      {/* ─── FLIP PAGE 0: SPLASH — black canvas + wordmark (2026-04-23) ─── */}
+      <FlipPage index={0} label="Splash">
+        <SplashPage />
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 1: HERO (was index 0) ─── */}
+      <FlipPage index={1} label="Hero">
       {/* ─── 2. HERO SECTION — Hero v2 (Vantablack + Ivory + Bronze) ─── */}
       <Hero />
+      </FlipPage>
 
+      {/* ─── FLIP PAGE 2: PROOF OF DISCIPLINE (was 1) ─── */}
+      <FlipPage index={2} label="Proof of discipline">
       {/* ─── 3. INTRO / PROOF OF DISCIPLINE — Ivory band ─── */}
       <section
         className="relative pt-32 pb-28 md:pt-48 md:pb-36 lg:pt-56 lg:pb-44"
@@ -1379,6 +1430,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 2: SAMPLE REPORTS ─── */}
+      <FlipPage index={3} label="Sample reports">
       {/* ─── SAMPLE REPORTS — Vantablack, 3 open + S&P Proof + 3 locked previews ─── */}
       <section
         id="sample-reports"
@@ -1741,6 +1796,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 3: FEATURES BENTO ─── */}
+      <FlipPage index={4} label="Features">
       {/* ─── 5. FEATURES BENTO — Vantablack lift ─── */}
       <section
         id="features"
@@ -1867,6 +1926,10 @@ export default function LandingPage() {
         </span>
       </div>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 4: FEATURE EXPLORER ─── */}
+      <FlipPage index={5} label="Feature explorer">
       {/* ─── 5b. FEATURE EXPLORER — Vantablack lift, click-to-reveal tabs ─── */}
       <section
         id="feature-explorer"
@@ -2214,6 +2277,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 5: HOW IT WORKS ─── */}
+      <FlipPage index={6} label="How it works">
       {/* ─── 6. HOW IT WORKS — Ivory, large watermark numerals ─── */}
       <section
         id="how-it-works"
@@ -2339,6 +2406,10 @@ export default function LandingPage() {
         </span>
       </div>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 6: ARCHETYPE ─── */}
+      <FlipPage index={7} label="Archetype">
       {/* ─── 5.5 ARCHETYPE — Ivory, calibration questionnaire + 8 archetypes ─── */}
       <section
         id="archetype"
@@ -2711,6 +2782,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 7: THE ENGINE ─── */}
+      <FlipPage index={8} label="The engine">
       {/* ─── 5c. THE ENGINE — Vantablack, quant / risk / AI inventory ─── */}
       <section
         id="the-engine"
@@ -2937,76 +3012,14 @@ export default function LandingPage() {
           </motion.p>
         </div>
 
-        {/* ─── Engine drawer: methodology card ─── */}
-        <AnimatePresence>
-          {selectedModel && (
-            <>
-              {/* Backdrop */}
-              <motion.button
-                key="engine-backdrop"
-                type="button"
-                aria-label="Close methodology"
-                onClick={() => setSelectedModelId(null)}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                className="fixed inset-0 z-40 cursor-default"
-                style={{ backgroundColor: "rgba(10,10,10,0.6)" }}
-              />
-
-              {/* Desktop: right-side drawer */}
-              <motion.aside
-                key="engine-drawer-desktop"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="engine-model-title"
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="hidden md:flex fixed top-0 right-0 bottom-0 z-50 w-[28rem] flex-col overflow-y-auto"
-                style={{
-                  backgroundColor: "#111111",
-                  borderLeft: "1px solid rgba(139,111,71,0.4)",
-                  color: "var(--pq-ivory)",
-                }}
-              >
-                <EngineDrawerContent
-                  model={selectedModel}
-                  onClose={() => setSelectedModelId(null)}
-                />
-              </motion.aside>
-
-              {/* Mobile: bottom sheet */}
-              <motion.aside
-                key="engine-drawer-mobile"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="engine-model-title-mobile"
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="md:hidden fixed left-0 right-0 bottom-0 z-50 flex flex-col overflow-y-auto rounded-t-2xl"
-                style={{
-                  maxHeight: "80vh",
-                  backgroundColor: "#111111",
-                  borderTop: "1px solid rgba(139,111,71,0.4)",
-                  color: "var(--pq-ivory)",
-                }}
-              >
-                <EngineDrawerContent
-                  model={selectedModel}
-                  onClose={() => setSelectedModelId(null)}
-                  mobile
-                />
-              </motion.aside>
-            </>
-          )}
-        </AnimatePresence>
+        {/* Engine drawer relocated below — must render outside FlipPage so
+            its position:fixed escapes the 3D transform context. */}
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 8: DASHBOARD PREVIEW ─── */}
+      <FlipPage index={9} label="Dashboard preview">
       {/* ─── 6. DASHBOARD PREVIEW — Ivory, Vantablack mockup ─── */}
       <section
         id="dashboard-preview"
@@ -3293,6 +3306,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 9: PRICING ─── */}
+      <FlipPage index={10} label="Pricing">
       {/* ─── 7. PRICING — Vantablack, 3 tiers (21st.dev editorial pattern, KRW) ─── */}
       <section
         id="pricing"
@@ -3569,6 +3586,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 10: PULL-QUOTE BELT ─── */}
+      <FlipPage index={11} label="Voice of the desk">
       {/* ─── 8. PULL-QUOTE BELT — Ivory, minimal ─── */}
       <section
         className="py-32 md:py-48 lg:py-56"
@@ -3622,6 +3643,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 11: FAQ ─── */}
+      <FlipPage index={12} label="Questions">
       {/* ─── 8b. FAQ — Vantablack, editorial accordion ─── */}
       <section
         id="faq"
@@ -3705,6 +3730,10 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </FlipPage>
+
+      {/* ─── FLIP PAGE 12: FINAL CTA + SOCIAL PROOF + FOOTER (combined close) ─── */}
+      <FlipPage index={13} label="Close">
       {/* ─── 9. FINAL CTA — Vantablack, centered ─── */}
       <section
         className="py-32 md:py-48 lg:py-56"
@@ -4012,6 +4041,79 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      </FlipPage>
+
+      </FlipLandingShell>
+
+      {/* ─── Engine drawer (rendered outside FlipLandingShell so position:fixed
+              escapes the 3D transform context of the active FlipPage) ─── */}
+      <AnimatePresence>
+        {selectedModel && (
+          <>
+            {/* Backdrop */}
+            <motion.button
+              key="engine-backdrop"
+              type="button"
+              aria-label="Close methodology"
+              onClick={() => setSelectedModelId(null)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed inset-0 z-40 cursor-default"
+              style={{ backgroundColor: "rgba(10,10,10,0.6)" }}
+            />
+
+            {/* Desktop: right-side drawer */}
+            <motion.aside
+              key="engine-drawer-desktop"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="engine-model-title"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="hidden md:flex fixed top-0 right-0 bottom-0 z-50 w-[28rem] flex-col overflow-y-auto"
+              style={{
+                backgroundColor: "#111111",
+                borderLeft: "1px solid rgba(139,111,71,0.4)",
+                color: "var(--pq-ivory)",
+              }}
+            >
+              <EngineDrawerContent
+                model={selectedModel}
+                onClose={() => setSelectedModelId(null)}
+              />
+            </motion.aside>
+
+            {/* Mobile: bottom sheet */}
+            <motion.aside
+              key="engine-drawer-mobile"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="engine-model-title-mobile"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="md:hidden fixed left-0 right-0 bottom-0 z-50 flex flex-col overflow-y-auto rounded-t-2xl"
+              style={{
+                maxHeight: "80vh",
+                backgroundColor: "#111111",
+                borderTop: "1px solid rgba(139,111,71,0.4)",
+                color: "var(--pq-ivory)",
+              }}
+            >
+              <EngineDrawerContent
+                model={selectedModel}
+                onClose={() => setSelectedModelId(null)}
+                mobile
+              />
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
