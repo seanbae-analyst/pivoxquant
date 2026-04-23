@@ -69,12 +69,14 @@ export function RuledKicker({
     >
       <span
         aria-hidden="true"
+        className="pq-ruled-kicker-hairline"
         style={{
           display: "inline-block",
           width: 24,
           height: 1,
           background: "var(--pq-bronze)",
           opacity: 0.7,
+          transformOrigin: "left center",
         }}
       />
       <span>{children}</span>

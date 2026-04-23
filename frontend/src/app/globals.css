@@ -2939,3 +2939,147 @@ html {
     opacity: 0;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   Dashboard — Cinematic Polish (2026-04-23)
+   Scoped under --pq-dash-* to avoid colliding with landing tokens.
+   ══════════════════════════════════════════════════════════ */
+
+:root {
+  --pq-dash-card-shadow:
+    0 0 0 1px rgba(184, 149, 106, 0.12),
+    0 12px 48px -16px rgba(0, 0, 0, 0.85);
+  --pq-dash-hero-glow:
+    radial-gradient(
+      ellipse 60% 50% at 50% 20%,
+      rgba(184, 149, 106, 0.08) 0%,
+      rgba(139, 111, 71, 0.035) 35%,
+      transparent 70%
+    );
+  --pq-dash-reveal-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Dashboard shell — subtle bronze radial halo that anchors the
+   whole app-surface with the same warmth as the landing hero.
+   Pinned above the ink background; respects fixed layouts. */
+.pq-dash-shell::before,
+[data-pq-dash-shell]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: var(--pq-dash-hero-glow);
+  z-index: 0;
+  mix-blend-mode: screen;
+}
+
+/* Film-grain overlay applied at the shell level. Reuses the SVG
+   string from FilmGrain but driven by pure CSS so it doesn't
+   require a mounted component. opacity 0.05 — a hair stronger
+   than landing default. */
+.pq-dash-shell::after,
+[data-pq-dash-shell]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.96  0 0 0 0 0.94  0 0 0 0 0.91  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: overlay;
+  opacity: 0.05;
+  z-index: 0;
+}
+
+/* Content wrappers should sit above the halo. */
+.pq-dash-shell > *,
+[data-pq-dash-shell] > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Reusable card shadow helper — matches spec §6. Opt-in to keep
+   existing panels untouched. */
+.pq-dash-card {
+  box-shadow: var(--pq-dash-card-shadow);
+}
+
+/* Bronze focus ring — spec §6. Keep it tight so data-dense
+   tables stay calm on focus traversal. */
+.pq-dash-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(184, 149, 106, 0.4);
+  border-radius: 2px;
+}
+
+/* Cinematic entrance — stagger timing scale. Used by the home
+   page to cascade major stages. Anything with `.pq-dash-stage`
+   fades-up from 14px; per-stage delay is set via inline style. */
+@keyframes pq-dash-stage-in {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.pq-dash-stage {
+  opacity: 0;
+  animation: pq-dash-stage-in 0.6s var(--pq-dash-reveal-ease) forwards;
+  animation-delay: var(--pq-dash-stage-delay, 0s);
+}
+
+/* Top-bar refinement — add a warmer bronze hairline + a touch
+   more backdrop blur. Works with the existing TopBar without
+   requiring a className change: targets the data attribute set
+   by the layout component, falling back to the sticky classes
+   already in use. */
+.pq-dash-topbar,
+[data-pq-dash-topbar] {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(10px) saturate(1.15);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+  border-bottom: 0.5px solid rgba(184, 149, 106, 0.28);
+  background: rgba(10, 10, 10, 0.72);
+}
+
+/* Today Hero — bronze hairline pulse at the bottom of the card. */
+@keyframes pq-today-hairline-pulse {
+  0%, 100% { opacity: 0.55; transform: scaleX(0.96); }
+  50%      { opacity: 1;    transform: scaleX(1.0); }
+}
+.pq-today-hairline {
+  transform-origin: 50% 50%;
+  animation: pq-today-hairline-pulse 4.8s var(--pq-dash-reveal-ease) infinite;
+}
+
+/* Artifact Queue — row hover glow (supplements the Link's Tailwind
+   classes with a soft bronze rim that doesn't appear on touch). */
+@media (hover: hover) {
+  .pq-artifact-queue li > a:hover {
+    box-shadow: 0 0 0 1px rgba(184, 149, 106, 0.28);
+  }
+}
+
+/* Persona Evolution — hover cards fade in smoothly. */
+.pq-persona-evolution [role="tooltip"] {
+  animation: pq-dash-stage-in 0.25s var(--pq-dash-reveal-ease) forwards;
+}
+
+/* RuledKicker hairline — 260ms bronze grow on page mount. Applied to
+   every page that uses the editorial kicker (portfolio / market /
+   signals / reports, etc.). */
+@keyframes pq-ruled-kicker-hairline-grow {
+  0%   { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 0.7; }
+}
+.pq-ruled-kicker-hairline {
+  animation: pq-ruled-kicker-hairline-grow 0.65s var(--pq-dash-reveal-ease) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pq-dash-stage,
+  .pq-today-hairline,
+  .pq-persona-evolution [role="tooltip"],
+  .pq-ruled-kicker-hairline {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

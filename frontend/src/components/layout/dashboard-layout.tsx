@@ -21,7 +21,10 @@ import { BottomNav } from "./bottom-nav";
  */
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
+    <div
+      className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)] pq-dash-shell"
+      data-pq-dash-shell
+    >
       {/* ── Desktop + Tablet (≥ md) ── */}
       <div className="hidden md:flex md:min-h-screen">
         {/* Sidebar rail — sticky full-height column */}
@@ -33,14 +36,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         {/* Right column — TopBar + scrollable main */}
         <div className="flex min-h-screen flex-1 flex-col min-w-0">
-          <TopBar />
+          <div data-pq-dash-topbar className="pq-dash-topbar">
+            <TopBar />
+          </div>
           <main className="flex-1 px-8 md:px-10 py-8">{children}</main>
         </div>
       </div>
 
       {/* ── Mobile (< md) ── */}
       <div className="flex min-h-screen flex-col md:hidden">
-        <TopBar />
+        <div data-pq-dash-topbar className="pq-dash-topbar">
+          <TopBar />
+        </div>
         <main className="flex-1 px-4 py-6 pb-24">{children}</main>
         <BottomNav />
       </div>

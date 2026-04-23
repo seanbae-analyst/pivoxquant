@@ -30,6 +30,10 @@ import {
   PERSONA_TAGLINES,
   type PersonaId,
 } from "@/lib/cfo/hooks";
+import {
+  getPersonaGlyph,
+  normalizedPersonaId,
+} from "@/components/home/persona-glyph";
 
 interface Props {
   /** Rendered inline (no paper shell). Defaults to false → renders
@@ -52,6 +56,8 @@ export function PersonaCard({ bare = false, className = "" }: Props) {
   const declaredTag =
     (declared && PERSONA_TAGLINES[declared.persona as PersonaId]) ??
     "Identity calibrating.";
+  const glyphId = normalizedPersonaId(declared?.persona);
+  const glyph = getPersonaGlyph(glyphId);
 
   const wrapperClass = bare
     ? `pq-cfo-persona-card ${className}`
@@ -78,10 +84,17 @@ export function PersonaCard({ bare = false, className = "" }: Props) {
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div
-            className="text-[9.5px] uppercase tracking-[0.26em]"
+            className="text-[9.5px] uppercase tracking-[0.26em] flex items-center gap-1.5"
             style={{ color: "#B8956A" }}
           >
-            Layer 1 · Identity · You, observed
+            <span
+              aria-hidden
+              className="font-mono"
+              style={{ fontSize: 12, lineHeight: 1 }}
+            >
+              {glyph}
+            </span>
+            <span>Layer 1 · Identity · You, observed</span>
           </div>
           <h2
             className="mt-1.5 font-serif text-2xl md:text-3xl"
