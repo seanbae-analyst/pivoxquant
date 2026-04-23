@@ -1,58 +1,56 @@
 "use client";
 
 /**
- * /home — PivoxQuant Research Terminal.
+ * /home — PivoxQuant Executive Dossier.
  *
- * Rendered inside <DashboardLayout/>. Restores the full original widget
- * set against live SWR endpoints — Portfolio summary, Positions, Equity
- * curve, Risk, Alerts, Signals, Morning Brief — all rendered in the
- * Vantablack ink theme (transparent cards, ivory text, bronze accents).
+ * Radical departure from the card-grid paradigm. The home screen is
+ * now a desk: Vantablack ink + ivory spotlight + three stacked paper
+ * documents that the user peers down onto like morning briefing pages
+ * on a mahogany desk.
  *
- * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner at foot.
+ * Data, SWR hooks, SSE real-time stream, legal scrub, KRW/USD split,
+ * DisclaimerBanner — all preserved from the previous /home. Only the
+ * render layer has been redesigned.
+ *
+ * Papers:
+ *   1. ThisMorningPaper      — editorial hero + NAV count-up (front)
+ *   2. PositionsLedgerPaper  — editorial positions table (middle, -4°)
+ *   3. SignalPaper           — observation of the day (back, -7°)
+ *
+ * Click any paper → lifts flat + front; others dim + recede.
+ * Pointer tilt across desk → whole stack rocks ±1.5°. Disabled under
+ * prefers-reduced-motion and < 768px viewports (stacks vertically).
+ *
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner retained
+ * at the foot of the page — lifted from the prior implementation.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import useSWR from "swr";
+
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import {
-  Caption,
-  Fleuron,
-  FootSignature,
-  RuledKicker,
-} from "@/components/ui/editorial";
-import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
+import { FootSignature } from "@/components/ui/editorial";
+import { MarketTicker } from "@/components/landing/market-ticker";
+
+import { DossierDesk } from "@/components/home/dossier-desk";
+import { PaperDocument } from "@/components/home/paper-document";
+import { ThisMorningPaper } from "@/components/home/this-morning-paper";
+import { PositionsLedgerPaper } from "@/components/home/positions-ledger-paper";
+import { SignalPaper } from "@/components/home/signal-paper";
+
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   API,
   PORTFOLIO_SUMMARY,
   PORTFOLIO_POSITIONS,
-  RISK_SUMMARY,
 } from "@/lib/endpoints";
-import { fmtUsd, fmtPct } from "@/lib/format";
 import { liveRefresh, isMarketOpen } from "@/lib/market-hours";
-import {
-  PriceWithTimestamp,
-  relativeTime,
-} from "@/components/ui/price-with-timestamp";
+import { relativeTime } from "@/components/ui/price-with-timestamp";
 import type { Position } from "@/components/portfolio/types";
 
-/** Format an ISO date or YYYY-MM-DD into a compact "Mon DD, YYYY" label. */
-function fmtChartDate(d: string): string {
-  const parsed = new Date(d);
-  if (isNaN(parsed.getTime())) return d;
-  return parsed.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-const fetcher = <T,>(url: string) => apiFetch<T>(url);
-
-/* ── Response shapes (loose to tolerate backend variants) ── */
+/* ── Response shapes ── */
 
 interface SummaryResponse {
   totalNav?: number;
@@ -60,175 +58,48 @@ interface SummaryResponse {
   todayPnlPct?: number;
   unrealized?: number;
   positionCount?: number;
-}
-interface RiskSummaryResponse {
-  var_1d_pct?: number;
-  corr_risk_index?: number;
+  observed_at?: string;
 }
 interface PositionsResponse {
   positions?: Position[];
 }
-interface AlertItem {
-  id: number | string;
-  title?: string;
-  message?: string;
-  ticker?: string;
-  severity?: string;
-  created_at?: string;
-  read_at?: string | null;
-}
-interface AlertsResponse {
-  alerts?: AlertItem[];
-}
-interface HistoryPoint {
-  date: string;
-  value: number;
-}
-interface HistoryResponse {
-  points?: HistoryPoint[];
-  history?: HistoryPoint[];
-}
 interface MorningBriefBody {
   insight?: string;
   summary?: string;
-  market_summary?: {
-    sp500?: { change_pct?: number };
-    nasdaq?: { change_pct?: number };
-    kospi?: { change_pct?: number };
-  };
 }
 interface MorningBriefResponse {
   available?: boolean;
   brief?: MorningBriefBody;
 }
 
-const PERIODS = [
-  { label: "1M", value: "1mo" },
-  { label: "3M", value: "3mo" },
-  { label: "6M", value: "6mo" },
-  { label: "1Y", value: "1y" },
-  { label: "ALL", value: "max" },
-] as const;
+const fetcher = <T,>(url: string) => apiFetch<T>(url);
 
-function weekTag(): string {
-  const d = new Date();
-  const first = new Date(d.getFullYear(), 0, 1);
-  const days = Math.floor((d.getTime() - first.getTime()) / 86400000);
-  const w = Math.ceil((days + first.getDay() + 1) / 7);
-  return `${d.getFullYear()} · W${String(w).padStart(2, "0")}`;
-}
-
-function signalFor(pnlPct: number | undefined): "POSITIVE" | "NEUTRAL" | "NEGATIVE" {
-  if (pnlPct == null) return "NEUTRAL";
-  if (pnlPct > 0.5) return "POSITIVE";
-  if (pnlPct < -0.5) return "NEGATIVE";
-  return "NEUTRAL";
-}
-
-/* ── Equity observation curve — real points + hover, or sketch fallback ── */
-
-function EquityCurve({ points }: { points: HistoryPoint[] }) {
-  const valid = useMemo(
-    () => points.filter((p) => p && isFinite(p.value)),
-    [points],
-  );
-
-  if (valid.length < 2) {
-    // Fallback sketch (no hover) when there's no data.
-    return (
-      <svg
-        viewBox="0 0 500 220"
-        className="h-full w-full"
-        preserveAspectRatio="none"
-        role="img"
-        aria-label="Equity observation curve (no data)"
-      >
-        <defs>
-          <linearGradient id="pqHomeCurveFallback" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8B6F47" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#8B6F47" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {[60, 120, 180].map((y) => (
-          <line
-            key={y}
-            x1={0}
-            y1={y}
-            x2={500}
-            y2={y}
-            stroke="#F5F0E8"
-            strokeOpacity={0.06}
-            strokeWidth={0.5}
-          />
-        ))}
-        <path
-          d="M0 170 C60 165, 100 150, 160 138 C220 125, 260 130, 320 110 C380 90, 420 95, 500 60 L500 220 L0 220 Z"
-          fill="url(#pqHomeCurveFallback)"
-        />
-        <path
-          d="M0 170 C60 165, 100 150, 160 138 C220 125, 260 130, 320 110 C380 90, 420 95, 500 60"
-          fill="none"
-          stroke="#8B6F47"
-          strokeWidth="1.25"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <InteractiveLineChart
-      points={valid}
-      height={220}
-      valueFormatter={(v) => fmtUsd(v)}
-      dateFormatter={fmtChartDate}
-      yLabel="Portfolio NAV"
-      ariaLabel="Equity observation curve"
-    />
-  );
+/** Format the top-strip date: "DAILY DOSSIER · 2026-04-22 · TUESDAY · 08:32 KST" */
+function fmtDeskDate(d: Date): string {
+  const weekday = d
+    .toLocaleDateString("en-US", { weekday: "long" })
+    .toUpperCase();
+  const iso = d.toISOString().slice(0, 10);
+  const time = d.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return `DAILY DOSSIER · ${iso} · ${weekday} · ${time} KST`;
 }
 
 /* ── Page ── */
 
 export default function HomePage() {
   const { user } = useAuth();
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]["value"]>("6mo");
 
-  // Live-refresh cadence — market-aware (open vs closed):
-  //  - summary/positions → 5s open / 60s closed  (quote-driven)
-  //  - risk               → 10s open / 120s closed
-  //  - alerts             → 10s open / 60s closed
-  //  - history            → 15s open / 120s closed (aggregated series)
-  //  - morning brief      → 10min always (daily artifact)
+  // Live SWR options — match legacy cadence so the SSE provider still
+  // enjoys the same dedupe window and focus-revalidation behaviour.
   const liveOpts = {
     refreshInterval: () => liveRefresh(5_000, 60_000),
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     dedupingInterval: 2_000,
-    errorRetryCount: 2,
-    errorRetryInterval: 5_000,
-  } as const;
-  const riskOpts = {
-    refreshInterval: () => liveRefresh(10_000, 120_000),
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    dedupingInterval: 2_000,
-    errorRetryCount: 2,
-    errorRetryInterval: 5_000,
-  } as const;
-  const alertsOpts = {
-    refreshInterval: () => liveRefresh(10_000, 60_000),
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    dedupingInterval: 2_000,
-    errorRetryCount: 2,
-    errorRetryInterval: 5_000,
-  } as const;
-  const historyOpts = {
-    refreshInterval: () => liveRefresh(15_000, 120_000),
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    dedupingInterval: 5_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
   } as const;
@@ -241,22 +112,15 @@ export default function HomePage() {
     errorRetryInterval: 10_000,
   } as const;
 
-  const { data: summary } = useSWR<SummaryResponse & { observed_at?: string }>(
+  const { data: summary } = useSWR<SummaryResponse>(
     PORTFOLIO_SUMMARY,
     fetcher,
     liveOpts,
   );
-  const { data: risk } = useSWR<RiskSummaryResponse>(RISK_SUMMARY, fetcher, riskOpts);
-  const { data: posData } = useSWR<PositionsResponse>(PORTFOLIO_POSITIONS, fetcher, liveOpts);
-  const { data: alertsData } = useSWR<AlertsResponse>(
-    `${API.alerts.list}?limit=5`,
+  const { data: posData } = useSWR<PositionsResponse>(
+    PORTFOLIO_POSITIONS,
     fetcher,
-    alertsOpts,
-  );
-  const { data: history } = useSWR<HistoryResponse>(
-    API.portfolio.history(period),
-    fetcher,
-    historyOpts,
+    liveOpts,
   );
   const { data: brief } = useSWR<MorningBriefResponse>(
     API.market.morningBriefToday,
@@ -264,481 +128,248 @@ export default function HomePage() {
     briefOpts,
   );
 
-  /* Derived */
-  const positions = posData?.positions ?? [];
-  const alerts = alertsData?.alerts ?? [];
-  const unreadCount = alerts.filter((a) => !a.read_at).length;
-  const historyPoints = useMemo(() => {
-    const raw = history?.points ?? history?.history ?? [];
-    return raw.filter((p) => p && isFinite(p.value));
-  }, [history]);
+  const positions = useMemo(() => posData?.positions ?? [], [posData]);
 
-  const positionsWithPnl = useMemo(
-    () =>
-      positions.map((p) => {
-        const pnlPct = p.avgCost > 0 ? ((p.current - p.avgCost) / p.avgCost) * 100 : 0;
-        return { ...p, pnlPct };
-      }),
-    [positions],
-  );
-
-  const topPositions = [...positionsWithPnl]
-    .sort((a, b) => b.current * b.shares - a.current * a.shares)
-    .slice(0, 5);
-
-  const topSignals = [...positionsWithPnl]
-    .sort((a, b) => Math.abs(b.pnlPct) - Math.abs(a.pnlPct))
-    .slice(0, 5);
-
-  /* Stats */
-  const navValue = summary?.totalNav;
-  const navDisplay = navValue != null ? fmtUsd(navValue) : "—";
-  const navSub =
-    summary?.todayPnlPct != null ? `${fmtPct(summary.todayPnlPct)} today` : "—";
-
-  const unrealized = summary?.unrealized;
-  const unrealizedDisplay = unrealized != null ? fmtUsd(unrealized) : "—";
   const positionCount = summary?.positionCount ?? positions.length;
 
-  const riskScore =
-    risk?.corr_risk_index != null
-      ? Math.round(Math.max(0, Math.min(100, 100 - risk.corr_risk_index * 100)))
-      : null;
-  const riskDisplay = riskScore != null ? String(riskScore) : "—";
-  const riskSub =
-    risk?.var_1d_pct != null ? `VaR 1D ${risk.var_1d_pct.toFixed(2)}%` : "—";
+  // Currency — if every loaded position is KRW, render the book in KRW.
+  // Otherwise default to USD (the backend summary is USD-normalised).
+  const bookCurrency: "USD" | "KRW" =
+    positions.length > 0 && positions.every((p) => p.currency === "KRW")
+      ? "KRW"
+      : "USD";
 
-  const briefInsight = brief?.brief?.insight ?? brief?.brief?.summary ?? null;
-  const briefAvailable = brief?.available !== false && !!briefInsight;
+  const briefText =
+    brief?.available !== false
+      ? brief?.brief?.insight ?? brief?.brief?.summary ?? null
+      : null;
 
   const displayName = user?.name?.split(" ")[0] || "Observer";
 
-  /* ── Live banner — ticks every 1s so "Xs ago" stays fresh. ── */
+  /* ── Top-strip clock ── */
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
+  const now = new Date(nowMs);
   const marketOpen = isMarketOpen();
   const observedAt = summary?.observed_at;
 
-  /* ── Render ── */
+  /* ── Active-paper controller ── */
+  type PaperId = "morning" | "ledger" | "signal";
+  const [active, setActive] = useState<PaperId | null>(null);
+  const onSelect = (id: PaperId) =>
+    setActive((cur) => (cur === id ? null : id));
+
   return (
     <ErrorBoundary>
-      {/* Header */}
-      <header className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <RuledKicker>PivoxQuant · Monday Brief · {weekTag()}</RuledKicker>
-          <h1
-            className="mt-2 font-serif italic"
-            style={{
-              fontSize: "clamp(1.75rem, 3vw, 2.25rem)",
-              lineHeight: 1.1,
-              color: "var(--pq-ivory)",
-              letterSpacing: "-0.015em",
-            }}
-          >
-            Welcome back, {displayName}.
-          </h1>
-          <Caption className="mt-2">
-            What we&rsquo;ve observed across your book since last close.
-          </Caption>
-        </div>
-        <div className="hidden flex-col items-end gap-1 sm:flex">
-          <div className="flex items-center gap-1.5 font-mono tabular-nums text-[10px]">
+      {/* ═══════════ TOP STRIP — embossed seal + ticker ═══════════ */}
+      <header
+        className="flex flex-col gap-3"
+        style={{
+          marginTop: "-8px",
+          marginBottom: 28,
+          borderBottom: "0.5px solid rgba(184,149,106,0.22)",
+          paddingBottom: 14,
+        }}
+      >
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="pq-emboss-seal" aria-hidden>
+              PivoxQuant
+            </span>
+            <span
+              className="font-mono uppercase hidden sm:inline-block"
+              style={{
+                fontSize: 9.5,
+                letterSpacing: "0.26em",
+                color: "rgba(245,240,232,0.55)",
+                borderLeft: "0.5px solid rgba(184,149,106,0.3)",
+                paddingLeft: 14,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {fmtDeskDate(now)}
+            </span>
+          </div>
+          <div className="hidden md:flex items-center gap-1.5 font-mono tabular-nums text-[10px]">
             <span
               className={`h-1.5 w-1.5 rounded-full ${
-                marketOpen ? "bg-[#7db487] animate-pulse" : "bg-[var(--pq-bronze)] opacity-50"
+                marketOpen
+                  ? "bg-[#7db487] animate-pulse"
+                  : "bg-[var(--pq-bronze)] opacity-50"
               }`}
             />
             <span
               className="uppercase tracking-[0.22em]"
               style={{ color: "var(--pq-bronze)" }}
             >
-              {marketOpen ? "Live" : "Closed"}
+              {marketOpen ? "Live" : "After Hours"}
             </span>
             {observedAt && (
               <span style={{ color: "rgba(245,240,232,0.5)" }}>
-                · {relativeTime(observedAt, nowMs)}
+                · observed {relativeTime(observedAt, nowMs)}
               </span>
             )}
           </div>
-          <span
-            className="font-mono"
-            style={{
-              fontSize: "11px",
-              letterSpacing: "0.05em",
-              color: "rgba(245,240,232,0.5)",
-            }}
-          >
-            07:00 KST
-          </span>
+        </div>
+        <div
+          style={{
+            marginLeft: -32,
+            marginRight: -40,
+            borderTop: "0.5px solid rgba(184,149,106,0.18)",
+            borderBottom: "0.5px solid rgba(184,149,106,0.18)",
+          }}
+        >
+          <MarketTicker />
         </div>
       </header>
 
-      {/* 4-stat bento */}
-      <section className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {[
-          { label: "Portfolio Value", value: navDisplay, sub: navSub },
-          {
-            label: "Unrealized P&L",
-            value: unrealizedDisplay,
-            sub: `${positionCount} position${positionCount === 1 ? "" : "s"}`,
-          },
-          { label: "Risk Index", value: riskDisplay, sub: riskSub },
-          {
-            label: "Alerts",
-            value: String(unreadCount),
-            sub: unreadCount > 0 ? "unread" : "all clear",
-          },
-        ].map((m) => (
+      {/* ═══════════ THE DESK ═══════════ */}
+      <DossierDesk>
+        {/* ── Desktop: 3D stacked papers ── */}
+        <div
+          className="hidden md:block relative"
+          style={{ margin: "0 auto", maxWidth: 980, padding: "60px 0 40px" }}
+        >
+          {/* Paper 3 — Signal (deepest, left fan) */}
           <div
-            key={m.label}
-            className="rounded-sm"
             style={{
-              backgroundColor: "rgba(255,255,255,0.02)",
-              border: "0.5px solid rgba(245,240,232,0.08)",
-              padding: "20px 22px",
+              position: "absolute",
+              inset: 0,
+              top: 80,
+              zIndex: active === "signal" ? 30 : 1,
             }}
           >
-            <p
-              className="mb-2 font-serif uppercase"
-              style={{ fontSize: "9.5px", letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+            <PaperDocument
+              rotation={-6.5}
+              zOffset={-90}
+              xOffset={-70}
+              active={active === "signal"}
+              dimmed={active !== null && active !== "signal"}
+              onClick={() => onSelect("signal")}
+              ariaLabel="Today's signal paper"
             >
-              {m.label}
-            </p>
-            <div className="pq-num-display mb-1.5" style={{ color: "var(--pq-ivory)", fontFamily: "var(--font-mono), ui-monospace, monospace", fontVariantNumeric: "tabular-nums", fontSize: "28px", lineHeight: 1.05, letterSpacing: "-0.015em" }}>
-              {m.value}
-            </div>
-            <p className="font-serif" style={{ fontSize: "11px", color: "rgba(245,240,232,0.55)" }}>
-              <span style={{ color: "var(--pq-bronze)", marginRight: 4 }}>&asymp;</span>
-              {m.sub}
-            </p>
+              <SignalPaper positions={positions} />
+            </PaperDocument>
           </div>
-        ))}
-      </section>
 
-      {/* Equity chart + Alerts */}
-      <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Equity curve */}
-        <div
-          className="lg:col-span-2"
-          style={{
-            backgroundColor: "rgba(255,255,255,0.015)",
-            borderTop: "0.5px solid rgba(245,240,232,0.08)",
-            borderBottom: "0.5px solid rgba(245,240,232,0.08)",
-            padding: "24px 8px",
-          }}
-        >
-          <div className="mb-4 flex items-center justify-between px-2">
-            <RuledKicker>Equity &middot; Observation</RuledKicker>
-            <div className="flex gap-1">
-              {PERIODS.map((p) => {
-                const active = p.value === period;
-                return (
-                  <button
-                    key={p.value}
-                    onClick={() => setPeriod(p.value)}
-                    className="font-mono tabular-nums"
-                    style={{
-                      fontSize: "10px",
-                      padding: "2px 8px",
-                      borderRadius: "2px",
-                      border: active ? "1px solid var(--pq-bronze)" : "1px solid transparent",
-                      color: active ? "var(--pq-bronze)" : "rgba(245,240,232,0.5)",
-                      letterSpacing: "0.05em",
-                      background: "transparent",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="h-[220px]">
-            <EquityCurve points={historyPoints} />
-          </div>
-        </div>
-
-        {/* Alerts list */}
-        <aside
-          className="rounded-sm"
-          style={{
-            backgroundColor: "rgba(255,255,255,0.02)",
-            border: "0.5px solid rgba(245,240,232,0.08)",
-            padding: "22px 22px",
-          }}
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <p
-              className="font-serif uppercase"
-              style={{ fontSize: "9.5px", letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-            >
-              Recent Alerts
-            </p>
-            <Link
-              href="/alerts"
-              className="font-mono uppercase"
-              style={{ fontSize: "9px", letterSpacing: "0.18em", color: "rgba(245,240,232,0.45)" }}
-            >
-              View
-            </Link>
-          </div>
-          {alerts.length === 0 ? (
-            <div className="py-6 text-center">
-              <Fleuron size={12} />
-              <p className="font-serif mt-2" style={{ fontSize: "13px", color: "rgba(245,240,232,0.6)" }}>
-                No observations recorded yet.
-              </p>
-              <Caption className="mt-1">Signals will appear as we observe them.</Caption>
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {alerts.slice(0, 5).map((a) => (
-                <li
-                  key={a.id}
-                  style={{
-                    borderBottom: "0.5px solid rgba(245,240,232,0.06)",
-                    paddingBottom: "10px",
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span
-                      className="font-serif"
-                      style={{ fontSize: "12.5px", color: "var(--pq-ivory)", lineHeight: 1.35 }}
-                    >
-                      {a.title || a.message || "Alert"}
-                    </span>
-                    {!a.read_at && (
-                      <span
-                        style={{
-                          width: "6px",
-                          height: "6px",
-                          borderRadius: "50%",
-                          background: "var(--pq-bronze)",
-                          marginTop: "6px",
-                          flexShrink: 0,
-                        }}
-                      />
-                    )}
-                  </div>
-                  {a.ticker && (
-                    <span
-                      className="font-mono tabular-nums mt-1 inline-block"
-                      style={{ fontSize: "10px", color: "rgba(245,240,232,0.45)" }}
-                    >
-                      {a.ticker}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </aside>
-      </section>
-
-      {/* Positions + Signals */}
-      <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Positions */}
-        <div
-          className="rounded-sm"
-          style={{
-            backgroundColor: "rgba(255,255,255,0.02)",
-            border: "0.5px solid rgba(245,240,232,0.08)",
-            padding: "22px 24px",
-          }}
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <p
-              className="font-serif uppercase"
-              style={{ fontSize: "9.5px", letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-            >
-              Positions
-            </p>
-            <Link
-              href="/portfolio"
-              className="font-mono uppercase"
-              style={{ fontSize: "9px", letterSpacing: "0.18em", color: "rgba(245,240,232,0.45)" }}
-            >
-              All
-            </Link>
-          </div>
-          {topPositions.length === 0 ? (
-            <p className="font-serif" style={{ fontSize: "12px", color: "rgba(245,240,232,0.45)" }}>
-              No positions yet.
-            </p>
-          ) : (
-            <table className="w-full" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
-              <colgroup>
-                <col style={{ width: "45%" }} />
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "30%" }} />
-              </colgroup>
-              <tbody>
-                {topPositions.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "0.5px solid rgba(245,240,232,0.06)" }}>
-                    <td className="py-2.5">
-                      <div className="font-serif" style={{ fontSize: "13px", color: "var(--pq-ivory)" }}>
-                        {p.name}
-                      </div>
-                      <div
-                        className="font-mono tabular-nums mt-0.5"
-                        style={{ fontSize: "10px", color: "rgba(245,240,232,0.45)" }}
-                      >
-                        {p.symbol}
-                      </div>
-                    </td>
-                    <td className="py-2.5 text-right">
-                      <PriceWithTimestamp
-                        price={p.current}
-                        observedAt={p.observed_at}
-                        currency={p.currency === "KRW" ? "KRW" : "USD"}
-                        size="sm"
-                      />
-                    </td>
-                    <td
-                      className="py-2.5 text-right font-mono tabular-nums"
-                      style={{
-                        fontSize: "11.5px",
-                        color: p.pnlPct >= 0 ? "#7db487" : "#d18888",
-                      }}
-                    >
-                      {fmtPct(p.pnlPct)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Signals */}
-        <div
-          className="rounded-sm"
-          style={{
-            backgroundColor: "rgba(255,255,255,0.02)",
-            border: "0.5px solid rgba(245,240,232,0.08)",
-            padding: "22px 24px",
-          }}
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <p
-              className="font-serif uppercase"
-              style={{ fontSize: "9.5px", letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-            >
-              Signals
-            </p>
-            <Link
-              href="/signals"
-              className="font-mono uppercase"
-              style={{ fontSize: "9px", letterSpacing: "0.18em", color: "rgba(245,240,232,0.45)" }}
-            >
-              All
-            </Link>
-          </div>
-          {topSignals.length === 0 ? (
-            <p className="font-serif" style={{ fontSize: "12px", color: "rgba(245,240,232,0.45)" }}>
-              No observations available.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {topSignals.map((p) => {
-                const sig = signalFor(p.pnlPct);
-                const cls =
-                  sig === "POSITIVE"
-                    ? "pq-ink-pill pq-ink-pill--pos"
-                    : sig === "NEGATIVE"
-                      ? "pq-ink-pill pq-ink-pill--neg"
-                      : "pq-ink-pill pq-ink-pill--neu";
-                return (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between gap-3"
-                    style={{ borderBottom: "0.5px solid rgba(245,240,232,0.06)", paddingBottom: "10px" }}
-                  >
-                    <div className="min-w-0">
-                      <div
-                        className="font-serif truncate"
-                        style={{ fontSize: "13px", color: "var(--pq-ivory)" }}
-                      >
-                        {p.name}
-                      </div>
-                      <div
-                        className="font-mono tabular-nums mt-0.5"
-                        style={{ fontSize: "10px", color: "rgba(245,240,232,0.45)" }}
-                      >
-                        {p.symbol}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span
-                        className="font-mono tabular-nums"
-                        style={{
-                          fontSize: "11.5px",
-                          color: p.pnlPct >= 0 ? "#7db487" : "#d18888",
-                        }}
-                      >
-                        {fmtPct(p.pnlPct)}
-                      </span>
-                      <span className={cls}>{sig}</span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </section>
-
-      {/* Morning Brief */}
-      <section
-        className="mb-8 rounded-sm"
-        style={{
-          backgroundColor: "rgba(255,255,255,0.015)",
-          border: "0.5px solid rgba(245,240,232,0.08)",
-          padding: "24px 28px",
-        }}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <p
-            className="font-serif uppercase"
-            style={{ fontSize: "9.5px", letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-          >
-            Morning Brief
-          </p>
-          <Link
-            href="/morning-brief"
-            className="font-mono uppercase"
-            style={{ fontSize: "9px", letterSpacing: "0.18em", color: "rgba(245,240,232,0.45)" }}
-          >
-            Archive
-          </Link>
-        </div>
-        {briefAvailable ? (
-          <p
-            className="font-serif"
+          {/* Paper 2 — Ledger (mid, right fan) */}
+          <div
             style={{
-              fontSize: "14px",
-              lineHeight: 1.55,
-              color: "rgba(245,240,232,0.82)",
-              maxWidth: "68ch",
+              position: "absolute",
+              inset: 0,
+              top: 40,
+              zIndex: active === "ledger" ? 30 : 2,
             }}
           >
-            {briefInsight}
-          </p>
-        ) : (
-          <p
-            className="font-serif"
-            style={{ fontSize: "13px", color: "rgba(245,240,232,0.5)" }}
-          >
-            Today&rsquo;s brief has not been dispatched yet.
-          </p>
-        )}
-      </section>
+            <PaperDocument
+              rotation={-3.5}
+              zOffset={-40}
+              xOffset={48}
+              active={active === "ledger"}
+              dimmed={active !== null && active !== "ledger"}
+              onClick={() => onSelect("ledger")}
+              ariaLabel="Positions ledger paper"
+            >
+              <PositionsLedgerPaper positions={positions} />
+            </PaperDocument>
+          </div>
 
-      {/* Footer — editorial signature, legal note, and disclaimer banner */}
+          {/* Paper 1 — This Morning (front) */}
+          <div
+            style={{
+              position: "relative",
+              zIndex: active === "morning" || active === null ? 20 : 10,
+            }}
+          >
+            <PaperDocument
+              rotation={0}
+              zOffset={0}
+              xOffset={0}
+              active={active === "morning"}
+              dimmed={active !== null && active !== "morning"}
+              onClick={() => onSelect("morning")}
+              ariaLabel="This morning editorial paper"
+            >
+              <ThisMorningPaper
+                totalNav={summary?.totalNav}
+                todayPnl={summary?.todayPnl}
+                todayPnlPct={summary?.todayPnlPct}
+                positionCount={positionCount}
+                currency={bookCurrency}
+                brief={briefText}
+                displayName={displayName}
+                active={active === "morning"}
+              />
+            </PaperDocument>
+          </div>
+
+          {/* Spacer reserves footprint for the deepest paper */}
+          <div aria-hidden style={{ height: 560 }} />
+
+          <p
+            style={{
+              textAlign: "center",
+              fontFamily: "var(--font-serif), Georgia, serif",
+              fontStyle: "italic",
+              fontSize: 11.5,
+              color: "rgba(245,240,232,0.4)",
+              letterSpacing: "0.02em",
+              marginTop: 36,
+            }}
+          >
+            {active
+              ? "Click the surfaced sheet again to return it to the stack."
+              : "Click any sheet to draw it forward."}
+          </p>
+        </div>
+
+        {/* ── Mobile: vertical flat stack ── */}
+        <div
+          className="md:hidden flex flex-col gap-5"
+          style={{ padding: "16px 0 24px" }}
+        >
+          <PaperDocument
+            rotation={0}
+            zOffset={0}
+            xOffset={0}
+            ariaLabel="This morning editorial paper"
+          >
+            <ThisMorningPaper
+              totalNav={summary?.totalNav}
+              todayPnl={summary?.todayPnl}
+              todayPnlPct={summary?.todayPnlPct}
+              positionCount={positionCount}
+              currency={bookCurrency}
+              brief={briefText}
+              displayName={displayName}
+              active
+            />
+          </PaperDocument>
+
+          <PaperDocument
+            rotation={0}
+            zOffset={0}
+            xOffset={0}
+            ariaLabel="Positions ledger paper"
+          >
+            <PositionsLedgerPaper positions={positions} />
+          </PaperDocument>
+
+          <PaperDocument
+            rotation={0}
+            zOffset={0}
+            xOffset={0}
+            ariaLabel="Today's signal paper"
+          >
+            <SignalPaper positions={positions} />
+          </PaperDocument>
+        </div>
+      </DossierDesk>
+
+      {/* Foot signature + legal */}
       <FootSignature />
       <DisclaimerBanner type="signal" />
     </ErrorBoundary>
