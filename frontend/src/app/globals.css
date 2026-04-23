@@ -2363,3 +2363,270 @@ i.italic,
     animation: none;
   }
 }
+
+/* ══════════════════════════════════════════════
+   FlipLandingShell — 3D page-flip scroll hijack
+   ══════════════════════════════════════════════ */
+
+/* Stage (fallback mode — normal flow). */
+.pq-flip-stage {
+  position: relative;
+  width: 100%;
+}
+
+/* Stage (active/hijack mode — fixed viewport, 3D perspective). */
+.pq-flip-stage--active {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  perspective: 1800px;
+  perspective-origin: center center;
+  isolation: isolate;
+}
+
+/* Pages in fallback mode render as normal tall sections. */
+.pq-flip-page--fallback {
+  display: block;
+  width: 100%;
+}
+
+/* Pages in active stage are absolutely stacked, each occupying the viewport. */
+.pq-flip-stage--active .pq-flip-page--stage {
+  position: absolute;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Inner wrapper scrolls when the page content exceeds the viewport. */
+.pq-flip-stage--active .pq-flip-page__inner {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide inner scrollbars — flip affordance is the right-side dots. */
+.pq-flip-stage--active .pq-flip-page__inner::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.pq-flip-stage--active .pq-flip-page__inner {
+  scrollbar-width: none;
+}
+
+/* In fallback mode the inner is a transparent pass-through. */
+.pq-flip-page--fallback .pq-flip-page__inner {
+  display: contents;
+}
+
+/* Right-side progress dots. */
+.pq-flip-dots {
+  position: fixed;
+  top: 50%;
+  right: 1.75rem;
+  transform: translateY(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+  pointer-events: none;
+}
+.pq-flip-dots__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  pointer-events: auto;
+}
+.pq-flip-dots__btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+}
+.pq-flip-dots__btn:focus-visible {
+  outline: 1px solid var(--pq-bronze, #8b6f47);
+  outline-offset: 2px;
+}
+.pq-flip-dots__mark {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(245, 240, 232, 0.25);
+  transition: background 200ms ease, transform 200ms ease;
+}
+.pq-flip-dots__btn:hover .pq-flip-dots__mark {
+  background: rgba(245, 240, 232, 0.6);
+}
+.pq-flip-dots__btn--active .pq-flip-dots__mark {
+  width: 9px;
+  height: 9px;
+  background: var(--pq-bronze, #8b6f47);
+  transform: scale(1);
+  box-shadow: 0 0 0 3px rgba(139, 111, 71, 0.18);
+}
+.pq-flip-dots__count {
+  pointer-events: none;
+  font-family: var(--font-serif, "EB Garamond", Georgia, serif);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  color: rgba(245, 240, 232, 0.45);
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  margin-top: 0.25rem;
+}
+.pq-flip-dots__count-num {
+  color: var(--pq-bronze, #8b6f47);
+}
+.pq-flip-dots__count-sep {
+  margin: 0 0.35em;
+  opacity: 0.5;
+}
+
+/* One-time hint ribbon. */
+.pq-flip-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 2.2rem;
+  transform: translateX(-50%);
+  z-index: 55;
+  font-family: var(--font-serif, "EB Garamond", Georgia, serif);
+  font-style: italic;
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.55);
+  padding: 0.55rem 1rem;
+  border: 0.5pt solid rgba(139, 111, 71, 0.35);
+  border-radius: 2px;
+  background: rgba(10, 10, 10, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+/* Disable the whole shell below lg — fallback to native scroll. */
+@media (max-width: 1023px) {
+  .pq-flip-stage--active {
+    position: relative;
+    height: auto;
+    overflow: visible;
+    perspective: none;
+  }
+  .pq-flip-stage--active .pq-flip-page--stage {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .pq-flip-stage--active .pq-flip-page__inner {
+    height: auto;
+    overflow: visible;
+  }
+  .pq-flip-dots,
+  .pq-flip-hint {
+    display: none;
+  }
+}
+
+/* Reduced-motion: shell is forced inactive via JS, but belt-and-suspenders. */
+@media (prefers-reduced-motion: reduce) {
+  .pq-flip-stage--active {
+    position: relative;
+    height: auto;
+    overflow: visible;
+    perspective: none;
+  }
+  .pq-flip-stage--active .pq-flip-page--stage {
+    position: relative;
+    inset: auto;
+    height: auto;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+  .pq-flip-stage--active .pq-flip-page__inner {
+    height: auto;
+    overflow: visible;
+  }
+  .pq-flip-dots,
+  .pq-flip-hint {
+    display: none;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   Splash Page 0 — 2026-04-23
+   Black canvas + wordmark cover before Hero.
+   CEO brief: "첫 페이지에 다 검은 여백에 우리
+   사이트 왼쪽위에 있는 것 그 문구만 넣고"
+   ══════════════════════════════════════════════ */
+
+/* Wordmark — reuses .pq-silver-matte for fill, adds breath pulse */
+.pq-splash-wordmark {
+  animation: pq-splash-breath 4s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+@keyframes pq-splash-breath {
+  0%,
+  100% {
+    opacity: 0.92;
+    transform: translateZ(0) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateZ(0) scale(1.008);
+  }
+}
+
+/* Chevron — gentle vertical hover reinforces the "scroll" hint */
+.pq-splash-chevron {
+  animation: pq-splash-chevron-hover 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes pq-splash-chevron-hover {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(4px);
+    opacity: 0.85;
+  }
+}
+
+/* Reduced-motion — honor user preference, static splash */
+@media (prefers-reduced-motion: reduce) {
+  .pq-splash-wordmark,
+  .pq-splash-chevron {
+    animation: none;
+  }
+}
+
+/* Diamond dot for the splash cover (index 0) in ProgressDots */
+.pq-flip-dots__btn--splash .pq-flip-dots__mark {
+  border-radius: 0 !important;
+  transform: rotate(45deg);
+}
+
