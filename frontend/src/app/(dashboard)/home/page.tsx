@@ -38,6 +38,9 @@ import { PaperDocument } from "@/components/home/paper-document";
 import { ThisMorningPaper } from "@/components/home/this-morning-paper";
 import { PositionsLedgerPaper } from "@/components/home/positions-ledger-paper";
 import { SignalPaper } from "@/components/home/signal-paper";
+import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
+import { PersonaCard } from "@/components/dashboard/persona-card";
+import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -164,6 +167,20 @@ export default function HomePage() {
 
   return (
     <ErrorBoundary>
+      {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════ */}
+      <div
+        className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10"
+        style={{
+          top: 0,
+          background: "rgba(10,10,10,0.78)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          marginBottom: 8,
+        }}
+      >
+        <LivingCFOStatusBar />
+      </div>
+
       {/* ═══════════ TOP STRIP — embossed seal + ticker ═══════════ */}
       <header
         className="flex flex-col gap-3"
@@ -229,6 +246,11 @@ export default function HomePage() {
           <MarketTicker />
         </div>
       </header>
+
+      {/* ═══════════ PERSONA CARD — Layer 1 identity ═══════════ */}
+      <div className="mb-6 md:mb-8">
+        <PersonaCard />
+      </div>
 
       {/* ═══════════ THE DESK ═══════════ */}
       <DossierDesk>
@@ -375,6 +397,9 @@ export default function HomePage() {
       {/* Foot signature + legal */}
       <FootSignature />
       <DisclaimerBanner type="signal" />
+
+      {/* ═══════════ WEEKLY PULSE — auto-triggers Monday 07:00 KST ═══════════ */}
+      <WeeklyPulseCard />
     </ErrorBoundary>
   );
 }

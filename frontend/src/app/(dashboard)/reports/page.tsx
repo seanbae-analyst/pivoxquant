@@ -26,6 +26,8 @@ import {
   FootSignature,
   RuledKicker,
 } from "@/components/ui/editorial";
+import { SectionFeedbackBar } from "@/components/artifacts/section-feedback";
+import { usePersona, PERSONA_LABELS, type PersonaId } from "@/lib/cfo/hooks";
 import type { Artifact } from "@/lib/types";
 import Link from "next/link";
 
@@ -39,27 +41,29 @@ interface CatalogEntry {
   title: string;
   cadence: string;
   minTier: Tier;
+  /** Personas this artifact is optimised for. `"all"` = persona-agnostic. */
+  personas: (PersonaId | "all")[];
 }
 
 const CATALOG: CatalogEntry[] = [
-  { slug: "weekly_memo",           type: "weekly_memo",          title: "Weekly Memo",             cadence: "Every Sunday",   minTier: "free" },
-  { slug: "morning_brief_plus",    type: "morning_brief",        title: "Morning Brief Plus",      cadence: "Every weekday",  minTier: "free" },
-  { slug: "brag_card",             type: "monthly_brag",         title: "Brag Card",               cadence: "Monthly",        minTier: "free" },
-  { slug: "earnings_prebrief",     type: "earnings_prebrief",    title: "Earnings Pre-Brief",      cadence: "Per event",      minTier: "pro" },
-  { slug: "risk_board",            type: "risk_report",          title: "Risk Board",              cadence: "Weekly",         minTier: "pro" },
-  { slug: "quarterly_self_report", type: "quarterly_review",     title: "Quarterly Self Report",   cadence: "Quarterly",      minTier: "pro" },
-  { slug: "self_audit",            type: "custom",               title: "Self Audit",              cadence: "On demand",      minTier: "pro" },
-  { slug: "dd_checklist",          type: "custom",               title: "DD Checklist",            cadence: "On demand",      minTier: "pro" },
-  { slug: "dividend_income",       type: "custom",               title: "Dividend Income",         cadence: "Monthly",        minTier: "pro" },
-  { slug: "insider_mirror",        type: "custom",               title: "Insider Mirror",          cadence: "Weekly",         minTier: "pro" },
-  { slug: "sp500_backtest",        type: "custom",               title: "S&P 500 Backtest",        cadence: "On demand",      minTier: "pro" },
-  { slug: "portfolio_segment",     type: "custom",               title: "Portfolio Segment",       cadence: "Monthly",        minTier: "pro" },
-  { slug: "capital_allocation",    type: "custom",               title: "Capital Allocation",      cadence: "Quarterly",      minTier: "premium" },
-  { slug: "credit_rating",         type: "custom",               title: "Credit Rating",           cadence: "Quarterly",      minTier: "premium" },
-  { slug: "burn_rate",             type: "custom",               title: "Burn Rate",               cadence: "Monthly",        minTier: "premium" },
-  { slug: "monthly_finance",       type: "custom",               title: "Monthly Finance",         cadence: "Monthly",        minTier: "premium" },
-  { slug: "kpi_dashboard",         type: "custom",               title: "KPI Dashboard",           cadence: "Weekly",         minTier: "premium" },
-  { slug: "year_end_letter",       type: "custom",               title: "Year-End Letter",         cadence: "Annual",         minTier: "premium" },
+  { slug: "weekly_memo",           type: "weekly_memo",          title: "Weekly Memo",             cadence: "Every Sunday",   minTier: "free",    personas: ["all"] },
+  { slug: "morning_brief_plus",    type: "morning_brief",        title: "Morning Brief Plus",      cadence: "Every weekday",  minTier: "free",    personas: ["all"] },
+  { slug: "brag_card",             type: "monthly_brag",         title: "Brag Card",               cadence: "Monthly",        minTier: "free",    personas: ["all"] },
+  { slug: "earnings_prebrief",     type: "earnings_prebrief",    title: "Earnings Pre-Brief",      cadence: "Per event",      minTier: "pro",     personas: ["growth", "momentum"] },
+  { slug: "risk_board",            type: "risk_report",          title: "Risk Board",              cadence: "Weekly",         minTier: "pro",     personas: ["conservative", "balanced"] },
+  { slug: "quarterly_self_report", type: "quarterly_review",     title: "Quarterly Self Report",   cadence: "Quarterly",      minTier: "pro",     personas: ["all"] },
+  { slug: "self_audit",            type: "custom",               title: "Self Audit",              cadence: "On demand",      minTier: "pro",     personas: ["all"] },
+  { slug: "dd_checklist",          type: "custom",               title: "DD Checklist",            cadence: "On demand",      minTier: "pro",     personas: ["value", "growth"] },
+  { slug: "dividend_income",       type: "custom",               title: "Dividend Income",         cadence: "Monthly",        minTier: "pro",     personas: ["income"] },
+  { slug: "insider_mirror",        type: "custom",               title: "Insider Mirror",          cadence: "Weekly",         minTier: "pro",     personas: ["value", "growth"] },
+  { slug: "sp500_backtest",        type: "custom",               title: "S&P 500 Backtest",        cadence: "On demand",      minTier: "pro",     personas: ["balanced", "conservative"] },
+  { slug: "portfolio_segment",     type: "custom",               title: "Portfolio Segment",       cadence: "Monthly",        minTier: "pro",     personas: ["all"] },
+  { slug: "capital_allocation",    type: "custom",               title: "Capital Allocation",      cadence: "Quarterly",      minTier: "premium", personas: ["value", "balanced"] },
+  { slug: "credit_rating",         type: "custom",               title: "Credit Rating",           cadence: "Quarterly",      minTier: "premium", personas: ["conservative", "income"] },
+  { slug: "burn_rate",             type: "custom",               title: "Burn Rate",               cadence: "Monthly",        minTier: "premium", personas: ["growth"] },
+  { slug: "monthly_finance",       type: "custom",               title: "Monthly Finance",         cadence: "Monthly",        minTier: "premium", personas: ["all"] },
+  { slug: "kpi_dashboard",         type: "custom",               title: "KPI Dashboard",           cadence: "Weekly",         minTier: "premium", personas: ["growth", "momentum"] },
+  { slug: "year_end_letter",       type: "custom",               title: "Year-End Letter",         cadence: "Annual",         minTier: "premium", personas: ["all"] },
 ];
 
 /* ── Tier gating ── */
@@ -75,11 +79,17 @@ function ArtifactCard({
   entry,
   live,
   locked,
+  declaredPersona,
 }: {
   entry: CatalogEntry;
   live?: Artifact;
   locked: boolean;
+  declaredPersona: PersonaId | null;
 }) {
+  const personaMatch =
+    declaredPersona !== null &&
+    !entry.personas.includes("all") &&
+    entry.personas.includes(declaredPersona);
   const samplePdf = `/samples/${entry.slug}.pdf`;
   const viewHref = live ? API.artifacts.preview(live.id) : samplePdf;
   const downloadHref = live ? API.artifacts.download(live.id) : samplePdf;
@@ -114,6 +124,11 @@ function ArtifactCard({
       <h3 className="mt-2 font-serif text-xl text-[var(--pq-ivory)]">
         {entry.title}
       </h3>
+      {personaMatch && declaredPersona && (
+        <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          Optimised for {PERSONA_LABELS[declaredPersona]}
+        </p>
+      )}
       <p className="mt-2 font-serif text-[11.5px] text-[rgba(245,240,232,0.55)]">
         Last generated &mdash; <span className="tabular-nums font-mono">{lastGenerated}</span>
       </p>
@@ -149,6 +164,17 @@ function ArtifactCard({
           </>
         )}
       </div>
+
+      {/* Section feedback — wiring Layer 2 learning */}
+      {!locked && (
+        <div className="mt-4 pt-3 border-t border-[rgba(245,240,232,0.06)]">
+          <SectionFeedbackBar
+            artifactId={live?.id ? String(live.id) : entry.slug}
+            section={entry.slug}
+            compact
+          />
+        </div>
+      )}
     </article>
   );
 }
@@ -159,7 +185,10 @@ function ReportsPageInner() {
   const { user } = useAuth();
   const tier = ((user?.subscription_tier as Tier) || "free") as Tier;
   const { artifacts, isLoading } = useArtifacts({ type: "all", since: "all" });
+  const { data: personaData } = usePersona();
+  const declaredPersona = (personaData?.declared?.persona as PersonaId) ?? null;
   const [filter, setFilter] = useState<"all" | Tier>("all");
+  const [personaFilter, setPersonaFilter] = useState<"all" | PersonaId>("all");
 
   // Index live artifacts by type for quick lookup
   const liveByType = useMemo(() => {
@@ -171,9 +200,15 @@ function ReportsPageInner() {
   }, [artifacts]);
 
   const visible = useMemo(() => {
-    if (filter === "all") return CATALOG;
-    return CATALOG.filter((c) => c.minTier === filter);
-  }, [filter]);
+    let rows = CATALOG;
+    if (filter !== "all") rows = rows.filter((c) => c.minTier === filter);
+    if (personaFilter !== "all") {
+      rows = rows.filter(
+        (c) => c.personas.includes("all") || c.personas.includes(personaFilter),
+      );
+    }
+    return rows;
+  }, [filter, personaFilter]);
 
   return (
     <div className="space-y-8">
@@ -208,6 +243,47 @@ function ReportsPageInner() {
         ))}
       </div>
 
+      {/* ── Persona filter — Layer 1 targeting ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mr-1">
+          Persona
+        </span>
+        {(
+          [
+            "all",
+            "growth",
+            "value",
+            "balanced",
+            "income",
+            "momentum",
+            "conservative",
+          ] as const
+        ).map((p) => {
+          const active = personaFilter === p;
+          const label = p === "all" ? "All personas" : PERSONA_LABELS[p];
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPersonaFilter(p)}
+              aria-pressed={active}
+              className="text-[10.5px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-[2px] border transition-colors"
+              style={{
+                borderColor: active
+                  ? "var(--pq-bronze)"
+                  : "rgba(245,240,232,0.1)",
+                background: active
+                  ? "rgba(139,111,71,0.18)"
+                  : "rgba(255,255,255,0.02)",
+                color: active ? "var(--pq-ivory)" : "rgba(245,240,232,0.55)",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Grid ── */}
       {isLoading && artifacts.length === 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -226,6 +302,7 @@ function ReportsPageInner() {
               entry={entry}
               live={liveByType.get(entry.type)}
               locked={!hasAccess(tier, entry.minTier)}
+              declaredPersona={declaredPersona}
             />
           ))}
         </div>

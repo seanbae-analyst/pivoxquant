@@ -30,6 +30,7 @@ import { ActivityPaper } from "@/components/portfolio/activity-paper";
 import { AddPositionModal } from "@/components/portfolio/add-position-modal";
 import { TradeModal } from "@/components/portfolio/trade-modal";
 import { MOCK_POSITIONS, MOCK_TRADES } from "@/components/portfolio/mock-data";
+import { RollingWindowWidget } from "@/components/dashboard/rolling-window";
 import {
   PORTFOLIO_POSITIONS,
   PORTFOLIO_SUMMARY,
@@ -275,8 +276,11 @@ export default function PortfolioPage() {
             />
           </PaperDocument>
 
-          {/* Right column — Sector on top, Activity below */}
+          {/* Right column — Rolling Window → Sector → Activity */}
           <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            {/* RollingWindowWidget renders its own ivory paper surface */}
+            <RollingWindowWidget paper />
+
             <PaperDocument
               rotation={-3}
               zOffset={-20}
@@ -321,6 +325,8 @@ export default function PortfolioPage() {
               onAction={openAction}
             />
           </PaperDocument>
+
+          <RollingWindowWidget paper />
 
           <PaperDocument
             rotation={0}

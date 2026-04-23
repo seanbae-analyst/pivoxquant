@@ -41,6 +41,13 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { fmtUsd, fmtKrw } from "@/lib/format";
+import {
+  usePersona,
+  usePulse,
+  PERSONA_LABELS,
+  type PersonaId,
+} from "@/lib/cfo/hooks";
+import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 
 /* ── Fetcher ── */
 
@@ -660,6 +667,157 @@ function PreferencesSection() {
   );
 }
 
+/* ── Living CFO section ── */
+
+const DRIFT_ALERT_LS = "pq_cfo_drift_alerts_enabled";
+
+function LivingCFOSection() {
+  const { data: persona } = usePersona();
+  const { data: pulse } = usePulse();
+  const [driftAlerts, setDriftAlerts] = useState<boolean>(true);
+  const [cadence, setCadence] = useState<"weekly" | "biweekly" | "monthly">(
+    "weekly",
+  );
+  const [feedbackCount, setFeedbackCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setDriftAlerts(window.localStorage.getItem(DRIFT_ALERT_LS) !== "0");
+
+    try {
+      const raw = window.localStorage.getItem("pq_cfo_feedback_votes_v1");
+      if (raw) {
+        const map = JSON.parse(raw) as Record<string, string>;
+        setFeedbackCount(Object.keys(map).length);
+      }
+    } catch {
+      /* ignore */
+    }
+
+    if (pulse?.cadence) setCadence(pulse.cadence);
+  }, [pulse?.cadence]);
+
+  const handleDriftToggle = (next: boolean) => {
+    setDriftAlerts(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(DRIFT_ALERT_LS, next ? "1" : "0");
+    }
+    toast.success(next ? "Drift alerts on." : "Drift alerts off.");
+  };
+
+  const declared = persona?.declared;
+  const observed30 = persona?.observed?.window_30d;
+
+  return (
+    <Section kicker="05 · Living CFO" title="Your personal CFO">
+      {/* Persona overview */}
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          Declared persona
+        </div>
+        <div className="mt-2 flex items-baseline justify-between gap-3 flex-wrap">
+          <div className="font-serif text-2xl text-[var(--pq-ivory)]">
+            {declared
+              ? PERSONA_LABELS[declared.persona as PersonaId] ??
+                declared.persona
+              : "Not set"}
+          </div>
+          {declared && (
+            <div className="font-mono tabular-nums text-sm text-[rgba(245,240,232,0.6)]">
+              score {declared.score}
+            </div>
+          )}
+        </div>
+
+        {observed30 && (
+          <p className="mt-3 font-serif text-[13px] text-[rgba(245,240,232,0.65)]">
+            Your last 30 days look like{" "}
+            <strong className="text-[var(--pq-ivory)]">
+              {PERSONA_LABELS[observed30.persona]} {observed30.score}
+            </strong>
+            .
+          </p>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/onboarding" className="pq-ink-btn-ghost">
+            Retake full assessment
+          </Link>
+        </div>
+      </div>
+
+      {/* Drift + cadence controls */}
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-serif text-base text-[var(--pq-ivory)]">
+              Drift alerts
+            </div>
+            <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
+              Notify when your 30-day behaviour diverges from the declared persona.
+            </div>
+          </div>
+          <Toggle
+            checked={driftAlerts}
+            onChange={handleDriftToggle}
+            ariaLabel="Drift alerts"
+          />
+        </div>
+
+        <div className="pt-3 border-t border-[rgba(245,240,232,0.06)]">
+          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+            Pulse cadence
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(["weekly", "biweekly", "monthly"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => {
+                  setCadence(c);
+                  toast.success(`Pulse set to ${c}.`);
+                }}
+                className={cn(
+                  cadence === c ? "pq-ink-btn-bronze" : "pq-ink-btn-ghost",
+                  "capitalize",
+                )}
+              >
+                {c === "weekly"
+                  ? "Weekly"
+                  : c === "biweekly"
+                    ? "Every 2 weeks"
+                    : "Monthly"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Section-feedback accumulator */}
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          Section feedback
+        </div>
+        <div className="mt-2 font-serif text-[var(--pq-ivory)]">
+          {feedbackCount} reaction{feedbackCount === 1 ? "" : "s"} recorded across your reports.
+        </div>
+        <p className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">
+          The CFO uses Useful / Meh / Skip votes to prioritise which sections it
+          writes for you next.
+        </p>
+      </div>
+
+      {/* Inline pulse submission + history */}
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
+          Submit a pulse
+        </div>
+        <WeeklyPulseCard inline />
+      </div>
+    </Section>
+  );
+}
+
 /* ── Delete modal ── */
 
 function DeleteAccountModal({ onClose }: { onClose: () => void }) {
@@ -740,6 +898,7 @@ export default function SettingsPage() {
         <SubscriptionSection />
         <BrokersSection />
         <PreferencesSection />
+        <LivingCFOSection />
 
         {/* ── Danger zone ── */}
         <section className="pt-8 border-t border-[rgba(245,240,232,0.08)]">
