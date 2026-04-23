@@ -1,49 +1,46 @@
 "use client";
 
 /**
- * Hero — PivoxQuant landing Hero v3 (Cinematic).
+ * Hero — PivoxQuant landing Hero v4 (Cinematic).
  * -----------------------------------------------------------------------
- * v3 upgrades on top of v2:
- *   1. MarketTicker (top strip, seamless marquee)
- *   2. CFO word — ivory → bronze glow via CSS keyframe (.pq-cfo-word)
- *   3. ReportFlipDeck (right column) — 3D Y-axis flip through 3 artifacts
- *   4. Scroll hint (bottom-center, "Continue dossier")
- *   5. Tighter Vantablack — narrower spotlight, deeper bottom fade,
- *      stronger film grain.
+ * v4 layers onto v3's CEO-approved copy:
+ *   1. HeroAurora       — bronze "sunrise" that tracks the cursor
+ *   2. HeroParticles    — slow ivory/bronze drifting motes (Canvas 2D)
+ *   3. HeroTypography   — glyph-by-glyph H1 reveal (LCP-safe)
+ *   4. HeroDataStream   — paper reports flowing behind the flip deck
+ *   5. CtaInkBleed      — SVG ink-bleed on the primary CTA
+ *   6. Scroll cue       — slim bronze pulse line (replaces chevron hint)
+ *   7. Animated counters on the STATS strip (scroll-triggered)
+ *   8. Cinematic entrance timeline (ticker → eyebrow → H1 → … → CTAs)
  *
- * Palette: Vantablack #050505/#0A0A0A · Ivory #F5F0E8 · Bronze #B8956A.
- * Type:    Source Serif 4 (masthead, H1, body) · JetBrains Mono (data).
- * Copy:    English, research-framed. NO BUY/SELL/HOLD/recommend/advice.
- * Disclaimer: inline (Bronze italic) per legal requirement.
- * A11y:    <h1> static for SEO; ticker/deck/hint are aria-hidden.
- * Perf:    CLS reserved (ticker 32px, H1 clamped, deck aspect 4:5).
+ * CEO-customized copy (preserved verbatim):
+ *   Eyebrow : "PivoxQuant · Living CFO"
+ *   H1      : "Your CFO learns you." (italic + bronze glow on "learns")
+ *   KR sub  : 매일 아침 두 번. 매수 전 일곱 관문. …
+ *   CTAs    : "Meet your CFO" / "See a sample"
+ *
+ * LCP discipline: the <h1> is rendered statically on the server with the
+ * full phrase; only after hydration + viewport entry does the glyph split
+ * take over (HeroTypography handles the cross-fade).
+ *
+ * Legal safe: no BUY/SELL/HOLD/recommend/advice/추천/조언 copy in any of
+ * the ambient text (aurora/particles/data stream).
  */
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
-import { ArrowRight, FileText, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "motion/react";
+import { ArrowRight, FileText } from "lucide-react";
 
 import { HeroSpotlight } from "./hero-spotlight";
+import { HeroAurora } from "./hero-aurora";
+import { HeroTypography } from "./hero-typography";
+import { CtaInkBleed } from "./cta-ink-bleed";
 import { FilmGrain } from "./film-grain";
 
 /* ────────────────────────────────────────────────
-   Dynamic imports — defer heavy, below-the-initial-paint UI.
-   ------------------------------------------------
-   MarketTicker and ReportFlipDeck together pull in motion/react runtime,
-   matchMedia listeners, and large inline styles (~72 KB chunk per
-   Lighthouse trace: _next/static/chunks/0nfangqn4qoja.js). They are NOT
-   needed for the Largest Contentful Paint (the H1 "Your portfolio,
-   briefed like a CFO's." is the LCP element).
-   Splitting them out:
-     - trims ~40-50 KB from the hero's critical JS path,
-     - removes forced reflow during hydration (measured +200-400 ms
-       Render Delay on mobile),
-     - preserves visuals (fixed-height skeletons keep CLS = 0).
-   `ssr: false` because both components read window.matchMedia inside
-   useEffect and the content is decorative/aria-hidden. A fixed-size
-   placeholder holds the layout until the chunk lands.
+   Dynamic imports — defer heavy, below-LCP UI.
    ──────────────────────────────────────────────── */
 const MarketTicker = dynamic(
   () => import("./market-ticker").then((m) => m.MarketTicker),
@@ -75,37 +72,128 @@ const ReportFlipDeck = dynamic(
   },
 );
 
-/* ────────────────────────────────────────────────
-   Motion
-   ──────────────────────────────────────────────── */
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] },
-  },
-};
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.09 } },
-};
+const HeroParticles = dynamic(
+  () => import("./hero-particles").then((m) => m.HeroParticles),
+  { ssr: false, loading: () => null },
+);
+
+const HeroDataStream = dynamic(
+  () => import("./hero-data-stream").then((m) => m.HeroDataStream),
+  { ssr: false, loading: () => null },
+);
 
 /* ────────────────────────────────────────────────
-   Stats (backtest figures, tabular-nums)
+   Stats — count-up targets. `toRender` preserves the
+   original text (e.g. "+23.2pp") so the visual width
+   doesn't jump between the 0 state and the final state.
    ──────────────────────────────────────────────── */
-const STATS: readonly { label: string; value: string; tone?: "pos" }[] = [
-  { label: "CAGR", value: "21.19%" },
-  { label: "Sharpe", value: "0.94" },
-  { label: "2022 Bear", value: "+23.2pp", tone: "pos" },
-  { label: "Alpha", value: "+9.66%", tone: "pos" },
+type Stat = {
+  label: string;
+  value: string;
+  /** Numeric target (null → don't animate, use `value` as-is). */
+  target?: number;
+  /** Formatter for the animated number. */
+  format?: (n: number) => string;
+  tone?: "pos";
+};
+
+const STATS: readonly Stat[] = [
+  {
+    label: "CAGR",
+    value: "21.19%",
+    target: 21.19,
+    format: (n) => `${n.toFixed(2)}%`,
+  },
+  {
+    label: "Sharpe",
+    value: "0.94",
+    target: 0.94,
+    format: (n) => n.toFixed(2),
+  },
+  {
+    label: "2022 Bear",
+    value: "+23.2pp",
+    target: 23.2,
+    format: (n) => `+${n.toFixed(1)}pp`,
+    tone: "pos",
+  },
+  {
+    label: "Alpha",
+    value: "+9.66%",
+    target: 9.66,
+    format: (n) => `+${n.toFixed(2)}%`,
+    tone: "pos",
+  },
 ] as const;
 
+/** Scroll-triggered count-up. Honors prefers-reduced-motion. */
+function useCountUp(target: number | undefined, enabled: boolean) {
+  const [value, setValue] = useState(target ?? 0);
+  const ref = useRef<HTMLSpanElement>(null);
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || target === undefined) return;
+    setValue(0);
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting && !firedRef.current) {
+            firedRef.current = true;
+            const duration = 1400;
+            const start = performance.now();
+            const tick = (now: number) => {
+              const t = Math.min(1, (now - start) / duration);
+              // ease-out cubic
+              const eased = 1 - Math.pow(1 - t, 3);
+              setValue(target * eased);
+              if (t < 1) requestAnimationFrame(tick);
+              else setValue(target);
+            };
+            requestAnimationFrame(tick);
+            io.disconnect();
+          }
+        }
+      },
+      { threshold: 0.3 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [target, enabled]);
+
+  return { value, ref };
+}
+
+function StatValue({ stat, animate }: { stat: Stat; animate: boolean }) {
+  const { value, ref } = useCountUp(stat.target, animate);
+  const display =
+    animate && stat.target !== undefined && stat.format
+      ? stat.format(value)
+      : stat.value;
+
+  return (
+    <span
+      ref={ref}
+      className="pq-stat-count font-mono text-[17px] leading-none sm:text-[19px]"
+      style={{
+        color: stat.tone === "pos" ? "#3C7A52" : "var(--pq-ivory)",
+        letterSpacing: "-0.01em",
+      }}
+    >
+      {display}
+    </span>
+  );
+}
+
 /* ══════════════════════════════════════════════════
-   HERO v3
+   HERO v4
    ══════════════════════════════════════════════════ */
 export function Hero() {
   const reduceMotion = useReducedMotion();
+  const animate = !reduceMotion;
+  const heroRef = useRef<HTMLElement>(null);
 
   const smoothScroll = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -113,8 +201,14 @@ export function Hero() {
     if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Cinematic entrance delays (ms). Client-only via inline style so SSR
+  // emits a static Hero; CSS animation kicks in after hydration.
+  const d = (ms: number): React.CSSProperties =>
+    animate ? { animationDelay: `${ms}ms` } : {};
+
   return (
     <section
+      ref={heroRef}
       aria-labelledby="pq-hero-heading"
       className="relative isolate overflow-hidden"
       style={{
@@ -122,13 +216,18 @@ export function Hero() {
         color: "var(--pq-ivory)",
       }}
     >
-      {/* ─── Ticker (v3) ─── thin strip at very top */}
-      <MarketTicker />
+      {/* ─── Ticker — thin strip at very top ─── */}
+      <div className={animate ? "pq-reveal" : ""} style={d(200)}>
+        <MarketTicker />
+      </div>
 
-      {/* ─── L2: Dot pattern ─── tighter mask (55% → 40%) */}
+      {/* ─── L0: Aurora — bronze radial, pointer-tracked ─── */}
+      <HeroAurora trackTarget={heroRef} />
+
+      {/* ─── L1: Dot pattern ─── */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 z-[1]"
         style={{
           backgroundImage:
             "radial-gradient(circle, rgba(245, 240, 232, 0.05) 1px, transparent 1px)",
@@ -140,111 +239,104 @@ export function Hero() {
         }}
       />
 
-      {/* ─── L3: Film grain ─── slightly filmier */}
-      <FilmGrain opacity={0.05} blendMode="overlay" />
+      {/* ─── L2: Drifting particles (Canvas 2D, off-screen pausable) ─── */}
+      <HeroParticles />
 
-      {/* ─── L4: Bottom fade into ink ─── deeper (h-40 → h-56) */}
+      {/* ─── L3: Film grain — filmier (0.05 → 0.07) ─── */}
+      <FilmGrain opacity={0.07} blendMode="overlay" />
+
+      {/* ─── L4: Bottom fade into ink ─── */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 h-56 z-[2]"
         style={{
           background:
-            "linear-gradient(to bottom, transparent 0%, #050505 92%)",
+            "linear-gradient(to bottom, transparent 0%, #030303 92%)",
         }}
       />
 
-      {/* ─── Spotlight wrapper ─── content inside ─── */}
+      {/* ─── L5: Inner warm glow below the H1 ─── */}
+      <div aria-hidden className="pq-inner-glow" />
+
+      {/* ─── Spotlight wrapper ─── */}
       <HeroSpotlight className="relative">
         <div className="relative mx-auto max-w-7xl px-5 pb-24 pt-24 sm:px-8 sm:pb-32 sm:pt-28 lg:px-10 lg:pb-36 lg:pt-32">
           <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.22fr)_minmax(0,1fr)] lg:gap-16">
             {/* ─── LEFT: Copy column ─── */}
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              animate="visible"
-              className="max-w-2xl"
-            >
+            <div className="relative z-[3] max-w-2xl">
               {/* Masthead eyebrow */}
-              <motion.div
-                variants={fadeUp}
-                className="mb-8 inline-flex items-center gap-2.5"
+              <div
+                className={`mb-8 inline-flex items-center gap-2.5 ${animate ? "pq-reveal" : ""}`}
+                style={d(350)}
               >
                 <span
                   aria-hidden
-                  className="h-px w-7"
-                  style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+                  className={`h-px ${animate ? "pq-eyebrow-grow" : "w-7"}`}
+                  style={{
+                    backgroundColor: "rgba(139, 111, 71, 0.7)",
+                    width: animate ? "28px" : undefined,
+                  }}
                 />
                 <span
-                  className="font-serif text-[11px] uppercase"
+                  className={`font-serif text-[11px] uppercase ${animate ? "pq-reveal" : ""}`}
                   style={{
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
+                    ...d(500),
                   }}
                 >
                   PivoxQuant · Living CFO
                 </span>
-              </motion.div>
+              </div>
 
-              {/* H1 — LCP element, rendered static (no fade-in) so Lighthouse
-                  counts first paint as contentful. Motion wrappers on the LCP
-                  element defer contentfulness until the animation settles. */}
-              <h1
+              {/* H1 — LCP element. HeroTypography renders a plain span
+                  statically, then swaps to a glyph layer after hydration. */}
+              <HeroTypography
                 id="pq-hero-heading"
-                className="pq-silver-matte mb-7 font-serif font-normal"
-                style={{
-                  fontSize: "clamp(2.5rem, 6vw, 4.75rem)",
-                  lineHeight: 1.02,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Your CFO&nbsp;
-                <span
-                  className={reduceMotion ? "" : "pq-cfo-word"}
-                  style={{
-                    fontStyle: "italic",
-                    ...(reduceMotion
-                      ? { color: "var(--pq-bronze-light)" }
-                      : {}),
-                  }}
-                >
-                  learns
-                </span>
-                <br />
-                you.
-              </h1>
+                className="pq-hero-h1 pq-silver-matte mb-7 font-serif font-normal"
+                startDelayMs={700}
+                segments={[
+                  { text: "Your CFO\u00A0" },
+                  { text: "learns", cfo: true, br: true },
+                  { text: "you." },
+                ]}
+              />
 
-              {/* Subcopy — Living CFO */}
-              <motion.p
-                variants={fadeUp}
-                className="mb-3 max-w-xl font-serif"
+              {/* Subcopy — Korean (Living CFO voice) */}
+              <p
+                className={`mb-3 max-w-xl font-serif ${animate ? "pq-reveal" : ""}`}
                 style={{
                   fontSize: "clamp(15px, 1.35vw, 17px)",
                   lineHeight: 1.65,
                   color: "rgba(245, 240, 232, 0.72)",
+                  ...d(1400),
                 }}
               >
                 매일 아침 두 번. 매수 전 일곱 관문. 매주 금요일 한 장의 편지.
                 2년 뒤 당신은 알게 된다. 이 앱이 당신의 투자 철학을 당신보다
                 먼저 기억한다는 것을.
-              </motion.p>
+              </p>
 
-              {/* Italic deck line */}
-              <motion.p
-                variants={fadeUp}
-                className="mb-9 max-w-xl font-serif italic"
+              {/* Italic deck line — English */}
+              <p
+                className={`mb-9 max-w-xl font-serif italic ${animate ? "pq-reveal" : ""}`}
                 style={{
                   fontSize: "clamp(13.5px, 1.15vw, 15px)",
                   lineHeight: 1.5,
                   letterSpacing: "0.005em",
                   color: "rgba(139, 111, 71, 0.85)",
+                  ...d(1550),
                 }}
               >
                 Twice each morning. Seven gates before every trade. One letter
                 each Friday. A personal CFO that studies you.
-              </motion.p>
+              </p>
 
               {/* ─── Stat strip ─── */}
-              <motion.div variants={fadeUp} className="mb-10">
+              <div
+                className={`mb-10 ${animate ? "pq-reveal" : ""}`}
+                style={d(1700)}
+              >
                 <div
                   aria-hidden
                   className="mb-4 h-px w-full"
@@ -262,17 +354,7 @@ export function Hero() {
                       >
                         {s.label}
                       </span>
-                      <span
-                        className="font-mono tabular-nums text-[17px] leading-none sm:text-[19px]"
-                        style={{
-                          color:
-                            s.tone === "pos" ? "#3C7A52" : "var(--pq-ivory)",
-                          fontFeatureSettings: '"tnum", "lnum"',
-                          letterSpacing: "-0.01em",
-                        }}
-                      >
-                        {s.value}
-                      </span>
+                      <StatValue stat={s} animate={animate ?? false} />
                     </li>
                   ))}
                 </ul>
@@ -283,111 +365,93 @@ export function Hero() {
                   Backtest, 2014–2024 US equity universe. Past performance does
                   not guarantee future results.
                 </p>
-              </motion.div>
+              </div>
 
-              {/* ─── CTAs ─── */}
-              <motion.div
-                variants={fadeUp}
-                className="flex flex-wrap items-center gap-3"
+              {/* ─── CTAs — ink-bleed primary + ghost secondary ─── */}
+              <div
+                className={`flex flex-wrap items-center gap-3 ${animate ? "pq-reveal" : ""}`}
+                style={d(1800)}
               >
-                <Link
-                  href="/signup"
-                  className="
-                    group inline-flex h-12 items-center gap-2 rounded-sm px-6
-                    text-[13.5px] font-medium tracking-wide
-                    transition-transform duration-200
-                    hover:-translate-y-px active:translate-y-0 active:scale-[0.99]
-                  "
-                  style={{
-                    backgroundColor: "var(--pq-ivory)",
-                    color: "var(--pq-ink)",
-                    boxShadow:
-                      "0 1px 0 0 rgba(245,240,232,0.3) inset, 0 8px 24px -8px rgba(245,240,232,0.25)",
-                  }}
-                >
+                <CtaInkBleed href="/signup" variant="bronze">
                   Meet your CFO
                   <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                </Link>
+                </CtaInkBleed>
 
-                <a
+                <CtaInkBleed
                   href="/samples/weekly_memo.pdf"
+                  as="anchor"
+                  variant="ghost"
                   target="_blank"
                   rel="noopener"
-                  className="
-                    inline-flex h-12 items-center gap-2 rounded-sm border bg-transparent px-5
-                    text-[13.5px] font-medium tracking-wide transition-colors duration-200
-                  "
-                  style={{
-                    borderColor: "rgba(139, 111, 71, 0.5)",
-                    color: "rgba(245, 240, 232, 0.88)",
-                  }}
+                  className="px-5"
                 >
                   <FileText className="h-4 w-4" />
                   See a sample
-                </a>
-              </motion.div>
+                </CtaInkBleed>
+              </div>
 
               {/* ─── Disclaimer footer ─── */}
-              <motion.p
-                variants={fadeUp}
-                className="mt-10 border-t pt-6 font-serif text-[11px] italic leading-relaxed tracking-wide"
+              <p
+                className={`mt-10 border-t pt-6 font-serif text-[11px] italic leading-relaxed tracking-wide ${animate ? "pq-reveal" : ""}`}
                 style={{
                   borderColor: "var(--pq-border)",
                   color: "var(--pq-muted)",
+                  ...d(1950),
                 }}
               >
                 <span style={{ color: "rgba(139, 111, 71, 0.9)" }}>— </span>
                 Not investment advice. Informational research only. Past
                 performance does not guarantee future results.
-              </motion.p>
-            </motion.div>
+              </p>
+            </div>
 
-            {/* ─── RIGHT: 3D Flip Deck ─── */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{
-                duration: 0.9,
-                ease: [0.16, 1, 0.3, 1],
-                delay: 0.1,
-              }}
-              className="relative order-first flex w-full items-center justify-center lg:order-none"
+            {/* ─── RIGHT: Flip deck, over the paper-flow stream ─── */}
+            <div
+              className={`relative order-first flex w-full items-center justify-center lg:order-none ${animate ? "pq-reveal" : ""}`}
+              style={d(2000)}
             >
-              <ReportFlipDeck />
-            </motion.div>
+              {/* Paper-flow stream — behind the deck */}
+              <HeroDataStream />
+              {/* The deck itself — 3D flip, visible in front */}
+              <div className="relative z-[2] w-full">
+                <ReportFlipDeck />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ─── Scroll hint (v3) ─── bottom-center, editorial ─── */}
+        {/* ─── Scroll cue — slim bronze pulse line, replaces v3 chevron. */}
         <a
           href="#pq-hero-anchor"
           onClick={smoothScroll}
           aria-label="Continue to next section"
-          className="
-            absolute bottom-8 left-1/2 z-[3] -translate-x-1/2
-            flex flex-col items-center gap-2
-            group
-          "
+          className="absolute bottom-8 left-1/2 z-[3] -translate-x-1/2 flex flex-col items-center gap-2"
+          style={d(2500)}
         >
           <span
-            className={`${reduceMotion ? "" : "pq-scroll-hint"} flex flex-col items-center gap-1.5`}
+            className="font-serif italic"
+            style={{
+              fontSize: "10.5px",
+              letterSpacing: "0.05em",
+              color: "rgba(139, 111, 71, 0.65)",
+            }}
           >
-            <span
-              className="font-serif italic"
-              style={{
-                fontSize: "10.5px",
-                letterSpacing: "0.05em",
-                color: "rgba(139, 111, 71, 0.65)",
-              }}
-            >
-              Continue dossier
-            </span>
-            <ChevronDown
-              className="h-3.5 w-3.5"
-              style={{ color: "rgba(139, 111, 71, 0.7)" }}
-              aria-hidden
-            />
+            Continue dossier
           </span>
+          <span
+            aria-hidden
+            className={animate ? "pq-scroll-cue-line" : ""}
+            style={
+              animate
+                ? undefined
+                : {
+                    width: 1,
+                    height: 40,
+                    background:
+                      "linear-gradient(to bottom, transparent 0%, var(--pq-bronze) 50%, transparent 100%)",
+                  }
+            }
+          />
         </a>
       </HeroSpotlight>
 
