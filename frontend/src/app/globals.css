@@ -1681,6 +1681,137 @@ i.italic,
   background: rgba(139, 111, 71, 0.3);
 }
 
+/* 12b. Section fleuron — horizontal divider between sections.
+   Hairline bronze rule with a centered lozenge diamond, editorial end-mark. */
+.pq-section-fleuron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 20rem;
+  margin: 0 auto;
+  pointer-events: none;
+}
+.pq-section-fleuron::before,
+.pq-section-fleuron::after {
+  content: "";
+  flex: 1;
+  height: 0.5px;
+  background: rgba(139, 111, 71, 0.45);
+}
+.pq-section-fleuron > span {
+  width: 5px;
+  height: 5px;
+  transform: rotate(45deg);
+  background: var(--pq-bronze);
+  opacity: 0.7;
+}
+
+/* 12c. Pricing tier seal — small bronze disc with Roman numeral,
+   sits above the tier label in Pricing cards. */
+.pq-tier-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 0.5pt solid var(--pq-bronze);
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-style: italic;
+  font-size: 11.5px;
+  letter-spacing: 0;
+  color: var(--pq-bronze);
+  background: transparent;
+}
+.pq-tier-seal--filled {
+  background: var(--pq-bronze);
+  color: var(--pq-ink);
+}
+
+/* 12d. Editorial FAQ — <details> accordion.
+   Hairline bronze top/bottom ruler per item. Respects reduced-motion. */
+.pq-faq-item {
+  border-top: 0.5px solid rgba(139, 111, 71, 0.22);
+}
+.pq-faq-item:last-child {
+  border-bottom: 0.5px solid rgba(139, 111, 71, 0.22);
+}
+.pq-faq-item > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 2px;
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-size: 17px;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+  color: var(--pq-ivory);
+  transition: color 220ms var(--pq-ease);
+}
+.pq-faq-item > summary::-webkit-details-marker { display: none; }
+.pq-faq-item > summary::after {
+  content: "+";
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: normal;
+  font-weight: 300;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--pq-bronze);
+  transition: transform 260ms var(--pq-ease);
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+.pq-faq-item[open] > summary::after {
+  transform: rotate(45deg);
+}
+.pq-faq-item > summary:hover {
+  color: var(--pq-bronze-light, #b89a74);
+}
+.pq-faq-item > .pq-faq-body {
+  padding: 0 2px 22px;
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: rgba(245, 240, 232, 0.68);
+  max-width: 44em;
+}
+.pq-faq-item > .pq-faq-body--ink {
+  color: rgba(10, 10, 10, 0.68);
+}
+.pq-faq-item[open] > .pq-faq-body {
+  animation: pq-faq-fade 320ms var(--pq-ease) both;
+}
+@keyframes pq-faq-fade {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pq-faq-item > summary::after { transition: none; }
+  .pq-faq-item[open] > .pq-faq-body { animation: none; }
+}
+
+/* 12e. Card lift — shared hover treatment for cards across sections.
+   -0.5px nudge + hairline bronze border transition.
+   Opt-in via className; does not override inline style borders. */
+.pq-card-lift {
+  transition:
+    transform 260ms var(--pq-ease),
+    border-color 260ms var(--pq-ease),
+    background-color 260ms var(--pq-ease);
+}
+.pq-card-lift:hover {
+  transform: translateY(-0.5px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pq-card-lift { transition: none; }
+  .pq-card-lift:hover { transform: none; }
+}
+
 /* 13. Pill — consistent transition (additive, harmless duplicate) */
 .pq-ink-pill {
   transition:

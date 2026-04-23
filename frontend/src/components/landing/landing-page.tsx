@@ -1193,6 +1193,7 @@ export default function LandingPage() {
                 { label: "Product", href: "#features" },
                 { label: "Pricing", href: "#pricing" },
                 { label: "Research", href: "#sample-reports" },
+                { label: "FAQ", href: "#faq" },
               ].map((l) => (
                 <a
                   key={l.label}
@@ -1399,13 +1400,12 @@ export default function LandingPage() {
               Four pages pulled from the drawer — the rest sit with members.
             </p>
             <h2
-              className="font-serif mb-10 md:mb-14"
+              className="pq-silver-matte font-serif mb-10 md:mb-14"
               style={{
                 fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)",
                 lineHeight: 1.08,
                 letterSpacing: "-0.02em",
                 fontWeight: 500,
-                color: "var(--pq-ivory)",
               }}
             >
               A glimpse of what
@@ -1758,14 +1758,16 @@ export default function LandingPage() {
                 The Research Desk
               </span>
             </div>
+            <p className="pq-deck mb-4">
+              Research artifacts, not conversation.
+            </p>
             <h2
-              className="font-serif mb-10 md:mb-14"
+              className="pq-silver-matte font-serif mb-10 md:mb-14"
               style={{
                 fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)",
                 lineHeight: 1.08,
                 letterSpacing: "-0.02em",
                 fontWeight: 500,
-                color: "var(--pq-ivory)",
               }}
             >
               Not a chatbot.
@@ -1854,16 +1856,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Section divider — Bronze 1px line ─── */}
+      {/* ─── Section fleuron — bronze rule + lozenge diamond ─── */}
       <div
-        className="flex items-center justify-center"
-        style={{ backgroundColor: "#111111", paddingTop: 0, paddingBottom: 0 }}
+        className="flex items-center justify-center py-2"
+        style={{ backgroundColor: "#111111" }}
         aria-hidden
       >
-        <span
-          className="h-px"
-          style={{ width: "6em", backgroundColor: "rgba(139,111,71,0.5)" }}
-        />
+        <span className="pq-section-fleuron">
+          <span />
+        </span>
       </div>
 
       {/* ─── 5b. FEATURE EXPLORER — Vantablack lift, click-to-reveal tabs ─── */}
@@ -1887,13 +1888,12 @@ export default function LandingPage() {
               Seventeen artifacts. Six rendered today, eleven staged.
             </p>
             <h2
-              className="font-serif mb-8 md:mb-12"
+              className="pq-silver-matte font-serif mb-8 md:mb-12"
               style={{
                 fontSize: "clamp(2rem, 4vw, 3rem)",
                 lineHeight: 1.08,
                 letterSpacing: "-0.02em",
                 fontWeight: 500,
-                color: "var(--pq-ivory)",
               }}
             >
               What each artifact actually does.
@@ -2328,16 +2328,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Section divider ─── */}
+      {/* ─── Section fleuron — bronze rule + lozenge on ivory ─── */}
       <div
-        className="flex items-center justify-center"
+        className="flex items-center justify-center py-2"
         style={{ backgroundColor: "var(--pq-ivory)" }}
         aria-hidden
       >
-        <span
-          className="h-px"
-          style={{ width: "6em", backgroundColor: "rgba(139,111,71,0.5)" }}
-        />
+        <span className="pq-section-fleuron">
+          <span />
+        </span>
       </div>
 
       {/* ─── 5.5 ARCHETYPE — Ivory, calibration questionnaire + 8 archetypes ─── */}
@@ -3315,13 +3314,12 @@ export default function LandingPage() {
               Three tiers. One incentive — your quiet compounding.
             </p>
             <h2
-              className="font-serif mb-8 md:mb-12"
+              className="pq-silver-matte font-serif mb-8 md:mb-12"
               style={{
                 fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)",
                 lineHeight: 1.08,
                 letterSpacing: "-0.02em",
                 fontWeight: 500,
-                color: "var(--pq-ivory)",
               }}
             >
               Flat monthly fee.
@@ -3347,6 +3345,7 @@ export default function LandingPage() {
             {[
               {
                 name: "Observer",
+                numeral: "I",
                 price: "0",
                 period: "forever",
                 unit: "KRW",
@@ -3363,6 +3362,7 @@ export default function LandingPage() {
               },
               {
                 name: "Operator",
+                numeral: "II",
                 price: "9,900",
                 period: "per month",
                 unit: "KRW",
@@ -3380,6 +3380,7 @@ export default function LandingPage() {
               },
               {
                 name: "Partner",
+                numeral: "III",
                 price: "19,900",
                 period: "per month",
                 unit: "KRW",
@@ -3416,21 +3417,27 @@ export default function LandingPage() {
                 >
                   {p.recommended && (
                     <span
-                      className="absolute -top-2.5 left-8 px-2.5 py-[3px] font-serif text-[9.5px] uppercase"
+                      className="absolute -top-3 left-8 px-3 py-[4px] font-serif italic text-[11px]"
                       style={{
                         backgroundColor: "#0A0A0A",
-                        color: "var(--pq-bronze)",
-                        letterSpacing: "0.3em",
-                        border: "1px solid var(--pq-bronze)",
+                        color: "var(--pq-bronze-light, #b89a74)",
+                        letterSpacing: "0.04em",
+                        border: "0.5pt solid var(--pq-bronze)",
                         borderRadius: "2px",
                       }}
                     >
-                      Most chosen
+                      the operator&rsquo;s tier
                     </span>
                   )}
 
-                  {/* Tier name + bronze hairline */}
+                  {/* Tier name + bronze seal + hairline */}
                   <div className="mb-6 flex items-center gap-3">
+                    <span
+                      aria-hidden
+                      className={`pq-tier-seal ${p.recommended ? "pq-tier-seal--filled" : ""}`}
+                    >
+                      {p.numeral}
+                    </span>
                     <span
                       className="font-serif text-[11px] uppercase"
                       style={{
@@ -3612,6 +3619,89 @@ export default function LandingPage() {
               — The editorial voice PivoxQuant is built around
             </p>
           </motion.div>
+        </div>
+      </section>
+
+      {/* ─── 8b. FAQ — Vantablack, editorial accordion ─── */}
+      <section
+        id="faq"
+        className="py-24 md:py-32 lg:py-40"
+        style={{ backgroundColor: "#0A0A0A" }}
+      >
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div {...motionProps(fadeUp)} className="mb-12 md:mb-16">
+            <div className="mb-6 inline-flex items-center gap-2.5">
+              <span
+                aria-hidden
+                className="h-px w-7"
+                style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+              />
+              <span
+                className="font-serif text-[11px] uppercase"
+                style={{
+                  letterSpacing: "0.22em",
+                  color: "var(--pq-bronze)",
+                }}
+              >
+                Desk Notes
+              </span>
+            </div>
+            <p className="pq-deck mb-4">
+              Questions members ask before they subscribe.
+            </p>
+            <h2
+              className="pq-silver-matte font-serif"
+              style={{
+                fontSize: "clamp(1.75rem, 3.4vw, 2.5rem)",
+                lineHeight: 1.1,
+                letterSpacing: "-0.02em",
+                fontWeight: 500,
+              }}
+            >
+              Before you open the desk.
+            </h2>
+          </motion.div>
+
+          <motion.div {...motionProps(staggerContainer)}>
+            {[
+              {
+                q: "Is this investment advice?",
+                a: "No. PivoxQuant is an informational research tool. Every artifact is a measurement — concentration, drawdown, factor tilts, earnings posture — not a directive. We do not issue buy, sell, or hold instructions. Decisions remain entirely yours.",
+              },
+              {
+                q: "What happens during the 7-day trial?",
+                a: "Full access to the Operator tier. Your first weekly memo, earnings pre-brief, and risk board render from your own holdings within 24 hours. Cancel anytime before day seven and you are not charged. After day seven, billing begins at ₩9,900 per month.",
+              },
+              {
+                q: "Do you have access to my brokerage account?",
+                a: "Read-only. We connect through Alpaca (US) and KIS (KR) with read-only scopes. We cannot place trades, transfer funds, or modify orders. If you disconnect the broker, artifact rendering pauses — your data is retained for 30 days, then purged.",
+              },
+              {
+                q: "Can I cancel? How do refunds work?",
+                a: "Cancel anytime from settings — no email, no call. Per Korean e-commerce law, you are entitled to a full refund within 14 days of first payment if the service has not been used. After that, billing stops at the end of the current period.",
+              },
+            ].map((item, i) => (
+              <motion.details
+                key={item.q}
+                variants={fadeUp}
+                className="pq-faq-item"
+                {...(i === 0 ? { open: true } : {})}
+              >
+                <summary>
+                  <span>{item.q}</span>
+                </summary>
+                <div className="pq-faq-body">{item.a}</div>
+              </motion.details>
+            ))}
+          </motion.div>
+
+          <motion.p
+            {...motionProps(fadeUp)}
+            className="mt-10 font-serif text-[11px] italic leading-relaxed"
+            style={{ color: "rgba(245,240,232,0.45)" }}
+          >
+            Informational research only. Not investment advice. Past performance does not guarantee future results.
+          </motion.p>
         </div>
       </section>
 
