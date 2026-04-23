@@ -1,13 +1,38 @@
-"""Investment profile routes: onboarding, get/update profile, questionnaire."""
+"""Investment profile routes: onboarding, get/update profile, questionnaire.
+
+Also hosts the **Living CFO Layer 2** endpoints consumed by
+``frontend/src/lib/cfo/hooks.ts``:
+
+    GET  /api/profile/persona
+    GET  /api/profile/rolling-window
+    POST /api/profile/feedback
+    GET  /api/profile/pulse
+    POST /api/profile/pulse
+
+All Layer 2 endpoints return HTTP 200 with a degraded-but-valid payload
+when the user has no trade history yet — the frontend SWR layer relies
+on that contract for first-load UX.
+"""
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 
 from extensions import db
-from models import InvestmentProfile
+from models import (
+    ArtifactFeedback,
+    InvestmentProfile,
+    VALID_CADENCES,
+    VOTE_CHOICES,
+    WeeklyPulse,
+)
 from models.investment_profile import calculate_profile_type
+from services.profile import (
+    compute_persona_response,
+    compute_rolling_response,
+)
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -299,3 +324,249 @@ def update_profile():
         "profile": profile.to_dict(),
         "changes_left": current_user.profile_changes_left,
     })
+
+
+# ── Living CFO Layer 2 (frontend/src/lib/cfo/hooks.ts) ───────────────────
+# All endpoints below power the Layer 2 dashboard ("2 years in, knows
+# you better than you know yourself"). They must always return HTTP 200
+# on authenticated requests — brand-new users with no trade history
+# receive a *valid empty* payload so the frontend can degrade gracefully
+# (see hooks.ts:cfoFetch which falls back to mocks on non-200 only).
+
+
+@profile_bp.route("/persona", methods=["GET"])
+@api_auth
+def get_persona_analysis():
+    """Return declared + observed persona for Layer 2 hero card.
+
+    Shape: see ``PersonaResponse`` in ``frontend/src/lib/cfo/hooks.ts``.
+    """
+    try:
+        payload = compute_persona_response(current_user.id)
+    except Exception:
+        logger.exception("profile.get_persona_analysis failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to compute persona"}), 500
+    return jsonify(payload)
+
+
+@profile_bp.route("/rolling-window", methods=["GET"])
+@api_auth
+def get_rolling_window():
+    """Return 30/60/90-day rolling behavioural metrics for Layer 2.
+
+    Shape: see ``RollingWindowResponse`` in
+    ``frontend/src/lib/cfo/hooks.ts``.
+    """
+    try:
+        payload = compute_rolling_response(current_user.id)
+    except Exception:
+        logger.exception("profile.get_rolling_window failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to compute rolling window"}), 500
+    return jsonify(payload)
+
+
+# ── Feedback ──────────────────────────────────────────────────────────────
+
+# Per-section free-text length cap. Keep short — this is a vote, not an
+# essay. Longer text is truncated silently.
+_SECTION_MAX_LEN = 80
+_ARTIFACT_ID_MAX_LEN = 64
+
+
+@profile_bp.route("/feedback", methods=["POST"])
+@api_auth
+def submit_feedback():
+    """Record a section-level vote on a rendered artifact.
+
+    Body (JSON):
+        artifact_id: string (required, <= 64 chars)
+        section:     string (required, <= 80 chars)
+        vote:        "useful" | "meh" | "skip"
+
+    Returns: ``{"ok": true}`` on success, ``{"error": "..."}`` + 400 on
+    bad input. Duplicate ``(user, artifact, section)`` rows are allowed
+    — the analytics layer takes the latest ``created_at`` as canonical.
+    """
+    data = request.get_json(silent=True) or {}
+    artifact_id = (data.get("artifact_id") or "").strip()
+    section = (data.get("section") or "").strip()
+    vote = (data.get("vote") or "").strip().lower()
+
+    if not artifact_id:
+        return jsonify({"error": "artifact_id is required"}), 400
+    if not section:
+        return jsonify({"error": "section is required"}), 400
+    if vote not in VOTE_CHOICES:
+        return jsonify({
+            "error": f"vote must be one of: {', '.join(VOTE_CHOICES)}",
+        }), 400
+
+    # Truncate rather than reject — the frontend may legitimately send
+    # long section headings, but we don't want runaway strings in the DB.
+    if len(artifact_id) > _ARTIFACT_ID_MAX_LEN:
+        artifact_id = artifact_id[:_ARTIFACT_ID_MAX_LEN]
+    if len(section) > _SECTION_MAX_LEN:
+        section = section[:_SECTION_MAX_LEN]
+
+    row = ArtifactFeedback(
+        user_id=current_user.id,
+        artifact_id=artifact_id,
+        section=section,
+        vote=vote,
+    )
+    db.session.add(row)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("profile.submit_feedback commit failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to save feedback"}), 500
+
+    return jsonify({"ok": True})
+
+
+# ── Weekly pulse (mood / confidence / worry / topics / learn) ────────────
+
+_CADENCE_DAYS = {"weekly": 7, "biweekly": 14, "monthly": 30}
+_PULSE_HISTORY_LIMIT = 52  # ~1 year weekly
+_PULSE_TEXT_MAX_LEN = 500
+_PULSE_TOPIC_MAX = 10
+_PULSE_TOPIC_LEN = 40
+
+
+def _next_due_at(last_submitted: datetime | None, cadence: str) -> str | None:
+    days = _CADENCE_DAYS.get(cadence, 7)
+    base = last_submitted or datetime.now(timezone.utc).replace(tzinfo=None)
+    if base.tzinfo is None:
+        base = base.replace(tzinfo=timezone.utc)
+    return (base + timedelta(days=days)).astimezone(timezone.utc).isoformat()
+
+
+@profile_bp.route("/pulse", methods=["GET"])
+@api_auth
+def get_pulse():
+    """Return the user's weekly pulse history + next-due timestamp.
+
+    Shape: see ``PulseResponse`` in ``frontend/src/lib/cfo/hooks.ts``.
+    """
+    rows = (
+        WeeklyPulse.query
+        .filter_by(user_id=current_user.id)
+        .order_by(WeeklyPulse.submitted_at.desc())
+        .limit(_PULSE_HISTORY_LIMIT)
+        .all()
+    )
+    # Most recent cadence wins; default weekly.
+    latest = rows[0] if rows else None
+    cadence = (latest.cadence if latest else "weekly") or "weekly"
+    if cadence not in VALID_CADENCES:
+        cadence = "weekly"
+
+    history = [r.to_dict() for r in reversed(rows)]  # oldest → newest
+    next_due = _next_due_at(latest.submitted_at if latest else None, cadence)
+
+    return jsonify({
+        "history": history,
+        "next_due_at": next_due,
+        "cadence": cadence,
+    })
+
+
+@profile_bp.route("/pulse", methods=["POST"])
+@api_auth
+def submit_pulse():
+    """Record a weekly pulse submission.
+
+    Body (JSON):
+        mood:         int 1..5  (required)
+        confidence:   int 1..5  (required)
+        worry:        str       (optional, max 500)
+        topics:       list[str] (optional, max 10 items, each <= 40 chars)
+        learn:        str       (optional, max 500)
+        submitted_at: ISO8601   (optional, server will override to now if
+                                 missing / unparseable / in the future)
+        cadence:      "weekly"|"biweekly"|"monthly" (optional, default
+                                 keeps the last-used cadence)
+
+    Returns: ``{"ok": true}`` on success, ``{"error": ...}`` + 400 on
+    validation failure.
+    """
+    data = request.get_json(silent=True) or {}
+
+    # mood / confidence — required ints 1..5
+    try:
+        mood = int(data.get("mood"))
+        confidence = int(data.get("confidence"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "mood and confidence must be integers 1..5"}), 400
+    if not (1 <= mood <= 5 and 1 <= confidence <= 5):
+        return jsonify({"error": "mood and confidence must be integers 1..5"}), 400
+
+    # Free-text fields — truncate silently.
+    worry = (data.get("worry") or "")
+    if not isinstance(worry, str):
+        worry = str(worry)
+    worry = worry[:_PULSE_TEXT_MAX_LEN]
+
+    learn = (data.get("learn") or "")
+    if not isinstance(learn, str):
+        learn = str(learn)
+    learn = learn[:_PULSE_TEXT_MAX_LEN]
+
+    # Topics — list of short strings, capped.
+    topics_raw = data.get("topics") or []
+    if not isinstance(topics_raw, list):
+        topics_raw = []
+    topics: list[str] = []
+    for t in topics_raw[:_PULSE_TOPIC_MAX]:
+        if t is None:
+            continue
+        t_str = str(t).strip()[:_PULSE_TOPIC_LEN]
+        if t_str:
+            topics.append(t_str)
+
+    # Cadence — keep user's previous setting if unspecified.
+    cadence = (data.get("cadence") or "").strip().lower()
+    if cadence not in VALID_CADENCES:
+        latest = (
+            WeeklyPulse.query
+            .filter_by(user_id=current_user.id)
+            .order_by(WeeklyPulse.submitted_at.desc())
+            .first()
+        )
+        cadence = latest.cadence if latest and latest.cadence in VALID_CADENCES else "weekly"
+
+    # submitted_at — best-effort parse; fall back to now on failure or
+    # when the client clock is ahead (no future-dated pulses).
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    submitted_at = now
+    raw_sa = data.get("submitted_at")
+    if isinstance(raw_sa, str) and raw_sa:
+        try:
+            parsed = datetime.fromisoformat(raw_sa.replace("Z", "+00:00"))
+            if parsed.tzinfo is not None:
+                parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            if parsed <= now + timedelta(minutes=5):  # tolerate small skew
+                submitted_at = parsed
+        except ValueError:
+            submitted_at = now
+
+    row = WeeklyPulse(
+        user_id=current_user.id,
+        mood=mood,
+        confidence=confidence,
+        worry=worry,
+        topics=json.dumps(topics, ensure_ascii=False),
+        learn=learn,
+        cadence=cadence,
+        submitted_at=submitted_at,
+    )
+    db.session.add(row)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("profile.submit_pulse commit failed (user_id=%s)", current_user.id)
+        return jsonify({"error": "Failed to save pulse"}), 500
+
+    return jsonify({"ok": True})
