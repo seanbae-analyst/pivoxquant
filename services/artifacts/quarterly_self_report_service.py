@@ -662,10 +662,39 @@ class QuarterlySelfReportService:
             return self._fallback_html(data)
         try:
             tpl = env.get_template("quarterly_self_report.html")
-            return tpl.render(**data)
+            return tpl.render(**self._with_persona(data))
         except Exception as exc:
             logger.warning("quarterly_self_report render failed: %s", exc)
             return self._fallback_html(data)
+
+    def _with_persona(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Inject the `persona` context variable. See weekly_memo_service
+        for the full rationale; this mirrors the same contract."""
+        ctx = dict(data)
+        try:
+            from services.artifacts.persona_resolver import (
+                DEFAULT_PERSONA, resolve_persona, resolve_persona_from_code,
+            )
+            if "persona" in ctx:
+                ctx["persona"] = resolve_persona_from_code(ctx.get("persona"))
+                return ctx
+            user_id = ctx.get("user_id")
+            profile = None
+            if user_id is not None:
+                try:
+                    from models import InvestmentProfile
+                    profile = (
+                        InvestmentProfile.query
+                        .filter_by(user_id=user_id)
+                        .first()
+                    )
+                except Exception:
+                    profile = None
+            ctx["persona"] = resolve_persona(profile) if profile else DEFAULT_PERSONA
+        except Exception as exc:
+            logger.debug("persona resolution failed: %s", exc)
+            ctx["persona"] = "balanced"
+        return ctx
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()

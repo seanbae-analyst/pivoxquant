@@ -1,0 +1,34 @@
+{#
+  Daytrader CFO · Data Focus
+  Source: PERSONA_SPEC §3.7 §G. Priority: VWAPDeviation, OrderFlowImbalance,
+  OpeningRangeBreakout, SpreadPercentile.
+#}
+<section class="persona-data-focus persona-data-focus--daytrader">
+  <p class="sp-eyebrow">Signal Focus · Intraday Microstructure</p>
+  <h3 class="sp-data-title">세션이 말하는 숫자</h3>
+
+  <ul class="pq-signal-list">
+    <li>
+      <span class="pq-signal-key">VWAP deviation</span>
+      <span class="pq-signal-val">세션 내 편차 σ 관찰 구간</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">Order flow imbalance</span>
+      <span class="pq-signal-val">상위 3 종목 매수 방향 우세 관찰</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">Opening Range Breakout</span>
+      <span class="pq-signal-val">관찰 리스트 후보 카운트</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">Spread percentile</span>
+      <span class="pq-signal-val">80% 초과 제외 · 관찰 유지 구간</span>
+    </li>
+  </ul>
+
+  <p class="sp-data-caption">
+    Spread percentile 이 80% 이상 구간에서는 스프레드 비용이 평균 알파를
+    잠식하는 사례가 시장 미시구조 문헌에 기록되어 있어 관찰 리스트에서
+    제외되는 규칙이 통용됩니다. 본 라인은 정보 제공 목적입니다.
+  </p>
+</section>

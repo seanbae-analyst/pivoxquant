@@ -3,7 +3,15 @@
    Concept: PM's three-month self-review — a letter to oneself, in observation.
    Buffett's quarterly partner letter tone. No advice — only self-review.
    Each page: distinct magazine-editorial layout, hand-crafted inline SVG.
+
+   Persona branching (2026-04-23):
+   • `persona` steers 1 section (opener). Quarterly reports remain
+     mostly persona-agnostic per spec §9 — only the opening reflection
+     is persona-toned.
+   • Unknown → balanced fallback.
    ══════════════════════════════════════════════════════════════════════════ #}
+{% import 'partials/_persona_macros.html' as pm with context %}
+{% set persona = persona | default('balanced') %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -496,6 +504,9 @@
    PAGE 2 · SELF-REVIEW LETTER SPREAD
    ══════════════════════════════════════════════════════════════════════════ #}
 <div class="r-page-break"></div>
+
+{# Persona opener — branches on {{ persona }} (spec §6.3). #}
+{{ pm.persona_opener(persona, user_name) }}
 
 <p class="sp-part">Part I · Self-Review</p>
 <h2 class="sp-title">What the three months were made of</h2>

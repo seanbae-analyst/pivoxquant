@@ -9,7 +9,7 @@
      risk block. Unknown persona → balanced (macro enforces fallback).
    • Spec: reports/product/PERSONA_SPEC_2026-04-23.md §6.3
    ══════════════════════════════════════════════════════════════════════════ #}
-{% import 'partials/_persona_macros.html' as pm %}
+{% import 'partials/_persona_macros.html' as pm with context %}
 {% set persona = persona | default('balanced') %}
 <!doctype html>
 <html lang="ko">
@@ -1034,13 +1034,16 @@
 {# ══════════════════════════════════════════════════════════════════════════
    PAGE 4 · RISK DASHBOARD — 2x2 small-multiples + methodology sidebar
    Rendered only when the service computed real KPIs from live positions.
+   Persona risk-narrative block renders unconditionally (persona voice
+   must always appear); the quantitative dashboard below it is gated on
+   `risk_kpi` availability.
    ══════════════════════════════════════════════════════════════════════════ #}
-{% if risk_kpi %}
 <div class="r-page-break"></div>
 
 {# Persona risk block — persona-tailored risk narrative (spec §6.3). #}
 {{ pm.persona_risk_block(persona, risk_kpi | default({})) }}
 
+{% if risk_kpi %}
 <p class="sp-part">Part III · Risk Dashboard</p>
 <h2 class="sp-title">Readings around the tails</h2>
 <p class="sp-deck">

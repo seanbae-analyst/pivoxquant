@@ -2,7 +2,14 @@
    Morning Brief Plus — Goldman IC v2 Editorial Redesign (6-page flagship)
    Daily morning observation pack — Bloomberg Terminal × NYT Morning tone.
    Observation only — never prediction or directive.
+
+   Persona branching (2026-04-23):
+   • `persona` steers 3 sections: opener, data focus, risk block.
+   • Unknown → balanced fallback (macro-enforced).
+   • Spec: reports/product/PERSONA_SPEC_2026-04-23.md §6.3
    ══════════════════════════════════════════════════════════════════════════ #}
+{% import 'partials/_persona_macros.html' as pm with context %}
+{% set persona = persona | default('balanced') %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -392,6 +399,9 @@
    ══════════════════════════════════════════════════════════════════════════ #}
 <div class="r-page-break"></div>
 
+{# Persona opener — branches on {{ persona }} (spec §6.3). #}
+{{ pm.persona_opener(persona, user_name) }}
+
 <p class="sp-part">Part I · Overnight Spread</p>
 <h2 class="sp-title">The hours between yesterday and today</h2>
 <p class="sp-deck">
@@ -537,6 +547,9 @@
    ══════════════════════════════════════════════════════════════════════════ #}
 <div class="r-page-break"></div>
 
+{# Persona data focus — signal list by persona (spec §6.3). #}
+{{ pm.persona_data_focus(persona, kpis | default({})) }}
+
 <p class="sp-part">Part II · Macro Ladder &amp; Calendar</p>
 <h2 class="sp-title">Where the reference points sit</h2>
 <p class="sp-deck">
@@ -637,6 +650,9 @@
    PAGE 4 · FLOW QUAD
    ══════════════════════════════════════════════════════════════════════════ #}
 <div class="r-page-break"></div>
+
+{# Persona risk block — persona-tailored risk narrative (spec §6.3). #}
+{{ pm.persona_risk_block(persona, kpis | default({})) }}
 
 <p class="sp-part">Part III · Flow Quad</p>
 <h2 class="sp-title">Four readings across the tape</h2>

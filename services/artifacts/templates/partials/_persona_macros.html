@@ -1,0 +1,187 @@
+{#
+  ═══════════════════════════════════════════════════════════════════════════
+  Persona Macros — Jinja helpers for 8-persona PDF branching
+  ═══════════════════════════════════════════════════════════════════════════
+  Source: reports/product/PERSONA_SPEC_2026-04-23.md §3 §G (example copy)
+  + §4 (section weights) + §5 (persona prompts).
+
+  Usage:
+      {% import 'partials/_persona_macros.html' as pm %}
+      {{ pm.persona_opener(persona, user_name) }}
+      {{ pm.persona_data_focus(persona, metrics) }}
+      {{ pm.persona_risk_block(persona, risk_kpi) }}
+      {{ pm.persona_action_points(persona, positions) }}
+      {{ pm.persona_benchmark_line(persona, benchmarks) }}
+
+  ─── Legal guards ──────────────────────────────────────────────────────────
+  • No regulated advisory language — labels only (POSITIVE/NEGATIVE/NEUTRAL).
+  • Labels only: POSITIVE / NEGATIVE / NEUTRAL.
+  • All tone is observational ("관찰됩니다", "구간에 있습니다"), never directive.
+  ─── Unknown persona ───────────────────────────────────────────────────────
+  • Any unknown persona falls back to the `balanced` branch so the PDF
+    always renders end-to-end. The service layer enforces VALID_PERSONAS
+    at context-injection time — this macro's fallback is defense-in-depth.
+  ═══════════════════════════════════════════════════════════════════════════
+#}
+
+{# ── Label helper (persona → 한글 라벨) ───────────────────────────────── #}
+{% macro persona_label(persona) -%}
+  {%- if persona == 'growth' %}Growth CFO · 성장 CFO
+  {%- elif persona == 'value' %}Value CFO · 가치 CFO
+  {%- elif persona == 'balanced' %}Balanced CFO · 밸런스 CFO
+  {%- elif persona == 'income' %}Income CFO · 인컴 CFO
+  {%- elif persona == 'quant' %}Quant CFO · 퀀트 CFO
+  {%- elif persona == 'speculator' %}Speculator CFO · 투기 CFO
+  {%- elif persona == 'daytrader' %}Daytrader CFO · 단타 CFO
+  {%- elif persona == 'beginner' %}Beginner CFO · 초보 CFO
+  {%- else %}Balanced CFO · 밸런스 CFO
+  {%- endif %}
+{%- endmacro %}
+
+
+{# ── Opener (Part I eyebrow paragraph) ──────────────────────────────── #}
+{% macro persona_opener(persona, user_name) -%}
+  {%- set name = user_name | default('') -%}
+  {%- if persona == 'growth' -%}
+    {% include 'partials/growth/opener.html' %}
+  {%- elif persona == 'value' -%}
+    {% include 'partials/value/opener.html' %}
+  {%- elif persona == 'income' -%}
+    {% include 'partials/income/opener.html' %}
+  {%- elif persona == 'quant' -%}
+    {% include 'partials/quant/opener.html' %}
+  {%- elif persona == 'speculator' -%}
+    {% include 'partials/speculator/opener.html' %}
+  {%- elif persona == 'daytrader' -%}
+    {% include 'partials/daytrader/opener.html' %}
+  {%- elif persona == 'beginner' -%}
+    {% include 'partials/beginner/opener.html' %}
+  {%- else -%}
+    {% include 'partials/balanced/opener.html' %}
+  {%- endif -%}
+{%- endmacro %}
+
+
+{# ── Data Focus (Part II data narrative) ────────────────────────────── #}
+{% macro persona_data_focus(persona, metrics) -%}
+  {%- if persona == 'growth' -%}
+    {% include 'partials/growth/data_focus.html' %}
+  {%- elif persona == 'value' -%}
+    {% include 'partials/value/data_focus.html' %}
+  {%- elif persona == 'income' -%}
+    {% include 'partials/income/data_focus.html' %}
+  {%- elif persona == 'quant' -%}
+    {% include 'partials/quant/data_focus.html' %}
+  {%- elif persona == 'speculator' -%}
+    {% include 'partials/speculator/data_focus.html' %}
+  {%- elif persona == 'daytrader' -%}
+    {% include 'partials/daytrader/data_focus.html' %}
+  {%- elif persona == 'beginner' -%}
+    {% include 'partials/beginner/data_focus.html' %}
+  {%- else -%}
+    {% include 'partials/balanced/data_focus.html' %}
+  {%- endif -%}
+{%- endmacro %}
+
+
+{# ── Risk Block (Part III risk narrative, before Risk Dashboard) ─── #}
+{% macro persona_risk_block(persona, risk_kpi) -%}
+  {%- if persona == 'growth' -%}
+    {% include 'partials/growth/risk_block.html' %}
+  {%- elif persona == 'value' -%}
+    {% include 'partials/value/risk_block.html' %}
+  {%- elif persona == 'income' -%}
+    {% include 'partials/income/risk_block.html' %}
+  {%- elif persona == 'quant' -%}
+    {% include 'partials/quant/risk_block.html' %}
+  {%- elif persona == 'speculator' -%}
+    {% include 'partials/speculator/risk_block.html' %}
+  {%- elif persona == 'daytrader' -%}
+    {% include 'partials/daytrader/risk_block.html' %}
+  {%- elif persona == 'beginner' -%}
+    {% include 'partials/beginner/risk_block.html' %}
+  {%- else -%}
+    {% include 'partials/balanced/risk_block.html' %}
+  {%- endif -%}
+{%- endmacro %}
+
+
+{# ── Action Points (legal-safe observation list) ──────────────────── #}
+{#
+   Action Points are deliberately informational — calendar events,
+   threshold values, rule-state checks. No entry/exit timing, no
+   position sizing, no directive verbs.
+#}
+{% macro persona_action_points(persona, positions) -%}
+  {%- if persona == 'growth' -%}
+    <ul class="pq-action-list">
+      <li>실적 발표 예정 종목의 D-day 카운트 관찰 구간</li>
+      <li>매출 성장률 둔화 감지 임계치 도달 종목 카운트</li>
+      <li>포지션별 52주 고점 근접도 NEUTRAL 이상 변화 관찰</li>
+    </ul>
+  {%- elif persona == 'value' -%}
+    <ul class="pq-action-list">
+      <li>10년 P/B 중앙값 대비 이탈 σ 요약 관찰</li>
+      <li>Net Debt/EBITDA 변동 추이 관찰 (분기 단위)</li>
+      <li>배당 커버리지 비율 임계치 도달 여부 점검</li>
+    </ul>
+  {%- elif persona == 'income' -%}
+    <ul class="pq-action-list">
+      <li>향후 30일 배당락일 예정 종목 요약 관찰</li>
+      <li>Payout Ratio 임계치 초과 종목 카운트</li>
+      <li>FCF 커버리지 1.0 이하 종목 관찰 대상 표시</li>
+    </ul>
+  {%- elif persona == 'quant' -%}
+    <ul class="pq-action-list">
+      <li>팩터 exposure 목표 대비 이탈 bp 기록</li>
+      <li>IR 롤링 52주 중앙값 대비 변화 관찰</li>
+      <li>Regime state 전환 관찰 (Markov 기준)</li>
+    </ul>
+  {%- elif persona == 'speculator' -%}
+    <ul class="pq-action-list">
+      <li>IV rank 85% 이상 진입 종목 관찰 리스트</li>
+      <li>다가오는 14일 이벤트 캘린더 D-day 기록</li>
+      <li>25Δ skew 절대값 0.10 초과 구간 관찰</li>
+    </ul>
+  {%- elif persona == 'daytrader' -%}
+    <ul class="pq-action-list">
+      <li>오늘 세션 VWAP 편차 1σ 초과 종목 관찰</li>
+      <li>스프레드 percentile 80% 초과 제외 리스트</li>
+      <li>일간 손실 한도 도달 시 세션 종료 규칙 상태</li>
+    </ul>
+  {%- elif persona == 'beginner' -%}
+    <ul class="pq-action-list">
+      <li>이번 주 배울 용어 1개 (카드 형식)</li>
+      <li>종목당 보유 비중 20% 기준선 관찰</li>
+      <li>연간 예상 수수료 합계 요약 확인</li>
+    </ul>
+  {%- else -%}
+    <ul class="pq-action-list">
+      <li>섹터 가중치 목표 대비 편차 ±5%p 임계치 도달 여부 관찰</li>
+      <li>Sharpe / Sortino 롤링 추세 변화 요약</li>
+      <li>리밸런싱 임계치 도달 포지션 카운트</li>
+    </ul>
+  {%- endif -%}
+{%- endmacro %}
+
+
+{# ── Benchmark line (one-line index reference) ──────────────────── #}
+{% macro persona_benchmark_line(persona, benchmarks) -%}
+  {%- if persona == 'growth' -%}
+    <p class="pq-benchmark-line">비교 지수 · Nasdaq 100 · Russell 1000 Growth · S&P 500</p>
+  {%- elif persona == 'value' -%}
+    <p class="pq-benchmark-line">비교 지수 · Russell 1000 Value · S&P 500 Value · KOSPI 200 Value</p>
+  {%- elif persona == 'income' -%}
+    <p class="pq-benchmark-line">비교 지수 · S&P 500 Dividend Aristocrats · SCHD · VYM</p>
+  {%- elif persona == 'quant' -%}
+    <p class="pq-benchmark-line">비교 지수 · MSCI Quality Mix · AQR Style Premia · S&P 500</p>
+  {%- elif persona == 'speculator' -%}
+    <p class="pq-benchmark-line">비교 지수 · VIX · VXN · CBOE Put-Call Ratio</p>
+  {%- elif persona == 'daytrader' -%}
+    <p class="pq-benchmark-line">비교 지수 · S&P 500 intraday range · 섹터 ETF intraday</p>
+  {%- elif persona == 'beginner' -%}
+    <p class="pq-benchmark-line">비교 지수 · S&P 500 · MSCI ACWI · KOSPI</p>
+  {%- else -%}
+    <p class="pq-benchmark-line">비교 지수 · 60/40 포트폴리오 · S&P 500 · Balanced Index</p>
+  {%- endif -%}
+{%- endmacro %}
