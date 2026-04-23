@@ -476,6 +476,28 @@ def render_brief_email(content: dict, *, user: User | None = None) -> str:
         "as_of":     (content.get("kpis") or {}).get("as_of")
                      or date.today().isoformat(),
     }
+    # Persona injection — resolve from the user's InvestmentProfile, if any.
+    # Resolver is lazy-imported and never raises; unknown → "balanced".
+    try:
+        from services.artifacts.persona_resolver import (
+            DEFAULT_PERSONA, resolve_persona,
+        )
+        profile = None
+        if user is not None and getattr(user, "id", None):
+            try:
+                from models import InvestmentProfile
+                profile = (
+                    InvestmentProfile.query
+                    .filter_by(user_id=user.id)
+                    .first()
+                )
+            except Exception:
+                profile = None
+        context["persona"] = resolve_persona(profile) if profile else DEFAULT_PERSONA
+    except Exception as exc:
+        logger.debug("persona resolution failed: %s", exc)
+        context["persona"] = "balanced"
+
     if env is None:
         return _fallback_brief_email(context)
     try:
