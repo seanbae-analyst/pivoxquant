@@ -35,6 +35,11 @@ logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
+# Root-level alias blueprint for `/api/logout`. Some clients (user-tester
+# probe, legacy mobile) hit this shorter path; the canonical endpoint
+# remains `/api/auth/logout`.
+auth_alias_bp = Blueprint("auth_alias", __name__)
+
 # ── OAuth setup ──────────────────────────────────────────────────────────────
 oauth = OAuth()
 
@@ -257,11 +262,115 @@ def login():
     return jsonify({"ok": True, "user": serialize_user(u)})
 
 
+# ── Logout ───────────────────────────────────────────────────────────────────
+#
+# Design notes (2026-04-23):
+#   - Idempotent: calling logout when already logged out returns 200, not 401.
+#     Rationale — HttpOnly session cookies can't be cleared client-side, so a
+#     401 response would leave the user permanently stuck if their session is
+#     somehow partially invalid. The correct response is always "you are now
+#     logged out" with all auth cookies cleared.
+#   - CSRF exempt (see security.py `_CSRF_EXEMPT_PREFIXES`). We compensate with
+#     Origin / Referer verification below so a cross-origin attacker page
+#     cannot force logout via a hidden <form> POST.
+#   - Cookie cleanup: Flask-Login's `logout_user()` clears the session dict,
+#     but we additionally delete `session`, `remember_token`, and `csrf_token`
+#     cookies on the response so the browser doesn't keep stale credentials.
+
+# Origin allowlist for logout POSTs. Same set as OAuth redirect whitelist —
+# if you're not one of these origins you have no business calling our logout.
+_LOGOUT_ALLOWED_ORIGINS = frozenset({
+    "https://pivoxquant.vercel.app",
+    "https://pivoxquant.com",
+    "https://www.pivoxquant.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    # Same-origin (Railway direct) — used by curl/tests and the production
+    # backend when served without the Vercel edge.
+    "http://localhost:5050",
+    "http://127.0.0.1:5050",
+    "https://RAILWAY_BACKEND_HOST.up.railway.app",
+})
+
+
+def _logout_origin_ok() -> bool:
+    """Accept the POST if Origin (or Referer, fallback) is in the allowlist,
+    OR if neither header is present (curl, server-to-server, mobile app).
+    The missing-header case is safe because a hostile browser page can't
+    suppress Origin/Referer on a cross-origin form submit.
+    """
+    origin = request.headers.get("Origin")
+    if origin:
+        return origin.rstrip("/") in _LOGOUT_ALLOWED_ORIGINS
+
+    referer = request.headers.get("Referer")
+    if referer:
+        parsed = urlparse(referer)
+        if parsed.scheme and parsed.netloc:
+            candidate = f"{parsed.scheme}://{parsed.netloc}"
+            return candidate in _LOGOUT_ALLOWED_ORIGINS
+        return False
+
+    # No Origin and no Referer — likely a direct tool (curl, tests, mobile).
+    # Browsers always send at least one on cross-origin POSTs, so "absent"
+    # is a strong negative signal for CSRF.
+    return True
+
+
+def _clear_auth_cookies(response):
+    """Expire every cookie the auth stack may have set."""
+    cookie_domain = current_app.config.get("SESSION_COOKIE_DOMAIN")
+    # Flask's session cookie name (defaults to "session")
+    session_cookie_name = current_app.config.get("SESSION_COOKIE_NAME", "session")
+    for name in (session_cookie_name, "remember_token", "csrf_token"):
+        response.delete_cookie(name, path="/", domain=cookie_domain)
+    return response
+
+
+def _do_logout_response():
+    """Shared handler for both `/api/auth/logout` and the `/api/logout` alias."""
+    if not _logout_origin_ok():
+        logger.warning(
+            "Logout rejected: disallowed origin=%r referer=%r",
+            request.headers.get("Origin"),
+            request.headers.get("Referer"),
+        )
+        return jsonify({
+            "error": "Logout blocked: untrusted origin.",
+            "error_kr": "신뢰되지 않은 출처에서의 로그아웃 요청입니다.",
+            "code": "UNTRUSTED_ORIGIN",
+        }), 403
+
+    was_authenticated = bool(getattr(current_user, "is_authenticated", False))
+    try:
+        logout_user()
+    except Exception:
+        # Never let a Flask-Login edge-case (e.g. stale user_loader) 500 the
+        # logout path. We still clear the session + cookies below.
+        logger.exception("Logout: logout_user() raised; continuing with session clear")
+
+    session.clear()
+    response = jsonify({"ok": True, "was_authenticated": was_authenticated})
+    return _clear_auth_cookies(response), 200
+
+
 @auth_bp.route("/logout", methods=["POST"])
-@api_auth
 def do_logout():
-    logout_user()
-    return jsonify({"ok": True})
+    """POST /api/auth/logout — primary logout endpoint.
+
+    Idempotent: always 200 OK with `{ok: true}` once origin check passes.
+    """
+    return _do_logout_response()
+
+
+@auth_alias_bp.route("/api/logout", methods=["POST"])
+def do_logout_alias():
+    """POST /api/logout — shorter alias for the canonical /api/auth/logout.
+
+    Kept for clients that don't know the /api/auth prefix (user-tester probe,
+    legacy mobile). Behaviour is identical.
+    """
+    return _do_logout_response()
 
 
 @auth_bp.route("/me")
