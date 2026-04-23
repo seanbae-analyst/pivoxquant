@@ -20,5 +20,14 @@ RUN playwright install chromium --with-deps \
 
 COPY . .
 
+# ── Journal Companion safety default ────────────────────────────────────────
+# The Personal Journal Companion (services/agents/) is in Closed Beta and
+# MUST NOT reach paying users until legal counsel signs off on
+# reports/legal/SAFE_FEATURE_SPECS_2026-04-23.md §6. This env default keeps
+# it OFF even if the code is deployed. To activate in staging:
+#   railway variables set AGENT_ENABLED=1
+# Production override requires CEO approval + logged kill-switch audit.
+ENV AGENT_ENABLED=0
+
 EXPOSE 5050
 CMD ["sh", "-c", "gunicorn app:app --worker-class gevent --workers 1 --bind 0.0.0.0:${PORT:-5050} --timeout 120 --keep-alive 5 --log-level info"]

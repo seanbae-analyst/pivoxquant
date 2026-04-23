@@ -1,0 +1,385 @@
+# Part of Journal Companion — see reports/legal/SAFE_FEATURE_SPECS_2026-04-23.md §6
+"""Admin API for the Journal Companion (kill switch + audit query).
+
+All endpoints are gated by ``ADMIN_EMAILS`` — same env var the other
+admin routes (``admin_fmp``, ``admin_preview``) use. Non-admin sessions
+receive 403. Unauthenticated sessions receive 401.
+
+Endpoints
+---------
+``POST /api/admin/agent/kill``
+    Flip the distributed kill switch to ON. Every subsequent
+    ``/api/agent/query`` call returns 503 within the cache TTL (5s).
+``POST /api/admin/agent/revive``
+    Flip the kill switch OFF. Body MUST include ``legal_approval`` text
+    (counsel reference — stored on the kill switch row for audit).
+``GET /api/admin/agent/audit/recent``
+    Recent ``UserAgentAudit`` rows. Filters: ``limit``, ``verdict``.
+    Never returns the raw user message — only the hash.
+``GET /api/admin/agent/stats``
+    24h / 7d / 30d volume + refusal rate + persona distribution.
+``POST /api/admin/agent/purge-expired``
+    Manually trigger the 2-year retention purge (nightly cron normally).
+
+Every kill/revive operation is logged with ``actor_email`` so a
+breach response can reconstruct the operator timeline.
+"""
+from __future__ import annotations
+
+import logging
+import os
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+from flask import Blueprint, jsonify, request
+from flask_login import current_user
+
+from extensions import db
+
+logger = logging.getLogger(__name__)
+
+agent_admin_bp = Blueprint(
+    "agent_admin", __name__, url_prefix="/api/admin/agent"
+)
+
+
+# ── Access control ───────────────────────────────────────────────────────────
+
+
+def _admin_emails() -> set[str]:
+    raw = os.getenv("ADMIN_EMAILS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
+def _deny_non_admin():
+    """Return a JSON error response if the caller isn't an admin.
+
+    Returns ``None`` when the caller IS admin, so the route body runs.
+    Fails closed: no ``ADMIN_EMAILS`` env var → everyone is denied.
+    """
+    if not getattr(current_user, "is_authenticated", False):
+        return jsonify({"error": "Login required"}), 401
+    admins = _admin_emails()
+    if not admins:
+        logger.warning(
+            "ADMIN_EMAILS not configured — denying /api/admin/agent"
+        )
+        return jsonify({"error": "Admin access not configured"}), 403
+    email = (getattr(current_user, "email", "") or "").lower()
+    if email not in admins:
+        return jsonify({"error": "Forbidden"}), 403
+    return None
+
+
+def _current_admin_email() -> str:
+    return (getattr(current_user, "email", "") or "").lower()
+
+
+# ── Kill switch (cached read, 5s TTL) ────────────────────────────────────────
+#
+# Writes are rare; reads are on every /api/agent/query call. A 5-second
+# TTL balances hot-flip responsiveness (ops flips, effect within 5s
+# fleet-wide) with avoiding a SELECT per LLM call.
+
+_KILL_CACHE: dict[str, Any] = {"killed": False, "expires_at": 0.0}
+_KILL_CACHE_TTL_SEC = 5.0
+
+
+def _utcnow_naive() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _read_kill_switch_row() -> Any:
+    """Return the singleton kill switch row (creating it on first read)."""
+    from models.user_agent_audit import AgentKillSwitch
+
+    row = db.session.get(AgentKillSwitch, 1)
+    if row is None:
+        row = AgentKillSwitch(id=1, killed=False)
+        db.session.add(row)
+        db.session.commit()
+    return row
+
+
+def is_agent_killed() -> bool:
+    """Return True if the kill switch is currently ON. Cached for 5s.
+
+    Safe to call from any route (including ``/api/agent/query``). On any
+    DB error it fails CLOSED — returning True — because the goal is to
+    stop agent traffic in the face of an outage we can't diagnose.
+    """
+    import time
+
+    now = time.monotonic()
+    if now < _KILL_CACHE.get("expires_at", 0.0):
+        return bool(_KILL_CACHE.get("killed", False))
+
+    try:
+        row = _read_kill_switch_row()
+        killed = bool(getattr(row, "killed", False))
+    except Exception as exc:  # noqa: BLE001
+        logger.error("agent_admin.kill_read_failed err=%s", exc)
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        # Fail closed — better to refuse than to leak responses while
+        # the operator's kill signal is stuck.
+        return True
+
+    _KILL_CACHE["killed"] = killed
+    _KILL_CACHE["expires_at"] = now + _KILL_CACHE_TTL_SEC
+    return killed
+
+
+def _invalidate_kill_cache() -> None:
+    _KILL_CACHE["expires_at"] = 0.0
+
+
+# ── Routes ───────────────────────────────────────────────────────────────────
+
+
+@agent_admin_bp.route("/kill", methods=["POST"])
+def kill() -> Any:
+    """POST /api/admin/agent/kill
+
+    Body (optional): {"reason": str}
+
+    Flip the kill switch to ON immediately. Effect fleet-wide within 5s.
+    """
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
+
+    payload = request.get_json(silent=True) or {}
+    reason = (payload.get("reason") or "").strip()[:500]
+
+    try:
+        row = _read_kill_switch_row()
+        row.killed = True
+        row.killed_at = _utcnow_naive()
+        row.killed_by = _current_admin_email()[:120]
+        row.killed_reason = reason
+        db.session.commit()
+    except Exception as exc:  # noqa: BLE001
+        db.session.rollback()
+        logger.exception("agent_admin.kill_write_failed err=%s", exc)
+        return jsonify({"error": "kill-switch-write-failed"}), 500
+
+    _invalidate_kill_cache()
+    logger.warning(
+        "agent.kill_switch.engaged actor=%s reason=%s",
+        _current_admin_email(),
+        reason,
+    )
+    return jsonify(
+        {
+            "ok": True,
+            "killed": True,
+            "killed_at": _utcnow_naive().isoformat(),
+            "killed_by": _current_admin_email(),
+        }
+    )
+
+
+@agent_admin_bp.route("/revive", methods=["POST"])
+def revive() -> Any:
+    """POST /api/admin/agent/revive
+
+    Body (required): {"legal_approval": "<counsel-ref>"}
+
+    Reviving the companion without legal sign-off is a liability event —
+    we force the operator to paste a counsel reference, and store it on
+    the kill switch row for audit.
+    """
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
+
+    payload = request.get_json(silent=True) or {}
+    note = (payload.get("legal_approval") or "").strip()
+    if len(note) < 3:
+        return (
+            jsonify(
+                {
+                    "error": "legal-approval-required",
+                    "message": (
+                        "Provide a legal_approval reference "
+                        "(counsel email, memo id, etc) before revival."
+                    ),
+                }
+            ),
+            400,
+        )
+    note = note[:500]
+
+    try:
+        row = _read_kill_switch_row()
+        row.killed = False
+        row.revived_at = _utcnow_naive()
+        row.revived_by = _current_admin_email()[:120]
+        row.revived_note = note
+        db.session.commit()
+    except Exception as exc:  # noqa: BLE001
+        db.session.rollback()
+        logger.exception("agent_admin.revive_write_failed err=%s", exc)
+        return jsonify({"error": "kill-switch-write-failed"}), 500
+
+    _invalidate_kill_cache()
+    logger.warning(
+        "agent.kill_switch.revived actor=%s note=%s",
+        _current_admin_email(),
+        note,
+    )
+    return jsonify(
+        {
+            "ok": True,
+            "killed": False,
+            "revived_at": _utcnow_naive().isoformat(),
+            "revived_by": _current_admin_email(),
+            "legal_approval": note,
+        }
+    )
+
+
+@agent_admin_bp.route("/audit/recent", methods=["GET"])
+def audit_recent() -> Any:
+    """GET /api/admin/agent/audit/recent?limit=50&verdict=deny_*
+
+    Returns recent audit rows (newest first). User message is returned
+    only as hash + length — never verbatim.
+    """
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
+
+    from models.user_agent_audit import UserAgentAudit
+
+    try:
+        limit = max(1, min(int(request.args.get("limit", 50)), 500))
+    except ValueError:
+        limit = 50
+
+    verdict_filter = (request.args.get("verdict") or "").strip()
+
+    query = db.session.query(UserAgentAudit).order_by(
+        UserAgentAudit.generated_at.desc()
+    )
+    if verdict_filter:
+        # Allow prefix filters: "deny_*" → SQL LIKE
+        if verdict_filter.endswith("*"):
+            query = query.filter(
+                UserAgentAudit.gate_verdict.like(verdict_filter[:-1] + "%")
+            )
+        else:
+            query = query.filter(UserAgentAudit.gate_verdict == verdict_filter)
+
+    rows = query.limit(limit).all()
+
+    return jsonify(
+        {
+            "ok": True,
+            "count": len(rows),
+            "rows": [
+                {
+                    "id": r.id,
+                    "request_id": r.request_id,
+                    # Mask user_id: send only the last 4 digits so admin
+                    # can correlate on a ticket but casual log leaks don't
+                    # expose the full id space.
+                    "user_id_suffix": str(r.user_id)[-4:] if r.user_id else "",
+                    "persona_code": r.persona_code,
+                    "gate_verdict": r.gate_verdict,
+                    "gate_reason": r.gate_reason,
+                    "user_message_len": r.user_message_len,
+                    "raw_output_len": r.raw_output_len,
+                    "model": r.model,
+                    "generated_at": (
+                        r.generated_at.isoformat() if r.generated_at else None
+                    ),
+                }
+                for r in rows
+            ],
+        }
+    )
+
+
+@agent_admin_bp.route("/stats", methods=["GET"])
+def stats() -> Any:
+    """GET /api/admin/agent/stats
+
+    24h / 7d / 30d totals + refusal rate + persona distribution.
+    Safe to poll — all queries are indexed.
+    """
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
+
+    from sqlalchemy import func
+
+    from models.user_agent_audit import UserAgentAudit
+
+    now = _utcnow_naive()
+    windows = {
+        "24h": now - timedelta(hours=24),
+        "7d": now - timedelta(days=7),
+        "30d": now - timedelta(days=30),
+    }
+
+    def _window_stats(since: datetime) -> dict[str, Any]:
+        q = db.session.query(UserAgentAudit).filter(
+            UserAgentAudit.generated_at >= since
+        )
+        total = q.count()
+        refused = q.filter(
+            UserAgentAudit.gate_verdict != "pass"
+        ).count()
+        rate = (refused / total) if total else 0.0
+        return {
+            "total": int(total),
+            "refused": int(refused),
+            "refusal_rate": round(rate, 4),
+        }
+
+    persona_rows = (
+        db.session.query(
+            UserAgentAudit.persona_code, func.count(UserAgentAudit.id)
+        )
+        .filter(UserAgentAudit.generated_at >= windows["30d"])
+        .group_by(UserAgentAudit.persona_code)
+        .all()
+    )
+    persona_distribution = {code: int(count) for code, count in persona_rows}
+
+    return jsonify(
+        {
+            "ok": True,
+            "as_of": now.isoformat(),
+            "windows": {k: _window_stats(v) for k, v in windows.items()},
+            "persona_distribution_30d": persona_distribution,
+            "kill_switch_on": is_agent_killed(),
+        }
+    )
+
+
+@agent_admin_bp.route("/purge-expired", methods=["POST"])
+def purge_expired_route() -> Any:
+    """POST /api/admin/agent/purge-expired
+
+    Manually trigger the 2-year retention purge. Normally runs via cron;
+    this exists so ops can confirm the job is functional without waiting
+    overnight.
+    """
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
+
+    from services.agents.audit_logger import purge_expired
+
+    deleted = purge_expired()
+    logger.info(
+        "agent.audit.manual_purge actor=%s deleted=%d",
+        _current_admin_email(),
+        deleted,
+    )
+    return jsonify({"ok": True, "deleted": int(deleted)})
