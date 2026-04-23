@@ -2699,3 +2699,243 @@ html {
   flex: 0 0 auto;
 }
 
+/* ══════════════════════════════════════════════════════════
+   Hero v4 Cinematic — aurora / data stream / ink CTA / H1 split
+   Additive. No existing keyframes modified.
+   ══════════════════════════════════════════════════════════ */
+
+/* Aurora — slow breath on the outermost bronze field. 24 s. */
+@keyframes pq-aurora-pulse {
+  0%, 100% { opacity: 0.92; transform: scale(1); }
+  50%      { opacity: 1.0;  transform: scale(1.035); }
+}
+.pq-aurora-pulse {
+  animation: pq-aurora-pulse 24s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  transform-origin: 50% 62%;
+  will-change: opacity, transform;
+}
+
+/* Inner-light glow — subtle warm ellipse below the H1. */
+.pq-inner-glow {
+  position: absolute;
+  inset: auto 0 18% 0;
+  height: 42%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 55% 60% at 50% 50%,
+    rgba(184, 149, 106, 0.085) 0%,
+    rgba(184, 149, 106, 0.04) 32%,
+    transparent 62%
+  );
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+
+/* Data stream paper flow — top → bottom loop. */
+@keyframes pq-paper-flow {
+  0%   { transform-origin: center; offset-distance: 0%; }
+  0%   { translate: -50% -120%; }
+  100% { translate: -50% 120%; }
+}
+.pq-paper-sheet {
+  /* translate + rotate + scale combined on the inline style; the keyframe
+     supplies the vertical flow via the `translate` property so we don't
+     stomp the rotation. */
+  transition: opacity 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: translate;
+}
+.pq-paper-inner {
+  position: relative;
+  border-radius: 2px;
+  padding: 14px 14px 12px;
+  background:
+    linear-gradient(180deg,
+      rgba(245, 240, 232, 0.96) 0%,
+      rgba(245, 240, 232, 0.90) 100%);
+  color: rgba(10, 10, 10, 0.72);
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.5) inset,
+    0 22px 48px -22px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(10, 10, 10, 0.06);
+  backdrop-filter: blur(0.5px);
+}
+.pq-paper-inner::before {
+  /* paper grain */
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(10, 10, 10, 0.015) 0px, rgba(10, 10, 10, 0.015) 1px,
+      transparent 1px, transparent 3px
+    );
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  border-radius: inherit;
+}
+.pq-paper-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.pq-paper-mark {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--pq-bronze);
+  flex: 0 0 auto;
+}
+.pq-paper-title {
+  font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(10, 10, 10, 0.82);
+}
+.pq-paper-sub {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 9.5px;
+  line-height: 1.35;
+  color: rgba(111, 86, 54, 0.85);
+  margin-bottom: 8px;
+  letter-spacing: 0.01em;
+}
+.pq-paper-rule {
+  height: 1px;
+  background: rgba(10, 10, 10, 0.1);
+  margin-bottom: 8px;
+}
+.pq-paper-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  filter: blur(0.45px);
+}
+.pq-paper-lines span {
+  display: block;
+  height: 3px;
+  border-radius: 1px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 10, 10, 0.32) 0%,
+    rgba(10, 10, 10, 0.12) 100%
+  );
+}
+.pq-paper-ticker {
+  font-family: var(--font-mono), "JetBrains Mono", monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  color: rgba(111, 86, 54, 0.8);
+  padding: 4px 6px;
+  background: rgba(184, 149, 106, 0.08);
+  border: 1px solid rgba(184, 149, 106, 0.18);
+  border-radius: 1px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pq-paper-foot {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+  font-size: 8.5px;
+  color: rgba(111, 86, 54, 0.7);
+  letter-spacing: 0.02em;
+}
+
+/* Hero H1 two-layer split container — requires the <h1> to be
+   position: relative for the glyph layer to stack on top.
+   Applied via className in hero.tsx. */
+.pq-hero-h1 {
+  position: relative;
+}
+.pq-hero-h1-static,
+.pq-hero-h1-glyphs {
+  display: block;
+}
+
+/* CTA ink-bleed — blob expansion on hover / click. */
+.pq-ink-blob {
+  transform: scale(0.0);
+  opacity: 0;
+  transition:
+    transform 350ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pq-ink-btn:hover .pq-ink-blob,
+.pq-ink-btn:focus-visible .pq-ink-blob {
+  transform: scale(1.0);
+  opacity: 1;
+}
+.pq-ink-btn:active {
+  transform: scale(0.98) translateY(0);
+  transition-duration: 120ms;
+}
+.pq-ink-btn:focus-visible {
+  outline: 2px solid var(--pq-bronze);
+  outline-offset: 3px;
+}
+
+/* Hero stats count-up — uses the tabular-num font; no transform needed,
+   so nothing animates in CSS. JS just updates textContent. This class
+   exists purely to mark the target elements. */
+.pq-stat-count {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Scroll cue — slim bronze vertical line. 1.8 s loop. */
+@keyframes pq-scroll-cue {
+  0%, 100% { transform: scaleY(0.55) translateY(0); opacity: 0.45; }
+  50%      { transform: scaleY(1)    translateY(4px); opacity: 0.9; }
+}
+.pq-scroll-cue-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--pq-bronze) 50%,
+    transparent 100%
+  );
+  transform-origin: top center;
+  animation: pq-scroll-cue 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* Cinematic entrance — a single timeline via CSS var --pq-reveal-delay
+   that each child can offset from. We use per-element animation-delay
+   inline in hero.tsx because it's cleaner than spraying subclasses. */
+@keyframes pq-fade-up {
+  0%   { opacity: 0; transform: translateY(18px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.pq-reveal {
+  opacity: 0;
+  animation: pq-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pq-aurora-pulse,
+  .pq-paper-sheet,
+  .pq-scroll-cue-line,
+  .pq-reveal,
+  .pq-ink-blob {
+    animation: none !important;
+    transition: none !important;
+  }
+  .pq-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .pq-ink-btn:hover .pq-ink-blob,
+  .pq-ink-btn:focus-visible .pq-ink-blob {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
