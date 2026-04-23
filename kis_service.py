@@ -9,7 +9,7 @@ import logging
 import requests
 import time
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +213,98 @@ class KISService:
             return None
         except Exception as e:
             logger.debug(f"KIS index price {index_code} failed: {e}")
+            return None
+
+    def get_index_history(self, index_code: str, period: str = "1y"):
+        """Get daily chart history for a KR market index.
+
+        Uses KIS `inquire-index-daily-price` (tr_id FHPUP02120000). Accepts
+        the same index codes as :meth:`get_index_price` (``0001`` KOSPI,
+        ``1001`` KOSDAQ, ``2001`` KOSPI200, ``2203`` KOSDAQ150). Mirrors
+        :meth:`get_index_price`'s production-URL-first behaviour — the VTS
+        (paper) endpoint does not serve index data.
+
+        Returns a list of ``{date, open, high, low, close, volume}`` dicts
+        ordered oldest→newest, or ``None`` on any failure. The caller is
+        expected to downsample via ``.tail(N)``; we do not truncate here.
+        """
+        if not self.available:
+            return None
+        token = self._get_token()
+        if not token:
+            return None
+
+        # Period → number of calendar days to request. KIS returns up to
+        # ~100 rows per call so "1y" maps to ~252 trading days but the
+        # endpoint will only return what it has.
+        period_map = {
+            "1mo": 30, "3mo": 90, "6mo": 180,
+            "1y": 365, "2y": 730, "5y": 1825,
+            "5d": 10, "1d": 5,
+        }
+        days = period_map.get(period, 365)
+        end = datetime.now()
+        start = end - timedelta(days=days)
+
+        try:
+            headers = {
+                "Content-Type": "application/json; charset=utf-8",
+                "authorization": f"Bearer {token}",
+                "appkey": self.app_key,
+                "appsecret": self.app_secret,
+                "tr_id": "FHPUP02120000",
+            }
+            params = {
+                "FID_COND_MRKT_DIV_CODE": "U",
+                "FID_INPUT_ISCD": index_code,
+                "FID_INPUT_DATE_1": start.strftime("%Y%m%d"),
+                "FID_INPUT_DATE_2": end.strftime("%Y%m%d"),
+                "FID_PERIOD_DIV_CODE": "D",  # D=day, W=week, M=month
+            }
+            for base in ("https://openapi.koreainvestment.com:9443", self.base_url):
+                try:
+                    r = requests.get(
+                        f"{base}/uapi/domestic-stock/v1/quotations/inquire-index-daily-price",
+                        headers=headers, params=params, timeout=10,
+                    )
+                except Exception:
+                    continue
+                if not r.ok:
+                    continue
+                data = r.json()
+                if data.get("rt_cd") != "0":
+                    continue
+                rows = data.get("output2") or data.get("output") or []
+                if not isinstance(rows, list) or not rows:
+                    continue
+                parsed = []
+                for row in rows:
+                    close = row.get("bstp_nmix_prpr") or row.get("stck_bsop_date_cls_prc")
+                    if close is None:
+                        continue
+                    try:
+                        close = float(close)
+                    except (TypeError, ValueError):
+                        continue
+                    if close <= 0:
+                        continue
+                    date_s = row.get("stck_bsop_date") or row.get("bstp_nmix_bsop_date") or ""
+                    parsed.append({
+                        "date":   date_s,
+                        "open":   float(row.get("bstp_nmix_oprc") or close),
+                        "high":   float(row.get("bstp_nmix_hgpr") or close),
+                        "low":    float(row.get("bstp_nmix_lwpr") or close),
+                        "close":  close,
+                        "volume": int(float(row.get("acml_vol") or 0)),
+                    })
+                if not parsed:
+                    continue
+                # KIS returns newest-first → reverse to oldest-first.
+                parsed.sort(key=lambda x: x.get("date") or "")
+                return parsed
+            return None
+        except Exception as e:
+            logger.debug(f"KIS index history {index_code} failed: {e}")
             return None
 
     def get_intraday_bars(self, stock_code, timeframe="1"):

@@ -495,10 +495,13 @@ def company_profile(ticker):
     try:
         import fmp_service as fmp
         info = fmp.get_info(ticker)
-        sector = info.get("sector", "")
-        if is_korean and not sector:
+        sector = (info.get("sector") or "").strip()
+        # "Unknown" is a common upstream placeholder when FMP has no KRX
+        # coverage — treat it the same as an empty string so the
+        # KOREAN_SECTORS curated table can supply the real sector.
+        if is_korean and (not sector or sector.lower() == "unknown"):
             from data_fetcher import KOREAN_SECTORS
-            sector = KOREAN_SECTORS.get(ticker, "")
+            sector = KOREAN_SECTORS.get(ticker, "") or sector
         return jsonify({
             "ticker": ticker,
             "name": info.get("shortName") or resolve_stock_name(ticker) or ticker,
@@ -637,24 +640,50 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         logger.debug(f"market.indices KIS {kis_code} failed: {e}")
 
     # 2) History for sparkline + 52W + fallback level / change.
+    # Primary: FMP `^KS11` / `^KQ11`. If FMP returns empty (the KRX index
+    # symbols are sometimes gated on Starter tier), try KIS's domestic
+    # index daily chart (FHKUP03500100) as a secondary source so the
+    # sparkline and 52W range still populate.
     sparkline: list[float] = []
     range_52w = [0.0, 0.0]
+    closes = None
     try:
         h = fetcher.get_price_history(ticker, period="1y")
         if h is not None and not h.empty and "Close" in h.columns:
-            closes = h["Close"].astype(float).dropna()
-            if len(closes):
-                if level is None:
-                    level = float(closes.iloc[-1])
-                if change_pct == 0.0 and len(closes) >= 2:
-                    prev = float(closes.iloc[-2])
-                    if prev:
-                        change_pct = (float(closes.iloc[-1]) - prev) / prev * 100.0
-                sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
-                range_52w = [round(float(closes.min()), 2),
-                             round(float(closes.max()), 2)]
-    except Exception:
-        pass
+            c = h["Close"].astype(float).dropna()
+            if len(c):
+                closes = c
+    except Exception as e:
+        logger.debug(f"market.indices fmp history {ticker} failed: {e}")
+
+    if closes is None or len(closes) == 0:
+        try:
+            from services.container import realtime as _rt
+            if getattr(_rt, "kis_available", False):
+                from kis_service import KISService
+                hist = KISService().get_index_history(kis_code, period="1y")
+                if hist:
+                    # Expect list of {date, close} dicts — coerce to a plain
+                    # list of floats ordered oldest→newest.
+                    vals = [float(row.get("close"))
+                            for row in hist
+                            if row and row.get("close") is not None]
+                    if vals:
+                        import pandas as _pd
+                        closes = _pd.Series(vals)
+        except Exception as e:
+            logger.debug(f"market.indices KIS history {kis_code} failed: {e}")
+
+    if closes is not None and len(closes):
+        if level is None:
+            level = float(closes.iloc[-1])
+        if change_pct == 0.0 and len(closes) >= 2:
+            prev = float(closes.iloc[-2])
+            if prev:
+                change_pct = (float(closes.iloc[-1]) - prev) / prev * 100.0
+        sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
+        range_52w = [round(float(closes.min()), 2),
+                     round(float(closes.max()), 2)]
 
     if level is None:
         return None
