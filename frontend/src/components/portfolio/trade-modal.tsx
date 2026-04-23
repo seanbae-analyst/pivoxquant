@@ -184,7 +184,7 @@ export function TradeModal({
               <Field label="Shares">
                 <input
                   readOnly
-                  className={inputClass + " bg-slate-50 text-slate-500"}
+                  className={inputClass + " bg-[rgba(245,240,232,0.04)] text-[rgba(245,240,232,0.55)]"}
                   value={position.shares}
                 />
               </Field>
@@ -254,7 +254,7 @@ export function TradeModal({
           </Field>
         </div>
 
-        <p className="col-span-2 text-[11px] text-slate-500">
+        <p className="col-span-2 text-[11px] text-[rgba(245,240,232,0.5)]">
           User-entered record only. Not investment advice.
         </p>
       </form>

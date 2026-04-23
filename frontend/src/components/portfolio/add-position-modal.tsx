@@ -125,7 +125,7 @@ export function AddPositionModal({
 
         <div className="col-span-2 sm:col-span-1">
           <Field label="Side">
-            <div className="flex h-10 overflow-hidden rounded-sm border border-slate-200">
+            <div className="flex h-10 overflow-hidden rounded-[2px] border border-[rgba(245,240,232,0.15)]">
               {(["Long", "Short"] as Side[]).map((opt) => {
                 const active = side === opt;
                 return (
@@ -136,8 +136,8 @@ export function AddPositionModal({
                     className={
                       "flex-1 text-[13px] font-medium transition-colors " +
                       (active
-                        ? "bg-slate-900 text-white"
-                        : "bg-white text-slate-600 hover:bg-slate-50")
+                        ? "bg-[var(--pq-bronze,#8B6F47)] text-[var(--pq-ink,#050505)]"
+                        : "bg-[rgba(255,255,255,0.02)] text-[rgba(245,240,232,0.6)] hover:bg-[rgba(245,240,232,0.06)]")
                     }
                   >
                     {opt}
@@ -202,7 +202,7 @@ export function AddPositionModal({
           </Field>
         </div>
 
-        <p className="col-span-2 text-[11px] text-slate-500">
+        <p className="col-span-2 text-[11px] text-[rgba(245,240,232,0.5)]">
           User-entered record only. Not investment advice.
         </p>
       </form>
