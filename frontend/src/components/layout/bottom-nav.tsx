@@ -35,6 +35,7 @@ import {
   Shield,
   Bot,
   MessageSquare,
+  BookHeart,
   Sun,
   FileText,
   Bell,
@@ -49,6 +50,8 @@ type Tab = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Render a small "Premium Plus" bronze seal next to the label. */
+  premiumPlus?: boolean;
 };
 
 // Primary bottom-bar tabs — chosen by CEO spec (Home / Market / Portfolio /
@@ -69,6 +72,9 @@ const DRAWER_ITEMS: Tab[] = [
   { href: "/risk", label: "Risk Board", icon: Shield },
   { href: "/autotrade", label: "Autotrade", icon: Bot },
   { href: "/ai-chat", label: "AI Chat", icon: MessageSquare },
+  // Journal Companion — Closed Beta, Premium Plus / Founding Lifetime only.
+  // Entitlement enforcement lives on /companion page; drawer just surfaces it.
+  { href: "/companion", label: "Journal Companion", icon: BookHeart, premiumPlus: true },
   { href: "/morning-brief", label: "Morning Brief", icon: Sun },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/alerts", label: "Alerts", icon: Bell },
@@ -240,7 +246,24 @@ export function BottomNav() {
                             : "rgba(245, 240, 232, 0.55)",
                         }}
                       />
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      {item.premiumPlus && (
+                        <span
+                          aria-label="Premium Plus · Closed Beta"
+                          className="font-mono uppercase"
+                          style={{
+                            fontSize: 8.5,
+                            letterSpacing: "0.2em",
+                            padding: "2px 6px",
+                            borderRadius: 1,
+                            background: "rgba(184, 149, 106, 0.12)",
+                            border: "0.5px solid rgba(184, 149, 106, 0.4)",
+                            color: "var(--pq-bronze)",
+                          }}
+                        >
+                          Plus
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );
