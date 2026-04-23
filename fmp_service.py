@@ -612,7 +612,40 @@ def get_info(ticker):
         except Exception as e:
             logger.debug(f"fundamentals quote-fallback failed for {ticker}: {e}")
 
-    _set_cache(cache_key, info)
+    # ── KR fundamentals routing ────────────────────────────────────
+    # FMP Starter has no KRX coverage, so US equities fallback-chain
+    # above always comes back empty for `.KS` / `.KQ` tickers. Route
+    # KR tickers through the licensed KIS `inquire-price` path which
+    # publishes PER/EPS/PBR/시가총액 on a commercial ToS. Overlays on
+    # any US fallback already populated above — never overwrites a
+    # non-null value.
+    if isinstance(ticker, str) and (ticker.endswith(".KS") or ticker.endswith(".KQ")):
+        try:
+            from services.data.kr_fundamentals import get_kr_fundamentals
+            kr = get_kr_fundamentals(ticker)
+            if kr:
+                for k, v in kr.items():
+                    if v is not None and not info.get(k):
+                        info[k] = v
+        except Exception as e:
+            logger.debug(f"KR fundamentals routing failed for {ticker}: {e}")
+
+    # ── Null-cache guard (US only) ─────────────────────────────────
+    # If the critical fundamentals are still null for a non-ETF US
+    # ticker, skip caching so the next request gets a fresh try.
+    # ETFs legitimately lack P/E + EPS — caching null for them is
+    # correct; we only want to retry when FMP returned a partial
+    # payload for a regular equity.
+    is_etf = bool(info.get("isEtf"))
+    has_critical = bool(info.get("trailingPE")) or bool(info.get("trailingEps")) or bool(info.get("marketCap"))
+    should_cache = is_etf or has_critical
+    if should_cache:
+        _set_cache(cache_key, info)
+    else:
+        logger.info(
+            f"FMP get_info({ticker}): critical fundamentals all null + not ETF — "
+            f"skipping cache so next request retries"
+        )
     return info
 
 
@@ -1084,7 +1117,16 @@ def prefetch_fundamentals(tickers):
                     "revenueGrowth": rev_per_share,
                     "revenuePerShare": rev_per_share,
                 })
-            _set_cache(cache_key, info)
+            # Mirror get_info()'s null-cache guard so the prefetch path
+            # doesn't pre-seed partial (all-null) records into cache.
+            is_etf = bool(info.get("isEtf"))
+            has_critical = (
+                bool(info.get("trailingPE"))
+                or bool(info.get("trailingEps"))
+                or bool(info.get("marketCap"))
+            )
+            if is_etf or has_critical:
+                _set_cache(cache_key, info)
 
     cached_count = sum(1 for t in us_tickers if _get_cache(f"info:{t}", TTL_FUNDAMENTAL))
     logger.info(f"FMP prefetch complete: {cached_count}/{len(us_tickers)} tickers cached, "
