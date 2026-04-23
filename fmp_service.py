@@ -630,6 +630,37 @@ def get_info(ticker):
         except Exception as e:
             logger.debug(f"KR fundamentals routing failed for {ticker}: {e}")
 
+    # ── Alpha Vantage fallback (US equities only) ─────────────────
+    # FMP Starter omits P/E + EPS on NVDA/MSFT/TSLA/etc. AV free tier
+    # (25 req/day) covers the gap. No-op when ALPHAVANTAGE_API_KEY is
+    # unset, so this code is safe to ship before key provisioning.
+    is_us_equity = isinstance(ticker, str) and not (
+        ticker.endswith(".KS") or ticker.endswith(".KQ")
+    )
+    still_missing = not info.get("trailingPE") or not info.get("trailingEps")
+    not_etf = not bool(info.get("isEtf"))
+    if is_us_equity and still_missing and not_etf:
+        try:
+            from services.data.alpha_vantage_fundamentals import get_av_fundamentals
+            av = get_av_fundamentals(ticker)
+            if av:
+                # Map AV schema (snake_case) onto FMP internal camelCase.
+                av_map = {
+                    "pe_ratio":       "trailingPE",
+                    "forward_pe":     "forwardPE",
+                    "eps":            "trailingEps",
+                    "market_cap":     "marketCap",
+                    "profit_margin":  "profitMargin",
+                    "revenue_growth": "revenueGrowth",
+                    "debt_equity":    "debtToEquity",
+                }
+                for av_key, fmp_key in av_map.items():
+                    v = av.get(av_key)
+                    if v is not None and not info.get(fmp_key):
+                        info[fmp_key] = v
+        except Exception as e:
+            logger.debug(f"AV fundamentals routing failed for {ticker}: {e}")
+
     # ── Null-cache guard (US only) ─────────────────────────────────
     # If the critical fundamentals are still null for a non-ETF US
     # ticker, skip caching so the next request gets a fresh try.
