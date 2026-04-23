@@ -28,8 +28,6 @@ import {
   Lock,
 } from "lucide-react";
 import { Hero } from "./hero";
-import { FlipLandingShell } from "./flip-landing-shell";
-import { FlipPage } from "./flip-page";
 import SplashPage from "./splash-page";
 
 /* ──────────────────────────────────────────────
@@ -1083,32 +1081,6 @@ export default function LandingPage() {
           variants: v,
         };
 
-  // 14 flip pages (nav stays fixed above; engine drawer renders outside shell
-  // because its fixed positioning must escape the 3D transform context).
-  // 2026-04-23: Splash added as Page 0 (CEO brief — black canvas + wordmark
-  // cover). Hero shifts to index 1; every subsequent page shifts +1.
-  const flipLabels = [
-    "Splash",
-    "Hero",
-    "Proof of discipline",
-    "Sample reports",
-    "Features",
-    "Feature explorer",
-    "How it works",
-    "Archetype",
-    "The engine",
-    "Dashboard preview",
-    "Pricing",
-    "Voice of the desk",
-    "Questions",
-    "Close",
-  ];
-  // Progress-dot kind map — index 0 gets a diamond (cover page), rest circles.
-  const flipKinds: Array<"splash" | "page"> = [
-    "splash",
-    ...(Array(flipLabels.length - 1).fill("page") as Array<"page">),
-  ];
-
   return (
     <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: "var(--pq-ink)", color: "var(--pq-ivory)" }}>
       {/* ─── 1. NAVIGATION — Vantablack sticky top bar ─── */}
@@ -1251,30 +1223,730 @@ export default function LandingPage() {
       </nav>
 
       {/* ═════════════════════════════════════════════
-          FLIP SHELL — 3D page-turn scroll hijack.
-          Active on desktop (>=1024px) + motion allowed.
-          Mobile / reduced-motion → native long scroll.
+          NATIVE-SCROLL LANDING (2026-04-23)
+          Previously a 3D page-flip scroll hijack; now a standard long-scroll
+          page with sticky-pin + fade-up + parallax per Revolut/Apple patterns.
+          Engine drawer renders outside the content tree (position:fixed).
           ═════════════════════════════════════════════ */}
-      <FlipLandingShell
-        total={flipLabels.length}
-        labels={flipLabels}
-        kinds={flipKinds}
-        paused={selectedModelId !== null || mobileMenuOpen}
-      >
 
-      {/* ─── FLIP PAGE 0: SPLASH — black canvas + wordmark (2026-04-23) ─── */}
-      <FlipPage index={0} label="Splash">
-        <SplashPage />
-      </FlipPage>
+      {/* ─── PAGE 0: SPLASH — black canvas + wordmark (2026-04-23) ─── */}
+      <SplashPage />
 
-      {/* ─── FLIP PAGE 1: HERO (was index 0) ─── */}
-      <FlipPage index={1} label="Hero">
+      {/* ─── PAGE 1: HERO ─── */}
       {/* ─── 2. HERO SECTION — Hero v2 (Vantablack + Ivory + Bronze) ─── */}
       <Hero />
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 2: PROOF OF DISCIPLINE (was 1) ─── */}
-      <FlipPage index={2} label="Proof of discipline">
+      {/* ─── PAGE 2: FEATURES BENTO (moved up — Revolut key-features-first pattern) ─── */}
+      {/* ─── 5. FEATURES BENTO — Vantablack lift ─── */}
+      <section
+        id="features"
+        className="py-20 md:py-28 lg:py-40"
+        style={{ backgroundColor: "#111111" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-20 md:mb-24">
+            <div className="mb-6 inline-flex items-center gap-2.5">
+              <span aria-hidden className="h-px w-7" style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }} />
+              <span
+                className="font-serif text-[11px] uppercase"
+                style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+              >
+                The Research Desk
+              </span>
+            </div>
+            <p className="pq-deck mb-4">
+              Research artifacts, not conversation.
+            </p>
+            <h2
+              className="pq-silver-matte font-serif mb-10 md:mb-14"
+              style={{
+                fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)",
+                lineHeight: 1.08,
+                letterSpacing: "-0.02em",
+                fontWeight: 500,
+              }}
+            >
+              Not a chatbot.
+              <br />
+              A research department that files.
+            </h2>
+            <p
+              className="font-serif"
+              style={{
+                fontSize: "clamp(15px, 1.3vw, 17px)",
+                lineHeight: 1.65,
+                color: "rgba(245,240,232,0.65)",
+              }}
+            >
+              Seventeen artifacts, drawn from your own holdings. Delivered as PDF, mirrored in the app.
+            </p>
+          </motion.div>
+
+          <motion.div
+            {...motionProps(staggerContainer)}
+            className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-14"
+          >
+            {features.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <motion.div
+                  key={feature.title}
+                  variants={fadeUp}
+                  className={`group relative p-7 md:p-8 rounded-sm transition-all duration-300 ${feature.span}`}
+                  style={{
+                    backgroundColor: "rgba(255,255,255,0.02)",
+                    border: "0.5pt solid rgba(245,240,232,0.10)",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(139,111,71,0.55)";
+                    e.currentTarget.style.backgroundColor = "rgba(139,111,71,0.035)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "rgba(245,240,232,0.10)";
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.02)";
+                  }}
+                >
+                  <div className="flex items-start justify-between mb-8">
+                    <Icon className="w-6 h-6" strokeWidth={1.25} style={{ color: "var(--pq-bronze)" }} />
+                    <span
+                      className="font-mono tabular-nums text-[10.5px]"
+                      style={{ color: "var(--pq-muted)", letterSpacing: "0.14em" }}
+                    >
+                      {feature.id}
+                    </span>
+                  </div>
+                  <h3
+                    className="font-serif mb-3"
+                    style={{
+                      fontSize: "clamp(20px, 1.65vw, 24px)",
+                      lineHeight: 1.2,
+                      letterSpacing: "-0.01em",
+                      color: "var(--pq-ivory)",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {feature.title}
+                  </h3>
+                  <p
+                    className="font-serif"
+                    style={{
+                      fontSize: "15px",
+                      lineHeight: 1.6,
+                      color: "rgba(245,240,232,0.65)",
+                    }}
+                  >
+                    {feature.description}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+
+          <motion.p
+            {...motionProps(fadeUp)}
+            className="mt-12 font-serif text-[11px] italic leading-relaxed"
+            style={{ color: "var(--pq-muted)" }}
+          >
+            Informational research only. Not investment advice.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* ─── Section fleuron — bronze rule + lozenge diamond ─── */}
+      <div
+        className="flex items-center justify-center py-2"
+        style={{ backgroundColor: "#111111" }}
+        aria-hidden
+      >
+        <span className="pq-section-fleuron">
+          <span />
+        </span>
+      </div>
+
+
+      {/* ─── PAGE 3: FEATURE EXPLORER (moved up) ─── */}
+      {/* ─── 5b. FEATURE EXPLORER — Vantablack lift, click-to-reveal tabs ─── */}
+      <section
+        id="feature-explorer"
+        className="py-20 md:py-28 lg:py-40"
+        style={{ backgroundColor: "#111111" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-8 md:mb-12">
+            <div className="mb-6 inline-flex items-center gap-2.5">
+              <span aria-hidden className="h-px w-7" style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }} />
+              <span
+                className="font-serif text-[11px] uppercase"
+                style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+              >
+                Explore the Desk
+              </span>
+            </div>
+            <p className="pq-deck mb-4">
+              Seventeen artifacts. Six rendered today, eleven staged.
+            </p>
+            <h2
+              className="pq-silver-matte font-serif mb-8 md:mb-12"
+              style={{
+                fontSize: "clamp(2rem, 4vw, 3rem)",
+                lineHeight: 1.08,
+                letterSpacing: "-0.02em",
+                fontWeight: 500,
+              }}
+            >
+              What each artifact actually does.
+            </h2>
+            <p
+              className="font-serif"
+              style={{
+                fontSize: "clamp(15px, 1.3vw, 17px)",
+                lineHeight: 1.65,
+                color: "rgba(245,240,232,0.65)",
+              }}
+            >
+              Click any to read the methodology. Six are live; the remaining eleven are staged on the roadmap — methodology visible, samples reserved for members on release.
+            </p>
+          </motion.div>
+
+          {/* Explorer container */}
+          <motion.div
+            {...motionProps(fadeUp)}
+            className="rounded-sm overflow-hidden"
+            style={{
+              backgroundColor: "rgba(245,240,232,0.02)",
+              border: "0.5pt solid rgba(245,240,232,0.10)",
+            }}
+          >
+            {/* Mobile: horizontal scrolling chips */}
+            <div
+              className="md:hidden flex overflow-x-auto gap-2 p-4"
+              style={{
+                borderBottom: "0.5pt solid rgba(245,240,232,0.10)",
+                scrollbarWidth: "thin",
+              }}
+            >
+              {artifacts.map((a, i) => (
+                <button
+                  key={a.name}
+                  onClick={() => setSelectedArtifact(i)}
+                  className="shrink-0 font-serif px-3 py-2 rounded-sm transition-colors text-[12.5px]"
+                  style={{
+                    backgroundColor:
+                      selectedArtifact === i
+                        ? "rgba(139,111,71,0.12)"
+                        : "transparent",
+                    color:
+                      selectedArtifact === i
+                        ? "var(--pq-ivory)"
+                        : "rgba(245,240,232,0.55)",
+                    border:
+                      selectedArtifact === i
+                        ? "0.5pt solid rgba(139,111,71,0.55)"
+                        : "0.5pt solid rgba(245,240,232,0.10)",
+                    letterSpacing: "0.02em",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {a.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col md:flex-row">
+              {/* Desktop: vertical tab list */}
+              <div
+                className="hidden md:block w-64 lg:w-80 shrink-0"
+                style={{
+                  borderRight: "0.5pt solid rgba(245,240,232,0.10)",
+                  maxHeight: "640px",
+                  overflowY: "auto",
+                }}
+                role="tablist"
+                aria-orientation="vertical"
+              >
+                {artifacts.map((a, i) => {
+                  const active = selectedArtifact === i;
+                  return (
+                    <button
+                      key={a.name}
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setSelectedArtifact(i)}
+                      className="w-full text-left px-6 py-4 transition-all duration-150"
+                      style={{
+                        backgroundColor: active
+                          ? "rgba(139,111,71,0.08)"
+                          : "transparent",
+                        borderLeft: active
+                          ? "2px solid var(--pq-bronze)"
+                          : "2px solid transparent",
+                        borderBottom: "0.5pt solid rgba(245,240,232,0.06)",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.backgroundColor =
+                            "rgba(245,240,232,0.04)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span
+                          className="font-serif block"
+                          style={{
+                            fontSize: "16px",
+                            color: active
+                              ? "var(--pq-ivory)"
+                              : "rgba(245,240,232,0.70)",
+                            fontWeight: 500,
+                            letterSpacing: "-0.005em",
+                          }}
+                        >
+                          {a.name}
+                        </span>
+                        <span
+                          className="font-mono tabular-nums shrink-0 mt-1"
+                          style={{
+                            fontSize: "9px",
+                            letterSpacing: "0.18em",
+                            color: active
+                              ? "var(--pq-bronze)"
+                              : "var(--pq-muted)",
+                          }}
+                        >
+                          {a.tier}
+                        </span>
+                      </div>
+                      <span
+                        className="font-serif italic block mt-1"
+                        style={{
+                          fontSize: "13px",
+                          color: "var(--pq-muted)",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {a.tagline}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Body panel */}
+              <div
+                className="flex-1 p-10 md:p-14"
+                role="tabpanel"
+                aria-live="polite"
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={selectedArtifact}
+                    initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+                    animate={prefersReduced ? undefined : { opacity: 1, y: 0 }}
+                    exit={prefersReduced ? undefined : { opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <div className="mb-8 inline-flex items-center gap-2.5">
+                      <span
+                        aria-hidden
+                        className="h-px w-5"
+                        style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
+                      />
+                      <span
+                        className="font-mono tabular-nums text-[10px] uppercase"
+                        style={{
+                          letterSpacing: "0.22em",
+                          color: "var(--pq-bronze)",
+                        }}
+                      >
+                        {artifacts[selectedArtifact].tier} · Methodology
+                      </span>
+                    </div>
+
+                    <h3
+                      className="font-serif mb-6"
+                      style={{
+                        fontSize: "22px",
+                        lineHeight: 1.2,
+                        letterSpacing: "-0.01em",
+                        color: "var(--pq-ivory)",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {artifacts[selectedArtifact].name}
+                    </h3>
+
+                    <p
+                      className="mb-8"
+                      style={{
+                        fontSize: "15px",
+                        lineHeight: 1.6,
+                        color: "rgba(245,240,232,0.78)",
+                      }}
+                    >
+                      {artifacts[selectedArtifact].body}
+                    </p>
+
+                    <p
+                      className="font-serif mb-4"
+                      style={{
+                        fontSize: "11px",
+                        letterSpacing: "0.22em",
+                        textTransform: "uppercase",
+                        color: "var(--pq-bronze)",
+                      }}
+                    >
+                      What&rsquo;s inside
+                    </p>
+                    <ul className="mb-10 space-y-2">
+                      {artifacts[selectedArtifact].bullets.map((b) => (
+                        <li
+                          key={b}
+                          className="flex items-start gap-3"
+                          style={{
+                            fontSize: "15px",
+                            lineHeight: 1.6,
+                            color: "rgba(245,240,232,0.78)",
+                          }}
+                        >
+                          <span
+                            aria-hidden
+                            className="shrink-0"
+                            style={{
+                              color: "var(--pq-bronze)",
+                              lineHeight: 1.6,
+                            }}
+                          >
+                            •
+                          </span>
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <p
+                      className="font-serif italic mb-8"
+                      style={{
+                        fontSize: "13px",
+                        lineHeight: 1.55,
+                        color: "var(--pq-muted)",
+                      }}
+                    >
+                      Format: {artifacts[selectedArtifact].format}
+                    </p>
+
+                    {artifacts[selectedArtifact].sampleUrl ? (
+                      <a
+                        href={artifacts[selectedArtifact].sampleUrl as string}
+                        target="_blank"
+                        rel="noopener"
+                        className="group inline-flex items-center gap-2 font-serif transition-colors"
+                        style={{
+                          fontSize: "13.5px",
+                          color: "var(--pq-bronze)",
+                          letterSpacing: "0.02em",
+                        }}
+                      >
+                        View sample PDF
+                        <ArrowRight
+                          className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
+                          strokeWidth={1.5}
+                        />
+                      </a>
+                    ) : (
+                      <div
+                        className="inline-flex items-center gap-3 rounded-sm px-4 py-2.5"
+                        style={{
+                          border: "0.5pt solid rgba(139,111,71,0.35)",
+                          backgroundColor: "rgba(139,111,71,0.06)",
+                        }}
+                      >
+                        <Lock
+                          className="h-3 w-3"
+                          strokeWidth={1.75}
+                          style={{ color: "var(--pq-bronze)" }}
+                        />
+                        <span
+                          className="font-serif uppercase"
+                          style={{
+                            fontSize: "10.5px",
+                            letterSpacing: "0.22em",
+                            color: "var(--pq-bronze)",
+                          }}
+                        >
+                          Not yet public
+                        </span>
+                        <span
+                          aria-hidden
+                          className="h-3 w-px"
+                          style={{ backgroundColor: "rgba(139,111,71,0.3)" }}
+                        />
+                        <span
+                          className="font-serif italic"
+                          style={{
+                            fontSize: "12px",
+                            color: "rgba(245,240,232,0.6)",
+                          }}
+                        >
+                          Released to members on go-live
+                        </span>
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.p
+            {...motionProps(fadeUp)}
+            className="mt-12 font-serif text-[11px] italic leading-relaxed"
+            style={{ color: "var(--pq-muted)" }}
+          >
+            Informational only. Not investment advice.
+          </motion.p>
+        </div>
+      </section>
+
+
+      {/* ─── PAGE 4: THE ENGINE (moved up) ─── */}
+      {/* ─── 5c. THE ENGINE — Vantablack, quant / risk / AI inventory ─── */}
+      <section
+        id="the-engine"
+        className="py-32 md:py-48 lg:py-56"
+        style={{ backgroundColor: "#0A0A0A", color: "var(--pq-ivory)" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Header */}
+          <motion.div {...motionProps(fadeUp)} className="max-w-3xl mb-10 md:mb-14">
+            <div className="mb-6 inline-flex items-center gap-2.5">
+              <span
+                aria-hidden
+                className="h-px w-7"
+                style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
+              />
+              <span
+                className="font-serif text-[11px] uppercase"
+                style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+              >
+                The Engine
+              </span>
+            </div>
+            <p className="pq-deck mb-4">
+              Measurement instruments, never directives.
+            </p>
+            <h2
+              className="pq-silver-matte font-serif mb-10"
+              style={{
+                fontSize: "clamp(2rem, 4vw, 3.25rem)",
+                lineHeight: 1.1,
+                letterSpacing: "-0.02em",
+                fontWeight: 500,
+              }}
+            >
+              Beneath every report,
+              <br />
+              58 models running quietly.
+            </h2>
+            <p
+              className="font-serif"
+              style={{
+                fontSize: "clamp(15px, 1.3vw, 17px)",
+                lineHeight: 1.65,
+                color: "rgba(245,240,232,0.65)",
+              }}
+            >
+              Each artifact is synthesized from measurement primitives — not
+              heuristics, not prompts. Below is a partial inventory of what
+              runs in the background, every minute the market is open.
+            </p>
+            <p
+              className="mt-4 font-serif text-[12px]"
+              style={{
+                letterSpacing: "0.04em",
+                color: "var(--pq-bronze)",
+              }}
+            >
+              Click any model to read its methodology.
+            </p>
+          </motion.div>
+
+          {/* Bronze divider */}
+          <div className="flex justify-center mb-10 md:mb-14" aria-hidden>
+            <span
+              className="h-px"
+              style={{ width: "6em", backgroundColor: "rgba(139,111,71,0.5)" }}
+            />
+          </div>
+
+          {/* 3-column inventory grid — unified heights & baselines */}
+          <motion.div
+            {...motionProps(staggerContainer)}
+            className="grid grid-cols-1 md:grid-cols-3 gap-14 md:gap-0 items-stretch"
+          >
+            {[
+              {
+                key: "QUANT",
+                label: "Quant",
+                numeric: 58,
+                numericLabel: "fifty-eight statistical models",
+                isWord: false,
+                caption: "statistical models",
+                models: MODEL_DEFS.filter((m) => m.category === "QUANT"),
+                extra: <li style={{ color: "var(--pq-muted)" }}>(+40 more)</li>,
+                footnote:
+                  "Including behavioral, cross-sectional, and ML-based variants.",
+                borderRight: true,
+              },
+              {
+                key: "RISK",
+                label: "Risk",
+                numeric: 7,
+                numericLabel: "seven-layer defense",
+                isWord: false,
+                caption: "7-Layer Defense",
+                models: MODEL_DEFS.filter((m) => m.category === "RISK"),
+                extra: null,
+                footnote:
+                  "Each layer acts as a circuit-breaker on every report: if a threshold is breached, the artifact flags it — not silences it.",
+                borderRight: true,
+              },
+              {
+                key: "AI",
+                label: "AI",
+                numeric: null,
+                wordValue: "Claude",
+                isWord: true,
+                caption: "Claude-augmented synthesis",
+                models: MODEL_DEFS.filter((m) => m.category === "AI"),
+                extra: null,
+                footnote:
+                  "AI is used to summarize the quant and risk outputs in plain English. It never originates a directive.",
+                borderRight: false,
+              },
+            ].map((col, idx) => (
+              <motion.div
+                key={col.key}
+                variants={prefersReduced ? undefined : fadeUp}
+                className={`flex flex-col px-0 md:px-10 lg:px-12 ${col.borderRight ? "md:border-r" : ""} ${idx > 0 ? "border-t md:border-t-0 pt-12 md:pt-0" : ""}`}
+                style={{
+                  borderColor: "rgba(245,240,232,0.08)",
+                }}
+              >
+                {/* Category label — fixed baseline */}
+                <p
+                  className="font-serif text-xs uppercase mb-5 flex items-center gap-3"
+                  style={{
+                    letterSpacing: "0.22em",
+                    color: "var(--pq-bronze)",
+                    minHeight: "1.25rem",
+                  }}
+                >
+                  <span aria-hidden style={{ opacity: 0.6, letterSpacing: "0.25em" }}>
+                    •—•
+                  </span>
+                  {col.label}
+                </p>
+
+                {/* Number / word — unified size, flex-aligned bottom baseline */}
+                <h3
+                  className="font-serif mb-2 font-mono tabular-nums"
+                  style={{
+                    fontSize: "clamp(4.5rem, 7vw, 6rem)",
+                    lineHeight: 1,
+                    letterSpacing: "-0.03em",
+                    fontWeight: 400,
+                    color: "var(--pq-ivory)",
+                    fontFamily: col.isWord
+                      ? "var(--font-serif), Georgia, serif"
+                      : undefined,
+                    display: "flex",
+                    alignItems: "flex-end",
+                    minHeight: "clamp(4.5rem, 7vw, 6rem)",
+                  }}
+                >
+                  {col.isWord ? (
+                    col.wordValue
+                  ) : (
+                    <CountUp
+                      to={col.numeric as number}
+                      ariaLabel={col.numericLabel}
+                    />
+                  )}
+                </h3>
+
+                {/* Caption — fixed height reserved so lists align */}
+                <p
+                  className="text-sm mb-10"
+                  style={{
+                    color: "var(--pq-muted)",
+                    minHeight: "1.25rem",
+                  }}
+                >
+                  {col.caption}
+                </p>
+
+                {/* Model list */}
+                <ul
+                  className="font-mono space-y-1"
+                  style={{
+                    fontSize: "13px",
+                    lineHeight: 1.8,
+                    fontVariantNumeric: "tabular-nums",
+                    color: "var(--pq-ivory)",
+                  }}
+                >
+                  {col.models.map((m) => (
+                    <li key={m.id}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedModelId(m.id)}
+                        aria-haspopup="dialog"
+                        aria-expanded={selectedModelId === m.id}
+                        className="pq-model-item text-left"
+                      >
+                        {m.name}
+                      </button>
+                    </li>
+                  ))}
+                  {col.extra}
+                </ul>
+
+                {/* Footnote — flush bottom of column */}
+                <p
+                  className="mt-auto pt-8 font-serif text-[11px] italic leading-relaxed"
+                  style={{ color: "var(--pq-muted)" }}
+                >
+                  {col.footnote}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Figure caption */}
+          <motion.p
+            {...motionProps(fadeUp)}
+            className="mt-20 md:mt-28 max-w-3xl font-serif text-[11.5px] italic leading-relaxed"
+            style={{ color: "var(--pq-muted)" }}
+          >
+            All models are measurement instruments. They quantify, detect, and
+            describe &mdash; they do not generate buy / sell / hold
+            instructions. Every output feeds the 17 artifacts as observations,
+            never as directives. Informational research only.
+          </motion.p>
+        </div>
+
+        {/* Engine drawer relocated below — rendered outside the content tree
+            to keep position:fixed predictable. */}
+      </section>
+
+
+
+      {/* ─── PAGE 5: PROOF OF DISCIPLINE ─── */}
       {/* ─── 3. INTRO / PROOF OF DISCIPLINE — Ivory band ─── */}
       <section
         className="relative pt-32 pb-28 md:pt-48 md:pb-36 lg:pt-56 lg:pb-44"
@@ -1430,10 +2102,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 2: SAMPLE REPORTS ─── */}
-      <FlipPage index={3} label="Sample reports">
+      {/* ─── PAGE 6: SAMPLE REPORTS ─── */}
       {/* ─── SAMPLE REPORTS — Vantablack, 3 open + S&P Proof + 3 locked previews ─── */}
       <section
         id="sample-reports"
@@ -1796,491 +2466,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 3: FEATURES BENTO ─── */}
-      <FlipPage index={4} label="Features">
-      {/* ─── 5. FEATURES BENTO — Vantablack lift ─── */}
-      <section
-        id="features"
-        className="py-20 md:py-28 lg:py-40"
-        style={{ backgroundColor: "#111111" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-20 md:mb-24">
-            <div className="mb-6 inline-flex items-center gap-2.5">
-              <span aria-hidden className="h-px w-7" style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }} />
-              <span
-                className="font-serif text-[11px] uppercase"
-                style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-              >
-                The Research Desk
-              </span>
-            </div>
-            <p className="pq-deck mb-4">
-              Research artifacts, not conversation.
-            </p>
-            <h2
-              className="pq-silver-matte font-serif mb-10 md:mb-14"
-              style={{
-                fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)",
-                lineHeight: 1.08,
-                letterSpacing: "-0.02em",
-                fontWeight: 500,
-              }}
-            >
-              Not a chatbot.
-              <br />
-              A research department that files.
-            </h2>
-            <p
-              className="font-serif"
-              style={{
-                fontSize: "clamp(15px, 1.3vw, 17px)",
-                lineHeight: 1.65,
-                color: "rgba(245,240,232,0.65)",
-              }}
-            >
-              Seventeen artifacts, drawn from your own holdings. Delivered as PDF, mirrored in the app.
-            </p>
-          </motion.div>
-
-          <motion.div
-            {...motionProps(staggerContainer)}
-            className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-14"
-          >
-            {features.map((feature) => {
-              const Icon = feature.icon;
-              return (
-                <motion.div
-                  key={feature.title}
-                  variants={fadeUp}
-                  className={`group relative p-7 md:p-8 rounded-sm transition-all duration-300 ${feature.span}`}
-                  style={{
-                    backgroundColor: "rgba(255,255,255,0.02)",
-                    border: "0.5pt solid rgba(245,240,232,0.10)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(139,111,71,0.55)";
-                    e.currentTarget.style.backgroundColor = "rgba(139,111,71,0.035)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(245,240,232,0.10)";
-                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.02)";
-                  }}
-                >
-                  <div className="flex items-start justify-between mb-8">
-                    <Icon className="w-6 h-6" strokeWidth={1.25} style={{ color: "var(--pq-bronze)" }} />
-                    <span
-                      className="font-mono tabular-nums text-[10.5px]"
-                      style={{ color: "var(--pq-muted)", letterSpacing: "0.14em" }}
-                    >
-                      {feature.id}
-                    </span>
-                  </div>
-                  <h3
-                    className="font-serif mb-3"
-                    style={{
-                      fontSize: "clamp(20px, 1.65vw, 24px)",
-                      lineHeight: 1.2,
-                      letterSpacing: "-0.01em",
-                      color: "var(--pq-ivory)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {feature.title}
-                  </h3>
-                  <p
-                    className="font-serif"
-                    style={{
-                      fontSize: "15px",
-                      lineHeight: 1.6,
-                      color: "rgba(245,240,232,0.65)",
-                    }}
-                  >
-                    {feature.description}
-                  </p>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-
-          <motion.p
-            {...motionProps(fadeUp)}
-            className="mt-12 font-serif text-[11px] italic leading-relaxed"
-            style={{ color: "var(--pq-muted)" }}
-          >
-            Informational research only. Not investment advice.
-          </motion.p>
-        </div>
-      </section>
-
-      {/* ─── Section fleuron — bronze rule + lozenge diamond ─── */}
-      <div
-        className="flex items-center justify-center py-2"
-        style={{ backgroundColor: "#111111" }}
-        aria-hidden
-      >
-        <span className="pq-section-fleuron">
-          <span />
-        </span>
-      </div>
-
-      </FlipPage>
-
-      {/* ─── FLIP PAGE 4: FEATURE EXPLORER ─── */}
-      <FlipPage index={5} label="Feature explorer">
-      {/* ─── 5b. FEATURE EXPLORER — Vantablack lift, click-to-reveal tabs ─── */}
-      <section
-        id="feature-explorer"
-        className="py-20 md:py-28 lg:py-40"
-        style={{ backgroundColor: "#111111" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div {...motionProps(fadeUp)} className="max-w-2xl mb-8 md:mb-12">
-            <div className="mb-6 inline-flex items-center gap-2.5">
-              <span aria-hidden className="h-px w-7" style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }} />
-              <span
-                className="font-serif text-[11px] uppercase"
-                style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-              >
-                Explore the Desk
-              </span>
-            </div>
-            <p className="pq-deck mb-4">
-              Seventeen artifacts. Six rendered today, eleven staged.
-            </p>
-            <h2
-              className="pq-silver-matte font-serif mb-8 md:mb-12"
-              style={{
-                fontSize: "clamp(2rem, 4vw, 3rem)",
-                lineHeight: 1.08,
-                letterSpacing: "-0.02em",
-                fontWeight: 500,
-              }}
-            >
-              What each artifact actually does.
-            </h2>
-            <p
-              className="font-serif"
-              style={{
-                fontSize: "clamp(15px, 1.3vw, 17px)",
-                lineHeight: 1.65,
-                color: "rgba(245,240,232,0.65)",
-              }}
-            >
-              Click any to read the methodology. Six are live; the remaining eleven are staged on the roadmap — methodology visible, samples reserved for members on release.
-            </p>
-          </motion.div>
-
-          {/* Explorer container */}
-          <motion.div
-            {...motionProps(fadeUp)}
-            className="rounded-sm overflow-hidden"
-            style={{
-              backgroundColor: "rgba(245,240,232,0.02)",
-              border: "0.5pt solid rgba(245,240,232,0.10)",
-            }}
-          >
-            {/* Mobile: horizontal scrolling chips */}
-            <div
-              className="md:hidden flex overflow-x-auto gap-2 p-4"
-              style={{
-                borderBottom: "0.5pt solid rgba(245,240,232,0.10)",
-                scrollbarWidth: "thin",
-              }}
-            >
-              {artifacts.map((a, i) => (
-                <button
-                  key={a.name}
-                  onClick={() => setSelectedArtifact(i)}
-                  className="shrink-0 font-serif px-3 py-2 rounded-sm transition-colors text-[12.5px]"
-                  style={{
-                    backgroundColor:
-                      selectedArtifact === i
-                        ? "rgba(139,111,71,0.12)"
-                        : "transparent",
-                    color:
-                      selectedArtifact === i
-                        ? "var(--pq-ivory)"
-                        : "rgba(245,240,232,0.55)",
-                    border:
-                      selectedArtifact === i
-                        ? "0.5pt solid rgba(139,111,71,0.55)"
-                        : "0.5pt solid rgba(245,240,232,0.10)",
-                    letterSpacing: "0.02em",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {a.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-col md:flex-row">
-              {/* Desktop: vertical tab list */}
-              <div
-                className="hidden md:block w-64 lg:w-80 shrink-0"
-                style={{
-                  borderRight: "0.5pt solid rgba(245,240,232,0.10)",
-                  maxHeight: "640px",
-                  overflowY: "auto",
-                }}
-                role="tablist"
-                aria-orientation="vertical"
-              >
-                {artifacts.map((a, i) => {
-                  const active = selectedArtifact === i;
-                  return (
-                    <button
-                      key={a.name}
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => setSelectedArtifact(i)}
-                      className="w-full text-left px-6 py-4 transition-all duration-150"
-                      style={{
-                        backgroundColor: active
-                          ? "rgba(139,111,71,0.08)"
-                          : "transparent",
-                        borderLeft: active
-                          ? "2px solid var(--pq-bronze)"
-                          : "2px solid transparent",
-                        borderBottom: "0.5pt solid rgba(245,240,232,0.06)",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!active) {
-                          e.currentTarget.style.backgroundColor =
-                            "rgba(245,240,232,0.04)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!active) {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                        }
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <span
-                          className="font-serif block"
-                          style={{
-                            fontSize: "16px",
-                            color: active
-                              ? "var(--pq-ivory)"
-                              : "rgba(245,240,232,0.70)",
-                            fontWeight: 500,
-                            letterSpacing: "-0.005em",
-                          }}
-                        >
-                          {a.name}
-                        </span>
-                        <span
-                          className="font-mono tabular-nums shrink-0 mt-1"
-                          style={{
-                            fontSize: "9px",
-                            letterSpacing: "0.18em",
-                            color: active
-                              ? "var(--pq-bronze)"
-                              : "var(--pq-muted)",
-                          }}
-                        >
-                          {a.tier}
-                        </span>
-                      </div>
-                      <span
-                        className="font-serif italic block mt-1"
-                        style={{
-                          fontSize: "13px",
-                          color: "var(--pq-muted)",
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {a.tagline}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Body panel */}
-              <div
-                className="flex-1 p-10 md:p-14"
-                role="tabpanel"
-                aria-live="polite"
-              >
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={selectedArtifact}
-                    initial={prefersReduced ? false : { opacity: 0, y: 8 }}
-                    animate={prefersReduced ? undefined : { opacity: 1, y: 0 }}
-                    exit={prefersReduced ? undefined : { opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <div className="mb-8 inline-flex items-center gap-2.5">
-                      <span
-                        aria-hidden
-                        className="h-px w-5"
-                        style={{ backgroundColor: "rgba(139,111,71,0.7)" }}
-                      />
-                      <span
-                        className="font-mono tabular-nums text-[10px] uppercase"
-                        style={{
-                          letterSpacing: "0.22em",
-                          color: "var(--pq-bronze)",
-                        }}
-                      >
-                        {artifacts[selectedArtifact].tier} · Methodology
-                      </span>
-                    </div>
-
-                    <h3
-                      className="font-serif mb-6"
-                      style={{
-                        fontSize: "22px",
-                        lineHeight: 1.2,
-                        letterSpacing: "-0.01em",
-                        color: "var(--pq-ivory)",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {artifacts[selectedArtifact].name}
-                    </h3>
-
-                    <p
-                      className="mb-8"
-                      style={{
-                        fontSize: "15px",
-                        lineHeight: 1.6,
-                        color: "rgba(245,240,232,0.78)",
-                      }}
-                    >
-                      {artifacts[selectedArtifact].body}
-                    </p>
-
-                    <p
-                      className="font-serif mb-4"
-                      style={{
-                        fontSize: "11px",
-                        letterSpacing: "0.22em",
-                        textTransform: "uppercase",
-                        color: "var(--pq-bronze)",
-                      }}
-                    >
-                      What&rsquo;s inside
-                    </p>
-                    <ul className="mb-10 space-y-2">
-                      {artifacts[selectedArtifact].bullets.map((b) => (
-                        <li
-                          key={b}
-                          className="flex items-start gap-3"
-                          style={{
-                            fontSize: "15px",
-                            lineHeight: 1.6,
-                            color: "rgba(245,240,232,0.78)",
-                          }}
-                        >
-                          <span
-                            aria-hidden
-                            className="shrink-0"
-                            style={{
-                              color: "var(--pq-bronze)",
-                              lineHeight: 1.6,
-                            }}
-                          >
-                            •
-                          </span>
-                          <span>{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <p
-                      className="font-serif italic mb-8"
-                      style={{
-                        fontSize: "13px",
-                        lineHeight: 1.55,
-                        color: "var(--pq-muted)",
-                      }}
-                    >
-                      Format: {artifacts[selectedArtifact].format}
-                    </p>
-
-                    {artifacts[selectedArtifact].sampleUrl ? (
-                      <a
-                        href={artifacts[selectedArtifact].sampleUrl as string}
-                        target="_blank"
-                        rel="noopener"
-                        className="group inline-flex items-center gap-2 font-serif transition-colors"
-                        style={{
-                          fontSize: "13.5px",
-                          color: "var(--pq-bronze)",
-                          letterSpacing: "0.02em",
-                        }}
-                      >
-                        View sample PDF
-                        <ArrowRight
-                          className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
-                          strokeWidth={1.5}
-                        />
-                      </a>
-                    ) : (
-                      <div
-                        className="inline-flex items-center gap-3 rounded-sm px-4 py-2.5"
-                        style={{
-                          border: "0.5pt solid rgba(139,111,71,0.35)",
-                          backgroundColor: "rgba(139,111,71,0.06)",
-                        }}
-                      >
-                        <Lock
-                          className="h-3 w-3"
-                          strokeWidth={1.75}
-                          style={{ color: "var(--pq-bronze)" }}
-                        />
-                        <span
-                          className="font-serif uppercase"
-                          style={{
-                            fontSize: "10.5px",
-                            letterSpacing: "0.22em",
-                            color: "var(--pq-bronze)",
-                          }}
-                        >
-                          Not yet public
-                        </span>
-                        <span
-                          aria-hidden
-                          className="h-3 w-px"
-                          style={{ backgroundColor: "rgba(139,111,71,0.3)" }}
-                        />
-                        <span
-                          className="font-serif italic"
-                          style={{
-                            fontSize: "12px",
-                            color: "rgba(245,240,232,0.6)",
-                          }}
-                        >
-                          Released to members on go-live
-                        </span>
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.p
-            {...motionProps(fadeUp)}
-            className="mt-12 font-serif text-[11px] italic leading-relaxed"
-            style={{ color: "var(--pq-muted)" }}
-          >
-            Informational only. Not investment advice.
-          </motion.p>
-        </div>
-      </section>
-
-      </FlipPage>
-
-      {/* ─── FLIP PAGE 5: HOW IT WORKS ─── */}
-      <FlipPage index={6} label="How it works">
+      {/* ─── PAGE 7: HOW IT WORKS ─── */}
       {/* ─── 6. HOW IT WORKS — Ivory, large watermark numerals ─── */}
       <section
         id="how-it-works"
@@ -2406,10 +2593,8 @@ export default function LandingPage() {
         </span>
       </div>
 
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 6: ARCHETYPE ─── */}
-      <FlipPage index={7} label="Archetype">
+      {/* ─── PAGE 8: ARCHETYPE ─── */}
       {/* ─── 5.5 ARCHETYPE — Ivory, calibration questionnaire + 8 archetypes ─── */}
       <section
         id="archetype"
@@ -2782,244 +2967,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 7: THE ENGINE ─── */}
-      <FlipPage index={8} label="The engine">
-      {/* ─── 5c. THE ENGINE — Vantablack, quant / risk / AI inventory ─── */}
-      <section
-        id="the-engine"
-        className="py-32 md:py-48 lg:py-56"
-        style={{ backgroundColor: "#0A0A0A", color: "var(--pq-ivory)" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <motion.div {...motionProps(fadeUp)} className="max-w-3xl mb-10 md:mb-14">
-            <div className="mb-6 inline-flex items-center gap-2.5">
-              <span
-                aria-hidden
-                className="h-px w-7"
-                style={{ backgroundColor: "rgba(139, 111, 71, 0.7)" }}
-              />
-              <span
-                className="font-serif text-[11px] uppercase"
-                style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
-              >
-                The Engine
-              </span>
-            </div>
-            <p className="pq-deck mb-4">
-              Measurement instruments, never directives.
-            </p>
-            <h2
-              className="pq-silver-matte font-serif mb-10"
-              style={{
-                fontSize: "clamp(2rem, 4vw, 3.25rem)",
-                lineHeight: 1.1,
-                letterSpacing: "-0.02em",
-                fontWeight: 500,
-              }}
-            >
-              Beneath every report,
-              <br />
-              58 models running quietly.
-            </h2>
-            <p
-              className="font-serif"
-              style={{
-                fontSize: "clamp(15px, 1.3vw, 17px)",
-                lineHeight: 1.65,
-                color: "rgba(245,240,232,0.65)",
-              }}
-            >
-              Each artifact is synthesized from measurement primitives — not
-              heuristics, not prompts. Below is a partial inventory of what
-              runs in the background, every minute the market is open.
-            </p>
-            <p
-              className="mt-4 font-serif text-[12px]"
-              style={{
-                letterSpacing: "0.04em",
-                color: "var(--pq-bronze)",
-              }}
-            >
-              Click any model to read its methodology.
-            </p>
-          </motion.div>
-
-          {/* Bronze divider */}
-          <div className="flex justify-center mb-10 md:mb-14" aria-hidden>
-            <span
-              className="h-px"
-              style={{ width: "6em", backgroundColor: "rgba(139,111,71,0.5)" }}
-            />
-          </div>
-
-          {/* 3-column inventory grid — unified heights & baselines */}
-          <motion.div
-            {...motionProps(staggerContainer)}
-            className="grid grid-cols-1 md:grid-cols-3 gap-14 md:gap-0 items-stretch"
-          >
-            {[
-              {
-                key: "QUANT",
-                label: "Quant",
-                numeric: 58,
-                numericLabel: "fifty-eight statistical models",
-                isWord: false,
-                caption: "statistical models",
-                models: MODEL_DEFS.filter((m) => m.category === "QUANT"),
-                extra: <li style={{ color: "var(--pq-muted)" }}>(+40 more)</li>,
-                footnote:
-                  "Including behavioral, cross-sectional, and ML-based variants.",
-                borderRight: true,
-              },
-              {
-                key: "RISK",
-                label: "Risk",
-                numeric: 7,
-                numericLabel: "seven-layer defense",
-                isWord: false,
-                caption: "7-Layer Defense",
-                models: MODEL_DEFS.filter((m) => m.category === "RISK"),
-                extra: null,
-                footnote:
-                  "Each layer acts as a circuit-breaker on every report: if a threshold is breached, the artifact flags it — not silences it.",
-                borderRight: true,
-              },
-              {
-                key: "AI",
-                label: "AI",
-                numeric: null,
-                wordValue: "Claude",
-                isWord: true,
-                caption: "Claude-augmented synthesis",
-                models: MODEL_DEFS.filter((m) => m.category === "AI"),
-                extra: null,
-                footnote:
-                  "AI is used to summarize the quant and risk outputs in plain English. It never originates a directive.",
-                borderRight: false,
-              },
-            ].map((col, idx) => (
-              <motion.div
-                key={col.key}
-                variants={prefersReduced ? undefined : fadeUp}
-                className={`flex flex-col px-0 md:px-10 lg:px-12 ${col.borderRight ? "md:border-r" : ""} ${idx > 0 ? "border-t md:border-t-0 pt-12 md:pt-0" : ""}`}
-                style={{
-                  borderColor: "rgba(245,240,232,0.08)",
-                }}
-              >
-                {/* Category label — fixed baseline */}
-                <p
-                  className="font-serif text-xs uppercase mb-5 flex items-center gap-3"
-                  style={{
-                    letterSpacing: "0.22em",
-                    color: "var(--pq-bronze)",
-                    minHeight: "1.25rem",
-                  }}
-                >
-                  <span aria-hidden style={{ opacity: 0.6, letterSpacing: "0.25em" }}>
-                    •—•
-                  </span>
-                  {col.label}
-                </p>
-
-                {/* Number / word — unified size, flex-aligned bottom baseline */}
-                <h3
-                  className="font-serif mb-2 font-mono tabular-nums"
-                  style={{
-                    fontSize: "clamp(4.5rem, 7vw, 6rem)",
-                    lineHeight: 1,
-                    letterSpacing: "-0.03em",
-                    fontWeight: 400,
-                    color: "var(--pq-ivory)",
-                    fontFamily: col.isWord
-                      ? "var(--font-serif), Georgia, serif"
-                      : undefined,
-                    display: "flex",
-                    alignItems: "flex-end",
-                    minHeight: "clamp(4.5rem, 7vw, 6rem)",
-                  }}
-                >
-                  {col.isWord ? (
-                    col.wordValue
-                  ) : (
-                    <CountUp
-                      to={col.numeric as number}
-                      ariaLabel={col.numericLabel}
-                    />
-                  )}
-                </h3>
-
-                {/* Caption — fixed height reserved so lists align */}
-                <p
-                  className="text-sm mb-10"
-                  style={{
-                    color: "var(--pq-muted)",
-                    minHeight: "1.25rem",
-                  }}
-                >
-                  {col.caption}
-                </p>
-
-                {/* Model list */}
-                <ul
-                  className="font-mono space-y-1"
-                  style={{
-                    fontSize: "13px",
-                    lineHeight: 1.8,
-                    fontVariantNumeric: "tabular-nums",
-                    color: "var(--pq-ivory)",
-                  }}
-                >
-                  {col.models.map((m) => (
-                    <li key={m.id}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedModelId(m.id)}
-                        aria-haspopup="dialog"
-                        aria-expanded={selectedModelId === m.id}
-                        className="pq-model-item text-left"
-                      >
-                        {m.name}
-                      </button>
-                    </li>
-                  ))}
-                  {col.extra}
-                </ul>
-
-                {/* Footnote — flush bottom of column */}
-                <p
-                  className="mt-auto pt-8 font-serif text-[11px] italic leading-relaxed"
-                  style={{ color: "var(--pq-muted)" }}
-                >
-                  {col.footnote}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* Figure caption */}
-          <motion.p
-            {...motionProps(fadeUp)}
-            className="mt-20 md:mt-28 max-w-3xl font-serif text-[11.5px] italic leading-relaxed"
-            style={{ color: "var(--pq-muted)" }}
-          >
-            All models are measurement instruments. They quantify, detect, and
-            describe &mdash; they do not generate buy / sell / hold
-            instructions. Every output feeds the 17 artifacts as observations,
-            never as directives. Informational research only.
-          </motion.p>
-        </div>
-
-        {/* Engine drawer relocated below — must render outside FlipPage so
-            its position:fixed escapes the 3D transform context. */}
-      </section>
-
-      </FlipPage>
-
-      {/* ─── FLIP PAGE 8: DASHBOARD PREVIEW ─── */}
-      <FlipPage index={9} label="Dashboard preview">
+      {/* ─── PAGE 9: DASHBOARD PREVIEW ─── */}
       {/* ─── 6. DASHBOARD PREVIEW — Ivory, Vantablack mockup ─── */}
       <section
         id="dashboard-preview"
@@ -3306,10 +3255,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 9: PRICING ─── */}
-      <FlipPage index={10} label="Pricing">
+      {/* ─── PAGE 10: PRICING ─── */}
       {/* ─── 7. PRICING — Vantablack, 3 tiers (21st.dev editorial pattern, KRW) ─── */}
       <section
         id="pricing"
@@ -3586,10 +3533,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 10: PULL-QUOTE BELT ─── */}
-      <FlipPage index={11} label="Voice of the desk">
+      {/* ─── PAGE 11: PULL-QUOTE BELT (Voice of the desk) ─── */}
       {/* ─── 8. PULL-QUOTE BELT — Ivory, minimal ─── */}
       <section
         className="py-32 md:py-48 lg:py-56"
@@ -3643,10 +3588,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 11: FAQ ─── */}
-      <FlipPage index={12} label="Questions">
+      {/* ─── PAGE 12: FAQ ─── */}
       {/* ─── 8b. FAQ — Vantablack, editorial accordion ─── */}
       <section
         id="faq"
@@ -3730,10 +3673,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      </FlipPage>
 
-      {/* ─── FLIP PAGE 12: FINAL CTA + SOCIAL PROOF + FOOTER (combined close) ─── */}
-      <FlipPage index={13} label="Close">
+      {/* ─── PAGE 13: FINAL CTA + SOCIAL PROOF + FOOTER ─── */}
       {/* ─── 9. FINAL CTA — Vantablack, centered ─── */}
       <section
         className="py-32 md:py-48 lg:py-56"
@@ -4041,12 +3982,10 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-      </FlipPage>
 
-      </FlipLandingShell>
 
-      {/* ─── Engine drawer (rendered outside FlipLandingShell so position:fixed
-              escapes the 3D transform context of the active FlipPage) ─── */}
+      {/* ─── Engine drawer (rendered at the root so position:fixed behaves
+              predictably and ESC/backdrop close always work) ─── */}
       <AnimatePresence>
         {selectedModel && (
           <>
