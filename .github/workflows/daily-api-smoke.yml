@@ -1,0 +1,278 @@
+name: Daily API Smoke
+
+on:
+  schedule:
+    - cron: '0 21 * * *'  # 21:00 UTC = 06:00 KST
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  smoke:
+    name: Endpoint smoke assertions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: GET /api/health — expect 200 + status ok
+        id: health
+        run: |
+          set +e
+          body=$(curl -sS -m 20 -w "\nHTTP:%{http_code}" \
+            https://RAILWAY_BACKEND_HOST.up.railway.app/api/health)
+          code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
+          payload=$(echo "$body" | head -n -1)
+          echo "code=$code" >> $GITHUB_OUTPUT
+          echo "payload=$payload" >> $GITHUB_OUTPUT
+
+          if [ "$code" != "200" ]; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+            echo "reason=/api/health returned HTTP $code (expected 200)" >> $GITHUB_OUTPUT
+          elif ! echo "$payload" | grep -q '"status":"ok"'; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+            echo "reason=/api/health HTTP 200 but status!=ok — payload: $payload" >> $GITHUB_OUTPUT
+          else
+            echo "failed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: GET /api/agent/status — expect 200 + enabled=false + legal_status=pending-counsel-review
+        id: agent_status
+        run: |
+          set +e
+          body=$(curl -sS -m 20 -w "\nHTTP:%{http_code}" \
+            https://RAILWAY_BACKEND_HOST.up.railway.app/api/agent/status)
+          code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
+          payload=$(echo "$body" | head -n -1)
+          echo "code=$code" >> $GITHUB_OUTPUT
+          echo "payload=$payload" >> $GITHUB_OUTPUT
+
+          reason=""
+          failed=false
+
+          if [ "$code" != "200" ]; then
+            failed=true
+            reason+="/api/agent/status returned HTTP $code (expected 200). "
+          fi
+
+          if ! echo "$payload" | grep -qE '"enabled"\s*:\s*false'; then
+            failed=true
+            reason+="enabled field is not false (agent kill switch may be off). "
+          fi
+
+          if ! echo "$payload" | grep -q '"legal_status":"pending-counsel-review"'; then
+            failed=true
+            reason+="legal_status != pending-counsel-review (compliance gate may be cleared prematurely). "
+          fi
+
+          echo "failed=$failed" >> $GITHUB_OUTPUT
+          echo "reason=$reason" >> $GITHUB_OUTPUT
+
+      - name: POST /api/broker/alpaca/connect — expect 401 or 503 alpaca-disabled
+        id: alpaca_connect
+        run: |
+          set +e
+          body=$(curl -sS -m 20 -w "\nHTTP:%{http_code}" \
+            -X POST \
+            -H 'Content-Type: application/json' \
+            -d '{}' \
+            https://RAILWAY_BACKEND_HOST.up.railway.app/api/broker/alpaca/connect)
+          code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
+          payload=$(echo "$body" | head -n -1)
+          echo "code=$code" >> $GITHUB_OUTPUT
+          echo "payload=$payload" >> $GITHUB_OUTPUT
+
+          # Acceptable: 401 (unauthenticated) or 503 with alpaca-disabled marker
+          if [ "$code" = "401" ]; then
+            echo "failed=false" >> $GITHUB_OUTPUT
+          elif [ "$code" = "503" ] && echo "$payload" | grep -qE 'alpaca.disabled|alpaca_disabled'; then
+            echo "failed=false" >> $GITHUB_OUTPUT
+          elif [ "$code" = "503" ]; then
+            # 503 without the expected marker — Alpaca kill switch text absent
+            echo "failed=true" >> $GITHUB_OUTPUT
+            echo "reason=POST /api/broker/alpaca/connect returned 503 but missing alpaca-disabled marker — payload: $payload" >> $GITHUB_OUTPUT
+          else
+            echo "failed=true" >> $GITHUB_OUTPUT
+            echo "reason=POST /api/broker/alpaca/connect returned HTTP $code (expected 401 or 503 alpaca-disabled)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: GET /api/market/indices?region=kr — expect 200 + KOSPI in [2000, 3500]
+        id: market_kr
+        run: |
+          set +e
+          body=$(curl -sS -m 20 -w "\nHTTP:%{http_code}" \
+            "https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/indices?region=kr")
+          code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
+          payload=$(echo "$body" | head -n -1)
+          echo "code=$code" >> $GITHUB_OUTPUT
+          echo "payload=$payload" >> $GITHUB_OUTPUT
+
+          reason=""
+          failed=false
+
+          if [ "$code" != "200" ]; then
+            failed=true
+            reason+="/api/market/indices?region=kr returned HTTP $code (expected 200). "
+          fi
+
+          if [ "$code" = "200" ]; then
+            # Extract KOSPI level from JSON — look for numeric value associated with KOSPI key
+            # Handles both {"KOSPI": 2650.12} and [{"symbol":"KOSPI","price":2650.12}] shapes
+            kospi_val=$(echo "$payload" | python3 -c "
+          import sys, json, re
+          try:
+              data = json.load(sys.stdin)
+              val = None
+              if isinstance(data, dict):
+                  for k, v in data.items():
+                      if 'kospi' in k.lower():
+                          val = float(v) if isinstance(v, (int, float)) else None
+                          break
+              elif isinstance(data, list):
+                  for item in data:
+                      if isinstance(item, dict):
+                          sym = str(item.get('symbol', '') or item.get('name', '') or item.get('index', '')).lower()
+                          if 'kospi' in sym:
+                              val = float(item.get('price') or item.get('level') or item.get('value') or 0)
+                              break
+              if val is None:
+                  print('NOT_FOUND')
+              else:
+                  print(val)
+          except Exception as e:
+              print(f'PARSE_ERROR:{e}')
+          " 2>/dev/null || echo "PARSE_ERROR")
+
+            if [ "$kospi_val" = "NOT_FOUND" ]; then
+              # KOSPI key absent — data shape may have changed; flag as warning, not hard fail
+              echo "::warning::KOSPI key not found in /api/market/indices?region=kr response — verify response shape"
+            elif echo "$kospi_val" | grep -qE '^PARSE_ERROR|^NOT_FOUND'; then
+              failed=true
+              reason+="KOSPI parse error: $kospi_val — payload: ${payload:0:300}. "
+            else
+              # Range check: 2000 <= KOSPI <= 3500
+              in_range=$(python3 -c "v=float('$kospi_val'); print('yes' if 2000 <= v <= 3500 else 'no')" 2>/dev/null)
+              if [ "$in_range" != "yes" ]; then
+                failed=true
+                reason+="KOSPI level $kospi_val is outside expected range [2000, 3500] — stale or corrupted data. "
+              fi
+            fi
+          fi
+
+          echo "failed=$failed" >> $GITHUB_OUTPUT
+          echo "reason=$reason" >> $GITHUB_OUTPUT
+
+      - name: Aggregate results
+        id: aggregate
+        run: |
+          any_failed=false
+          failures=""
+
+          if [ "${{ steps.health.outputs.failed }}" = "true" ]; then
+            any_failed=true
+            failures+="- [FAIL] /api/health: ${{ steps.health.outputs.reason }}\n"
+          else
+            failures+="- [PASS] /api/health: HTTP ${{ steps.health.outputs.code }}\n"
+          fi
+
+          if [ "${{ steps.agent_status.outputs.failed }}" = "true" ]; then
+            any_failed=true
+            failures+="- [FAIL] /api/agent/status: ${{ steps.agent_status.outputs.reason }}\n"
+          else
+            failures+="- [PASS] /api/agent/status: HTTP ${{ steps.agent_status.outputs.code }}\n"
+          fi
+
+          if [ "${{ steps.alpaca_connect.outputs.failed }}" = "true" ]; then
+            any_failed=true
+            failures+="- [FAIL] POST /api/broker/alpaca/connect: ${{ steps.alpaca_connect.outputs.reason }}\n"
+          else
+            failures+="- [PASS] POST /api/broker/alpaca/connect: HTTP ${{ steps.alpaca_connect.outputs.code }}\n"
+          fi
+
+          if [ "${{ steps.market_kr.outputs.failed }}" = "true" ]; then
+            any_failed=true
+            failures+="- [FAIL] /api/market/indices?region=kr: ${{ steps.market_kr.outputs.reason }}\n"
+          else
+            failures+="- [PASS] /api/market/indices?region=kr: HTTP ${{ steps.market_kr.outputs.code }}\n"
+          fi
+
+          echo "any_failed=$any_failed" >> $GITHUB_OUTPUT
+          {
+            echo "failures<<EOF"
+            printf '%b' "$failures"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Open incident issue on failure
+        if: steps.aggregate.outputs.any_failed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="[Smoke] Daily API smoke failed @ $(date -u +'%Y-%m-%d %H:%M') UTC"
+          body=$(cat <<'EOF'
+          ## Daily API Smoke — FAILED
+
+          One or more endpoint assertions did not meet expectations.
+
+          ### Endpoint results
+          ${{ steps.aggregate.outputs.failures }}
+
+          ### Response payloads (for debugging)
+          - `/api/health`: `${{ steps.health.outputs.payload }}`
+          - `/api/agent/status`: `${{ steps.agent_status.outputs.payload }}`
+          - `POST /api/broker/alpaca/connect`: `${{ steps.alpaca_connect.outputs.payload }}`
+          - `/api/market/indices?region=kr` (first 300 chars): `${{ steps.market_kr.outputs.payload }}`
+
+          ### Likely causes
+          - Railway cold start / deploy failure — check Railway logs
+          - Agent kill switch or legal_status field changed unexpectedly
+          - Alpaca disable guard removed from broker route
+          - KIS/pykrx market data source down or returning stale KOSPI level
+
+          Full run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          existing=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label autopilot,smoke \
+            --json number \
+            --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "$body"
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body "$body" \
+              --label autopilot,smoke
+          fi
+
+      - name: Close stale incident on recovery
+        if: steps.aggregate.outputs.any_failed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for num in $(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label autopilot,smoke \
+            --json number \
+            --jq '.[].number'); do
+            gh issue comment "$num" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "Smoke recovered at $(date -u +%FT%TZ). Auto-closing."
+            gh issue close "$num" --repo "$GITHUB_REPOSITORY"
+          done
+          echo "All smoke assertions PASSED — $(date -u +%FT%TZ)"
+
+      - name: Fail job if any assertion failed
+        if: steps.aggregate.outputs.any_failed == 'true'
+        run: exit 1
