@@ -52,3 +52,6 @@ Untitled*.canvas
 agent_worker/logs/
 logs/
 
+
+# Nightly bug hunt local artifacts
+nightly_artifacts/
