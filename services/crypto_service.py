@@ -32,11 +32,46 @@ logger = logging.getLogger(__name__)
 
 
 # ── Key bootstrap ─────────────────────────────────────────────────────────
+class MissingEncryptionKeyError(RuntimeError):
+    """Raised when PIVOX_BROKER_ENCRYPTION_KEY is required but absent.
+
+    Fail-fast in production: a missing key means ALL encrypted broker
+    credentials (KIS app_key/app_secret/account_no) will become
+    unrecoverable after the next process restart, silently logging users
+    out of their broker connections. This MUST block startup in prod.
+    """
+
+
+def _is_production() -> bool:
+    """Detect a production environment.
+
+    Heuristics (any one true => prod):
+      - FLASK_ENV=production
+      - PIVOX_ENV=production / prod
+      - RAILWAY_ENVIRONMENT_NAME=production (Railway-specific)
+      - DEPLOY_ENV / APP_ENV set to production/prod
+    Tests set FLASK_ENV=testing (see conftest.py) so they bypass this.
+    """
+    env_vars = (
+        os.environ.get("FLASK_ENV"),
+        os.environ.get("PIVOX_ENV"),
+        os.environ.get("RAILWAY_ENVIRONMENT_NAME"),
+        os.environ.get("DEPLOY_ENV"),
+        os.environ.get("APP_ENV"),
+    )
+    for v in env_vars:
+        if v and v.strip().lower() in ("production", "prod"):
+            return True
+    return False
+
+
 def _load_master_key() -> bytes:
     """Load or generate the 32-byte master key.
 
     Prefers `PIVOX_BROKER_ENCRYPTION_KEY` (base64, 32-byte decoded). Falls back
-    to `BROKER_ENCRYPTION_KEY`, then an ephemeral random key (dev/test).
+    to `BROKER_ENCRYPTION_KEY`. In **production** a missing key raises
+    :class:`MissingEncryptionKeyError` (fail-fast). In dev/test only, an
+    ephemeral random key is generated with a loud warning.
     """
     for var in ("PIVOX_BROKER_ENCRYPTION_KEY", "BROKER_ENCRYPTION_KEY"):
         raw = os.environ.get(var, "").strip()
@@ -53,11 +88,22 @@ def _load_master_key() -> bytes:
         # via SHA-256. Acceptable for a shared secret string.
         return hashlib.sha256(key).digest()
 
-    # No key configured — generate an ephemeral one. Warn loudly.
+    # No key configured.
+    if _is_production():
+        # Fail-fast: refuse to boot with an ephemeral key in prod. Losing this
+        # key between restarts corrupts every BrokerConnection row.
+        raise MissingEncryptionKeyError(
+            "PIVOX_BROKER_ENCRYPTION_KEY is not set in production. "
+            "Refusing to boot with an ephemeral key — broker credentials "
+            "would become unrecoverable on the next restart. "
+            "Set PIVOX_BROKER_ENCRYPTION_KEY (32 bytes, base64) and redeploy."
+        )
+    # Dev/test: ephemeral key with loud warning.
     logger.warning(
         "crypto_service: PIVOX_BROKER_ENCRYPTION_KEY not set — using an "
-        "ephemeral random key. Encrypted broker credentials will NOT survive "
-        "process restart. Set PIVOX_BROKER_ENCRYPTION_KEY in production."
+        "ephemeral random key (DEV/TEST ONLY). Encrypted broker credentials "
+        "will NOT survive process restart. Set PIVOX_BROKER_ENCRYPTION_KEY "
+        "in production (fail-fast enforced)."
     )
     return secrets.token_bytes(32)
 
