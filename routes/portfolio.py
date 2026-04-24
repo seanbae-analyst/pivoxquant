@@ -12,7 +12,7 @@ from security import trade_rate_limit
 from services import fx_service, cache_service
 from services.name_resolver import resolve_stock_name
 from services.container import engine, fetcher, realtime
-from services.price_overlay import overlay_prices
+from services.price_overlay import overlay_prices, parse_price_display
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -66,9 +66,23 @@ def get_portfolio():
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
         o = overlay.get(p.ticker) or {}
-        cur_px = float(o.get("price") or sd.get("price") or p.avg_cost or 0)
+        # Bug C (2026-04-24): add price_display parse as last-resort before
+        # avg_cost fallback. Matches the new behavior of overlay_prices
+        # tier-3 but also covers rows whose cache blob is so old that
+        # SignalCache.query returned no row at all.
+        cur_px_raw = o.get("price") or sd.get("price")
+        if not cur_px_raw:
+            cur_px_raw = parse_price_display(sd.get("price_display"))
+        cur_px = float(cur_px_raw or p.avg_cost or 0)
         observed_at = o.get("observed_at")
-        price_source = o.get("source") or ("stale" if sd.get("price") else "avg_cost")
+        if o.get("source"):
+            price_source = o["source"]
+        elif sd.get("price"):
+            price_source = "stale"
+        elif cur_px_raw:
+            price_source = "stale_display"
+        else:
+            price_source = "avg_cost"
         pnl = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
         cur = sd.get("currency", "KRW" if is_kr else "USD")
 
@@ -506,11 +520,22 @@ def _build_positions_list():
             observed_at = o.get("observed_at")
             change_pct = float(o.get("change_pct") or 0)
         else:
-            # Overlay has no fresh price — fall back to avg_cost (never stale cache).
-            cur_px = float(p.avg_cost or 0)
-            price_source = "stale"
-            observed_at = None
-            change_pct = 0.0
+            # Bug C (2026-04-24): before falling back to avg_cost, attempt a
+            # price_display parse. /api/portfolio/positions used to emit
+            # LAST=avg_cost (rendered as "•-" stale chip) whenever the overlay
+            # was empty, even when SignalCache had a legible "$402.91".
+            parsed_fallback = parse_price_display(sd.get("price_display"))
+            if parsed_fallback:
+                cur_px = parsed_fallback
+                price_source = "stale_display"
+                observed_at = None
+                change_pct = 0.0
+            else:
+                # Overlay has no fresh price — fall back to avg_cost (never stale cache).
+                cur_px = float(p.avg_cost or 0)
+                price_source = "stale"
+                observed_at = None
+                change_pct = 0.0
         currency = sd.get("currency", "KRW" if is_kr else "USD")
         name = _position_display_name(p, sd)
         opened_at = p.added_at.isoformat() if p.added_at else None

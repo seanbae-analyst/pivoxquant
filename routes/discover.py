@@ -228,8 +228,19 @@ def sectors():
     except Exception as e:
         logger.warning(f"discover.sectors upstream failed: {e}")
 
-    if len(rows) < 5:
-        logger.info("FMP rate limit — returning mock sectors fallback")
+    # Bug G (2026-04-24): FMP's sector-performance endpoint returns a full
+    # list of 11 GICS sectors with `"0%"` on market-closed windows. The
+    # old `len(rows) < 5` guard passed that through, so the UI showed
+    # 11 sectors all flat at 0.00% — indistinguishable from a real
+    # completely-flat tape. Now we reject *any* payload whose |d1| values
+    # are all below 0.001 (numerical noise threshold) and fall back to
+    # mock so at least the visual hierarchy is informative.
+    has_signal = any(abs(r.get("d1") or 0) > 0.001 for r in rows)
+    if len(rows) < 5 or not has_signal:
+        logger.info(
+            "discover.sectors: upstream returned %d rows, has_signal=%s — "
+            "using mock fallback", len(rows), has_signal,
+        )
         rows = list(mock.SECTORS)
 
     _section_set("sectors", rows)

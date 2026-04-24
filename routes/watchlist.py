@@ -10,7 +10,7 @@ from models import Watchlist, SignalCache
 from services import cache_service
 from services.container import engine
 from services.name_resolver import resolve_stock_name
-from services.price_overlay import overlay_prices
+from services.price_overlay import overlay_prices, parse_price_display
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -35,6 +35,18 @@ def _serialize(w: Watchlist, overlay_entry: dict | None = None) -> dict:
     change_1d_pct = o.get("change_pct")
     observed_at = o.get("observed_at")
     price_source = o.get("source") or "stale"
+
+    # Bug C (2026-04-24): Watchlist used to render "$0.0000" whenever the
+    # overlay came up empty, even though SignalCache stored a valid
+    # `price_display` like "$402.91". Derive a last-resort numeric price
+    # from the display string so UI never shows $0 when a legible value
+    # exists. Mark source "stale" so the UX chip is honest.
+    if not last_price:
+        parsed = parse_price_display(sd.get("price_display"))
+        if parsed:
+            last_price = parsed
+            if not price_source or price_source == "stale":
+                price_source = "stale_display"
 
     return {
         "id": w.id,

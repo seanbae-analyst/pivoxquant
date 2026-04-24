@@ -681,22 +681,27 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     }.get(kis_code, [kis_code])
 
     # 1) Live KIS quote (best — includes native d/d%).
+    # Bug D (2026-04-24): previously gated on `_rt.kis_available`, but that
+    # flag is a realtime-service-side init signal that can go False during a
+    # restart window even when the KIS keys are valid. KISService.__init__
+    # performs its own credential check (see `self.available` in
+    # kis_service.py) so we always *attempt* KIS here and let the service
+    # short-circuit internally. Keeps the KR-indices tiles alive when
+    # realtime init is briefly degraded.
     try:
-        from services.container import realtime as _rt
-        if getattr(_rt, "kis_available", False):
-            from kis_service import KISService
-            _svc = KISService()
-            for _code in _kis_code_candidates:
-                idx = _svc.get_index_price(_code)
-                if idx and idx.get("price"):
-                    level = float(idx["price"])
-                    change_pct = float(idx.get("change_pct") or 0)
-                    if _code != kis_code:
-                        logger.info(
-                            "market.indices KIS primary code %s empty; "
-                            "resolved via alternate %s", kis_code, _code,
-                        )
-                    break
+        from kis_service import KISService
+        _svc = KISService()
+        for _code in _kis_code_candidates:
+            idx = _svc.get_index_price(_code)
+            if idx and idx.get("price"):
+                level = float(idx["price"])
+                change_pct = float(idx.get("change_pct") or 0)
+                if _code != kis_code:
+                    logger.info(
+                        "market.indices KIS primary code %s empty; "
+                        "resolved via alternate %s", kis_code, _code,
+                    )
+                break
     except Exception as e:
         logger.debug(f"market.indices KIS {kis_code} failed: {e}")
 
@@ -720,22 +725,25 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     is_stale = False
 
     # 2a) KIS history FIRST (unit-consistent with live quote).
+    # Bug D (2026-04-24): attempt KIS directly without the realtime-side
+    # `kis_available` gate — KISService has its own credential check and
+    # returns None cleanly when keys are missing. The prior gate hid the
+    # history endpoint whenever realtime init was degraded, sending us to
+    # the unit-divergent FMP path.
     try:
-        from services.container import realtime as _rt
-        if getattr(_rt, "kis_available", False):
-            from kis_service import KISService
-            _svc = KISService()
-            for _code in _kis_code_candidates:
-                hist = _svc.get_index_history(_code, period="1y")
-                if hist:
-                    vals = [float(row.get("close"))
-                            for row in hist
-                            if row and row.get("close") is not None]
-                    if vals:
-                        import pandas as _pd
-                        closes = _pd.Series(vals)
-                        hist_source = "kis"
-                        break
+        from kis_service import KISService
+        _svc = KISService()
+        for _code in _kis_code_candidates:
+            hist = _svc.get_index_history(_code, period="1y")
+            if hist:
+                vals = [float(row.get("close"))
+                        for row in hist
+                        if row and row.get("close") is not None]
+                if vals:
+                    import pandas as _pd
+                    closes = _pd.Series(vals)
+                    hist_source = "kis"
+                    break
     except Exception as e:
         logger.debug(f"market.indices KIS history {kis_code} failed: {e}")
 
