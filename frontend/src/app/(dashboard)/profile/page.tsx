@@ -43,6 +43,7 @@ import {
 } from "@/lib/cfo/useCompanion";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 import { PersonaEvolution } from "@/components/dashboard/persona-evolution";
+import { PersonaV2Card } from "@/components/dashboard/persona-v2-card";
 
 /* ── Investor labels ── */
 
@@ -769,8 +770,16 @@ export default function ProfilePage() {
           </div>
         </Section>
 
+        {/* ── Persona classifier (9-dim observed) ── */}
+        <Section
+          kicker="04 · Observed persona"
+          title="How your trades read"
+        >
+          <PersonaV2Card />
+        </Section>
+
         {/* ── Living CFO ── */}
-        <Section kicker="04 · Living CFO" title="Your personal CFO">
+        <Section kicker="05 · Living CFO" title="Your personal CFO">
           <LivingCFOControls />
           <JournalCompanionSubsection
             user={user}

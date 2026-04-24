@@ -26,6 +26,7 @@
 import useSWR from "swr";
 import { useCallback } from "react";
 import { apiFetch, ApiError } from "@/lib/api";
+import { API } from "@/lib/endpoints";
 
 /* ═════════════ Types ═════════════ */
 
@@ -388,3 +389,191 @@ export const PERSONA_TAGLINES: Record<PersonaId, string> = {
   daytrader: "오늘 안에 답을 낸다.",
   beginner: "이해하지 못한 것에 돈을 걸지 않는다.",
 };
+
+/* ═════════════ Persona v2 (9-dim classifier) ═════════════
+ * Mirrors the backend response shapes in:
+ *   services/profile/persona_classifier_v2.classify_persona_multi
+ *   services/profile/group_benchmark.get_persona_stats / get_all_persona_stats
+ *
+ * Wired to the profile page Identity section. All language is
+ * *observational* — we never surface "recommend"/"advice" strings.
+ */
+
+/** 9 behavioural feature keys (load-bearing order — backend FEATURE_KEYS). */
+export type PersonaFeatureKey =
+  | "holding_period"
+  | "turnover"
+  | "sector_diversity"
+  | "ticker_diversity"
+  | "hold_variance"
+  | "loss_cut_discipline"
+  | "declared_risk"
+  | "conviction_stability"
+  | "feedback_engagement";
+
+export interface PersonaBreakdownRow {
+  feature: PersonaFeatureKey;
+  /** Korean UI label from backend FEATURE_LABELS. */
+  label: string;
+  /** Observed value in [0, 1]. */
+  value: number;
+  /** Centroid value of the winning persona in [0, 1]. */
+  centroid: number;
+  /** 1 - |value - centroid| in [0, 1]. Higher = closer to centroid. */
+  closeness: number;
+  /** Weight used in the cosine — 0.45 .. 1.25. */
+  weight: number;
+}
+
+export interface PersonaRankingEntry {
+  persona: PersonaId;
+  /** Similarity in (0, 1] — higher = closer. */
+  similarity: number;
+}
+
+export interface PersonaDetailResponse {
+  persona: PersonaId;
+  label: string;
+  tagline: string;
+  /** 0..100 confidence in the top-1 persona classification. */
+  confidence: number;
+  window_days: number;
+  /** True when observed trades < MIN_TRADES_FOR_OBSERVATION (10). */
+  data_sparse: boolean;
+  trade_count: number;
+  features: Record<PersonaFeatureKey, number>;
+  /** 1 if we had evidence for that feature, 0 if it defaulted to 0.5. */
+  present: Record<PersonaFeatureKey, 0 | 1>;
+  ranking: PersonaRankingEntry[];
+  breakdown: PersonaBreakdownRow[];
+  declared_persona: PersonaId | null;
+  last_computed_at: string;
+}
+
+export interface PersonaExplainResponse {
+  persona: PersonaId;
+  label: string;
+  confidence: number;
+  breakdown: PersonaBreakdownRow[];
+  features: Record<PersonaFeatureKey, number>;
+}
+
+/* ── Group benchmark ── */
+
+export type PersonaBenchmarkWindow = 30 | 90 | 365;
+
+export interface BenchmarkSectorShare {
+  sector: string;
+  /** Percent share, 0..100. */
+  share: number;
+}
+
+export interface BenchmarkMistake {
+  label: "disposition_effect" | "herding" | "anchoring" | string;
+  count: number;
+}
+
+export interface BenchmarkStats {
+  /** Median trade-level CAGR (%) across the group. */
+  avg_cagr: number;
+  avg_sharpe: number;
+  median_holding_days: number;
+  win_rate: number;
+  max_drawdown_avg: number;
+  most_held_sectors: BenchmarkSectorShare[];
+  common_mistakes: BenchmarkMistake[];
+  comparison_to_all: {
+    avg_cagr_all: number | null;
+    avg_sharpe_all: number | null;
+    median_holding_days_all: number | null;
+  };
+  framing: string;
+  persona: PersonaId;
+  window_days: number;
+}
+
+export interface BenchmarkAvailable {
+  available: true;
+  persona: PersonaId;
+  persona_label: string;
+  window_days: number;
+  stats: BenchmarkStats;
+}
+
+export interface BenchmarkUnavailable {
+  available: false;
+  reason: "insufficient_group_size" | "not_computed";
+  persona: PersonaId;
+  persona_label: string;
+  window_days: number;
+}
+
+export type PersonaBenchmarkResponse = BenchmarkAvailable | BenchmarkUnavailable;
+
+export interface PersonaBenchmarkAllResponse {
+  window_days: number;
+  personas: Record<
+    PersonaId,
+    | { available: true; label: string; stats: BenchmarkStats }
+    | {
+        available: false;
+        label: string;
+        reason: "insufficient_group_size" | "not_computed";
+      }
+  >;
+}
+
+/**
+ * Fetch the 9-dim persona classification for the current user.
+ *
+ * Unlike the CFO hero-card `usePersona()`, this one does **not** fall
+ * back to a mock — the backend endpoint is live (routes/profile.py).
+ * A brand-new user with no trade history still gets a valid payload
+ * with `data_sparse: true` from the backend, so the component can
+ * render a "더 많은 거래가 필요합니다" hint instead of an error.
+ */
+export function usePersonaDetail(windowDays: number = 90) {
+  return useSWR<PersonaDetailResponse>(
+    API.profile.personaDetail(windowDays),
+    (url) => apiFetch<PersonaDetailResponse>(url),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 300_000,
+    },
+  );
+}
+
+/**
+ * Fetch the user's own-group anonymized benchmark.
+ *
+ * Returns `available: false` when the persona bucket is < 20 users
+ * (legal floor enforced at the service layer). Never leaks individual
+ * records — only sector-level aggregates and mistake-label counts.
+ */
+export function usePersonaBenchmark(windowDays: PersonaBenchmarkWindow = 90) {
+  return useSWR<PersonaBenchmarkResponse>(
+    API.profile.personaBenchmark(windowDays),
+    (url) => apiFetch<PersonaBenchmarkResponse>(url),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 600_000,
+    },
+  );
+}
+
+/**
+ * Fetch benchmark stats for every persona in parallel (cross-group view).
+ * Suppressed personas return `available: false` with a reason.
+ */
+export function usePersonaBenchmarkAll(
+  windowDays: PersonaBenchmarkWindow = 90,
+) {
+  return useSWR<PersonaBenchmarkAllResponse>(
+    API.profile.personaBenchmarkAll(windowDays),
+    (url) => apiFetch<PersonaBenchmarkAllResponse>(url),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 600_000,
+    },
+  );
+}
