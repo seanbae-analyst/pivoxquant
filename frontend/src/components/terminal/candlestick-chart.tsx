@@ -1,0 +1,363 @@
+"use client";
+
+/**
+ * CandlestickChart — lightweight-charts v5 wrapper for PivoxQuant Terminal.
+ *
+ * Renders price + volume + MA overlays for a ticker against the backend
+ * /api/chart/{ticker}?period=... endpoint.
+ *
+ * Data note: the existing backend endpoint returns `{ data: [{ date,
+ * close, volume }] }` — no OHLC. We therefore plot close as a line series
+ * (MA20 / MA50 overlays on top) and volume as a histogram pane. When the
+ * backend gains OHLC we can promote the price series to CandlestickSeries
+ * without touching consumers.
+ *
+ * Props:
+ *   - ticker: "NVDA", "005930.KS", etc.
+ *   - timeframe: "1D" | "5D" | "1M" | "3M" | "6M" | "1Y" | "2Y"
+ *   - indicators: subset of "ma20" | "ma50" | "rsi" | "volume"
+ *
+ * Visual: dark terminal theme; bronze (#B8956A) for MA20, bronze-deep
+ * (#6F5636) dashed for MA50. Green/red volume bars.
+ */
+
+import { useEffect, useRef, useState } from "react";
+import type {
+  IChartApi,
+  ISeriesApi,
+  LineData,
+  HistogramData,
+  UTCTimestamp,
+} from "lightweight-charts";
+
+export type Timeframe = "1D" | "5D" | "1M" | "3M" | "6M" | "1Y" | "2Y";
+export type Indicator = "ma20" | "ma50" | "rsi" | "volume";
+
+const TIMEFRAME_TO_PERIOD: Record<Timeframe, string> = {
+  "1D": "1d",
+  "5D": "5d",
+  "1M": "1mo",
+  "3M": "3mo",
+  "6M": "6mo",
+  "1Y": "1y",
+  "2Y": "2y",
+};
+
+interface BackendPoint {
+  date: string;
+  close: number;
+  volume?: number;
+}
+interface BackendResponse {
+  ticker: string;
+  period: string;
+  data: BackendPoint[];
+  source?: string;
+  observed_at?: string;
+}
+
+export interface CandlestickChartProps {
+  ticker: string;
+  timeframe?: Timeframe;
+  indicators?: Indicator[];
+  /** Height of the primary price pane, px. Volume adds 80 more. Default 320. */
+  height?: number;
+  className?: string;
+}
+
+function toTs(s: string): UTCTimestamp {
+  const iso = s.length <= 10 ? `${s}T00:00:00Z` : `${s.replace(" ", "T")}:00Z`;
+  return Math.floor(new Date(iso).getTime() / 1000) as UTCTimestamp;
+}
+
+function sma(values: number[], window: number): (number | null)[] {
+  const out: (number | null)[] = [];
+  let sum = 0;
+  for (let i = 0; i < values.length; i++) {
+    sum += values[i];
+    if (i >= window) sum -= values[i - window];
+    out.push(i >= window - 1 ? sum / window : null);
+  }
+  return out;
+}
+
+export function CandlestickChart({
+  ticker,
+  timeframe = "1D",
+  indicators = ["ma20", "ma50", "volume"],
+  height = 320,
+  className = "",
+}: CandlestickChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const lineRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const ma20Ref = useRef<ISeriesApi<"Line"> | null>(null);
+  const ma50Ref = useRef<ISeriesApi<"Line"> | null>(null);
+  const volRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(null);
+
+  const wantVolume = indicators.includes("volume");
+  const wantMa20 = indicators.includes("ma20");
+  const wantMa50 = indicators.includes("ma50");
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    let cancelled = false;
+    let chart: IChartApi | null = null;
+    let ro: ResizeObserver | null = null;
+
+    (async () => {
+      const lc = await import("lightweight-charts");
+      if (cancelled || !container) return;
+
+      chart = lc.createChart(container, {
+        width: container.clientWidth,
+        height: height + (wantVolume ? 80 : 0),
+        layout: {
+          background: { type: lc.ColorType.Solid, color: "#0B0E14" },
+          textColor: "rgba(245,240,232,0.65)",
+          fontFamily:
+            "var(--font-mono), ui-monospace, Menlo, monospace",
+          fontSize: 10,
+        },
+        grid: {
+          vertLines: { color: "rgba(26,31,46,0.55)" },
+          horzLines: { color: "rgba(26,31,46,0.55)" },
+        },
+        rightPriceScale: {
+          borderColor: "#1A1F2E",
+        },
+        timeScale: {
+          borderColor: "#1A1F2E",
+          timeVisible: timeframe === "1D" || timeframe === "5D",
+          secondsVisible: false,
+        },
+        crosshair: {
+          horzLine: {
+            color: "#B8956A",
+            labelBackgroundColor: "#1A1F2E",
+          },
+          vertLine: {
+            color: "#B8956A",
+            labelBackgroundColor: "#1A1F2E",
+          },
+        },
+      });
+      chartRef.current = chart;
+
+      const line = chart.addSeries(lc.LineSeries, {
+        color: "rgba(245,240,232,0.92)",
+        lineWidth: 2,
+        priceLineColor: "#B8956A",
+        priceLineWidth: 1,
+        lastValueVisible: true,
+      });
+      lineRef.current = line;
+
+      if (wantMa20) {
+        ma20Ref.current = chart.addSeries(lc.LineSeries, {
+          color: "#B8956A",
+          lineWidth: 1,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          title: "MA20",
+        });
+      }
+      if (wantMa50) {
+        ma50Ref.current = chart.addSeries(lc.LineSeries, {
+          color: "#6F5636",
+          lineWidth: 1,
+          lineStyle: lc.LineStyle.Dashed,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          title: "MA50",
+        });
+      }
+      if (wantVolume) {
+        volRef.current = chart.addSeries(lc.HistogramSeries, {
+          priceFormat: { type: "volume" },
+          priceScaleId: "volume",
+          color: "rgba(125,180,135,0.55)",
+        });
+        chart.priceScale("volume").applyOptions({
+          scaleMargins: { top: 0.78, bottom: 0 },
+          borderColor: "#1A1F2E",
+        });
+      }
+
+      ro = new ResizeObserver(() => {
+        if (!chart || !container) return;
+        chart.applyOptions({
+          width: container.clientWidth,
+          height: height + (wantVolume ? 80 : 0),
+        });
+      });
+      ro.observe(container);
+    })().catch((e) => {
+      if (!cancelled) setErr(String(e?.message || e));
+    });
+
+    return () => {
+      cancelled = true;
+      ro?.disconnect();
+      if (chart) chart.remove();
+      chartRef.current = null;
+      lineRef.current = null;
+      ma20Ref.current = null;
+      ma50Ref.current = null;
+      volRef.current = null;
+    };
+  }, [height, wantVolume, wantMa20, wantMa50, timeframe]);
+
+  // Fetch + feed series whenever ticker / timeframe changes.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setErr(null);
+
+    const period = TIMEFRAME_TO_PERIOD[timeframe] ?? "6mo";
+    const url = `/api/chart/${encodeURIComponent(ticker)}?period=${period}`;
+
+    fetch(url, { credentials: "include" })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return (await r.json()) as BackendResponse;
+      })
+      .then((body) => {
+        if (cancelled) return;
+        const data = body.data || [];
+        setSource(body.source ?? null);
+
+        const priceData: LineData[] = data.map((p) => ({
+          time: toTs(p.date),
+          value: p.close,
+        }));
+        lineRef.current?.setData(priceData);
+
+        const closes = data.map((p) => p.close);
+        if (ma20Ref.current) {
+          const ma20 = sma(closes, 20);
+          const ma20Data: LineData[] = [];
+          ma20.forEach((v, i) => {
+            if (v != null) ma20Data.push({ time: toTs(data[i].date), value: v });
+          });
+          ma20Ref.current.setData(ma20Data);
+        }
+        if (ma50Ref.current) {
+          const ma50 = sma(closes, 50);
+          const ma50Data: LineData[] = [];
+          ma50.forEach((v, i) => {
+            if (v != null) ma50Data.push({ time: toTs(data[i].date), value: v });
+          });
+          ma50Ref.current.setData(ma50Data);
+        }
+        if (volRef.current) {
+          const volData: HistogramData[] = data.map((p, i) => {
+            const prev = i > 0 ? data[i - 1].close : p.close;
+            const up = p.close >= prev;
+            return {
+              time: toTs(p.date),
+              value: p.volume ?? 0,
+              color: up ? "rgba(125,180,135,0.55)" : "rgba(209,136,136,0.55)",
+            };
+          });
+          volRef.current.setData(volData);
+        }
+        chartRef.current?.timeScale().fitContent();
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setErr(String(e?.message || e));
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ticker, timeframe]);
+
+  return (
+    <div
+      className={`pq-terminal-chart ${className}`.trim()}
+      style={{
+        background: "#0B0E14",
+        border: "1px solid #1A1F2E",
+        position: "relative",
+      }}
+    >
+      <div
+        className="flex items-center justify-between px-3 py-2"
+        style={{ borderBottom: "1px solid #1A1F2E" }}
+      >
+        <div className="flex items-center gap-3">
+          <span
+            className="font-mono"
+            style={{
+              fontSize: 11.5,
+              letterSpacing: "0.12em",
+              color: "rgba(245,240,232,0.98)",
+              fontWeight: 500,
+            }}
+          >
+            {ticker}
+          </span>
+          <span
+            className="font-mono uppercase"
+            style={{
+              fontSize: 9.5,
+              letterSpacing: "0.22em",
+              color: "#B8956A",
+              borderLeft: "1px solid #1A1F2E",
+              paddingLeft: 12,
+            }}
+          >
+            {timeframe}
+          </span>
+        </div>
+        <div
+          className="font-mono uppercase"
+          style={{
+            fontSize: 9,
+            letterSpacing: "0.22em",
+            color: "rgba(245,240,232,0.45)",
+          }}
+        >
+          {loading
+            ? "Loading…"
+            : err
+              ? "Unavailable"
+              : source
+                ? `src · ${source}`
+                : "observed"}
+        </div>
+      </div>
+
+      <div ref={containerRef} style={{ width: "100%" }} />
+
+      {err && !loading && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            color: "rgba(245,240,232,0.45)",
+            fontSize: 11,
+            fontFamily: "var(--font-mono), ui-monospace, monospace",
+          }}
+        >
+          chart data unavailable
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default CandlestickChart;
