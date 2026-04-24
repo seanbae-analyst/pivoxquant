@@ -27,6 +27,7 @@ template falls back to the qualitative version of the same warning.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Final, Mapping
 
@@ -34,6 +35,13 @@ from services.artifacts.persona_resolver import (
     DEFAULT_PERSONA,
     VALID_PERSONAS,
 )
+from services.legal.forbidden_terms import (
+    FORBIDDEN_DIRECTIVE_TERMS,
+    assert_legal_safe as _assert_legal_safe_canonical,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -223,32 +231,68 @@ _GENERIC: Final[_WarningTemplate] = _WarningTemplate(
 # Legal scrub (defense-in-depth — primary filter is legal_filter.py)
 # ─────────────────────────────────────────────────────────────────────
 
-_FORBIDDEN_TERMS: Final[tuple[str, ...]] = (
-    # English
-    "buy", "sell", "hold",
-    "recommend", "recommendation", "advice", "advise", "advisor",
-    "ai coach", "investment coach",
-    # Korean
-    "추천", "조언", "투자 코치", "매수", "매도", "보유하세요",
-)
+# Backwards-compat alias. Tests reference ``_FORBIDDEN_TERMS`` as a
+# module attribute; we keep the symbol but pull from the canonical set
+# in :mod:`services.legal.forbidden_terms` so the lists cannot diverge
+# again. Sorted so the tuple order is deterministic for any caller
+# that snapshots it.
+_FORBIDDEN_TERMS: Final[tuple[str, ...]] = tuple(sorted(FORBIDDEN_DIRECTIVE_TERMS))
 
 
 def _assert_legal_safe(text: str, where: str) -> None:
-    lowered = text.lower()
-    for term in _FORBIDDEN_TERMS:
-        if term in lowered:
-            raise ValueError(
-                f"forbidden term '{term}' in persona warning copy at "
-                f"{where!r}: {text!r}"
-            )
+    """Delegate to the canonical scrub; preserved for in-module callers."""
+    _assert_legal_safe_canonical(text, where)
+
+
+# Templates flagged at import time. Failed templates are removed from
+# :data:`_TEMPLATES_SAFE` and :func:`generate_warning` falls back to
+# the persona-neutral generic copy. The runtime ``_assert_legal_safe``
+# call on rendered output (for the with-stats path) is unchanged so
+# stat injection cannot smuggle a forbidden term back in.
+_TEMPLATES_SAFE: dict[tuple[str, str], _WarningTemplate] = {}
 
 
 def _audit_all() -> None:
-    for (persona, sig), tpl in _TEMPLATES.items():
-        _assert_legal_safe(tpl.qualitative, f"{persona}/{sig}.qualitative")
+    """Scrub every template at import time. Fail-safe (does not raise).
+
+    Each violation is logged at ``CRITICAL`` and the offending template
+    is dropped from :data:`_TEMPLATES_SAFE` — :func:`generate_warning`
+    will then fall back to the generic copy for that ``(persona,
+    signal)`` combination. The previous behaviour (raise at import)
+    blocked the entire artifact pipeline on a single bad string; the
+    fail-safe path keeps the rest of the catalogue available while ops
+    fixes the regression.
+    """
+    for key, tpl in _TEMPLATES.items():
+        persona, sig = key
+        bad = False
+        try:
+            _assert_legal_safe(tpl.qualitative, f"{persona}/{sig}.qualitative")
+        except ValueError as exc:
+            logger.critical(
+                "persona_warnings template tainted at %s/%s.qualitative: %s",
+                persona, sig, exc,
+            )
+            bad = True
         if tpl.with_stats is not None:
-            _assert_legal_safe(tpl.with_stats, f"{persona}/{sig}.with_stats")
-    _assert_legal_safe(_GENERIC.qualitative, "GENERIC.qualitative")
+            try:
+                _assert_legal_safe(tpl.with_stats, f"{persona}/{sig}.with_stats")
+            except ValueError as exc:
+                logger.critical(
+                    "persona_warnings template tainted at %s/%s.with_stats: %s",
+                    persona, sig, exc,
+                )
+                bad = True
+        if not bad:
+            _TEMPLATES_SAFE[key] = tpl
+    try:
+        _assert_legal_safe(_GENERIC.qualitative, "GENERIC.qualitative")
+    except ValueError as exc:  # pragma: no cover — generic must always be clean
+        # Generic is the universal fallback; if it's tainted there is
+        # nowhere left to fall back to. Hard fail.
+        raise ValueError(
+            f"persona_warnings generic copy tainted: {exc}"
+        ) from exc
 
 
 _audit_all()
@@ -292,7 +336,9 @@ def generate_warning(
     if signal_type not in SIGNAL_TYPES:
         return _GENERIC.qualitative
 
-    tpl = _TEMPLATES.get((code, signal_type))
+    # Pull from the audited subset; tainted templates are absent and
+    # collapse to the persona-neutral generic copy.
+    tpl = _TEMPLATES_SAFE.get((code, signal_type))
     if tpl is None:
         return _GENERIC.qualitative
 

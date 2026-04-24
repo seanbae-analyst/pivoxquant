@@ -30,12 +30,14 @@ Design notes
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Iterable
 
 import pandas as pd
 
 from models import TradeHistory, InvestmentProfile
+from .common_util import sector_hhi, utc_now as _utc_now
+from .fifo_util import fifo_match_closed_trades, fifo_open_position_ages
 from .persona_analytics import (
     DECLARED_TO_PERSONA,
     PERSONA_CODES,
@@ -172,36 +174,16 @@ def _rolling_series(
 # ─────────────────────────────────────────────────────────────────────
 
 def _holding_period_days(trades: list[TradeHistory]) -> float:
-    """FIFO-match BUY/SELL per ticker; mean days held."""
-    opens: dict[str, list[tuple[datetime, float]]] = {}
-    hold_days: list[float] = []
-    for t in trades:
-        if not t.traded_at or not t.ticker:
-            continue
-        action = (t.action or "").upper()
-        key = t.ticker.upper()
-        if action == "BUY":
-            opens.setdefault(key, []).append((t.traded_at, float(t.shares or 0.0)))
-        elif action == "SELL":
-            remaining = float(t.shares or 0.0)
-            queue = opens.get(key, [])
-            while remaining > 1e-9 and queue:
-                buy_time, buy_sh = queue[0]
-                take = min(buy_sh, remaining)
-                hold_days.append(max(0.0, (t.traded_at - buy_time).total_seconds() / 86400.0))
-                remaining -= take
-                if take >= buy_sh - 1e-9:
-                    queue.pop(0)
-                else:
-                    queue[0] = (buy_time, buy_sh - take)
-    if hold_days:
-        return sum(hold_days) / len(hold_days)
-    # Fallback — average elapsed time of still-open positions.
-    ref = trades[-1].traded_at if trades and trades[-1].traded_at else datetime.utcnow()
-    elapsed = []
-    for queue in opens.values():
-        for buy_time, _sh in queue:
-            elapsed.append(max(0.0, (ref - buy_time).total_seconds() / 86400.0))
+    """FIFO-match BUY/SELL per ticker; mean days held.
+
+    Delegates to :mod:`fifo_util` so this module agrees byte-for-byte
+    with the other 3 callers. Fallback policy: ``trades[-1].traded_at``
+    is preferred over ``utcnow`` (canonicalised in ``fifo_util``).
+    """
+    pairs = fifo_match_closed_trades(trades)
+    if pairs:
+        return sum(p.hold_days for p in pairs) / len(pairs)
+    elapsed = fifo_open_position_ages(trades)
     return sum(elapsed) / len(elapsed) if elapsed else 0.0
 
 
@@ -214,19 +196,15 @@ def _sector_tilt_hhi(
     trades: list[TradeHistory],
     sector_map: dict[str, str],
 ) -> float:
+    """HHI on traded-volume weighted sector exposure (higher = more tilt)."""
     volume_by_sector: dict[str, float] = {}
-    total = 0.0
     for t in trades:
         sector = sector_map.get((t.ticker or "").upper(), "UNKNOWN")
         amount = abs(float(t.total_value or 0.0)) or abs(float(t.shares or 0.0))
         if amount <= 0:
             continue
         volume_by_sector[sector] = volume_by_sector.get(sector, 0.0) + amount
-        total += amount
-    if total <= 0 or not volume_by_sector:
-        return 0.0
-    hhi = sum((v / total) ** 2 for v in volume_by_sector.values())
-    return max(0.0, min(1.0, hhi))  # NB: frontend treats higher = more tilt
+    return sector_hhi(volume_by_sector)
 
 
 def _round_float(value: float, *, ndigits: int) -> float:
@@ -234,10 +212,6 @@ def _round_float(value: float, *, ndigits: int) -> float:
         return round(float(value), ndigits)
     except (TypeError, ValueError):
         return 0.0
-
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 # Keep symbols referenced by tests happy.

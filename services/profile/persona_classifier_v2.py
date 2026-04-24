@@ -40,7 +40,9 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+
+from flask import g, has_request_context
 
 from models import (
     ArtifactFeedback,
@@ -50,6 +52,8 @@ from models import (
     WeeklyPulse,
 )
 
+from .common_util import utc_now as _utc_now
+from .fifo_util import fifo_match_closed_trades
 from .persona_analytics import (
     PERSONA_CODES,
     PERSONA_LABELS,
@@ -238,36 +242,21 @@ def _extract_features(
 
 
 def _hold_time_cv(trades: list[TradeHistory]) -> float | None:
-    """Coefficient of variation over FIFO-matched realized hold days."""
-    opens: dict[str, list[tuple[datetime, float]]] = {}
-    holds: list[float] = []
-    for t in trades:
-        if not t.traded_at or not t.ticker:
-            continue
-        key = t.ticker.upper()
-        action = (t.action or "").upper()
-        if action == "BUY":
-            opens.setdefault(key, []).append((t.traded_at, float(t.shares or 0.0)))
-        elif action == "SELL":
-            remaining = float(t.shares or 0.0)
-            queue = opens.get(key, [])
-            while remaining > 1e-9 and queue:
-                buy_time, buy_sh = queue[0]
-                take = min(buy_sh, remaining)
-                holds.append(max(0.0, (t.traded_at - buy_time).total_seconds() / 86400.0))
-                remaining -= take
-                if take >= buy_sh - 1e-9:
-                    queue.pop(0)
-                else:
-                    queue[0] = (buy_time, buy_sh - take)
+    """Coefficient of variation over FIFO-matched realized hold days.
+
+    Delegates to :mod:`fifo_util` so the pairing semantics match the
+    other three callers exactly. Returns ``None`` when fewer than 3
+    closed pairs exist (CV is unstable below that count) or when the
+    mean hold collapses to ~0 (degenerate intraday-only sample).
+    """
+    holds = [p.hold_days for p in fifo_match_closed_trades(trades)]
     if len(holds) < 3:
         return None
     mean = sum(holds) / len(holds)
     if mean <= 1e-9:
         return None
     var = sum((h - mean) ** 2 for h in holds) / len(holds)
-    stdev = math.sqrt(var)
-    return stdev / mean
+    return math.sqrt(var) / mean
 
 
 def _loss_cut_discipline(trades: list[TradeHistory]) -> float | None:
@@ -281,36 +270,17 @@ def _loss_cut_discipline(trades: list[TradeHistory]) -> float | None:
     Cuts losers in ~half the time of winners → discipline ≈ 0.75+.
     Rides losers, takes profits early (classic disposition) → < 0.5.
     """
-    # Use stored pnl as primary source; fall back to FIFO match.
+    # Stored pnl is the primary win/loss signal; fall back to derived
+    # buy_px vs sell_px when pnl is missing or zero.
     win_holds: list[float] = []
     loss_holds: list[float] = []
-    opens: dict[str, list[tuple[datetime, float, float]]] = {}  # (time, shares, price)
-    for t in trades:
-        if not t.traded_at or not t.ticker:
-            continue
-        key = t.ticker.upper()
-        action = (t.action or "").upper()
-        if action == "BUY":
-            opens.setdefault(key, []).append(
-                (t.traded_at, float(t.shares or 0.0), float(t.price_per_share or 0.0))
-            )
-        elif action == "SELL":
-            remaining = float(t.shares or 0.0)
-            sell_px = float(t.price_per_share or 0.0)
-            queue = opens.get(key, [])
-            pnl = float(t.pnl or 0.0)
-            while remaining > 1e-9 and queue:
-                buy_time, buy_sh, buy_px = queue[0]
-                take = min(buy_sh, remaining)
-                hold = max(0.0, (t.traded_at - buy_time).total_seconds() / 86400.0)
-                # Prefer stored pnl, else derived.
-                is_win = (pnl > 0) if abs(pnl) > 1e-9 else (sell_px > buy_px)
-                (win_holds if is_win else loss_holds).append(hold)
-                remaining -= take
-                if take >= buy_sh - 1e-9:
-                    queue.pop(0)
-                else:
-                    queue[0] = (buy_time, buy_sh - take, buy_px)
+    for pair in fifo_match_closed_trades(trades):
+        is_win = (
+            (pair.sell_pnl > 0)
+            if abs(pair.sell_pnl) > 1e-9
+            else (pair.sell_price > pair.buy_price)
+        )
+        (win_holds if is_win else loss_holds).append(pair.hold_days)
 
     if not win_holds or not loss_holds:
         return None
@@ -444,12 +414,56 @@ def _breakdown(vec: dict[str, float], best_persona: str) -> list[dict]:
 # Public API
 # ─────────────────────────────────────────────────────────────────────
 
+# ``flask.g`` cache key. Stored as ``g._persona_classify_cache``;
+# cleared automatically at the end of every request.
+_REQUEST_CACHE_ATTR = "_persona_classify_cache"
+
+
+def _request_cache_get(key: tuple[int, int]) -> dict | None:
+    """Return cached classification for ``(user_id, window_days)`` if any.
+
+    Returns ``None`` outside of a Flask request context (e.g. cron jobs)
+    so the caller still computes fresh — this avoids leaking state
+    across cron iterations.
+    """
+    if not has_request_context():
+        return None
+    cache = getattr(g, _REQUEST_CACHE_ATTR, None)
+    if not isinstance(cache, dict):
+        return None
+    return cache.get(key)
+
+
+def _request_cache_set(key: tuple[int, int], value: dict) -> None:
+    if not has_request_context():
+        return
+    cache = getattr(g, _REQUEST_CACHE_ATTR, None)
+    if not isinstance(cache, dict):
+        cache = {}
+        setattr(g, _REQUEST_CACHE_ATTR, cache)
+    cache[key] = value
+
+
 def classify_persona_multi(
     user_id: int,
     window_days: int = 90,
     now: datetime | None = None,
 ) -> dict:
     """Classify a user on the 9-D feature vector.
+
+    Per-request memoization
+    -----------------------
+    Within a single Flask request the result is cached on ``flask.g``
+    keyed by ``(user_id, window_days)``. This is critical because both
+    :func:`get_persona_confidence` and
+    :func:`explain_persona_classification` previously re-ran the full
+    DB-heavy pipeline for the same user — a single endpoint could end
+    up hitting the trades / positions / pulse / feedback tables 3 times.
+
+    Cache is bypassed when:
+      * No Flask request context (cron / CLI calls always recompute).
+      * Caller passes an explicit ``now`` (forces a deterministic
+        recompute, used by tests).
 
     Returns
     -------
@@ -473,6 +487,10 @@ def classify_persona_multi(
         "last_computed_at": "2026-04-24T...",
     }
     """
+    if now is None:
+        cached = _request_cache_get((int(user_id), int(window_days)))
+        if cached is not None:
+            return cached
     now = _utc_now() if now is None else now
 
     trades = _fetch_trades(user_id)
@@ -493,7 +511,7 @@ def classify_persona_multi(
     confidence = _confidence_from_ranking(ranking, bundle.present)
     data_sparse = trade_count < MIN_TRADES_FOR_OBSERVATION
 
-    return {
+    payload = {
         "persona":          best_persona,
         "label":            PERSONA_LABELS[best_persona],
         "tagline":          PERSONA_TAGLINES[best_persona],
@@ -511,6 +529,11 @@ def classify_persona_multi(
         "declared_persona": declared,
         "last_computed_at": now.isoformat(),
     }
+    # Only cache classifications keyed off the implicit clock — caller-
+    # supplied ``now`` is reserved for deterministic test paths and
+    # must not leak into the per-request cache.
+    _request_cache_set((int(user_id), int(window_days)), payload)
+    return payload
 
 
 def get_persona_confidence(user_id: int, window_days: int = 90) -> int:
@@ -537,9 +560,10 @@ def explain_persona_classification(user_id: int, window_days: int = 90) -> dict:
 # ─────────────────────────────────────────────────────────────────────
 # Utilities
 # ─────────────────────────────────────────────────────────────────────
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+#
+# ``_utc_now`` is now imported from :mod:`services.profile.common_util`
+# (see top of file). The previous local copy is removed to keep the
+# clock semantics identical across the profile package.
 
 
 __all__ = [

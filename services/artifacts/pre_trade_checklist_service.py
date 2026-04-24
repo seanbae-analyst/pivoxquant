@@ -45,6 +45,7 @@ re-run the filter for defense-in-depth.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Final, Mapping, Sequence
 
@@ -52,6 +53,13 @@ from services.artifacts.persona_resolver import (
     DEFAULT_PERSONA,
     VALID_PERSONAS,
 )
+from services.legal.forbidden_terms import (
+    FORBIDDEN_DIRECTIVE_TERMS,
+    assert_legal_safe as _assert_legal_safe_canonical,
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -329,46 +337,79 @@ assert set(_PERSONA_SPECIFIC.keys()) == set(VALID_PERSONAS), (
 # Legal scrub — catch regression before it ships
 # ─────────────────────────────────────────────────────────────────────
 
-# Kept narrow and explicit. This list is deliberately redundant with
-# ``services/legal_filter.py`` so that this module can fail at import
-# time (not at request time) if someone slips in a forbidden term.
-_FORBIDDEN_TERMS: Final[tuple[str, ...]] = (
-    # English (lowercased match)
-    "buy", "sell", "hold",
-    "recommend", "recommendation", "advice", "advise", "advisor",
-    "ai coach", "investment coach",
-    # Korean — "매수/매도" are directive tokens forbidden by 자본시장법.
-    # "보유" (hold / holding period) is a neutral accounting term and is
-    # NOT in this list — it appears in legitimate copy like "보유 기간".
-    "추천", "조언", "투자 코치", "매수", "매도",
-)
+# Backwards-compatible alias. Tests historically referenced
+# ``_FORBIDDEN_TERMS`` as a tuple — preserve the symbol but pull the
+# canonical set from :mod:`services.legal.forbidden_terms` so adding
+# a term in one place propagates everywhere.
+_FORBIDDEN_TERMS: Final[tuple[str, ...]] = tuple(sorted(FORBIDDEN_DIRECTIVE_TERMS))
 
 
 def _assert_legal_safe(text: str, where: str) -> None:
-    """Raise ValueError if ``text`` contains any forbidden term.
+    """Thin wrapper around :func:`services.legal.forbidden_terms.assert_legal_safe`.
 
-    Matching is case-insensitive and whitespace-tolerant. Korean terms
-    are matched on the raw substring (case folding is a no-op for
-    Hangul but kept uniform for English).
+    Kept as a module-local symbol so existing callers / tests continue
+    to import from here. The body delegates so adding a term to the
+    canonical set is the only change needed.
     """
-    lowered = text.lower()
-    for term in _FORBIDDEN_TERMS:
-        if term in lowered:
-            raise ValueError(
-                f"forbidden term '{term}' found in pre-trade checklist "
-                f"copy at {where!r}: {text!r}"
-            )
+    _assert_legal_safe_canonical(text, where)
+
+
+# Personas marked as "tainted" at import time. Any persona with a
+# question that fails the legal scrub is dropped from
+# :func:`build_checklist` so a single regression cannot crash the whole
+# app — but the offending persona returns the universal block only and
+# every failure is logged at ``CRITICAL`` for ops to triage.
+_TAINTED_PERSONAS: set[str] = set()
 
 
 def _audit_all() -> None:
-    """Run the legal scrub on every question at import time."""
+    """Run the legal scrub on every question at import time.
+
+    Module load is fail-safe: a regression in copy logs at ``CRITICAL``
+    and marks the offending persona as tainted (its persona-specific
+    questions are skipped at request time). The runtime assertion in
+    :func:`build_checklist` continues to enforce the same scrub on the
+    served output, so a bad string can never reach the user.
+
+    The previous behaviour (raise at import) was unsafe: a typo in
+    Korean copy would 500 every artifact endpoint until a hotfix.
+    """
+    universal_failures: list[str] = []
     for q in _UNIVERSAL:
-        _assert_legal_safe(q.prompt, "universal.prompt")
-        _assert_legal_safe(q.why, "universal.why")
+        for text, label in ((q.prompt, "universal.prompt"), (q.why, "universal.why")):
+            try:
+                _assert_legal_safe(text, label)
+            except ValueError as exc:
+                logger.critical(
+                    "pre_trade_checklist legal scrub failed at %s: %s", label, exc,
+                )
+                universal_failures.append(str(exc))
+
     for persona, qs in _PERSONA_SPECIFIC.items():
         for i, q in enumerate(qs):
-            _assert_legal_safe(q.prompt, f"{persona}[{i}].prompt")
-            _assert_legal_safe(q.why, f"{persona}[{i}].why")
+            for text, label in (
+                (q.prompt, f"{persona}[{i}].prompt"),
+                (q.why, f"{persona}[{i}].why"),
+            ):
+                try:
+                    _assert_legal_safe(text, label)
+                except ValueError as exc:
+                    logger.critical(
+                        "pre_trade_checklist legal scrub failed at %s: %s",
+                        label, exc,
+                    )
+                    _TAINTED_PERSONAS.add(persona)
+
+    # Universal questions must always be clean — that block is shared
+    # across every persona and a failure there cannot be isolated.
+    if universal_failures:
+        # Still log + raise; this branch is unreachable in CI because
+        # universal copy is reviewed manually, but it MUST hard-fail
+        # if it ever happens.
+        raise ValueError(
+            "pre_trade_checklist universal copy failed legal scrub; "
+            f"first: {universal_failures[0]}"
+        )
 
 
 _audit_all()
@@ -403,6 +444,17 @@ def build_checklist(
     """
     _ = context  # reserved; see docstring
     code = persona if persona in VALID_PERSONAS else DEFAULT_PERSONA
+    # If the chosen persona has tainted copy, fall back to balanced
+    # so the user still gets the universal block + a clean specific
+    # set instead of an empty / partial result.
+    if code in _TAINTED_PERSONAS:
+        logger.warning(
+            "pre_trade_checklist falling back to %s (requested %s is tainted)",
+            DEFAULT_PERSONA, code,
+        )
+        code = DEFAULT_PERSONA
+        if code in _TAINTED_PERSONAS:  # pragma: no cover — both tainted is fatal
+            return list(_UNIVERSAL)
     return list(_UNIVERSAL) + list(_PERSONA_SPECIFIC[code])
 
 
