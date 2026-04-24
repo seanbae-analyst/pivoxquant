@@ -16,6 +16,7 @@
 
 import * as React from "react";
 import type { IndexQuote } from "@/components/market/index-card";
+import { proxyLabel } from "@/components/market/index-card";
 import { fmtPct } from "@/lib/format";
 
 interface Props {
@@ -120,7 +121,25 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
           color: "#141414",
           textAlign: "right",
         }}
+        title={
+          quote.proxy_ticker
+            ? `Level sourced from ${quote.proxy_ticker} ETF proxy.`
+            : undefined
+        }
       >
+        {quote.proxy_ticker ? (
+          <span
+            style={{
+              fontSize: 9,
+              letterSpacing: "0.14em",
+              color: "rgba(20,20,20,0.55)",
+              marginRight: 5,
+              textTransform: "uppercase",
+            }}
+          >
+            {quote.proxy_ticker}
+          </span>
+        ) : null}
         {fmtLevel(quote.level, quote.format)}
       </div>
       <div
@@ -271,7 +290,28 @@ export function OverviewPaper({
             style={{
               fontSize: "clamp(2.4rem, 5.2vw, 3.6rem)",
               }}
+            title={
+              hero.proxy_ticker
+                ? `Level sourced from ${hero.proxy_ticker} ETF (FMP Starter tier does not serve ${hero.symbol}). No ratio conversion applied.`
+                : undefined
+            }
           >
+            {hero.proxy_ticker ? (
+              <span
+                style={{
+                  fontFamily: "var(--font-mono), ui-monospace, monospace",
+                  fontSize: "0.32em",
+                  letterSpacing: "0.14em",
+                  color: "rgba(20,20,20,0.55)",
+                  marginRight: 10,
+                  textTransform: "uppercase",
+                  fontStyle: "normal",
+                  verticalAlign: "middle",
+                }}
+              >
+                {hero.proxy_ticker}
+              </span>
+            ) : null}
             {fmtLevel(hero.level, hero.format)}
             {hero.unit ? (
               <span
@@ -297,6 +337,21 @@ export function OverviewPaper({
           >
             {fmtPct(hero.changePct)} &middot; 1D
           </div>
+          {hero.proxy_ticker ? (
+            <div
+              style={{
+                fontFamily: "var(--font-mono), ui-monospace, monospace",
+                fontSize: 10,
+                letterSpacing: "0.16em",
+                textTransform: "uppercase",
+                color: "rgba(20,20,20,0.55)",
+                marginTop: 4,
+              }}
+              title="Index level via ETF proxy — level is the ETF price, not the underlying index."
+            >
+              {proxyLabel(hero.proxy_ticker)}
+            </div>
+          ) : null}
         </div>
       </div>
 

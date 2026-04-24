@@ -13,7 +13,11 @@
 
 import * as React from "react";
 import type { IndexQuote } from "@/components/market/index-card";
-import { relativeTime, useNowTick } from "@/components/market/index-card";
+import {
+  relativeTime,
+  useNowTick,
+  proxyLabel,
+} from "@/components/market/index-card";
 import { fmtPct } from "@/lib/format";
 import { isMarketOpen } from "@/lib/market-hours";
 import type { DerivativeRow } from "@/components/market/mock-indices";
@@ -176,7 +180,26 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
             color: "#141414",
             letterSpacing: "-0.01em",
           }}
+          title={
+            quote.proxy_ticker
+              ? `Level sourced from ${quote.proxy_ticker} ETF (FMP Starter tier does not serve ${quote.symbol}). No ratio conversion applied.`
+              : undefined
+          }
         >
+          {quote.proxy_ticker ? (
+            <span
+              style={{
+                fontFamily: "var(--font-mono), ui-monospace, monospace",
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                color: "rgba(20,20,20,0.55)",
+                marginRight: 5,
+                textTransform: "uppercase",
+              }}
+            >
+              {quote.proxy_ticker}
+            </span>
+          ) : null}
           {fmtLevel(quote.level, quote.format)}
           {quote.unit ? (
             <span
@@ -201,6 +224,20 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
         >
           {fmtPct(quote.changePct)}
         </div>
+        {quote.proxy_ticker ? (
+          <div
+            style={{
+              fontFamily: "var(--font-mono), ui-monospace, monospace",
+              fontSize: 9,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "rgba(20,20,20,0.5)",
+              marginTop: 2,
+            }}
+          >
+            {proxyLabel(quote.proxy_ticker)}
+          </div>
+        ) : null}
       </div>
 
       {/* Sparkline */}
