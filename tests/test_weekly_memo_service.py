@@ -273,8 +273,21 @@ def test_preview_route_requires_auth(raw_client):
     assert resp.status_code == 401
 
 
+@pytest.fixture
+def auth_pro_user(client, make_user):
+    """Create a Pro-tier user AND log them in. Weekly-memo routes are
+    @require_tier('pro'), so the default auth_user (Free) would 403."""
+    user = make_user(tier="pro")
+    resp = client.post("/api/auth/login", json={
+        "email": user["email"],
+        "password": user["password"],
+    })
+    assert resp.status_code == 200, f"Login failed: {resp.data!r}"
+    return user
+
+
 def test_preview_route_returns_ok_for_authed_user(
-    client, auth_user, patched_fetcher,
+    client, auth_pro_user, patched_fetcher,
 ):
     resp = client.post("/api/artifacts/weekly-memo/preview")
     assert resp.status_code == 200
@@ -285,7 +298,7 @@ def test_preview_route_returns_ok_for_authed_user(
     assert "week_number" in body["data"]
 
 
-def test_history_route_empty_shape(client, auth_user):
+def test_history_route_empty_shape(client, auth_pro_user):
     """New user → zero memos, ok=True."""
     resp = client.get("/api/artifacts/weekly-memo/history")
     assert resp.status_code == 200
@@ -302,7 +315,7 @@ def test_trigger_route_404s_without_dev_secret(client, auth_user):
     assert resp.status_code == 404
 
 
-def test_download_route_404_for_missing_memo(client, auth_user):
+def test_download_route_404_for_missing_memo(client, auth_pro_user):
     """Unknown id returns 404 (same code as "not yours")."""
     resp = client.get("/api/artifacts/weekly-memo/download/99999")
     assert resp.status_code == 404

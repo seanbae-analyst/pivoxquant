@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 import re
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_login import current_user
 
 from models.broker_connection import BrokerConnection
@@ -251,23 +251,43 @@ def broker_connections():
     kis_conn = BrokerConnection.query.filter_by(
         user_id=current_user.id, broker="kis"
     ).first()
-    alpaca_conn = BrokerConnection.query.filter_by(
-        user_id=current_user.id, broker="alpaca"
-    ).first()
 
-    def _alpaca_connected(c: BrokerConnection | None) -> bool:
-        return bool(c and c.is_active and c.encrypted_app_key and c.encrypted_app_secret)
+    # Alpaca is kill-switched by default (ALPACA_ENABLED=0). When disabled we
+    # still return the key so the frontend sees a stable schema, but force
+    # `alpaca_connected=False` and `alpaca_disabled=True` so UI hides the
+    # Alpaca card. Legacy rows in `broker_connections` are NOT deleted — the
+    # frontend simply can't act on them until Alpaca is re-enabled.
+    alpaca_enabled = bool(current_app.config.get("ALPACA_ENABLED"))
+
+    if alpaca_enabled:
+        alpaca_conn = BrokerConnection.query.filter_by(
+            user_id=current_user.id, broker="alpaca"
+        ).first()
+
+        def _alpaca_connected(c: BrokerConnection | None) -> bool:
+            return bool(
+                c and c.is_active and c.encrypted_app_key and c.encrypted_app_secret
+            )
+
+        alpaca_connected = _alpaca_connected(alpaca_conn)
+        alpaca_last_sync = (
+            alpaca_conn.last_synced_at.isoformat()
+            if (alpaca_conn and alpaca_conn.last_synced_at)
+            else None
+        )
+    else:
+        alpaca_connected = False
+        alpaca_last_sync = None
 
     return jsonify({
         "kis_connected": bool(kis_conn and kis_conn.is_active),
         "kis_last_sync": kis_conn.last_synced_at.isoformat()
         if (kis_conn and kis_conn.last_synced_at)
         else None,
-        "alpaca_connected": _alpaca_connected(alpaca_conn),
-        "alpaca_last_sync": alpaca_conn.last_synced_at.isoformat()
-        if (alpaca_conn and alpaca_conn.last_synced_at)
-        else None,
+        "alpaca_connected": alpaca_connected,
+        "alpaca_last_sync": alpaca_last_sync,
         "alpaca_mode": "paper",  # live trading intentionally disabled in this release
+        "alpaca_disabled": not alpaca_enabled,  # kill switch status for UI
     })
 
 
@@ -276,7 +296,36 @@ def broker_connections():
 # Symmetric with the KIS routes above. Credentials live in the same
 # `broker_connections` table under broker='alpaca', reusing the encrypted_app_key
 # / encrypted_app_secret columns. We NEVER accept env="live" — paper only.
+#
+# ⚠️ KILL SWITCH (2026-04-24): All Alpaca endpoints below are gated by
+# `ALPACA_ENABLED` (config.py / Dockerfile env). Default OFF — flipping to ON
+# without legal sign-off is a compliance violation (Alpaca "My Data" license).
+# When disabled, every Alpaca endpoint returns 503 with code="alpaca-disabled".
+# Legacy `broker='alpaca'` rows stay readable via `/api/broker/connections`
+# (no writes, no credentials exposed) — migration is NOT required.
 _ALPACA_KEY_RE = re.compile(r"^[A-Za-z0-9_-]{10,128}$")
+
+
+def _alpaca_kill_switch_response():
+    """Return the standard 503 payload for disabled Alpaca endpoints.
+
+    Returns None when Alpaca is enabled, signalling the caller to proceed.
+    Returns a Flask (response, status) tuple when disabled.
+    """
+    if current_app.config.get("ALPACA_ENABLED"):
+        return None
+    return (
+        jsonify({
+            "ok": False,
+            "error": "alpaca-disabled",
+            "message": (
+                "Alpaca integration is currently not available. "
+                "KIS (한국투자증권) is the supported broker."
+            ),
+            "code": "ALPACA_DISABLED",
+        }),
+        503,
+    )
 
 
 def _validate_alpaca_payload(body: dict) -> tuple[dict | None, dict | None]:
@@ -313,6 +362,9 @@ def _validate_alpaca_payload(body: dict) -> tuple[dict | None, dict | None]:
 @api_auth
 def alpaca_connect():
     """Register the user's Alpaca paper credentials and verify immediately."""
+    killed = _alpaca_kill_switch_response()
+    if killed is not None:
+        return killed
     body = request.get_json(silent=True) or {}
     cleaned, error = _validate_alpaca_payload(body)
     if error:
@@ -359,6 +411,9 @@ def alpaca_connect():
 @api_auth
 def alpaca_sync():
     """Trigger a light-touch Alpaca account refresh (paper only)."""
+    killed = _alpaca_kill_switch_response()
+    if killed is not None:
+        return killed
     try:
         service = UserAlpacaService(current_user.id)
     except UserAlpacaError as exc:
@@ -377,6 +432,9 @@ def alpaca_sync():
 @trade_rate_limit
 @api_auth
 def alpaca_disconnect():
+    killed = _alpaca_kill_switch_response()
+    if killed is not None:
+        return killed
     removed = delete_alpaca_connection(current_user.id)
     if not removed:
         return jsonify({
@@ -390,6 +448,9 @@ def alpaca_disconnect():
 @broker_oauth_bp.route("/alpaca/status", methods=["GET"])
 @api_auth
 def alpaca_status():
+    killed = _alpaca_kill_switch_response()
+    if killed is not None:
+        return killed
     conn = BrokerConnection.query.filter_by(
         user_id=current_user.id, broker="alpaca"
     ).first()

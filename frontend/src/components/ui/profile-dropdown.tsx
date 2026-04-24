@@ -138,7 +138,7 @@ export function ProfileDropdown() {
 
             {/* Menu items */}
             <nav className="py-1.5">
-              <MenuLink href="/settings/profile" icon={<User className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
+              <MenuLink href="/profile" icon={<User className="h-4 w-4" />} onNavigate={() => setOpen(false)}>
                 My Profile
               </MenuLink>
               <MenuLink href="/settings" icon={<Settings className="h-4 w-4" />} onNavigate={() => setOpen(false)}>

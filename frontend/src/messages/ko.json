@@ -185,7 +185,7 @@
       "notifications": "알림 설정",
       "security": "보안",
       "plan": "구독 플랜",
-      "connectAlpaca": "Alpaca 연결",
+      "connectAlpaca": "",
       "connectKIS": "KIS 연결",
       "deleteAccount": "계정 삭제"
     }
@@ -355,22 +355,22 @@
     },
     "connections": {
       "title": "브로커 연동",
-      "alpacaDesc": "Alpaca Markets를 통한 미국 주식 거래",
+      "alpacaDesc": "",
       "kisName": "한국투자증권",
-      "kisDesc": "KIS API를 통한 한국 주식 거래",
+      "kisDesc": "KIS API를 통한 한국 주식 조회 (read-only)",
       "connected": "연결됨",
       "notConnected": "미연결",
-      "connectAlpaca": "Alpaca 연결하기",
+      "connectAlpaca": "",
       "comingSoon": "출시 예정",
       "connecting": "연결 중...",
       "connect": "연결",
       "cancel": "취소",
       "apiKey": "API Key",
       "apiSecret": "API Secret",
-      "alpacaConnectSuccess": "Alpaca가 성공적으로 연결됐습니다!",
-      "alpacaConnectError": "Alpaca 연결에 실패했습니다.",
-      "alpacaCredentialsRequired": "API Key와 API Secret을 모두 입력해 주세요.",
-      "brokerNote": "브로커 연동 시 실시간 포트폴리오 동기화와 자동매매가 가능합니다."
+      "alpacaConnectSuccess": "",
+      "alpacaConnectError": "",
+      "alpacaCredentialsRequired": "",
+      "brokerNote": "브로커 연동 시 포트폴리오 조회가 자동 동기화됩니다 (read-only)."
     },
     "language": {
       "title": "언어",

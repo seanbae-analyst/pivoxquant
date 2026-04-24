@@ -175,7 +175,11 @@ def test_render_html_contains_required_elements(brag_svc):
     }
     html = brag_svc.render_html(data)
     assert isinstance(html, str)
-    assert "+12.3%" in html
+    # Template renders `best_return_pct` (18.0) with 2 decimals as "+18.00%"
+    # (confirmed empirically via direct service call). The previous
+    # assertion "+12.3%" was stale — return_pct is only a fallback when
+    # best_return_pct is None.
+    assert "+18.00%" in html
     assert "March 2026" in html
     assert "PIVOXQUANT" in html
     assert "정보 제공 목적" in html

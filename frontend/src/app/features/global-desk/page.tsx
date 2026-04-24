@@ -8,7 +8,7 @@ export default function GlobalDeskPage() {
     <FeaturePageShell
       eyebrow="Signature · Korea × US Desk"
       title="One pane. Two currencies. Zero double-booking."
-      deck="Alpaca, KIS, and FMP feed a single ledger. KRW and USD sit side by side. The Weekly Memo reads left-to-right across both markets, and the Risk Board deck runs the correlation matrix across the combined book."
+      deck="KIS and FMP feed a single ledger. KRW and USD sit side by side. The Weekly Memo reads left-to-right across both markets, and the Risk Board deck runs the correlation matrix across the combined book."
       seeAlso={[
         {
           eyebrow: "Signature",

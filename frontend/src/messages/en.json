@@ -247,7 +247,7 @@
       "notifications": "Notifications",
       "security": "Security",
       "plan": "Subscription Plan",
-      "connectAlpaca": "Connect Alpaca",
+      "connectAlpaca": "",
       "connectKIS": "Connect KIS",
       "deleteAccount": "Delete Account"
     }
@@ -355,22 +355,22 @@
     },
     "connections": {
       "title": "Broker Integrations",
-      "alpacaDesc": "Trade US equities via Alpaca Markets",
+      "alpacaDesc": "",
       "kisName": "Korea Investment & Securities",
-      "kisDesc": "Trade KR equities via KIS API",
+      "kisDesc": "Read-only Korean equity sync via KIS API",
       "connected": "Connected",
       "notConnected": "Not connected",
-      "connectAlpaca": "Connect Alpaca",
+      "connectAlpaca": "",
       "comingSoon": "Coming Soon",
       "connecting": "Connecting...",
       "connect": "Connect",
       "cancel": "Cancel",
       "apiKey": "API Key",
       "apiSecret": "API Secret",
-      "alpacaConnectSuccess": "Alpaca connected successfully!",
-      "alpacaConnectError": "Failed to connect Alpaca.",
-      "alpacaCredentialsRequired": "Please enter both API Key and API Secret.",
-      "brokerNote": "Broker integrations enable real-time portfolio sync and automated trading."
+      "alpacaConnectSuccess": "",
+      "alpacaConnectError": "",
+      "alpacaCredentialsRequired": "",
+      "brokerNote": "Broker integrations enable read-only portfolio synchronization."
     },
     "language": {
       "title": "Language",

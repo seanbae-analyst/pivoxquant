@@ -34,10 +34,21 @@ class RealtimeService:
         self._kis_ws_attempted = False
         self._kis_ws_lock = threading.Lock()
 
-        # Init Alpaca
+        # Init Alpaca (gated by ALPACA_ENABLED kill switch — default OFF).
+        # When disabled, `alpaca_available` stays False and all downstream
+        # code paths (routes/market.py, routes/portfolio.py, routes/realtime.py)
+        # route US prices through FMP instead.
+        alpaca_enabled = os.environ.get("ALPACA_ENABLED", "0").strip() in (
+            "1", "true", "True", "TRUE", "yes",
+        )
         api_key = os.environ.get("ALPACA_API_KEY", "").strip()
         secret = os.environ.get("ALPACA_SECRET_KEY", "").strip()
-        if api_key and secret:
+        if not alpaca_enabled:
+            logger.info(
+                "Realtime: Alpaca disabled (ALPACA_ENABLED=0); "
+                "US realtime quotes will use FMP."
+            )
+        elif api_key and secret:
             try:
                 from alpaca.data.historical import StockHistoricalDataClient
                 self.alpaca_client = StockHistoricalDataClient(api_key, secret)

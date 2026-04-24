@@ -11,6 +11,7 @@ def register_blueprints(app):
     from .market import market_bp
     from .daytrade import daytrade_bp
     from .alerts import alerts_bp
+    from .notifications import notifications_bp
     from .trades import trades_bp
     from .autotrade import autotrade_bp
     from .ai import ai_bp
@@ -54,7 +55,7 @@ def register_blueprints(app):
     blueprints = [
         health_bp,
         auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
-        market_bp, daytrade_bp, alerts_bp, trades_bp,
+        market_bp, daytrade_bp, alerts_bp, notifications_bp, trades_bp,
         autotrade_bp, ai_bp, watchlist_bp, backtest_bp,
         quant_bp, realtime_bp, profile_bp, broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,

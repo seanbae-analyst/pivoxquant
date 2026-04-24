@@ -17,6 +17,9 @@ interface AlpacaConnectModalProps {
  * Form-based Alpaca (paper) connection modal — Vantablack ink theme.
  * POSTs { key_id, secret_key, env: "paper" } → /api/broker/alpaca/connect.
  * Live environment is intentionally disabled and rejected by the backend.
+ *
+ * Phase-1 (2026-04-24): Consumers gate mount with NEXT_PUBLIC_ALPACA_ENABLED
+ * (see settings/page.tsx). Component body retained for phase-2 reinstatement.
  */
 export function AlpacaConnectModal({
   onClose,

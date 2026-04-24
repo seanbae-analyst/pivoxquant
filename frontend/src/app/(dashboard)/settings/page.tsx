@@ -1,11 +1,13 @@
 "use client";
 
 /**
- * /settings — Account / Subscription / Broker / Notifications / Language
- *              / Seed capital / Danger zone, all in the Vantablack ink theme.
+ * /settings — Operational controls only.
  *
- * Everything SWR-wired: profile, subscription, broker status, push status.
- * Nothing silently swallowed — all mutations toast on success/error.
+ * Slimmed 2026-04-24: identity / persona / Living CFO moved to /profile
+ * so Settings stays scoped to things the user adjusts, not who they are.
+ *
+ * Surfaces here: Account (read-only), Subscription, Brokers, Preferences
+ * (notifications + language + seed capital), Sign out, Delete account.
  */
 
 import React, { useState, useCallback, useEffect } from "react";
@@ -14,17 +16,24 @@ import Link from "next/link";
 import useSWR from "swr";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { useInvestmentProfile, useBrokerConnections } from "@/lib/hooks";
+import { useBrokerConnections } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { KisCard } from "@/components/broker/kis-card";
 import { KisConnectModal } from "@/components/broker/kis-connect-modal";
 import { AlpacaCard } from "@/components/broker/alpaca-card";
 import { AlpacaConnectModal } from "@/components/broker/alpaca-connect-modal";
+
+/**
+ * Phase-1 (2026-04-24): Alpaca integration is hidden from end users pending
+ * My Data license resolution. Mount gated by NEXT_PUBLIC_ALPACA_ENABLED.
+ * KIS (read-only) is the only broker surfaced in this release.
+ */
+const ALPACA_ENABLED = process.env.NEXT_PUBLIC_ALPACA_ENABLED === "1";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
-import { useT, useLocale } from "@/lib/locale";
+import { useLocale } from "@/lib/locale";
 import {
   isPushSupported,
   subscribeToPush,
@@ -38,21 +47,10 @@ import {
   AlertTriangle,
   X,
   Loader2,
+  UserCircle2,
   ChevronRight,
 } from "lucide-react";
 import { fmtUsd, fmtKrw } from "@/lib/format";
-import {
-  usePersona,
-  usePulse,
-  PERSONA_LABELS,
-  type PersonaId,
-} from "@/lib/cfo/hooks";
-import {
-  hasCompanionEntitlement,
-  useCompanionStatus,
-} from "@/lib/cfo/useCompanion";
-import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
-import { PersonaEvolution } from "@/components/dashboard/persona-evolution";
 
 /* ── Fetcher ── */
 
@@ -68,19 +66,6 @@ interface SubscriptionResponse {
   current_period_end?: string;
   cancel_at_period_end?: boolean;
 }
-
-/* ── Investor labels ── */
-
-const INVESTOR_TYPE_LABELS: Record<string, string> = {
-  passive_index_hugger: "Passive index",
-  steady_accumulator: "Steady accumulator",
-  value_hunter: "Value hunter",
-  risk_managed_growth: "Risk-managed growth",
-  swing_trader: "Swing trader",
-  momentum_rider: "Momentum rider",
-  macro_rotator: "Macro rotator",
-  aggressive_scalper: "Aggressive scalper",
-};
 
 /* ── Section shell ── */
 
@@ -129,15 +114,13 @@ function Row({
   );
 }
 
-/* ── Account section ── */
+/* ── Account (read-only) ── */
 
 function AccountSection() {
   const { user } = useAuth();
-  const { data: profileData, isLoading: profileLoading } = useInvestmentProfile();
-  const investorType = profileData?.profile?.profile_type ?? null;
 
   return (
-    <Section kicker="01 · Profile" title="Account">
+    <Section kicker="01 · Account" title="Signed-in identity">
       <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
         <Row label="Name" value={user?.name ?? "—"} />
         <Row label="Email" value={user?.email ?? "—"} />
@@ -151,36 +134,25 @@ function AccountSection() {
             }
           />
         )}
-        <Row
-          label="Investor type"
-          value={
-            profileLoading ? (
-              <span className="text-[rgba(245,240,232,0.3)]">Loading…</span>
-            ) : investorType ? (
-              INVESTOR_TYPE_LABELS[investorType] ?? investorType
-            ) : (
-              <span className="text-[rgba(245,240,232,0.3)]">Not set</span>
-            )
-          }
-        />
       </div>
 
       <Link
-        href="/onboarding"
+        href="/profile"
         className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] px-5 py-4 rounded-[2px] flex items-center justify-between hover:border-[var(--pq-bronze)] transition-colors group"
       >
-        <div>
-          <div className="font-serif text-base text-[var(--pq-ivory)]">
-            {investorType ? "Retake assessment" : "Take investor assessment"}
-          </div>
-          <div className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">
-            20-question questionnaire — calibrates every analytical surface.
+        <div className="flex items-center gap-3">
+          <UserCircle2 className="h-4 w-4 text-[var(--pq-bronze)]" />
+          <div>
+            <div className="font-serif text-base text-[var(--pq-ivory)]">
+              Manage profile &amp; persona
+            </div>
+            <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
+              Identity, declared persona, Living CFO controls, agent memory.
+            </div>
           </div>
         </div>
         <ChevronRight className="h-4 w-4 text-[var(--pq-bronze)] transition-transform group-hover:translate-x-0.5" />
       </Link>
-
-      <SeedCapitalSection />
     </Section>
   );
 }
@@ -484,19 +456,21 @@ function BrokersSection() {
         disconnecting={kisDisconnecting}
       />
 
-      <AlpacaCard
-        connected={Boolean(brokerData?.alpaca_connected)}
-        mode={brokerData?.alpaca_mode ?? "paper"}
-        lastSync={brokerData?.alpaca_last_sync ?? null}
-        onConnect={() => setAlpacaModalOpen(true)}
-        onSync={handleAlpacaSync}
-        onDisconnect={handleAlpacaDisconnect}
-        syncing={alpacaSyncing}
-        disconnecting={alpacaDisconnecting}
-      />
+      {ALPACA_ENABLED && (
+        <AlpacaCard
+          connected={Boolean(brokerData?.alpaca_connected)}
+          mode={brokerData?.alpaca_mode ?? "paper"}
+          lastSync={brokerData?.alpaca_last_sync ?? null}
+          onConnect={() => setAlpacaModalOpen(true)}
+          onSync={handleAlpacaSync}
+          onDisconnect={handleAlpacaDisconnect}
+          syncing={alpacaSyncing}
+          disconnecting={alpacaDisconnecting}
+        />
+      )}
 
       <p className="text-xs text-[rgba(245,240,232,0.4)] text-center">
-        KIS is read-only; Alpaca is paper-only. Live order routing is disabled.
+        KIS is read-only. Live order routing is disabled.
       </p>
 
       {kisModalOpen && (
@@ -505,7 +479,7 @@ function BrokersSection() {
           onSuccess={() => refreshBrokers()}
         />
       )}
-      {alpacaModalOpen && (
+      {ALPACA_ENABLED && alpacaModalOpen && (
         <AlpacaConnectModal
           onClose={() => setAlpacaModalOpen(false)}
           onSuccess={() => refreshBrokers()}
@@ -552,7 +526,7 @@ function Toggle({
   );
 }
 
-/* ── Preferences (notifications + language) ── */
+/* ── Preferences (notifications + language + seed capital) ── */
 
 function PreferencesSection() {
   const { locale, setLocale } = useLocale();
@@ -668,409 +642,9 @@ function PreferencesSection() {
           ))}
         </div>
       </div>
+
+      <SeedCapitalSection />
     </Section>
-  );
-}
-
-/* ── Living CFO section ── */
-
-const DRIFT_ALERT_LS = "pq_cfo_drift_alerts_enabled";
-
-function LivingCFOSection() {
-  const { user } = useAuth();
-  const { data: persona } = usePersona();
-  const { data: pulse } = usePulse();
-  const { data: companionStatus } = useCompanionStatus();
-  const [driftAlerts, setDriftAlerts] = useState<boolean>(true);
-  const [cadence, setCadence] = useState<"weekly" | "biweekly" | "monthly">(
-    "weekly",
-  );
-  const [feedbackCount, setFeedbackCount] = useState<number>(0);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setDriftAlerts(window.localStorage.getItem(DRIFT_ALERT_LS) !== "0");
-
-    try {
-      const raw = window.localStorage.getItem("pq_cfo_feedback_votes_v1");
-      if (raw) {
-        const map = JSON.parse(raw) as Record<string, string>;
-        setFeedbackCount(Object.keys(map).length);
-      }
-    } catch {
-      /* ignore */
-    }
-
-    if (pulse?.cadence) setCadence(pulse.cadence);
-  }, [pulse?.cadence]);
-
-  const handleDriftToggle = (next: boolean) => {
-    setDriftAlerts(next);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(DRIFT_ALERT_LS, next ? "1" : "0");
-    }
-    toast.success(next ? "Drift alerts on." : "Drift alerts off.");
-  };
-
-  const declared = persona?.declared;
-  const observed30 = persona?.observed?.window_30d;
-
-  return (
-    <Section kicker="05 · Living CFO" title="Your personal CFO">
-      {/* Persona overview */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-          Declared persona
-        </div>
-        <div className="mt-2 flex items-baseline justify-between gap-3 flex-wrap">
-          <div className="font-serif text-2xl text-[var(--pq-ivory)]">
-            {declared
-              ? PERSONA_LABELS[declared.persona as PersonaId] ??
-                declared.persona
-              : "Not set"}
-          </div>
-          {declared && (
-            <div className="font-mono tabular-nums text-sm text-[rgba(245,240,232,0.6)]">
-              score {declared.score}
-            </div>
-          )}
-        </div>
-
-        {observed30 && (
-          <p className="mt-3 font-serif text-[13px] text-[rgba(245,240,232,0.65)]">
-            Your last 30 days look like{" "}
-            <strong className="text-[var(--pq-ivory)]">
-              {PERSONA_LABELS[observed30.persona]} {observed30.score}
-            </strong>
-            .
-          </p>
-        )}
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/onboarding" className="pq-ink-btn-ghost">
-            Retake full assessment
-          </Link>
-        </div>
-      </div>
-
-      {/* Drift + cadence controls */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-serif text-base text-[var(--pq-ivory)]">
-              Drift alerts
-            </div>
-            <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
-              Notify when your 30-day behaviour diverges from the declared persona.
-            </div>
-          </div>
-          <Toggle
-            checked={driftAlerts}
-            onChange={handleDriftToggle}
-            ariaLabel="Drift alerts"
-          />
-        </div>
-
-        <div className="pt-3 border-t border-[rgba(245,240,232,0.06)]">
-          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
-            Pulse cadence
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(["weekly", "biweekly", "monthly"] as const).map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => {
-                  setCadence(c);
-                  toast.success(`Pulse set to ${c}.`);
-                }}
-                className={cn(
-                  cadence === c ? "pq-ink-btn-bronze" : "pq-ink-btn-ghost",
-                  "capitalize",
-                )}
-              >
-                {c === "weekly"
-                  ? "Weekly"
-                  : c === "biweekly"
-                    ? "Every 2 weeks"
-                    : "Monthly"}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Section-feedback accumulator */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-          Section feedback
-        </div>
-        <div className="mt-2 font-serif text-[var(--pq-ivory)]">
-          {feedbackCount} reaction{feedbackCount === 1 ? "" : "s"} recorded across your reports.
-        </div>
-        <p className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">
-          The CFO uses Useful / Meh / Skip votes to prioritise which sections it
-          writes for you next.
-        </p>
-      </div>
-
-      {/* Inline pulse submission + history */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
-        <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
-          Submit a pulse
-        </div>
-        <WeeklyPulseCard inline />
-      </div>
-
-      {/* Persona evolution timeline */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
-        <PersonaEvolution bare />
-      </div>
-
-      {/* Journal Companion sub-section */}
-      <JournalCompanionSubsection
-        user={user}
-        entitlementPlans={companionStatus?.entitlement_plans}
-      />
-
-      {/* Data export / delete (PIPA) */}
-      <AgentDataSubsection />
-    </Section>
-  );
-}
-
-/* ── Journal Companion sub-section ── */
-
-function JournalCompanionSubsection({
-  user,
-  entitlementPlans,
-}: {
-  user: ReturnType<typeof useAuth>["user"];
-  entitlementPlans?: string[];
-}) {
-  const entitled = hasCompanionEntitlement(
-    user?.subscription_tier,
-    entitlementPlans,
-  );
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [waitlistDone, setWaitlistDone] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleWaitlist = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
-      toast.error("Enter an email.");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await apiFetch("/api/agent/waitlist", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      setWaitlistDone(true);
-      toast.success("You're on the waitlist.");
-    } catch {
-      // 404/501 → still record locally so the user gets a positive state.
-      setWaitlistDone(true);
-      toast.success("Saved — we'll reach out.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-        Journal Companion · Layer 4
-      </div>
-      {entitled ? (
-        <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
-            Your Companion is active.
-          </div>
-          <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
-            Reflect on your positions and weeks with a CFO that remembers.
-          </p>
-          <div className="mt-3">
-            <Link href="/companion" className="pq-ink-btn-bronze">
-              Open Companion
-            </Link>
-          </div>
-        </>
-      ) : waitlistDone ? (
-        <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
-            You&rsquo;re on the waitlist.
-          </div>
-          <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
-            Closed Beta access is rolling out to Premium Plus members.
-          </p>
-        </>
-      ) : (
-        <>
-          <div className="mt-2 font-serif text-[var(--pq-ivory)] text-[15px]">
-            Closed Beta — join the waitlist.
-          </div>
-          <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
-            The reflective journal agent — available to Premium Plus. Drop
-            your email and we&rsquo;ll reach out as seats open.
-          </p>
-          <form
-            onSubmit={handleWaitlist}
-            className="mt-3 flex flex-col sm:flex-row gap-2"
-          >
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="pq-ink-input flex-1"
-              placeholder="you@example.com"
-              aria-label="Waitlist email"
-              required
-            />
-            <button
-              type="submit"
-              disabled={submitting}
-              className="pq-ink-btn-bronze disabled:opacity-50"
-            >
-              {submitting ? "Joining…" : "Join waitlist"}
-            </button>
-          </form>
-          <div className="mt-3">
-            <Link href="/pricing?plan=plus" className="pq-ink-btn-ghost">
-              See Premium Plus
-            </Link>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-/* ── Agent data export/delete ── */
-
-function AgentDataSubsection() {
-  const [exporting, setExporting] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      const data: unknown = await apiFetch("/api/agent/export");
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `pivoxquant-agent-memory-${new Date()
-        .toISOString()
-        .slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Export ready.");
-    } catch {
-      // Backend hasn't shipped the export endpoint yet — fall back to a
-      // local-only export that grabs persona/pulse/feedback caches and
-      // Companion history from localStorage. PIPA-safe: user data only.
-      try {
-        if (typeof window === "undefined") throw new Error("no window");
-        const snapshot = {
-          exported_at: new Date().toISOString(),
-          persona: window.localStorage.getItem("pq_cfo_persona_v1"),
-          rolling: window.localStorage.getItem("pq_cfo_rolling_v1"),
-          pulse: window.localStorage.getItem("pq_cfo_pulse_v1"),
-          feedback: window.localStorage.getItem("pq_cfo_feedback_v1"),
-          companion_history: window.localStorage.getItem(
-            "pq_companion_history_v1",
-          ),
-        };
-        const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `pivoxquant-agent-memory-local-${new Date()
-          .toISOString()
-          .slice(0, 10)}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        toast.success("Local memory exported.");
-      } catch {
-        toast.error("Export failed.");
-      }
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (
-      !confirm(
-        "Delete all agent memory? Persona, pulse, feedback, and Companion history will be wiped. This cannot be undone.",
-      )
-    ) {
-      return;
-    }
-    setDeleting(true);
-    try {
-      await apiFetch("/api/agent/delete", { method: "DELETE" });
-    } catch {
-      /* non-fatal — we still wipe locally */
-    }
-    if (typeof window !== "undefined") {
-      [
-        "pq_cfo_persona_v1",
-        "pq_cfo_rolling_v1",
-        "pq_cfo_pulse_v1",
-        "pq_cfo_feedback_v1",
-        "pq_cfo_feedback_votes_v1",
-        "pq_companion_history_v1",
-        "pq_companion_disclaimer_ack_v1",
-      ].forEach((k) => {
-        try {
-          window.localStorage.removeItem(k);
-        } catch {
-          /* noop */
-        }
-      });
-    }
-    setDeleting(false);
-    toast.success("Agent memory cleared.");
-  };
-
-  return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
-      <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-        Agent data
-      </div>
-      <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
-        Your CFO&rsquo;s memory is yours. Export a portable JSON copy at any
-        time, or clear it to start over. Both actions comply with PIPA data
-        rights.
-      </p>
-      <div className="mt-3 flex flex-col sm:flex-row gap-2">
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={exporting}
-          className="pq-ink-btn-ghost flex-1 disabled:opacity-50"
-        >
-          {exporting ? "Preparing…" : "Export my agent memory"}
-        </button>
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={deleting}
-          className="pq-ink-btn-ghost flex-1 disabled:opacity-50"
-          style={{ color: "#d27a7a", borderColor: "rgba(210,122,122,0.4)" }}
-        >
-          {deleting ? "Clearing…" : "Delete all agent data"}
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -1148,13 +722,20 @@ export default function SettingsPage() {
           <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
             Settings
           </h1>
+          <p className="mt-1 text-xs text-[rgba(245,240,232,0.5)]">
+            Subscription, brokers, and preferences. For identity and persona
+            controls see{" "}
+            <Link href="/profile" className="underline underline-offset-4 hover:text-[var(--pq-bronze)]">
+              My Profile
+            </Link>
+            .
+          </p>
         </header>
 
         <AccountSection />
         <SubscriptionSection />
         <BrokersSection />
         <PreferencesSection />
-        <LivingCFOSection />
 
         {/* ── Danger zone ── */}
         <section className="pt-8 border-t border-[rgba(245,240,232,0.08)]">

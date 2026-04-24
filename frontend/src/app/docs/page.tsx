@@ -17,11 +17,11 @@ const SECTIONS = [
       },
       {
         q: "Do you execute real trades?",
-        a: "No. Korean brokers (KIS) are read-only. US broker (Alpaca) is paper-only.",
+        a: "No. Korean brokers (KIS) are connected read-only. PivoxQuant never routes orders.",
       },
       {
         q: "How do I connect my account?",
-        a: "Settings → Brokers → Connect KIS (read-only) or Alpaca (paper).",
+        a: "Settings → Brokers → Connect KIS (read-only). Additional brokers are on the roadmap.",
       },
     ],
   },
@@ -89,7 +89,7 @@ const SECTIONS = [
       },
       {
         q: "How is my data protected?",
-        a: "See our Privacy Policy. Data encrypted in transit and at rest. KIS / Alpaca credentials encrypted per-user.",
+        a: "See our Privacy Policy. Data encrypted in transit and at rest. Broker credentials encrypted per-user.",
       },
       {
         q: "How do I delete my account?",

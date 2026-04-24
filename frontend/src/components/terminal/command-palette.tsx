@@ -149,12 +149,6 @@ export function CommandPalette({ extraActions = [] }: CommandPaletteProps) {
         run: () => router.push("/portfolio?modal=add"),
       },
       {
-        id: "a-connect-alpaca",
-        label: "Connect Alpaca",
-        hint: "US broker (paper)",
-        run: () => router.push("/settings?section=broker"),
-      },
-      {
         id: "a-connect-kis",
         label: "Connect KIS",
         hint: "KR broker (read-only)",

@@ -156,7 +156,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Do you have access to my brokerage account?",
-    a: "Read-only. Alpaca (US) · KIS (KR) read-only scope로 연결됩니다. 주문 · 출금 · 수정 불가. 연결 해제 시 artifact 렌더링 중단, 데이터는 30일 보관 후 파기.",
+    a: "Read-only. KIS (KR) read-only scope로 연결됩니다. 주문 · 출금 · 수정 불가. 연결 해제 시 artifact 렌더링 중단, 데이터는 30일 보관 후 파기.",
   },
   {
     q: "Can I cancel? How do refunds work?",

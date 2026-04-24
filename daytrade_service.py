@@ -31,10 +31,22 @@ class DayTradeService:
         self._subscribers = []  # SSE subscribers
         self._lock = threading.Lock()
 
+        # Gated by ALPACA_ENABLED kill switch (config.py / Dockerfile).
+        # Default OFF — US day-trade scanner is unavailable unless explicitly
+        # re-enabled. KIS-based KR day-trade scanning is handled by a separate
+        # code path in routes/daytrade.py and is NOT affected by this switch.
+        alpaca_enabled = os.environ.get("ALPACA_ENABLED", "0").strip() in (
+            "1", "true", "True", "TRUE", "yes",
+        )
         api_key = os.environ.get("ALPACA_API_KEY", "").strip()
         secret = os.environ.get("ALPACA_SECRET_KEY", "").strip()
 
-        if api_key and secret:
+        if not alpaca_enabled:
+            logger.info(
+                "DayTrade: Alpaca disabled (ALPACA_ENABLED=0); "
+                "US scanner unavailable. KR scanning via KIS still works."
+            )
+        elif api_key and secret:
             try:
                 from alpaca.data.historical import StockHistoricalDataClient
                 self.client = StockHistoricalDataClient(api_key, secret)

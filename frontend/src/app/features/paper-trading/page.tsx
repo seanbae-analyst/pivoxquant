@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 const steps = [
   {
     step: "1",
-    title: "Connect your Alpaca paper account",
-    description: "Alpaca offers free paper trading accounts. Sign up in 2 minutes, then link it to PivoxQuant.",
+    title: "Open a paper portfolio",
+    description: "Create a simulated portfolio inside PivoxQuant in under two minutes. No live broker linkage required.",
   },
   {
     step: "2",
@@ -45,8 +45,8 @@ const steps = [
   },
   {
     step: "5",
-    title: "Switch to live when ready",
-    description: "Once you are confident in the system, switch from paper to live trading with the same Alpaca account.",
+    title: "Take the journal to your broker",
+    description: "When you are ready, run the same thesis in your own brokerage account. PivoxQuant remains observational — no orders are ever routed for you.",
   },
 ];
 
@@ -183,7 +183,7 @@ export default function PaperTradingPage() {
             Start paper trading today
           </h2>
           <p className="text-slate-500 mb-6 max-w-md mx-auto">
-            Free Alpaca account. Free PivoxQuant account. Zero risk.
+            Free PivoxQuant account. Zero risk.
             See the quant models in action before you invest a single dollar.
           </p>
           <Link
