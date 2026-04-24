@@ -22,6 +22,40 @@ import { fmtPct } from "@/lib/format";
 import { isMarketOpen } from "@/lib/market-hours";
 import type { DerivativeRow } from "@/components/market/mock-indices";
 
+/**
+ * Proxy badge pill — mirrors the one in overview-paper.tsx. Rendered on
+ * the detail row when `proxy_ticker` is set so the reader can't mistake
+ * the ETF price (e.g. SPY 708.45) for the index level (S&P 500 ≈ 7108).
+ */
+function ProxyPillSmall({ proxy }: { proxy: string }) {
+  return (
+    <span
+      role="note"
+      aria-label={`Level sourced via ${proxy} ETF proxy`}
+      title={`Level via ${proxy} ETF proxy — not the underlying index level.`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 3,
+        fontFamily: "var(--font-mono), ui-monospace, monospace",
+        fontSize: 9,
+        letterSpacing: "0.18em",
+        textTransform: "uppercase",
+        color: "#8b6f47",
+        border: "0.5px solid rgba(139,111,71,0.55)",
+        background: "rgba(184,149,106,0.08)",
+        padding: "1.5px 5px",
+        borderRadius: 2,
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span style={{ opacity: 0.75 }}>via</span>
+      <span style={{ fontWeight: 600 }}>{proxy}</span>
+    </span>
+  );
+}
+
 interface Props {
   region: "US" | "KR";
   quotes: IndexQuote[];
@@ -172,6 +206,17 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
 
       {/* Level + change */}
       <div style={{ textAlign: "right" }}>
+        {quote.proxy_ticker ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginBottom: 3,
+            }}
+          >
+            <ProxyPillSmall proxy={quote.proxy_ticker} />
+          </div>
+        ) : null}
         <div
           style={{
             fontFamily: "var(--font-mono), ui-monospace, monospace",
@@ -186,20 +231,6 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
               : undefined
           }
         >
-          {quote.proxy_ticker ? (
-            <span
-              style={{
-                fontFamily: "var(--font-mono), ui-monospace, monospace",
-                fontSize: 10,
-                letterSpacing: "0.14em",
-                color: "rgba(20,20,20,0.55)",
-                marginRight: 5,
-                textTransform: "uppercase",
-              }}
-            >
-              {quote.proxy_ticker}
-            </span>
-          ) : null}
           {fmtLevel(quote.level, quote.format)}
           {quote.unit ? (
             <span

@@ -19,6 +19,56 @@ import type { IndexQuote } from "@/components/market/index-card";
 import { proxyLabel } from "@/components/market/index-card";
 import { fmtPct } from "@/lib/format";
 
+/**
+ * Proxy badge pill — bronze-outlined, mono "VIA <PROXY>" surfaced next to
+ * any level that is actually the ETF price, not the underlying index. Used
+ * both as an inline HEADLINE prefix (so the reader sees "VIA SPY · 708.45"
+ * at a glance) and in the mini-summary strip. Only rendered when
+ * `proxy_ticker` is set; KR indices and FX pairs never carry one, so the
+ * badge is invisible for them (Bloomberg-style conditional render).
+ */
+function ProxyPill({
+  proxy,
+  size = "sm",
+  title,
+}: {
+  proxy: string;
+  size?: "sm" | "md";
+  title?: string;
+}) {
+  const fontSize = size === "md" ? 11 : 9.5;
+  const padY = size === "md" ? 3 : 2;
+  const padX = size === "md" ? 7 : 5;
+  return (
+    <span
+      role="note"
+      aria-label={`Level sourced via ${proxy} ETF proxy`}
+      title={title ?? `Level via ${proxy} ETF proxy — not the underlying index level.`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        fontFamily: "var(--font-mono), ui-monospace, monospace",
+        fontSize,
+        letterSpacing: "0.18em",
+        textTransform: "uppercase",
+        color: "#8b6f47",
+        border: "0.5px solid rgba(139,111,71,0.55)",
+        background: "rgba(184,149,106,0.08)",
+        padding: `${padY}px ${padX}px`,
+        borderRadius: 2,
+        verticalAlign: "middle",
+        lineHeight: 1,
+        whiteSpace: "nowrap",
+        fontStyle: "normal",
+      }}
+    >
+      <span style={{ opacity: 0.75 }}>via</span>
+      <span style={{ fontWeight: 600 }}>{proxy}</span>
+    </span>
+  );
+}
+
 interface Props {
   region: "US" | "KR";
   quotes: IndexQuote[];
@@ -115,6 +165,10 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
       </div>
       <div
         style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          gap: 6,
           fontFamily: "var(--font-mono), ui-monospace, monospace",
           fontVariantNumeric: "tabular-nums",
           fontSize: 14,
@@ -127,20 +181,8 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
             : undefined
         }
       >
-        {quote.proxy_ticker ? (
-          <span
-            style={{
-              fontSize: 9,
-              letterSpacing: "0.14em",
-              color: "rgba(20,20,20,0.55)",
-              marginRight: 5,
-              textTransform: "uppercase",
-            }}
-          >
-            {quote.proxy_ticker}
-          </span>
-        ) : null}
-        {fmtLevel(quote.level, quote.format)}
+        {quote.proxy_ticker ? <ProxyPill proxy={quote.proxy_ticker} size="sm" /> : null}
+        <span>{fmtLevel(quote.level, quote.format)}</span>
       </div>
       <div
         className={isPositive ? "pq-paper-pos" : "pq-paper-neg"}
@@ -285,6 +327,26 @@ export function OverviewPaper({
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
+          {/* HEADLINE proxy badge — rendered ABOVE the number so the reader
+              sees "VIA SPY" before they parse the level. Prevents the
+              "708.45 = S&P 500 level" misread. Omitted entirely when the
+              level is a direct observation (KR indices, FX pairs, or any
+              symbol FMP serves natively). */}
+          {hero.proxy_ticker ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginBottom: 6,
+              }}
+            >
+              <ProxyPill
+                proxy={hero.proxy_ticker}
+                size="md"
+                title={`Level sourced from ${hero.proxy_ticker} ETF (FMP Starter tier does not serve ${hero.symbol}). No ratio conversion applied.`}
+              />
+            </div>
+          ) : null}
           <div
             className="pq-paper-hero-num"
             style={{
@@ -296,22 +358,6 @@ export function OverviewPaper({
                 : undefined
             }
           >
-            {hero.proxy_ticker ? (
-              <span
-                style={{
-                  fontFamily: "var(--font-mono), ui-monospace, monospace",
-                  fontSize: "0.32em",
-                  letterSpacing: "0.14em",
-                  color: "rgba(20,20,20,0.55)",
-                  marginRight: 10,
-                  textTransform: "uppercase",
-                  fontStyle: "normal",
-                  verticalAlign: "middle",
-                }}
-              >
-                {hero.proxy_ticker}
-              </span>
-            ) : null}
             {fmtLevel(hero.level, hero.format)}
             {hero.unit ? (
               <span
