@@ -239,7 +239,7 @@ vercel logs https://pivoxquant.com --follow
 매일 오전 확인:
 ```bash
 # FMP
-curl "https://financialmodelingprep.com/api/v3/quote/AAPL?apikey=$FMP_API_KEY"
+curl "https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=$FMP_API_KEY"
 # Alpaca
 curl -H "APCA-API-KEY-ID: $ALPACA_API_KEY" -H "APCA-API-SECRET-KEY: $ALPACA_SECRET_KEY" https://paper-api.alpaca.markets/v2/account
 # KIS (토큰 유효성)
@@ -314,7 +314,7 @@ curl "https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/fx"
 **진단 순서**:
 1. Network → `/api/realtime/quote/AAPL` 응답 확인
 2. Railway Logs → FMP/Alpaca 응답 에러
-3. FMP 쿼터: `curl https://financialmodelingprep.com/api/v3/quote/AAPL?apikey=$FMP_API_KEY` → `{"Error Message": "Limit Reach"}`인지
+3. FMP 쿼터: `curl "https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=$FMP_API_KEY"` → `{"Error Message": "Limit Reach"}`인지
 
 **해결 순서**:
 1. **FMP 402 (한도 초과)**: Starter → Premium 플랜 업그레이드 또는 TTL cache 확대

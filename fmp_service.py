@@ -238,6 +238,45 @@ def _is_us_ticker(ticker):
     return not (ticker.endswith(".KS") or ticker.endswith(".KQ"))
 
 
+def _class_share_alt(ticker):
+    """Return the alternative class-share form of ``ticker``, or None.
+
+    FMP's stable endpoints are inconsistent about class-share separators:
+    ``/quote?symbol=BRK.B`` returns ``[]`` while ``BRK-B`` returns data,
+    but on some endpoints (historical, profile) only the dotted form
+    resolves. When a fetch comes back empty, the caller can retry with
+    the alternate form. Returns None for tickers where a class-share
+    retry would be meaningless (Korean, indices, plain symbols).
+
+    Mapping:
+      ``BRK.B`` → ``BRK-B``
+      ``BRK-B`` → ``BRK.B``
+      ``AAPL``  → None
+      ``005930.KS`` → None  (KR suffix, not a class share)
+      ``^GSPC`` → None
+    """
+    if not isinstance(ticker, str) or not ticker:
+        return None
+    if ticker.startswith("^"):
+        return None
+    if ticker.endswith(".KS") or ticker.endswith(".KQ"):
+        return None
+    if "." in ticker:
+        # Dot form (BRK.B) — convert to dash. Only treat the last single
+        # alphabetic suffix as a class share; anything longer (BRK.AXY)
+        # is not a class share and shouldn't be rewritten.
+        base, _, suffix = ticker.rpartition(".")
+        if base and len(suffix) == 1 and suffix.isalpha():
+            return f"{base}-{suffix}"
+        return None
+    if "-" in ticker:
+        base, _, suffix = ticker.rpartition("-")
+        if base and len(suffix) == 1 and suffix.isalpha():
+            return f"{base}.{suffix}"
+        return None
+    return None
+
+
 # ── Quote (realtime-ish price) ──────────────────────────────────
 
 def get_quote(ticker):
@@ -262,6 +301,18 @@ def get_quote(ticker):
         result = data[0]
         _set_cache(cache_key, result)
         return result
+
+    # Class-share retry: FMP's stable /quote resolves BRK-B but not BRK.B
+    # (confirmed: dotted form returns [], dash form returns full payload).
+    # Parallel logic to get_history's retry block — identical guards.
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/quote", {"symbol": alt})
+        if data and isinstance(data, list) and len(data) > 0:
+            result = data[0]
+            logger.info("FMP quote resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, result)
+            return result
 
     # FMP miss → Alpaca fallback (US tickers only)
     if _is_us_ticker(ticker):
@@ -409,18 +460,18 @@ def get_history(ticker, period="3mo"):
         "symbol": ticker, "from": from_date, "to": to_date
     })
 
-    # Class-share retry: some FMP endpoints resolve BRK.B but not BRK-B (or
-    # vice versa). If the hyphen form returns empty, retry with the dotted
-    # form. Only applies to plain hyphen tickers (not indices or .KS/.KQ).
-    if (not data) and isinstance(ticker, str) and ("-" in ticker) \
-            and not ticker.startswith("^") \
-            and not ticker.endswith(".KS") and not ticker.endswith(".KQ"):
-        alt = ticker.replace("-", ".")
-        data = _fmp_get("/historical-price-eod/full", {
-            "symbol": alt, "from": from_date, "to": to_date
-        })
-        if data:
-            logger.info("FMP history resolved %s via class-share alt %s", ticker, alt)
+    # Class-share retry: some FMP endpoints resolve BRK.B but not BRK-B
+    # (or vice versa). If the first form returns empty, retry with the
+    # alternate. Shares logic with /quote, /profile, etc. via
+    # _class_share_alt() so the rule stays identical across endpoints.
+    if not data:
+        alt = _class_share_alt(ticker)
+        if alt:
+            data = _fmp_get("/historical-price-eod/full", {
+                "symbol": alt, "from": from_date, "to": to_date
+            })
+            if data:
+                logger.info("FMP history resolved %s via class-share alt %s", ticker, alt)
 
     if not data:
         # FMP returned nothing (402 plan-gated, index symbol, or network
@@ -494,6 +545,15 @@ def get_profile(ticker):
         result = data[0]
         _set_cache(cache_key, result)
         return result
+    # Class-share retry (BRK.B ⇄ BRK-B etc).
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/profile", {"symbol": alt})
+        if data and isinstance(data, list) and len(data) > 0:
+            result = data[0]
+            logger.info("FMP profile resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, result)
+            return result
     return {}
 
 
@@ -710,6 +770,14 @@ def get_ratios_ttm(ticker):
         result = data[0]
         _set_cache(cache_key, result)
         return result
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/ratios-ttm", {"symbol": alt})
+        if data and isinstance(data, list) and len(data) > 0:
+            result = data[0]
+            logger.info("FMP ratios-ttm resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, result)
+            return result
     return {}
 
 
@@ -728,6 +796,14 @@ def get_key_metrics_ttm(ticker):
         result = data[0]
         _set_cache(cache_key, result)
         return result
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/key-metrics-ttm", {"symbol": alt})
+        if data and isinstance(data, list) and len(data) > 0:
+            result = data[0]
+            logger.info("FMP key-metrics-ttm resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, result)
+            return result
     return {}
 
 
@@ -760,9 +836,18 @@ def get_quarterly_income(ticker, quarters=8):
     data = _fmp_get("/income-statement", {
         "symbol": ticker, "period": "quarter", "limit": quarters,
     })
-    if data and isinstance(data, list):
+    if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
         return data
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/income-statement", {
+            "symbol": alt, "period": "quarter", "limit": quarters,
+        })
+        if data and isinstance(data, list) and len(data) > 0:
+            logger.info("FMP quarterly income resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, data)
+            return data
 
     _set_cache(cache_key, [])
     return []
@@ -792,9 +877,18 @@ def get_annual_income(ticker, years=4):
     data = _fmp_get("/income-statement", {
         "symbol": ticker, "period": "annual", "limit": years,
     })
-    if data and isinstance(data, list):
+    if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
         return data
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/income-statement", {
+            "symbol": alt, "period": "annual", "limit": years,
+        })
+        if data and isinstance(data, list) and len(data) > 0:
+            logger.info("FMP annual income resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, data)
+            return data
 
     _set_cache(cache_key, [])
     return []
@@ -1008,6 +1102,14 @@ def get_balance_sheet(ticker):
     if isinstance(data, list) and data:
         _set_cache(cache_key, data)
         return data
+    # Class-share retry before falling to EDGAR.
+    alt = _class_share_alt(ticker)
+    if alt:
+        alt_data = _fmp_get("/balance-sheet-statement", {"symbol": alt})
+        if isinstance(alt_data, list) and alt_data:
+            logger.info("FMP balance-sheet resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, alt_data)
+            return alt_data
     # FMP returned None or [] — try EDGAR for US tickers.
     if _is_us_ticker(ticker):
         edgar = _edgar_fundamentals_fallback(ticker)
@@ -1042,6 +1144,14 @@ def get_income_statement(ticker):
     if isinstance(data, list) and data:
         _set_cache(cache_key, data)
         return data
+    # Class-share retry before falling to EDGAR.
+    alt = _class_share_alt(ticker)
+    if alt:
+        alt_data = _fmp_get("/income-statement", {"symbol": alt})
+        if isinstance(alt_data, list) and alt_data:
+            logger.info("FMP income-statement resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, alt_data)
+            return alt_data
     # FMP miss → EDGAR fallback (US tickers only)
     if _is_us_ticker(ticker):
         edgar = _edgar_fundamentals_fallback(ticker)
@@ -1190,9 +1300,16 @@ def get_news(ticker, limit=15):
         if stale:
             return stale
     data = _fmp_get("/news/stock", {"symbol": ticker, "limit": limit})
-    if data and isinstance(data, list):
+    if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
         return data
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/news/stock", {"symbol": alt, "limit": limit})
+        if data and isinstance(data, list) and len(data) > 0:
+            logger.info("FMP news resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, data)
+            return data
     return []
 
 
@@ -1261,9 +1378,23 @@ def get_earnings_calendar(ticker=None, days_ahead=30):
         params["symbol"] = ticker
 
     data = _fmp_get("/earnings-calendar", params)
-    if data and isinstance(data, list):
+    if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
         return data
+
+    # Class-share retry when a specific ticker was requested.
+    if ticker:
+        alt = _class_share_alt(ticker)
+        if alt:
+            alt_params = dict(params, symbol=alt)
+            alt_data = _fmp_get("/earnings-calendar", alt_params)
+            if alt_data and isinstance(alt_data, list) and len(alt_data) > 0:
+                logger.info(
+                    "FMP earnings-calendar resolved %s via class-share alt %s",
+                    ticker, alt,
+                )
+                _set_cache(cache_key, alt_data)
+                return alt_data
 
     # FMP miss — Alpaca does NOT publish earnings calendars, so no
     # fallback here today. The adapter returns [] deliberately; future
@@ -1295,9 +1426,16 @@ def get_dividends(ticker):
         if stale:
             return stale
     data = _fmp_get("/dividends", {"symbol": ticker})
-    if data and isinstance(data, list):
+    if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
         return data
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/dividends", {"symbol": alt})
+        if data and isinstance(data, list) and len(data) > 0:
+            logger.info("FMP dividends resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, data)
+            return data
     return []
 
 
@@ -1319,7 +1457,14 @@ def get_intraday(ticker, interval="1min"):
     fmp_interval = interval_map.get(interval, interval)
 
     data = _fmp_get(f"/historical-chart/{fmp_interval}", {"symbol": ticker})
-    if data and isinstance(data, list):
+    if not (data and isinstance(data, list) and len(data) > 0):
+        alt = _class_share_alt(ticker)
+        if alt:
+            alt_data = _fmp_get(f"/historical-chart/{fmp_interval}", {"symbol": alt})
+            if alt_data and isinstance(alt_data, list) and len(alt_data) > 0:
+                logger.info("FMP intraday resolved %s via class-share alt %s", ticker, alt)
+                data = alt_data
+    if data and isinstance(data, list) and len(data) > 0:
         df = pd.DataFrame(data)
         if "date" in df.columns:
             df["Date"] = pd.to_datetime(df["date"])
@@ -1410,9 +1555,16 @@ def get_insider_trades(ticker, limit=50):
             return stale
 
     data = _fmp_get("/insider-trading", {"symbol": ticker, "limit": limit})
-    if data and isinstance(data, list):
+    if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
         return data
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/insider-trading", {"symbol": alt, "limit": limit})
+        if data and isinstance(data, list) and len(data) > 0:
+            logger.info("FMP insider-trading resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, data)
+            return data
 
     _set_cache(cache_key, [])
     return []
@@ -1434,9 +1586,16 @@ def get_short_interest(ticker):
         if stale is not None:
             return stale
     data = _fmp_get("/historical/short-interest", {"symbol": ticker})
-    if data and isinstance(data, list):
+    if data and isinstance(data, list) and len(data) > 0:
         _set_cache(cache_key, data)
         return data
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/historical/short-interest", {"symbol": alt})
+        if data and isinstance(data, list) and len(data) > 0:
+            logger.info("FMP short-interest resolved %s via class-share alt %s", ticker, alt)
+            _set_cache(cache_key, data)
+            return data
     _set_cache(cache_key, [])
     return []
 
