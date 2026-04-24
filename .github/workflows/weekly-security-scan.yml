@@ -1,0 +1,223 @@
+name: Weekly Security Scan
+
+on:
+  schedule:
+    - cron: '0 20 * * 0'  # 매주 일요일 20:00 UTC = 월요일 05:00 KST
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  security-regression:
+    name: Security regression scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for git log .env check
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install test dependencies
+        run: pip install pytest pytest-flask
+
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
+
+      - name: pytest — kill switch + waitlist regression
+        id: pytest_kill
+        run: |
+          set +e
+          pytest \
+            tests/test_alpaca_kill_switch.py \
+            tests/test_agent_waitlist.py \
+            -v --tb=short 2>&1 | tee /tmp/pytest_kill.log
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: KIS terms-of-service violation patterns
+        id: kis_patterns
+        run: |
+          set +e
+
+          SCAN_PATHS="routes services"
+
+          # Raw response dump leak: resp.text[: or response.text[:
+          raw_dump_hits=$(grep -rnE \
+            '(resp|response)\.text\s*\[' \
+            $SCAN_PATHS \
+            --include='*.py' 2>/dev/null \
+            | grep -viE 'test_|__pycache__|#' \
+            || true)
+
+          # Debug print leaking KIS/Alpaca credentials or app_key
+          debug_print_hits=$(grep -rnE \
+            'print\s*\(.*\b(kis|alpaca|app_key|appkey|access_token|secret_key)\b' \
+            $SCAN_PATHS \
+            --include='*.py' 2>/dev/null \
+            | grep -iE 'print\s*\(' \
+            | grep -viE 'test_|__pycache__|#\s*print' \
+            || true)
+
+          total=0
+          report=""
+
+          if [ -n "$raw_dump_hits" ]; then
+            cnt=$(echo "$raw_dump_hits" | wc -l | tr -d ' ')
+            total=$((total + cnt))
+            report+="### Raw response dump leak — resp.text[: ($cnt)\n\`\`\`\n$raw_dump_hits\n\`\`\`\n\n"
+            echo "::error::KIS raw response slice found ($cnt) — potential PII/credential leak"
+          fi
+
+          if [ -n "$debug_print_hits" ]; then
+            cnt=$(echo "$debug_print_hits" | wc -l | tr -d ' ')
+            total=$((total + cnt))
+            report+="### Debug print with credential token ($cnt)\n\`\`\`\n$debug_print_hits\n\`\`\`\n\n"
+            echo "::error::Debug print with KIS/Alpaca/key token found ($cnt) — must be removed before deploy"
+          fi
+
+          echo "total=$total" >> $GITHUB_OUTPUT
+          {
+            echo "report<<EOF"
+            printf '%b' "$report"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: .env committed to git check
+        id: env_check
+        run: |
+          set +e
+          # Check all branches and the full history for any .env* file ever committed
+          env_hits=$(git log --all --oneline -- '.env' '.env.*' '.env.local' '.env.production' 2>/dev/null || true)
+          if [ -n "$env_hits" ]; then
+            echo "::error::.env file(s) found in git history — secret leak risk"
+            echo "hits<<EOF" >> $GITHUB_OUTPUT
+            echo "$env_hits" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Evaluate results
+        id: evaluate
+        run: |
+          pytest_ok="${{ steps.pytest_kill.outputs.exit_code }}"
+          kis_total="${{ steps.kis_patterns.outputs.total }}"
+          env_found="${{ steps.env_check.outputs.found }}"
+
+          failed=false
+          summary=""
+
+          if [ "$pytest_ok" != "0" ]; then
+            failed=true
+            summary+="- pytest kill switch + waitlist: FAILED (exit $pytest_ok)\n"
+          else
+            summary+="- pytest kill switch + waitlist: PASSED\n"
+          fi
+
+          if [ "$kis_total" != "0" ] && [ -n "$kis_total" ]; then
+            failed=true
+            summary+="- KIS violation patterns: FAILED ($kis_total hits)\n"
+          else
+            summary+="- KIS violation patterns: PASSED\n"
+          fi
+
+          if [ "$env_found" = "true" ]; then
+            failed=true
+            summary+=".env committed to git: FAILED (history contains .env file)\n"
+          else
+            summary+=".env committed to git: PASSED (no .env in history)\n"
+          fi
+
+          echo "failed=$failed" >> $GITHUB_OUTPUT
+          {
+            echo "summary<<EOF"
+            printf '%b' "$summary"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Open incident issue on failure
+        if: steps.evaluate.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          title="[Security] Weekly security scan failed @ $(date -u +'%Y-%m-%d') UTC"
+          body=$(cat <<'EOF'
+          ## Weekly Security Scan — FAILED
+
+          One or more security regression checks failed. Immediate investigation required.
+
+          ### Check results
+          ${{ steps.evaluate.outputs.summary }}
+
+          ### KIS pattern detail
+          ${{ steps.kis_patterns.outputs.report }}
+
+          ### .env git history hits
+          ${{ steps.env_check.outputs.hits }}
+
+          ### Remediation
+          1. Kill switch / waitlist test failure: check if `ALPACA_DISABLED` flag and waitlist gate are intact
+          2. KIS raw dump: replace `resp.text[:]` slices with structured JSON parsing
+          3. Debug prints: remove all `print()` calls containing credential tokens before next deploy
+          4. .env in git: run `git filter-repo` or BFG to purge history, rotate all exposed secrets immediately
+
+          Full run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          existing=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label autopilot,security \
+            --json number \
+            --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "$body"
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body "$body" \
+              --label autopilot,security
+          fi
+
+          # Optional Slack notification (only fires if secret is set)
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+              -H 'Content-type: application/json' \
+              --data "{\"text\":\"[PivoxQuant] Weekly security scan FAILED — see ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+          fi
+
+      - name: Close stale incident on recovery
+        if: steps.evaluate.outputs.failed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for num in $(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label autopilot,security \
+            --json number \
+            --jq '.[].number'); do
+            gh issue comment "$num" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "Security scan recovered at $(date -u +%FT%TZ). Auto-closing."
+            gh issue close "$num" --repo "$GITHUB_REPOSITORY"
+          done
+          echo "Security scan PASSED — $(date -u +%FT%TZ)"
+
+      - name: Fail job if issues found
+        if: steps.evaluate.outputs.failed == 'true'
+        run: exit 1

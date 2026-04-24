@@ -1,0 +1,207 @@
+name: Daily Legal Scan
+
+on:
+  schedule:
+    - cron: '15 0 * * *'  # 00:15 UTC = 09:15 KST
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  legal-regression:
+    name: Legal regression scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install test dependencies
+        run: pip install pytest pytest-flask
+
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
+
+      - name: pytest — no hardcoded samples regression
+        id: pytest_samples
+        run: |
+          set +e
+          pytest tests/test_no_hardcoded_samples.py -v --tb=short 2>&1 | tee /tmp/pytest_samples.log
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Forbidden directive token sweep
+        id: token_sweep
+        run: |
+          set +e
+
+          # Paths to scan (production source only — tests and legal_filter.py excluded)
+          SCAN_PATHS="routes services frontend/src"
+
+          # --- EN forbidden tokens ---
+          en_hits=$(grep -rnE \
+            '\b(recommendation|buy recommendation|sell recommendation)\b' \
+            $SCAN_PATHS \
+            --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
+            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|consent|never\s+(recommend)|not\s+(recommend)|no\s+recommend|does\s+not\s+(recommend)' \
+            || true)
+
+          # --- EN AI Coach / 투자 코치 ---
+          coach_hits=$(grep -rnE \
+            '\b(AI Coach|investment coach|투자\s*코치)\b' \
+            $SCAN_PATHS \
+            --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
+            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer' \
+            || true)
+
+          # --- KR forbidden advisory terms ---
+          kr_hits=$(grep -rnE \
+            '(매수\s*추천|매도\s*추천|투자\s*추천|종목\s*추천)' \
+            $SCAN_PATHS \
+            --include='*.py' --include='*.ts' --include='*.tsx' --include='*.md' 2>/dev/null \
+            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|금지|없음|않습니다|안\s*합니다|절대|하지\s*않' \
+            || true)
+
+          total=0
+          report=""
+
+          if [ -n "$en_hits" ]; then
+            cnt=$(echo "$en_hits" | wc -l | tr -d ' ')
+            total=$((total + cnt))
+            report+="### EN recommendation tokens ($cnt)\n\`\`\`\n$en_hits\n\`\`\`\n\n"
+            echo "::error::Forbidden EN recommendation tokens found ($cnt hits)"
+          fi
+
+          if [ -n "$coach_hits" ]; then
+            cnt=$(echo "$coach_hits" | wc -l | tr -d ' ')
+            total=$((total + cnt))
+            report+="### AI Coach / 투자 코치 token ($cnt)\n\`\`\`\n$coach_hits\n\`\`\`\n\n"
+            echo "::error::Forbidden AI Coach / 투자 코치 token found ($cnt hits)"
+          fi
+
+          if [ -n "$kr_hits" ]; then
+            cnt=$(echo "$kr_hits" | wc -l | tr -d ' ')
+            total=$((total + cnt))
+            report+="### KR advisory tokens ($cnt)\n\`\`\`\n$kr_hits\n\`\`\`\n\n"
+            echo "::error::Forbidden KR advisory tokens found ($cnt hits)"
+          fi
+
+          echo "total=$total" >> $GITHUB_OUTPUT
+          {
+            echo "report<<EOF"
+            printf '%b' "$report"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Evaluate results
+        id: evaluate
+        run: |
+          pytest_ok="${{ steps.pytest_samples.outputs.exit_code }}"
+          token_total="${{ steps.token_sweep.outputs.total }}"
+
+          failed=false
+          summary=""
+
+          if [ "$pytest_ok" != "0" ]; then
+            failed=true
+            summary+="- pytest test_no_hardcoded_samples: FAILED (exit $pytest_ok)\n"
+          else
+            summary+="- pytest test_no_hardcoded_samples: PASSED\n"
+          fi
+
+          if [ "$token_total" != "0" ] && [ -n "$token_total" ]; then
+            failed=true
+            summary+="- Forbidden token sweep: FAILED ($token_total hits)\n"
+          else
+            summary+="- Forbidden token sweep: PASSED\n"
+          fi
+
+          echo "failed=$failed" >> $GITHUB_OUTPUT
+          {
+            echo "summary<<EOF"
+            printf '%b' "$summary"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Open incident issue on failure
+        if: steps.evaluate.outputs.failed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          title="[Legal] Daily legal scan failed @ $(date -u +'%Y-%m-%d %H:%M') UTC"
+          body=$(cat <<'EOF'
+          ## Daily Legal Scan — FAILED
+
+          At least one legal regression check failed. Merge to main is NOT safe until resolved.
+
+          ### Check results
+          ${{ steps.evaluate.outputs.summary }}
+
+          ### Token sweep detail
+          ${{ steps.token_sweep.outputs.report }}
+
+          ### pytest log (tail)
+          See full run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ### Remediation
+          1. Review hits above
+          2. Replace forbidden tokens with compliant alternatives (POSITIVE/NEGATIVE/NEUTRAL signals, AI Assistant)
+          3. Verify `legal_filter.py` scrub is applied if the term is needed in context
+          4. Re-run: `pytest tests/test_no_hardcoded_samples.py -v`
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          existing=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label autopilot,legal \
+            --json number \
+            --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "$body"
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body "$body" \
+              --label autopilot,legal
+          fi
+
+          # Optional Slack notification (only fires if secret is set)
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+              -H 'Content-type: application/json' \
+              --data "{\"text\":\"[PivoxQuant] Daily legal scan FAILED — see ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"
+          fi
+
+      - name: Close stale incident on recovery
+        if: steps.evaluate.outputs.failed != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for num in $(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label autopilot,legal \
+            --json number \
+            --jq '.[].number'); do
+            gh issue comment "$num" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "Legal scan recovered at $(date -u +%FT%TZ). Auto-closing."
+            gh issue close "$num" --repo "$GITHUB_REPOSITORY"
+          done
+          echo "Legal scan PASSED — $(date -u +%FT%TZ)"
+
+      - name: Fail job if issues found
+        if: steps.evaluate.outputs.failed == 'true'
+        run: exit 1
