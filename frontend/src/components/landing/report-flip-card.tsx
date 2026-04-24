@@ -62,15 +62,25 @@ function CardChrome({
       aria-hidden={hidden || undefined}
       className="absolute inset-0 flex flex-col overflow-hidden rounded-sm p-7"
       style={{
+        // Opaque backgrounds on both faces — any alpha here was the
+        // root cause of the hover-flash (#FAF8F3 leaked through during
+        // the first few frames of rotateY).
         backgroundColor: side === "front" ? "#0D0D0D" : "#FAF8F3",
         border:
           side === "front"
             ? "0.5px solid rgba(184,149,106,0.25)"
             : "1px solid rgba(139,111,71,0.38)",
-        // 3D face stacking
+        // 3D face stacking — hide the rotated-away face completely.
         backfaceVisibility: "hidden",
         WebkitBackfaceVisibility: "hidden",
-        transform: side === "back" ? "rotateY(180deg)" : undefined,
+        // Promote to its own GPU layer so the first rotateY frame
+        // doesn't flash an untextured composite (white on most GPUs).
+        willChange: "transform",
+        transform:
+          side === "back"
+            ? "rotateY(180deg) translateZ(0)"
+            : "translateZ(0)",
+        transformOrigin: "center center",
         boxShadow:
           side === "back"
             ? "inset 0 0 0 1px rgba(255,255,255,0.35)"
@@ -444,7 +454,17 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
   return (
     <div
       className="group relative"
-      style={{ perspective: "1400px", minHeight: 320 }}
+      style={{
+        perspective: "1400px",
+        minHeight: 320,
+        // Force a separate stacking context so the rotating card's
+        // compositor layer can't blend with siblings mid-hover.
+        isolation: "isolate",
+        // Prevent any clipped white container behind the card from
+        // appearing through the front face on GPUs that composite
+        // perspective layers against the document background.
+        backgroundColor: "#0A0A0A",
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -466,6 +486,11 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
           style={{
             transformStyle: "preserve-3d",
             minHeight: 320,
+            // Promote the rotator to its own layer up-front so the very
+            // first frame is already GPU-composited — eliminates the
+            // 1-2 frame white flash at hover start.
+            willChange: "transform",
+            WebkitTransformStyle: "preserve-3d",
           }}
         >
           <FrontFace

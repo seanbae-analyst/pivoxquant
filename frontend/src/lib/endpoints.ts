@@ -170,6 +170,15 @@ export const API = {
     update: "/api/profile",
     questionnaire: "/api/profile/questionnaire",
     capital: "/api/profile/capital",
+    // Persona v2 — 9-dim classifier surface (backend: routes/profile.py).
+    // See `frontend/src/lib/cfo/hooks.ts` for response shapes.
+    personaDetail: (windowDays: number = 90) =>
+      `/api/profile/persona-detail?window_days=${windowDays}`,
+    personaExplain: "/api/profile/persona-explain",
+    personaBenchmark: (windowDays: 30 | 90 | 365 = 90) =>
+      `/api/profile/persona-benchmark?window=${windowDays}`,
+    personaBenchmarkAll: (windowDays: 30 | 90 | 365 = 90) =>
+      `/api/profile/persona-benchmark-all?window=${windowDays}`,
   },
   billing: {
     createCheckout: "/api/billing/create-checkout",
