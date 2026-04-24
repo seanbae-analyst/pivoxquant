@@ -75,7 +75,7 @@ const profiles = [
   {
     icon: Gem,
     title: "Value Hunter",
-    quote: "I buy great companies at discount prices.",
+    quote: "I look for great companies priced below their intrinsic value.",
     strategy: "Contrarian picks, fundamentals-heavy analysis, patient holding.",
     colorBg: "bg-cyan-50",
     colorBorder: "border-cyan-100",

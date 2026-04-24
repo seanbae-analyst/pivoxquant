@@ -1,60 +1,142 @@
 "use client";
 
-import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
-import { ArrowRight, FileText } from "lucide-react";
 import FeaturePageShell from "@/components/landing/feature-page-shell";
+import ReportFlipCard, {
+  type FlipSample,
+} from "@/components/landing/report-flip-card";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 18 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
 };
-const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } };
+const stagger: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } },
+};
 
-const SAMPLES = [
+const SAMPLES: readonly FlipSample[] = [
   {
     name: "Weekly Memo",
     subtitle: "Monday briefing · 5 pages",
+    pageCount: "5 pages",
+    cadence: "Delivered Mondays",
     excerpt:
       "Realized P&L from the last seven days, position drift, earnings events on your names, dividend calendar. Observation summary — never a recommendation.",
     href: "/samples/weekly_memo.pdf",
+    preview: {
+      kicker: "Week 16 · Investor Memo",
+      heading: "Seven days on the page.",
+      lede: "A Monday reading of the Example Portfolio: what compounded, what drifted, and the calendar that matters this week.",
+      bullets: [
+        "Realized P&L across the week, decomposed by position cohort.",
+        "Drift log: holdings that moved outside their entry thesis band.",
+        "Earnings and dividend events on names currently held.",
+      ],
+      closer: "Observation only. No allocation instructions.",
+    },
   },
   {
     name: "Earnings Pre-Brief",
     subtitle: "Day-before · 6 pages",
+    pageCount: "6 pages",
+    cadence: "Eve of print",
     excerpt:
       "Consensus revenue and EPS range, YoY comparisons, four-quarter guidance, business-specific metrics, prior earnings reaction pattern.",
     href: "/samples/earnings_prebrief.pdf",
+    preview: {
+      kicker: "Earnings · Pre-Brief",
+      heading: "What the Street expects tomorrow.",
+      lede: "Consensus bands, four-quarter guidance cadence, and the reaction pattern from the last eight prints for a held name.",
+      bullets: [
+        "Revenue and EPS consensus range with standard deviation.",
+        "Guidance history: how prior quarters landed vs. guidance given.",
+        "Post-print drift window observed across the last eight reports.",
+      ],
+      closer: "A reading of expectations — not a directional call.",
+    },
   },
   {
     name: "Risk Board Deck",
     subtitle: "Board-grade · 12 slides",
+    pageCount: "12 slides",
+    cadence: "Quarterly board cut",
     excerpt:
       "Concentration, drawdown history, factor tilts, correlation map, tail clustering, regime badge. The deck a CIO reads before the risk committee.",
     href: "/samples/risk_board.pdf",
+    preview: {
+      kicker: "Risk Board · Q2",
+      heading: "The deck a committee reads.",
+      lede: "Seven defensive layers rendered as a board-grade presentation: concentration, tail, correlation, regime.",
+      bullets: [
+        "Concentration by position and by sector, with Herfindahl band.",
+        "Drawdown history across three lookback windows, annotated.",
+        "Correlation map with tail-clustering flags marked for review.",
+      ],
+      closer: "Formatted to open on a boardroom screen.",
+    },
   },
   {
     name: "Quarterly Self-Report",
     subtitle: "Own-decisions audit · 10 pages",
+    pageCount: "10 pages",
+    cadence: "End of quarter",
     excerpt:
       "Decisions logged during the quarter, position changes with rationale, realized outcomes against entry notes, pattern observations across trades.",
     href: "/samples/quarterly_self_report.pdf",
+    preview: {
+      kicker: "Q-Review · Self-Audit",
+      heading: "A quarter of your own decisions.",
+      lede: "Every logged decision, traced from rationale at entry to the realized outcome by quarter end.",
+      bullets: [
+        "Decision log with entry thesis and exit disposition side by side.",
+        "Realized outcomes grouped by thesis type for pattern reading.",
+        "Style-drift observations against your declared investor profile.",
+      ],
+      closer: "A mirror held up to three months of your own hand.",
+    },
   },
   {
     name: "Year-End Letter",
-    subtitle: "Letter to next year’s self · 14 pages",
+    subtitle: "Letter to next year's self · 14 pages",
+    pageCount: "14 pages",
+    cadence: "Delivered January 15",
     excerpt:
-      "Annual P&L recap, decisions that compounded and those that didn’t, patterns drawn from the decision log, observations on style drift.",
+      "Annual P&L recap, decisions that compounded and those that didn't, patterns drawn from the decision log, observations on style drift.",
     href: "/samples/year_end_letter.pdf",
+    preview: {
+      kicker: "FY · Annual Letter",
+      heading: "A letter to next year's self.",
+      lede: "Twelve months compressed into a reflective accounting — what the portfolio did, and a reading of why.",
+      bullets: [
+        "Annual P&L recap against the year-open allocation baseline.",
+        "Decisions that compounded and the ones that cost carry.",
+        "Style-drift notes and a calendar for the year ahead.",
+      ],
+      closer: "Written in the voice of your chosen persona.",
+    },
   },
   {
     name: "Morning Brief Plus",
     subtitle: "Pre-market · 2 pages",
+    pageCount: "2 pages",
+    cadence: "Daily 07:30 KST",
     excerpt:
-      "Overnight tape on your names, futures and dollar index snapshot, earnings day-plan for today’s prints, macro cues drawn from the calendar.",
+      "Overnight tape on your names, futures and dollar index snapshot, earnings day-plan for today's prints, macro cues drawn from the calendar.",
     href: "/samples/morning_brief_plus.pdf",
+    preview: {
+      kicker: "Morning · Pre-Market",
+      heading: "Two pages before the open.",
+      lede: "A compact morning reading: overnight tape, futures and FX snapshot, the prints due before and after today's close.",
+      bullets: [
+        "Overnight moves on held names and watchlist benches.",
+        "Futures, dollar index, and rates tape summarized in one line each.",
+        "Day-plan of the prints with consensus bands inline.",
+      ],
+      closer: "Read between the coffee and the bell.",
+    },
   },
 ];
 
@@ -66,9 +148,24 @@ export default function ReportsPage() {
       title="Open a published PDF from the desk."
       deck="Six public samples. Rendered from anonymized composite portfolios. The formatting, cadence, and voice are exactly what members receive on their own holdings."
       seeAlso={[
-        { eyebrow: "Catalogue", title: "Feature Explorer", description: "All 17 artifacts, opened one at a time.", href: "/features/explorer" },
-        { eyebrow: "Identity", title: "8 CFO Personas", description: "Read the same artifact in each of eight voices.", href: "/features/personas" },
-        { eyebrow: "Preview", title: "Dashboard Preview", description: "The terminal that hosts the artifacts.", href: "/features/dashboard" },
+        {
+          eyebrow: "Catalogue",
+          title: "Feature Explorer",
+          description: "All 17 artifacts, opened one at a time.",
+          href: "/features/explorer",
+        },
+        {
+          eyebrow: "Identity",
+          title: "8 CFO Personas",
+          description: "Read the same artifact in each of eight voices.",
+          href: "/features/personas",
+        },
+        {
+          eyebrow: "Preview",
+          title: "Dashboard Preview",
+          description: "The terminal that hosts the artifacts.",
+          href: "/features/dashboard",
+        },
       ]}
     >
       <section
@@ -77,6 +174,35 @@ export default function ReportsPage() {
         style={{ backgroundColor: "#0A0A0A" }}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <span
+                aria-hidden
+                className="h-px w-7"
+                style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
+              />
+              <span
+                className="font-serif uppercase"
+                style={{
+                  color: "var(--pq-bronze)",
+                  fontSize: "11px",
+                  letterSpacing: "0.22em",
+                }}
+              >
+                Hover · focus · or tap to preview
+              </span>
+            </div>
+            <span
+              className="hidden font-serif italic sm:inline"
+              style={{
+                color: "rgba(245,240,232,0.45)",
+                fontSize: "11.5px",
+              }}
+            >
+              Six samples. Flip a card to read a page.
+            </span>
+          </div>
+
           <motion.div
             initial={reduce ? undefined : "hidden"}
             whileInView={reduce ? undefined : "visible"}
@@ -85,67 +211,9 @@ export default function ReportsPage() {
             className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
           >
             {SAMPLES.map((s) => (
-              <motion.article
-                key={s.name}
-                variants={fadeUp}
-                className="group relative flex flex-col gap-4 overflow-hidden rounded-sm p-7 transition-all hover:-translate-y-0.5"
-                style={{
-                  backgroundColor: "#0D0D0D",
-                  border: "0.5px solid rgba(184,149,106,0.25)",
-                  minHeight: 280,
-                }}
-              >
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, transparent 0%, rgba(184,149,106,0.5) 50%, transparent 100%)",
-                  }}
-                />
-                <div className="flex h-9 w-9 items-center justify-center rounded-sm"
-                  style={{
-                    backgroundColor: "rgba(184,149,106,0.1)",
-                    border: "0.5px solid rgba(184,149,106,0.3)",
-                    color: "var(--pq-bronze)",
-                  }}
-                >
-                  <FileText className="h-4 w-4" aria-hidden />
-                </div>
-                <div>
-                  <h3
-                    className="font-serif"
-                    style={{ color: "var(--pq-ivory)", fontSize: "20px", fontWeight: 500, letterSpacing: "-0.01em", marginBottom: 6 }}
-                  >
-                    {s.name}
-                  </h3>
-                  <p className="font-serif italic" style={{ color: "rgba(184,149,106,0.85)", fontSize: "12px" }}>
-                    {s.subtitle}
-                  </p>
-                </div>
-                <p
-                  className="font-serif"
-                  style={{ color: "rgba(245,240,232,0.68)", fontSize: "13.5px", lineHeight: 1.6 }}
-                >
-                  {s.excerpt}
-                </p>
-                <Link
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-auto inline-flex items-center gap-1.5 font-serif italic"
-                  style={{
-                    color: "var(--pq-bronze)",
-                    fontSize: "12.5px",
-                    borderBottom: "0.5px solid rgba(184,149,106,0.4)",
-                    alignSelf: "flex-start",
-                    paddingBottom: 2,
-                  }}
-                >
-                  Open PDF
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                </Link>
-              </motion.article>
+              <motion.div key={s.name} variants={fadeUp}>
+                <ReportFlipCard s={s} />
+              </motion.div>
             ))}
           </motion.div>
         </div>

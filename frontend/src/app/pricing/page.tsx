@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
@@ -8,6 +8,108 @@ import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Check, ChevronDown, ArrowLeft, Info, X as IconClose } from "lucide-react";
+
+/* ── PriceCountUp ──────────────────────────────────────────────────────────
+   Scroll-triggered count-up for tier price numbers.
+   - IntersectionObserver fires once when the card enters viewport.
+   - Honors prefers-reduced-motion: renders the final value immediately,
+     preserving the locale-formatted string (e.g. "9,900").
+   - SSR / first client paint renders the ORIGINAL `value` string verbatim
+     so server + client markup agree byte-for-byte (Node ICU and browser
+     ICU can otherwise disagree on `toLocaleString` output for the same
+     locale tag, triggering a React hydration warning). After hydration,
+     an effect rewrites the display to the locale-formatted target, and
+     the IntersectionObserver then drives the 0 → target count-up if
+     motion is allowed. A ref flag locks in the fired state so re-renders
+     never reset to zero.
+   - Zero is rendered verbatim (no animation) — animating "0" to "0" is
+     a no-op and would otherwise still repaint a "0" mid-tick.
+   ─────────────────────────────────────────────────────────────────────── */
+function PriceCountUp({
+  value,
+  locale = "ko-KR",
+}: {
+  value: string; // e.g. "0" | "9,900" | "19,900"
+  locale?: string;
+}) {
+  // Parse the numeric target once — tolerate any non-digit separators.
+  const target = Number(value.replace(/[^0-9.-]/g, ""));
+
+  // Skip animation for zero or unparsable values.
+  const shouldAnimate = Number.isFinite(target) && target > 0;
+
+  // SSR-safe: start with the raw `value` prop (already thousand-separated
+  // in TIERS). First client paint matches server markup exactly. We swap
+  // to the locale-formatted string inside useEffect on the client.
+  const [display, setDisplay] = useState<string>(value);
+  const ref = useRef<HTMLSpanElement>(null);
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    // Compute locale-formatted strings client-side only, so server and
+    // client-initial render don't diverge on ICU output differences.
+    const finalString = Number.isFinite(target)
+      ? target.toLocaleString(locale)
+      : value;
+
+    if (!shouldAnimate) {
+      // Zero / unparsable: snap display to the (client-formatted) final
+      // string and we're done.
+      setDisplay(finalString);
+      firedRef.current = true;
+      return;
+    }
+
+    const prefersReduced =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      setDisplay(finalString);
+      firedRef.current = true;
+      return;
+    }
+
+    const el = ref.current;
+    if (!el) return;
+
+    // Reset to 0 before the card enters the viewport so the count-up has
+    // somewhere to travel from. We only do this once per mount.
+    if (!firedRef.current) {
+      setDisplay((0).toLocaleString(locale));
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting || firedRef.current) continue;
+          firedRef.current = true;
+          const durationMs = 1400;
+          const startTs = performance.now();
+          const tick = (now: number) => {
+            const t = Math.min(1, (now - startTs) / durationMs);
+            // ease-out cubic
+            const eased = 1 - Math.pow(1 - t, 3);
+            const n = Math.round(target * eased);
+            setDisplay(n.toLocaleString(locale));
+            if (t < 1) {
+              requestAnimationFrame(tick);
+            } else {
+              setDisplay(finalString);
+            }
+          };
+          requestAnimationFrame(tick);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.3 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+    // target/finalString are derived from `value`; guard with `value` only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return <span ref={ref}>{display}</span>;
+}
 
 /* ── Tier data (3 tiers — matched to landing Pricing section) ── */
 
@@ -563,7 +665,7 @@ export default function PricingPage() {
                         color: isDark ? "var(--pq-ivory)" : "var(--pq-ink)",
                       }}
                     >
-                      {p.price}
+                      <PriceCountUp value={p.price} />
                     </span>
                     <span
                       className="font-serif text-[11px] uppercase"

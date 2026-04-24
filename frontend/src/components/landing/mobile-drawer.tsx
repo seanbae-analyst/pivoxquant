@@ -17,6 +17,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { ArrowRight, ChevronDown, X } from "lucide-react";
 import type { NavGroup } from "./top-nav";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -43,6 +44,7 @@ export default function MobileDrawer({
 }) {
   const reduce = useReducedMotion();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const panelRef = useFocusTrap<HTMLElement>(open);
 
   useEffect(() => {
     if (!open) return;
@@ -52,6 +54,16 @@ export default function MobileDrawer({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  // Body scroll lock while drawer open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   return (
     <AnimatePresence>
@@ -77,9 +89,11 @@ export default function MobileDrawer({
           {/* Panel */}
           <motion.aside
             key="drawer-panel"
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-label="Menu"
+            tabIndex={-1}
             variants={reduce ? undefined : panelVariants}
             initial={reduce ? false : "hidden"}
             animate="visible"

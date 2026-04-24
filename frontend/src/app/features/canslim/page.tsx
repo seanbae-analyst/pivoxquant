@@ -52,7 +52,7 @@ const factors = [
   {
     letter: "S",
     title: "Supply & Demand",
-    description: "Strong volume with limited shares available. When lots of people want to buy but few are selling, prices go up.",
+    description: "Strong volume with limited shares available. When demand outpaces supply, prices historically drift higher — a factor CANSLIM measures, not a prediction.",
     icon: BarChart3,
     threshold: "Strong volume + limited float",
     color: "text-emerald-600 bg-emerald-50 border-emerald-100",
@@ -68,9 +68,9 @@ const factors = [
   {
     letter: "I",
     title: "Institutional Interest",
-    description: "Mutual funds and hedge funds are buying in. When smart money moves in, it is a strong signal of confidence.",
+    description: "Observes institutional flow — mutual fund and hedge fund position changes in the name. Descriptive factor only; not a signal to act.",
     icon: Building2,
-    threshold: "Smart money is buying",
+    threshold: "Observed institutional accumulation",
     color: "text-indigo-600 bg-indigo-50 border-indigo-100",
   },
   {

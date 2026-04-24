@@ -34,6 +34,7 @@ import {
   getPersonaGlyph,
   normalizedPersonaId,
 } from "@/components/home/persona-glyph";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 interface Props {
   /** Rendered inline (no paper shell). Defaults to false → renders
@@ -275,12 +276,19 @@ function Sparkline({
 
 /* ── Re-classify mini modal — 5 rapid questions, local-only echo. ── */
 function ReclassifyMini({ onClose }: { onClose: () => void }) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(true);
+
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
   }, [onClose]);
 
   return (
@@ -297,6 +305,8 @@ function ReclassifyMini({ onClose }: { onClose: () => void }) {
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
     >
       <motion.div
+        ref={dialogRef}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         initial={{ y: 8, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

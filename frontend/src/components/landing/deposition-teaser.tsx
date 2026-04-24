@@ -27,7 +27,7 @@ const QUESTIONS: readonly { n: number; q_en: string; q_ko: string }[] = [
   {
     n: 1,
     q_en: "What is your thesis in one sentence?",
-    q_ko: "한 문장으로 이 매수 논리를 말해보라.",
+    q_ko: "한 문장으로 이 포지션 진입 논리를 말해보라.",
   },
   {
     n: 2,
@@ -121,7 +121,7 @@ export function DepositionTeaser() {
             color: "rgba(245, 240, 232, 0.65)",
           }}
         >
-          매수 버튼 앞에 서는 7개의 관문. 당신을 변호할 기회가 아니라,
+          진입 결정 앞에 서는 7개의 관문. 당신을 변호할 기회가 아니라,
           당신의 논리를 스스로 검증할 기회다. 이것은 조언이 아니라 규율이다.
         </motion.p>
 
