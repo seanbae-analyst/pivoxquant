@@ -544,6 +544,7 @@ _KR_INDEX_SPEC = [
 ]
 
 
+
 def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
     """Build the standard index entry from a liquid ETF proxy.
 
@@ -627,15 +628,34 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     level: float | None = None
     change_pct: float = 0.0
 
+    # Candidate KIS index codes. KIS's `inquire-index-price` endpoint is
+    # documented with 0001/1001 for KOSPI/KOSDAQ and 2001/2203 for
+    # KOSPI200/KOSDAQ150 — but the 2xxx codes have been observed returning
+    # rt_cd!=0 on the Starter plan. When the primary code yields no data we
+    # retry a known alternate (some regional docs use "201"/"301"). First
+    # non-empty hit wins.
+    _kis_code_candidates = {
+        "2001": ["2001", "0201"],   # KOSPI 200 alternatives
+        "2203": ["2203", "1150"],   # KOSDAQ 150 alternatives
+    }.get(kis_code, [kis_code])
+
     # 1) Live KIS quote (best — includes native d/d%).
     try:
         from services.container import realtime as _rt
         if getattr(_rt, "kis_available", False):
             from kis_service import KISService
-            idx = KISService().get_index_price(kis_code)
-            if idx and idx.get("price"):
-                level = float(idx["price"])
-                change_pct = float(idx.get("change_pct") or 0)
+            _svc = KISService()
+            for _code in _kis_code_candidates:
+                idx = _svc.get_index_price(_code)
+                if idx and idx.get("price"):
+                    level = float(idx["price"])
+                    change_pct = float(idx.get("change_pct") or 0)
+                    if _code != kis_code:
+                        logger.info(
+                            "market.indices KIS primary code %s empty; "
+                            "resolved via alternate %s", kis_code, _code,
+                        )
+                    break
     except Exception as e:
         logger.debug(f"market.indices KIS {kis_code} failed: {e}")
 
@@ -661,22 +681,50 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
             from services.container import realtime as _rt
             if getattr(_rt, "kis_available", False):
                 from kis_service import KISService
-                hist = KISService().get_index_history(kis_code, period="1y")
-                if hist:
-                    # Expect list of {date, close} dicts — coerce to a plain
-                    # list of floats ordered oldest→newest.
-                    vals = [float(row.get("close"))
-                            for row in hist
-                            if row and row.get("close") is not None]
-                    if vals:
-                        import pandas as _pd
-                        closes = _pd.Series(vals)
+                _svc = KISService()
+                for _code in _kis_code_candidates:
+                    hist = _svc.get_index_history(_code, period="1y")
+                    if hist:
+                        # Expect list of {date, close} dicts — coerce to a
+                        # plain list of floats ordered oldest→newest.
+                        vals = [float(row.get("close"))
+                                for row in hist
+                                if row and row.get("close") is not None]
+                        if vals:
+                            import pandas as _pd
+                            closes = _pd.Series(vals)
+                            break
         except Exception as e:
             logger.debug(f"market.indices KIS history {kis_code} failed: {e}")
 
     if closes is not None and len(closes):
+        last_hist = float(closes.iloc[-1])
+        # Sanity guard against KIS unit mismatches. Empirically observed:
+        # KIS `bstp_nmix_prpr` for code "0001" has returned values ~2.56x the
+        # actual KOSPI level (e.g., 6465 vs real ~2522 on 2026-04-24) while
+        # "1001" (KOSDAQ) is correct. Root cause is not yet confirmed — the
+        # field name (`bstp_nmix_prpr` = Business-Type Nmix Present Price)
+        # may reference a different series for certain codes, or KIS may
+        # briefly publish an aggregate (e.g., total-return or capitalization)
+        # instead of the price index. Rather than hardcode a divisor, we
+        # cross-check the live quote against the independent FMP history
+        # anchor and prefer the history close whenever the divergence
+        # exceeds 20%. This is safer than a fixed /N conversion which would
+        # bake in today's ratio and drift out of correctness over time.
+        if level is not None and last_hist > 0:
+            divergence = abs(level - last_hist) / last_hist
+            if divergence > 0.20:
+                logger.warning(
+                    "market.indices KIS %s level %.2f diverges %.1f%% from "
+                    "history anchor %.2f; using history close instead",
+                    kis_code, level, divergence * 100, last_hist,
+                )
+                level = last_hist
+                # The KIS-native d/d% was computed against a wrong base, so
+                # recompute from history below.
+                change_pct = 0.0
         if level is None:
-            level = float(closes.iloc[-1])
+            level = last_hist
         if change_pct == 0.0 and len(closes) >= 2:
             prev = float(closes.iloc[-2])
             if prev:
@@ -686,6 +734,17 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
                      round(float(closes.max()), 2)]
 
     if level is None:
+        return None
+
+    # Final absolute sanity bound: KOSPI-family indices trade in the
+    # 500–5000 range; KOSDAQ-150 in the 1000–2500 range. A value outside
+    # [100, 10000] is almost certainly a unit bug. Drop the entry rather
+    # than render a misleading number.
+    if not (100.0 <= level <= 10000.0):
+        logger.warning(
+            "market.indices %s level %.2f outside sanity bound [100,10000]; "
+            "dropping entry", ticker, level,
+        )
         return None
 
     return {
@@ -764,13 +823,44 @@ def market_indices():
             except Exception:
                 pass
         if usdkrw_level:
+            # Pull 1y FX history from FMP for sparkline + 52W range + d/d%.
+            # fmp_service.get_history("USDKRW") returns a standard OHLCV
+            # DataFrame; gracefully fall back to empty on any failure so a
+            # history miss never drops the level tile.
+            fx_change_pct = 0.0
+            fx_sparkline: list[float] = []
+            fx_range_52w = [0.0, 0.0]
+            try:
+                import fmp_service as _fmp
+                fx_hist = _fmp.get_history("USDKRW", period="1y")
+                if fx_hist is not None and not fx_hist.empty and "Close" in fx_hist.columns:
+                    fx_closes = fx_hist["Close"].astype(float).dropna()
+                    if len(fx_closes):
+                        if len(fx_closes) >= 2:
+                            fx_prev = float(fx_closes.iloc[-2])
+                            if fx_prev:
+                                fx_change_pct = (
+                                    (float(fx_closes.iloc[-1]) - fx_prev)
+                                    / fx_prev * 100.0
+                                )
+                        fx_sparkline = [
+                            round(float(v), 4)
+                            for v in fx_closes.tail(30).tolist()
+                        ]
+                        fx_range_52w = [
+                            round(float(fx_closes.min()), 2),
+                            round(float(fx_closes.max()), 2),
+                        ]
+            except Exception as e:
+                logger.debug(f"market.indices USDKRW history failed: {e}")
+
             out.append({
                 "ticker":        "USDKRW",
                 "name":          "USD / KRW",
                 "level":         round(usdkrw_level, 2),
-                "change_1d_pct": 0.0,  # fx_service doesn't track d/d yet
-                "range_52w":     [0.0, 0.0],
-                "sparkline_30d": [],
+                "change_1d_pct": round(fx_change_pct, 2),
+                "range_52w":     fx_range_52w,
+                "sparkline_30d": fx_sparkline,
                 "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "is_stale":      False,
             })
