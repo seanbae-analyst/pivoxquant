@@ -1,0 +1,141 @@
+name: Legal Risk Monitor
+
+# 01:00 UTC = 10:00 KST — complements daily-legal-scan (09:15 KST) with
+# deeper checks: full canonical term drift, artifact sample scan (HTML
+# + PDF), and scrub-coverage audit across AI-output services.
+#
+# Non-overlapping with daily-legal-scan.yml:
+#   - daily-legal-scan: fast grep on a small hardcoded EN/KR list
+#   - this monitor:     full FORBIDDEN_DIRECTIVE_TERMS set +
+#                       HTML/PDF artifact samples + scrub-call audit
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 01:00 UTC = 10:00 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (skip Issue creation).'
+        required: false
+        default: 'true'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  monitor:
+    name: Legal risk monitor
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install system deps (poppler for pdftotext)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Install Python deps
+        run: |
+          pip install -r requirements.txt || echo "::warning::requirements install failed — continuing"
+
+      - name: Run monitor
+        id: monitor
+        env:
+          DB_SCAN_URL: ${{ secrets.DB_SCAN_URL }}
+          DB_SCAN_TOKEN: ${{ secrets.DB_SCAN_TOKEN }}
+        run: |
+          python3 scripts/legal_monitor/monitor.py
+          # Expose severity + count as step outputs
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, pathlib
+          p = pathlib.Path("legal_monitor_artifacts/summary.json")
+          d = json.loads(p.read_text())
+          print(f"severity={d['severity']}")
+          print(f"total={d['total']}")
+          PY
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: legal-monitor-${{ github.run_id }}
+          path: legal_monitor_artifacts/
+          retention-days: 30
+
+      - name: Open or update issue
+        if: ${{ steps.monitor.outputs.severity != 'none' && github.event.inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEVERITY: ${{ steps.monitor.outputs.severity }}
+          TOTAL: ${{ steps.monitor.outputs.total }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          date_str=$(date -u +'%Y-%m-%d')
+          title="[Legal Monitor] ${date_str} — severity ${SEVERITY} (${TOTAL} findings)"
+          {
+            cat legal_monitor_artifacts/report.md
+            echo ""
+            echo "### Run"
+            echo "- Workflow: ${RUN_URL}"
+            echo ""
+            echo "/cc @seanbae-analyst"
+          } > legal_monitor_artifacts/issue_body.md
+
+          existing=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label legal-monitor \
+            --json number --jq '.[0].number // empty')
+
+          # Labels (best-effort idempotent creation)
+          gh label create legal-monitor --color "0e8a16" --description "Legal risk monitor finding" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh label create critical     --color "b60205" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh label create high         --color "d93f0b" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh label create medium       --color "fbca04" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+
+          sev_label="${SEVERITY}"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file legal_monitor_artifacts/issue_body.md
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body-file legal_monitor_artifacts/issue_body.md \
+              --label "legal-monitor,${sev_label}"
+          fi
+
+      - name: Slack notify (critical only)
+        if: ${{ steps.monitor.outputs.severity == 'critical' && github.event.inputs.dry_run != 'true' }}
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          TOTAL: ${{ steps.monitor.outputs.total }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL unset — skipping"
+            exit 0
+          fi
+          payload=$(python3 -c "
+          import json, os
+          print(json.dumps({
+            'text': f':rotating_light: *PivoxQuant Legal Monitor — CRITICAL* ({os.environ[\"TOTAL\"]} findings) — {os.environ[\"RUN_URL\"]}'
+          }))")
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' --data "$payload" || true
+
+      - name: Close stale issue on recovery
+        if: ${{ steps.monitor.outputs.severity == 'none' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for num in $(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label legal-monitor --json number --jq '.[].number'); do
+            gh issue comment "$num" --repo "$GITHUB_REPOSITORY" --body "Legal monitor clean at $(date -u +%FT%TZ) — auto-closing."
+            gh issue close "$num" --repo "$GITHUB_REPOSITORY"
+          done
