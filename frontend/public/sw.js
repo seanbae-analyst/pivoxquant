@@ -1,8 +1,14 @@
-// PivoxQuant Service Worker v3 (artifacts + growth + alt-data + broker policy)
-// v2 → v3: added per-user artefact/growth/alt-data/broker routing.
-// Bumping the version string evicts the v2 caches via the activate step
-// so users never see a stale pre-policy response after upgrade.
-const CACHE_VERSION = "sp-v3";
+// PivoxQuant Service Worker v4 (fix: stop fabricating 503s on network failure)
+// v3 → v4: networkFirst/cacheFirst no longer synthesize fake 503 "offline"
+// responses when fetch rejects. A fake 503 with Content-Type: application/json
+// and body `{"error":"offline"}` was being delivered to SWR as a *successful*
+// HTTP response, so SWR never entered its error state and the UI stayed stuck
+// on skeletons forever (dashboard / portfolio / watchlist / risk / home).
+// Now: serve cached response if we have one, otherwise re-throw the network
+// error so SWR error handling (retry + error UI) actually runs. Bumping the
+// version string evicts the v3 caches via the activate step so users never
+// see a stale pre-fix cached 503 after upgrade.
+const CACHE_VERSION = "sp-v4";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
@@ -173,8 +179,12 @@ async function cacheFirst(request, cacheName, maxAge) {
       );
     }
     return response;
-  } catch {
-    return cached || new Response("Offline", { status: 503 });
+  } catch (err) {
+    // Same fix as networkFirst: prefer cached, otherwise propagate the real
+    // error so SWR (or the caller) can reject cleanly instead of treating a
+    // fabricated 503 as a successful response.
+    if (cached) return cached;
+    throw err;
   }
 }
 
@@ -197,7 +207,14 @@ async function staleWhileRevalidate(request, cacheName, maxAge) {
       }
       return response;
     })
-    .catch(() => cached);
+    .catch((err) => {
+      // Same principle as networkFirst/cacheFirst: fall back to cached only
+      // if we actually have one, otherwise let the real network error reach
+      // the caller so SWR fires its error path instead of the page silently
+      // hanging on skeletons.
+      if (cached) return cached;
+      throw err;
+    });
 
   if (cached) {
     const cachedTime = cached.headers.get("sw-cached-at");
@@ -225,12 +242,17 @@ async function networkFirst(request, cacheName) {
       );
     }
     return response;
-  } catch {
+  } catch (err) {
+    // Critical: do NOT synthesize a 503 response here. A fabricated Response
+    // (even with status 503) is delivered to fetch()/SWR as a *resolved*
+    // promise, which SWR interprets as "the request completed, here's your
+    // data" — it never enters the error state, so retry/error UI never fire
+    // and skeletons stay on screen forever. Serve a genuine cache hit when we
+    // have one, otherwise let the real network error propagate so SWR can
+    // reject, retry, and show an error state.
     const cached = await cache.match(request);
-    return cached || new Response(JSON.stringify({ error: "offline" }), {
-      status: 503,
-      headers: { "Content-Type": "application/json" },
-    });
+    if (cached) return cached;
+    throw err;
   }
 }
 
