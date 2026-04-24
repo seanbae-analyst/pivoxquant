@@ -3,6 +3,7 @@
 import { TopBar } from "./top-bar";
 import { TerminalSidebar } from "./terminal-sidebar";
 import { BottomNav } from "./bottom-nav";
+import { CommandPalette } from "@/components/terminal/command-palette";
 
 /**
  * Dashboard shell — full-screen Vantablack.
@@ -51,6 +52,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 px-4 py-6 pb-24">{children}</main>
         <BottomNav />
       </div>
+
+      {/* Global Cmd+K terminal command palette — mounted once per layout */}
+      <CommandPalette />
     </div>
   );
 }

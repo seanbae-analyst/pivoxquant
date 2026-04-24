@@ -56,6 +56,46 @@ export interface RealtimeState {
   failed: boolean;
 }
 
+/**
+ * Shape of an individual row in GET /api/portfolio/positions (alias endpoint;
+ * see routes/portfolio.py `_build_positions_list`). We only type the fields we
+ * actually read or overwrite here — extra backend fields (side, purchaseDate,
+ * notes, sector, isKorean, name, ...) are preserved via rest-spread.
+ *
+ * Both `symbol` and `ticker` are accepted because legacy callers sometimes
+ * seed the cache with a `Position` shape (src/lib/types.ts). At runtime at
+ * least one of the two is present; `key` falls back between them.
+ */
+interface PositionAliasRow {
+  symbol?: string;
+  ticker?: string;
+  current?: number;
+  current_price?: number;
+  price?: number;
+  change_pct?: number;
+  observed_at?: string | null;
+  price_source?: string;
+  /** Preserve any additional backend fields we don't explicitly touch. */
+  [key: string]: unknown;
+}
+
+/** Cache body for the PORTFOLIO_POSITIONS SWR key. */
+interface PositionsAliasResponse {
+  positions: PositionAliasRow[];
+  [key: string]: unknown;
+}
+
+/**
+ * Cache body for the PORTFOLIO_SUMMARY SWR key (see
+ * routes/portfolio.py `portfolio_summary_alias`). We only set `observed_at`
+ * in-place so the UI "updated Xs ago" chip refreshes; all KPI fields
+ * (totalNav, todayPnl, etc.) are left untouched via rest-spread.
+ */
+interface PortfolioSummaryCache {
+  observed_at?: string;
+  [key: string]: unknown;
+}
+
 const INITIAL_STATE: RealtimeState = {
   prices: {},
   details: {},
@@ -228,15 +268,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
         // P0-A: Home / /portfolio pages consume /api/portfolio/positions
         // (alias shape). Mutate that cache key so SSE pushes reflect in UI.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         globalMutate(
           PORTFOLIO_POSITIONS,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (current: any) => {
+          (current: PositionsAliasResponse | undefined) => {
             if (!current || !Array.isArray(current.positions)) return current;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const positions = current.positions.map((p: any) => {
+            const positions = current.positions.map((p: PositionAliasRow) => {
               const key = p.symbol || p.ticker;
+              if (!key) return p;
               const detail = details[key];
               if (!detail) return p;
               const chg =
@@ -263,11 +301,9 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         // SWR to refetch /api/portfolio/summary on every SSE message, which
         // cascaded into RealtimeProvider remount → new EventSource → onerror
         // loop → ∞. In-place data update is sufficient.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         globalMutate(
           PORTFOLIO_SUMMARY,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (current: any) =>
+          (current: PortfolioSummaryCache | undefined) =>
             current
               ? { ...current, observed_at: new Date().toISOString() }
               : current,
