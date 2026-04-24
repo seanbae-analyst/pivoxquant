@@ -419,22 +419,112 @@ class RealtimeService:
     # ── FMP fallback ─────────────────────────────────────────
 
     def _get_fmp_price(self, ticker):
-        """FMP quote as fallback for Alpaca (US) and KIS (KR)."""
-        try:
-            import fmp_service as fmp
-            q = fmp.get_quote(ticker)
-            if not q or q.get("price", 0) <= 0:
+        """FMP quote as fallback for Alpaca (US) and KIS (KR).
+
+        Fallback order when the primary provider (Alpaca/KIS) misses:
+          1. ``fmp.get_quote`` — may itself serve stale cache or Alpaca
+             fallback. We inspect the result and propagate the ``stale``
+             flag if ``fmp.get_quote`` returned a stale entry.
+          2. ``fmp._get_cache_stale`` direct — belt+suspenders. Covers the
+             path where ``fmp.get_quote`` returned ``None`` because the
+             daily budget was hard-stopped BEFORE the stale-check branch
+             could fire, or where a future refactor skips the internal
+             stale lookup.
+          3. Return ``None`` → route layer decodes this as
+             "data_provider_throttled" (503) vs "ticker not found" (404).
+
+        Returning ``None`` is reserved for "no data anywhere" — not for
+        "FMP failed, try stale next time". The whole point of this fix is
+        that a 402 cooldown or 250-call budget exhaustion must NOT cause
+        every cache-miss ticker to 404 at the route layer.
+        """
+        is_kr = self.is_korean(ticker)
+
+        def _format_quote(q, is_stale=False, stale_at=None):
+            price = q.get("price") if isinstance(q, dict) else None
+            if price is None or float(price) <= 0:
                 return None
-            price = q["price"]
-            is_kr = self.is_korean(ticker)
-            return {
+            payload = {
                 "ticker": ticker,
                 "price": round(float(price), 0 if is_kr else 2),
-                "price_display": f"₩{int(price):,}" if is_kr else f"${float(price):,.2f}",
+                "price_display": (
+                    f"₩{int(price):,}" if is_kr else f"${float(price):,.2f}"
+                ),
                 "currency": "KRW" if is_kr else "USD",
-                "source": "fmp",
+                "source": "fmp_stale" if is_stale else "fmp",
                 "timestamp": datetime.now().isoformat(),
             }
+            if is_stale:
+                payload["stale"] = True
+                if stale_at is not None:
+                    payload["stale_at"] = stale_at
+            return payload
+
+        try:
+            import fmp_service as fmp
         except Exception as e:
-            logger.warning(f"FMP fallback failed {ticker}: {e}")
+            logger.warning(f"FMP import failed {ticker}: {e}")
             return None
+
+        # 1. Normal path — `fmp.get_quote` already layers fresh cache,
+        #    network, Alpaca fallback, and stale cache-of-last-resort.
+        q = None
+        try:
+            q = fmp.get_quote(ticker)
+        except Exception as e:
+            logger.warning(f"FMP get_quote failed {ticker}: {e}")
+
+        if q and isinstance(q, dict) and q.get("price", 0) and float(q.get("price") or 0) > 0:
+            return _format_quote(q, is_stale=False)
+
+        # 2. Belt+suspenders: if get_quote returned None (budget-exhausted
+        #    BEFORE the internal stale branch could run, or other exotic
+        #    failure), directly probe the stale cache ourselves.
+        try:
+            cache_key = f"quote:{ticker}"
+            with fmp._cache_lock:
+                entry = fmp._cache.get(cache_key)
+            if entry and isinstance(entry, dict):
+                stale_data = entry.get("data")
+                stale_ts = entry.get("ts")
+                if stale_data and isinstance(stale_data, dict):
+                    formatted = _format_quote(
+                        stale_data, is_stale=True, stale_at=stale_ts,
+                    )
+                    if formatted is not None:
+                        logger.info(
+                            "FMP stale cache served for %s (age=%.0fs)",
+                            ticker,
+                            (time.time() - stale_ts) if stale_ts else -1,
+                        )
+                        return formatted
+        except Exception as e:
+            logger.debug(f"FMP stale cache probe failed {ticker}: {e}")
+
+        # 3. Truly no data — let the caller decide 404 vs 503.
+        return None
+
+    # ── Provider health introspection ────────────────────────
+    def fmp_is_throttled(self):
+        """True when FMP is budget-exhausted or every endpoint is cooling.
+
+        Used by the route layer (``routes/realtime.py``) to distinguish
+        ``data_provider_throttled`` (503) from ``ticker_not_found`` (404).
+        Never raises — a missing helper yields False (assume healthy so
+        the route stays 404 on legitimate lookup misses).
+        """
+        try:
+            import fmp_service as fmp
+        except Exception:
+            return False
+        try:
+            if fmp._is_budget_exhausted():
+                return True
+            # /quote is the only endpoint realtime_service hits. If it's
+            # in 402 cooldown AND the budget is already in stale-mode,
+            # that's effectively "all primary paths down for US quotes".
+            if fmp._is_endpoint_blocked("/quote") and fmp._is_budget_stale():
+                return True
+        except Exception:
+            return False
+        return False
