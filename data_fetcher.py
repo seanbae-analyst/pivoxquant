@@ -17,17 +17,30 @@ import fmp_service as fmp
 logger = logging.getLogger(__name__)
 
 # ── Alpaca Historical Data Client (US stocks — no call limit) ─────────────────
+# Kill-switched via ALPACA_ENABLED (config.py / Dockerfile). Default OFF —
+# Alpaca is disabled to remove the legal risk tied to its "My Data" license.
+# When disabled, US prices fall back to FMP only.
 _alpaca_hist_client = None
 _alpaca_hist_available = False
 
+_ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in (
+    "1", "true", "True", "TRUE", "yes",
+)
+
 try:
-    _alpaca_key = os.environ.get("ALPACA_API_KEY", "").strip()
-    _alpaca_secret = os.environ.get("ALPACA_SECRET_KEY", "").strip()
-    if _alpaca_key and _alpaca_secret:
-        from alpaca.data.historical import StockHistoricalDataClient
-        _alpaca_hist_client = StockHistoricalDataClient(_alpaca_key, _alpaca_secret)
-        _alpaca_hist_available = True
-        logger.info("DataFetcher: Alpaca historical client initialized (US price source)")
+    if not _ALPACA_ENABLED:
+        logger.info(
+            "DataFetcher: Alpaca disabled (ALPACA_ENABLED=0); "
+            "US prices will use FMP exclusively."
+        )
+    else:
+        _alpaca_key = os.environ.get("ALPACA_API_KEY", "").strip()
+        _alpaca_secret = os.environ.get("ALPACA_SECRET_KEY", "").strip()
+        if _alpaca_key and _alpaca_secret:
+            from alpaca.data.historical import StockHistoricalDataClient
+            _alpaca_hist_client = StockHistoricalDataClient(_alpaca_key, _alpaca_secret)
+            _alpaca_hist_available = True
+            logger.info("DataFetcher: Alpaca historical client initialized (US price source)")
 except Exception as e:
     logger.warning(f"DataFetcher: Alpaca init failed, will use FMP for US prices: {e}")
 
@@ -627,7 +640,7 @@ Reply ONLY in this exact JSON format, nothing else:
         missing_stk = [s for s in stock_syms if s not in stk_data]
         missing_idx = [s for s in index_syms if s not in idx_data]
 
-        if missing_stk or missing_idx:
+        if (missing_stk or missing_idx) and _ALPACA_ENABLED:
             try:
                 from services.data import alpaca_market_adapter as ama
 
@@ -1272,7 +1285,7 @@ Reply ONLY in this exact JSON format, nothing else:
             pass
 
         missing = [(sym, name) for sym, name in sectors if sym not in filled]
-        if missing:
+        if missing and _ALPACA_ENABLED:
             try:
                 from services.data import alpaca_market_adapter as ama
 

@@ -23,7 +23,12 @@ interface AlpacaCardProps {
 
 /**
  * Alpaca (US equity paper) connection card — Vantablack ink theme.
- * Symmetric with KisCard. Paper-only; live is disabled by policy.
+ *
+ * Hidden by default. Only renders when NEXT_PUBLIC_ALPACA_ENABLED === "1".
+ * The component body is retained (2026-04-24 phase-1 UI hide — backend removal
+ * is phase-2) so we can re-enable quickly if policy changes, but the public
+ * surface area is now zero. Symmetric with KisCard. Paper-only; live is
+ * disabled by policy.
  */
 export function AlpacaCard({
   connected,
@@ -35,6 +40,12 @@ export function AlpacaCard({
   syncing = false,
   disconnecting = false,
 }: AlpacaCardProps) {
+  // Phase-1: UI completely hidden pending My Data license resolution.
+  // Re-enable by setting NEXT_PUBLIC_ALPACA_ENABLED=1.
+  if (process.env.NEXT_PUBLIC_ALPACA_ENABLED !== "1") {
+    return null;
+  }
+
   return (
     <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 sm:p-6">
       {/* Header */}

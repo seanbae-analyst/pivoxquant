@@ -13,7 +13,7 @@ export default function PreTradePage() {
         {
           eyebrow: "Signature",
           title: "Korea × US Desk",
-          description: "One pane. KRW and USD. KIS, Alpaca, FMP.",
+          description: "One pane. KRW and USD. KIS and FMP.",
           href: "/features/global-desk",
         },
         {

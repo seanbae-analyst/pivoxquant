@@ -36,10 +36,34 @@ if not _secret:
     _secret = os.urandom(32).hex()
 
 
+# ── Feature flags ─────────────────────────────────────────────────────────────
+# ALPACA_ENABLED — kill switch for Alpaca broker integration.
+#
+# Default: "0" (disabled). Alpaca is disabled by default to remove the legal
+# risk tied to Alpaca's "My Data" license (US broker-dealer regulation).
+# KIS (한국투자증권) is the supported broker. Setting ALPACA_ENABLED=1 is a
+# legacy opt-in only — do NOT flip this in production without legal sign-off.
+#
+# Consumed by:
+#   - routes/broker_oauth.py  (/api/broker/alpaca/* endpoints → 503 when off)
+#   - autotrader.py           (AutoTrader refuses to start when off)
+#   - data_fetcher.py         (Alpaca disabled as US price source when off)
+#   - realtime_service.py     (Alpaca disabled as realtime source when off)
+#   - daytrade_service.py     (Alpaca disabled as US scanner when off)
+#
+# IMPORTANT: Flipping this to 1 is NOT sufficient to re-enable Alpaca — the
+# ALPACA_API_KEY / ALPACA_SECRET_KEY env vars must also be set.
+ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in ("1", "true", "True", "TRUE", "yes")
+
+
 class Config:
     SECRET_KEY = _secret
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Mirror the module-level flag onto the Flask config so request handlers
+    # can read it via `current_app.config["ALPACA_ENABLED"]`.
+    ALPACA_ENABLED = ALPACA_ENABLED
 
     # Connection pool settings (only effective for PostgreSQL; SQLite ignores them)
     if IS_POSTGRES:

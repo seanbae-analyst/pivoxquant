@@ -10,7 +10,7 @@
  *   - 시그널 라벨 (POSITIVE / NEGATIVE / NEUTRAL) — 백엔드 호환 + 자본시장법
  *   - "AI Assistant" — 브랜드 일관성
  *   - "PivoxQuant" — 브랜드명
- *   - Alpaca / KIS / Google / Kakao — 고유 브랜드
+ *   - KIS / Google / Kakao — 고유 브랜드
  *   - KOSPI / KOSDAQ / S&P 500 / NASDAQ — 글로벌 지수명
  */
 
@@ -266,12 +266,12 @@ export const KO = {
     cancelsOn: "종료일",
     proFeatures: "Pro 플랜 혜택",
     connectedBrokers: "연동된 브로커",
-    alpacaDesc: "Alpaca Markets을 통한 미국 주식 거래",
+    alpacaDesc: "",
     kisName: "한국투자증권",
-    kisDesc: "KIS API를 통한 한국 주식 거래",
+    kisDesc: "KIS API를 통한 한국 주식 조회 (read-only)",
     connected: "연결됨",
     notConnected: "미연결",
-    connectAlpaca: "Alpaca 연결",
+    connectAlpaca: "",
     apiKey: "API Key",
     apiSecret: "API Secret",
     apiSecretPlaceholder: "API Secret 입력",
@@ -374,7 +374,7 @@ export const KO = {
         },
         step2: {
           title: "포트폴리오 연결",
-          desc: "Alpaca 계정(미국) 또는 KIS 계정(한국)을 연결하거나, 포지션을 직접 추가하세요. 두 시장 모두 지원합니다.",
+          desc: "KIS 계정(한국, read-only)을 연결하거나, 포지션을 직접 추가하세요. 미국 주식은 수동 입력으로 관찰 가능합니다.",
         },
         step3: {
           title: "AI가 보호하고 성장시킵니다",
@@ -414,7 +414,7 @@ export const KO = {
         desc: "파워 유저를 위한 기관급 도구",
         features: [
           "Pro 플랜 전체 포함",
-          "자동매매 (Alpaca + KIS)",
+          "자동매매 (한국 증권사, 출시 예정)",
           "고급 백테스트",
           "커스텀 퀀트 모델",
           "우선 AI Assistant",

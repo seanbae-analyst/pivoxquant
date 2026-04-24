@@ -126,10 +126,16 @@ export function NotificationDropdown() {
         onClick={() => setOpen((p) => !p)}
         aria-label="Notifications"
         aria-expanded={open}
-        className="relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)]"
-        style={{ color: "var(--pq-ink)" }}
+        className="pq-topbar-icon-btn relative flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-0"
+        style={{
+          color: open
+            ? "var(--pq-bronze)"
+            : unread > 0
+              ? "var(--pq-ivory)"
+              : "rgba(245, 240, 232, 0.72)",
+        }}
       >
-        <Bell className="h-[18px] w-[18px]" />
+        <Bell className="h-[18px] w-[18px]" strokeWidth={1.5} />
         {unread > 0 && (
           <span
             className="absolute right-1.5 top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 font-mono text-[10px] font-semibold"

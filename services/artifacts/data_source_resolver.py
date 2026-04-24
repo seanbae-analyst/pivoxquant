@@ -85,7 +85,18 @@ def _has_active_alpaca(user_id: int) -> bool:
     the legal/broker layer and the artifact layer agree on "connected".
     Returns False on any exception — a broken DB session must not cause
     us to *invent* a provenance claim.
+
+    ⚠️ Honors the ALPACA_ENABLED kill switch (2026-04-24). When disabled,
+    this function always returns False so generated artifacts (Weekly Memo,
+    Brag Card, etc.) do NOT advertise Alpaca as a data source. Keeping this
+    in sync with routes/broker_oauth.py is required to avoid provenance
+    mismatches (UI says "Alpaca unavailable" but artifact cites Alpaca).
     """
+    import os
+    if os.environ.get("ALPACA_ENABLED", "0").strip() not in (
+        "1", "true", "True", "TRUE", "yes",
+    ):
+        return False
     try:
         from models import BrokerConnection  # late import → test isolation
         conn = BrokerConnection.query.filter_by(

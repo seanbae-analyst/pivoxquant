@@ -58,6 +58,11 @@ for _k in (
 ):
     os.environ.pop(_k, None)
 
+# Force ALPACA_ENABLED off for tests. The production default is "0" (see
+# config.py + Dockerfile), but a developer's .env may override — tests must
+# pin it so the kill-switch suite doesn't read the env from the dev's shell.
+os.environ["ALPACA_ENABLED"] = "0"
+
 # Prevent the app factory (if ever imported) from spinning up a scheduler.
 os.environ["DISABLE_SCHEDULER"] = "1"
 
@@ -321,8 +326,10 @@ def mock_engine():
     mock.portfolio_analytics.return_value = {
         "total_value": 0, "sector_alloc": {}, "risk_score": 50
     }
-    with patch("routes.market.engine", mock), \
-         patch("routes.portfolio.engine", mock):
+    # `routes.market` no longer imports `engine` at module level (KR/US market
+    # indices go through fetcher + KIS paths instead of QuantEngine). Only
+    # portfolio still needs the mock.
+    with patch("routes.portfolio.engine", mock):
         yield mock
 
 

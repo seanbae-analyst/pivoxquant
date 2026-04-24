@@ -775,6 +775,17 @@
   --pq-locked-fade:   rgba(10, 10, 10, 0.05);        /* top-edge ghost */
 }
 
+/* TopBar icon buttons — inline `color` sets idle/active tint; hover
+   promotes to full Ivory for contrast against ink ground. Inline
+   style takes precedence on normal state; `:hover` overrides via
+   !important so we don't fight the open/unread-state color logic
+   (bronze / ivory / muted-ivory) in the component. Reduced motion
+   is already respected via Tailwind's `transition-colors` + user OS
+   setting — no additional animation introduced here. */
+.pq-topbar-icon-btn:hover {
+  color: var(--pq-ivory) !important;
+}
+
 /* Silver-matte text — spec-exact (v2, for new Hero). */
 .pq-silver-matte {
   background: linear-gradient(

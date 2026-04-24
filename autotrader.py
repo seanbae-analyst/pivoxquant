@@ -95,10 +95,22 @@ class AutoTrader:
         self._kr_daily_pnl = 0.0
         self._kis = None            # KIS service instance (set via set_kis)
 
+        # ALPACA_ENABLED kill switch (config.py / Dockerfile). Default OFF —
+        # Alpaca is disabled to remove the legal risk tied to its "My Data"
+        # license. When disabled, AutoTrader will not initialize a US trading
+        # client (KIS-based Korean paper trading still works via set_kis()).
+        alpaca_enabled = os.environ.get("ALPACA_ENABLED", "0").strip() in (
+            "1", "true", "True", "TRUE", "yes",
+        )
         api_key = os.environ.get("ALPACA_API_KEY", "").strip()
         secret = os.environ.get("ALPACA_SECRET_KEY", "").strip()
 
-        if api_key and secret:
+        if not alpaca_enabled:
+            logger.info(
+                "AutoTrader: Alpaca disabled (ALPACA_ENABLED=0). "
+                "US paper trading unavailable; KIS paper trading still supported."
+            )
+        elif api_key and secret:
             try:
                 from alpaca.trading.client import TradingClient
                 self.api = TradingClient(api_key, secret, paper=True)

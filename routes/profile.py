@@ -32,6 +32,8 @@ from models.investment_profile import calculate_profile_type
 from services.profile import (
     compute_persona_response,
     compute_rolling_response,
+    classify_persona_multi,
+    explain_persona_classification,
 )
 from .decorators import api_auth
 
@@ -349,6 +351,70 @@ def get_persona_analysis():
     return jsonify(payload)
 
 
+@profile_bp.route("/persona-detail", methods=["GET"])
+@api_auth
+def get_persona_detail():
+    """Return the multi-dimensional persona classification (v2).
+
+    Powered by :func:`services.profile.classify_persona_multi`. Fuses
+    trade mechanics, intra-trade patterns, declared preferences,
+    self-report (WeeklyPulse) and engagement (ArtifactFeedback) into a
+    9-D behavioural vector and compares to 8 persona centroids.
+
+    Query params
+    ------------
+    window_days : int (default 90, bounded to [30, 365])
+        Lookback window for the trade-history features.
+
+    Response shape
+    --------------
+    See :func:`services.profile.persona_classifier_v2.classify_persona_multi`
+    — adds ``persona``, ``confidence``, ``data_sparse``, ``features``,
+    ``present``, ``ranking``, ``breakdown``.
+
+    The simpler :func:`get_persona_analysis` (``GET /api/profile/persona``)
+    remains the canonical endpoint for the hero card; this one is the
+    detail view the tooltip / debug panel reads.
+    """
+    raw = request.args.get("window_days", "90")
+    try:
+        window_days = int(raw)
+    except (TypeError, ValueError):
+        window_days = 90
+    # Bound — absurd windows would blow up query latency for no signal.
+    window_days = max(30, min(365, window_days))
+
+    try:
+        payload = classify_persona_multi(current_user.id, window_days=window_days)
+    except Exception:
+        logger.exception(
+            "profile.get_persona_detail failed (user_id=%s, window=%s)",
+            current_user.id, window_days,
+        )
+        return jsonify({"error": "Failed to compute persona detail"}), 500
+    return jsonify(payload)
+
+
+@profile_bp.route("/persona-explain", methods=["GET"])
+@api_auth
+def get_persona_explain():
+    """Lightweight explainability payload — tooltip-sized.
+
+    Returns only ``persona``, ``label``, ``confidence``, ``breakdown``
+    and ``features``. Suitable for the frontend info popover that
+    answers "why was I classified as ___?".
+    """
+    try:
+        payload = explain_persona_classification(current_user.id)
+    except Exception:
+        logger.exception(
+            "profile.get_persona_explain failed (user_id=%s)",
+            current_user.id,
+        )
+        return jsonify({"error": "Failed to compute persona explanation"}), 500
+    return jsonify(payload)
+
+
 @profile_bp.route("/rolling-window", methods=["GET"])
 @api_auth
 def get_rolling_window():
@@ -570,3 +636,153 @@ def submit_pulse():
         return jsonify({"error": "Failed to save pulse"}), 500
 
     return jsonify({"ok": True})
+
+
+# ── Group Benchmark (anonymized peer stats) ──────────────────────────────
+# See reports/product/GROUP_BENCHMARK_SPEC_2026-04-24.md.
+# Exposes two read-only endpoints:
+#   GET /api/profile/persona-benchmark?window=90
+#       → own-persona group stats (200 w/ available=false when suppressed)
+#   GET /api/profile/persona-benchmark-all?window=90
+#       → all 8 personas, each entry null if suppressed / not computed
+#
+# Writes happen out-of-band via scripts/compute_group_stats.py (APScheduler
+# cron — weekly). These endpoints NEVER trigger a computation, so the
+# legal gate (n_users >= 20) is enforced at the service layer and these
+# routes cannot accidentally leak under-threshold stats.
+_DEFAULT_WINDOW = 90
+
+
+def _parse_window(raw: str | None) -> int | None:
+    """Validate the ``window`` query param. Returns None on invalid input."""
+    from models import VALID_WINDOWS  # local to avoid top-import churn
+    try:
+        val = int(raw) if raw is not None else _DEFAULT_WINDOW
+    except (TypeError, ValueError):
+        return None
+    return val if val in VALID_WINDOWS else None
+
+
+@profile_bp.route("/persona-benchmark", methods=["GET"])
+@api_auth
+def get_persona_benchmark():
+    """Return the authenticated user's peer-group stats.
+
+    Query params:
+        window: 30 | 90 | 365  (default 90)
+
+    Response shape (always HTTP 200 when the gate passes):
+        {"available": true, "persona": "...", "window_days": 90, "stats": {...}}
+
+    If the latest snapshot is suppressed (``n_users < 20``) OR hasn't been
+    computed yet, returns HTTP 200 with:
+        {"available": false, "reason": "insufficient_group_size" | "not_computed",
+         "persona": "...", "window_days": 90}
+
+    Individual user records are NEVER exposed — only sector-level
+    aggregates and behavioural mistake labels.
+    """
+    from services.profile import get_persona_stats
+    from services.profile.persona_analytics import (
+        DECLARED_TO_PERSONA,
+        PERSONA_LABELS,
+    )
+
+    window = _parse_window(request.args.get("window"))
+    if window is None:
+        return jsonify({"error": "window must be one of 30, 90, 365"}), 400
+
+    # Resolve the calling user's declared persona.
+    profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
+    profile_type = (profile.profile_type or "").lower() if profile else ""
+    persona = DECLARED_TO_PERSONA.get(profile_type, "balanced")
+
+    stats = get_persona_stats(persona, window)
+    if stats is None:
+        # Distinguish "no row at all" vs "suppressed" for the UI.
+        from models import PersonaGroupStats
+        latest = (
+            PersonaGroupStats.query
+            .filter_by(persona=persona, window_days=window)
+            .order_by(PersonaGroupStats.computed_at.desc())
+            .first()
+        )
+        reason = "not_computed" if latest is None else "insufficient_group_size"
+        return jsonify({
+            "available": False,
+            "reason": reason,
+            "persona": persona,
+            "persona_label": PERSONA_LABELS.get(persona, persona),
+            "window_days": window,
+        })
+
+    return jsonify({
+        "available": True,
+        "persona": persona,
+        "persona_label": PERSONA_LABELS.get(persona, persona),
+        "window_days": window,
+        "stats": stats,
+    })
+
+
+@profile_bp.route("/persona-benchmark-all", methods=["GET"])
+@api_auth
+def get_persona_benchmark_all():
+    """Return benchmark stats for every persona — for cross-group comparison.
+
+    Query params:
+        window: 30 | 90 | 365  (default 90)
+
+    Response shape:
+        {
+          "window_days": 90,
+          "personas": {
+            "growth":    {"available": true, "stats": {...}, "label": "Growth CFO"},
+            "value":     {"available": false, "reason": "insufficient_group_size", ...},
+            ...
+          }
+        }
+
+    Suppressed personas return ``available=false`` — never numeric values.
+    """
+    from services.profile import get_all_persona_stats
+    from services.profile.persona_analytics import (
+        PERSONA_CODES,
+        PERSONA_LABELS,
+    )
+    from models import PersonaGroupStats
+
+    window = _parse_window(request.args.get("window"))
+    if window is None:
+        return jsonify({"error": "window must be one of 30, 90, 365"}), 400
+
+    published = get_all_persona_stats(window)
+
+    out: dict[str, dict] = {}
+    for persona in PERSONA_CODES:
+        stats = published.get(persona)
+        label = PERSONA_LABELS.get(persona, persona)
+        if stats is not None:
+            out[persona] = {
+                "available": True,
+                "label": label,
+                "stats": stats,
+            }
+            continue
+        latest = (
+            PersonaGroupStats.query
+            .filter_by(persona=persona, window_days=window)
+            .order_by(PersonaGroupStats.computed_at.desc())
+            .first()
+        )
+        reason = "not_computed" if latest is None else "insufficient_group_size"
+        out[persona] = {
+            "available": False,
+            "label": label,
+            "reason": reason,
+        }
+
+    return jsonify({
+        "window_days": window,
+        "personas": out,
+    })

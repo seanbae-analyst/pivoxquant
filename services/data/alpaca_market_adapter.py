@@ -62,7 +62,17 @@ def _client():
 
     Deferred so missing installs / missing keys / import errors don't
     break the whole data pipeline — the fallback simply disables itself.
+
+    Also short-circuits when ``ALPACA_ENABLED=0`` (the default kill switch —
+    see config.py / Dockerfile). This is a defense-in-depth check: callers
+    like ``data_fetcher.py`` already gate the fallback, but anyone importing
+    this module directly still gets safe None.
     """
+    # Re-read each call so tests can flip the flag via monkeypatch.
+    if os.environ.get("ALPACA_ENABLED", "0").strip() not in (
+        "1", "true", "True", "TRUE", "yes",
+    ):
+        return None
     key = os.environ.get("ALPACA_API_KEY", "").strip()
     secret = os.environ.get("ALPACA_SECRET_KEY", "").strip()
     if not key or not secret:

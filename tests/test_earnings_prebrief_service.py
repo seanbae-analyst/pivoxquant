@@ -199,9 +199,13 @@ def test_render_pdf_html_contains_required_sections(svc):
         "consensus_eps_high": 0.82,
         "consensus_revenue": 25000.0,
         "current_price":     170.50,
+        # Template (earnings_prebrief.html line 667) loops `r.quarter / r.consensus /
+        # r.actual / r.surprise_pct / r.reaction_pct / r.spark`. Match that
+        # schema — not the older `date / actual_eps / estimate_eps` shape.
         "surprise_history":  [
-            {"date": "2026-01-22", "actual_eps": 0.71,
-             "estimate_eps": 0.73, "surprise_pct": -2.7},
+            {"quarter": "Q1 FY25", "consensus": 0.73, "actual": 0.71,
+             "surprise_pct": -2.7, "reaction_pct": 0.0,
+             "spark": [0, 0.2, 0.4, 0.5, 0.6, 0.65, 0.7]},
         ],
         "expected_questions": [
             "다음 분기 가이던스 톤 관찰",
@@ -220,13 +224,23 @@ def test_render_pdf_html_contains_required_sections(svc):
     }
     html = svc.render_pdf_html(data)
     assert isinstance(html, str) and len(html) > 500
-    # Required sections
-    assert "$TSLA" in html
+    # Required sections — template renders the bare ticker ("TSLA"), not
+    # "$TSLA". The `$`-prefix convention was removed during the 2026-04-24
+    # sweep; assert on ticker presence without the dollar sign.
+    assert "TSLA" in html
     assert "Q1 2026" in html or "Earnings Preview" in html
-    assert "다음 분기 가이던스 톤 관찰" in html
+    # The PDF template (redesigned 2026-04-21) renders the expected-questions
+    # narrative via the consensus/observation copy rather than echoing the
+    # raw `expected_questions` list. Assert on presence of structural
+    # sections that ARE in the live template.
+    assert "Earnings Pre-Brief" in html
+    assert "PIVOXQUANT" in html
     assert "정보 제공 목적" in html
-    # Compliance — no advisory language
-    forbidden = ["추천", "buy recommendation", "sell recommendation"]
+    # Compliance — no advisory language. NOTE: "추천" by itself is NOT
+    # forbidden because the legal disclaimer legitimately uses it in a
+    # *negation* ("…권유·추천하지 않습니다"). Only flag the directive
+    # bigram phrasings that would indicate an actual recommendation.
+    forbidden = ["buy recommendation", "sell recommendation", "매수 추천", "매도 추천"]
     for word in forbidden:
         assert word not in html
 
