@@ -3,6 +3,7 @@
 import FeaturePageShell from "@/components/landing/feature-page-shell";
 import { ThreeLayers } from "@/components/landing/three-layers";
 import { LivingCfoLoop } from "@/components/landing/living-cfo-loop";
+import EngineModelsDrawer from "@/components/landing/engine-models-drawer";
 
 export default function EnginePage() {
   return (
@@ -36,6 +37,9 @@ export default function EnginePage() {
       </div>
       <div id="loop">
         <LivingCfoLoop />
+      </div>
+      <div id="inventory">
+        <EngineModelsDrawer />
       </div>
     </FeaturePageShell>
   );

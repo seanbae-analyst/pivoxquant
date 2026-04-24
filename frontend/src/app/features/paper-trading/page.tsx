@@ -30,13 +30,13 @@ const steps = [
   },
   {
     step: "2",
-    title: "AutoTrader suggests trades",
-    description: "Based on your investor profile, our 58 quant models generate trade ideas using real-time market data.",
+    title: "AutoTrader surfaces candidate entries",
+    description: "Based on your investor profile, our 58 quant models produce observation-only candidates from real-time market data. You decide.",
   },
   {
     step: "3",
-    title: "You approve each trade",
-    description: "Every trade needs your one-click confirmation. Nothing happens without you. Approve or reject in seconds.",
+    title: "You confirm each order yourself",
+    description: "Every recorded order needs your one-click confirmation. Nothing executes without you. Confirm or dismiss in seconds.",
   },
   {
     step: "4",
@@ -62,9 +62,9 @@ const reasons = [
 /* ── Tracking metrics ── */
 const metrics = [
   { icon: DollarSign, label: "Daily P&L updates", description: "See exactly how much your paper portfolio gained or lost each day." },
-  { icon: BarChart3, label: "Comparison vs Buy & Hold", description: "Is the system beating a simple buy-and-hold strategy? See the data." },
+  { icon: BarChart3, label: "Benchmark comparison", description: "How does the recorded strategy compare against a passive index benchmark? Observation only." },
   { icon: Shield, label: "Risk metrics", description: "Max Drawdown, Sharpe Ratio, Calmar Ratio, and more." },
-  { icon: ListChecks, label: "Full trade history", description: "Every trade logged with the quant model that suggested it." },
+  { icon: ListChecks, label: "Full trade history", description: "Every recorded order is logged with the quant model that surfaced the candidate." },
   { icon: Clock, label: "Performance timeline", description: "View returns over days, weeks, and months." },
   { icon: Activity, label: "Model attribution", description: "See which of the 58 models contributed most to your returns." },
 ];

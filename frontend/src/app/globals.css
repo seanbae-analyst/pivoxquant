@@ -3083,3 +3083,31 @@ html {
     transform: none !important;
   }
 }
+
+/* Command palette (cmdk) — moved out of styled-jsx in
+   command-palette.tsx. Palette is a global overlay so module scope
+   is unnecessary; the data-selected selector must continue to match
+   cmdk's runtime attribute. */
+.pq-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  cursor: pointer;
+  color: rgba(245, 240, 232, 0.92);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 12.5px;
+  border-radius: 0;
+}
+.pq-palette-item[data-selected="true"] {
+  background: rgba(184, 149, 106, 0.08);
+  box-shadow: inset 2px 0 0 #b8956a;
+}
+[cmdk-group-heading] {
+  padding: 10px 12px 4px;
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.35);
+}

@@ -128,7 +128,7 @@ export const KO = {
     pageTitle: "포트폴리오",
     addPosition: "포지션 추가",
     editPosition: "포지션 수정",
-    sellShares: "주식 매도",
+    sellShares: "주식 매각 기록",
     deletePosition: "포지션 삭제",
     noPositions: "포지션 없음",
     noPositionsDesc: "첫 번째 포지션을 추가하여 포트폴리오 추적을 시작하세요.",
@@ -332,7 +332,7 @@ export const KO = {
       quantModels: "퀀트 모델",
       riskDefense: "단계 리스크 방어",
       markets: "시장",
-      mdd: "MDD (Buy & Hold 대비)",
+      mdd: "MDD (패시브 벤치마크 대비)",
     },
     features: {
       sectionBadge: "핵심 기능",

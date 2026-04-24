@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { usePulse, type PulseEntry } from "@/lib/cfo/hooks";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 const TOPICS = [
   "Macro",
@@ -75,14 +76,31 @@ export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
   }, [open, inline, history]);
 
   const isOpen = inline || (open ?? autoOpen);
+  const trapActive = Boolean(isOpen) && !inline;
+  const dialogRef = useFocusTrap<HTMLDivElement>(trapActive);
 
-  const handleDismiss = () => {
+  const handleDismiss = React.useCallback(() => {
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("pq_pulse_dismissed", "1");
     }
     setAutoOpen(false);
     onClose?.();
-  };
+  }, [onClose]);
+
+  // ESC + body scroll lock while modal open
+  React.useEffect(() => {
+    if (!trapActive) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleDismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [trapActive, handleDismiss]);
 
   if (inline) {
     return (
@@ -118,6 +136,8 @@ export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
           aria-label="Weekly pulse"
         >
           <motion.div
+            ref={dialogRef}
+            tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

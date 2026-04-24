@@ -31,6 +31,7 @@ import {
   useCompanionStatus,
   useCompanionHistory,
 } from "@/lib/cfo/useCompanion";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 type Readiness = "ready" | "learning" | "missing" | "locked";
 
@@ -249,13 +250,19 @@ function StatusModal({
   focusedLayer: LayerState["id"] | null;
 }) {
   const focusedRowRef = React.useRef<HTMLLIElement | null>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>(true);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
   }, [onClose]);
 
   React.useEffect(() => {
@@ -281,6 +288,8 @@ function StatusModal({
       style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
     >
       <motion.div
+        ref={dialogRef}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         initial={{ y: 8, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

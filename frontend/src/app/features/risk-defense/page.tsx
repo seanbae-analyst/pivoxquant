@@ -45,7 +45,7 @@ const layers = [
     title: "VIX Shield",
     question: "Is the market scared?",
     description:
-      "The VIX measures market fear. When it spikes, this layer automatically suggests raising your cash position to weather the storm.",
+      "The VIX measures market fear. When it spikes, this layer surfaces an observation about elevated-fear regimes so you can review your own cash posture.",
     color: "text-amber-600 bg-amber-50",
   },
   {

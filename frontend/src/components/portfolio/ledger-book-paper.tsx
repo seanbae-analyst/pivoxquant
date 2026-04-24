@@ -489,8 +489,8 @@ export function LedgerBookPaper({
                               e.stopPropagation();
                               onAction("buy", p);
                             }}
-                            aria-label={`Record additional buy for ${p.symbol}`}
-                            title="Record additional buy"
+                            aria-label={`Record additional purchase for ${p.symbol}`}
+                            title="Record additional purchase"
                             style={actionBtn}
                           >
                             +

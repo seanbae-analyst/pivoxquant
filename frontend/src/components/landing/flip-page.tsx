@@ -80,7 +80,7 @@ export const FlipPage = forwardRef<HTMLElement, FlipPageProps>(function FlipPage
         transformStyle: "preserve-3d",
       }}
     >
-      <div className="pq-flip-page__inner" tabIndex={active ? undefined : -1}>
+      <div className="pq-flip-page__inner" inert={!active}>
         {children}
       </div>
       <span className="sr-only">

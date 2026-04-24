@@ -16,7 +16,7 @@
  * CEO-customized copy (preserved verbatim):
  *   Eyebrow : "PivoxQuant · Living CFO"
  *   H1      : "Your CFO learns you." (italic + bronze glow on "learns")
- *   KR sub  : 매일 아침 두 번. 매수 전 일곱 관문. …
+ *   KR sub  : 매일 아침 두 번. 진입 전 일곱 관문. …
  *   CTAs    : "Meet your CFO" / "See a sample"
  *
  * LCP discipline: the <h1> is rendered statically on the server with the
@@ -312,7 +312,7 @@ export function Hero() {
                   ...d(1400),
                 }}
               >
-                매일 아침 두 번. 매수 전 일곱 관문. 매주 금요일 한 장의 편지.
+                매일 아침 두 번. 진입 전 일곱 관문. 매주 금요일 한 장의 편지.
                 2년 뒤 당신은 알게 된다. 이 앱이 당신의 투자 철학을 당신보다
                 먼저 기억한다는 것을.
               </p>
