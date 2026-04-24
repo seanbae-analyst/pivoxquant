@@ -277,3 +277,151 @@ class TestMarketIndicesKR:
         assert lo < hi, f"range_52w malformed: [{lo}, {hi}]"
         # Should bracket the seeded history.
         assert lo <= 1300.5 and hi >= 1349.0
+
+    # ────────────────────────────────────────────────────────────────────
+    # 2026-04-24 — BUG #RANGE-STALE: `_kis_index_snapshot` was pairing a
+    # live KIS level (e.g., KOSPI 6475) with a stale FMP history
+    # (~2500). The payload contradicted itself: range_52w[1] < level,
+    # sparkline max was ~40% of the level. Tests below enforce the new
+    # policy: prefer KIS history, and when it disagrees with live by
+    # >30%, discard the series and mark is_stale rather than publishing
+    # a self-contradictory row.
+    # ────────────────────────────────────────────────────────────────────
+
+    def test_kr_index_prefers_kis_history_over_fmp(self, client, auth_user):
+        """KIS `inquire-index-daily-price` must be consulted FIRST for
+        KR indices. FMP `^KS11` is known to lag on the Starter tier; a
+        fresh KIS series must win even when FMP returns data."""
+        from services import fx_service
+        fx_service.set_rate(1380.0)
+        from routes.market import _indices_cache
+        _indices_cache.clear()
+
+        # KIS history is fresh (bracketing the live level).
+        kis_hist = [6400.0 + i * 1.0 for i in range(60)]  # 6400 → 6459
+        # FMP history is stale (2023 baseline).
+        fmp_hist = [2500.0 + i * 0.1 for i in range(60)]
+
+        MockKIS = self._kis_service_mock(
+            price_map={"0001": 6475.0, "1001": 750.0,
+                       "2001": 980.0, "2203": 2040.0},
+            hist_map={"0001": kis_hist, "1001": kis_hist,
+                      "2001": kis_hist, "2203": kis_hist},
+        )
+
+        def _fetcher_hist(ticker, period="1y"):
+            # FMP would return stale 2500 series — new code should ignore.
+            return self._fmp_history(fmp_hist)
+
+        with patch("routes.market.fetcher") as m_f, \
+                patch("services.container.realtime") as m_rt, \
+                patch("kis_service.KISService", MockKIS), \
+                patch("fmp_service.get_history", return_value=None):
+            m_rt.kis_available = True
+            m_f.get_price_history.side_effect = _fetcher_hist
+            r = client.get("/api/market/indices?region=kr")
+
+        assert r.status_code == 200
+        data = r.get_json()
+        kospi = next((e for e in data if e["name"] == "KOSPI"), None)
+        assert kospi is not None
+        # With KIS history in play, sparkline must reflect KIS (~6400s),
+        # NOT the stale FMP ~2500 tail.
+        assert kospi["sparkline_30d"], "sparkline should be populated"
+        spark_max = max(kospi["sparkline_30d"])
+        assert spark_max > 6000, (
+            f"sparkline max={spark_max} looks like FMP stale data — "
+            "KIS history should have won. Level={kospi['level']}"
+        )
+        # Level must be within range_52w.
+        lo, hi = kospi["range_52w"]
+        assert lo <= kospi["level"] <= hi * 1.01, (
+            f"level {kospi['level']} outside range_52w [{lo}, {hi}]"
+        )
+
+    def test_kr_index_stale_history_discarded_with_flag(self, client, auth_user):
+        """When the only history we can obtain (FMP) diverges from the
+        live KIS level by >30%, discard the series and flag `is_stale`.
+        range_52w must become None (not [0,0]) so the frontend renders
+        N/A rather than a misleading bar chart."""
+        from services import fx_service
+        fx_service.set_rate(1380.0)
+        from routes.market import _indices_cache
+        _indices_cache.clear()
+
+        # KIS gives us the live level but NO history (returns None).
+        # FMP returns a deeply stale series 2023-era.
+        fmp_stale = [2500.0 + i * 0.1 for i in range(60)]
+
+        MockKIS = self._kis_service_mock(
+            price_map={"0001": 6475.0, "1001": 750.0,
+                       "2001": 980.0, "2203": 2040.0},
+            hist_map={},  # KIS history unavailable
+        )
+
+        def _fetcher_hist(ticker, period="1y"):
+            return self._fmp_history(fmp_stale)
+
+        with patch("routes.market.fetcher") as m_f, \
+                patch("services.container.realtime") as m_rt, \
+                patch("kis_service.KISService", MockKIS), \
+                patch("fmp_service.get_history", return_value=None):
+            m_rt.kis_available = True
+            m_f.get_price_history.side_effect = _fetcher_hist
+            r = client.get("/api/market/indices?region=kr")
+
+        assert r.status_code == 200
+        data = r.get_json()
+        kospi = next((e for e in data if e["name"] == "KOSPI"), None)
+        assert kospi is not None
+        assert kospi["level"] == 6475.0
+        assert kospi["is_stale"] is True, (
+            "is_stale must be True when history is rejected as stale"
+        )
+        # No self-contradiction: empty sparkline, None range_52w.
+        assert kospi["sparkline_30d"] == []
+        assert kospi["range_52w"] is None, (
+            f"range_52w must be None when history is discarded, got "
+            f"{kospi['range_52w']}"
+        )
+
+    def test_kr_index_level_within_range_52w_when_fresh(self, client, auth_user):
+        """Invariant: when range_52w is non-null, the live level must fit
+        inside (or very close to) the 52-week window. This is the core
+        sanity check that the original bug violated — level=6475 vs
+        range_52w=[2293, 2671]."""
+        from services import fx_service
+        fx_service.set_rate(1380.0)
+        from routes.market import _indices_cache
+        _indices_cache.clear()
+
+        kis_hist = [6400.0 + i * 1.0 for i in range(60)]  # 6400 → 6459
+
+        MockKIS = self._kis_service_mock(
+            price_map={"0001": 6475.0, "1001": 750.0,
+                       "2001": 980.0, "2203": 2040.0},
+            hist_map={"0001": kis_hist, "1001": kis_hist,
+                      "2001": kis_hist, "2203": kis_hist},
+        )
+
+        with patch("routes.market.fetcher") as m_f, \
+                patch("services.container.realtime") as m_rt, \
+                patch("kis_service.KISService", MockKIS), \
+                patch("fmp_service.get_history", return_value=None):
+            m_rt.kis_available = True
+            m_f.get_price_history.return_value = None
+            r = client.get("/api/market/indices?region=kr")
+
+        assert r.status_code == 200
+        data = r.get_json()
+        for entry in data:
+            if entry["ticker"] == "USDKRW":
+                continue  # USD/KRW has its own range semantics
+            if entry["range_52w"] is None:
+                continue  # stale path — separately tested
+            lo, hi = entry["range_52w"]
+            # Allow tiny headroom: live can exceed 52W high intraday.
+            assert lo <= entry["level"] <= hi * 1.05, (
+                f"{entry['name']}: level {entry['level']} outside "
+                f"range_52w [{lo}, {hi}] — source mismatch regression"
+            )
