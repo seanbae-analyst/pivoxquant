@@ -73,6 +73,13 @@ interface BackendIndex {
   sparkline_30d: number[];
   observed_at?: string;
   is_stale?: boolean;
+  /**
+   * Liquid ETF proxy used to source the level (US indices only).
+   * Backend contract: routes/market.py::_etf_snapshot returns
+   * `{"ticker": "^GSPC", "proxy_ticker": "SPY", "level": <SPY price>, …}`.
+   * Absent on KR indices and FX pairs.
+   */
+  proxy_ticker?: string;
 }
 
 const fetcher = <T,>(url: string) => apiFetch<T>(url);
@@ -91,6 +98,11 @@ function toQuote(b: BackendIndex, region: MarketTab): IndexQuote {
     unit: b.ticker === "USDKRW" ? "KRW" : undefined,
     observed_at: b.observed_at,
     is_stale: b.is_stale,
+    // US indices arrive with `proxy_ticker` (SPY/QQQ/DIA/IWM/VIXY) because
+    // FMP Starter gates ^GSPC/^IXIC/^DJI/^RUT/^VIX. The `level` is the ETF
+    // price — NEVER ratio-converted (routes/market.py:529). UI must surface
+    // the proxy so users don't read SPY $708 as S&P 500 (actual ≈ 7108).
+    proxy_ticker: b.proxy_ticker,
   };
 }
 
