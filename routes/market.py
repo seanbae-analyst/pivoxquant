@@ -485,7 +485,7 @@ def peer_comparison(ticker):
     return jsonify({"peers": peers[:10], "sector": sector, "rank": rank, "total": len(peers)})
 
 
-@market_bp.route("/profile/<ticker>")
+@market_bp.route("/market/profile/<ticker>")
 @api_auth
 def company_profile(ticker):
     ticker = ticker.strip().upper()
@@ -699,30 +699,15 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
 
     if closes is not None and len(closes):
         last_hist = float(closes.iloc[-1])
-        # Sanity guard against KIS unit mismatches. Empirically observed:
-        # KIS `bstp_nmix_prpr` for code "0001" has returned values ~2.56x the
-        # actual KOSPI level (e.g., 6465 vs real ~2522 on 2026-04-24) while
-        # "1001" (KOSDAQ) is correct. Root cause is not yet confirmed — the
-        # field name (`bstp_nmix_prpr` = Business-Type Nmix Present Price)
-        # may reference a different series for certain codes, or KIS may
-        # briefly publish an aggregate (e.g., total-return or capitalization)
-        # instead of the price index. Rather than hardcode a divisor, we
-        # cross-check the live quote against the independent FMP history
-        # anchor and prefer the history close whenever the divergence
-        # exceeds 20%. This is safer than a fixed /N conversion which would
-        # bake in today's ratio and drift out of correctness over time.
-        if level is not None and last_hist > 0:
-            divergence = abs(level - last_hist) / last_hist
-            if divergence > 0.20:
-                logger.warning(
-                    "market.indices KIS %s level %.2f diverges %.1f%% from "
-                    "history anchor %.2f; using history close instead",
-                    kis_code, level, divergence * 100, last_hist,
-                )
-                level = last_hist
-                # The KIS-native d/d% was computed against a wrong base, so
-                # recompute from history below.
-                change_pct = 0.0
+        # Removed 2026-04-24: The earlier "divergence guard" replaced a
+        # correct KIS live quote with a STALE FMP history close whenever
+        # the two differed by >20% — which broke production when the
+        # market legitimately re-rated (e.g., KOSPI 2522→6475 over several
+        # quarters: FMP history hadn't caught up, guard substituted the
+        # old value, live became permanently wrong). External verification
+        # against Yahoo Finance confirmed KIS live was correct. We now
+        # trust the KIS live quote and only fall back to history when
+        # KIS is unavailable.
         if level is None:
             level = last_hist
         if change_pct == 0.0 and len(closes) >= 2:
