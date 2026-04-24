@@ -1,0 +1,90 @@
+# PivoxQuant Regression Guards
+#
+# Five pattern-based guards derived from the bug fix patterns accumulated
+# during the 2026-04-23/24 sweep (see feedback_bug_fix_patterns.md):
+#
+#   G1 FAIL  — deprecated FMP api/v3 or api/v4 endpoints (blocks all new)
+#   G2 WARN  — weights.sum() normalization without a zero-guard
+#   G3 FAIL  — raw fetch() in frontend/.tsx (baseline-gated, new calls block)
+#   G4 WARN  — US indices .level render without proxy_ticker reference
+#   G5 WARN  — price_display read without parse_price_display fallback
+#
+# Baseline: .github/regression-guards-baseline.json records pre-existing
+# violations so this PR doesn't flip CI red for unrelated code. Only
+# counts *beyond* baseline fail the run.
+#
+# Regenerate baseline after an intentional change:
+#   GUARD_BASELINE=1 python3 scripts/check_regression_guards.py
+# then commit the updated JSON file.
+#
+# Local invocation (cross-platform, pure Python — no GNU grep needed):
+#   python3 scripts/check_regression_guards.py
+#
+# Downgrade everything to warnings during a rollout:
+#   GUARD_MODE=warn python3 scripts/check_regression_guards.py
+
+name: Regression Guards
+
+on:
+  pull_request:
+    branches: ['**']
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'enforce (default) or warn'
+        required: false
+        default: 'enforce'
+        type: choice
+        options:
+          - enforce
+          - warn
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pattern-guards:
+    name: Pattern-based regression guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run regression guards
+        env:
+          GUARD_MODE: ${{ github.event.inputs.mode || 'enforce' }}
+        run: |
+          python3 scripts/check_regression_guards.py
+
+      - name: Summarize violations on PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '### ❌ Regression Guards Failed',
+              '',
+              'A new pattern violation was introduced beyond the baseline.',
+              'See the job log for file:line details.',
+              '',
+              'If the violation is intentional, regenerate the baseline:',
+              '```bash',
+              'GUARD_BASELINE=1 python3 scripts/check_regression_guards.py',
+              'git add .github/regression-guards-baseline.json',
+              '```',
+              '',
+              'Docs: `.github/workflows/regression-guards.yml` header comment.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
