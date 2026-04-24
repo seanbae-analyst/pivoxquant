@@ -27,6 +27,7 @@ import {
   RuledKicker,
 } from "@/components/ui/editorial";
 import { SectionFeedbackBar } from "@/components/artifacts/section-feedback";
+import { PeerBenchmarkBlock } from "@/components/shared/peer-benchmark-block";
 import { usePersona, PERSONA_LABELS, type PersonaId } from "@/lib/cfo/hooks";
 import type { Artifact } from "@/lib/types";
 import Link from "next/link";
@@ -227,6 +228,22 @@ function ReportsPageInner() {
       </header>
 
       <DisclaimerBanner type="ai-analysis" />
+
+      {/* ── Peer benchmark context ──
+           Weekly Memo / Brag Card are persona-aware artifacts. Surfacing the
+           anonymized peer-group median here lets the reader see the reference
+           point those artifacts quietly compare their trading against —
+           without ever leaking an individual record (N >= 20 floor). */}
+      {declaredPersona && (
+        <PeerBenchmarkBlock
+          personaLabel={PERSONA_LABELS[declaredPersona]}
+          ownCagr={null}
+          ownSharpe={null}
+          ownHolding={null}
+          windowDays={90}
+          kicker="Weekly Memo · peer context · 90-day"
+        />
+      )}
 
       {/* ── Tier filter ── */}
       <div className="pq-ink-tabs flex gap-6 border-b border-[rgba(245,240,232,0.08)]">

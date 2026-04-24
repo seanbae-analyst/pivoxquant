@@ -24,21 +24,13 @@
 import * as React from "react";
 import {
   usePersonaDetail,
-  usePersonaBenchmark,
   PERSONA_LABELS,
   PERSONA_TAGLINES,
   type PersonaFeatureKey,
   type PersonaBreakdownRow,
   type PersonaId,
 } from "@/lib/cfo/hooks";
-
-/* ── Locale ── */
-
-const MISTAKE_LABELS_KR: Record<string, string> = {
-  disposition_effect: "손실은 오래 들고 이익은 빨리 판다",
-  herding: "남이 사면 따라 산다",
-  anchoring: "매수가에 집착한다",
-};
+import { PeerBenchmarkBlock } from "@/components/shared/peer-benchmark-block";
 
 /* ── Shared styling ── */
 
@@ -330,206 +322,6 @@ function WhyThisPersona({
   );
 }
 
-/* ── Benchmark (peer median) ── */
-
-function BenchmarkCompareRow({
-  label,
-  own,
-  group,
-  suffix = "",
-  digits = 1,
-}: {
-  label: string;
-  own: number | null | undefined;
-  group: number | null | undefined;
-  suffix?: string;
-  digits?: number;
-}) {
-  const delta =
-    own !== null && own !== undefined && group !== null && group !== undefined
-      ? own - group
-      : null;
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-2 border-b border-[rgba(245,240,232,0.06)] last:border-0">
-      <span className="text-xs text-[rgba(245,240,232,0.6)]">{label}</span>
-      <div className="flex items-baseline gap-2">
-        <span className="font-mono tabular-nums text-sm text-[var(--pq-ivory)]">
-          {fmt(group, digits, suffix)}
-        </span>
-        {delta !== null && (
-          <span
-            className="font-mono tabular-nums text-[10px]"
-            style={{
-              color:
-                delta > 0
-                  ? "rgba(184,149,106,0.85)"
-                  : delta < 0
-                    ? "rgba(245,240,232,0.45)"
-                    : "rgba(245,240,232,0.35)",
-            }}
-            aria-label={`Your ${label} vs group median: delta ${fmt(delta, digits, suffix)}`}
-          >
-            you {delta >= 0 ? "+" : ""}
-            {fmt(delta, digits, suffix)}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function BenchmarkCard({
-  personaLabel,
-  ownCagr,
-  ownSharpe,
-  ownHolding,
-}: {
-  personaLabel: string;
-  ownCagr: number | null;
-  ownSharpe: number | null;
-  ownHolding: number | null;
-}) {
-  const { data, isLoading, error } = usePersonaBenchmark(90);
-
-  if (isLoading) {
-    return (
-      <div
-        className="p-5 rounded-[2px]"
-        style={{ background: PAPER_BG, border: `1px solid ${PAPER_BORDER}` }}
-      >
-        <Kicker>Peer benchmark · 90-day</Kicker>
-        <p className="mt-3 text-xs text-[rgba(245,240,232,0.4)]">Loading…</p>
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return null;
-  }
-
-  if (!data.available) {
-    return (
-      <div
-        className="p-5 rounded-[2px]"
-        style={{ background: PAPER_BG, border: `1px solid ${PAPER_BORDER}` }}
-      >
-        <Kicker>Peer benchmark · 90-day</Kicker>
-        <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
-          {data.reason === "insufficient_group_size"
-            ? `The ${personaLabel} group currently has fewer than 20 members — peer stats are withheld for privacy.`
-            : "Peer stats are being computed. Check back soon."}
-        </p>
-      </div>
-    );
-  }
-
-  const s = data.stats;
-
-  return (
-    <div
-      className="p-5 rounded-[2px]"
-      style={{ background: PAPER_BG, border: `1px solid ${PAPER_BORDER}` }}
-    >
-      <div className="flex items-baseline justify-between gap-3">
-        <Kicker>Peer benchmark · 90-day</Kicker>
-        <span className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
-          N ≥ 20 · anonymized
-        </span>
-      </div>
-      <p className="mt-2 text-xs text-[rgba(245,240,232,0.55)]">
-        Median statistics across everyone classified as{" "}
-        <span className="text-[var(--pq-ivory)]">{personaLabel}</span>.
-        Observational — no individual record is exposed.
-      </p>
-
-      <div className="mt-4">
-        <BenchmarkCompareRow
-          label="CAGR (median)"
-          own={ownCagr}
-          group={s.avg_cagr}
-          digits={2}
-          suffix="%"
-        />
-        <BenchmarkCompareRow
-          label="Sharpe (median)"
-          own={ownSharpe}
-          group={s.avg_sharpe}
-          digits={2}
-        />
-        <BenchmarkCompareRow
-          label="Holding days (median)"
-          own={ownHolding}
-          group={s.median_holding_days}
-          digits={1}
-        />
-        <BenchmarkCompareRow
-          label="Win rate"
-          own={null}
-          group={s.win_rate}
-          digits={1}
-          suffix="%"
-        />
-        <BenchmarkCompareRow
-          label="Max drawdown (avg)"
-          own={null}
-          group={s.max_drawdown_avg}
-          digits={1}
-          suffix="%"
-        />
-      </div>
-
-      {s.most_held_sectors && s.most_held_sectors.length > 0 && (
-        <div className="mt-4">
-          <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
-            Most-held sectors
-          </div>
-          <ul className="mt-2 flex flex-wrap gap-2">
-            {s.most_held_sectors.slice(0, 5).map((sec) => (
-              <li
-                key={sec.sector}
-                className="inline-flex items-center gap-1.5 rounded-sm px-2 py-1 text-[11px]"
-                style={{
-                  background: "rgba(184,149,106,0.08)",
-                  border: "0.5px solid rgba(184,149,106,0.25)",
-                  color: "rgba(245,240,232,0.75)",
-                }}
-              >
-                <span className="font-serif">{sec.sector}</span>
-                <span className="font-mono tabular-nums text-[rgba(184,149,106,0.85)]">
-                  {fmt(sec.share, 1)}%
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {s.common_mistakes && s.common_mistakes.length > 0 && (
-        <div className="mt-4">
-          <div className="text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.45)]">
-            Common behavioural patterns in this group
-          </div>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {s.common_mistakes.slice(0, 3).map((m) => (
-              <li
-                key={m.label}
-                className="flex items-baseline justify-between gap-3 text-xs"
-              >
-                <span className="text-[rgba(245,240,232,0.65)]">
-                  {MISTAKE_LABELS_KR[m.label] ?? m.label}
-                </span>
-                <span className="font-mono tabular-nums text-[rgba(245,240,232,0.45)]">
-                  {m.count}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ── Main ── */
 
 interface Props {
@@ -575,11 +367,12 @@ export function PersonaV2Card({ className = "" }: Props) {
         breakdown={data.breakdown}
       />
       <WhyThisPersona breakdown={data.breakdown} label={data.label} />
-      <BenchmarkCard
+      <PeerBenchmarkBlock
         personaLabel={data.label}
         ownCagr={null}
         ownSharpe={null}
         ownHolding={null}
+        windowDays={90}
       />
     </div>
   );
