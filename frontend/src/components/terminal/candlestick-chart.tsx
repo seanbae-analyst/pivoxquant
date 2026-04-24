@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import useSWR from "swr";
 import type {
   IChartApi,
   ISeriesApi,
@@ -29,6 +30,7 @@ import type {
   HistogramData,
   UTCTimestamp,
 } from "lightweight-charts";
+import { apiFetch } from "@/lib/api";
 
 export type Timeframe = "1D" | "5D" | "1M" | "3M" | "6M" | "1Y" | "2Y";
 export type Indicator = "ma20" | "ma50" | "rsi" | "volume";
@@ -95,13 +97,38 @@ export function CandlestickChart({
   const ma50Ref = useRef<ISeriesApi<"Line"> | null>(null);
   const volRef = useRef<ISeriesApi<"Histogram"> | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-  const [source, setSource] = useState<string | null>(null);
-
   const wantVolume = indicators.includes("volume");
   const wantMa20 = indicators.includes("ma20");
   const wantMa50 = indicators.includes("ma50");
+
+  // BUG-8 FIX 1: chart data now flows through SWR instead of a raw
+  // `fetch()` inside a useEffect. The old code had TWO useEffects — a
+  // chart-init effect keyed on [height, wantVolume, wantMa20, wantMa50,
+  // timeframe] and a fetch effect keyed on [ticker, timeframe]. Under
+  // React StrictMode in dev, and on any timeframe-only change, both
+  // effects re-ran and the fetch fired twice for the same URL. With SWR
+  // + the global dedupingInterval (6 s), parallel calls to the same
+  // `/api/chart/NVDA?period=1d` URL return a single in-flight response.
+  const period = TIMEFRAME_TO_PERIOD[timeframe] ?? "6mo";
+  const chartKey = `/api/chart/${encodeURIComponent(ticker)}?period=${period}`;
+  const {
+    data: chartBody,
+    error: chartErr,
+    isLoading: chartLoading,
+  } = useSWR<BackendResponse>(
+    chartKey,
+    (url) => apiFetch<BackendResponse>(url),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60_000,
+      keepPreviousData: true,
+    },
+  );
+
+  const loading = chartLoading && !chartBody;
+  const err = chartErr ? String((chartErr as Error).message || chartErr) : null;
+  const source = chartBody?.source ?? null;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -197,8 +224,15 @@ export function CandlestickChart({
         });
       });
       ro.observe(container);
-    })().catch((e) => {
-      if (!cancelled) setErr(String(e?.message || e));
+      // Signal the data-feed effect that freshly-created series refs are
+      // ready to accept data. Without this, changing timeframe recreated
+      // the chart but the cached SWR response would not re-populate the
+      // new series until the next revalidation tick.
+      if (!cancelled) setChartRev((r) => r + 1);
+    })().catch(() => {
+      // Chart init errors are rare; data errors are surfaced via the
+      // SWR chartErr branch below. Silently swallow to avoid clobbering
+      // the useful error message.
     });
 
     return () => {
@@ -213,73 +247,53 @@ export function CandlestickChart({
     };
   }, [height, wantVolume, wantMa20, wantMa50, timeframe]);
 
-  // Fetch + feed series whenever ticker / timeframe changes.
+  // Push SWR data into the lightweight-charts series. Runs whenever
+  // chartBody updates OR when the series are rebuilt (timeframe/indicator
+  // change triggers the init effect above). `chartRev` tracks init-effect
+  // completions so we re-feed data into freshly-created series refs.
+  const [chartRev, setChartRev] = useState(0);
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setErr(null);
+    if (!chartBody) return;
+    const data = chartBody.data || [];
+    if (!lineRef.current) return;
 
-    const period = TIMEFRAME_TO_PERIOD[timeframe] ?? "6mo";
-    const url = `/api/chart/${encodeURIComponent(ticker)}?period=${period}`;
+    const priceData: LineData[] = data.map((p) => ({
+      time: toTs(p.date),
+      value: p.close,
+    }));
+    lineRef.current.setData(priceData);
 
-    fetch(url, { credentials: "include" })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return (await r.json()) as BackendResponse;
-      })
-      .then((body) => {
-        if (cancelled) return;
-        const data = body.data || [];
-        setSource(body.source ?? null);
-
-        const priceData: LineData[] = data.map((p) => ({
-          time: toTs(p.date),
-          value: p.close,
-        }));
-        lineRef.current?.setData(priceData);
-
-        const closes = data.map((p) => p.close);
-        if (ma20Ref.current) {
-          const ma20 = sma(closes, 20);
-          const ma20Data: LineData[] = [];
-          ma20.forEach((v, i) => {
-            if (v != null) ma20Data.push({ time: toTs(data[i].date), value: v });
-          });
-          ma20Ref.current.setData(ma20Data);
-        }
-        if (ma50Ref.current) {
-          const ma50 = sma(closes, 50);
-          const ma50Data: LineData[] = [];
-          ma50.forEach((v, i) => {
-            if (v != null) ma50Data.push({ time: toTs(data[i].date), value: v });
-          });
-          ma50Ref.current.setData(ma50Data);
-        }
-        if (volRef.current) {
-          const volData: HistogramData[] = data.map((p, i) => {
-            const prev = i > 0 ? data[i - 1].close : p.close;
-            const up = p.close >= prev;
-            return {
-              time: toTs(p.date),
-              value: p.volume ?? 0,
-              color: up ? "rgba(125,180,135,0.55)" : "rgba(209,136,136,0.55)",
-            };
-          });
-          volRef.current.setData(volData);
-        }
-        chartRef.current?.timeScale().fitContent();
-        setLoading(false);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setErr(String(e?.message || e));
-        setLoading(false);
+    const closes = data.map((p) => p.close);
+    if (ma20Ref.current) {
+      const ma20 = sma(closes, 20);
+      const ma20Data: LineData[] = [];
+      ma20.forEach((v, i) => {
+        if (v != null) ma20Data.push({ time: toTs(data[i].date), value: v });
       });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [ticker, timeframe]);
+      ma20Ref.current.setData(ma20Data);
+    }
+    if (ma50Ref.current) {
+      const ma50 = sma(closes, 50);
+      const ma50Data: LineData[] = [];
+      ma50.forEach((v, i) => {
+        if (v != null) ma50Data.push({ time: toTs(data[i].date), value: v });
+      });
+      ma50Ref.current.setData(ma50Data);
+    }
+    if (volRef.current) {
+      const volData: HistogramData[] = data.map((p, i) => {
+        const prev = i > 0 ? data[i - 1].close : p.close;
+        const up = p.close >= prev;
+        return {
+          time: toTs(p.date),
+          value: p.volume ?? 0,
+          color: up ? "rgba(125,180,135,0.55)" : "rgba(209,136,136,0.55)",
+        };
+      });
+      volRef.current.setData(volData);
+    }
+    chartRef.current?.timeScale().fitContent();
+  }, [chartBody, chartRev]);
 
   return (
     <div

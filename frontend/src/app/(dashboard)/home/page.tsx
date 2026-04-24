@@ -42,13 +42,12 @@ import { ArtifactQueue } from "@/components/home/artifact-queue";
 
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { API } from "@/lib/endpoints";
 import {
-  API,
-  PORTFOLIO_SUMMARY,
-  PORTFOLIO_POSITIONS,
-  WATCHLIST,
-} from "@/lib/endpoints";
-import { liveRefresh } from "@/lib/market-hours";
+  usePortfolioSummary,
+  usePortfolioPositions,
+  useWatchlist,
+} from "@/lib/hooks";
 import type { Position } from "@/components/portfolio/types";
 
 /* ── Response shapes ── */
@@ -175,14 +174,12 @@ function pctColor(n: number | null | undefined): string {
 export default function HomePage() {
   const { user } = useAuth();
 
-  const liveOpts = {
-    refreshInterval: () => liveRefresh(5_000, 60_000),
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    dedupingInterval: 2_000,
-    errorRetryCount: 2,
-    errorRetryInterval: 5_000,
-  } as const;
+  // BUG-8 FIX 4: portfolio summary/positions + watchlist now go through
+  // the shared hooks in `lib/hooks.ts`, which enforce a 10 s dedupe +
+  // revalidateIfStale:false. The old inline `liveOpts` (2 s dedupe)
+  // produced separate cache entries from `usePortfolioSummary` used by
+  // other components (RealtimeProvider, dashboard sidebars), multiplying
+  // portfolio calls on mount.
   const briefOpts = {
     refreshInterval: 600_000,
     revalidateOnFocus: false,
@@ -191,31 +188,31 @@ export default function HomePage() {
     errorRetryCount: 2,
     errorRetryInterval: 10_000,
   } as const;
+  const signalsOpts = {
+    refreshInterval: 30_000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    dedupingInterval: 10_000,
+    errorRetryCount: 2,
+    errorRetryInterval: 5_000,
+  } as const;
 
-  const { data: summary } = useSWR<SummaryResponse>(
-    PORTFOLIO_SUMMARY,
-    fetcher,
-    liveOpts,
-  );
-  const { data: posData } = useSWR<PositionsResponse>(
-    PORTFOLIO_POSITIONS,
-    fetcher,
-    liveOpts,
-  );
+  const { data: summary } = usePortfolioSummary() as {
+    data: SummaryResponse | undefined;
+  };
+  const { data: posData } = usePortfolioPositions<PositionsResponse>();
+  const { data: watch } = useWatchlist() as {
+    data: WatchlistResponse | undefined;
+  };
   const { data: brief } = useSWR<MorningBriefResponse>(
     API.market.morningBriefToday,
     fetcher,
     briefOpts,
   );
-  const { data: watch } = useSWR<WatchlistResponse>(
-    WATCHLIST,
-    fetcher,
-    liveOpts,
-  );
   const { data: signalsData } = useSWR<SignalsResponse>(
     API.signals.all,
     fetcher,
-    liveOpts,
+    signalsOpts,
   );
   const { data: riskSummary } = useSWR<RiskSummaryResponse>(
     "/api/risk/summary",

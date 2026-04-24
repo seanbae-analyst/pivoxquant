@@ -167,26 +167,35 @@ function is401(err: unknown): boolean {
 }
 
 export default function RiskPage() {
-  const { data: summary, error: summaryErr } = useSWR<RiskSummary>(
-    RISK_SUMMARY,
-    fetcher,
-    SWR_OPTS,
-  );
-  const { data: layersData, error: layersErr } = useSWR<LayersResponse | BackendLayer[]>(
-    RISK_LAYERS,
-    fetcher,
-    SWR_OPTS,
-  );
-  const { data: corrData, error: corrErr } = useSWR<CorrelationPayload>(
-    RISK_CORRELATION,
-    fetcher,
-    SWR_OPTS,
-  );
-  const { data: rollingVar, error: rollingErr } = useSWR<RollingVarPoint[]>(
-    RISK_ROLLING_VAR,
-    fetcher,
-    SWR_OPTS,
-  );
+  const {
+    data: summary,
+    error: summaryErr,
+    isLoading: summaryLoading,
+  } = useSWR<RiskSummary>(RISK_SUMMARY, fetcher, SWR_OPTS);
+  const {
+    data: layersData,
+    error: layersErr,
+    isLoading: layersLoading,
+  } = useSWR<LayersResponse | BackendLayer[]>(RISK_LAYERS, fetcher, SWR_OPTS);
+  const {
+    data: corrData,
+    error: corrErr,
+    isLoading: corrLoading,
+  } = useSWR<CorrelationPayload>(RISK_CORRELATION, fetcher, SWR_OPTS);
+  const {
+    data: rollingVar,
+    error: rollingErr,
+    isLoading: rollingLoading,
+  } = useSWR<RollingVarPoint[]>(RISK_ROLLING_VAR, fetcher, SWR_OPTS);
+
+  // BUG B FIX: suppress the "Sample preview" banner while any of the four
+  // endpoints is still resolving its first response. Previously the banner
+  // flashed for 2-3 s on mount because SWR's initial `data === undefined`
+  // was interpreted as "no data → show demo board". Now we only decide
+  // between real and sample states after at least one settlement (success
+  // OR error) for each endpoint.
+  const anyLoading =
+    summaryLoading || layersLoading || corrLoading || rollingLoading;
 
   // Mapped layers from backend (if present).
   const apiLayers: RiskLayer[] | null = useMemo(() => {
@@ -250,7 +259,11 @@ export default function RiskPage() {
     [displayVarPoints],
   );
 
-  const showSampleBanner = !hasData;
+  // Suppress the banner during the initial load — only show it once the
+  // endpoints have resolved and we can confirm there is no real data.
+  // Auth errors (401) are surfaced immediately because they are not
+  // transient and the user should see the "sign in" CTA without delay.
+  const showSampleBanner = !hasData && (!anyLoading || isAuthError);
 
   const fmtPct = (v: number | undefined, sign: "neg" | "auto" = "auto") => {
     if (v == null || Number.isNaN(v)) return "—";

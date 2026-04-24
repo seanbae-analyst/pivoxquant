@@ -64,8 +64,16 @@ export function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
+  // BUG-8 FIX 2: unify the SWR cache key with `useAlerts()` in hooks.ts
+  // so both subscriptions dedupe to a single request. The old key
+  // `/api/alerts?limit=10` produced a separate cache entry from
+  // `/api/alerts` and doubled the request count on /home. We now fetch
+  // the full list and slice client-side — the backend already paginates
+  // by `limit` query param at the service layer, so total payload is
+  // unchanged when the caller is `useAlerts` (both issue `/api/alerts`
+  // with no qs).
   const { data, error, isLoading, mutate } = useSWR<AlertsListResponse>(
-    `${API.alerts.list}?limit=10`,
+    API.alerts.list,
     fetcher,
     { refreshInterval: 60_000, revalidateOnFocus: true },
   );
@@ -75,7 +83,7 @@ export function NotificationDropdown() {
     { refreshInterval: 60_000, revalidateOnFocus: true },
   );
 
-  const items = data?.alerts ?? [];
+  const items = (data?.alerts ?? []).slice(0, 10);
   const unread = countData?.count ?? 0;
 
   useEffect(() => {

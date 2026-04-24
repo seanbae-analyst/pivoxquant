@@ -112,7 +112,15 @@ export function ArtifactQueue() {
 
   // "Portfolio Journal" is represented today by the Weekly Memo artifact
   // archive — pull the latest row of any type.
-  const { artifacts } = useArtifacts({ type: "all", since: "90d", limit: 5 });
+  //
+  // BUG-8 FIX 3: key unified with <LivingCFOStatusBar/> (both now call
+  // useArtifacts({type:"all", since:"all"})) so SWR dedupes them to a
+  // single /api/artifacts request. Previously this used
+  // `{since:"90d", limit:5}` → separate cache key → two concurrent
+  // requests on /home mount. We only consume `artifacts[0]` here, and
+  // the full-archive response is already small (user-scoped), so the
+  // extra rows are negligible bytes.
+  const { artifacts } = useArtifacts({ type: "all", since: "all" });
 
   const { data: companionStatus } = useCompanionStatus();
   const { messages } = useCompanionHistory();
