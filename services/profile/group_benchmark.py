@@ -40,10 +40,9 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import statistics
 from collections import Counter
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from extensions import db
@@ -56,6 +55,8 @@ from models import (
     VALID_PERSONAS,
     VALID_WINDOWS,
 )
+from services.profile.common_util import is_finite as _finite, utc_now as _utc_now
+from services.profile.fifo_util import fifo_match_closed_trades
 from services.profile.persona_analytics import DECLARED_TO_PERSONA
 
 
@@ -219,22 +220,38 @@ def get_all_persona_stats(window_days: int) -> dict[str, dict | None]:
 def _user_ids_for_persona(persona: str) -> list[int]:
     """Return distinct user_ids whose declared persona maps to ``persona``.
 
-    We use the DECLARED mapping (InvestmentProfile.profile_type →
-    persona_code) because it's stable across sessions. The observed
-    persona can flip weekly; grouping by declared is both cheaper and
+    Uses the DECLARED mapping (``InvestmentProfile.profile_type``
+    → persona_code) because it's stable across sessions. Observed
+    personas can flip weekly; grouping by declared is both cheaper and
     more defensible privacy-wise.
+
+    SQL pre-filter
+    --------------
+    Previously this function loaded **every** ``InvestmentProfile`` row
+    and filtered in Python — O(N) over the entire user table for each
+    of the 8 personas. We now push the filter into SQL via
+    ``profile_type.in_(...)``, returning only rows that can possibly
+    match. ``DECLARED_TO_PERSONA`` keys are case-folded by the resolver
+    so we match on the canonical lower-case form here.
     """
-    # Walk the legacy + V2 mapping in reverse: find every profile_type
-    # string that resolves to this persona.
     legacy_types = [
         pt for pt, code in DECLARED_TO_PERSONA.items() if code == persona
     ]
     if not legacy_types:
         return []
 
+    # Case-insensitive equality is platform-dependent; the column is
+    # stored exactly as the user submitted it. We expand the IN clause
+    # to cover both lower and upper variants seen in the wild — the
+    # resolver below still applies as a final guard.
+    candidate_values = set(legacy_types)
+    candidate_values.update(v.upper() for v in legacy_types)
+    candidate_values.update(v.capitalize() for v in legacy_types)
+
     rows = (
         db.session.query(InvestmentProfile.user_id, InvestmentProfile.profile_type)
         .filter(InvestmentProfile.profile_type.isnot(None))
+        .filter(InvestmentProfile.profile_type.in_(candidate_values))
         .all()
     )
     matched: set[int] = set()
@@ -290,9 +307,10 @@ def _aggregate_metrics(
 
     sectors = _sector_distribution(user_ids)
 
-    # Comparison-to-all — compute once across all users (not just this
-    # persona). We cache the result on the SQLAlchemy session identity
-    # so compute_all_personas only runs it 8×1 times per window.
+    # Comparison-to-all — computed once per window across the whole
+    # user base. ``_all_users_baseline`` memoizes the result with a 1h
+    # TTL, so ``compute_all_personas`` runs the full scan once per
+    # window even though it touches all 8 persona buckets.
     all_users_stats = _all_users_baseline(cutoff, window_days)
 
     metrics: dict = {
@@ -403,36 +421,16 @@ def _max_drawdown_pct(pnls: list[float]) -> float:
 
 
 def _avg_holding_days(trades: list[TradeHistory]) -> float | None:
-    """FIFO-match BUY/SELL per ticker. Returns None when no round trips."""
-    opens: dict[str, list[tuple[datetime, float]]] = {}
-    hold: list[float] = []
-    ordered = sorted(
-        [t for t in trades if t.traded_at],
-        key=lambda t: t.traded_at,
-    )
-    for t in ordered:
-        if not t.ticker:
-            continue
-        key = t.ticker.upper()
-        action = (t.action or "").upper()
-        if action == "BUY":
-            opens.setdefault(key, []).append((t.traded_at, float(t.shares or 0.0)))
-        elif action == "SELL":
-            remaining = float(t.shares or 0.0)
-            queue = opens.get(key, [])
-            while remaining > 1e-9 and queue:
-                buy_time, buy_sh = queue[0]
-                take = min(buy_sh, remaining)
-                days = max(0.0, (t.traded_at - buy_time).total_seconds() / 86400.0)
-                hold.append(days)
-                remaining -= take
-                if take >= buy_sh - 1e-9:
-                    queue.pop(0)
-                else:
-                    queue[0] = (buy_time, buy_sh - take)
-    if not hold:
+    """FIFO-match BUY/SELL per ticker. Returns None when no round trips.
+
+    Delegates to :mod:`fifo_util` so this aggregator agrees with the
+    per-user persona analytics pipeline byte-for-byte.
+    """
+    pairs = fifo_match_closed_trades(trades)
+    if not pairs:
         return None
-    return round(float(sum(hold) / len(hold)), 1)
+    mean = sum(p.hold_days for p in pairs) / len(pairs)
+    return round(float(mean), 1)
 
 
 def _user_mistakes(trades: list[TradeHistory]) -> set[str]:
@@ -447,46 +445,30 @@ def _user_mistakes(trades: list[TradeHistory]) -> set[str]:
         return mistakes
 
     # Disposition: avg hold on winners much shorter than on losers.
+    # Group FIFO-matched pairs by their SELL (sell_time + ticker) so we
+    # can attribute each SELL's stored ``pnl_pct`` to the right slice.
+    pairs = fifo_match_closed_trades(trades)
+    holds_by_sell: dict[tuple[str, datetime], list[float]] = {}
+    for p in pairs:
+        holds_by_sell.setdefault((p.ticker, p.sell_time), []).append(p.hold_days)
+
     win_holds: list[float] = []
     loss_holds: list[float] = []
-    # Build a holding-period lookup per SELL via FIFO.
-    opens: dict[str, list[tuple[datetime, float]]] = {}
-    ordered = sorted(
-        [t for t in trades if t.traded_at],
-        key=lambda t: t.traded_at,
-    )
-    for t in ordered:
-        if not t.ticker:
+    for sell in (t for t in trades if (t.action or "").upper() == "SELL"):
+        if not sell.traded_at or not sell.ticker:
             continue
-        key = t.ticker.upper()
-        action = (t.action or "").upper()
-        if action == "BUY":
-            opens.setdefault(key, []).append((t.traded_at, float(t.shares or 0.0)))
-        elif action == "SELL":
-            remaining = float(t.shares or 0.0)
-            queue = opens.get(key, [])
-            hold_for_this_sell: list[float] = []
-            while remaining > 1e-9 and queue:
-                buy_time, buy_sh = queue[0]
-                take = min(buy_sh, remaining)
-                hold_for_this_sell.append(
-                    max(0.0, (t.traded_at - buy_time).total_seconds() / 86400.0)
-                )
-                remaining -= take
-                if take >= buy_sh - 1e-9:
-                    queue.pop(0)
-                else:
-                    queue[0] = (buy_time, buy_sh - take)
-            if hold_for_this_sell:
-                avg_hold = sum(hold_for_this_sell) / len(hold_for_this_sell)
-                try:
-                    pct = float(t.pnl_pct or 0.0)
-                except (TypeError, ValueError):
-                    pct = 0.0
-                if pct > 0:
-                    win_holds.append(avg_hold)
-                elif pct < 0:
-                    loss_holds.append(avg_hold)
+        slice_holds = holds_by_sell.get((sell.ticker.upper(), sell.traded_at))
+        if not slice_holds:
+            continue
+        avg_hold = sum(slice_holds) / len(slice_holds)
+        try:
+            pct = float(sell.pnl_pct or 0.0)
+        except (TypeError, ValueError):
+            pct = 0.0
+        if pct > 0:
+            win_holds.append(avg_hold)
+        elif pct < 0:
+            loss_holds.append(avg_hold)
 
     if win_holds and loss_holds:
         avg_win = sum(win_holds) / len(win_holds)
@@ -582,6 +564,22 @@ def _ticker_to_sector(ticker: str) -> str:
 # ─────────────────────────────────────────────────────────────────────
 # All-users baseline (for comparison_to_all block)
 # ─────────────────────────────────────────────────────────────────────
+#
+# Module-level memoization: ``compute_all_personas`` previously called
+# this function 8× per window with identical arguments, but the
+# original "cached on session identity" comment was aspirational — no
+# cache existed. The full TradeHistory scan reran every time. We now
+# memoize on ``window_days`` with a short TTL.
+
+_BASELINE_CACHE_TTL = timedelta(hours=1)
+# window_days → (computed_at, baseline_dict)
+_baseline_cache: dict[int, tuple[datetime, dict]] = {}
+
+
+def _baseline_cache_clear() -> None:
+    """Drop the in-memory baseline cache (used by tests)."""
+    _baseline_cache.clear()
+
 
 def _all_users_baseline(cutoff: datetime, window_days: int) -> dict:
     """Compute aggregate baseline across EVERY user with trades.
@@ -590,14 +588,31 @@ def _all_users_baseline(cutoff: datetime, window_days: int) -> dict:
     don't gate on MIN_GROUP_SIZE here because the all-users bucket is
     effectively always > 20 in production — and if it isn't, suppression
     for individual personas already protects the user.
+
+    Caching
+    -------
+    Memoized at module scope keyed on ``window_days`` with a 1-hour
+    TTL. ``compute_all_personas(window_days)`` previously triggered 8
+    full ``TradeHistory`` scans (one per persona) for identical input;
+    this drops it to 1. The cache is intentionally process-local (no
+    Redis) so a deploy or process restart guarantees a fresh recompute.
     """
+    now = _utc_now()
+    cached = _baseline_cache.get(window_days)
+    if cached is not None:
+        computed_at, baseline = cached
+        if (now - computed_at) < _BASELINE_CACHE_TTL:
+            return baseline
+
     all_trades: list[TradeHistory] = (
         TradeHistory.query
         .filter(TradeHistory.traded_at >= cutoff)
         .all()
     )
     if not all_trades:
-        return {}
+        result: dict = {}
+        _baseline_cache[window_days] = (now, result)
+        return result
     by_user: dict[int, list[TradeHistory]] = {}
     for t in all_trades:
         by_user.setdefault(int(t.user_id), []).append(t)
@@ -613,11 +628,13 @@ def _all_users_baseline(cutoff: datetime, window_days: int) -> dict:
         hp = _avg_holding_days(u_trades)
         if hp is not None:
             holdings.append(hp)
-    return {
+    result = {
         "avg_cagr": _safe_median(cagrs),
         "avg_sharpe": _safe_median(sharpes),
         "median_holding_days": _safe_median(holdings),
     }
+    _baseline_cache[window_days] = (now, result)
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -625,19 +642,14 @@ def _all_users_baseline(cutoff: datetime, window_days: int) -> dict:
 # ─────────────────────────────────────────────────────────────────────
 
 def _safe_median(values: Iterable[float]) -> float:
+    """Median over the finite subset of ``values``; ``0.0`` when empty.
+
+    ``_finite`` and ``_utc_now`` are imported from
+    :mod:`services.profile.common_util` (see top of file) — the previous
+    local copies were removed to keep semantics identical across the
+    profile package.
+    """
     vs = [float(v) for v in values if _finite(v)]
     if not vs:
         return 0.0
     return round(float(statistics.median(vs)), 2)
-
-
-def _finite(x: float) -> bool:
-    try:
-        xf = float(x)
-    except (TypeError, ValueError):
-        return False
-    return not (math.isnan(xf) or math.isinf(xf))
-
-
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)

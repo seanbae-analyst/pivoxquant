@@ -758,6 +758,21 @@ def get_persona_benchmark_all():
 
     published = get_all_persona_stats(window)
 
+    # Single round-trip for "is there ANY snapshot per persona?" — used
+    # only when ``stats is None`` to distinguish "not computed yet" vs
+    # "computed but suppressed". Replaces the previous N+1 (8 queries
+    # per request).
+    presence_rows = (
+        db.session.query(PersonaGroupStats.persona)
+        .filter(
+            PersonaGroupStats.persona.in_(list(PERSONA_CODES)),
+            PersonaGroupStats.window_days == window,
+        )
+        .distinct()
+        .all()
+    )
+    has_any_snapshot: set[str] = {row[0] for row in presence_rows}
+
     out: dict[str, dict] = {}
     for persona in PERSONA_CODES:
         stats = published.get(persona)
@@ -769,13 +784,11 @@ def get_persona_benchmark_all():
                 "stats": stats,
             }
             continue
-        latest = (
-            PersonaGroupStats.query
-            .filter_by(persona=persona, window_days=window)
-            .order_by(PersonaGroupStats.computed_at.desc())
-            .first()
+        reason = (
+            "insufficient_group_size"
+            if persona in has_any_snapshot
+            else "not_computed"
         )
-        reason = "not_computed" if latest is None else "insufficient_group_size"
         out[persona] = {
             "available": False,
             "label": label,

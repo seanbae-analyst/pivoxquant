@@ -30,10 +30,12 @@ the JSON response.
 from __future__ import annotations
 
 import math
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Iterable
 
 from models import Position, TradeHistory, InvestmentProfile
+from .common_util import sector_hhi, to_diversity_score, utc_now as _utc_now
+from .fifo_util import fifo_match_closed_trades, fifo_open_position_ages
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -293,39 +295,21 @@ def _behaviour_vector(
 
 
 def _avg_holding_period(trades: list[TradeHistory]) -> float:
-    """FIFO-match BUY/SELL pairs per ticker; return mean hold in days."""
-    opens: dict[str, list[tuple[datetime, float]]] = {}
-    hold_days: list[float] = []
-    for t in trades:
-        if not t.traded_at or not t.ticker:
-            continue
-        action = (t.action or "").upper()
-        key = t.ticker.upper()
-        if action == "BUY":
-            opens.setdefault(key, []).append((t.traded_at, float(t.shares or 0.0)))
-        elif action == "SELL":
-            remaining = float(t.shares or 0.0)
-            queue = opens.get(key, [])
-            while remaining > 1e-9 and queue:
-                buy_time, buy_sh = queue[0]
-                take = min(buy_sh, remaining)
-                hold_days.append(max(0.0, (t.traded_at - buy_time).total_seconds() / 86400.0))
-                remaining -= take
-                if take >= buy_sh - 1e-9:
-                    queue.pop(0)
-                else:
-                    queue[0] = (buy_time, buy_sh - take)
-    if not hold_days:
-        # No completed round trips → approximate by elapsed time of first
-        # BUY (still-held). Gives ≈ window_days for long-term holders.
-        elapsed = []
-        for queue in opens.values():
-            for buy_time, _sh in queue:
-                elapsed.append(max(0.0, (datetime.utcnow() - buy_time).total_seconds() / 86400.0))
-        if not elapsed:
-            return 0.0
-        return sum(elapsed) / len(elapsed)
-    return sum(hold_days) / len(hold_days)
+    """FIFO-match BUY/SELL pairs per ticker; return mean hold in days.
+
+    Implementation delegates to :func:`fifo_util.fifo_match_closed_trades`
+    so all four legacy copies of this loop now produce identical results.
+    """
+    pairs = fifo_match_closed_trades(trades)
+    if pairs:
+        return sum(p.hold_days for p in pairs) / len(pairs)
+    # Fallback: average elapsed time of still-open positions. The util
+    # picks the latest ``traded_at`` as the reference (deterministic);
+    # only an empty trade list lands on ``utcnow``.
+    elapsed = fifo_open_position_ages(trades)
+    if not elapsed:
+        return 0.0
+    return sum(elapsed) / len(elapsed)
 
 
 def _sector_diversification(
@@ -334,18 +318,13 @@ def _sector_diversification(
 ) -> float:
     """1 - HHI on traded-volume weighted sector exposure, in [0, 1]."""
     volume_by_sector: dict[str, float] = {}
-    total = 0.0
     for t in trades:
         sector = sector_map.get((t.ticker or "").upper(), _UNKNOWN_SECTOR)
         amount = abs(float(t.total_value or 0.0)) or abs(float(t.shares or 0.0))
         if amount <= 0:
             continue
         volume_by_sector[sector] = volume_by_sector.get(sector, 0.0) + amount
-        total += amount
-    if total <= 0 or not volume_by_sector:
-        return 0.0
-    hhi = sum((v / total) ** 2 for v in volume_by_sector.values())
-    return max(0.0, min(1.0, 1.0 - hhi))
+    return to_diversity_score(sector_hhi(volume_by_sector))
 
 
 def _nearest_centroid(vec: tuple[float, float, float]) -> tuple[str, float]:
@@ -427,5 +406,14 @@ def _drift(declared_code: str, declared_score: float, observed_30d: dict) -> flo
     return max(0.0, min(100.0, gap))
 
 
-def _utc_now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+# ``_utc_now`` is now an alias for the canonical implementation in
+# :mod:`services.profile.common_util`. Kept here for the (small number
+# of) external imports that reference the symbol directly.
+__all__ = [
+    "compute_persona_response",
+    "PERSONA_CODES",
+    "PERSONA_LABELS",
+    "PERSONA_TAGLINES",
+    "DECLARED_TO_PERSONA",
+    "PERSONA_CENTROIDS",
+]
