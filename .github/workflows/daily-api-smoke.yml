@@ -153,11 +153,14 @@ jobs:
               failed=true
               reason+="KOSPI parse error: $kospi_val — payload: ${payload:0:300}. "
             else
-              # Range check: 2000 <= KOSPI <= 3500
-              in_range=$(python3 -c "v=float('$kospi_val'); print('yes' if 2000 <= v <= 3500 else 'no')" 2>/dev/null)
+              # Sanity check: KOSPI > 0 and < 100000 (reject 0/negative/nonsense).
+              # Removed strict range — KOSPI re-rated from ~2500 (2023) to ~6475 (2026).
+              # Indices internal consistency (level vs range_52w divergence) is now
+              # checked by nightly-bug-hunt's indices_consistency.py instead.
+              in_range=$(python3 -c "v=float('$kospi_val'); print('yes' if 0 < v < 100000 else 'no')" 2>/dev/null)
               if [ "$in_range" != "yes" ]; then
                 failed=true
-                reason+="KOSPI level $kospi_val is outside expected range [2000, 3500] — stale or corrupted data. "
+                reason+="KOSPI level $kospi_val is non-positive or absurd — corrupted data. "
               fi
             fi
           fi
