@@ -10,19 +10,57 @@ see a "current" price that's actually days old.
 Priority per ticker:
   1) realtime_service (Alpaca latest trade/quote, KIS WS/REST) — always fresh
   2) SignalCache row, only if not stale (TTL_SECONDS window, see models.SignalCache)
-  3) Omitted from response (caller falls back to avg_cost / last known)
+  3) SignalCache `price_display` string ("$402.91", "₩42,100") parsed — last
+     line of defense before we hand the caller a 0 that would render as "$0".
+     This covers the Bug C regression where realtime was dead, SignalCache
+     was stale (so `price` = None via get_signal), but the blob still had
+     a human-readable `price_display` from an earlier scan. The caller
+     marked the row as "stale" which is honest; we just stop it rendering
+     as `$0`.
+  4) Omitted from response (caller falls back to avg_cost / last known)
 """
 from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
-from typing import Iterable
+from typing import Iterable, Optional
 
+from models import SignalCache
+from extensions import db
 from services.container import realtime
 from services import cache_service
 
 logger = logging.getLogger(__name__)
+
+# Matches an unsigned/signed number with optional commas + decimal inside a
+# currency-decorated string like "$402.91", "₩42,100", "€1,234.56", "-$3.14".
+# We strip currency symbols and thousands-separator commas before float().
+_PRICE_DISPLAY_RE = re.compile(r"-?\d[\d,]*(?:\.\d+)?")
+
+
+def parse_price_display(display: Optional[str]) -> Optional[float]:
+    """Parse "$402.91" / "₩42,100" / "1,234.56" → float.
+
+    Returns None on any shape we can't confidently parse ("—", "", "N/A", None).
+    Callers should treat None as "no fallback available".
+    """
+    if not display or not isinstance(display, str):
+        return None
+    s = display.strip()
+    if not s or s in ("—", "-", "N/A", "n/a", "null", "None"):
+        return None
+    m = _PRICE_DISPLAY_RE.search(s)
+    if not m:
+        return None
+    try:
+        v = float(m.group(0).replace(",", ""))
+    except (TypeError, ValueError):
+        return None
+    if v <= 0:
+        return None
+    return v
 
 
 def _now_iso() -> str:
@@ -49,6 +87,16 @@ def overlay_prices(tickers: Iterable[str]) -> dict:
     except Exception:
         logger.exception("overlay_prices: realtime batch failed")
         rt = {}
+
+    # For tier-3 (stale-cache price_display parse), we need the raw
+    # SignalCache row even when get_signal() returns None because the row
+    # is beyond its TTL. Batch-load once to avoid N+1.
+    stale_map: dict = {}
+    try:
+        rows = SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+        stale_map = {r.ticker: r for r in rows}
+    except Exception:
+        logger.exception("overlay_prices: SignalCache batch load failed")
 
     for t in tickers:
         r = rt.get(t) or rt.get(t.upper()) or {}
@@ -89,6 +137,30 @@ def overlay_prices(tickers: Iterable[str]) -> dict:
                     "observed_at": cached.updated_at.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
                     if cached.updated_at else now,
                     "source": "cache",
+                }
+                continue
+
+        # ── 3) Stale-cache price_display parse fallback (Bug C) ──
+        # Even when SignalCache row is beyond TTL, a human-readable
+        # price_display like "$402.91" is better than 0 / "—".
+        stale_row = stale_map.get(t)
+        if stale_row and stale_row.data_json:
+            try:
+                sd2 = json.loads(stale_row.data_json)
+            except (TypeError, ValueError):
+                sd2 = {}
+            parsed = parse_price_display(sd2.get("price_display")) or parse_price_display(str(sd2.get("price") or ""))
+            if parsed:
+                try:
+                    chg2 = float(sd2.get("change_pct") or 0)
+                except (TypeError, ValueError):
+                    chg2 = 0.0
+                out[t] = {
+                    "price": parsed,
+                    "change_pct": chg2,
+                    "observed_at": stale_row.updated_at.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+                    if stale_row.updated_at else None,
+                    "source": "stale_display",
                 }
 
     return out

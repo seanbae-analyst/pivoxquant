@@ -44,6 +44,12 @@ def _build_returns_matrix(tickers: list[str], days: int = 90):
 
     matrix shape: (days, n_tickers). Rows are aligned by calendar day; missing
     days are forward-filled. Returns (None, [], None) on any failure.
+
+    Bug A (2026-04-24): previously any ticker with <20 rows was silently
+    dropped, and the whole call returned None if the intersected frame had
+    <20 rows. That nuked Layer-1/2/4 metrics whenever ANY single position
+    had a short history. We now accept tickers with ≥10 rows individually
+    and return a partial matrix (with logged drop list) instead of None.
     """
     if not tickers:
         return None, [], None
@@ -53,17 +59,28 @@ def _build_returns_matrix(tickers: list[str], days: int = 90):
         return None, [], None
 
     series: dict[str, "pd.Series"] = {}
+    dropped: list[str] = []
     for t in tickers:
         try:
             h = fetcher.get_price_history(t, period="3mo")
             if h is None or h.empty or "Close" not in h.columns:
+                dropped.append(f"{t}(empty)")
                 continue
-            s = h["Close"].astype(float)
-            if len(s) < 20:
+            s = h["Close"].astype(float).dropna()
+            # Lowered floor from 20 → 10. The per-layer checks already
+            # guard on matrix.shape[0] >= 20 at the aggregated level, so
+            # individual short tickers are still excluded when the final
+            # intersect would be unreliable.
+            if len(s) < 10:
+                dropped.append(f"{t}(n={len(s)})")
                 continue
             series[t] = s
         except Exception as e:
             logger.debug(f"risk: price history skip {t}: {e}")
+            dropped.append(f"{t}(err)")
+
+    if dropped:
+        logger.info("risk._build_returns_matrix dropped tickers: %s", dropped)
 
     if not series:
         return None, [], None
@@ -287,12 +304,19 @@ def risk_layers():
     try:
         return _risk_layers_impl()
     except Exception as e:
-        logger.warning(f"risk.layers failed: {e}", exc_info=True)
+        logger.exception("risk.layers failed: %s", e)
         return jsonify(_demo_layers_response())
 
 
 def _risk_layers_impl():
-    state, _, matrix, _ = _portfolio_snapshot()
+    state, valid_tickers, matrix, _ = _portfolio_snapshot()
+
+    n_pos_dbg = 0 if state is None else len(state.get("positions") or [])
+    mshape_dbg = None if matrix is None else tuple(matrix.shape)
+    logger.info(
+        "risk.layers: positions=%s valid=%s matrix=%s",
+        n_pos_dbg, len(valid_tickers or []), mshape_dbg,
+    )
 
     # Default layers when portfolio is empty
     default_layers = [
@@ -326,34 +350,60 @@ def _risk_layers_impl():
         getattr(current_user, "investor_profile", "steady_accumulator")
         or "steady_accumulator"
     )
+    # Run full check_all() for layers_triggered / defense_score. Any exception
+    # here must NOT kill the whole ladder — we compute metric strings below
+    # independently per-layer so even a partial failure shows real numbers
+    # (was Bug A: a single layer's crash swallowed all 7 behind "—").
     try:
         actions = rds.check_all(state)
     except Exception as e:
-        logger.warning(f"risk_layers check_all failed: {e}")
-        return jsonify(default_layers)
+        logger.exception("risk_layers check_all failed (partial fallback): %s", e)
+        actions = {"layers_triggered": [], "defense_score": 100}
 
     triggered = set(actions.get("layers_triggered", []))
 
     # ── Compute per-layer metric values from the snapshot ──
+    # Each block is independently guarded: Bug A (2026-04-24) was that a
+    # single failure (e.g., shape-mismatched weights, NaN corrcoef on a
+    # 1-column matrix) would bubble up and turn all 7 metric strings into
+    # "—". Now each metric is computed in its own try/except; a crash in
+    # one layer only blanks that one layer.
     n_pos = len(state["positions"])
-    weights = np.array([p["weight"] or (1.0 / max(n_pos, 1))
-                        for p in state["positions"]], dtype=float)
-    if matrix is not None and weights.shape[0] != matrix.shape[1]:
-        weights = np.ones(matrix.shape[1], dtype=float) / matrix.shape[1]
-    s = weights.sum()
-    if s > 0:
-        weights = weights / s
+    try:
+        weights = np.array([p["weight"] or (1.0 / max(n_pos, 1))
+                            for p in state["positions"]], dtype=float)
+        if matrix is not None and weights.shape[0] != matrix.shape[1]:
+            weights = np.ones(matrix.shape[1], dtype=float) / matrix.shape[1]
+        s = weights.sum()
+        if s > 0:
+            weights = weights / s
+    except Exception as e:
+        logger.warning("risk_layers weights compute failed: %s", e)
+        weights = (
+            np.ones(matrix.shape[1], dtype=float) / matrix.shape[1]
+            if matrix is not None and matrix.shape[1] > 0
+            else np.array([1.0])
+        )
 
     var_pct_str = "—"
+    try:
+        if matrix is not None and matrix.shape[0] >= 20 and matrix.shape[1] > 0:
+            pr = matrix @ weights
+            var_pct_str = f"{-float(np.percentile(pr, 5)) * 100:.2f}%"
+    except Exception as e:
+        logger.warning("risk_layers L1 VaR metric failed: %s", e)
+
     corr_str = "—"
-    if matrix is not None and matrix.shape[0] >= 20:
-        pr = matrix @ weights
-        var_pct_str = f"{-float(np.percentile(pr, 5)) * 100:.2f}%"
-        if matrix.shape[1] >= 2:
+    try:
+        if matrix is not None and matrix.shape[0] >= 20 and matrix.shape[1] >= 2:
             recent = matrix[-20:]
             c = np.corrcoef(recent.T)
             mask = ~np.eye(c.shape[0], dtype=bool)
-            corr_str = f"{float(np.nanmean(c[mask])):.2f}"
+            corr_val = float(np.nanmean(c[mask]))
+            if np.isfinite(corr_val):
+                corr_str = f"{corr_val:.2f}"
+    except Exception as e:
+        logger.warning("risk_layers L2 Correlation metric failed: %s", e)
 
     vix = state.get("vix")
     vix_str = f"{vix:.1f}" if isinstance(vix, (int, float)) else "—"
@@ -362,8 +412,12 @@ def _risk_layers_impl():
 
     # Sector concentration — all sectors currently "Unknown" (no sector data),
     # so we fall back to showing the largest single position weight.
-    max_w = max((p["weight"] for p in state["positions"]), default=0.0)
-    sector_str = f"{max_w * 100:.0f}% max position"
+    try:
+        max_w = max((p.get("weight") or 0.0 for p in state["positions"]), default=0.0)
+        sector_str = f"{max_w * 100:.0f}% max position"
+    except Exception as e:
+        logger.warning("risk_layers L6 Sector metric failed: %s", e)
+        sector_str = "—"
 
     cash_w_pct = 0.0  # portfolio model has no explicit cash sleeve yet
 

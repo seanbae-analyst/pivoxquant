@@ -230,12 +230,29 @@ class RiskDefenseSystem:
         """If 95% daily VaR exceeds threshold, flag the riskiest position's risk contribution."""
         if returns_matrix is None or returns_matrix.shape[0] < 20:
             return
+        if returns_matrix.shape[1] == 0:
+            return
 
         n_pos = len(positions)
+        if n_pos == 0:
+            return
         weights = np.array(
-            [p.get("weight", 1 / n_pos) for p in positions], dtype=np.float64
+            [p.get("weight") or (1.0 / n_pos) for p in positions],
+            dtype=np.float64,
         )
-        weights = weights / weights.sum()  # normalize to sum=1
+        # Drop-alignment guard (2026-04-24, Bug A): _build_returns_matrix may
+        # skip tickers whose price history is too short, so
+        # returns_matrix.shape[1] can be < len(positions). Before, the matmul
+        # would raise and kill the whole check_all() → all 7 layers "—".
+        if weights.shape[0] != returns_matrix.shape[1]:
+            n = returns_matrix.shape[1]
+            weights = np.ones(n, dtype=np.float64) / n
+        # Zero-weight portfolio (all positions valued at 0) guard.
+        ws = float(weights.sum())
+        if ws <= 0 or not np.isfinite(ws):
+            weights = np.ones(returns_matrix.shape[1], dtype=np.float64) / returns_matrix.shape[1]
+        else:
+            weights = weights / ws
 
         # Portfolio-level daily returns
         port_returns = returns_matrix @ weights
@@ -351,12 +368,25 @@ class RiskDefenseSystem:
         """Flag positions whose tail-risk contribution exceeds threshold."""
         if returns_matrix is None or returns_matrix.shape[0] < 20:
             return
+        if returns_matrix.shape[1] == 0:
+            return
 
         n_pos = len(positions)
+        if n_pos == 0:
+            return
         weights = np.array(
-            [p.get("weight", 1 / n_pos) for p in positions], dtype=np.float64
+            [p.get("weight") or (1.0 / n_pos) for p in positions],
+            dtype=np.float64,
         )
-        weights = weights / weights.sum()  # normalize to sum=1
+        # Same drop-alignment + zero-sum guard as _layer1_var (see Bug A notes).
+        if weights.shape[0] != returns_matrix.shape[1]:
+            n = returns_matrix.shape[1]
+            weights = np.ones(n, dtype=np.float64) / n
+        ws = float(weights.sum())
+        if ws <= 0 or not np.isfinite(ws):
+            weights = np.ones(returns_matrix.shape[1], dtype=np.float64) / returns_matrix.shape[1]
+        else:
+            weights = weights / ws
         port_returns = returns_matrix @ weights
 
         # 5th percentile as tail threshold

@@ -12,6 +12,7 @@ from models import Position, SignalCache, User
 from models.portfolio_share import PortfolioShare
 from services import fx_service
 from services.name_resolver import resolve_stock_name
+from services.price_overlay import parse_price_display
 from .decorators import api_auth
 
 logger = logging.getLogger(__name__)
@@ -84,7 +85,10 @@ def get_shared_portfolio(token):
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
 
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
-        cur_px = sd.get("price", p.avg_cost)
+        # Bug C parity (2026-04-24): before falling back to avg_cost, try
+        # parsing price_display so stale-but-legible values don't decay
+        # into the cost basis.
+        cur_px = sd.get("price") or parse_price_display(sd.get("price_display")) or p.avg_cost
         pnl_pct = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
         market_value = cur_px * p.shares
         currency = sd.get("currency", "KRW" if is_kr else "USD")
