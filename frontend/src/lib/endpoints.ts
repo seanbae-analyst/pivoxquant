@@ -53,7 +53,7 @@ export const API = {
     chart: (ticker: string) => `/api/chart/${ticker}`,
     earnings: "/api/earnings",
     peers: (ticker: string) => `/api/peers/${ticker}`,
-    profile: (ticker: string) => `/api/profile/${ticker}`,
+    profile: (ticker: string) => `/api/market/profile/${ticker}`,
     dividend: (ticker: string) => `/api/dividend/${ticker}`,
     news: (ticker: string) => `/api/news/${ticker}`,
   },

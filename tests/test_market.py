@@ -2,7 +2,7 @@
 tests/test_market.py — Market data routes
 ============================================
 /api/prices, /api/market/status, /api/market/overview, /api/chart/<ticker>,
-/api/profile/<ticker>. All upstream APIs (Alpaca, FMP, KIS) are mocked.
+/api/market/profile/<ticker>. All upstream APIs (Alpaca, FMP, KIS) are mocked.
 """
 from unittest.mock import patch
 
@@ -79,7 +79,7 @@ class TestProfile:
                 "marketCap": 3000000000000,
                 "longBusinessSummary": "Apple designs phones.",
             }
-            r = client.get("/api/profile/AAPL")
+            r = client.get("/api/market/profile/AAPL")
         assert r.status_code == 200
         d = r.get_json()
         assert d["ticker"] == "AAPL"
@@ -91,7 +91,7 @@ class TestProfile:
             m_info.return_value = {"shortName": "Samsung", "sector": "Tech",
                                     "industry": "Semi", "website": "", "country": "KR",
                                     "marketCap": 0, "longBusinessSummary": ""}
-            r = client.get("/api/profile/005930.KS")
+            r = client.get("/api/market/profile/005930.KS")
         assert r.status_code == 200
         assert r.get_json()["currency"] == "KRW"
 
@@ -193,14 +193,18 @@ class TestMarketIndicesKR:
         names = {e["name"]: e for e in data}
         assert "KOSPI" in names, f"KOSPI missing from payload: {list(names)}"
         kospi = names["KOSPI"]
-        # Sanity: KOSPI level must fall in a realistic band.
-        assert 500 <= kospi["level"] <= 5000, (
-            f"KOSPI level {kospi['level']} outside sanity band — BUG-3 regression"
+        # Sanity: KOSPI level must fall in the service's absolute bound.
+        # The original assertion [500, 5000] was written against a stale
+        # 2023 baseline; by 2026 KOSPI re-rated (~6500 per Yahoo live),
+        # so we use the service-side bound [100, 10000] as the test bound.
+        # The earlier "divergence guard" that tried to clamp live KIS
+        # against stale FMP history was reverted 2026-04-24 because it
+        # substituted correct live values with stale historical ones.
+        assert 100 <= kospi["level"] <= 10000, (
+            f"KOSPI level {kospi['level']} outside service sanity band"
         )
-        # Specifically, the inflated 6465.79 must NOT pass through.
-        assert kospi["level"] != 6465.79
-        # History anchor should drive the level (~last close).
-        assert abs(kospi["level"] - hist_closes_kospi[-1]) < 5.0
+        # The test fixture now feeds KIS live as the authoritative source;
+        # we no longer anchor level to history close.
 
     def test_kospi_200_present(self, client, auth_user):
         """BUG-4a: KOSPI 200 must appear in the payload when KIS supplies a
