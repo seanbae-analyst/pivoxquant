@@ -27,12 +27,43 @@ import asyncio
 import json
 import logging
 import os
+import re
 import threading
 import time
 from datetime import datetime
 from typing import Callable, Dict, Optional, Set
 
 import requests
+
+# ── Sensitive-data masking (H3, 2026-04-24) ─────────────────────────────
+_WS_SENSITIVE_RE = re.compile(
+    r'("(?:appkey|appsecret|app_key|app_secret|secretkey|access_token|'
+    r'approval_key|authorization|token|secret)"\s*:\s*")([^"]*)(")',
+    re.IGNORECASE,
+)
+
+
+def _ws_redact(text: str, max_len: int = 200) -> str:
+    if not text:
+        return ""
+    return _WS_SENSITIVE_RE.sub(lambda m: f'{m.group(1)}***{m.group(3)}', text)[:max_len]
+
+
+def _ws_redact_dict(d: dict) -> dict:
+    """Shallow redact a dict for logging; replaces sensitive values with '***'."""
+    if not isinstance(d, dict):
+        return d
+    redacted = {}
+    sensitive = {
+        "appkey", "appsecret", "app_key", "app_secret", "secretkey",
+        "access_token", "approval_key", "authorization", "token", "secret",
+    }
+    for k, v in d.items():
+        if isinstance(k, str) and k.lower() in sensitive:
+            redacted[k] = "***"
+        else:
+            redacted[k] = v
+    return redacted
 
 try:
     import websockets
@@ -188,11 +219,14 @@ class KISWebSocketService:
                         "real" if self.is_real else "vts",
                     )
                     return key
-                logger.warning("KIS /oauth2/Approval missing approval_key in response: %s", data)
+                logger.warning(
+                    "KIS /oauth2/Approval missing approval_key in response: %s",
+                    _ws_redact_dict(data),
+                )
             else:
                 logger.warning(
                     "KIS /oauth2/Approval HTTP %s: %s (VTS keys often cannot subscribe to real-time WS)",
-                    r.status_code, r.text[:200],
+                    r.status_code, _ws_redact(r.text, max_len=200),
                 )
             return None
         except Exception as e:

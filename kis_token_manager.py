@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import stat
 import threading
 from datetime import datetime, timedelta
@@ -32,6 +33,24 @@ from typing import Optional
 import requests
 
 logger = logging.getLogger(__name__)
+
+
+# ── Sensitive-data masking (H3, 2026-04-24) ─────────────────────────────
+_KTM_SENSITIVE_RE = re.compile(
+    r'("(?:appkey|appsecret|app_key|app_secret|access_token|approval_key|'
+    r'authorization|CANO|ACNT_PRDT_CD|ACNT_NO|account_no|token|secret)"\s*:\s*")'
+    r'([^"]*)(")',
+    re.IGNORECASE,
+)
+
+
+def _ktm_redact(text: str, max_len: int = 200) -> str:
+    if not text:
+        return ""
+    return _KTM_SENSITIVE_RE.sub(
+        lambda m: f'{m.group(1)}***{m.group(3)}',
+        text,
+    )[:max_len]
 
 # ── Endpoints ────────────────────────────────────────────────────────────
 REST_URL_REAL = "https://openapi.koreainvestment.com:9443"
@@ -208,7 +227,12 @@ class KISTokenManager:
 
             # Non-OK or missing access_token. Log once and keep any stale token.
             err_code = data.get("error_code") or data.get("rt_cd")
-            err_desc = data.get("error_description") or data.get("msg1") or r.text[:200]
+            err_desc = (
+                data.get("error_description")
+                or data.get("msg1")
+                # H3: raw body may echo the appkey/appsecret we sent — redact.
+                or _ktm_redact(r.text, max_len=200)
+            )
             logger.warning(
                 "KIS token issue failed (http=%s, code=%s): %s",
                 r.status_code, err_code, err_desc,

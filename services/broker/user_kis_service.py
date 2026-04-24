@@ -26,6 +26,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -50,6 +51,58 @@ _REQUEST_TIMEOUT = 10
 
 # 해외거래소 — 미국 커버 (NASDAQ + NYSE + AMEX)
 _US_EXCHANGES = ("NASD", "NYSE", "AMEX")
+
+
+# ── Sensitive-data masking (H3/H4, 2026-04-24) ─────────────────────────────
+# Keys that may appear in JSON error responses or raw text from KIS. When we
+# snapshot response text for a log line we must redact these so app_key /
+# app_secret / account_no / tokens don't leak to stdout / log aggregators.
+_SENSITIVE_KEY_PATTERNS = re.compile(
+    r'("(?:appkey|appsecret|app_key|app_secret|access_token|approval_key|'
+    r'authorization|CANO|ACNT_PRDT_CD|ACNT_NO|account_no|token|secret)"\s*:\s*")'
+    r'([^"]*)(")',
+    re.IGNORECASE,
+)
+# Bare 6-20 digit account-number-like runs (KIS 계좌번호 = 8 digits + 2-digit prod).
+_BARE_ACCOUNT_RE = re.compile(r"\b(\d{6,20})\b")
+
+
+def _mask_token(val: str) -> str:
+    """Return a length-preserving redacted form: first 4 + '***' + last 2, or '***' if short."""
+    if not val:
+        return "***"
+    if len(val) <= 6:
+        return "***"
+    return f"{val[:4]}***{val[-2:]}"
+
+
+def _redact_response_snippet(text: str, max_len: int = 200) -> str:
+    """Redact sensitive JSON values + bare account numbers, then truncate.
+
+    Safe to log. Preserves error_code / msg1 / non-secret fields so operators
+    can still diagnose. Returns '' for empty input.
+    """
+    if not text:
+        return ""
+    # Redact JSON string values for known sensitive keys.
+    redacted = _SENSITIVE_KEY_PATTERNS.sub(
+        lambda m: f'{m.group(1)}{_mask_token(m.group(2))}{m.group(3)}',
+        text,
+    )
+    # Redact any bare long digit runs that might be a 계좌번호 echoed in an
+    # error message. Keep 4-5 digit codes (HTTP status / error codes) alone.
+    redacted = _BARE_ACCOUNT_RE.sub(lambda m: _mask_token(m.group(1)), redacted)
+    return redacted[:max_len]
+
+
+def _mask_account_no(account_no: str) -> str:
+    """Mask a KIS account number for logs: show only last 4 digits."""
+    if not account_no:
+        return "***"
+    s = str(account_no)
+    if len(s) <= 4:
+        return "***"
+    return f"***{s[-4:]}"
 
 
 class UserKISError(Exception):
@@ -125,8 +178,12 @@ class UserKISService:
         return None
 
     def _record_failure(self, status: str, error: str) -> None:
+        # Redact any incidentally-captured secrets before persisting the error
+        # string to the DB (where it surfaces via /api/broker/kis/status).
         self._conn.last_sync_status = status
-        self._conn.last_sync_error = error[:500] if error else None
+        self._conn.last_sync_error = (
+            _redact_response_snippet(error, max_len=500) if error else None
+        )
         self._conn.consecutive_failures = (self._conn.consecutive_failures or 0) + 1
         if self._conn.consecutive_failures >= 3:
             self._conn.is_active = False
@@ -176,12 +233,16 @@ class UserKISService:
             }
 
         if not resp.ok:
-            snippet = resp.text[:200] if resp.text else ""
+            raw_snippet = resp.text or ""
+            # Safe-to-log redacted snippet (H3): removes appkey/appsecret/token
+            # if KIS ever echoes the request body back in an error response.
+            safe_snippet = _redact_response_snippet(raw_snippet, max_len=200)
             logger.warning(
-                f"UserKIS token HTTP {resp.status_code} user_id={self.user_id}: {snippet}"
+                f"UserKIS token HTTP {resp.status_code} user_id={self.user_id}: {safe_snippet}"
             )
-            # KIS "EGW00133" = 1분 1회 제한
-            if "EGW00133" in snippet:
+            # KIS "EGW00133" = 1분 1회 제한. Match against the *raw* snippet so
+            # the error-code detection is unaffected by redaction.
+            if "EGW00133" in raw_snippet:
                 return {
                     "ok": False,
                     "code": "RATE_LIMITED",

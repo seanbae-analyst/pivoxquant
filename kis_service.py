@@ -6,12 +6,54 @@ Supports: real-time price, intraday bars, momentum scanning.
 
 import os
 import logging
+import re
 import requests
 import time
 import numpy as np
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+
+# ── Sensitive-data masking (H3/H4, 2026-04-24) ─────────────────────────────
+# JSON keys that may carry secrets if KIS echoes the request back on error.
+_KIS_SENSITIVE_RE = re.compile(
+    r'("(?:appkey|appsecret|app_key|app_secret|access_token|approval_key|'
+    r'authorization|CANO|ACNT_PRDT_CD|ACNT_NO|account_no|token|secret)"\s*:\s*")'
+    r'([^"]*)(")',
+    re.IGNORECASE,
+)
+_KIS_BARE_ACCOUNT_RE = re.compile(r"\b(\d{6,20})\b")
+
+
+def _kis_mask_token(val: str) -> str:
+    if not val:
+        return "***"
+    if len(val) <= 6:
+        return "***"
+    return f"{val[:4]}***{val[-2:]}"
+
+
+def _kis_redact_snippet(text: str, max_len: int = 200) -> str:
+    """Redact secrets from a raw HTTP response body before logging."""
+    if not text:
+        return ""
+    redacted = _KIS_SENSITIVE_RE.sub(
+        lambda m: f'{m.group(1)}{_kis_mask_token(m.group(2))}{m.group(3)}',
+        text,
+    )
+    redacted = _KIS_BARE_ACCOUNT_RE.sub(lambda m: _kis_mask_token(m.group(1)), redacted)
+    return redacted[:max_len]
+
+
+def _kis_mask_account(account_no: str) -> str:
+    """Mask a KIS 계좌번호 for logs: show only last 4 digits."""
+    if not account_no:
+        return "***"
+    s = str(account_no)
+    if len(s) <= 4:
+        return "***"
+    return f"***{s[-4:]}"
 
 _USE_REAL = os.environ.get("KIS_USE_REAL", "").strip() in ("1", "true", "True")
 BASE_URL = "https://openapi.koreainvestment.com:9443" if _USE_REAL else "https://openapivts.koreainvestment.com:29443"
@@ -391,7 +433,13 @@ class KISService:
                 headers=headers, params=params, timeout=10,
             )
             if not resp.ok:
-                logger.warning(f"KIS get_balance HTTP {resp.status_code}: {resp.text[:200]}")
+                # H3/H4: redact any echoed appkey/appsecret/CANO before logging.
+                logger.warning(
+                    "KIS get_balance HTTP %s (account=%s): %s",
+                    resp.status_code,
+                    _kis_mask_account(self.account_no),
+                    _kis_redact_snippet(resp.text, max_len=200),
+                )
                 return {"error": f"KIS API error ({resp.status_code})"}
 
             data = resp.json()
@@ -425,16 +473,23 @@ class KISService:
                 "positions": positions,
             }
         except Exception as e:
-            logger.error(f"KIS get_balance error: {e}")
-            return {"error": str(e)}
+            # H4: redact any CANO / appkey that may appear in the exception
+            # string (e.g. requests.HTTPError echoes the URL with query params).
+            safe_err = _kis_redact_snippet(str(e), max_len=200)
+            logger.error(
+                "KIS get_balance error (account=%s): %s",
+                _kis_mask_account(self.account_no),
+                safe_err,
+            )
+            return {"error": "KIS balance lookup failed"}
 
     def buy_order(self, ticker: str, quantity: int, price: int = 0, order_type: str = "00"):
         """DISABLED -- KIS order execution is read-only for legal compliance.
-        한투 주문 실행은 투자일임업 규제로 비활성화됨.
-        Users should execute trades directly in the KIS app.
 
-        Original: POST /uapi/domestic-stock/v1/trading/order-cash
-        tr_id: VTTC0802U (모의투자 매수)
+        한투 주문 실행은 투자일임업(자본시장법) 규제로 영구 비활성화됨.
+        DO NOT re-enable without a licensed broker integration — violating this
+        would expose the service operator to 자본시장법 위반 (criminal penalty).
+        Users must execute trades directly in the KIS app.
         """
         return {
             "ok": False,
@@ -444,11 +499,11 @@ class KISService:
 
     def sell_order(self, ticker: str, quantity: int, price: int = 0, order_type: str = "00"):
         """DISABLED -- KIS order execution is read-only for legal compliance.
-        한투 주문 실행은 투자일임업 규제로 비활성화됨.
-        Users should execute trades directly in the KIS app.
 
-        Original: POST /uapi/domestic-stock/v1/trading/order-cash
-        tr_id: VTTC0801U (모의투자 매도)
+        한투 주문 실행은 투자일임업(자본시장법) 규제로 영구 비활성화됨.
+        DO NOT re-enable without a licensed broker integration — violating this
+        would expose the service operator to 자본시장법 위반 (criminal penalty).
+        Users must execute trades directly in the KIS app.
         """
         return {
             "ok": False,
@@ -457,65 +512,19 @@ class KISService:
         }
 
     def _place_order(self, ticker: str, quantity: int, price: int, order_type: str, side: str):
-        """DISABLED -- order execution removed for legal compliance.
-        This method is retained for reference but always returns read-only error.
-        Original implementation placed buy/sell orders via KIS order-cash API.
+        """DISABLED -- order execution removed for legal compliance (자본시장법).
+
+        KIS order execution is permanently disabled. The prior inline commented
+        implementation was removed (2026-04-24, H5) to eliminate the risk of
+        accidental re-enablement by a future edit. If orders are ever required,
+        they must go through a dedicated licensed broker integration — NOT by
+        re-introducing code here.
         """
         return {
             "ok": False,
             "error": "KIS order execution is disabled. Please use the KIS app to place orders.",
             "code": "KIS_READ_ONLY",
         }
-        # ── Original implementation (disabled) ──────────────────────
-        # if not self.available:
-        #     return {"ok": False, "order_no": None, "message": "KIS not configured"}
-        # if not self.account_no:
-        #     return {"ok": False, "order_no": None, "message": "KIS_ACCOUNT_NO not set"}
-        # if quantity <= 0:
-        #     return {"ok": False, "order_no": None, "message": "Quantity must be positive"}
-        # if order_type == "00" and price <= 0:
-        #     return {"ok": False, "order_no": None, "message": "Price required for limit order"}
-        #
-        # tr_id = "VTTC0802U" if side == "buy" else "VTTC0801U"
-        #
-        # try:
-        #     headers = self._headers()
-        #     if not headers:
-        #         return {"ok": False, "order_no": None, "message": "KIS token unavailable"}
-        #     headers["tr_id"] = tr_id
-        #
-        #     body = {
-        #         "CANO": self.account_no,
-        #         "ACNT_PRDT_CD": self.account_prod,
-        #         "PDNO": ticker,
-        #         "ORD_DVSN": order_type,
-        #         "ORD_QTY": str(quantity),
-        #         "ORD_UNPR": str(price) if order_type == "00" else "0",
-        #     }
-        #
-        #     resp = requests.post(
-        #         f"{self.base_url}/uapi/domestic-stock/v1/trading/order-cash",
-        #         headers=headers, json=body, timeout=10,
-        #     )
-        #     if not resp.ok:
-        #         logger.warning(f"KIS {side}_order HTTP {resp.status_code}: {resp.text[:200]}")
-        #         return {"ok": False, "order_no": None, "message": f"HTTP {resp.status_code}"}
-        #
-        #     result = resp.json()
-        #     success = result.get("rt_cd") == "0"
-        #     order_no = result.get("output", {}).get("ODNO") if success else None
-        #
-        #     if not success:
-        #         logger.warning(f"KIS {side}_order failed: {result.get('msg1')}")
-        #
-        #     return {
-        #         "ok": success,
-        #         "order_no": order_no,
-        #         "message": result.get("msg1", ""),
-        #     }
-        # except Exception as e:
-        #     logger.error(f"KIS {side}_order error: {e}")
-        #     return {"ok": False, "order_no": None, "message": str(e)}
 
     def get_order_status(self, start_date: str = None, end_date: str = None):
         """주문 체결 내역 조회.
@@ -595,8 +604,14 @@ class KISService:
 
             return {"ok": True, "orders": orders}
         except Exception as e:
-            logger.error(f"KIS get_order_status error: {e}")
-            return {"ok": False, "orders": [], "error": str(e)}
+            # H4: redact CANO/appkey from exception string before logging.
+            safe_err = _kis_redact_snippet(str(e), max_len=200)
+            logger.error(
+                "KIS get_order_status error (account=%s): %s",
+                _kis_mask_account(self.account_no),
+                safe_err,
+            )
+            return {"ok": False, "orders": [], "error": "KIS order lookup failed"}
 
     @staticmethod
     def _sig(typ, en, kr):
