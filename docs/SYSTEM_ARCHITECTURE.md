@@ -401,7 +401,7 @@ Vercel 배포 시 Railway 백엔드 URL로 하드코딩, 로컬은 `localhost:50
 [Flask - routes/market.py @market_bp.route("/search")]
   @api_auth
   1. kr_stock_registry.search("AAPL", limit=15) — 한국 종목 매칭 시도
-  2. FMP /v3/search?query=AAPL API 호출 (US 주식)
+  2. FMP /stable/search-symbol?query=AAPL API 호출 (US 주식, v3 deprecated 2025-08-31)
   3. 로컬 us_stock_registry 폴백 (FMP 실패 시)
   4. 중복 제거 후 통합 결과 반환
     │

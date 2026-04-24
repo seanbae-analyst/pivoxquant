@@ -77,13 +77,24 @@ def search_stocks():
             seen.add(candidate)
 
     # 2) FMP search API for US/global stocks
+    # NOTE: FMP's v3 endpoint (`/api/v3/search`) was deprecated 2025-08-31.
+    # It still returns HTTP 200 but the body is `{"Error Message": "Legacy
+    # Endpoint ..."}` — the old `isinstance(parsed, list)` guard silently
+    # filtered that out, so search was completely broken for US/global
+    # tickers. Switched to the stable endpoint (`/stable/search-symbol`),
+    # which remains a `list[dict]` on success. The stable response schema
+    # keeps the same keys we consume here (symbol / name / exchange /
+    # currency / exchangeShortName) so downstream parsing is unchanged.
     import os
     fmp_key = os.environ.get("FMP_API_KEY", "")
     fmp_ok = False
     if fmp_key:
         try:
             import requests as _req
-            url = f"https://financialmodelingprep.com/api/v3/search?query={query}&limit=10&apikey={fmp_key}"
+            url = (
+                "https://financialmodelingprep.com/stable/search-symbol"
+                f"?query={query}&limit=10&apikey={fmp_key}"
+            )
             resp = _req.get(url, timeout=5)
             if resp.status_code == 200:
                 try:
@@ -91,6 +102,8 @@ def search_stocks():
                 except Exception as e:
                     logger.warning(f"FMP search JSON parse failed: {e}")
                     parsed = None
+                # Stable returns list[dict] on success. Legacy v3 would
+                # have returned {"Error Message": ...}; guard both.
                 if isinstance(parsed, list) and parsed:
                     added = 0
                     for item in parsed:
@@ -99,7 +112,9 @@ def search_stocks():
                             results.append({
                                 "ticker": sym,
                                 "name": item.get("name", sym),
-                                "exchange": item.get("stockExchange", item.get("exchangeShortName", "")),
+                                "exchange": item.get("exchange")
+                                    or item.get("exchangeShortName")
+                                    or item.get("stockExchange", ""),
                                 "currency": item.get("currency", "USD"),
                                 "is_korean": False,
                             })
@@ -107,6 +122,10 @@ def search_stocks():
                             added += 1
                     if added > 0:
                         fmp_ok = True
+                elif isinstance(parsed, dict) and parsed.get("Error Message"):
+                    logger.warning(
+                        f"FMP search returned error payload: {parsed.get('Error Message')}"
+                    )
             else:
                 logger.warning(f"FMP search HTTP {resp.status_code}")
         except Exception as e:
