@@ -163,10 +163,40 @@ def portfolio_stream():
 @realtime_bp.route("/price/<ticker>")
 @api_auth
 def single(ticker):
-    p = realtime.get_price(ticker.upper())
+    """Single-ticker realtime price.
+
+    Response shape:
+      - 200 + quote dict (may include ``"stale": true`` + ``"stale_at"``
+        when FMP budget/cooldown forced a stale-cache fallback).
+      - 503 + ``{"error": "data_provider_throttled"}`` when FMP is
+        budget-exhausted or every primary provider is unavailable AND
+        no stale cache exists. Signals the client to retry later
+        rather than treating the ticker as permanently missing.
+      - 404 + ``{"error": "ticker_not_found", ...}`` when providers
+        responded but have no data for this symbol.
+    """
+    t = ticker.upper()
+    p = realtime.get_price(t)
     if p:
         return jsonify(p)
-    return jsonify({"error": f"No price for {ticker}"}), 404
+    # Distinguish "provider throttled / budget exhausted" from
+    # "ticker genuinely has no data". Previously both were 404 which
+    # masked the FMP-budget outage behind "No price for <TICKER>".
+    try:
+        throttled = realtime.fmp_is_throttled()
+    except Exception:
+        throttled = False
+    if throttled:
+        return jsonify({
+            "error": "data_provider_throttled",
+            "message": f"Price providers unavailable for {t}; try again shortly.",
+            "ticker": t,
+        }), 503
+    return jsonify({
+        "error": "ticker_not_found",
+        "message": f"No price for {t}",
+        "ticker": t,
+    }), 404
 
 
 @realtime_bp.route("/status")
