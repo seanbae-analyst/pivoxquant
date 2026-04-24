@@ -1,0 +1,223 @@
+name: Nightly Bug Hunt
+
+# Runs at 17:00 UTC = 02:00 KST, while CEO sleeps.
+# 1) Probes 50 tickers (US 25 + KR 25)
+# 2) Validates /api/market/indices internal consistency (US + KR)
+# 3) 9-iteration critical-endpoint probe, 5 min apart (40 min window)
+# 4) Runs pytest on main branch
+# 5) Aggregates → opens one GitHub Issue + optional Slack notification
+#
+# Workflow itself is always `success` (reporting is the goal, not CI gating).
+# Issue dedup: one open issue with label `nightly-bug-hunt` at a time.
+# Artifacts (jsonl + report.md) kept 30 days.
+
+on:
+  schedule:
+    - cron: '0 17 * * *'   # 17:00 UTC = 02:00 KST
+  workflow_dispatch:
+    inputs:
+      iter_count:
+        description: 'critical-endpoints iteration count (default 9)'
+        required: false
+        default: '9'
+      iter_sleep_s:
+        description: 'seconds between iterations (default 300)'
+        required: false
+        default: '300'
+
+permissions:
+  issues: write
+  contents: read
+
+env:
+  BASE_URL: https://RAILWAY_BACKEND_HOST.up.railway.app
+  ARTIFACTS_DIR: nightly_artifacts
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  nightly:
+    name: Nightly bug hunt
+    runs-on: ubuntu-latest
+    # 40 min critical-endpoints loop + overhead → 60 min is comfortable.
+    timeout-minutes: 75
+    continue-on-error: true   # never fail the workflow; the Issue is the signal
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install pytest deps
+        run: |
+          pip install pytest pytest-flask
+          # Install project deps so pytest-main step below can import the app.
+          # If requirements.txt install fails, don't block the rest of the run.
+          pip install -r requirements.txt || echo "::warning::pip install failed — pytest step will be skipped"
+
+      - name: Prepare artifacts dir
+        run: mkdir -p "${ARTIFACTS_DIR}"
+
+      # ── Layer 1: ticker-health (50 tickers, ~10s total at 200ms pacing) ──
+      - name: Ticker health scan
+        env:
+          DEV_LOGIN_SECRET: ${{ secrets.DEV_LOGIN_SECRET }}
+          RESULTS_PATH: ${{ env.ARTIFACTS_DIR }}/ticker_health.jsonl
+        run: python3 scripts/nightly/ticker_health.py
+
+      # ── Layer 2: indices consistency (US + KR) ──
+      - name: Indices consistency check
+        env:
+          DEV_LOGIN_SECRET: ${{ secrets.DEV_LOGIN_SECRET }}
+          RESULTS_PATH: ${{ env.ARTIFACTS_DIR }}/indices_consistency.jsonl
+        run: python3 scripts/nightly/indices_consistency.py
+
+      # ── Layer 3: critical endpoints (9 iters × 5 min = 40 min) ──
+      - name: Critical endpoints 9-iter probe
+        env:
+          DEV_LOGIN_SECRET: ${{ secrets.DEV_LOGIN_SECRET }}
+          RESULTS_PATH: ${{ env.ARTIFACTS_DIR }}/critical_endpoints.jsonl
+          ITER_COUNT: ${{ github.event.inputs.iter_count || '9' }}
+          ITER_SLEEP_S: ${{ github.event.inputs.iter_sleep_s || '300' }}
+        run: python3 scripts/nightly/critical_endpoints.py
+
+      # ── Layer 5: pytest on main branch (Layer 6 frontend-build skipped — Vercel does it) ──
+      - name: pytest main
+        id: pytest_main
+        run: |
+          set +e
+          pytest -q --tb=no 2>&1 | tee "${ARTIFACTS_DIR}/pytest_main.txt"
+          code="${PIPESTATUS[0]}"
+          echo "exit_code=${code}" >> "$GITHUB_OUTPUT"
+          # Never fail the step — aggregator reads pytest_main.txt.
+          exit 0
+
+      # ── Aggregate into markdown report + summary.json ──
+      - name: Aggregate results
+        id: aggregate
+        run: |
+          python3 scripts/nightly/aggregate_and_report.py
+          # Expose severity + total_issues as step outputs
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          d = json.load(open(os.path.join(os.environ['ARTIFACTS_DIR'], 'summary.json')))
+          print(f"severity={d['severity']}")
+          print(f"total_issues={d['total_issues']}")
+          PY
+
+      # ── Upload raw artifacts (30-day retention) ──
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-bug-hunt-${{ github.run_id }}
+          path: ${{ env.ARTIFACTS_DIR }}/
+          retention-days: 30
+
+      # ── Open / update GitHub Issue when severity > none ──
+      - name: Open or update issue
+        if: steps.aggregate.outputs.severity != 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEVERITY: ${{ steps.aggregate.outputs.severity }}
+          TOTAL: ${{ steps.aggregate.outputs.total_issues }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          date_str=$(date -u +'%Y-%m-%d')
+          title="[NIGHTLY] ${date_str} — ${TOTAL} issues found (severity: ${SEVERITY})"
+
+          # severity → label map
+          case "${SEVERITY}" in
+            critical) sev_label="critical" ;;
+            high)     sev_label="high" ;;
+            medium)   sev_label="medium" ;;
+            *)        sev_label="medium" ;;
+          esac
+
+          # Build body: report.md + footer
+          {
+            cat "${ARTIFACTS_DIR}/report.md"
+            echo ""
+            echo "### Run"
+            echo "- Workflow: ${RUN_URL}"
+            echo "- Artifacts: attached (30-day retention)"
+            echo ""
+            echo "/cc @seanbae-analyst"
+          } > "${ARTIFACTS_DIR}/issue_body.md"
+
+          # Dedup: look for an open issue with label nightly-bug-hunt.
+          # If one exists, comment on it; else create new.
+          existing=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label nightly-bug-hunt \
+            --json number,title \
+            --jq '.[0].number // empty')
+
+          if [ -n "$existing" ]; then
+            echo "Updating existing issue #$existing"
+            gh issue comment "$existing" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body-file "${ARTIFACTS_DIR}/issue_body.md"
+          else
+            echo "Creating new issue"
+            # Ensure labels exist (idempotent; ignore errors).
+            gh label create nightly-bug-hunt --color "5319e7" --description "Nightly bug hunt finding" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+            gh label create critical --color "b60205" --description "Critical severity" --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+            gh label create high     --color "d93f0b" --description "High severity"     --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+            gh label create medium   --color "fbca04" --description "Medium severity"   --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body-file "${ARTIFACTS_DIR}/issue_body.md" \
+              --label "nightly-bug-hunt,${sev_label}" \
+              --assignee "seanbae-analyst" || \
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body-file "${ARTIFACTS_DIR}/issue_body.md" \
+              --label "nightly-bug-hunt,${sev_label}"
+          fi
+
+      # ── Close stale issue if this run is clean ──
+      - name: Close stale issue on recovery
+        if: steps.aggregate.outputs.severity == 'none'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for num in $(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label nightly-bug-hunt \
+            --json number --jq '.[].number'); do
+            gh issue comment "$num" --repo "$GITHUB_REPOSITORY" \
+              --body "Nightly bug hunt clean at $(date -u +%FT%TZ) — auto-closing."
+            gh issue close "$num" --repo "$GITHUB_REPOSITORY"
+          done
+
+      # ── Optional Slack (continue-on-error — never blocks workflow) ──
+      - name: Slack notify
+        if: steps.aggregate.outputs.severity != 'none'
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SEVERITY: ${{ steps.aggregate.outputs.severity }}
+          TOTAL: ${{ steps.aggregate.outputs.total_issues }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL unset — skipping Slack notification"
+            exit 0
+          fi
+          payload=$(python3 -c "
+          import json, os
+          print(json.dumps({
+              'text': f\":rotating_light: *PivoxQuant Nightly Bug Hunt* — severity *{os.environ['SEVERITY']}* ({os.environ['TOTAL']} issues) — {os.environ['RUN_URL']}\"
+          }))
+          ")
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-type: application/json' \
+            --data "$payload" || echo "::warning::Slack POST failed (non-fatal)"
