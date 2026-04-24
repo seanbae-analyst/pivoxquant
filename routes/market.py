@@ -578,27 +578,49 @@ def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
     # 2) History for sparkline + 52W + fallback level / change.
     #    Same engine as /api/chart/<ticker>?period=1y.
     sparkline: list[float] = []
-    range_52w = [0.0, 0.0]
+    range_52w: list[float] | None = [0.0, 0.0]
+    is_stale = False
+    closes = None
     try:
         h = fetcher.get_price_history(etf, period="1y")
         if h is not None and not h.empty and "Close" in h.columns:
-            closes = h["Close"].astype(float).dropna()
-            if len(closes):
-                if level is None:
-                    level = float(closes.iloc[-1])
-                if len(closes) >= 2:
-                    prev = float(closes.iloc[-2])
-                    if prev:
-                        last = float(closes.iloc[-1])
-                        # Prefer history-derived change: even when live quote
-                        # has a value, lookup doesn't surface a d/d%, so
-                        # closes.iloc[-1]/[-2] is our only source.
-                        change_pct = (last - prev) / prev * 100.0
-                sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
-                range_52w = [round(float(closes.min()), 2),
-                             round(float(closes.max()), 2)]
+            c = h["Close"].astype(float).dropna()
+            if len(c):
+                closes = c
     except Exception as e:
         logger.debug(f"market.indices history {etf} failed: {e}")
+
+    # Staleness guard (same policy as `_kis_index_snapshot`): reject any
+    # history whose tail diverges from the live level by >30%. Protects
+    # against FMP returning year-old data on Starter-tier quiet windows.
+    if closes is not None and len(closes) and level is not None and level > 0:
+        last_hist = float(closes.iloc[-1])
+        if abs(last_hist - level) / level > 0.30:
+            logger.warning(
+                "market.indices %s (%s) history stale: tail=%.2f vs "
+                "live level=%.2f — discarding series",
+                ticker_alias, etf, last_hist, level,
+            )
+            closes = None
+            is_stale = True
+
+    if closes is not None and len(closes):
+        if level is None:
+            level = float(closes.iloc[-1])
+        if len(closes) >= 2:
+            prev = float(closes.iloc[-2])
+            if prev:
+                last = float(closes.iloc[-1])
+                # Prefer history-derived change: even when live quote
+                # has a value, lookup doesn't surface a d/d%, so
+                # closes.iloc[-1]/[-2] is our only source.
+                change_pct = (last - prev) / prev * 100.0
+        sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
+        range_52w = [round(float(closes.min()), 2),
+                     round(float(closes.max()), 2)]
+    else:
+        sparkline = []
+        range_52w = None
 
     if level is None:
         return None  # truly nothing to show — caller skips this entry
@@ -612,7 +634,7 @@ def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
         "range_52w":     range_52w,
         "sparkline_30d": sparkline,
         "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "is_stale":      False,
+        "is_stale":      is_stale,
     }
 
 
@@ -660,56 +682,77 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         logger.debug(f"market.indices KIS {kis_code} failed: {e}")
 
     # 2) History for sparkline + 52W + fallback level / change.
-    # Primary: FMP `^KS11` / `^KQ11`. If FMP returns empty (the KRX index
-    # symbols are sometimes gated on Starter tier), try KIS's domestic
-    # index daily chart (FHKUP03500100) as a secondary source so the
-    # sparkline and 52W range still populate.
+    #
+    # KR-index history source policy (2026-04-24, fix for BUG #RANGE-STALE):
+    #   KIS *live* quote is authoritative for `level` (e.g., KOSPI 6475.63
+    #   matches Yahoo/Investing). FMP `^KS11`/`^KQ11` history is known to
+    #   lag by quarters on the Starter plan — using it for sparkline/range
+    #   while `level` is KIS-live produced self-contradictory payloads
+    #   where `level > sparkline.max()` by >2x and `range_52w[1] < level`.
+    #
+    # New policy: for KR indices we *prefer KIS* `inquire-index-daily-price`
+    # (FHPUP02120000) since it shares units with the live quote. FMP is
+    # only used as a fallback, and any FMP series whose tail diverges from
+    # the live level by more than 30% is rejected as stale.
     sparkline: list[float] = []
-    range_52w = [0.0, 0.0]
+    range_52w: list[float] | None = [0.0, 0.0]
     closes = None
-    try:
-        h = fetcher.get_price_history(ticker, period="1y")
-        if h is not None and not h.empty and "Close" in h.columns:
-            c = h["Close"].astype(float).dropna()
-            if len(c):
-                closes = c
-    except Exception as e:
-        logger.debug(f"market.indices fmp history {ticker} failed: {e}")
+    hist_source = None  # "kis" | "fmp" | None — for logging + stale guard
+    is_stale = False
 
+    # 2a) KIS history FIRST (unit-consistent with live quote).
+    try:
+        from services.container import realtime as _rt
+        if getattr(_rt, "kis_available", False):
+            from kis_service import KISService
+            _svc = KISService()
+            for _code in _kis_code_candidates:
+                hist = _svc.get_index_history(_code, period="1y")
+                if hist:
+                    vals = [float(row.get("close"))
+                            for row in hist
+                            if row and row.get("close") is not None]
+                    if vals:
+                        import pandas as _pd
+                        closes = _pd.Series(vals)
+                        hist_source = "kis"
+                        break
+    except Exception as e:
+        logger.debug(f"market.indices KIS history {kis_code} failed: {e}")
+
+    # 2b) FMP fallback ONLY when KIS history unavailable.
     if closes is None or len(closes) == 0:
         try:
-            from services.container import realtime as _rt
-            if getattr(_rt, "kis_available", False):
-                from kis_service import KISService
-                _svc = KISService()
-                for _code in _kis_code_candidates:
-                    hist = _svc.get_index_history(_code, period="1y")
-                    if hist:
-                        # Expect list of {date, close} dicts — coerce to a
-                        # plain list of floats ordered oldest→newest.
-                        vals = [float(row.get("close"))
-                                for row in hist
-                                if row and row.get("close") is not None]
-                        if vals:
-                            import pandas as _pd
-                            closes = _pd.Series(vals)
-                            break
+            h = fetcher.get_price_history(ticker, period="1y")
+            if h is not None and not h.empty and "Close" in h.columns:
+                c = h["Close"].astype(float).dropna()
+                if len(c):
+                    closes = c
+                    hist_source = "fmp"
         except Exception as e:
-            logger.debug(f"market.indices KIS history {kis_code} failed: {e}")
+            logger.debug(f"market.indices fmp history {ticker} failed: {e}")
+
+    # 2c) Staleness guard — only meaningful when BOTH level and history
+    # are available. If the tail of history diverges from the live level
+    # by >30%, the series is stale (typical for FMP caret-prefixed index
+    # tickers on the Starter tier). Discard the series and flag is_stale
+    # so the frontend can render "N/A" for range_52w/sparkline instead
+    # of drawing a misleading chart.
+    if closes is not None and len(closes) and level is not None:
+        last_hist = float(closes.iloc[-1])
+        if level > 0 and abs(last_hist - level) / level > 0.30:
+            logger.warning(
+                "market.indices %s history (%s) stale: tail=%.2f vs "
+                "live level=%.2f (diff %.1f%%) — discarding series",
+                ticker, hist_source or "?", last_hist, level,
+                abs(last_hist - level) / level * 100.0,
+            )
+            closes = None
+            is_stale = True
 
     if closes is not None and len(closes):
-        last_hist = float(closes.iloc[-1])
-        # Removed 2026-04-24: The earlier "divergence guard" replaced a
-        # correct KIS live quote with a STALE FMP history close whenever
-        # the two differed by >20% — which broke production when the
-        # market legitimately re-rated (e.g., KOSPI 2522→6475 over several
-        # quarters: FMP history hadn't caught up, guard substituted the
-        # old value, live became permanently wrong). External verification
-        # against Yahoo Finance confirmed KIS live was correct. We now
-        # trust the KIS live quote and only fall back to history when
-        # KIS is unavailable.
         if level is None:
-            level = last_hist
+            level = float(closes.iloc[-1])
         if change_pct == 0.0 and len(closes) >= 2:
             prev = float(closes.iloc[-2])
             if prev:
@@ -717,14 +760,20 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         sparkline = [round(float(v), 4) for v in closes.tail(30).tolist()]
         range_52w = [round(float(closes.min()), 2),
                      round(float(closes.max()), 2)]
+    else:
+        # No trustworthy history — return null range so the frontend
+        # renders "N/A" rather than [0.0, 0.0] (which the bar chart
+        # would otherwise draw as a degenerate point).
+        sparkline = []
+        range_52w = None
 
     if level is None:
         return None
 
     # Final absolute sanity bound: KOSPI-family indices trade in the
-    # 500–5000 range; KOSDAQ-150 in the 1000–2500 range. A value outside
-    # [100, 10000] is almost certainly a unit bug. Drop the entry rather
-    # than render a misleading number.
+    # 500–7000 range (KOSPI re-rated to ~6500 by 2026); KOSDAQ-150 in the
+    # 1000–2500 range. A value outside [100, 10000] is almost certainly a
+    # unit bug. Drop the entry rather than render a misleading number.
     if not (100.0 <= level <= 10000.0):
         logger.warning(
             "market.indices %s level %.2f outside sanity bound [100,10000]; "
@@ -740,7 +789,7 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         "range_52w":     range_52w,
         "sparkline_30d": sparkline,
         "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "is_stale":      False,
+        "is_stale":      is_stale,
     }
 
 
@@ -812,32 +861,66 @@ def market_indices():
             # fmp_service.get_history("USDKRW") returns a standard OHLCV
             # DataFrame; gracefully fall back to empty on any failure so a
             # history miss never drops the level tile.
+            #
+            # Symbol fallback ladder (2026-04-24):
+            #   USDKRW  → FMP canonical. Empty on Starter tier during most
+            #             windows.
+            #   USDKRW=X → Yahoo-style alias; FMP sometimes resolves it.
+            #   KRW=X    → Last-ditch inversion attempt.
+            # If ALL three are empty, range_52w becomes None so the
+            # frontend can render "N/A" instead of the buggy [0,0] hardcode.
             fx_change_pct = 0.0
             fx_sparkline: list[float] = []
-            fx_range_52w = [0.0, 0.0]
+            fx_range_52w: list[float] | None = None
+            fx_is_stale = False
+            fx_closes = None
             try:
                 import fmp_service as _fmp
-                fx_hist = _fmp.get_history("USDKRW", period="1y")
-                if fx_hist is not None and not fx_hist.empty and "Close" in fx_hist.columns:
-                    fx_closes = fx_hist["Close"].astype(float).dropna()
-                    if len(fx_closes):
-                        if len(fx_closes) >= 2:
-                            fx_prev = float(fx_closes.iloc[-2])
-                            if fx_prev:
-                                fx_change_pct = (
-                                    (float(fx_closes.iloc[-1]) - fx_prev)
-                                    / fx_prev * 100.0
-                                )
-                        fx_sparkline = [
-                            round(float(v), 4)
-                            for v in fx_closes.tail(30).tolist()
-                        ]
-                        fx_range_52w = [
-                            round(float(fx_closes.min()), 2),
-                            round(float(fx_closes.max()), 2),
-                        ]
+                for _sym in ("USDKRW", "USDKRW=X", "KRW=X"):
+                    try:
+                        fx_hist = _fmp.get_history(_sym, period="1y")
+                    except Exception:
+                        fx_hist = None
+                    if fx_hist is not None and not fx_hist.empty \
+                            and "Close" in fx_hist.columns:
+                        c = fx_hist["Close"].astype(float).dropna()
+                        if len(c):
+                            fx_closes = c
+                            break
             except Exception as e:
                 logger.debug(f"market.indices USDKRW history failed: {e}")
+
+            if fx_closes is not None and len(fx_closes):
+                # Staleness guard mirrors the KR-index one: FMP USDKRW is
+                # notorious for returning year-old tails during the Starter
+                # plan's quiet windows. If the last close diverges from the
+                # live rate by >10%, treat it as stale.
+                last_fx = float(fx_closes.iloc[-1])
+                if usdkrw_level > 0 and abs(last_fx - usdkrw_level) / usdkrw_level > 0.10:
+                    logger.warning(
+                        "market.indices USDKRW history stale: tail=%.2f "
+                        "vs live level=%.2f — discarding series",
+                        last_fx, usdkrw_level,
+                    )
+                    fx_closes = None
+                    fx_is_stale = True
+
+            if fx_closes is not None and len(fx_closes):
+                if len(fx_closes) >= 2:
+                    fx_prev = float(fx_closes.iloc[-2])
+                    if fx_prev:
+                        fx_change_pct = (
+                            (float(fx_closes.iloc[-1]) - fx_prev)
+                            / fx_prev * 100.0
+                        )
+                fx_sparkline = [
+                    round(float(v), 4)
+                    for v in fx_closes.tail(30).tolist()
+                ]
+                fx_range_52w = [
+                    round(float(fx_closes.min()), 2),
+                    round(float(fx_closes.max()), 2),
+                ]
 
             out.append({
                 "ticker":        "USDKRW",
@@ -847,7 +930,7 @@ def market_indices():
                 "range_52w":     fx_range_52w,
                 "sparkline_30d": fx_sparkline,
                 "observed_at":   datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "is_stale":      False,
+                "is_stale":      fx_is_stale,
             })
 
     # Only cache successful responses. Caching a thin failure for 30s locks
