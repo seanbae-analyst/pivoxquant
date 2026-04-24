@@ -1,0 +1,54 @@
+name: Morning Triage (Layer B)
+
+# 00:00 UTC = 09:00 KST — runs ~1h after nightly-bug-hunt (02:00 KST)
+# has finished opening/updating issues. Reads the freshest open
+# `nightly-bug-hunt` issue(s) and posts a Claude-generated root-cause
+# analysis as a comment. Advisory only — never modifies code.
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 00:00 UTC = 09:00 KST
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Skip Claude calls + GH comments (true/false)'
+        required: false
+        default: 'true'
+      max_issues:
+        description: 'Max issues to analyse (default 3)'
+        required: false
+        default: '3'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    name: Claude triage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Advisory only — never fail the workflow. The comment is the signal.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50   # needed for `git log -n 1` on referenced files
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install anthropic SDK
+        run: pip install "anthropic>=0.39.0"
+
+      - name: Run morning triage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TRIAGE_DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '0' || '1' }}
+          TRIAGE_MAX_ISSUES: ${{ github.event.inputs.max_issues || '3' }}
+        run: python3 scripts/triage/morning_triage.py

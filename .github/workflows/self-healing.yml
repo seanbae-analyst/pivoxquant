@@ -1,0 +1,145 @@
+name: Self-Healing (Layer C)
+
+# Scans Railway runtime logs for recurring errors and proposes fixes.
+# Defaults to DRY RUN. Only opens a Draft PR when AUTO_PR=1 is
+# explicitly set via workflow_dispatch input or repo variable.
+#
+# Safety
+# ------
+# - Protected paths (autotrader, risk_defense, legal_filter, billing,
+#   auth, security, migrations) NEVER auto-patched; escalation only.
+# - 24h circuit breaker: 3 failed attempts on the same fingerprint
+#   stops retries and opens an escalation issue.
+# - pytest gate: proposed patch MUST keep pytest -q passing before the
+#   Draft PR is opened.
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'   # every 2 hours, UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip Claude + skip PR). Default true.'
+        required: false
+        default: 'true'
+      auto_pr:
+        description: 'Open Draft PR if patch passes pytest. Default false.'
+        required: false
+        default: 'false'
+  repository_dispatch:
+    types: [sentry.issue]
+
+permissions:
+  issues: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  heal:
+    name: Scan + propose fix
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true   # alerting, not gating
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 100
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install deps
+        run: |
+          pip install "anthropic>=0.39.0"
+          pip install -r requirements.txt || echo "::warning::requirements install failed"
+          pip install pytest pytest-flask
+
+      - name: Install Railway CLI (best-effort)
+        continue-on-error: true
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh || echo "::warning::Railway CLI install failed — fixture fallback will be used"
+
+      - name: Scan Railway logs for recurring errors
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'web' }}
+          SELF_HEALING_DRY_RUN: '1'   # scan phase is always observation
+          RAILWAY_WINDOW_MINUTES: '60'
+          RAILWAY_MIN_COUNT: '3'
+        run: python3 scripts/self_healing/scan_railway_logs.py
+
+      - name: Propose fix patches
+        id: propose
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          SELF_HEALING_DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '0' || '1' }}
+          AUTO_PR: ${{ github.event.inputs.auto_pr == 'true' && '1' || '0' }}
+          SELF_HEALING_MAX_PATTERNS: '2'
+        run: python3 scripts/self_healing/propose_fix.py
+
+      - name: Apply patch + run pytest (only if patches exist and AUTO_PR=1)
+        if: ${{ github.event.inputs.auto_pr == 'true' && github.event.inputs.dry_run == 'false' }}
+        id: apply
+        run: |
+          set -e
+          mkdir -p self_healing_artifacts/patches
+          applied_count=0
+          applied_files=()
+          for patch in self_healing_artifacts/patches/*.patch; do
+            [ -e "$patch" ] || continue
+            fp=$(basename "$patch" .patch)
+            # Create a candidate branch for this fingerprint
+            branch="self-heal/${fp}-$(date -u +%s)"
+            git checkout -b "$branch" origin/main
+            if ! git apply --check "$patch" 2>/tmp/apply_check.log; then
+              echo "::warning::patch $fp failed pre-check — skipping"
+              cat /tmp/apply_check.log
+              continue
+            fi
+            git apply "$patch"
+            # pytest gate
+            if ! pytest -q --tb=short > /tmp/pytest_${fp}.log 2>&1; then
+              echo "::warning::patch $fp broke pytest — reverting"
+              git checkout -- .
+              continue
+            fi
+            git config user.email "self-healing@pivoxquant.com"
+            git config user.name "PivoxQuant Self-Heal Bot"
+            git add -A
+            git commit -m "auto-heal: fix recurring error ${fp}"
+            applied_count=$((applied_count + 1))
+            applied_files+=("$branch")
+          done
+          echo "applied_count=${applied_count}" >> "$GITHUB_OUTPUT"
+
+      - name: Open Draft PR (only if AUTO_PR=1 and a patch was applied)
+        if: ${{ steps.apply.outputs.applied_count != '' && steps.apply.outputs.applied_count != '0' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Push the last candidate branch and open a Draft PR. We
+          # deliberately open one PR per run — if multiple patches were
+          # applied, only the final branch is pushed (the others were
+          # local-only). Refactor later if multi-fix per run is needed.
+          branch=$(git rev-parse --abbrev-ref HEAD)
+          git push origin "$branch"
+          gh pr create \
+            --draft \
+            --base main \
+            --head "$branch" \
+            --title "auto-heal: recurring Railway error" \
+            --body "Automated fix proposal. See self_healing_artifacts/ for patterns + patch. Human review required before merging."
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: self-healing-${{ github.run_id }}
+          path: |
+            self_healing_artifacts/
+          retention-days: 14

@@ -55,3 +55,7 @@ logs/
 
 # Nightly bug hunt local artifacts
 nightly_artifacts/
+
+# Autonomous ops local artifacts (Layer B/C + legal monitor)
+self_healing_artifacts/
+legal_monitor_artifacts/
