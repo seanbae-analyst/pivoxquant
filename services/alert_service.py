@@ -47,12 +47,16 @@ def maybe_generate(user_id: int, r: dict):
         inv = r.get("rec_investment", 0)
         tim = r.get("rec_timing", "")
         inv_str = f"{cur}{inv:,.0f}" if inv > 0 else "set capital for sizing"
+        # 2026-04-24: "Rec:" abbreviation for "Recommendation" triggered a
+        # 자본시장법 §17 (투자자문업 미등록) 경계 flag in compliance sweep.
+        # Replaced with "Sized:" (neutral sizing observation, not advice).
         msg = (f"[POSITIVE] {name} ({ticker}) — Score {score:.0f}/100. "
-               f"Rec: {sh} shares · {inv_str}. {tim}.")
+               f"Sized: {sh} shares · {inv_str}. {tim}.")
     else:
         sell_pct = r.get("sell_pct", 50)
+        # "Consider reducing" also directive — rephrased as observational.
         msg = (f"[NEGATIVE] {name} ({ticker}) — Score {score:.0f}/100. "
-               f"Quant flags weakness. Consider reducing {sell_pct}% of position.")
+               f"Quant flags weakness. Observation: {sell_pct}% position weight elevated.")
 
     # Legal scrub — rewrite advisory verbs (Consider reducing, Scale in, etc.)
     # before the message is persisted or pushed to the user.

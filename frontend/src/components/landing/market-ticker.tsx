@@ -22,11 +22,14 @@ type Tick = {
 };
 
 // Static observation snapshot. Matches "as observed" editorial label.
+// Fixed 2026-04-24: previous snapshot had SPY ETF price ($708) labeled
+// as "S&P 500" (actual index ~7108) — misleading by an order of magnitude.
+// Re-anchored to actual index levels as of the observation timestamp.
 const SNAPSHOT: readonly Tick[] = [
-  { symbol: "SPY",     name: "S&P 500",        level: "708.53",   change: "+0.12%", dir: "up" },
-  { symbol: "QQQ",     name: "Nasdaq 100",     level: "648.77",   change: "-0.38%", dir: "down" },
-  { symbol: "KOSPI",   name: "KOSPI",          level: "6,417.93", change: "+0.46%", dir: "up" },
-  { symbol: "USDKRW",  name: "USD/KRW",        level: "1,477.48", change: "+0.04%", dir: "flat" },
+  { symbol: "SPX",     name: "S&P 500",        level: "7,108.40", change: "+0.12%", dir: "up" },
+  { symbol: "NDX",     name: "Nasdaq 100",     level: "24,438.50",change: "-0.38%", dir: "down" },
+  { symbol: "KOSPI",   name: "KOSPI",          level: "6,475.63", change: "+0.46%", dir: "up" },
+  { symbol: "USDKRW",  name: "USD/KRW",        level: "1,483.08", change: "+0.04%", dir: "flat" },
   { symbol: "VIX",     name: "Volatility Idx", level: "27.98",    change: "+1.83%", dir: "up" },
   { symbol: "US10Y",   name: "US 10Y Yield",   level: "4.42%",    change: "-0.03pp", dir: "down" },
   { symbol: "GOLD",    name: "XAU/USD",        level: "3,112.40", change: "+0.22%", dir: "up" },
