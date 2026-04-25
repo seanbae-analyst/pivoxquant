@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { PushPermission } from "@/components/pwa/push-permission";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -37,6 +38,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <DashboardLayout>
       {children}
+      {/*
+        Single-source legal disclaimer footer — mounted once for every
+        (dashboard) route. Pages that need a contextual variant (signal,
+        ai-analysis, coaching, auto-trade) still mount their own
+        <DisclaimerBanner /> inline at the relevant section; this layout-level
+        instance guarantees the legally-required common notice appears on
+        every dashboard page even if a page is added without one.
+        Variant: "ai-analysis" — broadest applicability across analytics,
+        coaching, settings, growth, and profile surfaces. Theme: dark to
+        match the Vantablack dashboard shell (--pq-ink).
+      */}
+      <div className="px-4 pb-6 md:px-10 md:pb-8">
+        <DisclaimerBanner type="ai-analysis" />
+      </div>
       <PushPermission />
     </DashboardLayout>
   );

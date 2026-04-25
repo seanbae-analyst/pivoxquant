@@ -162,6 +162,19 @@ jobs:
 
       - name: Disclaimer coverage check
         run: |
+          # Single-source check: if the (dashboard) layout mounts
+          # <DisclaimerBanner />, every dashboard route inherits it and
+          # the legally-required notice is guaranteed. This is the
+          # preferred coverage path — page authors can no longer forget.
+          LAYOUT="frontend/src/app/(dashboard)/layout.tsx"
+          if [ -f "$LAYOUT" ] && grep -q 'DisclaimerBanner' "$LAYOUT"; then
+            echo "✅ DisclaimerBanner present in (dashboard)/layout.tsx — covers all dashboard pages"
+            exit 0
+          fi
+
+          # Fallback: layout doesn't mount it → require every page to
+          # mount its own. Preserves the original guarantee if the layout
+          # path regresses.
           missing=""
           for f in frontend/src/app/\(dashboard\)/*/page.tsx frontend/src/app/\(dashboard\)/*/*/page.tsx; do
             [ -f "$f" ] || continue
@@ -170,7 +183,7 @@ jobs:
             fi
           done
           if [ -n "$missing" ]; then
-            echo "::error::DisclaimerBanner missing on dashboard pages:"
+            echo "::error::DisclaimerBanner missing on dashboard pages (and not present in layout):"
             echo -e "$missing"
             exit 1
           fi
