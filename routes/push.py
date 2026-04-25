@@ -89,7 +89,7 @@ def send_push_to_user(user_id: int, title: str, body: str,
     Call this from services (e.g. alert_service) after creating an alert.
     """
     try:
-        from pywebpush import webpush, WebPushException
+        from pywebpush import webpush, WebPushException  # noqa: F401 — runtime exception type
     except ImportError:
         logger.warning("pywebpush not installed — skipping push notification")
         return

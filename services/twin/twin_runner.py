@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Iterable
 
@@ -36,7 +36,6 @@ from models import (
     AITwinTrade,
     DEFAULT_STARTING_CASH,
     InvestmentProfile,
-    User,
 )
 from services import container as svc
 from services.profile.persona_classifier_v2 import classify_persona_multi
