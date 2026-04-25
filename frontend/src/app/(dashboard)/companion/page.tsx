@@ -340,17 +340,13 @@ function ComingSoon({ phase }: { phase: string }) {
           </p>
         )}
 
-        <p
-          className="mt-10 font-serif italic"
-          style={{
-            fontSize: 11,
-            lineHeight: 1.6,
-            color: "rgba(245, 240, 232, 0.45)",
-          }}
-        >
-          Not investment advice. The Companion is a reflective tool — it does not
-          recommend, predict, or guarantee.
-        </p>
+        {/*
+          Inline "Not investment advice" italic was removed — the
+          (dashboard)/layout.tsx now mounts a single-source
+          <DisclaimerBanner /> for every dashboard page, satisfying the
+          legal-guard CI check and avoiding duplicate disclaimer text on
+          the Companion screen.
+        */}
       </div>
     </div>
   );
