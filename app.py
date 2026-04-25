@@ -441,6 +441,10 @@ def _do_migrations():
     _add_column_if_missing("investment_profiles", "ai_coaching_style", "VARCHAR(20)", default="'balanced'")
     _add_column_if_missing("investment_profiles", "alert_frequency", "VARCHAR(20)", default="'daily'")
     _add_column_if_missing("investment_profiles", "updated_at", "TIMESTAMP")
+    # Feature 1 (Quant Composer) — TEXT JSON columns. Empty list/dict default so
+    # the engine stays backward compatible for users who never opted in.
+    _add_column_if_missing("investment_profiles", "enabled_quant_models", "TEXT", default="'[]'")
+    _add_column_if_missing("investment_profiles", "model_weights", "TEXT", default="'{}'")
 
     # User referrals — `invited_count` is the one post-create candidate.
     _add_column_if_missing("user_referrals", "invited_count", "INTEGER", default="0")
@@ -840,6 +844,62 @@ def _init_scheduler(app):
             except Exception as e:
                 logger.error(f"Insider mirror weekly failed: {e}")
 
+    # ── Feature 5 — AI Trader Twin (paper-only) ─────────────────────────
+    # Twin runs daily decision passes and a Sunday weekly comparison.
+    # Every job operates on initialized twins only — uninitialized users
+    # get a no-op pass so the cron never grows broker-style state.
+    def _scheduled_twin_decisions_kr():
+        """Run Twin decisions after KOSPI/KOSDAQ close (16:30 KST).
+
+        Iterates every active AITwinPortfolio and invokes
+        ``run_twin_decisions``. Per-user failures never block the rest.
+        """
+        from models import AITwinPortfolio
+        from services.twin import run_twin_decisions
+        with app.app_context():
+            try:
+                rows = AITwinPortfolio.query.filter_by(is_active=True).all()
+                for tw in rows:
+                    try:
+                        run_twin_decisions(int(tw.user_id))
+                    except Exception as e:
+                        logger.error(f"Twin KR decisions failed user={tw.user_id}: {e}")
+                logger.info(f"Twin KR daily run: {len(rows)} twins scanned")
+            except Exception as e:
+                logger.error(f"Twin KR scheduler failed: {e}")
+
+    def _scheduled_twin_decisions_us():
+        """Run Twin decisions after the NYSE close (06:30 KST = 21:30 EST)."""
+        from models import AITwinPortfolio
+        from services.twin import run_twin_decisions
+        with app.app_context():
+            try:
+                rows = AITwinPortfolio.query.filter_by(is_active=True).all()
+                for tw in rows:
+                    try:
+                        run_twin_decisions(int(tw.user_id))
+                    except Exception as e:
+                        logger.error(f"Twin US decisions failed user={tw.user_id}: {e}")
+                logger.info(f"Twin US daily run: {len(rows)} twins scanned")
+            except Exception as e:
+                logger.error(f"Twin US scheduler failed: {e}")
+
+    def _scheduled_twin_weekly():
+        """Sunday 21:00 KST — user-vs-twin weekly comparison row."""
+        from models import AITwinPortfolio
+        from services.twin import generate_weekly_report
+        with app.app_context():
+            try:
+                rows = AITwinPortfolio.query.filter_by(is_active=True).all()
+                for tw in rows:
+                    try:
+                        generate_weekly_report(int(tw.user_id))
+                    except Exception as e:
+                        logger.error(f"Twin weekly report failed user={tw.user_id}: {e}")
+                logger.info(f"Twin weekly run: {len(rows)} twins reported")
+            except Exception as e:
+                logger.error(f"Twin weekly scheduler failed: {e}")
+
     def _scheduled_earnings_prebrief():
         """Scan every 15 min for positions whose earnings fire in ~30 min
         (MVP #3). The service enforces dedup per (user, ticker,
@@ -860,6 +920,47 @@ def _init_scheduler(app):
                 logger.info(f"Earnings pre-brief scan: {summary}")
             except Exception as e:
                 logger.error(f"Earnings pre-brief scan failed: {e}")
+
+    def _scheduled_behavioral_scores():
+        """Weekly Sunday 22:00 KST — BehavioralScore for every active user.
+
+        Backs Feature 7 (Weekly Behavioural Score). Scheduled 1h before
+        the 23:00 PersonaSnapshot cron so the score's persona-comparison
+        block reads against the *previous* snapshot — purely
+        observational, no directive language. Per-user failures never
+        block the rest; the scorer's UNIQUE(user_id, week_ending)
+        constraint keeps a manual re-trigger idempotent.
+        """
+        from services.behavior import run_weekly_for_all_users
+        with app.app_context():
+            try:
+                summary = run_weekly_for_all_users()
+                logger.info(f"Behavioural score weekly run: {summary}")
+            except Exception as e:
+                logger.error(f"Behavioural score weekly failed: {e}")
+
+    def _scheduled_persona_snapshots():
+        """Weekly Sunday 23:00 KST — PersonaSnapshot for every active user.
+
+        Backs Feature 3+4 (Evolution Timeline). Active = at least one
+        TradeHistory row in the last 90 days (the User model has no
+        ``last_login`` column so trade activity is the engagement proxy).
+
+        Scheduled to fire 21h *after* the Sunday 02:00 KST
+        ``compute_group_stats`` job so snapshots are computed against
+        the freshly-updated PersonaGroupStats. Per-user failures never
+        block the rest — see ``run_weekly_snapshots``. Idempotent: the
+        UNIQUE(user_id, computed_at) constraint silently skips a second
+        firing within the same second (e.g. cron coalesce + manual
+        ``/api/profile/persona-snapshot`` POST).
+        """
+        from services.profile import run_weekly_snapshots
+        with app.app_context():
+            try:
+                summary = run_weekly_snapshots()
+                logger.info(f"Persona snapshot weekly run: {summary}")
+            except Exception as e:
+                logger.error(f"Persona snapshot weekly failed: {e}")
 
     sched = BackgroundScheduler(timezone="UTC")
     sched.add_job(_scheduled_refresh, "interval", minutes=3, id="refresh")
@@ -1086,6 +1187,65 @@ def _init_scheduler(app):
         trigger="interval",
         minutes=1,
         id="fx_rate_refresh",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매주 일요일 22:00 KST — BehavioralScore 주간 점수 (Feature 7).
+    # PersonaSnapshot 23:00 보다 1시간 먼저 실행해 점수의 persona-comparison
+    # 블록이 *직전* 스냅샷을 읽도록 한다. 회고적 관찰 점수만 기록하며
+    # 권유 언어는 forbidden_terms 필터로 차단한다.
+    sched.add_job(
+        _scheduled_behavioral_scores,
+        trigger="cron",
+        day_of_week="sun", hour=22, minute=0,
+        timezone="Asia/Seoul",
+        id="behavioral_score_weekly",
+        max_instances=1,
+        coalesce=True,
+    )
+    # ── Feature 5 — AI Trader Twin (paper-only) ─────────────────────────
+    # 매일 16:30 KST — KOSPI/KOSDAQ 마감 직후 Twin paper 의사결정.
+    sched.add_job(
+        _scheduled_twin_decisions_kr,
+        trigger="cron",
+        hour=16, minute=30,
+        timezone="Asia/Seoul",
+        id="twin_kr_daily",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매일 06:30 KST — NYSE 마감 후 (≈21:30 EST 전일) Twin paper 의사결정.
+    sched.add_job(
+        _scheduled_twin_decisions_us,
+        trigger="cron",
+        hour=6, minute=30,
+        timezone="Asia/Seoul",
+        id="twin_us_daily",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매주 일요일 21:00 KST — Twin 주간 비교 리포트 생성. 22:00 KST의
+    # Behavioural Score (Feature 7) cron 보다 1시간 먼저 돌려, score 가 최신
+    # 비교 데이터를 참고할 수 있도록 의도적으로 분리한다.
+    sched.add_job(
+        _scheduled_twin_weekly,
+        trigger="cron",
+        day_of_week="sun", hour=21, minute=0,
+        timezone="Asia/Seoul",
+        id="twin_weekly_report",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매주 일요일 23:00 KST — PersonaSnapshot 영속화 (Feature 3+4).
+    # 같은 일요일 02:00 KST 의 ``compute_group_stats`` cron 이후에 실행되도록
+    # 21시간 뒤로 배치. PersonaGroupStats 가 최신 스냅샷에 반영된 상태에서
+    # 각 active 유저의 행동 페르소나를 기록한다.
+    sched.add_job(
+        _scheduled_persona_snapshots,
+        trigger="cron",
+        day_of_week="sun", hour=23, minute=0,
+        timezone="Asia/Seoul",
+        id="persona_snapshot_weekly",
         max_instances=1,
         coalesce=True,
     )

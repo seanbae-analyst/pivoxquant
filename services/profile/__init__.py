@@ -22,6 +22,15 @@ from .group_benchmark import (                            # noqa: F401
     get_persona_stats,
     get_all_persona_stats,
 )
+from .persona_history import (                            # noqa: F401
+    DRIFT_DISCLAIMER,
+    take_snapshot,
+    get_history,
+    compute_drift,
+    detect_significant_drift,
+    iter_active_user_ids,
+    run_weekly_snapshots,
+)
 
 __all__ = [
     "compute_persona_response",
@@ -33,4 +42,11 @@ __all__ = [
     "compute_all_personas",
     "get_persona_stats",
     "get_all_persona_stats",
+    "DRIFT_DISCLAIMER",
+    "take_snapshot",
+    "get_history",
+    "compute_drift",
+    "detect_significant_drift",
+    "iter_active_user_ids",
+    "run_weekly_snapshots",
 ]

@@ -77,7 +77,8 @@ class QuantEngine:
     def analyze(self, ticker: str, capital_usd: float = 10_000.0,
                 capital_krw: float = 0.0, fx_rate: float = 0.0,
                 current_pnl_pct: float = None,
-                profile_params: dict = None) -> "dict | None":
+                profile_params: dict = None,
+                user_id: int | None = None) -> "dict | None":
         ticker   = ticker.upper().strip()
         self._auto_prefetch_if_needed(ticker)
         snapshot = _fetcher.get_stock_snapshot(ticker)
@@ -188,6 +189,19 @@ class QuantEngine:
             buy_thresh -= 5  # Bull market: easier to buy
         elif quant_score <= 30:
             buy_thresh += 5  # Bear market: harder to buy
+
+        # ── Quant Composer hook (Feature 1) ──
+        # Apply the user's per-model selection + weight composition to the
+        # quant pillar before it enters the composite. Backward-compatible:
+        # when ``user_id`` is None or the user has not opted in, this is a
+        # no-op (returns ``quant_score`` unchanged). Failures here MUST NOT
+        # break the engine's hot path — fall back to the unmodified score.
+        if user_id is not None:
+            try:
+                from services.quant.composer import apply_user_composition
+                quant_score = apply_user_composition(user_id, quant_score)
+            except Exception:  # pragma: no cover — defensive
+                logger.exception("Quant Composer apply failed for user_id=%s", user_id)
 
         composite = round(
             tech_score * w_tech +
