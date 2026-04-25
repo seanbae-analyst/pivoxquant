@@ -1,0 +1,49 @@
+name: Agent Upgrades Monthly
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # 1st of month, 09:00 KST
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate upgrade proposals
+        run: |
+          python3 scripts/agent_ops/propose_upgrades.py \
+            --out report.md
+          cat report.md
+
+      - name: Open / update GitHub Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label agent-upgrades \
+            --json number \
+            --jq '.[0].number // empty')
+          title="[Agent Upgrades] Monthly $(date -u +'%Y-%m')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body-file report.md
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body-file report.md \
+              --label agent-upgrades
+          fi
