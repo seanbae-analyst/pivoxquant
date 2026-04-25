@@ -3,12 +3,10 @@
 Entry point for Railway worker service: `python -m agent_worker.worker`.
 Runs independently of the Flask web process; shares only the Postgres DB.
 """
-import json
 import logging
 import signal
 import sys
 import threading
-import time
 from datetime import datetime, timezone
 
 from apscheduler.schedulers.background import BackgroundScheduler

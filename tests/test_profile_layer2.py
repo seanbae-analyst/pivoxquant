@@ -21,7 +21,6 @@ over the SQLite test DB.
 """
 from __future__ import annotations
 
-import json
 from datetime import datetime, timedelta, timezone
 
 
@@ -184,7 +183,6 @@ class TestFeedback:
         assert r.status_code == 200, r.data
         assert r.get_json() == {"ok": True}
 
-        from extensions import db
         from models import ArtifactFeedback
         with app.app_context():
             rows = ArtifactFeedback.query.filter_by(user_id=auth_user["id"]).all()

@@ -13,7 +13,6 @@ Also smoke-tests the admin list endpoint so the ops runbook in
 """
 from __future__ import annotations
 
-import os
 
 import pytest
 

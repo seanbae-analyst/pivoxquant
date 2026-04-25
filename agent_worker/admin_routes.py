@@ -12,7 +12,7 @@ import logging
 import os
 from datetime import date, datetime, timezone
 
-from flask import Blueprint, abort, jsonify, redirect, request, url_for
+from flask import Blueprint, abort, jsonify
 from flask_login import current_user, login_required
 from markupsafe import escape
 from sqlalchemy import text

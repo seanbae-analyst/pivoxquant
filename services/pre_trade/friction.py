@@ -42,7 +42,6 @@ from models import (
     MIN_RATIONALE_CHARS,
     DEFAULT_COOLDOWN_SECONDS,
     EXTENDED_COOLDOWN_SECONDS,
-    AUTO_EXTEND_REASONS,
 )
 
 logger = logging.getLogger(__name__)

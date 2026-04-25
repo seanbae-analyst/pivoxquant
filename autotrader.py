@@ -5,12 +5,10 @@ Scans → Analyzes → Executes → Manages Risk
 """
 
 import os
-import json
 import logging
 import threading
 import time
 from datetime import datetime, timedelta
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 

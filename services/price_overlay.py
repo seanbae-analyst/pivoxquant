@@ -28,7 +28,6 @@ from datetime import datetime, timezone
 from typing import Iterable, Optional
 
 from models import SignalCache
-from extensions import db
 from services.container import realtime
 from services import cache_service
 

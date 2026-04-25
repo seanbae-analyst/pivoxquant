@@ -272,7 +272,7 @@ class TestMarketIndicesKR:
         assert fx is not None, "USD/KRW entry missing"
         lo, hi = fx["range_52w"]
         assert not (lo == 0.0 and hi == 0.0), (
-            f"USD/KRW range_52w is [0,0] — BUG-4b regression"
+            "USD/KRW range_52w is [0,0] — BUG-4b regression"
         )
         assert lo < hi, f"range_52w malformed: [{lo}, {hi}]"
         # Should bracket the seeded history.

@@ -3,8 +3,6 @@
 
 import os
 import sys
-import json
-import subprocess
 from datetime import datetime, timezone, timedelta
 
 KST = timezone(timedelta(hours=9))

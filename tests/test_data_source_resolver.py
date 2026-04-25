@@ -21,7 +21,6 @@ pulling in the ORM.
 """
 from __future__ import annotations
 
-import pytest
 
 from services.artifacts import data_source_resolver as dsr
 

@@ -191,7 +191,7 @@ class TestMeanReversion:
         result = MeanReversion.analyze(closes)
         assert result is not None
         assert result["z_score"] < -1, f"Expected z < -1, got {result['z_score']}"
-        assert result["score"] > 50, f"Oversold should boost score above 50"
+        assert result["score"] > 50, "Oversold should boost score above 50"
 
     def test_extreme_overbought_gives_negative_signal(self):
         """Price well above mean should generate NEGATIVE."""
@@ -201,7 +201,7 @@ class TestMeanReversion:
         result = MeanReversion.analyze(closes)
         assert result is not None
         assert result["z_score"] > 1, f"Expected z > 1, got {result['z_score']}"
-        assert result["score"] < 50, f"Overbought should push score below 50"
+        assert result["score"] < 50, "Overbought should push score below 50"
 
     def test_pct_b_range(self, steady_uptrend):
         """Bollinger %B should be a float, not crash on normal data."""
@@ -1223,7 +1223,7 @@ class TestCrossModelConsistency:
         rs = RegimeSwitching.analyze(closes)
         if rs is not None:
             assert rs["regime"] != "BULL", (
-                f"Crash data classified as BULL -- models are broken"
+                "Crash data classified as BULL -- models are broken"
             )
 
     def test_strong_uptrend_not_bear(self, steady_uptrend):
@@ -1232,7 +1232,7 @@ class TestCrossModelConsistency:
         rs = RegimeSwitching.analyze(closes)
         if rs is not None:
             assert rs["regime"] != "BEAR", (
-                f"Uptrend data classified as BEAR -- models are broken"
+                "Uptrend data classified as BEAR -- models are broken"
             )
 
     def test_adaptive_params_consistent_with_regime(self, steady_uptrend):
@@ -1245,5 +1245,5 @@ class TestCrossModelConsistency:
             # Bull trend should not produce survival profile
             if trend in ("BULL", "MILD_BULL"):
                 assert profile != "survival", (
-                    f"Bull trend produced survival profile -- misaligned"
+                    "Bull trend produced survival profile -- misaligned"
                 )

@@ -8,7 +8,6 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
-from flask_login import current_user
 from sqlalchemy import text
 
 from extensions import db

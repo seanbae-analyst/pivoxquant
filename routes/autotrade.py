@@ -22,7 +22,7 @@ Security (2026-04-24, C1):
     ownership guard is the correct mitigation. Procfile is pinned to
     `--workers 1` as a second layer of defence.
 """
-from flask import Blueprint, g, jsonify
+from flask import Blueprint, jsonify
 from flask_login import current_user
 
 from security import trade_rate_limit

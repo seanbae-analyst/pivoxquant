@@ -24,7 +24,6 @@ from services.quant.composer import (
     MAX_ENABLED_COUNT,
     PERSONA_QUANT_PRESETS,
     WEIGHT_MAX,
-    WEIGHT_MIN,
     apply_user_composition,
     get_persona_preset,
     validate_composition,

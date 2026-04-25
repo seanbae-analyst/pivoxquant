@@ -10,9 +10,7 @@ Covers:
 """
 from __future__ import annotations
 
-import importlib.util
-import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -127,7 +125,6 @@ def test_run_twin_decisions_persona_quant_uses_quant_threshold(app, make_user, m
     from services.twin import (
         initialize_twin,
         run_twin_decisions,
-        PERSONA_BUY_THRESHOLD,
     )
     from models import AITwinPortfolio, AITwinTrade
 
@@ -431,7 +428,6 @@ def test_endpoint_disclaimer_present_on_every_endpoint(client, auth_user):
 
 def test_other_user_cannot_view_twin(app, client, make_user):
     from services.twin import initialize_twin
-    from models import AITwinPortfolio
 
     owner = make_user(email="owner@test.com")
     intruder = make_user(email="intruder@test.com")

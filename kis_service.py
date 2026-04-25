@@ -715,7 +715,7 @@ class KISService:
                                 score += 10
                                 signals.append(S("bullish", f"Volume surge {vol_ratio}x avg", f"거래량 급증 {vol_ratio}배"))
                             elif vol_ratio < 0.3:
-                                signals.append(S("neutral", f"Volume dried up — wait for confirmation", f"거래량 실종 — 관망"))
+                                signals.append(S("neutral", "Volume dried up — wait for confirmation", "거래량 실종 — 관망"))
 
                     # ── 5. MA crossover ────────────────────────
                     if len(closes) >= 20:

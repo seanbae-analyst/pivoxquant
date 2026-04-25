@@ -469,7 +469,7 @@ class SelfAuditService:
         from_email = os.environ.get(
             "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
-        subject = f"PivoxQuant Self Audit — Q review"
+        subject = "PivoxQuant Self Audit — Q review"
 
         sg_key = os.environ.get("SENDGRID_API_KEY")
         if sg_key:
