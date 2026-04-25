@@ -114,6 +114,10 @@ class KPIContext:
     # Narrative
     position_count:   int
     disclaimer:       str
+    # Wave 6 — colophon provenance. Populated from
+    # `resolve_user_data_lineage`. Empty list renders a neutral line in
+    # the colophon rather than a hardcoded broker name.
+    data_sources:     list[dict[str, str]]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -130,6 +134,7 @@ class KPIContext:
             "cash_pct":         self.cash_pct,
             "position_count":   self.position_count,
             "disclaimer":       self.disclaimer,
+            "data_sources":     self.data_sources,
         }
 
 
@@ -332,6 +337,18 @@ def compute_kpis_for_user(user_id: int,
     turnover = _turnover_ratio(user_id, pv)
     cash = _cash_pct(user, pv)
 
+    # Wave 6 — colophon data lineage. Only include broker rows for a
+    # user who is actually connected (표시광고법 §3 기만표시 방어선).
+    try:
+        from services.artifacts.data_source_resolver import (
+            resolve_user_data_lineage,
+        )
+        data_sources = resolve_user_data_lineage(user_id)
+    except Exception as exc:
+        logger.debug("kpi dashboard lineage resolve failed for user %s: %s",
+                     user_id, exc)
+        data_sources = []
+
     ctx = KPIContext(
         user_id=user_id,
         user_name=user.name or user.email.split("@")[0],
@@ -346,6 +363,7 @@ def compute_kpis_for_user(user_id: int,
         cash_pct=cash,
         position_count=len(positions),
         disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+        data_sources=data_sources,
     )
     return ctx.to_dict()
 

@@ -130,6 +130,7 @@ class BurnContext:
     portfolio_value:  Optional[float]
     burn_pct:         Optional[float]   # burn_total / portfolio_value
     by_market:        list[dict[str, Any]]  # [{market, trades, burn}]
+    data_sources:     list[str]
     disclaimer:       str
 
     def to_dict(self) -> dict[str, Any]:
@@ -151,6 +152,7 @@ class BurnContext:
             "portfolio_value":   round(self.portfolio_value, 2) if self.portfolio_value else None,
             "burn_pct":          round(self.burn_pct, 3) if self.burn_pct is not None else None,
             "by_market":         self.by_market,
+            "data_sources":      self.data_sources,
             "disclaimer":        self.disclaimer,
         }
 
@@ -359,6 +361,23 @@ class BurnRateService:
             for m, row in sorted(by_market_acc.items())
         ]
 
+        # Data-source provenance — Wave 5. Burn-rate is computed from the
+        # user's own TradeHistory rows (which originate from either a
+        # broker sync OR the user's manual entry). We claim system
+        # sources for the tax-rate constants + the ledger flag, and only
+        # name brokers that are actually connected.
+        try:
+            from services.artifacts.data_source_resolver import (
+                resolve_user_data_sources,
+            )
+            data_sources = resolve_user_data_sources(
+                user_id, include_manual_ledger=True,
+            )
+        except Exception as exc:
+            logger.debug("data_source resolve failed for user %s: %s",
+                         user_id, exc)
+            data_sources = []
+
         ctx = BurnContext(
             user_id=user_id,
             user_name=user.name or user.email.split("@")[0],
@@ -377,6 +396,7 @@ class BurnRateService:
             portfolio_value=pv,
             burn_pct=burn_pct,
             by_market=by_market,
+            data_sources=data_sources,
             disclaimer=("본 리포트는 세무 상담이 아니며 예상 세금·비용을 정보 "
                         "제공 목적으로 추정한 것입니다. 실제 납부액은 중개사/"
                         "과세당국 산정과 다를 수 있습니다."),

@@ -949,8 +949,13 @@
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data sources</span> &nbsp;
-      {% set _ds = data_sources | default(['Bank statements', 'Credit card statements', 'Manual ledger', 'Budget app export']) %}
-      {{ _ds | join(' · ') }}.
+      {# Wave 5 — the burn-rate pipeline computes from the user's own
+         TradeHistory rows (commission / tax / slippage estimation) so
+         the truthful claim is system sources + the user's manual
+         ledger entry. No bank statement ingestion exists yet — we
+         must not claim one. #}
+      {% set _ds = data_sources | default([]) %}
+      {% if _ds %}{{ _ds | join(' · ') }}.{% else %}Data sources not specified.{% endif %}
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;

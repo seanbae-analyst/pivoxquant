@@ -362,6 +362,100 @@ def stats() -> Any:
     )
 
 
+@agent_admin_bp.route("/waitlist", methods=["GET"])
+def waitlist_list() -> Any:
+    """GET /api/admin/agent/waitlist
+
+    Full FIFO-ordered list of Closed Beta signups. Admin-only.
+
+    Query params:
+        limit   (int, optional, default 500, max 2000)
+        source  (str, optional)  — exact-match attribution filter.
+
+    Response:
+        {
+          "ok": true,
+          "total": <int>,            # count of all rows in DB
+          "count": <int>,            # count in this response
+          "rows": [
+            {"id": ..., "email": ..., "persona": ..., "source": ...,
+             "created_at": ..., "invited_at": ..., "activated_at": ...,
+             "position": ...}
+          ]
+        }
+
+    The ``email`` field is the plaintext address when the user consented to
+    direct notification (which, per ``routes.agent.waitlist``, is every
+    row) and ``<hashed>`` otherwise. The raw hash is never leaked to the
+    admin UI — that's a PII amplifier.
+    """
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
+
+    from models.companion_waitlist import CompanionWaitlist
+
+    try:
+        limit = max(1, min(int(request.args.get("limit", 500)), 2000))
+    except ValueError:
+        limit = 500
+
+    source_filter = (request.args.get("source") or "").strip()
+
+    query = CompanionWaitlist.query.order_by(CompanionWaitlist.created_at.asc())
+    if source_filter:
+        query = query.filter(CompanionWaitlist.source == source_filter[:40])
+
+    rows = query.limit(limit).all()
+    total = CompanionWaitlist.query.count()
+
+    def _masked_email(row: CompanionWaitlist) -> str:
+        """Return the display string for a waitlist row's email column.
+
+        NOTE — name vs. behaviour (audit GAP-2):
+        In closed beta, direct consent implies plaintext for operational
+        outreach; this helper therefore returns the raw email verbatim
+        (not a masked form) when consent was given, and the literal
+        sentinel ``"<hashed>"`` otherwise. The function name is retained
+        for call-site stability; rename pending post-GA when we introduce
+        real masking (e.g. ``al***@example.com``) for non-admin surfaces.
+        """
+        if row.email_plaintext:
+            return row.email_plaintext
+        return "<hashed>"
+
+    return jsonify(
+        {
+            "ok": True,
+            "total": int(total),
+            "count": len(rows),
+            "rows": [
+                {
+                    "id": r.id,
+                    "email": _masked_email(r),
+                    "persona": r.persona_interest,
+                    "source": r.source,
+                    "user_id": r.user_id,
+                    "created_at": (
+                        r.created_at.isoformat() if r.created_at else None
+                    ),
+                    "invited_at": (
+                        r.invited_at.isoformat() if r.invited_at else None
+                    ),
+                    "activated_at": (
+                        r.activated_at.isoformat() if r.activated_at else None
+                    ),
+                    # Position among returned rows; the row is already ordered
+                    # by created_at ASC so this matches the FIFO queue number
+                    # visible to the submitter.
+                    "position": idx + 1,
+                }
+                for idx, r in enumerate(rows)
+            ],
+        }
+    )
+
+
 @agent_admin_bp.route("/purge-expired", methods=["POST"])
 def purge_expired_route() -> Any:
     """POST /api/admin/agent/purge-expired

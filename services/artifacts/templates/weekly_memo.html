@@ -1171,19 +1171,22 @@
 
 <div class="ed-watch-head">What to watch · next seven days</div>
 <div class="ed-watch">
-  {% set _watch = what_to_watch | default([
-    {'category':'Earnings',    'detail':'AAPL · Tue after the close.'},
-    {'category':'Earnings',    'detail':'005930.KS · Thu before the open.'},
-    {'category':'Macro',       'detail':'FOMC minutes · Wed 21:00 KST.'},
-    {'category':'Macro',       'detail':'US CPI · Fri 22:30 KST.'},
-    {'category':'Observation', 'detail':'Top-2 semi correlation remains the week\'s structural read.'},
-  ]) %}
+  {% set _watch = what_to_watch | default([]) %}
+  {% if _watch %}
   {% for w in _watch %}
     <div class="ed-watch-item">
       <div class="ed-watch-cat">{{ w.category }}</div>
       <div class="ed-watch-detail">{{ w.detail }}</div>
     </div>
   {% endfor %}
+  {% else %}
+    <div class="ed-watch-item">
+      <div class="ed-watch-cat">—</div>
+      <div class="ed-watch-detail" style="font-style:italic;">
+        No scheduled events this week.
+      </div>
+    </div>
+  {% endif %}
 </div>
 
 
@@ -1206,8 +1209,15 @@
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data</span> &nbsp;
-      {% set _ds = data_sources | default(['KIS', 'Alpaca', 'FMP v4', 'SEC EDGAR', 'FRED']) %}
-      {{ _ds | join(' · ') }}.
+      {# Wave 5 — never fall back to a hardcoded provenance list. Claiming
+         a source the user isn't actually connected to is a 표시광고법 §3
+         misrepresentation. The service layer fills `data_sources` from
+         `resolve_user_data_sources(user_id)` and leaves the list empty
+         when nothing is known; that empty case prints the neutral
+         "Data sources not specified" sentence so no stranger's broker
+         ever appears in this user's PDF. #}
+      {% set _ds = data_sources | default([]) %}
+      {% if _ds %}{{ _ds | join(' · ') }}.{% else %}Data sources not specified. Connect your broker in Settings to see data lineage.{% endif %}
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;

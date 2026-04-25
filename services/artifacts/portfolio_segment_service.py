@@ -260,6 +260,8 @@ class SegmentContext:
     worst_segments:  list[dict[str, Any]]   # bottom 3
     narrative:       str
     disclaimer:      str
+    # Wave 6 — colophon provenance via `resolve_user_data_lineage`.
+    data_sources:    list[dict[str, str]]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -278,6 +280,7 @@ class SegmentContext:
             "worst_segments":  self.worst_segments,
             "narrative":       self.narrative,
             "disclaimer":      self.disclaimer,
+            "data_sources":    self.data_sources,
         }
 
 
@@ -396,6 +399,19 @@ class PortfolioSegmentService:
         worst = sorted(rated_all, key=lambda r: r["return_pct"])[:3]
         narrative = _narrative(best, worst)
 
+        # Wave 6 — colophon data lineage. Populates only broker
+        # connections the user actually has. Empty list renders a
+        # neutral "Data sources not specified" line in the template.
+        try:
+            from services.artifacts.data_source_resolver import (
+                resolve_user_data_lineage,
+            )
+            data_sources = resolve_user_data_lineage(user_id)
+        except Exception as exc:
+            logger.debug("portfolio_segment lineage resolve failed for user %s: %s",
+                         user_id, exc)
+            data_sources = []
+
         ctx = SegmentContext(
             user_id=user_id,
             user_name=user.name or user.email.split("@")[0],
@@ -412,6 +428,7 @@ class PortfolioSegmentService:
             worst_segments=worst,
             narrative=narrative,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+            data_sources=data_sources,
         )
         return ctx.to_dict()
 

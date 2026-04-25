@@ -774,7 +774,7 @@
   [0.18, 0.08, 0.04, 0.22, 1.00, -0.08],
   [-0.42, -0.68, -0.62, 0.14, -0.08, 1.00]
 ]) %}
-{% set _cl = corr_labels | default(['Strategy C', 'SPY', 'QQQ', 'TLT', 'Gold', 'VIX']) %}
+{% set _cl = corr_labels | default([]) %}
 
 <div class="ld-heatmap-wrap">
   <div class="sp-fig-title" style="text-align:center;">Fig. 2 · Pairwise observed correlation · full window</div>
@@ -785,11 +785,11 @@
   <svg viewBox="0 0 {{ _hm_w }} {{ _hm_h }}" width="85%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 0 auto; max-width: 360pt;">
     {% for c in range(6) %}
       <text x="{{ _hl + c * _cell + _cell/2 }}" y="{{ _hl - 6 }}" text-anchor="middle"
-            fill="#4a4a4a" font-size="7.4" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ _cl[c] | string | truncate(10, True, '') }}</text>
+            fill="#4a4a4a" font-size="7.4" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ (_cl[c] if _cl|length > c else '') | string | truncate(10, True, '') }}</text>
     {% endfor %}
     {% for r in range(6) %}
       <text x="{{ _hl - 5 }}" y="{{ _hl + r * _cell + _cell/2 + 2.5 }}" text-anchor="end"
-            fill="#4a4a4a" font-size="7.4" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ _cl[r] | string | truncate(10, True, '') }}</text>
+            fill="#4a4a4a" font-size="7.4" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ (_cl[r] if _cl|length > r else '') | string | truncate(10, True, '') }}</text>
     {% endfor %}
     {% for r in range(6) %}
       {% for c in range(6) %}
@@ -1056,10 +1056,21 @@
       <span class="co-key">Constituents</span> &nbsp;
       S&amp;P 500 constituents — SEC EDGAR + FMP v4 Stable.
     </p>
+    {# Wave 6 — direct 'Alpaca Market Data (IEX consolidated).' string
+       removed. This backtest runs on public index data; price-data
+       provenance now injected from `resolve_user_data_lineage` (or
+       elided when no user context). #}
+    {% if price_data_source %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Price data</span> &nbsp;
-      Alpaca Market Data (IEX consolidated).
+      {{ price_data_source }}
     </p>
+    {% else %}
+    <p style="margin: 0 0 10pt 0;">
+      <span class="co-key">Price data</span> &nbsp;
+      Historical daily closes · index constituents.
+    </p>
+    {% endif %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Risk-free</span> &nbsp;
       3-Month T-Bill via FRED (DGS3MO).

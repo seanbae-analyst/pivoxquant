@@ -538,11 +538,14 @@
     </div>
 
     <div class="ls-prose">
-      {% set _p = ledger_prose | default([
-        'April recorded a net gain of 2.4% on invested capital, against a month that ran cool through the first week and accelerated through the middle ten sessions. The drawdown trough on Day 10 of -0.20% was shallow relative to the ninety-day envelope and recovered inside two sessions.',
-        'Of the month gain, realised P&L from closed lots contributed $3,420 across twelve exits; unrealised P&L on open positions carries $8,210 at the month-end mark. Three dividend events posted during the month for a combined $612 gross receipt. Fees and costs totalled $58, FIFO lot-matched.'
-      ]) %}
-      {% for para in _p %}<p>{{ para }}</p>{% endfor %}
+      {% set _p = ledger_prose | default([]) %}
+      {% if _p %}
+        {% for para in _p %}<p>{{ para }}</p>{% endfor %}
+      {% else %}
+        <p style="font-style:italic; color:#6B6B6B;">
+          Monthly ledger commentary will appear here once the period closes.
+        </p>
+      {% endif %}
     </div>
 
   </div>
@@ -598,19 +601,8 @@
 
 <div class="ls-fig-title">Realised P&amp;L · top ten closed lots</div>
 
-{% set _closed = closed_lots | default([
-  {'ticker': 'NVDA',     'entry': '2026-02-14', 'exit': '2026-04-08', 'qty': 4,  'cost':  2540.00, 'proceeds':  3180.00, 'pnl':  640.00,  'spark': [0.2, 0.3, 0.4, 0.55, 0.65, 0.72, 0.80, 0.88]},
-  {'ticker': 'MSFT',     'entry': '2026-03-12', 'exit': '2026-04-11', 'qty': 8,  'cost':  2682.00, 'proceeds':  2940.00, 'pnl':  258.00,  'spark': [0.3, 0.36, 0.42, 0.44, 0.52, 0.58, 0.62, 0.66]},
-  {'ticker': 'AAPL',     'entry': '2026-01-28', 'exit': '2026-04-14', 'qty': 6,  'cost':  1034.40, 'proceeds':  1182.00, 'pnl':  147.60,  'spark': [0.4, 0.42, 0.48, 0.52, 0.58, 0.60, 0.64, 0.66]},
-  {'ticker': '005930.KS','entry': '2026-03-03', 'exit': '2026-04-16', 'qty': 20, 'cost':  1440.00, 'proceeds':  1596.00, 'pnl':  156.00,  'spark': [0.5, 0.52, 0.56, 0.58, 0.62, 0.64, 0.68, 0.72]},
-  {'ticker': 'GOOGL',    'entry': '2026-02-20', 'exit': '2026-04-03', 'qty': 5,  'cost':   745.00, 'proceeds':   812.00, 'pnl':   67.00,  'spark': [0.3, 0.28, 0.34, 0.38, 0.42, 0.46, 0.48, 0.52]},
-  {'ticker': 'AVGO',     'entry': '2026-03-20', 'exit': '2026-04-18', 'qty': 2,  'cost':  2560.00, 'proceeds':  2748.00, 'pnl':  188.00,  'spark': [0.4, 0.42, 0.48, 0.52, 0.58, 0.62, 0.66, 0.72]},
-  {'ticker': 'NFLX',     'entry': '2026-02-05', 'exit': '2026-04-09', 'qty': 3,  'cost':  1890.00, 'proceeds':  2022.00, 'pnl':  132.00,  'spark': [0.4, 0.44, 0.48, 0.50, 0.54, 0.58, 0.60, 0.64]},
-  {'ticker': 'QCOM',     'entry': '2026-03-18', 'exit': '2026-04-12', 'qty': 10, 'cost':  1580.00, 'proceeds':  1492.00, 'pnl':  -88.00,  'spark': [0.5, 0.48, 0.46, 0.44, 0.42, 0.40, 0.38, 0.36]},
-  {'ticker': 'INTC',     'entry': '2026-02-22', 'exit': '2026-04-05', 'qty': 15, 'cost':   585.00, 'proceeds':   536.25, 'pnl':  -48.75,  'spark': [0.5, 0.48, 0.46, 0.44, 0.42, 0.40, 0.38, 0.38]},
-  {'ticker': '000660.KS','entry': '2026-03-28', 'exit': '2026-04-19', 'qty': 5,  'cost':   725.00, 'proceeds':   831.00, 'pnl':  106.00,  'spark': [0.5, 0.52, 0.54, 0.58, 0.62, 0.66, 0.70, 0.74]},
-]) %}
-
+{% set _closed = closed_lots | default([]) %}
+{% if _closed %}
 <table class="ld-table">
   <thead>
     <tr>
@@ -659,6 +651,12 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% else %}
+<p class="sp-deck" style="font-style:italic; color:#6B6B6B; margin-top: 20pt;">
+  No closed lots recorded for this month.
+</p>
+{% endif %}
 
 <div class="ld-section-title">Cash flow summary · {{ month_label }}</div>
 
@@ -745,18 +743,8 @@
       <div class="aq-quad">
         <div class="aq-quad-label">Q2 · Contributors &amp; Detractors</div>
         <div class="aq-quad-sub">Top five either side, USD.</div>
-        {% set _cd = contrib_detract | default([
-          {'t':'NVDA',      'v':  1420},
-          {'t':'MSFT',      'v':   860},
-          {'t':'AAPL',      'v':   540},
-          {'t':'005930.KS', 'v':   380},
-          {'t':'AVGO',      'v':   320},
-          {'t':'QCOM',      'v':   -88},
-          {'t':'INTC',      'v':   -49},
-          {'t':'BABA',      'v':   -68},
-          {'t':'META',      'v':  -112},
-          {'t':'TSLA',      'v':  -190},
-        ]) %}
+        {% set _cd = contrib_detract | default([]) %}
+        {% if _cd %}
         {% set _cdabs = _cd | map(attribute='v') | map('abs') | list %}
         {% set _cdmax = _cdabs | max %}
         {% if _cdmax == 0 %}{% set _cdmax = 1 %}{% endif %}
@@ -773,22 +761,19 @@
           {% endfor %}
           <line x1="120" y1="2" x2="120" y2="106" stroke="#0A0A0A" stroke-width="0.3" opacity="0.55"/>
         </svg>
+        {% else %}
+        <div style="font-style:italic; color:#6B6B6B; padding: 40pt 6pt; text-align:center;">
+          Contribution / detraction data unavailable for this period.
+        </div>
+        {% endif %}
       </div>
 
       {# ── Q3 · Dividend timeline ── #}
       <div class="aq-quad">
         <div class="aq-quad-label">Q3 · Dividend Timeline</div>
         <div class="aq-quad-sub">Events this month, gross amount.</div>
-        {% set _divs = dividend_events | default([
-          {'day': 3,  't':'AAPL',     'amt':  12.00},
-          {'day': 8,  't':'MSFT',     'amt':  48.00},
-          {'day': 12, 't':'AVGO',     'amt':  42.00},
-          {'day': 15, 't':'KO',       'amt':  18.00},
-          {'day': 18, 't':'005930.KS','amt':  68.00},
-          {'day': 21, 't':'JNJ',      'amt':  22.00},
-          {'day': 24, 't':'PG',       'amt':  16.00},
-          {'day': 28, 't':'XOM',      'amt':  38.00},
-        ]) %}
+        {% set _divs = dividend_events | default([]) %}
+        {% if _divs %}
         {% set _damax = _divs | map(attribute='amt') | list | max %}
         {% if _damax == 0 %}{% set _damax = 1 %}{% endif %}
         <svg viewBox="0 0 240 110" width="100%" height="168" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
@@ -806,6 +791,11 @@
             <text x="{{ _tx }}" y="100" text-anchor="middle" fill="#8a8a8a" font-size="5.8" font-family="JetBrains Mono, monospace">D{{ day }}</text>
           {% endfor %}
         </svg>
+        {% else %}
+        <div style="font-style:italic; color:#6B6B6B; padding: 40pt 6pt; text-align:center;">
+          No dividend events recorded this month.
+        </div>
+        {% endif %}
       </div>
 
       {# ── Q4 · Fee / cost breakdown ── #}
@@ -921,10 +911,18 @@
       <strong>{{ month_label }}</strong>. Issue
       <strong>No. {{ '%02d' % _issue_no }}</strong> of the Monthly Finance series.
     </p>
+    {# Wave 6 — direct 'Alpaca Broker API (read-only)' and 'FX rate
+       observation via Alpaca FX…' strings removed. Positions/trade and
+       currency provenance now injected from `resolve_user_data_lineage`;
+       a KR-only user is never told they're connected to Alpaca
+       (표시광고법 §3). Corporate-actions + dividend lines are public
+       aggregators shared across users. #}
+    {% if positions_source %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data · Positions &amp; Trades</span> &nbsp;
-      Alpaca Broker API (read-only).
+      {{ positions_source }}
     </p>
+    {% endif %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data · Corporate Actions</span> &nbsp;
       FMP v4 Stable &middot; SEC EDGAR filings.
@@ -933,10 +931,12 @@
       <span class="co-key">Data · Dividend Calendar</span> &nbsp;
       NASDAQ dividend history &middot; issuer press releases.
     </p>
+    {% if currencies_source %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data · Currencies</span> &nbsp;
-      FX rate observation via Alpaca FX for KRW-denominated accounts.
+      {{ currencies_source }}
     </p>
+    {% endif %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;
       {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.

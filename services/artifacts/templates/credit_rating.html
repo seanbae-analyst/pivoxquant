@@ -538,19 +538,8 @@
   observed yield-to-maturity, duration, and option-adjusted spread.
 </p>
 
-{% set _pos = positions | default([
-  {'sym':'US-TSY-10Y',     'issuer':'U.S. Treasury',      'rating':'AAA', 'weight':12.0, 'ytm':4.20, 'dur':8.4, 'spread':  0, 'spark':[0.5,0.52,0.54,0.56,0.58,0.60,0.62,0.64]},
-  {'sym':'MSFT 2.52 2031', 'issuer':'Microsoft',          'rating':'AAA', 'weight': 8.0, 'ytm':4.65, 'dur':6.2, 'spread': 45, 'spark':[0.5,0.51,0.53,0.55,0.57,0.58,0.60,0.61]},
-  {'sym':'AAPL 3.35 2029', 'issuer':'Apple',              'rating':'AA',  'weight': 7.2, 'ytm':4.78, 'dur':4.9, 'spread': 58, 'spark':[0.5,0.52,0.54,0.55,0.57,0.59,0.60,0.62]},
-  {'sym':'JNJ 2.90 2028',  'issuer':'Johnson & J.',       'rating':'AA',  'weight': 6.8, 'ytm':4.82, 'dur':4.1, 'spread': 62, 'spark':[0.5,0.51,0.53,0.55,0.56,0.58,0.60,0.61]},
-  {'sym':'GS 4.25 2030',   'issuer':'Goldman Sachs',      'rating':'A',   'weight':10.4, 'ytm':5.12, 'dur':5.6, 'spread': 92, 'spark':[0.5,0.52,0.55,0.57,0.60,0.62,0.64,0.65]},
-  {'sym':'F 5.40 2029',    'issuer':'Ford Motor Co.',     'rating':'BBB', 'weight':11.2, 'ytm':5.88, 'dur':4.3, 'spread':168, 'spark':[0.5,0.52,0.54,0.57,0.60,0.64,0.66,0.69]},
-  {'sym':'T 4.90 2030',    'issuer':'AT&T',               'rating':'BBB', 'weight': 9.6, 'ytm':5.64, 'dur':5.2, 'spread':144, 'spark':[0.5,0.51,0.53,0.55,0.58,0.60,0.62,0.63]},
-  {'sym':'CCL 6.00 2029',  'issuer':'Carnival',           'rating':'BB',  'weight': 6.4, 'ytm':7.20, 'dur':3.8, 'spread':300, 'spark':[0.5,0.52,0.54,0.56,0.59,0.62,0.66,0.68]},
-  {'sym':'RIG 7.50 2031',  'issuer':'Transocean',         'rating':'B',   'weight': 4.2, 'ytm':9.12, 'dur':4.4, 'spread':492, 'spark':[0.5,0.53,0.55,0.58,0.62,0.66,0.70,0.73]},
-  {'sym':'UHC 8.00 2028',  'issuer':'Utility Holdings',   'rating':'CCC', 'weight': 2.4, 'ytm':11.40,'dur':3.2, 'spread':720, 'spark':[0.5,0.52,0.56,0.60,0.65,0.70,0.74,0.78]}
-]) %}
-
+{% set _pos = positions | default([]) %}
+{% if _pos %}
 <table class="ld-table">
   <thead>
     <tr>
@@ -598,6 +587,12 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% else %}
+<p class="sp-deck" style="font-style:italic; color:#6B6B6B; margin-top: 20pt;">
+  No fixed-income positions on file for this period.
+</p>
+{% endif %}
 
 <p class="sp-deck" style="margin-top: 10pt; font-size: 9.2pt;">
   Sparkline reads the trailing twelve-month OAS trajectory; bronze end-dot

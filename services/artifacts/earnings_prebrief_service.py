@@ -170,6 +170,14 @@ class PreBriefContext:
     sensitivity_miss:    Optional[float]   # $ PnL if -3% miss
     risk_notes:          list[str]
     disclaimer:          str
+    # Wave 6 — colophon provenance. Populated from
+    # `resolve_user_data_lineage(user_id)`. Empty list means the template
+    # renders a neutral "Data sources not specified" line; never a
+    # hardcoded broker-name fallback. `option_source` is a separate
+    # scalar because the option-chain section is a prose paragraph,
+    # not part of the colophon lineage list.
+    data_sources:        list[dict[str, str]]
+    option_source:       Optional[str]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -194,6 +202,8 @@ class PreBriefContext:
             "sensitivity_miss":   self.sensitivity_miss,
             "risk_notes":         self.risk_notes,
             "disclaimer":         self.disclaimer,
+            "data_sources":       self.data_sources,
+            "option_source":      self.option_source,
         }
 
 
@@ -603,6 +613,25 @@ class EarningsPreBriefService:
 
         company_name = quote.get("name") or ticker
 
+        # Wave 6 — colophon data lineage. Only include broker rows for a
+        # user who is actually connected. Option-chain provenance is a
+        # separate scalar because the section is a prose paragraph, not
+        # part of the colophon list; we claim "CBOE via Alpaca" only for
+        # Alpaca-connected users.
+        try:
+            from services.artifacts.data_source_resolver import (
+                resolve_user_data_lineage, _has_active_alpaca,
+            )
+            data_sources = resolve_user_data_lineage(user_id)
+            option_source: Optional[str] = (
+                "CBOE via Alpaca" if _has_active_alpaca(user_id) else None
+            )
+        except Exception as exc:
+            logger.debug("earnings_prebrief lineage resolve failed for user %s: %s",
+                         user_id, exc)
+            data_sources = []
+            option_source = None
+
         ctx = PreBriefContext(
             user_id=user_id,
             user_name=user.name or user.email.split("@")[0],
@@ -625,6 +654,8 @@ class EarningsPreBriefService:
             sensitivity_miss=sens_miss,
             risk_notes=risk_notes,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+            data_sources=data_sources,
+            option_source=option_source,
         )
         return ctx.to_dict()
 

@@ -372,14 +372,14 @@
 
 {# ── local helpers ─────────────────────────────────────────────────────── #}
 {% set _issue_no = issue_number | default(2) %}
-{% set _doc_ref = doc_ref | default('PQ-DD-' ~ ticker ~ '-' ~ (period_label | default('Q2-2026'))) %}
+{% set _doc_ref = doc_ref | default('PQ-DD' ~ ('-' ~ ticker if ticker else '') ~ ('-' ~ period_label if period_label else '')) %}
 {% set _hero = hero_headline | default([
   'Questions, patiently asked.',
   'Answers, honestly recorded.',
   'A checklist is not a verdict.',
 ]) %}
 
-{% set _kpi_ticker       = ticker | default('AAPL') %}
+{% set _kpi_ticker       = ticker | default(none) %}
 {% set _kpi_completeness = completeness_text | default('24 / 30') %}
 {% set _kpi_redflags     = red_flags | default(0) %}
 {% set _kpi_review       = review_date | default('2026-04-21') %}
@@ -399,8 +399,8 @@
   <div class="cv-rule-thin"></div>
   <div class="cv-issue">
     DD CHECKLIST <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
-    &nbsp;·&nbsp; {{ _kpi_ticker }}
-    &nbsp;·&nbsp; {{ period_label | default('Q2 2026') }}
+    {% if _kpi_ticker %}&nbsp;·&nbsp; {{ _kpi_ticker }}{% endif %}
+    {% if period_label %}&nbsp;·&nbsp; {{ period_label }}{% endif %}
   </div>
   <div class="cv-rule-thin"></div>
 
@@ -411,11 +411,13 @@
   <div class="cv-rule-thin"></div>
 
   <div class="cv-kpi4">
+    {% if _kpi_ticker %}
     <div class="cv-kpi">
       <div class="cv-kpi-label">Ticker</div>
       <div class="cv-kpi-value">{{ _kpi_ticker }}</div>
       <div class="cv-kpi-foot">Subject of observation.</div>
     </div>
+    {% endif %}
     <div class="cv-kpi">
       <div class="cv-kpi-label">Completeness</div>
       <div class="cv-kpi-value">{{ _kpi_completeness }}</div>
@@ -433,7 +435,7 @@
     </div>
   </div>
 
-  <div class="cv-slug">DD CHECKLIST &middot; {{ _kpi_ticker }} &middot; {{ period_label | default('Q2 2026') }}</div>
+  <div class="cv-slug">DD CHECKLIST{% if _kpi_ticker %} &middot; {{ _kpi_ticker }}{% endif %}{% if period_label %} &middot; {{ period_label }}{% endif %}</div>
 
   <p class="cv-foot">
     <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
@@ -737,7 +739,7 @@
         <!-- Q1: Quarterly revenue 8Q bar -->
         <div class="rq-quad">
           <div class="rq-quad-label">Quarterly Revenue · 8Q</div>
-          <div class="rq-quad-value">{{ quarterly_label | default('$94.9B · Q4 FY25') }}</div>
+          <div class="rq-quad-value">{{ quarterly_label | default(none) }}</div>
           {% set _qr = quarterly_revenue | default([78.4, 81.2, 85.5, 89.5, 82.9, 90.8, 94.9, 119.6]) %}
           {% set _qmax = _qr | max %}
           <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
@@ -791,7 +793,7 @@
         <!-- Q3: FCF 5Y bar -->
         <div class="rq-quad">
           <div class="rq-quad-label">Free Cash Flow · 5Y</div>
-          <div class="rq-quad-value">{{ fcf_label | default('$99.8B · FY25') }}</div>
+          <div class="rq-quad-value">{{ fcf_label | default(none) }}</div>
           {% set _fcf = fcf_history | default([73.4, 80.2, 92.9, 96.4, 99.8]) %}
           {% set _fmax = _fcf | max %}
           <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
@@ -816,13 +818,9 @@
         <!-- Q4: Peer comparison bar -->
         <div class="rq-quad">
           <div class="rq-quad-label">Peer Comparison · P/E TTM</div>
-          <div class="rq-quad-value">{{ peer_label | default('28.4 · 32.1 · 24.8 · 26.2') }}</div>
-          {% set _peers = peer_bars | default([
-            {'name': 'AAPL', 'v': 28.4},
-            {'name': 'MSFT', 'v': 32.1},
-            {'name': 'GOOG', 'v': 24.8},
-            {'name': 'META', 'v': 26.2},
-          ]) %}
+          {% set _peers = peer_bars | default([]) %}
+          {% if _peers %}
+          <div class="rq-quad-value">{{ peer_label | default('') }}</div>
           {% set _pmax = (_peers | map(attribute='v') | max) %}
           <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
                xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
@@ -843,6 +841,12 @@
             <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">P/E · TTM · SUBJECT vs PEERS</text>
           </svg>
           <div class="rq-quad-foot">Ink bar · subject. Bronze bars · sector peers.</div>
+          {% else %}
+          <div class="rq-quad-value" style="color:#6B6B6B;">—</div>
+          <div class="rq-quad-foot" style="font-style:italic; margin-top: 18pt;">
+            Peer data unavailable for this ticker.
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -953,7 +957,7 @@
       <strong>{{ generated_at }}</strong>. DD Checklist
       <strong>No. {{ '%02d' % _issue_no }}</strong> &middot;
       Subject <strong>{{ _kpi_ticker }}</strong> &middot;
-      Period <strong>{{ period_label | default('Q2 2026') }}</strong>.
+      {% if period_label %}Period <strong>{{ period_label }}</strong>.{% endif %}
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data sources</span>

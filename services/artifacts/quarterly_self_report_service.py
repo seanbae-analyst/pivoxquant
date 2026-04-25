@@ -167,6 +167,11 @@ class QuarterlyContext:
     # P12 / P13 already inside decision_quality
     watch_items:         list[dict[str, Any]]
     disclaimer:          str
+    # Wave 6 — colophon provenance. Populated from
+    # `resolve_user_data_lineage` with include_journal=True (the
+    # quarterly self-report narrates the user's own decisions and
+    # journal notes).
+    data_sources:        list[dict[str, str]]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -192,6 +197,7 @@ class QuarterlyContext:
             "thesis_checklist":    self.thesis_checklist,
             "watch_items":         self.watch_items,
             "disclaimer":          self.disclaimer,
+            "data_sources":        self.data_sources,
         }
 
 
@@ -616,6 +622,21 @@ class QuarterlySelfReportService:
             "segments":             segments,
         })
 
+        # Wave 6 — colophon data lineage. Include observation-journal
+        # row because the quarterly self-report is explicitly a
+        # reflection on the user's own decisions.
+        try:
+            from services.artifacts.data_source_resolver import (
+                resolve_user_data_lineage,
+            )
+            data_sources = resolve_user_data_lineage(
+                user_id, include_journal=True,
+            )
+        except Exception as exc:
+            logger.debug("quarterly_self_report lineage resolve failed for user %s: %s",
+                         user_id, exc)
+            data_sources = []
+
         ctx = QuarterlyContext(
             user_id=user_id,
             user_name=user.name or user.email.split("@")[0],
@@ -651,6 +672,7 @@ class QuarterlySelfReportService:
                 "정보 제공 목적이며 투자 권유가 아닙니다. "
                 "투자 판단은 본인 책임입니다."
             ),
+            data_sources=data_sources,
         )
         return ctx.to_dict()
 

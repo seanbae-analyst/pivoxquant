@@ -900,12 +900,7 @@
   <div class="co-rule-small"></div>
 
   <div class="co-body">
-    {% set _sources = data_sources | default([
-      {'key':'Price observations', 'note':'Alpaca Market Data (IEX consolidated).'},
-      {'key':'Corporate actions',  'note':'FMP v4 Stable.'},
-      {'key':'Risk-free',          'note':'3-Month T-Bill via FRED (DGS3MO).'},
-      {'key':'Benchmark',          'note':'SPY total return, with dividends.'}
-    ]) %}
+    {% set _sources = data_sources | default([]) %}
     {% for s in _sources %}
       <p style="margin: 0 0 10pt 0;">
         <span class="co-key">{{ s.key }}</span> &nbsp; {{ s.note }}

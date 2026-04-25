@@ -172,6 +172,8 @@ class RiskBoardContext:
     # AI narrative
     top_risks:         str               # scrubbed paragraph
     disclaimer:        str
+    # Wave 6 — colophon provenance via `resolve_user_data_lineage`.
+    data_sources:      list[dict[str, str]]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -198,6 +200,7 @@ class RiskBoardContext:
             "layer_status":     self.layer_status,
             "top_risks":        self.top_risks,
             "disclaimer":       self.disclaimer,
+            "data_sources":     self.data_sources,
         }
 
 
@@ -619,6 +622,17 @@ class RiskBoardService:
         else:
             period_label = now.strftime("%B %Y")
 
+        # Wave 6 — colophon data lineage.
+        try:
+            from services.artifacts.data_source_resolver import (
+                resolve_user_data_lineage,
+            )
+            data_sources = resolve_user_data_lineage(user_id)
+        except Exception as exc:
+            logger.debug("risk_board lineage resolve failed for user %s: %s",
+                         user_id, exc)
+            data_sources = []
+
         ctx = RiskBoardContext(
             user_id=user_id,
             user_name=user.name or user.email.split("@")[0],
@@ -643,6 +657,7 @@ class RiskBoardService:
             layer_status=layer_status,
             top_risks=narrative,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+            data_sources=data_sources,
         )
         return ctx.to_dict()
 

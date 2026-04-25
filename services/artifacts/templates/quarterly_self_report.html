@@ -541,11 +541,7 @@
   </div>
 
   <div class="le-margin">
-    {% set _margin = margin_notes | default([
-      {'eyebrow': 'Sharpe · quarter',  'note': 'Observed at 1.08 over the window. Not annualised into the future.'},
-      {'eyebrow': 'Beta · 90D',        'note': 'Book-to-SPY beta 0.92 over trailing 90 sessions. Quietly below one.'},
-      {'eyebrow': 'Turnover',          'note': '28% in the quarter. Monthly rebalance on the last trading day, held without exception.'},
-    ]) %}
+    {% set _margin = margin_notes | default([]) %}
     {% for m in _margin %}
       <div class="le-margin-block">
         <div class="le-margin-eyebrow">{{ m.eyebrow }}</div>
@@ -568,19 +564,8 @@
   are descriptive — factual record, not a directive.
 </p>
 
-{% set _ladder = decision_ladder | default([
-  {'date': '2026-01-08', 'action': 'Open',    'ticker': 'NVDA', 'weight_delta':  4.2, 'rationale': 'Sizing per plan',                'pnl_pct':  12.4, 'spark': [0, 0.6, 1.8, 3.2, 4.8, 7.6, 12.4]},
-  {'date': '2026-01-14', 'action': 'Trim',    'ticker': 'TSLA', 'weight_delta': -1.8, 'rationale': 'Position size reduction',        'pnl_pct':  -2.1, 'spark': [0, 0.3, -0.4, -1.2, -1.8, -2.0, -2.1]},
-  {'date': '2026-01-22', 'action': 'Add',     'ticker': 'AAPL', 'weight_delta':  2.0, 'rationale': 'Rebalance per plan',             'pnl_pct':   5.8, 'spark': [0, 0.4, 1.2, 2.4, 3.8, 5.0, 5.8]},
-  {'date': '2026-02-04', 'action': 'Open',    'ticker': 'AVGO', 'weight_delta':  3.0, 'rationale': 'New thesis entry',               'pnl_pct':   9.1, 'spark': [0, 0.8, 2.2, 4.1, 6.2, 8.0, 9.1]},
-  {'date': '2026-02-11', 'action': 'Trim',    'ticker': 'XLY',  'weight_delta': -2.4, 'rationale': 'Sector weight reduction',        'pnl_pct':   1.2, 'spark': [0, 0.2, 0.5, 0.8, 1.0, 1.1, 1.2]},
-  {'date': '2026-02-19', 'action': 'Cash',    'ticker': 'CASH', 'weight_delta':  2.4, 'rationale': 'Cash buffer increase',           'pnl_pct':   0.4, 'spark': [0, 0.1, 0.1, 0.2, 0.3, 0.3, 0.4]},
-  {'date': '2026-02-27', 'action': 'Add',     'ticker': 'MSFT', 'weight_delta':  1.5, 'rationale': 'Rebalance per plan',             'pnl_pct':   3.2, 'spark': [0, 0.3, 0.8, 1.6, 2.4, 2.9, 3.2]},
-  {'date': '2026-03-06', 'action': 'Close',   'ticker': 'NKE',  'weight_delta': -2.2, 'rationale': 'Thesis marked stale',            'pnl_pct':  -5.8, 'spark': [0, -0.4, -1.2, -2.4, -3.8, -4.9, -5.8]},
-  {'date': '2026-03-14', 'action': 'Observe', 'ticker': 'BOOK', 'weight_delta':  0.0, 'rationale': 'Drawdown day (\u22122.1% print)', 'pnl_pct': -2.1, 'spark': [0, -0.2, -0.8, -1.6, -2.0, -2.1, -2.1]},
-  {'date': '2026-03-27', 'action': 'Rebal',   'ticker': 'BOOK', 'weight_delta':  0.0, 'rationale': 'Monthly rebalance (per plan)',   'pnl_pct':   0.6, 'spark': [0, 0.1, 0.2, 0.3, 0.5, 0.6, 0.6]},
-]) %}
-
+{% set _ladder = decision_ladder | default([]) %}
+{% if _ladder %}
 <table class="ld-table">
   <thead>
     <tr>
@@ -627,6 +612,12 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% else %}
+<p class="sp-deck" style="font-style:italic; color:#6B6B6B; margin-top: 20pt;">
+  No decisions recorded in the quarter's log yet.
+</p>
+{% endif %}
 
 <div style="margin-top: 10pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 8.5pt; color: #8a8a8a;">
   Ten decisions in the order made. Bronze end-dot marks the most recent read
@@ -852,13 +843,16 @@
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data</span> &nbsp;
-      {% set _ds = data_sources | default([
-        {'key': 'Price observations', 'note': 'Alpaca Market Data (IEX consolidated).'},
-        {'key': 'Corporate actions',  'note': 'FMP v4 Stable.'},
-        {'key': 'Risk-free',          'note': '3-Month T-Bill via FRED (DGS3MO).'},
-        {'key': 'Benchmark',          'note': 'S&P 500 total return, with dividends.'},
-      ]) %}
-      {% for d in _ds %}{{ d.note }}{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+      {# Wave 6 — 'Alpaca Market Data (IEX consolidated).' prose-embedded
+         fallback removed. Service populates `data_sources` from real
+         connections via `resolve_user_data_lineage`; empty list renders
+         a neutral sentence (표시광고법 §3 기만표시 방어선). #}
+      {% set _ds = data_sources | default([]) %}
+      {% if _ds %}
+        {% for d in _ds %}{% if d.note is defined %}{{ d.note }}{% elif d.description is defined %}{{ d.description }}{% else %}{{ d.source | default('') }}{% endif %}{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+      {% else %}
+        Data sources not specified. Connect your broker in Settings to see data lineage.
+      {% endif %}
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;
