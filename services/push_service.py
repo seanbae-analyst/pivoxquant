@@ -26,7 +26,7 @@ def notify_alert(user_id: int, alert_data: dict):
         user_id=user_id,
         title=title,
         body=message[:200],
-        url=f"/alerts",
+        url="/alerts",
     )
 
 
@@ -37,7 +37,7 @@ def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: flo
     except ImportError:
         return
 
-    title = f"PivoxQuant — Trade Executed"
+    title = "PivoxQuant — Trade Executed"
     body = f"{action.upper()} {shares} shares of {ticker} @ ${price:,.2f}"
 
     send_push_to_user(user_id=user_id, title=title, body=body, url="/trades")

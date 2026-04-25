@@ -23,7 +23,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import ssl
 import urllib.request

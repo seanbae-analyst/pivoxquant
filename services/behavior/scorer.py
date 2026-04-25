@@ -40,7 +40,6 @@ import json
 import logging
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
-from typing import Iterable
 
 from extensions import db
 from models import (
@@ -50,10 +49,8 @@ from models import (
     PreTradeReflection,
     SUB_SCORE_KEYS,
     TradeHistory,
-    User,
 )
 from services.legal.forbidden_terms import (
-    FORBIDDEN_DIRECTIVE_TERMS,
     contains_forbidden_term,
 )
 from services.legal_filter import safe_scrub

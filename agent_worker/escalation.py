@@ -1,5 +1,4 @@
 """Human-in-the-loop escalation — Slack webhook for critical decisions."""
-import json
 import logging
 from datetime import datetime, timezone
 

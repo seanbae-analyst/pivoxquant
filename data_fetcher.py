@@ -383,7 +383,8 @@ class DataFetcher:
     def _score_news_with_ai(self, ticker: str, news: list) -> "tuple[float, list[dict]] | None":
         """Use Claude Haiku for context-aware news sentiment analysis."""
         try:
-            import os, anthropic
+            import os
+            import anthropic
             # dotenv는 app.py 시작 시점에 이미 로드됨. Railway에선 환경변수로 주입.
             api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
             if not api_key:
@@ -411,7 +412,8 @@ Reply ONLY in this exact JSON format, nothing else:
 {{"score": <number 0-100>, "sentiment": "<bullish/bearish/neutral>", "reason": "<1 sentence why>", "reason_kr": "<same in Korean>"}}"""
                 }]
             )
-            import json, re
+            import json
+            import re
             raw = resp.content[0].text.strip()
             # Strip markdown code fences if present
             raw = re.sub(r'^```(?:json)?\s*', '', raw)

@@ -20,10 +20,8 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from extensions import db
 from models import (
     AITwinPortfolio,
-    AITwinPosition,
     AITwinTrade,
     AITwinWeeklyReport,
 )

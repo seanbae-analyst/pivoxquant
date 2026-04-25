@@ -613,7 +613,7 @@ class YearEndLetterService:
         from_email = os.environ.get(
             "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
-        subject = f"PivoxQuant Year-End Investor Letter — for you only"
+        subject = "PivoxQuant Year-End Investor Letter — for you only"
 
         sg_key = os.environ.get("SENDGRID_API_KEY")
         if sg_key:

@@ -29,7 +29,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import ssl
 import urllib.request

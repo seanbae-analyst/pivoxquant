@@ -762,7 +762,7 @@ class QuarterlySelfReportService:
         from_email = os.environ.get(
             "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
-        subject = f"PivoxQuant Quarterly Self Report"
+        subject = "PivoxQuant Quarterly Self Report"
 
         sg_key = os.environ.get("SENDGRID_API_KEY")
         if sg_key:

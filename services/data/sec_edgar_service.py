@@ -152,7 +152,7 @@ class SECEdgarService:
         t = (ticker or "").upper().strip()
         if not t:
             return None
-        cache_key = f"cik_map"
+        cache_key = "cik_map"
         mapping = cls._cache_get(cache_key)
         if mapping is None:
             data = cls._http_get(f"{_EDGAR_WWW}/files/company_tickers.json")

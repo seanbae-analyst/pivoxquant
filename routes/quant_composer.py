@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
@@ -29,8 +29,6 @@ from models import InvestmentProfile
 from services.quant.composer import (
     PERSONA_QUANT_PRESETS,
     apply_persona_preset,
-    apply_user_composition,
-    get_persona_preset,
     validate_composition,
 )
 from services.quant.model_catalog import CATEGORIES, MODEL_BY_NAME, MODEL_CATALOG

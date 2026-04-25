@@ -36,7 +36,7 @@ from typing import Iterable
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
-from models import PersonaSnapshot, TradeHistory, User
+from models import PersonaSnapshot, TradeHistory
 from services.profile.common_util import utc_now as _utc_now
 from services.profile.persona_classifier_v2 import (
     FEATURE_KEYS,

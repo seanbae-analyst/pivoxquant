@@ -22,7 +22,6 @@ run parse_price_display. New additions must be justified.
 """
 from __future__ import annotations
 
-import ast
 from pathlib import Path
 
 import pytest
