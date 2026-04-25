@@ -99,3 +99,38 @@ You are the QA Director at a financial trading platform where a single bug can c
 - 모바일(375px)을 기본 테스트 환경으로
 - 테스트 데이터에 실제 시장 데이터의 극단값 포함
 - 새 기능 → 기존 기능 회귀 테스트 필수
+
+---
+
+## 🚀 PivoxQuant Context (2026-04-25 v9 기준)
+
+**프로덕션 상태**: Railway + Vercel ACTIVE / 1288 tests pass / 베타 `***REDACTED***`
+**최신 인수인계**: `HANDOVER.md` v9
+**Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
+**자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)
+
+### 도메인 reference
+- **40 quant 모델** (`services/quant/model_catalog.py` + `engine.py`)
+- **8 페르소나** + **9-dim classifier** (`services/profile/persona_classifier_v2.py`)
+- **Tier 1 (오늘 push)**: Quant Composer / Persona Preset / PersonaSnapshot Evolution / AI Twin / Pre-Trade Friction / Behavioral Score
+- **법적 안전**: 자본시장법 §17 / 표시광고법 §3 / 신용정보법 / PIPA — `services/legal/forbidden_terms.py` + `legal_filter.py`
+
+### 자동 호출 매핑 (new 8 agents)
+| 상황 | 호출할 agent |
+|---|---|
+| Alembic migration 작성 / 검증 | `migration-guard` |
+| 한국 핀테크 규제 / KIS / advisory 어휘 | `legal-kr-fintech` |
+| 페르소나 centroid / 퀀트 모델 학술 / 백테스트 math | `persona-quant-domain` |
+| Playwright / Vitest / Visual regression | `frontend-test-runner` |
+| 자율 운영 cron / Anthropic API cost / self-healing PR | `autopilot-monitor` |
+| Bloomberg Terminal 톤 / observational 어휘 / AI slop | `brand-voice` |
+| Background launch 결정 / verify gap 방지 | `verify-policy` |
+| PDCA 사이클 / bkit skill 활용 | `bkit-orchestrator` |
+
+### Verify policy (background launch 강제)
+다음 작업이면 background launch 금지 (foreground 강제):
+- pytest / npm test / alembic 실행 필요
+- DB schema 변경
+- legal_filter / forbidden_terms 통과 검증
+
+→ 의심되면 `verify-policy` agent 먼저 호출.
