@@ -8,7 +8,6 @@ PivoxQuant — Advanced Quant Models
 
 import numpy as np
 import logging
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -156,8 +155,8 @@ class StatArb:
             signal = {
                 **signal,
                 "signal": "DISABLED",
-                "action": f"Pair correlation too low for statistical arbitrage",
-                "action_kr": f"페어 상관관계가 통계적 차익거래에 부적합",
+                "action": "Pair correlation too low for statistical arbitrage",
+                "action_kr": "페어 상관관계가 통계적 차익거래에 부적합",
                 "confidence": 0,
             }
             warning = (
@@ -515,6 +514,7 @@ class CrossAssetMomentum:
     @classmethod
     def analyze(cls):
         """Analyze cross-asset momentum and correlations — FMP API."""
+        import pandas as pd
         import fmp_service as fmp
 
         tickers = list(cls.ASSETS.keys())
