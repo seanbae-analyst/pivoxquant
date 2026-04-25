@@ -101,6 +101,7 @@ class AuditContext:
     best_decisions:       list[dict[str, Any]]   # top 3
     worst_decisions:      list[dict[str, Any]]   # top 3
     pattern_summary:      str      # AI-generated 1-paragraph observation
+    data_sources:         list[str]
     disclaimer:           str
 
     def to_dict(self) -> dict[str, Any]:
@@ -119,6 +120,7 @@ class AuditContext:
             "best_decisions":  self.best_decisions,
             "worst_decisions": self.worst_decisions,
             "pattern_summary": self.pattern_summary,
+            "data_sources":    self.data_sources,
             "disclaimer":      self.disclaimer,
         }
 
@@ -372,6 +374,23 @@ class SelfAuditService:
 
         pattern = _pattern_summary(scored, win_rate, avg_ret)
 
+        # Data-source provenance — Wave 5. The quarterly self-audit
+        # narrates the user's own decisions, so in addition to the
+        # always-truthful system sources we surface the observation
+        # journal (which reflects the user's reflective notes) and
+        # any broker actually connected.
+        try:
+            from services.artifacts.data_source_resolver import (
+                resolve_user_data_sources,
+            )
+            data_sources = resolve_user_data_sources(
+                user_id, include_journal=True,
+            )
+        except Exception as exc:
+            logger.debug("data_source resolve failed for user %s: %s",
+                         user_id, exc)
+            data_sources = []
+
         ctx = AuditContext(
             user_id=user_id,
             user_name=user.name or user.email.split("@")[0],
@@ -387,6 +406,7 @@ class SelfAuditService:
             best_decisions=best,
             worst_decisions=worst,
             pattern_summary=pattern,
+            data_sources=data_sources,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
         )
         return ctx.to_dict()

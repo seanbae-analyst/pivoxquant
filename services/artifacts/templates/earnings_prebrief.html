@@ -8,7 +8,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title>Earnings Pre-Brief — {{ ticker | default('AAPL') }} {{ fiscal_period | default('Q2 FY26') }} — {{ user_name | default('Reader') }}</title>
+  <title>Earnings Pre-Brief{% if ticker %} — {{ ticker }}{% endif %}{% if fiscal_period %} {{ fiscal_period }}{% endif %} — {{ user_name | default('Reader') }}</title>
   <style>
     @page {
       size: A4;
@@ -22,7 +22,7 @@
         color: #B8956A;
       }
       @top-right {
-        content: "BRIEF No. " counter(page, decimal-leading-zero) "  ·  {{ ticker | default('AAPL') }} {{ fiscal_period | default('Q2 FY26') }}";
+        content: "BRIEF No. " counter(page, decimal-leading-zero){% if ticker %} "  ·  {{ ticker }}"{% endif %}{% if fiscal_period %} " {{ fiscal_period }}"{% endif %};
         font-family: "JetBrains Mono", monospace;
         font-size: 7pt;
         letter-spacing: 0.14em;
@@ -404,9 +404,9 @@
 <body>
 
 {# ── local helpers ──────────────────────────────────────────────────────── #}
-{% set _ticker = ticker | default('AAPL') %}
-{% set _company = company_name | default('Apple Inc.') %}
-{% set _fiscal = fiscal_period | default('Q2 FY26') %}
+{% set _ticker = ticker | default(none) %}
+{% set _company = company_name | default(none) %}
+{% set _fiscal = fiscal_period | default(none) %}
 {% set _rep_date = reporting_date | default('2026-04-30') %}
 {% set _doc_ref = doc_ref | default('PQ-EB-01 · v2026.04.21') %}
 {% set _issue_no = issue_number | default(1) %}
@@ -430,7 +430,7 @@
 
   <div class="cv-rule-thin"></div>
   <div class="cv-issue">
-    EARNINGS PRE-BRIEF &nbsp;·&nbsp; {{ _ticker }} {{ _fiscal }} &nbsp;·&nbsp; <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
+    EARNINGS PRE-BRIEF{% if _ticker %} &nbsp;·&nbsp; {{ _ticker }}{% endif %}{% if _fiscal %} {{ _fiscal }}{% endif %} &nbsp;·&nbsp; <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
   </div>
   <div class="cv-rule-thin"></div>
 
@@ -441,11 +441,13 @@
   <div class="cv-rule-thin"></div>
 
   <div class="cv-kpi4">
+    {% if _ticker %}
     <div class="cv-kpi">
       <div class="cv-kpi-label">Ticker</div>
       <div class="cv-kpi-value">{{ _ticker }}</div>
-      <div class="cv-kpi-foot">{{ _company }}</div>
+      {% if _company %}<div class="cv-kpi-foot">{{ _company }}</div>{% endif %}
     </div>
+    {% endif %}
     <div class="cv-kpi">
       <div class="cv-kpi-label">Reporting Date</div>
       <div class="cv-kpi-value">{{ _rep_date }}</div>
@@ -584,13 +586,29 @@
       </div>
     </div>
 
+    {# Wave 6 — option-chain provenance used to be a prose-embedded
+       'CBOE via Alpaca' fallback. A Samsung-only user would see that
+       literal whenever the service failed to populate `option_source`,
+       claiming an Alpaca connection they never made (표시광고법 §3).
+       Now: render only when the service supplies a truthful source; fall
+       back to a neutral line otherwise. #}
+    {% if option_source %}
     <div class="sp-margin-block">
       <div class="sp-margin-term">Option chain · source</div>
-      <div class="sp-margin-value">CBOE via Alpaca</div>
+      <div class="sp-margin-value">{{ option_source }}</div>
       <div class="sp-margin-body">
-        Straddle-implied move observed {{ option_as_of | default('2026-04-20') }} on the at-the-money strike for the first expiry after the print.
+        Straddle-implied move observed {{ option_as_of | default(consensus_as_of | default('')) }} on the at-the-money strike for the first expiry after the print.
       </div>
     </div>
+    {% else %}
+    <div class="sp-margin-block">
+      <div class="sp-margin-term">Option chain · source</div>
+      <div class="sp-margin-value">Not observed</div>
+      <div class="sp-margin-body">
+        Option-chain provenance not available for this pre-brief.
+      </div>
+    </div>
+    {% endif %}
 
     <div class="sp-margin-block">
       <div class="sp-margin-term">Estimate range</div>
@@ -805,15 +823,11 @@
         </svg>
         <div class="rq-quad-foot">Option-implied vs realised absolute move, 8 prints. Dashed line is unity.</div>
       </div>
+      {% if peer_eps_comp %}
       <div class="rq-quad">
         <div class="rq-quad-label">Peer EPS Comp</div>
         <div class="rq-quad-value" style="font-size: 12pt;">{{ peer_group | default('Megacap Tech') }}</div>
-        {% set _peers = peer_eps_comp | default([
-          {'ticker': _ticker, 'eps': 1.62},
-          {'ticker': 'MSFT',   'eps': 3.34},
-          {'ticker': 'GOOG',   'eps': 1.81},
-          {'ticker': 'META',   'eps': 5.12},
-        ]) %}
+        {% set _peers = peer_eps_comp %}
         <svg viewBox="0 0 180 42" width="100%" height="80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
           <line x1="0" y1="36" x2="180" y2="36" stroke="#c9c4b8" stroke-width="0.3"/>
           {% set _pmax = (_peers | map(attribute='eps') | max) %}
@@ -832,6 +846,7 @@
         </svg>
         <div class="rq-quad-foot">Peer consensus EPS for the same upcoming cycle &mdash; observed sampling.</div>
       </div>
+      {% endif %}
     </div>
 
     <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
@@ -921,19 +936,23 @@
 
   <div class="co-body">
     <p style="margin: 0 0 10pt 0;">
-      Prepared for <strong>{{ user_name | default('the reader') }}</strong> ahead of
-      <strong>{{ _ticker }}</strong> <strong>{{ _fiscal }}</strong> reporting on
-      <strong>{{ _rep_date }}</strong>.
+      Prepared for <strong>{{ user_name | default('the reader') }}</strong>{% if _ticker %} ahead of
+      <strong>{{ _ticker }}</strong>{% if _fiscal %} <strong>{{ _fiscal }}</strong>{% endif %} reporting on
+      <strong>{{ _rep_date }}</strong>{% endif %}.
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data</span> &nbsp;
-      {% set _ds = data_sources | default([
-        {'key': 'Consensus EPS',        'note': 'FMP v4 Stable.'},
-        {'key': 'Option chain',         'note': 'CBOE via Alpaca.'},
-        {'key': 'Historical EPS',       'note': 'SEC EDGAR.'},
-        {'key': 'Reporting calendar',   'note': 'Company Investor Relations.'},
-      ]) %}
-      {% for d in _ds %}{{ d.note }}{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+      {# Wave 6 — prose-embedded 'CBOE via Alpaca.' fallback removed.
+         Service populates `data_sources` from the user's real connections
+         via `resolve_user_data_lineage`. Empty list renders a neutral
+         sentence rather than claiming provenance for a user who has no
+         such connection (표시광고법 §3). #}
+      {% set _ds = data_sources | default([]) %}
+      {% if _ds %}
+        {% for d in _ds %}{% if d.note is defined %}{{ d.note }}{% elif d.description is defined %}{{ d.description }}{% else %}{{ d.source | default('') }}{% endif %}{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+      {% else %}
+        Data sources not specified. Connect your broker in Settings to see data lineage.
+      {% endif %}
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;

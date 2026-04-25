@@ -358,7 +358,7 @@
   "This is a month's sentence.",
 ]) %}
 
-{% set _kpi_nav    = kpi_nav_label | default('$127,450') %}
+{% set _kpi_nav    = kpi_nav_label | default(none) %}
 {% set _kpi_mtd    = kpi_mtd_pct   | default(2.4) %}
 {% set _kpi_ytd    = kpi_ytd_pct   | default(8.7) %}
 {% set _kpi_sharpe = kpi_sharpe    | default(0.94) %}
@@ -390,11 +390,13 @@
   <div class="cv-rule-thin"></div>
 
   <div class="cv-kpi4">
+    {% if _kpi_nav %}
     <div class="cv-kpi">
       <div class="cv-kpi-label">NAV</div>
       <div class="cv-kpi-value">{{ _kpi_nav }}</div>
       <div class="cv-kpi-foot">Net asset value, month-end mark.</div>
     </div>
+    {% endif %}
     <div class="cv-kpi">
       <div class="cv-kpi-label">MTD Return</div>
       <div class="cv-kpi-value {% if _kpi_mtd >= 0 %}r-pos{% else %}r-neg{% endif %}">
@@ -549,11 +551,13 @@
 
   <div class="sp-margin">
 
+    {% if _kpi_nav %}
     <div class="sp-margin-block" style="margin-top: 0;">
       <div class="sp-margin-term">NAV · Month-end</div>
       <div class="sp-margin-value">{{ _kpi_nav }}</div>
       <div class="sp-margin-body">Net asset value at last observed close.</div>
     </div>
+    {% endif %}
 
     <div class="sp-margin-block">
       <div class="sp-margin-term">Best Day</div>
@@ -894,18 +898,24 @@
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data sources</span>
     </p>
-    {% set _ds = data_sources | default([
-      {'key': 'Broker',    'value': 'Alpaca · Paper account statements'},
-      {'key': 'Engine',    'value': 'Portfolio observation pipeline'},
-      {'key': 'Risk-free', 'value': '3-Month T-Bill (FRED DGS3MO)'},
-      {'key': 'Window',    'value': 'Monthly marks · trailing 12 months'},
-    ]) %}
-    {% for d in _ds %}
+    {# Wave 6 — 'Alpaca · Paper account statements' prose-embedded
+       fallback removed. A Samsung-only KR user would otherwise receive
+       a KPI dashboard claiming Alpaca as their broker (표시광고법 §3).
+       Service populates `data_sources` from real connections via
+       `resolve_user_data_lineage`; empty list renders a neutral line. #}
+    {% set _ds = data_sources | default([]) %}
+    {% if _ds %}
+      {% for d in _ds %}
+        <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
+          <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key | default(d.source | default('')) }}</span>
+          <span>{{ d.value | default(d.description | default('')) }}</span>
+        </p>
+      {% endfor %}
+    {% else %}
       <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-        <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key }}</span>
-        <span>{{ d.value }}</span>
+        Data sources not specified. Connect your broker in Settings to see data lineage.
       </p>
-    {% endfor %}
+    {% endif %}
 
     <p style="margin: 10pt 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;

@@ -476,6 +476,24 @@ def render_brief_email(content: dict, *, user: User | None = None) -> str:
         "as_of":     (content.get("kpis") or {}).get("as_of")
                      or date.today().isoformat(),
     }
+    # Wave 6 — colophon provenance scalars. Only claim Alpaca for
+    # Alpaca-connected users; otherwise the template elides the section
+    # rather than claiming Alpaca Market Data / Alpaca FX as theirs
+    # (표시광고법 §3 기만표시 방어선).
+    try:
+        from services.artifacts.data_source_resolver import _has_active_alpaca
+        uid = getattr(user, "id", None) if user is not None else None
+        alpaca_on = _has_active_alpaca(uid) if uid else False
+    except Exception as exc:
+        logger.debug("morning_brief lineage check failed: %s", exc)
+        alpaca_on = False
+    context["equities_source"] = (
+        "Alpaca Market Data (IEX consolidated) · Polygon futures."
+        if alpaca_on else None
+    )
+    context["currencies_source"] = (
+        "FX rate observation via Alpaca FX." if alpaca_on else None
+    )
     # Persona injection — resolve from the user's InvestmentProfile, if any.
     # Resolver is lazy-imported and never raises; unknown → "balanced".
     try:

@@ -461,11 +461,14 @@
     </div>
 
     <div class="sp-prose">
-      {% set _p = spread_prose | default([
-        'The April receipt of $412 ties December as the year\'s highest month — a reading that reflects both the dividend cycle (quarterly payers concentrate in the third month of each quarter) and a modest uptick on the two largest holdings. Year-to-date dividends of $3,240 run 6.4% above the same period last year, a figure the desk tracks as an organic growth signal rather than any allocation change.',
-        'The trailing-twelve yield on NAV sits at 2.8%, a number the desk reads against the ten-year Treasury rather than against a peer. The pattern here is modest, boring, and cumulative — the three adjectives most appropriate to a dividend ledger.'
-      ]) %}
-      {% for para in _p %}<p>{{ para }}</p>{% endfor %}
+      {% set _p = spread_prose | default([]) %}
+      {% if _p %}
+        {% for para in _p %}<p>{{ para }}</p>{% endfor %}
+      {% else %}
+        <p style="font-style:italic; color:#6B6B6B;">
+          Dividend commentary will appear here once monthly receipts post to the ledger.
+        </p>
+      {% endif %}
     </div>
 
   </div>
@@ -518,19 +521,8 @@
   total received, and the trailing-twelve-month trajectory.
 </p>
 
-{% set _divs = dividend_rows | default([
-  {'sym':'MSFT','shares': 18, 'per_sh':0.83, 'freq':'Q', 'ex':'2026-04-10', 'pay':'2026-04-14', 'total':14.94, 'spark':[0.5,0.52,0.54,0.56,0.58,0.60,0.62,0.64]},
-  {'sym':'AAPL','shares': 35, 'per_sh':0.24, 'freq':'Q', 'ex':'2026-04-08', 'pay':'2026-04-12', 'total':8.40,  'spark':[0.5,0.51,0.52,0.53,0.54,0.55,0.56,0.58]},
-  {'sym':'KO',  'shares': 60, 'per_sh':0.49, 'freq':'Q', 'ex':'2026-04-22', 'pay':'2026-04-26', 'total':29.40, 'spark':[0.5,0.51,0.52,0.53,0.54,0.55,0.56,0.57]},
-  {'sym':'JNJ', 'shares': 22, 'per_sh':1.19, 'freq':'Q', 'ex':'2026-04-18', 'pay':'2026-04-22', 'total':26.18, 'spark':[0.5,0.51,0.53,0.54,0.55,0.56,0.58,0.60]},
-  {'sym':'PG',  'shares': 25, 'per_sh':0.94, 'freq':'Q', 'ex':'2026-04-15', 'pay':'2026-04-19', 'total':23.50, 'spark':[0.5,0.52,0.53,0.54,0.56,0.57,0.58,0.60]},
-  {'sym':'XOM', 'shares': 40, 'per_sh':0.95, 'freq':'Q', 'ex':'2026-04-24', 'pay':'2026-04-28', 'total':38.00, 'spark':[0.5,0.52,0.54,0.56,0.58,0.60,0.62,0.64]},
-  {'sym':'VZ',  'shares': 30, 'per_sh':0.66, 'freq':'Q', 'ex':'2026-04-09', 'pay':'2026-04-13', 'total':19.80, 'spark':[0.5,0.50,0.51,0.51,0.52,0.52,0.53,0.54]},
-  {'sym':'JPM', 'shares': 12, 'per_sh':1.15, 'freq':'Q', 'ex':'2026-04-11', 'pay':'2026-04-15', 'total':13.80, 'spark':[0.5,0.51,0.53,0.54,0.56,0.58,0.60,0.62]},
-  {'sym':'T',   'shares': 50, 'per_sh':0.28, 'freq':'Q', 'ex':'2026-04-10', 'pay':'2026-04-14', 'total':14.00, 'spark':[0.5,0.50,0.50,0.49,0.49,0.49,0.48,0.48]},
-  {'sym':'MCD', 'shares':  8, 'per_sh':1.67, 'freq':'Q', 'ex':'2026-04-02', 'pay':'2026-04-08', 'total':13.36, 'spark':[0.5,0.51,0.52,0.53,0.54,0.55,0.57,0.59]}
-]) %}
-
+{% set _divs = dividend_rows | default([]) %}
+{% if _divs %}
 <table class="ld-table">
   <thead>
     <tr>
@@ -577,6 +569,12 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% else %}
+<p class="sp-deck" style="font-style:italic; color:#6B6B6B; margin-top: 20pt;">
+  No dividend receipts posted for this period.
+</p>
+{% endif %}
 
 <p class="sp-deck" style="margin-top: 10pt; font-size: 9.2pt;">
   Frequencies: Q · quarterly, M · monthly, S · semi-annual, A · annual. Per-share
@@ -642,18 +640,8 @@
       <div class="aq-quad">
         <div class="aq-quad-label">Q2 · YoY Growth · Top 10</div>
         <div class="aq-quad-sub">Dividend growth per position, %.</div>
-        {% set _yoy = yoy_growth | default([
-          {'t':'MCD', 'v':  9.8},
-          {'t':'JPM', 'v':  8.4},
-          {'t':'JNJ', 'v':  6.2},
-          {'t':'MSFT','v': 10.2},
-          {'t':'PG',  'v':  4.9},
-          {'t':'KO',  'v':  4.1},
-          {'t':'XOM', 'v':  3.2},
-          {'t':'AAPL','v':  4.0},
-          {'t':'VZ',  'v':  1.8},
-          {'t':'T',   'v': -0.6}
-        ]) %}
+        {% set _yoy = yoy_growth | default([]) %}
+        {% if _yoy %}
         {% set _ymx = _yoy | map(attribute='v') | map('abs') | list | max %}
         {% if _ymx == 0 %}{% set _ymx = 1 %}{% endif %}
         <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
@@ -669,6 +657,11 @@
           {% endfor %}
           <line x1="70" y1="2" x2="70" y2="108" stroke="#0A0A0A" stroke-width="0.3" opacity="0.55"/>
         </svg>
+        {% else %}
+        <div style="font-style:italic; color:#6B6B6B; padding: 40pt 6pt; text-align:center;">
+          YoY growth data unavailable for this period.
+        </div>
+        {% endif %}
       </div>
 
       {# ── Q3 · Calendar heatmap ── #}
@@ -712,18 +705,8 @@
       <div class="aq-quad">
         <div class="aq-quad-label">Q4 · Yield vs Price</div>
         <div class="aq-quad-sub">Trailing yield % × current price $.</div>
-        {% set _sc = yield_scatter | default([
-          {'t':'KO',   'y':3.0, 'p': 64, 'sz':60},
-          {'t':'JNJ',  'y':3.2, 'p':152, 'sz':26},
-          {'t':'VZ',   'y':6.2, 'p': 42, 'sz':30},
-          {'t':'T',    'y':6.6, 'p': 17, 'sz':50},
-          {'t':'XOM',  'y':3.4, 'p':112, 'sz':40},
-          {'t':'PG',   'y':2.6, 'p':146, 'sz':25},
-          {'t':'MSFT', 'y':0.7, 'p':412, 'sz':18},
-          {'t':'AAPL', 'y':0.5, 'p':188, 'sz':35},
-          {'t':'JPM',  'y':2.8, 'p':206, 'sz':12},
-          {'t':'MCD',  'y':2.4, 'p':278, 'sz': 8}
-        ]) %}
+        {% set _sc = yield_scatter | default([]) %}
+        {% if _sc %}
         {% set _y_vals = _sc | map(attribute='y') | list %}
         {% set _p_vals = _sc | map(attribute='p') | list %}
         {% set _ymax = _y_vals | max %}
@@ -743,6 +726,11 @@
           <text x="234" y="104" text-anchor="end" fill="#8a8a8a" font-size="5.8" font-family="Geist, sans-serif" letter-spacing="0.08em">PRICE →</text>
           <text x="12" y="14" fill="#8a8a8a" font-size="5.8" font-family="Geist, sans-serif" letter-spacing="0.08em">YIELD</text>
         </svg>
+        {% else %}
+        <div style="font-style:italic; color:#6B6B6B; padding: 40pt 6pt; text-align:center;">
+          Yield scatter unavailable for this period.
+        </div>
+        {% endif %}
       </div>
 
     </div>

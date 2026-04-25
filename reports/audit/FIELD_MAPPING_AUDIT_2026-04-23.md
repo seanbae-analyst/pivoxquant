@@ -672,3 +672,40 @@ Note: quarterly_label, margin_label, peer_label은 하드코딩이 'AAPL' 기준
 
 *조사 기준: 직접 파일 열람 + grep 실측. 추측 없음.*  
 *증거 파일 경로 형식: `/Users/seanbae/Desktop/취준/stockpilot/services/artifacts/templates/{name}.html:{line}`*
+
+---
+
+## Wave 1~5 Sanitize 진행 현황 (2026-04-24 추가)
+
+이 섹션은 본 감사 이후 실행된 sanitize 작업 결과를 추적한다.
+
+### Wave별 결과
+
+| Wave | 대상 | 처리 건수 | 결과 |
+|------|------|-----------|------|
+| Wave 1 | A/B/C 등급 scalar default — 티커(`AAPL`, `NVDA`), 절대금액(`$94.9B`, `$127,450`), 날짜/기간(`April 3`, `Q2 2026`) | 17건 | `default(none)` 치환 + `{% if field %}...{% endif %}` 조건부 섹션 래핑 |
+| Wave 3 | list-embedded default 내 하드코딩 티커/금액 (scalar regex 로 미탐지된 추가 발견분) | 20건 | 동일 방식 sanitize |
+| Wave 5 | `data_sources` 조건부 렌더링 (법적 안전 검증) | 4건 | 조건부 렌더링 확인 — 법적 위험 없음 판정 |
+
+**누적 sanitize**: 41건 (Wave 1 17건 + Wave 3 20건 + Wave 5 4건)
+
+### 방어선 (이중)
+
+| 방어선 | 도구 | 실행 환경 | 비고 |
+|--------|------|-----------|------|
+| CI legal-guard | `.github/workflows/legal-guard.yml` (`grep -rnPzo`) | ubuntu-latest (GNU grep) | PR + push to main 자동 실행 |
+| 로컬 pytest | `tests/test_no_hardcoded_samples.py` | 크로스 플랫폼 (Python) | macOS 에서 `-P` 미지원 문제 우회 |
+
+**macOS 주의**: BSD grep 은 `-P` (PCRE) 미지원. `grep -Pzo` 실행 시 exit 0 반환(오탐) — 로컬 방어선은 pytest 전용.
+
+### D등급 잔존 항목 (법적 위험 없음 판정)
+
+아래 항목은 sanitize 대상에서 제외하며, 재오픈하지 않는다.
+
+| 변수 | 분류 | 판정 근거 |
+|------|------|-----------|
+| `hero_headline` | UI 레이블 (상수) | 유저 식별 데이터 아님. 모든 유저 동일 표시 — 개인화 데이터 아님 |
+| `month_labels` | UI 레이블 (상수) | 월 이름 목록. 유저 재무 수치 아님 |
+| `sector_labels` | UI 레이블 (상수) | 섹터 이름 목록. 유저 포트폴리오 데이터 아님 |
+
+세 항목 모두 "유저가 보유하지 않은 종목의 재무 수치를 자기 리포트로 받는" 자본시장법 §178 위험과 무관하다.

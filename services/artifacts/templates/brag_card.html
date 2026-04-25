@@ -379,7 +379,7 @@
         </div>
       </div>
       <div class="hc-ticker">
-        {{ best_ticker | default('NVDA') }} &nbsp;·&nbsp;
+        {% if best_ticker %}{{ best_ticker }} &nbsp;·&nbsp;{% endif %}
         <span class="hc-ticker-name">{{ '%+.2f'|format(_best_ret) }}%</span>
         &nbsp;·&nbsp; {{ hold_days | default(8) }}-day hold
       </div>
@@ -387,14 +387,19 @@
       <div class="hc-narrative">
         {% if hero_narrative %}
           {% for para in hero_narrative %}<p>{{ para }}</p>{% endfor %}
-        {% else %}
+        {% elif best_ticker and entry_date and exit_date %}
           <p>
-            Entered {{ best_ticker | default('NVDA') }} on
-            {{ entry_date | default('April 3') }} at ${{ entry_price | default('842') }}.
-            Closed {{ exit_date | default('April 11') }} at ${{ exit_price | default('879') }}.
+            Entered {{ best_ticker }} on
+            {{ entry_date }}{% if entry_price %} at ${{ entry_price }}{% endif %}.
+            Closed {{ exit_date }}{% if exit_price %} at ${{ exit_price }}{% endif %}.
             The thesis held three sessions, then handed off to the market's own
             weather. The gain was observed; the decision, imperfect as always, was
             your own. This is a record — not a pattern, not a plan, not a claim
+            about tomorrow.
+          </p>
+        {% else %}
+          <p>
+            A quiet record of the month — not a pattern, not a plan, not a claim
             about tomorrow.
           </p>
         {% endif %}
@@ -446,13 +451,8 @@
   bronze dot marks the end-of-hold mark relative to entry.
 </p>
 
-{% set _top_lots = top_lots | default([
-  {'ticker':'NVDA','days':8,'entry':842.00,'exit':879.00,'pnl':1240,'spark':[0.20,0.34,0.46,0.52,0.60,0.70,0.82,0.92]},
-  {'ticker':'MSFT','days':12,'entry':412.00,'exit':428.40,'pnl':656,'spark':[0.30,0.36,0.42,0.44,0.52,0.58,0.62,0.66]},
-  {'ticker':'AAPL','days':10,'entry':172.50,'exit':178.20,'pnl':342,'spark':[0.40,0.42,0.48,0.52,0.58,0.60,0.64,0.66]},
-  {'ticker':'AVGO','days':6,'entry':1280.00,'exit':1304.00,'pnl':192,'spark':[0.40,0.44,0.48,0.54,0.56,0.60,0.62,0.66]},
-  {'ticker':'005930.KS','days':14,'entry':72000,'exit':73400,'pnl':112,'spark':[0.50,0.52,0.56,0.58,0.62,0.64,0.66,0.70]}
-]) %}
+{% set _top_lots = top_lots | default([]) %}
+{% if _top_lots %}
 
 <table class="ld-table">
   <thead>
@@ -519,6 +519,15 @@
   {% endif %}
 </div>
 
+{% else %}
+<div class="ld-foot-prose">
+  <p style="color: #6B6B6B; font-style: italic;">
+    Trade history not yet available for this period. Once closed lots post to
+    the ledger, the five largest will be listed here in order of realised P&amp;L.
+  </p>
+</div>
+{% endif %}
+
 
 {# ══════════════════════════════════════════════════════════════════════════
    PAGE 4 · COLOPHON
@@ -539,8 +548,12 @@
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data sources</span> &nbsp;
-      {% set _ds = data_sources | default(['Broker statements', 'Alpaca', 'KIS', 'Observation journal']) %}
-      {{ _ds | join(' · ') }}.
+      {# Wave 5 — see weekly_memo.html for the rationale. An empty
+         `data_sources` list must not be back-filled with a boilerplate
+         Alpaca/KIS pairing: Samsung-only users would receive a card
+         that falsely claims Alpaca as a source. #}
+      {% set _ds = data_sources | default([]) %}
+      {% if _ds %}{{ _ds | join(' · ') }}.{% else %}Data sources not specified. Connect your broker in Settings to see data lineage.{% endif %}
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;

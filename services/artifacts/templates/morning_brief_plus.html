@@ -530,7 +530,7 @@
 
     <div class="os-margin-block">
       <div class="os-margin-term">Pre-market snapshot</div>
-      <div class="os-margin-body">Observed 8:45 AM ET. S&amp;P and Nasdaq futures as quoted on CME pre-open; gappers taken from the IEX consolidated tape.</div>
+      <div class="os-margin-body">Observed 8:45 AM ET. S&amp;P and Nasdaq futures as quoted on CME pre-open; pre-market gappers observed from the consolidated US equities tape.</div>
     </div>
 
     <div class="os-margin-block">
@@ -613,15 +613,8 @@
 
 <div class="ld-section-title">Today's calendar · scheduled items</div>
 
-{% set _cal = today_calendar | default([
-  {'time': '08:30 ET', 'event': 'Initial Jobless Claims',  'prior': '215 k', 'consensus': '218 k',   'note': 'Weekly release, schedule item'},
-  {'time': '08:30 ET', 'event': 'Philadelphia Fed Index',  'prior': '3.2',   'consensus': '2.0',     'note': 'Monthly, regional observation'},
-  {'time': '10:00 ET', 'event': 'Existing Home Sales',     'prior': '4.22M', 'consensus': '4.19M',   'note': 'Monthly, seasonally adjusted'},
-  {'time': '10:30 ET', 'event': 'EIA Natural Gas Storage', 'prior': '+24 bcf','consensus': '+30 bcf','note': 'Weekly, informational'},
-  {'time': '13:00 ET', 'event': 'US 20Y Bond Auction',     'prior': '4.68%', 'consensus': '—',       'note': 'Scheduled issuance'},
-  {'time': 'AMC',      'event': 'NFLX Q1 earnings',        'prior': '—',     'consensus': 'EPS 4.54','note': 'Watchlist, informational only'},
-]) %}
-
+{% set _cal = today_calendar | default([]) %}
+{% if _cal %}
 <table class="ld-table">
   <thead>
     <tr>
@@ -644,6 +637,11 @@
     {% endfor %}
   </tbody>
 </table>
+{% else %}
+<p class="sp-deck" style="font-style:italic; color:#6B6B6B;">
+  No scheduled events for today.
+</p>
+{% endif %}
 
 
 {# ══════════════════════════════════════════════════════════════════════════
@@ -874,10 +872,18 @@
       <strong>{{ as_of | default('2026-04-21') }}</strong>. Issue
       <strong>No. {{ '%03d' % _issue_no }}</strong> of the Morning Brief series.
     </p>
+    {# Wave 6 — direct 'Alpaca Market Data (IEX consolidated) · Polygon
+       futures.' and 'FX rate observation via Alpaca FX.' strings
+       removed. Equity and currency provenance is now injected from
+       `resolve_user_data_lineage`; a user without an Alpaca connection
+       never sees Alpaca claimed as their source (표시광고법 §3). Macro
+       + calendar lines are public aggregators shared across users. #}
+    {% if equities_source %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data · Equities</span> &nbsp;
-      Alpaca Market Data (IEX consolidated) &middot; Polygon futures.
+      {{ equities_source }}
     </p>
+    {% endif %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data · Macro</span> &nbsp;
       FRED &middot; Bloomberg public RSS &middot; ECB / BOJ public feeds.
@@ -886,10 +892,12 @@
       <span class="co-key">Data · Calendar</span> &nbsp;
       FMP v4 economic calendar &middot; SEC EDGAR filings.
     </p>
+    {% if currencies_source %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data · Currencies</span> &nbsp;
-      FX rate observation via Alpaca FX.
+      {{ currencies_source }}
     </p>
+    {% endif %}
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;
       {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.

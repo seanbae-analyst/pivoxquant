@@ -1,3 +1,8 @@
+# NOTE — macOS BSD grep does not support -P (PCRE) flag.
+# Local devs must rely on `pytest tests/test_no_hardcoded_samples.py`
+# for equivalent coverage. This workflow runs on ubuntu-latest
+# (GNU grep) where -Pzo is supported.
+
 name: Legal Guard
 
 on:
@@ -75,6 +80,123 @@ jobs:
             echo "::error::Legal Guard found $total forbidden vocabulary hits"
             exit 1
           fi
+
+      - name: No hardcoded sample tickers or money in template defaults
+        run: |
+          set +e
+          # --- Scalar form: default('AAPL') / default('$127,450') -------------
+          # Forbid any Jinja default('SYMBOL') where SYMBOL looks like a ticker
+          # (2-6 uppercase letters, possibly .KS suffix). sample_data.py stays in
+          # its own preview pipeline; template defaults must be data-driven or none.
+          ticker_hits=$(grep -rnE "default\(['\"][A-Z]{2,6}(\.[A-Z]{2,3})?['\"]\)" \
+            services/artifacts/templates/ 2>/dev/null || true)
+          # Forbid absolute USD/KRW figures as fallbacks (prevents cross-user leakage)
+          money_hits=$(grep -rnE "default\(['\"]\\\$[0-9]" \
+            services/artifacts/templates/ 2>/dev/null || true)
+
+          # --- List-embedded form: default([{'t':'AAPL', ...}, ...]) ---------
+          # The scalar regex above cannot see inside multiline list literals.
+          # We use PCRE multiline (-Pz) to scan every `default([...])` block
+          # for embedded ticker-looking strings or $money. Catches the P0-1
+          # regression where the original regex missed list-embedded samples.
+          # -z treats each file as one big string; -o prints only matches.
+          # Ticker regex: word-boundary match inside a default([...]) block.
+          # Covers both quoted tickers (`{'t':'AAPL'}`) and prose-embedded
+          # ticker strings (`{'detail':'AAPL · Tue'}`). [^\]] scopes to one
+          # bracket level; -Pz enables multiline PCRE.
+          list_hits=$(grep -rnPzo "default\(\s*\[[^\]]*?\b(AAPL|MSFT|GOOG|GOOGL|META|NVDA|AVGO|TSLA|AMZN|NFLX|BRK\.B|HD|UNH|JPM|KO|PG|COST|LLY|ORCL|CRM|MCD|JNJ|VZ|XOM|BABA|INTC|QCOM|NKE|SPY|QQQ|TLT|AGG)\b[^\]]*?\]" services/artifacts/templates/ 2>/dev/null || true)
+          # Numeric Korean tickers (005930.KS, 000660.KS, etc.).
+          list_num_hits=$(grep -rnPzo "default\(\s*\[[^\]]*?\b(005930|000660)(\.KS|\.KQ)?\b[^\]]*?\]" services/artifacts/templates/ 2>/dev/null || true)
+          # $money embedded in list defaults.
+          list_money_hits=$(grep -rnPzo "default\(\s*\[[^\]]*?\\\$[0-9][^\]]*?\]" services/artifacts/templates/ 2>/dev/null || true)
+          # --- Wave 5: data-source provenance names in list defaults -----------
+          # Claiming a broker/data provider the user is not actually connected
+          # to is 표시광고법 §3 기만표시. A Samsung-only user must never receive
+          # a PDF that lists "Alpaca" as a data source. Forbid broker/provider
+          # literals inside `default([...])` blocks. Case-sensitive — this
+          # won't collide with UI labels like 'Apple' or 'Google'.
+          list_source_hits=$(grep -rnPzo "default\(\s*\[[^\]]*?'(Alpaca|KIS|Kiwoom|Broker statements|Bank statements|Credit card statements|Manual ledger|Budget app export|Observation journal|Rebalance log)'[^\]]*?\]" services/artifacts/templates/ 2>/dev/null || true)
+
+          # --- Wave 6: prose-embedded broker names (substring match) ----------
+          # The Wave-5 regex requires the literal to be the *entire* quoted
+          # string. Wave-6 audit surfaced 12 cases where the broker name was
+          # embedded inside a longer prose string — e.g.
+          # `'Alpaca · Paper account statements'` or
+          # `'CBOE via Alpaca.'` — which the equality check let through.
+          # The checks below substring-match any quoted literal and any HTML
+          # raw-text run inside a template for a broker/data-provider name.
+          # False-positive mitigation: the token list is explicit and excludes
+          # public-exchange names that legitimately appear in methodology prose
+          # ('CME pre-open', 'FactSet', 'MSCI', 'NASDAQ'). Jinja comment ranges
+          # `{# ... #}` are stripped before matching so the Wave-6 audit notes
+          # referencing the removed strings don't retrigger the guard.
+          BROKER_TOKENS='Alpaca|Kiwoom|키움|알파카|Polygon|E-TRADE|Charles Schwab'
+          broker_quoted_hits=""
+          broker_text_hits=""
+          for tpl in $(find services/artifacts/templates -type f -name '*.html'); do
+            # Strip multi-line Jinja comments {# ... #} before grep. The
+            # comment notes themselves document the fixed regressions and
+            # must not re-trigger the guard. `tr` collapses newlines; `sed`
+            # removes `{# ... #}` across the file; `tr` re-expands; and
+            # `grep -n` gives us file:line numbers on the stripped form.
+            stripped=$(python3 -c "import re,sys; t=open(sys.argv[1]).read(); t=re.sub(r'\{#.*?#\}', lambda m: '\n'*m.group(0).count('\n'), t, flags=re.DOTALL); sys.stdout.write(t)" "$tpl")
+            q=$(printf '%s\n' "$stripped" | grep -nE "['\"][^'\"]*(${BROKER_TOKENS})[^'\"]*['\"]" || true)
+            t=$(printf '%s\n' "$stripped" | grep -nE ">[^<]*(${BROKER_TOKENS})[^<]*<" || true)
+            if [ -n "$q" ]; then
+              broker_quoted_hits+="${tpl}: "$'\n'"$q"$'\n'
+            fi
+            if [ -n "$t" ]; then
+              broker_text_hits+="${tpl}: "$'\n'"$t"$'\n'
+            fi
+          done
+
+          list_rc=0
+          if [ -n "$list_hits" ] || [ -n "$list_num_hits" ] || [ -n "$list_money_hits" ] || [ -n "$list_source_hits" ] || [ -n "$broker_quoted_hits" ] || [ -n "$broker_text_hits" ]; then
+            list_rc=1
+          fi
+
+          total=0
+          if [ -n "$ticker_hits" ]; then
+            echo "::error::Hardcoded ticker in template default():"
+            echo "$ticker_hits"
+            total=$((total + 1))
+          fi
+          if [ -n "$money_hits" ]; then
+            echo "::error::Hardcoded money figure in template default():"
+            echo "$money_hits"
+            total=$((total + 1))
+          fi
+          if [ "$list_rc" -ne 0 ]; then
+            if [ -n "$list_hits" ]; then
+              echo "::error::Hardcoded ticker inside list default([...]) block:"
+              echo "$list_hits"
+            fi
+            if [ -n "$list_num_hits" ]; then
+              echo "::error::Hardcoded numeric KR ticker inside list default([...]) block:"
+              echo "$list_num_hits"
+            fi
+            if [ -n "$list_money_hits" ]; then
+              echo "::error::Hardcoded money inside list default([...]) block:"
+              echo "$list_money_hits"
+            fi
+            if [ -n "$list_source_hits" ]; then
+              echo "::error::Hardcoded data-source provenance inside list default([...]) block (broker/provider claim a user isn't connected to = 표시광고법 §3 기만표시):"
+              echo "$list_source_hits"
+            fi
+            if [ -n "$broker_quoted_hits" ]; then
+              echo "::error::Wave 6 — broker name inside a template quoted string (prose-embedded is still a provenance claim):"
+              echo "$broker_quoted_hits"
+            fi
+            if [ -n "$broker_text_hits" ]; then
+              echo "::error::Wave 6 — broker name inside HTML raw text between tags:"
+              echo "$broker_text_hits"
+            fi
+            total=$((total + 1))
+          fi
+          if [ "$total" -gt 0 ]; then
+            exit 1
+          fi
+          echo "✅ No hardcoded sample tickers or money in template defaults (scalar + list-embedded)"
 
       - name: Disclaimer coverage check
         run: |

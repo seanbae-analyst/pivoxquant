@@ -26,8 +26,8 @@
 <!-- Preview text -->
 <div style="display:none;max-height:0;overflow:hidden;color:transparent;">
   A quiet note to self — {{ month_label_long | default(month_label) }}.
-  {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
-  observed on {{ best_ticker | default('NVDA') }}.
+  {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}{% if best_ticker %}
+  observed on {{ best_ticker }}.{% endif %}
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:0;">
@@ -80,7 +80,7 @@
                 {% if _best_usd >= 0 %}+${{ '{:,}'.format(_best_usd) }}{% else %}-${{ '{:,}'.format(-_best_usd) }}{% endif %}
               </div>
               <div style="margin-top:14px;font-family:'Geist',-apple-system,sans-serif;font-size:10px;letter-spacing:0.28em;text-transform:uppercase;color:#6B6B6B;font-weight:600;">
-                {{ best_ticker | default('NVDA') }} &nbsp;·&nbsp; <span style="color:#0A0A0A;">{{ '%+.2f'|format(_best_ret) }}%</span> &nbsp;·&nbsp; {{ hold_days | default(8) }}-day hold
+                {% if best_ticker %}{{ best_ticker }} &nbsp;·&nbsp; {% endif %}<span style="color:#0A0A0A;">{{ '%+.2f'|format(_best_ret) }}%</span> &nbsp;·&nbsp; {{ hold_days | default(8) }}-day hold
               </div>
             </td>
           </tr>
@@ -90,12 +90,17 @@
       {# ─── Editorial narrative ─────────────────────────────────────── #}
       <tr><td style="padding:24px 40px 0 40px;">
         <p style="margin:0 0 10px 0;font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:15px;line-height:1.65;color:#202020;text-align:justify;">
-          Entered {{ best_ticker | default('NVDA') }} on {{ entry_date | default('April 3') }}
-          at ${{ entry_price | default('842') }}. Closed
-          {{ exit_date | default('April 11') }} at ${{ exit_price | default('879') }}.
+          {% if best_ticker and entry_date and exit_date %}
+          Entered {{ best_ticker }} on {{ entry_date }}{% if entry_price %}
+          at ${{ entry_price }}{% endif %}. Closed
+          {{ exit_date }}{% if exit_price %} at ${{ exit_price }}{% endif %}.
           The thesis held three sessions, then handed off to the market's own
           weather. The gain was observed; the decision, imperfect as always, was
           your own.
+          {% else %}
+          A quiet record of the month — not a pattern, not a plan, not a claim
+          about tomorrow.
+          {% endif %}
         </p>
       </td></tr>
 

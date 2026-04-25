@@ -17,7 +17,7 @@
 | 법률 검토 (로펌) | ⏳ 예약 대기 |
 | 유사투자자문업 신고 | ⏳ 로펌 답변 이후 결정 |
 | 개인정보처리방침 업데이트 | ⏳ Journal Companion 섹션 추가 필요 |
-| 웨이팅 리스트 | ✅ `companion_waitlist` 테이블 + `/api/companion/waitlist` |
+| 웨이팅 리스트 | ✅ `companion_waitlist` 테이블 + `POST /api/agent/waitlist` + `GET /api/admin/agent/waitlist` (P0-2, 2026-04-24) |
 | Kill switch | ✅ `POST /api/admin/agent/kill` (admin 전용) |
 | 테스트 | ✅ `tests/test_journal_companion_gate.py` 30 pass |
 | 유저 노출 | ❌ 유저 0명 (flag 꺼짐) |
@@ -246,9 +246,65 @@ Journal Companion 을 production에 올리기 전 전부 ✅:
 - [ ] Kill switch 실제 동작 증명 (staging에서 한 번 눌러보고 복구)
 - [ ] Admin 대시보드 팝업 확인 (audit 조회/stats/purge UI)
 - [ ] 거부(T5) 응답 1000건 시뮬레이션 통과
+- [ ] `pytest tests/test_no_hardcoded_samples.py` 로컬 실행 완료 (macOS — BSD grep 은 `-P` 미지원, pytest 가 유일한 로컬 방어선)
+- [ ] CI legal-guard job green 확인 (GitHub Actions `Legal Guard / No hardcoded sample tickers or money in template defaults`)
 - [ ] CEO 서명
 
 체크리스트 한 칸이라도 비면 `AGENT_ENABLED=1` 금지.
+
+---
+
+## 8.5 웨이팅 리스트 운영 (P0-2, 2026-04-24)
+
+### 8.5-1. 엔드포인트
+
+| 엔드포인트 | 용도 | 인증 | Rate limit |
+|---|---|---|---|
+| `POST /api/agent/waitlist` | 공개 신청 (익명 랜딩 방문자 포함) | 불필요 (선택적) | 5 req / 1h / IP |
+| `GET /api/admin/agent/waitlist?limit=500&source=...` | 관리자 조회 (FIFO) | `ADMIN_EMAILS` 매칭 | — |
+
+### 8.5-2. 동작 원칙
+
+- **AGENT_ENABLED / kill switch 무관** — 웨이팅 리스트는 Closed Beta 진입 funnel 자체이므로 killed 상태에서도 접수 받는다.
+- **이메일 저장 정책**: `DRAFT_PRIVACY_POLICY_COMPANION_2026-04-23.md §9.1` 준수. `email_hash` (sha256) 를 기본 식별자로, `email_plaintext` 는 폼 제출(=직접 통지 동의)이 있을 때만 저장.
+- **Free-form 텍스트 금지**: `persona` 는 8 개 canonical persona 외 값은 drop, `source`/`referrer` 는 allowlist 외 값은 `"other"` 로 축소 — legal_gate bypass 방지.
+- **Idempotent**: 같은 이메일을 두 번 POST 하면 201(queued) → 200(already-registered), DB 상 동일 행 유지.
+
+### 8.5-3. 운영 절차
+
+**매일 아침 9 KST**:
+```bash
+# 신규 신청 수 확인
+curl -s -b cookies.txt https://pivoxquant.com/api/admin/agent/waitlist?limit=2000 \
+  | jq '.total, (.rows | map(select(.invited_at == null)) | length)'
+```
+
+**Closed Beta 초대 발송 (주간, 금요일)**:
+1. 위 GET 으로 `invited_at IS NULL` 행 수 확인.
+2. Founding 100 한도 내에서 선착순으로 초대.
+3. (수동, 로펌 승인 후 자동화) 각 초대 완료 시 해당 행의 `invited_at` 을 현재 UTC 시각으로 업데이트 (스키마에 반영된 `invited_at` 컬럼).
+
+**유저 삭제 요청 수신 시**:
+```python
+# Python shell
+from models.companion_waitlist import CompanionWaitlist
+CompanionWaitlist.purge_by_email("user@example.com")  # returns 1 if deleted
+```
+— `DRAFT_PRIVACY_POLICY_COMPANION_2026-04-23.md §9.3` 요구사항 충족 (즉시 삭제).
+
+### 8.5-4. 모니터링 지표
+
+- `INFO: agent.waitlist.enrolled` JSON 로그 (request_id, source, persona, position)
+- `ERROR: agent.waitlist.store_failed` JSON 로그 — 발생 시 즉시 Sentry 알림 확인
+- Admin GET 응답의 `total` 필드 — 주간 delta 를 Notion 주간 리포트에 기록
+
+### 8.5-5. 테스트
+
+`tests/test_agent_waitlist.py` 13 케이스 — CI pass 필수:
+- 신규/중복/잘못된 이메일/누락/대소문자 dedup
+- persona allowlist, referrer alias, AGENT_ENABLED=0 하에서도 접수
+- 5/hour rate limit
+- admin 401/403/200 ladder
 
 ---
 
@@ -257,6 +313,7 @@ Journal Companion 을 production에 올리기 전 전부 ✅:
 | 날짜 | 변경 | 담당 |
 |---|---|---|
 | 2026-04-23 | 초안 작성, Closed Beta 준비 | 배상현 |
+| 2026-04-24 | §8.5 웨이팅 리스트 운영 추가 (P0-2, `/api/agent/waitlist` + admin 조회) | 배상현 |
 
 ---
 

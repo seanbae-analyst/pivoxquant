@@ -131,6 +131,37 @@ cd /Users/seanbae/Desktop/취준/stockpilot/frontend && npm run dev
 - 회원탈퇴 기능 (PIPA 준수)
 - Terms checkbox 필수 (회원가입 시)
 
+### Template Hardcoding Guard
+
+**방어선 2개 (이중 방어)**
+
+| 방어선 | 위치 | 실행 환경 | 검증 대상 |
+|--------|------|-----------|-----------|
+| CI legal-guard | `.github/workflows/legal-guard.yml` | ubuntu-latest (GNU grep) | PR + push to main 자동 실행 |
+| 로컬 pytest | `tests/test_no_hardcoded_samples.py` | 크로스 플랫폼 (Python) | 로컬 개발 + CI 동일 실행 |
+
+**macOS 주의사항**
+
+`.github/workflows/legal-guard.yml` 의 `grep -rnPzo` 는 PCRE (`-P`) 플래그를 사용한다.
+macOS 기본 BSD grep 은 `-P` 를 지원하지 않으며, 오류 메시지(`grep: invalid option -- P`)와 함께 exit 0 을 반환한다 — 즉, 위반이 있어도 **통과로 오탐**한다.
+
+로컬(macOS) 에서 template 변경 후 반드시 pytest 로 검증:
+```bash
+pytest tests/test_no_hardcoded_samples.py -v
+```
+
+**선택: GNU grep 로컬 설치**
+```bash
+brew install grep
+# 설치 후 ~/.zshrc 또는 ~/.bash_profile 에 추가:
+# export PATH="$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
+```
+설치 후에는 `grep -Pzo` 가 macOS 에서도 정상 동작한다.
+
+**PR 머지 전**
+
+CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in template defaults`) 이 green 이어야 머지 가능. CI 는 ubuntu-latest (GNU grep) 에서 실행되므로 `-Pzo` 가 정상 작동한다.
+
 ## 다음 세션 TODO (우선순위 순)
 
 ### 🔴 P0 — CEO가 직접 해야 하는 것

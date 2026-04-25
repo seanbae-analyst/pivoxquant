@@ -788,13 +788,7 @@
   <div class="aq-side">
     <div class="aq-rail">
       <div class="aq-rail-eyebrow">Allocation Notes</div>
-      {% set _rail = allocation_notes | default([
-        'Weights are month-end marks; intraday variations are smoothed.',
-        'The 60/40 benchmark uses SPY/AGG, total return.',
-        'Real assets combine REIT index and a 2% gold sleeve.',
-        'Alternatives held for diversification, not for return alone.',
-        'Rebalance events are observed, not prescribed by the document.'
-      ]) %}
+      {% set _rail = allocation_notes | default([]) %}
       {% for n in _rail %}
         <div class="aq-rail-item"><span class="aq-rail-n">{{ '%02d' % loop.index }}</span>{{ n }}</div>
       {% endfor %}

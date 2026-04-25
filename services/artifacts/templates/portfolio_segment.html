@@ -933,18 +933,24 @@
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data sources</span>
     </p>
-    {% set _ds = data_sources | default([
-      {'key': 'Holdings',         'value': 'Broker statements · month-end'},
-      {'key': 'Style taxonomy',   'value': 'FactSet / MSCI style classification'},
-      {'key': 'Region taxonomy',  'value': 'MSCI region · developed / emerging'},
-      {'key': 'Fundamentals',     'value': 'FMP v4 Stable · sector ratios'},
-    ]) %}
-    {% for d in _ds %}
+    {# Wave 6 — 'Broker statements · month-end' prose-embedded fallback
+       removed. 'Broker statements' implies a broker connection we may
+       not have; Wave 5 TestNoHardcodedDataSources already forbids the
+       literal in list defaults. Service populates `data_sources` via
+       `resolve_user_data_lineage`; empty list renders neutral line. #}
+    {% set _ds = data_sources | default([]) %}
+    {% if _ds %}
+      {% for d in _ds %}
+        <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
+          <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key | default(d.source | default('')) }}</span>
+          <span>{{ d.value | default(d.description | default('')) }}</span>
+        </p>
+      {% endfor %}
+    {% else %}
       <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-        <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key }}</span>
-        <span>{{ d.value }}</span>
+        Data sources not specified. Connect your broker in Settings to see data lineage.
       </p>
-    {% endfor %}
+    {% endif %}
 
     <p style="margin: 10pt 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;

@@ -27,6 +27,28 @@ export interface IndexQuote {
   observed_at?: string;
   /** Backend-flagged stale (quote older than freshness policy) */
   is_stale?: boolean;
+  /**
+   * Liquid ETF proxy used to source the level when the caret-prefixed
+   * index symbol (e.g. ^GSPC) is gated on the FMP Starter tier.
+   * Present ONLY for US indices served via ETF proxy
+   * (SPY for ^GSPC, QQQ for ^IXIC, DIA for ^DJI, IWM for ^RUT, VIXY for ^VIX).
+   * KR indices and FX pairs do NOT carry this field.
+   *
+   * When present, the UI MUST surface the proxy so the user does not
+   * mistake SPY ($708) for S&P 500 level (7108). The level itself is
+   * NEVER converted — a ratio would drift. See routes/market.py:529.
+   */
+  proxy_ticker?: string;
+}
+
+/**
+ * Short descriptor text for the ETF proxy badge.
+ * Example: `proxyLabel("SPY") === "via SPY · ETF proxy"`.
+ * Returns empty string when no proxy (caller guards on truthiness).
+ */
+export function proxyLabel(proxy: string | undefined): string {
+  if (!proxy) return "";
+  return `via ${proxy} · ETF proxy`;
 }
 
 /**
@@ -152,6 +174,14 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
           <h3 className="font-serif text-base font-bold text-slate-900 truncate">
             {quote.name}
           </h3>
+          {quote.proxy_ticker && (
+            <p
+              className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.18em] text-slate-500"
+              title="Level sourced from a liquid ETF proxy (FMP Starter tier does not serve the caret-prefixed index symbol). No ratio conversion is applied."
+            >
+              {proxyLabel(quote.proxy_ticker)}
+            </p>
+          )}
           {quote.observed_at && (
             <div className="mt-1 flex items-center gap-2">
               <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-slate-400 tabular-nums">

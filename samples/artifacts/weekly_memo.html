@@ -2656,6 +2656,22 @@ svg text.tick-label {
 
 <div class="r-page-break"></div>
 
+<section class="persona-opener persona-opener--balanced">
+  <p class="sp-eyebrow">Opener · Balanced CFO</p>
+  <h3 class="sp-opener-title">포트폴리오 전체가 말하는 한 주</h3>
+  <p class="sp-opener-lede">
+    배상현 님 포트폴리오 Sharpe ratio 는 지난주 대비
+    소폭 개선된 구간에 있으며, 섹터 HHI 는 분산 관점에서 NEUTRAL 구간을
+    유지합니다. 최대 낙폭은 목표 임계치 이내에 머물고 있어 규칙 기반
+    관찰 지표가 안정적으로 유지되는 한 주로 기록됩니다.
+  </p>
+  <p class="sp-opener-sub">
+    개별 종목의 승패보다 포트폴리오 레벨의 리스크 · 분산 · 재조정 임계치
+    세 축을 중심으로 본 리포트가 구성됩니다. 라벨은 POSITIVE / NEGATIVE /
+    NEUTRAL 이며, 모든 수치는 관찰값입니다.
+  </p>
+</section>
+
 <p class="sp-part">Part I · This Week in Returns</p>
 <h2 class="sp-title">Why the spread stayed small</h2>
 <p class="sp-deck">
@@ -2808,6 +2824,36 @@ svg text.tick-label {
 
 
 <div class="r-page-break"></div>
+
+<section class="persona-data-focus persona-data-focus--balanced">
+  <p class="sp-eyebrow">Signal Focus · Portfolio-Level Risk Metrics</p>
+  <h3 class="sp-data-title">분산의 품질을 측정하는 숫자</h3>
+
+  <ul class="pq-signal-list">
+    <li>
+      <span class="pq-signal-key">Sharpe ratio</span>
+      <span class="pq-signal-val">전주 대비 POSITIVE 흐름 구간</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">ComponentES 상위 3 종목</span>
+      <span class="pq-signal-val">전체 리스크 기여도 — 집중 방향 관찰</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">섹터 HHI</span>
+      <span class="pq-signal-val">분산 관점 NEUTRAL 구간</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">LedoitWolf 공분산 조건수</span>
+      <span class="pq-signal-val">안정 구간 유지</span>
+    </li>
+  </ul>
+
+  <p class="sp-data-caption">
+    ComponentES 는 포지션별 기대손실 기여도를 정량화하는 지표로, 상위 3
+    종목의 기여도가 증가하는 구간은 리스크가 특정 종목에 쏠리는 관찰
+    구간으로 해석됩니다. 본 라인은 정보 제공 목적입니다.
+  </p>
+</section>
 
 <p class="sp-part">Part II · Position Ladder</p>
 <h2 class="sp-title">The names that moved the book</h2>
@@ -2991,122 +3037,32 @@ Largest drag.        </span></td>
 
 <div class="r-page-break"></div>
 
-<p class="sp-part">Part III · Risk Dashboard</p>
-<h2 class="sp-title">Readings around the tails</h2>
-<p class="sp-deck">
-  Four risk dimensions, each sampled over the same ninety-day window.
-  Methodology notes sit inline so the page reads as a single object.
-</p>
+<section class="persona-risk-block persona-risk-block--balanced">
+  <p class="sp-eyebrow">Risk Observation · Rebalance Thresholds</p>
+  <h3 class="sp-risk-title">임계치 관찰 포인트</h3>
 
-<div class="rq-grid">
-  <div class="rq-main">
+  <ul class="pq-risk-list">
+    <li>
+      <strong>집중도 표류.</strong> 리스크 집중도가 주간 단위로 5%p 이상
+      이동하는 경우, 이는 규칙 기반 재조정 임계치 도달 신호로 데이터에
+      기록되는 구간입니다.
+    </li>
+    <li>
+      <strong>상관관계 클러스터.</strong> 상위 포지션 간 상관계수가 0.6
+      이상으로 수렴할 때, 동일 리스크 노출 중복이 발생하는 구조 변화가
+      관찰된 사례가 있습니다.
+    </li>
+    <li>
+      <strong>Max Drawdown 목표선.</strong> 포트폴리오 MDD 가 사전 설정
+      목표 임계치에 근접하는 구간은 변동성 축소 점검 대상으로 분류됩니다.
+    </li>
+  </ul>
 
-    <div class="rq-quads">
-      <div class="rq-quad" style="border-right: none; border-bottom: none;">
-        <div class="rq-quad-label">VaR 95%</div>
-        <div class="rq-quad-value">-2.14%</div>
-        <!-- compact bar visualization of VaR vs realised max loss -->
-        <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
-          <line x1="0" y1="28" x2="180" y2="28" stroke="#c9c4b8" stroke-width="0.3"/>
-          <rect x="0" y="14" width="120" height="14" fill="#B8956A" fill-opacity="0.3"/>
-          <rect x="0" y="14" width="85" height="14" fill="#7f1d1d" fill-opacity="0.55"/>
-          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">REALISED vs LIMIT</text>
-          <text x="180" y="8" text-anchor="end" fill="#6B6B6B" font-size="6.5" font-family="JetBrains Mono, monospace">70% of cap</text>
-        </svg>
-        <div class="rq-quad-foot">Loss exceeded on 5% of historical days. 90-day HS.</div>
-      </div>
-      <div class="rq-quad" style="border-bottom: none;">
-        <div class="rq-quad-label">Expected Shortfall 95%</div>
-        <div class="rq-quad-value">-3.12%</div>
-        <!-- tail shape tiny sparkbar -->
-        <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
-            <rect x="1" y="34.0" width="7" height="2.0" fill="#c9c4b8"/>
-            <rect x="10" y="33.92" width="7" height="2.08" fill="#c9c4b8"/>
-            <rect x="19" y="33.68" width="7" height="2.32" fill="#c9c4b8"/>
-            <rect x="28" y="33.28" width="7" height="2.7199999999999998" fill="#c9c4b8"/>
-            <rect x="37" y="32.72" width="7" height="3.2800000000000002" fill="#c9c4b8"/>
-            <rect x="46" y="32.0" width="7" height="4.0" fill="#c9c4b8"/>
-            <rect x="55" y="31.12" width="7" height="4.88" fill="#c9c4b8"/>
-            <rect x="64" y="30.08" width="7" height="5.92" fill="#c9c4b8"/>
-            <rect x="73" y="28.88" width="7" height="7.12" fill="#c9c4b8"/>
-            <rect x="82" y="27.52" width="7" height="8.48" fill="#c9c4b8"/>
-            <rect x="91" y="26.0" width="7" height="10.0" fill="#c9c4b8"/>
-            <rect x="100" y="24.32" width="7" height="11.68" fill="#c9c4b8"/>
-            <rect x="109" y="22.48" width="7" height="13.52" fill="#c9c4b8"/>
-            <rect x="118" y="20.48" width="7" height="15.52" fill="#c9c4b8"/>
-            <rect x="127" y="18.32" width="7" height="17.68" fill="#c9c4b8"/>
-            <rect x="136" y="16.0" width="7" height="20.0" fill="#c9c4b8"/>
-            <rect x="145" y="13.52" width="7" height="22.48" fill="#c9c4b8"/>
-            <rect x="154" y="10.879999999999999" width="7" height="25.12" fill="#7f1d1d"/>
-            <rect x="163" y="8.079999999999998" width="7" height="27.92" fill="#7f1d1d"/>
-            <rect x="172" y="5.120000000000001" width="7" height="30.88" fill="#7f1d1d"/>
-          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">LOSS DISTRIBUTION · WORST 5% HIGHLIGHT</text>
-        </svg>
-        <div class="rq-quad-foot">Mean loss on the worst 5% of days — the tail VaR does not see.</div>
-      </div>
-      <div class="rq-quad" style="border-right: none;">
-        <div class="rq-quad-label">Max Drawdown · 12w</div>
-        <div class="rq-quad-value">-8.14%</div>
-        <!-- underwater curve -->
-        <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
-          <line x1="0" y1="6" x2="180" y2="6" stroke="#c9c4b8" stroke-width="0.3"/>
-          <polygon points="0,6 10,6 20,12 30,18 45,28 60,34 80,30 100,22 120,14 140,10 160,8 180,6"
-                   fill="#7f1d1d" fill-opacity="0.14"/>
-          <polyline points="0,6 10,6 20,12 30,18 45,28 60,34 80,30 100,22 120,14 140,10 160,8 180,6"
-                    fill="none" stroke="#7f1d1d" stroke-width="0.8"/>
-          <text x="60" y="36" fill="#7f1d1d" font-size="6.5" font-family="JetBrains Mono, monospace" text-anchor="middle">trough · W-9</text>
-        </svg>
-        <div class="rq-quad-foot">Peak-to-trough on daily marks. Recovered to flat by W-13.</div>
-      </div>
-      <div class="rq-quad">
-        <div class="rq-quad-label">Tail Ratio</div>
-        <div class="rq-quad-value">1.08</div>
-        <!-- left vs right tail side-by-side bars -->
-        <svg viewBox="0 0 180 40" width="100%" height="86" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
-          <line x1="90" y1="6" x2="90" y2="34" stroke="#c9c4b8" stroke-width="0.3"/>
-          <rect x="12" y="14" width="78" height="14" fill="#7f1d1d" fill-opacity="0.48"/>
-          <rect x="90" y="14" width="84" height="14" fill="#B8956A" fill-opacity="0.55"/>
-          <text x="12" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">P5</text>
-          <text x="174" y="8" text-anchor="end" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">P95</text>
-        </svg>
-        <div class="rq-quad-foot">|P95| ÷ |P5|. Above one, right tail carries more work.</div>
-      </div>
-    </div>
+  <p class="sp-risk-caption">
+    본 문서는 정보 제공 목적이며 매매 결정은 이용자 판단에 따릅니다.
+  </p>
+</section>
 
-    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
-      Fig. 3. Four risk dimensions, sampled over the trailing ninety
-      trading sessions. Bronze marks the benign direction; oxblood, the
-      loss direction. Grid lines are deliberately quiet.
-    </div>
-
-  </div>
-
-  <div class="rq-side">
-    <div class="rq-method">
-      <div class="rq-method-eyebrow">Methodology</div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">VaR · Value at Risk</span>
-        <div class="rq-method-def">Historical simulation over ninety trading days. Uses close-to-close log-returns; no parametric shape is assumed. Jorion (2007).</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Expected Shortfall</span>
-        <div class="rq-method-def">Average of losses beyond the 95th VaR percentile. Coherent under sub-additivity. Acerbi &amp; Tasche (2002).</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Covariance · Ledoit-Wolf</span>
-        <div class="rq-method-def">Ledoit-Wolf linear shrinkage estimator is used where a full covariance is required — stabilises eigenvalues on thin samples.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Volatility · GKYZ</span>
-        <div class="rq-method-def">Garman-Klass-Yang-Zhang range-based estimator. Efficient under five-minute sampling, robust to opening jumps.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Max Drawdown</span>
-        <div class="rq-method-def">Minimum running difference between mark and running high, over the twelve-week window on daily marks.</div>
-      </div>
-    </div>
-  </div>
-</div>
 
 
 <div class="r-page-break"></div>
@@ -3130,24 +3086,10 @@ Largest drag.        </span></td>
 <div class="ed-watch-head">What to watch · next seven days</div>
 <div class="ed-watch">
     <div class="ed-watch-item">
-      <div class="ed-watch-cat">Earnings</div>
-      <div class="ed-watch-detail">AAPL · Tue after the close.</div>
-    </div>
-    <div class="ed-watch-item">
-      <div class="ed-watch-cat">Earnings</div>
-      <div class="ed-watch-detail">005930.KS · Thu before the open.</div>
-    </div>
-    <div class="ed-watch-item">
-      <div class="ed-watch-cat">Macro</div>
-      <div class="ed-watch-detail">FOMC minutes · Wed 21:00 KST.</div>
-    </div>
-    <div class="ed-watch-item">
-      <div class="ed-watch-cat">Macro</div>
-      <div class="ed-watch-detail">US CPI · Fri 22:30 KST.</div>
-    </div>
-    <div class="ed-watch-item">
-      <div class="ed-watch-cat">Observation</div>
-      <div class="ed-watch-detail">Top-2 semi correlation remains the week&#39;s structural read.</div>
+      <div class="ed-watch-cat">—</div>
+      <div class="ed-watch-detail" style="font-style:italic;">
+        No scheduled events this week.
+      </div>
     </div>
 </div>
 
@@ -3168,8 +3110,7 @@ Largest drag.        </span></td>
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data</span> &nbsp;
-      KIS · Alpaca · FMP v4 · SEC EDGAR · FRED.
-    </p>
+Data sources not specified. Connect your broker in Settings to see data lineage.    </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;
       Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR.

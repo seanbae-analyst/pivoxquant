@@ -155,6 +155,7 @@ class BragCardContext:
     anonymous:          bool
     is_empty:           bool
     share_token:        Optional[str]
+    data_sources:       list[str]
     disclaimer:         str
 
     def to_dict(self) -> dict[str, Any]:
@@ -176,6 +177,7 @@ class BragCardContext:
             "anonymous":        self.anonymous,
             "is_empty":         self.is_empty,
             "share_token":      self.share_token,
+            "data_sources":     self.data_sources,
             "disclaimer":       self.disclaimer,
         }
 
@@ -375,6 +377,19 @@ class BragCardService:
         user_name = (user.name or "").strip() or \
                     (user.email or "").split("@")[0] or "Investor"
 
+        # Data-source provenance — Wave 5. The brag card narrates the
+        # user's own realised trades, so the truthful claim is system
+        # sources + whatever broker actually served the trade history.
+        try:
+            from services.artifacts.data_source_resolver import (
+                resolve_user_data_sources,
+            )
+            data_sources = resolve_user_data_sources(user_id)
+        except Exception as exc:
+            logger.debug("data_source resolve failed for user %s: %s",
+                         user_id, exc)
+            data_sources = []
+
         ctx = BragCardContext(
             user_id=user_id,
             user_name=user_name,
@@ -393,6 +408,7 @@ class BragCardService:
             anonymous=anonymous,
             is_empty=is_empty,
             share_token=None,  # populated on first persist
+            data_sources=data_sources,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다.",
         )
         return ctx.to_dict()

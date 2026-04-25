@@ -473,6 +473,12 @@ class MonthlyFinanceContext:
     # P6 Watch
     watch:             dict[str, Any]
     disclaimer:        str
+    # Wave 6 — colophon provenance scalars. Positions/trade lineage
+    # only named when the user actually has an Alpaca connection (KIS
+    # orders are disabled so KIS positions don't qualify here either —
+    # resolver returns an empty phrase). Currency source likewise.
+    positions_source:  Optional[str]
+    currencies_source: Optional[str]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -494,6 +500,8 @@ class MonthlyFinanceContext:
             "tax_estimate":    self.tax_estimate,
             "watch":           self.watch,
             "disclaimer":      self.disclaimer,
+            "positions_source":  self.positions_source,
+            "currencies_source": self.currencies_source,
         }
 
 
@@ -530,6 +538,24 @@ class MonthlyFinanceService:
 
         watch = _watch_items(positions, next_start, next_end)
 
+        # Wave 6 — provenance scalars. Only name Alpaca for users with a
+        # live Alpaca connection; leave blank otherwise so the template
+        # elides the section rather than claiming Alpaca as theirs.
+        try:
+            from services.artifacts.data_source_resolver import _has_active_alpaca
+            alpaca_on = _has_active_alpaca(user_id)
+        except Exception as exc:
+            logger.debug("monthly_finance alpaca check failed for user %s: %s",
+                         user_id, exc)
+            alpaca_on = False
+        positions_source = (
+            "Alpaca Broker API (read-only)." if alpaca_on else None
+        )
+        currencies_source = (
+            "FX rate observation via Alpaca FX for KRW-denominated accounts."
+            if alpaca_on else None
+        )
+
         ctx = MonthlyFinanceContext(
             user_id=user_id,
             user_name=user.name or user.email.split("@")[0],
@@ -553,6 +579,8 @@ class MonthlyFinanceService:
                 "집계이며, 투자자문·세무자문이 아닙니다. 수수료·세금·환전료 "
                 "추정치는 업계 표준치에 기반한 근사값이며 실제 금액과 다를 수 있습니다."
             ),
+            positions_source=positions_source,
+            currencies_source=currencies_source,
         )
         return ctx.to_dict()
 

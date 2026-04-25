@@ -2358,6 +2358,22 @@ svg text.tick-label {
 
 <div class="r-page-break"></div>
 
+<section class="persona-opener persona-opener--balanced">
+  <p class="sp-eyebrow">Opener · Balanced CFO</p>
+  <h3 class="sp-opener-title">포트폴리오 전체가 말하는 한 주</h3>
+  <p class="sp-opener-lede">
+    배상현 님 포트폴리오 Sharpe ratio 는 지난주 대비
+    소폭 개선된 구간에 있으며, 섹터 HHI 는 분산 관점에서 NEUTRAL 구간을
+    유지합니다. 최대 낙폭은 목표 임계치 이내에 머물고 있어 규칙 기반
+    관찰 지표가 안정적으로 유지되는 한 주로 기록됩니다.
+  </p>
+  <p class="sp-opener-sub">
+    개별 종목의 승패보다 포트폴리오 레벨의 리스크 · 분산 · 재조정 임계치
+    세 축을 중심으로 본 리포트가 구성됩니다. 라벨은 POSITIVE / NEGATIVE /
+    NEUTRAL 이며, 모든 수치는 관찰값입니다.
+  </p>
+</section>
+
 <p class="sp-part">Part I · Overnight Spread</p>
 <h2 class="sp-title">The hours between yesterday and today</h2>
 <p class="sp-deck">
@@ -2457,7 +2473,7 @@ svg text.tick-label {
 
     <div class="os-margin-block">
       <div class="os-margin-term">Pre-market snapshot</div>
-      <div class="os-margin-body">Observed 8:45 AM ET. S&amp;P and Nasdaq futures as quoted on CME pre-open; gappers taken from the IEX consolidated tape.</div>
+      <div class="os-margin-body">Observed 8:45 AM ET. S&amp;P and Nasdaq futures as quoted on CME pre-open; pre-market gappers observed from the consolidated US equities tape.</div>
     </div>
 
     <div class="os-margin-block">
@@ -2470,6 +2486,36 @@ svg text.tick-label {
 
 
 <div class="r-page-break"></div>
+
+<section class="persona-data-focus persona-data-focus--balanced">
+  <p class="sp-eyebrow">Signal Focus · Portfolio-Level Risk Metrics</p>
+  <h3 class="sp-data-title">분산의 품질을 측정하는 숫자</h3>
+
+  <ul class="pq-signal-list">
+    <li>
+      <span class="pq-signal-key">Sharpe ratio</span>
+      <span class="pq-signal-val">전주 대비 POSITIVE 흐름 구간</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">ComponentES 상위 3 종목</span>
+      <span class="pq-signal-val">전체 리스크 기여도 — 집중 방향 관찰</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">섹터 HHI</span>
+      <span class="pq-signal-val">분산 관점 NEUTRAL 구간</span>
+    </li>
+    <li>
+      <span class="pq-signal-key">LedoitWolf 공분산 조건수</span>
+      <span class="pq-signal-val">안정 구간 유지</span>
+    </li>
+  </ul>
+
+  <p class="sp-data-caption">
+    ComponentES 는 포지션별 기대손실 기여도를 정량화하는 지표로, 상위 3
+    종목의 기여도가 증가하는 구간은 리스크가 특정 종목에 쏠리는 관찰
+    구간으로 해석됩니다. 본 라인은 정보 제공 목적입니다.
+  </p>
+</section>
 
 <p class="sp-part">Part II · Macro Ladder &amp; Calendar</p>
 <h2 class="sp-title">Where the reference points sit</h2>
@@ -2600,7 +2646,6 @@ svg text.tick-label {
 
 <div class="ld-section-title">Today's calendar · scheduled items</div>
 
-
 <table class="ld-table">
   <thead>
     <tr>
@@ -2659,6 +2704,32 @@ svg text.tick-label {
 
 
 <div class="r-page-break"></div>
+
+<section class="persona-risk-block persona-risk-block--balanced">
+  <p class="sp-eyebrow">Risk Observation · Rebalance Thresholds</p>
+  <h3 class="sp-risk-title">임계치 관찰 포인트</h3>
+
+  <ul class="pq-risk-list">
+    <li>
+      <strong>집중도 표류.</strong> 리스크 집중도가 주간 단위로 5%p 이상
+      이동하는 경우, 이는 규칙 기반 재조정 임계치 도달 신호로 데이터에
+      기록되는 구간입니다.
+    </li>
+    <li>
+      <strong>상관관계 클러스터.</strong> 상위 포지션 간 상관계수가 0.6
+      이상으로 수렴할 때, 동일 리스크 노출 중복이 발생하는 구조 변화가
+      관찰된 사례가 있습니다.
+    </li>
+    <li>
+      <strong>Max Drawdown 목표선.</strong> 포트폴리오 MDD 가 사전 설정
+      목표 임계치에 근접하는 구간은 변동성 축소 점검 대상으로 분류됩니다.
+    </li>
+  </ul>
+
+  <p class="sp-risk-caption">
+    본 문서는 정보 제공 목적이며 매매 결정은 이용자 판단에 따릅니다.
+  </p>
+</section>
 
 <p class="sp-part">Part III · Flow Quad</p>
 <h2 class="sp-title">Four readings across the tape</h2>
@@ -2863,20 +2934,12 @@ svg text.tick-label {
       <strong>No. 087</strong> of the Morning Brief series.
     </p>
     <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data · Equities</span> &nbsp;
-      Alpaca Market Data (IEX consolidated) &middot; Polygon futures.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data · Macro</span> &nbsp;
       FRED &middot; Bloomberg public RSS &middot; ECB / BOJ public feeds.
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data · Calendar</span> &nbsp;
       FMP v4 economic calendar &middot; SEC EDGAR filings.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data · Currencies</span> &nbsp;
-      FX rate observation via Alpaca FX.
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;

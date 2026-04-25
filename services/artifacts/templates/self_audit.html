@@ -560,7 +560,7 @@
    'flag': 'yellow', 'note': 'Pass overdue — schedule in the next fortnight.'},
   {'q': 'Are broker statements reconciled?',
    'a': 'Reconciled to the cent through the quarter-end cutoff.',
-   'flag': 'green', 'note': 'Alpaca and KIS statements matched to the ledger.'},
+   'flag': 'green', 'note': 'Reconciled to connected broker records.'},
   {'q': 'Are dividend receipts recorded?',
    'a': 'Eight events recorded, two with posting lag beyond three sessions.',
    'flag': 'yellow', 'note': 'Recording lag is a small process hygiene item.'},
@@ -814,8 +814,14 @@
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Data sources</span> &nbsp;
-      {% set _ds = data_sources | default(['Broker statements', 'Observation journal', 'Rebalance log']) %}
-      {{ _ds | join(' · ') }}.
+      {# Wave 5 — the self-audit scoring uses the user's own
+         TradeHistory plus forward market prices from our system data
+         sources. We surface the observation journal because the audit
+         narrative reflects user-entered decision notes. If the service
+         fails to populate `data_sources`, we prefer silence over a
+         fabricated "Broker statements" claim. #}
+      {% set _ds = data_sources | default([]) %}
+      {% if _ds %}{{ _ds | join(' · ') }}.{% else %}Data sources not specified.{% endif %}
     </p>
     <p style="margin: 0 0 10pt 0;">
       <span class="co-key">Typeset in</span> &nbsp;

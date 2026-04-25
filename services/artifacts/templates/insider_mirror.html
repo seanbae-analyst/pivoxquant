@@ -543,19 +543,8 @@
   filing date. All figures are drawn from the public record.
 </p>
 
-{% set _flist = filings | default([
-  {'tkr':'NVDA',  'filer':'Huang, Jen-Hsun',     'role':'CEO / Director', 'form':'Form 4',   'action':'sell', 'shares': 120000, 'value':137774400, 'date':'2026-04-18', 'spark':[0.5,0.48,0.47,0.46,0.44,0.43,0.41,0.40]},
-  {'tkr':'META',  'filer':'Zuckerberg, Mark',    'role':'CEO / 10% Owner','form':'Form 4',   'action':'sell', 'shares': 200000, 'value':124200000, 'date':'2026-04-15', 'spark':[0.5,0.49,0.48,0.47,0.46,0.45,0.43,0.42]},
-  {'tkr':'MSFT',  'filer':'Nadella, Satya',      'role':'CEO',            'form':'Form 4',   'action':'sell', 'shares':  40000, 'value': 17641200, 'date':'2026-04-17', 'spark':[0.5,0.49,0.48,0.48,0.47,0.46,0.46,0.45]},
-  {'tkr':'TSLA',  'filer':'Taneja, Vaibhav',    'role':'CFO',            'form':'Form 4',   'action':'sell', 'shares':  15000, 'value':  3492000, 'date':'2026-04-16', 'spark':[0.5,0.48,0.47,0.45,0.44,0.42,0.41,0.40]},
-  {'tkr':'AAPL',  'filer':'Maestri, Luca',       'role':'CFO',            'form':'Form 4',   'action':'buy',  'shares':   5000, 'value':  1074400, 'date':'2026-04-14', 'spark':[0.5,0.51,0.52,0.54,0.56,0.58,0.60,0.62]},
-  {'tkr':'AMZN',  'filer':'Olsavsky, Brian',    'role':'CFO',            'form':'Form 4',   'action':'sell', 'shares':   8000, 'value':  1580000, 'date':'2026-04-13', 'spark':[0.5,0.50,0.49,0.49,0.48,0.47,0.47,0.46]},
-  {'tkr':'GOOGL', 'filer':'Porat, Ruth',        'role':'President',      'form':'Form 4',   'action':'sell', 'shares':  12000, 'value':  2014800, 'date':'2026-04-11', 'spark':[0.5,0.49,0.48,0.48,0.47,0.47,0.46,0.46]},
-  {'tkr':'AVGO',  'filer':'Tan, Hock E.',       'role':'CEO',            'form':'Form 144', 'action':'sell', 'shares':   4000, 'value':  5496000, 'date':'2026-04-10', 'spark':[0.5,0.49,0.49,0.48,0.47,0.47,0.46,0.45]},
-  {'tkr':'BRK.B', 'filer':'Buffett, Warren',    'role':'CEO / Chair',    'form':'Form 4',   'action':'buy',  'shares':   2500, 'value':  1092500, 'date':'2026-04-09', 'spark':[0.5,0.51,0.52,0.53,0.54,0.55,0.56,0.57]},
-  {'tkr':'005930','filer':'Lee, Jae-Yong',      'role':'Chair',          'form':'DART',     'action':'buy',  'shares': 100000, 'value':  5680000, 'date':'2026-04-07', 'spark':[0.5,0.50,0.51,0.52,0.53,0.54,0.55,0.56]}
-]) %}
-
+{% set _flist = filings | default([]) %}
+{% if _flist %}
 <table class="ld-table">
   <thead>
     <tr>
@@ -604,6 +593,12 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% else %}
+<p class="sp-deck" style="font-style: italic; color: #6B6B6B; margin-top: 20pt;">
+  No qualifying insider filings for the selected window.
+</p>
+{% endif %}
 
 <p class="sp-deck" style="margin-top: 10pt; font-size: 9.2pt;">
   All filings are public record, retrieved from SEC EDGAR (Form 4 / 5 / 144)
@@ -661,18 +656,8 @@
       <div class="aq-quad">
         <div class="aq-quad-label">Q2 · Top 10 Net-Acquisition Co.</div>
         <div class="aq-quad-sub">Observed $ value, USD.</div>
-        {% set _nb = net_buy_top | default([
-          {'t':'AAPL',  'v': 1074400},
-          {'t':'BRK.B', 'v': 1092500},
-          {'t':'005930','v': 5680000},
-          {'t':'HD',    'v':  840000},
-          {'t':'UNH',   'v':  620000},
-          {'t':'JPM',   'v':  540000},
-          {'t':'KO',    'v':  420000},
-          {'t':'PG',    'v':  380000},
-          {'t':'COST',  'v':  312000},
-          {'t':'LLY',   'v':  282000}
-        ]) %}
+        {% set _nb = net_buy_top | default([]) %}
+        {% if _nb %}
         {% set _nbmax = _nb | map(attribute='v') | list | max %}
         {% if _nbmax == 0 %}{% set _nbmax = 1 %}{% endif %}
         <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
@@ -684,24 +669,19 @@
             <text x="{{ 64 + _w }}" y="{{ _y + 5.6 }}" text-anchor="start" fill="#4a4a4a" font-size="5.4" font-family="JetBrains Mono, monospace">${{ '{:,.0f}'.format(r.v / 1000) }}k</text>
           {% endfor %}
         </svg>
+        {% else %}
+        <div style="font-style:italic; color:#6B6B6B; padding: 40pt 6pt; text-align:center;">
+          No net-acquisition filings for this window.
+        </div>
+        {% endif %}
       </div>
 
       {# ── Q3 · Top 10 net-sell companies ── #}
       <div class="aq-quad">
         <div class="aq-quad-label">Q3 · Top 10 Net-Disposition Co.</div>
         <div class="aq-quad-sub">Observed $ value, USD.</div>
-        {% set _ns = net_sell_top | default([
-          {'t':'NVDA',  'v':137774400},
-          {'t':'META',  'v':124200000},
-          {'t':'MSFT',  'v': 17641200},
-          {'t':'AVGO',  'v':  5496000},
-          {'t':'TSLA',  'v':  3492000},
-          {'t':'GOOGL', 'v':  2014800},
-          {'t':'AMZN',  'v':  1580000},
-          {'t':'ORCL',  'v':  1220000},
-          {'t':'CRM',   'v':   960000},
-          {'t':'NFLX',  'v':   780000}
-        ]) %}
+        {% set _ns = net_sell_top | default([]) %}
+        {% if _ns %}
         {% set _nsmax = _ns | map(attribute='v') | list | max %}
         {% if _nsmax == 0 %}{% set _nsmax = 1 %}{% endif %}
         <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
@@ -713,6 +693,11 @@
             <text x="{{ 64 + _w }}" y="{{ _y + 5.6 }}" text-anchor="start" fill="#4a4a4a" font-size="5.4" font-family="JetBrains Mono, monospace">${{ '{:,.0f}'.format(r.v / 1000000) }}M</text>
           {% endfor %}
         </svg>
+        {% else %}
+        <div style="font-style:italic; color:#6B6B6B; padding: 40pt 6pt; text-align:center;">
+          No net-disposition filings for this window.
+        </div>
+        {% endif %}
       </div>
 
       {# ── Q4 · Form type distribution ── #}

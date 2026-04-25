@@ -119,6 +119,7 @@ class MemoContext:
     macro_checklist:   list[dict[str, Any]]
     risk_notes:        list[str]
     risk_kpi:          dict[str, Any]
+    data_sources:      list[str]
     disclaimer:        str
 
     def to_dict(self) -> dict[str, Any]:
@@ -140,6 +141,7 @@ class MemoContext:
             "macro_checklist":   self.macro_checklist,
             "risk_notes":        self.risk_notes,
             "risk_kpi":          self.risk_kpi,
+            "data_sources":      self.data_sources,
             "disclaimer":        self.disclaimer,
         }
 
@@ -675,6 +677,21 @@ class WeeklyMemoService:
                            user_id, exc)
             risk_kpi = {}
 
+        # Data-source provenance — Wave 5. `resolve_user_data_sources` never
+        # raises and never invents a broker claim, so an empty result is
+        # a trustworthy signal to the template ("say nothing" rather than
+        # "claim Alpaca"). The weekly memo is descriptive of market-level
+        # and broker-reported positions — no journal entries feed it.
+        try:
+            from services.artifacts.data_source_resolver import (
+                resolve_user_data_sources,
+            )
+            data_sources = resolve_user_data_sources(user_id)
+        except Exception as exc:
+            logger.debug("data_source resolve failed for user %s: %s",
+                         user_id, exc)
+            data_sources = []
+
         ctx = MemoContext(
             user_id=user_id,
             user_name=user.name or user.email.split("@")[0],
@@ -693,6 +710,7 @@ class WeeklyMemoService:
             macro_checklist=macro,
             risk_notes=risk,
             risk_kpi=risk_kpi,
+            data_sources=data_sources,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
         )
         return ctx.to_dict()
