@@ -1,0 +1,134 @@
+name: Frontend Tests
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  vitest:
+    name: Vitest (units)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test
+        env:
+          CI: 'true'
+
+  build-and-typecheck:
+    name: Build + TypeScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  playwright:
+    name: Playwright (E2E)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build-and-typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+        env:
+          CI: 'true'
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 14
+
+  open-issue-on-failure:
+    name: Open Issue on regression
+    runs-on: ubuntu-latest
+    needs: [vitest, build-and-typecheck, playwright]
+    if: failure() && github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: File / update Issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="[Frontend] Tests broken on main @ $(date -u +'%Y-%m-%d %H:%M') UTC"
+          body=$(cat <<EOF
+          Frontend test suite failed on main.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Failing jobs are listed in the run summary. Most common causes:
+          - Vitest: component render / hook / format regression.
+          - Build: TS error or missing dep.
+          - Playwright: route 500 / dev-server failed to boot / interaction selector changed.
+
+          Triage:
+          1. Open the run, expand the failed job, copy the first error.
+          2. If Playwright, the playwright-report artifact is attached.
+          3. Run \`cd frontend && npm run test\` and \`npm run e2e\` locally to reproduce.
+
+          /cc @seanbae-analyst
+          EOF
+          )
+          existing=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label autopilot,frontend-tests \
+            --json number \
+            --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" \
+              --repo "$GITHUB_REPOSITORY" \
+              --body "$body"
+          else
+            gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body "$body" \
+              --label autopilot,frontend-tests
+          fi
