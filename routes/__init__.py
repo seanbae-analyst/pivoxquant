@@ -18,6 +18,7 @@ def register_blueprints(app):
     from .watchlist import watchlist_bp
     from .backtest import backtest_bp
     from .quant import quant_bp
+    from .quant_composer import quant_composer_bp  # Feature 1 — Quant Composer
     from .realtime import realtime_bp
     from .profile import profile_bp
     from .broker_oauth import broker_oauth_bp
@@ -35,6 +36,9 @@ def register_blueprints(app):
     from .risk import risk_bp
     from .agent import agent_bp
     from .agent_admin import agent_admin_bp
+    from .twin import twin_bp  # Feature 5 — AI Trader Twin (paper-only)
+    from .pre_trade import pre_trade_bp  # Feature 6 — Pre-Trade Friction
+    from .behavior import behavior_bp    # Feature 7 — Weekly Behavioural Score
 
     # agent_worker is a sibling package and may be absent in some deploys
     # (it ships a Procfile + its own requirements). When it's unavailable
@@ -57,11 +61,13 @@ def register_blueprints(app):
         auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, daytrade_bp, alerts_bp, notifications_bp, trades_bp,
         autotrade_bp, ai_bp, watchlist_bp, backtest_bp,
-        quant_bp, realtime_bp, profile_bp, broker_oauth_bp,
+        quant_bp, quant_composer_bp, realtime_bp, profile_bp, broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
         counterfactual_bp, morning_brief_bp, alt_data_bp,
         artifacts_bp, admin_fmp_bp, admin_preview_bp,
         risk_bp, agent_bp, agent_admin_bp,
+        twin_bp,
+        pre_trade_bp, behavior_bp,
     ]
     if growth_bp is not None:
         blueprints.append(growth_bp)

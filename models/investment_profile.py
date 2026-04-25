@@ -97,6 +97,13 @@ class InvestmentProfile(db.Model):
     ai_coaching_style = db.Column(db.String(20), default="balanced")
     alert_frequency = db.Column(db.String(20), default="daily")
 
+    # ── Feature 1 (Quant Composer) ── per-user model selection + weight overrides.
+    # Stored as TEXT JSON for SQLite/Postgres portability; serialized via
+    # services.quant.composer at the boundary. Empty list/dict = "no override"
+    # so the engine remains backward compatible for users who never opted in.
+    enabled_quant_models = db.Column(db.Text, default="[]")
+    model_weights = db.Column(db.Text, default="{}")
+
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 

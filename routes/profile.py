@@ -34,6 +34,11 @@ from services.profile import (
     compute_rolling_response,
     classify_persona_multi,
     explain_persona_classification,
+    DRIFT_DISCLAIMER,
+    take_snapshot,
+    get_history,
+    compute_drift,
+    detect_significant_drift,
 )
 from .decorators import api_auth
 
@@ -798,4 +803,146 @@ def get_persona_benchmark_all():
     return jsonify({
         "window_days": window,
         "personas": out,
+    })
+
+
+# ── PersonaSnapshot history + Evolution Timeline (Feature 3+4) ────────────
+# All read endpoints scope strictly to ``current_user.id`` — never another
+# user's data. Write endpoint is self-only too: there is no admin override
+# that lets one user trigger another user's snapshot. The
+# ``/api/profile/persona-snapshot`` POST is rate-limited at the security
+# layer and exists primarily as a test/debug surface for the frontend
+# Evolution Timeline component while the weekly cron is the production
+# write path. Every response carries ``DRIFT_DISCLAIMER`` so the
+# observational framing the legal filter expects is always present.
+
+
+# Bound the timeline lookback. ``days_back`` matches the service-layer
+# clamp (1..365) but we keep a separate constant for clarity at the
+# route boundary.
+_HISTORY_MIN_DAYS = 1
+_HISTORY_MAX_DAYS = 365
+_HISTORY_DEFAULT_DAYS = 180
+
+
+@profile_bp.route("/persona-history", methods=["GET"])
+@api_auth
+def get_persona_history():
+    """Return the authenticated user's PersonaSnapshot timeline.
+
+    Query params:
+        days: int (default 180, bounded to [1, 365])
+
+    Response shape:
+        {
+            "snapshots": [...],   # oldest → newest
+            "n":         int,
+            "days":      int,
+            "disclaimer": "...",
+        }
+
+    Empty list when no snapshots exist — the API always returns HTTP
+    200 so SWR doesn't fall back to mocks for fresh users.
+    """
+    raw = request.args.get("days", str(_HISTORY_DEFAULT_DAYS))
+    try:
+        days = int(raw)
+    except (TypeError, ValueError):
+        days = _HISTORY_DEFAULT_DAYS
+    days = max(_HISTORY_MIN_DAYS, min(_HISTORY_MAX_DAYS, days))
+
+    try:
+        snapshots = get_history(current_user.id, days_back=days)
+    except Exception:
+        logger.exception(
+            "profile.get_persona_history failed (user_id=%s, days=%s)",
+            current_user.id, days,
+        )
+        return jsonify({"error": "Failed to load persona history"}), 500
+
+    return jsonify({
+        "snapshots": snapshots,
+        "n": len(snapshots),
+        "days": days,
+        "disclaimer": DRIFT_DISCLAIMER,
+    })
+
+
+@profile_bp.route("/persona-drift", methods=["GET"])
+@api_auth
+def get_persona_drift():
+    """Return a recent-drift summary for the authenticated user.
+
+    Combines a 180-day full-history drift summary with a 4-week
+    significance check. Always returns HTTP 200; the ``available``
+    flag inside ``drift`` indicates whether enough data exists. The
+    ``significant`` block is ``None`` when the recent change is below
+    the threshold (steady state) — the UI hides the banner in that
+    case.
+
+    Every textual field is observational. ``disclaimer`` is the same
+    constant the timeline endpoint emits.
+    """
+    try:
+        snapshots = get_history(current_user.id, days_back=_HISTORY_DEFAULT_DAYS)
+        drift = compute_drift(snapshots)
+        significant = detect_significant_drift(current_user.id)
+    except Exception:
+        logger.exception(
+            "profile.get_persona_drift failed (user_id=%s)",
+            current_user.id,
+        )
+        return jsonify({"error": "Failed to compute persona drift"}), 500
+
+    return jsonify({
+        "drift": drift,
+        "significant": significant,
+        "disclaimer": DRIFT_DISCLAIMER,
+    })
+
+
+@profile_bp.route("/persona-snapshot", methods=["POST"])
+@api_auth
+def post_persona_snapshot():
+    """Take an immediate PersonaSnapshot for the authenticated user.
+
+    Self-only — there is no admin override that lets one user trigger
+    another user's snapshot. The weekly cron remains the production
+    write path; this endpoint is the test / debug surface so the
+    frontend Evolution Timeline can be exercised before the first
+    Sunday cron fires for a new account.
+
+    Returns ``{"ok": true, "snapshot": {...}}`` on success or
+    ``{"ok": true, "snapshot": null, "reason": "duplicate"}`` when a
+    snapshot at the same instant already exists (UNIQUE collision).
+    """
+    body = request.get_json(silent=True) or {}
+    raw_window = body.get("window_days", 90)
+    try:
+        window_days = int(raw_window)
+    except (TypeError, ValueError):
+        window_days = 90
+    window_days = max(30, min(365, window_days))
+
+    try:
+        row = take_snapshot(current_user.id, window_days=window_days)
+    except Exception:
+        logger.exception(
+            "profile.post_persona_snapshot failed (user_id=%s)",
+            current_user.id,
+        )
+        return jsonify({"error": "Failed to take persona snapshot"}), 500
+
+    if row is None:
+        return jsonify({
+            "ok": True,
+            "snapshot": None,
+            "reason": "duplicate",
+            "disclaimer": DRIFT_DISCLAIMER,
+        })
+
+    return jsonify({
+        "ok": True,
+        "snapshot": row.to_dict(),
+        "disclaimer": DRIFT_DISCLAIMER,
     })

@@ -22,6 +22,20 @@ from .persona_group_stats import (
     VALID_PERSONAS,
     VALID_WINDOWS,
 )
+from .persona_snapshot import PersonaSnapshot, VALID_SNAPSHOT_PERSONAS
+from .pre_trade_reflection import (
+    PreTradeReflection,
+    MIN_RATIONALE_CHARS,
+    DEFAULT_COOLDOWN_SECONDS,
+    EXTENDED_COOLDOWN_SECONDS,
+    AUTO_EXTEND_REASONS,
+)
+from .behavioral_score import BehavioralScore, SUB_SCORE_KEYS
+# Feature 5 — AI Twin (paper portfolio simulator). 100% paper / no broker.
+from .ai_twin_portfolio import AITwinPortfolio, DEFAULT_STARTING_CASH
+from .ai_twin_position import AITwinPosition
+from .ai_twin_trade import AITwinTrade, VALID_SIDES as AI_TWIN_VALID_SIDES
+from .ai_twin_weekly_report import AITwinWeeklyReport
 
 __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlist",
            "InvestmentProfile", "BrokerConnection", "PushSubscription", "PortfolioShare",
@@ -31,4 +45,13 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "ArtifactFeedback", "VOTE_CHOICES",
            "WeeklyPulse", "VALID_CADENCES",
            "CompanionWaitlist",
-           "PersonaGroupStats", "MIN_GROUP_SIZE", "VALID_PERSONAS", "VALID_WINDOWS"]
+           "PersonaGroupStats", "MIN_GROUP_SIZE", "VALID_PERSONAS", "VALID_WINDOWS",
+           "PersonaSnapshot", "VALID_SNAPSHOT_PERSONAS",
+           "PreTradeReflection", "MIN_RATIONALE_CHARS",
+           "DEFAULT_COOLDOWN_SECONDS", "EXTENDED_COOLDOWN_SECONDS",
+           "AUTO_EXTEND_REASONS",
+           "BehavioralScore", "SUB_SCORE_KEYS",
+           "AITwinPortfolio", "DEFAULT_STARTING_CASH",
+           "AITwinPosition",
+           "AITwinTrade", "AI_TWIN_VALID_SIDES",
+           "AITwinWeeklyReport"]
