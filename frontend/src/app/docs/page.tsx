@@ -141,7 +141,7 @@ export default function DocsPage() {
         </div>
 
         <footer className="mt-16 pt-8 border-t border-[rgba(245,240,232,0.08)] text-center">
-          <div className="pq-fleuron inline-flex mb-3">❦</div>
+          <div className="pq-fleuron inline-flex mb-3" aria-hidden="true">❦</div>
           <p className="pq-caption">
             More questions? Email us · hello@pivoxquant.com
           </p>

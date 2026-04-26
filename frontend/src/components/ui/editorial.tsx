@@ -144,11 +144,12 @@ export function NumDisplay({
   tone?: "pos" | "neg" | "neu";
   size?: number;
 }) {
+  // KR convention (CEO directive 2026-04-26): pos = red, neg = blue.
   const color =
     tone === "pos"
-      ? "#7db487"
-      : tone === "neg"
       ? "#d18888"
+      : tone === "neg"
+      ? "#7aa0c8"
       : "var(--pq-ivory)";
   return (
     <span
@@ -233,11 +234,12 @@ export function StatRow({
   value: React.ReactNode;
   tone?: "pos" | "neg" | "neu";
 }) {
+  // KR convention (CEO directive 2026-04-26): pos = red, neg = blue.
   const color =
     tone === "pos"
-      ? "#7db487"
-      : tone === "neg"
       ? "#d18888"
+      : tone === "neg"
+      ? "#7aa0c8"
       : "var(--pq-ivory)";
   return (
     <div className="pq-detail-stat-row">

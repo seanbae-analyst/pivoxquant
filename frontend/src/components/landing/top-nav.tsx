@@ -475,7 +475,10 @@ export default function TopNav() {
                 href="/signup"
                 className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-4 font-serif text-[12.5px] transition-transform duration-200 active:scale-[0.98]"
                 style={{
-                  height: 36,
+                  // WCAG 2.5.5 AA — 44x44 minimum tap target. Was 36 (failed
+                  // mobile guideline + Apple HIG). Padding/letter-spacing
+                  // unchanged so visual presence stays nav-grade restrained.
+                  height: 44,
                   backgroundColor: "var(--pq-bronze)",
                   color: "var(--pq-ink)",
                   letterSpacing: "0.02em",

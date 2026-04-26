@@ -1,6 +1,7 @@
 "use client";
 
 import FeaturePageShell from "@/components/landing/feature-page-shell";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 import { PersonaShowcase } from "@/components/landing/persona-showcase";
 
 export default function PersonasPage() {
@@ -30,8 +31,11 @@ export default function PersonasPage() {
         },
       ]}
     >
-      <PersonaShowcase />
+      <SectionCurtain divider={false}>
+        <PersonaShowcase />
+      </SectionCurtain>
 
+      <SectionCurtain>
       <section
         id="archetype"
         className="py-24 md:py-32"
@@ -97,6 +101,7 @@ export default function PersonasPage() {
           </a>
         </div>
       </section>
+      </SectionCurtain>
     </FeaturePageShell>
   );
 }

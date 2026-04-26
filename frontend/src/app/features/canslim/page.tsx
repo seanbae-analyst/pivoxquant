@@ -16,6 +16,7 @@ import {
   XCircle,
   CheckCircle2,
 } from "lucide-react";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 
 export const metadata: Metadata = {
   title: "CAN SLIM Stock Screener — PivoxQuant",
@@ -71,7 +72,7 @@ const factors = [
     description: "Observes institutional flow — mutual fund and hedge fund position changes in the name. Descriptive factor only; not a signal to act.",
     icon: Building2,
     threshold: "Observed institutional accumulation",
-    color: "text-indigo-600 bg-indigo-50 border-indigo-100",
+    color: "text-amber-700 bg-amber-50 border-amber-100",
   },
   {
     letter: "M",
@@ -152,6 +153,7 @@ export default function CanslimPage() {
         </div>
 
         {/* ── What is CAN SLIM? ── */}
+        <SectionCurtain divider={false}>
         <section className="mb-16">
           <div className="sp-card rounded-2xl p-6 sm:p-8">
             <h2 className="text-xl font-bold text-slate-900 mb-4">What is CAN SLIM?</h2>
@@ -165,8 +167,10 @@ export default function CanslimPage() {
             </p>
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── The 7 Factors ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-6">The 7 Factors</h2>
           <div className="space-y-4">
@@ -196,8 +200,10 @@ export default function CanslimPage() {
             })}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── Rating System ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-6">Rating System</h2>
           <p className="text-sm text-slate-500 mb-6">
@@ -219,8 +225,10 @@ export default function CanslimPage() {
             })}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── CTA ── */}
+        <SectionCurtain>
         <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
           <h2 className="text-2xl font-bold text-slate-900 mb-3">
             Screen stocks with CAN SLIM
@@ -237,6 +245,7 @@ export default function CanslimPage() {
             <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
+        </SectionCurtain>
       </main>
     </div>
   );

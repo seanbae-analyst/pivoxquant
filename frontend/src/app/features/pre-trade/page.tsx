@@ -1,6 +1,7 @@
 "use client";
 
 import FeaturePageShell from "@/components/landing/feature-page-shell";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 import { DepositionTeaser } from "@/components/landing/deposition-teaser";
 
 export default function PreTradePage() {
@@ -30,9 +31,9 @@ export default function PreTradePage() {
         },
       ]}
     >
-      <div id="deposition">
+      <SectionCurtain divider={false} id="deposition">
         <DepositionTeaser />
-      </div>
+      </SectionCurtain>
     </FeaturePageShell>
   );
 }

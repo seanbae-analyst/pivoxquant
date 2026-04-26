@@ -1,6 +1,7 @@
 "use client";
 
 import FeaturePageShell from "@/components/landing/feature-page-shell";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 import { ThreeLayers } from "@/components/landing/three-layers";
 import { LivingCfoLoop } from "@/components/landing/living-cfo-loop";
 import EngineModelsDrawer from "@/components/landing/engine-models-drawer";
@@ -32,15 +33,15 @@ export default function EnginePage() {
         },
       ]}
     >
-      <div id="three-layers">
+      <SectionCurtain divider={false} id="three-layers">
         <ThreeLayers />
-      </div>
-      <div id="loop">
+      </SectionCurtain>
+      <SectionCurtain id="loop">
         <LivingCfoLoop />
-      </div>
-      <div id="inventory">
+      </SectionCurtain>
+      <SectionCurtain id="inventory">
         <EngineModelsDrawer />
-      </div>
+      </SectionCurtain>
     </FeaturePageShell>
   );
 }

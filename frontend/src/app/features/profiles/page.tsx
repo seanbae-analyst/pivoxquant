@@ -1,23 +1,18 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 import {
   ArrowLeft,
   ArrowRight,
   User,
-  Turtle,
-  TrendingUp,
-  Zap,
-  Rocket,
-  Gem,
-  ShieldCheck,
-  Swords,
-  Globe,
   CheckCircle2,
   Clock,
   SlidersHorizontal,
   Target,
   BarChart3,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -26,94 +21,66 @@ export const metadata: Metadata = {
     "8 distinct investor profiles. Each gets a customized strategy tailored to your risk tolerance and goals.",
 };
 
-/* ── Profile data ── */
+/* ── Profile data ──
+   Editorial pattern: 2-letter abbrev code + ledger numbering ("01 / 08"),
+   no icon-in-colored-box. Mirrors landing/personas-preview.tsx so the desk
+   feels of-a-piece across the site. Action verbs replaced with neutral
+   observation language for legal + tone alignment. */
 const profiles = [
   {
-    icon: Turtle,
+    code: "PX",
     title: "Passive Index Hugger",
-    quote: "I want steady growth with minimal effort.",
-    strategy: "Quarterly rebalancing, widest stops, let winners run for years.",
-    colorBg: "bg-emerald-50",
-    colorBorder: "border-emerald-100",
-    colorIcon: "text-emerald-600",
-    colorTag: "bg-emerald-100 text-emerald-700",
+    quote: "I want steady compounding with minimal effort.",
+    strategy: "Quarterly rebalancing, widest stops, hold winners for years.",
     tag: "Low effort",
   },
   {
-    icon: TrendingUp,
+    code: "ST",
     title: "Steady Accumulator",
-    quote: "I invest monthly and want moderate growth.",
+    quote: "I invest monthly and want moderate compounding.",
     strategy: "Monthly check-ins, balanced approach, dollar-cost averaging.",
-    colorBg: "bg-blue-50",
-    colorBorder: "border-blue-100",
-    colorIcon: "text-blue-600",
-    colorTag: "bg-blue-100 text-blue-700",
     tag: "Balanced",
   },
   {
-    icon: Zap,
+    code: "SW",
     title: "Swing Trader",
     quote: "I actively trade on weekly patterns.",
     strategy: "Technical focus, medium-term holds, weekly rebalancing.",
-    colorBg: "bg-amber-50",
-    colorBorder: "border-amber-100",
-    colorIcon: "text-amber-600",
-    colorTag: "bg-amber-100 text-amber-700",
     tag: "Active",
   },
   {
-    icon: Rocket,
+    code: "MO",
     title: "Momentum Rider",
     quote: "I ride trends for weeks to months.",
     strategy: "Trend-following signals, wide trailing stops, ride momentum.",
-    colorBg: "bg-accent/10",
-    colorBorder: "border-accent/20",
-    colorIcon: "text-accent",
-    colorTag: "bg-accent/15 text-accent",
     tag: "Momentum",
   },
   {
-    icon: Gem,
+    code: "VA",
     title: "Value Hunter",
     quote: "I look for great companies priced below their intrinsic value.",
     strategy: "Contrarian picks, fundamentals-heavy analysis, patient holding.",
-    colorBg: "bg-cyan-50",
-    colorBorder: "border-cyan-100",
-    colorIcon: "text-cyan-600",
-    colorTag: "bg-cyan-100 text-cyan-700",
     tag: "Value",
   },
   {
-    icon: ShieldCheck,
-    title: "Risk-Managed Growth",
-    quote: "Growth, but with strict loss limits.",
-    strategy: "Hard 11% max drawdown cap, growth-oriented with guardrails.",
-    colorBg: "bg-rose-50",
-    colorBorder: "border-rose-100",
-    colorIcon: "text-rose-600",
-    colorTag: "bg-rose-100 text-rose-700",
-    tag: "Protected",
+    code: "RM",
+    title: "Risk-Managed Compounder",
+    quote: "Performance, but with strict loss limits.",
+    strategy: "Hard 11% max drawdown cap, performance-oriented with guardrails.",
+    tag: "Guardrailed",
   },
   {
-    icon: Swords,
+    code: "AS",
     title: "Aggressive Scalper",
     quote: "I trade frequently for small gains.",
     strategy: "Tight stops, high frequency signals, quick entries and exits.",
-    colorBg: "bg-red-50",
-    colorBorder: "border-red-100",
-    colorIcon: "text-red-600",
-    colorTag: "bg-red-100 text-red-700",
     tag: "High frequency",
   },
   {
-    icon: Globe,
+    code: "MR",
     title: "Macro Rotator",
     quote: "I shift between sectors based on the economy.",
     strategy: "Regime-driven rotation, sector momentum, macro signals.",
-    colorBg: "bg-indigo-50",
-    colorBorder: "border-indigo-100",
-    colorIcon: "text-indigo-600",
-    colorTag: "bg-indigo-100 text-indigo-700",
     tag: "Macro",
   },
 ];
@@ -164,6 +131,7 @@ export default function ProfilesPage() {
         </div>
 
         {/* ── Assessment intro ── */}
+        <SectionCurtain divider={false}>
         <section className="mb-12">
           <div className="sp-card rounded-2xl p-6 sm:p-8">
             <h2 className="text-xl font-bold text-slate-900 mb-3">How it works</h2>
@@ -175,23 +143,39 @@ export default function ProfilesPage() {
             </p>
           </div>
         </section>
+        </SectionCurtain>
 
-        {/* ── 8 Profile Cards ── */}
+        {/* ── 8 Profile Cards ──
+            Editorial pattern: 2-letter code + "NN / 08" ledger number,
+            no icon-in-colored-box (AI slop pattern banned by design audit).
+            Hairline border + serif numerals match landing/personas-preview. */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-6">The 8 Profiles</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {profiles.map((profile) => {
-              const Icon = profile.icon;
+            {profiles.map((profile, idx) => {
+              const ordinal = String(idx + 1).padStart(2, "0");
               return (
-                <div key={profile.title} className={`sp-card rounded-2xl p-5 border ${profile.colorBorder}`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${profile.colorBg}`}>
-                      <Icon className={`w-5 h-5 ${profile.colorIcon}`} />
+                <div
+                  key={profile.title}
+                  className="rounded-sm border border-slate-200 bg-white p-5"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 flex flex-col items-start gap-1">
+                      <span
+                        className="font-serif text-[18px] tracking-[0.04em] text-slate-900"
+                        style={{ letterSpacing: "0.04em" }}
+                      >
+                        {profile.code}
+                      </span>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400 tabular-nums">
+                        {ordinal} / 08
+                      </span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="text-sm font-semibold text-slate-900">{profile.title}</h3>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${profile.colorTag}`}>
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] px-2 py-0.5 border border-slate-200 text-slate-500 rounded-sm">
                           {profile.tag}
                         </span>
                       </div>
@@ -208,8 +192,10 @@ export default function ProfilesPage() {
             })}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── What each profile customizes ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <div className="bg-slate-50 rounded-2xl p-6 sm:p-8">
             <h2 className="text-lg font-bold text-slate-900 mb-2">Each profile gets different...</h2>
@@ -228,8 +214,10 @@ export default function ProfilesPage() {
             </div>
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── CTA ── */}
+        <SectionCurtain>
         <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
           <h2 className="text-2xl font-bold text-slate-900 mb-3">
             Discover your investor type
@@ -246,6 +234,7 @@ export default function ProfilesPage() {
             <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
+        </SectionCurtain>
       </main>
     </div>
   );

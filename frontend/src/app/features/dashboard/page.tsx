@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import FeaturePageShell from "@/components/landing/feature-page-shell";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const fadeUp: Variants = {
@@ -34,6 +35,7 @@ export default function DashboardPreviewPage() {
         { eyebrow: "Research", title: "Sample Reports", description: "Read what the panes publish.", href: "/features/reports" },
       ]}
     >
+      <SectionCurtain divider={false}>
       <section
         id="dashboard-preview"
         className="py-20 md:py-28"
@@ -125,6 +127,7 @@ export default function DashboardPreviewPage() {
           </div>
         </div>
       </section>
+      </SectionCurtain>
     </FeaturePageShell>
   );
 }

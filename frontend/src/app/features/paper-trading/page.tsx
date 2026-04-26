@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 import {
   ArrowLeft,
   ArrowRight,
@@ -105,6 +106,7 @@ export default function PaperTradingPage() {
         </div>
 
         {/* ── What is Paper Trading? ── */}
+        <SectionCurtain divider={false}>
         <section className="mb-16">
           <div className="sp-card rounded-2xl p-6 sm:p-8">
             <h2 className="text-xl font-bold text-slate-900 mb-4">What is Paper Trading?</h2>
@@ -119,8 +121,10 @@ export default function PaperTradingPage() {
             </p>
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── Why Paper Trade ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-6">Why Paper Trade?</h2>
           <div className="space-y-3">
@@ -134,8 +138,10 @@ export default function PaperTradingPage() {
             })}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── How It Works (steps) ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-6">How It Works</h2>
           <div className="space-y-4">
@@ -152,8 +158,10 @@ export default function PaperTradingPage() {
             ))}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── Live Tracking ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-2">Live Tracking</h2>
           <p className="text-sm text-slate-500 mb-6">
@@ -176,8 +184,10 @@ export default function PaperTradingPage() {
             })}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── CTA ── */}
+        <SectionCurtain>
         <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
           <h2 className="text-2xl font-bold text-slate-900 mb-3">
             Start paper trading today
@@ -194,6 +204,7 @@ export default function PaperTradingPage() {
             <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
+        </SectionCurtain>
       </main>
     </div>
   );

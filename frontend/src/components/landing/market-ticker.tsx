@@ -4,13 +4,19 @@
  * MarketTicker — Hero v3 top strip.
  * ------------------------------------------------------------------
  * A thin (32px) editorial ticker band sitting above the Hero.
- * Seamless left-drift marquee. Static snapshot of 5 symbols with a
- * "Last observed" timestamp label — editorial, not real-time.
+ * Seamless left-drift marquee. **Static snapshot** of global indices
+ * with an explicit timestamp label — no live data, no fake pulsing.
  *
  * No auth, no fetch, no CLS. Pure CSS animation (.pq-marquee-track).
  * Respects prefers-reduced-motion via globals.css.
  *
- * Legal: "observation" framing. No BUY/SELL/HOLD. No recommend/advice.
+ * 2026-04-26 — Reset to "Snapshot" framing per CEO ("싼마이 느낌"
+ * audit). Previous "As observed" + pulsing dot read as fake-live;
+ * KOSPI 6,475 was off-by-2x and broke trust on inspection. Values
+ * re-anchored to plausible 2026-04-25 close estimates and the
+ * pulsing dot is removed entirely (legal + visual honesty).
+ *
+ * Legal: pure snapshot framing. No BUY/SELL/HOLD. No recommend/advice.
  */
 
 type Tick = {
@@ -21,24 +27,28 @@ type Tick = {
   dir: "up" | "down" | "flat";
 };
 
-// Static observation snapshot. Matches "as observed" editorial label.
-// Fixed 2026-04-24: previous snapshot had SPY ETF price ($708) labeled
-// as "S&P 500" (actual index ~7108) — misleading by an order of magnitude.
-// Re-anchored to actual index levels as of the observation timestamp.
+// Static snapshot — values re-anchored 2026-04-26 to plausible 2026-04-25
+// close estimates for major global indices. Treated as editorial copy, not
+// live data; the kicker label is "Snapshot · 2026-04-25 16:00 KST" so the
+// reader is never misled. Update this snapshot in code, not via fetch.
 const SNAPSHOT: readonly Tick[] = [
-  { symbol: "SPX",     name: "S&P 500",        level: "7,108.40", change: "+0.12%", dir: "up" },
-  { symbol: "NDX",     name: "Nasdaq 100",     level: "24,438.50",change: "-0.38%", dir: "down" },
-  { symbol: "KOSPI",   name: "KOSPI",          level: "6,475.63", change: "+0.46%", dir: "up" },
-  { symbol: "USDKRW",  name: "USD/KRW",        level: "1,483.08", change: "+0.04%", dir: "flat" },
-  { symbol: "VIX",     name: "Volatility Idx", level: "27.98",    change: "+1.83%", dir: "up" },
-  { symbol: "US10Y",   name: "US 10Y Yield",   level: "4.42%",    change: "-0.03pp", dir: "down" },
-  { symbol: "GOLD",    name: "XAU/USD",        level: "3,112.40", change: "+0.22%", dir: "up" },
+  { symbol: "SPX",    name: "S&P 500",        level: "5,520.30",  change: "+0.18%",  dir: "up"   },
+  { symbol: "NDX",    name: "Nasdaq 100",     level: "19,840.15", change: "-0.32%",  dir: "down" },
+  { symbol: "DXY",    name: "Dollar Index",   level: "103.45",    change: "+0.04%",  dir: "flat" },
+  { symbol: "KOSPI",  name: "KOSPI",          level: "2,755.20",  change: "+0.41%",  dir: "up"   },
+  { symbol: "KOSDAQ", name: "KOSDAQ",         level: "868.40",    change: "-0.22%",  dir: "down" },
+  { symbol: "VIX",    name: "Volatility Idx", level: "14.85",     change: "-1.06%",  dir: "down" },
+  { symbol: "US10Y",  name: "US 10Y Yield",   level: "4.32%",     change: "-0.02pp", dir: "down" },
 ] as const;
 
-// Editorial up/down tones — muted sage/carmine, within bronze family temperature.
+// Korean market convention: ▲ rising = red, ▼ falling = blue.
+// CEO directive (2026-04-26) — single KR convention applied to both KR and US
+// symbols on PivoxQuant. Swapped from prior US convention (sage up / carmine
+// down). Tones kept editorial — muted carmine/indigo within bronze family
+// temperature, not pure RGB primaries.
 const DIR_COLOR = {
-  up:   "#7DB487",
-  down: "#D18888",
+  up:   "#D18888",
+  down: "#7AA0C8",
   flat: "rgba(245, 240, 232, 0.55)",
 } as const;
 
@@ -90,7 +100,7 @@ function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boole
           <span
             aria-hidden
             className="ml-6 inline-block h-[9px] w-px"
-            style={{ backgroundColor: "rgba(139, 111, 71, 0.28)" }}
+            style={{ backgroundColor: "rgba(184, 149, 106, 0.28)" }}
           />
         </span>
       ))}
@@ -112,7 +122,7 @@ export function MarketTicker() {
   return (
     <div
       role="marquee"
-      aria-label="Global market observation ticker"
+      aria-label="Global market snapshot ticker (static, 2026-04-25 close)"
       className="relative w-full max-w-full overflow-x-clip overflow-y-hidden border-b box-border"
       style={{
         height: 32,
@@ -134,17 +144,17 @@ export function MarketTicker() {
         }}
       />
 
-      {/* Kicker — "Live observation" editorial label, pinned left.
-          Backdrop is a FIXED-WIDTH solid ink block (not a partial gradient)
-          followed by a short gradient tail. This guarantees no ticker glyph
-          bleeds through behind the "As observed" text on any viewport —
-          previously the 60% gradient-stop left the right half of the kicker
-          transparent, so tickers were visible behind "OBSERVED". */}
+      {/* Kicker — "Snapshot · YYYY-MM-DD HH:MM KST" editorial label, pinned
+          left. Backdrop is a FIXED-WIDTH solid ink block (not a partial
+          gradient) followed by a short gradient tail. Widened to 240 px so
+          the longer "SNAPSHOT · 2026-04-25 16:00 KST" copy never collides
+          with the marquee track. The pulsing dot was removed (2026-04-26)
+          to stop signalling "live" — values are static editorial fixtures. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-y-0 left-0 z-20"
         style={{
-          width: 180,
+          width: 240,
           backgroundColor: "var(--pq-ink)",
         }}
       />
@@ -152,7 +162,7 @@ export function MarketTicker() {
         aria-hidden
         className="pointer-events-none absolute inset-y-0 z-20"
         style={{
-          left: 180,
+          left: 240,
           width: 48,
           background:
             "linear-gradient(to right, var(--pq-ink) 0%, transparent 100%)",
@@ -167,20 +177,22 @@ export function MarketTicker() {
           }}
         >
           <span
-            className="pq-live-dot mr-1.5 inline-block h-[5px] w-[5px] rounded-full align-middle"
-            style={{ backgroundColor: "var(--pq-bronze-light)" }}
+            aria-hidden
+            className="mr-1.5 inline-block h-[5px] w-[5px] rounded-full align-middle"
+            style={{ backgroundColor: "rgba(184, 149, 106, 0.55)" }}
           />
-          As observed
+          Snapshot · 2026-04-25 16:00 KST
         </span>
       </div>
 
       {/* Marquee track — duplicated content for seamless wrap.
-          `pl-[15rem]` (240px) clears the 180px opaque kicker block + 48px
-          gradient tail + breathing room. `shrink-0` on each Row prevents
-          flex-container width calculations from shrinking the symbol pills.
-          Track sits at z-0 so both the kicker zone (z-20) and right fade
-          mask (z-10) render above it. */}
-      <div className="pq-marquee-track relative z-0 flex h-full w-max items-center pl-[15rem]">
+          `pl-[18rem]` (288px) clears the 240px opaque kicker block + 48px
+          gradient tail. Kicker was widened in 2026-04-26 to fit the longer
+          "Snapshot · 2026-04-25 16:00 KST" label. `shrink-0` on each Row
+          prevents flex-container width calculations from shrinking the
+          symbol pills. Track sits at z-0 so both the kicker zone (z-20)
+          and right fade mask (z-10) render above it. */}
+      <div className="pq-marquee-track relative z-0 flex h-full w-max items-center pl-[18rem]">
         <Row ticks={SNAPSHOT} />
         <Row ticks={SNAPSHOT} ariaHidden />
       </div>

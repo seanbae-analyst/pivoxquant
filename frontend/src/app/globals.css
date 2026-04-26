@@ -158,6 +158,41 @@
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #e2e8f0;
   --sidebar-ring: #E2B96F;
+
+  /* ── PivoxQuant Vantablack tokens (Wave 1C) ── */
+  /* RGB components for opacity composition */
+  --pq-bronze-rgb: 184, 149, 106;
+  --pq-bronze-light-rgb: 163, 132, 92;
+  --pq-ivory-rgb: 245, 240, 232;
+  --pq-ink-rgb: 5, 5, 5;
+
+  /* Type scale (8 steps + 3 fluid) */
+  --pq-text-eyebrow: 10.5px;
+  --pq-text-mono-sm: 11px;
+  --pq-text-caption: 12px;
+  --pq-text-body-sm: 13px;
+  --pq-text-body: 14px;
+  --pq-text-deck: 17px;
+  --pq-text-quote: 22px;
+  --pq-text-h3: 30px;
+  --pq-text-h2: clamp(1.875rem, 3.6vw, 2.75rem);
+  --pq-text-h1: clamp(2.4rem, 5.6vw, 4.5rem);
+  --pq-text-display: clamp(3rem, 7vw, 6rem);
+
+  /* Tracking */
+  --pq-track-eyebrow: 0.22em;
+  --pq-track-wordmark: 0.16em;
+  --pq-track-tight: -0.02em;
+
+  /* CTA / surface radius */
+  --pq-radius-cta: 2px;
+  --pq-radius-card: 4px;
+  --pq-radius-pill: 9999px;
+
+  /* Semantic tokens — error/warn within bronze family register.
+     KR convention reserves #D18888 (muted red) for losses; --pq-error
+     is the same hue, semantically distinct from `up/down` price colors. */
+  --pq-error: #d18888;
 }
 
 /* ── Design tokens (dark) ── */
@@ -621,10 +656,12 @@
   -webkit-text-fill-color: currentColor;
 }
 
-/* Old purple-blue-pink background gradient → primary solid */
+/* Legacy `.bg-primary-gradient` — retuned to Vantablack/bronze brand.
+   Old violet→blue→pink gradient is gone; this now reads as a warm-bronze
+   solid for any remaining call sites (e.g. tier-gate CTA pill). */
 .bg-primary-gradient {
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--pq-bronze, var(--primary));
+  color: var(--pq-ink, var(--primary-foreground));
 }
 
 /* Old glass panels → flat card */
@@ -1211,13 +1248,14 @@
   background: currentColor;
   box-shadow: 0 0 6px currentColor;
 }
+/* KR convention (CEO directive 2026-04-26): pos = red, neg = blue. */
 .pq-ink-pill--pos {
-  color: #7db487;
-  border-color: rgba(125, 180, 135, 0.4);
-}
-.pq-ink-pill--neg {
   color: #d18888;
   border-color: rgba(209, 136, 136, 0.4);
+}
+.pq-ink-pill--neg {
+  color: #7aa0c8;
+  border-color: rgba(122, 160, 200, 0.4);
 }
 .pq-ink-pill--neu {
   color: rgba(245, 240, 232, 0.55);
@@ -1471,6 +1509,9 @@ button:hover > .pq-ink-pill,
   --pq-space-7: 48px;
   --pq-space-8: 64px;
   --pq-radius: 2px;
+  /* Legacy radius — used by older Wave 1A/1B components (sp-card etc).
+     Kept distinct from --pq-radius-card (4px, Wave 1C card system).
+     Do not consolidate without a sweep of consumers. */
   --pq-radius-lg: 3px;
   --pq-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --pq-ease-fast: cubic-bezier(0.4, 0, 0.2, 1);
@@ -2051,13 +2092,14 @@ i.italic,
   font-weight: 500;
   line-height: 1.4;
 }
+/* KR convention (CEO directive 2026-04-26): pos = red, neg = blue. */
 .pq-sent-chip--pos {
-  color: #7db487;
-  border-color: rgba(125, 180, 135, 0.35);
-}
-.pq-sent-chip--neg {
   color: #d18888;
   border-color: rgba(209, 136, 136, 0.35);
+}
+.pq-sent-chip--neg {
+  color: #7aa0c8;
+  border-color: rgba(122, 160, 200, 0.35);
 }
 .pq-sent-chip--neu {
   color: rgba(245, 240, 232, 0.5);
@@ -2593,8 +2635,10 @@ i.italic,
 
 /* Wordmark — full opacity always (CEO asked for clearer text); keep subtle
    scale breath so it still feels alive. No silver-matte gradient — pure ivory
-   on Vantablack for maximum legibility. */
+   on Vantablack for maximum legibility. Family: Playfair Display so the
+   splash cover matches the hero H1's editorial Didone face. */
 .pq-splash-wordmark {
+  font-family: var(--font-display), Georgia, "Source Serif 4", serif;
   animation: pq-splash-breath 4s ease-in-out infinite;
   will-change: transform;
   /* Subtle text shadow bumps edges against the dark desk so letterforms
@@ -2863,13 +2907,26 @@ html {
 
 /* Hero H1 two-layer split container — requires the <h1> to be
    position: relative for the glyph layer to stack on top.
-   Applied via className in hero.tsx. */
+   Applied via className in hero.tsx.
+
+   2026-04-26 — display sizing + family added. Previously hero.tsx
+   relied on .pq-silver-matte for color and Tailwind ".font-serif"
+   for family but never actually set a font-size at the H1 level,
+   so the heading inherited the body 15px. We now lock in a
+   fluid display sizing scale and switch the family to Playfair
+   Display (--font-display) for the editorial Didone feel. */
 .pq-hero-h1 {
   position: relative;
+  font-family: var(--font-display), Georgia, "Source Serif 4", serif;
+  font-size: clamp(2.4rem, 5.6vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
 }
 .pq-hero-h1-static,
 .pq-hero-h1-glyphs {
   display: block;
+  font-family: var(--font-display), Georgia, "Source Serif 4", serif;
 }
 
 /* CTA ink-bleed — blob expansion on hover / click. */
@@ -2931,18 +2988,63 @@ html {
   animation: pq-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Horizontal split-reveal — left column slides in from left,
+   right column slides in from right. Used in Hero to mirror
+   the worldquantfoundry "text in from sides" feel. */
+@keyframes pq-fade-left {
+  0%   { opacity: 0; transform: translate3d(-30px, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes pq-fade-right {
+  0%   { opacity: 0; transform: translate3d(30px, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.pq-reveal-left {
+  opacity: 0;
+  animation: pq-fade-left 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.pq-reveal-right {
+  opacity: 0;
+  animation: pq-fade-right 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Hero Artifact Preview cycle — fades in fresh content each time the
+   parent <div key={idx}> remounts. Pure CSS so it doesn't depend on
+   motion library hydration timing. */
+@keyframes pq-artifact-cycle {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.pq-artifact-cycle {
+  opacity: 0;
+  animation: pq-artifact-cycle 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Hero Persona Live styles (pq-persona-fade / pq-portrait-stage /
+   pq-portrait-3d / pq-persona-hero + keyframes) removed 2026-04-26 along
+   with hero-persona-live.tsx itself. The clock-dial PersonaGlyph had no
+   semantic link to the "투자자 페르소나" concept and the eight personas
+   are now exclusively presented by the <PersonasPreview /> section. */
+
 @media (prefers-reduced-motion: reduce) {
   .pq-aurora-pulse,
   .pq-paper-sheet,
   .pq-scroll-cue-line,
   .pq-reveal,
+  .pq-reveal-left,
+  .pq-reveal-right,
+  .pq-artifact-cycle,
   .pq-ink-blob {
     animation: none !important;
     transition: none !important;
   }
-  .pq-reveal {
+  .pq-reveal,
+  .pq-reveal-left,
+  .pq-reveal-right,
+  .pq-artifact-cycle {
     opacity: 1 !important;
     transform: none !important;
+    filter: none !important;
   }
   .pq-ink-btn:hover .pq-ink-blob,
   .pq-ink-btn:focus-visible .pq-ink-blob {

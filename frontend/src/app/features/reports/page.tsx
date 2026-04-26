@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import FeaturePageShell from "@/components/landing/feature-page-shell";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 import ReportFlipCard, {
   type FlipSample,
 } from "@/components/landing/report-flip-card";
@@ -168,6 +169,7 @@ export default function ReportsPage() {
         },
       ]}
     >
+      <SectionCurtain divider={false}>
       <section
         id="sample-reports"
         className="py-20 md:py-28"
@@ -218,6 +220,7 @@ export default function ReportsPage() {
           </motion.div>
         </div>
       </section>
+      </SectionCurtain>
     </FeaturePageShell>
   );
 }

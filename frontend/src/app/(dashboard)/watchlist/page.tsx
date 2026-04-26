@@ -213,7 +213,8 @@ export default function WatchlistPage() {
                       <td
                         className={
                           "num " +
-                          (isPositive ? "text-[#7db487]" : "text-[#d18888]")
+                          // KR convention: ▲ rising = red, ▼ falling = blue (CEO directive 2026-04-26).
+                          (isPositive ? "text-[#d18888]" : "text-[#7aa0c8]")
                         }
                       >
                         {fmtPct(item.change_pct ?? 0)}

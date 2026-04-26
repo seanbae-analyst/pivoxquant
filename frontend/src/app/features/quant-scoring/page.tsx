@@ -5,12 +5,9 @@ import {
   ArrowLeft,
   ArrowRight,
   BarChart3,
-  LineChart,
-  DollarSign,
-  Newspaper,
-  Brain,
   CheckCircle2,
 } from "lucide-react";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 
 export const metadata: Metadata = {
   title: "How Quant Scoring Works — PivoxQuant",
@@ -44,35 +41,34 @@ function ScoreBar() {
   );
 }
 
-/* ── Pillar data ── */
+/* ── Pillar data ──
+   Editorial pattern: 2-letter abbrev + ledger numbering ("01 / 04"),
+   no icon-in-colored-box. Mirrors features/profiles/page.tsx so the
+   feature dossier reads of-a-piece across the site. */
 const pillars = [
   {
-    icon: LineChart,
+    code: "TC",
     title: "Technical",
     count: "25 signals",
-    question: "Is the chart showing momentum or weakness?",
-    color: "bg-accent/10 text-accent",
+    question: "Does the chart compound momentum or weakness?",
   },
   {
-    icon: DollarSign,
+    code: "FD",
     title: "Fundamental",
     count: "13 ratios",
-    question: "Is the business healthy?",
-    color: "bg-blue-50 text-blue-600",
+    question: "Is the underlying business sound?",
   },
   {
-    icon: Newspaper,
+    code: "SN",
     title: "Sentiment",
     count: "News tone",
-    question: "What are people saying?",
-    color: "bg-rose-50 text-rose-600",
+    question: "What is the tape saying about this name?",
   },
   {
-    icon: Brain,
+    code: "QM",
     title: "Quant Models",
     count: "58 models",
     question: "What do math models observe?",
-    color: "bg-emerald-50 text-emerald-600",
   },
 ];
 
@@ -134,6 +130,7 @@ export default function QuantScoringPage() {
         </div>
 
         {/* ── What is a Quant Score? ── */}
+        <SectionCurtain divider={false}>
         <section className="mb-16">
           <div className="sp-card rounded-2xl p-6 sm:p-8">
             <h2 className="text-xl font-bold text-slate-900 mb-4">What is a Quant Score?</h2>
@@ -148,8 +145,10 @@ export default function QuantScoringPage() {
             </p>
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── Score Range ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-6">Score Range</h2>
           <div className="bg-slate-50 rounded-2xl p-6 sm:p-8">
@@ -170,28 +169,47 @@ export default function QuantScoringPage() {
             </div>
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── The 4 Pillars ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-6">The 4 Pillars</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {pillars.map((pillar) => {
-              const Icon = pillar.icon;
+            {pillars.map((pillar, idx) => {
+              const ordinal = String(idx + 1).padStart(2, "0");
               return (
-                <div key={pillar.title} className="sp-card rounded-2xl p-6">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${pillar.color.split(" ")[0]}`}>
-                    <Icon className={`w-5 h-5 ${pillar.color.split(" ")[1]}`} />
+                <div
+                  key={pillar.title}
+                  className="rounded-sm border border-slate-200 bg-white p-5"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 flex flex-col items-start gap-1">
+                      <span
+                        className="font-serif text-[18px] tracking-[0.04em] text-slate-900"
+                        style={{ letterSpacing: "0.04em" }}
+                      >
+                        {pillar.code}
+                      </span>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400 tabular-nums">
+                        {ordinal} / 04
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-1">{pillar.title}</h3>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 mb-2">{pillar.count}</p>
+                      <p className="text-sm text-slate-500 italic">&ldquo;{pillar.question}&rdquo;</p>
+                    </div>
                   </div>
-                  <h3 className="text-base font-semibold text-slate-900 mb-1">{pillar.title}</h3>
-                  <p className="text-xs font-medium text-accent mb-2">{pillar.count}</p>
-                  <p className="text-sm text-slate-500 italic">&ldquo;{pillar.question}&rdquo;</p>
                 </div>
               );
             })}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── Technical Indicators ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-2">Technical Indicators (25)</h2>
           <p className="text-sm text-slate-500 mb-6">
@@ -212,12 +230,14 @@ export default function QuantScoringPage() {
             ))}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── Fundamental Factors ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-2">Fundamental Factors (13)</h2>
           <p className="text-sm text-slate-500 mb-6">
-            These check if the actual business behind the stock is strong and growing.
+            These observe whether the underlying business compounds or contracts.
           </p>
           <div className="space-y-3">
             {fundamentalFactors.map((factor) => (
@@ -233,8 +253,10 @@ export default function QuantScoringPage() {
             ))}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── CTA ── */}
+        <SectionCurtain>
         <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
           <h2 className="text-2xl font-bold text-slate-900 mb-3">
             See scores for any stock — free
@@ -251,6 +273,7 @@ export default function QuantScoringPage() {
             <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
+        </SectionCurtain>
       </main>
     </div>
   );

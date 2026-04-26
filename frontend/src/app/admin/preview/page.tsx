@@ -44,8 +44,8 @@ type DeviceSize = "mobile" | "tablet" | "desktop";
 
 const TIER_STYLE: Record<ArtifactCatalogEntry["tier"], string> = {
   free:    "bg-slate-100 text-slate-700 border-slate-200",
-  pro:     "bg-indigo-50 text-indigo-700 border-indigo-200",
-  premium: "bg-amber-50 text-amber-800 border-amber-200",
+  pro:     "bg-amber-50 text-amber-700 border-amber-200",
+  premium: "bg-amber-100 text-amber-900 border-amber-300",
 };
 
 const CADENCE_LABEL: Record<string, string> = {
