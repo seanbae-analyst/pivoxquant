@@ -147,9 +147,10 @@ export function KpiCard({
   }, [value]);
 
   const deltaColor = useMemo(() => {
+    // KR convention (CEO directive 2026-04-26): ▲ rising = red, ▼ falling = blue.
     if (delta == null) return "rgba(245,240,232,0.55)";
-    if (delta > 0) return "#7DB487";
-    if (delta < 0) return "#D18888";
+    if (delta > 0) return "#D18888";
+    if (delta < 0) return "#7AA0C8";
     return "rgba(245,240,232,0.55)";
   }, [delta]);
 

@@ -13,7 +13,7 @@
  * Visual language:
  *   - Dark terminal tone: #0B0E14 bg, #1A1F2E hairline rule.
  *   - Bronze (#B8956A) for the brand pip + delimiters.
- *   - Green (#7DB487) / red (#D18888) tick flashes on price change, 0.3s.
+ *   - KR convention tick flashes on price change, 0.3s: red (#D18888) up, blue (#7AA0C8) down.
  *
  * Legal: observation-only. No BUY/SELL/HOLD. No recommend / advise copy.
  */
@@ -40,9 +40,10 @@ const FALLBACK: readonly Snapshot[] = [
   { symbol: "VIX",    label: "VIX",      level: "17.23",    delta: "+1.83%", dir: "up" },
 ];
 
+// Korean market convention (CEO directive 2026-04-26): ▲ red, ▼ blue.
 const DIR_COLOR = {
-  up: "#7DB487",
-  down: "#D18888",
+  up: "#D18888",
+  down: "#7AA0C8",
   flat: "rgba(245,240,232,0.55)",
 } as const;
 

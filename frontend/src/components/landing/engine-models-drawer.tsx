@@ -20,17 +20,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { X } from "lucide-react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE } },
-};
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.05 } },
-};
+import { PQ_EASE, fadeUp, stagger } from "@/lib/motion";
 
 type Category =
   | "QUANT"
@@ -972,7 +962,7 @@ export default function EngineModelsDrawer() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2, ease: EASE }}
+              transition={{ duration: 0.2, ease: PQ_EASE }}
               className="fixed inset-0 z-40 cursor-default"
               style={{ backgroundColor: "rgba(10,10,10,0.6)" }}
             />
@@ -988,7 +978,7 @@ export default function EngineModelsDrawer() {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ duration: 0.3, ease: EASE }}
+              transition={{ duration: 0.3, ease: PQ_EASE }}
               className="hidden md:flex fixed top-0 right-0 bottom-0 z-50 w-[30rem] flex-col overflow-y-auto"
               style={{
                 backgroundColor: "#111111",
@@ -1014,7 +1004,7 @@ export default function EngineModelsDrawer() {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ duration: 0.3, ease: EASE }}
+              transition={{ duration: 0.3, ease: PQ_EASE }}
               className="md:hidden fixed left-0 right-0 bottom-0 z-50 flex flex-col overflow-y-auto rounded-t-2xl"
               style={{
                 maxHeight: "82vh",

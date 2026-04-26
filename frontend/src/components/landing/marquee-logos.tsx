@@ -1,11 +1,16 @@
 "use client";
 
 /**
- * MarqueeLogos — benchmark-wordmark strip below hero.
+ * MarqueeLogos — methodology-wordmark strip below hero.
  * ----------------------------------------------------
- *  • "Research cadence modeled after:" eyebrow.
- *  • Continuous left-scrolling wordmark row — SVG text only (no brand
- *    logos; we set tone via typographic wordmarks, legally safe).
+ *  • "Built on the methodology of" eyebrow.
+ *  • Continuous left-scrolling wordmark row — pure typographic SVG text.
+ *  • Methodology wordmarks (academic / quant model names) — no brand
+ *    references. Legally safe + truthful: these are the actual models
+ *    PivoxQuant runs (DuPont identity, HRP allocator, Ledoit-Wolf
+ *    shrinkage, Black-Litterman, Fama-French 5, GKYZ vol estimator,
+ *    statistical arbitrage, time-series momentum, conditional VaR,
+ *    mean reversion, behavioural biases).
  *  • Pauses on hover. Dims in reduced-motion.
  *  • Vantablack bg, ivory @ 0.36 opacity, bronze divider dots.
  */
@@ -13,14 +18,18 @@
 import { useReducedMotion } from "motion/react";
 
 const WORDMARKS = [
-  "GOLDMAN RESEARCH",
-  "McKINSEY QUARTERLY",
-  "FINANCIAL TIMES",
-  "MORGAN STANLEY DESK",
-  "BLACKROCK SYSTEMATIC",
-  "J.P. MORGAN EYE",
-  "BRIDGEWATER DAILY",
-  "ALLIANCEBERNSTEIN LEDGER",
+  "DUPONT IDENTITY",
+  "HRP PORTFOLIO",
+  "LEDOIT-WOLF SHRINKAGE",
+  "BLACK-LITTERMAN",
+  "FAMA-FRENCH 5",
+  "GKYZ VOLATILITY",
+  "STATISTICAL ARBITRAGE",
+  "TS-MOMENTUM",
+  "CONDITIONAL VAR",
+  "MEAN REVERSION",
+  "DISPOSITION EFFECT",
+  "ANCHORING BIAS",
 ];
 
 export function MarqueeLogos() {
@@ -30,7 +39,7 @@ export function MarqueeLogos() {
 
   return (
     <section
-      aria-label="Research cadence benchmarks"
+      aria-label="Quant methodology stack"
       className="relative overflow-hidden border-y"
       style={{
         backgroundColor: "#060606",
@@ -52,7 +61,7 @@ export function MarqueeLogos() {
               letterSpacing: "0.24em",
             }}
           >
-            Research cadence modeled after
+            Built on the methodology of
           </span>
           <span
             aria-hidden

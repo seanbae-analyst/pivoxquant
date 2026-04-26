@@ -1,6 +1,7 @@
 "use client";
 
 import FeaturePageShell from "@/components/landing/feature-page-shell";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 import { KoreaUsDesk } from "@/components/landing/korea-us-desk";
 
 export default function GlobalDeskPage() {
@@ -30,7 +31,9 @@ export default function GlobalDeskPage() {
         },
       ]}
     >
-      <KoreaUsDesk />
+      <SectionCurtain divider={false}>
+        <KoreaUsDesk />
+      </SectionCurtain>
     </FeaturePageShell>
   );
 }

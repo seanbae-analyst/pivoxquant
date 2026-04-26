@@ -28,29 +28,17 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
 import { ArrowRight, Check } from "lucide-react";
 
 import TopNav from "./top-nav";
 import SplashPage from "./splash-page";
 import { Hero } from "./hero";
-import { ThreeLayers } from "./three-layers";
 import MarqueeLogos from "./marquee-logos";
 import PersonasPreview from "./personas-preview";
 import { FilmGrain } from "./film-grain";
-
-/* ───────────────────────── motion ───────────────────────── */
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 22 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
-};
-const stagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
-};
+import { SectionCurtain } from "./section-curtain";
+import { Eyebrow } from "./eyebrow";
+import { PQ_EASE, fadeUp, stagger } from "@/lib/motion";
 
 /* ───────────────────────── pricing data ───────────────────────── */
 
@@ -184,23 +172,7 @@ function PricingPreview() {
           variants={fadeUp}
           className="mb-16 max-w-2xl md:mb-24"
         >
-          <div className="mb-6 inline-flex items-center gap-2.5">
-            <span
-              aria-hidden
-              className="h-px w-7"
-              style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-            />
-            <span
-              className="font-serif uppercase"
-              style={{
-                color: "var(--pq-bronze)",
-                fontSize: "11px",
-                letterSpacing: "0.22em",
-              }}
-            >
-              Membership
-            </span>
-          </div>
+          <Eyebrow className="mb-6">Membership</Eyebrow>
           <p className="pq-deck mb-4">
             Four tiers. We are never paid when you trade.
           </p>
@@ -276,7 +248,7 @@ function PricingPreview() {
                   className="font-serif"
                   style={{
                     color: "var(--pq-bronze)",
-                    fontSize: "12px",
+                    fontSize: "var(--pq-text-caption)",
                     letterSpacing: "0.22em",
                   }}
                 >
@@ -286,7 +258,7 @@ function PricingPreview() {
                   className="font-serif"
                   style={{
                     color: "var(--pq-ivory)",
-                    fontSize: "22px",
+                    fontSize: "var(--pq-text-quote)",
                     fontWeight: 500,
                     letterSpacing: "-0.01em",
                   }}
@@ -300,7 +272,7 @@ function PricingPreview() {
                   className="font-serif"
                   style={{
                     color: "var(--pq-ivory)",
-                    fontSize: "30px",
+                    fontSize: "var(--pq-text-h3)",
                     fontWeight: 500,
                     letterSpacing: "-0.02em",
                   }}
@@ -311,7 +283,7 @@ function PricingPreview() {
                   className="font-serif"
                   style={{
                     color: "rgba(245,240,232,0.45)",
-                    fontSize: "12px",
+                    fontSize: "var(--pq-text-caption)",
                     marginLeft: 6,
                   }}
                 >
@@ -323,7 +295,7 @@ function PricingPreview() {
                 className="font-serif italic"
                 style={{
                   color: "rgba(245,240,232,0.6)",
-                  fontSize: "13px",
+                  fontSize: "var(--pq-text-body-sm)",
                   lineHeight: 1.5,
                   marginBottom: 20,
                 }}
@@ -338,7 +310,7 @@ function PricingPreview() {
                     className="flex items-start gap-2.5 font-serif"
                     style={{
                       color: "rgba(245,240,232,0.78)",
-                      fontSize: "13px",
+                      fontSize: "var(--pq-text-body-sm)",
                       lineHeight: 1.5,
                     }}
                   >
@@ -354,7 +326,7 @@ function PricingPreview() {
 
               <Link
                 href={t.href}
-                className="group/cta inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 font-serif transition-transform active:scale-[0.98]"
+                className="group/cta inline-flex items-center justify-center gap-2 rounded-sm px-5 py-3 font-serif transition-transform active:scale-[0.98]"
                 style={{
                   backgroundColor: t.recommended
                     ? "var(--pq-bronze)"
@@ -363,7 +335,7 @@ function PricingPreview() {
                   border: t.recommended
                     ? "none"
                     : "0.5pt solid rgba(184,149,106,0.5)",
-                  fontSize: "13px",
+                  fontSize: "var(--pq-text-body-sm)",
                   letterSpacing: "0.02em",
                   fontWeight: 500,
                 }}
@@ -394,23 +366,7 @@ function PricingPreview() {
         >
           <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-[1fr_auto]">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2.5">
-                <span
-                  aria-hidden
-                  className="h-px w-6"
-                  style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-                />
-                <span
-                  className="font-serif uppercase"
-                  style={{
-                    color: "var(--pq-bronze)",
-                    fontSize: "10.5px",
-                    letterSpacing: "0.22em",
-                  }}
-                >
-                  Founding Lifetime · 200 seats
-                </span>
-              </div>
+              <Eyebrow className="mb-3">Founding Lifetime · 200 seats</Eyebrow>
               <h3
                 className="font-serif"
                 style={{
@@ -427,7 +383,7 @@ function PricingPreview() {
                 className="font-serif"
                 style={{
                   color: "rgba(245,240,232,0.62)",
-                  fontSize: "14px",
+                  fontSize: "var(--pq-text-body)",
                   lineHeight: 1.65,
                   maxWidth: 560,
                 }}
@@ -438,11 +394,11 @@ function PricingPreview() {
             </div>
             <Link
               href="/signup?plan=founding"
-              className="inline-flex items-center gap-2 rounded-full px-6 py-3.5 font-serif transition-transform active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-sm px-6 py-3.5 font-serif transition-transform active:scale-[0.98]"
               style={{
                 backgroundColor: "var(--pq-bronze)",
                 color: "var(--pq-ink)",
-                fontSize: "13.5px",
+                fontSize: "var(--pq-text-body-sm)",
                 letterSpacing: "0.02em",
                 fontWeight: 500,
               }}
@@ -466,7 +422,7 @@ function Faq() {
   return (
     <section
       id="faq"
-      className="py-24 md:py-32 lg:py-40"
+      className="pt-12 pb-24 md:pt-16 md:pb-32 lg:pt-20 lg:pb-40"
       style={{ backgroundColor: "#0A0A0A" }}
     >
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -477,23 +433,7 @@ function Faq() {
           variants={fadeUp}
           className="mb-12 md:mb-16"
         >
-          <div className="mb-6 inline-flex items-center gap-2.5">
-            <span
-              aria-hidden
-              className="h-px w-7"
-              style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-            />
-            <span
-              className="font-serif uppercase"
-              style={{
-                color: "var(--pq-bronze)",
-                fontSize: "11px",
-                letterSpacing: "0.22em",
-              }}
-            >
-              Desk Notes
-            </span>
-          </div>
+          <Eyebrow className="mb-6">Desk Notes</Eyebrow>
           <p className="pq-deck mb-4">
             Questions members ask before they subscribe.
           </p>
@@ -576,28 +516,9 @@ function CtaFooter() {
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
-          className="mb-6 inline-flex items-center justify-center gap-3"
+          className="mb-6 flex justify-center"
         >
-          <span
-            aria-hidden
-            className="h-px w-7"
-            style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-          />
-          <span
-            className="font-serif uppercase"
-            style={{
-              color: "var(--pq-bronze)",
-              fontSize: "10.5px",
-              letterSpacing: "0.24em",
-            }}
-          >
-            Ready?
-          </span>
-          <span
-            aria-hidden
-            className="h-px w-7"
-            style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-          />
+          <Eyebrow withDashRight>Ready?</Eyebrow>
         </motion.div>
 
         <motion.h2
@@ -654,7 +575,7 @@ function CtaFooter() {
             style={{
               backgroundColor: "var(--pq-bronze)",
               color: "var(--pq-ink)",
-              fontSize: "14px",
+              fontSize: "var(--pq-text-body)",
               letterSpacing: "0.02em",
             }}
           >
@@ -671,7 +592,7 @@ function CtaFooter() {
             style={{
               border: "0.75pt solid var(--pq-bronze)",
               color: "var(--pq-bronze)",
-              fontSize: "14px",
+              fontSize: "var(--pq-text-body)",
               letterSpacing: "0.02em",
               backgroundColor: "transparent",
             }}
@@ -712,7 +633,7 @@ function SiteFooter() {
             <p
               className="font-serif max-w-xs"
               style={{
-                fontSize: "13.5px",
+                fontSize: "var(--pq-text-body-sm)",
                 lineHeight: 1.6,
                 color: "rgba(245,240,232,0.5)",
               }}
@@ -761,7 +682,7 @@ function SiteFooter() {
               <h4
                 className="font-serif uppercase"
                 style={{
-                  fontSize: "10.5px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
                   marginBottom: 14,
@@ -776,7 +697,7 @@ function SiteFooter() {
                       href={link.href}
                       className="font-serif transition-colors"
                       style={{
-                        fontSize: "13px",
+                        fontSize: "var(--pq-text-body-sm)",
                         color: "rgba(245,240,232,0.55)",
                       }}
                     >
@@ -808,7 +729,7 @@ function SiteFooter() {
             <p
               className="font-serif italic text-center"
               style={{
-                fontSize: "11px",
+                fontSize: "var(--pq-text-mono-sm)",
                 lineHeight: 1.6,
                 color: "rgba(245,240,232,0.4)",
               }}
@@ -835,7 +756,7 @@ function SiteFooter() {
                 aria-hidden
                 className="font-serif"
                 style={{
-                  fontSize: "11px",
+                  fontSize: "var(--pq-text-mono-sm)",
                   color: "rgba(184,149,106,0.55)",
                 }}
               >
@@ -873,12 +794,21 @@ export default function LandingV2() {
       <TopNav />
       <SplashPage />
       <Hero />
-      <MarqueeLogos />
-      <ThreeLayers />
-      <PersonasPreview />
-      <PricingPreview />
-      <Faq />
-      <CtaFooter />
+      <SectionCurtain divider={false}>
+        <MarqueeLogos />
+      </SectionCurtain>
+      <SectionCurtain>
+        <PersonasPreview />
+      </SectionCurtain>
+      <SectionCurtain>
+        <PricingPreview />
+      </SectionCurtain>
+      <SectionCurtain divider={false}>
+        <Faq />
+      </SectionCurtain>
+      <SectionCurtain revealEnd={0.55}>
+        <CtaFooter />
+      </SectionCurtain>
       <SiteFooter />
     </div>
   );

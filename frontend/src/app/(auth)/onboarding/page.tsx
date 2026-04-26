@@ -90,7 +90,7 @@ function ProgressBar({ current, total, category }: { current: number; total: num
       <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
         <motion.div
           className="absolute inset-y-0 left-0 rounded-full"
-          style={{ background: "linear-gradient(90deg, #8b5cf6, #3b82f6)" }}
+          style={{ background: "linear-gradient(90deg, var(--pq-bronze-light), var(--pq-bronze))" }}
           initial={false}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -122,7 +122,7 @@ function OptionCard({
         text-left transition-all duration-300
         ${
           selected
-            ? "border-[#8b5cf6] bg-[#8b5cf6]/[0.04] shadow-[0_0_0_1px_rgba(139,92,246,0.1)]"
+            ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]/[0.04] shadow-[0_0_0_1px_rgba(184,149,106,0.18)]"
             : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
         }
       `}
@@ -134,7 +134,7 @@ function OptionCard({
           flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200
           ${
             selected
-              ? "border-[#8b5cf6] bg-[#8b5cf6]"
+              ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]"
               : "border-slate-300 bg-white group-hover:border-slate-400"
           }
         `}
@@ -177,7 +177,7 @@ function MultiOptionCard({
         text-left transition-all duration-300
         ${
           selected
-            ? "border-[#8b5cf6] bg-[#8b5cf6]/[0.04]"
+            ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]/[0.04]"
             : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
         }
       `}
@@ -189,7 +189,7 @@ function MultiOptionCard({
           flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-200
           ${
             selected
-              ? "border-[#8b5cf6] bg-[#8b5cf6]"
+              ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]"
               : "border-slate-300 bg-white group-hover:border-slate-400"
           }
         `}
@@ -227,7 +227,7 @@ function SliderInput({
     <div className="flex flex-col gap-6">
       {/* Current value display */}
       <div className="text-center">
-        <div className="mb-1 text-4xl font-bold text-[#8b5cf6]">{value}</div>
+        <div className="mb-1 text-4xl font-bold text-[var(--pq-bronze-light)]">{value}</div>
         <div className="text-sm font-medium text-slate-600">
           {currentOption?.label ?? ""}
         </div>
@@ -670,7 +670,7 @@ export default function OnboardingPage() {
   if (authLoading) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center">
-        <Loader2 size={24} className="animate-spin text-[#8b5cf6]" />
+        <Loader2 size={24} className="animate-spin text-[var(--pq-bronze-light)]" />
       </div>
     );
   }

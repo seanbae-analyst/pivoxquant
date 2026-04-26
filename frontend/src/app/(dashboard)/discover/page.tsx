@@ -67,8 +67,9 @@ function weekTag(): string {
 }
 
 function deltaCls(v: number) {
-  if (v > 0) return "text-[#7db487]";
-  if (v < 0) return "text-[#d18888]";
+  // KR convention (CEO directive 2026-04-26): ▲ rising = red, ▼ falling = blue.
+  if (v > 0) return "text-[#d18888]";
+  if (v < 0) return "text-[#7aa0c8]";
   return "text-[rgba(245,240,232,0.55)]";
 }
 
@@ -351,7 +352,7 @@ export default function DiscoverPage() {
                           {item.name || item.ticker}
                         </td>
                         <td className="num">{priceDisplay}</td>
-                        <td className={"num " + (isPos ? "text-[#7db487]" : "text-[#d18888]")}>
+                        <td className={"num " + (isPos ? "text-[#d18888]" : "text-[#7aa0c8]")}>
                           {fmtPct(item.change_pct ?? 0)}
                         </td>
                         <td>

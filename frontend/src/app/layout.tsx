@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, JetBrains_Mono, Source_Serif_4 } from "next/font/google";
+import {
+  Geist,
+  JetBrains_Mono,
+  Source_Serif_4,
+  Playfair_Display,
+} from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -34,6 +39,18 @@ const serif = Source_Serif_4({
   variable: "--font-serif",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+// Display serif — high-contrast Didone-adjacent face used only on the
+// landing hero H1, splash wordmark, and persona hero name. Kept to three
+// weights (500/600/700) + italic to keep the font payload small; Next.js
+// fetches at build time so unused weights never reach the client.
+const display = Playfair_Display({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 
@@ -166,7 +183,7 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geist.variable} ${geistHeading.variable} ${mono.variable} ${serif.variable} h-full antialiased`}
+      className={`${geist.variable} ${geistHeading.variable} ${mono.variable} ${serif.variable} ${display.variable} h-full antialiased`}
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

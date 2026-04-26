@@ -13,18 +13,12 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import type { Variants } from "motion/react";
 import { ArrowRight } from "lucide-react";
 
 import TopNav from "./top-nav";
 import { FilmGrain } from "./film-grain";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
-
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
-};
+import { Eyebrow } from "./eyebrow";
+import { fadeUp } from "@/lib/motion";
 
 export type SeeAlsoCard = {
   eyebrow: string;
@@ -73,23 +67,9 @@ export default function FeaturePageShell({
             initial={reduce ? undefined : "hidden"}
             animate="visible"
             variants={fadeUp}
-            className="mb-5 inline-flex items-center gap-2.5"
+            className="mb-5"
           >
-            <span
-              aria-hidden
-              className="h-px w-8"
-              style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-            />
-            <span
-              className="font-serif uppercase"
-              style={{
-                color: "var(--pq-bronze)",
-                fontSize: "11px",
-                letterSpacing: "0.24em",
-              }}
-            >
-              {eyebrow}
-            </span>
+            <Eyebrow>{eyebrow}</Eyebrow>
           </motion.div>
 
           <motion.h1
@@ -138,23 +118,7 @@ export default function FeaturePageShell({
         }}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-10 flex items-center gap-2.5">
-            <span
-              aria-hidden
-              className="h-px w-7"
-              style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-            />
-            <span
-              className="font-serif uppercase"
-              style={{
-                color: "var(--pq-bronze)",
-                fontSize: "11px",
-                letterSpacing: "0.22em",
-              }}
-            >
-              Continue reading
-            </span>
-          </div>
+          <Eyebrow className="mb-10 flex">Continue reading</Eyebrow>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             {seeAlso.map((s) => (
               <Link

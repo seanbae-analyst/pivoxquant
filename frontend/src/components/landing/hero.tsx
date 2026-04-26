@@ -59,26 +59,8 @@ const MarketTicker = dynamic(
   },
 );
 
-const ReportFlipDeck = dynamic(
-  () => import("./report-flip-deck").then((m) => m.ReportFlipDeck),
-  {
-    ssr: false,
-    loading: () => (
-      <div
-        aria-hidden
-        className="relative mx-auto aspect-[4/5] w-full max-w-[460px]"
-      />
-    ),
-  },
-);
-
 const HeroParticles = dynamic(
   () => import("./hero-particles").then((m) => m.HeroParticles),
-  { ssr: false, loading: () => null },
-);
-
-const HeroDataStream = dynamic(
-  () => import("./hero-data-stream").then((m) => m.HeroDataStream),
   { ssr: false, loading: () => null },
 );
 
@@ -261,9 +243,16 @@ export function Hero() {
       {/* ─── Spotlight wrapper ─── */}
       <HeroSpotlight className="relative">
         <div className="relative mx-auto max-w-7xl px-5 pb-24 pt-24 sm:px-8 sm:pb-32 sm:pt-28 lg:px-10 lg:pb-36 lg:pt-32">
-          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.22fr)_minmax(0,1fr)] lg:gap-16">
-            {/* ─── LEFT: Copy column ─── */}
-            <div className="relative z-[3] max-w-2xl">
+          {/* Single-composition Hero (2026-04-26): right-column persona
+              spotlight removed per CEO direction. The clock-dial PersonaGlyph
+              had no semantic link to "투자자 페르소나" and the eight personas
+              already have a dedicated home in the PersonasPreview section
+              below. Hero is now a single editorial column — left-aligned,
+              max-width capped — so a visitor reads exactly one message:
+              "Your CFO learns you." */}
+          <div className="relative">
+            {/* ─── Editorial copy column (single, max-width capped) ─── */}
+            <div className="relative z-[3] max-w-3xl">
               {/* Masthead eyebrow */}
               <div
                 className={`mb-8 inline-flex items-center gap-2.5 ${animate ? "pq-reveal" : ""}`}
@@ -302,70 +291,24 @@ export function Hero() {
                 ]}
               />
 
-              {/* Subcopy — Korean (Living CFO voice) */}
+              {/* English deck line — primary subtitle (Korean removed per CEO,
+                  2026-04-26: "Hero 영어로 하라고"). */}
               <p
-                className={`mb-3 max-w-xl font-serif ${animate ? "pq-reveal" : ""}`}
+                className={`mb-9 max-w-xl font-serif ${animate ? "pq-reveal-left" : ""}`}
                 style={{
-                  fontSize: "clamp(15px, 1.35vw, 17px)",
-                  lineHeight: 1.65,
+                  fontSize: "clamp(15px, 1.35vw, 18px)",
+                  lineHeight: 1.55,
+                  letterSpacing: "0.005em",
                   color: "rgba(245, 240, 232, 0.72)",
                   ...d(1400),
                 }}
               >
-                매일 아침 두 번. 진입 전 일곱 관문. 매주 금요일 한 장의 편지.
-                2년 뒤 당신은 알게 된다. 이 앱이 당신의 투자 철학을 당신보다
-                먼저 기억한다는 것을.
+                Morning memos. Pre-trade gates. A letter every Friday.
               </p>
 
-              {/* Italic deck line — English */}
-              <p
-                className={`mb-9 max-w-xl font-serif italic ${animate ? "pq-reveal" : ""}`}
-                style={{
-                  fontSize: "clamp(13.5px, 1.15vw, 15px)",
-                  lineHeight: 1.5,
-                  letterSpacing: "0.005em",
-                  color: "rgba(139, 111, 71, 0.85)",
-                  ...d(1550),
-                }}
-              >
-                Twice each morning. Seven gates before every trade. One letter
-                each Friday. A personal CFO that studies you.
-              </p>
-
-              {/* ─── Stat strip ─── */}
-              <div
-                className={`mb-10 ${animate ? "pq-reveal" : ""}`}
-                style={d(1700)}
-              >
-                <div
-                  aria-hidden
-                  className="mb-4 h-px w-full"
-                  style={{ backgroundColor: "var(--pq-border)" }}
-                />
-                <ul className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-                  {STATS.map((s) => (
-                    <li key={s.label} className="flex flex-col gap-1.5">
-                      <span
-                        className="font-serif text-[9.5px] uppercase leading-none"
-                        style={{
-                          letterSpacing: "0.22em",
-                          color: "var(--pq-muted)",
-                        }}
-                      >
-                        {s.label}
-                      </span>
-                      <StatValue stat={s} animate={animate ?? false} />
-                    </li>
-                  ))}
-                </ul>
-                <p
-                  className="mt-3 font-serif text-[10.5px] italic leading-relaxed"
-                  style={{ color: "var(--pq-muted)" }}
-                >
-                  Backtest, 2014–2024 US equity universe. Past performance does
-                  not guarantee future results.
-                </p>
-              </div>
+              {/* Stat strip removed from Hero per CEO direction (2026-04-26).
+                  Backtest numbers live on /features/engine and pricing pages.
+                  Hero is now persona-focused — CFO learns you, that's it. */}
 
               {/* ─── CTAs — ink-bleed primary + ghost secondary ─── */}
               <div
@@ -405,18 +348,6 @@ export function Hero() {
               </p>
             </div>
 
-            {/* ─── RIGHT: Flip deck, over the paper-flow stream ─── */}
-            <div
-              className={`relative order-first flex w-full items-center justify-center lg:order-none ${animate ? "pq-reveal" : ""}`}
-              style={d(2000)}
-            >
-              {/* Paper-flow stream — behind the deck */}
-              <HeroDataStream />
-              {/* The deck itself — 3D flip, visible in front */}
-              <div className="relative z-[2] w-full">
-                <ReportFlipDeck />
-              </div>
-            </div>
           </div>
         </div>
 

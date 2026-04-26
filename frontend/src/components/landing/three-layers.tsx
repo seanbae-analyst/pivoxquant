@@ -12,7 +12,14 @@
  * Colors: Vantablack + Bronze + Ivory. Palette-safe.
  */
 
-import { motion, useReducedMotion } from "motion/react";
+import { useRef } from "react";
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useTransform,
+  type MotionValue,
+} from "motion/react";
 import type { Variants } from "motion/react";
 import { Layers, Activity, Fingerprint } from "lucide-react";
 
@@ -71,11 +78,105 @@ const LAYERS: readonly LayerDef[] = [
   },
 ] as const;
 
+/* ────────────────────────────────────────────────────────────
+   IsoLayer — single rectangle in the 3D stack. Animates its
+   opacity + translateZ based on the parent section's scroll
+   progress so the three layers emerge one-by-one as the user
+   scrolls (worldquantfoundry-style chapter pause).
+   ──────────────────────────────────────────────────────────── */
+function IsoLayer({
+  layer,
+  idx,
+  total,
+  progress,
+  reduce,
+}: {
+  layer: LayerDef;
+  idx: number;
+  total: number;
+  progress: MotionValue<number>;
+  reduce: boolean;
+}) {
+  // Scroll windows: layer 0 (top) is fully visible by 0.30,
+  // layer 1 by 0.50, layer 2 by 0.70. Section is tall (sticky-pin
+  // window), so these windows leave breathing room.
+  const start = 0.12 + idx * 0.18;
+  const end = start + 0.18;
+
+  const opacity = useTransform(progress, [start, end], [0.05, 1]);
+  // Lift each layer up in Z as it reveals (parallax).
+  const baseZ = (total - 1 - idx) * 44;
+  const z = useTransform(progress, [start, end], [baseZ - 32, baseZ]);
+
+  const bg =
+    idx === 0
+      ? "rgba(245, 240, 232, 0.92)"
+      : idx === 1
+        ? "rgba(184, 149, 106, 0.85)"
+        : "rgba(10, 10, 10, 0.95)";
+
+  return (
+    <motion.div
+      className="absolute left-1/2 top-1/2 rounded-sm"
+      style={{
+        width: "68%",
+        height: "68%",
+        opacity: reduce ? 1 : opacity,
+        translateX: "-50%",
+        translateY: "-50%",
+        translateZ: reduce ? baseZ : z,
+        backgroundColor: bg,
+        boxShadow:
+          "0 12px 40px -12px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(139,111,71,0.4)",
+        color: idx === 2 ? "var(--pq-ivory)" : "var(--pq-ink)",
+      }}
+    >
+      {/* Label corner */}
+      <div
+        className="absolute left-3 top-3 flex items-center gap-1.5"
+        style={{ fontFamily: "var(--font-jetbrains, monospace)" }}
+      >
+        <span
+          className="text-[9px] uppercase tracking-widest font-mono"
+          style={{
+            color:
+              idx === 2 ? "rgba(184,149,106,0.85)" : "rgba(10,10,10,0.55)",
+            letterSpacing: "0.2em",
+          }}
+        >
+          L{layer.n}
+        </span>
+      </div>
+
+      {/* Faux doc lines */}
+      <div className="absolute inset-x-5 top-10 space-y-1.5">
+        {Array.from({ length: 5 }).map((_, li) => (
+          <div
+            key={li}
+            className="h-[2px] rounded-full"
+            style={{
+              width: `${70 - li * 8}%`,
+              backgroundColor:
+                idx === 2 ? "rgba(245,240,232,0.25)" : "rgba(10,10,10,0.18)",
+            }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 export function ThreeLayers() {
   const reduce = useReducedMotion();
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end end"],
+  });
 
   return (
     <section
+      ref={sectionRef}
       id="pq-three-layers"
       className="relative py-24 md:py-36"
       style={{ backgroundColor: "#0A0A0A", color: "var(--pq-ivory)" }}
@@ -137,89 +238,34 @@ export function ThreeLayers() {
         </motion.p>
 
         <div className="grid grid-cols-1 gap-12 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-16 lg:gap-24 items-center">
-          {/* LEFT: Isometric stack visual */}
-          <motion.div
-            initial={reduce ? undefined : "hidden"}
-            whileInView={reduce ? undefined : "visible"}
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-            className="relative mx-auto w-full max-w-[460px] aspect-[1/1.1]"
-            style={{
-              perspective: "1200px",
-            }}
-          >
+          {/* LEFT: Isometric stack visual — sticky-pinned on desktop so it
+              "holds" while the right-side layer cards reveal one-by-one. */}
+          <div className="md:sticky md:top-[18vh] self-start">
             <div
-              className="relative h-full w-full"
-              style={{
-                transformStyle: "preserve-3d",
-                transform:
-                  "rotateX(56deg) rotateZ(-42deg) translateY(-18px)",
-              }}
+              className="relative mx-auto w-full max-w-[460px] aspect-[1/1.1]"
+              style={{ perspective: "1200px" }}
             >
-              {LAYERS.map((layer, idx) => (
-                <motion.div
-                  key={layer.n}
-                  variants={fadeUp}
-                  className="absolute left-1/2 top-1/2 rounded-sm"
-                  style={{
-                    width: "68%",
-                    height: "68%",
-                    transform: `translate(-50%, -50%) translateZ(${
-                      (LAYERS.length - 1 - idx) * 44
-                    }px)`,
-                    backgroundColor:
-                      idx === 0
-                        ? "rgba(245, 240, 232, 0.92)"
-                        : idx === 1
-                          ? "rgba(184, 149, 106, 0.85)"
-                          : "rgba(10, 10, 10, 0.95)",
-                    boxShadow:
-                      "0 12px 40px -12px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(139,111,71,0.4)",
-                    color:
-                      idx === 2
-                        ? "var(--pq-ivory)"
-                        : "var(--pq-ink)",
-                  }}
-                >
-                  {/* Label corner */}
-                  <div
-                    className="absolute left-3 top-3 flex items-center gap-1.5"
-                    style={{ fontFamily: "var(--font-jetbrains, monospace)" }}
-                  >
-                    <span
-                      className="text-[9px] uppercase tracking-widest font-mono"
-                      style={{
-                        color:
-                          idx === 2
-                            ? "rgba(184,149,106,0.85)"
-                            : "rgba(10,10,10,0.55)",
-                        letterSpacing: "0.2em",
-                      }}
-                    >
-                      L{layer.n}
-                    </span>
-                  </div>
-
-                  {/* Faux doc lines */}
-                  <div className="absolute inset-x-5 top-10 space-y-1.5">
-                    {Array.from({ length: 5 }).map((_, li) => (
-                      <div
-                        key={li}
-                        className="h-[2px] rounded-full"
-                        style={{
-                          width: `${70 - li * 8}%`,
-                          backgroundColor:
-                            idx === 2
-                              ? "rgba(245,240,232,0.25)"
-                              : "rgba(10,10,10,0.18)",
-                        }}
-                      />
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
+              <div
+                className="relative h-full w-full"
+                style={{
+                  transformStyle: "preserve-3d",
+                  transform:
+                    "rotateX(56deg) rotateZ(-42deg) translateY(-18px)",
+                }}
+              >
+                {LAYERS.map((layer, idx) => (
+                  <IsoLayer
+                    key={layer.n}
+                    layer={layer}
+                    idx={idx}
+                    total={LAYERS.length}
+                    progress={scrollYProgress}
+                    reduce={!!reduce}
+                  />
+                ))}
+              </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* RIGHT: Layer labels */}
           <motion.ol

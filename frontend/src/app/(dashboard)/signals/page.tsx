@@ -187,7 +187,7 @@ export default function SignalsPage() {
       <div className="mb-6 grid grid-cols-3 gap-6 border-y border-[rgba(245,240,232,0.1)] py-4">
         <div>
           <div className="pq-ink-label">Positive</div>
-          <div className="mt-1 font-serif text-[26px] tabular-nums text-[#7db487]">
+          <div className="mt-1 font-serif text-[26px] tabular-nums text-[#d18888]">
             {positive.length}
           </div>
         </div>
@@ -199,7 +199,7 @@ export default function SignalsPage() {
         </div>
         <div>
           <div className="pq-ink-label">Negative</div>
-          <div className="mt-1 font-serif text-[26px] tabular-nums text-[#d18888]">
+          <div className="mt-1 font-serif text-[26px] tabular-nums text-[#7aa0c8]">
             {negative.length}
           </div>
         </div>

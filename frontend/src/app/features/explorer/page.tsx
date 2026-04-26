@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { ArrowRight, FileText, Lock } from "lucide-react";
 import FeaturePageShell from "@/components/landing/feature-page-shell";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const fadeUp: Variants = {
@@ -46,6 +47,7 @@ export default function ExplorerPage() {
         { eyebrow: "Preview", title: "Dashboard Preview", description: "Where the artifacts land.", href: "/features/dashboard" },
       ]}
     >
+      <SectionCurtain divider={false}>
       <section className="py-20 md:py-28" style={{ backgroundColor: "#0A0A0A" }}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -134,6 +136,7 @@ export default function ExplorerPage() {
           </motion.div>
         </div>
       </section>
+      </SectionCurtain>
     </FeaturePageShell>
   );
 }

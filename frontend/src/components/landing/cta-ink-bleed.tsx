@@ -44,12 +44,14 @@ type Props = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
 function variantStyle(v: Variant): React.CSSProperties {
   switch (v) {
     case "bronze":
+      // Ink-on-bronze: WCAG AA contrast ~6.4:1 (was ivory-on-bronze ~2.6:1
+      // which read as gold-on-gold and triggered the CEO illegibility flag).
       return {
         backgroundColor: "var(--pq-bronze)",
-        color: "var(--pq-ivory)",
-        border: "1px solid rgba(245, 240, 232, 0.18)",
+        color: "var(--pq-ink)",
+        border: "1px solid rgba(10, 10, 10, 0.16)",
         boxShadow:
-          "0 1px 0 0 rgba(245, 240, 232, 0.28) inset, 0 14px 36px -14px rgba(184, 149, 106, 0.55)",
+          "0 1px 0 0 rgba(245, 240, 232, 0.32) inset, 0 14px 36px -14px rgba(184, 149, 106, 0.55)",
       };
     case "ivory":
       return {
@@ -154,7 +156,20 @@ export const CtaInkBleed = forwardRef<HTMLAnchorElement, Props>(
           </span>
         )}
 
-        <span className="pq-ink-label" style={{ position: "relative", zIndex: 1, display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
+        {/* Inner label: own class — must NOT reuse `.pq-ink-label` (global
+            utility forces bronze + 9.5px uppercase, which collides with
+            the bronze CTA fill → gold-on-gold). Inherit color from button. */}
+        <span
+          className="pq-ink-btn-label"
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            color: "inherit",
+          }}
+        >
           {children}
         </span>
       </>

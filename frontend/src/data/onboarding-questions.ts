@@ -390,13 +390,18 @@ export const LEGAL_QUESTION = ONBOARDING_QUESTIONS[19];
 
 // ── Category metadata ────────────────────────────────────────────────────────
 
+/* Category dot colors — bronze family + KR convention only.
+   THE LILA BAN: no violet/blue-AI/pink. Each color carries semantic weight:
+   bronze tones for identity/strategy/returns; KR muted red (#D18888) for
+   risk-psychology (loss-domain hue); KR muted blue (#7AA0C8) for knowledge
+   (trust/library hue); slate-500 for legal (institutional neutral). */
 export const CATEGORIES: Record<string, { label: string; icon: string; color: string }> = {
-  A: { label: "Investment Identity", icon: "user", color: "#8b5cf6" },
-  B: { label: "Strategy Preferences", icon: "settings", color: "#3b82f6" },
-  C: { label: "Risk Psychology", icon: "brain", color: "#ec4899" },
-  D: { label: "Return Expectations", icon: "trending-up", color: "#f59e0b" },
-  E: { label: "Market Knowledge", icon: "book-open", color: "#10b981" },
-  F: { label: "Legal & Compliance", icon: "shield", color: "#64748b" },
+  A: { label: "Investment Identity", icon: "user", color: "#B8956A" },         // pq-bronze
+  B: { label: "Strategy Preferences", icon: "settings", color: "#A3845C" },    // pq-bronze-light
+  C: { label: "Risk Psychology", icon: "brain", color: "#D18888" },            // KR muted red
+  D: { label: "Return Expectations", icon: "trending-up", color: "#6F5636" },  // pq-bronze-deep
+  E: { label: "Market Knowledge", icon: "book-open", color: "#7AA0C8" },       // KR muted blue
+  F: { label: "Legal & Compliance", icon: "shield", color: "#64748b" },        // slate-500 (kept)
 };
 
 // ── Investor Types ───────────────────────────────────────────────────────────

@@ -4,85 +4,75 @@ import {
   ArrowLeft,
   ArrowRight,
   Shield,
-  AlertTriangle,
-  Activity,
-  GitBranch,
-  Gauge,
-  PieChart,
-  Radio,
-  OctagonAlert,
 } from "lucide-react";
+import { SectionCurtain } from "@/components/landing/section-curtain";
 
 export const metadata: Metadata = {
   title: "7-Layer Risk Defense — PivoxQuant",
   description:
-    "Protecting your portfolio is just as important as growing it. Learn about our 7-layer automatic defense system.",
+    "Monitoring downside risk is the other half of return. A seven-layer observation system that surfaces risk concentrations in your portfolio.",
 };
 
-/* ── 7 Layers ── */
+/* ── 7 Layers ──
+   Editorial pattern: 2-letter abbrev + ledger numbering ("01 / 07"),
+   no icon-in-colored-box. Mirrors features/profiles/page.tsx. Action
+   verbs neutralized to observation language ("monitor", "surface"). */
 const layers = [
   {
     number: 1,
-    icon: Gauge,
+    code: "VR",
     title: "VaR Monitor",
     question: "How much could I lose today?",
     description:
-      "Value at Risk calculates your worst-case daily loss at 95% confidence. If your VaR exceeds your comfort zone, you get an immediate alert so you can act before losses pile up.",
-    color: "text-accent bg-accent/10",
+      "Value at Risk computes your worst-case daily loss at 95% confidence. When VaR moves outside your comfort range, an observation is surfaced so you can review the position before losses compound.",
   },
   {
     number: 2,
-    icon: GitBranch,
+    code: "CW",
     title: "Correlation Watch",
     question: "Are all my stocks moving together?",
     description:
-      "If all your holdings rise and fall at the same time, your diversification is an illusion. This layer warns when portfolio correlations spike above safe levels.",
-    color: "text-blue-600 bg-blue-50",
+      "If holdings rise and fall in lockstep, diversification is an illusion. This layer surfaces an observation when portfolio correlations cross safe thresholds.",
   },
   {
     number: 3,
-    icon: Activity,
+    code: "VX",
     title: "VIX Shield",
     question: "Is the market scared?",
     description:
       "The VIX measures market fear. When it spikes, this layer surfaces an observation about elevated-fear regimes so you can review your own cash posture.",
-    color: "text-amber-600 bg-amber-50",
   },
   {
     number: 4,
-    icon: AlertTriangle,
+    code: "TR",
     title: "Tail Risk Guard",
     question: "Which stock could hurt me most?",
     description:
-      "Identifies the single position contributing the most risk to your portfolio. Even one bad apple can drag down everything else.",
-    color: "text-amber-600 bg-amber-50",
+      "Identifies the single position contributing the most risk to the book. One outlier can drag the rest with it.",
   },
   {
     number: 5,
-    icon: OctagonAlert,
+    code: "DL",
     title: "Daily Loss Limit",
     question: "Stop the bleeding.",
     description:
-      "Sets a hard cap on daily losses. If your portfolio drops past your threshold in a single day, the system halts all trading activity to prevent panic decisions.",
-    color: "text-red-600 bg-red-50",
+      "Sets a hard cap on daily losses. If the portfolio crosses your threshold in a single session, the system halts further trading activity until the next review.",
   },
   {
     number: 6,
-    icon: PieChart,
+    code: "SB",
     title: "Sector Balance",
     question: "Don't put all eggs in one basket.",
     description:
-      "Monitors how much of your portfolio is in any single sector. If technology reaches 50% of your portfolio, you get an alert before concentration becomes dangerous.",
-    color: "text-emerald-600 bg-emerald-50",
+      "Monitors how much of the portfolio sits in any single sector. When technology reaches 50%, an observation is surfaced before concentration compounds.",
   },
   {
     number: 7,
-    icon: Radio,
+    code: "RR",
     title: "Regime Radar",
     question: "What phase is the market in?",
     description:
-      "Markets cycle between bull runs, corrections, and crashes. This layer detects the current regime and adjusts all defense settings accordingly.",
-    color: "text-indigo-600 bg-indigo-50",
+      "Markets cycle between bull runs, corrections, and crashes. This layer detects the current regime and adjusts the rest of the dossier accordingly.",
   },
 ];
 
@@ -114,47 +104,61 @@ export default function RiskDefensePage() {
             7-Layer <span className="gradient-text">Risk Defense</span>
           </h1>
           <p className="text-lg text-slate-500 max-w-xl mx-auto">
-            Protecting your portfolio is just as important as growing it.
+            Monitoring downside risk is the other half of return.
           </p>
         </div>
 
         {/* ── The Problem ── */}
+        <SectionCurtain divider={false}>
         <section className="mb-16">
-          <div className="sp-card rounded-2xl p-6 sm:p-8 border-l-4 border-l-amber-400">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 mb-2">The Problem</h2>
-                <p className="text-slate-600 leading-relaxed">
-                  The average investor panics and sells at the worst possible time, losing
-                  4&ndash;8% more than necessary during market drops. Emotions take over when
-                  you have no system protecting you.
-                </p>
-              </div>
+          {/* Bronze hairline editorial box — replaced earlier amber left-border
+              + rounded-2xl pattern (read as AI-generated alert card). The
+              hairline + small-caps eyebrow keeps the editorial register and
+              removes the colored bubble cue. */}
+          <div className="border-y border-slate-200 py-6 sm:py-8">
+            <div className="text-[10.5px] uppercase tracking-[0.22em] text-slate-400 mb-3">
+              Observation
             </div>
+            <h2 className="text-lg font-bold text-slate-900 mb-2">The Problem</h2>
+            <p className="text-slate-600 leading-relaxed">
+              The average investor sells at the worst possible time, surrendering
+              4&ndash;8% more than necessary during market drops. Emotion fills the
+              vacuum left by a missing observation system.
+            </p>
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── 7 Defense Layers ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-2">Our Solution: 7 Automatic Defense Layers</h2>
           <p className="text-sm text-slate-500 mb-8">
             Each layer works independently. Together, they form a comprehensive safety net.
           </p>
           <div className="space-y-4">
-            {layers.map((layer) => {
-              const Icon = layer.icon;
+            {layers.map((layer, idx) => {
+              const ordinal = String(idx + 1).padStart(2, "0");
               return (
-                <div key={layer.number} className="sp-card rounded-2xl p-6">
+                <div
+                  key={layer.number}
+                  className="rounded-sm border border-slate-200 bg-white p-5"
+                >
                   <div className="flex items-start gap-4">
-                    <div className="shrink-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${layer.color.split(" ")[1]}`}>
-                        <Icon className={`w-5 h-5 ${layer.color.split(" ")[0]}`} />
-                      </div>
+                    <div className="shrink-0 flex flex-col items-start gap-1">
+                      <span
+                        className="font-serif text-[18px] tracking-[0.04em] text-slate-900"
+                        style={{ letterSpacing: "0.04em" }}
+                      >
+                        {layer.code}
+                      </span>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400 tabular-nums">
+                        {ordinal} / 07
+                      </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-accent bg-accent/10 px-2 py-0.5 rounded">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] px-2 py-0.5 border border-slate-200 text-slate-500 rounded-sm">
                           Layer {layer.number}
                         </span>
                         <h3 className="text-base font-semibold text-slate-900">{layer.title}</h3>
@@ -172,8 +176,10 @@ export default function RiskDefensePage() {
             })}
           </div>
         </section>
+        </SectionCurtain>
 
         {/* ── Results Comparison ── */}
+        <SectionCurtain>
         <section className="mb-16">
           <h2 className="text-xl font-bold text-slate-900 mb-6">Results</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -219,24 +225,27 @@ export default function RiskDefensePage() {
             Based on backtested data across 6-month market correction periods. Past performance does not guarantee future results.
           </p>
         </section>
+        </SectionCurtain>
 
         {/* ── CTA ── */}
+        <SectionCurtain>
         <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
           <h2 className="text-2xl font-bold text-slate-900 mb-3">
-            Protect your portfolio today
+            Run a risk simulation today
           </h2>
           <p className="text-slate-500 mb-6 max-w-md mx-auto">
-            All 7 defense layers are active on the free plan. Sign up
-            and sleep better knowing your investments are protected.
+            All seven observation layers are active on the free tier. Sign in
+            and see your portfolio surfaced through the same lens.
           </p>
           <Link
             href="/signup"
             className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all active:scale-[0.97]"
           >
-            Protect My Portfolio
+            Run Risk Simulation
             <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
+        </SectionCurtain>
       </main>
     </div>
   );

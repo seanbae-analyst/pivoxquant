@@ -106,11 +106,21 @@ export default function BetaGateForm() {
   }
 
   return (
-    <div className="sp-card w-full animate-fade-up px-6 py-8 sm:px-8 sm:py-10">
+    <div
+      className="w-full animate-fade-up rounded-2xl border px-6 py-8 sm:px-8 sm:py-10"
+      style={{
+        backgroundColor: "rgba(255, 255, 255, 0.02)",
+        borderColor: "rgba(184, 149, 106, 0.18)",
+        fontFamily: '"Source Serif 4", Georgia, serif',
+      }}
+    >
       {/* Lock badge + brand */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary-gradient shadow-sm">
+          <span
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl"
+            style={{ backgroundColor: "var(--pq-bronze-light)" }}
+          >
             <svg
               aria-hidden="true"
               viewBox="0 0 24 24"
@@ -119,13 +129,17 @@ export default function BetaGateForm() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-4 w-4 text-white"
+              className="h-4 w-4"
+              style={{ color: "var(--pq-ink)" }}
             >
               <rect x="4" y="11" width="16" height="9" rx="2" />
               <path d="M8 11V8a4 4 0 0 1 8 0v3" />
             </svg>
           </span>
-          <span className="text-sm font-semibold tracking-tight text-[color:var(--sp-text)]">
+          <span
+            className="text-sm font-semibold tracking-tight"
+            style={{ color: "var(--pq-ivory)" }}
+          >
             PivoxQuant
           </span>
         </div>
@@ -133,7 +147,10 @@ export default function BetaGateForm() {
         <button
           type="button"
           onClick={() => setLocale(locale === "ko" ? "en" : "ko")}
-          className="text-xs font-medium text-[color:var(--sp-text-muted)] transition-colors hover:text-[color:var(--sp-text)]"
+          className="text-xs font-medium transition-colors"
+          style={{ color: "rgba(245, 240, 232, 0.55)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--pq-ivory)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(245, 240, 232, 0.55)")}
           aria-label="Toggle language"
         >
           {copy.toggleLocale}
@@ -142,18 +159,32 @@ export default function BetaGateForm() {
 
       {/* Header */}
       <div className="mt-8">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--sp-border)] bg-[color:var(--sp-bg-subtle)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--sp-accent-hover)]">
+        <div
+          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider"
+          style={{
+            borderColor: "rgba(184, 149, 106, 0.32)",
+            backgroundColor: "rgba(184, 149, 106, 0.06)",
+            color: "var(--pq-bronze)",
+          }}
+        >
           <span
             aria-hidden="true"
-            className="inline-block h-1.5 w-1.5 rounded-full bg-primary-gradient"
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{ backgroundColor: "var(--pq-bronze-light)" }}
           />
           {copy.eyebrow}
         </div>
 
-        <h1 className="mt-4 text-2xl font-semibold leading-tight tracking-tight text-[color:var(--sp-text)] sm:text-[28px]">
+        <h1
+          className="mt-4 text-2xl font-semibold leading-tight tracking-tight sm:text-[28px]"
+          style={{ color: "var(--pq-ivory)" }}
+        >
           {copy.title}
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-[color:var(--sp-text-secondary)]">
+        <p
+          className="mt-3 text-sm leading-relaxed"
+          style={{ color: "rgba(245, 240, 232, 0.7)" }}
+        >
           {copy.subtitle}
         </p>
       </div>
@@ -163,7 +194,8 @@ export default function BetaGateForm() {
         <div>
           <label
             htmlFor="beta-password"
-            className="mb-2 block text-xs font-semibold text-[color:var(--sp-text-secondary)]"
+            className="mb-2 block text-xs font-semibold"
+            style={{ color: "rgba(245, 240, 232, 0.7)" }}
           >
             {copy.label}
           </label>
@@ -183,13 +215,19 @@ export default function BetaGateForm() {
             placeholder={copy.placeholder}
             aria-invalid={!!error}
             aria-describedby={error ? "beta-error" : undefined}
-            className="w-full rounded-xl border border-[color:var(--sp-border)] bg-white px-4 py-3 text-[15px] text-[color:var(--sp-text)] shadow-sm outline-none transition-[box-shadow,border-color] duration-200 placeholder:text-[color:var(--sp-text-muted)] focus:border-[color:var(--sp-accent)] focus:shadow-[0_0_0_4px_rgba(139,92,246,0.12)]"
+            className="w-full rounded-xl border px-4 py-3 text-[15px] outline-none transition-[box-shadow,border-color] duration-200 focus:border-[var(--pq-bronze)] focus:shadow-[0_0_0_4px_rgba(184,149,106,0.32)]"
+            style={{
+              backgroundColor: "rgba(10, 10, 10, 0.6)",
+              borderColor: "rgba(184, 149, 106, 0.32)",
+              color: "var(--pq-ivory)",
+            }}
           />
           {error && (
             <p
               id="beta-error"
               role="alert"
-              className="mt-2 text-sm text-[color:var(--sp-danger)]"
+              className="mt-2 text-sm"
+              style={{ color: "var(--pq-error)" }}
             >
               {error}
             </p>
@@ -199,11 +237,19 @@ export default function BetaGateForm() {
         <button
           type="submit"
           disabled={submitting || password.length === 0}
-          className="bg-primary-gradient relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-xl text-sm font-semibold tracking-tight text-white shadow-[0_6px_20px_-6px_rgba(139,92,246,0.5)] transition-[transform,box-shadow,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] hover:shadow-[0_10px_28px_-8px_rgba(139,92,246,0.55)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+          className="relative inline-flex h-12 w-full items-center justify-center overflow-hidden rounded-xl text-sm font-semibold tracking-tight transition-[transform,box-shadow,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+          style={{
+            backgroundColor: "var(--pq-bronze-light)",
+            color: "var(--pq-ink)",
+            boxShadow: "0 6px 20px -6px rgba(184, 149, 106, 0.45)",
+          }}
         >
           {submitting ? (
             <span className="inline-flex items-center gap-2">
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              <span
+                className="h-3.5 w-3.5 animate-spin rounded-full border-2"
+                style={{ borderColor: "rgba(5, 5, 5, 0.4)", borderTopColor: "var(--pq-ink)" }}
+              />
               {copy.submitting}
             </span>
           ) : (
@@ -213,7 +259,10 @@ export default function BetaGateForm() {
       </form>
 
       {/* Footer */}
-      <p className="mt-6 text-center text-xs text-[color:var(--sp-text-muted)]">
+      <p
+        className="mt-6 text-center text-xs"
+        style={{ color: "rgba(245, 240, 232, 0.5)" }}
+      >
         {copy.footer}
       </p>
     </div>

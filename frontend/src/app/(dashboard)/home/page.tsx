@@ -163,9 +163,10 @@ function fmtPct(n: number | null | undefined): string {
 }
 
 function pctColor(n: number | null | undefined): string {
+  // Korean market convention (CEO directive 2026-04-26): ▲ rising = red, ▼ falling = blue.
   if (n == null || !Number.isFinite(n)) return "rgba(245,240,232,0.55)";
-  if (n > 0) return "#7DB487";
-  if (n < 0) return "#D18888";
+  if (n > 0) return "#D18888";
+  if (n < 0) return "#7AA0C8";
   return "rgba(245,240,232,0.55)";
 }
 
@@ -437,7 +438,8 @@ export default function HomePage() {
         render: (r) => {
           const up = r.label === "POSITIVE";
           const down = r.label === "NEGATIVE";
-          const color = up ? "#7DB487" : down ? "#D18888" : "rgba(245,240,232,0.55)";
+          // KR convention: POSITIVE → red, NEGATIVE → blue (CEO directive 2026-04-26).
+          const color = up ? "#D18888" : down ? "#7AA0C8" : "rgba(245,240,232,0.55)";
           return (
             <span
               className="font-mono uppercase"
