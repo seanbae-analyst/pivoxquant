@@ -27,7 +27,7 @@ import {
 } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { cn, isKoreanTicker } from "@/lib/utils";
-import { fmtPct } from "@/lib/format";
+import { fmtPct, pctColorClass } from "@/lib/format";
 import { useDiscover } from "@/lib/hooks";
 import type { DiscoverResult } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
@@ -73,10 +73,44 @@ function deltaCls(v: number) {
   return "text-[rgba(245,240,232,0.55)]";
 }
 
+// Fleuron ornament — consistent with portfolio empty-state convention
+function Fleuron() {
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      className="mx-auto opacity-30"
+    >
+      <path
+        d="M12 2C12 2 9 6 9 9C9 12 12 14 12 14C12 14 15 12 15 9C15 6 12 2 12 2Z"
+        fill="currentColor"
+      />
+      <path
+        d="M12 22C12 22 15 18 15 15C15 12 12 10 12 10C12 10 9 12 9 15C9 18 12 22 12 22Z"
+        fill="currentColor"
+      />
+      <path
+        d="M2 12C2 12 6 9 9 9C12 9 14 12 14 12C14 12 12 15 9 15C6 15 2 12 2 12Z"
+        fill="currentColor"
+      />
+      <path
+        d="M22 12C22 12 18 15 15 15C12 15 10 12 10 12C10 12 12 9 15 9C18 9 22 12 22 12Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export default function DiscoverPage() {
   const router = useRouter();
   const { data, isLoading, error, mutate } = useDiscover();
   const [scanning, setScanning] = useState(false);
+
+  // Aggregate load error: all primary SWR calls failed and no data
+  const hasLoadError = Boolean(error) && !data;
 
   // Discover is editorial; backend 2h-caches to absorb FMP 402 bursts.
   // Client refresh at 5min so users see fresh content without stampeding upstream.
@@ -192,6 +226,35 @@ export default function DiscoverPage() {
         </span>
       </header>
 
+      {/* Error banner — shown when primary data fetch fails */}
+      {hasLoadError && (
+        <div
+          role="alert"
+          className="mb-8 flex items-center justify-between gap-4 rounded border border-[rgba(209,136,136,0.3)] bg-[rgba(209,136,136,0.07)] px-4 py-3"
+        >
+          <p className="text-[12px] text-[rgba(209,136,136,0.9)]">
+            Unable to load market data. The data source may be temporarily unavailable.
+          </p>
+          <button
+            type="button"
+            onClick={() => mutate()}
+            className="shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.5)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.8)] transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Loading skeleton — shown while initial fetch is in-flight */}
+      {isLoading && !data && !hasLoadError && (
+        <div className="pq-ink-empty mb-12 flex flex-col items-center gap-4 py-20 text-center">
+          <Fleuron />
+          <p className="text-[12px] text-[rgba(245,240,232,0.4)]">
+            Loading market data…
+          </p>
+        </div>
+      )}
+
       <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="pq-ink-h1">Discover</h1>
@@ -213,31 +276,49 @@ export default function DiscoverPage() {
         {/* Market Overview */}
         <section className="mb-12">
           <SectionKicker eyebrow="Overview" title="Market Overview" sub="US · KR index levels (1D Δ)" />
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {overviewItems.map((o) => (
-              <div key={o.name} className="pq-ink-stat">
-                <div className="pq-ink-label truncate">{o.name}</div>
-                <div className="mt-2 font-mono tabular-nums text-[18px] text-[var(--pq-ivory)]">
-                  {o.level}
-                </div>
-                <div className={"mt-1 font-mono text-[11px] " + deltaCls(o.changePct)}>
-                  {fmtPct(o.changePct)}
-                </div>
-                {o.observed_at && (
-                  <div className="mt-1 flex items-center gap-1.5 font-mono text-[9.5px] text-[rgba(245,240,232,0.4)] tabular-nums">
-                    <span>Last obs {relativeTime(o.observed_at, nowMs)}</span>
-                    {o.is_stale && (
-                      <span
-                        aria-label="Stale quote"
-                        title="Quote has not refreshed recently"
-                        className="inline-block h-1 w-1 rounded-full bg-yellow-500/70"
-                      />
-                    )}
+          {overviewItems.length > 0 ? (
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {overviewItems.map((o) => (
+                <div key={o.name} className="pq-ink-stat">
+                  <div className="pq-ink-label truncate">{o.name}</div>
+                  <div className="mt-2 font-mono tabular-nums text-[18px] text-[var(--pq-ivory)]">
+                    {o.level}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
+                  <div className={"mt-1 font-mono text-[11px] " + deltaCls(o.changePct)}>
+                    {fmtPct(o.changePct)}
+                  </div>
+                  {o.observed_at && (
+                    <div className="mt-1 flex items-center gap-1.5 font-mono text-[9.5px] text-[rgba(245,240,232,0.4)] tabular-nums">
+                      <span>Last obs {relativeTime(o.observed_at, nowMs)}</span>
+                      {o.is_stale && (
+                        <span
+                          aria-label="Stale quote"
+                          title="Quote has not refreshed recently"
+                          className="inline-block h-1 w-1 rounded-full bg-yellow-500/70"
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Empty state — fallback to MOCK_INDICES refused (stale 2024 values = legal misrepresentation risk).
+            // Display explicit "unavailable" state instead of fake numbers.
+            <div className="pq-ink-empty mt-4 flex flex-col items-center gap-3 rounded border border-[rgba(245,240,232,0.06)] py-10 text-center">
+              <Fleuron />
+              <p className="text-[12px] text-[rgba(245,240,232,0.4)]">
+                Index data unavailable — market feed may be offline.
+              </p>
+              <button
+                type="button"
+                onClick={() => mutate()}
+                className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.35)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.6)] transition-colors"
+              >
+                Refresh
+              </button>
+            </div>
+          )}
         </section>
 
         {/* US Movers */}
@@ -324,7 +405,6 @@ export default function DiscoverPage() {
                 </thead>
                 <tbody>
                   {results.slice(0, 20).map((item: DiscoverResult) => {
-                    const isPos = (item.change_pct ?? 0) >= 0;
                     const priceDisplay =
                       item?.price_display != null && item.price_display !== ""
                         ? item.price_display
@@ -352,7 +432,7 @@ export default function DiscoverPage() {
                           {item.name || item.ticker}
                         </td>
                         <td className="num">{priceDisplay}</td>
-                        <td className={"num " + (isPos ? "text-[#d18888]" : "text-[#7aa0c8]")}>
+                        <td className={"num " + pctColorClass(item.change_pct)}>
                           {fmtPct(item.change_pct ?? 0)}
                         </td>
                         <td>
