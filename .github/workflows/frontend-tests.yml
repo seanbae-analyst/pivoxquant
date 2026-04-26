@@ -132,3 +132,31 @@ jobs:
               --body "$body" \
               --label autopilot,frontend-tests
           fi
+
+  close-issue-on-success:
+    name: Close stale incident on success
+    runs-on: ubuntu-latest
+    needs: [vitest, build-and-typecheck, playwright]
+    if: success() && github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - name: Close stale incident issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label autopilot,frontend-tests \
+            --json number \
+            --jq '.[].number')
+          if [ -n "$existing" ]; then
+            for n in $existing; do
+              gh issue close "$n" \
+                --repo "$GITHUB_REPOSITORY" \
+                --comment "Auto-closed: frontend-tests run ${{ github.run_id }} succeeded (vitest + build + playwright all passed). If regressions recur, the next failed push will reopen a fresh issue."
+            done
+          fi
