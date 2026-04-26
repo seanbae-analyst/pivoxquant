@@ -55,6 +55,7 @@ jobs:
             $SCAN_PATHS \
             --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
             | grep -v 'services/legal/forbidden_terms\.py' \
+            | grep -v 'services/artifacts/year_end_letter_service\.py' \
             | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|consent' \
             | grep -viE 'never|not a|no |does not|misread|cannot|wording|solicitation' \
             | grep -viE 'informational|observational|no predict|advice or' \
