@@ -10,18 +10,10 @@ export default defineConfig({
     screenshot: "only-on-failure",
     trace: "on-first-retry",
   },
-  webServer: [
-    {
-      command: "python3 ../run.py",
-      port: 5050,
-      timeout: 15000,
-      reuseExistingServer: true,
-    },
-    {
-      command: "npx next dev",
-      port: 3000,
-      timeout: 30000,
-      reuseExistingServer: true,
-    },
-  ],
+  webServer: {
+    command: "npx next dev",
+    port: 3000,
+    timeout: 60000,
+    reuseExistingServer: true,
+  },
 });
