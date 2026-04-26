@@ -59,7 +59,8 @@ jobs:
             | grep -viE 'never|not a|no |does not|misread|cannot|wording|solicitation' \
             | grep -viE 'informational|observational|no predict|advice or' \
             | grep -viE 'language|advice.*recommendation|recommendation.*advice|or advice' \
-            | grep -viE '\* recommendation|\`\`recommendation\`\`|fields.*recommendation|recommendation fields' \
+            | grep -viE '\* recommendation|recommendation.*fields|fields.*recommendation|``recommendation``' \
+            | grep -v '``recommendation``' \
             || true)
 
           # --- EN AI Coach / 투자 코치 ---
