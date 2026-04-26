@@ -26,7 +26,49 @@ jobs:
             --out report.md
           cat report.md
 
-      - name: Open / update GitHub Issue
+      - name: Open / update GitHub Issue on anomaly
+        id: open_issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Only open/update an issue if the report contains anomalies (non-zero warning count)
+          # grep exits 0 if a warn/error line is found, 1 if not
+          set +e
+          has_anomaly=$(grep -iE '(warn|error|fail|anomaly|degraded)' report.md | wc -l | tr -d ' ')
+          set -e
+          if [ "${has_anomaly:-0}" -gt 0 ]; then
+            echo "anomaly=true" >> $GITHUB_OUTPUT
+            existing=$(gh issue list \
+              --repo "$GITHUB_REPOSITORY" \
+              --state open \
+              --label agent-health \
+              --json number \
+              --jq '.[0].number // empty')
+            title="[Agent Health] Weekly $(date -u +'%Y-%m-%d')"
+            if [ -n "$existing" ]; then
+              gh issue comment "$existing" \
+                --repo "$GITHUB_REPOSITORY" \
+                --body-file report.md
+            else
+              gh issue create \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "$title" \
+                --body-file report.md \
+                --label agent-health \
+                --assignee seanbae-analyst || \
+              gh issue create \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "$title" \
+                --body-file report.md \
+                --label agent-health
+            fi
+          else
+            echo "anomaly=false" >> $GITHUB_OUTPUT
+            echo "Report clean — no anomalies detected."
+          fi
+
+      - name: Close stale incident issues on success
+        if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -35,22 +77,11 @@ jobs:
             --state open \
             --label agent-health \
             --json number \
-            --jq '.[0].number // empty')
-          title="[Agent Health] Weekly $(date -u +'%Y-%m-%d')"
+            --jq '.[].number')
           if [ -n "$existing" ]; then
-            gh issue comment "$existing" \
-              --repo "$GITHUB_REPOSITORY" \
-              --body-file report.md
-          else
-            gh issue create \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "$title" \
-              --body-file report.md \
-              --label agent-health \
-              --assignee seanbae-analyst || \
-            gh issue create \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "$title" \
-              --body-file report.md \
-              --label agent-health
+            for n in $existing; do
+              gh issue close "$n" \
+                --repo "$GITHUB_REPOSITORY" \
+                --comment "Auto-closed: agent-health-weekly run ${{ github.run_id }} succeeded. If anomalies recur, the next failed run will open a fresh issue."
+            done
           fi
