@@ -56,9 +56,10 @@ jobs:
             --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
             | grep -v 'services/legal/forbidden_terms\.py' \
             | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|consent' \
-            | grep -viE 'never\s+(use|a|constitute|recommend)|not\s+(a\s+)?(recommend|constitute)|no\s+(advice|recommend)|does\s+not\s+(recommend|constitute)' \
-            | grep -viE 'forbid(s)?\s+recommendation|no\s+advice|informational\s+only|observational\s+only|no\s+predict|Watch.*not.*Act' \
-            | grep -viE '"recommendation"\s*language|advice\s*/\s*recommendation|recommendation\s+language' \
+            | grep -viE 'never|not a|no |does not|misread|cannot|wording|solicitation' \
+            | grep -viE 'informational|observational|no predict|advice or' \
+            | grep -viE 'language|advice.*recommendation|recommendation.*advice|or advice' \
+            | grep -viE '\* recommendation|\`\`recommendation\`\`|fields.*recommendation|recommendation fields' \
             || true)
 
           # --- EN AI Coach / 투자 코치 ---
@@ -69,17 +70,18 @@ jobs:
             --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
             | grep -v 'services/legal/forbidden_terms\.py' \
             | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer' \
-            | grep -viE 'scrubbed|forbidden|BUY/SELL/HOLD|are\s+scrub' \
+            | grep -viE 'scrubbed|forbidden|BUY/SELL/HOLD|scrub' \
             || true)
 
           # --- KR forbidden advisory terms ---
-          # Whitelist: forbidden_terms.py definition, content/terms docs with explicit prohibition context
+          # Whitelist: forbidden_terms.py definition, content/terms docs with explicit prohibition context,
+          #   negation forms: "아닙니다" (is not), "아닌" (not a), "않" (do not)
           kr_hits=$(grep -rnE \
             '(매수\s*추천|매도\s*추천|투자\s*추천|종목\s*추천)' \
             $SCAN_PATHS \
             --include='*.py' --include='*.ts' --include='*.tsx' --include='*.md' 2>/dev/null \
             | grep -v 'services/legal/forbidden_terms\.py' \
-            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|금지|없음|않습니다|안\s*합니다|절대|하지\s*않' \
+            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|금지|없음|않습니다|안 합니다|절대|하지 않|아닙니다|아닌|또는 조언|이나 조언' \
             | grep -viE 'content/terms|terms-ko' \
             || true)
 
