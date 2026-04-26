@@ -99,7 +99,7 @@ jobs:
             echo "reason=POST /api/broker/alpaca/connect returned HTTP $code (expected 401 or 503 alpaca-disabled)" >> $GITHUB_OUTPUT
           fi
 
-      - name: GET /api/market/indices?region=kr — expect 200 + KOSPI in [2000, 3500]
+      - name: GET /api/market/indices?region=kr — expect 200 or 401 (auth-gated endpoint)
         id: market_kr
         run: |
           set +e
@@ -113,9 +113,14 @@ jobs:
           reason=""
           failed=false
 
-          if [ "$code" != "200" ]; then
+          # /api/market/indices is protected by @api_auth — 401 from unauthenticated CI is expected.
+          # Only fail on 5xx (server error) or unexpected non-auth codes.
+          if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+            # Auth-gate working as expected — not a failure
+            echo "::notice::/api/market/indices returned HTTP $code (auth-gated, expected in CI)"
+          elif [ "$code" != "200" ]; then
             failed=true
-            reason+="/api/market/indices?region=kr returned HTTP $code (expected 200). "
+            reason+="/api/market/indices?region=kr returned HTTP $code (expected 200 or 401). "
           fi
 
           if [ "$code" = "200" ]; then
