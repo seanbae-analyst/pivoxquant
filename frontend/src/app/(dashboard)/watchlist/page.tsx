@@ -14,7 +14,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useWatchlist } from "@/lib/hooks";
-import { fmtPct } from "@/lib/format";
+import { fmtPct, pctColorClass } from "@/lib/format";
 import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
@@ -42,18 +42,11 @@ function formatPrice(item: WatchlistItem): string {
   })}`;
 }
 
-function mock52W(item: WatchlistItem): string {
-  if (!item.price) return "—";
-  const seed = Array.from(item.ticker).reduce((a, c) => a + c.charCodeAt(0), 0);
-  const spread = 0.18 + (seed % 30) / 100;
-  const low = item.price * (1 - spread * 0.6);
-  const high = item.price * (1 + spread * 0.4);
-  const fmt = (v: number) =>
-    item.currency === "KRW"
-      ? `₩${Math.round(v).toLocaleString("en-US")}`
-      : `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  return `${fmt(low)} – ${fmt(high)}`;
-}
+// Never synthesize 52W ranges from the current price — fabricated price
+// history rendered alongside live data is a misrepresentation risk under
+// 자본시장법. Same policy as portfolio/page.tsx (no MOCK_POSITIONS) and
+// discover/page.tsx (no MOCK_INDICES). Until WatchlistItem carries real
+// `high_52w` / `low_52w` fields from the backend, render an em dash.
 
 function weekTag(): string {
   const d = new Date();
@@ -163,7 +156,7 @@ export default function WatchlistPage() {
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-10 animate-pulse bg-white/5 rounded-sm"
+                className="h-10 animate-pulse bg-[rgba(245,240,232,0.04)] rounded-sm"
               />
             ))}
           </div>
@@ -189,7 +182,6 @@ export default function WatchlistPage() {
               </thead>
               <tbody>
                 {watchlist.map((item) => {
-                  const isPositive = (item.change_pct ?? 0) >= 0;
                   return (
                     <tr
                       key={item.id}
@@ -212,15 +204,15 @@ export default function WatchlistPage() {
                       </td>
                       <td
                         className={
-                          "num " +
-                          // KR convention: ▲ rising = red, ▼ falling = blue (CEO directive 2026-04-26).
-                          (isPositive ? "text-[#d18888]" : "text-[#7aa0c8]")
+                          // KR convention via single source (lib/format.ts): ▲ red, ▼ blue.
+                          "num " + pctColorClass(item.change_pct)
                         }
                       >
                         {fmtPct(item.change_pct ?? 0)}
                       </td>
                       <td className="font-mono text-[11px] text-[rgba(245,240,232,0.55)]">
-                        {mock52W(item)}
+                        {/* 52W range pending real backend field — see note above. */}
+                        —
                       </td>
                       <td className="text-[11px] text-[rgba(245,240,232,0.6)] truncate max-w-[220px]">
                         {item.note && item.note.length > 0

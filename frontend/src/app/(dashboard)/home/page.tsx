@@ -43,6 +43,7 @@ import { ArtifactQueue } from "@/components/home/artifact-queue";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
+import { pctColor, PRICE_COLOR_HEX } from "@/lib/format";
 import {
   usePortfolioSummary,
   usePortfolioPositions,
@@ -162,14 +163,6 @@ function fmtPct(n: number | null | undefined): string {
   return `${sign}${n.toFixed(2)}%`;
 }
 
-function pctColor(n: number | null | undefined): string {
-  // Korean market convention (CEO directive 2026-04-26): ▲ rising = red, ▼ falling = blue.
-  if (n == null || !Number.isFinite(n)) return "rgba(245,240,232,0.55)";
-  if (n > 0) return "#D18888";
-  if (n < 0) return "#7AA0C8";
-  return "rgba(245,240,232,0.55)";
-}
-
 /* ── Page ── */
 
 export default function HomePage() {
@@ -263,7 +256,7 @@ export default function HomePage() {
         header: "Ticker",
         width: "96px",
         render: (r) => (
-          <span style={{ color: "#B8956A", letterSpacing: "0.04em" }}>
+          <span style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}>
             {r.ticker}
           </span>
         ),
@@ -345,7 +338,7 @@ export default function HomePage() {
         header: "Ticker",
         width: "96px",
         render: (r) => (
-          <span style={{ color: "#B8956A", letterSpacing: "0.04em" }}>
+          <span style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}>
             {r.ticker}
           </span>
         ),
@@ -427,7 +420,7 @@ export default function HomePage() {
         header: "Ticker",
         width: "96px",
         render: (r) => (
-          <span style={{ color: "#B8956A", letterSpacing: "0.04em" }}>
+          <span style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}>
             {r.ticker}
           </span>
         ),
@@ -436,10 +429,13 @@ export default function HomePage() {
         key: "label",
         header: "Signal",
         render: (r) => {
-          const up = r.label === "POSITIVE";
-          const down = r.label === "NEGATIVE";
-          // KR convention: POSITIVE → red, NEGATIVE → blue (CEO directive 2026-04-26).
-          const color = up ? "#D18888" : down ? "#7AA0C8" : "rgba(245,240,232,0.55)";
+          // KR convention: POSITIVE → red, NEGATIVE → blue (single source: lib/format.ts).
+          const color =
+            r.label === "POSITIVE"
+              ? PRICE_COLOR_HEX.up
+              : r.label === "NEGATIVE"
+                ? PRICE_COLOR_HEX.down
+                : PRICE_COLOR_HEX.flat;
           return (
             <span
               className="font-mono uppercase"
@@ -516,8 +512,8 @@ export default function HomePage() {
         {/* Today Brief card — editorial summary */}
         <div
           style={{
-            background: "#0B0E14",
-            border: "1px solid #1A1F2E",
+            background: "var(--pq-card-bg-ink)",
+            border: "1px solid var(--pq-hairline-ink)",
             padding: "14px 16px",
             display: "flex",
             flexDirection: "column",
@@ -531,7 +527,7 @@ export default function HomePage() {
               style={{
                 fontSize: 9.5,
                 letterSpacing: "0.24em",
-                color: "#B8956A",
+                color: "var(--pq-bronze)",
               }}
             >
               Today Brief · {displayName}
@@ -663,7 +659,7 @@ export default function HomePage() {
               style={{
                 fontSize: 9.5,
                 letterSpacing: "0.24em",
-                color: "#B8956A",
+                color: "var(--pq-bronze)",
               }}
             >
               Positions
@@ -699,7 +695,7 @@ export default function HomePage() {
               style={{
                 fontSize: 9.5,
                 letterSpacing: "0.24em",
-                color: "#B8956A",
+                color: "var(--pq-bronze)",
               }}
             >
               Watchlist
@@ -736,7 +732,7 @@ export default function HomePage() {
             style={{
               fontSize: 9.5,
               letterSpacing: "0.24em",
-              color: "#B8956A",
+              color: "var(--pq-bronze)",
             }}
           >
             Flagship Chart — NVDA · 1D
@@ -778,7 +774,7 @@ export default function HomePage() {
               style={{
                 fontSize: 9.5,
                 letterSpacing: "0.24em",
-                color: "#B8956A",
+                color: "var(--pq-bronze)",
               }}
             >
               Signals Stream
@@ -813,7 +809,7 @@ export default function HomePage() {
               style={{
                 fontSize: 9.5,
                 letterSpacing: "0.24em",
-                color: "#B8956A",
+                color: "var(--pq-bronze)",
               }}
             >
               Pulse Activity
@@ -854,8 +850,8 @@ export default function HomePage() {
         <Link
           href="/companion"
           style={{
-            background: "#0B0E14",
-            border: "1px solid #1A1F2E",
+            background: "var(--pq-card-bg-ink)",
+            border: "1px solid var(--pq-hairline-ink)",
             padding: "16px 18px",
             display: "flex",
             flexDirection: "column",
@@ -864,14 +860,14 @@ export default function HomePage() {
             minHeight: 110,
             transition: "border-color 0.2s ease",
           }}
-          className="hover:border-[#B8956A]"
+          className="hover:border-[color:var(--pq-bronze)]"
         >
           <span
             className="font-mono uppercase"
             style={{
               fontSize: 9.5,
               letterSpacing: "0.24em",
-              color: "#B8956A",
+              color: "var(--pq-bronze)",
             }}
           >
             Companion · Personal Journal

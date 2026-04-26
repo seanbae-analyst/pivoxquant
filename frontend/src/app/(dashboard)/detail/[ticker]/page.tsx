@@ -22,7 +22,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { API, WATCHLIST, WATCHLIST_ITEM } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { fmtUsd, fmtKrw } from "@/lib/format";
+import { fmtUsd, fmtKrw, pctColorClass } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
 import { cn } from "@/lib/utils";
@@ -170,13 +170,6 @@ function fmtSignedPct(pct: number | string | null | undefined): string {
   return `${sign}${n.toFixed(2)}%`;
 }
 
-function pctColor(pct: number | null | undefined): string {
-  if (pct == null) return "text-[rgba(245,240,232,0.5)]";
-  if (pct > 0) return "text-emerald-400";
-  if (pct < 0) return "text-red-400";
-  return "text-[rgba(245,240,232,0.6)]";
-}
-
 function pillarToken(label: string): "POSITIVE" | "NEGATIVE" | "NEUTRAL" {
   return label === "POSITIVE" ? "POSITIVE" : label === "NEGATIVE" ? "NEGATIVE" : "NEUTRAL";
 }
@@ -313,17 +306,18 @@ function PillarCard({
   const safe = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
   const token: "POSITIVE" | "NEGATIVE" | "NEUTRAL" =
     safe >= 65 ? "POSITIVE" : safe <= 35 ? "NEGATIVE" : "NEUTRAL";
+  // KR convention (CEO directive 2026-04-26): POSITIVE → red (▲), NEGATIVE → blue (▼).
   const barColor =
     token === "POSITIVE"
-      ? "bg-emerald-400"
+      ? "bg-[#D18888]"
       : token === "NEGATIVE"
-        ? "bg-red-400"
+        ? "bg-[#7AA0C8]"
         : "bg-[var(--pq-bronze)]";
   const textColor =
     token === "POSITIVE"
-      ? "text-emerald-400"
+      ? "text-[#D18888]"
       : token === "NEGATIVE"
-        ? "text-red-400"
+        ? "text-[#7AA0C8]"
         : "text-[rgba(245,240,232,0.7)]";
   return (
     <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] pq-ink-card-interactive">
@@ -658,7 +652,7 @@ export default function StockDetailPage() {
                 <div
                   className={cn(
                     "mt-3 inline-flex items-center gap-1.5 tabular-nums font-mono text-[15px]",
-                    pctColor(signal?.change_pct),
+                    pctColorClass(signal?.change_pct),
                   )}
                 >
                   {signal?.change_pct == null ? (
@@ -707,10 +701,11 @@ export default function StockDetailPage() {
                 <div
                   className={cn(
                     "mt-4 font-mono tabular-nums text-[40px] leading-none",
+                    // KR convention (CEO directive 2026-04-26): POSITIVE → red, NEGATIVE → blue.
                     signalTone === "pos"
-                      ? "text-emerald-400"
+                      ? "text-[#D18888]"
                       : signalTone === "neg"
-                        ? "text-red-400"
+                        ? "text-[#7AA0C8]"
                         : "text-[var(--pq-ivory)]",
                   )}
                 >
