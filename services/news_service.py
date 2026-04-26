@@ -171,8 +171,11 @@ def get_news_naver(ticker: str) -> List[dict]:
             _NAVER_API, headers=headers, params=params, timeout=_REQUEST_TIMEOUT
         )
         if resp.status_code != 200:
-            logger.warning("Naver Search API HTTP %s for %s (%s)",
-                           resp.status_code, ticker, resp.text[:120])
+            # Don't dump raw response body — security scanner flags resp.text[:N]
+            # as potential credential leakage even though Naver Search responses
+            # contain no secrets. Status code + ticker is enough for triage.
+            logger.warning("Naver Search API HTTP %s for %s",
+                           resp.status_code, ticker)
             return []
         payload = resp.json() or {}
         for entry in payload.get("items", []) or []:

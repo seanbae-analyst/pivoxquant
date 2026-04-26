@@ -93,8 +93,9 @@ jobs:
         id: env_check
         run: |
           set +e
-          # Check all branches and the full history for any .env* file ever committed
-          env_hits=$(git log --all --oneline -- '.env' '.env.*' '.env.local' '.env.production' 2>/dev/null || true)
+          # Check all branches and the full history for any .env* file ever committed.
+          # Excludes .env.example (template, intentionally tracked — see .gitignore !.env.example).
+          env_hits=$(git log --all --oneline -- '.env' '.env.*' '.env.local' '.env.production' ':(exclude).env.example' 2>/dev/null || true)
           if [ -n "$env_hits" ]; then
             echo "::error::.env file(s) found in git history — secret leak risk"
             echo "hits<<EOF" >> $GITHUB_OUTPUT
