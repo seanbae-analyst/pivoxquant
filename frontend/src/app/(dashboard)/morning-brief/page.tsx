@@ -30,6 +30,7 @@ import {
 import { useMorningBrief, useMorningBriefArchive } from "@/lib/hooks";
 import { useLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
+import { pctColorClass } from "@/lib/format";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
@@ -50,13 +51,6 @@ function fmtPctSigned(pct: number | undefined): string {
   if (pct == null || !Number.isFinite(pct)) return "—";
   const s = pct >= 0 ? "+" : "";
   return `${s}${pct.toFixed(2)}%`;
-}
-
-function pctColor(pct: number | undefined): string {
-  if (pct == null) return "text-[rgba(245,240,232,0.4)]";
-  if (pct > 0) return "text-emerald-400";
-  if (pct < 0) return "text-red-400";
-  return "text-[rgba(245,240,232,0.6)]";
 }
 
 function pctIcon(pct: number | undefined) {
@@ -89,7 +83,7 @@ function IndexTile({
       <div
         className={cn(
           "mt-3 flex items-center gap-1.5 tabular-nums text-2xl",
-          pctColor(pct),
+          pctColorClass(pct),
         )}
       >
         {pctIcon(pct)}
@@ -138,10 +132,10 @@ function ArchiveRow({ item }: { item: MorningBriefArchiveItem }) {
           <time className="font-serif text-base text-[var(--pq-ivory)]">
             {dateStr}
           </time>
-          <span className={cn("text-xs tabular-nums", pctColor(item.content.market_summary.sp500?.change_pct))}>
+          <span className={cn("text-xs tabular-nums", pctColorClass(item.content.market_summary.sp500?.change_pct))}>
             S&amp;P {fmtPctSigned(item.content.market_summary.sp500?.change_pct)}
           </span>
-          <span className={cn("text-xs tabular-nums hidden sm:inline", pctColor(item.content.market_summary.nasdaq?.change_pct))}>
+          <span className={cn("text-xs tabular-nums hidden sm:inline", pctColorClass(item.content.market_summary.nasdaq?.change_pct))}>
             NASDAQ {fmtPctSigned(item.content.market_summary.nasdaq?.change_pct)}
           </span>
         </div>

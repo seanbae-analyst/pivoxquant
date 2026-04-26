@@ -1,5 +1,18 @@
 "use client";
 
+/**
+ * /ai — AI Analysis Tools in the Vantablack ink theme.
+ *
+ * Two stations:
+ *   1. Portfolio Insights — single Claude-generated coaching note.
+ *   2. Stock Analysis — ticker-scoped accordion (SWOT / Competitor /
+ *      Sector trend / Commentary), each fetched on first expand.
+ *
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner top + bottom.
+ * Editorial palette: Vantablack #050505, bronze hairlines, Source Serif 4
+ * headings, JetBrains Mono numbers. No buy/sell/recommend language.
+ */
+
 import { useState, useCallback, type FormEvent } from "react";
 import {
   Sparkles,
@@ -15,6 +28,12 @@ import {
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import {
+  Caption,
+  Fleuron,
+  FootSignature,
+  RuledKicker,
+} from "@/components/ui/editorial";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -117,58 +136,65 @@ function AnalysisSectionCard({
   const contentKr = getContentKr();
 
   return (
-    <div className="sp-card overflow-hidden">
+    <div className="overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-200 hover:bg-slate-50"
+        className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors duration-200 hover:bg-[rgba(255,255,255,0.02)]"
         aria-expanded={state.expanded}
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--sp-accent-light)]">
-          <Icon className="h-4 w-4 text-[var(--sp-accent)]" />
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[2px] border border-[rgba(245,240,232,0.1)]"
+          style={{ background: "rgba(139,111,71,0.12)" }}
+        >
+          <Icon className="h-4 w-4 text-[var(--pq-bronze)]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-900">{config.label}</p>
-          <p className="text-xs text-slate-500 truncate">{config.description}</p>
+          <p className="font-serif text-[15px] text-[var(--pq-ivory)]">
+            {config.label}
+          </p>
+          <p className="text-[11.5px] text-[rgba(245,240,232,0.55)] truncate">
+            {config.description}
+          </p>
         </div>
         <div className="shrink-0 flex items-center gap-2">
           {state.loading && (
-            <Loader2 className="h-4 w-4 animate-spin text-[var(--sp-accent)]" />
+            <Loader2 className="h-4 w-4 animate-spin text-[var(--pq-bronze)]" />
           )}
           {state.expanded ? (
-            <ChevronUp className="h-4 w-4 text-slate-400" />
+            <ChevronUp className="h-4 w-4 text-[rgba(245,240,232,0.5)]" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-slate-400" />
+            <ChevronDown className="h-4 w-4 text-[rgba(245,240,232,0.5)]" />
           )}
         </div>
       </button>
 
       {state.expanded && (
-        <div className="border-t border-slate-100 px-4 py-4">
+        <div className="border-t border-[rgba(245,240,232,0.08)] px-5 py-5">
           {state.loading && !content && (
             <div className="flex items-center justify-center gap-2 py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-[var(--sp-accent)]" />
-              <span className="text-sm text-slate-500">
-                Analyzing with AI...
+              <Loader2 className="h-5 w-5 animate-spin text-[var(--pq-bronze)]" />
+              <span className="text-[12px] text-[rgba(245,240,232,0.55)] uppercase tracking-[0.18em]">
+                Analyzing with AI…
               </span>
             </div>
           )}
           {state.error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3">
-              <p className="text-sm text-red-600">{state.error}</p>
+            <div className="rounded-[2px] border border-red-500/30 bg-red-500/5 px-4 py-3">
+              <p className="text-[12.5px] text-red-400">{state.error}</p>
             </div>
           )}
           {content && (
             <div className="space-y-3">
-              <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+              <div className="whitespace-pre-wrap font-serif text-[14px] leading-relaxed text-[var(--pq-ivory)]">
                 {content}
               </div>
               {contentKr && (
                 <details className="group">
-                  <summary className="cursor-pointer text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                  <summary className="cursor-pointer text-[10.5px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
                     Korean translation
                   </summary>
-                  <div className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-slate-500">
+                  <div className="mt-3 whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.6)]">
                     {contentKr}
                   </div>
                 </details>
@@ -176,7 +202,7 @@ function AnalysisSectionCard({
             </div>
           )}
           {!state.loading && !state.error && !content && (
-            <p className="text-center text-sm text-slate-400 py-4">
+            <p className="text-center text-[12px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.4)] py-4">
               Click to load analysis
             </p>
           )}
@@ -317,61 +343,72 @@ export default function AiPage() {
   return (
     <ErrorBoundary>
       <TierGate tier="pro">
-        <DisclaimerBanner type="coaching" />
-        <div className="space-y-6 pb-8">
-          {/* Page header */}
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+        <div className="space-y-8">
+          {/* ── Header ── */}
+          <header>
+            <RuledKicker>AI Assistant &middot; Observational analysis</RuledKicker>
+            <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
               AI Analysis Tools
             </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Powered by Claude AI with 58 quant models
+            <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)] max-w-2xl">
+              Claude-driven research notes, drawn over 58 quant signals.
             </p>
-          </div>
+            <Caption className="mt-1 max-w-2xl">
+              Generative summaries, not advice. Every line here is informational only.
+            </Caption>
+          </header>
 
-          {/* Quick Insight — Coaching */}
-          <div className="sp-card overflow-hidden">
-            <div className="flex items-start gap-4 p-5">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--sp-accent-light)]">
-                <Sparkles className="h-5 w-5 text-[var(--sp-accent)]" />
+          <DisclaimerBanner type="coaching" />
+
+          {/* ── Portfolio Insights ── */}
+          <section className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+            <div className="flex items-start gap-4">
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[2px] border border-[rgba(245,240,232,0.1)]"
+                style={{ background: "rgba(139,111,71,0.14)" }}
+              >
+                <Sparkles className="h-5 w-5 text-[var(--pq-bronze)]" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-base font-bold text-slate-900">
+                <div className="text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+                  Station I &middot; Portfolio
+                </div>
+                <h2 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
                   Portfolio Insights
                 </h2>
-                <p className="mt-0.5 text-sm text-slate-500">
-                  Get an AI-generated insight about your portfolio right now.
-                </p>
+                <Caption className="mt-1">
+                  An AI-drafted note on the shape of your book — generated on demand.
+                </Caption>
 
                 {coaching.loading && (
                   <div className="mt-4 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-[var(--sp-accent)]" />
-                    <span className="text-sm text-slate-500">
-                      Generating insight...
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--pq-bronze)]" />
+                    <span className="text-[11.5px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)]">
+                      Generating insight…
                     </span>
                   </div>
                 )}
 
                 {coaching.error && (
-                  <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
-                    <p className="text-sm text-red-600">{coaching.error}</p>
+                  <div className="mt-4 rounded-[2px] border border-red-500/30 bg-red-500/5 px-4 py-3">
+                    <p className="text-[12.5px] text-red-400">{coaching.error}</p>
                   </div>
                 )}
 
                 {coaching.data && (
                   <div className="mt-4 space-y-3">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                    <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.015)] p-4">
+                      <p className="whitespace-pre-wrap font-serif text-[14px] leading-relaxed text-[var(--pq-ivory)]">
                         {coaching.data.insight}
                       </p>
                     </div>
                     {coaching.data.insight_kr && (
                       <details className="group">
-                        <summary className="cursor-pointer text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors">
+                        <summary className="cursor-pointer text-[10.5px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
                           Korean translation
                         </summary>
-                        <div className="mt-2 rounded-xl border border-slate-100 bg-slate-50 p-4">
-                          <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-500">
+                        <div className="mt-3 rounded-[2px] border border-[rgba(245,240,232,0.06)] bg-[rgba(255,255,255,0.015)] p-4">
+                          <p className="whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.6)]">
                             {coaching.data.insight_kr}
                           </p>
                         </div>
@@ -384,17 +421,9 @@ export default function AiPage() {
                   <button
                     type="button"
                     onClick={fetchCoaching}
-                    className={cn(
-                      "mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5",
-                      "bg-[var(--sp-accent)] text-white text-sm font-semibold",
-                      "transition-all duration-200 hover:bg-[var(--sp-accent-hover)] hover:scale-[1.02] active:scale-[0.97]",
-                    )}
-                    style={{
-                      transitionTimingFunction:
-                        "cubic-bezier(0.16, 1, 0.3, 1)",
-                    }}
+                    className="pq-ink-btn-bronze mt-4 inline-flex items-center gap-1.5"
                   >
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles className="h-3.5 w-3.5" />
                     Get Insight
                   </button>
                 )}
@@ -403,82 +432,76 @@ export default function AiPage() {
                   <button
                     type="button"
                     onClick={fetchCoaching}
-                    className="mt-3 text-xs font-medium text-[var(--sp-accent)] hover:underline"
+                    className="mt-3 text-[10.5px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors"
                   >
                     Refresh insight
                   </button>
                 )}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Stock Analysis section */}
-          <div className="sp-card overflow-hidden">
+          {/* ── Stock Analysis ── */}
+          <section className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px]">
             <div className="p-5">
-              <h2 className="text-base font-bold text-slate-900 mb-1">
+              <div className="text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+                Station II &middot; Symbol
+              </div>
+              <h2 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
                 Stock Analysis
               </h2>
-              <p className="text-sm text-slate-500 mb-4">
-                Enter a ticker symbol to run AI-powered analysis tools.
-              </p>
+              <Caption className="mt-1 mb-4">
+                Enter a ticker to draw SWOT, competitor, sector and commentary notes.
+              </Caption>
 
               <form
                 onSubmit={handleTickerSubmit}
                 className="flex gap-2"
               >
                 <div className="relative flex-1 max-w-xs">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgba(245,240,232,0.4)]" />
                   <input
                     type="text"
                     value={ticker}
                     onChange={(e) => setTicker(e.target.value.toUpperCase())}
                     placeholder="AAPL"
                     className={cn(
-                      "w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-4 py-2.5 text-sm text-slate-900",
-                      "placeholder:text-slate-400 outline-none transition-all duration-200",
-                      "focus:border-[var(--sp-accent)] focus:ring-2 focus:ring-[var(--sp-accent)]/20 focus:bg-white",
+                      "w-full rounded-[2px] border border-[rgba(245,240,232,0.12)] bg-[rgba(255,255,255,0.02)] pl-9 pr-4 py-2.5 text-[13px] font-mono tracking-wide text-[var(--pq-ivory)]",
+                      "placeholder:text-[rgba(245,240,232,0.3)] outline-none transition-all duration-200",
+                      "focus:border-[var(--pq-bronze)] focus:bg-[rgba(255,255,255,0.04)]",
                     )}
-                    style={{
-                      transitionTimingFunction:
-                        "cubic-bezier(0.16, 1, 0.3, 1)",
-                    }}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={!ticker.trim()}
                   className={cn(
-                    "rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.97]",
-                    ticker.trim()
-                      ? "bg-slate-900 text-white hover:bg-slate-800"
-                      : "bg-slate-100 text-slate-400 cursor-not-allowed",
+                    ticker.trim() ? "pq-ink-btn-bronze" : "pq-ink-btn-ghost",
+                    !ticker.trim() && "opacity-40 cursor-not-allowed",
                   )}
-                  style={{
-                    transitionTimingFunction:
-                      "cubic-bezier(0.16, 1, 0.3, 1)",
-                  }}
                 >
                   Analyze
                 </button>
               </form>
 
               {activeTicker && (
-                <p className="mt-3 text-xs font-medium text-[var(--sp-accent)]">
-                  Showing analysis for {activeTicker}
+                <p className="mt-3 text-[10.5px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)]">
+                  Showing analysis for{" "}
+                  <span className="font-mono tabular-nums">{activeTicker}</span>
                 </p>
               )}
             </div>
 
             {/* Analysis sections */}
             {activeTicker && (
-              <div className="border-t border-slate-100">
+              <div className="border-t border-[rgba(245,240,232,0.08)]">
                 {(
                   Object.keys(SECTION_CONFIG) as AnalysisSection[]
                 ).map((section) => (
                   <div
                     key={section}
                     className={cn(
-                      section !== "swot" && "border-t border-slate-100",
+                      section !== "swot" && "border-t border-[rgba(245,240,232,0.06)]",
                     )}
                   >
                     <AnalysisSectionCard
@@ -492,17 +515,21 @@ export default function AiPage() {
             )}
 
             {!activeTicker && (
-              <div className="border-t border-slate-100 px-5 py-8 text-center">
-                <Search className="mx-auto h-8 w-8 text-slate-300 mb-3" />
-                <p className="text-sm text-slate-400">
-                  Enter a ticker symbol above to get started
-                </p>
+              <div className="border-t border-[rgba(245,240,232,0.08)] pq-ink-empty text-center py-12">
+                <Fleuron size={14} />
+                <div className="font-serif text-[15px] text-[var(--pq-ivory)] mt-3">
+                  No symbol selected.
+                </div>
+                <Caption className="mt-2">
+                  Enter a ticker above to begin observing.
+                </Caption>
               </div>
             )}
-          </div>
+          </section>
 
-          {/* Disclaimer */}
+          {/* ── Disclaimer + Editorial signature ── */}
           <DisclaimerBanner type="ai-analysis" />
+          <FootSignature note="PivoxQuant &middot; AI Assistant &middot; Observational research only &middot; Not investment advice" />
         </div>
       </TierGate>
     </ErrorBoundary>

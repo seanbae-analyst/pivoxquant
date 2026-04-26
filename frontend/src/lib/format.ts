@@ -50,3 +50,54 @@ export function scoreTextColor(score: number): string {
   if (score >= 45) return "text-warning";
   return "text-destructive";
 }
+
+/**
+ * KR convention price color tokens.
+ * ▲ rising  = red  (#D18888 muted carmine)
+ * ▼ falling = blue (#7AA0C8 muted indigo)
+ * → flat    = ivory soft
+ *
+ * Single source of truth — every dashboard page uses this so the
+ * convention can never split again. CEO directive 2026-04-26.
+ */
+export type PriceDir = "up" | "down" | "flat";
+
+export function priceDir(value: number | null | undefined): PriceDir {
+  if (value === null || value === undefined || Number.isNaN(value)) return "flat";
+  if (!Number.isFinite(value)) return "flat";
+  if (value > 0) return "up";
+  if (value < 0) return "down";
+  return "flat";
+}
+
+export const PRICE_COLOR_HEX = {
+  up: "#D18888",
+  down: "#7AA0C8",
+  flat: "rgba(245, 240, 232, 0.55)",
+} as const;
+
+/** Returns hex color for a numeric pct/delta. KR convention. */
+export function pctColor(value: number | null | undefined): string {
+  return PRICE_COLOR_HEX[priceDir(value)];
+}
+
+/** Tailwind class variant — useful when style prop isn't ergonomic. */
+export const PRICE_COLOR_CLASS = {
+  up: "text-[#D18888]",
+  down: "text-[#7AA0C8]",
+  flat: "text-[rgba(245,240,232,0.55)]",
+} as const;
+
+export function pctColorClass(value: number | null | undefined): string {
+  return PRICE_COLOR_CLASS[priceDir(value)];
+}
+
+export const PRICE_GLYPH = {
+  up: "▲",
+  down: "▼",
+  flat: "·",
+} as const;
+
+export function priceGlyph(value: number | null | undefined): string {
+  return PRICE_GLYPH[priceDir(value)];
+}

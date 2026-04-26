@@ -29,7 +29,6 @@ import { SectorPaper } from "@/components/portfolio/sector-paper";
 import { ActivityPaper } from "@/components/portfolio/activity-paper";
 import { AddPositionModal } from "@/components/portfolio/add-position-modal";
 import { TradeModal } from "@/components/portfolio/trade-modal";
-import { MOCK_POSITIONS, MOCK_TRADES } from "@/components/portfolio/mock-data";
 import { RollingWindowWidget } from "@/components/dashboard/rolling-window";
 import {
   PORTFOLIO_POSITIONS,
@@ -126,17 +125,22 @@ export default function PortfolioPage() {
     return () => clearTimeout(t);
   }, []);
 
+  // Never fall back to MOCK_POSITIONS / MOCK_TRADES (hardcoded SPY/QQQ/AAPL
+  // fixtures) — displaying fake holdings in a real portfolio view is a
+  // misrepresentation risk under 자본시장법, and a trust risk regardless.
+  // Same policy as discover/page.tsx (see comment near MOCK_INDICES).
+  // On error we render an empty state + an explicit retry banner below.
   const positions: Position[] = useMemo(() => {
-    if (posData?.positions && posData.positions.length > 0) return posData.positions;
-    if (posErr) return MOCK_POSITIONS;
+    if (posErr) return [];
     return posData?.positions ?? [];
   }, [posData, posErr]);
 
   const trades: Trade[] = useMemo(() => {
-    if (tradesData?.trades && tradesData.trades.length > 0) return tradesData.trades;
-    if (tradesErr) return MOCK_TRADES;
+    if (tradesErr) return [];
     return tradesData?.trades ?? [];
   }, [tradesData, tradesErr]);
+
+  const hasLoadError = Boolean(posErr || tradesErr);
 
   const totals = useMemo(() => {
     let mv = 0;
@@ -206,11 +210,11 @@ export default function PortfolioPage() {
   if (posLoading && showSkeleton) {
     return (
       <div className="animate-pulse">
-        <div className="h-4 w-40 bg-white/10 rounded-sm" />
-        <div className="mt-6 h-10 w-56 bg-white/10 rounded-sm" />
+        <div className="h-4 w-40 bg-[rgba(245,240,232,0.08)] rounded-sm" />
+        <div className="mt-6 h-10 w-56 bg-[rgba(245,240,232,0.08)] rounded-sm" />
         <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-white/5 rounded-sm" />
+            <div key={i} className="h-24 bg-[rgba(245,240,232,0.04)] rounded-sm" />
           ))}
         </div>
       </div>
@@ -243,6 +247,30 @@ export default function PortfolioPage() {
           )}
         </div>
       </header>
+
+      {hasLoadError && (
+        <div
+          role="alert"
+          className="mb-4 flex items-center justify-between gap-3 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em]"
+          style={{
+            background: "rgba(226, 185, 111, 0.06)",
+            borderTop: "1px solid var(--pq-bronze)",
+            borderBottom: "1px solid var(--pq-bronze)",
+            color: "var(--pq-bronze)",
+          }}
+        >
+          <span>
+            Unable to load live portfolio data. No fallback values are shown.
+          </span>
+          <button
+            type="button"
+            onClick={refreshAll}
+            className="underline-offset-4 hover:underline"
+          >
+            Refresh
+          </button>
+        </div>
+      )}
 
       {/* ═══════════ THE LEDGER BINDER ═══════════ */}
       <DossierDesk maxTilt={1.0}>

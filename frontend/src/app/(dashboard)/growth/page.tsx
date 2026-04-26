@@ -35,13 +35,17 @@ function DayDetail({ date, onClose }: DayDetailProps) {
   const isToday = date === new Date().toISOString().split("T")[0];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div
+        className="mx-4 w-full max-w-md rounded-[2px] border border-[rgba(245,240,232,0.1)] bg-[var(--pq-ink)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+      >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-900">{date}</h3>
+          <h3 className="font-serif text-lg font-semibold text-[var(--pq-ivory)]">
+            <span className="font-mono tabular-nums">{date}</span>
+          </h3>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600"
+            className="text-[rgba(245,240,232,0.45)] hover:text-[var(--pq-bronze)]"
             aria-label="Close"
           >
             <svg width={20} height={20} viewBox="0 0 20 20" fill="currentColor">
@@ -56,16 +60,21 @@ function DayDetail({ date, onClose }: DayDetailProps) {
 
         {isToday && today?.briefing && (
           <div className="mt-4">
-            <h4 className="text-sm font-medium text-slate-500">Priorities</h4>
-            <ul className="mt-1 space-y-1">
+            <h4 className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+              Priorities
+            </h4>
+            <ul className="mt-2 space-y-1">
               {today.briefing.priorities.map((p, i) => (
-                <li key={i} className="text-sm text-slate-700">
-                  {i + 1}. {p}
+                <li key={i} className="text-sm text-[rgba(245,240,232,0.82)]">
+                  <span className="font-mono tabular-nums text-[var(--pq-bronze)]">
+                    {i + 1}.
+                  </span>{" "}
+                  {p}
                 </li>
               ))}
             </ul>
             {today.briefing.motivation && (
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-3 border-t border-[rgba(245,240,232,0.08)] pt-3 text-sm text-[rgba(245,240,232,0.65)]">
                 {today.briefing.motivation}
               </p>
             )}
@@ -74,20 +83,24 @@ function DayDetail({ date, onClose }: DayDetailProps) {
 
         {isToday && today?.reflection && (
           <div className="mt-4">
-            <h4 className="text-sm font-medium text-slate-500">Reflection</h4>
+            <h4 className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+              Reflection
+            </h4>
             {today.reflection.answers ? (
-              <ul className="mt-1 space-y-2">
+              <ul className="mt-2 space-y-2">
                 {today.reflection.questions.map((q, i) => (
                   <li key={i}>
-                    <p className="text-xs text-slate-400">Q: {q}</p>
-                    <p className="text-sm text-slate-700">
+                    <p className="text-xs text-[rgba(245,240,232,0.45)]">
+                      Q: {q}
+                    </p>
+                    <p className="text-sm text-[rgba(245,240,232,0.82)]">
                       A: {today.reflection!.answers![i] ?? "-"}
                     </p>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-2 text-sm text-[rgba(245,240,232,0.45)]">
                 아직 답변하지 않았습니다.
               </p>
             )}
@@ -95,33 +108,36 @@ function DayDetail({ date, onClose }: DayDetailProps) {
         )}
 
         {isToday && today?.score && (
-          <div className="mt-4 flex gap-4 text-center">
-            <div>
-              <p className="text-lg font-bold text-slate-900">
+          <div className="mt-5 flex gap-4 border-t border-[rgba(245,240,232,0.08)] pt-4 text-center">
+            <div className="flex-1">
+              <p className="font-mono text-lg font-bold tabular-nums text-[var(--pq-ivory)]">
                 {today.score.total}
               </p>
-              <p className="text-xs text-slate-500">Total</p>
+              <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+                Total
+              </p>
             </div>
-            <div>
-              <p className="text-lg font-bold text-green-600">
+            <div className="flex-1">
+              <p className="font-mono text-lg font-bold tabular-nums text-[var(--pq-bronze)]">
                 {today.score.activity}
               </p>
-              <p className="text-xs text-slate-500">Activity</p>
+              <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+                Activity
+              </p>
             </div>
-            <div>
-              <p
-                className="text-lg font-bold"
-                style={{ color: "#E2B96F" }}
-              >
+            <div className="flex-1">
+              <p className="font-mono text-lg font-bold tabular-nums text-[var(--pq-bronze-light)]">
                 {today.score.reflection}
               </p>
-              <p className="text-xs text-slate-500">Reflection</p>
+              <p className="mt-0.5 font-mono text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+                Reflection
+              </p>
             </div>
           </div>
         )}
 
         {!isToday && (
-          <p className="mt-4 text-sm text-slate-400">
+          <p className="mt-4 text-sm text-[rgba(245,240,232,0.45)]">
             상세 데이터는 오늘 날짜에서만 확인할 수 있습니다.
           </p>
         )}
@@ -162,8 +178,8 @@ export default function GrowthPage() {
       <div className="space-y-6 pb-8">
         {/* Header */}
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Growth OS</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-[var(--pq-ivory)]">Growth OS</h1>
+          <p className="text-sm text-[rgba(245,240,232,0.55)]">
             Personal growth tracking and reflection
           </p>
         </div>
@@ -174,36 +190,36 @@ export default function GrowthPage() {
 
           {todayData?.score ? (
             <>
-              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
-                  <span className="text-lg font-bold text-green-600">
+              <div className="flex items-center gap-3 rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(34,197,94,0.12)]">
+                  <span className="text-lg font-bold text-[#7DD897]">
                     {todayData.score.activity}
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Activity</p>
-                  <p className="text-xs text-slate-500">Today&apos;s activity score</p>
+                  <p className="text-sm font-medium text-[var(--pq-ivory)]">Activity</p>
+                  <p className="text-xs text-[rgba(245,240,232,0.55)]">Today&apos;s activity score</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: "#fef3c7" }}>
+              <div className="flex items-center gap-3 rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(226,185,111,0.14)" }}>
                   <span className="text-lg font-bold" style={{ color: "#E2B96F" }}>
                     {todayData.score.reflection}
                   </span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-sm font-medium text-[var(--pq-ivory)]">
                     Reflection
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[rgba(245,240,232,0.55)]">
                     Today&apos;s reflection score
                   </p>
                 </div>
               </div>
             </>
           ) : (
-            <div className="col-span-2 flex items-center justify-center rounded-lg border border-dashed border-slate-200 px-4 py-3">
-              <p className="text-sm text-slate-400">
+            <div className="col-span-2 flex items-center justify-center rounded-sm border border-dashed border-[rgba(245,240,232,0.12)] px-4 py-3">
+              <p className="text-sm text-[rgba(245,240,232,0.55)]">
                 {todayLoading
                   ? "Loading..."
                   : "아직 오늘의 점수가 없습니다."}
@@ -214,17 +230,17 @@ export default function GrowthPage() {
 
         {/* Morning Briefing */}
         {todayData?.briefing && (
-          <section className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="text-base font-semibold text-slate-900">
+          <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+            <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
               Today&apos;s Priorities
             </h2>
             <ul className="mt-3 space-y-2">
               {todayData.briefing.priorities.map((priority, i) => (
                 <li
                   key={i}
-                  className="flex items-start gap-2 text-sm text-slate-700"
+                  className="flex items-start gap-2 text-sm text-[rgba(245,240,232,0.82)]"
                 >
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-50 text-xs font-medium text-green-700">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(34,197,94,0.12)] text-xs font-medium text-[#7DD897]">
                     {i + 1}
                   </span>
                   {priority}
@@ -232,7 +248,7 @@ export default function GrowthPage() {
               ))}
             </ul>
             {todayData.briefing.motivation && (
-              <p className="mt-3 border-t border-slate-100 pt-3 text-sm text-slate-500">
+              <p className="mt-3 border-t border-[rgba(245,240,232,0.08)] pt-3 text-sm text-[rgba(245,240,232,0.55)]">
                 {todayData.briefing.motivation}
               </p>
             )}
@@ -241,8 +257,8 @@ export default function GrowthPage() {
 
         {/* Reflection Form */}
         {todayData?.reflection && (
-          <section className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="text-base font-semibold text-slate-900">
+          <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+            <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
               Evening Reflection
             </h2>
             <div className="mt-3">
@@ -255,17 +271,17 @@ export default function GrowthPage() {
         )}
 
         {/* Growth Graph */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="text-base font-semibold text-slate-900">
+        <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+          <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
             Growth Graph
           </h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
             Past 365 days. Click a day for details.
           </p>
           <div className="mt-4">
             {graphLoading ? (
               <div className="flex h-32 items-center justify-center">
-                <p className="text-sm text-slate-400">Loading...</p>
+                <p className="text-sm text-[rgba(245,240,232,0.55)]">Loading...</p>
               </div>
             ) : (
               <GrowthGraph
@@ -277,17 +293,17 @@ export default function GrowthPage() {
         </section>
 
         {/* Weekly Trend */}
-        <section className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="text-base font-semibold text-slate-900">
+        <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+          <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
             Weekly Trend
           </h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-[rgba(245,240,232,0.55)]">
             Activity vs reflection over the last 4 weeks.
           </p>
           <div className="mt-4">
             {graphLoading ? (
               <div className="flex h-40 items-center justify-center">
-                <p className="text-sm text-slate-400">Loading...</p>
+                <p className="text-sm text-[rgba(245,240,232,0.55)]">Loading...</p>
               </div>
             ) : (
               <WeeklyTrendChart data={graphData ?? []} />
@@ -297,37 +313,37 @@ export default function GrowthPage() {
 
         {/* Weekly Reports */}
         {weeklyData && weeklyData.length > 0 && (
-          <section className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="text-base font-semibold text-slate-900">
+          <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+            <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
               Weekly Reports
             </h2>
             <div className="mt-3 space-y-4">
               {weeklyData.map((report) => (
                 <div
                   key={report.id}
-                  className="rounded-lg border border-slate-100 bg-slate-50/50 p-4"
+                  className="rounded-sm border border-[rgba(245,240,232,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
                 >
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-slate-700">
+                    <h3 className="text-sm font-medium text-[rgba(245,240,232,0.82)]">
                       Week of {report.week_start}
                     </h3>
-                    <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                    <span className="rounded-full bg-[rgba(34,197,94,0.12)] px-2.5 py-0.5 text-xs font-medium text-[#7DD897]">
                       {report.week_score}/100
                     </span>
                   </div>
-                  <p className="mt-2 text-sm text-slate-600 whitespace-pre-line">
+                  <p className="mt-2 text-sm text-[rgba(245,240,232,0.82)] whitespace-pre-line">
                     {report.summary}
                   </p>
                   {report.patterns.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-slate-500">
+                      <p className="text-xs font-medium text-[rgba(245,240,232,0.55)]">
                         Patterns
                       </p>
                       <ul className="mt-1 space-y-0.5">
                         {report.patterns.map((p, i) => (
                           <li
                             key={i}
-                            className="text-xs text-slate-500"
+                            className="text-xs text-[rgba(245,240,232,0.55)]"
                           >
                             - {p}
                           </li>
@@ -337,14 +353,14 @@ export default function GrowthPage() {
                   )}
                   {report.next_week_suggestions.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs font-medium text-slate-500">
+                      <p className="text-xs font-medium text-[rgba(245,240,232,0.55)]">
                         Next Week
                       </p>
                       <ul className="mt-1 space-y-0.5">
                         {report.next_week_suggestions.map((s, i) => (
                           <li
                             key={i}
-                            className="text-xs text-slate-500"
+                            className="text-xs text-[rgba(245,240,232,0.55)]"
                           >
                             {i + 1}. {s}
                           </li>
