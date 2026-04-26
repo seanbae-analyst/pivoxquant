@@ -45,27 +45,42 @@ jobs:
           SCAN_PATHS="routes services frontend/src"
 
           # --- EN forbidden tokens ---
+          # Whitelist:
+          #   forbidden_terms.py — term definition file itself
+          #   negation context: never/not/no/does not recommend, no advice/recommendation
+          #   quoted-prohibition comments: "Never use the words", "forbids recommendation"
+          #   informational disclaimers: "informational only", "observational only"
           en_hits=$(grep -rnE \
             '\b(recommendation|buy recommendation|sell recommendation)\b' \
             $SCAN_PATHS \
             --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
-            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|consent|never\s+(recommend)|not\s+(recommend)|no\s+recommend|does\s+not\s+(recommend)' \
+            | grep -v 'services/legal/forbidden_terms\.py' \
+            | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|consent' \
+            | grep -viE 'never\s+(use|a|constitute|recommend)|not\s+(a\s+)?(recommend|constitute)|no\s+(advice|recommend)|does\s+not\s+(recommend|constitute)' \
+            | grep -viE 'forbid(s)?\s+recommendation|no\s+advice|informational\s+only|observational\s+only|no\s+predict|Watch.*not.*Act' \
+            | grep -viE '"recommendation"\s*language|advice\s*/\s*recommendation|recommendation\s+language' \
             || true)
 
           # --- EN AI Coach / 투자 코치 ---
+          # Whitelist: forbidden_terms.py definition file and scrub-context mentions
           coach_hits=$(grep -rnE \
             '\b(AI Coach|investment coach|투자\s*코치)\b' \
             $SCAN_PATHS \
             --include='*.py' --include='*.ts' --include='*.tsx' 2>/dev/null \
+            | grep -v 'services/legal/forbidden_terms\.py' \
             | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer' \
+            | grep -viE 'scrubbed|forbidden|BUY/SELL/HOLD|are\s+scrub' \
             || true)
 
           # --- KR forbidden advisory terms ---
+          # Whitelist: forbidden_terms.py definition, content/terms docs with explicit prohibition context
           kr_hits=$(grep -rnE \
             '(매수\s*추천|매도\s*추천|투자\s*추천|종목\s*추천)' \
             $SCAN_PATHS \
             --include='*.py' --include='*.ts' --include='*.tsx' --include='*.md' 2>/dev/null \
+            | grep -v 'services/legal/forbidden_terms\.py' \
             | grep -viE 'test_|__pycache__|legal_filter\.py|disclaimer|금지|없음|않습니다|안\s*합니다|절대|하지\s*않' \
+            | grep -viE 'content/terms|terms-ko' \
             || true)
 
           total=0
