@@ -283,35 +283,41 @@ export default function HomePage() {
   const posColumns: Column<PosRow>[] = useMemo(
     () => [
       {
-        key: "ticker",
-        header: "Ticker",
-        width: "96px",
+        key: "name",
+        header: "Name",
+        sortAccessor: (r) => r.name || r.ticker,
         render: (r) => (
           <Link
             href={`/detail/${encodeURIComponent(r.ticker)}`}
-            className="pq-ticker-link"
-            style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}
+            className="block pq-ticker-link"
+            style={{ textDecoration: "none" }}
           >
-            {r.ticker}
+            <div
+              className="font-serif"
+              style={{
+                fontSize: 14,
+                lineHeight: 1.2,
+                color: "var(--pq-ivory)",
+                maxWidth: 220,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {r.name || r.ticker}
+            </div>
+            <div
+              className="font-mono"
+              style={{
+                fontSize: 10,
+                marginTop: 2,
+                color: "rgba(245,240,232,0.45)",
+                letterSpacing: "0.06em",
+              }}
+            >
+              {r.ticker}
+            </div>
           </Link>
-        ),
-      },
-      {
-        key: "name",
-        header: "Name",
-        render: (r) => (
-          <span
-            style={{
-              color: "rgba(245,240,232,0.75)",
-              display: "inline-block",
-              maxWidth: 200,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {r.name}
-          </span>
         ),
       },
       {
@@ -369,35 +375,41 @@ export default function HomePage() {
   const watchColumns: Column<WatchRow>[] = useMemo(
     () => [
       {
-        key: "ticker",
-        header: "Ticker",
-        width: "96px",
+        key: "name",
+        header: "Name",
+        sortAccessor: (r) => r.name || r.ticker,
         render: (r) => (
           <Link
             href={`/detail/${encodeURIComponent(r.ticker)}`}
-            className="pq-ticker-link"
-            style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}
+            className="block pq-ticker-link"
+            style={{ textDecoration: "none" }}
           >
-            {r.ticker}
+            <div
+              className="font-serif"
+              style={{
+                fontSize: 14,
+                lineHeight: 1.2,
+                color: "var(--pq-ivory)",
+                maxWidth: 220,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {r.name || r.ticker}
+            </div>
+            <div
+              className="font-mono"
+              style={{
+                fontSize: 10,
+                marginTop: 2,
+                color: "rgba(245,240,232,0.45)",
+                letterSpacing: "0.06em",
+              }}
+            >
+              {r.ticker}
+            </div>
           </Link>
-        ),
-      },
-      {
-        key: "name",
-        header: "Name",
-        render: (r) => (
-          <span
-            style={{
-              color: "rgba(245,240,232,0.75)",
-              display: "inline-block",
-              maxWidth: 200,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {r.name || "—"}
-          </span>
         ),
       },
       {
@@ -456,15 +468,25 @@ export default function HomePage() {
     () => [
       {
         key: "ticker",
-        header: "Ticker",
-        width: "96px",
+        header: "Symbol",
+        width: "112px",
         render: (r) => (
           <Link
             href={`/detail/${encodeURIComponent(r.ticker)}`}
-            className="pq-ticker-link"
-            style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}
+            className="block pq-ticker-link"
+            style={{ textDecoration: "none" }}
           >
-            {r.ticker}
+            <div
+              className="font-serif"
+              style={{
+                fontSize: 14,
+                lineHeight: 1.2,
+                color: "var(--pq-ivory)",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {r.ticker}
+            </div>
           </Link>
         ),
       },
@@ -596,9 +618,10 @@ export default function HomePage() {
             </Link>
           </div>
           <p
+            className="font-serif"
             style={{
-              fontSize: 12.5,
-              lineHeight: 1.55,
+              fontSize: 13,
+              lineHeight: 1.6,
               color: "rgba(245,240,232,0.82)",
               margin: 0,
             }}
@@ -844,24 +867,37 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══════════ Row 3 — Top Holding Candlestick (full width) ═══════════ */}
+      {/* ═══════════ Row 3 — Top Holding Chart (full width) ═══════════ */}
       <section className="mb-3">
         <div
           className="flex items-center justify-between mb-1"
           style={{ padding: "0 2px" }}
         >
-          <span
-            className="font-mono uppercase"
-            style={{
-              fontSize: 9.5,
-              letterSpacing: "0.24em",
-              color: "var(--pq-bronze)",
-            }}
-          >
-            {topTicker
-              ? `Top Holding · ${topTicker} · 1D`
-              : "Top Holding · 1D"}
-          </span>
+          <div style={{ minWidth: 0 }}>
+            <div
+              className="font-mono uppercase"
+              style={{
+                fontSize: 9.5,
+                letterSpacing: "0.24em",
+                color: "var(--pq-bronze)",
+              }}
+            >
+              {topTicker
+                ? `Top Holding · ${topTicker} · 1D`
+                : "Top Holding · 1D"}
+            </div>
+            <p
+              className="font-serif"
+              style={{
+                fontSize: 12,
+                lineHeight: 1.5,
+                color: "rgba(245,240,232,0.55)",
+                margin: "4px 0 0 0",
+              }}
+            >
+              Daily closing price with 20- and 50-day moving averages.
+            </p>
+          </div>
           {topTicker ? (
             <Link
               href={`/detail/${encodeURIComponent(topTicker)}`}
@@ -882,11 +918,15 @@ export default function HomePage() {
             timeframe="1D"
             indicators={["ma20", "ma50", "volume"]}
             height={320}
+            showKpiChips
           />
         ) : (
           <div className="pq-ink-empty">
             <Fleuron size={13} />
-            <p style={{ marginTop: 12, fontStyle: "italic" }}>
+            <p
+              className="font-serif"
+              style={{ marginTop: 12, fontStyle: "italic", fontSize: 13 }}
+            >
               Add your first position to see your top holding chart.
             </p>
             <div style={{ marginTop: 16 }}>
@@ -968,10 +1008,10 @@ export default function HomePage() {
           </div>
           <DataTable<PosRow>
             columns={[
-              posColumns[0], // ticker
-              posColumns[4], // current
-              posColumns[5], // pnl%
-              posColumns[6], // mkt value
+              posColumns[0], // name + ticker (combined)
+              posColumns[3], // current
+              posColumns[4], // pnl%
+              posColumns[5], // mkt value
             ]}
             rows={pulseRows}
             label="Pulse Activity"
@@ -1014,9 +1054,10 @@ export default function HomePage() {
             Companion · Personal Journal
           </span>
           <p
+            className="font-serif"
             style={{
-              fontSize: 12,
-              lineHeight: 1.55,
+              fontSize: 13,
+              lineHeight: 1.6,
               color: "rgba(245,240,232,0.75)",
               margin: 0,
             }}
