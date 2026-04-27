@@ -21,7 +21,7 @@
  * (#6F5636) dashed for MA50. Green/red volume bars.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import type {
   IChartApi,
@@ -31,6 +31,7 @@ import type {
   UTCTimestamp,
 } from "lightweight-charts";
 import { apiFetch } from "@/lib/api";
+import { pctColor } from "@/lib/format";
 
 export type Timeframe = "1D" | "5D" | "1M" | "3M" | "6M" | "1Y" | "2Y";
 export type Indicator = "ma20" | "ma50" | "rsi" | "volume";
@@ -65,6 +66,8 @@ export interface CandlestickChartProps {
   /** Height of the primary price pane, px. Volume adds 80 more. Default 320. */
   height?: number;
   className?: string;
+  /** If true, render Today / 5-Day / 1-Month KPI chips above the chart. */
+  showKpiChips?: boolean;
 }
 
 function toTs(s: string): UTCTimestamp {
@@ -89,6 +92,7 @@ export function CandlestickChart({
   indicators = ["ma20", "ma50", "volume"],
   height = 320,
   className = "",
+  showKpiChips = false,
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -295,6 +299,30 @@ export function CandlestickChart({
     chartRef.current?.timeScale().fitContent();
   }, [chartBody, chartRev]);
 
+  // KPI chips — computed client-side from the SWR chart data. The /api/chart
+  // endpoint already returns dense daily close points, so Today / 5-Day /
+  // 1-Month % returns are just close[-1] vs close[-N-1]. When showKpiChips
+  // is false we skip rendering — avoids visual noise on detail-page consumers.
+  const kpiChips = useMemo(() => {
+    if (!showKpiChips) return null;
+    const data = chartBody?.data ?? [];
+    if (data.length < 2) return null;
+    const last = data[data.length - 1]?.close;
+    if (!Number.isFinite(last)) return null;
+    const pctAt = (lookback: number): number | null => {
+      const idx = data.length - 1 - lookback;
+      if (idx < 0) return null;
+      const base = data[idx]?.close;
+      if (!Number.isFinite(base) || base === 0) return null;
+      return ((last - base) / base) * 100;
+    };
+    return [
+      { label: "Today", pct: pctAt(1) },
+      { label: "5-Day", pct: pctAt(5) },
+      { label: "1-Month", pct: pctAt(21) },
+    ];
+  }, [chartBody, showKpiChips]);
+
   return (
     <div
       className={`pq-terminal-chart ${className}`.trim()}
@@ -350,6 +378,56 @@ export function CandlestickChart({
                 : "observed"}
         </div>
       </div>
+
+      {kpiChips && (
+        <div
+          className="flex gap-2 px-3 py-2"
+          style={{
+            borderBottom: "1px solid #1A1F2E",
+            background: "rgba(184,149,106,0.02)",
+          }}
+        >
+          {kpiChips.map((chip) => (
+            <div
+              key={chip.label}
+              style={{
+                padding: "5px 10px",
+                border: "1px solid rgba(245,240,232,0.08)",
+                borderRadius: 2,
+                background: "rgba(10,10,10,0.4)",
+                minWidth: 76,
+              }}
+            >
+              <div
+                className="font-mono uppercase"
+                style={{
+                  fontSize: 9,
+                  letterSpacing: "0.2em",
+                  color: "rgba(245,240,232,0.45)",
+                }}
+              >
+                {chip.label}
+              </div>
+              <div
+                className="font-mono tabular-nums"
+                style={{
+                  fontSize: 14,
+                  fontWeight: 500,
+                  marginTop: 2,
+                  color:
+                    chip.pct == null
+                      ? "rgba(245,240,232,0.45)"
+                      : pctColor(chip.pct),
+                }}
+              >
+                {chip.pct == null
+                  ? "—"
+                  : `${chip.pct >= 0 ? "+" : ""}${chip.pct.toFixed(2)}%`}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div ref={containerRef} style={{ width: "100%" }} />
 
