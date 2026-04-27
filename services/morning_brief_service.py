@@ -33,6 +33,7 @@ from extensions import db
 from models import MorningBrief, Position, SignalCache, User, Watchlist
 from services.container import ai as ai_service
 from services.container import fetcher
+from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
 from services.name_resolver import (
     lookup_name_from_signal_cache,
     resolve_stock_name,
@@ -357,6 +358,11 @@ def generate_brief(user: User, for_date: date | None = None) -> MorningBrief:
         "disclaimer":        "정보 제공 목적, 투자 판단은 본인 책임",
         "generated_at":      datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
     }
+
+    # Legal scrub at user-facing boundary — `insight` is the AI-generated
+    # one-liner; scrub_signal walks known free-text fields (insight,
+    # disclaimer, message, etc.) before persistence + email render.
+    content = scrub_signal(content)
 
     # 6. Upsert — idempotent re-runs on the same date
     existing = MorningBrief.query.filter_by(

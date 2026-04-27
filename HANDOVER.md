@@ -41,7 +41,17 @@ e3b3f54  chore: land carryover — template hardcoding + Journal Companion + aud
 ## 2. ✅ 진짜로 완료된 것 (증거: tests + git log)
 
 ### 2-A. 보안 (이전 세션)
-- C1 AutoTrader 싱글톤 user_id leak fix
+- **2026-04-27: AutoTrade 기능 완전 제거 per CEO + legal review** (투자일임업 등록 회피)
+  - Frontend: `app/(dashboard)/autotrade/` 디렉토리 삭제, nav (terminal-sidebar/bottom-nav) 항목 제거, endpoints/i18n/robots 정리
+  - Backend: `routes/autotrade.py` blueprint 등록 해제 (`routes/__init__.py`), `autotrader.py` 파일은 rollback 가능하도록 보존
+  - Layout disclaimer: "auto-trade" kind 및 ALWAYS_EXPANDED_PREFIXES `/autotrade` 제거
+  - 자세한 내용: `AUTOTRADE_REMOVAL_2026-04-27.md`
+- **2026-04-27: Alpaca BYO(Bring Your Own Key) 모델 명시화 per CEO + legal**
+  - `config.py` 주석 갱신 — server-side ALPACA_ENABLED는 OFF 유지, BYO는 `services/broker/user_alpaca_service.py` 경로
+  - `terms-ko.md` / `privacy-ko.md` BYO 조항 추가
+  - `alpaca-connect-modal.tsx` BYO 메시징 강화
+  - `settings/page.tsx` 게이팅 주석을 BYO로 갱신
+- C1 AutoTrader 싱글톤 user_id leak fix (※ 2026-04-27 기능 자체 제거됨)
 - H1 PIVOX_BROKER_ENCRYPTION_KEY fail-fast (Railway 키 설정됨)
 - H2 글로벌 KISService docstring 명시 (audit 결과: market-data only, 재검수 PASS)
 - H3-H4 로그 redaction (appkey/secret/CANO)

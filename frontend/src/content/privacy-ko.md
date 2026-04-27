@@ -21,8 +21,7 @@ processors:
   - "Anthropic PBC (Claude API)"
   - "Stripe, Inc. (결제 처리)"
   - "Vercel, Inc. (프론트엔드 호스팅)"
-  - "Railway Corp. (백엔드 호스팅)"
-  - "Supabase, Inc. (데이터베이스 및 인증)"
+  - "Railway Corp. (백엔드 호스팅 및 PostgreSQL 데이터베이스)"
 third_party_data_providers:
   - "Alpaca Securities LLC (US 시세)"
   - "Korea Investment & Securities (KR 시세)"
@@ -150,11 +149,19 @@ disclaimer: "본 문서는 변호사 검토 전 초안(Draft)입니다. 서비�
 |-------------|-----------|-----------|----------------|
 | Stripe, Inc. (미국) | 이메일, 결제 정보 | 유료 서비스 결제 처리 | Stripe 정책에 따름 |
 | Korea Investment & Securities (선택) | 사용자 지정 정보 | 증권 계좌 연동 (이용자가 **별도 동의** 시) | 연동 해지 시까지 |
-| Alpaca Securities LLC (선택) | 사용자 지정 정보 | 미국 증권 계좌 연동 (이용자가 **별도 동의** 시) | 연동 해지 시까지 |
+| Alpaca Securities LLC (선택, **BYO**) | 이용자 본인 발급 API 키(암호화 저장) | 이용자 본인 명의 미국 페이퍼 계좌 조회 (이용자가 **별도 동의** 시) | 연동 해지 시까지 |
 
 ### 2. 별도 동의 원칙
 
 브로커(KIS, Alpaca 등) 연동은 이용자가 명시적으로 연동을 신청하는 경우에만 진행되며, 연동 시 별도의 동의 절차를 거칩니다. 이용자는 언제든지 연동을 해지할 수 있습니다.
+
+### 2-1. Alpaca BYO(Bring Your Own Key) 원칙 (2026-04-27)
+
+Alpaca 연동은 **이용자 본인이 발급받은 API 키**를 회사에 등록하여, 회사가 해당 키를 사용해 이용자 본인의 Alpaca 계정 데이터만 조회·전달하는 방식으로 운영됩니다.
+
+- 이용자의 Alpaca API 키는 회사 서버에 **암호화 저장**되며, 이용자 본인의 계정 데이터 조회 외 목적으로 사용되지 않습니다.
+- 회사는 Alpaca 시장 데이터를 제3자에게 재배포하지 않으며, 이용자가 받는 시장 데이터는 **이용자 본인의 Alpaca 라이선스** 하에 제공됩니다.
+- API 키 자체의 소유권 및 사용 권한은 전적으로 이용자에게 있으며, 이용자는 언제든지 Alpaca 측에서 키를 폐기하거나 회사 측에서 연동을 해지할 수 있습니다.
 
 ### 3. 법령에 따른 제공
 
@@ -175,8 +182,7 @@ disclaimer: "본 문서는 변호사 검토 전 초안(Draft)입니다. 서비�
 | **Anthropic PBC** | AI Assistant 기능 (Claude API를 통한 자연어 처리) | 미국 |
 | **Stripe, Inc.** | 유료 서비스 결제 처리 및 환불 | 미국 |
 | **Vercel, Inc.** | 프론트엔드 호스팅 및 CDN | 미국 |
-| **Railway Corp.** | 백엔드 API 호스팅 | 미국 |
-| **Supabase, Inc.** | 데이터베이스 및 인증 관리 | 미국/싱가포르 |
+| **Railway Corp.** | 백엔드 API 호스팅 및 PostgreSQL 데이터베이스 | 미국 |
 
 ### 1. 국외 이전
 

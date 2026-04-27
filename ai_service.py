@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 # 자본시장법 §6 미등록 투자자문업 위반 방지. AI가 '추천/매수/매도/
 # recommend/buy/sell' 같은 자문업 언어를 산출할 경우 응답을 면책 문구로
 # 교체한다. 사전 정의 패턴은 services.morning_brief_service 에서 관리.
+from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
+
 try:
     from services.morning_brief_service import is_compliant as _is_compliant
 except Exception:  # pragma: no cover — avoid import-time boot failure
@@ -323,10 +325,10 @@ Use these EXACT markers:
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {
+            return scrub_signal({
                 "commentary": _compliance_filter(en, "en"),
                 "commentary_kr": _compliance_filter(kr, "kr"),
-            }
+            })
         except Exception as e:
             logger.error(f"Commentary error: {e}")
             return None
@@ -366,10 +368,10 @@ Top Headlines:
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {
+            return scrub_signal({
                 "summary": _compliance_filter(en, "en"),
                 "summary_kr": _compliance_filter(kr, "kr"),
-            }
+            })
         except Exception as e:
             logger.error(f"Morning summary error: {e}")
             return None
@@ -400,10 +402,10 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean. Do NOT cu
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {
+            return scrub_signal({
                 "insight": _compliance_filter(en, "en"),
                 "insight_kr": _compliance_filter(kr, "kr"),
-            }
+            })
         except Exception as e:
             logger.error(f"Coaching error: {e}")
             return None
@@ -441,10 +443,10 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {
+            return scrub_signal({
                 "swot": _compliance_filter(en, "en"),
                 "swot_kr": _compliance_filter(kr, "kr"),
-            }
+            })
         except Exception as e:
             logger.error(f"SWOT error: {e}")
             return None
@@ -490,10 +492,10 @@ Peers in same sector:
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {
+            return scrub_signal({
                 "analysis": _compliance_filter(en, "en"),
                 "analysis_kr": _compliance_filter(kr, "kr"),
-            }
+            })
         except Exception as e:
             logger.error(f"Competitor analysis error: {e}")
             return None
@@ -569,12 +571,16 @@ Output ONLY a JSON object, no markdown:
                     return None
                 # Drop (return None) if compliance fails so caller falls
                 # back to rule-based text rather than showing a disclaimer.
-                return insight if _is_compliant(insight) else None
+                if not _is_compliant(insight):
+                    return None
+                return safe_scrub(insight, context="ai_service.brief_insight")
             except Exception:
                 fallback = text[:60] if text else None
                 if not fallback:
                     return None
-                return fallback if _is_compliant(fallback) else None
+                if not _is_compliant(fallback):
+                    return None
+                return safe_scrub(fallback, context="ai_service.brief_insight.fallback")
         except Exception as e:
             logger.error(f"Brief insight error: {e}")
             return None
@@ -616,11 +622,11 @@ Stocks in {sector}:
             )
             text = resp.content[0].text
             en, kr = self._parse_bilingual(text)
-            return {
+            return scrub_signal({
                 "trend": _compliance_filter(en, "en"),
                 "trend_kr": _compliance_filter(kr, "kr"),
                 "sector": sector,
-            }
+            })
         except Exception as e:
             logger.error(f"Sector trend error: {e}")
             return None

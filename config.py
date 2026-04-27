@@ -37,22 +37,30 @@ if not _secret:
 
 
 # ── Feature flags ─────────────────────────────────────────────────────────────
-# ALPACA_ENABLED — kill switch for Alpaca broker integration.
+# ALPACA_ENABLED — kill switch for SYSTEM-WIDE Alpaca usage (server-owned keys).
 #
-# Default: "0" (disabled). Alpaca is disabled by default to remove the legal
-# risk tied to Alpaca's "My Data" license (US broker-dealer regulation).
-# KIS (한국투자증권) is the supported broker. Setting ALPACA_ENABLED=1 is a
-# legacy opt-in only — do NOT flip this in production without legal sign-off.
+# Default: "0" (disabled). 2026-04-27 (per CEO + legal):
+# PivoxQuant operates on a BYO (Bring Your Own Key) Alpaca model. Each user
+# connects THEIR OWN Alpaca paper account; we only forward read-only requests
+# under the user's own Alpaca license. We DO NOT redistribute Alpaca market
+# data — there is no commercial-data-license obligation on us.
+#
+# This server-side ALPACA_ENABLED flag therefore stays OFF in production.
+# Per-user Alpaca runs through `services/broker/user_alpaca_service.py`
+# (encrypted credentials, paper-only) and is independent of this flag.
+#
+# Autotrade reference removed 2026-04-27 alongside the autotrade feature
+# (투자일임업 등록 회피).
 #
 # Consumed by:
 #   - routes/broker_oauth.py  (/api/broker/alpaca/* endpoints → 503 when off)
-#   - autotrader.py           (AutoTrader refuses to start when off)
 #   - data_fetcher.py         (Alpaca disabled as US price source when off)
 #   - realtime_service.py     (Alpaca disabled as realtime source when off)
 #   - daytrade_service.py     (Alpaca disabled as US scanner when off)
 #
-# IMPORTANT: Flipping this to 1 is NOT sufficient to re-enable Alpaca — the
-# ALPACA_API_KEY / ALPACA_SECRET_KEY env vars must also be set.
+# IMPORTANT: Flipping this to 1 re-enables the server-key path which would
+# require us to hold an Alpaca commercial data license. Do NOT enable in
+# production without legal sign-off.
 ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in ("1", "true", "True", "TRUE", "yes")
 
 

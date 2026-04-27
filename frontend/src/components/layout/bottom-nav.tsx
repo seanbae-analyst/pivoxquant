@@ -33,7 +33,6 @@ import {
   Eye,
   Compass,
   Shield,
-  Bot,
   MessageSquare,
   BookHeart,
   Sun,
@@ -93,7 +92,7 @@ const DRAWER_GROUPS: DrawerGroup[] = [
       { href: "/portfolio", label: "Portfolio", icon: Briefcase },
       { href: "/watchlist", label: "Watchlist", icon: Eye },
       { href: "/risk", label: "Risk Board", icon: Shield },
-      { href: "/autotrade", label: "Autotrade", icon: Bot },
+      // REMOVED 2026-04-27 per CEO + legal: autotrade nav (투자일임업 회피).
     ],
   },
   {

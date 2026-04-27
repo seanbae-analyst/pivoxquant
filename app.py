@@ -196,7 +196,14 @@ def create_app():
         return redirect(frontend_url)
 
     # Initialize services
-    svc.init_trader(db, Position, TradeHistory, app)
+    # REMOVED 2026-04-27 per CEO + legal: AutoTrader boot disabled alongside
+    # the autotrade feature removal (투자일임업 등록 회피). The
+    # services/container.py module no longer imports `autotrader` at module
+    # load either — `init_trader()` is now a no-op kept only for backward
+    # compatibility with any caller that still references it.
+    # To restore: re-enable both this line AND the AutoTrader import in
+    # services/container.py, then re-register routes/autotrade.py.
+    # svc.init_trader(db, Position, TradeHistory, app)
 
     # Register all blueprints
     register_blueprints(app)

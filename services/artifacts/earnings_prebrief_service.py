@@ -48,6 +48,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, User
+from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
 
 logger = logging.getLogger(__name__)
 
@@ -657,7 +658,20 @@ class EarningsPreBriefService:
             data_sources=data_sources,
             option_source=option_source,
         )
-        return ctx.to_dict()
+        # Legal scrub at user-facing boundary — AI-generated questions and
+        # rule-based risk notes both pass through scrubber before render.
+        data = scrub_signal(ctx.to_dict())
+        if isinstance(data.get("expected_questions"), list):
+            data["expected_questions"] = [
+                safe_scrub(q, context="earnings_prebrief.question")
+                for q in data["expected_questions"]
+            ]
+        if isinstance(data.get("risk_notes"), list):
+            data["risk_notes"] = [
+                safe_scrub(n, context="earnings_prebrief.risk_notes")
+                for n in data["risk_notes"]
+            ]
+        return data
 
     # ── render ─────────────────────────────────────────────────────────────
 

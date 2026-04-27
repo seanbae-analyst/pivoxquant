@@ -25,9 +25,12 @@ import { AlpacaCard } from "@/components/broker/alpaca-card";
 import { AlpacaConnectModal } from "@/components/broker/alpaca-connect-modal";
 
 /**
- * Phase-1 (2026-04-24): Alpaca integration is hidden from end users pending
- * My Data license resolution. Mount gated by NEXT_PUBLIC_ALPACA_ENABLED.
- * KIS (read-only) is the only broker surfaced in this release.
+ * 2026-04-27 (per CEO + legal): PivoxQuant operates Alpaca on a BYO
+ * (Bring Your Own Key) model. Each user connects their OWN Alpaca paper
+ * account; we forward read-only requests under the user's own license.
+ * We do NOT redistribute Alpaca market data — no commercial-data-license
+ * obligation on us. Surface gated by NEXT_PUBLIC_ALPACA_ENABLED so the
+ * BYO flow can be enabled per-environment without code changes.
  */
 const ALPACA_ENABLED = process.env.NEXT_PUBLIC_ALPACA_ENABLED === "1";
 import { cn } from "@/lib/utils";
@@ -350,7 +353,7 @@ function SubscriptionSection() {
             <div className="mt-5 flex gap-2">
               {!isPaid ? (
                 <Link href="/pricing" className="pq-ink-btn-bronze">
-                  Upgrade to Operator / Partner
+                  Upgrade to Pro / Premium
                 </Link>
               ) : (
                 <button

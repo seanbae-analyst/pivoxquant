@@ -3242,3 +3242,908 @@ html {
   outline: 1px solid var(--pq-bronze-light);
   outline-offset: 2px;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   PIVOXQUANT PDF REPORT SYSTEM
+   Ported from /design_handoff_pdf_reports/reports/base.css (CEO 2026-04-27).
+   All classes scoped under .pq-report — no leakage to Vantablack dashboard.
+   Body voice = Source Serif 4 (--font-serif).
+   Eyebrows / labels / table headers / chart axis = JetBrains Mono (--font-mono).
+   Print: A4, 16mm margins, hard page-break between .pq-pdf-page.
+   ════════════════════════════════════════════════════════════════════ */
+
+.pq-report {
+  --r-ink: #0e0e0e;
+  --r-ink-2: #2a2a2a;
+  --r-ink-3: #5a5a5a;
+  --r-ink-4: #8a8a8a;
+  --r-rule: #e5e5e5;
+  --r-rule-strong: #111;
+  --r-paper: #ffffff;
+  --r-bg-soft: #f7f6f3;
+  --r-bg-soft-2: #efede7;
+  --r-gold: #c9963f;
+  --r-gold-soft: #f4d27a;
+  --r-gold-deep: #6b4715;
+  --r-pos: #0a7d3a;
+  --r-neg: #b3261e;
+  --r-warn: #a86a00;
+
+  font-family: var(--font-serif), "Source Serif 4", "Noto Serif KR", Georgia, serif;
+  color: var(--r-ink);
+  background: #ececec;
+  font-size: 13px;
+  font-feature-settings: "ss01", "kern";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.pq-report .pq-pdf-num,
+.pq-report .pq-pdf-kpi-val,
+.pq-report .pq-pdf-stat-val,
+.pq-report .pq-pdf-table td.right,
+.pq-report .pq-pdf-table th.right,
+.pq-report .pq-pdf-tier-chip,
+.pq-report .pq-pdf-ticker,
+.pq-report .pq-pdf-axis,
+.pq-report .pq-pdf-eyebrow,
+.pq-report .pq-pdf-meta {
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+  font-feature-settings: "tnum", "lnum", "zero", "ss01";
+}
+
+.pq-pdf-page {
+  width: 210mm;
+  min-height: 297mm;
+  background: var(--r-paper, #ffffff);
+  margin: 24px auto;
+  padding: 18mm 16mm 22mm;
+  position: relative;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+  page-break-after: always;
+  color: var(--r-ink, #0e0e0e);
+}
+.pq-pdf-page:last-of-type { page-break-after: auto; }
+.pq-pdf-page.compact { padding: 14mm 14mm 18mm; }
+
+.pq-pdf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid var(--r-rule-strong);
+  margin-bottom: 22px;
+}
+.pq-pdf-brand-name {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--r-ink);
+  text-transform: lowercase;
+  font-feature-settings: "ss01", "kern";
+}
+.pq-pdf-brand-name .accent { color: var(--r-gold-deep); }
+.pq-pdf-meta {
+  text-align: right;
+  font-size: 10px;
+  color: var(--r-ink-3);
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  font-family: var(--font-mono), monospace;
+  white-space: nowrap;
+}
+.pq-pdf-meta strong {
+  display: block;
+  color: var(--r-ink);
+  font-weight: 500;
+  font-size: 11px;
+  margin-bottom: 3px;
+  letter-spacing: 1.6px;
+}
+
+.pq-pdf-tier-chip {
+  display: inline-block;
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  padding: 3px 8px 2px;
+  border-radius: 2px;
+  border: 1px solid var(--r-ink);
+  margin-right: 8px;
+  vertical-align: 1px;
+  font-weight: 500;
+}
+.pq-pdf-tier-chip.free { border-color: var(--r-ink-3); color: var(--r-ink-3); }
+.pq-pdf-tier-chip.pro { border-color: var(--r-gold); color: var(--r-gold-deep); background: #fffaef; }
+.pq-pdf-tier-chip.premium { border-color: #0e0e0e; color: #fff; background: #0e0e0e; }
+
+.pq-pdf-eyebrow {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--r-ink-4);
+  font-family: var(--font-mono), monospace;
+  margin-bottom: 6px;
+}
+.pq-pdf-section-title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 28px;
+  letter-spacing: -0.018em;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--r-rule);
+  color: var(--r-ink);
+}
+.pq-pdf-section-title.sm { font-size: 20px; padding-bottom: 8px; margin-bottom: 14px; }
+.pq-pdf-section-title.dry {
+  font-family: var(--font-mono), monospace;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 2px;
+  border-bottom: 1.5px solid var(--r-ink);
+  padding-bottom: 8px;
+  text-transform: uppercase;
+  color: var(--r-ink);
+}
+.pq-pdf-col-title {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--r-ink-3);
+  margin-bottom: 10px;
+  font-family: var(--font-mono), monospace;
+}
+
+.pq-pdf-cover-eyebrow {
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--r-ink-3);
+  margin-top: 50mm;
+  font-family: var(--font-mono), monospace;
+}
+.pq-pdf-cover-title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 64px;
+  line-height: 1.0;
+  letter-spacing: -0.025em;
+  margin-top: 18px;
+  text-wrap: balance;
+}
+.pq-pdf-cover-title em { font-style: normal; font-weight: 600; color: var(--r-gold); }
+.pq-pdf-cover-sub {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  color: var(--r-ink-3);
+  line-height: 1.55;
+  max-width: 130mm;
+  margin-top: 24px;
+}
+
+.pq-pdf-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 24px;
+  border-top: 1.5px solid var(--r-ink);
+  border-bottom: 1.5px solid var(--r-ink);
+  background: #fff;
+}
+.pq-pdf-kpi-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.pq-pdf-kpi-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.pq-pdf-kpi {
+  padding: 18px 20px 16px;
+  border-right: 1px solid var(--r-rule);
+  position: relative;
+}
+.pq-pdf-kpi:last-child { border-right: none; }
+.pq-pdf-kpi-lbl {
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--r-ink-4);
+  font-family: var(--font-mono), monospace;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+.pq-pdf-kpi-val {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 0.95;
+  color: var(--r-ink);
+  letter-spacing: -0.022em;
+}
+.pq-pdf-kpi-val.sm { font-size: 24px; }
+.pq-pdf-kpi-delta { font-size: 11px; margin-top: 8px; font-family: var(--font-mono), monospace; }
+.pq-pdf-kpi-delta.pos { color: var(--r-pos); }
+.pq-pdf-kpi-delta.neg { color: var(--r-neg); }
+.pq-pdf-kpi-delta.warn { color: var(--r-warn); }
+
+.pq-pdf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-family: var(--font-serif);
+}
+.pq-pdf-table thead th {
+  text-align: left;
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--r-ink-4);
+  font-family: var(--font-mono), monospace;
+  padding: 11px 8px 9px;
+  border-bottom: 1.5px solid var(--r-rule-strong);
+  font-weight: 500;
+  vertical-align: bottom;
+}
+.pq-pdf-table thead th.right,
+.pq-pdf-table tbody td.right {
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+}
+.pq-pdf-table tbody td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--r-rule);
+  vertical-align: middle;
+}
+.pq-pdf-table tbody tr:last-child td { border-bottom: 1px solid var(--r-rule-strong); }
+.pq-pdf-table tbody tr.total td {
+  font-weight: 600;
+  padding-top: 13px;
+  padding-bottom: 13px;
+  border-top: 1.5px solid var(--r-rule-strong);
+}
+.pq-pdf-table td.pos { color: var(--r-pos); }
+.pq-pdf-table td.neg { color: var(--r-neg); }
+.pq-pdf-ticker {
+  display: inline-block;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--r-bg-soft);
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+  letter-spacing: 0.04em;
+}
+
+.pq-pdf-alloc-row {
+  display: grid;
+  grid-template-columns: 30mm 1fr 18mm;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--r-rule);
+}
+.pq-pdf-alloc-row:last-child { border-bottom: none; }
+.pq-pdf-alloc-bar {
+  height: 8px;
+  background: var(--r-bg-soft);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pq-pdf-alloc-bar > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #1a1a1a, #c9963f);
+  border-radius: 2px;
+}
+.pq-pdf-alloc-pct {
+  text-align: right;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+}
+
+.pq-pdf-card {
+  border: 1px solid var(--r-rule);
+  border-radius: 6px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.pq-pdf-card.soft { background: var(--r-bg-soft); border: 0; }
+.pq-pdf-card h3 {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+.pq-pdf-callout {
+  border-left: 3px solid var(--r-gold);
+  background: var(--r-bg-soft);
+  padding: 14px 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--r-ink-2);
+  margin-bottom: 14px;
+  font-family: var(--font-serif);
+}
+.pq-pdf-callout.flat { border-left-color: var(--r-ink); }
+.pq-pdf-pullquote {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--r-ink);
+  padding: 18px 0;
+  border-top: 1px solid var(--r-rule-strong);
+  border-bottom: 1px solid var(--r-rule-strong);
+  margin: 18px 0;
+}
+.pq-pdf-pullquote em { font-style: normal; font-weight: 600; color: var(--r-gold); }
+
+/* SVG charts: axis text uses --font-mono so labels feel typographic */
+.pq-pdf-chart { width: 100%; height: 120px; }
+.pq-pdf-chart.tall { height: 160px; }
+.pq-pdf-grid-line { stroke: #ececec; stroke-width: 1; }
+.pq-pdf-axis {
+  font-family: var(--font-mono), monospace;
+  font-size: 8px;
+  fill: var(--r-ink-4);
+}
+.pq-pdf-line-bench {
+  stroke: #c0c0c0;
+  stroke-width: 1.4;
+  fill: none;
+  stroke-dasharray: 3 3;
+}
+.pq-pdf-line-port { stroke: #0e0e0e; stroke-width: 2; fill: none; }
+.pq-pdf-line-port-fill { opacity: 0.5; }
+.pq-pdf-bar-port { fill: #0e0e0e; }
+.pq-pdf-bar-bench { fill: #c0c0c0; }
+.pq-pdf-chart-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 10px;
+  color: var(--r-ink-3);
+  font-family: var(--font-mono), monospace;
+  margin-top: 8px;
+}
+.pq-pdf-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 5px;
+  vertical-align: middle;
+  border-radius: 1px;
+}
+
+.pq-pdf-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.pq-pdf-three-col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+.pq-pdf-check-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--r-rule);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.pq-pdf-check-row:last-child { border-bottom: none; }
+.pq-pdf-check-box {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--r-ink);
+  border-radius: 3px;
+  margin-top: 2px;
+  background: #fff;
+  position: relative;
+}
+.pq-pdf-check-box.checked::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: -1px;
+  width: 5px;
+  height: 9px;
+  border: solid #0e0e0e;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.pq-pdf-check-meta {
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  color: var(--r-ink-4);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pq-pdf-notes {
+  border: 1px solid var(--r-rule);
+  border-radius: 6px;
+  padding: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--r-ink-2);
+  font-family: var(--font-serif);
+}
+.pq-pdf-notes.tall { min-height: 80mm; }
+
+.pq-pdf-page-footer {
+  position: absolute;
+  left: 16mm;
+  right: 16mm;
+  bottom: 10mm;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--r-ink-4);
+  font-family: var(--font-mono), monospace;
+  letter-spacing: 1.4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--r-rule);
+  text-transform: uppercase;
+}
+
+/* Disclaimer block — required by 자본시장법 on every report page */
+.pq-pdf-disclaimer {
+  margin-top: 18px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--r-rule);
+  font-size: 9px;
+  line-height: 1.6;
+  color: var(--r-ink-4);
+  font-family: var(--font-mono), monospace;
+  letter-spacing: 0.3px;
+  text-align: justify;
+  hyphens: auto;
+}
+.pq-pdf-disclaimer strong { color: var(--r-ink-2); font-weight: 600; }
+
+/* Governance block — Pro/Premium only */
+.pq-pdf-gov-block {
+  border-top: 1.5px solid var(--r-rule-strong);
+  padding-top: 16px;
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  font-size: 10px;
+}
+.pq-pdf-gov-cell .lbl {
+  font-family: var(--font-mono), monospace;
+  font-size: 8px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--r-ink-4);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.pq-pdf-gov-cell .val {
+  font-size: 11px;
+  color: var(--r-ink-2);
+  line-height: 1.5;
+  font-family: var(--font-serif);
+}
+
+.pq-pdf-stat { display: flex; flex-direction: column; gap: 4px; }
+.pq-pdf-stat-lbl {
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--r-ink-4);
+  font-weight: 500;
+}
+.pq-pdf-stat-val {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 0.95;
+  letter-spacing: -0.024em;
+  color: var(--r-ink);
+}
+
+.pq-pdf-heat {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pq-pdf-heat.green { background: #eaf5ee; color: var(--r-pos); }
+.pq-pdf-heat.amber { background: #fff7e8; color: var(--r-warn); }
+.pq-pdf-heat.red { background: #fdecea; color: var(--r-neg); }
+
+.pq-pdf-gold-rule {
+  height: 2px;
+  background: linear-gradient(90deg, #c9963f, #e8c87a, #c9963f);
+  margin: 0 0 20px;
+}
+.pq-pdf-hairline { height: 1px; background: var(--r-rule); margin: 14px 0; }
+.pq-pdf-hairline.strong { background: var(--r-ink); height: 1.5px; }
+
+/* Toolbar — preview-only chrome (PDF / 인쇄 button). Hidden on print. */
+.pq-pdf-toolbar {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+  background: #fff;
+  padding: 8px;
+  border: 1px solid var(--r-rule);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px -10px rgba(0, 0, 0, 0.2);
+}
+.pq-pdf-toolbar button {
+  padding: 8px 14px;
+  border: 1px solid var(--r-rule);
+  background: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--r-ink-2);
+  font-family: var(--font-serif);
+}
+.pq-pdf-toolbar button.primary {
+  background: #0e0e0e;
+  color: #fff;
+  border-color: #0e0e0e;
+}
+
+/* ============================================================
+   IC-PACK ADDITIONS — 2026-04-27 (CEO design lock-in)
+   Maps base.css IC-pack components into the .pq-report scope.
+   ============================================================ */
+
+/* --- Status badges (verdicts, severity) --- */
+.pq-report .pq-pdf-badge {
+  display: inline-block;
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  padding: 3px 7px 2px;
+  border-radius: 2px;
+  font-weight: 500;
+  border: 1px solid currentColor;
+  background: #fff;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+  vertical-align: 1px;
+}
+.pq-report .pq-pdf-badge.severe { color: var(--r-neg); background: #fdecea; border-color: #f5c0bb; }
+.pq-report .pq-pdf-badge.high { color: var(--r-neg); background: #fff4f3; border-color: #f5c0bb; }
+.pq-report .pq-pdf-badge.moderate { color: var(--r-warn); background: #fff7e8; border-color: #f1d49a; }
+.pq-report .pq-pdf-badge.low { color: var(--r-pos); background: #eaf5ee; border-color: #bcdcc6; }
+.pq-report .pq-pdf-badge.neutral { color: var(--r-ink-3); background: var(--r-bg-soft); border-color: var(--r-rule); }
+.pq-report .pq-pdf-badge.info { color: #1a4d8f; background: #eef4fb; border-color: #c7d8ee; }
+
+/* --- Severity dots --- */
+.pq-report .pq-pdf-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  vertical-align: middle; margin-right: 6px;
+}
+.pq-report .pq-pdf-dot.severe { background: var(--r-neg); }
+.pq-report .pq-pdf-dot.high { background: #d96b3a; }
+.pq-report .pq-pdf-dot.moderate { background: var(--r-warn); }
+.pq-report .pq-pdf-dot.low { background: var(--r-pos); }
+.pq-report .pq-pdf-dot.neutral { background: var(--r-ink-4); }
+
+/* --- Limit gauge (utilization vs cap) --- */
+.pq-report .pq-pdf-lim-row {
+  display: grid;
+  grid-template-columns: 38mm 1fr 28mm 18mm;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--r-rule);
+}
+.pq-report .pq-pdf-lim-row:last-child { border-bottom: none; }
+.pq-report .pq-pdf-lim-name strong { display: block; font-weight: 600; font-size: 12px; }
+.pq-report .pq-pdf-lim-name small {
+  font-family: var(--font-mono), monospace;
+  font-size: 9px; color: var(--r-ink-4);
+  letter-spacing: 0.5px; text-transform: uppercase;
+}
+.pq-report .pq-pdf-lim-gauge {
+  position: relative; height: 14px;
+  background: var(--r-bg-soft);
+  border-radius: 2px; overflow: visible;
+}
+.pq-report .pq-pdf-lim-gauge .fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: #0e0e0e; border-radius: 2px;
+}
+.pq-report .pq-pdf-lim-gauge .fill.warn { background: var(--r-warn); }
+.pq-report .pq-pdf-lim-gauge .fill.breach { background: var(--r-neg); }
+.pq-report .pq-pdf-lim-gauge .cap {
+  position: absolute; top: -3px; bottom: -3px;
+  width: 2px; background: var(--r-ink);
+}
+.pq-report .pq-pdf-lim-val {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px; text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pq-report .pq-pdf-lim-status { text-align: right; }
+
+/* --- Waterfall (stress test impact bars) --- */
+.pq-report .pq-pdf-waterfall {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+}
+.pq-report .pq-pdf-wf-row {
+  display: grid;
+  grid-template-columns: 38mm 1fr 22mm;
+  align-items: center;
+  gap: 10px;
+}
+.pq-report .pq-pdf-wf-bar {
+  position: relative; height: 18px;
+  background: var(--r-bg-soft); border-radius: 2px;
+}
+.pq-report .pq-pdf-wf-bar i {
+  position: absolute; top: 0; bottom: 0;
+  background: var(--r-neg); opacity: 0.85;
+}
+.pq-report .pq-pdf-wf-bar i.pos { background: var(--r-pos); }
+.pq-report .pq-pdf-wf-bar .axis {
+  position: absolute; top: -2px; bottom: -2px;
+  width: 1px; background: var(--r-ink);
+}
+.pq-report .pq-pdf-wf-val {
+  font-size: 11px; text-align: right;
+  font-variant-numeric: tabular-nums; font-weight: 500;
+}
+
+/* --- Donut + legend --- */
+.pq-report .pq-pdf-donut-wrap { display: flex; align-items: center; gap: 18px; }
+.pq-report .pq-pdf-donut { width: 120px; height: 120px; flex-shrink: 0; }
+.pq-report .pq-pdf-donut.sm { width: 88px; height: 88px; }
+.pq-report .pq-pdf-donut-legend { flex: 1; font-size: 11px; }
+.pq-report .pq-pdf-donut-legend .lg-row {
+  display: grid; grid-template-columns: 12px 1fr auto;
+  gap: 8px; align-items: center; padding: 5px 0;
+  border-bottom: 1px solid var(--r-rule);
+}
+.pq-report .pq-pdf-donut-legend .lg-row:last-child { border-bottom: none; }
+.pq-report .pq-pdf-donut-legend .sw { width: 10px; height: 10px; border-radius: 1px; }
+.pq-report .pq-pdf-donut-legend .lg-pct {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Executive summary block --- */
+.pq-report .pq-pdf-exec-sum {
+  border-top: 1.5px solid var(--r-ink);
+  border-bottom: 1.5px solid var(--r-ink);
+  padding: 18px 0 20px;
+  margin-bottom: 22px;
+}
+.pq-report .pq-pdf-exec-sum .es-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-bottom: 1px solid var(--r-rule);
+  padding-bottom: 10px; margin-bottom: 14px;
+}
+.pq-report .pq-pdf-exec-sum .es-head h2 {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--r-ink);
+}
+.pq-report .pq-pdf-exec-sum .es-stamp {
+  font-family: var(--font-mono), monospace;
+  font-size: 9px; letter-spacing: 1.6px; text-transform: uppercase;
+  color: var(--r-ink-3);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.pq-report .pq-pdf-exec-sum dl {
+  display: grid;
+  grid-template-columns: 28mm 1fr;
+  row-gap: 9px; column-gap: 14px;
+  font-size: 12px; align-items: start;
+}
+.pq-report .pq-pdf-exec-sum dt {
+  font-family: var(--font-mono), monospace;
+  font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--r-ink-4); padding-top: 2px;
+}
+.pq-report .pq-pdf-exec-sum dd { font-size: 12px; line-height: 1.55; color: var(--r-ink-2); }
+.pq-report .pq-pdf-exec-sum dd strong { color: var(--r-ink); font-weight: 600; }
+
+/* --- Cover meta grid (Premium covers) --- */
+.pq-report .pq-pdf-cover-meta-grid {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1.5px solid var(--r-ink);
+  border-bottom: 1.5px solid var(--r-ink);
+}
+.pq-report .pq-pdf-cover-meta {
+  padding: 14px 0 14px 14px;
+  border-right: 1px solid var(--r-rule);
+}
+.pq-report .pq-pdf-cover-meta:first-child { padding-left: 0; }
+.pq-report .pq-pdf-cover-meta:last-child { border-right: none; }
+.pq-report .pq-pdf-cover-meta .lbl {
+  font-size: 9px; letter-spacing: 1.6px; text-transform: uppercase;
+  color: var(--r-ink-4);
+  font-family: var(--font-mono), monospace;
+  margin-bottom: 6px; font-weight: 500;
+}
+.pq-report .pq-pdf-cover-meta .val {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 18px; color: var(--r-ink); font-weight: 500;
+  letter-spacing: -0.012em;
+  font-variant-numeric: tabular-nums lining-nums slashed-zero;
+}
+.pq-report .pq-pdf-cover-foot {
+  position: absolute; left: 16mm; right: 16mm; bottom: 18mm;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  font-size: 10px; color: var(--r-ink-4);
+  font-family: var(--font-mono), monospace; letter-spacing: 0.5px;
+}
+.pq-report .pq-pdf-conf-stamp {
+  border: 1px solid var(--r-ink); color: var(--r-ink);
+  padding: 4px 10px; font-size: 10px;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  font-family: var(--font-mono), monospace;
+}
+
+/* --- Sign row --- */
+.pq-report .pq-pdf-sign-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 24px; margin-top: 24px;
+}
+.pq-report .pq-pdf-sign-box {
+  border-top: 1px solid var(--r-ink); padding-top: 6px;
+  font-size: 10px; color: var(--r-ink-3);
+  letter-spacing: 1px; text-transform: uppercase;
+  font-family: var(--font-mono), monospace;
+}
+
+/* --- Rating ladder (#14 credit) --- */
+.pq-report .pq-pdf-rating-ladder {
+  display: grid; grid-template-columns: repeat(8, 1fr);
+  gap: 2px; margin: 8px 0;
+}
+.pq-report .pq-pdf-rating-ladder .rung {
+  text-align: center; padding: 6px 0;
+  font-family: var(--font-mono), monospace; font-size: 10px;
+  background: var(--r-bg-soft); color: var(--r-ink-3);
+  border-radius: 2px;
+}
+.pq-report .pq-pdf-rating-ladder .rung.now {
+  background: var(--r-ink); color: #fff; font-weight: 600;
+}
+.pq-report .pq-pdf-rating-ladder .rung.prev {
+  background: #fff; border: 1px dashed var(--r-ink-3); color: var(--r-ink-2);
+}
+
+/* --- Sparkline --- */
+.pq-report .pq-pdf-spark {
+  display: inline-block; height: 14px; width: 60px; vertical-align: middle;
+}
+.pq-report .pq-pdf-spark path {
+  fill: none; stroke: var(--r-ink); stroke-width: 1.5;
+}
+
+/* --- Gauge (correlation, %) --- */
+.pq-report .pq-pdf-gauge {
+  position: relative; height: 6px;
+  background: var(--r-bg-soft); border-radius: 3px;
+  margin-top: 10px;
+}
+.pq-report .pq-pdf-gauge i {
+  position: absolute; top: -2px; width: 2px; height: 10px;
+  background: #0e0e0e; border-radius: 1px;
+}
+.pq-report .pq-pdf-gauge-scale {
+  display: flex; justify-content: space-between;
+  font-family: var(--font-mono), monospace;
+  font-size: 8px; color: var(--r-ink-4);
+  margin-top: 4px;
+}
+
+/* --- Flat alloc bar (mono fill, no gradient) --- */
+.pq-report .pq-pdf-alloc-bar.flat > i { background: #0e0e0e; }
+
+/* --- IC-pack dark cover (#17 KPI Dashboard) --- */
+.pq-report .pq-pdf-ic-cover {
+  background: #0e0e0e; color: #fff;
+  padding: 24mm 18mm 22mm;
+  min-height: 297mm;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+.pq-report .pq-pdf-ic-cover .pq-pdf-header { border-bottom: 1px solid #2a2a2a; padding-bottom: 14px; }
+.pq-report .pq-pdf-ic-cover .pq-pdf-brand-name { color: #fff; }
+.pq-report .pq-pdf-ic-cover .pq-pdf-brand-name .accent { color: var(--r-gold); }
+.pq-report .pq-pdf-ic-cover .pq-pdf-meta { color: #8a8a8a; }
+.pq-report .pq-pdf-ic-cover .pq-pdf-meta strong { color: #fff; }
+.pq-report .pq-pdf-ic-cover .pq-pdf-tier-chip.premium {
+  background: var(--r-gold); color: #0e0e0e; border-color: var(--r-gold);
+}
+.pq-report .pq-pdf-ic-eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--r-gold); margin-top: 30mm;
+}
+.pq-report .pq-pdf-ic-title {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 500;
+  font-size: 72px; line-height: 1.0;
+  letter-spacing: -0.015em;
+  margin-top: 14px;
+}
+.pq-report .pq-pdf-ic-title em {
+  font-style: normal; color: var(--r-gold); font-weight: 500;
+}
+.pq-report .pq-pdf-ic-sub {
+  font-size: 15px; color: #bcbcbc; line-height: 1.55;
+  max-width: 130mm; margin-top: 20px;
+}
+.pq-report .pq-pdf-ic-marquee {
+  margin-top: auto; padding-top: 24px;
+  border-top: 1px solid #2a2a2a;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+}
+.pq-report .pq-pdf-ic-marquee .marq {
+  padding: 14px 16px 14px 0;
+  border-right: 1px solid #2a2a2a;
+}
+.pq-report .pq-pdf-ic-marquee .marq:last-child { border-right: none; }
+.pq-report .pq-pdf-ic-marquee .marq .lbl {
+  font-family: var(--font-mono), monospace;
+  font-size: 9px; letter-spacing: 1.8px; text-transform: uppercase;
+  color: #8a8a8a; margin-bottom: 8px;
+}
+.pq-report .pq-pdf-ic-marquee .marq .val {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 24px; font-weight: 500; line-height: 1;
+}
+.pq-report .pq-pdf-ic-marquee .marq .val.pos { color: var(--r-gold); }
+.pq-report .pq-pdf-ic-marquee .marq .delta {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px; color: #8a8a8a; margin-top: 6px;
+}
+.pq-report .pq-pdf-ic-foot {
+  margin-top: 24px; padding-top: 14px; border-top: 1px solid #2a2a2a;
+  display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px; letter-spacing: 1px;
+  color: #8a8a8a; text-transform: uppercase;
+}
+.pq-report .pq-pdf-ic-foot .pq-pdf-conf-stamp {
+  border: 1px solid var(--r-gold); color: var(--r-gold);
+}
+
+/* --- Utility: flex-between --- */
+.pq-report .pq-pdf-flex-between {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pq-report .pq-pdf-divider { height: 1px; background: var(--r-rule); margin: 14px 0; }
+
+@media print {
+  .pq-report { background: #fff !important; }
+  .pq-pdf-page {
+    margin: 0 !important;
+    box-shadow: none !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+  }
+  .pq-pdf-toolbar { display: none !important; }
+  body { background: #fff !important; }
+}
+@page { size: A4; margin: 0; }
+

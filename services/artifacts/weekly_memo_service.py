@@ -49,6 +49,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, User
+from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
 
 logger = logging.getLogger(__name__)
 
@@ -713,7 +714,15 @@ class WeeklyMemoService:
             data_sources=data_sources,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
         )
-        return ctx.to_dict()
+        # Legal scrub at user-facing boundary — risk_notes free-text and any
+        # AI-derived prose. scrub_signal handles known free-text fields;
+        # risk_notes (list[str]) is scrubbed item-by-item below.
+        data = scrub_signal(ctx.to_dict())
+        if isinstance(data.get("risk_notes"), list):
+            data["risk_notes"] = [
+                safe_scrub(n, context="weekly_memo.risk_notes") for n in data["risk_notes"]
+            ]
+        return data
 
     def _previous_sector_alloc(self, user_id: int) -> dict[str, float]:
         """Pull the most recent memo row's sector_alloc (if any)."""

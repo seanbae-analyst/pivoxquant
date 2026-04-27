@@ -35,7 +35,7 @@ const SECTIONS = [
       },
       {
         q: "What tier gets which reports?",
-        a: "Observer (free): Weekly Memo preview. Operator: 17 artifacts. Partner: All + priority + concierge notes.",
+        a: "Free: Weekly Memo preview. Pro: 12 artifacts. Premium: All + priority + concierge notes.",
       },
       {
         q: "Can I download PDFs?",

@@ -20,14 +20,15 @@ import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
    are distinct from the page-level footer mounted here.
    ────────────────────────────────────────────────────────────────── */
 
-type DisclaimerKind = "signal" | "ai-analysis" | "auto-trade" | "coaching";
+// REMOVED 2026-04-27 per CEO + legal: "auto-trade" disclaimer kind retired
+// alongside the autotrade feature removal (투자일임업 등록 회피).
+type DisclaimerKind = "signal" | "ai-analysis" | "coaching";
 
 /** Longest-prefix matching: more specific paths first. */
 const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   // most specific / multi-segment first
   ["/morning-brief", "signal"],
   ["/ai-chat", "ai-analysis"],
-  ["/autotrade", "auto-trade"],
   ["/watchlist", "signal"],
   ["/portfolio", "signal"],
   ["/companion", "ai-analysis"],
@@ -46,7 +47,8 @@ const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
 ];
 
 /** Routes that need the banner force-expanded (highest-risk surfaces). */
-const ALWAYS_EXPANDED_PREFIXES: ReadonlyArray<string> = ["/autotrade"];
+// REMOVED 2026-04-27 per CEO + legal: previously forced /autotrade banner expanded.
+const ALWAYS_EXPANDED_PREFIXES: ReadonlyArray<string> = [];
 
 function resolveDisclaimerType(pathname: string | null): DisclaimerKind {
   if (!pathname) return "signal";

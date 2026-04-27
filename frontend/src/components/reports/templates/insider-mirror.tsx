@@ -1,0 +1,289 @@
+/**
+ * Report 10 — Insider Mirror (Pro · 2 pages · Weekly)
+ *
+ * Source: /design_handoff_pdf_reports/reports/10_insider_mirror.html
+ *
+ * Page 1: 4-up KPI (clusters / CEO+CFO / non-10b5-1 sells / mirror hit rate)
+ *         + Top Buys table + Sells table.
+ * Page 2: Featured signal card + 24m mirror vs S&P 500 chart + 3-up KPI
+ *         + how-to-use callout + governance + disclaimer.
+ *
+ * Compliance: Form 4 mirror only. NEVER buy/sell/hold language — insider
+ * activity classification is descriptive ("CLUSTER", "FIRST IN", "SOLO"), not
+ * advice. POSITIVE / NEGATIVE / NEUTRAL signals only.
+ */
+
+"use client";
+
+import {
+  PdfPage,
+  PdfHeader,
+  PdfGoldRule,
+  PdfEyebrow,
+  PdfCoverTitle,
+  PdfKpiRow,
+  PdfSectionTitle,
+  PdfTable,
+  PdfTicker,
+  PdfCard,
+  PdfFlexBetween,
+  PdfThreeCol,
+  PdfCallout,
+  PdfGovBlock,
+  PdfPageFooter,
+  PdfDisclaimer,
+} from "../pdf-primitives";
+
+interface BuyRow {
+  ticker: string;
+  insider: string;
+  role: string;
+  amount: string;
+  date: string;
+  signal: string;
+  signalTone: "pos" | "warn";
+}
+interface SellRow {
+  ticker: string;
+  insider: string;
+  role: string;
+  amount: string;
+  plan: string;
+  flag: string;
+  flagTone: "neg" | "neutral";
+}
+
+export interface InsiderMirrorData {
+  asOf: string;
+  clusterBuys: { value: string; detail: string };
+  ceoCfoPair: { value: string; detail: string };
+  nonPlanSells: { value: string; detail: string };
+  hitRate: { value: string; detail: string };
+  buys: BuyRow[];
+  sells: SellRow[];
+  featured: {
+    badge: string;
+    headline: string;
+    ticker: string;
+    body: string;
+    avgPrice: string;
+    lastBuy: string;
+    hitRate: string;
+  };
+  mirror24m: { value: string; delta: string };
+  winRate: { value: string; detail: string };
+  avgHold: { value: string; detail: string };
+  howToUse: string;
+}
+
+const DEFAULT: InsiderMirrorData = {
+  asOf: "Week of Apr 26 · IM-2026-04",
+  clusterBuys: { value: "7", detail: "5+ insiders, 30d" },
+  ceoCfoPair: { value: "3", detail: "strongest signal" },
+  nonPlanSells: { value: "12", detail: "flag list" },
+  hitRate: { value: "63%", detail: "+8.2% avg" },
+  buys: [
+    { ticker: "CRWD", insider: "George Kurtz", role: "CEO", amount: "$4.2M", date: "10/22", signal: "★★★ FIRST IN 18m", signalTone: "pos" },
+    { ticker: "ANET", insider: "Jayshree Ullal", role: "CEO", amount: "$3.8M", date: "10/18", signal: "★★★ CLUSTER 6×", signalTone: "pos" },
+    { ticker: "SHOP", insider: "Tobias Lütke + 4", role: "CEO + Dirs", amount: "$2.1M", date: "10/15", signal: "★★ CLUSTER 5×", signalTone: "pos" },
+    { ticker: "UBER", insider: "Prashanth Mahendra", role: "CFO", amount: "$1.4M", date: "10/12", signal: "★★ FIRST IN 24m", signalTone: "pos" },
+    { ticker: "DKNG", insider: "Jason Robins", role: "CEO", amount: "$890k", date: "10/09", signal: "★ SOLO", signalTone: "warn" },
+  ],
+  sells: [
+    { ticker: "PANW", insider: "Nikesh Arora", role: "CEO", amount: "−$48M", plan: "discretionary", flag: "⚠ NON-10b5-1", flagTone: "neg" },
+    { ticker: "SNOW", insider: "Frank Slootman", role: "Chair", amount: "−$22M", plan: "10b5-1", flag: "routine", flagTone: "neutral" },
+    { ticker: "META", insider: "Mark Zuckerberg", role: "CEO", amount: "−$185M", plan: "10b5-1", flag: "routine", flagTone: "neutral" },
+  ],
+  featured: {
+    badge: "★★★ FIRST IN · 18 MONTHS",
+    headline: "CRWD · George Kurtz · CEO · $4.2M",
+    ticker: "CRWD",
+    body: "18개월 만의 첫 직접 매수. 평균 주가 대비 본인 평단보다 한참 아래에서 진입. 과거 첫 매수 시점 12m 후 평균 +28%. 7월 사건 이후 −34% 빠진 자리, 평균 주가 −41% 대비 본인 평단보다 한참 아래에서 진입. 단, 이번엔 평판 회복 비용 + 보안 리텐션이 변수.",
+    avgPrice: "$268.40",
+    lastBuy: "2024-04 · $1.8M",
+    hitRate: "68% (n=11)",
+  },
+  mirror24m: { value: "+62.4%", delta: "vs S&P +28.1%" },
+  winRate: { value: "63%", detail: "n = 84 signals" },
+  avgHold: { value: "94 days", detail: "median 76d" },
+  howToUse:
+    "시그널은 시그널일 뿐. ★★★만 1.5%, ★★는 1%, ★는 무시. 90일 후 자동 점검, 가설 깨지면 청산. 미러는 출발점이지 끝이 아니다.",
+};
+
+export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) {
+  return (
+    <>
+      {/* PAGE 1 */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="INSIDER MIRROR" meta={data.asOf} />
+        <PdfGoldRule />
+
+        <PdfEyebrow>Insider Mirror · Weekly</PdfEyebrow>
+        <PdfCoverTitle size={42}>
+          Insiders are <em>buying</em>—
+          <br />
+          the signals worth following this week.
+        </PdfCoverTitle>
+        <p style={{ color: "var(--r-ink-3)", fontSize: 13, lineHeight: 1.55, marginTop: 12 }}>
+          Form 4 only. Cluster buys, CEO+CFO pairs, first-time buyers — extracted after the noise is filtered out.
+        </p>
+
+        <div style={{ marginTop: 24 }}>
+          <PdfKpiRow
+            kpis={[
+              { label: "Cluster Buys", value: data.clusterBuys.value, delta: data.clusterBuys.detail, deltaTone: "pos" },
+              { label: "CEO+CFO 동반", value: data.ceoCfoPair.value, delta: data.ceoCfoPair.detail, deltaTone: "pos" },
+              { label: "10b5-1 제외 매도", value: data.nonPlanSells.value, delta: data.nonPlanSells.detail, deltaTone: "neg" },
+              { label: "Mirror Hit Rate · 12m", value: data.hitRate.value, delta: data.hitRate.detail },
+            ]}
+          />
+        </div>
+
+        <PdfSectionTitle variant="sm">Top Buys · 따라갈 만한 매수</PdfSectionTitle>
+        <PdfTable>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Insider</th>
+              <th>Role</th>
+              <th className="right">$ Amount</th>
+              <th className="right">Date</th>
+              <th className="right">Signal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.buys.map((b) => (
+              <tr key={b.ticker}>
+                <td><PdfTicker>{b.ticker}</PdfTicker></td>
+                <td>{b.insider}</td>
+                <td>{b.role}</td>
+                <td className="right pos">{b.amount}</td>
+                <td className="right">{b.date}</td>
+                <td className="right" style={{ color: b.signalTone === "pos" ? "var(--r-pos)" : "var(--r-warn)" }}>
+                  {b.signal}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </PdfTable>
+
+        <PdfSectionTitle variant="sm">Sells · 주의가 필요한 매도</PdfSectionTitle>
+        <PdfTable>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Insider</th>
+              <th>Role</th>
+              <th className="right">$ Amount</th>
+              <th className="right">Plan</th>
+              <th className="right">Flag</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.sells.map((s) => (
+              <tr key={s.ticker}>
+                <td><PdfTicker>{s.ticker}</PdfTicker></td>
+                <td>{s.insider}</td>
+                <td>{s.role}</td>
+                <td className="right neg">{s.amount}</td>
+                <td className="right" style={{ color: "var(--r-ink-3)" }}>{s.plan}</td>
+                <td className="right" style={{ color: s.flagTone === "neg" ? "var(--r-neg)" : "var(--r-ink-3)" }}>
+                  {s.flag}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </PdfTable>
+
+        <PdfPageFooter left="Insider Mirror · Pro" right="Page 01" />
+        <PdfDisclaimer cadence="weekly" />
+      </PdfPage>
+
+      {/* PAGE 2 */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="INSIDER MIRROR" meta={`${data.asOf} · 02/02`} />
+        <PdfGoldRule />
+
+        <PdfSectionTitle variant="sm">Featured Signal · 이번 주 단일 베스트</PdfSectionTitle>
+        <PdfCard>
+          <PdfFlexBetween>
+            <div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+                {data.featured.badge}
+              </div>
+              <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 24, margin: "6px 0", fontWeight: 500 }}>
+                {data.featured.headline}
+              </h3>
+            </div>
+            <PdfTicker>{data.featured.ticker}</PdfTicker>
+          </PdfFlexBetween>
+          <p style={{ fontSize: 13, lineHeight: 1.65, color: "var(--r-ink-2)", marginTop: 8 }}>
+            {data.featured.body}
+          </p>
+          <div style={{ marginTop: 12 }}>
+            <PdfThreeCol>
+              <div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }}>Avg Price</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{data.featured.avgPrice}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }}>Last Insider Buy</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{data.featured.lastBuy}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }}>12m Hit Rate</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--r-pos)" }}>{data.featured.hitRate}</div>
+              </div>
+            </PdfThreeCol>
+          </div>
+        </PdfCard>
+
+        <PdfSectionTitle variant="sm">Mirror Backtest · 과거 시그널 추적</PdfSectionTitle>
+        <PdfCard>
+          <PdfFlexBetween>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+              Mirror vs S&amp;P 500 · Last 24m
+            </div>
+            <div style={{ display: "flex", gap: 14, fontSize: 10, color: "var(--r-ink-3)", fontFamily: "var(--font-mono)" }}>
+              <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Mirror Portfolio</span>
+              <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500</span>
+            </div>
+          </PdfFlexBetween>
+          <svg viewBox="0 0 600 160" preserveAspectRatio="none" style={{ width: "100%", height: 160, marginTop: 12 }}>
+            <defs>
+              <linearGradient id="mirror-fade" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#0e0e0e" stopOpacity=".18" />
+                <stop offset="1" stopColor="#0e0e0e" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="40" x2="600" y2="40" stroke="#ececec" strokeWidth="1" />
+            <line x1="0" y1="80" x2="600" y2="80" stroke="#ececec" strokeWidth="1" />
+            <line x1="0" y1="120" x2="600" y2="120" stroke="#ececec" strokeWidth="1" />
+            <path d="M0,130 L60,118 L120,108 L180,92 L240,98 L300,82 L360,68 L420,52 L480,42 L540,30 L600,22 L600,160 L0,160 Z" fill="url(#mirror-fade)" opacity=".5" />
+            <path d="M0,130 L60,118 L120,108 L180,92 L240,98 L300,82 L360,68 L420,52 L480,42 L540,30 L600,22" stroke="#0e0e0e" strokeWidth="2" fill="none" />
+            <path d="M0,130 L60,124 L120,118 L180,112 L240,108 L300,98 L360,92 L420,84 L480,78 L540,72 L600,68" stroke="#c0c0c0" strokeWidth="1.4" fill="none" strokeDasharray="3 3" />
+          </svg>
+        </PdfCard>
+
+        <div style={{ marginTop: 12 }}>
+          <PdfKpiRow
+            cols={3}
+            kpis={[
+              { label: "Mirror 24m", value: data.mirror24m.value, delta: data.mirror24m.delta, deltaTone: "pos" },
+              { label: "Win Rate", value: data.winRate.value, delta: data.winRate.detail },
+              { label: "Avg Hold", value: data.avgHold.value, delta: data.avgHold.detail },
+            ]}
+          />
+        </div>
+
+        <div style={{ marginTop: 18 }}>
+          <PdfCallout label="How to Use">{data.howToUse}</PdfCallout>
+        </div>
+
+        <PdfGovBlock />
+        <PdfPageFooter left="Insider Mirror · Pro · Past activity ≠ future returns" right="Page 02" />
+        <PdfDisclaimer cadence="weekly" />
+      </PdfPage>
+    </>
+  );
+}

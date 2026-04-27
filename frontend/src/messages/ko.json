@@ -8,7 +8,6 @@
     "discover": "탐색",
     "watchlist": "관심종목",
     "ai": "AI Assistant",
-    "autotrade": "자동매매",
     "risk": "리스크",
     "alerts": "알림",
     "reports": "나의 리포트",
@@ -160,14 +159,6 @@
       "safe": "안전",
       "warning": "경고",
       "critical": "위험"
-    },
-    "autotrade": {
-      "title": "자동매매",
-      "paperMode": "페이퍼 모드",
-      "killSwitch": "긴급 정지",
-      "enable": "활성화",
-      "disable": "비활성화",
-      "status": "상태"
     },
     "alerts": {
       "title": "알림",

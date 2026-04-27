@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/utils";
 
-type Tier = "Observer" | "Operator" | "Partner";
+type Tier = "Free" | "Pro" | "Premium";
 
 function initials(name?: string, email?: string): string {
   if (name) {
@@ -38,7 +38,7 @@ export function ProfileDropdown() {
   const ref = useRef<HTMLDivElement | null>(null);
 
   // Mock: Observer until billing resolved
-  const tier: Tier = "Observer";
+  const tier: Tier = "Free";
 
   const displayName = user?.name || "배상현";
   const displayEmail = user?.email || "seanbae1521@gmail.com";

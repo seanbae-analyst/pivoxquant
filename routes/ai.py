@@ -181,8 +181,8 @@ def coaching():
         return jsonify({"error": "AI not configured"}), 503
     positions = Position.query.filter_by(user_id=current_user.id).all()
     if not positions:
-        return jsonify({"insight": "Add some positions first to get AI coaching!",
-                        "insight_kr": "AI 코칭을 받으려면 먼저 포지션을 추가하세요!"})
+        return jsonify({"insight": "Add some positions first to use the AI Assistant!",
+                        "insight_kr": "AI Assistant를 사용하려면 먼저 포지션을 추가하세요!"})
     sig_cache = {}
     for p in positions:
         c = db.session.get(SignalCache, p.ticker)
