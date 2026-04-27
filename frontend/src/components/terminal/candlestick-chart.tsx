@@ -66,7 +66,11 @@ export interface CandlestickChartProps {
   /** Height of the primary price pane, px. Volume adds 80 more. Default 320. */
   height?: number;
   className?: string;
-  /** If true, render Today / 5-Day / 1-Month KPI chips above the chart. */
+  /** If true, render the Today % KPI chip above the chart. CEO directive
+   *  2026-04-27: with the chart on a `1d` SWR fetch, only the 1-day return
+   *  has reliable lookback; 5-Day / 1-Month chips would render "—" most of
+   *  the time. Better to surface a single trustworthy chip than three with
+   *  two perpetual blanks. Multi-period view lives on /detail/[ticker]. */
   showKpiChips?: boolean;
 }
 
@@ -299,28 +303,22 @@ export function CandlestickChart({
     chartRef.current?.timeScale().fitContent();
   }, [chartBody, chartRev]);
 
-  // KPI chips — computed client-side from the SWR chart data. The /api/chart
-  // endpoint already returns dense daily close points, so Today / 5-Day /
-  // 1-Month % returns are just close[-1] vs close[-N-1]. When showKpiChips
-  // is false we skip rendering — avoids visual noise on detail-page consumers.
+  // KPI chip (single, "Today") — computed client-side from the SWR chart
+  // data. With the chart on a `1d` fetch we only have the last vs second-
+  // to-last close to compare; multi-day chips would be "—" most of the time
+  // (CEO call: avoid blank chips, surface one trustworthy number). Detail
+  // page is the place for 5-Day / 1-Month context.
   const kpiChips = useMemo(() => {
     if (!showKpiChips) return null;
     const data = chartBody?.data ?? [];
     if (data.length < 2) return null;
     const last = data[data.length - 1]?.close;
-    if (!Number.isFinite(last)) return null;
-    const pctAt = (lookback: number): number | null => {
-      const idx = data.length - 1 - lookback;
-      if (idx < 0) return null;
-      const base = data[idx]?.close;
-      if (!Number.isFinite(base) || base === 0) return null;
-      return ((last - base) / base) * 100;
-    };
-    return [
-      { label: "Today", pct: pctAt(1) },
-      { label: "5-Day", pct: pctAt(5) },
-      { label: "1-Month", pct: pctAt(21) },
-    ];
+    const prev = data[data.length - 2]?.close;
+    if (!Number.isFinite(last) || !Number.isFinite(prev) || prev === 0) {
+      return null;
+    }
+    const todayPct = ((last - prev) / prev) * 100;
+    return [{ label: "Today", pct: todayPct }];
   }, [chartBody, showKpiChips]);
 
   return (
