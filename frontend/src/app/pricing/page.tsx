@@ -113,7 +113,7 @@ function PriceCountUp({
 
 /* ── Tier data (3 tiers — matched to landing Pricing section) ── */
 
-type TierKey = "observer" | "operator" | "partner";
+type TierKey = "free" | "pro" | "premium";
 
 interface Tier {
   key: TierKey;
@@ -129,10 +129,13 @@ interface Tier {
   href?: string; // free tier goes straight to /signup
 }
 
+// Tier SoT: frontend/src/content/terms-ko.md §8.1 (Free / Pro / Premium).
+// 2026-04-27: tier names consolidated from Observer/Operator/Partner to
+// Free/Pro/Premium per legal review (4-way mismatch with terms-ko.md fixed).
 const TIERS: Tier[] = [
   {
-    key: "observer",
-    name: "Observer",
+    key: "free",
+    name: "Free",
     price: "0",
     unit: "KRW",
     period: "forever",
@@ -148,15 +151,15 @@ const TIERS: Tier[] = [
     href: "/signup",
   },
   {
-    key: "operator",
-    name: "Operator",
+    key: "pro",
+    name: "Pro",
     price: "9,900",
     unit: "KRW",
     period: "per month",
-    tagline: "Full desk access. 17 artifacts. Weekly ship.",
+    tagline: "Full desk access. 12 artifacts. Weekly ship.",
     features: [
-      "Everything in Observer",
-      "7 Operator artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Burn Rate, Credit Rating, AI Suite, Weekly Memo (full)",
+      "Everything in Free",
+      "Pro artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Insider Mirror, Risk Board, Dividend Income, Quarterly Self-Report, S&P 500 Backtest, Self-Audit, Portfolio Segment, AI Assistant, Weekly Memo (full)",
       "2 broker connections",
       "Risk Board — 7-layer observation",
     ],
@@ -165,17 +168,17 @@ const TIERS: Tier[] = [
     recommended: true,
   },
   {
-    key: "partner",
-    name: "Partner",
+    key: "premium",
+    name: "Premium",
     price: "19,900",
     unit: "KRW",
     period: "per month",
-    tagline: "Concierge research. Priority renders. Quarterly 1:1 notes.",
+    tagline: "Concierge research. Priority renders. Year-end letter.",
     features: [
-      "Everything in Operator",
-      "10 Partner artifacts — Risk Board Deck, Year-End Letter, Quarterly Self-Report, Capital Allocation, Insider Mirror, Portfolio Segment, Dividend Income, Monthly Finance, Self-Audit, Brag Card",
+      "Everything in Pro",
+      "Premium artifacts — Capital Allocation, Credit Rating, Burn Rate, Monthly Finance, KPI Dashboard, Year-End Letter, Brag Card",
       "Priority render queue",
-      "Quarterly 1:1 desk notes",
+      "Unlimited broker connections",
     ],
     cta: "Start 7-day trial",
     dark: false,
@@ -193,11 +196,11 @@ interface FaqItem {
 const FAQ_ITEMS: FaqItem[] = [
   {
     q: "What does a PivoxQuant subscription include?",
-    a: "A research desk that writes for you. Observer receives an abridged Weekly Memo. Operator adds the full seventeen-artifact desk — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Credit Rating, and more, shipped on a weekly cadence. Partner adds ten additional artifacts and priority render queue.",
+    a: "A research desk that writes for you. Free receives an abridged Weekly Memo. Pro adds the full twelve Pro artifacts — Morning Brief Plus, Earnings Pre-Brief, DD Checklist, Insider Mirror, Risk Board, and more, shipped on a weekly cadence. Premium adds seven additional Premium artifacts including Year-End Letter and priority render queue.",
   },
   {
     q: "Can I cancel at any time?",
-    a: "Yes. Cancel from Settings › Subscription at any time. Your plan remains active until the next billing date, then converts automatically to Observer.",
+    a: "Yes. Cancel from Settings › Subscription at any time. Your plan remains active until the next billing date, then converts automatically to Free.",
   },
   {
     q: "Is this investment advice?",
@@ -261,9 +264,9 @@ function FaqAccordion({ item }: { item: FaqItem }) {
 /* ── Consent modal (legal — 금소법 §19 + 전자상거래법 §22의2) ── */
 
 const PRICE_LABEL: Record<TierKey, string> = {
-  observer: "0 KRW",
-  operator: "9,900 KRW",
-  partner: "19,900 KRW",
+  free: "0 KRW",
+  pro: "9,900 KRW",
+  premium: "19,900 KRW",
 };
 
 function CheckboxBtn({

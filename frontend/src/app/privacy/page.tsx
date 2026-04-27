@@ -1,138 +1,48 @@
+/**
+ * /privacy — PIPA-compliant Korean privacy policy.
+ * Reads frontend/src/content/privacy-ko.md (single source of truth)
+ * and renders via `marked`. Strips YAML frontmatter before parsing.
+ *
+ * 한국 이용자에게 한국어로 공시 (PIPA §30 의무).
+ */
+
 import Link from "next/link";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { marked } from "marked";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy - PivoxQuant",
+  title: "개인정보처리방침 - PivoxQuant",
 };
 
-export default function PrivacyPage() {
+function stripFrontmatter(md: string): string {
+  if (!md.startsWith("---")) return md;
+  const end = md.indexOf("\n---", 3);
+  return end === -1 ? md : md.slice(end + 4).trimStart();
+}
+
+export default async function PrivacyPage() {
+  const filePath = path.join(process.cwd(), "src/content/privacy-ko.md");
+  const raw = await fs.readFile(filePath, "utf8");
+  const html = await marked.parse(stripFrontmatter(raw));
+
   return (
     <div className="min-h-[100dvh] bg-white">
-      <div className="mx-auto max-w-2xl px-4 py-12 sm:py-20">
+      <div className="mx-auto max-w-3xl px-4 py-12 sm:py-20">
         <Link
           href="/login"
           className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors mb-8"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
           Back
         </Link>
-
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-          Privacy Policy
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          Last updated: April 13, 2026
-        </p>
-
-        <div className="mt-10 space-y-8 text-sm leading-relaxed text-slate-600">
-          <section>
-            <h2 className="text-lg font-semibold text-slate-900">
-              1. Information We Collect
-            </h2>
-            <p className="mt-3">
-              When you sign up via Google or Kakao OAuth, we receive your name,
-              email address, and profile photo from the provider. We also collect
-              usage data such as pages visited, features used, and interaction
-              patterns to improve the Service.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-slate-900">
-              2. How We Use Your Information
-            </h2>
-            <p className="mt-3">
-              We use your information to provide and improve the Service,
-              personalize your experience, send important notifications about
-              your account, and generate anonymized analytics. We do not sell
-              your personal information to third parties.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-slate-900">
-              3. Data Storage
-            </h2>
-            <p className="mt-3">
-              Your data is stored securely using industry-standard encryption.
-              Portfolio data, watchlists, and preferences are stored in our
-              database. We retain your data for as long as your account is
-              active.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-slate-900">
-              4. Third-Party Services
-            </h2>
-            <p className="mt-3">
-              We use third-party services for authentication (Google, Kakao),
-              market data (Financial Modeling Prep), AI analysis (Anthropic
-              Claude), and payment processing. Each provider has their own
-              privacy policy governing their use of your data.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-slate-900">
-              5. Cookies and Sessions
-            </h2>
-            <p className="mt-3">
-              We use session cookies to maintain your login state. These cookies
-              are essential for the Service to function and expire after 24 hours
-              of inactivity.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-slate-900">
-              6. Your Rights
-            </h2>
-            <p className="mt-3">
-              You have the right to access, update, or delete your personal
-              data. You can request data deletion by contacting us. Upon account
-              deletion, all associated data will be permanently removed within 30
-              days.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-slate-900">
-              7. Security
-            </h2>
-            <p className="mt-3">
-              We implement appropriate technical and organizational measures to
-              protect your personal data. This includes HTTPS encryption, CSRF
-              protection, rate limiting, and secure session management.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold text-slate-900">
-              8. Contact
-            </h2>
-            <p className="mt-3">
-              For privacy-related inquiries, contact us at{" "}
-              <a
-                href="mailto:seanbae1521@gmail.com"
-                className="text-[var(--sp-accent)] hover:underline"
-              >
-                seanbae1521@gmail.com
-              </a>
-            </p>
-          </section>
-        </div>
+        <article
+          className="prose prose-slate prose-sm max-w-none [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mt-0 [&_h1]:mb-6 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:mt-8 [&_h2]:mb-3 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-6 [&_h3]:mb-2 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-slate-300 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-slate-50 [&_th]:text-left [&_td]:border [&_td]:border-slate-300 [&_td]:px-3 [&_td]:py-2 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-600 [&_hr]:my-8 [&_a]:text-blue-600 [&_a]:underline [&_p]:my-3 [&_ul]:my-3 [&_ol]:my-3 [&_li]:my-1"
+          dangerouslySetInnerHTML={{ __html: html as string }}
+        />
       </div>
     </div>
   );

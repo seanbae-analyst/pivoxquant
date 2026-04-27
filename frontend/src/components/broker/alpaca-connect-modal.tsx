@@ -89,11 +89,16 @@ export function AlpacaConnectModal({
           </button>
         </div>
 
-        {/* Description */}
-        <p className="mb-5 text-[12px] leading-relaxed text-[rgba(245,240,232,0.65)]">
+        {/* Description — BYO (Bring Your Own Key) model, per legal 2026-04-27 */}
+        <p className="mb-3 text-[12px] leading-relaxed text-[rgba(245,240,232,0.65)]">
           Enter your Alpaca paper trading keys. We store them encrypted and only
           use them to observe your paper account. Live trading is disabled in
           this release.
+        </p>
+        <p className="mb-5 text-[11px] leading-relaxed text-[rgba(245,240,232,0.55)]">
+          Bring Your Own Key (BYO): market data is fetched under your own
+          Alpaca account license. PivoxQuant does not redistribute Alpaca
+          market data — your keys, your license.
         </p>
 
         {/* Help link */}

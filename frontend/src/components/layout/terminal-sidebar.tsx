@@ -33,7 +33,6 @@ import {
   Shield,
   Zap,
   MessageSquare,
-  Bot,
   Sun,
   FileText,
   Bell,
@@ -53,7 +52,7 @@ export type TerminalSidebarKey =
   | "portfolio"
   | "watchlist"
   | "risk"
-  | "autotrade"
+  // REMOVED 2026-04-27 per CEO + legal: "autotrade" key retired.
   | "market"
   | "discover"
   | "ai-chat"
@@ -88,7 +87,7 @@ const PORTFOLIO: Item[] = [
   { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
   { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye },
   { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
-  { key: "autotrade", label: "Autotrade", href: "/autotrade", icon: Bot },
+  // REMOVED 2026-04-27 per CEO + legal: autotrade item (투자일임업 회피).
 ];
 
 // ── RESEARCH — 조사·분석 ───────────────────────────────────────────

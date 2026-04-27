@@ -21,7 +21,7 @@ export default function robots(): MetadataRoute.Robots {
           "/watchlist/",
           "/ai/",
           "/ai-chat/",
-          "/autotrade/",
+          // REMOVED 2026-04-27 per CEO + legal: "/autotrade/" route retired.
           "/market/",
           "/signals/",
           "/alerts/",

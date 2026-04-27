@@ -77,15 +77,10 @@ export const API = {
     itemDelete: (id: string | number) => `/api/alerts/${id}`,
   },
   trades: "/api/trades",
-  autotrade: {
-    status: "/api/autotrade/status",
-    start: "/api/autotrade/start",
-    stop: "/api/autotrade/stop",
-    sellAll: "/api/autotrade/sell-all",
-    pending: "/api/autotrade/pending",
-    approve: (tradeId: string) => `/api/autotrade/approve/${tradeId}`,
-    reject: (tradeId: string) => `/api/autotrade/reject/${tradeId}`,
-  },
+  // REMOVED 2026-04-27 per CEO + legal: autotrade endpoints group retired
+  // (투자일임업 등록 회피 — feature 자체 제거). Restore path:
+  // 1) re-enable backend blueprint in routes/__init__.py and app.py
+  // 2) restore this group + frontend page/nav/i18n.
   ai: {
     status: "/api/ai/status",
     chat: "/api/ai/chat",

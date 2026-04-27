@@ -55,9 +55,12 @@ type TierSlim = {
   recommended?: boolean;
 };
 
+// Tier SoT: frontend/src/content/terms-ko.md §8.1 (Free / Pro / Premium).
+// 2026-04-27: 4-tier (incl. Elite + Founding Lifetime) consolidated to 3-tier
+// per legal review — see REPORT_LEGAL_AUDIT_2026-04-27.md.
 const TIERS: readonly TierSlim[] = [
   {
-    name: "Observer",
+    name: "Free",
     numeral: "I",
     price: "0",
     period: "forever",
@@ -73,48 +76,33 @@ const TIERS: readonly TierSlim[] = [
   {
     name: "Pro",
     numeral: "II",
-    price: "14,900",
+    price: "9,900",
     period: "per month",
-    tagline: "Full desk. 15 artifacts. Pre-Trade Checklist unlocked.",
+    tagline: "Full desk. 12 artifacts. AI Assistant.",
     dark: true,
     recommended: true,
     features: [
-      "Everything in Observer",
+      "Everything in Free",
       "Morning Brief Plus · Earnings Pre-Brief",
-      "Pre-Trade Checklist — 7 gates",
-      "2 broker connections · Risk Board",
+      "DD Checklist · Risk Board · Insider Mirror",
+      "2 broker connections · AI Assistant",
     ],
-    cta: "Meet your CFO",
+    cta: "Subscribe to Pro",
     href: "/signup",
   },
   {
     name: "Premium",
     numeral: "III",
-    price: "29,900",
+    price: "19,900",
     period: "per month",
     tagline: "Board-grade decks. Quarterly self-audit. Year-end letter.",
     features: [
       "Everything in Pro",
-      "Risk Board Deck · Capital Allocation",
-      "Quarterly Self-Report · Year-End Letter",
-      "Unlimited brokers · Priority render queue",
+      "Capital Allocation · Credit Rating · Burn Rate",
+      "Monthly Finance · KPI Dashboard",
+      "Year-End Letter · Unlimited brokers",
     ],
     cta: "Upgrade to Premium",
-    href: "/signup",
-  },
-  {
-    name: "Elite",
-    numeral: "IV",
-    price: "99,900",
-    period: "per month",
-    tagline: "Voice brief. Quarterly 1:1 desk notes. Everything.",
-    features: [
-      "Everything in Premium",
-      "Korean + English voice morning brief",
-      "Quarterly 1:1 desk notes",
-      "Founding Lifetime eligible (200 seats)",
-    ],
-    cta: "Request invitation",
     href: "/signup",
   },
 ] as const;
@@ -135,12 +123,8 @@ const FAQ_ITEMS = [
     a: "Drift detection이 매주 동작합니다. 최근 90일의 거래·반응 패턴이 현재 페르소나와 유의미하게 달라지면 CFO가 “당신이 다르게 움직이기 시작했다”는 Pulse 리포트를 발행합니다. 재분류는 자동이 아니라 제안입니다 — 수락해야 다음 사이클부터 새 페르소나 기준으로 리포트가 나옵니다.",
   },
   {
-    q: "What is different about Elite · CFO Suite?",
-    a: "Pro와 Premium의 모든 기능 + (1) 한국어·영어 음성 morning brief, (2) 분기 1:1 desk notes, (3) priority everything (render queue, data refresh, support). Founding Lifetime 200명에 한해 평생 포함.",
-  },
-  {
     q: "What happens during the 7-day trial?",
-    a: "Pro 티어 풀액세스. 첫 weekly memo · earnings pre-brief · Risk Board가 24시간 내 당신의 실제 보유에서 렌더됩니다. 7일 내 취소 시 과금 없음. 이후 월 ₩14,900.",
+    a: "Pro 티어 풀액세스. 첫 weekly memo · earnings pre-brief · Risk Board가 24시간 내 당신의 실제 보유에서 렌더됩니다. 7일 내 취소 시 과금 없음. 이후 월 ₩9,900.",
   },
   {
     q: "Do you have access to my brokerage account?",
@@ -148,7 +132,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Can I cancel? How do refunds work?",
-    a: "Settings에서 언제든 취소 — 이메일·전화 없이. 전자상거래법상 첫 결제 14일 이내 미사용 시 전액 환불 대상. 이후에는 현재 주기 종료 시 청구가 멈춥니다. Founding Lifetime은 전자상거래법 7일 청약철회 후 환불 불가 (평생 상품 특성상).",
+    a: "Settings에서 언제든 취소 — 이메일·전화 없이. 전자상거래법상 첫 결제 14일 이내 미사용 시 전액 환불 대상. 이후에는 현재 주기 종료 시 청구가 멈춥니다.",
   },
 ];
 
@@ -174,7 +158,7 @@ function PricingPreview() {
         >
           <Eyebrow className="mb-6">Membership</Eyebrow>
           <p className="pq-deck mb-4">
-            Four tiers. We are never paid when you trade.
+            Three tiers. We are never paid when you trade.
           </p>
           <h2
             className="pq-silver-matte font-serif"
@@ -209,7 +193,7 @@ function PricingPreview() {
           whileInView={reduce ? undefined : "visible"}
           viewport={{ once: true, margin: "-60px" }}
           variants={stagger}
-          className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-2 lg:grid-cols-4 md:gap-7"
+          className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3 md:gap-7"
         >
           {TIERS.map((t) => (
             <motion.article
@@ -350,64 +334,9 @@ function PricingPreview() {
           ))}
         </motion.div>
 
-        {/* Founding lifetime panel */}
-        <motion.div
-          initial={reduce ? undefined : "hidden"}
-          whileInView={reduce ? undefined : "visible"}
-          viewport={{ once: true, margin: "-40px" }}
-          variants={fadeUp}
-          className="mt-16 rounded-sm p-8 md:p-10"
-          style={{
-            backgroundColor: "#0D0D0D",
-            border: "0.5pt solid rgba(184,149,106,0.32)",
-            backgroundImage:
-              "linear-gradient(180deg, rgba(184,149,106,0.04) 0%, transparent 60%)",
-          }}
-        >
-          <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-[1fr_auto]">
-            <div>
-              <Eyebrow className="mb-3">Founding Lifetime · 200 seats</Eyebrow>
-              <h3
-                className="font-serif"
-                style={{
-                  color: "var(--pq-ivory)",
-                  fontSize: "clamp(1.25rem, 2.4vw, 1.75rem)",
-                  fontWeight: 500,
-                  letterSpacing: "-0.01em",
-                  marginBottom: 10,
-                }}
-              >
-                Premium for life. One payment.
-              </h3>
-              <p
-                className="font-serif"
-                style={{
-                  color: "rgba(245,240,232,0.62)",
-                  fontSize: "var(--pq-text-body)",
-                  lineHeight: 1.65,
-                  maxWidth: 560,
-                }}
-              >
-                ₩990,000 once. Locked Premium for the life of the product.
-                Transferable within a single household. When Elite ships, Founding members receive it at cost.
-              </p>
-            </div>
-            <Link
-              href="/signup?plan=founding"
-              className="inline-flex items-center gap-2 rounded-sm px-6 py-3.5 font-serif transition-transform active:scale-[0.98]"
-              style={{
-                backgroundColor: "var(--pq-bronze)",
-                color: "var(--pq-ink)",
-                fontSize: "var(--pq-text-body-sm)",
-                letterSpacing: "0.02em",
-                fontWeight: 500,
-              }}
-            >
-              Reserve a seat
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-        </motion.div>
+        {/* Founding Lifetime panel removed 2026-04-27 per legal review:
+            "평생 사용권" 약속은 1인 시드 단계에서 영업 지속성 의존 채무.
+            전자상거래법 §21 기만적 광고 가능성. 향후 안정 단계 진입 후 재검토. */}
       </div>
     </section>
   );
@@ -710,8 +639,34 @@ function SiteFooter() {
           ))}
         </div>
 
+        {/* 전자상거래법 §13 사업자 정보 표시 (2026-04-27 추가).
+            사업자등록번호 / 통신판매업 신고번호는 등록 완료 후 채울 placeholder. */}
         <div
-          className="pt-8"
+          className="pt-6 pb-4"
+          style={{ borderTop: "0.5pt solid rgba(245,240,232,0.08)" }}
+        >
+          <p
+            className="font-serif"
+            style={{
+              fontSize: "11px",
+              lineHeight: 1.7,
+              letterSpacing: "0.02em",
+              color: "rgba(245,240,232,0.45)",
+            }}
+          >
+            <strong style={{ color: "rgba(245,240,232,0.65)" }}>PivoxQuant</strong>
+            &nbsp;·&nbsp; 대표 배상현
+            &nbsp;·&nbsp; 사업자등록번호 <span style={{ opacity: 0.55 }}>(등록 후 표시)</span>
+            &nbsp;·&nbsp; 통신판매업 신고번호 <span style={{ opacity: 0.55 }}>(신고 후 표시)</span>
+            <br />
+            주소 <span style={{ opacity: 0.55 }}>(사업장 등록 후 표시)</span>
+            &nbsp;·&nbsp; 이메일 <a href="mailto:seanbae1521@gmail.com" style={{ color: "inherit", textDecoration: "underline" }}>seanbae1521@gmail.com</a>
+            &nbsp;·&nbsp; 호스팅 Vercel · Railway
+          </p>
+        </div>
+
+        <div
+          className="pt-6"
           style={{ borderTop: "0.5pt solid rgba(245,240,232,0.08)" }}
         >
           <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-3">

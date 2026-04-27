@@ -59,6 +59,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, TradeHistory, User, UserReferral
+from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
 
 logger = logging.getLogger(__name__)
 
@@ -411,7 +412,9 @@ class BragCardService:
             data_sources=data_sources,
             disclaimer="정보 제공 목적이며 투자 권유가 아닙니다.",
         )
-        return ctx.to_dict()
+        # Legal scrub at user-facing boundary — covers known free-text
+        # fields (commentary/disclaimer/etc.) before the card renders.
+        return scrub_signal(ctx.to_dict())
 
     # ── render (HTML) ────────────────────────────────────────────────────────
 

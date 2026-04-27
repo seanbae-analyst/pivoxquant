@@ -1,11 +1,19 @@
 """Service singletons — centralized instance management."""
 from __future__ import annotations
+from typing import Any
+
 from engine import QuantEngine
 from data_fetcher import DataFetcher
 from ai_service import AIService
 from daytrade_service import DayTradeService
 from realtime_service import RealtimeService
-from autotrader import AutoTrader
+
+# REMOVED 2026-04-27 per CEO + legal: top-level `from autotrader import AutoTrader`
+# eliminated alongside the autotrade feature removal (투자일임업 등록 회피).
+# `autotrader.py` is preserved on disk for rollback; importing it here at module
+# load would still execute its module side-effects (AutoTrader class build,
+# circuit-breaker constants, etc.), which is undesirable when the feature is
+# disabled. Re-enable by restoring the import + the `init_trader()` body below.
 
 engine = QuantEngine()
 fetcher = DataFetcher()
@@ -13,39 +21,23 @@ ai = AIService()
 daytrade = DayTradeService()
 realtime = RealtimeService()
 
-# AutoTrader requires db + models, initialized via init_trader()
-trader: AutoTrader | None = None
+# AutoTrader removed 2026-04-27. `trader` kept as `None` for backward
+# compatibility with any caller that still references `services.container.trader`
+# (those callers should treat None as "feature disabled" and short-circuit).
+trader: Any = None
 
 
 def init_trader(db, Position, TradeHistory, app):
-    """Initialize AutoTrader after models are loaded.
+    """No-op since 2026-04-27 (per CEO + legal — autotrade feature removed).
 
-    Security note (H2, 2026-04-24):
-        The global `KISService()` here is intentionally app-owner-scoped —
-        it is used ONLY for *public market data* queries (get_current_price,
-        scan_momentum, intraday bars), never for per-user balance or order
-        APIs. KIS's "1 App Key = 1 계좌" covenant applies to account-bound
-        operations; market-data endpoints do not touch any user's account.
+    Kept as a callable so legacy invocations (e.g. app.py during a partial
+    rollback) do not crash with AttributeError. Returns None.
 
-        All per-user operations (balance sync, credential storage,
-        optional order execution) flow through `UserKISService(user_id)`
-        with encrypted per-user credentials. See
-        `services/broker/user_kis_service.py`.
-
-        DO NOT call `kis.get_balance()` / `kis.buy_order()` / `kis.sell_order()`
-        on this global instance — those are either disabled (H5) or would
-        return the app-owner's account data and leak across users.
+    Restore path:
+      1) Re-add `from autotrader import AutoTrader` at module top.
+      2) Replace this body with the prior implementation (AutoTrader instance
+         + optional KISService market-data binding).
+      3) Re-enable the `svc.init_trader(...)` call in app.py.
+      4) Re-register routes/autotrade.py blueprint in routes/__init__.py.
     """
-    global trader
-    trader = AutoTrader(db=db, Position=Position, TradeHistory=TradeHistory, app=app)
-    try:
-        from kis_service import KISService
-        kis = KISService()
-        if kis.available:
-            # Market-data-only binding. AutoTrader uses this for KR price
-            # scanning in paper mode; per-user trading goes through
-            # UserKISService (never this singleton).
-            trader.set_kis(kis)
-    except Exception:
-        pass
-    return trader
+    return None

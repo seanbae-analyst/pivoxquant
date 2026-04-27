@@ -167,7 +167,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       {
         label: "Four Tiers",
         href: "/#pricing",
-        description: "Observer, Pro, Premium, Elite — priced in KRW.",
+        description: "Free, Pro, Premium — priced in KRW.",
         icon: Receipt,
       },
       {

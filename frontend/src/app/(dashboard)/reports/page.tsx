@@ -90,8 +90,12 @@ function ArtifactCard({
     declaredPersona !== null &&
     !entry.personas.includes("all") &&
     entry.personas.includes(declaredPersona);
+  // New PDF design system — see design_handoff_pdf_reports/. React preview routes
+  // (kebab-cased) live at /reports/preview/{slug}; legacy PDF samples remain in
+  // /public/samples/ (underscored) until headless-Chrome rebuild lands.
+  const previewRoute = `/reports/preview/${entry.slug.replace(/_/g, "-")}`;
   const samplePdf = `/samples/${entry.slug}.pdf`;
-  const viewHref = live ? API.artifacts.preview(live.id) : samplePdf;
+  const viewHref = live ? API.artifacts.preview(live.id) : previewRoute;
   const downloadHref = live ? API.artifacts.download(live.id) : samplePdf;
 
   const lastGenerated =

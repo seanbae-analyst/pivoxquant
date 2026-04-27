@@ -593,10 +593,10 @@ export default function ProfilePage() {
   const tier = (user?.subscription_tier ?? "observer").toLowerCase();
   const tierLabel =
     tier === "pro" || tier === "operator"
-      ? "Operator"
+      ? "Pro"
       : tier === "premium" || tier === "partner"
-        ? "Partner"
-        : "Observer";
+        ? "Premium"
+        : "Free";
 
   const handleSaveName = useCallback(
     async (e: React.FormEvent) => {

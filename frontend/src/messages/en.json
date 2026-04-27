@@ -8,7 +8,6 @@
     "discover": "Discover",
     "watchlist": "Watchlist",
     "ai": "AI Assistant",
-    "autotrade": "AutoTrade",
     "risk": "Risk",
     "alerts": "Alerts",
     "reports": "My Reports",
@@ -209,14 +208,6 @@
       "safe": "Safe",
       "warning": "Warning",
       "critical": "Critical"
-    },
-    "autotrade": {
-      "title": "AutoTrade",
-      "paperMode": "Paper Mode",
-      "killSwitch": "Kill Switch",
-      "enable": "Enable",
-      "disable": "Disable",
-      "status": "Status"
     },
     "alerts": {
       "title": "Alerts",
