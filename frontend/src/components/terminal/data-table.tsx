@@ -135,13 +135,12 @@ export function DataTable<R extends { id: string | number }>({
       role="grid"
       aria-label={label}
       onKeyDown={onKeyDown}
-      className={`pq-data-table ${className}`.trim()}
+      className={`pq-data-table font-mono ${className}`.trim()}
       style={{
         background: "#0B0E14",
         border: "1px solid #1A1F2E",
         overflow: "auto",
         outline: "none",
-        fontFamily: "var(--font-mono), ui-monospace, Menlo, monospace",
       }}
     >
       <table

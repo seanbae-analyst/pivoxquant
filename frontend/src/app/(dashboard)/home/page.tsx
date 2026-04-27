@@ -221,18 +221,23 @@ export default function HomePage() {
   const positions = useMemo(() => posData?.positions ?? [], [posData]);
   const positionCount = summary?.positionCount ?? positions.length;
 
-  /* Top holding ticker — drives the candlestick chart below.
-     Sorted by market value (current price × shares) desc.
-     Falls back to null when portfolio is empty → empty-state UI. */
-  const topTicker = useMemo<string | null>(() => {
+  /* Top holding — drives the candlestick chart below. Sorted by market
+     value (current price × shares) desc. Returns the company name as the
+     primary identity (display) and the ticker as the secondary technical
+     handle (chart fetch / link). Falls back to null when portfolio is
+     empty → empty-state UI. */
+  const topHolding = useMemo<{ ticker: string; name: string } | null>(() => {
     if (!positions || positions.length === 0) return null;
     const ranked = [...positions].sort((a, b) => {
       const av = (a.current ?? 0) * (a.shares ?? 0);
       const bv = (b.current ?? 0) * (b.shares ?? 0);
       return bv - av;
     });
-    return ranked[0]?.symbol ?? null;
+    const top = ranked[0];
+    if (!top?.symbol) return null;
+    return { ticker: top.symbol, name: top.name || top.symbol };
   }, [positions]);
+  const topTicker = topHolding?.ticker ?? null;
 
   const bookCurrency: "USD" | "KRW" =
     positions.length > 0 && positions.every((p) => p.currency === "KRW")
@@ -874,6 +879,8 @@ export default function HomePage() {
           style={{ padding: "0 2px" }}
         >
           <div style={{ minWidth: 0 }}>
+            {/* Eyebrow — section label only (mono uppercase remains the
+                design signature for eyebrows; numbers/codes excluded). */}
             <div
               className="font-mono uppercase"
               style={{
@@ -882,10 +889,39 @@ export default function HomePage() {
                 color: "var(--pq-bronze)",
               }}
             >
-              {topTicker
-                ? `Top Holding · ${topTicker} · 1D`
-                : "Top Holding · 1D"}
+              Top Holding
             </div>
+            {/* Name first, ticker as a small bronze handle. CEO directive
+                2026-04-26: "ticker 번호 두면 어케 아냐 종목 이름을 둬야지" — so
+                the company name leads, and the ticker code is demoted to a
+                secondary technical handle next to it. */}
+            {topHolding ? (
+              <h2
+                className="font-serif"
+                style={{
+                  fontSize: 20,
+                  lineHeight: 1.2,
+                  color: "var(--pq-ivory)",
+                  margin: "4px 0 0 0",
+                  fontWeight: 500,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                {topHolding.name}
+                <span
+                  className="font-mono"
+                  style={{
+                    marginLeft: 10,
+                    fontSize: 11,
+                    letterSpacing: "0.06em",
+                    color: "rgba(245,240,232,0.45)",
+                    fontWeight: 400,
+                  }}
+                >
+                  {topHolding.ticker}
+                </span>
+              </h2>
+            ) : null}
             <p
               className="font-serif"
               style={{

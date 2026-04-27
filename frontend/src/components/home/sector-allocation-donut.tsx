@@ -38,18 +38,27 @@ interface SectorRow {
   color: string;
 }
 
-/** Bronze gradient, light → deep, 6 stops. Ordered by allocation desc. */
-const BRONZE_RAMP = [
-  "#D9B584",
-  "#C8A475",
-  "#B8956A",
-  "#A3845C",
-  "#8B6F47",
-  "#6F5636",
+/** Sector palette — distinct hues kept inside the muted Vantablack tone
+ *  family. Each sector gets its own identity so the donut reads at a
+ *  glance, but no color is bright/saturated enough to break the editorial
+ *  ink mood. CEO directive 2026-04-27: previous bronze-only ramp was
+ *  unreadable. Hues: bronze / sage / dusty-blue / muted-rose / mauve /
+ *  warm-grey / olive / steel — calibrated lightness ~55-65 / chroma low. */
+const SECTOR_PALETTE = [
+  "#B8956A",  // bronze         — primary
+  "#7DB487",  // sage green
+  "#7AA0C8",  // dusty blue
+  "#C28F8F",  // muted rose
+  "#9B89B3",  // dusty mauve
+  "#B5A98F",  // warm grey
+  "#9AAB7E",  // olive
+  "#88A6B8",  // steel blue
+  "#C4A47C",  // sand
+  "#A8908F",  // taupe-rose
 ];
 
-/** Fallback for sectors beyond the 6th — desaturated bronze. */
-const BRONZE_TAIL = "#5A4A36";
+/** Fallback for sectors beyond the palette length. */
+const BRONZE_TAIL = "#6F5636";
 
 function fmtMoney(n: number, currency: "USD" | "KRW"): string {
   if (!Number.isFinite(n)) return "—";
@@ -85,24 +94,37 @@ function DonutTooltip({ active, payload, currency }: DonutTooltipProps) {
         fontSize: 11,
         lineHeight: 1.55,
         color: "var(--pq-ivory)",
-        fontFamily:
-          "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace",
       }}
     >
+      {/* Sector name — serif (text identity, not a number/code). */}
       <div
+        className="font-serif"
         style={{
           color: "var(--pq-bronze)",
-          letterSpacing: "0.1em",
+          letterSpacing: "0.04em",
           marginBottom: 4,
-          textTransform: "uppercase",
+          fontSize: 12,
         }}
       >
         {row.sector}
       </div>
-      <div>{row.pct.toFixed(1)}% of book</div>
-      <div style={{ color: "rgba(245, 240, 232, 0.7)" }}>
-        {fmtMoney(row.value, currency)} · {row.count}{" "}
-        {row.count === 1 ? "position" : "positions"}
+      <div className="font-mono tabular-nums">
+        {row.pct.toFixed(1)}%{" "}
+        <span className="font-serif" style={{ fontSize: 10.5, color: "rgba(245,240,232,0.55)" }}>
+          of book
+        </span>
+      </div>
+      <div
+        className="font-mono tabular-nums"
+        style={{ color: "rgba(245, 240, 232, 0.7)" }}
+      >
+        {fmtMoney(row.value, currency)}
+        <span
+          className="font-serif"
+          style={{ fontSize: 10.5, color: "rgba(245,240,232,0.55)", marginLeft: 6 }}
+        >
+          · {row.count} {row.count === 1 ? "position" : "positions"}
+        </span>
       </div>
     </div>
   );
@@ -142,7 +164,7 @@ export function SectorAllocationDonut({
         value: b.value,
         count: b.count,
         pct: (b.value / total) * 100,
-        color: BRONZE_RAMP[i] ?? BRONZE_TAIL,
+        color: SECTOR_PALETTE[i] ?? BRONZE_TAIL,
       }));
 
     return sorted;
@@ -182,6 +204,7 @@ export function SectorAllocationDonut({
           No data
         </div>
         <div
+          className="font-serif"
           style={{
             fontSize: 12,
             lineHeight: 1.6,
@@ -305,8 +328,6 @@ export function SectorAllocationDonut({
           gap: 4,
           minWidth: 0,
           overflowY: "auto",
-          fontFamily:
-            "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace",
           fontSize: 11,
         }}
       >
@@ -334,18 +355,20 @@ export function SectorAllocationDonut({
               }}
             />
             <span
+              className="font-serif"
               style={{
                 color: "rgba(245, 240, 232, 0.78)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                fontSize: 11,
+                fontSize: 12,
               }}
               title={`${r.sector} · ${r.count} ${r.count === 1 ? "position" : "positions"}`}
             >
               {r.sector}
             </span>
             <span
+              className="font-mono"
               style={{
                 color: "var(--pq-bronze)",
                 fontVariantNumeric: "tabular-nums",
