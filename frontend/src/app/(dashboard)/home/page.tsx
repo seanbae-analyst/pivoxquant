@@ -10,8 +10,10 @@
  *
  * Layout:
  *   ┌── TopTicker (live) ──────────────────────────────────┐
+ *   ├─ TodayMemoHero — CFO hero with Artifact CTA chips ─┤
  *   ├─ Today Brief │ Portfolio Snapshot │ Risk Gauges ──┤
  *   ├─ Positions table │ Watchlist table ──────────────┤
+ *   ├─ Equity Curve 90d │ Sector Allocation Donut ────┤
  *   ├─ Candlestick chart (NVDA 1D + MA20/50 + Volume) ─┤
  *   ├─ Signals stream │ Pulse Activity ───────────────┤
  *   └─ Companion entry │ Feedback summary ──────────────┘
@@ -39,6 +41,9 @@ import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 import { UpsellPlus } from "@/components/dashboard/upsell-plus";
 import { ArtifactQueue } from "@/components/home/artifact-queue";
+import { TodayMemoHero } from "@/components/home/today-memo-hero";
+import { EquityCurveChart } from "@/components/home/equity-curve-chart";
+import { SectorAllocationDonut } from "@/components/home/sector-allocation-donut";
 
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -198,7 +203,7 @@ export default function HomePage() {
   const { data: watch } = useWatchlist() as {
     data: WatchlistResponse | undefined;
   };
-  const { data: brief } = useSWR<MorningBriefResponse>(
+  const { data: brief, isLoading: briefLoading } = useSWR<MorningBriefResponse>(
     API.market.morningBriefToday,
     fetcher,
     briefOpts,
@@ -225,6 +230,20 @@ export default function HomePage() {
   const briefText =
     brief?.available !== false
       ? brief?.brief?.insight ?? brief?.brief?.summary ?? null
+      : null;
+
+  // Hero variant: prefer insight as headline, fall back to summary; if both
+  // exist, render summary as the body paragraph beneath the headline.
+  const heroHeadline =
+    brief?.available !== false
+      ? brief?.brief?.insight ?? brief?.brief?.summary ?? null
+      : null;
+  const heroBody =
+    brief?.available !== false &&
+    brief?.brief?.insight &&
+    brief?.brief?.summary &&
+    brief.brief.insight !== brief.brief.summary
+      ? brief.brief.summary ?? null
       : null;
 
   const displayName = user?.name?.split(" ")[0] || "Observer";
@@ -256,9 +275,13 @@ export default function HomePage() {
         header: "Ticker",
         width: "96px",
         render: (r) => (
-          <span style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}>
+          <Link
+            href={`/detail/${encodeURIComponent(r.ticker)}`}
+            className="pq-ticker-link"
+            style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}
+          >
             {r.ticker}
-          </span>
+          </Link>
         ),
       },
       {
@@ -338,9 +361,13 @@ export default function HomePage() {
         header: "Ticker",
         width: "96px",
         render: (r) => (
-          <span style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}>
+          <Link
+            href={`/detail/${encodeURIComponent(r.ticker)}`}
+            className="pq-ticker-link"
+            style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}
+          >
             {r.ticker}
-          </span>
+          </Link>
         ),
       },
       {
@@ -420,9 +447,13 @@ export default function HomePage() {
         header: "Ticker",
         width: "96px",
         render: (r) => (
-          <span style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}>
+          <Link
+            href={`/detail/${encodeURIComponent(r.ticker)}`}
+            className="pq-ticker-link"
+            style={{ color: "var(--pq-bronze)", letterSpacing: "0.04em" }}
+          >
             {r.ticker}
-          </span>
+          </Link>
         ),
       },
       {
@@ -501,6 +532,14 @@ export default function HomePage() {
       >
         <LivingCFOStatusBar />
       </div>
+
+      {/* ═══════════ CFO HERO — Today's memo + Artifact CTAs ═══════════ */}
+      <TodayMemoHero
+        headline={heroHeadline}
+        body={heroBody}
+        loading={briefLoading && heroHeadline == null}
+        displayName={displayName}
+      />
 
       {/* ═══════════ Row 1 — Today Brief │ Snapshot │ Risk Gauges ═══════════ */}
       <section
@@ -717,6 +756,78 @@ export default function HomePage() {
             rows={watchRows}
             label="Watchlist"
             emptyState="Watchlist empty — add symbols from /watchlist."
+          />
+        </div>
+      </section>
+
+      {/* ═══════════ Row 2.5 — Equity Curve │ Sector Allocation ═══════════ */}
+      <section
+        className="grid gap-3 mb-3"
+        style={{
+          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+        }}
+      >
+        <div>
+          <div
+            className="flex items-center justify-between mb-1"
+            style={{ padding: "0 2px" }}
+          >
+            <span
+              className="font-mono uppercase"
+              style={{
+                fontSize: 9.5,
+                letterSpacing: "0.24em",
+                color: "var(--pq-bronze)",
+              }}
+            >
+              Equity Curve · 90d
+            </span>
+            <Link
+              href="/portfolio"
+              className="font-mono uppercase"
+              style={{
+                fontSize: 9,
+                letterSpacing: "0.2em",
+                color: "rgba(245,240,232,0.4)",
+              }}
+            >
+              Open Book ›
+            </Link>
+          </div>
+          <EquityCurveChart currency={bookCurrency} height={240} />
+        </div>
+
+        <div>
+          <div
+            className="flex items-center justify-between mb-1"
+            style={{ padding: "0 2px" }}
+          >
+            <span
+              className="font-mono uppercase"
+              style={{
+                fontSize: 9.5,
+                letterSpacing: "0.24em",
+                color: "var(--pq-bronze)",
+              }}
+            >
+              Sector Allocation
+            </span>
+            <span
+              className="font-mono uppercase"
+              style={{
+                fontSize: 9,
+                letterSpacing: "0.2em",
+                color: "rgba(245,240,232,0.4)",
+              }}
+            >
+              {positions.length}{" "}
+              {positions.length === 1 ? "position" : "positions"}
+            </span>
+          </div>
+          <SectorAllocationDonut
+            positions={positions}
+            currency={bookCurrency}
+            height={240}
           />
         </div>
       </section>

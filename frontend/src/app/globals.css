@@ -3224,3 +3224,21 @@ html {
   text-transform: uppercase;
   color: rgba(245, 240, 232, 0.35);
 }
+
+/* Ticker link in dashboard tables — bronze accent + bronze-light on hover */
+.pq-ticker-link {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  transition: color 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pq-ticker-link:hover {
+  color: var(--pq-bronze-light) !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.pq-ticker-link:focus-visible {
+  outline: 1px solid var(--pq-bronze-light);
+  outline-offset: 2px;
+}
