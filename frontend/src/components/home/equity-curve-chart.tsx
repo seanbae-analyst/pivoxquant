@@ -274,12 +274,15 @@ export function EquityCurveChart({
               fontSize: 10,
               fill: "rgba(245, 240, 232, 0.55)",
               fontFamily:
-                "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace",
+                "var(--font-serif), Georgia, 'Source Serif 4', serif",
             }}
             tickLine={false}
             axisLine={{ stroke: "rgba(245, 240, 232, 0.10)" }}
             minTickGap={32}
           />
+          {/* Per CEO 2026-04-27 broad serif directive: chart axis ticks
+              also switch to serif. Trades a bit of tabular-nums precision
+              for visual consistency with the rest of /home. */}
           <YAxis
             domain={yDomain}
             tickFormatter={(v: number) => fmtAxisMoney(v, currency)}
@@ -288,7 +291,7 @@ export function EquityCurveChart({
               fontSize: 10,
               fill: "rgba(245, 240, 232, 0.55)",
               fontFamily:
-                "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace",
+                "var(--font-serif), Georgia, 'Source Serif 4', serif",
             }}
             tickLine={false}
             axisLine={false}

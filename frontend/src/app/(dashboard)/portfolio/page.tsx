@@ -250,12 +250,13 @@ export default function PortfolioPage() {
       {hasLoadError && (
         <div
           role="alert"
-          className="mb-4 flex items-center justify-between gap-3 px-4 py-3 font-mono text-[11px] uppercase tracking-[0.18em]"
+          className="mb-4 flex items-center justify-between gap-3 px-4 py-3 font-serif text-[12.5px]"
           style={{
             background: "rgba(226, 185, 111, 0.06)",
             borderTop: "1px solid var(--pq-bronze)",
             borderBottom: "1px solid var(--pq-bronze)",
             color: "var(--pq-bronze)",
+            letterSpacing: "0.005em",
           }}
         >
           <span>
@@ -264,7 +265,7 @@ export default function PortfolioPage() {
           <button
             type="button"
             onClick={refreshAll}
-            className="underline-offset-4 hover:underline"
+            className="underline-offset-4 hover:underline font-serif"
           >
             Refresh
           </button>
