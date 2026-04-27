@@ -477,3 +477,44 @@ fd7c68c  fix(ci): accept 401 from /api/market/indices in daily smoke
 
 **v10 작성**: 2026-04-27 (자율 모드 마무리)
 **최신 commit**: `6030d64`
+
+---
+
+# v10.1 — 2026-04-27 P0 진단 (자율 모드 종료 시점)
+
+## 17. P0 7건 정밀 진단 결과 — **자율 fix 불가 4건 발견**
+
+investigator가 file:line 단위로 검증한 결과:
+
+### 17-A. 코드는 멀쩡, 런타임 원인 의심 (4건)
+- **Search Stock**: top-bar.tsx:42 `onClick={() => openSearchCommand()}` + search-command.tsx:124-132 listener 정상. fetch endpoint도 `/api/search` (routes/market.py:37) 살아있음. **"안 눌림" = 런타임**.
+- **Watchlist +**: watchlist/page.tsx:145 `onClick={() => setShowAdd(true)}` + AddSymbolModal 렌더 정상. POST `/api/watchlist` 백엔드 존재.
+- **알림 벨**: notification-dropdown.tsx:62-306 완전 구현. SWR fetch + 외부 클릭 닫기 + Esc 닫기 모두.
+- **프로필 드롭다운**: profile-dropdown.tsx:33-183. open state + ModalShell + 6개 메뉴 항목.
+
+→ 진짜 원인 후보: 로그인 세션 미인증(`@api_auth`)·CSS z-index·dev/prod 빌드 차이. **라이브 클릭 + 콘솔/네트워크 진단으로만 좁힘 가능**.
+
+### 17-B. 의도적 비활성화 / 외부 의존 (3건)
+- **Connect Alpaca**: `ALPACA_ENABLED=0` kill switch. 백엔드 broker_oauth.py:365-367이 503 반환. 코드 주석: "My Data 라이선스 미해결 = 컴플라이언스 위반". **법적 판단 필요**.
+- **KOSPI/KOSDAQ**: market.py:692-704가 KIS API 호출. 토큰 만료 시 mock_indices.ts의 2024 수치로 폴백. CEO가 본 "데이터 없음"이 mock 수치였을 가능성. **KIS token 갱신 + market.py 폴백 동작 검증 필요**.
+- **Discover FMP 402**: fmp_service.py:64-69 — FMP $29 Starter 250 calls/day 한도. 코드 레벨 fix 불가. **$49+ 플랜 결제 필요**.
+
+## 18. 자율 모드 종료 사유
+
+"안 눌림" 4건의 코드를 만지면 멀쩡한 걸 망가뜨릴 위험 → 자율 fix 시작하지 않음. CEO가 라이브에서 클릭 + 콘솔(F12) + Network 탭 확인 후 진짜 원인을 알려주면 정확한 fix 가능.
+
+## 19. 다음 세션 시작점 (수정)
+
+### P0-A (CEO 결정 필요)
+- 4건 라이브 진단 (Search/Watchlist/알림벨/프로필) — 5분, 콘솔 로그 알려주기
+- Alpaca 라이선스 법적 판단
+- FMP 플랜 업그레이드 결정 ($49 vs 캐싱 최적화)
+
+### P0-B (자율 가능)
+- KOSPI/KOSDAQ mock 2024 폴백을 명시적 "데이터 없음" 또는 KIS 재연결 시도 (30-60분)
+- 4건 라이브 진단 결과 받으면 즉시 fix
+
+---
+
+**v10.1 작성**: 2026-04-27 (P0 진단 + 자율 종료)
+**최신 commit**: `728ecb9`
