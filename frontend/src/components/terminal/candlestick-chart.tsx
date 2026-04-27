@@ -156,7 +156,7 @@ export function CandlestickChart({
           background: { type: lc.ColorType.Solid, color: "#0B0E14" },
           textColor: "rgba(245,240,232,0.65)",
           fontFamily:
-            "var(--font-mono), ui-monospace, Menlo, monospace",
+            "var(--font-serif), Georgia, 'Source Serif 4', serif",
           fontSize: 10,
         },
         grid: {

@@ -287,8 +287,8 @@ export default function DiscoverPage() {
                     {fmtPct(o.changePct)}
                   </div>
                   {o.observed_at && (
-                    <div className="mt-1 flex items-center gap-1.5 font-mono text-[9.5px] text-[rgba(245,240,232,0.4)] tabular-nums">
-                      <span>Last obs {relativeTime(o.observed_at, nowMs)}</span>
+                    <div className="mt-1 flex items-center gap-1.5 text-[9.5px] text-[rgba(245,240,232,0.4)]">
+                      <span className="font-serif">Last obs <span className="font-mono tabular-nums">{relativeTime(o.observed_at, nowMs)}</span></span>
                       {o.is_stale && (
                         <span
                           aria-label="Stale quote"
