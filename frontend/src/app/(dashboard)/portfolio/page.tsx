@@ -19,7 +19,6 @@
 
 import { useMemo, useState, useEffect } from "react";
 import useSWR, { mutate } from "swr";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { FootSignature, RuledKicker } from "@/components/ui/editorial";
 import { DossierDesk } from "@/components/home/dossier-desk";
@@ -380,11 +379,8 @@ export default function PortfolioPage() {
         </div>
       </DossierDesk>
 
-      {/* Editorial foot signature + disclaimer */}
+      {/* Editorial foot signature — legal disclaimer mounted by (dashboard)/layout.tsx */}
       <FootSignature note="PivoxQuant &middot; User-entered record &middot; Not investment advice" />
-      <div className="mt-4 text-[rgba(245,240,232,0.7)]">
-        <DisclaimerBanner type="signal" />
-      </div>
 
       {/* Modals — overlaid, retain existing ivory styling */}
       <AddPositionModal

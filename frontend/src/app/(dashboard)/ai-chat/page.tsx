@@ -22,7 +22,6 @@ import {
 import { Send, StopCircle } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { API } from "@/lib/endpoints";
 
 /* ── Types ── */
@@ -415,10 +414,7 @@ function ChatInner() {
         </p>
       </footer>
 
-      {/* DisclaimerBanner — page bottom, generous gap */}
-      <div className="mt-12 pt-8 border-t border-[rgba(245,240,232,0.06)]">
-        <DisclaimerBanner type="ai-analysis" />
-      </div>
+      {/* Legal disclaimer mounted by (dashboard)/layout.tsx — do not re-mount. */}
     </div>
   );
 }

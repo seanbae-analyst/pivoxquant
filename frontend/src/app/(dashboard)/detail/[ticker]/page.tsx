@@ -136,12 +136,19 @@ interface SwotResponse {
   swot_kr?: string;
 }
 
-// Earnings calendar — GET /api/earnings (filtered by ticker client-side)
+// Earnings calendar — GET /api/earnings (filtered by ticker client-side).
+// Backend (routes/market.py:440) returns:
+//   { earnings: [{ ticker, name, date, signal, score }] }
+// `signal` is POSITIVE/NEGATIVE/NEUTRAL/—. eps_*/revenue_* fields are
+// kept optional for forward-compat if backend ever extends the schema.
 interface EarningsItem {
   ticker?: string;
-  symbol?: string;
+  symbol?: string;        // alias compat — not currently emitted
+  name?: string;
   date?: string;
-  eps_estimate?: number | null;
+  signal?: "POSITIVE" | "NEGATIVE" | "NEUTRAL" | "—" | string;
+  score?: number;
+  eps_estimate?: number | null;       // forward-compat (unused today)
   eps_actual?: number | null;
   revenue_estimate?: number | null;
   revenue_actual?: number | null;

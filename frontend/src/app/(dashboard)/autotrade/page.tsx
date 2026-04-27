@@ -15,7 +15,6 @@ import useSWR from "swr";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { TierGate } from "@/components/ui/tier-gate";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
   Bot,
@@ -535,10 +534,12 @@ function AutoTradeContent() {
         </div>
       </section>
 
-      {/* Disclaimer */}
-      <div className="mt-10 border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
-        <DisclaimerBanner type="auto-trade" alwaysExpanded />
-      </div>
+      {/*
+        Legal disclaimer for auto-trade is mounted by (dashboard)/layout.tsx,
+        which detects this path and applies type="auto-trade" with
+        alwaysExpanded — preserving the highest-risk surface guarantee
+        without duplicating banners on the page.
+      */}
     </>
   );
 }

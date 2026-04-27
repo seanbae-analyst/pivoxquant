@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * <EquityCurveChart /> — 90d portfolio NAV time-series on /home.
+ * <EquityCurveChart /> — 3-month portfolio NAV time-series on /home.
  *
  * Backend: GET /api/portfolio/history?period=3mo → { data: [{date, value}] }
  * (3mo ≈ 90 trading days). No mock fallback: empty / loading / error each
@@ -205,7 +205,7 @@ export function EquityCurveChart({
   );
 
   if (isLoading) {
-    return <Frame label="Loading">90-day equity curve resolving…</Frame>;
+    return <Frame label="Loading">3-month equity curve resolving…</Frame>;
   }
   if (error) {
     return (
@@ -217,8 +217,8 @@ export function EquityCurveChart({
   if (rows.length === 0) {
     return (
       <Frame label="No data">
-        No portfolio history yet. Add a position to see your 90-day equity
-        curve.
+        No portfolio history yet. Add a position to see your 3-month
+        equity curve.
       </Frame>
     );
   }

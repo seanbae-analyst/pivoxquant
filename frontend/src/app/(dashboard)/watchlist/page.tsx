@@ -17,7 +17,6 @@ import { useWatchlist } from "@/lib/hooks";
 import { fmtPct, pctColorClass } from "@/lib/format";
 import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import {
   Caption,
   Fleuron,
@@ -245,11 +244,8 @@ export default function WatchlistPage() {
           </div>
         )}
 
-      {/* Editorial signature + Disclaimer */}
+      {/* Editorial signature — legal disclaimer mounted by (dashboard)/layout.tsx */}
       <FootSignature />
-      <div className="mt-4 text-[rgba(245,240,232,0.7)]">
-        <DisclaimerBanner type="signal" />
-      </div>
 
       {showAdd && (
         <AddSymbolModal
