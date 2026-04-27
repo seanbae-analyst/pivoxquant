@@ -218,3 +218,35 @@ export function usePortfolioPositions<T = any>() {
 
 export { useRealtimeContext } from "./realtime";
 export type { RealtimePriceDetail, PriceDirection, RealtimeState } from "./realtime";
+
+/* ── Macro tape (US 10Y / VIX / FX / Gold / WTI / Fear&Greed) ── */
+
+export interface MacroQuote { price: number; change_pct: number; name?: string }
+export interface MacroResponse {
+  vix?: number;
+  treasury_10y?: number;
+  sp500?: MacroQuote;
+  nasdaq?: MacroQuote;
+  dow?: MacroQuote;
+  russell2000?: MacroQuote;
+  kospi?: MacroQuote;
+  kosdaq?: MacroQuote;
+  gold?: MacroQuote;
+  silver?: MacroQuote;
+  oil_wti?: MacroQuote;
+  usdkrw?: MacroQuote;
+  eurusd?: MacroQuote;
+  usdjpy?: MacroQuote;
+  dxy?: MacroQuote;
+  btc?: MacroQuote;
+  fear_greed?: { value: number; label: string };
+  yield_curve?: Record<string, number>;
+}
+
+export function useMacro() {
+  return useSWR<MacroResponse>(API.market.macro, fetcher, {
+    refreshInterval: 60_000,
+    revalidateOnFocus: false,
+    dedupingInterval: 30_000,
+  });
+}

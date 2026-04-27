@@ -31,7 +31,7 @@ import {
   Loader2,
   Lock,
 } from "lucide-react";
-import { useMorningBrief, useMorningBriefArchive } from "@/lib/hooks";
+import { useMorningBrief, useMorningBriefArchive, useMacro } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
@@ -253,12 +253,31 @@ function ArchiveRow({ item }: { item: MorningBriefArchiveItem }) {
 export default function MorningBriefPage() {
   const { data: today, isLoading: todayLoading } = useMorningBrief();
   const { data: archive } = useMorningBriefArchive();
+  const { data: macro, isLoading: macroLoading } = useMacro();
   const { mutate } = useSWRConfig();
   const now = useNowTick(1000);
   const refreshBrief = () => {
     mutate(API.market.morningBriefToday);
     mutate(API.market.morningBriefArchive);
   };
+
+  // Cross-asset tape — formatted strings ready for MacroTile
+  const macroTiles = useMemo(() => {
+    const fmt = (v: number | undefined, opts?: { decimals?: number; prefix?: string }) =>
+      v == null || !Number.isFinite(v)
+        ? "—"
+        : `${opts?.prefix ?? ""}${v.toLocaleString(undefined, {
+            minimumFractionDigits: opts?.decimals ?? 2,
+            maximumFractionDigits: opts?.decimals ?? 2,
+          })}`;
+    return {
+      us10y: fmt(macro?.treasury_10y, { decimals: 2 }) + (macro?.treasury_10y != null ? "%" : ""),
+      vix: fmt(macro?.vix, { decimals: 2 }),
+      usdkrw: fmt(macro?.usdkrw?.price, { decimals: 2 }),
+      gold: fmt(macro?.gold?.price, { decimals: 2, prefix: "$" }),
+      wti: fmt(macro?.oil_wti?.price, { decimals: 2, prefix: "$" }),
+    };
+  }, [macro]);
 
   const todayDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -361,14 +380,14 @@ export default function MorningBriefPage() {
         <section>
           <h2 className="pq-ink-h2 mb-4">Cross-asset</h2>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <MacroTile label="US 10Y" value="—" />
-            <MacroTile label="VIX" value="—" />
-            <MacroTile label="USD/KRW" value="—" />
-            <MacroTile label="Gold" value="—" />
-            <MacroTile label="WTI" value="—" />
+            <MacroTile label="US 10Y" value={macroLoading ? "…" : macroTiles.us10y} />
+            <MacroTile label="VIX" value={macroLoading ? "…" : macroTiles.vix} />
+            <MacroTile label="USD/KRW" value={macroLoading ? "…" : macroTiles.usdkrw} />
+            <MacroTile label="Gold" value={macroLoading ? "…" : macroTiles.gold} />
+            <MacroTile label="WTI" value={macroLoading ? "…" : macroTiles.wti} />
           </div>
           <p className="mt-3 text-xs text-[rgba(245,240,232,0.4)]">
-            Values stream from the macro tape at 9:00 KST.
+            Live · refreshes every 60s. FRED + FMP + Alpaca composite tape.
           </p>
         </section>
 
