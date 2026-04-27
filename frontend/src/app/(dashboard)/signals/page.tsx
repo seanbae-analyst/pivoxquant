@@ -29,7 +29,6 @@ import useSWR from "swr";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { liveRefresh } from "@/lib/market-hours";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { FootSignature } from "@/components/ui/editorial";
 import { RefreshCw, Zap } from "lucide-react";
@@ -431,11 +430,8 @@ export default function SignalsPage() {
         </DossierDesk>
       )}
 
-      {/* Foot signature + legal */}
+      {/* Foot signature — legal disclaimer mounted by (dashboard)/layout.tsx */}
       <FootSignature />
-      <div className="mt-4 text-[rgba(245,240,232,0.7)]">
-        <DisclaimerBanner type="signal" />
-      </div>
     </ErrorBoundary>
   );
 }

@@ -13,8 +13,8 @@
  *   ├─ TodayMemoHero — CFO hero with Artifact CTA chips ─┤
  *   ├─ Today Brief │ Portfolio Snapshot │ Risk Gauges ──┤
  *   ├─ Positions table │ Watchlist table ──────────────┤
- *   ├─ Equity Curve 90d │ Sector Allocation Donut ────┤
- *   ├─ Candlestick chart (NVDA 1D + MA20/50 + Volume) ─┤
+ *   ├─ Equity Curve 3mo │ Sector Allocation Donut ────┤
+ *   ├─ Candlestick chart (top holding 1D + MA20/50 + Vol) ─┤
  *   ├─ Signals stream │ Pulse Activity ───────────────┤
  *   └─ Companion entry │ Feedback summary ──────────────┘
  *
@@ -28,9 +28,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import useSWR from "swr";
 
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { FootSignature } from "@/components/ui/editorial";
+import { FootSignature, Fleuron } from "@/components/ui/editorial";
 
 import { TopTicker } from "@/components/terminal/top-ticker";
 import { KpiCard } from "@/components/terminal/kpi-card";
@@ -221,6 +220,19 @@ export default function HomePage() {
 
   const positions = useMemo(() => posData?.positions ?? [], [posData]);
   const positionCount = summary?.positionCount ?? positions.length;
+
+  /* Top holding ticker — drives the candlestick chart below.
+     Sorted by market value (current price × shares) desc.
+     Falls back to null when portfolio is empty → empty-state UI. */
+  const topTicker = useMemo<string | null>(() => {
+    if (!positions || positions.length === 0) return null;
+    const ranked = [...positions].sort((a, b) => {
+      const av = (a.current ?? 0) * (a.shares ?? 0);
+      const bv = (b.current ?? 0) * (b.shares ?? 0);
+      return bv - av;
+    });
+    return ranked[0]?.symbol ?? null;
+  }, [positions]);
 
   const bookCurrency: "USD" | "KRW" =
     positions.length > 0 && positions.every((p) => p.currency === "KRW")
@@ -780,7 +792,7 @@ export default function HomePage() {
                 color: "var(--pq-bronze)",
               }}
             >
-              Equity Curve · 90d
+              Equity Curve · 3mo
             </span>
             <Link
               href="/portfolio"
@@ -832,7 +844,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══════════ Row 3 — NVDA Candlestick (full width) ═══════════ */}
+      {/* ═══════════ Row 3 — Top Holding Candlestick (full width) ═══════════ */}
       <section className="mb-3">
         <div
           className="flex items-center justify-between mb-1"
@@ -846,26 +858,44 @@ export default function HomePage() {
               color: "var(--pq-bronze)",
             }}
           >
-            Flagship Chart — NVDA · 1D
+            {topTicker
+              ? `Top Holding · ${topTicker} · 1D`
+              : "Top Holding · 1D"}
           </span>
-          <Link
-            href="/detail/NVDA"
-            className="font-mono uppercase"
-            style={{
-              fontSize: 9,
-              letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.4)",
-            }}
-          >
-            Full View ›
-          </Link>
+          {topTicker ? (
+            <Link
+              href={`/detail/${encodeURIComponent(topTicker)}`}
+              className="font-mono uppercase"
+              style={{
+                fontSize: 9,
+                letterSpacing: "0.2em",
+                color: "rgba(245,240,232,0.4)",
+              }}
+            >
+              Full View ›
+            </Link>
+          ) : null}
         </div>
-        <CandlestickChart
-          ticker="NVDA"
-          timeframe="1D"
-          indicators={["ma20", "ma50", "volume"]}
-          height={320}
-        />
+        {topTicker ? (
+          <CandlestickChart
+            ticker={topTicker}
+            timeframe="1D"
+            indicators={["ma20", "ma50", "volume"]}
+            height={320}
+          />
+        ) : (
+          <div className="pq-ink-empty">
+            <Fleuron size={13} />
+            <p style={{ marginTop: 12, fontStyle: "italic" }}>
+              Add your first position to see your top holding chart.
+            </p>
+            <div style={{ marginTop: 16 }}>
+              <Link href="/portfolio" className="pq-ink-btn-bronze">
+                Open Portfolio
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ═══════════ Row 4 — Signals │ Pulse Activity ═══════════ */}
@@ -1018,10 +1048,11 @@ export default function HomePage() {
         <UpsellPlus />
       </div>
 
-      {/* ═══════════ Foot signature + legal ═══════════ */}
+      {/* ═══════════ Foot signature ═══════════ */}
+      {/* Legal disclaimer is mounted once by (dashboard)/layout.tsx as a
+          path-aware footer — do not re-mount here. */}
       <div className="mt-6">
         <FootSignature />
-        <DisclaimerBanner type="signal" />
       </div>
 
       {/* Weekly Pulse — auto-triggers Monday 07:00 KST */}

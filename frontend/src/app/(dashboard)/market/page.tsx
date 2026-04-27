@@ -34,7 +34,6 @@ import { apiFetch } from "@/lib/api";
 import { MARKET_INDICES, API } from "@/lib/endpoints";
 import { isMarketOpen, liveRefresh } from "@/lib/market-hours";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { FootSignature } from "@/components/ui/editorial";
 import { cn } from "@/lib/utils";
 
@@ -481,11 +480,8 @@ export default function MarketPage() {
         </div>
       </DossierDesk>
 
-      {/* Foot signature + legal banner */}
+      {/* Foot signature — legal disclaimer mounted by (dashboard)/layout.tsx */}
       <FootSignature />
-      <div className="mt-4 text-[rgba(245,240,232,0.7)]">
-        <DisclaimerBanner type="signal" />
-      </div>
     </ErrorBoundary>
   );
 }

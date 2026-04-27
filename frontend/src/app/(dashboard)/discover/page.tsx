@@ -31,7 +31,6 @@ import { fmtPct, pctColorClass } from "@/lib/format";
 import { useDiscover } from "@/lib/hooks";
 import type { DiscoverResult } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
   MOCK_INDICES,
@@ -454,9 +453,7 @@ export default function DiscoverPage() {
           )}
         </section>
 
-      <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
-        <DisclaimerBanner type="signal" />
-      </div>
+      {/* Legal disclaimer mounted by (dashboard)/layout.tsx — do not re-mount. */}
     </ErrorBoundary>
   );
 }

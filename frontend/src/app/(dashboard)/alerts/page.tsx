@@ -21,7 +21,6 @@ import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAlerts } from "@/lib/hooks";
 import type { AlertItem } from "@/lib/types";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
   Caption,
@@ -201,8 +200,7 @@ export default function AlertsPage() {
           ))}
         </section>
 
-        {/* ── Disclaimer ── */}
-        <DisclaimerBanner type="signal" />
+        {/* Legal disclaimer mounted by (dashboard)/layout.tsx — do not re-mount. */}
 
         {/* ── Filter tabs ── */}
         <div className="pq-ink-tabs flex gap-6 border-b border-[rgba(245,240,232,0.08)]">

@@ -18,7 +18,6 @@ import { useArtifacts } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
   Caption,
@@ -227,7 +226,7 @@ function ReportsPageInner() {
         </Caption>
       </header>
 
-      <DisclaimerBanner type="ai-analysis" />
+      {/* Legal disclaimer mounted by (dashboard)/layout.tsx (type="ai-analysis") */}
 
       {/* ── Peer benchmark context ──
            Weekly Memo / Brag Card are persona-aware artifacts. Surfacing the

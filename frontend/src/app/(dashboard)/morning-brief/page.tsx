@@ -33,7 +33,6 @@ import { cn } from "@/lib/utils";
 import { pctColorClass } from "@/lib/format";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import {
   Caption,
   Fleuron,
@@ -222,7 +221,7 @@ export default function MorningBriefPage() {
           </a>
         </header>
 
-        <DisclaimerBanner type="signal" />
+        {/* Legal disclaimer mounted by (dashboard)/layout.tsx — do not re-mount. */}
 
         {/* ── Overnight 3-up: Asia / Europe / US ── */}
         <section>

@@ -30,7 +30,6 @@ import {
   RISK_ROLLING_VAR,
 } from "@/lib/endpoints";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
 import {
   type RiskLayer,
@@ -521,10 +520,7 @@ export default function RiskPage() {
         </ul>
       </section>
 
-      {/* Disclaimer */}
-      <div className="border-t border-[rgba(245,240,232,0.1)] pt-6 text-[rgba(245,240,232,0.7)]">
-        <DisclaimerBanner type="signal" />
-      </div>
+      {/* Legal disclaimer mounted by (dashboard)/layout.tsx — do not re-mount. */}
     </ErrorBoundary>
   );
 }

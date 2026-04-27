@@ -1,16 +1,72 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { PushPermission } from "@/components/pwa/push-permission";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 
+/* ──────────────────────────────────────────────────────────────────
+   Path → DisclaimerBanner type resolver
+
+   Single-source legal disclaimer — mounted once per (dashboard) route.
+   Pages do NOT mount their own page-level DisclaimerBanner; the layout
+   picks the correct legal variant by pathname so each page gets the
+   most appropriate copy. Pages MAY still mount a DisclaimerBanner
+   inline INSIDE a section (e.g. SWOT box, hero strip) when the
+   contextual disclaimer is part of that section's content — those
+   are distinct from the page-level footer mounted here.
+   ────────────────────────────────────────────────────────────────── */
+
+type DisclaimerKind = "signal" | "ai-analysis" | "auto-trade" | "coaching";
+
+/** Longest-prefix matching: more specific paths first. */
+const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
+  // most specific / multi-segment first
+  ["/morning-brief", "signal"],
+  ["/ai-chat", "ai-analysis"],
+  ["/autotrade", "auto-trade"],
+  ["/watchlist", "signal"],
+  ["/portfolio", "signal"],
+  ["/companion", "ai-analysis"],
+  ["/discover", "signal"],
+  ["/settings", "signal"],
+  ["/profile", "signal"],
+  ["/reports", "ai-analysis"],
+  ["/signals", "signal"],
+  ["/alerts", "signal"],
+  ["/market", "signal"],
+  ["/detail", "signal"],
+  ["/growth", "signal"],
+  ["/risk", "signal"],
+  ["/home", "signal"],
+  ["/ai", "ai-analysis"],
+];
+
+/** Routes that need the banner force-expanded (highest-risk surfaces). */
+const ALWAYS_EXPANDED_PREFIXES: ReadonlyArray<string> = ["/autotrade"];
+
+function resolveDisclaimerType(pathname: string | null): DisclaimerKind {
+  if (!pathname) return "signal";
+  for (const [prefix, kind] of PATH_TO_TYPE) {
+    if (pathname === prefix || pathname.startsWith(prefix + "/")) return kind;
+  }
+  return "signal";
+}
+
+function shouldAlwaysExpand(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return ALWAYS_EXPANDED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -35,22 +91,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  const disclaimerType = resolveDisclaimerType(pathname);
+  const alwaysExpanded = shouldAlwaysExpand(pathname);
+
   return (
     <DashboardLayout>
       {children}
       {/*
         Single-source legal disclaimer footer — mounted once for every
-        (dashboard) route. Pages that need a contextual variant (signal,
-        ai-analysis, coaching, auto-trade) still mount their own
-        <DisclaimerBanner /> inline at the relevant section; this layout-level
-        instance guarantees the legally-required common notice appears on
-        every dashboard page even if a page is added without one.
-        Variant: "ai-analysis" — broadest applicability across analytics,
-        coaching, settings, growth, and profile surfaces. Theme: dark to
-        match the Vantablack dashboard shell (--pq-ink).
+        (dashboard) route, with the variant chosen by pathname.
+        Pages MAY mount their own <DisclaimerBanner /> inline INSIDE a
+        <section> when the disclaimer is part of that section's content
+        (e.g. detail-page SWOT box, hero strip, coaching tools). Those
+        contextual instances are intentional and live alongside this
+        layout-level footer.
       */}
       <div className="px-4 pb-6 md:px-10 md:pb-8">
-        <DisclaimerBanner type="ai-analysis" />
+        <DisclaimerBanner type={disclaimerType} alwaysExpanded={alwaysExpanded} />
       </div>
       <PushPermission />
     </DashboardLayout>

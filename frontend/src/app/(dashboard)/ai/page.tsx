@@ -8,7 +8,9 @@
  *   2. Stock Analysis — ticker-scoped accordion (SWOT / Competitor /
  *      Sector trend / Commentary), each fetched on first expand.
  *
- * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner top + bottom.
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL only. A contextual coaching
+ * DisclaimerBanner sits above the Stations; the page-level legal footer
+ * is provided by (dashboard)/layout.tsx (type="ai-analysis").
  * Editorial palette: Vantablack #050505, bronze hairlines, Source Serif 4
  * headings, JetBrains Mono numbers. No buy/sell/recommend language.
  */
@@ -527,8 +529,10 @@ export default function AiPage() {
             )}
           </section>
 
-          {/* ── Disclaimer + Editorial signature ── */}
-          <DisclaimerBanner type="ai-analysis" />
+          {/* Editorial signature — legal disclaimer mounted by (dashboard)/layout.tsx
+              as a path-aware footer (type="ai-analysis"). The contextual
+              type="coaching" banner above the Stations is intentional and
+              specific to the coaching surface. */}
           <FootSignature note="PivoxQuant &middot; AI Assistant &middot; Observational research only &middot; Not investment advice" />
         </div>
       </TierGate>
