@@ -100,11 +100,10 @@ function ChartTooltip({ active, payload, currency }: CustomTooltipProps) {
         fontSize: 11,
         lineHeight: 1.5,
         color: "var(--pq-ivory)",
-        fontFamily:
-          "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace",
       }}
     >
       <div
+        className="font-mono"
         style={{
           color: "var(--pq-bronze)",
           letterSpacing: "0.08em",
@@ -113,10 +112,25 @@ function ChartTooltip({ active, payload, currency }: CustomTooltipProps) {
       >
         {row.date}
       </div>
-      <div>{fmtTooltipMoney(row.value, currency)}</div>
-      <div style={{ color: pctColor(row.changePct) }}>
+      <div className="font-mono tabular-nums">
+        {fmtTooltipMoney(row.value, currency)}
+      </div>
+      <div
+        className="font-mono tabular-nums"
+        style={{ color: pctColor(row.changePct) }}
+      >
         {row.changePct >= 0 ? "+" : ""}
-        {row.changePct.toFixed(2)}% vs window start
+        {row.changePct.toFixed(2)}%
+      </div>
+      <div
+        className="font-serif"
+        style={{
+          fontSize: 10.5,
+          color: "rgba(245,240,232,0.55)",
+          marginTop: 2,
+        }}
+      >
+        vs window start
       </div>
     </div>
   );
@@ -199,7 +213,7 @@ export function EquityCurveChart({
             {label}
           </div>
         )}
-        {children}
+        <div className="font-serif">{children}</div>
       </div>
     </div>
   );

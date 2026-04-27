@@ -431,6 +431,7 @@ export function CandlestickChart({
 
       {err && !loading && (
         <div
+          className="font-serif"
           style={{
             position: "absolute",
             inset: 0,
@@ -439,8 +440,7 @@ export function CandlestickChart({
             justifyContent: "center",
             pointerEvents: "none",
             color: "rgba(245,240,232,0.45)",
-            fontSize: 11,
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
+            fontSize: 12,
           }}
         >
           chart data unavailable
