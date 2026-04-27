@@ -42,6 +42,10 @@ import {
   ArrowLeft,
   FileText,
   Eye,
+  Sparkles,
+  CalendarDays,
+  Building2,
+  MessageSquare,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -124,6 +128,27 @@ interface ProfileData {
   country?: string;
   market_cap?: number | null;
   currency?: "USD" | "KRW";
+}
+
+// AI SWOT — POST /api/ai/swot
+interface SwotResponse {
+  swot?: string;
+  swot_kr?: string;
+}
+
+// Earnings calendar — GET /api/earnings (filtered by ticker client-side)
+interface EarningsItem {
+  ticker?: string;
+  symbol?: string;
+  date?: string;
+  eps_estimate?: number | null;
+  eps_actual?: number | null;
+  revenue_estimate?: number | null;
+  revenue_actual?: number | null;
+}
+interface EarningsResponse {
+  earnings?: EarningsItem[];
+  data?: EarningsItem[];
 }
 
 /* ── Fetcher ── */
@@ -420,6 +445,52 @@ export default function StockDetailPage() {
   const insiderData: InsiderFiling[] = Array.isArray(insiderRes?.data)
     ? (insiderRes!.data as InsiderFiling[])
     : [];
+
+  // Earnings calendar — server returns next-30d list; client filters by ticker.
+  const { data: earningsRes } = useSWR<EarningsResponse>(
+    ticker ? API.market.earnings : null,
+    fetcher,
+    {
+      refreshInterval: 600_000,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 60_000,
+      shouldRetryOnError: false,
+    },
+  );
+  const earningsForTicker: EarningsItem[] = useMemo(() => {
+    const list = earningsRes?.earnings ?? earningsRes?.data ?? [];
+    if (!ticker) return [];
+    const upper = ticker.toUpperCase();
+    return list
+      .filter((e) => {
+        const t = (e.ticker || e.symbol || "").toUpperCase();
+        return t === upper;
+      })
+      .slice(0, 4);
+  }, [earningsRes, ticker]);
+
+  // AI SWOT — on-demand POST (Claude is rate-limited; user-triggered).
+  const [swot, setSwot] = useState<SwotResponse | null>(null);
+  const [swotLoading, setSwotLoading] = useState(false);
+  const [swotError, setSwotError] = useState<string | null>(null);
+  const handleGenerateSwot = useCallback(async () => {
+    if (!ticker) return;
+    setSwotLoading(true);
+    setSwotError(null);
+    try {
+      const res = await apiFetch<SwotResponse>(API.ai.swot, {
+        method: "POST",
+        body: JSON.stringify({ ticker }),
+      });
+      setSwot(res);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Request failed";
+      setSwotError(msg);
+    } finally {
+      setSwotLoading(false);
+    }
+  }, [ticker]);
 
   const { data: watchlistData, mutate: refreshWatchlist } = useWatchlist();
   const watchlistEntry = watchlistData?.watchlist?.find((w) => w.ticker === ticker);
@@ -1069,6 +1140,190 @@ export default function StockDetailPage() {
             </div>
           </section>
         )}
+
+        {/* ══════════════════════════════════════════════════
+            AI Analysis — on-demand SWOT (POSITIVE/NEGATIVE/NEUTRAL framing)
+           ══════════════════════════════════════════════════ */}
+        <section>
+          <div className="mb-5 flex items-center gap-3">
+            <Sparkles className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+            <div>
+              <div className="pq-section-kicker">AI assistant · observation</div>
+              <h2 className="pq-detail-h2 mt-1.5">AI analysis</h2>
+            </div>
+          </div>
+          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
+            {swot && (swot.swot_kr || swot.swot) ? (
+              <div className="space-y-4">
+                {swot.swot_kr ? (
+                  <div>
+                    <FieldLabel>한국어</FieldLabel>
+                    <p className="mt-2 whitespace-pre-line text-[14px] leading-[1.7] text-[var(--pq-ivory)]/85">
+                      {swot.swot_kr}
+                    </p>
+                  </div>
+                ) : null}
+                {swot.swot ? (
+                  <div className="pt-3 border-t border-[rgba(245,240,232,0.06)]">
+                    <FieldLabel>English</FieldLabel>
+                    <p className="mt-2 whitespace-pre-line text-[14px] leading-[1.7] text-[var(--pq-ivory)]/75">
+                      {swot.swot}
+                    </p>
+                  </div>
+                ) : null}
+                <div className="pt-3 mt-3 border-t border-[rgba(245,240,232,0.06)]">
+                  <DisclaimerBanner type="signal" />
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-start gap-3">
+                <p className="pq-detail-caption">
+                  AI analysis is being prepared. Trigger an observation summary
+                  for {ticker ?? "this ticker"} below.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleGenerateSwot}
+                  disabled={swotLoading || !ticker}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-[11px] uppercase tracking-[0.18em] border border-[var(--pq-bronze)] text-[var(--pq-bronze)] hover:bg-[rgba(184,149,106,0.08)] hover:text-[var(--pq-bronze-light)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors rounded-[2px]"
+                >
+                  <Sparkles className="h-3 w-3" strokeWidth={1.6} />
+                  {swotLoading ? "Generating…" : "Generate AI summary"}
+                </button>
+                {swotError ? (
+                  <p className="text-[11px] text-[rgba(245,240,232,0.5)]">
+                    Unable to generate right now ({swotError}). Try again later.
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════
+            Earnings calendar — next + last quarters
+           ══════════════════════════════════════════════════ */}
+        <section>
+          <div className="mb-5 flex items-center gap-3">
+            <CalendarDays className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+            <div>
+              <div className="pq-section-kicker">Earnings · forward window</div>
+              <h2 className="pq-detail-h2 mt-1.5">Earnings calendar</h2>
+            </div>
+          </div>
+          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
+            {earningsForTicker.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="text-left border-b border-[rgba(245,240,232,0.08)]">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[10px] text-[rgba(245,240,232,0.45)]">
+                        Date
+                      </th>
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[10px] text-[rgba(245,240,232,0.45)] text-right">
+                        EPS estimate
+                      </th>
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[10px] text-[rgba(245,240,232,0.45)] text-right">
+                        EPS actual
+                      </th>
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[10px] text-[rgba(245,240,232,0.45)] text-right">
+                        Revenue est.
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {earningsForTicker.map((e, i) => (
+                      <tr
+                        key={`${e.date ?? "na"}-${i}`}
+                        className="border-b border-[rgba(245,240,232,0.04)] last:border-0"
+                      >
+                        <td className="py-2.5 text-[var(--pq-ivory)]/85">
+                          {e.date
+                            ? new Date(e.date).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "—"}
+                        </td>
+                        <td className="py-2.5 text-right font-mono tabular-nums text-[var(--pq-ivory)]/75">
+                          {e.eps_estimate != null
+                            ? e.eps_estimate.toFixed(2)
+                            : "—"}
+                        </td>
+                        <td className="py-2.5 text-right font-mono tabular-nums text-[var(--pq-ivory)]">
+                          {e.eps_actual != null
+                            ? e.eps_actual.toFixed(2)
+                            : "—"}
+                        </td>
+                        <td className="py-2.5 text-right font-mono tabular-nums text-[var(--pq-ivory)]/75">
+                          {e.revenue_estimate != null
+                            ? `$${(e.revenue_estimate / 1e9).toFixed(2)}B`
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="pq-detail-caption">
+                Next earnings date not available for {ticker ?? "this ticker"} in the
+                forward 30-day window.
+              </p>
+            )}
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════
+            Institutional ownership — placeholder (backend endpoint pending)
+           ══════════════════════════════════════════════════ */}
+        <section>
+          <div className="mb-5 flex items-center gap-3">
+            <Building2 className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+            <div>
+              <div className="pq-section-kicker">Institutional · 13F</div>
+              <h2 className="pq-detail-h2 mt-1.5">Institutional ownership</h2>
+            </div>
+          </div>
+          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
+            <p className="pq-detail-caption">
+              13F holder breakdown is not yet wired. Surface scheduled once the
+              SEC EDGAR holdings feed lands in /api/alt-data.
+            </p>
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════
+            Companion CTA — context handoff
+           ══════════════════════════════════════════════════ */}
+        <section>
+          <Link
+            href={`/companion?ticker=${encodeURIComponent(ticker ?? "")}`}
+            className="block bg-[rgba(184,149,106,0.04)] border border-[var(--pq-bronze)]/40 rounded-[2px] p-5 hover:bg-[rgba(184,149,106,0.08)] hover:border-[var(--pq-bronze)] transition-all group"
+          >
+            <div className="flex items-start gap-4">
+              <MessageSquare
+                className="h-5 w-5 text-[var(--pq-bronze)] mt-0.5"
+                strokeWidth={1.4}
+              />
+              <div className="flex-1">
+                <FieldLabel>AI Assistant · context handoff</FieldLabel>
+                <div className="mt-1.5 font-serif text-[18px] text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors">
+                  Ask Companion about {ticker ?? "this ticker"}
+                </div>
+                <p className="mt-2 pq-detail-caption">
+                  Open a Companion thread pre-seeded with the current snapshot —
+                  fundamentals, signal label, and recent coverage.
+                </p>
+              </div>
+              <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] opacity-60 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5 self-center">
+                Open
+                <ExternalLink className="h-3 w-3" />
+              </div>
+            </div>
+          </Link>
+        </section>
 
         {/* ══════════════════════════════════════════════════
             Related observations — Artifact links
