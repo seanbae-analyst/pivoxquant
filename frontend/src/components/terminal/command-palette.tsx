@@ -46,7 +46,7 @@ const PAGES: Page[] = [
   { id: "p-reports",   label: "Reports",    hint: "Dossier archive",        path: "/reports" },
   { id: "p-ai",        label: "AI Chat",    hint: "AI Assistant",           path: "/ai-chat" },
   { id: "p-companion", label: "Companion",  hint: "Personal journal",       path: "/companion" },
-  { id: "p-growth",    label: "Growth",     hint: "Progress tracking",      path: "/growth" },
+  { id: "p-growth",    label: "Journal",    hint: "Personal journal & reflection", path: "/growth" },
   { id: "p-settings",  label: "Settings",   hint: "Account & broker",       path: "/settings" },
 ];
 

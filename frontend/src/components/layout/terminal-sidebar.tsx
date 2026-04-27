@@ -3,18 +3,23 @@
 /**
  * TerminalSidebar — full-height Vantablack navigation rail.
  *
- * Rendered by <DashboardLayout/> at the left edge of every desktop
- * dashboard view. Visual language mirrors the landing Dashboard
- * Preview: ink column, bronze left-edge accent on the active item,
- * editorial uppercase labels with generous spacing.
+ * IA: Home (top, ungrouped) + 4 thematic groups —
+ *   ARTIFACTS  · CFO 생산물 (Morning Brief / Reports / Signals)
+ *   PORTFOLIO  · 자산 관리 (Portfolio / Watchlist / Risk / Autotrade)
+ *   RESEARCH   · 조사·분석 (Market / Discover / AI Chat / AI Analysis)
+ *   SYSTEM     · 도구·계정 (Alerts / Companion / Journal / Profile · Persona / Settings)
  *
- * Props:
- *   - variant: "rail" (default) — fills its parent column (240px in
- *     DashboardLayout). Self-determines the active item from the URL
- *     via `usePathname`.
- *   - active: legacy opt-in override for callers that still want to
- *     force a particular key (tests, embedded previews). Ignored by
- *     default.
+ * Note: "Journal" label maps to /growth route. Display label avoids
+ * "Growth" to prevent confusion with capital-market asset-growth
+ * language under KR financial advisory law.
+ *
+ * Profile · Persona surfaces the account + investor-persona page directly
+ * in the rail (it was previously only reachable via the top-bar avatar).
+ * Detail/[ticker] is dynamic and not surfaced.
+ *
+ * Visual language: ink column, bronze left-edge accent on the active
+ * item, editorial uppercase labels with generous spacing. Group labels
+ * use the bronze tint at 55% with a hairline divider directly under.
  */
 
 import Link from "next/link";
@@ -33,22 +38,30 @@ import {
   FileText,
   Bell,
   Settings as SettingsIcon,
+  Sparkles,
+  BookHeart,
+  TrendingUp,
+  UserCircle,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type TerminalSidebarKey =
   | "home"
-  | "portfolio"
-  | "watchlist"
-  | "market"
-  | "discover"
-  | "risk"
-  | "signals"
-  | "ai-chat"
-  | "autotrade"
   | "morning-brief"
   | "reports"
+  | "signals"
+  | "portfolio"
+  | "watchlist"
+  | "risk"
+  | "autotrade"
+  | "market"
+  | "discover"
+  | "ai-chat"
+  | "ai"
   | "alerts"
+  | "companion"
+  | "growth"
+  | "profile"
   | "settings";
 
 type Item = {
@@ -58,30 +71,49 @@ type Item = {
   icon: LucideIcon;
 };
 
-const PRIMARY_ITEMS: Item[] = [
+// Top — ungrouped, sits above the first group label.
+const TOP: Item[] = [
   { key: "home", label: "Home", href: "/home", icon: HomeIcon },
+];
+
+// ── ARTIFACTS — CFO 생산물 ──────────────────────────────────────────
+const ARTIFACTS: Item[] = [
+  { key: "morning-brief", label: "Morning Brief", href: "/morning-brief", icon: Sun },
+  { key: "reports", label: "Reports", href: "/reports", icon: FileText },
+  { key: "signals", label: "Signals", href: "/signals", icon: Zap },
+];
+
+// ── PORTFOLIO — 자산 관리 ──────────────────────────────────────────
+const PORTFOLIO: Item[] = [
   { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
   { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye },
-  { key: "market", label: "Market", href: "/market", icon: Activity },
-  { key: "discover", label: "Discover", href: "/discover", icon: Compass },
   { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
-  { key: "signals", label: "Signals", href: "/signals", icon: Zap },
-  { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare },
   { key: "autotrade", label: "Autotrade", href: "/autotrade", icon: Bot },
 ];
 
-const SECONDARY_ITEMS: Item[] = [
-  { key: "morning-brief", label: "Morning Brief", href: "/morning-brief", icon: Sun },
-  { key: "reports", label: "Reports", href: "/reports", icon: FileText },
+// ── RESEARCH — 조사·분석 ───────────────────────────────────────────
+const RESEARCH: Item[] = [
+  { key: "market", label: "Market", href: "/market", icon: Activity },
+  { key: "discover", label: "Discover", href: "/discover", icon: Compass },
+  { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare },
+  { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
+];
+
+// ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
+const SYSTEM: Item[] = [
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
+  { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
+  { key: "growth", label: "Journal", href: "/growth", icon: TrendingUp },
+  { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
   { key: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
 ];
 
+const ALL_ITEMS: Item[] = [...TOP, ...ARTIFACTS, ...PORTFOLIO, ...RESEARCH, ...SYSTEM];
+
 function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
   if (!pathname) return null;
-  const all = [...PRIMARY_ITEMS, ...SECONDARY_ITEMS];
   // Longest-prefix match so "/portfolio/123" lights Portfolio.
-  const match = all
+  const match = ALL_ITEMS
     .slice()
     .sort((a, b) => b.href.length - a.href.length)
     .find((it) => pathname === it.href || pathname.startsWith(it.href + "/"));
@@ -115,10 +147,11 @@ export function TerminalSidebar({
         </span>
       </div>
 
-      {/* Primary nav */}
-      <nav className="px-3" aria-label="Primary">
-        <ul className="space-y-0.5">
-          {PRIMARY_ITEMS.map((item) => (
+      {/* Scrollable nav body */}
+      <nav className="flex-1 overflow-y-auto" aria-label="Primary">
+        {/* TOP — Home (ungrouped) */}
+        <ul className="space-y-0.5 px-3">
+          {TOP.map((item) => (
             <SidebarLink
               key={item.key}
               item={item}
@@ -126,26 +159,32 @@ export function TerminalSidebar({
             />
           ))}
         </ul>
-      </nav>
 
-      {/* Hairline separator */}
-      <div
-        aria-hidden="true"
-        style={{
-          borderTop: "0.5px solid rgba(245,240,232,0.08)",
-          margin: "16px 12px",
-        }}
-      />
+        <GroupHeader label="Artifacts" />
+        <ul className="space-y-0.5 px-3">
+          {ARTIFACTS.map((item) => (
+            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+          ))}
+        </ul>
 
-      {/* Secondary nav */}
-      <nav className="flex-1 px-3" aria-label="Secondary">
-        <ul className="space-y-0.5">
-          {SECONDARY_ITEMS.map((item) => (
-            <SidebarLink
-              key={item.key}
-              item={item}
-              isActive={resolvedActive === item.key}
-            />
+        <GroupHeader label="Portfolio" />
+        <ul className="space-y-0.5 px-3">
+          {PORTFOLIO.map((item) => (
+            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+          ))}
+        </ul>
+
+        <GroupHeader label="Research" />
+        <ul className="space-y-0.5 px-3">
+          {RESEARCH.map((item) => (
+            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
+          ))}
+        </ul>
+
+        <GroupHeader label="System" />
+        <ul className="space-y-0.5 px-3 pb-4">
+          {SYSTEM.map((item) => (
+            <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
           ))}
         </ul>
       </nav>
@@ -163,6 +202,29 @@ export function TerminalSidebar({
           v1.0 · Paper
         </span>
       </div>
+    </div>
+  );
+}
+
+function GroupHeader({ label }: { label: string }) {
+  return (
+    <div className="px-3 mt-6 mb-2" aria-hidden="true">
+      <span
+        className="font-serif uppercase"
+        style={{
+          fontSize: "10px",
+          letterSpacing: "0.22em",
+          color: "rgba(184, 149, 106, 0.55)",
+          display: "block",
+          paddingLeft: "14px",
+        }}
+      >
+        {label}
+      </span>
+      <div
+        className="mt-1 h-px"
+        style={{ backgroundColor: "rgba(245,240,232,0.08)" }}
+      />
     </div>
   );
 }
