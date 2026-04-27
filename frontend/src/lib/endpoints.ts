@@ -47,6 +47,7 @@ export const API = {
     morningBrief: "/api/morning-brief",
     morningBriefToday: "/api/brief/today",
     morningBriefArchive: "/api/brief/archive",
+    morningBriefGenerate: "/api/brief/generate-now",
     search: (query: string) => `/api/search?q=${encodeURIComponent(query)}`,
     lookup: (ticker: string) => `/api/lookup/${ticker}`,
     prices: "/api/prices",

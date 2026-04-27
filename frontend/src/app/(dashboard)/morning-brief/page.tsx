@@ -16,6 +16,8 @@
  */
 
 import { useMemo, useState } from "react";
+import { useSWRConfig } from "swr";
+import Link from "next/link";
 import {
   Sunrise,
   Sparkles,
@@ -26,8 +28,13 @@ import {
   ChevronDown,
   ChevronUp,
   CalendarDays,
+  Loader2,
+  Lock,
 } from "lucide-react";
 import { useMorningBrief, useMorningBriefArchive } from "@/lib/hooks";
+import { useAuth } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
+import { API } from "@/lib/endpoints";
 import { useLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import { pctColorClass } from "@/lib/format";
@@ -43,6 +50,88 @@ import type {
   MorningBriefArchiveItem,
   MorningBriefIndex,
 } from "@/lib/types";
+
+/* ── Tier helper ── */
+
+const TIER_RANK: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+function isProOrAbove(tier?: string): boolean {
+  const norm = (tier ?? "free").toLowerCase();
+  return (TIER_RANK[norm] ?? 0) >= 1;
+}
+
+/* ── EmptyBriefState — empty state with generate-now CTA (Pro+) or upgrade CTA (Free) ── */
+
+function EmptyBriefState({ onGenerated }: { onGenerated: () => void }) {
+  const { user } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const proPlus = isProOrAbove(user?.subscription_tier);
+
+  async function handleGenerate() {
+    setBusy(true);
+    setErr(null);
+    try {
+      // apiFetch throws on non-2xx and returns parsed JSON of type T.
+      await apiFetch<{ ok?: boolean; brief?: unknown }>(
+        API.market.morningBriefGenerate,
+        { method: "POST", timeoutMs: 60_000 },
+      );
+      onGenerated();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Generation failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-10 rounded-[2px] text-center">
+      <Sunrise className="h-6 w-6 text-[var(--pq-bronze)] mx-auto mb-3 opacity-60" />
+      <h3 className="font-serif text-[18px] text-[var(--pq-ivory)] mb-2">
+        오늘 브리핑이 아직 준비되지 않았어요
+      </h3>
+      <p className="text-sm text-[rgba(245,240,232,0.55)] mb-6 font-serif">
+        매일 06:00 KST 에 자동 생성됩니다. 그 전에 미리 보고 싶다면 아래에서 직접 요청하세요.
+      </p>
+      {proPlus ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={handleGenerate}
+          className="pq-ink-btn-bronze inline-flex items-center gap-1.5 disabled:opacity-50"
+        >
+          {busy ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              생성 중… (10–30초)
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-3.5 w-3.5" />
+              지금 생성하기
+            </>
+          )}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <Link
+            href="/pricing"
+            className="pq-ink-btn-bronze inline-flex items-center gap-1.5"
+          >
+            <Lock className="h-3.5 w-3.5" />
+            Pro로 업그레이드 (₩9,900/월)
+          </Link>
+          <p className="text-[11px] text-[rgba(245,240,232,0.4)]">
+            Free 티어는 자동 생성만 — 즉시 생성은 Pro 이상에서.
+          </p>
+        </div>
+      )}
+      {err && (
+        <p className="mt-3 text-xs text-red-400">에러: {err}</p>
+      )}
+    </div>
+  );
+}
 
 /* ── Helpers ── */
 
@@ -164,7 +253,12 @@ function ArchiveRow({ item }: { item: MorningBriefArchiveItem }) {
 export default function MorningBriefPage() {
   const { data: today, isLoading: todayLoading } = useMorningBrief();
   const { data: archive } = useMorningBriefArchive();
+  const { mutate } = useSWRConfig();
   const now = useNowTick(1000);
+  const refreshBrief = () => {
+    mutate(API.market.morningBriefToday);
+    mutate(API.market.morningBriefArchive);
+  };
 
   const todayDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -254,9 +348,7 @@ export default function MorningBriefPage() {
               />
             </div>
           ) : (
-            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-8 rounded-[2px] text-center text-sm text-[rgba(245,240,232,0.5)]">
-              Today's brief is being assembled. Check back shortly.
-            </div>
+            <EmptyBriefState onGenerated={refreshBrief} />
           )}
         </section>
 
