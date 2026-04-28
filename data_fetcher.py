@@ -739,14 +739,13 @@ Reply ONLY in this exact JSON format, nothing else:
             except Exception:
                 pass
             return default
-        # Default ranges widened 2026-04-29 after CEO confirmed KOSPI ~6,600
-        # (re-rated 2026 — routes/market.py:801 comment was correct, the
-        # earlier 1500-3500 default rejected legitimate readings as if they
-        # were the 2026-04-28 KIS scaling glitch).
-        # KOSPI valid floor: 1500 (legacy low) · ceiling: 8000 (head-room).
-        # KOSDAQ valid floor: 500 · ceiling: 2500 (proportional re-rate).
-        _KOSPI_RANGE = _parse_range("PIVOX_KOSPI_RANGE", (1500.0, 8000.0))
-        _KOSDAQ_RANGE = _parse_range("PIVOX_KOSDAQ_RANGE", (500.0, 2500.0))
+        # Default ranges per CEO directive 2026-04-29: ceiling pushed to
+        # 50,000 to absorb future re-rates without code change. The guard
+        # still catches 100x unit-confusion glitches (e.g. KOSPI 660,000).
+        # KOSPI valid floor: 1500 (legacy low) · ceiling: 50000 (extreme head-room)
+        # KOSDAQ valid floor: 500 · ceiling: 50000 (same)
+        _KOSPI_RANGE = _parse_range("PIVOX_KOSPI_RANGE", (1500.0, 50000.0))
+        _KOSDAQ_RANGE = _parse_range("PIVOX_KOSDAQ_RANGE", (500.0, 50000.0))
 
         if kis_ready:
             try:

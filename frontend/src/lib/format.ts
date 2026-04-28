@@ -51,15 +51,16 @@ function _parsePublicRange(envKey: string, fallback: [number, number]): [number,
   return [lo, hi];
 }
 
-// Default ranges widened 2026-04-29 after CEO confirmed KOSPI ~6,600 (re-rated
-// 2026). The earlier 1500-3500 ceiling rejected legitimate readings.
+// Default ranges per CEO directive 2026-04-29: ceiling 50,000 for both.
+// Absorbs future re-rates without code change while still catching 100x
+// unit-confusion glitches.
 export const KOSPI_RANGE: [number, number] = _parsePublicRange(
   "NEXT_PUBLIC_KOSPI_RANGE",
-  [1500, 8000],
+  [1500, 50000],
 );
 export const KOSDAQ_RANGE: [number, number] = _parsePublicRange(
   "NEXT_PUBLIC_KOSDAQ_RANGE",
-  [500, 2500],
+  [500, 50000],
 );
 
 export function isSaneKospi(level: number | null | undefined): level is number {
