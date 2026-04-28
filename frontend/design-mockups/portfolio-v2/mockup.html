@@ -1,0 +1,1138 @@
+<!doctype html>
+<html lang="en" data-price-mode="kr">
+<head>
+  <meta charset="utf-8" />
+  <title>PivoxQuant — /portfolio v2 (The Book)</title>
+  <meta name="viewport" content="width=1280" />
+
+  <!-- Tailwind for utility scaffolding only — all custom design lives in :root tokens below -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Design system v3 fonts (mirror of home-v2) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ───────────────────────────────────────────────
+       PivoxQuant Design System v3 — locked tokens
+       (mirror of frontend/src/app/globals.css :root,
+       identical to home-v2/mockup.html)
+       ─────────────────────────────────────────────── */
+    :root {
+      --pq-ink:           #050505;
+      --pq-ink-card:      rgba(255,255,255,0.02);
+      --pq-ivory:         #F5F0E8;
+      --pq-ivory-soft:    rgba(245,240,232,0.82);
+      --pq-ivory-quiet:   rgba(245,240,232,0.55);
+      --pq-ivory-mute:    rgba(245,240,232,0.40);
+
+      --pq-hairline:      rgba(245,240,232,0.08);
+      --pq-hairline-2:    rgba(245,240,232,0.14);
+
+      --pq-bronze:        #B8956A;
+      --pq-bronze-light:  #A3845C;
+      --pq-bronze-deep:   #6F5636;
+      --pq-bronze-15:     rgba(184,149,106,0.15);
+      --pq-bronze-08:     rgba(184,149,106,0.08);
+
+      /* KR price convention (locked): up=red, down=blue */
+      --pq-positive:      #dc2626;
+      --pq-negative:      #2563eb;
+      --pq-neutral:       rgba(245,240,232,0.55);
+      --pq-error:         #d18888;
+
+      --pq-text-eyebrow:  10.5px;
+      --pq-text-mono-sm:  11px;
+      --pq-text-caption:  12px;
+      --pq-text-body-sm:  13px;
+      --pq-text-body:     14px;
+      --pq-text-deck:     17px;
+      --pq-text-quote:    22px;
+      --pq-text-h3:       30px;
+      --pq-text-h2:       40px;
+      --pq-text-h1:       48px;
+      --pq-text-display:  72px;
+
+      --pq-track-eyebrow: 0.22em;
+      --pq-track-tight:   -0.02em;
+
+      --pq-radius-cta:    2px;
+      --pq-radius-card:   4px;
+
+      --pq-font-display:  "Playfair Display","Source Serif 4",Georgia,serif;
+      --pq-font-serif:    "Source Serif 4","Iowan Old Style",Georgia,serif;
+      --pq-font-mono:     "JetBrains Mono","SF Mono",ui-monospace,monospace;
+      --pq-font-sans:     "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    html, body {
+      background: var(--pq-ink);
+      color: var(--pq-ivory);
+      font-family: var(--pq-font-sans);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01","cv02","cv03","tnum";
+    }
+
+    .num, .mono {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+      letter-spacing: -0.01em;
+    }
+
+    .eyebrow {
+      font-family: var(--pq-font-mono);
+      font-size: var(--pq-text-eyebrow);
+      letter-spacing: var(--pq-track-eyebrow);
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+    }
+    .eyebrow.dim { color: var(--pq-ivory-mute); }
+
+    .display-h1 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: var(--pq-text-h1);
+      line-height: 1.05;
+      letter-spacing: var(--pq-track-tight);
+      color: var(--pq-ivory);
+    }
+    .display-h2 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: var(--pq-text-h2);
+      line-height: 1.1;
+      letter-spacing: var(--pq-track-tight);
+    }
+    .editorial-body {
+      font-family: var(--pq-font-serif);
+      font-size: var(--pq-text-deck);
+      line-height: 1.55;
+      color: var(--pq-ivory-soft);
+    }
+
+    .br {
+      color: var(--pq-bronze);
+      font-style: italic;
+      font-feature-settings: "ss01";
+    }
+
+    .pq-card {
+      background: var(--pq-ink-card);
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-card);
+      padding: 24px;
+      transition: border-color 240ms cubic-bezier(0.16,1,0.3,1),
+                  background-color 240ms cubic-bezier(0.16,1,0.3,1);
+      position: relative;
+    }
+    .pq-card:hover {
+      border-color: var(--pq-bronze);
+      background: rgba(184,149,106,0.025);
+    }
+    .pq-card .corner {
+      position: absolute;
+      top: 14px; right: 14px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.2em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+      transition: color 240ms;
+    }
+    .pq-card:hover .corner { color: var(--pq-bronze); }
+
+    .pq-hero {
+      padding: 80px 64px 64px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+
+    .pq-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      background: var(--pq-bronze);
+      color: var(--pq-ink);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--pq-radius-cta);
+      transition: background-color 200ms;
+    }
+    .pq-cta:hover { background: var(--pq-bronze-light); }
+
+    .pq-cta.outline {
+      background: transparent;
+      color: var(--pq-bronze);
+      border: 1px solid var(--pq-bronze);
+    }
+    .pq-cta.outline:hover {
+      background: var(--pq-bronze-08);
+      color: var(--pq-bronze-light);
+      border-color: var(--pq-bronze-light);
+    }
+
+    .pq-link {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      border-bottom: 1px solid var(--pq-bronze-15);
+      padding-bottom: 2px;
+    }
+    .pq-link:hover { color: var(--pq-bronze-light); border-bottom-color: var(--pq-bronze-light); }
+
+    .ticker {
+      display: flex;
+      gap: 36px;
+      padding: 10px 24px;
+      border-top: 1px solid var(--pq-hairline);
+      border-bottom: 1px solid var(--pq-hairline);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker .row { display:flex; gap:8px; align-items:baseline; font-family: var(--pq-font-mono); font-size: 11.5px; }
+    .ticker .sym { color: var(--pq-ivory); font-weight: 500; letter-spacing: 0.05em; }
+    .ticker .px  { color: var(--pq-ivory-quiet); }
+    .pos { color: var(--pq-positive); }
+    .neg { color: var(--pq-negative); }
+
+    .cfo-status {
+      display: flex; gap: 24px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      color: var(--pq-ivory-quiet);
+      letter-spacing: 0.06em;
+    }
+    .cfo-status .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--pq-bronze);
+      box-shadow: 0 0 0 3px rgba(184,149,106,0.18);
+    }
+    .cfo-status .seg { display: flex; gap: 8px; align-items: center; }
+    .cfo-status .seg b { color: var(--pq-ivory); font-weight: 500; }
+
+    /* Equity curve (full-width SVG) */
+    .equity-curve {
+      width: 100%;
+      height: 280px;
+      display: block;
+    }
+
+    /* Timeframe toggle (mono, eyebrow-style pills) */
+    .tf-toggle {
+      display: inline-flex;
+      gap: 0;
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-cta);
+    }
+    .tf-toggle button {
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      color: var(--pq-ivory-quiet);
+      border-right: 1px solid var(--pq-hairline);
+      background: transparent;
+      transition: color 200ms, background 200ms;
+    }
+    .tf-toggle button:last-child { border-right: 0; }
+    .tf-toggle button.active {
+      color: var(--pq-ink);
+      background: var(--pq-bronze);
+    }
+    .tf-toggle button:not(.active):hover { color: var(--pq-bronze); }
+
+    /* Positions table — Bloomberg-grade, editorial-tone */
+    .pos-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .pos-table thead th {
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-mute);
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--pq-hairline);
+      text-align: left;
+      font-weight: 400;
+      cursor: pointer;
+    }
+    .pos-table thead th:hover { color: var(--pq-bronze); }
+    .pos-table thead th.num,
+    .pos-table tbody td.num { text-align: right; }
+    .pos-table tbody tr {
+      transition: background 200ms, border-color 200ms;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .pos-table tbody tr:hover {
+      background: rgba(184,149,106,0.03);
+    }
+    .pos-table tbody td {
+      padding: 18px 12px;
+      vertical-align: baseline;
+    }
+    /* Stock name — main hierarchy 1순위 (CEO directive 2026-04-26) */
+    .pos-table .name {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+      color: var(--pq-ivory);
+      line-height: 1.2;
+    }
+    .pos-table .ticker {
+      display: block;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      color: var(--pq-ivory-mute);
+      letter-spacing: 0.16em;
+      margin-top: 4px;
+    }
+    .pos-table .num {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 13.5px;
+      color: var(--pq-ivory-soft);
+    }
+    .pos-table .num.muted { color: var(--pq-ivory-quiet); }
+    .pos-table .sector-tag {
+      font-family: var(--pq-font-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      padding: 4px 8px;
+      border: 1px solid var(--pq-bronze-15);
+      border-radius: var(--pq-radius-cta);
+    }
+    .pos-table .weight-bar {
+      display: block;
+      height: 3px;
+      background: rgba(245,240,232,0.06);
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .pos-table .weight-bar > i {
+      display: block; height: 100%;
+      background: linear-gradient(90deg, var(--pq-bronze-deep), var(--pq-bronze));
+    }
+
+    /* Sector donut */
+    .sector-donut svg { display:block; margin: 0 auto; }
+    .sector-legend .row {
+      display: grid;
+      grid-template-columns: 12px 1fr auto;
+      gap: 10px;
+      padding: 8px 0;
+      align-items: baseline;
+      border-bottom: 1px solid var(--pq-hairline);
+      font-size: 12.5px;
+    }
+    .sector-legend .row:last-child { border-bottom: 0; }
+    .sector-legend .swatch { width: 8px; height: 8px; align-self: center; }
+    .sector-legend .label { color: var(--pq-ivory-soft); font-family: var(--pq-font-serif); }
+    .sector-legend .pct { font-family: var(--pq-font-mono); color: var(--pq-ivory-quiet); }
+
+    /* Mini list (watchlist + transactions) */
+    .mini-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      align-items: baseline;
+    }
+    .mini-row:last-child { border-bottom: 0; }
+    /* Stock name — main hierarchy 1순위 */
+    .mini-row .name {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 15px;
+      color: var(--pq-ivory);
+      letter-spacing: -0.005em;
+    }
+    .mini-row .name small {
+      font-family: var(--pq-font-mono);
+      font-size: 10px;
+      color: var(--pq-ivory-mute);
+      margin-left: 8px;
+      letter-spacing: 0.14em;
+    }
+    .mini-row .meta {
+      font-family: var(--pq-font-serif);
+      font-size: 12px;
+      color: var(--pq-ivory-quiet);
+      margin-top: 3px;
+      display: block;
+    }
+    .mini-row .px { font-size: 13px; color: var(--pq-ivory-soft); }
+
+    /* Modal — Add Position (shown inline for mockup, real version: dialog) */
+    .modal-stage {
+      margin-top: 80px;
+      padding: 56px;
+      border: 1px dashed var(--pq-hairline-2);
+      border-radius: var(--pq-radius-card);
+      position: relative;
+    }
+    .modal-stage .stage-label {
+      position: absolute;
+      top: -10px; left: 32px;
+      background: var(--pq-ink);
+      padding: 0 12px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+    }
+    .modal-card {
+      max-width: 560px;
+      margin: 0 auto;
+      background: rgba(184,149,106,0.025);
+      border: 1px solid var(--pq-hairline-2);
+      border-radius: var(--pq-radius-card);
+      padding: 40px 36px;
+    }
+    .form-field {
+      display: block;
+      margin-bottom: 22px;
+    }
+    .form-field label {
+      display: block;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      margin-bottom: 8px;
+    }
+    .form-field input,
+    .form-field textarea {
+      width: 100%;
+      background: transparent;
+      border: 0;
+      border-bottom: 1px solid var(--pq-hairline-2);
+      padding: 8px 0;
+      font-family: var(--pq-font-mono);
+      font-size: 14px;
+      color: var(--pq-ivory);
+      outline: none;
+      transition: border-color 200ms;
+    }
+    .form-field input:focus,
+    .form-field textarea:focus {
+      border-bottom-color: var(--pq-bronze);
+    }
+    .form-field input::placeholder { color: var(--pq-ivory-mute); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+
+    .disclaimer {
+      margin-top: 64px;
+      padding: 18px 24px;
+      border: 1px dashed var(--pq-hairline-2);
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--pq-ivory-mute);
+    }
+
+    .foot {
+      margin-top: 24px;
+      padding: 24px 0 56px;
+      text-align: center;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.28em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+    }
+    .foot .fleuron {
+      color: var(--pq-bronze);
+      font-size: 14px;
+      letter-spacing: 0;
+      margin: 0 8px;
+    }
+
+    .wordmark {
+      font-family: var(--pq-font-display);
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+    .wordmark span { color: var(--pq-bronze); }
+
+    .topnav {
+      display:flex; align-items:center; justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .topnav nav a {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-quiet);
+      margin-left: 28px;
+    }
+    .topnav nav a.active { color: var(--pq-ivory); border-bottom: 1px solid var(--pq-bronze); padding-bottom: 4px; }
+
+    /* Section header */
+    .sec-head {
+      display: flex; align-items: end; justify-content: space-between;
+      margin-bottom: 22px;
+    }
+    .sec-head .h2 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 32px;
+      letter-spacing: var(--pq-track-tight);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════ TOP NAV ════════ -->
+  <header class="topnav">
+    <div class="flex items-center gap-3">
+      <span class="wordmark">Pivox<span>Quant</span></span>
+      <span class="eyebrow dim ml-3">Beta · Apr 27</span>
+    </div>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Memo</a>
+      <a href="#" class="active">Book</a>
+      <a href="#">Watchlist</a>
+      <a href="#">Risk</a>
+      <a href="#">Archive</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <span class="eyebrow dim">Sean · Pro</span>
+      <span class="num" style="color:var(--pq-ivory-quiet); font-size:11px;">21:38 KST</span>
+    </div>
+  </header>
+
+  <!-- ════════ TOP TICKER ════════ -->
+  <div class="ticker">
+    <div class="row"><span class="sym">SPX</span><span class="px num">5,612.34</span><span class="pos num">+0.42%</span></div>
+    <div class="row"><span class="sym">NDX</span><span class="px num">19,884.12</span><span class="pos num">+0.71%</span></div>
+    <div class="row"><span class="sym">DJI</span><span class="px num">42,118.50</span><span class="neg num">-0.18%</span></div>
+    <div class="row"><span class="sym">KOSPI</span><span class="px num">2,712.04</span><span class="pos num">+0.33%</span></div>
+    <div class="row"><span class="sym">KOSDAQ</span><span class="px num">868.91</span><span class="neg num">-0.21%</span></div>
+    <div class="row"><span class="sym">USD/KRW</span><span class="px num">1,387.20</span><span class="pos num">+0.12%</span></div>
+    <div class="row"><span class="sym">VIX</span><span class="px num">14.82</span><span class="neg num">-2.41%</span></div>
+    <div class="row"><span class="sym">BTC</span><span class="px num">$68,442</span><span class="pos num">+1.84%</span></div>
+    <div class="row"><span class="sym">10Y UST</span><span class="px num">4.27%</span><span class="neg num">-3bp</span></div>
+  </div>
+
+  <!-- ════════ LIVING CFO STATUS ════════ -->
+  <div class="max-w-[1280px] mx-auto px-6">
+    <div class="cfo-status">
+      <span class="dot"></span>
+      <span class="seg">CFO ROOM <b>OPEN</b></span>
+      <span class="seg">Last reconciled <b>27 Apr · 21:30 KST</b></span>
+      <span class="seg">Broker sync <b>KIS · Alpaca paper</b></span>
+      <span class="seg ml-auto">NAV intraday <b class="num pos">+₩1,284,500</b></span>
+    </div>
+  </div>
+
+  <!-- ════════ HERO — "Your book" (Supanova-tone) ════════ -->
+  <section class="max-w-[1280px] mx-auto px-6 pq-hero">
+    <div class="eyebrow mb-7">Book · Volume 14 · Friday</div>
+
+    <h1 class="display-h1 mb-7" style="max-width: 940px;">
+      Your <span class="br">book.</span>
+    </h1>
+
+    <p class="editorial-body mb-10" style="max-width: 720px;">
+      12 positions <span class="br">observed</span> · NAV ₩124,580,320 · last
+      <span class="br">reconciled</span> 27 Apr 21:30 KST. Cash buffer at 18.4%, drag from
+      semis already trimmed. Drawdown distance to threshold: 3.9 percentage points.
+    </p>
+
+    <div class="flex items-center gap-4">
+      <a href="#" class="pq-cta">Add position →</a>
+      <a href="#" class="pq-cta outline">Reconcile from broker</a>
+      <span class="eyebrow dim ml-4">Drafted by AI · Reviewed by you</span>
+    </div>
+  </section>
+
+  <!-- ════════ MAIN CONTENT ════════ -->
+  <main class="max-w-[1280px] mx-auto px-6 pt-14">
+
+    <!-- ── BLOCK 1 — Equity curve full-width ──────────────────────────── -->
+    <section class="mb-16">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow mb-2">Equity · Curve</div>
+          <h2 class="h2">NAV over time.</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="eyebrow dim mr-2">Range</span>
+          <div class="tf-toggle">
+            <button>1mo</button>
+            <button>3mo</button>
+            <button class="active">6mo</button>
+            <button>1yr</button>
+            <button>All</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="pq-card" style="padding: 32px;">
+        <div class="grid grid-cols-3 gap-8 mb-7">
+          <div>
+            <div class="eyebrow mb-2">NAV · Current</div>
+            <div class="num" style="font-size: 30px; color: var(--pq-ivory); letter-spacing: -0.02em;">₩124,580,320</div>
+          </div>
+          <div>
+            <div class="eyebrow mb-2">6-month return</div>
+            <div class="num pos" style="font-size: 30px; letter-spacing: -0.02em;">+18.42%</div>
+          </div>
+          <div>
+            <div class="eyebrow mb-2">Benchmark · KOSPI200</div>
+            <div class="num" style="font-size: 30px; color: var(--pq-ivory-soft); letter-spacing: -0.02em;">+11.18%</div>
+          </div>
+        </div>
+
+        <svg class="equity-curve" viewBox="0 0 1200 280" preserveAspectRatio="none">
+          <!-- Subtle bronze fill under curve -->
+          <defs>
+            <linearGradient id="eqFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="rgba(184,149,106,0.18)" />
+              <stop offset="100%" stop-color="rgba(184,149,106,0)" />
+            </linearGradient>
+            <linearGradient id="bmFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="rgba(245,240,232,0.06)" />
+              <stop offset="100%" stop-color="rgba(245,240,232,0)" />
+            </linearGradient>
+          </defs>
+
+          <!-- Gridlines (hairline horizontals) -->
+          <line x1="0" x2="1200" y1="56"  y2="56"  stroke="rgba(245,240,232,0.05)"/>
+          <line x1="0" x2="1200" y1="112" y2="112" stroke="rgba(245,240,232,0.05)"/>
+          <line x1="0" x2="1200" y1="168" y2="168" stroke="rgba(245,240,232,0.05)"/>
+          <line x1="0" x2="1200" y1="224" y2="224" stroke="rgba(245,240,232,0.05)"/>
+
+          <!-- Benchmark (ivory dim) -->
+          <polyline fill="url(#bmFill)" stroke="none"
+            points="0,200 60,196 120,202 180,194 240,190 300,184 360,180 420,176 480,170 540,166 600,162 660,158 720,154 780,150 840,148 900,142 960,138 1020,134 1080,130 1140,128 1200,124 1200,280 0,280" />
+          <polyline fill="none" stroke="rgba(245,240,232,0.32)" stroke-width="1.2" stroke-dasharray="3 4"
+            points="0,200 60,196 120,202 180,194 240,190 300,184 360,180 420,176 480,170 540,166 600,162 660,158 720,154 780,150 840,148 900,142 960,138 1020,134 1080,130 1140,128 1200,124" />
+
+          <!-- Portfolio (bronze) -->
+          <polyline fill="url(#eqFill)" stroke="none"
+            points="0,200 60,192 120,198 180,182 240,176 300,162 360,158 420,148 480,138 540,142 600,128 660,118 720,124 780,108 840,100 900,92 960,98 1020,82 1080,72 1140,64 1200,56 1200,280 0,280" />
+          <polyline fill="none" stroke="var(--pq-bronze)" stroke-width="1.6"
+            points="0,200 60,192 120,198 180,182 240,176 300,162 360,158 420,148 480,138 540,142 600,128 660,118 720,124 780,108 840,100 900,92 960,98 1020,82 1080,72 1140,64 1200,56" />
+        </svg>
+
+        <div class="flex justify-between items-center mt-6 pt-5" style="border-top: 1px solid var(--pq-hairline);">
+          <div class="flex gap-6 items-center">
+            <span class="flex items-center gap-2">
+              <span style="display:inline-block; width:12px; height:2px; background: var(--pq-bronze);"></span>
+              <span class="eyebrow dim">Your book</span>
+            </span>
+            <span class="flex items-center gap-2">
+              <span style="display:inline-block; width:12px; height:2px; background: rgba(245,240,232,0.32); border-bottom: 1px dashed;"></span>
+              <span class="eyebrow dim">KOSPI 200</span>
+            </span>
+          </div>
+          <span class="eyebrow dim">Spread <span class="num pos" style="font-size: 12px; letter-spacing: 0.04em;">+7.24pp</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── BLOCK 2 — Positions table ──────────────────────────── -->
+    <section class="mb-16">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow mb-2">Positions · Twelve open</div>
+          <h2 class="h2">The full ledger.</h2>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="#" class="pq-link">Filter ›</a>
+          <a href="#" class="pq-link">Export CSV ›</a>
+        </div>
+      </div>
+
+      <div class="pq-card" style="padding: 8px 28px 16px;">
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th class="num">Shares</th>
+              <th class="num">Avg Cost</th>
+              <th class="num">Last</th>
+              <th class="num">P/L %</th>
+              <th class="num">Mkt Value</th>
+              <th class="num">Weight</th>
+              <th>Sector</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span class="name">Apple Inc.</span>
+                <span class="ticker">AAPL · NASDAQ</span>
+              </td>
+              <td class="num">42</td>
+              <td class="num muted">$182.40</td>
+              <td class="num">$214.32</td>
+              <td class="num pos">+17.50%</td>
+              <td class="num">$9,001.44</td>
+              <td class="num">
+                14.2%
+                <span class="weight-bar"><i style="width: 78%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Tech</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">Samsung Electronics</span>
+                <span class="ticker">005930.KS · KOSPI</span>
+              </td>
+              <td class="num">120</td>
+              <td class="num muted">₩68,200</td>
+              <td class="num">₩72,400</td>
+              <td class="num pos">+6.16%</td>
+              <td class="num">₩8,688,000</td>
+              <td class="num">
+                12.8%
+                <span class="weight-bar"><i style="width: 70%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Tech</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">NVIDIA Corp.</span>
+                <span class="ticker">NVDA · NASDAQ</span>
+              </td>
+              <td class="num">68</td>
+              <td class="num muted">$92.10</td>
+              <td class="num">$118.74</td>
+              <td class="num pos">+28.92%</td>
+              <td class="num">$8,074.32</td>
+              <td class="num">
+                11.4%
+                <span class="weight-bar"><i style="width: 62%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Tech</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">Microsoft Corp.</span>
+                <span class="ticker">MSFT · NASDAQ</span>
+              </td>
+              <td class="num">18</td>
+              <td class="num muted">$398.20</td>
+              <td class="num">$432.18</td>
+              <td class="num pos">+8.53%</td>
+              <td class="num">$7,779.24</td>
+              <td class="num">
+                10.6%
+                <span class="weight-bar"><i style="width: 58%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Tech</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">SK Hynix</span>
+                <span class="ticker">000660.KS · KOSPI</span>
+              </td>
+              <td class="num">38</td>
+              <td class="num muted">₩186,400</td>
+              <td class="num">₩198,500</td>
+              <td class="num pos">+6.49%</td>
+              <td class="num">₩7,543,000</td>
+              <td class="num">
+                9.8%
+                <span class="weight-bar"><i style="width: 54%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Semis</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">Tesla Inc.</span>
+                <span class="ticker">TSLA · NASDAQ</span>
+              </td>
+              <td class="num">22</td>
+              <td class="num muted">$248.80</td>
+              <td class="num">$219.34</td>
+              <td class="num neg">-11.83%</td>
+              <td class="num">$4,825.48</td>
+              <td class="num">
+                7.4%
+                <span class="weight-bar"><i style="width: 41%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Auto</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">Alphabet Inc.</span>
+                <span class="ticker">GOOGL · NASDAQ</span>
+              </td>
+              <td class="num">28</td>
+              <td class="num muted">$148.20</td>
+              <td class="num">$162.84</td>
+              <td class="num pos">+9.88%</td>
+              <td class="num">$4,559.52</td>
+              <td class="num">
+                6.8%
+                <span class="weight-bar"><i style="width: 38%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Tech</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">Naver Corp.</span>
+                <span class="ticker">035420.KS · KOSPI</span>
+              </td>
+              <td class="num">22</td>
+              <td class="num muted">₩192,800</td>
+              <td class="num">₩184,500</td>
+              <td class="num neg">-4.30%</td>
+              <td class="num">₩4,059,000</td>
+              <td class="num">
+                5.2%
+                <span class="weight-bar"><i style="width: 28%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Tech</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">JPMorgan Chase</span>
+                <span class="ticker">JPM · NYSE</span>
+              </td>
+              <td class="num">14</td>
+              <td class="num muted">$184.40</td>
+              <td class="num">$201.18</td>
+              <td class="num pos">+9.10%</td>
+              <td class="num">$2,816.52</td>
+              <td class="num">
+                4.4%
+                <span class="weight-bar"><i style="width: 24%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Financial</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">Hyundai Motor</span>
+                <span class="ticker">005380.KS · KOSPI</span>
+              </td>
+              <td class="num">12</td>
+              <td class="num muted">₩214,000</td>
+              <td class="num">₩228,500</td>
+              <td class="num pos">+6.78%</td>
+              <td class="num">₩2,742,000</td>
+              <td class="num">
+                3.6%
+                <span class="weight-bar"><i style="width: 20%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Auto</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">Costco Wholesale</span>
+                <span class="ticker">COST · NASDAQ</span>
+              </td>
+              <td class="num">3</td>
+              <td class="num muted">$728.40</td>
+              <td class="num">$832.18</td>
+              <td class="num pos">+14.25%</td>
+              <td class="num">$2,496.54</td>
+              <td class="num">
+                3.0%
+                <span class="weight-bar"><i style="width: 17%;"></i></span>
+              </td>
+              <td><span class="sector-tag">Cons.</span></td>
+            </tr>
+            <tr>
+              <td>
+                <span class="name">Realty Income</span>
+                <span class="ticker">O · NYSE</span>
+              </td>
+              <td class="num">28</td>
+              <td class="num muted">$58.40</td>
+              <td class="num">$54.92</td>
+              <td class="num neg">-5.96%</td>
+              <td class="num">$1,537.76</td>
+              <td class="num">
+                2.0%
+                <span class="weight-bar"><i style="width: 11%;"></i></span>
+              </td>
+              <td><span class="sector-tag">REIT</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── BLOCK 3 — 3-col: Sector / Watchlist / Transactions ──────────── -->
+    <section class="mb-16">
+      <div class="grid grid-cols-3 gap-3">
+
+        <!-- Sector donut -->
+        <div class="pq-card" style="min-height: 380px;">
+          <span class="corner">Sector ›</span>
+          <div class="eyebrow mb-5">Allocation · By sector</div>
+
+          <div class="sector-donut" style="margin-bottom: 24px;">
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <!-- Tech 41% -->
+              <circle cx="80" cy="80" r="56" fill="none"
+                stroke="var(--pq-bronze)" stroke-width="22"
+                stroke-dasharray="144.3 351.7" stroke-dashoffset="0"
+                transform="rotate(-90 80 80)" />
+              <!-- Semis 14% -->
+              <circle cx="80" cy="80" r="56" fill="none"
+                stroke="var(--pq-bronze-light)" stroke-width="22"
+                stroke-dasharray="49.2 351.7" stroke-dashoffset="-144.3"
+                transform="rotate(-90 80 80)" />
+              <!-- Auto 11% -->
+              <circle cx="80" cy="80" r="56" fill="none"
+                stroke="var(--pq-bronze-deep)" stroke-width="22"
+                stroke-dasharray="38.7 351.7" stroke-dashoffset="-193.5"
+                transform="rotate(-90 80 80)" />
+              <!-- Financial 4.4% / Cons 3% / REIT 2% / Cash 18.4% -->
+              <circle cx="80" cy="80" r="56" fill="none"
+                stroke="rgba(245,240,232,0.32)" stroke-width="22"
+                stroke-dasharray="15.5 351.7" stroke-dashoffset="-232.2"
+                transform="rotate(-90 80 80)" />
+              <circle cx="80" cy="80" r="56" fill="none"
+                stroke="rgba(245,240,232,0.22)" stroke-width="22"
+                stroke-dasharray="10.5 351.7" stroke-dashoffset="-247.7"
+                transform="rotate(-90 80 80)" />
+              <circle cx="80" cy="80" r="56" fill="none"
+                stroke="rgba(245,240,232,0.14)" stroke-width="22"
+                stroke-dasharray="7 351.7" stroke-dashoffset="-258.2"
+                transform="rotate(-90 80 80)" />
+              <circle cx="80" cy="80" r="56" fill="none"
+                stroke="rgba(245,240,232,0.08)" stroke-width="22"
+                stroke-dasharray="64.7 351.7" stroke-dashoffset="-265.2"
+                transform="rotate(-90 80 80)" />
+
+              <text x="80" y="76" text-anchor="middle"
+                style="font-family: var(--pq-font-mono); font-size: 11px; fill: var(--pq-ivory-mute); letter-spacing: 0.18em;">SECTORS</text>
+              <text x="80" y="94" text-anchor="middle"
+                style="font-family: var(--pq-font-display); font-size: 20px; fill: var(--pq-ivory); font-weight: 500;">7</text>
+            </svg>
+          </div>
+
+          <div class="sector-legend">
+            <div class="row"><span class="swatch" style="background: var(--pq-bronze);"></span><span class="label">Tech</span><span class="pct">41.0%</span></div>
+            <div class="row"><span class="swatch" style="background: var(--pq-bronze-light);"></span><span class="label">Semis</span><span class="pct">14.0%</span></div>
+            <div class="row"><span class="swatch" style="background: var(--pq-bronze-deep);"></span><span class="label">Auto</span><span class="pct">11.0%</span></div>
+            <div class="row"><span class="swatch" style="background: rgba(245,240,232,0.32);"></span><span class="label">Financial</span><span class="pct">4.4%</span></div>
+            <div class="row"><span class="swatch" style="background: rgba(245,240,232,0.22);"></span><span class="label">Cons. Staples</span><span class="pct">3.0%</span></div>
+            <div class="row"><span class="swatch" style="background: rgba(245,240,232,0.14);"></span><span class="label">REIT</span><span class="pct">2.0%</span></div>
+            <div class="row"><span class="swatch" style="background: rgba(245,240,232,0.08);"></span><span class="label">Cash</span><span class="pct">18.4%</span></div>
+          </div>
+        </div>
+
+        <!-- Watchlist mini -->
+        <div class="pq-card" style="min-height: 380px;">
+          <span class="corner">Watchlist ›</span>
+          <div class="eyebrow mb-5">Watchlist · 8 names</div>
+
+          <div class="mini-row">
+            <span>
+              <span class="name">Meta Platforms <small>META</small></span>
+            </span>
+            <span class="px num">$498.24</span>
+            <span class="num pos">+1.84%</span>
+          </div>
+          <div class="mini-row">
+            <span>
+              <span class="name">LG Energy Solution <small>373220.KS</small></span>
+            </span>
+            <span class="px num">₩412,500</span>
+            <span class="num neg">-0.96%</span>
+          </div>
+          <div class="mini-row">
+            <span>
+              <span class="name">Advanced Micro Devices <small>AMD</small></span>
+            </span>
+            <span class="px num">$162.18</span>
+            <span class="num pos">+2.34%</span>
+          </div>
+          <div class="mini-row">
+            <span>
+              <span class="name">Kakao Corp. <small>035720.KS</small></span>
+            </span>
+            <span class="px num">₩48,200</span>
+            <span class="num neg">-1.42%</span>
+          </div>
+          <div class="mini-row">
+            <span>
+              <span class="name">Palantir Technologies <small>PLTR</small></span>
+            </span>
+            <span class="px num">$28.92</span>
+            <span class="num pos">+3.12%</span>
+          </div>
+          <div class="mini-row">
+            <span>
+              <span class="name">Krafton <small>259960.KS</small></span>
+            </span>
+            <span class="px num">₩294,000</span>
+            <span class="num pos">+0.68%</span>
+          </div>
+
+          <div class="mt-5 flex justify-between items-baseline">
+            <span class="eyebrow dim">2 more · 8 total</span>
+            <span class="pq-link">Open Watchlist ›</span>
+          </div>
+        </div>
+
+        <!-- Recent transactions -->
+        <div class="pq-card" style="min-height: 380px;">
+          <span class="corner">Ledger ›</span>
+          <div class="eyebrow mb-5">Transactions · Last 7</div>
+
+          <div class="mini-row" style="grid-template-columns: 1fr auto;">
+            <span>
+              <span class="name">NVIDIA Corp. <small>NVDA</small></span>
+              <span class="meta">Add · 12 sh @ $116.40 · 24 Apr</span>
+            </span>
+            <span class="num pos">+$1,396.80</span>
+          </div>
+          <div class="mini-row" style="grid-template-columns: 1fr auto;">
+            <span>
+              <span class="name">SK Hynix <small>000660.KS</small></span>
+              <span class="meta">Trim · −10 sh @ ₩201,200 · 22 Apr</span>
+            </span>
+            <span class="num pos">+₩2,012,000</span>
+          </div>
+          <div class="mini-row" style="grid-template-columns: 1fr auto;">
+            <span>
+              <span class="name">Tesla Inc. <small>TSLA</small></span>
+              <span class="meta">Trim · −8 sh @ $228.40 · 19 Apr</span>
+            </span>
+            <span class="num pos">+$1,827.20</span>
+          </div>
+          <div class="mini-row" style="grid-template-columns: 1fr auto;">
+            <span>
+              <span class="name">Apple Inc. <small>AAPL</small></span>
+              <span class="meta">Add · 8 sh @ $208.20 · 16 Apr</span>
+            </span>
+            <span class="num pos">+$1,665.60</span>
+          </div>
+          <div class="mini-row" style="grid-template-columns: 1fr auto;">
+            <span>
+              <span class="name">Realty Income <small>O</small></span>
+              <span class="meta">Add · 28 sh @ $58.40 · 12 Apr</span>
+            </span>
+            <span class="num pos">+$1,635.20</span>
+          </div>
+          <div class="mini-row" style="grid-template-columns: 1fr auto;">
+            <span>
+              <span class="name">Cash · USD</span>
+              <span class="meta">Deposit · ₩2,000,000 → $1,442 · 10 Apr</span>
+            </span>
+            <span class="num" style="color: var(--pq-ivory-soft);">+$1,442.00</span>
+          </div>
+
+          <div class="mt-5 flex justify-between items-baseline">
+            <span class="eyebrow dim">1 more · 7 shown</span>
+            <span class="pq-link">Open Ledger ›</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── BLOCK 4 — Add Position modal (CRITICAL bug fix design) ──────── -->
+    <section class="modal-stage">
+      <span class="stage-label">Modal · Add Position (open state)</span>
+
+      <div class="modal-card">
+        <div class="eyebrow mb-3">Observation · New entry</div>
+        <h2 class="display-h2 mb-4" style="font-size: 32px;">
+          Record a <span class="br">new position.</span>
+        </h2>
+        <p class="editorial-body mb-8" style="font-size: 14.5px; line-height: 1.6;">
+          PivoxQuant <span class="br">observes</span> what you've already done —
+          this is record-keeping, not execution.
+        </p>
+
+        <form>
+          <div class="form-field">
+            <label>Symbol</label>
+            <input type="text" placeholder="Search · e.g. Apple, AAPL, 005930" />
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label>Shares</label>
+              <input type="text" placeholder="e.g. 42" />
+            </div>
+            <div class="form-field">
+              <label>Avg cost (per share)</label>
+              <input type="text" placeholder="e.g. $182.40" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label>Date acquired</label>
+              <input type="text" placeholder="2026-04-12" />
+            </div>
+            <div class="form-field">
+              <label>Currency</label>
+              <input type="text" placeholder="USD · KRW" />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>Memo (optional)</label>
+            <input type="text" placeholder="e.g. Initial entry · long-horizon thesis" />
+          </div>
+
+          <div class="flex items-center gap-4 mt-10">
+            <button type="button" class="pq-cta">Save observation →</button>
+            <a href="#" class="pq-link">Cancel</a>
+            <span class="eyebrow dim ml-auto">Saved to your book · not sent to broker</span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ══════════ DISCLAIMER (required) ══════════ -->
+    <div class="disclaimer">
+      <strong style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif); font-style:italic;">
+        Notice / 면책 고지.
+      </strong>
+      &nbsp; PivoxQuant produces editorial memos and analytical artifacts for the user's own
+      record-keeping. Positions shown here are observations of what the user has already
+      executed elsewhere — this surface neither places nor recommends trades. Nothing on this
+      page constitutes investment advice, a solicitation, or a recommendation to buy or sell
+      any security. 본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이
+      아니며, 모든 의사결정과 책임은 이용자 본인에게 있습니다.
+    </div>
+
+    <!-- ══════════ FOOT SIGNATURE ══════════ -->
+    <div class="foot">
+      <span>PivoxQuant</span>
+      <span class="fleuron">❦</span>
+      <span>The Book · Volume 14</span>
+      <span class="fleuron">❦</span>
+      <span>Seoul · 27 April 2026</span>
+    </div>
+
+  </main>
+
+</body>
+</html>

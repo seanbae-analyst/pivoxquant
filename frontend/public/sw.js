@@ -1,4 +1,11 @@
-// PivoxQuant Service Worker v4 (fix: stop fabricating 503s on network failure)
+// PivoxQuant Service Worker v5 (cache bust for v2 page rollout — Stage 12)
+// v4 → v5: invalidate v4 caches now that home/portfolio/risk/signals/reports
+// shipped their v2 redesigns. PWA-installed users were holding v4 caches with
+// the old static asset hashes + the old cached navigation HTML, which would
+// keep serving v1 markup until next route fetch. Bumping CACHE_VERSION makes
+// the activate step delete every `sp-v4-*` cache the moment the new SW takes
+// control, so users get a clean slate against the new build artefacts.
+//
 // v3 → v4: networkFirst/cacheFirst no longer synthesize fake 503 "offline"
 // responses when fetch rejects. A fake 503 with Content-Type: application/json
 // and body `{"error":"offline"}` was being delivered to SWR as a *successful*
@@ -8,7 +15,7 @@
 // error so SWR error handling (retry + error UI) actually runs. Bumping the
 // version string evicts the v3 caches via the activate step so users never
 // see a stale pre-fix cached 503 after upgrade.
-const CACHE_VERSION = "sp-v4";
+const CACHE_VERSION = "sp-v5";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";

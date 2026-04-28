@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en" data-price-mode="kr">
+<head>
+  <meta charset="utf-8" />
+  <title>PivoxQuant — /signals v2 (Stream)</title>
+  <meta name="viewport" content="width=1280" />
+
+  <!-- Tailwind for utility scaffolding only — all custom design lives in :root tokens below -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Design system v3 fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ───────────────────────────────────────────────
+       PivoxQuant Design System v3 — locked tokens
+       (mirror of frontend/src/app/globals.css :root)
+       ─────────────────────────────────────────────── */
+    :root {
+      --pq-ink:           #050505;
+      --pq-ink-card:      rgba(255,255,255,0.02);
+      --pq-ivory:         #F5F0E8;
+      --pq-ivory-soft:    rgba(245,240,232,0.82);
+      --pq-ivory-quiet:   rgba(245,240,232,0.55);
+      --pq-ivory-mute:    rgba(245,240,232,0.40);
+
+      --pq-hairline:      rgba(245,240,232,0.08);
+      --pq-hairline-2:    rgba(245,240,232,0.14);
+
+      --pq-bronze:        #B8956A;
+      --pq-bronze-light:  #A3845C;
+      --pq-bronze-deep:   #6F5636;
+      --pq-bronze-15:     rgba(184,149,106,0.15);
+      --pq-bronze-08:     rgba(184,149,106,0.08);
+
+      /* KR price convention (locked): up=red, down=blue */
+      --pq-positive:      #dc2626;
+      --pq-negative:      #2563eb;
+      --pq-neutral:       rgba(245,240,232,0.55);
+      --pq-error:         #d18888;
+
+      --pq-text-eyebrow:  10.5px;
+      --pq-text-mono-sm:  11px;
+      --pq-text-caption:  12px;
+      --pq-text-body-sm:  13px;
+      --pq-text-body:     14px;
+      --pq-text-deck:     17px;
+      --pq-text-quote:    22px;
+      --pq-text-h3:       30px;
+      --pq-text-h2:       40px;
+      --pq-text-h1:       48px;
+      --pq-text-display:  72px;
+
+      --pq-track-eyebrow: 0.22em;
+      --pq-track-tight:   -0.02em;
+
+      --pq-radius-cta:    2px;
+      --pq-radius-card:   4px;
+
+      --pq-font-display:  "Playfair Display","Source Serif 4",Georgia,serif;
+      --pq-font-serif:    "Source Serif 4","Iowan Old Style",Georgia,serif;
+      --pq-font-mono:     "JetBrains Mono","SF Mono",ui-monospace,monospace;
+      --pq-font-sans:     "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    html, body {
+      background: var(--pq-ink);
+      color: var(--pq-ivory);
+      font-family: var(--pq-font-sans);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01","cv02","cv03","tnum";
+    }
+
+    .num, .mono {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+      letter-spacing: -0.01em;
+    }
+
+    .eyebrow {
+      font-family: var(--pq-font-mono);
+      font-size: var(--pq-text-eyebrow);
+      letter-spacing: var(--pq-track-eyebrow);
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+    }
+    .eyebrow.dim { color: var(--pq-ivory-mute); }
+    .eyebrow.pos { color: var(--pq-positive); }
+    .eyebrow.neg { color: var(--pq-negative); }
+
+    .display-h1 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: var(--pq-text-h1);
+      line-height: 1.05;
+      letter-spacing: var(--pq-track-tight);
+      color: var(--pq-ivory);
+    }
+    .display-h2 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: var(--pq-text-h2);
+      line-height: 1.1;
+      letter-spacing: var(--pq-track-tight);
+    }
+    .editorial-body {
+      font-family: var(--pq-font-serif);
+      font-size: var(--pq-text-deck);
+      line-height: 1.55;
+      color: var(--pq-ivory-soft);
+    }
+
+    .br {
+      color: var(--pq-bronze);
+      font-style: italic;
+      font-feature-settings: "ss01";
+    }
+
+    /* ── Card surface ────────────────────────── */
+    .pq-card {
+      background: var(--pq-ink-card);
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-card);
+      padding: 24px;
+      transition: border-color 240ms cubic-bezier(0.16,1,0.3,1),
+                  background-color 240ms cubic-bezier(0.16,1,0.3,1);
+      position: relative;
+    }
+    .pq-card:hover {
+      border-color: var(--pq-bronze);
+      background: rgba(184,149,106,0.025);
+    }
+    .pq-card .corner {
+      position: absolute;
+      top: 14px; right: 14px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.2em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+      transition: color 240ms;
+    }
+    .pq-card:hover .corner { color: var(--pq-bronze); }
+
+    /* Hero card — taller, no border, just a hairline-bottom seal */
+    .pq-hero {
+      padding: 80px 64px 64px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+
+    .pq-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      background: var(--pq-bronze);
+      color: var(--pq-ink);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--pq-radius-cta);
+      transition: background-color 200ms;
+    }
+    .pq-cta:hover { background: var(--pq-bronze-light); }
+
+    .pq-link {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      border-bottom: 1px solid var(--pq-bronze-15);
+      padding-bottom: 2px;
+    }
+    .pq-link:hover { color: var(--pq-bronze-light); border-bottom-color: var(--pq-bronze-light); }
+
+    /* Top ticker strip */
+    .ticker {
+      display: flex;
+      gap: 36px;
+      padding: 10px 24px;
+      border-top: 1px solid var(--pq-hairline);
+      border-bottom: 1px solid var(--pq-hairline);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker .row { display:flex; gap:8px; align-items:baseline; font-family: var(--pq-font-mono); font-size: 11.5px; }
+    .ticker .sym { color: var(--pq-ivory); font-weight: 500; letter-spacing: 0.05em; }
+    .ticker .px  { color: var(--pq-ivory-quiet); }
+    .pos { color: var(--pq-positive); }
+    .neg { color: var(--pq-negative); }
+
+    /* Living-CFO status hairline */
+    .cfo-status {
+      display: flex; gap: 24px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      color: var(--pq-ivory-quiet);
+      letter-spacing: 0.06em;
+    }
+    .cfo-status .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--pq-bronze);
+      box-shadow: 0 0 0 3px rgba(184,149,106,0.18);
+    }
+    .cfo-status .seg { display: flex; gap: 8px; align-items: center; }
+    .cfo-status .seg b { color: var(--pq-ivory); font-weight: 500; }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: 64px;
+      padding: 18px 24px;
+      border: 1px dashed var(--pq-hairline-2);
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--pq-ivory-mute);
+    }
+
+    .foot {
+      margin-top: 24px;
+      padding: 24px 0 56px;
+      text-align: center;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.28em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+    }
+    .foot .fleuron {
+      color: var(--pq-bronze);
+      font-size: 14px;
+      letter-spacing: 0;
+      margin: 0 8px;
+    }
+
+    .wordmark {
+      font-family: var(--pq-font-display);
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+    .wordmark span { color: var(--pq-bronze); }
+
+    .topnav {
+      display:flex; align-items:center; justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .topnav nav a {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-quiet);
+      margin-left: 28px;
+    }
+    .topnav nav a.active { color: var(--pq-ivory); border-bottom: 1px solid var(--pq-bronze); padding-bottom: 4px; }
+
+    /* ── Filter bar (sticky) ──────────────────── */
+    .filter-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--pq-ink);
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr 0.8fr;
+      gap: 32px;
+      padding: 18px 0;
+      border-top: 1px solid var(--pq-hairline);
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .filter-bar .col { display: flex; flex-direction: column; gap: 8px; }
+    .filter-bar .col-label {
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-mute);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border: 1px solid var(--pq-hairline);
+      border-radius: 2px;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-quiet);
+      cursor: pointer;
+      transition: border-color 200ms, color 200ms;
+    }
+    .chip:hover { border-color: var(--pq-bronze-light); color: var(--pq-ivory); }
+    .chip.active { border-color: var(--pq-bronze); color: var(--pq-ivory); background: var(--pq-bronze-08); }
+    .chip .dot { width:6px; height:6px; border-radius:50%; }
+    .chip .dot.pos { background: var(--pq-positive); }
+    .chip .dot.neg { background: var(--pq-negative); }
+    .chip .dot.neu { background: var(--pq-ivory-mute); }
+
+    .range {
+      position: relative;
+      height: 4px;
+      background: rgba(245,240,232,0.06);
+      border-radius: 2px;
+    }
+    .range > i {
+      display: block;
+      height: 100%;
+      width: 62%;
+      margin-left: 18%;
+      background: var(--pq-bronze);
+    }
+    .range::before, .range::after {
+      content: "";
+      position: absolute;
+      top: -4px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--pq-ivory);
+      border: 2px solid var(--pq-ink);
+    }
+    .range::before { left: 18%; }
+    .range::after { left: 80%; }
+
+    .input-stub {
+      padding: 7px 10px;
+      border: 1px solid var(--pq-hairline);
+      border-radius: 2px;
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      color: var(--pq-ivory-quiet);
+      background: transparent;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Top movers — horizontal scroll ──────── */
+    .movers-rail {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+    .mover {
+      padding: 18px 18px 16px;
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-card);
+      background: var(--pq-ink-card);
+      transition: border-color 240ms;
+      min-height: 168px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .mover:hover { border-color: var(--pq-bronze); }
+    .mover .name-main {
+      font-family: var(--pq-font-display);
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--pq-ivory);
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+    }
+    .mover .ticker-sub {
+      font-family: var(--pq-font-mono);
+      font-size: 10px;
+      color: rgba(245,240,232,0.45);
+      letter-spacing: 0.14em;
+      margin-top: 3px;
+    }
+    .mover .rationale {
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--pq-ivory-soft);
+      margin-top: 12px;
+    }
+
+    .label-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px 3px 6px;
+      border-radius: 2px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .label-pill.pos { color: var(--pq-positive); border: 1px solid rgba(220,38,38,0.32); background: rgba(220,38,38,0.06); }
+    .label-pill.neg { color: var(--pq-negative); border: 1px solid rgba(37,99,235,0.32); background: rgba(37,99,235,0.06); }
+    .label-pill.neu { color: var(--pq-ivory-mute); border: 1px solid var(--pq-hairline-2); }
+
+    .strength-bar {
+      height: 3px;
+      background: rgba(245,240,232,0.06);
+      margin-top: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .strength-bar > i {
+      display:block; height:100%;
+      background: linear-gradient(90deg, var(--pq-bronze-deep), var(--pq-bronze));
+    }
+
+    /* ── Signal timeline card ──────────────── */
+    .signal-row {
+      display: grid;
+      grid-template-columns: 1fr 280px 120px;
+      gap: 28px;
+      align-items: start;
+      padding: 22px 24px;
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-card);
+      background: var(--pq-ink-card);
+      margin-bottom: 10px;
+      transition: border-color 240ms;
+      cursor: pointer;
+    }
+    .signal-row:hover { border-color: var(--pq-bronze); background: rgba(184,149,106,0.025); }
+    .signal-row .name-main {
+      font-family: var(--pq-font-display);
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--pq-ivory);
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+    .signal-row .ticker-sub {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      color: rgba(245,240,232,0.45);
+      letter-spacing: 0.14em;
+      margin-top: 4px;
+    }
+    .signal-row .rationale {
+      font-family: var(--pq-font-serif);
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--pq-ivory-soft);
+      margin-top: 10px;
+    }
+    .signal-row .timestamp {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      color: var(--pq-ivory-mute);
+      letter-spacing: 0.1em;
+      text-align: right;
+    }
+
+    /* ── Date heading inside timeline ─────── */
+    .day-rule {
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      margin: 36px 0 14px;
+    }
+    .day-rule h3 {
+      font-family: var(--pq-font-display);
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--pq-ivory);
+      letter-spacing: -0.01em;
+    }
+    .day-rule .meta {
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-mute);
+    }
+    .day-rule .line { flex: 1; height: 1px; background: var(--pq-hairline); }
+
+    /* Pagination */
+    .pager {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      margin-top: 40px;
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .pager a {
+      color: var(--pq-ivory-mute);
+      padding: 6px 10px;
+      border-bottom: 1px solid transparent;
+    }
+    .pager a.active { color: var(--pq-ivory); border-bottom-color: var(--pq-bronze); }
+    .pager a:hover { color: var(--pq-ivory); }
+  </style>
+</head>
+<body>
+
+  <!-- ════════ TOP NAV ════════ -->
+  <header class="topnav">
+    <div class="flex items-center gap-3">
+      <span class="wordmark">Pivox<span>Quant</span></span>
+      <span class="eyebrow dim ml-3">Beta · Apr 27</span>
+    </div>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Memo</a>
+      <a href="#">Book</a>
+      <a href="#">Watchlist</a>
+      <a href="#">Risk</a>
+      <a href="#" class="active">Signals</a>
+      <a href="#">Archive</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <span class="eyebrow dim">Sean · Pro</span>
+      <span class="num" style="color:var(--pq-ivory-quiet); font-size:11px;">21:38 KST</span>
+    </div>
+  </header>
+
+  <!-- ════════ TOP TICKER ════════ -->
+  <div class="ticker">
+    <div class="row"><span class="sym">SPX</span><span class="px num">5,612.34</span><span class="pos num">+0.42%</span></div>
+    <div class="row"><span class="sym">NDX</span><span class="px num">19,884.12</span><span class="pos num">+0.71%</span></div>
+    <div class="row"><span class="sym">DJI</span><span class="px num">42,118.50</span><span class="neg num">-0.18%</span></div>
+    <div class="row"><span class="sym">KOSPI</span><span class="px num">2,712.04</span><span class="pos num">+0.33%</span></div>
+    <div class="row"><span class="sym">KOSDAQ</span><span class="px num">868.91</span><span class="neg num">-0.21%</span></div>
+    <div class="row"><span class="sym">USD/KRW</span><span class="px num">1,387.20</span><span class="pos num">+0.12%</span></div>
+    <div class="row"><span class="sym">VIX</span><span class="px num">14.82</span><span class="neg num">-2.41%</span></div>
+    <div class="row"><span class="sym">BTC</span><span class="px num">$68,442</span><span class="pos num">+1.84%</span></div>
+    <div class="row"><span class="sym">10Y UST</span><span class="px num">4.27%</span><span class="neg num">-3bp</span></div>
+  </div>
+
+  <!-- ════════ CFO STATUS BAR ════════ -->
+  <div class="max-w-[1280px] mx-auto px-6">
+    <div class="cfo-status">
+      <span class="dot"></span>
+      <span class="seg">CFO ROOM <b>OPEN</b></span>
+      <span class="seg">Stream <b>LIVE</b></span>
+      <span class="seg">Last observation <b>14 sec ago</b></span>
+      <span class="seg ml-auto">Filtered to your book + watchlist <b class="num">· 27 symbols</b></span>
+    </div>
+  </div>
+
+  <!-- ════════ HERO ════════ -->
+  <section class="max-w-[1280px] mx-auto px-6 pq-hero">
+    <div class="eyebrow mb-7">Signals · live</div>
+
+    <h1 class="display-h1 mb-7" style="max-width: 940px;">
+      The stream is <span class="br">observed</span>,<br/>
+      not advised — <span class="br">filtered</span> to what you own.
+    </h1>
+
+    <p class="editorial-body mb-10" style="max-width: 720px;">
+      Today: <span class="num" style="color:var(--pq-ivory);">42 observations</span> across your 27 symbols.
+      <span class="num pos">17 POSITIVE</span> · <span class="num neg">14 NEGATIVE</span> ·
+      <span class="num" style="color:var(--pq-ivory-quiet);">11 NEUTRAL</span>. None are
+      instructions. They describe model state — your call sits at the top of the page.
+    </p>
+
+    <div class="flex items-center gap-4">
+      <a href="#" class="pq-cta">Jump to my book →</a>
+      <a href="#" class="pq-link">Export today · CSV</a>
+      <span class="eyebrow dim ml-4">Stream interval · 5s when open · 60s when closed</span>
+    </div>
+  </section>
+
+  <!-- ════════ MAIN ════════ -->
+  <main class="max-w-[1280px] mx-auto px-6 pt-2">
+
+    <!-- ── BLOCK 1 — Filter bar ── -->
+    <div class="filter-bar">
+      <div class="col">
+        <span class="col-label">Label</span>
+        <div class="flex flex-wrap gap-2">
+          <span class="chip active"><span class="dot pos"></span>Positive · 17</span>
+          <span class="chip active"><span class="dot neg"></span>Negative · 14</span>
+          <span class="chip"><span class="dot neu"></span>Neutral · 11</span>
+        </div>
+      </div>
+      <div class="col">
+        <span class="col-label">Strength · 0.32 → 0.94</span>
+        <div class="range"><i></i></div>
+        <div class="flex justify-between mt-1">
+          <span class="num" style="font-size:10.5px; color:var(--pq-ivory-mute);">0.00</span>
+          <span class="num" style="font-size:10.5px; color:var(--pq-ivory-mute);">1.00</span>
+        </div>
+      </div>
+      <div class="col">
+        <span class="col-label">Symbol</span>
+        <input class="input-stub" placeholder="AAPL · NVDA · 005930.KS …" value="" />
+      </div>
+      <div class="col">
+        <span class="col-label">Time</span>
+        <div class="flex gap-2">
+          <span class="chip active">Today</span>
+          <span class="chip">7d</span>
+          <span class="chip">30d</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BLOCK 2 — Top movers ── -->
+    <div class="flex items-end justify-between mt-10 mb-5">
+      <div>
+        <div class="eyebrow mb-2">Today · top movers</div>
+        <h2 class="display-h2" style="font-size:30px;">Loudest five.</h2>
+      </div>
+      <a href="#" class="pq-link">Sort by strength ›</a>
+    </div>
+
+    <div class="movers-rail mb-12">
+
+      <div class="mover">
+        <div>
+          <div class="name-main">NVIDIA</div>
+          <div class="ticker-sub">NVDA · NASDAQ</div>
+          <div class="mt-3"><span class="label-pill pos">Positive · 0.91</span></div>
+          <div class="strength-bar"><i style="width:91%"></i></div>
+          <div class="rationale">MACD cross sustained. Volume +38% vs 20-day median.</div>
+        </div>
+        <div class="num pos" style="font-size:11px; margin-top:10px;">+2.81% &nbsp;<span style="color:var(--pq-ivory-mute);">$118.74</span></div>
+      </div>
+
+      <div class="mover">
+        <div>
+          <div class="name-main">Tesla</div>
+          <div class="ticker-sub">TSLA · NASDAQ</div>
+          <div class="mt-3"><span class="label-pill neg">Negative · 0.84</span></div>
+          <div class="strength-bar"><i style="width:84%"></i></div>
+          <div class="rationale">RSI 76 with bearish divergence. Two-week distribution.</div>
+        </div>
+        <div class="num neg" style="font-size:11px; margin-top:10px;">-1.94% &nbsp;<span style="color:var(--pq-ivory-mute);">$172.40</span></div>
+      </div>
+
+      <div class="mover">
+        <div>
+          <div class="name-main">Apple Inc.</div>
+          <div class="ticker-sub">AAPL · NASDAQ</div>
+          <div class="mt-3"><span class="label-pill pos">Positive · 0.78</span></div>
+          <div class="strength-bar"><i style="width:78%"></i></div>
+          <div class="rationale">200-day reclaim on rising volume. Pre-print drift.</div>
+        </div>
+        <div class="num pos" style="font-size:11px; margin-top:10px;">+1.42% &nbsp;<span style="color:var(--pq-ivory-mute);">$214.32</span></div>
+      </div>
+
+      <div class="mover">
+        <div>
+          <div class="name-main">Samsung Elec.</div>
+          <div class="ticker-sub">005930.KS · KOSPI</div>
+          <div class="mt-3"><span class="label-pill neg">Negative · 0.71</span></div>
+          <div class="strength-bar"><i style="width:71%"></i></div>
+          <div class="rationale">Foreign net-sell streak day 4. Memory cycle wobble.</div>
+        </div>
+        <div class="num neg" style="font-size:11px; margin-top:10px;">-0.69% &nbsp;<span style="color:var(--pq-ivory-mute);">₩72,400</span></div>
+      </div>
+
+      <div class="mover">
+        <div>
+          <div class="name-main">SK Hynix</div>
+          <div class="ticker-sub">000660.KS · KOSPI</div>
+          <div class="mt-3"><span class="label-pill neg">Negative · 0.66</span></div>
+          <div class="strength-bar"><i style="width:66%"></i></div>
+          <div class="rationale">HBM supply commentary fading. Inventory days +6.</div>
+        </div>
+        <div class="num neg" style="font-size:11px; margin-top:10px;">-1.12% &nbsp;<span style="color:var(--pq-ivory-mute);">₩198,500</span></div>
+      </div>
+
+    </div>
+
+    <!-- ── BLOCK 3 — Signals timeline ── -->
+    <div class="flex items-end justify-between mb-2">
+      <div>
+        <div class="eyebrow mb-2">Stream · in chronological order</div>
+        <h2 class="display-h2" style="font-size:30px;">Today's observations.</h2>
+      </div>
+      <span class="eyebrow dim">Auto-updating · paused on hover</span>
+    </div>
+
+    <!-- Day rule: Today -->
+    <div class="day-rule">
+      <h3>Friday</h3>
+      <span class="meta">27 Apr · 21 observations</span>
+      <span class="line"></span>
+    </div>
+
+    <!-- Signal cards -->
+    <div class="signal-row">
+      <div>
+        <div class="name-main">NVIDIA</div>
+        <div class="ticker-sub">NVDA · NASDAQ</div>
+        <div class="rationale">
+          MACD cross sustained for the third consecutive session. Volume sits +38% above
+          the 20-day median, with relative strength holding above the semi-cap peer line.
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="label-pill pos">Positive</span>
+          <span class="num" style="color:var(--pq-ivory-soft); font-size:13px;">strength 0.91</span>
+        </div>
+        <div class="strength-bar"><i style="width:91%"></i></div>
+        <div class="num pos" style="font-size:12px; margin-top:10px;">$118.74 &nbsp;+2.81%</div>
+      </div>
+      <div class="timestamp">09:42 KST<br/><span style="color:var(--pq-ivory-mute); letter-spacing:0.06em;">3h ago</span></div>
+    </div>
+
+    <div class="signal-row">
+      <div>
+        <div class="name-main">Tesla</div>
+        <div class="ticker-sub">TSLA · NASDAQ</div>
+        <div class="rationale">
+          RSI 76 with bearish divergence on the 4-hour. Two-week distribution pattern
+          visible on volume profile. Price still above the 50-day, but momentum cooling.
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="label-pill neg">Negative</span>
+          <span class="num" style="color:var(--pq-ivory-soft); font-size:13px;">strength 0.84</span>
+        </div>
+        <div class="strength-bar"><i style="width:84%"></i></div>
+        <div class="num neg" style="font-size:12px; margin-top:10px;">$172.40 &nbsp;-1.94%</div>
+      </div>
+      <div class="timestamp">10:18 KST<br/><span style="color:var(--pq-ivory-mute); letter-spacing:0.06em;">3h ago</span></div>
+    </div>
+
+    <div class="signal-row">
+      <div>
+        <div class="name-main">Apple Inc.</div>
+        <div class="ticker-sub">AAPL · NASDAQ</div>
+        <div class="rationale">
+          Reclaimed the 200-day on rising volume — a base-pattern resolution observed
+          ahead of next Tuesday's print. Implied move sits at ±4.1%.
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="label-pill pos">Positive</span>
+          <span class="num" style="color:var(--pq-ivory-soft); font-size:13px;">strength 0.78</span>
+        </div>
+        <div class="strength-bar"><i style="width:78%"></i></div>
+        <div class="num pos" style="font-size:12px; margin-top:10px;">$214.32 &nbsp;+1.42%</div>
+      </div>
+      <div class="timestamp">11:04 KST<br/><span style="color:var(--pq-ivory-mute); letter-spacing:0.06em;">2h ago</span></div>
+    </div>
+
+    <div class="signal-row">
+      <div>
+        <div class="name-main">Samsung Electronics</div>
+        <div class="ticker-sub">005930.KS · KOSPI</div>
+        <div class="rationale">
+          Inside the 50/200 channel after four sessions of foreign net-selling. Earnings
+          Thursday — pre-brief is queued in your archive.
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="label-pill neu">Neutral</span>
+          <span class="num" style="color:var(--pq-ivory-soft); font-size:13px;">strength 0.42</span>
+        </div>
+        <div class="strength-bar"><i style="width:42%"></i></div>
+        <div class="num neg" style="font-size:12px; margin-top:10px;">₩72,400 &nbsp;-0.69%</div>
+      </div>
+      <div class="timestamp">15:22 KST<br/><span style="color:var(--pq-ivory-mute); letter-spacing:0.06em;">22m ago</span></div>
+    </div>
+
+    <div class="signal-row">
+      <div>
+        <div class="name-main">Microsoft</div>
+        <div class="ticker-sub">MSFT · NASDAQ</div>
+        <div class="rationale">
+          Holding the 20-day with diminishing range. Implied vol 18.4 — middle of the
+          three-month band. Print Wednesday post-market.
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="label-pill neu">Neutral</span>
+          <span class="num" style="color:var(--pq-ivory-soft); font-size:13px;">strength 0.36</span>
+        </div>
+        <div class="strength-bar"><i style="width:36%"></i></div>
+        <div class="num pos" style="font-size:12px; margin-top:10px;">$432.18 &nbsp;+0.34%</div>
+      </div>
+      <div class="timestamp">15:31 KST<br/><span style="color:var(--pq-ivory-mute); letter-spacing:0.06em;">13m ago</span></div>
+    </div>
+
+    <!-- Day rule: Yesterday -->
+    <div class="day-rule">
+      <h3>Thursday</h3>
+      <span class="meta">26 Apr · 19 observations</span>
+      <span class="line"></span>
+    </div>
+
+    <div class="signal-row">
+      <div>
+        <div class="name-main">SK Hynix</div>
+        <div class="ticker-sub">000660.KS · KOSPI</div>
+        <div class="rationale">
+          HBM supply commentary fading off the call. Inventory days +6 vs Q4. Foreign
+          ownership down 0.4ppt week-over-week.
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="label-pill neg">Negative</span>
+          <span class="num" style="color:var(--pq-ivory-soft); font-size:13px;">strength 0.66</span>
+        </div>
+        <div class="strength-bar"><i style="width:66%"></i></div>
+        <div class="num neg" style="font-size:12px; margin-top:10px;">₩198,500 &nbsp;-1.12%</div>
+      </div>
+      <div class="timestamp">14:52 KST<br/><span style="color:var(--pq-ivory-mute); letter-spacing:0.06em;">1d ago</span></div>
+    </div>
+
+    <div class="signal-row">
+      <div>
+        <div class="name-main">Alphabet</div>
+        <div class="ticker-sub">GOOGL · NASDAQ</div>
+        <div class="rationale">
+          Post-print drift positive · gap-and-go held into close. Search ad commentary
+          re-rated the stock above the 50-day in one session.
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <span class="label-pill pos">Positive</span>
+          <span class="num" style="color:var(--pq-ivory-soft); font-size:13px;">strength 0.74</span>
+        </div>
+        <div class="strength-bar"><i style="width:74%"></i></div>
+        <div class="num pos" style="font-size:12px; margin-top:10px;">$172.18 &nbsp;+3.81%</div>
+      </div>
+      <div class="timestamp">06:12 KST<br/><span style="color:var(--pq-ivory-mute); letter-spacing:0.06em;">1d ago</span></div>
+    </div>
+
+    <!-- ── Pagination ── -->
+    <div class="pager">
+      <a href="#">‹ Prev</a>
+      <a href="#" class="active">01</a>
+      <a href="#">02</a>
+      <a href="#">03</a>
+      <a href="#">04</a>
+      <span style="color:var(--pq-ivory-mute);">…</span>
+      <a href="#">12</a>
+      <a href="#">Next ›</a>
+    </div>
+
+    <!-- ══════════ DISCLAIMER ══════════ -->
+    <div class="disclaimer">
+      <strong style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif); font-style:italic;">
+        Notice / 면책 고지.
+      </strong>
+      &nbsp; Signals are observations of model state, not actions. POSITIVE / NEGATIVE / NEUTRAL
+      describe the system's read of price, volume, and structure — they are not buy, sell, or
+      hold instructions, and PivoxQuant does not provide investment advice or solicitation.
+      본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며,
+      모든 의사결정과 책임은 이용자 본인에게 있습니다.
+    </div>
+
+    <!-- ══════════ FOOT ══════════ -->
+    <div class="foot">
+      <span>PivoxQuant</span>
+      <span class="fleuron">❦</span>
+      <span>Signals · Stream</span>
+      <span class="fleuron">❦</span>
+      <span>Seoul · 27 April 2026</span>
+    </div>
+
+  </main>
+
+</body>
+</html>

@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="en" data-price-mode="kr">
+<head>
+  <meta charset="utf-8" />
+  <title>PivoxQuant — /risk v2 (Risk Board)</title>
+  <meta name="viewport" content="width=1280" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ───────────────────────────────────────────────
+       PivoxQuant Design System v3 — locked tokens
+       (mirror of frontend/src/app/globals.css :root,
+       identical to home-v2 + portfolio-v2 mockups)
+       ─────────────────────────────────────────────── */
+    :root {
+      --pq-ink:           #050505;
+      --pq-ink-card:      rgba(255,255,255,0.02);
+      --pq-ivory:         #F5F0E8;
+      --pq-ivory-soft:    rgba(245,240,232,0.82);
+      --pq-ivory-quiet:   rgba(245,240,232,0.55);
+      --pq-ivory-mute:    rgba(245,240,232,0.40);
+
+      --pq-hairline:      rgba(245,240,232,0.08);
+      --pq-hairline-2:    rgba(245,240,232,0.14);
+
+      --pq-bronze:        #B8956A;
+      --pq-bronze-light:  #A3845C;
+      --pq-bronze-deep:   #6F5636;
+      --pq-bronze-15:     rgba(184,149,106,0.15);
+      --pq-bronze-08:     rgba(184,149,106,0.08);
+
+      --pq-positive:      #dc2626;
+      --pq-negative:      #2563eb;
+      --pq-neutral:       rgba(245,240,232,0.55);
+      --pq-error:         #d18888;
+
+      --pq-text-eyebrow:  10.5px;
+      --pq-text-mono-sm:  11px;
+      --pq-text-caption:  12px;
+      --pq-text-body-sm:  13px;
+      --pq-text-body:     14px;
+      --pq-text-deck:     17px;
+      --pq-text-quote:    22px;
+      --pq-text-h3:       30px;
+      --pq-text-h2:       40px;
+      --pq-text-h1:       48px;
+      --pq-text-display:  72px;
+
+      --pq-track-eyebrow: 0.22em;
+      --pq-track-tight:   -0.02em;
+
+      --pq-radius-cta:    2px;
+      --pq-radius-card:   4px;
+
+      --pq-font-display:  "Playfair Display","Source Serif 4",Georgia,serif;
+      --pq-font-serif:    "Source Serif 4","Iowan Old Style",Georgia,serif;
+      --pq-font-mono:     "JetBrains Mono","SF Mono",ui-monospace,monospace;
+      --pq-font-sans:     "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    html, body {
+      background: var(--pq-ink);
+      color: var(--pq-ivory);
+      font-family: var(--pq-font-sans);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01","cv02","cv03","tnum";
+    }
+
+    .num, .mono {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+      letter-spacing: -0.01em;
+    }
+
+    .eyebrow {
+      font-family: var(--pq-font-mono);
+      font-size: var(--pq-text-eyebrow);
+      letter-spacing: var(--pq-track-eyebrow);
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+    }
+    .eyebrow.dim { color: var(--pq-ivory-mute); }
+
+    .display-h1 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: var(--pq-text-h1);
+      line-height: 1.05;
+      letter-spacing: var(--pq-track-tight);
+      color: var(--pq-ivory);
+    }
+    .display-h2 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: var(--pq-text-h2);
+      line-height: 1.1;
+      letter-spacing: var(--pq-track-tight);
+    }
+    .editorial-body {
+      font-family: var(--pq-font-serif);
+      font-size: var(--pq-text-deck);
+      line-height: 1.55;
+      color: var(--pq-ivory-soft);
+    }
+    .br {
+      color: var(--pq-bronze);
+      font-style: italic;
+      font-feature-settings: "ss01";
+    }
+
+    .pq-card {
+      background: var(--pq-ink-card);
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-card);
+      padding: 24px;
+      transition: border-color 240ms cubic-bezier(0.16,1,0.3,1),
+                  background-color 240ms cubic-bezier(0.16,1,0.3,1);
+      position: relative;
+    }
+    .pq-card:hover {
+      border-color: var(--pq-bronze);
+      background: rgba(184,149,106,0.025);
+    }
+    .pq-card .corner {
+      position: absolute;
+      top: 14px; right: 14px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.2em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+      transition: color 240ms;
+    }
+    .pq-card:hover .corner { color: var(--pq-bronze); }
+
+    .pq-hero {
+      padding: 80px 64px 64px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+
+    .pq-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      background: var(--pq-bronze);
+      color: var(--pq-ink);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--pq-radius-cta);
+      transition: background-color 200ms;
+    }
+    .pq-cta:hover { background: var(--pq-bronze-light); }
+    .pq-cta.outline {
+      background: transparent;
+      color: var(--pq-bronze);
+      border: 1px solid var(--pq-bronze);
+    }
+    .pq-cta.outline:hover { background: var(--pq-bronze-08); }
+
+    .pq-link {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      border-bottom: 1px solid var(--pq-bronze-15);
+      padding-bottom: 2px;
+    }
+    .pq-link:hover { color: var(--pq-bronze-light); border-bottom-color: var(--pq-bronze-light); }
+
+    .ticker {
+      display: flex;
+      gap: 36px;
+      padding: 10px 24px;
+      border-top: 1px solid var(--pq-hairline);
+      border-bottom: 1px solid var(--pq-hairline);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker .row { display:flex; gap:8px; align-items:baseline; font-family: var(--pq-font-mono); font-size: 11.5px; }
+    .ticker .sym { color: var(--pq-ivory); font-weight: 500; letter-spacing: 0.05em; }
+    .ticker .px  { color: var(--pq-ivory-quiet); }
+    .pos { color: var(--pq-positive); }
+    .neg { color: var(--pq-negative); }
+
+    .cfo-status {
+      display: flex; gap: 24px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      color: var(--pq-ivory-quiet);
+      letter-spacing: 0.06em;
+    }
+    .cfo-status .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--pq-bronze);
+      box-shadow: 0 0 0 3px rgba(184,149,106,0.18);
+    }
+    .cfo-status .seg { display: flex; gap: 8px; align-items: center; }
+    .cfo-status .seg b { color: var(--pq-ivory); font-weight: 500; }
+
+    /* ── Big gauge (240px tall, 2x2 grid) ─────────── */
+    .big-gauge {
+      min-height: 240px;
+      padding: 28px 28px 24px;
+      display: flex;
+      flex-direction: column;
+    }
+    .big-gauge .gauge-value {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 44px;
+      letter-spacing: -0.025em;
+      line-height: 1;
+      color: var(--pq-ivory);
+      margin: 18px 0 8px;
+    }
+    .big-gauge .gauge-range {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      color: var(--pq-ivory-quiet);
+      margin-bottom: 18px;
+      text-transform: uppercase;
+    }
+    .big-gauge .arc-wrap {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: end;
+      margin-top: auto;
+    }
+    /* Linear gauge bar (Bronze-deep → Bronze gradient, home-v2 .gauge style) */
+    .arc {
+      width: 100%;
+      height: 6px;
+      background: rgba(245,240,232,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .arc > i {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--pq-bronze-deep), var(--pq-bronze));
+    }
+    .arc-marks {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      color: var(--pq-ivory-mute);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+    .gauge-status {
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-top: 16px;
+    }
+    .gauge-status.positive { color: var(--pq-positive); }
+    .gauge-status.negative { color: var(--pq-negative); }
+    .gauge-status.neutral  { color: var(--pq-ivory-quiet); }
+
+    /* ── 7-Layer Defense rows ────────────────────── */
+    .layer-row {
+      display: grid;
+      grid-template-columns: 56px 1fr 110px 130px 110px 140px;
+      gap: 24px;
+      padding: 20px 0;
+      align-items: baseline;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .layer-row:last-child { border-bottom: 0; }
+    .layer-row .layer-num {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 22px;
+      color: var(--pq-bronze);
+    }
+    .layer-row .layer-name {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 18px;
+      letter-spacing: -0.005em;
+      color: var(--pq-ivory);
+      line-height: 1.25;
+    }
+    .layer-row .layer-name small {
+      display: block;
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      color: var(--pq-ivory-quiet);
+      margin-top: 4px;
+      letter-spacing: 0;
+    }
+    .layer-row .layer-status {
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    .layer-row .layer-value {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 16px;
+      color: var(--pq-ivory);
+      letter-spacing: -0.01em;
+    }
+    .layer-row .layer-thresh {
+      font-family: var(--pq-font-mono);
+      font-size: 11.5px;
+      color: var(--pq-ivory-quiet);
+      letter-spacing: 0.04em;
+    }
+    .layer-row .layer-time {
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      color: var(--pq-ivory-mute);
+      letter-spacing: 0.14em;
+      text-align: right;
+    }
+    .status-positive { color: var(--pq-positive); }
+    .status-negative { color: var(--pq-negative); }
+    .status-neutral  { color: var(--pq-ivory-quiet); }
+
+    /* ── Concentration table ─────────────────────── */
+    .conc-row {
+      display: grid;
+      grid-template-columns: 32px 1fr 120px 1fr;
+      gap: 20px;
+      padding: 16px 0;
+      align-items: center;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .conc-row:last-child { border-bottom: 0; }
+    .conc-row .rank {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 22px;
+      color: var(--pq-bronze);
+    }
+    /* 종목명 main pattern */
+    .conc-row .name {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 18px;
+      letter-spacing: -0.005em;
+      color: var(--pq-ivory);
+      line-height: 1.25;
+    }
+    .conc-row .name small {
+      display: block;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      color: var(--pq-ivory-mute);
+      letter-spacing: 0.16em;
+      margin-top: 4px;
+    }
+    .conc-row .pct {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 18px;
+      color: var(--pq-ivory);
+      letter-spacing: -0.01em;
+    }
+    .conc-row .bar {
+      height: 4px;
+      background: rgba(245,240,232,0.06);
+      overflow: hidden;
+    }
+    .conc-row .bar > i {
+      display: block; height: 100%;
+      background: linear-gradient(90deg, var(--pq-bronze-deep), var(--pq-bronze));
+    }
+
+    /* ── Sector exposure 2-col ───────────────────── */
+    .sector-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .sector-table th {
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-mute);
+      text-align: left;
+      padding: 12px 0;
+      font-weight: 400;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .sector-table td {
+      padding: 14px 0;
+      vertical-align: baseline;
+      border-bottom: 1px solid var(--pq-hairline);
+      font-size: 13px;
+    }
+    .sector-table tr:last-child td { border-bottom: 0; }
+    /* 종목명 main pattern in sector row leaders */
+    .sector-table .name {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 16px;
+      color: var(--pq-ivory);
+      letter-spacing: -0.005em;
+    }
+    .sector-table .name small {
+      display: block;
+      font-family: var(--pq-font-mono);
+      font-size: 10px;
+      color: var(--pq-ivory-mute);
+      letter-spacing: 0.14em;
+      margin-top: 3px;
+    }
+    .sector-table .num {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      color: var(--pq-ivory-soft);
+    }
+
+    /* Risk timeline */
+    .risk-timeline {
+      width: 100%;
+      height: 200px;
+      display: block;
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+      margin-top: 64px;
+      padding: 18px 24px;
+      border: 1px dashed var(--pq-hairline-2);
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--pq-ivory-mute);
+    }
+
+    .foot {
+      margin-top: 24px;
+      padding: 24px 0 56px;
+      text-align: center;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.28em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+    }
+    .foot .fleuron {
+      color: var(--pq-bronze);
+      font-size: 14px;
+      letter-spacing: 0;
+      margin: 0 8px;
+    }
+
+    .wordmark {
+      font-family: var(--pq-font-display);
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+    .wordmark span { color: var(--pq-bronze); }
+
+    .topnav {
+      display:flex; align-items:center; justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .topnav nav a {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-quiet);
+      margin-left: 28px;
+    }
+    .topnav nav a.active { color: var(--pq-ivory); border-bottom: 1px solid var(--pq-bronze); padding-bottom: 4px; }
+
+    .sec-head {
+      display: flex; align-items: end; justify-content: space-between;
+      margin-bottom: 22px;
+    }
+    .sec-head .h2 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 32px;
+      letter-spacing: var(--pq-track-tight);
+    }
+
+    /* Sector donut (mirror of portfolio-v2) */
+    .sector-donut svg { display:block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+  <!-- ════════ TOP NAV ════════ -->
+  <header class="topnav">
+    <div class="flex items-center gap-3">
+      <span class="wordmark">Pivox<span>Quant</span></span>
+      <span class="eyebrow dim ml-3">Beta · Apr 27</span>
+    </div>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Memo</a>
+      <a href="#">Book</a>
+      <a href="#">Watchlist</a>
+      <a href="#" class="active">Risk</a>
+      <a href="#">Archive</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <span class="eyebrow dim">Sean · Pro</span>
+      <span class="num" style="color:var(--pq-ivory-quiet); font-size:11px;">21:38 KST</span>
+    </div>
+  </header>
+
+  <!-- ════════ TOP TICKER ════════ -->
+  <div class="ticker">
+    <div class="row"><span class="sym">SPX</span><span class="px num">5,612.34</span><span class="pos num">+0.42%</span></div>
+    <div class="row"><span class="sym">NDX</span><span class="px num">19,884.12</span><span class="pos num">+0.71%</span></div>
+    <div class="row"><span class="sym">DJI</span><span class="px num">42,118.50</span><span class="neg num">-0.18%</span></div>
+    <div class="row"><span class="sym">KOSPI</span><span class="px num">2,712.04</span><span class="pos num">+0.33%</span></div>
+    <div class="row"><span class="sym">KOSDAQ</span><span class="px num">868.91</span><span class="neg num">-0.21%</span></div>
+    <div class="row"><span class="sym">USD/KRW</span><span class="px num">1,387.20</span><span class="pos num">+0.12%</span></div>
+    <div class="row"><span class="sym">VIX</span><span class="px num">14.82</span><span class="neg num">-2.41%</span></div>
+    <div class="row"><span class="sym">BTC</span><span class="px num">$68,442</span><span class="pos num">+1.84%</span></div>
+    <div class="row"><span class="sym">10Y UST</span><span class="px num">4.27%</span><span class="neg num">-3bp</span></div>
+  </div>
+
+  <!-- ════════ LIVING CFO STATUS ════════ -->
+  <div class="max-w-[1280px] mx-auto px-6">
+    <div class="cfo-status">
+      <span class="dot"></span>
+      <span class="seg">CFO ROOM <b>OPEN</b></span>
+      <span class="seg">Risk last observed <b>27 Apr · 21:30 KST</b></span>
+      <span class="seg">Posture <b>Composed</b></span>
+      <span class="seg ml-auto">DD distance <b class="num">3.92pp</b></span>
+    </div>
+  </div>
+
+  <!-- ════════ HERO — "Risk board" ════════ -->
+  <section class="max-w-[1280px] mx-auto px-6 pq-hero">
+    <div class="eyebrow mb-7">Risk · 7-Layer Defense · Friday</div>
+
+    <h1 class="display-h1 mb-7" style="max-width: 940px;">
+      Risk <span class="br">board.</span>
+    </h1>
+
+    <p class="editorial-body mb-10" style="max-width: 720px;">
+      Seven layers <span class="br">observed</span> at 21:30 KST. Three under strain,
+      none breached. Posture: <span class="br">composed.</span> Concentration is the
+      loudest signal — Tech weight at 41.0% of book.
+    </p>
+
+    <div class="flex items-center gap-4">
+      <a href="#" class="pq-cta">Open layers ↓</a>
+      <a href="#" class="pq-cta outline">Stress test</a>
+      <span class="eyebrow dim ml-4">Drafted by AI · Reviewed by you</span>
+    </div>
+  </section>
+
+  <!-- ════════ MAIN CONTENT ════════ -->
+  <main class="max-w-[1280px] mx-auto px-6 pt-14">
+
+    <!-- ── BLOCK 1 — 4 KPI Gauges (2x2) ─────────────────────── -->
+    <section class="mb-16">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow mb-2">Gauges · Four primary</div>
+          <h2 class="h2">Where the book stands.</h2>
+        </div>
+        <span class="eyebrow dim">Window · 90 days</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+
+        <!-- VaR 95 -->
+        <div class="pq-card big-gauge">
+          <div class="eyebrow">VaR · 95% / 1-day</div>
+          <div class="gauge-value">−2.34<span style="font-size: 26px; color: var(--pq-ivory-mute);">%</span></div>
+          <div class="gauge-range">Normal range −2.0 ↔ −3.5%</div>
+          <div class="arc-wrap">
+            <div style="width: 100%;">
+              <div class="arc"><i style="width: 38%;"></i></div>
+              <div class="arc-marks">
+                <span>Calm</span>
+                <span>Strained</span>
+                <span>Breach</span>
+              </div>
+            </div>
+          </div>
+          <div class="gauge-status neutral">Posture · Neutral</div>
+        </div>
+
+        <!-- Concentration HHI -->
+        <div class="pq-card big-gauge">
+          <div class="eyebrow">Concentration · HHI</div>
+          <div class="gauge-value">0.184</div>
+          <div class="gauge-range">Threshold &lt; 0.25 · Tech 41.0%</div>
+          <div class="arc-wrap">
+            <div style="width: 100%;">
+              <div class="arc"><i style="width: 62%;"></i></div>
+              <div class="arc-marks">
+                <span>Diffuse</span>
+                <span>Tilted</span>
+                <span>Breach</span>
+              </div>
+            </div>
+          </div>
+          <div class="gauge-status negative">Posture · Negative</div>
+        </div>
+
+        <!-- Correlation avg -->
+        <div class="pq-card big-gauge">
+          <div class="eyebrow">Correlation · 90-day avg</div>
+          <div class="gauge-value">0.42</div>
+          <div class="gauge-range">Cluster max 0.71 · NVDA ↔ AMD</div>
+          <div class="arc-wrap">
+            <div style="width: 100%;">
+              <div class="arc"><i style="width: 71%;"></i></div>
+              <div class="arc-marks">
+                <span>Independent</span>
+                <span>Clustered</span>
+                <span>Synced</span>
+              </div>
+            </div>
+          </div>
+          <div class="gauge-status negative">Posture · Negative</div>
+        </div>
+
+        <!-- Tail CES -->
+        <div class="pq-card big-gauge">
+          <div class="eyebrow">Tail · Component ES</div>
+          <div class="gauge-value">−4.12<span style="font-size: 26px; color: var(--pq-ivory-mute);">%</span></div>
+          <div class="gauge-range">99th percentile · 1-day</div>
+          <div class="arc-wrap">
+            <div style="width: 100%;">
+              <div class="arc"><i style="width: 44%;"></i></div>
+              <div class="arc-marks">
+                <span>Thin</span>
+                <span>Heavy</span>
+                <span>Fat</span>
+              </div>
+            </div>
+          </div>
+          <div class="gauge-status positive">Posture · Positive</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── BLOCK 2 — 7-Layer Defense ────────────────────────── -->
+    <section class="mb-16">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow mb-2">Defense · Seven layers</div>
+          <h2 class="h2">Layer-by-layer.</h2>
+        </div>
+        <span class="eyebrow dim">Last observed · 21:30 KST</span>
+      </div>
+
+      <div class="pq-card" style="padding: 8px 28px;">
+
+        <div class="layer-row">
+          <span class="layer-num">01</span>
+          <div>
+            <div class="layer-name">Value at Risk</div>
+            <small class="layer-name small" style="font-family: var(--pq-font-serif); font-size: 12.5px; color: var(--pq-ivory-quiet); margin-top: 4px; display: block;">95% / 99% one-day, 90-day window.</small>
+          </div>
+          <span class="layer-status status-neutral">NEUTRAL</span>
+          <span class="layer-value">−2.34% / −3.81%</span>
+          <span class="layer-thresh">vs −5.0% threshold</span>
+          <span class="layer-time">21:30 KST</span>
+        </div>
+
+        <div class="layer-row">
+          <span class="layer-num">02</span>
+          <div>
+            <div class="layer-name">Correlation matrix</div>
+            <small style="font-family: var(--pq-font-serif); font-size: 12.5px; color: var(--pq-ivory-quiet); margin-top: 4px; display: block;">Pairwise 90-day; Ledoit-Wolf shrunk.</small>
+          </div>
+          <span class="layer-status status-negative">NEGATIVE</span>
+          <span class="layer-value">avg 0.42 · max 0.71</span>
+          <span class="layer-thresh">cluster &gt; 0.65</span>
+          <span class="layer-time">21:30 KST</span>
+        </div>
+
+        <div class="layer-row">
+          <span class="layer-num">03</span>
+          <div>
+            <div class="layer-name">VIX gauge</div>
+            <small style="font-family: var(--pq-font-serif); font-size: 12.5px; color: var(--pq-ivory-quiet); margin-top: 4px; display: block;">Spot vs. 30-day mean; regime classifier.</small>
+          </div>
+          <span class="layer-status status-positive">POSITIVE</span>
+          <span class="layer-value">14.82 · regime: calm</span>
+          <span class="layer-thresh">elevated &gt; 22</span>
+          <span class="layer-time">21:30 KST</span>
+        </div>
+
+        <div class="layer-row">
+          <span class="layer-num">04</span>
+          <div>
+            <div class="layer-name">Component Expected Shortfall</div>
+            <small style="font-family: var(--pq-font-serif); font-size: 12.5px; color: var(--pq-ivory-quiet); margin-top: 4px; display: block;">Tail loss attributed to each position.</small>
+          </div>
+          <span class="layer-status status-positive">POSITIVE</span>
+          <span class="layer-value">−4.12% (NVDA 38%)</span>
+          <span class="layer-thresh">vs −6.0% threshold</span>
+          <span class="layer-time">21:30 KST</span>
+        </div>
+
+        <div class="layer-row">
+          <span class="layer-num">05</span>
+          <div>
+            <div class="layer-name">Daily drawdown</div>
+            <small style="font-family: var(--pq-font-serif); font-size: 12.5px; color: var(--pq-ivory-quiet); margin-top: 4px; display: block;">Distance from peak NAV today.</small>
+          </div>
+          <span class="layer-status status-neutral">NEUTRAL</span>
+          <span class="layer-value">−1.08%</span>
+          <span class="layer-thresh">vs −5.0% halt line</span>
+          <span class="layer-time">21:30 KST</span>
+        </div>
+
+        <div class="layer-row">
+          <span class="layer-num">06</span>
+          <div>
+            <div class="layer-name">Sector concentration</div>
+            <small style="font-family: var(--pq-font-serif); font-size: 12.5px; color: var(--pq-ivory-quiet); margin-top: 4px; display: block;">HHI on book sector weights.</small>
+          </div>
+          <span class="layer-status status-negative">NEGATIVE</span>
+          <span class="layer-value">HHI 0.184 · Tech 41%</span>
+          <span class="layer-thresh">soft cap 35%</span>
+          <span class="layer-time">21:30 KST</span>
+        </div>
+
+        <div class="layer-row">
+          <span class="layer-num">07</span>
+          <div>
+            <div class="layer-name">Cash buffer</div>
+            <small style="font-family: var(--pq-font-serif); font-size: 12.5px; color: var(--pq-ivory-quiet); margin-top: 4px; display: block;">Idle cash share of NAV.</small>
+          </div>
+          <span class="layer-status status-positive">POSITIVE</span>
+          <span class="layer-value">18.4%</span>
+          <span class="layer-thresh">target floor 10%</span>
+          <span class="layer-time">21:30 KST</span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── BLOCK 3 — Concentration table ─────────────────────── -->
+    <section class="mb-16">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow mb-2">Concentration · Top 5 positions</div>
+          <h2 class="h2">Where the weight sits.</h2>
+        </div>
+        <span class="eyebrow dim">Sum of top 5 · 58.8%</span>
+      </div>
+
+      <div class="pq-card" style="padding: 16px 28px;">
+        <div class="conc-row">
+          <span class="rank">01</span>
+          <div>
+            <div class="name">Apple Inc.</div>
+            <small>AAPL · NASDAQ</small>
+          </div>
+          <span class="pct">14.2%</span>
+          <span class="bar"><i style="width: 78%;"></i></span>
+        </div>
+        <div class="conc-row">
+          <span class="rank">02</span>
+          <div>
+            <div class="name">Samsung Electronics</div>
+            <small>005930.KS · KOSPI</small>
+          </div>
+          <span class="pct">12.8%</span>
+          <span class="bar"><i style="width: 70%;"></i></span>
+        </div>
+        <div class="conc-row">
+          <span class="rank">03</span>
+          <div>
+            <div class="name">NVIDIA Corp.</div>
+            <small>NVDA · NASDAQ</small>
+          </div>
+          <span class="pct">11.4%</span>
+          <span class="bar"><i style="width: 62%;"></i></span>
+        </div>
+        <div class="conc-row">
+          <span class="rank">04</span>
+          <div>
+            <div class="name">Microsoft Corp.</div>
+            <small>MSFT · NASDAQ</small>
+          </div>
+          <span class="pct">10.6%</span>
+          <span class="bar"><i style="width: 58%;"></i></span>
+        </div>
+        <div class="conc-row">
+          <span class="rank">05</span>
+          <div>
+            <div class="name">SK Hynix</div>
+            <small>000660.KS · KOSPI</small>
+          </div>
+          <span class="pct">9.8%</span>
+          <span class="bar"><i style="width: 54%;"></i></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── BLOCK 4 — Sector exposure 2-col ──────────────────── -->
+    <section class="mb-16">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow mb-2">Exposure · By sector</div>
+          <h2 class="h2">Sector lens.</h2>
+        </div>
+        <span class="eyebrow dim">7 sectors · cash 18.4%</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+
+        <!-- Donut -->
+        <div class="pq-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 380px;">
+          <span class="corner">Donut</span>
+          <div class="sector-donut" style="margin-bottom: 28px;">
+            <svg width="220" height="220" viewBox="0 0 220 220">
+              <!-- Circumference 2πr where r=80 → 502.65 -->
+              <!-- Tech 41% -->
+              <circle cx="110" cy="110" r="80" fill="none"
+                stroke="var(--pq-bronze)" stroke-width="32"
+                stroke-dasharray="206.1 502.65" stroke-dashoffset="0"
+                transform="rotate(-90 110 110)" />
+              <!-- Semis 14% -->
+              <circle cx="110" cy="110" r="80" fill="none"
+                stroke="var(--pq-bronze-light)" stroke-width="32"
+                stroke-dasharray="70.4 502.65" stroke-dashoffset="-206.1"
+                transform="rotate(-90 110 110)" />
+              <!-- Auto 11% -->
+              <circle cx="110" cy="110" r="80" fill="none"
+                stroke="var(--pq-bronze-deep)" stroke-width="32"
+                stroke-dasharray="55.3 502.65" stroke-dashoffset="-276.5"
+                transform="rotate(-90 110 110)" />
+              <!-- Financial 4.4% -->
+              <circle cx="110" cy="110" r="80" fill="none"
+                stroke="rgba(245,240,232,0.32)" stroke-width="32"
+                stroke-dasharray="22.1 502.65" stroke-dashoffset="-331.8"
+                transform="rotate(-90 110 110)" />
+              <!-- Cons 3% -->
+              <circle cx="110" cy="110" r="80" fill="none"
+                stroke="rgba(245,240,232,0.22)" stroke-width="32"
+                stroke-dasharray="15.1 502.65" stroke-dashoffset="-353.9"
+                transform="rotate(-90 110 110)" />
+              <!-- REIT 2% -->
+              <circle cx="110" cy="110" r="80" fill="none"
+                stroke="rgba(245,240,232,0.14)" stroke-width="32"
+                stroke-dasharray="10 502.65" stroke-dashoffset="-369"
+                transform="rotate(-90 110 110)" />
+              <!-- Cash 18.4% -->
+              <circle cx="110" cy="110" r="80" fill="none"
+                stroke="rgba(245,240,232,0.08)" stroke-width="32"
+                stroke-dasharray="92.5 502.65" stroke-dashoffset="-379"
+                transform="rotate(-90 110 110)" />
+
+              <text x="110" y="104" text-anchor="middle"
+                style="font-family: var(--pq-font-mono); font-size: 11px; fill: var(--pq-ivory-mute); letter-spacing: 0.18em;">SECTORS</text>
+              <text x="110" y="128" text-anchor="middle"
+                style="font-family: var(--pq-font-display); font-size: 32px; fill: var(--pq-ivory); font-weight: 500;">7</text>
+            </svg>
+          </div>
+          <div class="eyebrow dim">Cash buffer 18.4%</div>
+        </div>
+
+        <!-- Sector table with leader names -->
+        <div class="pq-card" style="min-height: 380px;">
+          <span class="corner">Table</span>
+          <div class="eyebrow mb-4">Lead names by sector</div>
+          <table class="sector-table">
+            <thead>
+              <tr>
+                <th>Sector</th>
+                <th>Leader</th>
+                <th class="num" style="text-align: right;">Weight</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="eyebrow" style="color: var(--pq-bronze);">TECH</span></td>
+                <td>
+                  <span class="name">Apple Inc.</span>
+                  <small>AAPL</small>
+                </td>
+                <td class="num">41.0%</td>
+              </tr>
+              <tr>
+                <td><span class="eyebrow" style="color: var(--pq-bronze-light);">SEMIS</span></td>
+                <td>
+                  <span class="name">SK Hynix</span>
+                  <small>000660.KS</small>
+                </td>
+                <td class="num">14.0%</td>
+              </tr>
+              <tr>
+                <td><span class="eyebrow" style="color: var(--pq-bronze-deep);">AUTO</span></td>
+                <td>
+                  <span class="name">Tesla Inc.</span>
+                  <small>TSLA</small>
+                </td>
+                <td class="num">11.0%</td>
+              </tr>
+              <tr>
+                <td><span class="eyebrow dim">FIN.</span></td>
+                <td>
+                  <span class="name">JPMorgan Chase</span>
+                  <small>JPM</small>
+                </td>
+                <td class="num">4.4%</td>
+              </tr>
+              <tr>
+                <td><span class="eyebrow dim">CONS.</span></td>
+                <td>
+                  <span class="name">Costco Wholesale</span>
+                  <small>COST</small>
+                </td>
+                <td class="num">3.0%</td>
+              </tr>
+              <tr>
+                <td><span class="eyebrow dim">REIT</span></td>
+                <td>
+                  <span class="name">Realty Income</span>
+                  <small>O</small>
+                </td>
+                <td class="num">2.0%</td>
+              </tr>
+              <tr>
+                <td><span class="eyebrow dim">CASH</span></td>
+                <td>
+                  <span class="name">Idle balance</span>
+                  <small>USD · KRW</small>
+                </td>
+                <td class="num">18.4%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── BLOCK 5 — Risk timeline ─────────────────────── -->
+    <section class="mb-16">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow mb-2">Timeline · 30 days</div>
+          <h2 class="h2">Risk over time.</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="eyebrow dim">Composite score · 0–100</span>
+          <span class="num" style="font-size: 16px; color: var(--pq-ivory);">38</span>
+        </div>
+      </div>
+
+      <div class="pq-card" style="padding: 32px;">
+        <svg class="risk-timeline" viewBox="0 0 1200 200" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="riskFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="rgba(184,149,106,0.16)" />
+              <stop offset="100%" stop-color="rgba(184,149,106,0)" />
+            </linearGradient>
+          </defs>
+
+          <!-- Threshold band: above 60 = strain -->
+          <rect x="0" y="0" width="1200" height="80" fill="rgba(220,38,38,0.04)" />
+
+          <!-- Gridlines -->
+          <line x1="0" x2="1200" y1="40"  y2="40"  stroke="rgba(245,240,232,0.05)"/>
+          <line x1="0" x2="1200" y1="80"  y2="80"  stroke="rgba(245,240,232,0.08)" stroke-dasharray="4 6"/>
+          <line x1="0" x2="1200" y1="120" y2="120" stroke="rgba(245,240,232,0.05)"/>
+          <line x1="0" x2="1200" y1="160" y2="160" stroke="rgba(245,240,232,0.05)"/>
+
+          <!-- Risk score line (lower = calmer; higher = strain) -->
+          <polyline fill="url(#riskFill)" stroke="none"
+            points="0,140 40,138 80,134 120,138 160,128 200,124 240,118 280,114 320,118 360,108 400,104 440,98 480,102 520,96 560,92 600,98 640,86 680,82 720,88 760,80 800,84 840,90 880,96 920,108 960,112 1000,118 1040,124 1080,130 1120,124 1160,124 1200,124 1200,200 0,200" />
+          <polyline fill="none" stroke="var(--pq-bronze)" stroke-width="1.6"
+            points="0,140 40,138 80,134 120,138 160,128 200,124 240,118 280,114 320,118 360,108 400,104 440,98 480,102 520,96 560,92 600,98 640,86 680,82 720,88 760,80 800,84 840,90 880,96 920,108 960,112 1000,118 1040,124 1080,130 1120,124 1160,124 1200,124" />
+
+          <!-- Threshold label -->
+          <text x="1180" y="76" text-anchor="end"
+            style="font-family: var(--pq-font-mono); font-size: 10px; fill: var(--pq-ivory-mute); letter-spacing: 0.18em;">STRAIN · 60</text>
+        </svg>
+
+        <div class="grid grid-cols-4 gap-8 mt-6 pt-5" style="border-top: 1px solid var(--pq-hairline);">
+          <div>
+            <div class="eyebrow mb-2">Today</div>
+            <div class="num" style="font-size: 22px; color: var(--pq-ivory);">38</div>
+          </div>
+          <div>
+            <div class="eyebrow mb-2">30-day avg</div>
+            <div class="num" style="font-size: 22px; color: var(--pq-ivory);">42</div>
+          </div>
+          <div>
+            <div class="eyebrow mb-2">30-day max</div>
+            <div class="num" style="font-size: 22px; color: var(--pq-ivory);">58</div>
+          </div>
+          <div>
+            <div class="eyebrow mb-2">Days above strain</div>
+            <div class="num" style="font-size: 22px; color: var(--pq-ivory);">0</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ DISCLAIMER (required, with risk-specific note) ══════════ -->
+    <div class="disclaimer">
+      <strong style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif); font-style:italic;">
+        Notice / 면책 고지.
+      </strong>
+      &nbsp; Risk metrics on this page (VaR, Component ES, Concentration HHI, Correlation,
+      Drawdown distance) are <em>probabilistic observations</em> over historical windows —
+      not guarantees of future loss. Layers labelled POSITIVE / NEGATIVE / NEUTRAL describe
+      observed model state, not action. PivoxQuant produces these analytical artifacts for
+      the user's own record-keeping; nothing on this page constitutes investment advice, a
+      solicitation, or a recommendation. 본 서비스는 자본시장과 금융투자업에 관한 법률상의
+      투자자문업·투자일임업이 아니며, 모든 의사결정과 책임은 이용자 본인에게 있습니다.
+    </div>
+
+    <!-- ══════════ FOOT SIGNATURE ══════════ -->
+    <div class="foot">
+      <span>PivoxQuant</span>
+      <span class="fleuron">❦</span>
+      <span>Risk Board · Volume 14</span>
+      <span class="fleuron">❦</span>
+      <span>Seoul · 27 April 2026</span>
+    </div>
+
+  </main>
+
+</body>
+</html>

@@ -59,7 +59,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, TradeHistory, User, UserReferral
-from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
+from services.legal_filter import scrub_signal
 
 logger = logging.getLogger(__name__)
 

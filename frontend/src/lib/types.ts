@@ -439,3 +439,53 @@ export interface ArtifactsListResponse {
   total: number;
   unread_count: number;
 }
+
+/* ── Signals v2 (additive — does not modify any v1 type) ──
+ *
+ * Wire format: POSITIVE / NEGATIVE / NEUTRAL only. Banned vocabulary
+ * (BUY/SELL/HOLD/recommend/advice) MUST never reach the client.
+ * Backend `routes/signals.py::all()` is responsible for the label
+ * mapper; this front-end type just consumes the canonical shape.
+ */
+
+export type SignalLabel = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
+
+export interface SignalEntry {
+  id?: number | string;
+  ticker: string;            // "AAPL", "005930.KS"
+  /**
+   * Company display name. The legacy `/api/signals` endpoint already
+   * sends this on the v1 MemoSignalItem shape, so re-using it is safe.
+   * If the field is missing, the v2 page will fall back to the
+   * watchlist+positions name resolver and ultimately to the ticker
+   * itself (graceful degradation).
+   */
+  name?: string | null;
+  exchange?: string | null;
+  signal?: string;           // v1 alias — same value as label
+  label?: SignalLabel;
+  score?: number;            // v1: 0..100 composite
+  strength?: number;         // v2: 0..1 (derived from score / 100)
+  rationale?: string | null;
+  observed_at?: string | null;
+  price?: number | null;
+  change_pct?: number | null;
+  currency?: "USD" | "KRW";
+  is_korean?: boolean;
+  sector?: string | null;
+}
+
+export interface SignalsResponse {
+  signals: SignalEntry[];
+  total?: number;
+  counts?: { positive: number; negative: number; neutral: number };
+  symbols_filtered?: number;
+}
+
+export interface SignalFilters {
+  labels: Set<SignalLabel>;
+  strengthMin: number;   // 0..1
+  strengthMax: number;   // 0..1
+  symbol: string | null; // exact ticker or null
+  window: "today" | "7d" | "30d";
+}

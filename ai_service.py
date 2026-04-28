@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # 자본시장법 §6 미등록 투자자문업 위반 방지. AI가 '추천/매수/매도/
 # recommend/buy/sell' 같은 자문업 언어를 산출할 경우 응답을 면책 문구로
 # 교체한다. 사전 정의 패턴은 services.morning_brief_service 에서 관리.
-from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
+from services.legal_filter import safe_scrub, scrub_signal
 
 try:
     from services.morning_brief_service import is_compliant as _is_compliant

@@ -393,7 +393,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
 
             <PdfCard>
               <div className="pq-pdf-kpi-lbl" style={{ marginBottom: 8 }}>
-                RECOMMENDED ACTIONS · NEXT REBAL
+                REBALANCE NOTES · OBSERVED
               </div>
               <PdfCheckList
                 items={[

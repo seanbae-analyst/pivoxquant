@@ -1,0 +1,407 @@
+"use client";
+
+/**
+ * <PortfolioHeroV2 />
+ *
+ * Editorial hero for /portfolio v2 (mockup §HERO).
+ *
+ * Visual rules:
+ * - 80px top / 64px bottom padding, hairline-bottom only (no card border).
+ * - H1 Playfair 500 / 48px / line-height 1.05 / track-tight.
+ * - Bronze italic accent on the word "book."
+ * - Two CTAs: bronze-filled "Add position" + bronze-outline "Reconcile".
+ * - Eyebrow: "Book · Volume {weekIndex} · {weekday}".
+ *
+ * Legal: action vocabulary `Add` / `Reconcile` / `Save observation` only.
+ * Never "Buy / Sell / Recommend / Advice".
+ */
+
+import * as React from "react";
+
+interface PortfolioHeroV2Props {
+  /** Total NAV in display currency (USD or KRW). May be undefined. */
+  nav?: number;
+  navCurrency?: "USD" | "KRW";
+  /** Number of recorded positions. Optional — em-dash when missing. */
+  positionCount?: number;
+  /** Cash bucket as percent of NAV (0..100). Optional — em-dash when missing. */
+  cashPct?: number;
+  /** ISO timestamp of last reconciliation / observation. Optional. */
+  lastReconciledAt?: string | null;
+  /** Whether at least one broker connection is wired. Drives CTA enabled state. */
+  reconcileAvailable?: boolean;
+  /** Click handler for the primary "Add position" CTA. */
+  onAddPosition: () => void;
+  /** Click handler for the secondary "Reconcile from broker" CTA. */
+  onReconcile?: () => void;
+  loading?: boolean;
+  /** Today P&L in display currency. v1 KPI parity (additive). */
+  todayPnl?: number;
+  /** Today P&L percent. v1 KPI parity (additive). */
+  todayPnlPct?: number;
+  /** Unrealized P&L in display currency. v1 KPI parity (additive). */
+  unrealized?: number;
+  /** Realized YTD P&L in display currency. v1 KPI parity (additive). */
+  realizedYtd?: number;
+}
+
+function weekIndexOf(d: Date): number {
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const days = Math.floor((d.getTime() - yearStart.getTime()) / 86_400_000);
+  return Math.min(52, Math.max(1, Math.ceil((days + yearStart.getDay() + 1) / 7)));
+}
+
+function weekdayOf(d: Date): string {
+  return d.toLocaleDateString("en-US", { weekday: "long" });
+}
+
+function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "-" : "";
+  const dec = currency === "KRW" ? 0 : 0;
+  const body = abs.toLocaleString(currency === "KRW" ? "ko-KR" : "en-US", {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec,
+  });
+  return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
+}
+
+function fmtPct(n: number | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return `${n.toFixed(1)}%`;
+}
+
+/** Like fmtMoney but always emits an explicit +/− sign for non-zero values. */
+function fmtMoneySigned(
+  n: number | undefined,
+  currency: "USD" | "KRW",
+  loading?: boolean,
+): string {
+  if (loading) return "—";
+  if (n == null || !Number.isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  const sign = n > 0 ? "+" : n < 0 ? "−" : "";
+  const dec = currency === "KRW" ? 0 : 0;
+  const body = abs.toLocaleString(currency === "KRW" ? "ko-KR" : "en-US", {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec,
+  });
+  return `${sign}${currency === "KRW" ? "₩" : "$"}${body}`;
+}
+
+function relativeTime(iso: string | null | undefined): string {
+  if (!iso) return "never";
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "never";
+  const diff = Date.now() - t;
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const days = Math.floor(hr / 24);
+  return `${days}d ago`;
+}
+
+export function PortfolioHeroV2({
+  nav,
+  navCurrency = "USD",
+  positionCount,
+  cashPct,
+  lastReconciledAt,
+  reconcileAvailable = false,
+  onAddPosition,
+  onReconcile,
+  loading,
+  todayPnl,
+  todayPnlPct,
+  unrealized,
+  realizedYtd,
+}: PortfolioHeroV2Props) {
+  const now = new Date();
+  const eyebrow = `Book · Volume ${weekIndexOf(now)} · ${weekdayOf(now)}`;
+
+  const navText = loading ? "—" : fmtMoney(nav, navCurrency);
+  const positionsText = loading
+    ? "—"
+    : positionCount != null
+      ? `${positionCount}`
+      : "—";
+  const cashText = loading ? "—" : fmtPct(cashPct);
+  const reconcileText = loading
+    ? "—"
+    : relativeTime(lastReconciledAt);
+
+  return (
+    <section
+      className="pq-portfolio-hero-v2"
+      style={{
+        padding: "80px 0 64px",
+        borderBottom: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+        marginBottom: 40,
+      }}
+    >
+      <div
+        className="font-mono uppercase"
+        style={{
+          fontSize: "var(--pq-text-eyebrow, 10.5px)",
+          letterSpacing: "0.22em",
+          color: "var(--pq-bronze)",
+          marginBottom: 28,
+        }}
+      >
+        {eyebrow}
+      </div>
+
+      <h1
+        className="font-serif"
+        style={{
+          fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
+          fontWeight: 500,
+          fontSize: "clamp(32px, 4.2vw, 48px)",
+          lineHeight: 1.05,
+          letterSpacing: "var(--pq-track-tight, -0.02em)",
+          color: "var(--pq-ivory)",
+          maxWidth: 940,
+          margin: "0 0 28px 0",
+        }}
+      >
+        Your{" "}
+        <span
+          style={{
+            fontStyle: "italic",
+            color: "var(--pq-bronze)",
+          }}
+        >
+          book.
+        </span>
+      </h1>
+
+      <p
+        className="font-serif"
+        style={{
+          fontFamily: '"Source Serif 4","Iowan Old Style",Georgia,serif',
+          fontSize: 17,
+          lineHeight: 1.55,
+          color: "rgba(245,240,232,0.82)",
+          maxWidth: 720,
+          margin: "0 0 32px 0",
+        }}
+      >
+        {positionsText} positions{" "}
+        <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+          observed
+        </span>
+        {" · "}
+        {navText} of capital
+        {" · "}
+        last{" "}
+        <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+          reconciled
+        </span>{" "}
+        {reconcileText}. Cash buffer at {cashText}.
+      </p>
+
+      {/* KPI deck — v1 parity (today P&L / unrealized / realized YTD).
+          Renders only when at least one figure is present so v2 doesn't
+          get a row of em-dashes during the initial load. */}
+      {(todayPnl != null || unrealized != null || realizedYtd != null) && (
+        <div
+          aria-label="Portfolio KPI deck"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 24,
+            maxWidth: 720,
+            marginBottom: 32,
+            paddingTop: 4,
+          }}
+        >
+          <HeroKpi
+            label="Today"
+            value={fmtMoneySigned(todayPnl, navCurrency, loading)}
+            sub={
+              todayPnlPct != null && Number.isFinite(todayPnlPct)
+                ? `${todayPnlPct >= 0 ? "+" : ""}${todayPnlPct.toFixed(2)}%`
+                : undefined
+            }
+            tone={
+              todayPnl == null
+                ? "neutral"
+                : todayPnl >= 0
+                  ? "positive"
+                  : "negative"
+            }
+          />
+          <HeroKpi
+            label="Unrealized"
+            value={fmtMoneySigned(unrealized, navCurrency, loading)}
+            tone={
+              unrealized == null
+                ? "neutral"
+                : unrealized >= 0
+                  ? "positive"
+                  : "negative"
+            }
+          />
+          <HeroKpi
+            label="Realized YTD"
+            value={fmtMoneySigned(realizedYtd, navCurrency, loading)}
+            tone={
+              realizedYtd == null
+                ? "neutral"
+                : realizedYtd >= 0
+                  ? "positive"
+                  : "negative"
+            }
+          />
+        </div>
+      )}
+
+      {/* CTAs */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          type="button"
+          onClick={onAddPosition}
+          className="pq-cta-bronze"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 22px",
+            background: "var(--pq-bronze)",
+            color: "var(--pq-ink, #050505)",
+            fontFamily:
+              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
+            fontSize: 11,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            border: "none",
+            borderRadius: "var(--pq-radius-cta, 2px)",
+            cursor: "pointer",
+            transition: "background-color 200ms",
+          }}
+        >
+          Add position →
+        </button>
+
+        <button
+          type="button"
+          onClick={onReconcile}
+          disabled={!reconcileAvailable}
+          className="pq-cta-outline"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 22px",
+            background: "transparent",
+            color: reconcileAvailable
+              ? "var(--pq-bronze)"
+              : "rgba(245,240,232,0.40)",
+            fontFamily:
+              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
+            fontSize: 11,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            border: `1px solid ${reconcileAvailable ? "var(--pq-bronze)" : "rgba(245,240,232,0.20)"}`,
+            borderRadius: "var(--pq-radius-cta, 2px)",
+            cursor: reconcileAvailable ? "pointer" : "not-allowed",
+            transition: "border-color 200ms, color 200ms",
+          }}
+          aria-disabled={!reconcileAvailable}
+          title={
+            reconcileAvailable
+              ? "Reconcile from connected broker"
+              : "Connect a broker first (Settings)"
+          }
+        >
+          Reconcile from broker
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/* ── HeroKpi — KPI deck cell (v1 parity) ─────────────────────────── */
+
+function HeroKpi({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone: "positive" | "negative" | "neutral";
+}) {
+  // Color: bronze for neutral, semantic for positive/negative — paired
+  // with text labels in the parent prose for accessibility.
+  const valueColor =
+    tone === "positive"
+      ? "var(--pq-positive, #dc2626)"
+      : tone === "negative"
+        ? "var(--pq-negative, #2563eb)"
+        : "var(--pq-bronze)";
+
+  return (
+    <div
+      style={{
+        borderTop: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.10))",
+        paddingTop: 12,
+      }}
+    >
+      <div
+        className="font-mono uppercase"
+        style={{
+          fontFamily:
+            'var(--pq-font-mono,"JetBrains Mono","SF Mono",monospace)',
+          fontSize: 9.5,
+          letterSpacing: "0.22em",
+          color: "var(--pq-bronze)",
+          marginBottom: 6,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        className="font-mono tabular-nums"
+        style={{
+          fontFamily:
+            'var(--pq-font-mono,"JetBrains Mono","SF Mono",monospace)',
+          fontSize: 18,
+          letterSpacing: "-0.005em",
+          color: valueColor,
+          lineHeight: 1.2,
+        }}
+      >
+        {value}
+      </div>
+      {sub ? (
+        <div
+          className="font-mono tabular-nums"
+          style={{
+            fontFamily:
+              'var(--pq-font-mono,"JetBrains Mono","SF Mono",monospace)',
+            fontSize: 11,
+            color: "rgba(245,240,232,0.55)",
+            marginTop: 2,
+          }}
+        >
+          {sub}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default PortfolioHeroV2;

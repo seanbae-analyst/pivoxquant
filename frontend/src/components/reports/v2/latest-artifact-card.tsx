@@ -1,0 +1,364 @@
+"use client";
+
+/**
+ * <LatestArtifactCard /> — full-width 2-column card for the most recent
+ * artifact. Left column: type pill + Playfair pull-quote + body. Right
+ * column: "Mentioned" rows w/ 종목명 main pattern (Name on top, ticker
+ * code mono dim beneath, +/-X.XX% in KR colors).
+ *
+ * Source: design-mockups/reports-v2/SPEC.md §2.
+ * Legal: POSITIVE / NEGATIVE / NEUTRAL only. No banned vocabulary.
+ */
+
+import * as React from "react";
+import Link from "next/link";
+import { API } from "@/lib/endpoints";
+import type { Artifact, ArtifactType } from "@/lib/types";
+
+const TYPE_LABEL: Record<ArtifactType, string> = {
+  weekly_memo: "Weekly Pulse",
+  morning_brief: "Today's Memo",
+  earnings_prebrief: "Earnings Pre-Brief",
+  monthly_brag: "Brag Card",
+  quarterly_review: "Quarterly Audit",
+  risk_report: "Risk Note",
+  custom: "Letter",
+};
+
+interface MentionRow {
+  ticker: string;
+  name: string;
+  changePct?: number;
+  exchange?: string;
+}
+
+function asMentionRows(
+  preview: Record<string, unknown> | null | undefined,
+): MentionRow[] {
+  if (!preview) return [];
+  const raw = (preview as { mentioned_tickers?: unknown }).mentioned_tickers;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
+    .map((x) => ({
+      ticker: typeof x.ticker === "string" ? x.ticker : "",
+      name: typeof x.name === "string" ? x.name : "",
+      exchange: typeof x.exchange === "string" ? x.exchange : undefined,
+      changePct:
+        typeof x.change_pct === "number"
+          ? x.change_pct
+          : typeof x.changePct === "number"
+            ? x.changePct
+            : undefined,
+    }))
+    .filter((r) => r.ticker.length > 0);
+}
+
+interface Props {
+  artifact: Artifact | null;
+  loading?: boolean;
+  resolveName?: (ticker: string) => string;
+}
+
+export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
+  if (loading) {
+    return (
+      <div
+        style={{
+          border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+          borderRadius: 4,
+          padding: "52px 56px",
+          background: "rgba(255,255,255,0.02)",
+          height: 280,
+        }}
+        className="animate-pulse"
+        aria-label="Loading latest artifact"
+      />
+    );
+  }
+
+  if (!artifact) {
+    return (
+      <div
+        style={{
+          border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+          borderRadius: 4,
+          padding: "52px 56px",
+          background: "rgba(255,255,255,0.02)",
+        }}
+      >
+        <div
+          className="font-mono uppercase"
+          style={{
+            fontSize: 10.5,
+            letterSpacing: "0.22em",
+            color: "var(--pq-bronze, #B8956A)",
+            marginBottom: 12,
+          }}
+        >
+          No artifacts yet
+        </div>
+        <p
+          className="font-serif"
+          style={{
+            fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
+            fontSize: 14.5,
+            lineHeight: 1.65,
+            color: "rgba(245,240,232,0.7)",
+            margin: 0,
+          }}
+        >
+          The shelf is empty for now. Your first morning memo arrives at 06:00 KST
+          on the next trading day.
+        </p>
+      </div>
+    );
+  }
+
+  const mentions = asMentionRows(artifact.data_preview);
+  const typeLabel = TYPE_LABEL[artifact.type] ?? "Artifact";
+  const sentDate = artifact.sent_at
+    ? new Date(artifact.sent_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "—";
+
+  return (
+    <article
+      style={{
+        border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        borderRadius: 4,
+        padding: "52px 56px",
+        background: "rgba(255,255,255,0.02)",
+        position: "relative",
+        transition: "border-color 200ms ease",
+      }}
+      className="hover:border-[var(--pq-bronze)]"
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 280px",
+          gap: 56,
+        }}
+        className="lg:grid-cols-[1fr_280px] md:!grid-cols-1 md:gap-8"
+      >
+        {/* LEFT */}
+        <div>
+          <span
+            className="font-mono uppercase inline-block"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              color: "var(--pq-bronze, #B8956A)",
+              border: "1px solid var(--pq-hairline-2, rgba(245,240,232,0.12))",
+              borderRadius: 2,
+              padding: "4px 9px",
+              marginBottom: 18,
+            }}
+          >
+            {typeLabel} · {sentDate}
+          </span>
+
+          <h2
+            className="font-serif"
+            style={{
+              fontFamily:
+                'var(--pq-font-display,"Playfair Display",Georgia,serif)',
+              fontWeight: 500,
+              fontSize: 30,
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              color: "var(--pq-ivory, #F5F0E8)",
+              margin: 0,
+            }}
+          >
+            {artifact.title}
+          </h2>
+
+          {artifact.subtitle && (
+            <p
+              className="font-serif"
+              style={{
+                fontFamily:
+                  'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
+                fontSize: 14.5,
+                lineHeight: 1.65,
+                color: "rgba(245,240,232,0.78)",
+                marginTop: 18,
+                marginBottom: 0,
+                maxWidth: 580,
+              }}
+            >
+              {artifact.subtitle}
+            </p>
+          )}
+
+          <div
+            style={{
+              marginTop: 28,
+              display: "flex",
+              gap: 18,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <a
+              href={API.artifacts.preview(artifact.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pq-ink-btn-bronze"
+              style={{ fontSize: 11, letterSpacing: "0.18em" }}
+            >
+              Open full memo ›
+            </a>
+            <a
+              href={API.artifacts.download(artifact.id)}
+              download
+              className="font-mono uppercase"
+              style={{
+                fontSize: 10.5,
+                letterSpacing: "0.18em",
+                color: "var(--pq-bronze, #B8956A)",
+                borderBottom: "1px solid var(--pq-bronze-15, rgba(184,149,106,0.15))",
+                paddingBottom: 2,
+                textDecoration: "none",
+              }}
+            >
+              Download PDF
+            </a>
+          </div>
+        </div>
+
+        {/* RIGHT — Mentioned */}
+        <div
+          style={{
+            borderLeft: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+            paddingLeft: 36,
+          }}
+          className="md:!border-l-0 md:!border-t md:!pl-0 md:!pt-8"
+        >
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              color: "rgba(245,240,232,0.45)",
+              marginBottom: 16,
+            }}
+          >
+            Mentioned
+          </div>
+
+          {mentions.length === 0 ? (
+            <p
+              className="font-serif"
+              style={{
+                fontSize: 13,
+                color: "rgba(245,240,232,0.55)",
+                margin: 0,
+              }}
+            >
+              No tickers indexed for this issue.
+            </p>
+          ) : (
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              {mentions.slice(0, 3).map((m) => {
+                const displayName =
+                  m.name && m.name.length > 0
+                    ? m.name
+                    : resolveName
+                      ? resolveName(m.ticker)
+                      : m.ticker;
+                const pct = m.changePct;
+                const isUp = typeof pct === "number" && pct > 0;
+                const isDown = typeof pct === "number" && pct < 0;
+                const pctColor = isUp
+                  ? "var(--pq-positive, #dc2626)"
+                  : isDown
+                    ? "var(--pq-negative, #2563eb)"
+                    : "rgba(245,240,232,0.55)";
+                const sign = isUp ? "+" : "";
+                return (
+                  <li
+                    key={m.ticker}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto",
+                      alignItems: "baseline",
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <div
+                        className="font-serif"
+                        style={{
+                          fontFamily:
+                            'var(--pq-font-display,"Playfair Display",Georgia,serif)',
+                          fontWeight: 500,
+                          fontSize: 18,
+                          color: "var(--pq-ivory, #F5F0E8)",
+                          lineHeight: 1.15,
+                        }}
+                      >
+                        {displayName}
+                      </div>
+                      <div
+                        className="font-mono uppercase"
+                        style={{
+                          fontSize: 10,
+                          letterSpacing: "0.14em",
+                          color: "rgba(245,240,232,0.45)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {m.ticker}
+                        {m.exchange ? ` · ${m.exchange}` : ""}
+                      </div>
+                    </div>
+                    {typeof pct === "number" && (
+                      <div
+                        className="font-mono"
+                        style={{
+                          fontVariantNumeric: "tabular-nums",
+                          fontSize: 13,
+                          color: pctColor,
+                        }}
+                      >
+                        {sign}
+                        {pct.toFixed(2)}%
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Hidden link wrapper for accessibility — entire card navigates */}
+      <Link
+        href={API.artifacts.preview(artifact.id)}
+        aria-label={`${typeLabel} — open full artifact`}
+        className="absolute inset-0"
+        style={{ overflow: "hidden", textIndent: "-9999px" }}
+      >
+        Open
+      </Link>
+    </article>
+  );
+}
+
+export default LatestArtifactCard;

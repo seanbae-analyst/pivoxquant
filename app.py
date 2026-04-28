@@ -113,7 +113,7 @@ def create_app():
     login_manager.login_view = "index"
 
     # User loader
-    from models import User, Position, TradeHistory
+    from models import User
 
     @login_manager.user_loader
     def load_user(uid):
@@ -1144,6 +1144,7 @@ def _init_scheduler(app):
         _scheduled_vix_spike_monitor,
         trigger="cron",
         minute=30,
+        timezone="Asia/Seoul",
         id="vix_spike_monitor",
         max_instances=1,
         coalesce=True,

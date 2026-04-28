@@ -215,6 +215,12 @@ export const API = {
     download: (id: number) => `/api/artifacts/${id}/download`,
     preview: (id: number) => `/api/artifacts/${id}/preview`,
     markRead: (id: number) => `/api/artifacts/${id}/read`,
+    // reports-v2 — additive (Stage 10, 2026-04-27). Backend GAPs.
+    // Hooks fall back to client-side derivation from `list` when these 404.
+    stats: "/api/artifacts/stats",
+    byMonth: "/api/artifacts/by-month",
+    generate: "/api/artifacts/generate",
+    jobStatus: (jobId: string) => `/api/artifacts/job/${jobId}`,
   },
   admin: {
     artifactsList: "/api/admin/artifacts/list",

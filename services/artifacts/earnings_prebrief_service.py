@@ -48,7 +48,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, User
-from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
+from services.legal_filter import safe_scrub, scrub_signal
 
 logger = logging.getLogger(__name__)
 

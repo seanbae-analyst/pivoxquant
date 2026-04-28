@@ -1,0 +1,233 @@
+"use client";
+
+/**
+ * <CorrelationHeatmap /> — Risk v2 correlation matrix.
+ *
+ * Restores the v1 90-day pairwise correlation observation surface that
+ * was dropped from /risk v2. The endpoint (RISK_CORRELATION) and the
+ * payload shape are unchanged — only the chrome is re-tuned to the v2
+ * Vantablack + Bronze tone (hairline borders, mono labels, bronze hover
+ * outline) per the design system v3 lock-in.
+ *
+ * Source of v1 visuals: src/app/(dashboard)/risk/_v1/page-v1.tsx
+ *   · Diverging gradient (Bronze positive, muted-rose negative)
+ *   · Cell title text "{rowLabel} × {colLabel}: {value.toFixed(2)}"
+ *   · Sticky header row with bronze tracking-[0.12em] tickers
+ *
+ * Legal: observational. No recommend/advice/buy/sell language.
+ */
+
+import * as React from "react";
+import { useRiskCorrelation } from "@/lib/hooks";
+
+export function CorrelationHeatmap() {
+  const { labels, matrix, hasData, isLoading } = useRiskCorrelation();
+
+  return (
+    <section
+      aria-label="Pairwise correlation matrix"
+      style={{ marginBottom: 64 }}
+    >
+      {/* Section header — mirrors v2 typography rhythm */}
+      <div
+        className="font-mono uppercase"
+        style={{
+          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+          fontSize: 10.5,
+          letterSpacing: "0.22em",
+          color: "var(--pq-bronze)",
+          marginBottom: 8,
+        }}
+      >
+        Correlation · 90-day pairwise observation
+      </div>
+      <h2
+        className="font-serif"
+        style={{
+          fontFamily:
+            'var(--pq-font-display,"Playfair Display",Georgia,serif)',
+          fontWeight: 500,
+          fontSize: 32,
+          letterSpacing: "-0.02em",
+          color: "var(--pq-ivory)",
+          margin: "0 0 12px 0",
+        }}
+      >
+        How closely the book moves together.
+      </h2>
+      <p
+        className="font-serif"
+        style={{
+          fontFamily:
+            'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
+          fontSize: 13,
+          color: "rgba(245,240,232,0.70)",
+          lineHeight: 1.55,
+          maxWidth: 640,
+          margin: "0 0 22px 0",
+        }}
+      >
+        Each cell shows how two holdings have moved together over the last
+        90 trading days.{" "}
+        <span style={{ color: "var(--pq-bronze)" }}>+1.00</span> means they
+        move in lockstep,{" "}
+        <span style={{ color: "var(--pq-bronze)" }}>0</span> means no
+        relationship,{" "}
+        <span style={{ color: "var(--pq-bronze)" }}>−1.00</span> means
+        opposite. High numbers everywhere = one bet worn in many costumes.
+      </p>
+
+      {/* Gradient legend */}
+      <div
+        className="font-mono uppercase"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 18,
+          fontSize: 10,
+          letterSpacing: "0.22em",
+          color: "rgba(245,240,232,0.55)",
+        }}
+      >
+        <span>−1</span>
+        <span
+          style={{
+            height: 8,
+            flex: 1,
+            maxWidth: 220,
+            background:
+              "linear-gradient(to right, rgba(209,136,136,0.7), rgba(245,240,232,0.12), rgba(139,111,71,0.75))",
+          }}
+        />
+        <span>+1</span>
+        <span
+          style={{
+            marginLeft: "auto",
+            color: "rgba(245,240,232,0.4)",
+            letterSpacing: "0.18em",
+          }}
+        >
+          Hover a cell for the pair
+        </span>
+      </div>
+
+      {/* Empty / loading states */}
+      {isLoading ? (
+        <div
+          className="font-serif"
+          style={{
+            padding: "32px 0",
+            color: "rgba(245,240,232,0.55)",
+            fontSize: 13,
+          }}
+        >
+          Observing pairwise correlations…
+        </div>
+      ) : !hasData ? (
+        <div
+          className="font-serif"
+          style={{
+            padding: "32px 0",
+            color: "rgba(245,240,232,0.55)",
+            fontSize: 13,
+          }}
+        >
+          Not enough holdings to compute a correlation matrix yet. Add at
+          least two positions to populate this view.
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th
+                  className="font-mono uppercase"
+                  style={{
+                    height: 32,
+                    width: 48,
+                    fontSize: 9,
+                    letterSpacing: "0.18em",
+                    color: "var(--pq-bronze)",
+                  }}
+                />
+                {labels.map((l) => (
+                  <th
+                    key={l}
+                    className="font-mono uppercase"
+                    style={{
+                      height: 32,
+                      width: 48,
+                      fontSize: 9,
+                      letterSpacing: "0.12em",
+                      color: "var(--pq-bronze)",
+                    }}
+                  >
+                    {l}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {matrix.map((row, i) => (
+                <tr key={labels[i] ?? i}>
+                  <td
+                    className="font-mono uppercase"
+                    style={{
+                      height: 40,
+                      width: 48,
+                      paddingRight: 8,
+                      textAlign: "right",
+                      fontSize: 9,
+                      letterSpacing: "0.12em",
+                      color: "var(--pq-bronze)",
+                    }}
+                  >
+                    {labels[i]}
+                  </td>
+                  {row.map((v, j) => {
+                    const alpha = Math.min(1, Math.max(0.05, Math.abs(v)));
+                    const bg =
+                      v >= 0
+                        ? `rgba(139, 111, 71, ${alpha * 0.55})`
+                        : `rgba(209, 136, 136, ${alpha * 0.5})`;
+                    return (
+                      <td
+                        key={`${i}-${j}`}
+                        title={`${labels[i]} × ${labels[j]}: ${v.toFixed(2)}`}
+                        className="font-mono tabular-nums"
+                        style={{
+                          height: 40,
+                          width: 48,
+                          textAlign: "center",
+                          fontSize: 10,
+                          color: "var(--pq-ivory)",
+                          backgroundColor: bg,
+                          border: "0.5px solid rgba(245,240,232,0.06)",
+                          cursor: "default",
+                          transition: "outline 120ms",
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLTableCellElement).style.outline =
+                            "1px solid var(--pq-bronze)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLTableCellElement).style.outline =
+                            "none";
+                        }}
+                      >
+                        {v.toFixed(2)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default CorrelationHeatmap;
