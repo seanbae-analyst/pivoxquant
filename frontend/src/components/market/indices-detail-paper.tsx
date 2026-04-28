@@ -20,7 +20,14 @@ import {
 } from "@/components/market/index-card";
 import { fmtPct } from "@/lib/format";
 import { isMarketOpen } from "@/lib/market-hours";
-import type { DerivativeRow } from "@/components/market/mock-indices";
+
+/** Simple domestic futures/options summary rows. Sourced from backend
+ *  when available — never fabricated locally. */
+export interface DerivativeRow {
+  label: string;
+  value: string;
+  note: string;
+}
 
 /**
  * Proxy badge pill — mirrors the one in overview-paper.tsx. Rendered on
@@ -386,9 +393,22 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
       </div>
 
       <div>
-        {quotes.map((q) => (
-          <DetailRow key={q.symbol} quote={q} />
-        ))}
+        {quotes.length > 0 ? (
+          quotes.map((q) => <DetailRow key={q.symbol} quote={q} />)
+        ) : (
+          <p
+            style={{
+              fontFamily: "var(--font-serif), Georgia, serif",
+              fontSize: 13,
+              fontStyle: "italic",
+              color: "rgba(20,20,20,0.55)",
+              padding: "20px 0",
+              margin: 0,
+            }}
+          >
+            Index data temporarily unavailable.
+          </p>
+        )}
       </div>
 
       {region === "KR" && derivatives && derivatives.length > 0 ? (

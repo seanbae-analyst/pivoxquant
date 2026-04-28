@@ -847,7 +847,7 @@ export default function StockDetailPage() {
             ) : (
               <SparkChart
                 data={chartRes?.data ?? []}
-                currency={signal?.currency ?? "USD"}
+                currency={isKrw(signal, ticker) ? "KRW" : (signal?.currency ?? "USD")}
               />
             )}
           </div>

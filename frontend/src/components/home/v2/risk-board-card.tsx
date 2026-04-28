@@ -21,6 +21,15 @@ import { HomeCard } from "./home-card";
 import { apiFetch } from "@/lib/api";
 
 interface RiskSummaryShape {
+  // Backend (/api/risk/summary) returns snake_case PERCENT values:
+  //   var_1d_pct, es_1d_pct, max_dd_90d_pct, corr_risk_index
+  // Older optional fractional names (var_95, tail_ces, …) kept for
+  // forward-compat with risk-gauge-grid contract.
+  var_1d_pct?: number;
+  es_1d_pct?: number;
+  max_dd_90d_pct?: number;
+  corr_risk_index?: number;
+  // Legacy / forward-compat
   var_95?: number;
   var_99?: number;
   max_drawdown?: number;
@@ -119,20 +128,28 @@ export function RiskBoardCard() {
     },
   );
 
+  // Backend snake_case is canonical; legacy fractional fields kept as
+  // last-resort fallback. var_1d_pct / es_1d_pct are PERCENT (e.g. 2.14);
+  // var_95 / tail_ces (legacy) are FRACTIONS (e.g. 0.0214).  Coerce both
+  // to fraction (0..1) here so downstream `* 100` math stays correct.
+  const toFraction = (v: number | undefined): number | null => {
+    if (v == null || !Number.isFinite(v)) return null;
+    return Math.abs(v) <= 1 ? v : v / 100;
+  };
   const var95 =
-    risk?.var_95 != null && Number.isFinite(risk.var_95) ? risk.var_95 : null;
+    toFraction(risk?.var_1d_pct) ?? toFraction(risk?.var_95);
   const tail =
-    risk?.tail_ces != null && Number.isFinite(risk.tail_ces)
-      ? risk.tail_ces
-      : null;
+    toFraction(risk?.es_1d_pct) ?? toFraction(risk?.tail_ces);
   const sectorConc =
     risk?.sector_concentration != null
       ? risk.sector_concentration
       : risk?.gauge?.concentration;
   const correl =
-    risk?.correlation_cluster != null
-      ? risk.correlation_cluster
-      : risk?.gauge?.correlation;
+    risk?.corr_risk_index != null
+      ? risk.corr_risk_index
+      : risk?.correlation_cluster != null
+        ? risk.correlation_cluster
+        : risk?.gauge?.correlation;
 
   const composeWord =
     var95 != null && Math.abs(var95) >= 0.05

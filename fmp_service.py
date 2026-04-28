@@ -681,9 +681,17 @@ def get_info(ticker):
         # revenuePerShareTTM moved to ratios-ttm
         eps = (ratios or {}).get("netIncomePerShareTTM") or metrics.get("epsTTM") or 0
         rev_per_share = (ratios or {}).get("revenuePerShareTTM") or metrics.get("revenuePerShareTTM") or 0
+        # NOTE: revenueGrowth must be a YoY growth RATE (e.g. 0.12 = +12%), not an
+        # absolute revenue-per-share figure. /key-metrics-ttm + /ratios-ttm do not
+        # publish a TTM growth rate — populating revenueGrowth with revenuePerShare
+        # was an upstream mismapping that surfaced as nonsense % values in the UI
+        # (frontend renders `(value * 100).toFixed(1) + "%"`). Until we wire up
+        # /income-statement-growth, leave revenueGrowth null so the UI renders "—"
+        # honestly. revenuePerShare keeps the absolute figure for any callers that
+        # actually want it.
         info.update({
             "trailingEps": eps,
-            "revenueGrowth": rev_per_share,
+            "revenueGrowth": None,
             "revenuePerShare": rev_per_share,
         })
 
@@ -1289,9 +1297,12 @@ def prefetch_fundamentals(tickers):
             if metrics:
                 eps = (ratios or {}).get("netIncomePerShareTTM") or metrics.get("epsTTM") or 0
                 rev_per_share = (ratios or {}).get("revenuePerShareTTM") or metrics.get("revenuePerShareTTM") or 0
+                # See get_info() above: revenueGrowth must be a YoY rate, not an
+                # absolute revenue-per-share figure. Mirror the same null fix here
+                # so the prefetch path doesn't pre-seed a wrong value into cache.
                 info.update({
                     "trailingEps": eps,
-                    "revenueGrowth": rev_per_share,
+                    "revenueGrowth": None,
                     "revenuePerShare": rev_per_share,
                 })
             # Mirror get_info()'s null-cache guard so the prefetch path

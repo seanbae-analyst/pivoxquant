@@ -29,15 +29,19 @@ type Snapshot = {
   dir: "up" | "down" | "flat";
 };
 
-// Static fallback levels — sourced from the existing landing marquee so
-// the strip is populated on first paint before SSE resolves.
-const FALLBACK: readonly Snapshot[] = [
-  { symbol: "SPX",    label: "S&P 500",  level: "5,812.44", delta: "+0.12%", dir: "up" },
-  { symbol: "NDX",    label: "NASDAQ",   level: "20,437.12", delta: "-0.38%", dir: "down" },
-  { symbol: "KOSPI",  label: "KOSPI",    level: "2,623.30", delta: "+0.46%", dir: "up" },
-  { symbol: "KOSDAQ", label: "KOSDAQ",   level: "744.83",   delta: "-0.21%", dir: "down" },
-  { symbol: "USDKRW", label: "USD/KRW",  level: "1,438.20", delta: "+0.04%", dir: "flat" },
-  { symbol: "VIX",    label: "VIX",      level: "17.23",    delta: "+1.83%", dir: "up" },
+// Macro symbols the strip tracks. Levels are NEVER hard-coded — every cell
+// renders an em-dash placeholder until the SSE stream delivers a real quote.
+// (2026-04-28: prior FALLBACK constant carried 2024-vintage levels that drifted
+//  60%+ from reality, e.g. KOSPI 2,623 vs actual 6,641. Showing stale numbers
+//  as if live is a capital-markets-law misrepresentation risk.)
+const PLACEHOLDER_DELTA = "—";
+const TRACKED: readonly { symbol: string; label: string }[] = [
+  { symbol: "SPX",    label: "S&P 500" },
+  { symbol: "NDX",    label: "NASDAQ"  },
+  { symbol: "KOSPI",  label: "KOSPI"   },
+  { symbol: "KOSDAQ", label: "KOSDAQ"  },
+  { symbol: "USDKRW", label: "USD/KRW" },
+  { symbol: "VIX",    label: "VIX"     },
 ];
 
 // Korean market convention (CEO directive 2026-04-26): ▲ red, ▼ blue.
@@ -138,11 +142,21 @@ export function TopTicker() {
     return () => clearInterval(id);
   }, []);
 
-  // Merge SSE details (if any tickers overlap) into the static snapshot.
+  // Build rows from tracked symbols, populating from SSE only. Anything
+  // without a live quote renders a "—" placeholder so we never display
+  // stale or fabricated levels (legal: misrepresentation risk).
   const rows: Snapshot[] = useMemo(() => {
-    return FALLBACK.map((s) => {
-      const d = rt.details[s.symbol];
-      if (!d) return s;
+    return TRACKED.map((t) => {
+      const d = rt.details[t.symbol];
+      if (!d) {
+        return {
+          symbol: t.symbol,
+          label: t.label,
+          level: PLACEHOLDER_DELTA,
+          delta: PLACEHOLDER_DELTA,
+          dir: "flat" as const,
+        };
+      }
       const pct = d.change_pct;
       const dir: Snapshot["dir"] =
         typeof pct === "number" && pct > 0
@@ -151,10 +165,13 @@ export function TopTicker() {
             ? "down"
             : "flat";
       const deltaStr =
-        typeof pct === "number" ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%` : s.delta;
+        typeof pct === "number"
+          ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`
+          : PLACEHOLDER_DELTA;
       return {
-        ...s,
-        level: d.price_display || s.level,
+        symbol: t.symbol,
+        label: t.label,
+        level: d.price_display || PLACEHOLDER_DELTA,
         delta: deltaStr,
         dir,
       };

@@ -479,46 +479,54 @@ export default function SettingsPageV2() {
             </div>
           </section>
 
-          {/* SECTION B — Brokers */}
-          <BrokerCardV2
-            alpacaSlot={
-              ALPACA_ENABLED ? (
-                <AlpacaCard
-                  connected={Boolean(brokerData?.alpaca_connected)}
-                  mode={brokerData?.alpaca_mode ?? "paper"}
-                  lastSync={brokerData?.alpaca_last_sync ?? null}
-                  onConnect={() => setAlpacaModalOpen(true)}
-                  onSync={handleAlpacaSync}
-                  onDisconnect={handleAlpacaDisconnect}
-                  syncing={alpacaSyncing}
-                  disconnecting={alpacaDisconnecting}
+          {/* SECTION B — Brokers
+              `id="section-b"` anchor required by AnchorRail (2026-04-28 fix).
+              Without it, /settings#section-b URL changes but no scroll. */}
+          <section
+            id="section-b"
+            style={{ scrollMarginTop: 96 }}
+            aria-label="Brokers"
+          >
+            <BrokerCardV2
+              alpacaSlot={
+                ALPACA_ENABLED ? (
+                  <AlpacaCard
+                    connected={Boolean(brokerData?.alpaca_connected)}
+                    mode={brokerData?.alpaca_mode ?? "paper"}
+                    lastSync={brokerData?.alpaca_last_sync ?? null}
+                    onConnect={() => setAlpacaModalOpen(true)}
+                    onSync={handleAlpacaSync}
+                    onDisconnect={handleAlpacaDisconnect}
+                    syncing={alpacaSyncing}
+                    disconnecting={alpacaDisconnecting}
+                  />
+                ) : (
+                  <p
+                    className="font-serif"
+                    style={{
+                      fontFamily:
+                        '"Source Serif 4","Iowan Old Style",Georgia,serif',
+                      fontSize: 13,
+                      color: "rgba(245,240,232,0.55)",
+                    }}
+                  >
+                    Alpaca BYOK is not enabled in this environment.
+                  </p>
+                )
+              }
+              kisSlot={
+                <KisCard
+                  connected={Boolean(brokerData?.kis_connected)}
+                  lastSync={brokerData?.kis_last_sync ?? null}
+                  onConnect={() => setKisModalOpen(true)}
+                  onSync={handleKisSync}
+                  onDisconnect={handleKisDisconnect}
+                  syncing={kisSyncing}
+                  disconnecting={kisDisconnecting}
                 />
-              ) : (
-                <p
-                  className="font-serif"
-                  style={{
-                    fontFamily:
-                      '"Source Serif 4","Iowan Old Style",Georgia,serif',
-                    fontSize: 13,
-                    color: "rgba(245,240,232,0.55)",
-                  }}
-                >
-                  Alpaca BYOK is not enabled in this environment.
-                </p>
-              )
-            }
-            kisSlot={
-              <KisCard
-                connected={Boolean(brokerData?.kis_connected)}
-                lastSync={brokerData?.kis_last_sync ?? null}
-                onConnect={() => setKisModalOpen(true)}
-                onSync={handleKisSync}
-                onDisconnect={handleKisDisconnect}
-                syncing={kisSyncing}
-                disconnecting={kisDisconnecting}
-              />
-            }
-          />
+              }
+            />
+          </section>
 
           {/* SECTION C — Notifications */}
           <section
@@ -819,19 +827,33 @@ export default function SettingsPageV2() {
             </div>
           </section>
 
-          {/* SECTION D — Subscription */}
-          <SubscriptionCardV2
-            currentTier={currentTier}
-            renewalLine={renewalLine}
-            onManageBilling={handleManageBilling}
-          />
+          {/* SECTION D — Subscription
+              `id="section-d"` anchor required by AnchorRail (2026-04-28 fix). */}
+          <section
+            id="section-d"
+            style={{ scrollMarginTop: 96 }}
+            aria-label="Subscription"
+          >
+            <SubscriptionCardV2
+              currentTier={currentTier}
+              renewalLine={renewalLine}
+              onManageBilling={handleManageBilling}
+            />
+          </section>
 
-          {/* SECTION E — Privacy */}
-          <PrivacyCardV2
-            onRequestExport={handleRequestExport}
-            onSignOut={handleSignOut}
-            signingOut={signingOut}
-          />
+          {/* SECTION E — Privacy
+              `id="section-e"` anchor required by AnchorRail (2026-04-28 fix). */}
+          <section
+            id="section-e"
+            style={{ scrollMarginTop: 96 }}
+            aria-label="Privacy"
+          >
+            <PrivacyCardV2
+              onRequestExport={handleRequestExport}
+              onSignOut={handleSignOut}
+              signingOut={signingOut}
+            />
+          </section>
 
           {/* DISCLAIMER */}
           <div

@@ -79,6 +79,13 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Re-entrancy guard (2026-04-28): rapid double-submit (Enter twice or
+    // double-click) could fire two POSTs before React commits the disabled
+    // state on the button. The second submission would race the first and
+    // — if the user typed a different ticker between presses — could record
+    // the wrong symbol. The button-disabled state is necessary but not
+    // sufficient because `submitting` updates asynchronously.
+    if (submitting) return;
     const clean = ticker.trim().toUpperCase();
     if (!clean) return;
     setSubmitting(true);
