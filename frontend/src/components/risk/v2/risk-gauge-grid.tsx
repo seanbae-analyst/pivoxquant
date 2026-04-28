@@ -1,0 +1,316 @@
+"use client";
+
+/**
+ * <RiskGaugeGrid /> — Block 1 of /risk v2.
+ *
+ * Four big-gauge cards (VaR · Concentration HHI · Correlation avg ·
+ * Component ES) arranged 2×2 with a 12px gutter. Linear gauge bar (NOT
+ * circular) keeps the same primitive used in home-v2 .gauge.
+ *
+ * Posture labels are legal-safe (POSITIVE / NEGATIVE / NEUTRAL) — color
+ * is always paired with the text label per a11y §11 of SPEC.
+ */
+
+import * as React from "react";
+import type { RiskSummaryV2, RiskLayerV2, RiskLayerStatus } from "@/lib/hooks";
+
+interface BigGaugeProps {
+  eyebrow: string;
+  value: string;
+  unit?: string;
+  range: string;
+  gaugePct: number;
+  marks: [string, string, string];
+  posture: RiskLayerStatus;
+}
+
+function postureColor(p: RiskLayerStatus): string {
+  if (p === "POSITIVE") return "var(--pq-positive, #dc2626)";
+  if (p === "NEGATIVE") return "var(--pq-negative, #2563eb)";
+  return "rgba(245,240,232,0.55)";
+}
+
+function BigGaugeCard({
+  eyebrow,
+  value,
+  unit,
+  range,
+  gaugePct,
+  marks,
+  posture,
+}: BigGaugeProps) {
+  const pct = Math.min(100, Math.max(0, gaugePct));
+  return (
+    <div
+      className="pq-card"
+      style={{
+        background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
+        border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        borderRadius: 4,
+        padding: 28,
+        minHeight: 240,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+      role="group"
+      aria-label={`${eyebrow}: ${value}${unit ?? ""}, ${posture}`}
+    >
+      <div
+        className="font-mono uppercase"
+        style={{
+          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+          fontSize: 10.5,
+          letterSpacing: "0.22em",
+          color: "var(--pq-bronze)",
+        }}
+      >
+        {eyebrow}
+      </div>
+
+      <div
+        style={{
+          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+          fontVariantNumeric: "tabular-nums",
+          fontSize: 44,
+          color: "var(--pq-ivory)",
+          lineHeight: 1,
+          letterSpacing: "-0.01em",
+        }}
+      >
+        {value}
+        {unit ? (
+          <span
+            style={{
+              fontSize: 26,
+              color: "rgba(245,240,232,0.40)",
+              marginLeft: 2,
+            }}
+          >
+            {unit}
+          </span>
+        ) : null}
+      </div>
+
+      <div
+        className="font-mono"
+        style={{
+          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+          fontSize: 11,
+          letterSpacing: "0.04em",
+          color: "rgba(245,240,232,0.55)",
+        }}
+      >
+        {range}
+      </div>
+
+      <div style={{ marginTop: "auto", paddingTop: 12 }}>
+        <div
+          aria-hidden
+          style={{
+            height: 6,
+            background: "rgba(245,240,232,0.06)",
+            position: "relative",
+            overflow: "hidden",
+            borderRadius: 1,
+          }}
+        >
+          <span
+            style={{
+              display: "block",
+              height: "100%",
+              width: `${pct}%`,
+              background:
+                "linear-gradient(90deg, var(--pq-bronze-deep,#6F5636), var(--pq-bronze,#B8956A))",
+              transition: "width 240ms cubic-bezier(0.16,1,0.3,1)",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginTop: 6,
+            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+            fontSize: 9.5,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "rgba(245,240,232,0.40)",
+          }}
+        >
+          {marks.map((m, i) => (
+            <span key={i}>{m}</span>
+          ))}
+        </div>
+        <div
+          className="font-mono uppercase"
+          style={{
+            marginTop: 10,
+            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+            fontSize: 10.5,
+            letterSpacing: "0.22em",
+            color: postureColor(posture),
+          }}
+        >
+          Posture · {posture}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface Props {
+  summary?: RiskSummaryV2;
+  layers?: RiskLayerV2[];
+}
+
+function pickStatusByLayerNum(
+  layers: RiskLayerV2[] | undefined,
+  num: RiskLayerV2["num"],
+): RiskLayerStatus {
+  return layers?.find((l) => l.num === num)?.status ?? "NEUTRAL";
+}
+
+function fmtPct(n: number | undefined, opts?: { signed?: boolean }): string {
+  if (n == null || !Number.isFinite(n)) return "—";
+  const v = Math.abs(n) <= 1 ? n * 100 : n;
+  const sign = opts?.signed && v > 0 ? "+" : "";
+  return `${sign}${v.toFixed(2)}`;
+}
+
+export function RiskGaugeGrid({ summary, layers }: Props) {
+  // VaR 95% / 1-day — value + gauge
+  const var95Raw = summary?.var_95 ?? summary?.var_1d_pct;
+  const var95Pct = var95Raw != null ? (Math.abs(var95Raw) <= 1 ? var95Raw * 100 : var95Raw) : null;
+  const var95Display = var95Pct != null ? `−${Math.abs(var95Pct).toFixed(2)}` : "—";
+  // Map |VaR| 0..7% → 0..100% along gauge.
+  const var95Gauge = var95Pct != null ? Math.min(100, (Math.abs(var95Pct) / 7) * 100) : 0;
+
+  // Concentration HHI — value already 0..1.
+  const hhi = summary?.hhi;
+  const hhiDisplay = hhi != null && Number.isFinite(hhi) ? hhi.toFixed(3) : "—";
+  const hhiRange =
+    summary?.sector_top_name && summary?.sector_top_pct != null
+      ? `Threshold < 0.25 · ${summary.sector_top_name} ${(summary.sector_top_pct > 1 ? summary.sector_top_pct : summary.sector_top_pct * 100).toFixed(1)}%`
+      : "Threshold < 0.25";
+  // 0 → 0%, 0.25 → 100% (the breach line).
+  const hhiGauge = hhi != null && Number.isFinite(hhi) ? Math.min(100, (hhi / 0.25) * 100) : 0;
+
+  // Correlation 90-day average — value 0..1.
+  const corr = summary?.correlation_avg ?? summary?.corr_risk_index;
+  const corrDisplay = corr != null && Number.isFinite(corr) ? corr.toFixed(2) : "—";
+  const corrMaxClause =
+    summary?.correlation_max != null
+      ? `Cluster max ${summary.correlation_max.toFixed(2)}`
+      : "Cluster snapshot pending";
+  // 0 → 0%, 1 → 100%.
+  const corrGauge = corr != null && Number.isFinite(corr) ? Math.min(100, corr * 100) : 0;
+
+  // Tail (Component ES) — value % already.
+  const tailRaw = summary?.tail_ces ?? summary?.es_1d_pct;
+  const tailPct = tailRaw != null ? (Math.abs(tailRaw) <= 1 ? tailRaw * 100 : tailRaw) : null;
+  const tailDisplay = tailPct != null ? `−${Math.abs(tailPct).toFixed(2)}` : "—";
+  // |ES| 0..8% → 0..100%.
+  const tailGauge = tailPct != null ? Math.min(100, (Math.abs(tailPct) / 8) * 100) : 0;
+
+  return (
+    <section style={{ marginBottom: 64 }} aria-label="Four primary gauges">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "space-between",
+          marginBottom: 22,
+          gap: 16,
+        }}
+      >
+        <div>
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+              fontSize: 10.5,
+              letterSpacing: "0.22em",
+              color: "var(--pq-bronze)",
+              marginBottom: 8,
+            }}
+          >
+            Gauges · Four primary
+          </div>
+          <h2
+            className="font-serif"
+            style={{
+              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
+              fontWeight: 500,
+              fontSize: 32,
+              letterSpacing: "-0.02em",
+              color: "var(--pq-ivory)",
+              margin: 0,
+            }}
+          >
+            Where the book stands.
+          </h2>
+        </div>
+        <span
+          className="font-mono uppercase"
+          style={{
+            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+            fontSize: 10.5,
+            letterSpacing: "0.22em",
+            color: "rgba(245,240,232,0.40)",
+          }}
+        >
+          Window · 90 days
+        </span>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 12,
+        }}
+      >
+        <BigGaugeCard
+          eyebrow="VaR · 95% / 1-day"
+          value={var95Display}
+          unit="%"
+          range="Normal range −2.0 ↔ −3.5%"
+          gaugePct={var95Gauge}
+          marks={["Calm", "Strained", "Breach"]}
+          posture={pickStatusByLayerNum(layers, 1)}
+        />
+        <BigGaugeCard
+          eyebrow="Concentration · HHI"
+          value={hhiDisplay}
+          range={hhiRange}
+          gaugePct={hhiGauge}
+          marks={["Diffuse", "Tilted", "Breach"]}
+          posture={pickStatusByLayerNum(layers, 6)}
+        />
+        <BigGaugeCard
+          eyebrow="Correlation · 90-day avg"
+          value={corrDisplay}
+          range={corrMaxClause}
+          gaugePct={corrGauge}
+          marks={["Independent", "Clustered", "Synced"]}
+          posture={pickStatusByLayerNum(layers, 2)}
+        />
+        <BigGaugeCard
+          eyebrow="Tail · Component ES"
+          value={tailDisplay}
+          unit="%"
+          range="99th percentile · 1-day"
+          gaugePct={tailGauge}
+          marks={["Thin", "Heavy", "Fat"]}
+          posture={pickStatusByLayerNum(layers, 4)}
+        />
+      </div>
+    </section>
+  );
+}
+
+// Suppress unused-import warning for fmtPct (kept for symmetry with other v2 cards).
+void fmtPct;
+
+export default RiskGaugeGrid;

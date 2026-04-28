@@ -794,7 +794,7 @@
    Only the landing Hero consumes these.
    ══════════════════════════════════════════════════════════ */
 :root {
-  --pq-ink: #0A0A0A;
+  --pq-ink: #050505; /* reconciled 2026-04-27: v3 lock-in Vantablack — was #0A0A0A */
   --pq-ivory: #F5F0E8;
   --pq-bronze: #B8956A;
   --pq-bronze-light: #A3845C;      /* Bronze light — underlines, hover accents */

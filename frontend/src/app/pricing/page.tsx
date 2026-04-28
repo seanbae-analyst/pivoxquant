@@ -294,7 +294,7 @@ function CheckboxBtn({
           height="10"
           viewBox="0 0 12 12"
           fill="none"
-          stroke="#0A0A0A"
+          stroke="#050505"
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -329,7 +329,7 @@ function ConsentModal({
       <div
         className="w-full max-w-md overflow-hidden rounded-sm"
         style={{
-          backgroundColor: "#0A0A0A",
+          backgroundColor: "#050505",
           border: "1px solid rgba(245,240,232,0.14)",
         }}
       >
@@ -528,7 +528,7 @@ export default function PricingPage() {
     <ErrorBoundary>
       <div
         className="min-h-screen"
-        style={{ backgroundColor: "#0A0A0A", color: "var(--pq-ivory)" }}
+        style={{ backgroundColor: "#050505", color: "var(--pq-ivory)" }}
       >
         {/* ── Top nav ── */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
@@ -620,7 +620,7 @@ export default function PricingPage() {
                     <span
                       className="absolute -top-2.5 left-8 px-2.5 py-[3px] font-serif text-[9.5px] uppercase"
                       style={{
-                        backgroundColor: "#0A0A0A",
+                        backgroundColor: "#050505",
                         color: "var(--pq-bronze)",
                         letterSpacing: "0.3em",
                         border: "1px solid var(--pq-bronze)",

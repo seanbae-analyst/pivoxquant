@@ -33,7 +33,7 @@ from extensions import db
 from models import MorningBrief, Position, SignalCache, User, Watchlist
 from services.container import ai as ai_service
 from services.container import fetcher
-from services.legal_filter import safe_scrub, scrub_signal, ensure_disclaimer
+from services.legal_filter import scrub_signal
 from services.name_resolver import (
     lookup_name_from_signal_cache,
     resolve_stock_name,

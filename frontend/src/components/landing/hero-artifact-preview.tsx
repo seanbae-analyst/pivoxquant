@@ -9,7 +9,7 @@
  * Design intent (CEO direction): a research-terminal panel rendered in
  * editorial typography on Vantablack — NOT a 3D card, NOT gold-on-gold.
  * Every text/background pair is contrast-checked:
- *   • Ivory (#F5F0E8 ~ 95% L) on Vantablack (#0A0A0A) → ~17:1 (AAA)
+ *   • Ivory (#F5F0E8 ~ 95% L) on Vantablack (#050505) → ~17:1 (AAA)
  *   • Bronze (#B8956A ~ 65% L) on Vantablack             → ~6.4:1 (AA body)
  *   • Bronze on bronze tint (rgba(184,149,106,0.08))     → ~5.9:1
  *   • No bronze fill behind bronze text anywhere.
@@ -107,7 +107,7 @@ export function HeroArtifactPreview() {
       <div
         className="absolute inset-0 overflow-hidden rounded-sm"
         style={{
-          backgroundColor: "#0A0A0A",
+          backgroundColor: "#050505",
           border: "0.5px solid rgba(184,149,106,0.32)",
           boxShadow:
             "0 1px 0 rgba(245,240,232,0.04) inset, 0 30px 80px -40px rgba(0,0,0,0.85)",

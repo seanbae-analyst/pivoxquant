@@ -68,7 +68,7 @@ export function DepositionTeaser() {
     <section
       id="pq-deposition"
       className="relative py-24 md:py-36"
-      style={{ backgroundColor: "#0A0A0A", color: "var(--pq-ivory)" }}
+      style={{ backgroundColor: "#050505", color: "var(--pq-ivory)" }}
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
         <motion.div
@@ -135,7 +135,7 @@ export function DepositionTeaser() {
             className="relative rounded-sm p-8 md:p-10"
             style={{
               backgroundColor: "#F5F0E8",
-              color: "#0A0A0A",
+              color: "#050505",
               boxShadow:
                 "0 30px 80px -20px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(139,111,71,0.25)",
               aspectRatio: "3/4",

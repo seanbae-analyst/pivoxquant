@@ -264,7 +264,7 @@ export function TodayHero() {
       aria-label={`Today, for ${personaLabel}`}
       className="pq-today-hero relative overflow-hidden rounded-[3px]"
       style={{
-        background: "var(--pq-ink, #0A0A0A)",
+        background: "var(--pq-ink, #050505)",
         border: "0.5px solid rgba(184,149,106,0.22)",
         boxShadow:
           "0 0 0 1px rgba(184,149,106,0.06), 0 18px 56px -20px rgba(0,0,0,0.9)",

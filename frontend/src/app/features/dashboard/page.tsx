@@ -39,7 +39,7 @@ export default function DashboardPreviewPage() {
       <section
         id="dashboard-preview"
         className="py-20 md:py-28"
-        style={{ backgroundColor: "#0A0A0A" }}
+        style={{ backgroundColor: "#050505" }}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <motion.div

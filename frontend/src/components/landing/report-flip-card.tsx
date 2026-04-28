@@ -463,7 +463,7 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
         // Prevent any clipped white container behind the card from
         // appearing through the front face on GPUs that composite
         // perspective layers against the document background.
-        backgroundColor: "#0A0A0A",
+        backgroundColor: "#050505",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -476,7 +476,7 @@ export default function ReportFlipCard({ s }: { s: FlipSample }) {
         aria-describedby={uid}
         onKeyDown={onKeyDown}
         onClick={toggle}
-        className="relative h-full w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0A0A]"
+        className="relative h-full w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--pq-bronze)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#050505]"
         style={{ minHeight: 320 }}
       >
         <motion.div

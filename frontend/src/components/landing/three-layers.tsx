@@ -179,7 +179,7 @@ export function ThreeLayers() {
       ref={sectionRef}
       id="pq-three-layers"
       className="relative py-24 md:py-36"
-      style={{ backgroundColor: "#0A0A0A", color: "var(--pq-ivory)" }}
+      style={{ backgroundColor: "#050505", color: "var(--pq-ivory)" }}
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
         {/* Eyebrow */}

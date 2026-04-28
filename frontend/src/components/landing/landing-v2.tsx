@@ -146,7 +146,7 @@ function PricingPreview() {
     <section
       id="pricing"
       className="relative py-20 md:py-28 lg:py-40"
-      style={{ backgroundColor: "#0A0A0A" }}
+      style={{ backgroundColor: "#050505" }}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
@@ -201,7 +201,7 @@ function PricingPreview() {
               variants={fadeUp}
               className="group relative flex flex-col overflow-hidden rounded-sm p-7"
               style={{
-                backgroundColor: t.dark ? "#0D0D0D" : "#0A0A0A",
+                backgroundColor: t.dark ? "#0D0D0D" : "#050505",
                 border: t.recommended
                   ? "0.5px solid rgba(184,149,106,0.55)"
                   : "0.5px solid rgba(184,149,106,0.22)",
@@ -352,7 +352,7 @@ function Faq() {
     <section
       id="faq"
       className="pt-12 pb-24 md:pt-16 md:pb-32 lg:pt-20 lg:pb-40"
-      style={{ backgroundColor: "#0A0A0A" }}
+      style={{ backgroundColor: "#050505" }}
     >
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <motion.div

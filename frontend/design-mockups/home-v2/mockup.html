@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en" data-price-mode="kr">
+<head>
+  <meta charset="utf-8" />
+  <title>PivoxQuant — /home v2 (Direction B · Gallery)</title>
+  <meta name="viewport" content="width=1280" />
+
+  <!-- Tailwind for utility scaffolding only — all custom design lives in :root tokens below -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Design system v3 fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* ───────────────────────────────────────────────
+       PivoxQuant Design System v3 — locked tokens
+       (mirror of frontend/src/app/globals.css :root)
+       ─────────────────────────────────────────────── */
+    :root {
+      /* Surfaces */
+      --pq-ink:           #050505;       /* Vantablack — base canvas */
+      --pq-ink-card:      rgba(255,255,255,0.02);
+      --pq-ivory:         #F5F0E8;
+      --pq-ivory-soft:    rgba(245,240,232,0.82);
+      --pq-ivory-quiet:   rgba(245,240,232,0.55);
+      --pq-ivory-mute:    rgba(245,240,232,0.40);
+
+      /* Hairlines */
+      --pq-hairline:      rgba(245,240,232,0.08);
+      --pq-hairline-2:    rgba(245,240,232,0.14);
+
+      /* Bronze register */
+      --pq-bronze:        #B8956A;
+      --pq-bronze-light:  #A3845C;
+      --pq-bronze-deep:   #6F5636;
+      --pq-bronze-15:     rgba(184,149,106,0.15);
+      --pq-bronze-08:     rgba(184,149,106,0.08);
+
+      /* KR price convention (locked): up=red, down=blue */
+      --pq-positive:      #dc2626;       /* up / 상승 */
+      --pq-negative:      #2563eb;       /* down / 하락 */
+      --pq-neutral:       rgba(245,240,232,0.55);
+      --pq-error:         #d18888;
+
+      /* Type ramp */
+      --pq-text-eyebrow:  10.5px;
+      --pq-text-mono-sm:  11px;
+      --pq-text-caption:  12px;
+      --pq-text-body-sm:  13px;
+      --pq-text-body:     14px;
+      --pq-text-deck:     17px;
+      --pq-text-quote:    22px;
+      --pq-text-h3:       30px;
+      --pq-text-h2:       40px;
+      --pq-text-h1:       48px;     /* matches Supanova H1 reference */
+      --pq-text-display:  72px;
+
+      /* Tracking */
+      --pq-track-eyebrow: 0.22em;
+      --pq-track-tight:   -0.02em;
+
+      /* Radius */
+      --pq-radius-cta:    2px;
+      --pq-radius-card:   4px;
+
+      /* Fonts */
+      --pq-font-display:  "Playfair Display","Source Serif 4",Georgia,serif;
+      --pq-font-serif:    "Source Serif 4","Iowan Old Style",Georgia,serif;
+      --pq-font-mono:     "JetBrains Mono","SF Mono",ui-monospace,monospace;
+      --pq-font-sans:     "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+
+    html, body {
+      background: var(--pq-ink);
+      color: var(--pq-ivory);
+      font-family: var(--pq-font-sans);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01","cv02","cv03","tnum";
+    }
+
+    /* Numbers always tabular — Bloomberg discipline */
+    .num, .mono {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Eyebrow (mono kicker, bronze) ───────── */
+    .eyebrow {
+      font-family: var(--pq-font-mono);
+      font-size: var(--pq-text-eyebrow);
+      letter-spacing: var(--pq-track-eyebrow);
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+    }
+    .eyebrow.dim {
+      color: var(--pq-ivory-mute);
+    }
+
+    /* ── Editorial display (Playfair) ────────── */
+    .display-h1 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: var(--pq-text-h1);
+      line-height: 1.05;
+      letter-spacing: var(--pq-track-tight);
+      color: var(--pq-ivory);
+    }
+    .display-h2 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: var(--pq-text-h2);
+      line-height: 1.1;
+      letter-spacing: var(--pq-track-tight);
+    }
+    .editorial-body {
+      font-family: var(--pq-font-serif);
+      font-size: var(--pq-text-deck);
+      line-height: 1.55;
+      color: var(--pq-ivory-soft);
+    }
+
+    /* Bronze emphasis word inside editorial sentences */
+    .br {
+      color: var(--pq-bronze);
+      font-style: italic;
+      font-feature-settings: "ss01";
+    }
+
+    /* ── Card surface ────────────────────────── */
+    .pq-card {
+      background: var(--pq-ink-card);
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-card);
+      padding: 24px;
+      transition: border-color 240ms cubic-bezier(0.16,1,0.3,1),
+                  background-color 240ms cubic-bezier(0.16,1,0.3,1);
+      position: relative;
+    }
+    .pq-card:hover {
+      border-color: var(--pq-bronze);              /* Bronze hover ← key v2 move */
+      background: rgba(184,149,106,0.025);
+    }
+    .pq-card .corner {
+      position: absolute;
+      top: 14px; right: 14px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.2em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+      transition: color 240ms;
+    }
+    .pq-card:hover .corner { color: var(--pq-bronze); }
+
+    /* Hero card — taller, no border, just a hairline-bottom seal */
+    .pq-hero {
+      padding: 80px 64px 64px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+
+    /* CTA — bronze pill (no border-radius to stay editorial) */
+    .pq-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      background: var(--pq-bronze);
+      color: var(--pq-ink);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--pq-radius-cta);
+      transition: background-color 200ms;
+    }
+    .pq-cta:hover { background: var(--pq-bronze-light); }
+
+    .pq-link {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      border-bottom: 1px solid var(--pq-bronze-15);
+      padding-bottom: 2px;
+    }
+    .pq-link:hover { color: var(--pq-bronze-light); border-bottom-color: var(--pq-bronze-light); }
+
+    /* Top ticker strip — full-bleed, hairline both sides */
+    .ticker {
+      display: flex;
+      gap: 36px;
+      padding: 10px 24px;
+      border-top: 1px solid var(--pq-hairline);
+      border-bottom: 1px solid var(--pq-hairline);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .ticker .row { display:flex; gap:8px; align-items:baseline; font-family: var(--pq-font-mono); font-size: 11.5px; }
+    .ticker .sym { color: var(--pq-ivory); font-weight: 500; letter-spacing: 0.05em; }
+    .ticker .px  { color: var(--pq-ivory-quiet); }
+    .pos { color: var(--pq-positive); }
+    .neg { color: var(--pq-negative); }
+
+    /* Living-CFO status hairline */
+    .cfo-status {
+      display: flex; gap: 24px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      color: var(--pq-ivory-quiet);
+      letter-spacing: 0.06em;
+    }
+    .cfo-status .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--pq-bronze);
+      box-shadow: 0 0 0 3px rgba(184,149,106,0.18);
+    }
+    .cfo-status .seg { display: flex; gap: 8px; align-items: center; }
+    .cfo-status .seg b { color: var(--pq-ivory); font-weight: 500; }
+
+    /* KPI — tabular giant number */
+    .kpi-label {
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+    }
+    .kpi-value {
+      font-family: var(--pq-font-mono);
+      font-size: 28px;
+      letter-spacing: -0.02em;
+      color: var(--pq-ivory);
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+    }
+    .kpi-delta {
+      font-family: var(--pq-font-mono);
+      font-size: 12.5px;
+    }
+
+    /* Mini gauge (CSS only) */
+    .gauge {
+      height: 4px;
+      background: rgba(245,240,232,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .gauge > i {
+      display:block; height: 100%;
+      background: linear-gradient(90deg, var(--pq-bronze-deep), var(--pq-bronze));
+    }
+
+    /* Sparkline placeholder using SVG */
+    .spark { width: 100%; height: 36px; display:block; }
+
+    /* Mini table inside cards */
+    .mini-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      align-items: baseline;
+    }
+    .mini-row:last-child { border-bottom: 0; }
+    .mini-row .name {
+      font-family: var(--pq-font-serif);
+      font-size: 14px;
+      color: var(--pq-ivory);
+    }
+    .mini-row .name small {
+      font-family: var(--pq-font-mono);
+      font-size: 10px;
+      color: var(--pq-ivory-mute);
+      margin-left: 8px;
+      letter-spacing: 0.12em;
+    }
+    .mini-row .px { font-size: 13px; color: var(--pq-ivory-soft); }
+
+    /* Disclaimer — required on every analytical page */
+    .disclaimer {
+      margin-top: 64px;
+      padding: 18px 24px;
+      border: 1px dashed var(--pq-hairline-2);
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--pq-ivory-mute);
+    }
+
+    /* Foot signature */
+    .foot {
+      margin-top: 24px;
+      padding: 24px 0 56px;
+      text-align: center;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.28em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+    }
+    .foot .fleuron {
+      color: var(--pq-bronze);
+      font-size: 14px;
+      letter-spacing: 0;
+      margin: 0 8px;
+    }
+
+    /* Wordmark */
+    .wordmark {
+      font-family: var(--pq-font-display);
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.01em;
+    }
+    .wordmark span { color: var(--pq-bronze); }
+
+    /* Top nav */
+    .topnav {
+      display:flex; align-items:center; justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .topnav nav a {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-quiet);
+      margin-left: 28px;
+    }
+    .topnav nav a.active { color: var(--pq-ivory); border-bottom: 1px solid var(--pq-bronze); padding-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- ════════ TOP NAV ════════ -->
+  <header class="topnav">
+    <div class="flex items-center gap-3">
+      <span class="wordmark">Pivox<span>Quant</span></span>
+      <span class="eyebrow dim ml-3">Beta · Apr 27</span>
+    </div>
+    <nav>
+      <a href="#" class="active">Home</a>
+      <a href="#">Memo</a>
+      <a href="#">Book</a>
+      <a href="#">Watchlist</a>
+      <a href="#">Risk</a>
+      <a href="#">Archive</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <span class="eyebrow dim">Sean · Pro</span>
+      <span class="num" style="color:var(--pq-ivory-quiet); font-size:11px;">21:38 KST</span>
+    </div>
+  </header>
+
+  <!-- ════════ TOP TICKER (live, full-bleed) ════════ -->
+  <div class="ticker">
+    <div class="row"><span class="sym">SPX</span><span class="px num">5,612.34</span><span class="pos num">+0.42%</span></div>
+    <div class="row"><span class="sym">NDX</span><span class="px num">19,884.12</span><span class="pos num">+0.71%</span></div>
+    <div class="row"><span class="sym">DJI</span><span class="px num">42,118.50</span><span class="neg num">-0.18%</span></div>
+    <div class="row"><span class="sym">KOSPI</span><span class="px num">2,712.04</span><span class="pos num">+0.33%</span></div>
+    <div class="row"><span class="sym">KOSDAQ</span><span class="px num">868.91</span><span class="neg num">-0.21%</span></div>
+    <div class="row"><span class="sym">USD/KRW</span><span class="px num">1,387.20</span><span class="pos num">+0.12%</span></div>
+    <div class="row"><span class="sym">VIX</span><span class="px num">14.82</span><span class="neg num">-2.41%</span></div>
+    <div class="row"><span class="sym">BTC</span><span class="px num">$68,442</span><span class="pos num">+1.84%</span></div>
+    <div class="row"><span class="sym">10Y UST</span><span class="px num">4.27%</span><span class="neg num">-3bp</span></div>
+  </div>
+
+  <!-- ════════ LIVING CFO STATUS — sticky hairline ════════ -->
+  <div class="max-w-[1280px] mx-auto px-6">
+    <div class="cfo-status">
+      <span class="dot"></span>
+      <span class="seg">CFO ROOM <b>OPEN</b></span>
+      <span class="seg">Last memo <b>27 Apr · 07:00 KST</b></span>
+      <span class="seg">Next pre-brief <b>AAPL earnings · 30 Apr</b></span>
+      <span class="seg ml-auto">Since session start <b class="num">+$1,284.50</b></span>
+    </div>
+  </div>
+
+  <!-- ════════ HERO — Today's Memo (Supanova-tone) ════════ -->
+  <section class="max-w-[1280px] mx-auto px-6 pq-hero">
+    <div class="eyebrow mb-7">Memo · 14 of 52 · Friday</div>
+
+    <h1 class="display-h1 mb-7" style="max-width: 940px;">
+      You held through <span class="br">noise</span>.<br/>
+      Cash buffer is doing the work — <span class="br">don't tax it.</span>
+    </h1>
+
+    <p class="editorial-body mb-10" style="max-width: 720px;">
+      Book finished the week +2.34% versus benchmark +1.18%. The drag came almost
+      entirely from semis, where you trimmed twice and were proven right. AAPL prints
+      Tuesday — your <span class="br">pre-brief</span> is already drafted and sits in the queue.
+    </p>
+
+    <div class="flex items-center gap-4">
+      <a href="#" class="pq-cta">Read full memo →</a>
+      <a href="#" class="pq-link">Listen · 4:12</a>
+      <span class="eyebrow dim ml-4">Drafted by AI · Reviewed by you</span>
+    </div>
+  </section>
+
+  <!-- ════════ CARD GALLERY — 6 cards, 3×2 grid ════════ -->
+  <main class="max-w-[1280px] mx-auto px-6 pt-10">
+
+    <div class="flex items-end justify-between mb-6">
+      <div>
+        <div class="eyebrow mb-2">The Book · Snapshot</div>
+        <h2 class="display-h2">Six rooms.</h2>
+      </div>
+      <a href="#" class="pq-link">Configure cards ›</a>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3">
+
+      <!-- ── CARD 1 — Portfolio Snapshot ────────────────── -->
+      <a href="#" class="pq-card" style="grid-column: span 1; min-height: 280px;">
+        <span class="corner">Open Book ›</span>
+        <div class="kpi-label mb-5">Portfolio · NAV</div>
+
+        <div class="kpi-value mb-1">$124,580.32</div>
+        <div class="kpi-delta pos mb-7">+$2,847.10 &nbsp; <span style="opacity:.7">+2.34% wk</span></div>
+
+        <svg class="spark mb-6" viewBox="0 0 200 36" preserveAspectRatio="none">
+          <polyline fill="none" stroke="var(--pq-bronze)" stroke-width="1.4"
+            points="0,28 14,26 28,29 42,22 56,24 70,18 84,20 98,15 112,17 126,11 140,14 154,9 168,12 182,7 196,10" />
+          <polyline fill="rgba(184,149,106,0.06)" stroke="none"
+            points="0,28 14,26 28,29 42,22 56,24 70,18 84,20 98,15 112,17 126,11 140,14 154,9 168,12 182,7 196,10 196,36 0,36" />
+        </svg>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <div class="kpi-label" style="font-size:9.5px;">Today P/L</div>
+            <div class="num pos" style="font-size:14px;">+$684.20</div>
+          </div>
+          <div>
+            <div class="kpi-label" style="font-size:9.5px;">Positions</div>
+            <div class="num" style="font-size:14px;">12 open</div>
+          </div>
+          <div>
+            <div class="kpi-label" style="font-size:9.5px;">Cash %</div>
+            <div class="num" style="font-size:14px;">18.4%</div>
+          </div>
+        </div>
+      </a>
+
+      <!-- ── CARD 2 — Risk Board ────────────────── -->
+      <a href="#" class="pq-card" style="min-height: 280px;">
+        <span class="corner">Risk Board ›</span>
+        <div class="kpi-label mb-5">Risk · 7-Layer Defense</div>
+
+        <div class="display-h2 mb-1" style="font-size:30px;">Composed</div>
+        <div class="editorial-body mb-6" style="font-size:14px;">
+          Three of seven layers showing strain. None breached.
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between mb-1.5">
+              <span class="kpi-label" style="font-size:9.5px;">VaR 95</span>
+              <span class="num" style="font-size:11.5px; color:var(--pq-ivory-soft);">-2.84%</span>
+            </div>
+            <div class="gauge"><i style="width:38%;"></i></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1.5">
+              <span class="kpi-label" style="font-size:9.5px;">Sector concentration</span>
+              <span class="num" style="font-size:11.5px; color:var(--pq-ivory-soft);">Tech 41%</span>
+            </div>
+            <div class="gauge"><i style="width:62%;"></i></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1.5">
+              <span class="kpi-label" style="font-size:9.5px;">Correlation cluster</span>
+              <span class="num" style="font-size:11.5px; color:var(--pq-ivory-soft);">0.71</span>
+            </div>
+            <div class="gauge"><i style="width:71%;"></i></div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1.5">
+              <span class="kpi-label" style="font-size:9.5px;">Tail (CES)</span>
+              <span class="num" style="font-size:11.5px; color:var(--pq-ivory-soft);">-4.12%</span>
+            </div>
+            <div class="gauge"><i style="width:44%;"></i></div>
+          </div>
+        </div>
+      </a>
+
+      <!-- ── CARD 3 — Earnings Pre-Brief ────────────────── -->
+      <a href="#" class="pq-card" style="min-height: 280px;">
+        <span class="corner">Pre-brief ›</span>
+        <div class="kpi-label mb-5">Pre-Brief · 4 days out</div>
+
+        <div class="display-h2 mb-2" style="font-size:30px;">AAPL.</div>
+
+        <div class="editorial-body mb-6" style="font-size:14px;">
+          Drafted. Whisper number is <span class="br">$1.52 EPS</span>, street consensus
+          $1.50. Services growth carries the print.
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mb-5 pb-5" style="border-bottom: 1px solid var(--pq-hairline);">
+          <div>
+            <div class="kpi-label" style="font-size:9.5px;">EPS est.</div>
+            <div class="num" style="font-size:13px;">$1.50</div>
+          </div>
+          <div>
+            <div class="kpi-label" style="font-size:9.5px;">Revenue</div>
+            <div class="num" style="font-size:13px;">$94.6B</div>
+          </div>
+          <div>
+            <div class="kpi-label" style="font-size:9.5px;">Implied move</div>
+            <div class="num" style="font-size:13px;">±4.1%</div>
+          </div>
+        </div>
+
+        <div class="eyebrow dim mb-2">Queue · 7 days</div>
+        <div class="space-y-1.5">
+          <div class="flex justify-between" style="font-size:12.5px;">
+            <span class="num" style="color:var(--pq-ivory-soft);">AAPL</span>
+            <span style="color:var(--pq-ivory-mute);">Tue · post-mkt</span>
+          </div>
+          <div class="flex justify-between" style="font-size:12.5px;">
+            <span class="num" style="color:var(--pq-ivory-soft);">MSFT</span>
+            <span style="color:var(--pq-ivory-mute);">Wed · post-mkt</span>
+          </div>
+          <div class="flex justify-between" style="font-size:12.5px;">
+            <span class="num" style="color:var(--pq-ivory-soft);">005930.KS</span>
+            <span style="color:var(--pq-ivory-mute);">Thu · 09:00 KST</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- ── CARD 4 — Positions (mini) ────────────────── -->
+      <a href="#" class="pq-card" style="min-height: 280px;">
+        <span class="corner">Open Book ›</span>
+        <div class="kpi-label mb-5">Positions · Top weight</div>
+
+        <div class="mini-row">
+          <span class="name">Apple <small>AAPL</small></span>
+          <span class="px num">$214.32</span>
+          <span class="num pos">+1.42%</span>
+        </div>
+        <div class="mini-row">
+          <span class="name">Samsung Electronics <small>005930.KS</small></span>
+          <span class="px num">₩72,400</span>
+          <span class="num neg">-0.69%</span>
+        </div>
+        <div class="mini-row">
+          <span class="name">NVIDIA <small>NVDA</small></span>
+          <span class="px num">$118.74</span>
+          <span class="num pos">+2.81%</span>
+        </div>
+        <div class="mini-row">
+          <span class="name">Microsoft <small>MSFT</small></span>
+          <span class="px num">$432.18</span>
+          <span class="num pos">+0.34%</span>
+        </div>
+        <div class="mini-row">
+          <span class="name">SK Hynix <small>000660.KS</small></span>
+          <span class="px num">₩198,500</span>
+          <span class="num neg">-1.12%</span>
+        </div>
+
+        <div class="mt-5 flex justify-between items-baseline">
+          <span class="eyebrow dim">7 more · 12 total</span>
+          <span class="pq-link">Open the Book ›</span>
+        </div>
+      </a>
+
+      <!-- ── CARD 5 — Signals (POSITIVE/NEGATIVE/NEUTRAL only) ────────────────── -->
+      <a href="#" class="pq-card" style="min-height: 280px;">
+        <span class="corner">All signals ›</span>
+        <div class="kpi-label mb-5">Signals · Today's three</div>
+
+        <div class="space-y-5">
+
+          <div>
+            <div class="flex items-baseline justify-between mb-1.5">
+              <span class="display-h2" style="font-size:22px; font-family:var(--pq-font-display);">NVDA</span>
+              <span class="eyebrow" style="color:var(--pq-positive);">POSITIVE</span>
+            </div>
+            <p class="editorial-body" style="font-size:13px; line-height:1.5;">
+              MACD cross sustained 3 sessions. Volume +38% vs 20-day median.
+            </p>
+          </div>
+
+          <div style="border-top:1px solid var(--pq-hairline); padding-top:18px;">
+            <div class="flex items-baseline justify-between mb-1.5">
+              <span class="display-h2" style="font-size:22px; font-family:var(--pq-font-display);">TSLA</span>
+              <span class="eyebrow" style="color:var(--pq-negative);">NEGATIVE</span>
+            </div>
+            <p class="editorial-body" style="font-size:13px; line-height:1.5;">
+              RSI 76 with bearish divergence. Two-week distribution pattern visible.
+            </p>
+          </div>
+
+          <div style="border-top:1px solid var(--pq-hairline); padding-top:18px;">
+            <div class="flex items-baseline justify-between mb-1.5">
+              <span class="display-h2" style="font-size:22px; font-family:var(--pq-font-display);">005930.KS</span>
+              <span class="eyebrow dim">NEUTRAL</span>
+            </div>
+            <p class="editorial-body" style="font-size:13px; line-height:1.5;">
+              Inside the 50/200 channel. Earnings Thursday; pre-brief queued.
+            </p>
+          </div>
+
+        </div>
+      </a>
+
+      <!-- ── CARD 6 — Companion · Archive ────────────────── -->
+      <a href="#" class="pq-card" style="min-height: 280px;">
+        <span class="corner">Archive ›</span>
+        <div class="kpi-label mb-5">Companion · Past briefs</div>
+
+        <div class="display-h2 mb-2" style="font-size:30px; color:var(--pq-bronze);">52</div>
+        <div class="editorial-body mb-6" style="font-size:14px;">
+          memos written for you this year. Three of them <span class="br">moved a decision.</span>
+        </div>
+
+        <div class="space-y-3 mb-6">
+          <div class="flex justify-between" style="font-size:13px;">
+            <span style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif);">"Trim semis · take half"</span>
+            <span class="num" style="color:var(--pq-ivory-mute); font-size:11px;">22 Apr</span>
+          </div>
+          <div class="flex justify-between" style="font-size:13px;">
+            <span style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif);">"Hold AAPL into print"</span>
+            <span class="num" style="color:var(--pq-ivory-mute); font-size:11px;">19 Apr</span>
+          </div>
+          <div class="flex justify-between" style="font-size:13px;">
+            <span style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif);">"Brag card · Q1 review"</span>
+            <span class="num" style="color:var(--pq-ivory-mute); font-size:11px;">12 Apr</span>
+          </div>
+        </div>
+
+        <div class="flex gap-3">
+          <span class="pq-link">Brag Card ›</span>
+          <span class="pq-link">Voice memos ›</span>
+        </div>
+      </a>
+
+    </div>
+
+    <!-- ══════════ DISCLAIMER (required) ══════════ -->
+    <div class="disclaimer">
+      <strong style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif); font-style:italic;">
+        Notice / 면책 고지.
+      </strong>
+      &nbsp; PivoxQuant produces editorial memos and analytical artifacts for the user's own
+      record-keeping. Nothing on this page constitutes investment advice, a solicitation, or a
+      recommendation to buy or sell any security. Signals labelled POSITIVE / NEGATIVE / NEUTRAL
+      describe model state, not action. 본 서비스는 자본시장과 금융투자업에 관한 법률상의
+      투자자문업·투자일임업이 아니며, 모든 의사결정과 책임은 이용자 본인에게 있습니다.
+    </div>
+
+    <!-- ══════════ FOOT SIGNATURE ══════════ -->
+    <div class="foot">
+      <span>PivoxQuant</span>
+      <span class="fleuron">❦</span>
+      <span>Volume 14 · Quarto Edition</span>
+      <span class="fleuron">❦</span>
+      <span>Seoul · 27 April 2026</span>
+    </div>
+
+  </main>
+
+</body>
+</html>
