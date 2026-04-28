@@ -255,10 +255,11 @@ export const SEARCH = `${API_BASE}/api/search`;
 
 // Risk + Discover + Market (added 2026-04-22) — observation endpoints wired to
 // the new risk/discover/market pages. Existing API.* namespace untouched.
-export const RISK_SUMMARY      = `${API_BASE}/api/risk/summary`;
-export const RISK_LAYERS       = `${API_BASE}/api/risk/layers`;
-export const RISK_CORRELATION  = `${API_BASE}/api/risk/correlation`;
-export const RISK_ROLLING_VAR  = `${API_BASE}/api/risk/rolling-var`;
+export const RISK_SUMMARY       = `${API_BASE}/api/risk/summary`;
+export const RISK_LAYERS        = `${API_BASE}/api/risk/layers`;
+export const RISK_CORRELATION   = `${API_BASE}/api/risk/correlation`;
+export const RISK_ROLLING_VAR   = `${API_BASE}/api/risk/rolling-var`;
+export const RISK_CONCENTRATION = `${API_BASE}/api/risk/concentration`;
 export const DISCOVER_OVERVIEW  = `${API_BASE}/api/discover/market-overview`;
 export const DISCOVER_MOVERS    = `${API_BASE}/api/discover/movers`;
 export const DISCOVER_SECTORS   = `${API_BASE}/api/discover/sectors`;
