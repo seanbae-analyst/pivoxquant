@@ -321,7 +321,10 @@ export default function MorningBriefPage() {
                 </span>
               </div>
             )}
-            <h1 className="mt-3 font-serif text-[2.25rem] leading-tight text-[var(--pq-ivory)]" style={{ letterSpacing: "-0.015em" }}>
+            {/* pq-ink-h1: Playfair Display italic — site-wide H1 token
+                (globals.css:1141). Source Serif 4 했던 거 다른 페이지 H1과 폰트 달라
+                CEO 지적 2026-04-29 "morning brief 그리고 이 페이지 폰트 동일한거냐". */}
+            <h1 className="pq-ink-h1 mt-3">
               Good morning.
             </h1>
             <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)]">
