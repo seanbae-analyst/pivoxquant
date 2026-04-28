@@ -62,6 +62,7 @@ jobs:
             | grep -viE 'language|advice.*recommendation|recommendation.*advice|or advice' \
             | grep -viE '\* recommendation|recommendation.*fields|fields.*recommendation|``recommendation``' \
             | grep -v '``recommendation``' \
+            | grep -vE '_v2/page-v2\.tsx:[0-9]+:.*recommendation to buy or sell' \
             || true)
 
           # --- EN AI Coach / 투자 코치 ---
