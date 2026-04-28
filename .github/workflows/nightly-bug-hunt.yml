@@ -13,7 +13,12 @@ name: Nightly Bug Hunt
 
 on:
   schedule:
-    - cron: '0 17 * * *'   # 17:00 UTC = 02:00 KST
+    # 2026-04-29 cost reduction: was daily (~30 runs/mo at ~50min each
+    # = 1500min/mo, the single largest cost). Now Sundays only — Morning
+    # Brief + Daily API Smoke + hourly API Health cover daily monitoring.
+    # Nightly's 9-iter probe is deep regression analysis, weekly cadence
+    # is sufficient.
+    - cron: '0 17 * * 0'   # Sun 17:00 UTC = Mon 02:00 KST
   workflow_dispatch:
     inputs:
       iter_count:

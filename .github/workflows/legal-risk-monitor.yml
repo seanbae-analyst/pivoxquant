@@ -11,7 +11,11 @@ name: Legal Risk Monitor
 
 on:
   schedule:
-    - cron: '0 1 * * *'   # 01:00 UTC = 10:00 KST
+    # 2026-04-29 cost reduction: was daily, now Mondays only. Daily
+    # Legal Scan (09:15 KST) handles the fast bare-token regression
+    # check every day; this monitor's deeper artifact + scrub-coverage
+    # pass is fine at weekly cadence.
+    - cron: '0 1 * * 1'   # Mon 01:00 UTC = Mon 10:00 KST
   workflow_dispatch:
     inputs:
       dry_run:
