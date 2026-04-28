@@ -20,10 +20,24 @@ function stripFrontmatter(md: string): string {
   return end === -1 ? md : md.slice(end + 4).trimStart();
 }
 
+/**
+ * Insert a hair-space after `**bold**` when a Korean syllable follows
+ * immediately. CommonMark closes the bold delimiter only at a "word
+ * boundary"; Hangul jamo aren't word-boundary chars in marked v18, so
+ * `**"서비스"**란` rendered as literal asterisks. The hair-space is
+ * narrow enough to be visually invisible while restoring parser closure.
+ *
+ * (Wave 2 bug-hunter finding 2026-04-29 — terms/privacy were rendering
+ * literal `**` to every new signup.)
+ */
+function unbreakKoreanBold(md: string): string {
+  return md.replace(/(\*\*[^*\n]+?\*\*)([ㄱ-ㆎ가-힣])/g, "$1 $2");
+}
+
 export default async function TermsPage() {
   const filePath = path.join(process.cwd(), "src/content/terms-ko.md");
   const raw = await fs.readFile(filePath, "utf8");
-  const html = await marked.parse(stripFrontmatter(raw));
+  const html = await marked.parse(unbreakKoreanBold(stripFrontmatter(raw)));
 
   return (
     <div className="min-h-[100dvh] bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
