@@ -31,8 +31,10 @@ interface PositionsTableV2Props {
   positions: Position[];
   /** Total NAV in display currency for weight calc. */
   totalNav: number;
-  /** FX rate used to normalize KRW positions to USD when totalNav is USD. */
-  fxRate: number;
+  /** FX rate used to normalize KRW positions to USD when totalNav is USD.
+   *  null when no live feed — KRW positions render with weight 0 rather
+   *  than fabricate a USD figure with a stale literal. */
+  fxRate: number | null;
   /** Display currency for the running totals. */
   displayCurrency?: "USD" | "KRW";
   loading?: boolean;
@@ -85,10 +87,11 @@ interface DerivedPosition {
 function derive(
   positions: Position[],
   totalNav: number,
-  fxRate: number,
+  fxRate: number | null,
   displayCurrency: "USD" | "KRW",
 ): DerivedPosition[] {
   const safeTotal = totalNav > 0 ? totalNav : 1;
+  const safeFx = fxRate && fxRate > 0 ? fxRate : null;
   return positions.map((p) => {
     const mv = p.shares * p.current;
     const cost = p.shares * p.avgCost;
@@ -96,13 +99,15 @@ function derive(
     const plPct = cost > 0 ? (pl / cost) * 100 : 0;
 
     // Normalize market value to display currency for weight calc.
+    // When FX is unavailable for a cross-currency position, mvNormalized
+    // is 0 and the weight column reports — (handled by fmtPctSigned).
     let mvNormalized = mv;
     if (displayCurrency === "USD" && p.currency === "KRW") {
-      mvNormalized = mv / (fxRate || 1);
+      mvNormalized = safeFx ? mv / safeFx : 0;
     } else if (displayCurrency === "KRW" && p.currency !== "KRW") {
-      mvNormalized = mv * (fxRate || 1);
+      mvNormalized = safeFx ? mv * safeFx : 0;
     }
-    const weight = (mvNormalized / safeTotal) * 100;
+    const weight = mvNormalized > 0 ? (mvNormalized / safeTotal) * 100 : 0;
 
     return { raw: p, pl, plPct, mv, mvNormalized, weight };
   });

@@ -215,6 +215,34 @@ export function usePortfolioSummary() {
   });
 }
 
+/**
+ * Live USD/KRW from /api/market/fx — backend scheduler refreshes ~60s.
+ * Returns null when feed is unavailable (rather than a stale literal).
+ *
+ * Why a dedicated hook (and not `usePortfolioSummary().fxRate`):
+ *   - Portfolio summary's fxRate field is computed at NAV time and may be
+ *     missing for users with no holdings. The market/fx feed is independent.
+ *   - We poll less aggressively (60s) since FX moves slowly intraday.
+ */
+export function useFxRate(): { rate: number | null; isStale: boolean } {
+  const { data } = useSWR<{
+    ok?: boolean;
+    usd_krw?: number;
+    is_stale?: boolean;
+  }>(API.market.fx, fetcher, {
+    refreshInterval: 60_000,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    dedupingInterval: 30_000,
+    errorRetryCount: 1,
+  });
+  const rate =
+    typeof data?.usd_krw === "number" && data.usd_krw > 0
+      ? data.usd_krw
+      : null;
+  return { rate, isStale: Boolean(data?.is_stale) };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function usePortfolioPositions<T = any>() {
   return useSWR<T>(PORTFOLIO_POSITIONS, fetcher, {

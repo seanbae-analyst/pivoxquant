@@ -29,7 +29,10 @@ interface Totals {
   todayPnlPct: number;
   unrealized: number;
   realizedYtd: number;
-  fxRate: number;
+  // null when neither the portfolio summary endpoint nor the live /api/market/fx
+  // feed has a fresh USD/KRW rate. Mixed-currency math elides KRW positions
+  // rather than fabricate a USD figure with a stale literal (was FX_FALLBACK=1342).
+  fxRate: number | null;
 }
 
 interface Props {
@@ -96,7 +99,7 @@ export function LedgerBookPaper({
       label: `Book Value · ${bookCurrency}`,
       value: fmtMoneyBig(totals.totalNav, bookCurrency),
       sub:
-        bookCurrency === "USD"
+        bookCurrency === "USD" && totals.fxRate && totals.fxRate > 0
           ? "\u20A9" + Math.round(totals.totalNav * totals.fxRate).toLocaleString()
           : undefined,
     },

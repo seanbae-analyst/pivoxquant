@@ -23,6 +23,13 @@ interface SignalItem {
   id?: number | string;
   ticker?: string;
   symbol?: string;
+  /**
+   * Backend `engine.py` historically returns "signal" only; the home v2
+   * card used to read `s.label` and always fell through to "NEUTRAL"
+   * (root cause of the home/signals-page divergence reported 2026-04-28).
+   * Both keys accepted now.
+   */
+  signal?: string;
   label?: string;
   rationale?: string;
   reason?: string;
