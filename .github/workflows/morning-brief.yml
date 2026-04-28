@@ -1,0 +1,91 @@
+name: Morning Brief
+
+# Aggregates the last 24h of automation status into one GitHub Issue
+# at 09:00 KST. CEO checks one issue, decides what to action.
+#
+# Sources covered:
+#   - All workflow runs in the last 24h (success/failure counts + failed list)
+#   - Currently OPEN issues with automation labels (autopilot, nightly-bug-hunt, legal, ...)
+#   - Self-Healing Layer C latest run + DRY RUN/AUTO_PR mode
+#
+# Dedup: closes yesterday's brief and creates a fresh one each run.
+# At any time exactly 1 OPEN morning-brief issue exists.
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 00:00 UTC = 09:00 KST
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+  actions: read
+
+jobs:
+  brief:
+    name: Build morning brief
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build brief body
+        id: build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          BRIEF_BODY_PATH: brief_body.md
+        run: |
+          python3 scripts/morning_brief/build_brief.py
+          echo "size=$(wc -c < brief_body.md)" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure morning-brief label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create morning-brief \
+            --repo "$GITHUB_REPOSITORY" \
+            --color "0E8A16" \
+            --description "Daily morning automation brief" 2>/dev/null || true
+
+      - name: Close yesterday's brief
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for n in $(gh issue list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label morning-brief \
+            --json number --jq '.[].number'); do
+            gh issue close "$n" \
+              --repo "$GITHUB_REPOSITORY" \
+              --comment "Replaced by today's brief."
+          done
+
+      - name: Create today's brief
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          today=$(TZ='Asia/Seoul' date +'%Y-%m-%d')
+          title="🌅 Morning Brief — ${today}"
+          url=$(gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$title" \
+            --body-file brief_body.md \
+            --label morning-brief \
+            --assignee seanbae-analyst 2>/dev/null \
+            || gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body-file brief_body.md \
+              --label morning-brief)
+          echo "Created: $url"
+
+          # Optional Slack ping
+          if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+            curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+              -H 'Content-type: application/json' \
+              --data "{\"text\":\"🌅 PivoxQuant Morning Brief ready: $url\"}" \
+              || echo "::warning::Slack POST failed (non-fatal)"
+          fi
