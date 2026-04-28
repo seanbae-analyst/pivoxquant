@@ -1137,9 +1137,9 @@
   color: var(--pq-bronze);
 }
 
-/* Editorial H1 — Playfair/serif italic ivory on ink */
+/* Editorial H1 — Playfair Display italic ivory on ink (v3 lock-in) */
 .pq-ink-h1 {
-  font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
+  font-family: var(--font-display), "Playfair Display", "EB Garamond", Georgia, serif;
   font-style: italic;
   font-weight: 500;
   font-size: clamp(1.75rem, 3.2vw, 2.25rem);
@@ -1971,9 +1971,9 @@ i.italic,
   line-height: 1.2;
 }
 
-/* Editorial H1 ticker display — serif italic, oversized */
+/* Editorial H1 ticker display — Playfair Display italic, oversized (v3 lock-in) */
 .pq-detail-ticker-display {
-  font-family: var(--font-serif), "Source Serif 4", "EB Garamond", Georgia, serif;
+  font-family: var(--font-display), "Playfair Display", "EB Garamond", Georgia, serif;
   font-style: italic;
   font-weight: 500;
   font-size: clamp(2.25rem, 5vw, 3.5rem);

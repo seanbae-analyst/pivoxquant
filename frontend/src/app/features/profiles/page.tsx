@@ -21,11 +21,6 @@ export const metadata: Metadata = {
     "8 distinct investor profiles. Each gets a customized strategy tailored to your risk tolerance and goals.",
 };
 
-/* ── Profile data ──
-   Editorial pattern: 2-letter abbrev code + ledger numbering ("01 / 08"),
-   no icon-in-colored-box. Mirrors landing/personas-preview.tsx so the desk
-   feels of-a-piece across the site. Action verbs replaced with neutral
-   observation language for legal + tone alignment. */
 const profiles = [
   {
     code: "PX",
@@ -85,7 +80,6 @@ const profiles = [
   },
 ];
 
-/* ── What each profile customizes ── */
 const customizations = [
   { icon: Target, label: "Signal thresholds (POSITIVE/NEGATIVE)" },
   { icon: ShieldCheck, label: "Risk defense settings" },
@@ -97,35 +91,35 @@ const customizations = [
 
 export default function ProfilesPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-slate-100 bg-white/80 backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Link>
-          <span className="text-slate-300">/</span>
-          <span className="text-sm font-medium text-slate-700">Investor Profiles</span>
+          <span className="text-[rgba(245,240,232,0.32)]">/</span>
+          <span className="text-sm font-medium text-[var(--pq-ivory)]">Investor Profiles</span>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-20">
         {/* ── Disclaimer ── */}
-        <DisclaimerBanner type="ai-analysis" theme="light" className="mb-8" />
+        <DisclaimerBanner type="ai-analysis" className="mb-8" />
 
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
-            <User className="w-7 h-7 text-accent" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] mb-6">
+            <User className="w-6 h-6 text-[var(--pq-bronze)]" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            Find Your <span className="gradient-text">Investor Type</span>
+          <h1 className="font-[var(--font-display)] italic text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
+            Find Your Investor Type
           </h1>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto">
+          <p className="text-base text-[rgba(245,240,232,0.62)] max-w-xl mx-auto">
             8 distinct profiles. Each gets a customized strategy.
           </p>
         </div>
@@ -133,10 +127,10 @@ export default function ProfilesPage() {
         {/* ── Assessment intro ── */}
         <SectionCurtain divider={false}>
         <section className="mb-12">
-          <div className="sp-card rounded-2xl p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-slate-900 mb-3">How it works</h2>
-            <p className="text-slate-600 leading-relaxed">
-              Take our <span className="font-semibold text-slate-900">20-question assessment</span> to
+          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+            <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-3">How it works</h2>
+            <p className="text-[rgba(245,240,232,0.82)] leading-relaxed">
+              Take our <span className="font-semibold text-[var(--pq-ivory)]">20-question assessment</span> to
               discover your investor type. Questions cover your experience level, risk tolerance,
               time horizon, and trading style. It takes about 3 minutes, and you can retake it anytime
               your situation changes.
@@ -145,44 +139,38 @@ export default function ProfilesPage() {
         </section>
         </SectionCurtain>
 
-        {/* ── 8 Profile Cards ──
-            Editorial pattern: 2-letter code + "NN / 08" ledger number,
-            no icon-in-colored-box (AI slop pattern banned by design audit).
-            Hairline border + serif numerals match landing/personas-preview. */}
+        {/* ── 8 Profile Cards ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">The 8 Profiles</h2>
+          <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">The 8 Profiles</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {profiles.map((profile, idx) => {
               const ordinal = String(idx + 1).padStart(2, "0");
               return (
                 <div
                   key={profile.title}
-                  className="rounded-sm border border-slate-200 bg-white p-5"
+                  className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5"
                 >
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 flex flex-col items-start gap-1">
-                      <span
-                        className="font-serif text-[18px] tracking-[0.04em] text-slate-900"
-                        style={{ letterSpacing: "0.04em" }}
-                      >
+                      <span className="font-[var(--font-serif)] text-[18px] tracking-[0.04em] text-[var(--pq-ivory)]">
                         {profile.code}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400 tabular-nums">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">
                         {ordinal} / 08
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="text-sm font-semibold text-slate-900">{profile.title}</h3>
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] px-2 py-0.5 border border-slate-200 text-slate-500 rounded-sm">
+                        <h3 className="text-sm font-semibold text-[var(--pq-ivory)]">{profile.title}</h3>
+                        <span className="text-[10px] font-medium uppercase tracking-[0.16em] px-2 py-0.5 border border-[rgba(184,149,106,0.28)] text-[var(--pq-bronze)] rounded-sm">
                           {profile.tag}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-500 italic mb-2">
+                      <p className="text-sm text-[rgba(245,240,232,0.62)] italic mb-2">
                         &ldquo;{profile.quote}&rdquo;
                       </p>
-                      <p className="text-xs text-slate-400 leading-relaxed">
+                      <p className="text-xs text-[rgba(245,240,232,0.55)] leading-relaxed">
                         {profile.strategy}
                       </p>
                     </div>
@@ -197,20 +185,18 @@ export default function ProfilesPage() {
         {/* ── What each profile customizes ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <div className="bg-slate-50 rounded-2xl p-6 sm:p-8">
-            <h2 className="text-lg font-bold text-slate-900 mb-2">Each profile gets different...</h2>
-            <p className="text-sm text-slate-500 mb-6">
+          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+            <h2 className="font-[var(--font-serif)] text-lg font-medium text-[var(--pq-ivory)] mb-2">Each profile gets different...</h2>
+            <p className="text-sm text-[rgba(245,240,232,0.62)] mb-6">
               Your profile does not just change labels. It changes how the entire system behaves for you.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {customizations.map((item) => {
-                return (
-                  <div key={item.label} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-slate-100">
-                    <CheckCircle2 className="w-4 h-4 text-accent shrink-0" />
-                    <span className="text-sm text-slate-700">{item.label}</span>
-                  </div>
-                );
-              })}
+              {customizations.map((item) => (
+                <div key={item.label} className="flex items-center gap-3 rounded-sm px-4 py-3 border border-[rgba(245,240,232,0.08)] bg-[rgba(0,0,0,0.18)]">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--pq-bronze)] shrink-0" />
+                  <span className="text-sm text-[rgba(245,240,232,0.82)]">{item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -218,17 +204,17 @@ export default function ProfilesPage() {
 
         {/* ── CTA ── */}
         <SectionCurtain>
-        <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">
+        <section className="text-center py-12 px-6 rounded-sm border border-[rgba(184,149,106,0.18)] bg-[rgba(184,149,106,0.04)]">
+          <h2 className="font-[var(--font-display)] italic text-2xl font-medium text-[var(--pq-ivory)] mb-3">
             Discover your investor type
           </h2>
-          <p className="text-slate-500 mb-6 max-w-md mx-auto">
+          <p className="text-[rgba(245,240,232,0.62)] mb-6 max-w-md mx-auto">
             3 minutes, 20 questions. Get a strategy built for the way you
             actually invest.
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all active:scale-[0.97]"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-sm bg-[var(--pq-bronze)] text-[var(--pq-ink)] text-sm font-semibold hover:bg-[var(--pq-bronze-light)] transition-all"
           >
             Take the Assessment
             <ArrowRight className="w-4 h-4" />

@@ -16,9 +16,6 @@ export const metadata: Metadata = {
     "당신이 자는 동안 리포트가 만들어집니다. Morning Brief, Weekly Memo, Earnings Pre-Brief — 맥킨지 포맷의 분석물이 메일함에 도착합니다.",
 };
 
-/* ── 발행되는 리포트 샘플 ──
-   Editorial pattern: 2-letter code + ledger numbering ("01 / 04"),
-   no icon-in-colored-box. Mirrors features/profiles/page.tsx. */
 const conversations = [
   {
     code: "MB",
@@ -46,11 +43,10 @@ const conversations = [
   },
 ];
 
-/* ── 리서치 데스크가 읽는 데이터 ── */
 const knowledgeSources = [
   { label: "당신의 포트폴리오와 실제 포지션" },
   { label: "실시간 시장 데이터·뉴스" },
-  { label: "58개 퀀트 모델 출력물" },
+  { label: "40개 퀀트 모델 출력물" },
   { label: "당신의 위험 허용도 프로필" },
   { label: "섹터·상관관계 분석" },
   { label: "과거 성과 패턴과 벤치마크" },
@@ -58,37 +54,37 @@ const knowledgeSources = [
 
 export default function AiAssistantPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-slate-100 bg-white/80 backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Link>
-          <span className="text-slate-300">/</span>
-          <span className="text-sm font-medium text-slate-700">Research Desk</span>
+          <span className="text-[rgba(245,240,232,0.32)]">/</span>
+          <span className="text-sm font-medium text-[var(--pq-ivory)]">Research Desk</span>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-20">
         {/* ── Disclaimer ── */}
         <div className="mb-8">
-          <DisclaimerBanner type="ai-analysis" theme="light" />
+          <DisclaimerBanner type="ai-analysis" />
         </div>
 
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
-            <Brain className="w-7 h-7 text-accent" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] mb-6">
+            <Brain className="w-6 h-6 text-[var(--pq-bronze)]" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            당신의 <span className="gradient-text">전속 리서치 데스크</span>
+          <h1 className="font-[var(--font-display)] italic text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
+            당신의 전속 리서치 데스크
           </h1>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto">
+          <p className="text-base text-[rgba(245,240,232,0.62)] max-w-xl mx-auto">
             당신은 CFO입니다. 리포트는 저희가 씁니다. 매일 아침 6시, 메일함에.
           </p>
         </div>
@@ -96,41 +92,36 @@ export default function AiAssistantPage() {
         {/* ── 어떤 리포트가 도착하나요? ── */}
         <SectionCurtain divider={false}>
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">어떤 리포트가 도착하나요?</h2>
+          <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">어떤 리포트가 도착하나요?</h2>
           <div className="space-y-4">
             {conversations.map((conv, idx) => {
               const ordinal = String(idx + 1).padStart(2, "0");
               return (
                 <div
                   key={conv.question}
-                  className="rounded-sm border border-slate-200 bg-white p-5"
+                  className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5"
                 >
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 flex flex-col items-start gap-1">
-                      <span
-                        className="font-serif text-[18px] tracking-[0.04em] text-slate-900"
-                        style={{ letterSpacing: "0.04em" }}
-                      >
+                      <span className="font-[var(--font-serif)] text-[18px] tracking-[0.04em] text-[var(--pq-ivory)]">
                         {conv.code}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400 tabular-nums">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">
                         {ordinal} / 04
                       </span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      {/* Report title */}
                       <div className="mb-3">
-                        <p className="text-sm font-semibold text-slate-900">
+                        <p className="text-sm font-semibold text-[var(--pq-ivory)]">
                           &ldquo;{conv.question}&rdquo;
                         </p>
                       </div>
-                      {/* Report body */}
-                      <div className="bg-slate-50 rounded-sm p-4 border border-slate-100">
+                      <div className="rounded-sm p-4 border border-[rgba(184,149,106,0.18)] bg-[rgba(184,149,106,0.04)]">
                         <div className="flex items-center gap-1.5 mb-2">
-                          <Sparkles className="w-3.5 h-3.5 text-accent" />
-                          <span className="text-xs font-semibold text-accent">PivoxQuant Analyst Desk</span>
+                          <Sparkles className="w-3.5 h-3.5 text-[var(--pq-bronze)]" />
+                          <span className="text-xs font-semibold uppercase tracking-wider text-[var(--pq-bronze)]">PivoxQuant Analyst Desk</span>
                         </div>
-                        <p className="text-sm text-slate-600 leading-relaxed">{conv.answer}</p>
+                        <p className="text-sm text-[rgba(245,240,232,0.82)] leading-relaxed">{conv.answer}</p>
                       </div>
                     </div>
                   </div>
@@ -141,31 +132,27 @@ export default function AiAssistantPage() {
         </section>
         </SectionCurtain>
 
-        {/* ── Powered by Claude AI ── */}
+        {/* ── 챗봇이 아닌 리서치 데스크 ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <div className="bg-slate-50 rounded-2xl p-6 sm:p-8">
-            {/* Editorial header — eyebrow + heading, no icon-in-box.
-                Matches the desk-dossier register used elsewhere. */}
+          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <div className="mb-6">
-              <div className="text-[10.5px] uppercase tracking-[0.22em] text-slate-400 mb-2">
+              <div className="text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mb-2">
                 Research Desk · Method
               </div>
-              <h2 className="text-lg font-bold text-slate-900">챗봇이 아닌 리서치 데스크</h2>
-              <p className="text-sm text-slate-500 mt-1">당신의 장부를 읽고, 당신의 리포트를 씁니다.</p>
+              <h2 className="font-[var(--font-serif)] text-lg font-medium text-[var(--pq-ivory)]">챗봇이 아닌 리서치 데스크</h2>
+              <p className="text-sm text-[rgba(245,240,232,0.62)] mt-1">당신의 장부를 읽고, 당신의 리포트를 씁니다.</p>
             </div>
-            <p className="text-sm text-slate-600 leading-relaxed mb-6">
+            <p className="text-sm text-[rgba(245,240,232,0.82)] leading-relaxed mb-6">
               ChatGPT는 당신이 물어야 답합니다. PivoxQuant는 당신이 자는 동안 만듭니다. 정기 스케줄에 따라 매일·매주·분기별 리포트가 당신의 메일함, PDF, 음성 파일로 발행됩니다. 당신 포트폴리오 한 명만을 위한 리서치 데스크.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {knowledgeSources.map((source) => {
-                return (
-                  <div key={source.label} className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-slate-100">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span className="text-sm text-slate-700">{source.label}</span>
-                  </div>
-                );
-              })}
+              {knowledgeSources.map((source) => (
+                <div key={source.label} className="flex items-center gap-3 rounded-sm px-4 py-3 border border-[rgba(245,240,232,0.08)] bg-[rgba(0,0,0,0.18)]">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--pq-bronze)] shrink-0" />
+                  <span className="text-sm text-[rgba(245,240,232,0.82)]">{source.label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -174,19 +161,19 @@ export default function AiAssistantPage() {
         {/* ── How it works ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">리포트가 만들어지는 과정</h2>
+          <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">리포트가 만들어지는 과정</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { step: "01", title: "CFO 프로필 등록", desc: "당신의 포트폴리오, 투자 스타일, 위험 허용도를 온보딩으로 입력합니다." },
-              { step: "02", title: "데스크가 데이터 수집", desc: "당신 포지션·시장 데이터·58개 퀀트 모델·섹터 로테이션을 자동으로 읽습니다." },
+              { step: "02", title: "데스크가 데이터 수집", desc: "당신 포지션·시장 데이터·40개 퀀트 모델·섹터 로테이션을 자동으로 읽습니다." },
               { step: "03", title: "리포트 발행", desc: "매일 6시 이메일, 일요일 PDF, 실적 30분 전 프리브리프가 자동 발송됩니다." },
             ].map((item) => (
-              <div key={item.step} className="sp-card rounded-2xl p-6 text-center">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 text-accent text-sm font-bold mb-3">
+              <div key={item.step} className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 text-center">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] text-[var(--pq-bronze)] font-mono text-sm font-medium tabular-nums mb-3">
                   {item.step}
                 </div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-2">{item.title}</h3>
-                <p className="text-sm text-slate-500">{item.desc}</p>
+                <h3 className="text-sm font-semibold text-[var(--pq-ivory)] mb-2">{item.title}</h3>
+                <p className="text-sm text-[rgba(245,240,232,0.62)]">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -195,16 +182,16 @@ export default function AiAssistantPage() {
 
         {/* ── CTA ── */}
         <SectionCurtain>
-        <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">
+        <section className="text-center py-12 px-6 rounded-sm border border-[rgba(184,149,106,0.18)] bg-[rgba(184,149,106,0.04)]">
+          <h2 className="font-[var(--font-display)] italic text-2xl font-medium text-[var(--pq-ivory)] mb-3">
             내일 아침 6시, 첫 리포트가 메일함에.
           </h2>
-          <p className="text-slate-500 mb-6 max-w-md mx-auto">
+          <p className="text-[rgba(245,240,232,0.62)] mb-6 max-w-md mx-auto">
             무료 플랜으로 월간 Brag Card부터. Pro로 업그레이드하면 데일리 리포트가 시작됩니다.
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all active:scale-[0.97]"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-sm bg-[var(--pq-bronze)] text-[var(--pq-ink)] text-sm font-semibold hover:bg-[var(--pq-bronze-light)] transition-all"
           >
             첫 리포트 받아보기
             <ArrowRight className="w-4 h-4" />
