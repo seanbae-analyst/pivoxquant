@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -65,10 +66,17 @@ def main() -> int:
     pytest_text = pytest_log.read_text() if pytest_log.exists() else ""
     pytest_failed = False
     if pytest_text:
-        # pytest prints "failed" summary on failure; be conservative
-        pytest_failed = (" failed" in pytest_text.split("\n")[-30:].__str__()) or (
-            "FAILED" in pytest_text
-        )
+        # Look only at pytest's canonical summary line, which is the last
+        # non-empty line and looks like:
+        #   "= 1283 passed, 1 skipped, 190 warnings in 173s ="          (clean)
+        #   "= 1 failed, 1282 passed, 1 skipped in 173s ="             (real fail)
+        # Earlier behaviour grepped "FAILED" anywhere which tripped on
+        # things like "ERROR ... FAILED to fetch X" inside test stdout
+        # for tests that ultimately passed.
+        non_empty = [ln for ln in pytest_text.strip().splitlines() if ln.strip()]
+        last_line = non_empty[-1] if non_empty else ""
+        m = re.search(r"(\d+)\s+failed", last_line)
+        pytest_failed = bool(m and int(m.group(1)) > 0)
 
     # Severity
     if health_failed:
