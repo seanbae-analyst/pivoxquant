@@ -34,13 +34,17 @@ import {
   PORTFOLIO_SUMMARY,
   PORTFOLIO_TRADES,
 } from "@/lib/endpoints";
+import { useFxRate } from "@/lib/hooks";
 import { apiFetch, ApiError } from "@/lib/api";
 import { liveRefresh, isMarketOpen } from "@/lib/market-hours";
 import { relativeTime } from "@/components/ui/price-with-timestamp";
 import { toast } from "sonner";
 import type { Position, Trade, TradeAction } from "@/components/portfolio/types";
 
-const FX_FALLBACK = 1342;
+// FX_FALLBACK removed 2026-04-29 (was 1342, ~9% off live rate ~1478).
+// Use the live rate from /api/market/fx via useFxRate(); when both
+// sumData.fxRate and the live feed are unavailable we keep KRW positions
+// in their native unit rather than fabricate a USD equivalence.
 
 interface PositionsResponse { positions?: Position[]; }
 interface TradesResponse { trades?: Trade[]; }
@@ -141,6 +145,10 @@ export default function PortfolioPage() {
 
   const hasLoadError = Boolean(posErr || tradesErr);
 
+  // Live USD/KRW from /api/market/fx (60s poll) — used when the portfolio
+  // summary endpoint did not include fxRate (e.g. empty book or summary fail).
+  const { rate: liveFx } = useFxRate();
+
   const totals = useMemo(() => {
     let mv = 0;
     let cost = 0;
@@ -149,7 +157,14 @@ export default function PortfolioPage() {
       cost += p.shares * p.avgCost;
     }
     const unrealized = mv - cost;
-    const fx = (sumData?.fxRate && sumData.fxRate > 0) ? sumData.fxRate : FX_FALLBACK;
+    // Resolution order: server-side fxRate (matched to NAV calc) → live FX
+    // poll → null. Never substitute a hard-coded literal.
+    const fx =
+      sumData?.fxRate && sumData.fxRate > 0
+        ? sumData.fxRate
+        : liveFx && liveFx > 0
+          ? liveFx
+          : null;
     if (sumData && typeof sumData.totalNav === "number") {
       return {
         totalNav: sumData.totalNav,
@@ -161,19 +176,26 @@ export default function PortfolioPage() {
       };
     }
     return { totalNav: mv, todayPnl: 0, todayPnlPct: 0, unrealized, realizedYtd: 0, fxRate: fx };
-  }, [sumData, positions]);
+  }, [sumData, positions, liveFx]);
 
-  // Sector allocation — computed inline.
-  // KRW positions are converted to USD via fxRate so that mixed-currency
-  // books don't sum raw won values into the dollar bucket (previously a
-  // ₩1,389,100 KRW position rendered as $1,389,100 in the sector chart).
+  // Sector allocation — KRW positions are converted to USD via fxRate so
+  // that mixed-currency books don't sum raw won values into the dollar
+  // bucket. When fx is null (no server fxRate AND no live feed) we skip the
+  // KRW conversion and report the USD slice only — better than rendering a
+  // wildly wrong dollar number from a stale literal.
   const sectorAlloc = useMemo(() => {
     const byS: Record<string, number> = {};
     let total = 0;
-    const fx = totals.fxRate && totals.fxRate > 0 ? totals.fxRate : FX_FALLBACK;
+    const fx = totals.fxRate;
     for (const p of positions) {
       const rawMv = p.shares * p.current;
-      const mvUsd = p.currency === "KRW" ? rawMv / fx : rawMv;
+      let mvUsd: number;
+      if (p.currency === "KRW") {
+        if (!fx || fx <= 0) continue;
+        mvUsd = rawMv / fx;
+      } else {
+        mvUsd = rawMv;
+      }
       byS[p.sector] = (byS[p.sector] ?? 0) + mvUsd;
       total += mvUsd;
     }

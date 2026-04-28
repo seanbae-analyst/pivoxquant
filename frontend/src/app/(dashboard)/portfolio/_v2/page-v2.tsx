@@ -41,6 +41,7 @@ import { RollingWindowWidget } from "@/components/dashboard/rolling-window";
 import {
   usePortfolioPositions,
   usePortfolioSummary,
+  useFxRate,
 } from "@/lib/hooks";
 import {
   PORTFOLIO_POSITIONS,
@@ -59,7 +60,11 @@ import { TradeModalV2 } from "@/components/portfolio/v2/trade-modal-v2";
 
 import type { Position, TradeAction } from "@/components/portfolio/types";
 
-const FX_FALLBACK = 1342;
+// FX_FALLBACK removed 2026-04-29 (was 1342, ~9% off live ~1478).
+// Resolution: server fxRate → live /api/market/fx (useFxRate) → null.
+// Never substitute a literal — 표시광고법 §3 기만표시 방어선.
+const SAFE_FX = (sumFx: number | undefined, liveFx: number | null) =>
+  sumFx && sumFx > 0 ? sumFx : liveFx && liveFx > 0 ? liveFx : null;
 
 interface PositionsResponse {
   positions?: Position[];
@@ -116,8 +121,10 @@ export default function PortfolioPageV2() {
     return hasKrw && !hasUsd ? "KRW" : "USD";
   }, [positions]);
 
-  const fxRate =
-    sumData?.fxRate && sumData.fxRate > 0 ? sumData.fxRate : FX_FALLBACK;
+  // Live USD/KRW from /api/market/fx (60s poll). Used when sumData.fxRate
+  // is missing — never substitute a hard-coded literal.
+  const { rate: liveFx } = useFxRate();
+  const fxRate: number | null = SAFE_FX(sumData?.fxRate, liveFx);
 
   // Total NAV in display currency.
   const totalNav = React.useMemo(() => {
@@ -127,10 +134,18 @@ export default function PortfolioPageV2() {
     let nav = 0;
     for (const p of positions) {
       const mv = p.shares * p.current;
-      if (displayCurrency === "USD" && p.currency === "KRW") {
-        nav += mv / (fxRate || 1);
-      } else if (displayCurrency === "KRW" && p.currency !== "KRW") {
-        nav += mv * (fxRate || 1);
+      const needsConversion =
+        (displayCurrency === "USD" && p.currency === "KRW") ||
+        (displayCurrency === "KRW" && p.currency !== "KRW");
+      if (needsConversion) {
+        // Skip the position rather than apply a fake fx — keeps the NAV
+        // number honest when the FX feed is down.
+        if (!fxRate || fxRate <= 0) continue;
+        if (displayCurrency === "USD" && p.currency === "KRW") {
+          nav += mv / fxRate;
+        } else {
+          nav += mv * fxRate;
+        }
       } else {
         nav += mv;
       }

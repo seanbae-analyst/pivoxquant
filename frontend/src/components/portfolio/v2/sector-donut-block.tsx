@@ -12,7 +12,8 @@ import type { Position } from "@/components/portfolio/types";
 
 interface SectorDonutBlockProps {
   positions: Position[];
-  fxRate: number;
+  /** null when no live FX feed is available — KRW positions are then skipped. */
+  fxRate: number | null;
   displayCurrency?: "USD" | "KRW";
 }
 
@@ -34,18 +35,27 @@ const COLOR_RAMP: string[] = [
 
 function buildSectors(
   positions: Position[],
-  fxRate: number,
+  fxRate: number | null,
   displayCurrency: "USD" | "KRW",
 ): SectorBucket[] {
   const totals: Record<string, number> = {};
   let total = 0;
   for (const p of positions) {
     const mv = p.shares * p.current;
-    let normalized = mv;
-    if (displayCurrency === "USD" && p.currency === "KRW") {
-      normalized = mv / (fxRate || 1);
-    } else if (displayCurrency === "KRW" && p.currency !== "KRW") {
-      normalized = mv * (fxRate || 1);
+    let normalized: number;
+    const needsConversion =
+      (displayCurrency === "USD" && p.currency === "KRW") ||
+      (displayCurrency === "KRW" && p.currency !== "KRW");
+    if (needsConversion) {
+      // Skip rather than apply a placeholder fx — keeps the sector chart
+      // honest when the FX feed is down.
+      if (!fxRate || fxRate <= 0) continue;
+      normalized =
+        displayCurrency === "USD" && p.currency === "KRW"
+          ? mv / fxRate
+          : mv * fxRate;
+    } else {
+      normalized = mv;
     }
     const sector = p.sector || "Unclassified";
     totals[sector] = (totals[sector] ?? 0) + normalized;
