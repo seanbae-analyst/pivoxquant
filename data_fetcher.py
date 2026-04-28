@@ -685,25 +685,66 @@ Reply ONLY in this exact JSON format, nothing else:
         except Exception:
             kis_ready = False
 
+        # KOSPI / KOSDAQ sanity bounds. Drop any reading outside these ranges
+        # rather than publish a value the user has flagged as suspect (the
+        # 6,641.02 incident on 2026-04-28 — most likely a KIS scaling glitch
+        # or alternate index code returned in the response).
+        # Override with PIVOX_KOSPI_RANGE / PIVOX_KOSDAQ_RANGE (low,high) only
+        # if you've verified the rating with an external source (KRX/Yahoo).
+        def _parse_range(env_key: str, default: tuple[float, float]) -> tuple[float, float]:
+            import os as _os
+            raw = (_os.getenv(env_key) or "").strip()
+            if not raw:
+                return default
+            try:
+                lo, hi = (float(x) for x in raw.split(","))
+                if 0 < lo < hi:
+                    return (lo, hi)
+            except Exception:
+                pass
+            return default
+        _KOSPI_RANGE = _parse_range("PIVOX_KOSPI_RANGE", (1500.0, 3500.0))
+        _KOSDAQ_RANGE = _parse_range("PIVOX_KOSDAQ_RANGE", (500.0, 1500.0))
+
         if kis_ready:
             try:
                 from kis_service import KISService
                 _kis = KISService()
-                for code, key in [("0001", "kospi"), ("1001", "kosdaq")]:
+                for code, key, sanity in [
+                    ("0001", "kospi",  _KOSPI_RANGE),
+                    ("1001", "kosdaq", _KOSDAQ_RANGE),
+                ]:
                     idx = _kis.get_index_price(code)
                     if idx and idx.get("price"):
+                        price = self._safe(idx["price"])
+                        if price is None or not (sanity[0] <= price <= sanity[1]):
+                            logger.warning(
+                                "KIS %s level %.2f outside sanity %s — dropping",
+                                key.upper(), price or 0.0, sanity,
+                            )
+                            continue
                         macro[key] = {
-                            "price": self._safe(idx["price"]),
+                            "price":      price,
                             "change_pct": self._safe(idx.get("change_pct", 0)),
                         }
             except Exception as e:
                 logger.debug(f"KIS index fetch failed: {e}")
 
         # FMP fallback for KR indices (rarely works on free tier)
-        for sym, key in [("^KS11", "kospi"), ("^KQ11", "kosdaq")]:
+        for sym, key, sanity in [
+            ("^KS11", "kospi",  _KOSPI_RANGE),
+            ("^KQ11", "kosdaq", _KOSDAQ_RANGE),
+        ]:
             if key not in macro and sym in idx_data:
                 p, c = idx_data[sym]
-                macro[key] = {"price": self._safe(p), "change_pct": self._safe(c)}
+                price = self._safe(p)
+                if price is None or not (sanity[0] <= price <= sanity[1]):
+                    logger.warning(
+                        "FMP %s level %.2f outside sanity %s — dropping",
+                        key.upper(), price or 0.0, sanity,
+                    )
+                    continue
+                macro[key] = {"price": price, "change_pct": self._safe(c)}
 
         # VIX
         if "^VIX" in idx_data:
