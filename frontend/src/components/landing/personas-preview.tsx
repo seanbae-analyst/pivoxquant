@@ -158,7 +158,7 @@ export default function PersonasPreview() {
             <motion.article
               key={p.code}
               variants={fadeUp}
-              className="group relative flex flex-col overflow-hidden rounded-sm p-6 md:p-7 transition-all duration-500 hover:-translate-y-1"
+              className="pq-persona-card-v2 group relative flex flex-col overflow-hidden rounded-sm p-6 md:p-7 transition-all duration-500 hover:-translate-y-1"
               style={{
                 minHeight: 240,
                 backgroundColor: "#0C0C0C",
@@ -303,6 +303,15 @@ export default function PersonasPreview() {
           </Link>
         </motion.div>
       </div>
+
+      {/* C — hover consistency: bronze border + bronze-08 fill on hover.
+          Mirrors home-card.tsx pq-home-card-v2 pattern. */}
+      <style jsx global>{`
+        .pq-persona-card-v2:hover {
+          border-color: var(--pq-bronze) !important;
+          background-color: rgba(184, 149, 106, 0.025) !important;
+        }
+      `}</style>
     </section>
   );
 }

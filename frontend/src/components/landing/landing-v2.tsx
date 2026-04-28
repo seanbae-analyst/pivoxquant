@@ -35,6 +35,7 @@ import SplashPage from "./splash-page";
 import { Hero } from "./hero";
 import MarqueeLogos from "./marquee-logos";
 import PersonasPreview from "./personas-preview";
+import ReportsGallery from "./reports-gallery";
 import { FilmGrain } from "./film-grain";
 import { SectionCurtain } from "./section-curtain";
 import { Eyebrow } from "./eyebrow";
@@ -145,7 +146,7 @@ function PricingPreview() {
   return (
     <section
       id="pricing"
-      className="relative py-20 md:py-28 lg:py-40"
+      className="relative py-24 md:py-36 lg:py-48"
       style={{ backgroundColor: "#050505" }}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -199,7 +200,7 @@ function PricingPreview() {
             <motion.article
               key={t.name}
               variants={fadeUp}
-              className="group relative flex flex-col overflow-hidden rounded-sm p-7"
+              className="pq-tier-card-v2 group relative flex flex-col overflow-hidden rounded-sm p-7"
               style={{
                 backgroundColor: t.dark ? "#0D0D0D" : "#050505",
                 border: t.recommended
@@ -208,6 +209,8 @@ function PricingPreview() {
                 boxShadow: t.recommended
                   ? "0 1px 0 rgba(184,149,106,0.12) inset, 0 24px 48px -32px rgba(184,149,106,0.25)"
                   : "none",
+                transition:
+                  "border-color 240ms cubic-bezier(0.16,1,0.3,1), background-color 240ms cubic-bezier(0.16,1,0.3,1)",
               }}
             >
               {t.recommended && (
@@ -338,6 +341,20 @@ function PricingPreview() {
             "평생 사용권" 약속은 1인 시드 단계에서 영업 지속성 의존 채무.
             전자상거래법 §21 기만적 광고 가능성. 향후 안정 단계 진입 후 재검토. */}
       </div>
+
+      {/* C — hover consistency: bronze border + bronze-08 fill on hover.
+          Mirrors home-card.tsx pq-home-card-v2 pattern. */}
+      <style jsx global>{`
+        .pq-tier-card-v2:hover {
+          border-color: var(--pq-bronze) !important;
+          background-color: rgba(184, 149, 106, 0.025) !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .pq-tier-card-v2 {
+            transition: none !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }
@@ -351,7 +368,7 @@ function Faq() {
   return (
     <section
       id="faq"
-      className="pt-12 pb-24 md:pt-16 md:pb-32 lg:pt-20 lg:pb-40"
+      className="pt-16 pb-28 md:pt-24 md:pb-36 lg:pt-32 lg:pb-48"
       style={{ backgroundColor: "#050505" }}
     >
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -425,7 +442,7 @@ function CtaFooter() {
   const reduce = useReducedMotion();
   return (
     <section
-      className="relative overflow-hidden py-28 md:py-36"
+      className="relative overflow-hidden py-32 md:py-44 lg:py-52"
       style={{ backgroundColor: "#050505" }}
     >
       <FilmGrain opacity={0.03} blendMode="soft-light" />
@@ -754,6 +771,9 @@ export default function LandingV2() {
       </SectionCurtain>
       <SectionCurtain>
         <PersonasPreview />
+      </SectionCurtain>
+      <SectionCurtain>
+        <ReportsGallery />
       </SectionCurtain>
       <SectionCurtain>
         <PricingPreview />
