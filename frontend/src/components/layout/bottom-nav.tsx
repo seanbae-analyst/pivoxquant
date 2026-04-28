@@ -54,6 +54,14 @@ type Tab = {
   icon: LucideIcon;
   /** Render a small "Premium Plus" bronze seal next to the label. */
   premiumPlus?: boolean;
+  /**
+   * If true, the item is excluded from rendering but kept in the array
+   * so the underlying route (e.g. /watchlist) continues to resolve when
+   * users hit it via deep link, and route→active-state mapping stays
+   * intact. 2026-04-27 per CEO: hide Morning Brief / Watchlist / Market
+   * / Discover / AI Chat from sidebar + drawer (pages preserved).
+   */
+  hidden?: boolean;
 };
 
 type DrawerGroup = {
@@ -62,13 +70,18 @@ type DrawerGroup = {
   items: Tab[];
 };
 
-// Primary bottom-bar tabs — Home / Portfolio / Morning Brief / Signals.
+// Primary bottom-bar tabs — Home / Portfolio / Reports / Signals.
 // Labels are literal (no locale dep) so a missing i18n key can never
 // blank the bar on mobile.
+//
+// 2026-04-27 per CEO: Morning Brief replaced with Reports (Artifacts
+// group sibling) on the primary bar so the mobile shell still has 4
+// primary destinations after hiding Morning Brief. /morning-brief
+// remains a valid deep link.
 const PRIMARY_TABS: Tab[] = [
   { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-  { href: "/morning-brief", label: "Brief", icon: Sun },
+  { href: "/reports", label: "Reports", icon: FileText },
   { href: "/signals", label: "Signals", icon: Zap },
 ];
 
@@ -81,7 +94,7 @@ const DRAWER_GROUPS: DrawerGroup[] = [
   {
     label: "Artifacts",
     items: [
-      { href: "/morning-brief", label: "Morning Brief", icon: Sun },
+      { href: "/morning-brief", label: "Morning Brief", icon: Sun, hidden: true },
       { href: "/reports", label: "Reports", icon: FileText },
       { href: "/signals", label: "Signals", icon: Zap },
     ],
@@ -90,7 +103,7 @@ const DRAWER_GROUPS: DrawerGroup[] = [
     label: "Portfolio",
     items: [
       { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-      { href: "/watchlist", label: "Watchlist", icon: Eye },
+      { href: "/watchlist", label: "Watchlist", icon: Eye, hidden: true },
       { href: "/risk", label: "Risk Board", icon: Shield },
       // REMOVED 2026-04-27 per CEO + legal: autotrade nav (투자일임업 회피).
     ],
@@ -98,9 +111,9 @@ const DRAWER_GROUPS: DrawerGroup[] = [
   {
     label: "Research",
     items: [
-      { href: "/market", label: "Market", icon: Activity },
-      { href: "/discover", label: "Discover", icon: Compass },
-      { href: "/ai-chat", label: "AI Chat", icon: MessageSquare },
+      { href: "/market", label: "Market", icon: Activity, hidden: true },
+      { href: "/discover", label: "Discover", icon: Compass, hidden: true },
+      { href: "/ai-chat", label: "AI Chat", icon: MessageSquare, hidden: true },
       { href: "/ai", label: "AI Analysis", icon: Sparkles },
     ],
   },
@@ -332,7 +345,7 @@ function DrawerGroupSection({
       </div>
 
       <ul role="list">
-        {group.items.map((item) => {
+        {group.items.filter((it) => !it.hidden).map((item) => {
           const active = isRouteActive(pathname, item.href);
           const Icon = item.icon;
           return (
