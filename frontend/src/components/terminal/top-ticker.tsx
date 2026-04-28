@@ -19,8 +19,26 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import useSWR from "swr";
 import { useRealtimeContext } from "@/lib/realtime";
 import { sanitizeKrIndex } from "@/lib/format";
+import { MARKET_INDICES, API } from "@/lib/endpoints";
+import { apiFetch } from "@/lib/api";
+
+/* Macro feed via /api/market/indices — SSE portfolio-stream carries position
+ * tickers only, so the ribbon's macro symbols (SPX/NDX/KOSPI/KOSDAQ/VIX) used
+ * to render permanent em-dashes (HANDOVER P1-9). Two SWR polls (US + KR) at
+ * 60s give live levels without opening a second EventSource. */
+interface IndexBlock {
+  ticker: string;
+  name: string;
+  level: number;
+  change_1d_pct: number;
+  is_stale?: boolean;
+  proxy_ticker?: string;
+}
+const fetchIndices = async (url: string): Promise<IndexBlock[]> =>
+  apiFetch<IndexBlock[]>(url);
 
 type Snapshot = {
   symbol: string;
@@ -131,8 +149,93 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
   );
 }
 
+/** Map a /market/indices block onto our ribbon symbol. */
+function _macroFromIndex(block: IndexBlock | undefined, symbol: string):
+  | { level: string; pct: number }
+  | null {
+  if (!block || typeof block.level !== "number") return null;
+  // KR sanity boundary at the consumer too — protects from cached
+  // stale payloads that bypass the backend filter.
+  let level = block.level;
+  if (symbol === "KOSPI" || symbol === "KOSDAQ") {
+    const safe = sanitizeKrIndex(symbol, level);
+    if (safe == null) return null;
+    level = safe;
+  }
+  const pct = typeof block.change_1d_pct === "number" ? block.change_1d_pct : 0;
+  // Format level — KR indices use comma-grouping with 2 decimals, USD/KRW
+  // is a 4-digit FX value, US/VIX use 2 decimals.
+  let levelStr: string;
+  if (symbol === "USDKRW") {
+    levelStr = level.toLocaleString("ko-KR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  } else {
+    levelStr = level.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+  return { level: levelStr, pct };
+}
+
+const RIBBON_SWR_OPTS = {
+  refreshInterval: 60_000,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: true,
+  dedupingInterval: 30_000,
+  errorRetryCount: 1,
+} as const;
+
 export function TopTicker() {
   const rt = useRealtimeContext();
+
+  // Macro feed — two SWR polls (US + KR) populate the ribbon symbols that
+  // SSE doesn't carry. portfolio-stream remains the price source for
+  // user-held tickers; this is purely additive.
+  const { data: usIdx } = useSWR<IndexBlock[]>(
+    `${MARKET_INDICES}?region=us`,
+    fetchIndices,
+    RIBBON_SWR_OPTS,
+  );
+  const { data: krIdx } = useSWR<IndexBlock[]>(
+    `${MARKET_INDICES}?region=kr`,
+    fetchIndices,
+    RIBBON_SWR_OPTS,
+  );
+  const { data: fxData } = useSWR<{ usd_krw?: number; is_stale?: boolean }>(
+    API.market.fx,
+    fetchIndices as unknown as (u: string) => Promise<{ usd_krw?: number }>,
+    RIBBON_SWR_OPTS,
+  );
+
+  // Build a symbol → block lookup once per data change.
+  const macroMap = useMemo(() => {
+    const m = new Map<string, IndexBlock>();
+    const find = (arr: IndexBlock[] | undefined, ticker: string) =>
+      (arr ?? []).find((b) => b.ticker === ticker);
+    const spy = find(usIdx, "^GSPC");
+    if (spy) m.set("SPX", spy);
+    const ixic = find(usIdx, "^IXIC");
+    if (ixic) m.set("NDX", ixic);
+    const vix = find(usIdx, "^VIX");
+    if (vix) m.set("VIX", vix);
+    const ks = find(krIdx, "^KS11");
+    if (ks) m.set("KOSPI", ks);
+    const kq = find(krIdx, "^KQ11");
+    if (kq) m.set("KOSDAQ", kq);
+    if (typeof fxData?.usd_krw === "number" && fxData.usd_krw > 0) {
+      m.set("USDKRW", {
+        ticker: "USDKRW",
+        name: "USD/KRW",
+        level: fxData.usd_krw,
+        change_1d_pct: 0,
+      });
+    }
+    return m;
+  }, [usIdx, krIdx, fxData]);
+
   // Start with null so the server and the first client render agree
   // (both produce the placeholder). The real time is filled in after
   // mount, avoiding a hydration mismatch on the KST clock span.
@@ -143,56 +246,68 @@ export function TopTicker() {
     return () => clearInterval(id);
   }, []);
 
-  // Build rows from tracked symbols, populating from SSE only. Anything
-  // without a live quote renders a "—" placeholder so we never display
-  // stale or fabricated levels (legal: misrepresentation risk).
+  // Build rows: SSE detail wins (intra-second freshness for held tickers);
+  // SWR macro feed fills the rest. Either path renders "—" if the symbol
+  // has no live data (legal: never fabricate a level).
   const rows: Snapshot[] = useMemo(() => {
     return TRACKED.map((t) => {
-      const d = rt.details[t.symbol];
-      if (!d) {
+      const sse = rt.details[t.symbol];
+      if (sse) {
+        if (t.symbol === "KOSPI" || t.symbol === "KOSDAQ") {
+          if (sanitizeKrIndex(t.symbol, sse.price) == null) {
+            return {
+              symbol: t.symbol,
+              label: t.label,
+              level: PLACEHOLDER_DELTA,
+              delta: PLACEHOLDER_DELTA,
+              dir: "flat" as const,
+            };
+          }
+        }
+        const pct = sse.change_pct;
+        const dir: Snapshot["dir"] =
+          typeof pct === "number" && pct > 0
+            ? "up"
+            : typeof pct === "number" && pct < 0
+              ? "down"
+              : "flat";
+        const deltaStr =
+          typeof pct === "number"
+            ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`
+            : PLACEHOLDER_DELTA;
         return {
           symbol: t.symbol,
           label: t.label,
-          level: PLACEHOLDER_DELTA,
-          delta: PLACEHOLDER_DELTA,
-          dir: "flat" as const,
+          level: sse.price_display || PLACEHOLDER_DELTA,
+          delta: deltaStr,
+          dir,
         };
       }
-      // KR index sanity guard. KIS occasionally returns out-of-range levels
-      // (e.g. KOSPI 6,641 on 2026-04-28). Better an em-dash than a misleading
-      // figure on the always-visible ribbon.
-      if (t.symbol === "KOSPI" || t.symbol === "KOSDAQ") {
-        const safeLevel = sanitizeKrIndex(t.symbol, d.price);
-        if (safeLevel == null) {
-          return {
-            symbol: t.symbol,
-            label: t.label,
-            level: PLACEHOLDER_DELTA,
-            delta: PLACEHOLDER_DELTA,
-            dir: "flat" as const,
-          };
-        }
+      // Fallback: macro SWR feed for ribbon-only symbols (SPX/NDX/KOSPI/...).
+      const macro = _macroFromIndex(macroMap.get(t.symbol), t.symbol);
+      if (macro) {
+        const dir: Snapshot["dir"] =
+          macro.pct > 0 ? "up" : macro.pct < 0 ? "down" : "flat";
+        return {
+          symbol: t.symbol,
+          label: t.label,
+          level: macro.level,
+          delta:
+            macro.pct === 0
+              ? PLACEHOLDER_DELTA
+              : `${macro.pct >= 0 ? "+" : ""}${macro.pct.toFixed(2)}%`,
+          dir,
+        };
       }
-      const pct = d.change_pct;
-      const dir: Snapshot["dir"] =
-        typeof pct === "number" && pct > 0
-          ? "up"
-          : typeof pct === "number" && pct < 0
-            ? "down"
-            : "flat";
-      const deltaStr =
-        typeof pct === "number"
-          ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`
-          : PLACEHOLDER_DELTA;
       return {
         symbol: t.symbol,
         label: t.label,
-        level: d.price_display || PLACEHOLDER_DELTA,
-        delta: deltaStr,
-        dir,
+        level: PLACEHOLDER_DELTA,
+        delta: PLACEHOLDER_DELTA,
+        dir: "flat" as const,
       };
     });
-  }, [rt.details]);
+  }, [rt.details, macroMap]);
 
   return (
     <div
