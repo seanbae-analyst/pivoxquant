@@ -569,3 +569,121 @@ def rolling_var():
     except Exception as e:
         logger.warning(f"risk.rolling_var failed: {e}", exc_info=True)
         return jsonify([])
+
+
+
+@risk_bp.route("/concentration")
+@api_auth
+@legal_scrub_response
+def risk_concentration():
+    """Portfolio concentration metrics — HHI, top positions, sector buckets.
+
+    Empty portfolio → 200 OK with empty arrays (NOT 404). Frontend Risk
+    Board CONCENTRATION widget reads  for the gauge and 
+    for the position rail. Sector resolution is best-effort:
+      - KR tickers: services.kr_stock_registry.get_sector
+      - US tickers: fmp_service.get_profile().sector (cached 7 days)
+      - Unresolved: bucketed under "Unclassified"
+
+    Response shape:
+        {
+          "hhi":            float,            # 0..1 (sum of weight^2)
+          "hhi_label":      str,              # "low" | "medium" | "high"
+          "top_positions":  [{ticker, weight, sector}],
+          "sectors":        [{name, weight, count}],
+          "position_count": int,
+          "as_of":          ISO-8601 UTC,
+        }
+    """
+    from datetime import datetime, timezone
+    try:
+        state, _, _, _ = _portfolio_snapshot()
+        as_of = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        if state is None or not state.get("positions"):
+            return jsonify({
+                "hhi":            0.0,
+                "hhi_label":      "low",
+                "top_positions":  [],
+                "sectors":        [],
+                "position_count": 0,
+                "as_of":          as_of,
+            })
+
+        positions = state["positions"]
+        # Resolve sectors best-effort. KR registry first (no network), then
+        # FMP profile (cached). Failures bucket as "Unclassified".
+        try:
+            from services.kr_stock_registry import get_sector as _kr_sector
+        except Exception:
+            _kr_sector = lambda _t: None  # type: ignore
+        try:
+            import fmp_service as _fmp
+        except Exception:
+            _fmp = None
+
+        def _resolve_sector(t: str) -> str:
+            try:
+                kr = _kr_sector(t) if t.endswith(".KS") or t.endswith(".KQ") else None
+                if kr:
+                    return kr
+                if _fmp is not None:
+                    prof = _fmp.get_profile(t) or {}
+                    sec = prof.get("sector")
+                    if isinstance(sec, str) and sec.strip():
+                        return sec.strip()
+            except Exception:
+                pass
+            return "Unclassified"
+
+        # HHI (Herfindahl-Hirschman) — sum of squared weights, range 0..1.
+        # Single-position book → 1.0 (max concentration).
+        weights = [float(p.get("weight") or 0.0) for p in positions]
+        hhi = sum(w * w for w in weights)
+        if hhi >= 0.25:
+            hhi_label = "high"
+        elif hhi >= 0.15:
+            hhi_label = "medium"
+        else:
+            hhi_label = "low"
+
+        # Top positions sorted by weight desc.
+        ranked = sorted(positions, key=lambda p: float(p.get("weight") or 0.0), reverse=True)
+        top_positions = []
+        sector_buckets: dict[str, dict] = {}
+        for p in ranked:
+            t = p.get("ticker") or ""
+            w = float(p.get("weight") or 0.0)
+            sec = _resolve_sector(t)
+            top_positions.append({
+                "ticker": t,
+                "weight": round(w, 4),
+                "sector": sec,
+            })
+            bucket = sector_buckets.setdefault(sec, {"name": sec, "weight": 0.0, "count": 0})
+            bucket["weight"] += w
+            bucket["count"] += 1
+
+        sectors = sorted(sector_buckets.values(), key=lambda s: s["weight"], reverse=True)
+        for s in sectors:
+            s["weight"] = round(s["weight"], 4)
+
+        return jsonify({
+            "hhi":            round(hhi, 4),
+            "hhi_label":      hhi_label,
+            "top_positions":  top_positions[:10],
+            "sectors":        sectors,
+            "position_count": len(positions),
+            "as_of":          as_of,
+        })
+    except Exception as e:
+        logger.warning(f"risk.concentration failed: {e}", exc_info=True)
+        # Fail-safe: empty payload (200) so the gauge shows '—' rather than 404.
+        return jsonify({
+            "hhi":            0.0,
+            "hhi_label":      "low",
+            "top_positions":  [],
+            "sectors":        [],
+            "position_count": 0,
+            "as_of":          datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "message":        "Concentration data temporarily unavailable",
+        })
