@@ -656,8 +656,10 @@ function SiteFooter() {
           ))}
         </div>
 
-        {/* 전자상거래법 §13 사업자 정보 표시 (2026-04-27 추가).
-            사업자등록번호 / 통신판매업 신고번호는 등록 완료 후 채울 placeholder. */}
+        {/* 전자상거래법 §13 사업자 정보 표시 (2026-04-27 추가, 2026-04-29 ENV gate).
+            사업자등록번호/통신판매업 신고번호/주소는 NEXT_PUBLIC_BUSINESS_*
+            ENV 가 설정되어 있을 때만 노출. 미설정이면 elide — placeholder
+            "(등록 후 표시)" 노출은 첫 인상 신뢰 깎고 표시광고법 위반 의심. */}
         <div
           className="pt-6 pb-4"
           style={{ borderTop: "0.5pt solid rgba(245,240,232,0.08)" }}
@@ -673,10 +675,22 @@ function SiteFooter() {
           >
             <strong style={{ color: "rgba(245,240,232,0.65)" }}>PivoxQuant</strong>
             &nbsp;·&nbsp; 대표 배상현
-            &nbsp;·&nbsp; 사업자등록번호 <span style={{ opacity: 0.55 }}>(등록 후 표시)</span>
-            &nbsp;·&nbsp; 통신판매업 신고번호 <span style={{ opacity: 0.55 }}>(신고 후 표시)</span>
-            <br />
-            주소 <span style={{ opacity: 0.55 }}>(사업장 등록 후 표시)</span>
+            {process.env.NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER && (
+              <>
+                &nbsp;·&nbsp; 사업자등록번호 {process.env.NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER}
+              </>
+            )}
+            {process.env.NEXT_PUBLIC_TELESELLER_REGISTRATION_NUMBER && (
+              <>
+                &nbsp;·&nbsp; 통신판매업 신고번호 {process.env.NEXT_PUBLIC_TELESELLER_REGISTRATION_NUMBER}
+              </>
+            )}
+            {process.env.NEXT_PUBLIC_BUSINESS_ADDRESS && (
+              <>
+                <br />
+                주소 {process.env.NEXT_PUBLIC_BUSINESS_ADDRESS}
+              </>
+            )}
             &nbsp;·&nbsp; 이메일 <a href="mailto:seanbae1521@gmail.com" style={{ color: "inherit", textDecoration: "underline" }}>seanbae1521@gmail.com</a>
             &nbsp;·&nbsp; 호스팅 Vercel · Railway
           </p>
