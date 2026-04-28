@@ -32,17 +32,11 @@ import { useDiscover } from "@/lib/hooks";
 import type { DiscoverResult } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import {
-  MOCK_INDICES,
-  MOCK_US_GAINERS,
-  MOCK_US_LOSERS,
-  MOCK_KR_GAINERS,
-  MOCK_KR_LOSERS,
-  MOCK_SECTORS,
-  MOCK_OVERSOLD,
-  MOCK_HIGHS_52W,
-  MOCK_EARNINGS_BEAT,
-} from "@/components/discover/mock-data";
+
+// Mock fallback data was removed (2026-04-28). Displaying stale 2024 hard-coded
+// prices as if they were live misled users and created a capital-markets-law
+// misrepresentation risk. When the upstream feed fails we now render an
+// explicit "data unavailable" editorial state instead of fake numbers.
 
 const jsonFetcher = <T,>(url: string) => apiFetch<T>(url);
 
@@ -158,52 +152,55 @@ export default function DiscoverPage() {
       ? `₩${Math.round(price).toLocaleString("ko-KR")}`
       : `$${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  // All `?? MOCK_*` fallbacks removed 2026-04-28 — backend 503 / FMP 402
+  // must not be papered over with hardcoded 2024 prices (legal risk).
+  // Empty arrays produce <EmptyBlock/> editorial fallbacks below.
   const usGainers = useMemo(
-    () => (usMovers?.gainers?.length ? usMovers.gainers : null)?.map((r) => ({
+    () => (usMovers?.gainers?.length ? usMovers.gainers : []).map((r) => ({
       ticker: r.ticker, name: r.name, price: fmtMoverPrice(r.price, false), changePct: r.change_pct,
-    })) ?? MOCK_US_GAINERS,
+    })),
     [usMovers],
   );
   const usLosers = useMemo(
-    () => (usMovers?.losers?.length ? usMovers.losers : null)?.map((r) => ({
+    () => (usMovers?.losers?.length ? usMovers.losers : []).map((r) => ({
       ticker: r.ticker, name: r.name, price: fmtMoverPrice(r.price, false), changePct: r.change_pct,
-    })) ?? MOCK_US_LOSERS,
+    })),
     [usMovers],
   );
   const krGainers = useMemo(
-    () => (krMovers?.gainers?.length ? krMovers.gainers : null)?.map((r) => ({
+    () => (krMovers?.gainers?.length ? krMovers.gainers : []).map((r) => ({
       ticker: r.ticker, name: r.name, price: fmtMoverPrice(r.price, true), changePct: r.change_pct,
-    })) ?? MOCK_KR_GAINERS,
+    })),
     [krMovers],
   );
   const krLosers = useMemo(
-    () => (krMovers?.losers?.length ? krMovers.losers : null)?.map((r) => ({
+    () => (krMovers?.losers?.length ? krMovers.losers : []).map((r) => ({
       ticker: r.ticker, name: r.name, price: fmtMoverPrice(r.price, true), changePct: r.change_pct,
-    })) ?? MOCK_KR_LOSERS,
+    })),
     [krMovers],
   );
   const sectorRows = useMemo(
     () => sectorsLive && sectorsLive.length >= 3
       ? sectorsLive.map((s) => ({ sector: s.sector, d1: s.d1, d5: s.d5, m1: s.m1 }))
-      : MOCK_SECTORS,
+      : [],
     [sectorsLive],
   );
   const oversold = useMemo(
-    () => (screenersLive?.oversold_rsi?.length ? screenersLive.oversold_rsi : null)?.map((x) => ({
+    () => (screenersLive?.oversold_rsi?.length ? screenersLive.oversold_rsi : []).map((x) => ({
       ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
-    })) ?? MOCK_OVERSOLD,
+    })),
     [screenersLive],
   );
   const highs52w = useMemo(
-    () => (screenersLive?.highs_52w?.length ? screenersLive.highs_52w : null)?.map((x) => ({
+    () => (screenersLive?.highs_52w?.length ? screenersLive.highs_52w : []).map((x) => ({
       ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
-    })) ?? MOCK_HIGHS_52W,
+    })),
     [screenersLive],
   );
   const earnings = useMemo(
-    () => (screenersLive?.earnings_beats?.length ? screenersLive.earnings_beats : null)?.map((x) => ({
+    () => (screenersLive?.earnings_beats?.length ? screenersLive.earnings_beats : []).map((x) => ({
       ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
-    })) ?? MOCK_EARNINGS_BEAT,
+    })),
     [screenersLive],
   );
 
@@ -324,8 +321,12 @@ export default function DiscoverPage() {
         <section className="mb-12">
           <SectionKicker eyebrow="US Markets" title="Top Movers — United States" sub="Top gainers and losers by 1D change." />
           <div className="mt-5 grid gap-8 sm:grid-cols-2">
-            <MoversBlock title="Gainers" rows={usGainers} />
-            <MoversBlock title="Losers" rows={usLosers} />
+            {usGainers.length > 0
+              ? <MoversBlock title="Gainers" rows={usGainers} />
+              : <EmptyBlock title="Gainers" />}
+            {usLosers.length > 0
+              ? <MoversBlock title="Losers" rows={usLosers} />
+              : <EmptyBlock title="Losers" />}
           </div>
         </section>
 
@@ -333,45 +334,61 @@ export default function DiscoverPage() {
         <section className="mb-12">
           <SectionKicker eyebrow="KR Markets" title="Top Movers — Korea" sub="KOSPI top gainers and losers." />
           <div className="mt-5 grid gap-8 sm:grid-cols-2">
-            <MoversBlock title="Gainers" rows={krGainers} />
-            <MoversBlock title="Losers" rows={krLosers} />
+            {krGainers.length > 0
+              ? <MoversBlock title="Gainers" rows={krGainers} />
+              : <EmptyBlock title="Gainers" />}
+            {krLosers.length > 0
+              ? <MoversBlock title="Losers" rows={krLosers} />
+              : <EmptyBlock title="Losers" />}
           </div>
         </section>
 
         {/* Sector Rotation */}
         <section className="mb-12">
           <SectionKicker eyebrow="Rotation" title="Sector Rotation" sub="11 GICS sectors — 1D · 5D · 1M returns." />
-          <div className="mt-5 overflow-x-auto">
-            <table className="pq-ink-table">
-              <thead>
-                <tr>
-                  <th>Sector</th>
-                  <th className="num">1D</th>
-                  <th className="num">5D</th>
-                  <th className="num">1M</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sectorRows.map((s) => (
-                  <tr key={s.sector}>
-                    <td className="text-[rgba(245,240,232,0.85)]">{s.sector}</td>
-                    <td className={"num " + deltaCls(s.d1)}>{fmtPct(s.d1)}</td>
-                    <td className={"num " + deltaCls(s.d5)}>{fmtPct(s.d5)}</td>
-                    <td className={"num " + deltaCls(s.m1)}>{fmtPct(s.m1)}</td>
+          {sectorRows.length > 0 ? (
+            <div className="mt-5 overflow-x-auto">
+              <table className="pq-ink-table">
+                <thead>
+                  <tr>
+                    <th>Sector</th>
+                    <th className="num">1D</th>
+                    <th className="num">5D</th>
+                    <th className="num">1M</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {sectorRows.map((s) => (
+                    <tr key={s.sector}>
+                      <td className="text-[rgba(245,240,232,0.85)]">{s.sector}</td>
+                      <td className={"num " + deltaCls(s.d1)}>{fmtPct(s.d1)}</td>
+                      <td className={"num " + deltaCls(s.d5)}>{fmtPct(s.d5)}</td>
+                      <td className={"num " + deltaCls(s.m1)}>{fmtPct(s.m1)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="mt-5 text-[12px] italic text-[rgba(245,240,232,0.4)]">
+              Sector rotation data unavailable.
+            </p>
+          )}
         </section>
 
         {/* Thematic */}
         <section className="mb-12">
           <SectionKicker eyebrow="Screeners" title="Thematic Signals" sub="Observational filters across universes." />
           <div className="mt-5 grid gap-8 sm:grid-cols-3">
-            <ThematicBlockInk title="Oversold (RSI < 32)" items={oversold} />
-            <ThematicBlockInk title="52-Week Highs" items={highs52w} />
-            <ThematicBlockInk title="Earnings Surprise" items={earnings} />
+            {oversold.length > 0
+              ? <ThematicBlockInk title="Oversold (RSI < 32)" items={oversold} />
+              : <EmptyBlock title="Oversold (RSI < 32)" />}
+            {highs52w.length > 0
+              ? <ThematicBlockInk title="52-Week Highs" items={highs52w} />
+              : <EmptyBlock title="52-Week Highs" />}
+            {earnings.length > 0
+              ? <ThematicBlockInk title="Earnings Surprise" items={earnings} />
+              : <EmptyBlock title="Earnings Surprise" />}
           </div>
         </section>
 
@@ -506,6 +523,24 @@ function MoversBlock({
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Editorial empty state for individual blocks (Movers / Screeners). Renders a
+ * titled placeholder so the page rhythm is preserved when an upstream feed is
+ * down — never silently swap in fabricated rows.
+ */
+function EmptyBlock({ title }: { title: string }) {
+  return (
+    <div>
+      <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+        {title}
+      </div>
+      <p className="py-4 text-[12px] italic text-[rgba(245,240,232,0.4)]">
+        Data temporarily unavailable.
+      </p>
     </div>
   );
 }

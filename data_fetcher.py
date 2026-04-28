@@ -880,11 +880,18 @@ Reply ONLY in this exact JSON format, nothing else:
 
             is_kr = self.is_korean(ticker)
 
-            # Korean stocks: FMP free tier does NOT serve KR — use KIS + minimal info
-            if is_kr:
-                info = {}  # FMP fundamentals unavailable for KR
-            else:
+            # Korean stocks: FMP free tier does NOT serve KR directly, but
+            # fmp.get_info() routes KR tickers (.KS / .KQ) through the licensed
+            # KIS `inquire-price` path internally (see fmp_service.py L711-727),
+            # which publishes PER/EPS/PBR/시가총액 on a commercial ToS. Skipping
+            # the call here was leaving every KR ticker with empty fundamentals
+            # (P/E, EPS, profit_margin all null → "—" everywhere). Try get_info
+            # for both US and KR; fall back to {} on failure rather than crashing.
+            try:
                 info = fmp.get_info(ticker) or {}
+            except Exception as e:
+                logger.warning(f"fmp.get_info failed for {ticker}: {e}")
+                info = {}
 
             # Use get_price_history() which routes through KIS for KR, Alpaca for US
             hist = self.get_price_history(ticker, period="1y")

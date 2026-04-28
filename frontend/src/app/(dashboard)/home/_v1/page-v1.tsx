@@ -103,6 +103,12 @@ interface SignalsResponse {
   items?: SignalItem[];
 }
 interface RiskSummaryResponse {
+  // Backend (/api/risk/summary) snake_case PERCENT values
+  var_1d_pct?: number;
+  es_1d_pct?: number;
+  max_dd_90d_pct?: number;
+  corr_risk_index?: number;
+  // Legacy fractional fields kept as fallbacks
   var_95?: number;
   var_99?: number;
   max_drawdown?: number;
@@ -685,11 +691,14 @@ export default function HomePageV1() {
           <div className="grid grid-cols-2 gap-2">
             <KpiCard
               label="VaR 95"
-              value={
-                riskSummary?.var_95 != null
-                  ? Math.abs(riskSummary.var_95)
-                  : undefined
-              }
+              value={(() => {
+                // Backend canonical: var_1d_pct (PERCENT). Legacy: var_95 (fraction).
+                // KpiCard format="percent" expects a fraction (0..1) and renders ×100.
+                const raw = riskSummary?.var_1d_pct ?? riskSummary?.var_95;
+                if (raw == null || !Number.isFinite(raw)) return undefined;
+                const frac = Math.abs(raw) <= 1 ? raw : raw / 100;
+                return Math.abs(frac);
+              })()}
               format="percent"
               size="sm"
             />

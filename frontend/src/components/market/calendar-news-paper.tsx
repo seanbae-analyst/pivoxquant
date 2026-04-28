@@ -261,42 +261,56 @@ export function CalendarNewsPaper({
           Market Pulse &middot; Recent Observations
         </div>
         <div>
-          {pulse.map((row) => (
-            <div
-              key={row.time}
+          {pulse.length > 0 ? (
+            pulse.map((row) => (
+              <div
+                key={row.time}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "auto 1fr",
+                  alignItems: "baseline",
+                  gap: 10,
+                  padding: "9px 0",
+                  borderBottom: "0.5px solid rgba(184,149,106,0.18)",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono), ui-monospace, monospace",
+                    fontVariantNumeric: "tabular-nums",
+                    fontSize: 10.5,
+                    color: "var(--pq-bronze, #B8956A)",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  {row.time}
+                </span>
+                <p
+                  style={{
+                    fontFamily: "var(--font-serif), Georgia, serif",
+                    fontSize: 12.5,
+                    lineHeight: 1.5,
+                    color: "rgba(20,20,20,0.78)",
+                    margin: 0,
+                  }}
+                >
+                  {row.text}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p
               style={{
-                display: "grid",
-                gridTemplateColumns: "auto 1fr",
-                alignItems: "baseline",
-                gap: 10,
-                padding: "9px 0",
-                borderBottom: "0.5px solid rgba(184,149,106,0.18)",
+                fontFamily: "var(--font-serif), Georgia, serif",
+                fontSize: 12,
+                fontStyle: "italic",
+                color: "rgba(20,20,20,0.5)",
+                margin: "8px 0 0",
               }}
             >
-              <span
-                style={{
-                  fontFamily: "var(--font-mono), ui-monospace, monospace",
-                  fontVariantNumeric: "tabular-nums",
-                  fontSize: 10.5,
-                  color: "var(--pq-bronze, #B8956A)",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                {row.time}
-              </span>
-              <p
-                style={{
-                  fontFamily: "var(--font-serif), Georgia, serif",
-                  fontSize: 12.5,
-                  lineHeight: 1.5,
-                  color: "rgba(20,20,20,0.78)",
-                  margin: 0,
-                }}
-              >
-                {row.text}
-              </p>
-            </div>
-          ))}
+              No recent pulse observations available.
+            </p>
+          )}
         </div>
       </section>
     </div>

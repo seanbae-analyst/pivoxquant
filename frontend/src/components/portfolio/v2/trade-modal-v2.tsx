@@ -318,12 +318,18 @@ export function TradeModalV2({
                 <FormField
                   label={action === "sell" ? `Shares (max ${position.shares})` : "Shares"}
                 >
+                  {/*
+                    `max` HTML constraint removed (2026-04-28). Browser-level
+                    validation triggered a silent block (no toast) before the
+                    JS `parsedQty > position.shares` check below could fire
+                    with a user-friendly toast. JS validation in handleSubmit
+                    (L152-156) is the single source of truth.
+                  */}
                   <input
                     required
                     type="number"
                     step="any"
                     min="0"
-                    max={action === "sell" ? position.shares : undefined}
                     value={shares}
                     onChange={(e) => setShares(e.target.value)}
                     placeholder="0"

@@ -40,11 +40,6 @@ import { cn } from "@/lib/utils";
 import { DossierDesk } from "@/components/home/dossier-desk";
 import { PaperDocument } from "@/components/home/paper-document";
 
-import {
-  US_INDICES,
-  KR_INDICES,
-  KR_DERIVATIVES,
-} from "@/components/market/mock-indices";
 import type { IndexQuote } from "@/components/market/index-card";
 import { useNowTick } from "@/components/market/index-card";
 
@@ -157,9 +152,14 @@ export default function MarketPage() {
   });
 
   const quotes: IndexQuote[] = useMemo(() => {
+    // No mock fallback (2026-04-28). Static US_INDICES / KR_INDICES carried
+    // 2024-vintage levels (KOSPI 2,612 vs actual 6,641; SPY-style 5,218 vs
+    // ~5,800). Showing them when the backend is down misled users and is a
+    // capital-markets-law misrepresentation risk. Render an empty board and
+    // let the editorial empty state surface "data unavailable" instead.
     if (Array.isArray(data) && data.length >= 3)
       return data.map((b) => toQuote(b, tab));
-    return tab === "US" ? US_INDICES : KR_INDICES;
+    return [];
   }, [data, tab]);
 
   const upcomingEarnings = (earningsData?.earnings ?? []).slice(0, 6);
@@ -201,11 +201,11 @@ export default function MarketPage() {
   const onSelect = (id: PaperId) =>
     setActive((cur) => (cur === id ? null : id));
 
-  const pulse = [
-    { time: "08:42", text: "VIX closed below 15 for the third consecutive session." },
-    { time: "07:18", text: "Treasury 10Y yield eased 4bp against a softer CPI print." },
-    { time: "06:05", text: "KRW/USD drifted within its 90-day band at 1,355." },
-  ];
+  // Pulse rows previously hard-coded fabricated headlines + times — removed
+  // 2026-04-28 (legal: cannot publish editorial-looking news copy invented in
+  // the front-end). Until a real news feed is wired in, the section renders
+  // an editorial empty state.
+  const pulse: { time: string; text: string }[] = [];
 
   return (
     <ErrorBoundary>
@@ -381,7 +381,7 @@ export default function MarketPage() {
               <IndicesDetailPaper
                 region={tab}
                 quotes={quotes}
-                derivatives={tab === "KR" ? KR_DERIVATIVES : undefined}
+                derivatives={undefined /* KR derivatives feed not yet wired */}
               />
             </PaperDocument>
           </div>
@@ -460,7 +460,7 @@ export default function MarketPage() {
             <IndicesDetailPaper
               region={tab}
               quotes={quotes}
-              derivatives={tab === "KR" ? KR_DERIVATIVES : undefined}
+              derivatives={undefined /* KR derivatives feed not yet wired */}
             />
           </PaperDocument>
 
