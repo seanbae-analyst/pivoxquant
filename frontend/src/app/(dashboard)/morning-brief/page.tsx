@@ -37,7 +37,7 @@ import { apiFetch } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { useLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
-import { pctColorClass } from "@/lib/format";
+import { pctColorClass, sanitizeKrIndex } from "@/lib/format";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
@@ -159,7 +159,14 @@ function IndexTile({
   data?: MorningBriefIndex;
   region: string;
 }) {
-  const pct = data?.change_pct;
+  // KR index sanity guard — drop level if outside [KOSPI 1500-3500 / KOSDAQ
+  // 500-1500] (2026-04-28 KIS scaling glitch defense). pct intentionally
+  // kept since direction is independent of an out-of-range level.
+  const safeLevel =
+    label === "KOSPI" || label === "KOSDAQ"
+      ? sanitizeKrIndex(label, data?.price)
+      : data?.price;
+  const pct = safeLevel == null ? undefined : data?.change_pct;
   return (
     <div className="flex-1 bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
       <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">

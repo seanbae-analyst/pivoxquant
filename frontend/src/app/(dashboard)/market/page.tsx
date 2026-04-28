@@ -32,6 +32,7 @@ import useSWR from "swr";
 
 import { apiFetch } from "@/lib/api";
 import { MARKET_INDICES, API } from "@/lib/endpoints";
+import { sanitizeKrIndex } from "@/lib/format";
 import { isMarketOpen, liveRefresh } from "@/lib/market-hours";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { FootSignature } from "@/components/ui/editorial";
@@ -153,13 +154,23 @@ export default function MarketPage() {
 
   const quotes: IndexQuote[] = useMemo(() => {
     // No mock fallback (2026-04-28). Static US_INDICES / KR_INDICES carried
-    // 2024-vintage levels (KOSPI 2,612 vs actual 6,641; SPY-style 5,218 vs
-    // ~5,800). Showing them when the backend is down misled users and is a
-    // capital-markets-law misrepresentation risk. Render an empty board and
-    // let the editorial empty state surface "data unavailable" instead.
-    if (Array.isArray(data) && data.length >= 3)
-      return data.map((b) => toQuote(b, tab));
-    return [];
+    // 2024-vintage levels. Render an empty board and let the editorial empty
+    // state surface "data unavailable" instead.
+    if (!Array.isArray(data) || data.length < 3) return [];
+    // KR sanity guard (2026-04-28 KIS scaling glitch defense). Backend now
+    // drops out-of-range readings, but a second guard at the display
+    // boundary protects against any cached payload or alt path.
+    return data
+      .filter((b) => {
+        if (b.ticker === "^KS11" || b.name === "KOSPI") {
+          return sanitizeKrIndex("KOSPI", b.level) !== null;
+        }
+        if (b.ticker === "^KQ11" || b.name === "KOSDAQ") {
+          return sanitizeKrIndex("KOSDAQ", b.level) !== null;
+        }
+        return true;
+      })
+      .map((b) => toQuote(b, tab));
   }, [data, tab]);
 
   const upcomingEarnings = (earningsData?.earnings ?? []).slice(0, 6);

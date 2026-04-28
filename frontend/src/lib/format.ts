@@ -28,6 +28,71 @@ export function pnlColor(v: number): string {
   return "text-muted-foreground";
 }
 
+/**
+ * KR index sanity guards.
+ *
+ * 2026-04-28 incident: KIS API briefly returned KOSPI = 6,641.02 (~2x the
+ * historical max of 3,316). Backend `data_fetcher.get_enhanced_macro` now
+ * drops out-of-range readings, but we apply a second guard at the display
+ * boundary so a stray value from any path (SSE, alternate endpoint, cached
+ * payload) never renders as if live.
+ *
+ * Bounds intentionally mirror the backend defaults; widen via env only after
+ * verifying with KRX/Yahoo (NEXT_PUBLIC_KOSPI_RANGE / _KOSDAQ_RANGE).
+ */
+function _parsePublicRange(envKey: string, fallback: [number, number]): [number, number] {
+  if (typeof process === "undefined") return fallback;
+  const raw = (process.env?.[envKey] ?? "").trim();
+  if (!raw) return fallback;
+  const parts = raw.split(",").map((s) => Number.parseFloat(s.trim()));
+  if (parts.length !== 2 || parts.some((n) => !Number.isFinite(n))) return fallback;
+  const [lo, hi] = parts as [number, number];
+  if (!(lo > 0 && hi > lo)) return fallback;
+  return [lo, hi];
+}
+
+export const KOSPI_RANGE: [number, number] = _parsePublicRange(
+  "NEXT_PUBLIC_KOSPI_RANGE",
+  [1500, 3500],
+);
+export const KOSDAQ_RANGE: [number, number] = _parsePublicRange(
+  "NEXT_PUBLIC_KOSDAQ_RANGE",
+  [500, 1500],
+);
+
+export function isSaneKospi(level: number | null | undefined): level is number {
+  return (
+    typeof level === "number" &&
+    Number.isFinite(level) &&
+    level >= KOSPI_RANGE[0] &&
+    level <= KOSPI_RANGE[1]
+  );
+}
+
+export function isSaneKosdaq(level: number | null | undefined): level is number {
+  return (
+    typeof level === "number" &&
+    Number.isFinite(level) &&
+    level >= KOSDAQ_RANGE[0] &&
+    level <= KOSDAQ_RANGE[1]
+  );
+}
+
+/** Drop a KR index level if it falls outside its sanity window. */
+export function sanitizeKrIndex(
+  symbol: "KOSPI" | "KOSDAQ" | string,
+  level: number | null | undefined,
+): number | null {
+  if (level == null) return null;
+  if (symbol === "KOSPI" || symbol === "kospi" || symbol === "^KS11") {
+    return isSaneKospi(level) ? level : null;
+  }
+  if (symbol === "KOSDAQ" || symbol === "kosdaq" || symbol === "^KQ11") {
+    return isSaneKosdaq(level) ? level : null;
+  }
+  return Number.isFinite(level) ? level : null;
+}
+
 export function signalColor(signal: string): string {
   switch (signal) {
     case "POSITIVE":

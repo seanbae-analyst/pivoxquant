@@ -20,6 +20,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRealtimeContext } from "@/lib/realtime";
+import { sanitizeKrIndex } from "@/lib/format";
 
 type Snapshot = {
   symbol: string;
@@ -156,6 +157,21 @@ export function TopTicker() {
           delta: PLACEHOLDER_DELTA,
           dir: "flat" as const,
         };
+      }
+      // KR index sanity guard. KIS occasionally returns out-of-range levels
+      // (e.g. KOSPI 6,641 on 2026-04-28). Better an em-dash than a misleading
+      // figure on the always-visible ribbon.
+      if (t.symbol === "KOSPI" || t.symbol === "KOSDAQ") {
+        const safeLevel = sanitizeKrIndex(t.symbol, d.price);
+        if (safeLevel == null) {
+          return {
+            symbol: t.symbol,
+            label: t.label,
+            level: PLACEHOLDER_DELTA,
+            delta: PLACEHOLDER_DELTA,
+            dir: "flat" as const,
+          };
+        }
       }
       const pct = d.change_pct;
       const dir: Snapshot["dir"] =
