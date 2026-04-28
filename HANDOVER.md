@@ -1,11 +1,103 @@
-# PivoxQuant — 인수인계서 (2026-04-25 세션 종료 · v9 "Tier-1 Launch Bundle + Autopilot")
+# PivoxQuant — 인수인계서 (2026-04-28 세션 종료 · v10 "V2 Tone Unification")
 
 ## 이 문서의 원칙
 - **거짓 보고 금지**. 완료된 것은 완료, 미완은 미완.
-- 내가 이번 세션 **잘못 보고했던 것**도 §10 에 기록.
+- 내가 이번 세션 **잘못 보고했던 것**도 §6 에 기록.
 - "대체로 OK" "거의 완료" 표현 금지. 숫자로.
 
 ---
+
+## 🔥 2026-04-28 세션 — V2 톤 통일 + 자동화 정리
+
+### 1. 머지된 10 PRs (main 반영)
+
+| PR | 커밋 | 변경 |
+|---|---|---|
+| #7  | `5f18d6c` | 5 dashboard v2 (home/portfolio/risk/signals/reports) + Daily Memo 설계 |
+| #8  | `6d1e0ef` | 사이드바 5 페이지 hidden (morning-brief/watchlist/market/discover/ai-chat — 라우트 보존) |
+| #9  | `143411b` | profile + settings v2 (11/11 + 6/6 매핑) |
+| #10 | `7ce7af8` | KIS card copy 정정 (국내+해외주식 명시) |
+| #11 | `94e72bf` | scheduler 진단 logging (`vix_spike_monitor` cron tz 1개 누락 fix + worker_pid/next_run_time 로그) |
+| #13 | `27401c5` | login + signup v2 |
+| #14 | `0efe329` | landing ReportsGallery + Supanova whitespace + hover 통일 |
+| #15 | (z-index) | dropdown z-50 → z-[100] (LivingCFOStatusBar overlap fix) |
+| #16 | (growth) | growth Hero v2 (Journal 사이드바 매핑 톤 통일) |
+| #17 | (PII) | ProfileDropdown owner PII 폴백 제거 (배상현/이메일 → Guest/—) |
+
+총 코드 변경: ~12,000 lines new + ~4,000 lines edit. 빌드 87/87 routes 양쪽 flag 모두 ✓.
+
+### 2. v2 톤 통일 — 9 페이지 (Vantablack + Bronze + Playfair v3 락-인)
+
+새로 v2 적용: home / portfolio / risk / signals / reports / profile / settings / login / signup / landing / growth(Journal)
+이미 v2 톤이라 작업 X (정직 진단): /detail, /ai, /alerts, /companion
+
+v1 fallback 100% 보존 — `process.env.NEXT_PUBLIC_*_V2 !== "true"` → v1 렌더. 7 feature flags 사용.
+
+### 3. 자동화 정리 (mcp__scheduled-tasks vs GitHub Actions)
+
+**전부 disabled** (Mac local cron, 4-5일 미작동): morning/noon/evening-briefing, pivoxquant-{api-sentinel, bug-hunter-daily, legal-guard, v2-autopilot}.
+
+**24/7 작동 중** (GitHub Actions 15개 워크플로우, 서버 측):
+- `api-health.yml` (매시 7/23/37/53분), `daily-api-smoke.yml` (06:00 KST), `nightly-bug-hunt.yml` (02:00 KST), `daily-legal-scan.yml` (09:15 KST), `morning-triage.yml` (09:00 KST)
+- `legal-guard.yml`, `regression-guards.yml`, `frontend-tests.yml`, `post-deploy-canary.yml`, `ci.yml` (push/PR trigger)
+- `agent-health-weekly.yml`, `weekly-security-scan.yml`, `agent-upgrades-monthly.yml`, `self-healing.yml`
+
+APScheduler (Railway 서버) 27 cron jobs 그대로 작동.
+
+### 4. 🚨 사용자 액션 필요 (Claude 권한 X)
+
+| Action | 위치 | 목적 |
+|---|---|---|
+| `NEXT_PUBLIC_HOME_V2=true` 외 7개 토글 | Vercel env | dashboard v2 활성화 |
+| `NEXT_PUBLIC_LOGIN_V2=true` + `_SIGNUP_V2=true` | Vercel env | 인증 페이지 v2 |
+| `NEXT_PUBLIC_ALPACA_ENABLED=1` | Vercel env | AlpacaCard DOM 노출 (현재 hidden) |
+| `DEV_PREMIUM_EMAILS=seanbae1521@gmail.com` | **Railway** env (frontend X, **backend**) | Companion tier-gating 우회 |
+| 해외주식 거래 신청 | KIS 콘솔 | KIS 미장 prod 활성화 (이미 backend 100% 구현됨) |
+| 변호사 자문 | 별도 일정 | 마이데이터 법 (신용정보법 §22의9) BYOK+read-only 적용 여부 |
+| Railway 로그 확인 | 다음 dawn cycle | morning_brief KST 15:00 root cause (PR #11 진단 로그 기반) |
+| 강제 새로고침 (Cmd+Shift+R) | 사용자 PWA | SW v5 cache 갱신 |
+
+### 5. 다음 sprint 우선순위
+
+**P0 (메모리 잔여 버그)**
+- /discover 데이터 안 나옴 (FMP 402 가능성)
+- /market 코스피/코스닥 (현재 사이드바 hidden, deep link만)
+
+**P1**
+- KST 15:00 morning_brief root cause + targeted fix (Railway 로그 분석 후)
+- KIS 미장 점진 마이그레이션 — Alpaca → KIS 단일 broker (1-2주 작업)
+- v2 LandingV2 mobile 반응형 실 검증
+
+**P2**
+- Stripe 결제 연결 (API Key + Product ID + test mode)
+- Contact 이메일 4곳 가짜 도메인 통일
+- 이용약관/개인정보처리방침 한국어 변호사 검수
+- Detail 7 섹션 데이터 fetch 검증
+
+### 6. 잘못 보고했던 것 (정직)
+
+1. mcp__scheduled-tasks 첫 보고에서 "4-5일 안 돈다 — 자동화 깨짐" 라고 했지만 실제로는 GitHub Actions 15개가 같은 작업 24/7 수행 중. 중복 백업 인지 못 함.
+2. backend `morning_brief_daily` cron timezone 누락 보고 — 실제로는 이미 `timezone="Asia/Seoul"` 명시되어 있음. `vix_spike_monitor` 1개만 누락. sub-agent 결과 forward만 하고 직접 검증 안 한 실수 (PR #11에서 정정).
+3. signals 백엔드 name 필드 부재 우려 — 실제로는 `routes/signals.py:10` `resolve_stock_name` import + 모든 응답에 backfill. signals-card.tsx fallback 패턴이 정공이었음.
+4. KIS 미장 미구현 우려 — 실제로는 `services/broker/user_kis_service.py:372-537` 완전 구현 (NASD/NYSE/AMEX merge + domestic+overseas integration).
+5. AlpacaCard "안 눌림" 진단 — z-index만 의심했으나 실제로는 `NEXT_PUBLIC_ALPACA_ENABLED !== "1"` env-flag로 카드 자체 DOM 부재 (의도된 phase-1 hide).
+6. portfolio-v2 audit "RollingWindowWidget 누락" P0 escalation — fix됨 (Stage 5b → page-v2.tsx에 RollingWindowWidget 추가).
+
+### 7. 메모리 갱신 (이번 세션 신규/추가)
+
+- `project_pwa.md` (신규) — PWA 형식 (SW 캐시 v4→v5 bump, manifest, 무효화 고려)
+- `feedback_feature_preservation.md` (신규) — 기능 100% 보존 원칙 (CEO 강조 — settings 등 빠짐 X)
+- `legal_compliance.md` (확장) — 마이데이터 법 우려 추가 (BYOK + read-only가 신용정보법 §22의9 사업 해당 여부, 변호사 자문 P1)
+
+### 8. main HEAD + 빌드
+
+- main HEAD 갱신 중 (PR #17 머지 시점)
+- 빌드 검증: tsc 0 errors / eslint 0 errors / build 87/87 routes 양쪽 flag (default V1 + 9 v2 flags)
+- 법적 금지어 grep: 0 hits in user-facing UI strings
+
+---
+
+## 📜 2026-04-25 이전 세션 (v9 archive)
 
 ## 1. 🎯 이번 세션 commit (16개 push)
 
