@@ -68,6 +68,15 @@ type Item = {
   label: string;
   href: string;
   icon: LucideIcon;
+  /**
+   * If true, the item is excluded from rendering but kept in the array
+   * so that routes/keys/active-state resolution remains intact and any
+   * deep links (e.g. /watchlist) still light the correct active key
+   * when the user navigates there directly. 2026-04-27 per CEO: hide
+   * Morning Brief / Watchlist / Market / Discover / AI Chat from the
+   * rail while preserving the underlying pages.
+   */
+  hidden?: boolean;
 };
 
 // Top — ungrouped, sits above the first group label.
@@ -77,7 +86,7 @@ const TOP: Item[] = [
 
 // ── ARTIFACTS — CFO 생산물 ──────────────────────────────────────────
 const ARTIFACTS: Item[] = [
-  { key: "morning-brief", label: "Morning Brief", href: "/morning-brief", icon: Sun },
+  { key: "morning-brief", label: "Morning Brief", href: "/morning-brief", icon: Sun, hidden: true },
   { key: "reports", label: "Reports", href: "/reports", icon: FileText },
   { key: "signals", label: "Signals", href: "/signals", icon: Zap },
 ];
@@ -85,16 +94,16 @@ const ARTIFACTS: Item[] = [
 // ── PORTFOLIO — 자산 관리 ──────────────────────────────────────────
 const PORTFOLIO: Item[] = [
   { key: "portfolio", label: "Portfolio", href: "/portfolio", icon: Briefcase },
-  { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye },
+  { key: "watchlist", label: "Watchlist", href: "/watchlist", icon: Eye, hidden: true },
   { key: "risk", label: "Risk Board", href: "/risk", icon: Shield },
   // REMOVED 2026-04-27 per CEO + legal: autotrade item (투자일임업 회피).
 ];
 
 // ── RESEARCH — 조사·분석 ───────────────────────────────────────────
 const RESEARCH: Item[] = [
-  { key: "market", label: "Market", href: "/market", icon: Activity },
-  { key: "discover", label: "Discover", href: "/discover", icon: Compass },
-  { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare },
+  { key: "market", label: "Market", href: "/market", icon: Activity, hidden: true },
+  { key: "discover", label: "Discover", href: "/discover", icon: Compass, hidden: true },
+  { key: "ai-chat", label: "AI Chat", href: "/ai-chat", icon: MessageSquare, hidden: true },
   { key: "ai", label: "AI Analysis", href: "/ai", icon: Sparkles },
 ];
 
@@ -150,7 +159,7 @@ export function TerminalSidebar({
       <nav className="flex-1 overflow-y-auto" aria-label="Primary">
         {/* TOP — Home (ungrouped) */}
         <ul className="space-y-0.5 px-3">
-          {TOP.map((item) => (
+          {TOP.filter((it) => !it.hidden).map((item) => (
             <SidebarLink
               key={item.key}
               item={item}
@@ -161,28 +170,28 @@ export function TerminalSidebar({
 
         <GroupHeader label="Artifacts" />
         <ul className="space-y-0.5 px-3">
-          {ARTIFACTS.map((item) => (
+          {ARTIFACTS.filter((it) => !it.hidden).map((item) => (
             <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
           ))}
         </ul>
 
         <GroupHeader label="Portfolio" />
         <ul className="space-y-0.5 px-3">
-          {PORTFOLIO.map((item) => (
+          {PORTFOLIO.filter((it) => !it.hidden).map((item) => (
             <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
           ))}
         </ul>
 
         <GroupHeader label="Research" />
         <ul className="space-y-0.5 px-3">
-          {RESEARCH.map((item) => (
+          {RESEARCH.filter((it) => !it.hidden).map((item) => (
             <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
           ))}
         </ul>
 
         <GroupHeader label="System" />
         <ul className="space-y-0.5 px-3 pb-4">
-          {SYSTEM.map((item) => (
+          {SYSTEM.filter((it) => !it.hidden).map((item) => (
             <SidebarLink key={item.key} item={item} isActive={resolvedActive === item.key} />
           ))}
         </ul>
