@@ -3,22 +3,22 @@
 Exposes a single GET endpoint — ``/api/admin/fmp-usage`` — gated by the
 ``ADMIN_EMAILS`` env var (same gate the ``agent_worker`` admin routes use).
 Intended for the founder / ops console to spot-check whether we're about
-to hit the 250/day Starter cap or whether a particular endpoint is in
-402 cooldown.
+to hit the FMP_DAILY_SOFT_LIMIT (default 10k for Premium $29) or whether a
+particular endpoint is in 402 cooldown.
 
-Response shape (stable)::
+Response shape (stable, values reflect FMP_DAILY_SOFT_LIMIT — example shows Premium default 10000)::
 
     {
       "daily_calls": 147,
-      "daily_limit": 250,
-      "remaining": 103,
+      "daily_limit": 10000,
+      "remaining": 9853,
       "cache_entries": 482,
       "stale_mode": false,
       "hard_stopped": false,
       "blocked_endpoints": {"/institutional-ownership/...": 842},
       "402_counts": {"/institutional-ownership/...": 3},
-      "stale_threshold": 220,
-      "hard_stop_threshold": 248
+      "stale_threshold": 8800,
+      "hard_stop_threshold": 9900
     }
 
 The endpoint is read-only — no writes, no external calls, no PII. Safe to

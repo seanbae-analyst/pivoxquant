@@ -435,7 +435,7 @@ class RealtimeService:
 
         Returning ``None`` is reserved for "no data anywhere" — not for
         "FMP failed, try stale next time". The whole point of this fix is
-        that a 402 cooldown or 250-call budget exhaustion must NOT cause
+        that a 402 cooldown or daily-soft-limit budget exhaustion must NOT cause
         every cache-miss ticker to 404 at the route layer.
         """
         is_kr = self.is_korean(ticker)

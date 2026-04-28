@@ -35,7 +35,7 @@ AI + Quant 기반 개인 투자 어드바이저 플랫폼.
 - **Frontend**: Next.js 16 + TypeScript + Tailwind 4 + SWR + motion/react
 - **AI**: Claude API (Anthropic) — SWOT, Chat, Sector, Coaching
 - **Broker**: Alpaca (US, paper=True) + KIS 한국투자증권 (read-only)
-- **Data**: FMP v4 Stable ($29 Starter) + Alpaca + SEC EDGAR
+- **Data**: FMP v4 Stable ($29 Premium — 750 req/min, soft daily cap 10k) + Alpaca + SEC EDGAR
 - **Auth**: Google + Kakao OAuth (email+password 없음)
 - **Payment**: Stripe (코드만 있음, 미연결)
 - **Design**: Nexora template 기반 — purple/blue/pink gradient, clean white
