@@ -115,6 +115,32 @@ def _directive_only(terms: set[str]) -> set[str]:
     return keep
 
 
+def _drift_directive_only(terms: set[str]) -> set[str]:
+    """For ``scan_drift_in_sources`` only — keep COMPOUND directives.
+
+    Bare Hangul verbs like ``매수`` / ``매도`` / ``추천`` / ``조언`` appear
+    legitimately throughout the codebase: user-trade retrospectives, tax
+    accounting (증권거래세 — 매도 시 0.20%), behavior-pattern descriptors
+    (\"변동 후 매수 빈도\"), peer-benchmark labels (\"매수가에 집착한다\"),
+    JSX children in PDF report templates, and inline comments. Scanning
+    them line-by-line is a false-positive geyser.
+
+    The bare-token regression is already covered by:
+      - ``daily-legal-scan.yml`` (curated EN list, runs every day)
+      - ``tests/test_no_hardcoded_samples.py`` (template defaults)
+      - ``services/legal_filter.py`` (runtime scrub of generated text)
+
+    What this scan does catch is *new compound directives* drifting into
+    code — e.g. ``\"매수 추천\"`` or ``\"buy recommendation\"`` — which is
+    where the regulatory risk actually lives.
+    """
+    keep: set[str] = set()
+    for t in terms:
+        if " " in t:
+            keep.add(t)
+    return keep
+
+
 # Negation markers — when a forbidden term appears in a sentence that
 # ALSO contains one of these, it is almost certainly a legal-safe
 # disclaimer ("does not recommend buying or selling"). Used by the
@@ -278,17 +304,96 @@ def audit_scrub_coverage() -> list[dict[str, Any]]:
 
 
 # --- (d) New forbidden-token drift in production sources ---------------
+
+# Files where forbidden terms are intentional content (legal docs themselves
+# or v2 disclaimer pages whose JSX wraps the standard 면책 block).
+_DRIFT_FILE_SKIP = (
+    re.compile(r"content/terms-"),
+    re.compile(r"content/privacy-"),
+    re.compile(r"_v\d+/page-v\d+\.(?:tsx?|jsx?)"),
+    # Files whose entire purpose is to define/describe the disclaimer
+    re.compile(r"(?:^|/)disclaimer\.(?:ts|tsx|py)$"),
+    re.compile(r"(?:^|/)(?:lib|services)/.+/disclaimer\."),
+)
+
+# Line-level whitelist — when any of these patterns matches the offending
+# line, the term mention is tooling/UI/jargon, not a directive.
+_DRIFT_LINE_WHITELIST = (
+    # raw-string regex pattern: r"매수", r"recommend"
+    re.compile(r'r["\'][^"\']*["\']'),
+    # quoted-string list: ("추천", "매수", "매도", ...) or ['추천', '매수']
+    re.compile(r'["\'][^"\']{1,40}["\']\s*,\s*["\'][^"\']{1,40}["\']'),
+    # JSON dict UI labels: "label": "Sell Everything", "label_kr": "전량 매도"
+    re.compile(r'"label(?:_kr)?"\s*:'),
+    # JSON dict description fields: "description": "매수 T+3 체크리스트..."
+    re.compile(r'"description"\s*:'),
+    # Trading-jargon technical-analysis context (signal != directive)
+    re.compile(r"\b(bullish|bearish|oversold|overbought|RSI|MACD|EMA|SMA)\b", re.IGNORECASE),
+    # Tax/accounting context: 거래세/양도세/CGT/transaction tax — fact, not directive
+    re.compile(
+        r"(?:거래세|양도세|증권거래세|capital[\s-]?gain|transaction\s*tax|"
+        r"CGT|tax_(?:bps|sell|rate)|_TX_TAX|TX_TAX_)",
+        re.IGNORECASE,
+    ),
+    # Historical-trade retrospective on user's OWN data (not a directive)
+    re.compile(
+        r"(?:기록된|기록한|실행한|체결된|체크리스트|"
+        r"거래(?:가|을|를|에|와|로|·)|결정(?:가|을|를|에|와|로|·|\s*중)|"
+        r"분기\s*내|패턴\s*분석)"
+    ),
+    # String-membership / classification operators on data, not advice:
+    #   if "매수" in isu, x = "매수" if cond else "매도"
+    re.compile(r'["\'][^"\']*["\']\s*(?:in|not\s+in)\s+\w'),
+    re.compile(r'\bif\s+["\'][^"\']*["\']\s+in\b'),
+    # Forbidden-context markers (defining/scrubbing forbidden terms)
+    re.compile(
+        r"(?:forbid|forbids|forbidden|FORBIDDEN|BLACKLIST|blacklist|"
+        r"scrub|are\s+scrubbed|do\s+not\s+use|never\s+use|"
+        r"쓰지\s*말|절대|금지|advisory[-\s]?words?|단어\s*0\s*건)",
+        re.IGNORECASE,
+    ),
+    # Pure comment lines (#, //, /*, {/*, <!--, JSDoc * continuation)
+    re.compile(r'^\s*(?:#|//|/\*|\{/\*|<!--|\*\s)'),
+)
+
+# Negation/disclaimer markers — line-level. When present, the directive
+# is wrapped in legitimate disclaimer language.
+_DRIFT_NEGATION = re.compile(
+    r"(금지|없음|않습|안\s*합|하지\s*않|아닙|아닌|아니라|아니에요|"
+    r"정보\s*제공|정보제공|권유\s*아|추천\s*아|자문\s*아|"
+    r"권유[·,/]?\s*추천하지|추천[·,/]?\s*권유하지|"
+    r"not\s+|no\s+|never\s+|disclaimer|informational|"
+    r"investment[\s-]?advisory|advisory\s+words?|"
+    r"목적이며|목적입니다|규율이다)",
+    re.IGNORECASE,
+)
+
+
+def _has_negation_in_neighborhood(lines: list[str], idx: int, radius: int = 1) -> bool:
+    """True if any of the surrounding ±radius lines contain a negation marker.
+    Catches multi-line wrapped disclaimers like:
+        "...권유·추천하지\n        않습니다."
+    where the term and 'not' end up on different lines.
+    """
+    lo = max(0, idx - radius)
+    hi = min(len(lines), idx + radius + 1)
+    for j in range(lo, hi):
+        if _DRIFT_NEGATION.search(lines[j]):
+            return True
+    return False
+
+
 def scan_drift_in_sources() -> list[dict[str, Any]]:
     """Scan production paths for any canonical term that is NOT already
     guarded by a negation. This is a drift detector: the daily-legal-scan
     workflow uses a small hardcoded set, but this checks the FULL canonical
     list."""
     findings: list[dict[str, Any]] = []
-    # Same narrowing rationale as the sample scan: bare English verbs
-    # appear legitimately in source (e.g. `buy_button`, `sell_modal`).
-    # The daily-legal-scan workflow already handles bare-word regression
-    # with its curated EN set; the monitor focuses on directive forms.
-    terms = _directive_only(set(FORBIDDEN_DIRECTIVE_TERMS))
+    # Compound-only narrowing (see _drift_directive_only docstring): bare
+    # English verbs like `buy`/`sell` AND bare Hangul verbs like `매수`/
+    # `매도`/`추천`/`조언` appear legitimately throughout source. The
+    # monitor focuses exclusively on multi-word directive forms.
+    terms = _drift_directive_only(set(FORBIDDEN_DIRECTIVE_TERMS))
     scan_paths = ("routes", "services", "frontend/src")
     for term in sorted(terms):
         # Skip very short / ambiguous tokens (e.g., single Hangul chars)
@@ -314,21 +419,27 @@ def scan_drift_in_sources() -> list[dict[str, Any]]:
                     continue
                 if "/tests/" in rel or rel.startswith("tests/"):
                     continue
+                # Skip legal docs and v2 disclaimer page templates
+                if any(sk.search(rel) for sk in _DRIFT_FILE_SKIP):
+                    continue
                 try:
                     text = p.read_text(encoding="utf-8", errors="replace")
                 except OSError:
                     continue
-                for idx, line in enumerate(text.splitlines(), start=1):
-                    if re.search(pattern, line, re.IGNORECASE):
-                        # Reject if the line also contains a negation marker
-                        if re.search(
-                            r"(금지|없음|않습|안\s*합|하지\s*않|not\s+|no\s+|never\s+|disclaimer)",
-                            line, re.IGNORECASE,
-                        ):
-                            continue
-                        hits.append(f"{rel}:{idx}: {line.strip()[:120]}")
-                        if len(hits) >= 5:
-                            break
+                file_lines = text.splitlines()
+                for idx, line in enumerate(file_lines, start=1):
+                    if not re.search(pattern, line, re.IGNORECASE):
+                        continue
+                    # 1. Skip if line matches a tooling/UI/jargon whitelist
+                    if any(w.search(line) for w in _DRIFT_LINE_WHITELIST):
+                        continue
+                    # 2. Skip if negation marker appears within ±1 line
+                    #    (handles wrapped disclaimers like "...추천하지\n  않습니다")
+                    if _has_negation_in_neighborhood(file_lines, idx - 1, radius=1):
+                        continue
+                    hits.append(f"{rel}:{idx}: {line.strip()[:120]}")
+                    if len(hits) >= 5:
+                        break
                 if len(hits) >= 5:
                     break
         if hits:
