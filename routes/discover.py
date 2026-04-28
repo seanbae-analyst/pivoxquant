@@ -2,8 +2,10 @@
 
 Also serves the /api/discover/* sub-endpoints consumed by the editorial
 Discover page (market-overview / movers / sectors / screeners). These
-share a 2h cache and degrade to the mock fallback in
-``services.mock_data.discover_fallback`` when FMP hits 402/5xx.
+share a market-aware cache and **fail-fast with HTTP 503** when the
+upstream data provider (FMP) is unavailable. We never serve mock /
+hardcoded sample data to end users — surfacing fake market levels as
+real would be a legal/ethical violation (자본시장법: 거짓 정보 제공).
 
 Language stays observational — no BUY/SELL/recommend/advice/bullish/bearish.
 """
@@ -18,7 +20,6 @@ from models import Position
 from services import fx_service, cache_service
 from services.container import engine, fetcher
 from services.name_resolver import resolve_stock_name
-from services.mock_data import discover_fallback as mock
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -99,11 +100,31 @@ def _section_set(key: str, data) -> None:
     _section_cache[key] = {"ts": time.time(), "data": data}
 
 
+def _data_unavailable(endpoint: str, *, retry_after: int = 60):
+    """Standard 503 response when the upstream data provider is down.
+
+    We deliberately do NOT degrade to mock/hardcoded sample data — serving
+    fake market levels as if real would mislead users on financial data
+    (legal/ethical violation). The frontend should render a "데이터 일시
+    불가" banner on this 503.
+    """
+    body = {
+        "error":       "Data temporarily unavailable",
+        "code":        "DATA_PROVIDER_DOWN",
+        "endpoint":    endpoint,
+        "retry_after": retry_after,
+    }
+    response = jsonify(body)
+    response.status_code = 503
+    response.headers["Retry-After"] = str(retry_after)
+    return response
+
+
 @discover_bp.route("/discover/market-overview")
 @api_auth
 @legal_scrub_response
 def market_overview():
-    """Five-index headline cards. Falls back to static mock on upstream failure."""
+    """Five-index headline cards. 503 fail-fast on upstream failure."""
     cached = _section_get("overview")
     if cached:
         return jsonify(cached)
@@ -127,10 +148,11 @@ def market_overview():
         logger.warning(f"discover.market-overview upstream failed: {e}")
 
     if len(result) < 3:
-        logger.info("FMP rate limit or empty overview — returning cached/mock fallback")
-        # Flag mock rows so the frontend can surface a "stale data" banner
-        # instead of silently showing 2024 snapshots.
-        result = [{**r, "is_mock": True} for r in mock.MARKET_OVERVIEW]
+        logger.warning(
+            "discover.market-overview: only %d/5 indices available — "
+            "failing fast (no mock fallback)", len(result),
+        )
+        return _data_unavailable("market-overview")
 
     _section_set("overview", result)
     return jsonify(result)
@@ -140,7 +162,7 @@ def market_overview():
 @api_auth
 @legal_scrub_response
 def movers():
-    """Top gainers/losers (10 each) for US or KR. Mock fallback on failure."""
+    """Top gainers/losers (10 each) for US or KR. 503 fail-fast on failure."""
     region = (request.args.get("region") or "us").lower()
     if region not in ("us", "kr"):
         region = "us"
@@ -177,13 +199,12 @@ def movers():
         logger.debug(f"discover.movers live path skip: {e}")
 
     if len(gainers) < 3 or len(losers) < 3:
-        logger.info("FMP rate limit — returning mock movers fallback")
-        if region == "us":
-            gainers = [{**r, "is_mock": True} for r in mock.US_GAINERS]
-            losers  = [{**r, "is_mock": True} for r in mock.US_LOSERS]
-        else:
-            gainers = [{**r, "is_mock": True} for r in mock.KR_GAINERS]
-            losers  = [{**r, "is_mock": True} for r in mock.KR_LOSERS]
+        logger.warning(
+            "discover.movers (%s): only %d gainers / %d losers — "
+            "failing fast (no mock fallback)",
+            region, len(gainers), len(losers),
+        )
+        return _data_unavailable(f"movers:{region}")
 
     observed_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     payload = {
@@ -200,7 +221,7 @@ def movers():
 @api_auth
 @legal_scrub_response
 def sectors():
-    """11 GICS sectors with 1D/5D/1M observation. Mock on upstream failure."""
+    """11 GICS sectors with 1D/5D/1M observation. 503 fail-fast on failure."""
     cached = _section_get("sectors")
     if cached:
         return jsonify(cached)
@@ -229,19 +250,17 @@ def sectors():
         logger.warning(f"discover.sectors upstream failed: {e}")
 
     # Bug G (2026-04-24): FMP's sector-performance endpoint returns a full
-    # list of 11 GICS sectors with `"0%"` on market-closed windows. The
-    # old `len(rows) < 5` guard passed that through, so the UI showed
-    # 11 sectors all flat at 0.00% — indistinguishable from a real
-    # completely-flat tape. Now we reject *any* payload whose |d1| values
-    # are all below 0.001 (numerical noise threshold) and fall back to
-    # mock so at least the visual hierarchy is informative.
+    # list of 11 GICS sectors with `"0%"` on market-closed windows. We
+    # reject *any* payload whose |d1| values are all below 0.001
+    # (numerical noise threshold) — that's indistinguishable from a stale
+    # tape and we will not paint mock numbers as real data.
     has_signal = any(abs(r.get("d1") or 0) > 0.001 for r in rows)
     if len(rows) < 5 or not has_signal:
-        logger.info(
+        logger.warning(
             "discover.sectors: upstream returned %d rows, has_signal=%s — "
-            "using mock fallback", len(rows), has_signal,
+            "failing fast (no mock fallback)", len(rows), has_signal,
         )
-        rows = list(mock.SECTORS)
+        return _data_unavailable("sectors")
 
     _section_set("sectors", rows)
     return jsonify(rows)
@@ -251,15 +270,17 @@ def sectors():
 @api_auth
 @legal_scrub_response
 def screeners():
-    """Thematic observation lists. Mock-only for now (pre-compute TODO)."""
+    """Thematic observation lists. Pre-compute pipeline pending — until then,
+    fail-fast 503 (was mock-only, which violated the no-fake-data rule)."""
     cached = _section_get("screeners")
     if cached:
         return jsonify(cached)
 
-    payload = {
-        "oversold_rsi":   list(mock.OVERSOLD_RSI),
-        "highs_52w":      list(mock.HIGHS_52W),
-        "earnings_beats": list(mock.EARNINGS_BEATS),
-    }
-    _section_set("screeners", payload)
-    return jsonify(payload)
+    # No live source wired yet. Refuse to serve stale mock screeners as
+    # if they were today's market state. Tracked: pre-compute thematic
+    # screeners off the engine universe (RSI/52w-high/earnings-beat).
+    logger.warning(
+        "discover.screeners: no live source implemented — failing fast "
+        "(refuses to serve mock as real data)",
+    )
+    return _data_unavailable("screeners", retry_after=3600)

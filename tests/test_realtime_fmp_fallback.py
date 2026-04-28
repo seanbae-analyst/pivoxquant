@@ -1,7 +1,7 @@
 """
 PivoxQuant — Tests for realtime_service FMP stale-cache fallback (2026-04-24)
 
-Regression coverage for the FMP 250-call budget / 402 cooldown / connection
+Regression coverage for the FMP daily-soft-limit budget / 402 cooldown / connection
 failure bug where cache-miss tickers returned 404 for ALL symbols.
 
 Scenarios covered:

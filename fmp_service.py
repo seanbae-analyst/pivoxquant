@@ -1,7 +1,9 @@
 """
 PivoxQuant — FMP (Financial Modeling Prep) Service
 Official FMP API for market data.
-Free tier: 250 calls/day, 10/sec.
+Premium $29 plan: 750 req/min, no daily cap. We keep an env-configurable
+soft daily limit (FMP_DAILY_SOFT_LIMIT, default 10000) as a runaway-usage
+safety net. Set FMP_DAILY_SOFT_LIMIT=250 if downgrading to Starter $14.
 """
 
 import os
@@ -16,6 +18,12 @@ logger = logging.getLogger(__name__)
 
 FMP_BASE = "https://financialmodelingprep.com/stable"
 FMP_KEY = os.environ.get("FMP_API_KEY", "")
+
+# FMP Premium $29 plan: 750 req/min, no daily cap. We keep a soft daily limit
+# as a safety net against runaway usage (bug/attack) — env-configurable.
+_FMP_DAILY_SOFT_LIMIT = int(os.environ.get("FMP_DAILY_SOFT_LIMIT", "10000"))
+_FMP_BUDGET_STALE_PCT = float(os.environ.get("FMP_BUDGET_STALE_PCT", "0.88"))  # 88% → stale fallback
+_FMP_BUDGET_HARD_STOP_PCT = float(os.environ.get("FMP_BUDGET_HARD_STOP_PCT", "0.99"))  # 99% → block
 
 # ── Cache TTL Constants ─────────────────────────────────────────
 # Price-adjacent TTLs (quote/intraday/fx) are market-aware at the call
@@ -68,12 +76,27 @@ _endpoint_402_cooldown = {}     # {endpoint_path: unix_ts until cooldown expires
 _ENDPOINT_402_THRESHOLD = 3     # After 3 consecutive 402s, block endpoint
 _ENDPOINT_402_COOLDOWN = 1800   # 30 min cooldown
 
-# Budget thresholds
-# FMP free plan: 250 calls/day.
-# Startup prefetch uses ~200 calls for 50-ticker discover pool.
-# Leave at least 48 calls for runtime (macro overview = ~15, sectors = 1, chart = 1, etc.)
-_BUDGET_STALE_THRESHOLD = 220   # At 220 calls: return expired cache (stale-while-revalidate)
-_BUDGET_HARD_STOP = 248         # At 248 calls: stop making new FMP calls entirely (2 buffer)
+# Budget thresholds — Premium $29 plan default (10k/day soft cap).
+# Override via FMP_DAILY_SOFT_LIMIT env var (e.g. set to 250 if downgrading to Starter).
+_BUDGET_STALE_THRESHOLD = int(_FMP_DAILY_SOFT_LIMIT * _FMP_BUDGET_STALE_PCT)
+_BUDGET_HARD_STOP = int(_FMP_DAILY_SOFT_LIMIT * _FMP_BUDGET_HARD_STOP_PCT)
+
+# Defensive: misconfigured env (e.g. STALE_PCT > HARD_STOP_PCT) would let
+# stale-mode trigger before exhaustion, leaving hard_stop unreachable. Force
+# stale_threshold ≤ hard_stop and hard_stop ≥ 1 to fail-fast at import time.
+if _BUDGET_STALE_THRESHOLD > _BUDGET_HARD_STOP:
+    logger.error(
+        f"FMP budget config inverted (stale={_BUDGET_STALE_THRESHOLD} > hard_stop={_BUDGET_HARD_STOP}); "
+        f"clamping stale to hard_stop. Check FMP_BUDGET_STALE_PCT vs FMP_BUDGET_HARD_STOP_PCT."
+    )
+    _BUDGET_STALE_THRESHOLD = _BUDGET_HARD_STOP
+if _BUDGET_HARD_STOP < 1:
+    logger.error(
+        f"FMP_DAILY_SOFT_LIMIT={_FMP_DAILY_SOFT_LIMIT} produces hard_stop<1; "
+        f"forcing minimum 1 to avoid blocking every call."
+    )
+    _BUDGET_HARD_STOP = 1
+    _BUDGET_STALE_THRESHOLD = min(_BUDGET_STALE_THRESHOLD, 1)
 
 
 def _get_cache(key, max_age):
@@ -118,9 +141,9 @@ def _track_call():
         _daily_calls_reset = now
     _daily_calls += 1
     if _daily_calls >= _BUDGET_HARD_STOP:
-        logger.warning(f"FMP HARD STOP: {_daily_calls}/250 calls used — blocking further API calls")
+        logger.warning(f"FMP HARD STOP: {_daily_calls}/{_FMP_DAILY_SOFT_LIMIT} calls used — blocking further API calls")
     elif _daily_calls >= _BUDGET_STALE_THRESHOLD:
-        logger.warning(f"FMP budget low: {_daily_calls}/250 calls — returning stale cache when available")
+        logger.warning(f"FMP budget low: {_daily_calls}/{_FMP_DAILY_SOFT_LIMIT} calls — returning stale cache when available")
 
 
 def _is_endpoint_blocked(endpoint):
@@ -164,7 +187,7 @@ def _fmp_get(endpoint, params=None, timeout=5):
         logger.error("FMP_API_KEY not set")
         return None
     if _is_budget_exhausted():
-        logger.warning(f"FMP call blocked (budget exhausted at {_daily_calls}/250): {endpoint}")
+        logger.warning(f"FMP call blocked (budget exhausted at {_daily_calls}/{_FMP_DAILY_SOFT_LIMIT}): {endpoint}")
         return None
     if _is_endpoint_blocked(endpoint):
         # Endpoint is in 402 cooldown — short-circuit without network call
@@ -1206,8 +1229,8 @@ def prefetch_fundamentals(tickers):
         get_quotes_batch(chunk)
 
     # 3. Per-ticker ratios and metrics — SKIPPED at startup to preserve daily budget.
-    # On the FMP free plan (250 calls/day), 50 ratios + 50 metrics = 100 calls consumed at
-    # startup, leaving almost nothing for runtime (macro/chart/sectors need ~30+ calls/session).
+    # On the FMP Premium plan (10k/day soft cap), 50 ratios + 50 metrics = 100 calls consumed
+    # upfront wastes budget when most tickers are never opened in a session.
     # Ratios/metrics are fetched on-demand with 24h TTL — the first analyze() call for each
     # ticker will populate these caches and subsequent calls within 24h are free.
     uncached_ratios = [t for t in us_tickers if not _get_cache(f"ratios_ttm:{t}", TTL_FUNDAMENTAL)]
@@ -1284,7 +1307,7 @@ def prefetch_fundamentals(tickers):
 
     cached_count = sum(1 for t in us_tickers if _get_cache(f"info:{t}", TTL_FUNDAMENTAL))
     logger.info(f"FMP prefetch complete: {cached_count}/{len(us_tickers)} tickers cached, "
-                f"{_daily_calls}/250 API calls used today")
+                f"{_daily_calls}/{_FMP_DAILY_SOFT_LIMIT} API calls used today")
 
 
 # ── News ────────────────────────────────────────────────────────
@@ -1622,8 +1645,8 @@ def get_api_usage():
                if until > now}
     return {
         "daily_calls": _daily_calls,
-        "daily_limit": 250,
-        "remaining": max(0, 250 - _daily_calls),
+        "daily_limit": _FMP_DAILY_SOFT_LIMIT,
+        "remaining": max(0, _FMP_DAILY_SOFT_LIMIT - _daily_calls),
         "cache_entries": len(_cache),
         "stale_mode": _is_budget_stale(),
         "hard_stopped": _is_budget_exhausted(),

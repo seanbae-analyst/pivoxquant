@@ -7,6 +7,74 @@
 
 ---
 
+## 🔥 2026-04-28 자율 세션 — 배포 전 P0 fix (FMP budget + decorator)
+
+**이전 V2 톤 세션과 별도. 사용자 외출 + 권한 위임 자율 실행. 모두 working tree, 미 commit/미 push.**
+
+### 핵심 발견 → 모두 fix
+
+| # | 발견 | Root Cause | Fix |
+|---|------|-----------|-----|
+| 1 | 21개 P0 endpoint 빈 응답/mock fallback | `fmp_service.py:75-76` `_BUDGET_HARD_STOP=248` 하드코딩 (Starter $14 한도) — Premium $29 분당 750req 무용지물 | ENV-driven (`FMP_DAILY_SOFT_LIMIT` default 10000), 11곳 250 하드코딩 박멸 |
+| 2 | discover/* `is_mock:true` 응답 (가짜 데이터를 진짜처럼 노출) | `routes/discover.py` mock fallback 분기 4곳 | fail-fast 503 (`code: DATA_PROVIDER_DOWN` + `Retry-After: 60`) |
+| 3 | discover 503 fix가 200으로 떨어지는 미스터리 | `routes/decorators.py:42-49` `legal_scrub_response` 가 모든 Response의 status_code를 강제 200으로 coerce. **73 endpoints 영향** | `getattr(resp, 'status_code', 200)` 로 status_code 보존 |
+| 4 | FRED endpoints 503 `FRED_NOT_CONFIGURED` | `.env` 에 `FRED_API_KEY` 없음 (사용자가 발급은 했으나 미저장) | `.env` 추가 + curl 검증 (`FEDFUNDS=3.64`) |
+| 5 | 비표준 ENV (PCT 역전, =0) 시 hard_stop 영구 비활성 | 방어 코드 부재 | clamp + log 방어 추가 |
+
+### 변경 파일 (9개, 미 commit)
+
+```
+.env                                      # FRED_API_KEY=bdd5f23ac...
+fmp_service.py                            # budget Premium + 방어 코드
+realtime_service.py                       # 주석 동기화 (전수 점검 결과)
+.env.example                              # FMP plan tuning 안내
+tests/test_realtime_fmp_fallback.py       # 주석 갱신
+routes/admin_fmp.py                       # docstring 동적화 (250 → 10000 예시)
+routes/discover.py                        # mock 제거 + _data_unavailable 헬퍼
+routes/decorators.py                      # legal_scrub_response status_code 보존
+tests/test_bugsweep_2026_04_24.py         # discover sectors 503 어서션
+```
+
+### 검증 (실제 출력)
+
+- `python -m pytest tests/` → **1276 passed, 1 skipped, 0 failed** (decorator 73 endpoint 영향 회귀 검증 완료)
+- `python -m pytest tests/ -k "fmp or discover"` → **39 passed, 0 failed**
+- 기본값 import: `_FMP_DAILY_SOFT_LIMIT=10000, _BUDGET_STALE_THRESHOLD=8800, _BUDGET_HARD_STOP=9900`
+- ENV override `FMP_DAILY_SOFT_LIMIT=250`: `250, 220, 247`
+- 역전 ENV (`STALE_PCT=0.99 HARD_STOP_PCT=0.5`): clamp `5000, 5000` + warning log
+- `FMP_DAILY_SOFT_LIMIT=0`: clamp `0, 1` + warning log
+- `curl ...api.stlouisfed.org/.../FEDFUNDS&api_key=...` → 200 OK, value `3.64`
+
+### 🚨 사용자 액션 필요 (자율 모드 권한 외)
+
+| Action | 위치 | 명령/값 |
+|---|---|---|
+| Railway env: `FRED_API_KEY` 추가 | Railway 대시보드 → Settings → Variables | `FRED_API_KEY=bdd5f23acc7ef1dab2d328e1591f16bb` |
+| Railway env: FMP plan tuning (선택) | 동일 | (미설정 시 Premium 10k default. Starter 다운그레이드 시 `FMP_DAILY_SOFT_LIMIT=250`) |
+| 9개 파일 git diff 검토 | 로컬 | `cd /Users/seanbae/Desktop/취준/stockpilot && git diff` |
+| commit 결정 | 로컬 | (자율 세션은 미 commit. CLAUDE.md 룰: 사용자가 명시 요청 시만 commit) |
+| Railway 배포 확인 | 배포 후 | `curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/admin/fmp-usage` (admin 로그인 필요). `daily_limit: 10000` 확인 |
+| Wave 1B 신규 P0 8건 검토 | 별도 | user-tester agent 보고 (아래 §6.2). 진위 직접 브라우저 확인 권장 |
+
+### Wave 1B 검증 (제3자 user-tester agent 보고 — forward 주의)
+
+비인증 영역만 검증 (OAuth 로그인 권한 없음). agent 주장:
+- 신규 P0 8건: `/terms` `/privacy` raw markdown + 흰배경, `/pricing` 카운터 잘못된 숫자 노출, SEO canonical=Railway URL, 랜딩 가격 carousel 깨짐, `/reports/preview/*` 12개 비로그인 차단, 사업자 정보 placeholder, login redirect `?from=` 누락, `/companion` 비로그인 차단
+- 인증 P0 6종 (검색/Watchlist/알림벨/프로필/Connect/시장 데이터): **UNVERIFIED**
+- 자율 모드에서 fix 안 함 (디자인/가격/SEO/법적 표기 정책 결정 필요)
+
+**진위 확인 권장**: 본인 브라우저로 https://pivoxquant.com/terms , /privacy , /pricing 직접 확인 후 fix 우선순위 결정.
+
+### 정직한 미완 사항
+
+1. ❌ **dev-login으로 인증 영역 재검증 안 함** (다음 turn 가능: `.env`에 `DEV_LOGIN_SECRET` 있음)
+2. ❌ **신규 P0 8건 fix 안 함** (정책 결정 필요)
+3. ❌ **git commit 안 함** (사용자 명시 요청 대기)
+4. ❌ **Railway 배포 후 21개 endpoint 실제 응답 재검증 안 함** (배포 후 가능)
+5. ⚠️ **17/21 P0 BUG 해결 추정** — Railway 배포 + 실제 호출 후 검증 필요. 코드 레벨 root cause 확정은 ✓이지만 production 실측은 미완
+
+---
+
 ## 🔥 2026-04-28 세션 — V2 톤 통일 + 자동화 정리
 
 ### 1. 머지된 10 PRs (main 반영)

@@ -41,12 +41,15 @@ def legal_scrub_response(f):
     def wrapped(*args, **kwargs):
         result = f(*args, **kwargs)
         # Normalize to (response, status) — Flask view returns vary.
+        # Default status: prefer Response.status_code (preserves 4xx/5xx from
+        # _data_unavailable / abort-style returns); fall back to 200 only when
+        # there is no Response object at all.
         if isinstance(result, tuple):
             resp = result[0]
-            status = result[1] if len(result) > 1 else 200
+            status = result[1] if len(result) > 1 else getattr(resp, "status_code", 200)
         else:
             resp = result
-            status = 200
+            status = getattr(resp, "status_code", 200)
         if hasattr(resp, "get_json") and getattr(resp, "is_json", False):
             try:
                 data = resp.get_json()
