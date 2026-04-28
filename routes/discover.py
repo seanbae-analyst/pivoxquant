@@ -138,12 +138,18 @@ def market_overview():
             price = data.get("price")
             if price is None:
                 continue
-            result.append({
+            entry = {
                 "name":       display,
                 "symbol":     key,
                 "level":      round(float(price), 2),
                 "change_pct": round(float(data.get("change_pct", 0) or 0), 2),
-            })
+            }
+            # Pass-through the ETF proxy badge from data_fetcher so the
+            # frontend can label "S&P 500 · SPY proxy" — same convention as
+            # /api/market/indices (Wave 2 Bug #11 fix 2026-04-29).
+            if data.get("proxy_ticker"):
+                entry["proxy_ticker"] = data["proxy_ticker"]
+            result.append(entry)
     except Exception as e:
         logger.warning(f"discover.market-overview upstream failed: {e}")
 

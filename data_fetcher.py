@@ -565,7 +565,10 @@ Reply ONLY in this exact JSON format, nothing else:
 
         # FMP v4 stable: use get_quote() for all — works for indices, ETFs, crypto
         index_syms = ["^GSPC", "^IXIC", "^DJI", "^RUT", "^VIX", "^TNX", "^IRX", "^TYX"]
-        stock_syms = ["GLD", "USO", "SLV", "UUP"]
+        # SPY/QQQ/DIA/IWM added 2026-04-29 (Wave 2 Bug #11): always fetch
+        # the index ETF proxies so /discover/market-overview can publish the
+        # same unit-scale value as /api/market/indices.
+        stock_syms = ["GLD", "USO", "SLV", "UUP", "SPY", "QQQ", "DIA", "IWM"]
         fx_pairs = ["USDKRW", "EURUSD", "USDJPY"]
 
         def _get_single_quote(sym):
@@ -672,10 +675,43 @@ Reply ONLY in this exact JSON format, nothing else:
         # (ETFs track their index within ±0.02% intraday). Attempting a
         # scale conversion via historical ratio would inject drift and
         # produce subtly wrong numbers, so we publish ETF-native values.
+        # Index level normalization (Wave 2 Bug #11 fix 2026-04-29):
+        # Some FMP plans return raw ^GSPC/^IXIC/^DJI/^RUT (e.g. SPX 7,139)
+        # while others reject the symbol and we substitute the ETF proxy
+        # (SPY 711). The /api/market/indices route always publishes ETF
+        # proxies for unit consistency; if we mix raw + proxy here, the same
+        # UI can show "S&P 500 = 711" on /market/indices and "S&P 500 = 7,139"
+        # on /discover/market-overview — a 10x divergence that triggers a
+        # 표시광고법 §3 기만표시 risk (bug-hunter Wave 2 finding).
+        # Policy: when an ETF proxy quote is available, prefer it. Emit a
+        # `proxy_ticker` field so consumers can label "S&P 500 · SPY proxy".
+        ETF_PROXY_FOR = {"^GSPC": "SPY", "^IXIC": "QQQ", "^DJI": "DIA", "^RUT": "IWM"}
         for sym, key in [("^GSPC","sp500"),("^IXIC","nasdaq"),("^DJI","dow"),("^RUT","russell2000")]:
-            if sym in idx_data:
+            proxy = ETF_PROXY_FOR.get(sym)
+            proxy_q = stk_data.get(proxy) if proxy else None
+            # 1) Try ETF proxy first (matches /api/market/indices unit scale).
+            if proxy_q is not None:
+                p, c = proxy_q
+                macro[key] = {
+                    "price":        self._safe(p),
+                    "change_pct":   self._safe(c),
+                    "proxy_ticker": proxy,
+                }
+            # 2) Fall back to whatever idx_data has — could be the FMP raw
+            #    index level OR (when missing_idx triggered above) the same
+            #    Alpaca ETF proxy slotted under the caret symbol.
+            elif sym in idx_data:
                 p, c = idx_data[sym]
-                macro[key] = {"price": self._safe(p), "change_pct": self._safe(c)}
+                entry: dict = {
+                    "price":      self._safe(p),
+                    "change_pct": self._safe(c),
+                }
+                # If the value came from the missing-idx Alpaca ETF fallback,
+                # tag it so the consumer can still surface the proxy badge.
+                p_val = entry["price"]
+                if proxy and isinstance(p_val, (int, float)) and 0 < p_val < 1500:
+                    entry["proxy_ticker"] = proxy
+                macro[key] = entry
 
         # Korean indices — FMP does not serve KR indices on free tier, prefer KIS.
         # Fall back to FMP only if KIS fails.
