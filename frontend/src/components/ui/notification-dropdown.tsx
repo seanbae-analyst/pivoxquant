@@ -156,7 +156,7 @@ export function NotificationDropdown() {
 
       {open && (
         <div
-          className="absolute right-0 top-full z-50 mt-2 w-[340px] overflow-hidden rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
+          className="absolute right-0 top-full z-[100] mt-2 w-[340px] overflow-hidden rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
           style={{ background: "var(--pq-ivory)", border: "0.5px solid var(--pq-hairline)" }}
           role="menu"
         >
