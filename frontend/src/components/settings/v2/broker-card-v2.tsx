@@ -237,8 +237,8 @@ export function BrokerCardV2({
               marginTop: 16,
             }}
           >
-            KIS order routing is permanently disabled — read-only. You enter
-            your{" "}
+            KIS read-only · 국내 + 해외주식 (NASDAQ / NYSE / AMEX). Order
+            routing is permanently disabled. You enter your{" "}
             <span
               className="font-mono"
               style={{
