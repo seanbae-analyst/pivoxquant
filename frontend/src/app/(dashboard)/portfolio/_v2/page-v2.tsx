@@ -327,11 +327,13 @@ export default function PortfolioPageV2() {
       </section>
 
       {/* ═══════════ ROLLING WINDOW (Block 5) — v1 parity (Layer 2 learning) ═══════════ */}
+      {/* paper={false}: v2 페이지는 Vantablack v3 톤. ivory paper bg 는 v1 (paper desk)
+          전용. CEO 직접 지적 2026-04-29: "declared vs observed 부분 왜 얘만 노래" */}
       <section
         aria-label="Rolling window behavioural analysis"
         style={{ marginBottom: 40 }}
       >
-        <RollingWindowWidget paper />
+        <RollingWindowWidget paper={false} />
       </section>
 
       {/* ═══════════ Foot signature ═══════════ */}
