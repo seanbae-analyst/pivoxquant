@@ -176,6 +176,62 @@ export default function GrowthPage() {
   return (
     <ErrorBoundary>
       <div className="space-y-6 pb-8">
+        {/* v2 polish 2026-04-28 — Editorial Hero (Playfair 48px + Bronze italic + 80px padding).
+            Tone parity with /home v2 hero. Adds editorial seal above the existing 6-section
+            Growth OS layout. Existing sections, hooks, components untouched. */}
+        <section
+          className="pq-hero-v2"
+          style={{
+            padding: "80px 0 64px",
+            borderBottom: "1px solid var(--pq-hairline-ink)",
+            marginBottom: 8,
+          }}
+        >
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontSize: "var(--pq-text-eyebrow, 10.5px)",
+              letterSpacing: "0.22em",
+              color: "var(--pq-bronze)",
+              marginBottom: 28,
+            }}
+          >
+            Growth OS · Solo Founder
+          </div>
+
+          <h1
+            className="font-serif"
+            style={{
+              fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
+              fontWeight: 500,
+              fontSize: "clamp(32px, 4.2vw, 48px)",
+              lineHeight: 1.05,
+              letterSpacing: "-0.02em",
+              color: "var(--pq-ivory)",
+              maxWidth: 940,
+              margin: "0 0 24px 0",
+            }}
+          >
+            Your <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>steady</span>{" "}
+            streak.
+          </h1>
+
+          <p
+            className="font-serif"
+            style={{
+              fontFamily: '"Source Serif 4","Iowan Old Style",Georgia,serif',
+              fontSize: 17,
+              lineHeight: 1.55,
+              color: "rgba(245,240,232,0.82)",
+              maxWidth: 720,
+              margin: 0,
+            }}
+          >
+            Streak · morning priorities · evening reflection · 365-day graph · weekly trend ·
+            archived reports — one editorial board, drafted with you.
+          </p>
+        </section>
+
         {/* Header */}
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold text-[var(--pq-ivory)]">Growth OS</h1>
