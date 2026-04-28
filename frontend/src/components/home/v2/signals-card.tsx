@@ -73,7 +73,10 @@ export function SignalsCard() {
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {items.map((s, i) => {
             const ticker = s.ticker || s.symbol || "—";
-            const label = (s.label || "NEUTRAL").toUpperCase();
+            // Backend engine.py:420 returns "signal" key only; "label" is undefined.
+            // Read both fields so home card matches signals page (v1 used `s.signal`,
+            // v2 uses `s.label ?? s.signal`). Without this every ticker rendered NEUTRAL.
+            const label = (s.label ?? s.signal ?? "NEUTRAL").toString().toUpperCase();
             const rationale =
               s.rationale ||
               s.reason ||
