@@ -357,6 +357,11 @@ def generate_brief(user: User, for_date: date | None = None) -> MorningBrief:
         "insight":           insight,
         "disclaimer":        "정보 제공 목적, 투자 판단은 본인 책임",
         "generated_at":      datetime.now(timezone.utc).replace(tzinfo=None).isoformat() + "Z",
+        # Raw enhanced_macro snapshot — consumed by render_brief_email() to
+        # bind kpis_cover / fx_crosses / macro_ladder / rates_curve template
+        # variables. Kept whole (not pre-formatted) so future template
+        # changes can re-derive without code changes here.
+        "macro":             macro,
     }
 
     # Legal scrub at user-facing boundary — `insight` is the AI-generated
@@ -465,13 +470,133 @@ def _jinja_env():
         return None
 
 
+def _macro_email_context(macro: dict | None) -> dict:
+    """Best-effort mapping of `enhanced_macro` → 9 template macro variables.
+
+    Why: the template historically had stale 2026-04-21 hard-coded fallbacks
+    inside `default(...)` blocks (USD/KRW=1342, US10Y=4.32%, VIX=15.80, etc).
+    For Pro+ users the email shipped daily with these stale numbers regardless
+    of real conditions — a 표시광고법 §3 기만표시 risk.
+
+    Strategy: explicitly bind every template variable from real macro data
+    when available, and pass empty list/dict otherwise. The template `default`
+    branches are kept as `[]`/`{}` so a missed binding renders an elided
+    section rather than a fabricated number.
+    """
+    macro = macro or {}
+
+    def _num(d: dict | None, key: str = "price"):
+        if not isinstance(d, dict):
+            return None
+        v = d.get(key)
+        return v if isinstance(v, (int, float)) else None
+
+    def _change(d: dict | None):
+        return _num(d, "change_pct")
+
+    sp500 = macro.get("sp500") if isinstance(macro.get("sp500"), dict) else None
+    vix_level = macro.get("vix") if isinstance(macro.get("vix"), (int, float)) else None
+    us10y = macro.get("treasury_10y") if isinstance(macro.get("treasury_10y"), (int, float)) else None
+    usdkrw_block = macro.get("usdkrw") if isinstance(macro.get("usdkrw"), dict) else None
+
+    # 1. kpis_cover — only emitted if every component resolves to a real value.
+    kpis_cover: dict = {}
+    if (
+        _change(sp500) is not None
+        and vix_level is not None
+        and us10y is not None
+        and _num(usdkrw_block) is not None
+    ):
+        kpis_cover = {
+            "sp_futures_pct": round(_change(sp500), 2),
+            "vix_level":      round(vix_level, 2),
+            "us10y_pct":      round(us10y, 2),
+            "usdkrw":         int(round(_num(usdkrw_block))),
+        }
+
+    # 2. fx_crosses — only the pairs we actually fetched (USD/KRW, EUR/USD, USD/JPY)
+    fx_crosses: list = []
+    for pair_key, label, fmt in (
+        ("eurusd", "EUR/USD", "{:.4f}"),
+        ("usdjpy", "USD/JPY", "{:.2f}"),
+        ("usdkrw", "USD/KRW", "{:,.0f}"),
+    ):
+        block = macro.get(pair_key)
+        if not isinstance(block, dict):
+            continue
+        price = _num(block)
+        if price is None:
+            continue
+        chg = _change(block)
+        chg_str = f"{chg:+.2f}" if isinstance(chg, (int, float)) else "0.00"
+        fx_crosses.append({"p": label, "l": fmt.format(price), "d": chg_str})
+
+    # 3. macro_ladder — 8 instruments. We can credibly fill DXY, Oil, Gold,
+    # 10Y, VIX from enhanced_macro. 2Y/MOVE/HY OAS are not in our data yet
+    # → emit only what we have so the table doesn't lie.
+    macro_ladder: list = []
+    def _add_ladder(name: str, level: float | None, change_pct: float | None, level_fmt: str):
+        if level is None:
+            return
+        d1 = f"{change_pct:+.2f}" if isinstance(change_pct, (int, float)) else "0.00"
+        macro_ladder.append({
+            "name":  name,
+            "level": level_fmt.format(level),
+            "d1":    d1,
+            "d5":    "—",
+            "range": "—",
+            "spark": [],
+        })
+
+    dxy = macro.get("dxy") if isinstance(macro.get("dxy"), dict) else None
+    _add_ladder("DXY", _num(dxy), _change(dxy), "{:.2f}")
+    oil = macro.get("oil_wti") if isinstance(macro.get("oil_wti"), dict) else None
+    _add_ladder("Oil · WTI", _num(oil), _change(oil), "{:.2f}")
+    gold = macro.get("gold") if isinstance(macro.get("gold"), dict) else None
+    _add_ladder("Gold", _num(gold), _change(gold), "{:,.0f}")
+    if us10y is not None:
+        _add_ladder("10Y Treasury", us10y, None, "{:.2f}%")
+    if vix_level is not None:
+        _add_ladder("VIX", vix_level, None, "{:.2f}")
+    if isinstance(sp500, dict):
+        _add_ladder("S&P 500 (SPY)", _num(sp500), _change(sp500), "{:.2f}")
+
+    # 4. rates_curve — yield_curve has t3m / t10y / t30y; emit only the points
+    # we actually have. The template handles 1-3 points without breaking.
+    rates_curve: list = []
+    yc = macro.get("yield_curve") if isinstance(macro.get("yield_curve"), dict) else None
+    if isinstance(yc, dict):
+        for label, key in (("3M", "t3m"), ("10Y", "t10y"), ("30Y", "t30y")):
+            v = yc.get(key)
+            if isinstance(v, (int, float)):
+                rates_curve.append({"t": label, "y": round(float(v), 2)})
+
+    # 5-9. Variables we don't have a feed for yet → empty so template elides.
+    return {
+        "kpis_cover":        kpis_cover,           # dict, possibly empty
+        "fx_crosses":        fx_crosses,           # list, possibly empty
+        "macro_ladder":      macro_ladder,         # list, possibly empty
+        "rates_curve":       rates_curve,          # list, possibly empty
+        "vix_term":          [],                   # no term-structure feed
+        "overnight_tape":    [],                   # no 24h ribbon feed
+        "overnight_prose":   {},                   # no AI prose feed
+        "sector_premkt":     [],                   # no premkt sector feed
+        # observation_notes intentionally NOT set — template default holds
+        # generic advisory text (no stale data) and is acceptable to keep.
+    }
+
+
 def render_brief_email(content: dict, *, user: User | None = None) -> str:
     """Render the Morning Brief Plus HTML email.
 
     `content` is the dict produced by `generate_brief()` (has `kpis`,
     `market_summary`, `portfolio_changes`, `events`, `insight`,
-    `disclaimer`, `generated_at`). A missing `kpis` key degrades cleanly —
-    the template hides the KPI grid rather than erroring.
+    `disclaimer`, `generated_at`, `macro`). A missing `kpis` key degrades
+    cleanly — the template hides the KPI grid rather than erroring.
+
+    Macro variables (kpis_cover, macro_ladder, fx_crosses, rates_curve, ...)
+    are derived from `content["macro"]` (raw enhanced_macro snapshot).
+    Missing macro → empty values → template elides the corresponding section.
     """
     env = _jinja_env()
     context = {
@@ -482,6 +607,10 @@ def render_brief_email(content: dict, *, user: User | None = None) -> str:
         "as_of":     (content.get("kpis") or {}).get("as_of")
                      or date.today().isoformat(),
     }
+    # 표시광고법 §3 기만표시 방어선: explicitly bind every template macro
+    # variable from real `enhanced_macro` data. Empty values cause the
+    # template to elide the section rather than fall back to stale numbers.
+    context.update(_macro_email_context(content.get("macro")))
     # Wave 6 — colophon provenance scalars. Only claim Alpaca for
     # Alpaca-connected users; otherwise the template elides the section
     # rather than claiming Alpaca Market Data / Alpaca FX as theirs

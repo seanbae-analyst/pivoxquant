@@ -355,13 +355,9 @@
 
   <div class="cv-rule-thin"></div>
 
-  {% set _kpi = kpis_cover | default({
-    'sp_futures_pct':   0.12,
-    'vix_level':        15.8,
-    'us10y_pct':        4.32,
-    'usdkrw':           1342,
-  }) %}
+  {% set _kpi = kpis_cover | default({}) %}
 
+  {% if _kpi and _kpi.sp_futures_pct is not none and _kpi.vix_level is not none and _kpi.us10y_pct is not none and _kpi.usdkrw is not none %}
   <div class="cv-kpi4">
     <div class="cv-kpi">
       <div class="cv-kpi-label">S&amp;P FUTURES</div>
@@ -386,6 +382,7 @@
       <div class="cv-kpi-foot">FX observation, pre-open.</div>
     </div>
   </div>
+  {% endif %}
 
   <p class="cv-foot">
     Prepared for {{ user_name }} &nbsp;·&nbsp; Morning observation only.
@@ -424,11 +421,8 @@
     {% set _PW = _W - _Lp - _Rp %}
     {% set _PH = _H - _Tp - _Bp %}
 
-    {% set _tape = overnight_tape | default([
-      -0.08,-0.05,-0.03,-0.01, 0.02, 0.05, 0.06, 0.04,
-       0.00, 0.03, 0.07, 0.09, 0.11, 0.14, 0.12, 0.10,
-       0.08, 0.05, 0.07, 0.10, 0.11, 0.12, 0.12, 0.12
-    ]) %}
+    {% set _tape = overnight_tape | default([]) %}
+    {% if _tape and _tape | length >= 2 %}
     {% set _tabs = _tape | map('abs') | list %}
     {% set _tmax = _tabs | max %}
     {% if _tmax == 0 %}{% set _tmax = 1 %}{% endif %}
@@ -502,17 +496,16 @@
       US pre-market. Vertical dashes mark session boundaries. This is a record
       of what was observed, not a signal of what will follow.
     </div>
+    {% endif %}
 
+    {% set _p = overnight_prose | default({}) %}
+    {% if _p and (_p.asia or _p.europe or _p.premkt) %}
     <div class="os-prose">
-      {% set _p = overnight_prose | default({
-        'asia':   'Asia observed a measured session — KOSPI held near flat at 2,684, Nikkei closed 0.41% lower against a firmer yen, and Hang Seng recorded a 0.28% gain concentrated in the platform cohort.',
-        'europe': 'Europe opened with the Stoxx 600 up 0.14%, led by industrials. The DAX tracked sideways around prior close while autos recorded a small drag. Gilt yields drifted two basis points higher in early trade.',
-        'premkt': 'US pre-market observation shows S&P futures quoting +0.12% and Nasdaq futures +0.21%, with the largest pre-open tick recorded in the semiconductor cohort. Volumes remain thin through the first hour of the US pre-open window.'
-      }) %}
-      <p>{{ _p.asia }}</p>
-      <p>{{ _p.europe }}</p>
-      <p>{{ _p.premkt }}</p>
+      {% if _p.asia %}<p>{{ _p.asia }}</p>{% endif %}
+      {% if _p.europe %}<p>{{ _p.europe }}</p>{% endif %}
+      {% if _p.premkt %}<p>{{ _p.premkt }}</p>{% endif %}
     </div>
+    {% endif %}
 
   </div>
 
@@ -557,17 +550,9 @@
   plain timetable of scheduled releases. Notes are scheduling detail only.
 </p>
 
-{% set _ml = macro_ladder | default([
-  {'name': 'DXY',          'level': '99.42',   'd1': '-0.14', 'd5': '-0.62', 'range': '97.8 — 106.5', 'spark': [0.20, 0.40, 0.30, 0.50, 0.60, 0.55, 0.45, 0.40]},
-  {'name': 'Oil · WTI',    'level': '82.14',   'd1': '+0.42', 'd5': '+1.28', 'range': '66.1 — 87.4',  'spark': [0.30, 0.38, 0.48, 0.52, 0.58, 0.65, 0.70, 0.72]},
-  {'name': 'Gold',         'level': '2,384',   'd1': '+0.18', 'd5': '+0.94', 'range': '1,992 — 2,421','spark': [0.55, 0.60, 0.62, 0.68, 0.72, 0.78, 0.82, 0.86]},
-  {'name': '10Y Treasury', 'level': '4.32%',   'd1': '-0.02', 'd5': '-0.08', 'range': '3.86 — 4.74',  'spark': [0.62, 0.60, 0.58, 0.56, 0.55, 0.54, 0.53, 0.52]},
-  {'name': '2Y Treasury',  'level': '4.88%',   'd1': '-0.01', 'd5': '-0.04', 'range': '4.42 — 5.02',  'spark': [0.72, 0.70, 0.68, 0.66, 0.65, 0.64, 0.63, 0.62]},
-  {'name': 'VIX',          'level': '15.80',   'd1': '+0.42', 'd5': '-1.20', 'range': '12.1 — 23.4',  'spark': [0.50, 0.45, 0.40, 0.38, 0.36, 0.38, 0.42, 0.40]},
-  {'name': 'MOVE',         'level': '102.4',   'd1': '-0.80', 'd5': '-3.10', 'range': '88.2 — 128.7', 'spark': [0.58, 0.56, 0.52, 0.50, 0.48, 0.46, 0.44, 0.42]},
-  {'name': 'HY Credit OAS','level': '348 bps', 'd1': '+1',    'd5': '-4',    'range': '298 — 412',    'spark': [0.45, 0.46, 0.48, 0.48, 0.46, 0.44, 0.42, 0.40]},
-]) %}
+{% set _ml = macro_ladder | default([]) %}
 
+{% if _ml %}
 <table class="ld-table">
   <thead>
     <tr>
@@ -583,7 +568,9 @@
     {% for r in _ml %}
       {% set _sw = 90 %}
       {% set _sh = 18 %}
-      {% set _sp = r.spark if r.spark else [0.30, 0.40, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50] %}
+      {% set _has_spark = r.spark and (r.spark | length) >= 2 %}
+      {% if _has_spark %}
+      {% set _sp = r.spark %}
       {% set _smax = _sp | max %}
       {% set _smin = _sp | min %}
       {% if _smax == _smin %}{% set _smax = _smin + 0.01 %}{% endif %}
@@ -594,22 +581,28 @@
         {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
       {% endfor %}
       {% set _last = _pts[-1].split(',') %}
+      {% endif %}
       <tr>
         <td><span class="ld-tkr">{{ r.name }}</span></td>
         <td class="num">{{ r.level }}</td>
-        <td class="num {% if r.d1.startswith('+') %}r-pos{% elif r.d1.startswith('-') %}r-neg{% endif %}">{{ r.d1 }}</td>
-        <td class="num {% if r.d5.startswith('+') %}r-pos{% elif r.d5.startswith('-') %}r-neg{% endif %}">{{ r.d5 }}</td>
+        <td class="num {% if r.d1 and r.d1.startswith('+') %}r-pos{% elif r.d1 and r.d1.startswith('-') %}r-neg{% endif %}">{{ r.d1 }}</td>
+        <td class="num {% if r.d5 and r.d5.startswith('+') %}r-pos{% elif r.d5 and r.d5.startswith('-') %}r-neg{% endif %}">{{ r.d5 }}</td>
         <td><span class="ld-note">{{ r.range }}</span></td>
         <td>
+          {% if _has_spark %}
           <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="24" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
             <polyline points="{{ _pts | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
             <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="1.8" fill="#B8956A"/>
           </svg>
+          {% else %}
+          <span class="ld-note">—</span>
+          {% endif %}
         </td>
       </tr>
     {% endfor %}
   </tbody>
 </table>
+{% endif %}
 
 <div class="ld-section-title">Today's calendar · scheduled items</div>
 
@@ -668,19 +661,8 @@
       <div class="fq-quad">
         <div class="fq-quad-label">Q1 · Sector Premarket Heat</div>
         <div class="fq-quad-sub">11 GICS sectors, relative move.</div>
-        {% set _secs = sector_premkt | default([
-          {'n':'Tech',     'v':  0.48},
-          {'n':'Semis',    'v':  0.72},
-          {'n':'Comms',    'v':  0.18},
-          {'n':'Cons.D',   'v': -0.14},
-          {'n':'Cons.S',   'v':  0.08},
-          {'n':'Health',   'v':  0.12},
-          {'n':'Indus',    'v':  0.22},
-          {'n':'Fin',      'v': -0.04},
-          {'n':'Util',     'v': -0.21},
-          {'n':'Energy',   'v':  0.34},
-          {'n':'Real Est', 'v': -0.28},
-        ]) %}
+        {% set _secs = sector_premkt | default([]) %}
+        {% if _secs %}
         <svg viewBox="0 0 240 95" width="100%" height="140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
           {% set _bw = 18 %}
           {% set _gap = 4 %}
@@ -696,42 +678,38 @@
           {% endfor %}
           <line x1="0" y1="{{ _mid }}" x2="240" y2="{{ _mid }}" stroke="#0A0A0A" stroke-width="0.35" opacity="0.5"/>
         </svg>
+        {% else %}
+        <p class="fq-quad-sub" style="font-style:italic; margin-top:8pt;">Sector premarket data unavailable.</p>
+        {% endif %}
       </div>
 
       {# ── Q2 · FX cross table ── #}
       <div class="fq-quad">
         <div class="fq-quad-label">Q2 · FX Cross Observation</div>
         <div class="fq-quad-sub">Six majors, overnight level.</div>
-        {% set _fx = fx_crosses | default([
-          {'p':'EUR/USD', 'l':'1.0842', 'd':'+0.14'},
-          {'p':'USD/JPY', 'l':'154.28', 'd':'-0.08'},
-          {'p':'USD/KRW', 'l':'1,342',  'd':'-0.22'},
-          {'p':'USD/CNH', 'l':'7.242',  'd':'+0.04'},
-          {'p':'GBP/USD', 'l':'1.2642', 'd':'+0.18'},
-          {'p':'AUD/USD', 'l':'0.6521', 'd':'+0.11'},
-        ]) %}
+        {% set _fx = fx_crosses | default([]) %}
+        {% if _fx %}
         <table style="width:100%; border-collapse:collapse; margin-top:4pt; font-family:JetBrains Mono, monospace; font-size:7.6pt; font-variant-numeric:tabular-nums;">
           {% for f in _fx %}
             <tr>
               <td style="padding:2pt 0; color:#0A0A0A;">{{ f.p }}</td>
               <td style="padding:2pt 0; text-align:right; color:#0A0A0A;">{{ f.l }}</td>
               <td style="padding:2pt 0 2pt 8pt; text-align:right;"
-                  class="{% if f.d.startswith('+') %}r-pos{% elif f.d.startswith('-') %}r-neg{% endif %}">{{ f.d }}%</td>
+                  class="{% if f.d and f.d.startswith('+') %}r-pos{% elif f.d and f.d.startswith('-') %}r-neg{% endif %}">{{ f.d }}%</td>
             </tr>
           {% endfor %}
         </table>
+        {% else %}
+        <p class="fq-quad-sub" style="font-style:italic; margin-top:8pt;">FX cross data unavailable.</p>
+        {% endif %}
       </div>
 
       {# ── Q3 · Rates curve ── #}
       <div class="fq-quad">
         <div class="fq-quad-label">Q3 · Treasury Curve</div>
         <div class="fq-quad-sub">2Y · 5Y · 10Y · 30Y level.</div>
-        {% set _curve = rates_curve | default([
-          {'t':'2Y',  'y':4.88},
-          {'t':'5Y',  'y':4.48},
-          {'t':'10Y', 'y':4.32},
-          {'t':'30Y', 'y':4.52}
-        ]) %}
+        {% set _curve = rates_curve | default([]) %}
+        {% if _curve and (_curve | length) >= 2 %}
         {% set _cymax = _curve | map(attribute='y') | list | max %}
         {% set _cymin = _curve | map(attribute='y') | list | min %}
         {% if _cymax == _cymin %}{% set _cymax = _cymin + 0.01 %}{% endif %}
@@ -751,18 +729,17 @@
             <text x="{{ _x }}" y="{{ _y - 4 }}" text-anchor="middle" fill="#0A0A0A" font-size="6.5" font-family="JetBrains Mono, monospace">{{ '%.2f' % c.y }}</text>
           {% endfor %}
         </svg>
+        {% else %}
+        <p class="fq-quad-sub" style="font-style:italic; margin-top:8pt;">Treasury curve data unavailable.</p>
+        {% endif %}
       </div>
 
       {# ── Q4 · Vol term structure ── #}
       <div class="fq-quad">
         <div class="fq-quad-label">Q4 · VIX Term Structure</div>
         <div class="fq-quad-sub">9-day · 1-mo · 3-mo · 6-mo.</div>
-        {% set _vts = vix_term | default([
-          {'t':'VIX9D', 'y':14.2},
-          {'t':'VIX',   'y':15.8},
-          {'t':'VIX3M', 'y':17.1},
-          {'t':'VIX6M', 'y':18.4},
-        ]) %}
+        {% set _vts = vix_term | default([]) %}
+        {% if _vts and (_vts | length) >= 2 %}
         {% set _vmax = _vts | map(attribute='y') | list | max %}
         {% set _vmin = _vts | map(attribute='y') | list | min %}
         {% if _vmax == _vmin %}{% set _vmax = _vmin + 0.01 %}{% endif %}
@@ -782,6 +759,9 @@
             <text x="{{ _x }}" y="{{ _y - 4 }}" text-anchor="middle" fill="#0A0A0A" font-size="6.5" font-family="JetBrains Mono, monospace">{{ '%.1f' % v.y }}</text>
           {% endfor %}
         </svg>
+        {% else %}
+        <p class="fq-quad-sub" style="font-style:italic; margin-top:8pt;">VIX term data unavailable.</p>
+        {% endif %}
       </div>
     </div>
 
