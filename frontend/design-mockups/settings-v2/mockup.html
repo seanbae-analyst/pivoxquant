@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="en" data-price-mode="kr">
+<head>
+  <meta charset="utf-8" />
+  <title>PivoxQuant — /settings v2 (Operations · Brokers · Subscription · Privacy)</title>
+  <meta name="viewport" content="width=1280" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --pq-ink:           #050505;
+      --pq-ink-card:      rgba(255,255,255,0.02);
+      --pq-ivory:         #F5F0E8;
+      --pq-ivory-soft:    rgba(245,240,232,0.82);
+      --pq-ivory-quiet:   rgba(245,240,232,0.55);
+      --pq-ivory-mute:    rgba(245,240,232,0.40);
+      --pq-hairline:      rgba(245,240,232,0.08);
+      --pq-hairline-2:    rgba(245,240,232,0.14);
+      --pq-bronze:        #B8956A;
+      --pq-bronze-light:  #A3845C;
+      --pq-bronze-deep:   #6F5636;
+      --pq-bronze-15:     rgba(184,149,106,0.15);
+      --pq-bronze-08:     rgba(184,149,106,0.08);
+      --pq-positive:      #dc2626;
+      --pq-negative:      #2563eb;
+      --pq-neutral:       rgba(245,240,232,0.55);
+      --pq-error:         #d18888;
+      --pq-text-eyebrow:  10.5px;
+      --pq-track-eyebrow: 0.22em;
+      --pq-track-tight:   -0.02em;
+      --pq-radius-cta:    2px;
+      --pq-radius-card:   4px;
+      --pq-font-display:  "Playfair Display","Source Serif 4",Georgia,serif;
+      --pq-font-serif:    "Source Serif 4","Iowan Old Style",Georgia,serif;
+      --pq-font-mono:     "JetBrains Mono","SF Mono",ui-monospace,monospace;
+      --pq-font-sans:     "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    html, body {
+      background: var(--pq-ink);
+      color: var(--pq-ivory);
+      font-family: var(--pq-font-sans);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01","cv02","cv03","tnum";
+    }
+    .num, .mono {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+      letter-spacing: -0.01em;
+    }
+    .eyebrow {
+      font-family: var(--pq-font-mono);
+      font-size: var(--pq-text-eyebrow);
+      letter-spacing: var(--pq-track-eyebrow);
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+    }
+    .eyebrow.dim { color: var(--pq-ivory-mute); }
+
+    .display-h1 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 48px;
+      line-height: 1.05;
+      letter-spacing: var(--pq-track-tight);
+      color: var(--pq-ivory);
+    }
+    .display-h2 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 30px;
+      line-height: 1.15;
+      letter-spacing: var(--pq-track-tight);
+      color: var(--pq-ivory);
+    }
+    .editorial-body {
+      font-family: var(--pq-font-serif);
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--pq-ivory-soft);
+    }
+    .br { color: var(--pq-bronze); font-style: italic; font-feature-settings: "ss01"; }
+
+    .pq-card {
+      background: var(--pq-ink-card);
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-card);
+      padding: 24px;
+      transition: border-color 240ms cubic-bezier(0.16,1,0.3,1),
+                  background-color 240ms cubic-bezier(0.16,1,0.3,1);
+      position: relative;
+    }
+    .pq-card:hover {
+      border-color: var(--pq-bronze);
+      background: rgba(184,149,106,0.025);
+    }
+    .pq-card .corner {
+      position: absolute;
+      top: 14px; right: 14px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.2em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+      transition: color 240ms;
+    }
+    .pq-card:hover .corner { color: var(--pq-bronze); }
+
+    .pq-hero {
+      padding: 80px 64px 48px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .pq-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      background: var(--pq-bronze);
+      color: var(--pq-ink);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--pq-radius-cta);
+      transition: background-color 200ms;
+    }
+    .pq-cta:hover { background: var(--pq-bronze-light); }
+    .pq-cta-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 20px;
+      background: transparent;
+      color: var(--pq-bronze);
+      border: 1px solid var(--pq-bronze);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--pq-radius-cta);
+    }
+    .pq-cta-ghost:hover { background: var(--pq-bronze-08); }
+    .pq-link {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      border-bottom: 1px solid var(--pq-bronze-15);
+      padding-bottom: 2px;
+    }
+    .pq-link:hover { color: var(--pq-bronze-light); border-bottom-color: var(--pq-bronze-light); }
+
+    .ticker {
+      display: flex; gap: 36px; padding: 10px 24px;
+      border-top: 1px solid var(--pq-hairline);
+      border-bottom: 1px solid var(--pq-hairline);
+      overflow: hidden; white-space: nowrap;
+    }
+    .ticker .row { display:flex; gap:8px; align-items:baseline; font-family: var(--pq-font-mono); font-size: 11.5px; }
+    .ticker .sym { color: var(--pq-ivory); font-weight: 500; letter-spacing: 0.05em; }
+    .ticker .px  { color: var(--pq-ivory-quiet); }
+    .pos { color: var(--pq-positive); }
+    .neg { color: var(--pq-negative); }
+
+    .cfo-status {
+      display: flex; gap: 24px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      font-family: var(--pq-font-mono);
+      font-size: 11px; color: var(--pq-ivory-quiet); letter-spacing: 0.06em;
+    }
+    .cfo-status .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--pq-bronze);
+      box-shadow: 0 0 0 3px rgba(184,149,106,0.18);
+    }
+    .cfo-status .seg { display: flex; gap: 8px; align-items: center; }
+    .cfo-status .seg b { color: var(--pq-ivory); font-weight: 500; }
+
+    /* — Form atoms — */
+    .pq-input {
+      width: 100%;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--pq-hairline-2);
+      border-radius: 2px;
+      padding: 10px 12px;
+      color: var(--pq-ivory);
+      font-family: var(--pq-font-mono);
+      font-size: 13px;
+      letter-spacing: -0.01em;
+      transition: border-color 200ms;
+    }
+    .pq-input:focus {
+      outline: none;
+      border-color: var(--pq-bronze);
+    }
+    .pq-label {
+      font-family: var(--pq-font-mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-quiet);
+    }
+    .pq-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .pq-row:last-child { border-bottom: 0; }
+    .pq-row .label-block { min-width: 0; }
+    .pq-row .label-block .label-name {
+      font-family: var(--pq-font-serif);
+      font-size: 14px;
+      color: var(--pq-ivory);
+    }
+    .pq-row .label-block .label-help {
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      color: var(--pq-ivory-mute);
+      margin-top: 2px;
+    }
+
+    /* — Toggle (matches v1 Toggle component) — */
+    .pq-toggle {
+      position: relative;
+      display: inline-block;
+      width: 36px; height: 20px;
+      background: rgba(245,240,232,0.10);
+      border-radius: 999px;
+      transition: background 200ms;
+      flex-shrink: 0;
+    }
+    .pq-toggle .knob {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 14px; height: 14px;
+      background: var(--pq-ivory);
+      border-radius: 999px;
+      transition: transform 200ms;
+    }
+    .pq-toggle.on { background: var(--pq-bronze); }
+    .pq-toggle.on .knob { transform: translateX(16px); }
+
+    /* — Connection card — */
+    .conn-card {
+      display: grid;
+      grid-template-columns: 56px 1fr auto;
+      gap: 18px;
+      align-items: center;
+      padding: 18px 20px;
+      background: rgba(255,255,255,0.015);
+      border: 1px solid var(--pq-hairline);
+      border-radius: 2px;
+    }
+    .conn-card.connected { border-color: var(--pq-bronze-15); }
+    .conn-card .glyph {
+      width: 56px; height: 56px;
+      border: 1px solid var(--pq-bronze);
+      color: var(--pq-bronze);
+      font-family: var(--pq-font-mono);
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 2px;
+    }
+    .conn-card .name {
+      font-family: var(--pq-font-display);
+      font-size: 20px;
+      color: var(--pq-ivory);
+      line-height: 1.1;
+    }
+    .conn-card .meta {
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      color: var(--pq-ivory-mute);
+      margin-top: 4px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      border: 1px solid var(--pq-bronze-15);
+      color: var(--pq-bronze);
+      border-radius: 2px;
+      margin-left: 6px;
+    }
+    .pill.dim { color: var(--pq-ivory-mute); border-color: var(--pq-hairline-2); }
+    .pill.warn { color: var(--pq-error); border-color: rgba(209,136,136,0.3); }
+
+    /* — Notification matrix — */
+    .notif-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .notif-table th, .notif-table td {
+      padding: 14px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .notif-table th {
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      font-weight: 500;
+    }
+    .notif-table th.center, .notif-table td.center { text-align: center; }
+    .notif-table td .row-name {
+      font-family: var(--pq-font-serif);
+      font-size: 14px;
+      color: var(--pq-ivory);
+    }
+    .notif-table td .row-help {
+      font-family: var(--pq-font-serif);
+      font-size: 12px;
+      color: var(--pq-ivory-mute);
+      margin-top: 2px;
+    }
+    .notif-table tr:last-child td { border-bottom: 0; }
+
+    /* — Tier card — */
+    .tier-card {
+      padding: 22px;
+      border: 1px solid var(--pq-hairline);
+      border-radius: 2px;
+      background: rgba(255,255,255,0.015);
+      position: relative;
+      transition: border-color 240ms;
+    }
+    .tier-card.current { border-color: var(--pq-bronze); background: rgba(184,149,106,0.04); }
+    .tier-card .tier-eyebrow {
+      font-family: var(--pq-font-mono);
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-mute);
+    }
+    .tier-card.current .tier-eyebrow { color: var(--pq-bronze); }
+    .tier-card .tier-name {
+      font-family: var(--pq-font-display);
+      font-size: 28px;
+      color: var(--pq-ivory);
+      margin-top: 6px;
+    }
+    .tier-card .tier-price {
+      font-family: var(--pq-font-mono);
+      font-size: 13px;
+      color: var(--pq-ivory-soft);
+      margin-top: 4px;
+    }
+    .tier-card ul {
+      margin-top: 14px;
+      font-family: var(--pq-font-serif);
+      font-size: 13px;
+      color: var(--pq-ivory-soft);
+      line-height: 1.7;
+    }
+    .tier-card ul li { padding-left: 14px; position: relative; }
+    .tier-card ul li::before {
+      content: "·";
+      position: absolute; left: 0;
+      color: var(--pq-bronze);
+      font-weight: 700;
+    }
+
+    .disclaimer {
+      margin-top: 64px;
+      padding: 18px 24px;
+      border: 1px dashed var(--pq-hairline-2);
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--pq-ivory-mute);
+    }
+    .foot {
+      margin-top: 24px;
+      padding: 24px 0 56px;
+      text-align: center;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.28em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+    }
+    .foot .fleuron { color: var(--pq-bronze); font-size: 14px; letter-spacing: 0; margin: 0 8px; }
+
+    .wordmark { font-family: var(--pq-font-display); font-weight: 600; font-size: 18px; letter-spacing: -0.01em; }
+    .wordmark span { color: var(--pq-bronze); }
+    .topnav {
+      display:flex; align-items:center; justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .topnav nav a {
+      font-family: var(--pq-font-mono); font-size: 11px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--pq-ivory-quiet); margin-left: 28px;
+    }
+    .topnav nav a.active { color: var(--pq-ivory); border-bottom: 1px solid var(--pq-bronze); padding-bottom: 4px; }
+
+    /* — Section anchor rail (left) — */
+    .anchor-rail {
+      position: sticky;
+      top: 24px;
+      align-self: flex-start;
+    }
+    .anchor-rail a {
+      display: block;
+      padding: 10px 0 10px 14px;
+      border-left: 1px solid var(--pq-hairline);
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--pq-ivory-quiet);
+      transition: color 200ms, border-color 200ms;
+    }
+    .anchor-rail a:hover { color: var(--pq-bronze); }
+    .anchor-rail a.active {
+      color: var(--pq-bronze);
+      border-left-color: var(--pq-bronze);
+    }
+    .anchor-rail .num-prefix {
+      color: var(--pq-ivory-mute);
+      margin-right: 8px;
+    }
+    .anchor-rail a.active .num-prefix { color: var(--pq-bronze); }
+  </style>
+</head>
+<body>
+
+  <!-- ════════ TOP NAV ════════ -->
+  <header class="topnav">
+    <div class="flex items-center gap-3">
+      <span class="wordmark">Pivox<span>Quant</span></span>
+      <span class="eyebrow dim ml-3">Beta · Apr 27</span>
+    </div>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Memo</a>
+      <a href="#">Book</a>
+      <a href="#">Watchlist</a>
+      <a href="#">Risk</a>
+      <a href="#">Archive</a>
+      <a href="#" class="active">Settings</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <span class="eyebrow dim">Sean · Pro</span>
+      <span class="num" style="color:var(--pq-ivory-quiet); font-size:11px;">21:38 KST</span>
+    </div>
+  </header>
+
+  <!-- ════════ TOP TICKER ════════ -->
+  <div class="ticker">
+    <div class="row"><span class="sym">SPX</span><span class="px num">5,612.34</span><span class="pos num">+0.42%</span></div>
+    <div class="row"><span class="sym">NDX</span><span class="px num">19,884.12</span><span class="pos num">+0.71%</span></div>
+    <div class="row"><span class="sym">DJI</span><span class="px num">42,118.50</span><span class="neg num">-0.18%</span></div>
+    <div class="row"><span class="sym">KOSPI</span><span class="px num">2,712.04</span><span class="pos num">+0.33%</span></div>
+    <div class="row"><span class="sym">KOSDAQ</span><span class="px num">868.91</span><span class="neg num">-0.21%</span></div>
+    <div class="row"><span class="sym">USD/KRW</span><span class="px num">1,387.20</span><span class="pos num">+0.12%</span></div>
+    <div class="row"><span class="sym">VIX</span><span class="px num">14.82</span><span class="neg num">-2.41%</span></div>
+    <div class="row"><span class="sym">10Y UST</span><span class="px num">4.27%</span><span class="neg num">-3bp</span></div>
+  </div>
+
+  <!-- ════════ LIVING CFO STATUS ════════ -->
+  <div class="max-w-[1280px] mx-auto px-6">
+    <div class="cfo-status">
+      <span class="dot"></span>
+      <span class="seg">CFO ROOM <b>OPEN</b></span>
+      <span class="seg">Brokers <b>2 connected · 1 syncing</b></span>
+      <span class="seg">Plan <b>Pro · renews 14 May</b></span>
+      <span class="seg ml-auto">Last config change <b>27 Apr · 18:42 KST</b></span>
+    </div>
+  </div>
+
+  <!-- ════════ HERO ════════ -->
+  <section class="max-w-[1280px] mx-auto px-6 pq-hero">
+    <div class="eyebrow mb-7">Operations · Brokers · Subscription · Privacy</div>
+
+    <h1 class="display-h1 mb-7" style="max-width: 940px;">
+      The dials that run <span class="br">your CFO room.</span><br/>
+      Adjusted by you, <span class="br">remembered by us.</span>
+    </h1>
+
+    <p class="editorial-body mb-10" style="max-width: 720px;">
+      Identity and persona live on <a href="#" class="pq-link" style="font-size:12px;">Profile ›</a>.
+      Settings is for the operational levers — how you sign in, which brokers stream,
+      which artifacts arrive in your inbox, and how you exercise your <span class="br">data rights.</span>
+    </p>
+
+    <div class="flex items-center gap-4 flex-wrap">
+      <a href="#section-d" class="pq-cta">Manage subscription →</a>
+      <a href="#section-b" class="pq-link">Connect a broker</a>
+      <span class="eyebrow dim ml-4">Drafted by AI · Reviewed by you</span>
+    </div>
+  </section>
+
+  <!-- ════════ MAIN — sticky rail + sections ════════ -->
+  <main class="max-w-[1280px] mx-auto px-6 pt-12 grid grid-cols-12 gap-8">
+
+    <!-- ════════ ANCHOR RAIL ════════ -->
+    <aside class="col-span-2 anchor-rail">
+      <div class="eyebrow mb-3">Sections</div>
+      <a href="#section-a" class="active"><span class="num-prefix">A</span>Identity</a>
+      <a href="#section-b"><span class="num-prefix">B</span>Brokers</a>
+      <a href="#section-c"><span class="num-prefix">C</span>Notifications</a>
+      <a href="#section-d"><span class="num-prefix">D</span>Subscription</a>
+      <a href="#section-e"><span class="num-prefix">E</span>Privacy</a>
+    </aside>
+
+    <!-- ════════ SECTIONS ════════ -->
+    <div class="col-span-10 space-y-16">
+
+      <!-- ══════════════════════════════════════════════════
+           SECTION A — Identity & Security
+           ══════════════════════════════════════════════════ -->
+      <section id="section-a" class="space-y-4">
+        <div class="flex items-end justify-between">
+          <div>
+            <div class="eyebrow mb-2">A · Identity & security</div>
+            <div class="display-h2">Who is signed in.</div>
+          </div>
+          <a href="#" class="pq-link">Profile detail ›</a>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+
+          <!-- Identity card -->
+          <div class="pq-card">
+            <span class="corner">A1 · Identity</span>
+            <div class="eyebrow mb-4">Signed-in as</div>
+
+            <div class="pq-row" style="border:0; padding:0 0 14px;">
+              <div class="label-block">
+                <div class="label-name">Display name</div>
+                <div class="label-help">Used on memos, brag cards, and exports.</div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="num" style="font-size:13px; color:var(--pq-ivory-soft);">Sean Bae</span>
+                <a href="#" class="pq-link" style="font-size:10px;">Edit</a>
+              </div>
+            </div>
+
+            <div class="pq-row">
+              <div class="label-block">
+                <div class="label-name">Email</div>
+                <div class="label-help">Verified · primary contact.</div>
+              </div>
+              <span class="num" style="font-size:12.5px; color:var(--pq-ivory-soft);">seanbae1521@gmail.com</span>
+            </div>
+
+            <div class="pq-row">
+              <div class="label-block">
+                <div class="label-name">Locale</div>
+                <div class="label-help">한국어 / English. Number convention follows locale.</div>
+              </div>
+              <div class="flex gap-2">
+                <span class="pill">한국어</span>
+                <span class="pill dim">English</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sign-in methods card -->
+          <div class="pq-card">
+            <span class="corner">A2 · Sign-in</span>
+            <div class="eyebrow mb-4">How you authenticate</div>
+
+            <div class="pq-row" style="border:0; padding:0 0 14px;">
+              <div class="label-block">
+                <div class="label-name">Google <span class="pill">Linked</span></div>
+                <div class="label-help">seanbae1521@gmail.com · primary login.</div>
+              </div>
+              <a href="#" class="pq-link" style="font-size:10px; color:var(--pq-error); border-bottom-color:rgba(209,136,136,0.3);">Disconnect</a>
+            </div>
+
+            <div class="pq-row">
+              <div class="label-block">
+                <div class="label-name">Kakao <span class="pill dim">Not linked</span></div>
+                <div class="label-help">Add as a backup sign-in method.</div>
+              </div>
+              <a href="#" class="pq-link" style="font-size:10px;">Connect Kakao</a>
+            </div>
+
+            <div class="pq-row">
+              <div class="label-block">
+                <div class="label-name">Password</div>
+                <div class="label-help">OAuth-only — no password set on this account.</div>
+              </div>
+              <span class="eyebrow dim">N/A</span>
+            </div>
+
+            <p class="editorial-body mt-4" style="font-size:12.5px; color:var(--pq-ivory-mute);">
+              At least one OAuth provider must remain connected. Disconnecting your last provider locks the account.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════
+           SECTION B — Brokers (Alpaca BYO + KIS)
+           ══════════════════════════════════════════════════ -->
+      <section id="section-b" class="space-y-4">
+        <div class="flex items-end justify-between">
+          <div>
+            <div class="eyebrow mb-2">B · Brokers · Read-only stream</div>
+            <div class="display-h2">Where your <span class="br">book lives.</span></div>
+          </div>
+          <span class="eyebrow dim">2 of 2 supported</span>
+        </div>
+
+        <p class="editorial-body" style="font-size:14px; max-width: 720px;">
+          PivoxQuant operates brokers on a <span class="br">Bring-Your-Own-Key</span> model.
+          We forward read-only requests under your own license — we never place orders, never store live trading credentials.
+        </p>
+
+        <!-- Alpaca card (CONNECTED state) -->
+        <div class="pq-card">
+          <span class="corner">B1 · Alpaca</span>
+
+          <div class="conn-card connected">
+            <div class="glyph">α</div>
+            <div>
+              <div class="name">Alpaca <span class="pill">Connected</span> <span class="pill">Paper</span></div>
+              <div class="meta">
+                Read-only · last sync <span class="num">27 Apr · 18:38 KST</span> · 12 positions / 1 cash account
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="pq-cta-ghost">Sync now</button>
+              <button class="pq-link" style="color:var(--pq-error); border-bottom-color: rgba(209,136,136,0.3);">Disconnect</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 mt-5 pt-5" style="border-top: 1px solid var(--pq-hairline);">
+            <div>
+              <div class="pq-label">Mode</div>
+              <div class="num mt-1.5" style="font-size:13px; color:var(--pq-ivory-soft);">paper · live disabled</div>
+            </div>
+            <div>
+              <div class="pq-label">Account ID</div>
+              <div class="num mt-1.5" style="font-size:13px; color:var(--pq-ivory-soft);">PA3K2***LZ4</div>
+            </div>
+            <div>
+              <div class="pq-label">Buying power</div>
+              <div class="num mt-1.5" style="font-size:13px; color:var(--pq-ivory-soft);">$98,420.18</div>
+            </div>
+          </div>
+
+          <p class="editorial-body mt-4" style="font-size:12.5px; color:var(--pq-ivory-mute);">
+            Alpaca live trading is hard-disabled at the backend. We reject any request with <span class="num">env="live"</span>.
+          </p>
+        </div>
+
+        <!-- KIS card (DISCONNECTED state) -->
+        <div class="pq-card">
+          <span class="corner">B2 · KIS</span>
+
+          <div class="conn-card">
+            <div class="glyph">韓</div>
+            <div>
+              <div class="name">한국투자증권 <span class="pill dim">Not connected</span></div>
+              <div class="meta">
+                Read-only KR positions and account balance · KOSPI / KOSDAQ symbols.
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="pq-cta">Connect KIS →</button>
+            </div>
+          </div>
+
+          <p class="editorial-body mt-4" style="font-size:12.5px; color:var(--pq-ivory-mute);">
+            KIS order routing is permanently disabled — read-only. You enter your <span class="num">App Key</span>, <span class="num">App Secret</span>, and <span class="num">계좌번호</span> in the connect modal; we encrypt at rest.
+          </p>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════
+           SECTION C — Notifications matrix
+           ══════════════════════════════════════════════════ -->
+      <section id="section-c" class="space-y-4">
+        <div class="flex items-end justify-between">
+          <div>
+            <div class="eyebrow mb-2">C · Notifications · Channels × Events</div>
+            <div class="display-h2">When the CFO <span class="br">should reach you.</span></div>
+          </div>
+          <a href="#" class="pq-link">Quiet hours ›</a>
+        </div>
+
+        <div class="pq-card" style="padding: 0;">
+          <table class="notif-table">
+            <thead>
+              <tr>
+                <th style="padding-left: 24px;">Event</th>
+                <th class="center">Email</th>
+                <th class="center">Push</th>
+                <th class="center" style="padding-right: 24px;">In-app</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding-left: 24px;">
+                  <div class="row-name">Weekly memo · Mon 07:00 KST</div>
+                  <div class="row-help">Drafted weekly editorial brief.</div>
+                </td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center" style="padding-right: 24px;"><span class="pq-toggle on"><span class="knob"></span></span></td>
+              </tr>
+              <tr>
+                <td style="padding-left: 24px;">
+                  <div class="row-name">Earnings pre-brief</div>
+                  <div class="row-help">Drafted 4 days before any holding's print.</div>
+                </td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center" style="padding-right: 24px;"><span class="pq-toggle on"><span class="knob"></span></span></td>
+              </tr>
+              <tr>
+                <td style="padding-left: 24px;">
+                  <div class="row-name">Signal state change</div>
+                  <div class="row-help">POSITIVE / NEGATIVE / NEUTRAL transitions on watchlist.</div>
+                </td>
+                <td class="center"><span class="pq-toggle"><span class="knob"></span></span></td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center" style="padding-right: 24px;"><span class="pq-toggle on"><span class="knob"></span></span></td>
+              </tr>
+              <tr>
+                <td style="padding-left: 24px;">
+                  <div class="row-name">Risk layer breach</div>
+                  <div class="row-help">VaR, concentration, correlation, tail, drawdown thresholds.</div>
+                </td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center" style="padding-right: 24px;"><span class="pq-toggle on"><span class="knob"></span></span></td>
+              </tr>
+              <tr>
+                <td style="padding-left: 24px;">
+                  <div class="row-name">Pulse prompt · Weekly</div>
+                  <div class="row-help">One reflective question for the Companion.</div>
+                </td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center"><span class="pq-toggle"><span class="knob"></span></span></td>
+                <td class="center" style="padding-right: 24px;"><span class="pq-toggle on"><span class="knob"></span></span></td>
+              </tr>
+              <tr>
+                <td style="padding-left: 24px;">
+                  <div class="row-name">Brag card · Monthly</div>
+                  <div class="row-help">Shareable performance artifact.</div>
+                </td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center"><span class="pq-toggle"><span class="knob"></span></span></td>
+                <td class="center" style="padding-right: 24px;"><span class="pq-toggle on"><span class="knob"></span></span></td>
+              </tr>
+              <tr>
+                <td style="padding-left: 24px;">
+                  <div class="row-name">Broker sync error</div>
+                  <div class="row-help">Token refresh, rate-limit, or auth failures.</div>
+                </td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center"><span class="pq-toggle on"><span class="knob"></span></span></td>
+                <td class="center" style="padding-right: 24px;"><span class="pq-toggle on"><span class="knob"></span></span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="pq-card">
+            <span class="corner">C1 · Push</span>
+            <div class="eyebrow mb-3">Push channel · device permission</div>
+            <div class="pq-row" style="border:0; padding:0;">
+              <div class="label-block">
+                <div class="label-name">Browser push</div>
+                <div class="label-help">Granted · MacBook Pro · Chrome 137. <a href="#" class="pq-link" style="font-size:10px;">Test push</a></div>
+              </div>
+              <span class="pq-toggle on"><span class="knob"></span></span>
+            </div>
+          </div>
+
+          <div class="pq-card">
+            <span class="corner">C2 · Email</span>
+            <div class="eyebrow mb-3">Email delivery</div>
+            <div class="pq-row" style="border:0; padding:0;">
+              <div class="label-block">
+                <div class="label-name">Send to seanbae1521@gmail.com</div>
+                <div class="label-help">All artifacts arrive in your inbox as PDF + HTML.</div>
+              </div>
+              <span class="pq-toggle on"><span class="knob"></span></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════
+           SECTION D — Subscription
+           ══════════════════════════════════════════════════ -->
+      <section id="section-d" class="space-y-4">
+        <div class="flex items-end justify-between">
+          <div>
+            <div class="eyebrow mb-2">D · Subscription · Stripe</div>
+            <div class="display-h2">The plan you're <span class="br">on.</span></div>
+          </div>
+          <a href="#" class="pq-link">Billing portal ›</a>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="tier-card">
+            <div class="tier-eyebrow">Tier 1</div>
+            <div class="tier-name">Free</div>
+            <div class="tier-price">₩0 / month</div>
+            <ul>
+              <li>Watchlist · 5 symbols</li>
+              <li>Weekly memo · read-only</li>
+              <li>Risk dashboard · 30-day window</li>
+            </ul>
+          </div>
+          <div class="tier-card current">
+            <div class="tier-eyebrow">Current · Tier 2</div>
+            <div class="tier-name">Pro</div>
+            <div class="tier-price">₩9,900 / month · renews 14 May 2026</div>
+            <ul>
+              <li>Unlimited watchlist + alerts</li>
+              <li>Earnings pre-brief · all holdings</li>
+              <li>Brag card · monthly · email + PDF</li>
+              <li>Broker sync · Alpaca paper + KIS read-only</li>
+              <li>Persona v3 classifier · 90D window</li>
+            </ul>
+            <div class="mt-5 flex gap-2">
+              <a href="#" class="pq-cta-ghost">Manage billing</a>
+              <a href="#" class="pq-link" style="font-size:10px; color:var(--pq-error); border-bottom-color:rgba(209,136,136,0.3);">Cancel plan</a>
+            </div>
+          </div>
+          <div class="tier-card">
+            <div class="tier-eyebrow">Tier 3 · Premium</div>
+            <div class="tier-name">Premium</div>
+            <div class="tier-price">₩19,900 / month</div>
+            <ul>
+              <li>Everything in Pro</li>
+              <li>Companion · reflective journal agent</li>
+              <li>Persona v3 · 365D rolling window</li>
+              <li>Peer benchmark · all cohorts</li>
+              <li>Priority queue · same-day briefs</li>
+            </ul>
+            <div class="mt-5">
+              <a href="#" class="pq-cta">Upgrade to Premium →</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="pq-card">
+          <span class="corner">D1 · Receipt</span>
+          <div class="grid grid-cols-4 gap-6">
+            <div>
+              <div class="pq-label">Last invoice</div>
+              <div class="num mt-1.5" style="font-size:13px; color:var(--pq-ivory-soft);">14 Apr 2026</div>
+            </div>
+            <div>
+              <div class="pq-label">Amount</div>
+              <div class="num mt-1.5" style="font-size:13px; color:var(--pq-ivory-soft);">₩9,900</div>
+            </div>
+            <div>
+              <div class="pq-label">Method</div>
+              <div class="num mt-1.5" style="font-size:13px; color:var(--pq-ivory-soft);">Visa · 4242</div>
+            </div>
+            <div>
+              <div class="pq-label">Receipts</div>
+              <div class="mt-1.5"><a href="#" class="pq-link" style="font-size:10px;">Open in Stripe ›</a></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════
+           SECTION E — Privacy (Cookie / Export / Delete)
+           ══════════════════════════════════════════════════ -->
+      <section id="section-e" class="space-y-4">
+        <div class="flex items-end justify-between">
+          <div>
+            <div class="eyebrow mb-2">E · Privacy · PIPA · GDPR</div>
+            <div class="display-h2">Your data is <span class="br">yours.</span></div>
+          </div>
+          <a href="#" class="pq-link">Privacy policy ›</a>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+
+          <!-- Cookie consent -->
+          <div class="pq-card">
+            <span class="corner">E1 · Consent</span>
+            <div class="eyebrow mb-4">Cookie consent · Granular</div>
+
+            <div class="pq-row" style="border:0; padding:0 0 14px;">
+              <div class="label-block">
+                <div class="label-name">Strictly necessary</div>
+                <div class="label-help">Auth session, CSRF, locale. Required for sign-in.</div>
+              </div>
+              <span class="pill">Always on</span>
+            </div>
+
+            <div class="pq-row">
+              <div class="label-block">
+                <div class="label-name">Analytics</div>
+                <div class="label-help">Anonymized page-view counts. Self-hosted.</div>
+              </div>
+              <span class="pq-toggle on"><span class="knob"></span></span>
+            </div>
+
+            <div class="pq-row">
+              <div class="label-block">
+                <div class="label-name">Performance</div>
+                <div class="label-help">Web Vitals · LCP / CLS / INP — for engineering.</div>
+              </div>
+              <span class="pq-toggle on"><span class="knob"></span></span>
+            </div>
+
+            <div class="pq-row">
+              <div class="label-block">
+                <div class="label-name">Marketing</div>
+                <div class="label-help">Off by default. We do not use ad-tech cookies.</div>
+              </div>
+              <span class="pq-toggle"><span class="knob"></span></span>
+            </div>
+          </div>
+
+          <!-- Data export -->
+          <div class="pq-card">
+            <span class="corner">E2 · Export</span>
+            <div class="eyebrow mb-4">Data export · PIPA Art. 35</div>
+
+            <p class="editorial-body mb-5" style="font-size:13px;">
+              Download a portable JSON copy of your account: positions, watchlist, persona snapshots, pulse history, and delivered artifact metadata.
+            </p>
+
+            <div class="pq-row" style="border:0; padding:0 0 14px;">
+              <div class="label-block">
+                <div class="label-name">Last export</div>
+                <div class="label-help"><span class="num">14 Mar 2026 · 11:02 KST</span> · 2.3 MB</div>
+              </div>
+              <a href="#" class="pq-link" style="font-size:10px;">Download again</a>
+            </div>
+
+            <a href="#" class="pq-cta mt-4">Request new export →</a>
+            <p class="editorial-body mt-3" style="font-size:11.5px; color:var(--pq-ivory-mute);">
+              Email delivery within <span class="num">24 h</span>. Includes Companion archive on Premium.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Danger zone -->
+        <div class="pq-card" style="border-color: rgba(209,136,136,0.18);">
+          <span class="corner" style="color: var(--pq-error);">E3 · Danger zone</span>
+          <div class="eyebrow mb-3" style="color: var(--pq-error);">Account deletion · PIPA Art. 36</div>
+
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <div class="display-h2 mb-3" style="font-size:22px;">Sign out</div>
+              <p class="editorial-body mb-4" style="font-size:13px;">
+                Ends this browser session. Your data is preserved.
+              </p>
+              <a href="#" class="pq-cta-ghost">Sign out →</a>
+            </div>
+
+            <div>
+              <div class="display-h2 mb-3" style="font-size:22px;">Delete account</div>
+              <p class="editorial-body mb-4" style="font-size:13px;">
+                Permanent. Removes positions, watchlists, persona snapshots, and delivered artifacts. PIPA · 30-day purge after request.
+              </p>
+              <a href="mailto:seanbae1521@gmail.com?subject=Account%20Deletion%20Request" class="pq-link" style="color:var(--pq-error); border-bottom-color: rgba(209,136,136,0.3);">Contact support to delete</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ════════ DISCLAIMER ════════ -->
+      <div class="disclaimer">
+        <strong style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif); font-style:italic;">
+          Notice / 면책 고지.
+        </strong>
+        &nbsp; PivoxQuant produces editorial memos and analytical artifacts for the user&rsquo;s own
+        record-keeping. Brokerage connections are read-only — no order routing, no investment advice, no recommendation to buy or sell.
+        본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며,
+        모든 의사결정과 책임은 이용자 본인에게 있습니다.
+      </div>
+
+      <!-- ════════ FOOT ════════ -->
+      <div class="foot">
+        <span>PivoxQuant</span>
+        <span class="fleuron">❦</span>
+        <span>Settings · Volume 14</span>
+        <span class="fleuron">❦</span>
+        <span>Seoul · 27 April 2026</span>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>

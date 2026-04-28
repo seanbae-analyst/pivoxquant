@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en" data-price-mode="kr">
+<head>
+  <meta charset="utf-8" />
+  <title>PivoxQuant — /profile v2 (Identity · Persona · Living CFO)</title>
+  <meta name="viewport" content="width=1280" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --pq-ink:           #050505;
+      --pq-ink-card:      rgba(255,255,255,0.02);
+      --pq-ivory:         #F5F0E8;
+      --pq-ivory-soft:    rgba(245,240,232,0.82);
+      --pq-ivory-quiet:   rgba(245,240,232,0.55);
+      --pq-ivory-mute:    rgba(245,240,232,0.40);
+      --pq-hairline:      rgba(245,240,232,0.08);
+      --pq-hairline-2:    rgba(245,240,232,0.14);
+      --pq-bronze:        #B8956A;
+      --pq-bronze-light:  #A3845C;
+      --pq-bronze-deep:   #6F5636;
+      --pq-bronze-15:     rgba(184,149,106,0.15);
+      --pq-bronze-08:     rgba(184,149,106,0.08);
+      --pq-positive:      #dc2626;
+      --pq-negative:      #2563eb;
+      --pq-neutral:       rgba(245,240,232,0.55);
+      --pq-text-eyebrow:  10.5px;
+      --pq-track-eyebrow: 0.22em;
+      --pq-track-tight:   -0.02em;
+      --pq-radius-cta:    2px;
+      --pq-radius-card:   4px;
+      --pq-font-display:  "Playfair Display","Source Serif 4",Georgia,serif;
+      --pq-font-serif:    "Source Serif 4","Iowan Old Style",Georgia,serif;
+      --pq-font-mono:     "JetBrains Mono","SF Mono",ui-monospace,monospace;
+      --pq-font-sans:     "Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    }
+    html, body {
+      background: var(--pq-ink);
+      color: var(--pq-ivory);
+      font-family: var(--pq-font-sans);
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01","cv02","cv03","tnum";
+    }
+    .num, .mono {
+      font-family: var(--pq-font-mono);
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+      letter-spacing: -0.01em;
+    }
+    .eyebrow {
+      font-family: var(--pq-font-mono);
+      font-size: var(--pq-text-eyebrow);
+      letter-spacing: var(--pq-track-eyebrow);
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+    }
+    .eyebrow.dim { color: var(--pq-ivory-mute); }
+    .display-h1 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 48px;
+      line-height: 1.05;
+      letter-spacing: var(--pq-track-tight);
+      color: var(--pq-ivory);
+    }
+    .display-h2 {
+      font-family: var(--pq-font-display);
+      font-weight: 500;
+      font-size: 30px;
+      line-height: 1.15;
+      letter-spacing: var(--pq-track-tight);
+      color: var(--pq-ivory);
+    }
+    .editorial-body {
+      font-family: var(--pq-font-serif);
+      font-size: 17px;
+      line-height: 1.55;
+      color: var(--pq-ivory-soft);
+    }
+    .br { color: var(--pq-bronze); font-style: italic; font-feature-settings: "ss01"; }
+
+    .pq-card {
+      background: var(--pq-ink-card);
+      border: 1px solid var(--pq-hairline);
+      border-radius: var(--pq-radius-card);
+      padding: 24px;
+      transition: border-color 240ms cubic-bezier(0.16,1,0.3,1),
+                  background-color 240ms cubic-bezier(0.16,1,0.3,1);
+      position: relative;
+    }
+    .pq-card:hover {
+      border-color: var(--pq-bronze);
+      background: rgba(184,149,106,0.025);
+    }
+    .pq-card .corner {
+      position: absolute;
+      top: 14px; right: 14px;
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      letter-spacing: 0.2em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+      transition: color 240ms;
+    }
+    .pq-card:hover .corner { color: var(--pq-bronze); }
+
+    .pq-hero {
+      padding: 80px 64px 48px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .pq-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      background: var(--pq-bronze);
+      color: var(--pq-ink);
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border-radius: var(--pq-radius-cta);
+      transition: background-color 200ms;
+    }
+    .pq-cta:hover { background: var(--pq-bronze-light); }
+    .pq-link {
+      font-family: var(--pq-font-mono);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--pq-bronze);
+      border-bottom: 1px solid var(--pq-bronze-15);
+      padding-bottom: 2px;
+    }
+    .pq-link:hover { color: var(--pq-bronze-light); border-bottom-color: var(--pq-bronze-light); }
+
+    .ticker {
+      display: flex; gap: 36px; padding: 10px 24px;
+      border-top: 1px solid var(--pq-hairline);
+      border-bottom: 1px solid var(--pq-hairline);
+      overflow: hidden; white-space: nowrap;
+    }
+    .ticker .row { display:flex; gap:8px; align-items:baseline; font-family: var(--pq-font-mono); font-size: 11.5px; }
+    .ticker .sym { color: var(--pq-ivory); font-weight: 500; letter-spacing: 0.05em; }
+    .ticker .px  { color: var(--pq-ivory-quiet); }
+    .pos { color: var(--pq-positive); }
+    .neg { color: var(--pq-negative); }
+
+    .cfo-status {
+      display: flex; gap: 24px; align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      font-family: var(--pq-font-mono);
+      font-size: 11px; color: var(--pq-ivory-quiet); letter-spacing: 0.06em;
+    }
+    .cfo-status .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--pq-bronze);
+      box-shadow: 0 0 0 3px rgba(184,149,106,0.18);
+    }
+    .cfo-status .seg { display: flex; gap: 8px; align-items: center; }
+    .cfo-status .seg b { color: var(--pq-ivory); font-weight: 500; }
+
+    .gauge {
+      height: 4px; background: rgba(245,240,232,0.06);
+      position: relative; overflow: hidden;
+    }
+    .gauge > i {
+      display:block; height: 100%;
+      background: linear-gradient(90deg, var(--pq-bronze-deep), var(--pq-bronze));
+    }
+
+    /* Persona evolution timeline (CSS-only, no chart lib) */
+    .timeline {
+      position: relative;
+      height: 120px;
+      width: 100%;
+      border-bottom: 1px solid var(--pq-hairline);
+      border-top: 1px solid var(--pq-hairline);
+    }
+    .timeline svg { width: 100%; height: 100%; display:block; }
+    .tl-axis {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      font-family: var(--pq-font-mono);
+      font-size: 9.5px;
+      color: var(--pq-ivory-mute);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding-top: 6px;
+    }
+
+    .dim-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+      align-items: baseline;
+    }
+    .dim-row:last-child { border-bottom: 0; }
+    .dim-row .dim-name {
+      font-family: var(--pq-font-display);
+      font-size: 17px;
+      color: var(--pq-ivory);
+    }
+    .dim-row .dim-quote {
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      color: var(--pq-ivory-quiet);
+      margin-top: 4px;
+      line-height: 1.5;
+      max-width: 100%;
+    }
+    .dim-row .dim-score {
+      font-family: var(--pq-font-mono);
+      font-size: 13.5px;
+      color: var(--pq-bronze);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .trait-chip {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px;
+      border: 1px solid var(--pq-bronze-15);
+      color: var(--pq-bronze);
+      font-family: var(--pq-font-mono);
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      margin: 0 6px 6px 0;
+    }
+
+    .pulse-row {
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      gap: 14px;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .pulse-row:last-child { border-bottom: 0; }
+
+    .disclaimer {
+      margin-top: 64px;
+      padding: 18px 24px;
+      border: 1px dashed var(--pq-hairline-2);
+      font-family: var(--pq-font-serif);
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--pq-ivory-mute);
+    }
+    .foot {
+      margin-top: 24px;
+      padding: 24px 0 56px;
+      text-align: center;
+      font-family: var(--pq-font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.28em;
+      color: var(--pq-ivory-mute);
+      text-transform: uppercase;
+    }
+    .foot .fleuron { color: var(--pq-bronze); font-size: 14px; letter-spacing: 0; margin: 0 8px; }
+
+    .wordmark { font-family: var(--pq-font-display); font-weight: 600; font-size: 18px; letter-spacing: -0.01em; }
+    .wordmark span { color: var(--pq-bronze); }
+    .topnav {
+      display:flex; align-items:center; justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--pq-hairline);
+    }
+    .topnav nav a {
+      font-family: var(--pq-font-mono); font-size: 11px;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--pq-ivory-quiet); margin-left: 28px;
+    }
+    .topnav nav a.active { color: var(--pq-ivory); border-bottom: 1px solid var(--pq-bronze); padding-bottom: 4px; }
+
+    /* Avatar — bronze ring monogram */
+    .avatar {
+      width: 96px; height: 96px;
+      border: 1px solid var(--pq-bronze);
+      color: var(--pq-bronze);
+      font-family: var(--pq-font-mono);
+      font-size: 28px;
+      letter-spacing: 0.04em;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 999px;
+    }
+
+    /* Peer-benchmark mini gauge */
+    .peer-track {
+      position: relative;
+      height: 6px;
+      background: rgba(245,240,232,0.06);
+      border-radius: 1px;
+    }
+    .peer-track .you {
+      position: absolute;
+      top: -5px;
+      width: 2px;
+      height: 16px;
+      background: var(--pq-bronze);
+    }
+    .peer-track .median {
+      position: absolute;
+      top: 0;
+      width: 1px;
+      height: 6px;
+      background: var(--pq-ivory-mute);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ════════ TOP NAV ════════ -->
+  <header class="topnav">
+    <div class="flex items-center gap-3">
+      <span class="wordmark">Pivox<span>Quant</span></span>
+      <span class="eyebrow dim ml-3">Beta · Apr 27</span>
+    </div>
+    <nav>
+      <a href="#">Home</a>
+      <a href="#">Memo</a>
+      <a href="#">Book</a>
+      <a href="#">Watchlist</a>
+      <a href="#">Risk</a>
+      <a href="#">Archive</a>
+      <a href="#" class="active">Profile</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <span class="eyebrow dim">Sean · Pro</span>
+      <span class="num" style="color:var(--pq-ivory-quiet); font-size:11px;">21:38 KST</span>
+    </div>
+  </header>
+
+  <!-- ════════ TOP TICKER ════════ -->
+  <div class="ticker">
+    <div class="row"><span class="sym">SPX</span><span class="px num">5,612.34</span><span class="pos num">+0.42%</span></div>
+    <div class="row"><span class="sym">NDX</span><span class="px num">19,884.12</span><span class="pos num">+0.71%</span></div>
+    <div class="row"><span class="sym">DJI</span><span class="px num">42,118.50</span><span class="neg num">-0.18%</span></div>
+    <div class="row"><span class="sym">KOSPI</span><span class="px num">2,712.04</span><span class="pos num">+0.33%</span></div>
+    <div class="row"><span class="sym">KOSDAQ</span><span class="px num">868.91</span><span class="neg num">-0.21%</span></div>
+    <div class="row"><span class="sym">USD/KRW</span><span class="px num">1,387.20</span><span class="pos num">+0.12%</span></div>
+    <div class="row"><span class="sym">VIX</span><span class="px num">14.82</span><span class="neg num">-2.41%</span></div>
+    <div class="row"><span class="sym">10Y UST</span><span class="px num">4.27%</span><span class="neg num">-3bp</span></div>
+  </div>
+
+  <!-- ════════ LIVING CFO STATUS ════════ -->
+  <div class="max-w-[1280px] mx-auto px-6">
+    <div class="cfo-status">
+      <span class="dot"></span>
+      <span class="seg">CFO ROOM <b>OPEN</b></span>
+      <span class="seg">Persona last refreshed <b>27 Apr · 07:00 KST</b></span>
+      <span class="seg">Pulse cadence <b>Weekly</b></span>
+      <span class="seg ml-auto">Companion · <b>Closed Beta</b></span>
+    </div>
+  </div>
+
+  <!-- ════════ HERO ════════ -->
+  <section class="max-w-[1280px] mx-auto px-6 pq-hero">
+    <div class="eyebrow mb-7">Identity · Persona · Living CFO</div>
+
+    <h1 class="display-h1 mb-7" style="max-width: 940px;">
+      Who you are, when the <span class="br">tape moves.</span><br/>
+      Defensive Allocator <span class="br">· v3.</span>
+    </h1>
+
+    <p class="editorial-body mb-10" style="max-width: 720px;">
+      Across the last 90 days you held through three drawdowns, trimmed twice into strength,
+      and rotated cash on schedule. Your declared persona and your trades are
+      <span class="br">in agreement</span> for the second consecutive quarter.
+    </p>
+
+    <div class="flex items-center gap-4 flex-wrap">
+      <a href="#" class="pq-cta">Retake assessment →</a>
+      <a href="#" class="pq-link">Export agent memory</a>
+      <span class="eyebrow dim ml-4">Drafted by AI · Reviewed by you</span>
+    </div>
+  </section>
+
+  <main class="max-w-[1280px] mx-auto px-6 pt-12">
+
+    <!-- ════════ BLOCK 1 — Identity card + Persona V2 hero ════════ -->
+    <section class="grid grid-cols-12 gap-3 mb-12">
+
+      <!-- Identity card (left, 4 cols) -->
+      <div class="pq-card col-span-4" style="min-height: 320px;">
+        <span class="corner">Edit ›</span>
+        <div class="eyebrow mb-5">01 · Identity</div>
+        <div class="flex items-center gap-5 mb-6">
+          <div class="avatar">SB</div>
+          <div class="min-w-0">
+            <div class="display-h2" style="font-size:22px;">Sean Bae</div>
+            <div class="num mt-1" style="font-size:11.5px; color:var(--pq-ivory-quiet);">seanbae1521@gmail.com</div>
+            <div class="mt-3 flex items-center gap-2">
+              <span class="eyebrow" style="border:1px solid var(--pq-bronze); padding:2px 8px;">PRO</span>
+              <span class="eyebrow dim">via Google</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--pq-hairline); padding-top:14px;">
+          <div class="eyebrow dim mb-2">Investor type · 20-Q calibration</div>
+          <div class="display-h2" style="font-size:18px;">Risk-managed Growth</div>
+          <p class="editorial-body mt-2" style="font-size:13px;">
+            Last calibrated <span class="num">14 Mar 2026.</span> Recalibrate after material life events
+            or every six months.
+          </p>
+        </div>
+      </div>
+
+      <!-- PersonaV2 hero card (right, 8 cols) -->
+      <div class="pq-card col-span-8" style="min-height: 320px;">
+        <span class="corner">Persona detail ›</span>
+        <div class="eyebrow mb-5">02 · Observed persona · 90 day window</div>
+
+        <div class="flex items-baseline justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <div class="display-h1" style="font-size:40px;">Defensive Allocator</div>
+            <div class="num mt-2" style="font-size:12.5px; color:var(--pq-ivory-quiet); letter-spacing:0.18em;">
+              SCORE 78 · CONFIDENCE 0.86 · v3
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="eyebrow dim">DECLARED</div>
+            <div class="num mt-1" style="font-size:13px; color:var(--pq-ivory-soft);">Risk-managed Growth · 64</div>
+            <div class="num mt-0.5" style="font-size:10.5px; color:var(--pq-bronze); letter-spacing:0.18em;">
+              ALIGNED · DRIFT 0.12σ
+            </div>
+          </div>
+        </div>
+
+        <p class="editorial-body mb-5" style="font-size:14px; max-width: 620px;">
+          You behave like a steward — small position sizes, fast cuts on losers, slow adds on winners.
+          When volatility rises, you trim before adding. The book reflects a
+          <span class="br">lower-octane temperament</span> than your declared profile suggests.
+        </p>
+
+        <div>
+          <span class="trait-chip">Patient</span>
+          <span class="trait-chip">Cash-aware</span>
+          <span class="trait-chip">Sector-balanced</span>
+          <span class="trait-chip">Cuts losers fast</span>
+          <span class="trait-chip">Slow adds</span>
+          <span class="trait-chip">Low turnover</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════ BLOCK 2 — Persona Evolution timeline ════════ -->
+    <section class="pq-card mb-12" style="padding: 32px;">
+      <span class="corner">Full timeline ›</span>
+      <div class="flex items-end justify-between mb-5">
+        <div>
+          <div class="eyebrow mb-2">03 · Evolution · 12-month rolling window</div>
+          <div class="display-h2">How your persona <span class="br">drifted.</span></div>
+        </div>
+        <div class="flex gap-2">
+          <span class="eyebrow" style="border:1px solid var(--pq-bronze); padding:4px 10px;">90D</span>
+          <span class="eyebrow dim" style="border:1px solid var(--pq-hairline-2); padding:4px 10px;">180D</span>
+          <span class="eyebrow dim" style="border:1px solid var(--pq-hairline-2); padding:4px 10px;">365D</span>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+          <!-- gradient fill -->
+          <defs>
+            <linearGradient id="bronze-fade" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="rgba(184,149,106,0.18)" />
+              <stop offset="100%" stop-color="rgba(184,149,106,0)" />
+            </linearGradient>
+          </defs>
+          <!-- declared persona horizontal reference -->
+          <line x1="0" x2="1200" y1="55" y2="55" stroke="rgba(245,240,232,0.18)" stroke-dasharray="3,5" />
+          <text x="6" y="50" fill="rgba(245,240,232,0.40)" font-family="JetBrains Mono" font-size="9" letter-spacing="0.2em">DECLARED · 64</text>
+          <!-- observed persona path -->
+          <polyline fill="url(#bronze-fade)" stroke="none"
+            points="0,80 100,76 200,72 300,68 400,72 500,66 600,58 700,52 800,48 900,42 1000,38 1100,40 1200,35 1200,120 0,120" />
+          <polyline fill="none" stroke="var(--pq-bronze)" stroke-width="1.6"
+            points="0,80 100,76 200,72 300,68 400,72 500,66 600,58 700,52 800,48 900,42 1000,38 1100,40 1200,35" />
+          <!-- annotation circle for current -->
+          <circle cx="1200" cy="35" r="4" fill="var(--pq-bronze)" />
+        </svg>
+      </div>
+
+      <div class="tl-axis mt-2">
+        <div>MAY '25</div><div>JUN</div><div>JUL</div><div>AUG</div><div>SEP</div><div>OCT</div>
+        <div>NOV</div><div>DEC</div><div>JAN '26</div><div>FEB</div><div>MAR</div><div>APR</div>
+      </div>
+
+      <p class="editorial-body mt-6" style="font-size:14px; max-width: 720px;">
+        Trended from <span class="br">Steady Accumulator (62)</span> through three regime shifts
+        toward <span class="br">Defensive Allocator (78)</span>. The drift accelerated in
+        Feb 2026 — coinciding with your sector trim around <span class="num">NVDA</span> earnings.
+      </p>
+    </section>
+
+    <!-- ════════ BLOCK 3 — 6 Dimensions ════════ -->
+    <section class="grid grid-cols-12 gap-3 mb-12">
+      <div class="col-span-12 mb-3 flex items-end justify-between">
+        <div>
+          <div class="eyebrow mb-2">04 · The six dimensions</div>
+          <div class="display-h2">What the persona is made of.</div>
+        </div>
+        <a href="#" class="pq-link">Methodology ›</a>
+      </div>
+
+      <!-- Dim 1 -->
+      <div class="pq-card col-span-6">
+        <span class="corner">01</span>
+        <div class="dim-row" style="border:0; padding:0;">
+          <div>
+            <div class="dim-name">Risk tolerance</div>
+            <p class="dim-quote">
+              "You sized down twice in February before VIX spiked. Tail-aware, not tail-chasing."
+            </p>
+          </div>
+          <div class="dim-score">7.2 / 10</div>
+        </div>
+        <div class="gauge mt-4"><i style="width:72%;"></i></div>
+      </div>
+
+      <!-- Dim 2 -->
+      <div class="pq-card col-span-6">
+        <span class="corner">02</span>
+        <div class="dim-row" style="border:0; padding:0;">
+          <div>
+            <div class="dim-name">Time horizon</div>
+            <p class="dim-quote">
+              "Median holding period 47 days. Top decile of your peer cohort by patience."
+            </p>
+          </div>
+          <div class="dim-score">8.1 / 10</div>
+        </div>
+        <div class="gauge mt-4"><i style="width:81%;"></i></div>
+      </div>
+
+      <!-- Dim 3 -->
+      <div class="pq-card col-span-6">
+        <span class="corner">03</span>
+        <div class="dim-row" style="border:0; padding:0;">
+          <div>
+            <div class="dim-name">Diversification</div>
+            <p class="dim-quote">
+              "Twelve open names across six sectors. Concentration ratio 41% in Tech — flagged."
+            </p>
+          </div>
+          <div class="dim-score">6.4 / 10</div>
+        </div>
+        <div class="gauge mt-4"><i style="width:64%;"></i></div>
+      </div>
+
+      <!-- Dim 4 -->
+      <div class="pq-card col-span-6">
+        <span class="corner">04</span>
+        <div class="dim-row" style="border:0; padding:0;">
+          <div>
+            <div class="dim-name">Sector lean</div>
+            <p class="dim-quote">
+              "Tech-heavy with a defensive tilt: <span class='num'>AAPL</span>, <span class='num'>MSFT</span>, <span class='num'>005930.KS</span> as anchors."
+            </p>
+          </div>
+          <div class="dim-score">7.0 / 10</div>
+        </div>
+        <div class="gauge mt-4"><i style="width:70%;"></i></div>
+      </div>
+
+      <!-- Dim 5 -->
+      <div class="pq-card col-span-6">
+        <span class="corner">05</span>
+        <div class="dim-row" style="border:0; padding:0;">
+          <div>
+            <div class="dim-name">Behavioral pattern</div>
+            <p class="dim-quote">
+              "No disposition effect detected. You let winners run; you cut losers within 2σ moves."
+            </p>
+          </div>
+          <div class="dim-score">8.6 / 10</div>
+        </div>
+        <div class="gauge mt-4"><i style="width:86%;"></i></div>
+      </div>
+
+      <!-- Dim 6 -->
+      <div class="pq-card col-span-6">
+        <span class="corner">06</span>
+        <div class="dim-row" style="border:0; padding:0;">
+          <div>
+            <div class="dim-name">Reaction style</div>
+            <p class="dim-quote">
+              "Slower than median peer to chase post-earnings moves. Reads the second day."
+            </p>
+          </div>
+          <div class="dim-score">7.4 / 10</div>
+        </div>
+        <div class="gauge mt-4"><i style="width:74%;"></i></div>
+      </div>
+    </section>
+
+    <!-- ════════ BLOCK 4 — Peer benchmark ════════ -->
+    <section class="pq-card mb-12" style="padding: 32px;">
+      <span class="corner">All cohorts ›</span>
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <div class="eyebrow mb-2">05 · Peer benchmark · Defensive Allocator cohort</div>
+          <div class="display-h2">How you read against <span class="br">your tribe.</span></div>
+        </div>
+        <div class="num" style="font-size:11px; color:var(--pq-ivory-mute); letter-spacing:0.18em; text-transform:uppercase;">
+          n = 412 · 90D
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-x-12 gap-y-7">
+        <div>
+          <div class="flex justify-between mb-2.5">
+            <span class="eyebrow">Sharpe (90d)</span>
+            <span class="num" style="font-size:12.5px; color:var(--pq-ivory-soft);">1.42 · top 18%</span>
+          </div>
+          <div class="peer-track">
+            <span class="median" style="left: 50%;"></span>
+            <span class="you" style="left: 82%;"></span>
+          </div>
+          <div class="num mt-1.5" style="font-size:9.5px; color:var(--pq-ivory-mute); letter-spacing:0.16em;">YOU · BRONZE BAR &nbsp; · &nbsp; MEDIAN · IVORY TICK</div>
+        </div>
+
+        <div>
+          <div class="flex justify-between mb-2.5">
+            <span class="eyebrow">Max drawdown</span>
+            <span class="num" style="font-size:12.5px; color:var(--pq-ivory-soft);">-6.8% · top 24%</span>
+          </div>
+          <div class="peer-track">
+            <span class="median" style="left: 50%;"></span>
+            <span class="you" style="left: 76%;"></span>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between mb-2.5">
+            <span class="eyebrow">Turnover</span>
+            <span class="num" style="font-size:12.5px; color:var(--pq-ivory-soft);">0.41 · bottom 30%</span>
+          </div>
+          <div class="peer-track">
+            <span class="median" style="left: 50%;"></span>
+            <span class="you" style="left: 30%;"></span>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between mb-2.5">
+            <span class="eyebrow">Concentration</span>
+            <span class="num" style="font-size:12.5px; color:var(--pq-ivory-soft);">41% · in cohort</span>
+          </div>
+          <div class="peer-track">
+            <span class="median" style="left: 50%;"></span>
+            <span class="you" style="left: 47%;"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════ BLOCK 5 — Pulse + Companion ════════ -->
+    <section class="grid grid-cols-12 gap-3 mb-12">
+
+      <!-- Weekly pulse -->
+      <div class="pq-card col-span-7">
+        <span class="corner">All pulses ›</span>
+        <div class="eyebrow mb-3">06 · Pulse · Weekly</div>
+        <div class="display-h2 mb-2">Tell the CFO <span class="br">how you read.</span></div>
+        <p class="editorial-body mb-5" style="font-size:14px;">
+          One question, every Monday at 07:00 KST. The Companion uses your pulse to weight which
+          sections it writes for you next.
+        </p>
+
+        <div class="pulse-row">
+          <span class="num" style="color:var(--pq-bronze); font-size:11px; letter-spacing:0.16em;">22 APR</span>
+          <span class="editorial-body" style="font-size:14px;">
+            "How heavy did the semis trim feel?"
+          </span>
+          <span class="eyebrow" style="color:var(--pq-bronze);">CALM</span>
+        </div>
+        <div class="pulse-row">
+          <span class="num" style="color:var(--pq-bronze); font-size:11px; letter-spacing:0.16em;">15 APR</span>
+          <span class="editorial-body" style="font-size:14px;">
+            "Cash buffer — protective or punitive?"
+          </span>
+          <span class="eyebrow" style="color:var(--pq-bronze);">PROTECTIVE</span>
+        </div>
+        <div class="pulse-row">
+          <span class="num" style="color:var(--pq-bronze); font-size:11px; letter-spacing:0.16em;">08 APR</span>
+          <span class="editorial-body" style="font-size:14px;">
+            "AAPL into print — would you size up or hold?"
+          </span>
+          <span class="eyebrow dim">HOLD</span>
+        </div>
+
+        <a href="#" class="pq-cta mt-6">Submit this week →</a>
+      </div>
+
+      <!-- Companion entry -->
+      <div class="pq-card col-span-5">
+        <span class="corner">Closed Beta</span>
+        <div class="eyebrow mb-3">07 · Companion · Layer 4</div>
+        <div class="display-h2 mb-3" style="font-size:24px;">A CFO that <span class="br">remembers.</span></div>
+        <p class="editorial-body mb-5" style="font-size:14px;">
+          The reflective journal agent — Premium Plus. Reflect on positions and weeks with a
+          companion that reads your archive and pulses, then asks the next question.
+        </p>
+
+        <div style="border-top:1px solid var(--pq-hairline); padding-top:14px; margin-bottom:14px;">
+          <div class="eyebrow dim mb-2">YOU ARE ON THE WAITLIST</div>
+          <p class="editorial-body" style="font-size:13px;">
+            Seats roll out to Premium Plus members. We&rsquo;ll reach out at <span class="num" style="color:var(--pq-ivory-soft);">seanbae1521@gmail.com</span>.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <a href="#" class="pq-cta">See Premium Plus →</a>
+          <a href="#" class="pq-link">Sample memo</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════ BLOCK 6 — Agent data + Danger zone ════════ -->
+    <section class="grid grid-cols-12 gap-3 mb-6">
+      <div class="pq-card col-span-7">
+        <div class="eyebrow mb-3">08 · Agent data · PIPA rights</div>
+        <div class="display-h2 mb-3" style="font-size:22px;">Your CFO&rsquo;s memory is <span class="br">yours.</span></div>
+        <p class="editorial-body mb-5" style="font-size:13.5px;">
+          Export a portable JSON copy of the persona, rolling window, pulses, feedback, and Companion history.
+          Or wipe it to start over. Both actions comply with PIPA data-rights and run client+server.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="#" class="pq-cta">Export agent memory →</a>
+          <a href="#" class="pq-link" style="color:var(--pq-error); border-bottom-color: rgba(209,136,136,0.3);">Delete all agent data</a>
+        </div>
+      </div>
+
+      <div class="pq-card col-span-5" style="border-color: rgba(209,136,136,0.18);">
+        <div class="eyebrow mb-3" style="color: var(--pq-error);">Danger zone · Account deletion</div>
+        <p class="editorial-body mb-5" style="font-size:13px;">
+          Deletion is permanent and removes positions, watchlists, and delivered artifacts.
+          PIPA · 30-day purge.
+        </p>
+        <a href="mailto:seanbae1521@gmail.com" class="pq-link" style="color:var(--pq-error); border-bottom-color: rgba(209,136,136,0.3);">Contact support to delete</a>
+      </div>
+    </section>
+
+    <!-- ════════ DISCLAIMER ════════ -->
+    <div class="disclaimer">
+      <strong style="color:var(--pq-ivory-soft); font-family:var(--pq-font-serif); font-style:italic;">
+        Notice / 면책 고지.
+      </strong>
+      &nbsp; PivoxQuant produces editorial memos and analytical artifacts for the user&rsquo;s own
+      record-keeping. The persona classifier describes observed behaviour; it is not investment
+      advice, a solicitation, or a recommendation to buy or sell any security.
+      본 서비스는 자본시장과 금융투자업에 관한 법률상의 투자자문업·투자일임업이 아니며,
+      모든 의사결정과 책임은 이용자 본인에게 있습니다.
+    </div>
+
+    <!-- ════════ FOOT ════════ -->
+    <div class="foot">
+      <span>PivoxQuant</span>
+      <span class="fleuron">❦</span>
+      <span>Profile · Volume 14</span>
+      <span class="fleuron">❦</span>
+      <span>Seoul · 27 April 2026</span>
+    </div>
+
+  </main>
+
+</body>
+</html>
