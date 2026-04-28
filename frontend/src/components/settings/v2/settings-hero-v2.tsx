@@ -1,0 +1,161 @@
+"use client";
+
+/**
+ * <SettingsHeroV2 /> — editorial hero for /settings v2.
+ *
+ * Mirrors the home-v2 / risk-v2 hero rhythm: 80/64 padding, hairline-bottom,
+ * Playfair 500 / 48px H1 with bronze italic accents, Source Serif deck.
+ *
+ * Surface only — observation-language, no advice/recommend strings.
+ */
+
+import * as React from "react";
+
+interface Props {
+  eyebrow?: string;
+}
+
+export function SettingsHeroV2({
+  eyebrow = "Operations · Brokers · Subscription · Privacy",
+}: Props) {
+  return (
+    <section
+      style={{
+        padding: "80px 0 48px",
+        borderBottom: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+      }}
+    >
+      <div
+        className="font-mono uppercase"
+        style={{
+          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+          fontSize: 10.5,
+          letterSpacing: "0.22em",
+          color: "var(--pq-bronze)",
+          marginBottom: 28,
+        }}
+      >
+        {eyebrow}
+      </div>
+
+      <h1
+        className="font-serif"
+        style={{
+          fontFamily:
+            'var(--pq-font-display,"Playfair Display","Source Serif 4",Georgia,serif)',
+          fontWeight: 500,
+          fontSize: 48,
+          lineHeight: 1.05,
+          letterSpacing: "-0.02em",
+          color: "var(--pq-ivory)",
+          maxWidth: 940,
+          margin: "0 0 28px 0",
+        }}
+      >
+        The dials that run{" "}
+        <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+          your CFO room.
+        </span>
+        <br />
+        Adjusted by you,{" "}
+        <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+          remembered by us.
+        </span>
+      </h1>
+
+      <p
+        className="font-serif"
+        style={{
+          fontFamily:
+            'var(--pq-font-serif,"Source Serif 4","Iowan Old Style",Georgia,serif)',
+          fontSize: 17,
+          lineHeight: 1.55,
+          color: "rgba(245,240,232,0.82)",
+          maxWidth: 720,
+          margin: "0 0 40px 0",
+        }}
+      >
+        Identity and persona live on{" "}
+        <a
+          href="/profile"
+          className="font-mono uppercase"
+          style={{
+            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+            fontSize: 12,
+            letterSpacing: "0.18em",
+            color: "var(--pq-bronze)",
+            borderBottom: "1px solid rgba(184,149,106,0.15)",
+            paddingBottom: 2,
+            textDecoration: "none",
+          }}
+        >
+          Profile ›
+        </a>
+        . Settings is for the operational levers — how you sign in, which
+        brokers stream, which artifacts arrive in your inbox, and how you
+        exercise your{" "}
+        <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
+          data rights.
+        </span>
+      </p>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <a
+          href="#section-d"
+          className="font-mono uppercase"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 22px",
+            background: "var(--pq-bronze)",
+            color: "var(--pq-ink, #050505)",
+            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+            fontSize: 11,
+            letterSpacing: "0.2em",
+            borderRadius: 2,
+            textDecoration: "none",
+          }}
+        >
+          Manage subscription →
+        </a>
+        <a
+          href="#section-b"
+          className="font-mono uppercase"
+          style={{
+            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            color: "var(--pq-bronze)",
+            borderBottom: "1px solid rgba(184,149,106,0.15)",
+            paddingBottom: 2,
+            textDecoration: "none",
+          }}
+        >
+          Connect a broker
+        </a>
+        <span
+          className="font-mono uppercase"
+          style={{
+            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
+            fontSize: 10.5,
+            letterSpacing: "0.22em",
+            color: "rgba(245,240,232,0.40)",
+            marginLeft: 8,
+          }}
+        >
+          Drafted by AI · Reviewed by you
+        </span>
+      </div>
+    </section>
+  );
+}
+
+export default SettingsHeroV2;
