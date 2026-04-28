@@ -7,7 +7,62 @@
 
 ---
 
-## 🔥 2026-04-28 자율 세션 — 배포 전 P0 fix (FMP budget + decorator)
+## 🔥 2026-04-28 자율 세션 Wave 2 — Frontend mock + design + new bugs (commit 8efddc5)
+
+**자율 모드 2차. 1차 (548cf3e) 후 발견된 frontend mock 잔존 + UI bug 처리.**
+
+### 핵심 발견 (이번 wave)
+
+| # | 발견 | 처리 |
+|---|------|------|
+| 1 | **Backend는 mock 제거했지만 frontend 별개 mock 보유** — top-ticker FALLBACK (KOSPI 2,623 / VIX 17.23 / S&P 5,812 등) + discover MOCK_* 8개 배열 + market mock-indices | ✅ 모두 삭제 + EmptyBlock UI 처리 |
+| 2 | KR ticker 207940.KS chart 가 "$1,504,000" 표시 (signal=null 시 SparkChart currency fallback "USD") | ✅ isKrw(signal, ticker) regex fallback 적용 |
+| 3 | revenueGrowth 키에 revenuePerShareTTM (절대값) 잘못 매핑 | ✅ None 으로 (정직) |
+| 4 | KR 종목 fundamentals 전부 null (data_fetcher KR 분기에서 fmp.get_info 미호출) | ✅ KR 도 호출 |
+| 5 | /api/risk/summary 200 OK 인데 위젯 "—" (필드명 snake vs camel 불일치) | ✅ snake_case canonical + camelCase legacy fallback |
+| 6 | TRIM 모달 HTML max= 가 JS validation 전에 silent block | ✅ max 속성 제거 |
+| 7 | Watchlist + 더블클릭 시 잘못된 ticker 추가 (race) | ✅ submitting guard |
+| 8 | Settings v2 #section-b/d/e 앵커 미동작 (wrapper 누락) | ✅ id 추가 |
+
+### 검증 (실측)
+- `pytest -k "fmp or fetcher or risk or discover"` → **63 passed, 0 failed**
+- `npx tsc --noEmit` → clean
+- `npm run build` → 87/87 routes ✓
+- commit 8efddc5: 16 files, +359/-481
+
+### 🚨 미처리 (별도 PR / 정책 결정 필요)
+
+#### CRITICAL (배포 전 fix 권장)
+1. **Morning Brief email template 전체 macro 하드코딩** — `services/morning_brief_service.py` `render_brief_email()` 가 `kpis_cover, macro_ladder, fx_crosses, rates_curve, vix_term, overnight_tape, overnight_prose, sector_premkt, observation_notes` 10개 변수 미전달 → template default (USD/KRW=1342, US10Y=4.32%, VIX=15.8 모두 2026-04-21 시점 fallback) 영구 표시. 사용자 매일 받는 이메일에 가짜 macro 노출. **사용자가 직접 지적한 영역**.
+2. **/terms /privacy 흰배경 + raw markdown** — `src/app/terms/page.tsx:29`, `src/app/privacy/page.tsx:31` `bg-white` (v3 위반). `**초안**` 같은 markdown raw 표시 (marked 파서 적용 안 됨). 회원가입 모든 신규 유저가 깨진 페이지 첫 인상.
+3. **`.pq-ink-h1` CSS가 `--font-serif` 사용** — `globals.css:1141, 1975` Source Serif 4 적용. v3 락-인은 Playfair Display (`--font-display`). 영향: market/discover/watchlist/alerts/companion/detail/docs/pricing 8개 페이지.
+
+#### HIGH
+4. **/features/* 6개 페이지 흰배경 + Geist 폰트** — risk-defense/quant-scoring/ai-assistant/profiles/paper-trading/canslim. v3 이탈.
+5. **Footer 사업자등록번호/통신판매업신고/주소 placeholder "(등록 후 표시)"** — 한국 전자상거래법 표기 의무. 실제 사업자등록 + 통신판매업 신고 필요.
+6. **/api/risk/concentration 404** — backend 미구현.
+7. **Top-ticker SSE wire-up 누락** — portfolio-stream 만 SSE 구독, 매크로 심볼(KOSPI/VIX/USD-KRW) 영구 "—" placeholder. 별도 SSE 채널 또는 REST poll 필요.
+8. **Portfolio FX_FALLBACK = 1342** — 실제 1,478 대비 9% 오차. `portfolio/_v1/page-v1.tsx:43`, `_v2/page-v2.tsx:62`.
+9. **/discover screeners 영구 503** — 라이브 source 미구현 (의도적). screener pipeline 구현 필요.
+10. **Discover Market Overview 위젯 EmptyBlock 표시** — API 200 + 데이터 있는데 빈 상태 (재현 의심). 라이브 DevTools 캡처 필요.
+11. **Signal 불일치 (NEUTRAL home vs POSITIVE signals)** — endpoint divergence 의심.
+
+#### MEDIUM
+12. **Profile RETAKE ASSESSMENT 무반응** — code 정상 (Link href="/onboarding"). 실제 동작은 onboarding 라우트 측 확인 필요.
+13. **AI 3종 (swot/coaching/sector-trend) 404** — backend 는 POST routes 정상. frontend endpoints.ts 와 매치. bug-hunter 가 GET 으로 테스트한 것일 가능성.
+
+#### 별건
+- KOSPI 6,641.02 — 역사적 최고치(3,316)의 두 배. 데이터 소스 오류 의심 (FMP `^KS11` 또는 KIS 필드 오독). morning brief 와 동일 source 사용 확인 필요.
+- 207940 (삼성바이오) EMPTY: KIS realtime/history 동시 실패 시 snapshot=None. 다른 KR 종목 (005930 등) 정상. KIS 응답 문제일 가능성.
+
+### Wave 2 통계
+- 발견 BUG: 신규 14건 + 디자인 P0 3건 + morning brief CRITICAL 1건 = **18건**
+- 처리: 8건 commit
+- 미처리: 10건 (별도 PR / 정책 결정)
+
+---
+
+## 🔥 2026-04-28 자율 세션 Wave 1 — 배포 전 P0 fix (FMP budget + decorator)
 
 **이전 V2 톤 세션과 별도. 사용자 외출 + 권한 위임 자율 실행. 모두 working tree, 미 commit/미 push.**
 
