@@ -19,10 +19,10 @@ import {
 export const metadata: Metadata = {
   title: "Paper Trading — PivoxQuant",
   description:
-    "Practice with real market data. Risk zero real money. Test all 58 quant models before committing real capital.",
+    "Practice with real market data. Risk zero real money. Test all 40 quant models before committing real capital.",
 };
 
-/* ── Steps ── */
+/* ── Steps (v3 + AutoTrader removal post 2026-04-27 legal review) ── */
 const steps = [
   {
     step: "1",
@@ -31,8 +31,8 @@ const steps = [
   },
   {
     step: "2",
-    title: "AutoTrader surfaces candidate entries",
-    description: "Based on your investor profile, our 58 quant models produce observation-only candidates from real-time market data. You decide.",
+    title: "Quant models surface candidate entries",
+    description: "Based on your investor profile, our 40 quant models produce observation-only candidates from real-time market data. You decide.",
   },
   {
     step: "3",
@@ -53,8 +53,8 @@ const steps = [
 
 /* ── Why paper trade ── */
 const reasons = [
-  { icon: FlaskConical, label: "Test our 58 quant models before committing real capital" },
-  { icon: Shield, label: "See how the 7-layer risk defense protects in real time" },
+  { icon: FlaskConical, label: "Test our 40 quant models before committing real capital" },
+  { icon: Shield, label: "See how the 7-layer risk defense surfaces in real time" },
   { icon: Activity, label: "Learn how your investor profile performs in live markets" },
   { icon: TrendingUp, label: "Build confidence in the system at your own pace" },
   { icon: DollarSign, label: "Zero risk. No real money involved at any point" },
@@ -67,40 +67,40 @@ const metrics = [
   { icon: Shield, label: "Risk metrics", description: "Max Drawdown, Sharpe Ratio, Calmar Ratio, and more." },
   { icon: ListChecks, label: "Full trade history", description: "Every recorded order is logged with the quant model that surfaced the candidate." },
   { icon: Clock, label: "Performance timeline", description: "View returns over days, weeks, and months." },
-  { icon: Activity, label: "Model attribution", description: "See which of the 58 models contributed most to your returns." },
+  { icon: Activity, label: "Model attribution", description: "See which of the 40 models contributed most to your returns." },
 ];
 
 export default function PaperTradingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-slate-100 bg-white/80 backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Link>
-          <span className="text-slate-300">/</span>
-          <span className="text-sm font-medium text-slate-700">Paper Trading</span>
+          <span className="text-[rgba(245,240,232,0.32)]">/</span>
+          <span className="text-sm font-medium text-[var(--pq-ivory)]">Paper Trading</span>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-20">
         {/* ── Disclaimer ── */}
-        <DisclaimerBanner type="ai-analysis" theme="light" className="mb-8" />
+        <DisclaimerBanner type="ai-analysis" className="mb-8" />
 
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
-            <FlaskConical className="w-7 h-7 text-accent" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] mb-6">
+            <FlaskConical className="w-6 h-6 text-[var(--pq-bronze)]" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            <span className="gradient-text">Paper Trading</span>
+          <h1 className="font-[var(--font-display)] italic text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
+            Paper Trading
           </h1>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto">
+          <p className="text-base text-[rgba(245,240,232,0.62)] max-w-xl mx-auto">
             Practice with real market data. Risk zero real money.
           </p>
         </div>
@@ -108,14 +108,14 @@ export default function PaperTradingPage() {
         {/* ── What is Paper Trading? ── */}
         <SectionCurtain divider={false}>
         <section className="mb-16">
-          <div className="sp-card rounded-2xl p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">What is Paper Trading?</h2>
-            <p className="text-slate-600 leading-relaxed mb-3">
-              Think of it as a <span className="font-semibold text-slate-900">flight simulator for investing</span>.
+          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+            <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-4">What is Paper Trading?</h2>
+            <p className="text-[rgba(245,240,232,0.82)] leading-relaxed mb-3">
+              Think of it as a <span className="font-semibold text-[var(--pq-ivory)]">flight simulator for investing</span>.
               You make trades with virtual money using real-time market prices.
               Everything works exactly like real trading, except no actual money is at stake.
             </p>
-            <p className="text-slate-500 text-sm leading-relaxed">
+            <p className="text-[rgba(245,240,232,0.62)] text-sm leading-relaxed">
               Professional traders test new strategies this way before risking real capital.
               Now you can too.
             </p>
@@ -126,16 +126,14 @@ export default function PaperTradingPage() {
         {/* ── Why Paper Trade ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">Why Paper Trade?</h2>
+          <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">Why Paper Trade?</h2>
           <div className="space-y-3">
-            {reasons.map((reason) => {
-              return (
-                <div key={reason.label} className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                  <CheckCircle2 className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                  <span className="text-sm text-slate-700">{reason.label}</span>
-                </div>
-              );
-            })}
+            {reasons.map((reason) => (
+              <div key={reason.label} className="flex items-center gap-3 p-4 rounded-sm bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)]">
+                <CheckCircle2 className="w-4 h-4 text-[var(--pq-bronze)] shrink-0" />
+                <span className="text-sm text-[rgba(245,240,232,0.82)]">{reason.label}</span>
+              </div>
+            ))}
           </div>
         </section>
         </SectionCurtain>
@@ -143,16 +141,16 @@ export default function PaperTradingPage() {
         {/* ── How It Works (steps) ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">How It Works</h2>
+          <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">How It Works</h2>
           <div className="space-y-4">
             {steps.map((item) => (
               <div key={item.step} className="flex items-start gap-4">
-                <div className="shrink-0 w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                  <span className="text-sm font-bold text-accent">{item.step}</span>
+                <div className="shrink-0 w-10 h-10 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] flex items-center justify-center">
+                  <span className="font-mono text-sm font-medium text-[var(--pq-bronze)] tabular-nums">{item.step}</span>
                 </div>
                 <div className="pt-1.5 min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-1">{item.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed">{item.description}</p>
+                  <h3 className="text-sm font-semibold text-[var(--pq-ivory)] mb-1">{item.title}</h3>
+                  <p className="text-sm text-[rgba(245,240,232,0.62)] leading-relaxed">{item.description}</p>
                 </div>
               </div>
             ))}
@@ -163,22 +161,22 @@ export default function PaperTradingPage() {
         {/* ── Live Tracking ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Live Tracking</h2>
-          <p className="text-sm text-slate-500 mb-6">
+          <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-2">Live Tracking</h2>
+          <p className="text-sm text-[rgba(245,240,232,0.62)] mb-6">
             Full transparency into how your paper portfolio performs, with institutional-grade analytics.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {metrics.map((metric) => {
               const Icon = metric.icon;
               return (
-                <div key={metric.label} className="sp-card rounded-2xl p-5">
+                <div key={metric.label} className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
-                      <Icon className="w-4 h-4 text-accent" />
+                    <div className="w-8 h-8 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] flex items-center justify-center">
+                      <Icon className="w-4 h-4 text-[var(--pq-bronze)]" />
                     </div>
-                    <h3 className="text-sm font-semibold text-slate-900">{metric.label}</h3>
+                    <h3 className="text-sm font-semibold text-[var(--pq-ivory)]">{metric.label}</h3>
                   </div>
-                  <p className="text-sm text-slate-500 leading-relaxed">{metric.description}</p>
+                  <p className="text-sm text-[rgba(245,240,232,0.62)] leading-relaxed">{metric.description}</p>
                 </div>
               );
             })}
@@ -188,17 +186,17 @@ export default function PaperTradingPage() {
 
         {/* ── CTA ── */}
         <SectionCurtain>
-        <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">
+        <section className="text-center py-12 px-6 rounded-sm border border-[rgba(184,149,106,0.18)] bg-[rgba(184,149,106,0.04)]">
+          <h2 className="font-[var(--font-display)] italic text-2xl font-medium text-[var(--pq-ivory)] mb-3">
             Start paper trading today
           </h2>
-          <p className="text-slate-500 mb-6 max-w-md mx-auto">
+          <p className="text-[rgba(245,240,232,0.62)] mb-6 max-w-md mx-auto">
             Free PivoxQuant account. Zero risk.
             See the quant models in action before you invest a single dollar.
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all active:scale-[0.97]"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-sm bg-[var(--pq-bronze)] text-[var(--pq-ink)] text-sm font-semibold hover:bg-[var(--pq-bronze-light)] transition-all"
           >
             Start Paper Trading
             <ArrowRight className="w-4 h-4" />

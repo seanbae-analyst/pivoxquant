@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     "William O'Neil's systematic 7-factor method, automated. Screen stocks using the CAN SLIM strategy.",
 };
 
-/* ── CAN SLIM factors ── */
+/* ── CAN SLIM factors (v3: bronze accent uniform) ── */
 const factors = [
   {
     letter: "C",
@@ -32,7 +32,6 @@ const factors = [
     description: "Quarterly earnings growth of 25% or more. Is the company making more money right now than it did last year at this time?",
     icon: TrendingUp,
     threshold: "25%+ quarterly growth",
-    color: "text-accent bg-accent/10 border-accent/20",
   },
   {
     letter: "A",
@@ -40,7 +39,6 @@ const factors = [
     description: "Three or more years of consistent annual earnings growth. One good quarter is not enough. You want a track record.",
     icon: CalendarDays,
     threshold: "3 years consistent growth",
-    color: "text-blue-600 bg-blue-50 border-blue-100",
   },
   {
     letter: "N",
@@ -48,7 +46,6 @@ const factors = [
     description: "Stock trading near its 52-week high. Counterintuitively, stocks making new highs tend to go even higher. Momentum matters.",
     icon: Sparkles,
     threshold: "Near 52-week high",
-    color: "text-amber-600 bg-amber-50 border-amber-100",
   },
   {
     letter: "S",
@@ -56,7 +53,6 @@ const factors = [
     description: "Strong volume with limited shares available. When demand outpaces supply, prices historically drift higher — a factor CANSLIM measures, not a prediction.",
     icon: BarChart3,
     threshold: "Strong volume + limited float",
-    color: "text-emerald-600 bg-emerald-50 border-emerald-100",
   },
   {
     letter: "L",
@@ -64,7 +60,6 @@ const factors = [
     description: "The stock shows higher relative strength versus its sector (benchmark comparison, information only).",
     icon: Award,
     threshold: "Higher relative strength vs sector",
-    color: "text-amber-600 bg-amber-50 border-amber-100",
   },
   {
     letter: "I",
@@ -72,7 +67,6 @@ const factors = [
     description: "Observes institutional flow — mutual fund and hedge fund position changes in the name. Descriptive factor only; not a signal to act.",
     icon: Building2,
     threshold: "Observed institutional accumulation",
-    color: "text-amber-700 bg-amber-50 border-amber-100",
   },
   {
     letter: "M",
@@ -80,74 +74,77 @@ const factors = [
     description: "The overall market is in an uptrend. Even the best stock struggles when the whole market is falling.",
     icon: Activity,
     threshold: "Overall market is healthy",
-    color: "text-cyan-600 bg-cyan-50 border-cyan-100",
   },
 ];
 
-/* ── Rating tiers ── */
+/* ── Rating tiers (v3 KR convention: indigo for warning, bronze for strong) ── */
 const ratings = [
   {
     range: "6 - 7",
     label: "STRONG",
     description: "All systems go. The stock passes nearly every check.",
-    color: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    accent: "var(--pq-bronze)",
+    bg: "rgba(184,149,106,0.08)",
+    border: "rgba(184,149,106,0.28)",
     icon: Star,
-    iconColor: "text-emerald-500",
   },
   {
     range: "4 - 5",
     label: "MODERATE",
     description: "Some concerns. Worth watching, but do more research.",
-    color: "bg-amber-50 border-amber-200 text-amber-700",
+    accent: "var(--pq-bronze-light)",
+    bg: "rgba(184,149,106,0.04)",
+    border: "rgba(184,149,106,0.18)",
     icon: AlertTriangle,
-    iconColor: "text-amber-500",
   },
   {
     range: "2 - 3",
     label: "WEAK",
     description: "Significant risks. Multiple warning signs present.",
-    color: "bg-orange-50 border-orange-200 text-orange-700",
+    accent: "#7AA0C8",
+    bg: "rgba(122,160,200,0.06)",
+    border: "rgba(122,160,200,0.22)",
     icon: AlertTriangle,
-    iconColor: "text-orange-500",
   },
   {
     range: "0 - 1",
     label: "AVOID",
     description: "Too many red flags. The data says stay away for now.",
-    color: "bg-red-50 border-red-200 text-red-700",
+    accent: "#7AA0C8",
+    bg: "rgba(122,160,200,0.1)",
+    border: "rgba(122,160,200,0.32)",
     icon: XCircle,
-    iconColor: "text-red-500",
   },
 ];
 
 export default function CanslimPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-slate-100 bg-white/80 backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
-            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-[rgba(245,240,232,0.55)] hover:text-[var(--pq-bronze)] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </Link>
-          <span className="text-slate-300">/</span>
-          <span className="text-sm font-medium text-slate-700">CAN SLIM Screener</span>
+          <span className="text-[rgba(245,240,232,0.32)]">/</span>
+          <span className="text-sm font-medium text-[var(--pq-ivory)]">CAN SLIM Screener</span>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-20">
         {/* ── Title ── */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-accent/10 mb-6">
-            <Search className="w-7 h-7 text-accent" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] mb-6">
+            <Search className="w-6 h-6 text-[var(--pq-bronze)]" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            <span className="gradient-text">CAN SLIM</span> Stock Screener
+          <h1 className="font-[var(--font-display)] italic text-3xl sm:text-4xl font-medium text-[var(--pq-ivory)] mb-4 tracking-tight">
+            CAN SLIM Stock Screener
           </h1>
-          <p className="text-lg text-slate-500 max-w-xl mx-auto">
+          <p className="text-base text-[rgba(245,240,232,0.62)] max-w-xl mx-auto">
             William O&apos;Neil&apos;s systematic 7-factor method, automated.
           </p>
         </div>
@@ -155,13 +152,13 @@ export default function CanslimPage() {
         {/* ── What is CAN SLIM? ── */}
         <SectionCurtain divider={false}>
         <section className="mb-16">
-          <div className="sp-card rounded-2xl p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">What is CAN SLIM?</h2>
-            <p className="text-slate-600 leading-relaxed mb-3">
+          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+            <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-4">What is CAN SLIM?</h2>
+            <p className="text-[rgba(245,240,232,0.82)] leading-relaxed mb-3">
               CAN SLIM is a stock selection method created by William O&apos;Neil, who famously
               turned a small starting investment into significant returns in just 18 months.
             </p>
-            <p className="text-slate-500 text-sm leading-relaxed">
+            <p className="text-[rgba(245,240,232,0.62)] text-sm leading-relaxed">
               His method picks stocks using 7 specific factors. Each letter stands for one
               factor. A stock either passes or fails each check, giving it a score from 0 to 7.
             </p>
@@ -172,32 +169,29 @@ export default function CanslimPage() {
         {/* ── The 7 Factors ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">The 7 Factors</h2>
+          <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">The 7 Factors</h2>
           <div className="space-y-4">
-            {factors.map((factor) => {
-              const colorParts = factor.color.split(" ");
-              return (
-                <div key={factor.letter} className={`rounded-2xl p-5 border ${colorParts[2]} ${colorParts[1]}`}>
-                  <div className="flex items-start gap-4">
-                    <div className="shrink-0 w-12 h-12 rounded-xl bg-white flex items-center justify-center border border-slate-100 shadow-sm">
-                      <span className="text-xl font-black text-slate-900">{factor.letter}</span>
+            {factors.map((factor) => (
+              <div key={factor.letter} className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.06)] flex items-center justify-center border border-[rgba(184,149,106,0.18)]">
+                    <span className="font-[var(--font-display)] italic text-xl font-medium text-[var(--pq-bronze)]">{factor.letter}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="text-base font-semibold text-[var(--pq-ivory)]">{factor.title}</h3>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="text-base font-semibold text-slate-900">{factor.title}</h3>
-                      </div>
-                      <p className="text-sm text-slate-600 leading-relaxed mb-2">
-                        {factor.description}
-                      </p>
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
-                        <span className="text-xs font-medium text-accent">{factor.threshold}</span>
-                      </div>
+                    <p className="text-sm text-[rgba(245,240,232,0.82)] leading-relaxed mb-2">
+                      {factor.description}
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[var(--pq-bronze)]" />
+                      <span className="text-xs font-medium text-[var(--pq-bronze)]">{factor.threshold}</span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </section>
         </SectionCurtain>
@@ -205,21 +199,25 @@ export default function CanslimPage() {
         {/* ── Rating System ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <h2 className="text-xl font-bold text-slate-900 mb-6">Rating System</h2>
-          <p className="text-sm text-slate-500 mb-6">
+          <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">Rating System</h2>
+          <p className="text-sm text-[rgba(245,240,232,0.62)] mb-6">
             Each stock scores 0 to 7 based on how many factors it passes. Higher means a stronger candidate.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {ratings.map((rating) => {
               const Icon = rating.icon;
               return (
-                <div key={rating.label} className={`rounded-2xl p-5 border ${rating.color}`}>
+                <div
+                  key={rating.label}
+                  className="rounded-sm p-5 border"
+                  style={{ background: rating.bg, borderColor: rating.border }}
+                >
                   <div className="flex items-center gap-2 mb-2">
-                    <Icon className={`w-5 h-5 ${rating.iconColor}`} />
-                    <span className="text-lg font-bold">{rating.range}</span>
-                    <span className="text-xs font-bold uppercase">{rating.label}</span>
+                    <Icon className="w-5 h-5" style={{ color: rating.accent }} />
+                    <span className="font-mono text-lg font-medium tabular-nums" style={{ color: rating.accent }}>{rating.range}</span>
+                    <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: rating.accent }}>{rating.label}</span>
                   </div>
-                  <p className="text-sm opacity-80">{rating.description}</p>
+                  <p className="text-sm text-[rgba(245,240,232,0.72)]">{rating.description}</p>
                 </div>
               );
             })}
@@ -229,17 +227,17 @@ export default function CanslimPage() {
 
         {/* ── CTA ── */}
         <SectionCurtain>
-        <section className="text-center py-12 px-6 bg-slate-50 rounded-2xl">
-          <h2 className="text-2xl font-bold text-slate-900 mb-3">
+        <section className="text-center py-12 px-6 rounded-sm border border-[rgba(184,149,106,0.18)] bg-[rgba(184,149,106,0.04)]">
+          <h2 className="font-[var(--font-display)] italic text-2xl font-medium text-[var(--pq-ivory)] mb-3">
             Screen stocks with CAN SLIM
           </h2>
-          <p className="text-slate-500 mb-6 max-w-md mx-auto">
+          <p className="text-[rgba(245,240,232,0.62)] mb-6 max-w-md mx-auto">
             We automate the research that used to take hours. Sign up and start
             screening stocks in seconds.
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-all active:scale-[0.97]"
+            className="inline-flex items-center gap-2 px-7 py-3 rounded-sm bg-[var(--pq-bronze)] text-[var(--pq-ink)] text-sm font-semibold hover:bg-[var(--pq-bronze-light)] transition-all"
           >
             Try the Screener
             <ArrowRight className="w-4 h-4" />
