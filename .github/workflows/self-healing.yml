@@ -15,7 +15,11 @@ name: Self-Healing (Layer C)
 
 on:
   schedule:
-    - cron: '0 */2 * * *'   # every 2 hours, UTC
+    # 2026-04-29 cost reduction: was every 2h (~360 runs/mo at ~5min each),
+    # now every 12h. DRY RUN by default so cron frequency has no functional
+    # impact — only matters once AUTO_PR=1 is enabled, and even then daily
+    # cadence is enough.
+    - cron: '0 */12 * * *'   # every 12 hours, UTC
   workflow_dispatch:
     inputs:
       dry_run:

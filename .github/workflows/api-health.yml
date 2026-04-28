@@ -2,7 +2,10 @@ name: API Health Monitor
 
 on:
   schedule:
-    - cron: '7,23,37,53 * * * *'
+    # 2026-04-29 cost reduction: was 4x/hour (~2880 runs/mo), now 1x/hour
+    # to stay within GitHub Actions free tier. Daily API Smoke covers
+    # deeper authenticated checks once per day.
+    - cron: '7 * * * *'
   workflow_dispatch:
 
 permissions:
