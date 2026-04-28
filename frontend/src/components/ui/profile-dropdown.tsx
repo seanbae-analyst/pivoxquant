@@ -40,8 +40,8 @@ export function ProfileDropdown() {
   // Mock: Observer until billing resolved
   const tier: Tier = "Free";
 
-  const displayName = user?.name || "배상현";
-  const displayEmail = user?.email || "seanbae1521@gmail.com";
+  const displayName = user?.name || "Guest";
+  const displayEmail = user?.email || "—";
   const init = initials(displayName, displayEmail);
 
   useEffect(() => {
