@@ -15,8 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Wait for Railway + Vercel deploy window (120s)
-        run: sleep 120
+      - name: Wait for Railway + Vercel deploy window (180s)
+        run: sleep 180
 
       - name: Backend health + data sanity
         id: probe
@@ -25,11 +25,20 @@ jobs:
           ok=1
           reasons=""
 
-          # /api/health
-          hbody=$(curl -sS -m 20 https://RAILWAY_BACKEND_HOST.up.railway.app/api/health)
+          # /api/health — retry 5x at 20s intervals (100s total) so Railway's
+          # post-deploy boot window doesn't false-fail the canary.
+          hbody=""
+          for i in 1 2 3 4 5; do
+            hbody=$(curl -sS -m 20 https://RAILWAY_BACKEND_HOST.up.railway.app/api/health)
+            if echo "$hbody" | grep -q '"status":"ok"'; then
+              break
+            fi
+            echo "health attempt $i: not ok yet (body: ${hbody:0:120})"
+            sleep 20
+          done
           if ! echo "$hbody" | grep -q '"status":"ok"'; then
             ok=0
-            reasons+="- /api/health not ok: $hbody\n"
+            reasons+="- /api/health not ok after 5 retries: ${hbody:0:200}\n"
           fi
 
           # Market indices auth-required returns 401 with JSON error — that's healthy.
