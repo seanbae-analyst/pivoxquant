@@ -1257,6 +1257,27 @@ def _init_scheduler(app):
         max_instances=1,
         coalesce=True,
     )
+
+    # ── Diagnostic — 2026-04-28 ────────────────────────────────────────────
+    # Tracks the suspected KST 15:00 firing for `morning_brief_daily`. Logs
+    # worker PID + every registered job's `next_run_time` (already converted
+    # to the job's own timezone by APScheduler) at scheduler-start time.
+    # Read these lines in Railway after the next dawn cycle to confirm
+    # whether the issue is (a) multi-worker race, (b) misfire grace catchup,
+    # or (c) something else. NOT a fix — instrumentation only.
+    try:
+        job_summary = [
+            (j.id, j.next_run_time.isoformat() if j.next_run_time else None)
+            for j in sched.get_jobs()
+        ]
+        logger.info(
+            "scheduler.start pid=%s jobs=%s",
+            os.getpid(),
+            job_summary,
+        )
+    except Exception:
+        logger.exception("scheduler.start diagnostic logging failed")
+
     sched.start()
 
 
