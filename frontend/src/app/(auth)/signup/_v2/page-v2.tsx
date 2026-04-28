@@ -1,0 +1,455 @@
+"use client";
+
+/**
+ * /signup v2 — Editorial entry, Vantablack split layout.
+ *
+ * Toggle: NEXT_PUBLIC_SIGNUP_V2=true (default off; v1 remains live).
+ *
+ * Function preservation (verbatim from v1):
+ * - useAuth + router.replace("/home") on existing session.
+ * - Three required + one optional consent (terms / non_advisory / age /
+ *   marketing). `allRequired` gates the OAuth buttons.
+ * - On click, persist consent snapshot to localStorage under
+ *   `pivox_signup_consents` then redirect to API.auth.google / .kakao.
+ * - Same CONSENT_STORAGE_KEY constant — OAuth callback handler stays
+ *   binary-compatible with v1.
+ *
+ * Visual layer only — Vantablack background, Bronze hairlines, Playfair H1,
+ * Source Serif body, JetBrains Mono uppercase OAuth labels.
+ */
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+import { useAuth } from "@/lib/auth";
+import { API } from "@/lib/endpoints";
+
+import { AuthHeroV2 } from "@/components/auth/v2/auth-hero-v2";
+import { OAuthButtonsV2 } from "@/components/auth/v2/oauth-buttons-v2";
+import { AuthLinkV2 } from "@/components/auth/v2/auth-link-v2";
+import { Fleuron } from "@/components/ui/editorial";
+
+/* Same key as v1 — OAuth callback handler reads this on first login. */
+const CONSENT_STORAGE_KEY = "pivox_signup_consents";
+
+interface Consents {
+  terms: boolean;
+  non_advisory: boolean;
+  age: boolean;
+  marketing: boolean;
+}
+
+/* Bronze-tinted ink checkbox — visual only, behavior identical to v1. */
+function CheckboxV2({
+  checked,
+  onChange,
+  id,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  id: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      id={id}
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      style={{
+        marginTop: 2,
+        flexShrink: 0,
+        display: "flex",
+        height: 16,
+        width: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 2,
+        border: checked
+          ? "1px solid var(--pq-bronze, #B8956A)"
+          : "1px solid rgba(245,240,232,0.20)",
+        background: checked
+          ? "var(--pq-bronze, #B8956A)"
+          : "transparent",
+        transition:
+          "background-color 200ms cubic-bezier(0.16,1,0.3,1), border-color 200ms",
+        cursor: "pointer",
+      }}
+    >
+      {checked && (
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="var(--pq-ink, #050505)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <polyline points="2 6 5 9 10 3" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+export default function SignupPageV2() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [consents, setConsents] = useState<Consents>({
+    terms: false,
+    non_advisory: false,
+    age: false,
+    marketing: false,
+  });
+  const [allRequired, setAllRequired] = useState(false);
+
+  useEffect(() => {
+    // Preserved verbatim from v1 behavior — derived-value refactor is out of
+    // scope for the visual-only v2 task per CEO directive.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAllRequired(consents.terms && consents.non_advisory && consents.age);
+  }, [consents]);
+
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace("/home");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div
+        className="flex min-h-[100dvh] items-center justify-center"
+        style={{ background: "var(--pq-ink, #050505)" }}
+      >
+        <div
+          className="h-8 w-8 animate-spin rounded-full"
+          style={{
+            border: "2px solid rgba(245,240,232,0.10)",
+            borderTopColor: "var(--pq-bronze, #B8956A)",
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (user) return null;
+
+  const setConsent = (key: keyof Consents) => (next: boolean) => {
+    setConsents((prev) => ({ ...prev, [key]: next }));
+  };
+
+  /* Same handler shape as v1 handleOAuthClick — preserves the legal gate
+   * + consent snapshot persistence + redirect URL behavior 1:1. */
+  const handleOAuthClick =
+    (url: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+      if (!allRequired) {
+        e.preventDefault();
+        return;
+      }
+      try {
+        window.localStorage.setItem(
+          CONSENT_STORAGE_KEY,
+          JSON.stringify({
+            ...consents,
+            consented_at: new Date().toISOString(),
+          }),
+        );
+      } catch {
+        // non-fatal
+      }
+      window.location.href = url;
+    };
+
+  const consentLabelStyle: React.CSSProperties = {
+    fontFamily:
+      '"Source Serif 4","Iowan Old Style",Georgia,serif',
+    fontSize: 13,
+    lineHeight: 1.55,
+    color: "rgba(245,240,232,0.72)",
+  };
+
+  const consentRowStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+    cursor: "pointer",
+  };
+
+  const requiredTagStyle: React.CSSProperties = {
+    fontFamily:
+      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
+    fontSize: 10,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    color: "var(--pq-bronze, #B8956A)",
+    marginRight: 6,
+  };
+
+  const optionalTagStyle: React.CSSProperties = {
+    ...requiredTagStyle,
+    color: "rgba(245,240,232,0.40)",
+  };
+
+  return (
+    <div
+      className="pq-auth-shell-v2"
+      style={{
+        // Escape the (auth)/layout.tsx max-w-sm white wrapper without
+        // editing the shared layout (v1 still depends on it). Fixed-fill
+        // covers the viewport with Vantablack ink underneath the layout.
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        minHeight: "100dvh",
+        background: "var(--pq-ink, #050505)",
+        color: "var(--pq-ivory, #F5F0E8)",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        overflowY: "auto",
+      }}
+    >
+      {/* ── Left: Editorial Hero ──────────────────────────────────────── */}
+      <div
+        className="pq-auth-hero-pane"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          borderRight: "0.5px solid rgba(184,149,106,0.18)",
+          minHeight: "100dvh",
+        }}
+      >
+        <AuthHeroV2
+          eyebrow={"PivoxQuant · Entry"}
+          headlineHtml={
+            'Create your <span class="br">CFO</span>.<br/>The first memo lands <span class="br">Sunday 07:00.</span>'
+          }
+          deck="A weekly editorial, an earnings pre-brief, and a brag card you can ship — drafted by AI, reviewed by you, addressed only to you."
+          signature="Beta · Free during preview"
+        />
+      </div>
+
+      {/* ── Right: Consent + OAuth Card ───────────────────────────────── */}
+      <div
+        className="pq-auth-card-pane"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          minHeight: "100dvh",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: 460,
+            padding: "64px 56px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 28,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span
+              className="font-mono uppercase"
+              style={{
+                fontFamily:
+                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
+                fontSize: 10.5,
+                letterSpacing: "0.24em",
+                color: "var(--pq-bronze, #B8956A)",
+                textTransform: "uppercase",
+              }}
+            >
+              Sign up
+            </span>
+            <h2
+              className="font-serif"
+              style={{
+                fontFamily:
+                  '"Playfair Display","Source Serif 4",Georgia,serif',
+                fontWeight: 500,
+                fontSize: 24,
+                lineHeight: 1.2,
+                letterSpacing: "-0.01em",
+                color: "var(--pq-ivory, #F5F0E8)",
+                margin: 0,
+              }}
+            >
+              가입 전 확인
+            </h2>
+          </div>
+
+          {/* Consent block — Vantablack ink, Bronze hairlines */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+              padding: 20,
+              borderRadius: 2,
+              border: "0.5px solid rgba(245,240,232,0.08)",
+              background: "rgba(245,240,232,0.02)",
+            }}
+          >
+            <label htmlFor="agree_terms" style={consentRowStyle}>
+              <CheckboxV2
+                id="agree_terms"
+                checked={consents.terms}
+                onChange={setConsent("terms")}
+              />
+              <span style={consentLabelStyle}>
+                <span style={requiredTagStyle}>[필수]</span>
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    color: "var(--pq-ivory, #F5F0E8)",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 2,
+                  }}
+                >
+                  이용약관
+                </Link>{" "}
+                및{" "}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    color: "var(--pq-ivory, #F5F0E8)",
+                    textDecoration: "underline",
+                    textUnderlineOffset: 2,
+                  }}
+                >
+                  개인정보처리방침
+                </Link>
+                에 동의합니다.
+              </span>
+            </label>
+
+            <label htmlFor="agree_non_advisory" style={consentRowStyle}>
+              <CheckboxV2
+                id="agree_non_advisory"
+                checked={consents.non_advisory}
+                onChange={setConsent("non_advisory")}
+              />
+              <span style={consentLabelStyle}>
+                <span style={requiredTagStyle}>[필수]</span>
+                PivoxQuant는 자본시장법상 투자자문업이 아니며, 본 서비스의 모든
+                분석·리포트·시그널은 정보 제공 목적임을 이해합니다. 투자 판단과
+                그 결과는 이용자 본인의 책임입니다.
+              </span>
+            </label>
+
+            <label htmlFor="agree_age" style={consentRowStyle}>
+              <CheckboxV2
+                id="agree_age"
+                checked={consents.age}
+                onChange={setConsent("age")}
+              />
+              <span style={consentLabelStyle}>
+                <span style={requiredTagStyle}>[필수]</span>
+                만 14세 이상입니다. (개인정보보호법 §22)
+              </span>
+            </label>
+
+            <label htmlFor="agree_marketing" style={consentRowStyle}>
+              <CheckboxV2
+                id="agree_marketing"
+                checked={consents.marketing}
+                onChange={setConsent("marketing")}
+              />
+              <span style={consentLabelStyle}>
+                <span style={optionalTagStyle}>[선택]</span>
+                마케팅 정보(이벤트, 신기능 안내) 수신에 동의합니다.
+              </span>
+            </label>
+          </div>
+
+          {/* OAuth — disabled until allRequired === true (legal gate) */}
+          <OAuthButtonsV2
+            disabled={!allRequired}
+            onGoogleClick={handleOAuthClick(API.auth.google)}
+            onKakaoClick={handleOAuthClick(API.auth.kakao)}
+            hint="필수 항목 3개에 모두 동의해야 가입할 수 있습니다."
+          />
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              padding: "8px 0",
+            }}
+            aria-hidden="true"
+          >
+            <span
+              style={{
+                flex: 1,
+                height: 0,
+                borderTop: "0.5px solid rgba(245,240,232,0.08)",
+              }}
+            />
+            <Fleuron size={12} />
+            <span
+              style={{
+                flex: 1,
+                height: 0,
+                borderTop: "0.5px solid rgba(245,240,232,0.08)",
+              }}
+            />
+          </div>
+
+          <AuthLinkV2
+            prompt="이미 계정이 있으신가요?"
+            action="로그인"
+            href="/login"
+          />
+
+          <p
+            className="font-mono uppercase"
+            style={{
+              marginTop: 6,
+              fontFamily:
+                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
+              fontSize: 10,
+              letterSpacing: "0.20em",
+              color: "rgba(245,240,232,0.40)",
+              textAlign: "center",
+              textTransform: "uppercase",
+            }}
+          >
+            Beta · 카드 등록 불필요
+          </p>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @media (max-width: 900px) {
+          :global(.pq-auth-shell-v2) {
+            grid-template-columns: 1fr !important;
+          }
+          :global(.pq-auth-hero-pane) {
+            min-height: auto !important;
+            border-right: 0 !important;
+            border-bottom: 0.5px solid rgba(184, 149, 106, 0.18) !important;
+            justify-content: flex-start !important;
+          }
+          :global(.pq-auth-card-pane) {
+            min-height: auto !important;
+            justify-content: center !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
