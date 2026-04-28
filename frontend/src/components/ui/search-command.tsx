@@ -250,7 +250,7 @@ export function SearchCommandMenu() {
     <ModalShell onClose={close} ariaLabel="Search palette" className="!items-start !pt-[12vh]">
       <div
         className="w-full max-w-xl overflow-hidden rounded-2xl shadow-[0_24px_60px_-20px_rgba(10,10,10,0.35)]"
-        style={{ background: "var(--pq-ivory)", border: "0.5px solid var(--pq-hairline)" }}
+        style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
       >
         {/* Input row */}
         <div
@@ -266,7 +266,7 @@ export function SearchCommandMenu() {
             onKeyDown={handleKeyDown}
             placeholder="Search ticker, page…"
             className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[color:var(--pq-muted)]"
-            style={{ color: "var(--pq-ink)" }}
+            style={{ color: "var(--pq-ivory)" }}
           />
           {loading && (
             <Loader2
@@ -320,7 +320,7 @@ export function SearchCommandMenu() {
                     <span className="w-24 font-mono text-xs font-semibold" style={{ color: "var(--pq-bronze)" }}>
                       {s.ticker}
                     </span>
-                    <span className="flex-1 truncate text-sm" style={{ color: "var(--pq-ink)" }}>
+                    <span className="flex-1 truncate text-sm" style={{ color: "var(--pq-ivory)" }}>
                       {s.name}
                     </span>
                     <span
@@ -346,7 +346,7 @@ export function SearchCommandMenu() {
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => runItem(p)}
                   >
-                    <span className="text-sm" style={{ color: "var(--pq-ink)" }}>
+                    <span className="text-sm" style={{ color: "var(--pq-ivory)" }}>
                       {p.label}
                     </span>
                     {p.hint && (
@@ -375,7 +375,7 @@ export function SearchCommandMenu() {
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => runItem(r)}
                   >
-                    <span className="text-sm" style={{ color: "var(--pq-ink)" }}>
+                    <span className="text-sm" style={{ color: "var(--pq-ivory)" }}>
                       {r.label}
                     </span>
                   </CommandRow>
