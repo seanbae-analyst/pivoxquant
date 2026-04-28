@@ -599,7 +599,14 @@ export default function PricingPage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 md:pb-28">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
             {TIERS.map((p) => {
-              const isDark = p.dark;
+              // v3 lock-in 2026-04-29: all pricing cards on Vantablack —
+              // bug-hunter Wave 2 Bug #7 found Free/Premium cards rendering
+              // ivory backgrounds while the rest of the site is dark, which
+              // visually fractures the page. The legacy `p.dark` flag is
+              // honored for tone signaling (e.g. recommended highlight) but
+              // the panel ground is uniformly dark.
+              const isDark = true;
+              void p.dark;
               return (
                 <div
                   key={p.key}

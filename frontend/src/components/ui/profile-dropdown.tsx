@@ -97,7 +97,7 @@ export function ProfileDropdown() {
         {open && (
           <div
             className="absolute right-0 top-full z-[100] mt-2 w-[260px] overflow-hidden rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
-            style={{ background: "var(--pq-ivory)", border: "0.5px solid var(--pq-hairline)" }}
+            style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
             role="menu"
           >
             {/* Identity block */}
@@ -109,7 +109,7 @@ export function ProfileDropdown() {
                 className="text-[15px]"
                 style={{
                   fontFamily: "var(--font-serif), serif",
-                  color: "var(--pq-ink)",
+                  color: "var(--pq-ivory)",
                 }}
               >
                 {displayName}
@@ -202,7 +202,7 @@ function MenuLink({
       className={cn(
         "flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]",
       )}
-      style={{ color: "var(--pq-ink)" }}
+      style={{ color: "var(--pq-ivory)" }}
     >
       <span style={{ color: "var(--pq-muted)" }}>{icon}</span>
       {children}
@@ -224,7 +224,7 @@ function MenuButton({
       type="button"
       onClick={onClick}
       className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
-      style={{ color: "var(--pq-ink)" }}
+      style={{ color: "var(--pq-ivory)" }}
     >
       <span style={{ color: "var(--pq-muted)" }}>{icon}</span>
       {children}
@@ -249,7 +249,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
     <ModalShell onClose={onClose} ariaLabel="Keyboard shortcuts">
       <div
         className="w-full max-w-md overflow-hidden rounded-2xl shadow-[0_24px_60px_-20px_rgba(10,10,10,0.35)]"
-        style={{ background: "var(--pq-ivory)", border: "0.5px solid var(--pq-hairline)" }}
+        style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
       >
         <div
           className="px-5 py-4"
@@ -263,7 +263,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
           </div>
           <div
             className="mt-0.5 text-xl"
-            style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ink)" }}
+            style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ivory)" }}
           >
             Keyboard shortcuts
           </div>
@@ -275,7 +275,7 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
               className="flex items-center justify-between px-5 py-3"
               style={{ borderBottom: "0.5px solid var(--pq-hairline-soft)" }}
             >
-              <span className="text-sm" style={{ color: "var(--pq-ink)" }}>{label}</span>
+              <span className="text-sm" style={{ color: "var(--pq-ivory)" }}>{label}</span>
               <kbd
                 className="rounded px-2 py-0.5 font-mono text-xs"
                 style={{ border: "0.5px solid var(--pq-hairline)", color: "var(--pq-bronze)" }}

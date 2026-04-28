@@ -157,7 +157,7 @@ export function NotificationDropdown() {
       {open && (
         <div
           className="absolute right-0 top-full z-[100] mt-2 w-[340px] overflow-hidden rounded-xl shadow-[0_16px_48px_-16px_rgba(10,10,10,0.3)]"
-          style={{ background: "var(--pq-ivory)", border: "0.5px solid var(--pq-hairline)" }}
+          style={{ background: "#0E0E0E", border: "0.5px solid rgba(245,240,232,0.12)" }}
           role="menu"
         >
           {/* Header */}
@@ -174,7 +174,7 @@ export function NotificationDropdown() {
               </div>
               <div
                 className="text-base"
-                style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ink)" }}
+                style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ivory)" }}
               >
                 Observations
               </div>
@@ -199,17 +199,17 @@ export function NotificationDropdown() {
                   <div key={i} className="flex items-start gap-3 py-3">
                     <div
                       className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ background: "var(--pq-hairline)" }}
+                      style={{ background: "rgba(245,240,232,0.12)" }}
                       aria-hidden
                     />
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <div
                         className="h-3 w-4/5 rounded"
-                        style={{ background: "var(--pq-hairline-soft, rgba(0,0,0,0.06))" }}
+                        style={{ background: "rgba(245,240,232,0.08)" }}
                       />
                       <div
                         className="h-2 w-2/5 rounded"
-                        style={{ background: "var(--pq-hairline-soft, rgba(0,0,0,0.04))" }}
+                        style={{ background: "rgba(245,240,232,0.06)" }}
                       />
                     </div>
                   </div>

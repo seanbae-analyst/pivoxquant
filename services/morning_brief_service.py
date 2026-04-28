@@ -221,6 +221,13 @@ def _today_events(tickers: list[str]) -> list[dict]:
     targets = {today.isoformat(), tomorrow.isoformat()}
 
     events: list[dict] = []
+    # Dedupe key — (ticker, date, event_type). FMP earnings-calendar
+    # occasionally returns the same earnings row twice (FY/Q overlap or
+    # multiple revisions), and the same user-supplied ticker can also
+    # appear twice in `tickers` if a position and a watch row share it.
+    # Without this guard the home Memo Hero rendered "AAPL, AAPL 관련
+    # 일정 관찰됨" (bug-hunter Wave 2 finding 2026-04-29).
+    seen: set[tuple[str, str, str]] = set()
     for ticker in tickers[:10]:  # cap to protect the FMP budget
         try:
             rows = fmp.get_earnings_calendar(ticker=ticker, days_ahead=2) or []
@@ -240,6 +247,10 @@ def _today_events(tickers: list[str]) -> list[dict]:
             d = str(r.get("date", ""))[:10]
             if d not in targets:
                 continue
+            key = (ticker, d, "earnings")
+            if key in seen:
+                continue
+            seen.add(key)
             events.append({
                 "ticker":      ticker,
                 "name":        name,
