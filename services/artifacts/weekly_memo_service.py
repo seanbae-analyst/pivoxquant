@@ -765,13 +765,15 @@ class WeeklyMemoService:
             return self._fallback_html(data, email=True)
 
     def render_pdf_html(self, data: dict[str, Any]) -> str:
-        """Render the *full* 5-page PDF HTML (richer, print-oriented)."""
+        """Render the 1-page Free Weekly Memo PDF HTML (CEO design v3)."""
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data, email=False)
         try:
             tpl = env.get_template("weekly_memo.html")
-            return tpl.render(**self._with_persona(data))
+            ctx = self._with_persona(data)
+            ctx["v3"] = self._to_v3_shape(data)
+            return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("pdf template render failed: %s", exc)
             return self._fallback_html(data, email=False)
@@ -812,6 +814,169 @@ class WeeklyMemoService:
             logger.debug("persona resolution failed: %s", exc)
             ctx["persona"] = "balanced"
         return ctx
+
+    # ── v3 shape mapping (CEO design 2026-04-29) ────────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user() result → the 1-page Free Weekly Memo v3
+        data shape consumed by services/artifacts/templates/weekly_memo.html.
+
+        Source of truth for the design:
+          frontend/src/components/reports/templates/weekly-memo.tsx
+          (interface WeeklyMemoData, 2026-04-29).
+
+        Mapping summary
+        ---------------
+          as_of              ← period_end (str ISO date)
+          week_tag           ← "WK-{year}-{week_number}"
+          portfolio_return   ← formatted weekly_return_pct, e.g. "+2.4%"
+          benchmark_return   ← formatted "vs S&P {benchmark_pct}"
+          portfolio_value    ← placeholder "—" (TODO: positions × last_price)
+          portfolio_delta    ← placeholder ""  (TODO)
+          ytd_return         ← placeholder "—"  (TODO)
+          ytd_detail         ← placeholder ""   (TODO)
+          three_checks       ← AI-generated weekly observations (placeholder
+                                copy until the AI generation sprint lands).
+          trajectory         ← daily-return path (placeholder rebuild from
+                                weekly_return_pct until 5-day series surfaces
+                                in generate_for_user).
+          decision           ← AI-generated next-week observation (placeholder).
+          memo_to_self       ← AI-generated memo text (placeholder).
+
+        Every placeholder is descriptive — no buy/sell/추천 verbs (자본시장법).
+        """
+        # ── headline returns ────────────────────────────────────────────────
+        wr = data.get("weekly_return_pct")
+        bm = data.get("benchmark_pct")
+
+        if wr is None:
+            portfolio_return = "—"
+            portfolio_return_tone = "neutral"
+        else:
+            portfolio_return = f"{wr:+.1f}%"
+            portfolio_return_tone = "pos" if wr >= 0 else "neg"
+
+        if bm is None:
+            benchmark_return = ""
+        else:
+            benchmark_return = f"vs S&P {bm:+.1f}%"
+
+        # ── trajectory path (5 daily returns, rebased) ──────────────────────
+        trajectory = self._build_trajectory(wr, bm)
+
+        # ── three checks (AI placeholder until generation sprint) ───────────
+        three_checks = [
+            {
+                "body": "이번 주 점검 1 — 포트폴리오 섹터별 비중 변동 관찰",
+                "meta": "—",
+                "checked": False,
+            },
+            {
+                "body": "이번 주 점검 2 — 보유 종목 주간 모멘텀 변화 점검",
+                "meta": "—",
+                "checked": False,
+            },
+            {
+                "body": "이번 주 점검 3 — 다음 주 주요 이벤트 / 실적 일정 확인",
+                "meta": "—",
+                "checked": False,
+            },
+        ]
+
+        # ── week tag ────────────────────────────────────────────────────────
+        week_number = data.get("week_number") or 0
+        period_end = str(data.get("period_end") or "")
+        try:
+            year = period_end[:4] if period_end else ""
+            week_tag = f"WK-{year}-{week_number:02d}" if year else f"WK-{week_number:02d}"
+        except Exception:
+            week_tag = f"WK-{week_number}"
+
+        return {
+            "as_of":              period_end or "—",
+            "week_tag":           week_tag,
+            "portfolio_return":   portfolio_return,
+            "portfolio_return_tone": portfolio_return_tone,
+            "benchmark_return":   benchmark_return,
+            "portfolio_value":    "—",
+            "portfolio_delta":    "",
+            "ytd_return":         "—",
+            "ytd_detail":         "",
+            "ytd_tone":           "neutral",
+            "three_checks":       three_checks,
+            "trajectory":         trajectory,
+            "decision":           "이번 주 점검 항목을 검토하세요. "
+                                  "다음 주 단 하나의 결정을 위해 시장 조건과 "
+                                  "포트폴리오 변동을 함께 살피세요.",
+            "memo_to_self":       "다음 주 검토 사항을 기록하세요. "
+                                  "관찰한 점, 주의할 부분, 확인이 필요한 데이터를 정리합니다.",
+        }
+
+    @staticmethod
+    def _build_trajectory(weekly_return_pct: Optional[float],
+                          benchmark_pct: Optional[float]
+                          ) -> dict[str, Any]:
+        """Construct the 5-day trajectory SVG paths.
+
+        Until daily snapshots surface in generate_for_user(), we approximate
+        a smooth 5-day curve using a linear ramp ending at the weekly total
+        return — descriptive, not predictive.
+
+        Returns a dict containing both the raw 5-element series (for any
+        future consumer) and three pre-built SVG path strings:
+            path_port, path_port_fill, path_bench
+        sized to the 600×120 viewBox the React component uses.
+        """
+        wr = float(weekly_return_pct) if weekly_return_pct is not None else 0.0
+        bm = float(benchmark_pct) if benchmark_pct is not None else 0.0
+
+        # 5-day linear ramp from 0 → final weekly return.
+        port_series = [round(wr * i / 4.0, 4) for i in range(5)]
+        bench_series = [round(bm * i / 4.0, 4) for i in range(5)]
+
+        all_returns = port_series + bench_series
+        port_path = WeeklyMemoService._path_from_returns(port_series, all_returns)
+        bench_path = WeeklyMemoService._path_from_returns(bench_series, all_returns)
+
+        # Closed area beneath the portfolio curve, anchored at y=120.
+        port_fill_path = (
+            f"{port_path} L600,120 L0,120 Z" if port_path else ""
+        )
+
+        return {
+            "portfolio":      port_series,
+            "benchmark":      bench_series,
+            "path_port":      port_path,
+            "path_port_fill": port_fill_path,
+            "path_bench":     bench_path,
+        }
+
+    @staticmethod
+    def _path_from_returns(values: list[float], all_values: list[float],
+                           width: int = 600, height: int = 120) -> str:
+        """Port of pathFromReturns() in weekly-memo.tsx (1:1).
+
+        Rebases to a height-tall band — top=best, bottom=worst across both
+        series. Pads 10% top/bottom so endpoints don't clip to the edge.
+        """
+        if not values:
+            return ""
+        if not all_values:
+            all_values = values
+        v_min = min(all_values)
+        v_max = max(all_values)
+        v_range = (v_max - v_min) or 1.0
+        n = len(values)
+        step = width / (n - 1) if n > 1 else width
+        parts: list[str] = []
+        for i, v in enumerate(values):
+            x = i * step
+            y = height * 0.95 - ((v - v_min) / v_range) * (height * 0.85)
+            cmd = "M" if i == 0 else "L"
+            parts.append(f"{cmd}{x:.0f},{y:.1f}")
+        return " ".join(parts)
+
+    # ── PDF render ──────────────────────────────────────────────────────────
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         """HTML → PDF via WeasyPrint. None when WeasyPrint is unavailable."""

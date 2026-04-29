@@ -151,10 +151,17 @@ def test_risk_kpi_differs_between_users(app, make_user, add_position):
 def test_rendered_pdf_html_has_no_hardcoded_risk_numbers(
     app, make_user, add_position,
 ):
-    """The audit-flagged literals must not appear as Risk Dashboard values.
+    """The audit-flagged literals must not appear anywhere in the rendered HTML.
 
-    We render the PDF template with real risk_kpi injected, then scan the
-    Risk Dashboard region of the HTML for the old hardcoded strings.
+    The 2026-04-29 redesign collapsed the 6-page Goldman IC v2 into a 1-page
+    Free Weekly Memo (CEO design v3). The "Part III · Risk Dashboard" page no
+    longer exists in the Free template — the risk_kpi data still lives in
+    `data["risk_kpi"]` for downstream tier templates, but the Free PDF only
+    surfaces the headline weekly return.
+
+    Regression intent preserved: the OLD hardcoded literals must not slip
+    back into the rendered HTML by any path (they would imply a reverted
+    template).
     """
     from services.artifacts.weekly_memo_service import WeeklyMemoService
 
@@ -169,34 +176,26 @@ def test_rendered_pdf_html_has_no_hardcoded_risk_numbers(
         data = svc.generate_for_user(u["id"])
         html = svc.render_pdf_html(data)
 
-    assert "Part III · Risk Dashboard" in html, "Risk section should render for this user"
-
-    # Isolate the Risk Dashboard page so we don't collide with unrelated
-    # literals elsewhere in the 5-page memo.
-    start = html.find("Part III · Risk Dashboard")
-    end = html.find("Part IV", start)
-    risk_region = html[start:end] if end > start else html[start:]
-
-    # The exact hardcoded numbers must not appear as Risk Dashboard values.
+    # The exact hardcoded numbers from the audit must not appear ANYWHERE.
     for literal in ("-2.14%", "-3.12%", "-8.14%", ">1.08<"):
-        assert literal not in risk_region, (
-            f"Hardcoded value {literal!r} still present in Risk Dashboard"
+        assert literal not in html, (
+            f"Hardcoded value {literal!r} still present in rendered HTML"
         )
-    # "W-9" and "W-13" were the frozen trough/recovery labels.
-    # They may legitimately reappear if the synthetic series happens to
-    # produce those same week indices — so we only assert that at least
-    # one of the two old labels is absent (a pair match would be suspicious).
-    frozen_pair_present = ("trough · W-9" in risk_region
-                            and "Recovered to flat by W-13" in risk_region)
+    # The frozen trough+recovery label pair from the audit must not coexist.
+    frozen_pair_present = ("trough · W-9" in html
+                            and "Recovered to flat by W-13" in html)
     assert not frozen_pair_present, (
         "Both hardcoded trough + recovery labels still present together"
     )
 
 
-# ─── 5. empty risk_kpi hides the section entirely ────────────────────────────
+# ─── 5. empty risk_kpi hides the legacy Risk Dashboard ───────────────────────
 
 def test_section_hidden_when_risk_kpi_empty(app, make_user):
-    """Template must skip the Part III block when risk_kpi == {}."""
+    """The Free 1-page template (CEO design v3) drops the Risk Dashboard
+    section entirely. Whether risk_kpi is empty or populated, none of the
+    legacy Risk Dashboard surface text should appear in Free output.
+    """
     from services.artifacts.weekly_memo_service import WeeklyMemoService
 
     u = make_user(email="norisk@test.com", tier="pro")
@@ -209,6 +208,6 @@ def test_section_hidden_when_risk_kpi_empty(app, make_user):
 
     assert "Part III · Risk Dashboard" not in html
     assert "Readings around the tails" not in html
-    # Methodology terms like "VaR · Value at Risk" live inside the Risk page
-    # and should also be gone.
+    # Methodology terms like "VaR · Value at Risk" lived inside the Risk page
+    # and must also be gone from the Free 1-page surface.
     assert "VaR · Value at Risk" not in html
