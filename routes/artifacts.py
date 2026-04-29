@@ -3148,3 +3148,90 @@ def diag_weekly_memo_pipeline():
                           "without an attachment, the bug is downstream "
                           "(send_email or SendGrid delivery).",
     })
+
+
+# ═══════ STATS / ARCHIVE — server-side aggregation ═══════
+# Frontend hooks (lib/hooks.ts:802 useArtifactStats, useArtifactArchive)
+# previously fell back to client-side derivation when these endpoints
+# 404'd. Adding the server-side path so the network log stops showing
+# 404s and the dashboard can render before all artifacts are downloaded.
+
+@artifacts_bp.route("/stats", methods=["GET"])
+@api_auth
+def artifacts_stats():
+    """Aggregate stats for /reports v2 hero. Mirrors `deriveArtifactStats`
+    in lib/hooks.ts so the frontend can prefer server-side numbers when
+    available and silently fall back when not.
+
+    Returns:
+        {
+          total, countYtd, countMemos, countBriefs, countBragCards,
+          byType: {<type>: <count>, ...},
+          nextScheduled: null,                  # populated when scheduler exposes it
+          latestIndexedAt: ISO-8601 | null,
+        }
+    """
+    rows = (
+        Artifact.query
+        .filter_by(user_id=current_user.id)
+        .all()
+    )
+    year_start = datetime(datetime.now(timezone.utc).year, 1, 1)
+    by_type: dict[str, int] = {}
+    count_ytd = 0
+    latest: datetime | None = None
+    for a in rows:
+        by_type[a.type] = by_type.get(a.type, 0) + 1
+        sent_at = a.sent_at
+        if sent_at:
+            if sent_at >= year_start:
+                count_ytd += 1
+            if latest is None or sent_at > latest:
+                latest = sent_at
+    return jsonify({
+        "total":           len(rows),
+        "countYtd":        count_ytd,
+        "countMemos":      by_type.get("weekly_memo", 0),
+        "countBriefs":     by_type.get("earnings_prebrief", 0),
+        "countBragCards":  by_type.get("monthly_brag", 0),
+        "byType":          by_type,
+        "nextScheduled":   None,
+        "latestIndexedAt": latest.isoformat() if latest else None,
+    })
+
+
+@artifacts_bp.route("/by-month", methods=["GET"])
+@api_auth
+def artifacts_by_month():
+    """Server-side groupby for the year timeline. Frontend falls back to
+    `deriveArchiveMonths(artifacts)` when this 404s — the response shape
+    matches `ArtifactArchiveMonth` in lib/hooks.ts.
+
+    Query:
+        month — "YYYY-MM" required.
+
+    Returns:
+        { month, artifacts: [...], count }
+    """
+    month_str = (request.args.get("month") or "").strip()
+    try:
+        year, mon = (int(p) for p in month_str.split("-", 1))
+        start = datetime(year, mon, 1)
+        end = datetime(year + (1 if mon == 12 else 0),
+                       1 if mon == 12 else mon + 1, 1)
+    except (ValueError, TypeError):
+        return jsonify({"error": "month must be YYYY-MM"}), 400
+
+    rows = (
+        Artifact.query
+        .filter(Artifact.user_id == current_user.id,
+                Artifact.sent_at >= start,
+                Artifact.sent_at < end)
+        .order_by(Artifact.sent_at.desc())
+        .all()
+    )
+    return jsonify({
+        "month":     month_str,
+        "artifacts": [r.to_dict() for r in rows],
+        "count":     len(rows),
+    })
