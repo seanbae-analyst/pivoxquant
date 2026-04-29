@@ -9,7 +9,7 @@
  *         decision 3-up + pre-entry promise callout + sign row + governance + disclaimer.
  *
  * Compliance: Process audit / pre-entry checklist. No buy/sell/hold language.
- * "PROCEED / HOLD / REJECT" labels are checklist gates, not investment advice.
+ * "PROCEED / REJECT" labels are checklist gates, not investment advice.
  * Cadence: ondemand (one-off pre-entry diligence).
  */
 
