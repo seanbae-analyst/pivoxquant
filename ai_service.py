@@ -4,7 +4,6 @@ Uses Claude Haiku for cost-efficient, beginner-friendly financial insights.
 """
 
 import os
-import json
 import logging
 from datetime import datetime, timezone
 
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 # 교체한다. 사전 정의 패턴은 services.legal_filter 에서 관리
 # (이전: services.morning_brief_service — 2026-04-29 제거).
 from services.legal_filter import is_compliant as _is_compliant
-from services.legal_filter import safe_scrub, scrub_signal
+from services.legal_filter import scrub_signal
 
 
 _DISCLAIMER_EN = (
