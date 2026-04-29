@@ -1,24 +1,25 @@
+"use client";
+
 /**
  * /reports/preview/brag-card
  *
- * Print-ready preview of Report 03 — Brag Card (Free · Monthly).
+ * Wave 2 (2026-04-29) — wired to real artifact data via <ReportPreviewShell />.
+ * Free tier. Backend artifact type: `brag_card` (Wave 1 dispatch).
  */
 
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
 import {
-  ReportSurface,
-  PdfToolbar,
-} from "@/components/reports/pdf-primitives";
-import { BragCard } from "@/components/reports/templates/brag-card";
-
-export const metadata = {
-  title: "Brag Card · PivoxQuant",
-};
+  BragCard,
+  type BragCardData,
+} from "@/components/reports/templates/brag-card";
 
 export default function BragCardPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <BragCard />
-    </ReportSurface>
+    <ReportPreviewShell<BragCardData>
+      type="brag_card"
+      tier="free"
+      emptyReason="no_trades"
+      render={(data) => <BragCard data={data} />}
+    />
   );
 }

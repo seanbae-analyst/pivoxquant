@@ -595,6 +595,56 @@ export default function PricingPage() {
           </div>
         </section>
 
+        {/* ── Coming Soon banner — Wave 2 (2026-04-29) ──
+            Stripe API key + product IDs are unallocated until the user's
+            사업자등록증 + Stripe onboarding completes. The CTA still fires
+            against `/api/billing/checkout`, which currently returns 502;
+            the consent-modal flow has been retained so we can flip the
+            switch the moment Stripe goes live. */}
+        <section
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8"
+          aria-label="Subscription availability"
+        >
+          <div
+            role="status"
+            className="rounded-sm p-5 flex items-start gap-3"
+            style={{
+              backgroundColor: "rgba(139,111,71,0.08)",
+              border: "0.5pt solid rgba(139,111,71,0.32)",
+            }}
+          >
+            <Info
+              className="h-4 w-4 mt-[2px] shrink-0"
+              style={{ color: "var(--pq-bronze)" }}
+            />
+            <div>
+              <p
+                className="font-mono uppercase mb-1"
+                style={{
+                  fontSize: "10.5px",
+                  letterSpacing: "0.22em",
+                  color: "var(--pq-bronze)",
+                }}
+              >
+                Coming Soon · 정식 출시 후 활성화
+              </p>
+              <p
+                className="font-serif leading-relaxed"
+                style={{
+                  fontSize: "13px",
+                  color: "rgba(245,240,232,0.72)",
+                  lineHeight: 1.65,
+                  maxWidth: "62ch",
+                }}
+              >
+                결제 시스템(Stripe)은 사업자등록 절차 완료 후 활성화됩니다. 그
+                전까지는 Free 플랜으로 모든 베타 기능을 사용할 수 있어요.
+                구독 확정은 Stripe 연동 시점에 이메일로 안내드립니다.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* ── Tier Cards (matches landing Pricing section) ── */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 md:pb-28">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">

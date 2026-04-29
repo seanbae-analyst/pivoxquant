@@ -23,6 +23,23 @@ const TYPE_LABEL: Record<ArtifactType, string> = {
   quarterly_review: "Quarterly Audit",
   risk_report: "Risk Note",
   custom: "Letter",
+  // ── Wave 2 (2026-04-29) labels for the 17 backend artifact types.
+  brag_card: "Brag Card",
+  self_audit: "Self Audit",
+  risk_board: "Risk Board",
+  year_end_letter: "Year-End Letter",
+  quarterly_self_report: "Quarterly Self-Report",
+  kpi_dashboard: "KPI Dashboard",
+  dd_checklist: "DD Checklist",
+  dividend_income: "Dividend Income",
+  monthly_finance: "Monthly Finance",
+  burn_rate: "Burn Rate",
+  capital_allocation: "Capital Allocation",
+  credit_rating: "Credit Rating",
+  insider_mirror: "Insider Mirror",
+  portfolio_segment: "Portfolio Segment",
+  pre_trade_checklist: "Pre-Trade Checklist",
+  sp500_backtest: "S&P 500 Backtest",
 };
 
 interface MentionRow {

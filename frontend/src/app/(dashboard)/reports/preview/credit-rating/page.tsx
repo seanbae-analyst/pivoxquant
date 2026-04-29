@@ -1,19 +1,23 @@
+"use client";
+
 /**
- * /reports/preview/credit-rating — Report 14 (Premium · Quarterly · 3 pages)
+ * /reports/preview/credit-rating — Wave 2 (2026-04-29).
+ * Premium tier. Backend type: `credit_rating`.
  */
 
-import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
-import { CreditRating } from "@/components/reports/templates/credit-rating";
-
-export const metadata = {
-  title: "Credit Rating · PivoxQuant",
-};
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
+import {
+  CreditRating,
+  type CreditRatingData,
+} from "@/components/reports/templates/credit-rating";
 
 export default function CreditRatingPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <CreditRating />
-    </ReportSurface>
+    <ReportPreviewShell<CreditRatingData>
+      type="credit_rating"
+      tier="premium"
+      emptyReason="not_in_portfolio"
+      render={(data) => <CreditRating data={data} />}
+    />
   );
 }

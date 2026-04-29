@@ -1,19 +1,23 @@
+"use client";
+
 /**
- * /reports/preview/insider-mirror — Report 10 (Pro · Weekly · 2 pages)
+ * /reports/preview/insider-mirror — Wave 2 (2026-04-29).
+ * Pro tier. Backend type: `insider_mirror`.
  */
 
-import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
-import { InsiderMirror } from "@/components/reports/templates/insider-mirror";
-
-export const metadata = {
-  title: "Insider Mirror · PivoxQuant",
-};
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
+import {
+  InsiderMirror,
+  type InsiderMirrorData,
+} from "@/components/reports/templates/insider-mirror";
 
 export default function InsiderMirrorPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <InsiderMirror />
-    </ReportSurface>
+    <ReportPreviewShell<InsiderMirrorData>
+      type="insider_mirror"
+      tier="pro"
+      emptyReason="not_in_portfolio"
+      render={(data) => <InsiderMirror data={data} />}
+    />
   );
 }

@@ -1,28 +1,26 @@
+"use client";
+
 /**
- * /reports/preview/earnings-prebrief
+ * /reports/preview/earnings-prebrief — Wave 2 (2026-04-29).
+ * Pro tier. Backend type: `earnings_prebrief`.
  *
- * Print-ready preview of Report 04 — Earnings Pre-Brief (Pro · Per-event · 2 pages).
- *
- * COMPLIANCE NOTE: The Quant Signal block uses POSITIVE / NEGATIVE / NEUTRAL
- * labels (NEVER BUY/SELL/HOLD). See templates/earnings-prebrief.tsx for the
- * compliance-fixed version of the original PDF mock.
+ * COMPLIANCE NOTE: Quant Signal block uses POSITIVE / NEGATIVE / NEUTRAL
+ * labels (NEVER BUY/SELL/HOLD). Enforced inside the template.
  */
 
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
 import {
-  ReportSurface,
-  PdfToolbar,
-} from "@/components/reports/pdf-primitives";
-import { EarningsPrebrief } from "@/components/reports/templates/earnings-prebrief";
-
-export const metadata = {
-  title: "Earnings Pre-Brief · PivoxQuant",
-};
+  EarningsPrebrief,
+  type EarningsPrebriefData,
+} from "@/components/reports/templates/earnings-prebrief";
 
 export default function EarningsPrebriefPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <EarningsPrebrief />
-    </ReportSurface>
+    <ReportPreviewShell<EarningsPrebriefData>
+      type="earnings_prebrief"
+      tier="pro"
+      emptyReason="not_in_portfolio"
+      render={(data) => <EarningsPrebrief data={data} />}
+    />
   );
 }

@@ -1,19 +1,23 @@
+"use client";
+
 /**
- * /reports/preview/portfolio-segment — Report 12 (Pro · Monthly · 2 pages)
+ * /reports/preview/portfolio-segment — Wave 2 (2026-04-29).
+ * Pro tier. Backend type: `portfolio_segment`.
  */
 
-import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
-import { PortfolioSegment } from "@/components/reports/templates/portfolio-segment";
-
-export const metadata = {
-  title: "Portfolio Segment · PivoxQuant",
-};
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
+import {
+  PortfolioSegment,
+  type PortfolioSegmentData,
+} from "@/components/reports/templates/portfolio-segment";
 
 export default function PortfolioSegmentPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <PortfolioSegment />
-    </ReportSurface>
+    <ReportPreviewShell<PortfolioSegmentData>
+      type="portfolio_segment"
+      tier="pro"
+      emptyReason="no_positions"
+      render={(data) => <PortfolioSegment data={data} />}
+    />
   );
 }

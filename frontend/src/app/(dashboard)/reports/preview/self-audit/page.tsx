@@ -1,19 +1,23 @@
+"use client";
+
 /**
- * /reports/preview/self-audit — Report 07 (Pro · On-demand · 2 pages)
+ * /reports/preview/self-audit — Wave 2 (2026-04-29).
+ * Pro tier. Backend type: `self_audit`.
  */
 
-import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
-import { SelfAudit } from "@/components/reports/templates/self-audit";
-
-export const metadata = {
-  title: "Self Audit · PivoxQuant",
-};
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
+import {
+  SelfAudit,
+  type SelfAuditData,
+} from "@/components/reports/templates/self-audit";
 
 export default function SelfAuditPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <SelfAudit />
-    </ReportSurface>
+    <ReportPreviewShell<SelfAuditData>
+      type="self_audit"
+      tier="pro"
+      emptyReason="no_trades"
+      render={(data) => <SelfAudit data={data} />}
+    />
   );
 }

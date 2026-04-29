@@ -1,19 +1,23 @@
+"use client";
+
 /**
- * /reports/preview/risk-board — Report 05 (Pro · Weekly · 2 pages)
+ * /reports/preview/risk-board — Wave 2 (2026-04-29).
+ * Pro tier. Backend type: `risk_board`.
  */
 
-import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
-import { RiskBoard } from "@/components/reports/templates/risk-board";
-
-export const metadata = {
-  title: "Risk Board · PivoxQuant",
-};
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
+import {
+  RiskBoard,
+  type RiskBoardData,
+} from "@/components/reports/templates/risk-board";
 
 export default function RiskBoardPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <RiskBoard />
-    </ReportSurface>
+    <ReportPreviewShell<RiskBoardData>
+      type="risk_board"
+      tier="pro"
+      emptyReason="no_positions"
+      render={(data) => <RiskBoard data={data} />}
+    />
   );
 }
