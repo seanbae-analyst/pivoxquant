@@ -1,958 +1,293 @@
 {# ══════════════════════════════════════════════════════════════════════════
-   Risk Board — Goldman Risk Committee v2 Editorial Redesign (6-page)
-   Hand-crafted inline SVG, Ink × Bronze bichrome, Tufte-quiet grids.
-   Brand v2: wordmark (cover) · monogram (colophon) · submark (running-head).
+   Risk Board — Pro · 2-page (CEO design v3, 2026-04-29)
+
+   Source: frontend/src/components/reports/templates/risk-board.tsx
+   1:1 port of the React component into a print-oriented Jinja template.
+
+   Page 1 — Executive Summary + Limits
+     1. Header        — pivoxquant wordmark + PRO chip + asOf · weekTag · 01/02
+     2. Eyebrow       — "Risk Board · Weekly"
+     3. ExecSum       — dl/dt/dd (Status / Headline Risk / Stress Worst /
+                        This Week / Action P1)
+     4. KPI row (4)   — VaR · Beta · Max DD · Sharpe
+     5. Risk Limits   — limit list (gauge bars + cap + status badge)
+     6. Page footer
+     7. Disclaimer    — _disclaimer.html (자본시장법 verbatim)
+
+   Page 2 — Stress Tests + Actions
+     1. Header (02/02) + gold rule
+     2. Stress Test Impact — waterfall card (5 scenarios)
+     3. Scenario table (Scenario / P&L / %NAV / NAV After / Recovery / Verdict)
+     4. Two-col bottom    — AVG PAIRWISE CORR (gauge) | REBALANCE NOTES
+     5. GovBlock          — observation-only governance footer (Pro tier)
+     6. Page footer
+     7. Disclaimer    — _disclaimer.html
+
+   WeasyPrint 68.1: NO ::first-letter + float:left combination.
+
+   The data shape v3 (built by RiskBoardService._to_v3_shape) supplies:
+     v3.as_of, v3.week_tag,
+     v3.status_tone, v3.status_text,
+     v3.headline_risk, v3.stress_worst, v3.this_week, v3.action_p1,
+     v3.kpis (list of {label, value, delta, delta_tone, heat_tone, heat_text}),
+     v3.limits (list of {name, detail, fill_pct, cap_pct, value_label,
+                          fill_state, status_tone, status_text}),
+     v3.scenarios (list of {label, detail, left_pct, width_pct, axis_pct,
+                             value, pnl_pct, nav_after, recovery,
+                             verdict_tone, verdict_text}),
+     v3.corr (value, gauge_pct, badge_tone, badge_text, verdict),
+     v3.actions (list of {body, meta})
+   Compliance: All risk metrics are observation labels (BREACH/OVER/OK).
+   No buy/sell/hold language. _disclaimer.html appears on both pages.
    ══════════════════════════════════════════════════════════════════════════ #}
+{%- set v3 = v3 | default({}) -%}
 <!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8"/>
   <title>Risk Board — {{ period_label }} — {{ user_name }}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 22mm 20mm 22mm 20mm;
-      @top-left {
-        content: "PIVOXQUANT  ·  RISK BOARD";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7.2pt;
-        letter-spacing: 0.36em;
-        text-transform: uppercase;
-        color: #B8956A;
-      }
-      @top-right {
-        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ period_label }}";
-        font-family: "JetBrains Mono", monospace;
-        font-size: 7pt;
-        letter-spacing: 0.14em;
-        color: #6B6B6B;
-      }
-      @bottom-left {
-        content: "Observation only — not a directive.";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7pt;
-        font-style: italic;
-        color: #8a8a8a;
-      }
-      @bottom-right {
-        content: counter(page) " / " counter(pages);
-        font-family: "JetBrains Mono", monospace;
-        font-size: 8pt;
-        color: #4a4a4a;
-      }
-    }
-    /* Cover page silence. */
-    @page :first {
-      @top-left { content: none; }
-      @top-right { content: none; }
-      @bottom-left { content: none; }
-      @bottom-right { content: none; }
-    }
-    {% include '_report_css.html' %}
-
-    /* ───────────────────── P1 · COVER ─────────────────────────────── */
-    .cv { position: relative; padding-top: 0; }
-    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
-    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
-    .cv-issue {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
-      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
-    }
-    .cv-issue .cv-issue-key { color: #0A0A0A; }
-    .cv-hero {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 38pt; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A;
-      margin: 28pt 0 28pt 0; padding: 0;
-    }
-    .cv-hero span { display: block; }
-    .cv-hero span + span { padding-left: 30pt; }
-    .cv-hero span + span + span { padding-left: 60pt; color: #B8956A; }
-    .cv-kpi4 {
-      display: table; width: 100%; border-collapse: collapse; margin-top: 18pt; table-layout: fixed;
-    }
-    .cv-kpi { display: table-cell; width: 25%; padding: 4pt 10pt; vertical-align: top; overflow: visible; }
-    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 12pt; }
-    .cv-kpi-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8a8a8a; margin-bottom: 4pt;
-    }
-    .cv-kpi-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 18pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -0.015em; line-height: 1.02;
-    }
-    .cv-kpi-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
-    }
-    .cv-foot {
-      margin-top: 22pt; text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt; color: #6B6B6B; letter-spacing: 0.02em;
-    }
-
-    /* ───────────────────── Common part headers ────────────────────── */
-    .sp-part {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin: 0 0 2pt 0;
-    }
-    .sp-title {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 26pt; font-weight: 400; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
-    }
-    .sp-deck {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
-      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
-    }
-
-    /* ───────────────────── P2 · HEATMAP SPREAD ────────────────────── */
-    .sp-grid {
-      display: table; width: 100%; border-collapse: separate;
-      border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed;
-    }
-    .sp-grid > .sp-main { display: table-cell; width: 66%; vertical-align: top; }
-    .sp-grid > .sp-margin { display: table-cell; width: 34%; vertical-align: top; }
-
-    .sp-fig-title {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; margin-bottom: 6pt;
-    }
-    .sp-fig-caption {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
-      line-height: 1.4; margin-top: 6pt; max-width: 360pt;
-    }
-    .sp-prose {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; line-height: 1.58; color: #202020;
-      margin-top: 0; padding-top: 0;
-    }
-    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
-    .sp-prose > p:first-child::first-letter {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 28pt; line-height: 0.88; font-weight: 500;
-      color: #B8956A; /* float+padding removed for WeasyPrint 68.1 compat */ font-style: normal;
-    }
-
-    .sp-marg-list {
-      margin-top: 12pt; border-top: 0.35pt solid #c9c4b8; padding-top: 8pt;
-    }
-    .sp-marg-item {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt;
-      color: #6B6B6B; margin: 0 0 4pt 0;
-    }
-
-    /* ───────────────────── P3 · RISK LADDER ───────────────────────── */
-    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
-    .ld-table th, .ld-table td {
-      padding: 5pt 6pt; text-align: left; vertical-align: middle;
-      border-bottom: 0.25pt solid #e4dfd2;
-    }
-    .ld-table thead th {
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.16em;
-      text-transform: uppercase; color: #6B6B6B;
-      font-weight: 600;
-    }
-    .ld-table td.num {
-      text-align: right;
-      font-family: "JetBrains Mono", monospace;
-      font-variant-numeric: tabular-nums; font-size: 8.8pt;
-    }
-    .ld-tkr {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-weight: 600; font-size: 9.2pt;
-      letter-spacing: 0.02em; color: #0A0A0A;
-    }
-    .ld-hl-bronze .ld-tkr {
-      color: #B8956A;
-    }
-    .ld-total-row td {
-      border-top: 0.35pt solid #B8956A;
-      border-bottom: none !important;
-      padding-top: 10pt !important;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; color: #6B6B6B;
-    }
-
-    /* ───────────────────── P4 · TAIL / DRAWDOWN QUAD ──────────────── */
-    .rq-grid {
-      display: table; width: 100%; border-collapse: separate;
-      border-spacing: 14pt 0; table-layout: fixed;
-    }
-    .rq-main { display: table-cell; width: 70%; vertical-align: top; }
-    .rq-side { display: table-cell; width: 30%; vertical-align: top; }
-
-    .rq-quads { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; }
-    .rq-quad-row { display: table-row; }
-    .rq-quad {
-      display: table-cell; width: 50%;
-      padding: 6pt 8pt;
-      vertical-align: top; height: 140pt;
-    }
-    .rq-quad svg { width: 100%; }
-    .rq-quad-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 3pt;
-    }
-    .rq-quad-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 13pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-    }
-    .rq-quad-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; color: #6B6B6B;
-      margin-top: 4pt; line-height: 1.4;
-    }
-
-    .rq-method {
-      padding: 10pt 0;
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-size: 8pt;
-    }
-    .rq-method-eyebrow {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.28em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 8pt;
-    }
-    .rq-method-item { margin-bottom: 9pt; }
-    .rq-method-item:last-child { margin-bottom: 0; }
-    .rq-method-num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.6pt; color: #B8956A; font-weight: 600;
-      letter-spacing: 0.04em; margin-right: 4pt;
-    }
-    .rq-method-def {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.2pt; line-height: 1.5;
-      color: #4a4a4a; display: inline;
-    }
-
-    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
-    .ed-quote-wrap {
-      min-height: 300pt; padding: 20pt 14mm 20pt 14mm;
-      display: table; width: 100%; text-align: center;
-    }
-    .ed-quote-cell { display: table-cell; vertical-align: middle; }
-    .ed-quote {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 38pt; line-height: 1.22;
-      letter-spacing: -0.015em; color: #0A0A0A;
-      margin: 0 auto; max-width: 150mm;
-    }
-    .ed-quote-attr {
-      margin-top: 26pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #B8956A;
-    }
-    .ed-quote-attr::before, .ed-quote-attr::after {
-      content: "——"; color: #B8956A; opacity: 0.5;
-      margin: 0 8pt; letter-spacing: 0;
-    }
-
-    .ed-notans-head {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; margin-top: 26pt;
-      padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
-    }
-    .ed-notans-grid {
-      display: table; width: 100%; border-collapse: separate;
-      border-spacing: 18pt 0; margin-top: 10pt;
-    }
-    .ed-notans-col {
-      display: table-cell; width: 50%; vertical-align: top;
-    }
-    .ed-notans-item {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; line-height: 1.6;
-      color: #202020; margin-bottom: 8pt;
-      padding-left: 24pt; text-indent: -24pt;
-    }
-    .ed-notans-num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8pt; color: #B8956A;
-      font-weight: 600; letter-spacing: 0.04em;
-      margin-right: 10pt;
-    }
-
-    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
-    .co-wrap { padding: 0; text-align: left; }
-    .co-body p { margin: 0 0 8pt 0 !important; }
-    .co-head {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 4pt;
-    }
-    .co-rule-small {
-      width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0;
-    }
-    .co-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.7;
-      color: #202020; max-width: 440pt;
-    }
-    .co-body .co-key {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.4pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #6B6B6B;
-    }
-    .co-thin-rule {
-      height: 0.35pt; background: #c9c4b8; margin: 12pt 0;
-    }
-    .co-sign { text-align: center; margin-top: 14pt; }
-    .co-sign-house {
-      margin-top: 16pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #0A0A0A; font-weight: 500;
-    }
-    .co-sign-ref {
-      margin-top: 10pt;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
-    }
-    .co-sign-time {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
-    }
-    section.disclaimer.pq-disclaimer {
-      padding: 10pt 0 !important;
-      margin: 16pt 0 0 0 !important;
-      border-top: 0.5pt solid #0A0A0A !important;
-      font-size: 7.6pt !important;
-      line-height: 1.5 !important;
-    }
-    section.disclaimer.pq-disclaimer h5.disclaimer__title {
-      font-family: "Geist", -apple-system, sans-serif !important;
-      font-size: 7pt !important;
-      letter-spacing: 0.32em !important;
-      text-transform: uppercase !important;
-      color: #B8956A !important;
-      margin: 0 0 6pt 0 !important;
-    }
-  </style>
+  <style>{% include '_risk_board_v3_css.html' %}</style>
 </head>
 <body>
 
-{# ── local helpers ─────────────────────────────────────────────────────── #}
-{% set _issue_no = issue_number | default(4) %}
-{% set _doc_ref = doc_ref | default('PQ-RB-' ~ ('%02d' % _issue_no) ~ ' · v2026.04.21') %}
-{% set _hero = hero_headline | default([
-  'Risk is observed, not eliminated.',
-  'Numbers are companions, not captains.',
-  'This is a record — not a route.',
-]) %}
+<div class="pq-report">
 
-{# KPI defaults — cover page #}
-{% set _kpi_var    = kpi_var_1d    | default(-2.14) %}
-{% set _kpi_es     = kpi_es_1d     | default(-3.42) %}
-{% set _kpi_mdd    = kpi_maxdd_90d | default(-8.70) %}
-{% set _kpi_corr   = kpi_corr_index | default(0.58) %}
+  {# ═══════════════════════ PAGE 1 ═══════════════════════ #}
+  <section class="pq-pdf-page">
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 1 · COVER
-   ══════════════════════════════════════════════════════════════════════════ #}
-<section class="cv">
-
-  <div class="cv-wordmark" style="margin: 6pt auto 14pt auto;">
-    {% with brand_kind='wordmark', brand_size=260 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-  </div>
-
-  <div class="cv-rule-thin"></div>
-  <div class="cv-issue">
-    RISK BOARD <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
-    &nbsp;·&nbsp; {{ period_label | default('April 2026') }}
-    &nbsp;·&nbsp; PORTFOLIO OBSERVATION
-  </div>
-  <div class="cv-rule-thin"></div>
-
-  <h1 class="cv-hero">
-    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
-  </h1>
-
-  <div class="cv-rule-thin"></div>
-
-  <div class="cv-kpi4">
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Portfolio VaR · 95% · 1D</div>
-      <div class="cv-kpi-value r-neg">{{ '%+.2f'|format(_kpi_var) }}%</div>
-      <div class="cv-kpi-foot">Historical simulation, 252D.</div>
+    {# ───────── 1. Header ───────── #}
+    <div class="pq-pdf-header">
+      <div>
+        <span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span>
+      </div>
+      <div class="pq-pdf-meta">
+        <strong>
+          <span class="pq-pdf-tier-chip pro">PRO</span>RISK BOARD · WEEKLY
+        </strong>
+        <span>{{ v3.as_of | default(period_label) }} · {{ v3.week_tag | default('RB-' ~ period_label) }} · 01/02</span>
+      </div>
     </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Expected Shortfall · 95%</div>
-      <div class="cv-kpi-value r-neg">{{ '%+.2f'|format(_kpi_es) }}%</div>
-      <div class="cv-kpi-foot">Mean loss beyond VaR.</div>
+
+    {# ───────── 2. Eyebrow ───────── #}
+    <div class="pq-pdf-eyebrow">Risk Board · Weekly Observation</div>
+
+    {# ───────── 3. ExecSum ───────── #}
+    <div class="pq-pdf-execsum">
+      <div class="pq-pdf-execsum-stamp">{{ v3.as_of_stamp | default(period_label) }}</div>
+      <dl>
+        <dt>Status</dt>
+        <dd>
+          <span class="pq-pdf-badge {{ v3.status_tone | default('moderate') }}">
+            {{ v3.status_label | default('AMBER') }}
+          </span>
+          &nbsp;{{ v3.status_text | default('한도 점검 결과 확인.') }}
+        </dd>
+
+        <dt>Headline Risk</dt>
+        <dd>{{ v3.headline_risk | default('관찰된 한도 초과 항목이 없습니다.') }}</dd>
+
+        <dt>Stress Worst</dt>
+        <dd>{{ v3.stress_worst | default('스트레스 시나리오 결과를 확인하세요.') }}</dd>
+
+        <dt>This Week</dt>
+        <dd>{{ v3.this_week | default('주간 관찰 지표를 검토하세요.') }}</dd>
+
+        <dt>Action P1</dt>
+        <dd>{{ v3.action_p1 | default('다음 리밸런스 시 한도 복귀 항목을 점검하세요.') }}</dd>
+      </dl>
     </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Max Drawdown · 90D</div>
-      <div class="cv-kpi-value r-neg">{{ '%+.2f'|format(_kpi_mdd) }}%</div>
-      <div class="cv-kpi-foot">Peak to trough, daily marks.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Correlation Risk Index</div>
-      <div class="cv-kpi-value">{{ '%.2f'|format(_kpi_corr) }}</div>
-      <div class="cv-kpi-foot">90D rolling mean pairwise.</div>
-    </div>
-  </div>
 
-  <p class="cv-foot">
-    <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice.</em>
-  </p>
-</section>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 2 · HEATMAP SPREAD — 10×10 correlation · editorial prose
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part I · Correlation Observed</p>
-<h2 class="sp-title">Where the tribe moves together</h2>
-<p class="sp-deck">
-  A ninety-day Pearson reading on ten holdings. The diagonal is left quiet;
-  the off-diagonal numbers are facts, not directives.
-</p>
-
-<div class="sp-grid">
-  <div class="sp-main">
-
-    <div class="sp-fig-title">Fig. 1 · Pairwise 90-day correlation · ten names</div>
-
-    {# ── Correlation heatmap, hand-crafted ─────────────────────────── #}
-    {% set _cl = corr_matrix['labels'] if corr_matrix and corr_matrix['labels'] else ['AAPL','MSFT','NVDA','GOOG','META','AMZN','TSLA','JPM','XOM','UNH'] %}
-    {% set _cm = corr_matrix['values'] if corr_matrix and corr_matrix['values'] else [
-      [1.00, 0.82, 0.68, 0.71, 0.64, 0.66, 0.47, 0.32, 0.18, 0.24],
-      [0.82, 1.00, 0.72, 0.74, 0.68, 0.69, 0.44, 0.35, 0.21, 0.26],
-      [0.68, 0.72, 1.00, 0.62, 0.58, 0.60, 0.52, 0.28, 0.11, 0.19],
-      [0.71, 0.74, 0.62, 1.00, 0.67, 0.65, 0.41, 0.30, 0.17, 0.22],
-      [0.64, 0.68, 0.58, 0.67, 1.00, 0.61, 0.39, 0.27, 0.15, 0.20],
-      [0.66, 0.69, 0.60, 0.65, 0.61, 1.00, 0.43, 0.29, 0.16, 0.21],
-      [0.47, 0.44, 0.52, 0.41, 0.39, 0.43, 1.00, 0.22, 0.14, 0.17],
-      [0.32, 0.35, 0.28, 0.30, 0.27, 0.29, 0.22, 1.00, 0.34, 0.28],
-      [0.18, 0.21, 0.11, 0.17, 0.15, 0.16, 0.14, 0.34, 1.00, 0.19],
-      [0.24, 0.26, 0.19, 0.22, 0.20, 0.21, 0.17, 0.28, 0.19, 1.00],
-    ] %}
-
-    {% set _cell = 28 %}
-    {% set _hl   = 42 %}
-    {% set _hm_w = _hl + _cell * 10 + 10 %}
-    {% set _hm_h = _hl + _cell * 10 + 22 %}
-
-    <svg viewBox="0 0 {{ _hm_w }} {{ _hm_h }}" width="100%"
-         preserveAspectRatio="none"
-         xmlns="http://www.w3.org/2000/svg" aria-label="Correlation heatmap" role="img"
-         style="display:block; overflow:visible;">
-
-      <!-- column labels -->
-      {% for c in range(10) %}
-        <text x="{{ _hl + c * _cell + _cell/2 }}" y="{{ _hl - 5 }}"
-              text-anchor="middle" fill="#4a4a4a"
-              font-size="6.4" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ _cl[c] }}</text>
-      {% endfor %}
-      <!-- row labels -->
-      {% for r in range(10) %}
-        <text x="{{ _hl - 5 }}" y="{{ _hl + r * _cell + _cell/2 + 2.3 }}"
-              text-anchor="end" fill="#4a4a4a"
-              font-size="6.4" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ _cl[r] }}</text>
-      {% endfor %}
-      <!-- cells -->
-      {% for r in range(10) %}
-        {% for c in range(10) %}
-          {% set _val = _cm[r][c] %}
-          {% if r == c %}
-            <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}"
-                  width="{{ _cell - 1 }}" height="{{ _cell - 1 }}"
-                  fill="#f7f3ec" stroke="#c9c4b8" stroke-width="0.35"/>
-            <text x="{{ _hl + c * _cell + _cell/2 }}"
-                  y="{{ _hl + r * _cell + _cell/2 + 2.3 }}"
-                  text-anchor="middle" font-size="6.4"
-                  font-family="JetBrains Mono, monospace"
-                  fill="#c9c4b8">—</text>
-          {% else %}
-            {% set _av = _val if _val >= 0 else -_val %}
-            {% if _val >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
-            <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}"
-                  width="{{ _cell - 1 }}" height="{{ _cell - 1 }}"
-                  fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}"
-                  stroke="#ffffff" stroke-width="0.5"/>
-            <text x="{{ _hl + c * _cell + _cell/2 }}"
-                  y="{{ _hl + r * _cell + _cell/2 + 2.3 }}"
-                  text-anchor="middle" font-size="6.6"
-                  font-family="JetBrains Mono, monospace"
-                  fill="{{ '#0A0A0A' if _av < 0.5 else '#F7F5EF' }}">{{ '%.2f'|format(_val) }}</text>
+    {# ───────── 4. KPI row (4-up) ───────── #}
+    <div class="pq-pdf-kpi-row">
+      {% for k in v3.kpis | default([]) %}
+      <div class="pq-pdf-kpi">
+        <div class="pq-pdf-kpi-lbl">{{ k.label }}</div>
+        <div class="pq-pdf-kpi-val">{{ k.value | default('—') }}</div>
+        <div class="pq-pdf-kpi-delta {{ k.delta_tone | default('') }}">
+          {{ k.delta | default('') }}
+          {% if k.heat_text %}
+          &middot; <span class="pq-pdf-heat {{ k.heat_tone | default('green') }}">{{ k.heat_text }}</span>
           {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# ───────── 5. Risk Limits ───────── #}
+    <div class="pq-pdf-section-title">
+      Risk Limits <small>한도 점검 · vs cap</small>
+    </div>
+
+    <div class="pq-pdf-limit-list">
+      {% for L in v3.limits | default([]) %}
+      <div class="pq-pdf-limit-row">
+        <div>
+          <div class="pq-pdf-limit-name">{{ L.name }}</div>
+          {% if L.detail %}<span class="pq-pdf-limit-detail">{{ L.detail }}</span>{% endif %}
+        </div>
+        <div class="pq-pdf-limit-bar">
+          <div class="pq-pdf-limit-fill {{ L.fill_state | default('') }}"
+               style="width: {{ L.fill_pct | default(0) }}%;"></div>
+          {% if L.cap_pct is defined and L.cap_pct is not none %}
+          <div class="pq-pdf-limit-cap" style="left: {{ L.cap_pct }}%;"></div>
+          {% endif %}
+        </div>
+        <div class="pq-pdf-limit-val">{{ L.value_label | default('—') }}</div>
+        <div class="pq-pdf-limit-status">
+          <span class="pq-pdf-badge {{ L.status_tone | default('low') }}">
+            {{ L.status_text | default('OK') }}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# ───────── 6. Page footer ───────── #}
+    <div class="pq-pdf-page-footer">
+      <span>Risk Board · Pro · For information only · pivoxquant.com</span>
+      <span>Page 01</span>
+    </div>
+
+    {# ───────── 7. Disclaimer (legal partial) ───────── #}
+    {% include '_disclaimer.html' %}
+
+  </section>
+
+  {# ═══════════════════════ PAGE 2 ═══════════════════════ #}
+  <section class="pq-pdf-page">
+
+    {# ───────── 1. Header (02/02) ───────── #}
+    <div class="pq-pdf-header">
+      <div>
+        <span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span>
+      </div>
+      <div class="pq-pdf-meta">
+        <strong>
+          <span class="pq-pdf-tier-chip pro">PRO</span>RISK BOARD · WEEKLY
+        </strong>
+        <span>{{ v3.as_of | default(period_label) }} · {{ v3.week_tag | default('RB-' ~ period_label) }} · 02/02</span>
+      </div>
+    </div>
+
+    <div class="pq-pdf-gold-rule"></div>
+
+    {# ───────── 2. Stress Test Impact (waterfall card) ───────── #}
+    <div class="pq-pdf-section-title" style="margin-top: 0;">
+      Stress Test Impact <small>P&amp;L 충격 · 5 scenarios</small>
+    </div>
+
+    <div class="pq-pdf-card">
+      <div class="pq-pdf-wf">
+        {% for s in v3.scenarios | default([]) %}
+        <div class="pq-pdf-wf-row">
+          <div>
+            <div class="pq-pdf-wf-name">{{ s.label }}</div>
+            {% if s.detail %}<span class="pq-pdf-wf-detail">{{ s.detail }}</span>{% endif %}
+          </div>
+          <div class="pq-pdf-wf-bar">
+            <div class="pq-pdf-wf-fill"
+                 style="left: {{ s.left_pct | default(0) }}%; width: {{ s.width_pct | default(0) }}%;"></div>
+            {% if s.axis_pct is defined and s.axis_pct is not none %}
+            <div class="pq-pdf-wf-axis" style="left: {{ s.axis_pct }}%;"></div>
+            {% endif %}
+          </div>
+          <div class="pq-pdf-wf-val {{ s.value_tone | default('neg') }}">{{ s.value | default('—') }}</div>
+        </div>
         {% endfor %}
-      {% endfor %}
+      </div>
+    </div>
 
-      <!-- bichrome legend -->
-      <g transform="translate({{ _hl }}, {{ _hl + _cell * 10 + 10 }})">
-        <text x="0" y="0" fill="#8a8a8a" font-size="6.4" font-family="JetBrains Mono, monospace">-1</text>
-        {% for i in range(40) %}
-          {% set _frac = i / 39.0 %}
-          {% set _shade = 1 - (2 * _frac - 1) if _frac < 0.5 else (2 * _frac - 1) %}
-          {% set _c = '#A84C4C' if _frac < 0.5 else '#B8956A' %}
-          <rect x="{{ 14 + i * 3 }}" y="-6" width="3" height="6"
-                fill="{{ _c }}" fill-opacity="{{ '%.2f' % _shade }}"/>
+    {# ───────── 3. Scenario table ───────── #}
+    <table class="pq-pdf-table">
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th class="right">P&amp;L</th>
+          <th class="right">% NAV</th>
+          <th class="right">NAV After</th>
+          <th class="right">Recovery</th>
+          <th class="right">Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in v3.scenarios | default([]) %}
+        <tr>
+          <td><strong>{{ s.label }}</strong></td>
+          <td class="right {{ s.value_tone | default('neg') }}">{{ s.value | default('—') }}</td>
+          <td class="right {{ s.value_tone | default('neg') }}">{{ s.pnl_pct | default('—') }}</td>
+          <td class="right">{{ s.nav_after | default('—') }}</td>
+          <td class="right">{{ s.recovery | default('—') }}</td>
+          <td class="right">
+            <span class="pq-pdf-badge {{ s.verdict_tone | default('moderate') }}">
+              {{ s.verdict_text | default('—') }}
+            </span>
+          </td>
+        </tr>
         {% endfor %}
-        <text x="74" y="0" fill="#8a8a8a" font-size="6.4" font-family="JetBrains Mono, monospace">0</text>
-        <text x="136" y="0" fill="#8a8a8a" font-size="6.4" font-family="JetBrains Mono, monospace">+1</text>
-      </g>
-    </svg>
+      </tbody>
+    </table>
 
-    <div class="sp-fig-caption">
-      Fig. 1. Ninety-day rolling Pearson correlation on log returns.
-      Bronze · positive co-movement. Faint red · negative. The diagonal
-      is omitted so the eye reads pairs, not self-references.
-    </div>
+    {# ───────── 4. Two-col bottom — Correlation gauge | Rebalance Notes ───────── #}
+    <div class="pq-pdf-two-col">
 
-  </div>
-
-  <div class="sp-margin">
-    <div class="sp-prose">
-      <p>Correlation, observed over ninety trading days, tells where the
-        tribe moves together. When it tightens, portfolios become a single
-        bet worn in ten costumes — the appearance of diversification,
-        without its mathematics.</p>
-      <p>The highest observed pairing this month was AAPL–MSFT at 0.82.
-        The lowest was XOM–NVDA at 0.11. Neither is a directive; both are
-        facts. The bronze clustering in the upper-left quadrant reflects a
-        structural feature of the held book, not an event.</p>
-    </div>
-
-    <div class="sp-marg-list">
-      <p class="sp-marg-item">Method &nbsp;·&nbsp; Pearson, 90D rolling.</p>
-      <p class="sp-marg-item">Sample &nbsp;·&nbsp; 252 trading days.</p>
-      <p class="sp-marg-item">Next review &nbsp;·&nbsp; monthly close.</p>
-    </div>
-  </div>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 3 · RISK LADDER — per-position table
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part II · Position Ladder</p>
-<h2 class="sp-title">The names inside the numbers</h2>
-<p class="sp-deck">
-  Each row is a single observation of historical loss behaviour. The bronze
-  highlight marks the two largest VaR contributions in the current book.
-</p>
-
-{% set _ladder = positions_ladder | default([]) %}
-{% if _ladder %}
-<table class="ld-table">
-  <thead>
-    <tr>
-      <th style="width:10%;">Position</th>
-      <th class="num" style="width:9%;">Weight</th>
-      <th class="num" style="width:12%;">1D VaR · 95%</th>
-      <th class="num" style="width:12%;">1D ES · 95%</th>
-      <th class="num" style="width:11%;">90D MaxDD</th>
-      <th class="num" style="width:9%;">Beta</th>
-      <th class="num" style="width:11%;">Vol · Ann.</th>
-      <th style="width:26%;">Risk · 90D Trajectory</th>
-    </tr>
-  </thead>
-  <tbody>
-    {# sort by absolute VaR to find top-2 contributions #}
-    {% set _var_values = _ladder | map(attribute='var_1d') | list %}
-    {% set _sorted_abs = _var_values | map('abs') | list | sort(reverse=True) %}
-    {% set _threshold = _sorted_abs[1] if _sorted_abs | length >= 2 else _sorted_abs[0] %}
-
-    {% for p in _ladder %}
-      {% set _is_top = (p.var_1d | abs) >= _threshold %}
-      {% set _spark = p.spark | default([0, p.var_1d*0.2, p.var_1d*0.4, p.var_1d*0.65, p.var_1d*0.5, p.var_1d*0.8, p.var_1d]) %}
-      {% set _smax = (_spark | map('abs') | max) %}
-      {% if _smax == 0 %}{% set _smax = 1 %}{% endif %}
-      {% set _sw = 110 %}
-      {% set _sh = 20 %}
-      {% set _sp = [] %}
-      {% for v in _spark %}
-        {% set _x = loop.index0 * _sw / (_spark | length - 1) %}
-        {% set _y = _sh/2 - (v / (_smax * 2)) * (_sh - 4) %}
-        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-      {% endfor %}
-      {% set _lastpt = _sp[-1].split(',') %}
-      <tr class="{{ 'ld-hl-bronze' if _is_top else '' }}">
-        <td><span class="ld-tkr">{{ p.ticker }}</span></td>
-        <td class="num">{{ '%.1f'|format(p.weight) }}%</td>
-        <td class="num r-neg">{{ '%+.2f'|format(p.var_1d) }}%</td>
-        <td class="num r-neg">{{ '%+.2f'|format(p.es_1d) }}%</td>
-        <td class="num r-neg">{{ '%+.2f'|format(p.maxdd_90d) }}%</td>
-        <td class="num">{{ '%.2f'|format(p.beta) }}</td>
-        <td class="num">{{ '%.1f'|format(p.vol_ann) }}%</td>
-        <td>
-          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="26" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg"
-               style="display:block; vertical-align:middle;">
-            <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}"
-                  stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
-            <polyline points="{{ _sp | join(' ') }}"
-                      stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
-          </svg>
-        </td>
-      </tr>
-    {% endfor %}
-
-    {# totals row — portfolio-level, faintly divided #}
-    {% set _tot_w = (_ladder | map(attribute='weight') | sum) %}
-    {% set _tot_var = (_ladder | map(attribute='var_1d') | sum) %}
-    {% set _tot_es  = (_ladder | map(attribute='es_1d')  | sum) %}
-    <tr class="ld-total-row">
-      <td><em>Portfolio</em></td>
-      <td class="num">{{ '%.1f'|format(_tot_w) }}%</td>
-      <td class="num">{{ '%+.2f'|format(_kpi_var) }}%</td>
-      <td class="num">{{ '%+.2f'|format(_kpi_es) }}%</td>
-      <td class="num">{{ '%+.2f'|format(_kpi_mdd) }}%</td>
-      <td class="num">—</td>
-      <td class="num">—</td>
-      <td><em style="font-size:8pt; color:#8a8a8a;">Totals shown. Diversification is not additive.</em></td>
-    </tr>
-  </tbody>
-</table>
-{% else %}
-<p class="r-muted">Ladder rows were not resolvable for this window.</p>
-{% endif %}
-
-<p style="margin-top: 4pt; font-family: 'Source Serif 4', Georgia, serif; font-size: 8.8pt; line-height: 1.5; color: #4a4a4a; font-style: italic;">
-  Row-level VaR is a descriptive figure. Portfolio-level risk is not the
-  arithmetic sum of position risks; diversification and covariance bend the
-  line. The two bronze-highlighted rows denote the largest single
-  contributions to the observed portfolio VaR.
-</p>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 4 · TAIL / DRAWDOWN QUAD — 2×2 small-multiples + method sidebar
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part III · Tail &amp; Drawdown</p>
-<h2 class="sp-title">Readings around the tails</h2>
-<p class="sp-deck">
-  Four risk dimensions, each sampled over the same 252-day window.
-  Methodology notes sit inline so the page reads as a single object.
-</p>
-
-<div class="rq-grid">
-  <div class="rq-main">
-
-    <div class="rq-quads">
-      <div class="rq-quad-row">
-
-        <!-- Q1: VaR histogram (daily 1Y) -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">VaR Histogram · 252D</div>
-          <div class="rq-quad-value">{{ '%+.2f'|format(_kpi_var) }}%</div>
-          {% set _bins = (var_histogram.bins if var_histogram and var_histogram.bins else [-4,-3,-2,-1,0,1,2,3,4]) %}
-          {% set _cnts = (var_histogram.counts if var_histogram and var_histogram.counts else [2,6,14,32,60,48,28,12,4]) %}
-          {% set _cmax = _cnts | max %}
-          <svg viewBox="0 0 180 48" width="100%" height="80" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
-            {% for i in range(_bins | length) %}
-              {% set _h = (_cnts[i] / _cmax) * 30 %}
-              {% if _bins[i] < 0 %}{% set _c = '#A84C4C' %}{% set _op = 0.55 %}{% else %}{% set _c = '#B8956A' %}{% set _op = 0.75 %}{% endif %}
-              {% set _bw = 180 / (_bins | length) - 1 %}
-              <rect x="{{ i * (180 / (_bins | length)) + 0.5 }}" y="{{ 42 - _h }}"
-                    width="{{ _bw }}" height="{{ _h }}"
-                    fill="{{ _c }}" fill-opacity="{{ _op }}"/>
-            {% endfor %}
-            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">DAILY RETURN DISTRIBUTION</text>
-            <text x="178" y="7" text-anchor="end" fill="#6B6B6B" font-size="6.2" font-family="JetBrains Mono, monospace">95th pct line</text>
-          </svg>
-          <div class="rq-quad-foot">Historical simulation, 252 daily log-returns.</div>
+      {# Left: Avg pairwise correlation (gauge) #}
+      <div class="pq-pdf-card">
+        <div class="pq-pdf-kpi-lbl">AVG PAIRWISE CORR</div>
+        <div class="pq-pdf-corr-headline">
+          <div class="pq-pdf-corr-val">{{ v3.corr.value | default('—') if v3.corr else '—' }}</div>
+          {% if v3.corr and v3.corr.badge_text %}
+          <span class="pq-pdf-badge {{ v3.corr.badge_tone | default('moderate') }}">
+            {{ v3.corr.badge_text }}
+          </span>
+          {% endif %}
         </div>
+        <div class="pq-pdf-gauge">
+          <div class="pq-pdf-gauge-fill"
+               style="width: {{ (v3.corr.gauge_pct | default(0)) if v3.corr else 0 }}%;"></div>
+        </div>
+        <div class="pq-pdf-gauge-scale">
+          <span>0.0 diversified</span>
+          <span>1.0 concentrated</span>
+        </div>
+        {% if v3.corr and v3.corr.verdict %}
+        <p class="pq-pdf-corr-verdict">{{ v3.corr.verdict }}</p>
+        {% endif %}
+      </div>
 
-        <!-- Q2: Underwater curve -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Underwater · 90D</div>
-          <div class="rq-quad-value">{{ '%+.2f'|format(_kpi_mdd) }}%</div>
-          {% set _uw = underwater | default([0,-0.4,-1.2,-2.8,-4.4,-6.2,-7.8,-8.7,-7.2,-5.4,-3.1,-1.2,-0.4,0]) %}
-          {% set _umin = _uw | min %}
-          {% if _umin == 0 %}{% set _umin = -1 %}{% endif %}
-          {% set _pts = [] %}
-          {% set _n = _uw | length %}
-          {% for v in _uw %}
-            {% set _x = loop.index0 * 180 / (_n - 1) %}
-            {% set _y = 6 + (v / _umin) * 30 %}
-            {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+      {# Right: Rebalance notes (observed checklist) #}
+      <div class="pq-pdf-card">
+        <div class="pq-pdf-kpi-lbl">REBALANCE NOTES · OBSERVED</div>
+        <div style="margin-top: 8px;">
+          {% for a in v3.actions | default([]) %}
+          <div class="pq-pdf-check-row">
+            <div class="pq-pdf-check-box"></div>
+            <div>{{ a.body }}</div>
+            {% if a.meta %}<div class="pq-pdf-check-meta">{{ a.meta }}</div>{% endif %}
+          </div>
           {% endfor %}
-          {# find trough index #}
-          {% set _tidx = 0 %}
-          {% for v in _uw %}{% if v == _umin %}{% set _tidx = loop.index0 %}{% endif %}{% endfor %}
-          {% set _tx = _tidx * 180 / (_n - 1) %}
-          <svg viewBox="0 0 180 48" width="100%" height="80" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            <line x1="0" y1="6" x2="180" y2="6" stroke="#c9c4b8" stroke-width="0.3"/>
-            <polygon points="0,6 {{ _pts | join(' ') }} 180,6"
-                     fill="#A84C4C" fill-opacity="0.14"/>
-            <polyline points="{{ _pts | join(' ') }}"
-                      fill="none" stroke="#A84C4C" stroke-width="0.9"/>
-            <circle cx="{{ '%.2f' % _tx }}" cy="{{ 6 + 30 }}" r="2.0" fill="#B8956A"/>
-            <text x="{{ '%.2f' % _tx }}" y="{{ 6 + 44 }}" text-anchor="middle"
-                  fill="#B8956A" font-size="6.0" font-family="JetBrains Mono, monospace">trough</text>
-          </svg>
-          <div class="rq-quad-foot">Peak-to-trough on daily marks, 90 sessions.</div>
         </div>
       </div>
 
-      <div class="rq-quad-row">
-
-        <!-- Q3: Tail ratio (empirical vs normal) -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Tail Distribution</div>
-          <div class="rq-quad-value">{{ '%.2f'|format(tail_ratio | default(1.08)) }}</div>
-          {% set _emp = tail_dist.empirical if tail_dist and tail_dist.empirical else [0.4,1.2,3.4,6.8,9.2,11.8,9.4,5.8,2.8,0.9] %}
-          {% set _nor = tail_dist.normal    if tail_dist and tail_dist.normal    else [0.9,2.4,4.6,7.4,9.6,10.1,8.2,4.9,2.1,0.6] %}
-          {% set _emax = ((_emp | max), (_nor | max)) | max %}
-          {% set _ept = [] %}
-          {% set _npt = [] %}
-          {% set _n2 = _emp | length %}
-          {% for i in range(_n2) %}
-            {% set _x = i * 180 / (_n2 - 1) %}
-            {% set _ye = 42 - (_emp[i] / _emax) * 30 %}
-            {% set _yn = 42 - (_nor[i] / _emax) * 30 %}
-            {% set _ = _ept.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _ye)) %}
-            {% set _ = _npt.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _yn)) %}
-          {% endfor %}
-          <svg viewBox="0 0 180 48" width="100%" height="80" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
-            <polyline points="{{ _npt | join(' ') }}"
-                      fill="none" stroke="#8a8a8a" stroke-width="0.7" stroke-dasharray="3,2"/>
-            <polyline points="{{ _ept | join(' ') }}"
-                      fill="none" stroke="#0A0A0A" stroke-width="1.2"/>
-            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">EMPIRICAL vs NORMAL</text>
-          </svg>
-          <div class="rq-quad-foot">Solid · empirical. Dashed · Gaussian reference.</div>
-        </div>
-
-        <!-- Q4: Liquidity heat strip -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Liquidity Cover · 5D ADV</div>
-          <div class="rq-quad-value">{{ liquidity_label | default('1.2× avg') }}</div>
-          {% set _lh = liquidity_heat if liquidity_heat else [
-            [0.08,0.09,0.11,0.09,0.10],
-            [0.12,0.14,0.13,0.15,0.12],
-            [0.22,0.28,0.31,0.26,0.24],
-            [0.06,0.07,0.06,0.08,0.07],
-            [0.18,0.21,0.19,0.20,0.22],
-            [0.09,0.10,0.12,0.09,0.11],
-            [0.34,0.38,0.32,0.36,0.40],
-            [0.14,0.16,0.15,0.13,0.14],
-            [0.05,0.06,0.05,0.07,0.05],
-            [0.11,0.13,0.12,0.10,0.14],
-          ] %}
-          <svg viewBox="0 0 180 48" width="100%" height="80" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            {% set _cw = 14 %}
-            {% set _ch = 3.4 %}
-            {% set _gx = 6 %}
-            {% set _gy = 6 %}
-            {% for r in range(10) %}
-              {% for c in range(5) %}
-                {% set _op = _lh[r][c] * 2.2 %}
-                {% if _op > 1 %}{% set _op = 1 %}{% endif %}
-                <rect x="{{ _gx + c * (_cw + 0.6) }}"
-                      y="{{ _gy + r * (_ch + 0.4) }}"
-                      width="{{ _cw }}" height="{{ _ch }}"
-                      fill="#B8956A" fill-opacity="{{ '%.2f' % _op }}"
-                      stroke="#ffffff" stroke-width="0.25"/>
-              {% endfor %}
-            {% endfor %}
-            <text x="{{ _gx + 5 * (_cw + 0.6) + 6 }}" y="{{ _gy + 6 }}"
-                  fill="#6B6B6B" font-size="6.0" font-family="Geist, sans-serif"
-                  letter-spacing="0.12em">POS × 5D</text>
-            <text x="{{ _gx + 5 * (_cw + 0.6) + 6 }}" y="{{ _gy + 16 }}"
-                  fill="#8a8a8a" font-size="6.0" font-family="Source Serif 4, serif"
-                  font-style="italic">darker · thinner cover</text>
-          </svg>
-          <div class="rq-quad-foot">Position divided by 5D average dollar volume.</div>
-        </div>
-      </div>
     </div>
 
-    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
-      Fig. 2. Four risk dimensions, sampled on the same 252-day window.
-      Bronze marks benign directions; faint red, the loss side.
+    {# ───────── 5. GovBlock (Pro tier governance footer) ───────── #}
+    <div class="pq-pdf-govblock">
+      <div class="pq-pdf-govblock-title">Governance · Observation Only</div>
+      본 리스크 보드는 관찰 기록이며 매매 지시가 아닙니다. 모든 한도·시나리오·스트레스 결과는
+      관찰 라벨(BREACH / OVER / OK)로 표기되며, 매수·매도·보유 권유를 포함하지 않습니다.
+      투자 판단은 전적으로 이용자 본인의 책임 하에 이루어져야 합니다.
     </div>
 
-  </div>
-
-  <div class="rq-side">
-    <div class="rq-method">
-      <div class="rq-method-eyebrow">Method Notes</div>
-      <div class="rq-method-item">
-        <span class="rq-method-num">01</span>
-        <span class="rq-method-def">VaR and ES computed via historical simulation, 252D window.</span>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-num">02</span>
-        <span class="rq-method-def">Correlation · 90D rolling Pearson on log returns.</span>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-num">03</span>
-        <span class="rq-method-def">Drawdown · peak-to-trough, 90D observation.</span>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-num">04</span>
-        <span class="rq-method-def">Liquidity · position over 5D average dollar volume.</span>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-num">05</span>
-        <span class="rq-method-def">Informational only — not a portfolio instruction.</span>
-      </div>
+    {# ───────── 6. Page footer ───────── #}
+    <div class="pq-pdf-page-footer">
+      <span>Risk Board · Pro · Internal use only · pivoxquant.com</span>
+      <span>Page 02</span>
     </div>
-  </div>
-</div>
 
+    {# ───────── 7. Disclaimer (legal partial) ───────── #}
+    {% include '_disclaimer.html' %}
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 5 · EDITORIAL — pull quote + what this board does not answer
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part IV · Editorial</p>
-<h2 class="sp-title">What the desk is sitting with</h2>
-<p class="sp-deck">
-  A sentence the risk desk is holding, and the short list of questions this
-  board, by construction, does not answer.
-</p>
-
-<div class="ed-quote-wrap">
-  <div class="ed-quote-cell">
-    <blockquote class="ed-quote">
-      {{ pull_quote | default("Observations of risk do not subtract it. They shape the room we stand in while the weather turns.") }}
-    </blockquote>
-    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Risk Desk") }}</div>
-  </div>
-</div>
-
-<div class="ed-notans-head">What this board does not answer</div>
-
-{% set _notans = not_answered | default([
-  'Tax consequences of rebalancing.',
-  'Individual liquidity events.',
-  'Regime shifts not in the 252D window.',
-  'Correlated news shocks not priced in.',
-  'Personal cash-flow timing.',
-]) %}
-{% set _half = ((_notans | length) / 2) | round(0, 'ceil') | int %}
-
-<div class="ed-notans-grid">
-  <div class="ed-notans-col">
-    {% for item in _notans[:_half] %}
-      <div class="ed-notans-item">
-        <span class="ed-notans-num">{{ '%02d' % loop.index }}</span>{{ item }}
-      </div>
-    {% endfor %}
-  </div>
-  <div class="ed-notans-col">
-    {% for item in _notans[_half:] %}
-      <div class="ed-notans-item">
-        <span class="ed-notans-num">{{ '%02d' % (_half + loop.index) }}</span>{{ item }}
-      </div>
-    {% endfor %}
-  </div>
-</div>
-
-<p style="margin-top: 14pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 7.6pt; color: #8a8a8a; text-align: center; line-height: 1.5;">
-  <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
-</p>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 6 · COLOPHON
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<div class="co-wrap">
-
-  <div class="co-head">Colophon</div>
-  <div class="co-rule-small"></div>
-
-  <div class="co-body">
-    <p style="margin: 0 0 10pt 0;">
-      Prepared for <strong>{{ user_name }}</strong> on
-      <strong>{{ period_label | default('April 2026') }}</strong>. Risk Board
-      <strong>No. {{ '%02d' % _issue_no }}</strong>.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data sources</span>
-    </p>
-    {# Wave 6 — 'Alpaca Market Data (IEX consolidated)' prose-embedded
-       fallback removed. Service populates `data_sources` via
-       `resolve_user_data_lineage`; empty list renders a neutral line
-       rather than claiming Alpaca for a user who isn't connected. #}
-    {% set _ds = data_sources | default([]) %}
-    {% if _ds %}
-      {% for d in _ds %}
-        <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-          <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key | default(d.source | default('')) }}</span>
-          <span>{{ d.value | default(d.description | default('')) }}</span>
-        </p>
-      {% endfor %}
-    {% else %}
-      <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-        Data sources not specified. Connect your broker in Settings to see data lineage.
-      </p>
-    {% endif %}
-
-    <p style="margin: 10pt 0 10pt 0;">
-      <span class="co-key">Typeset in</span> &nbsp;
-      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono') }}.
-    </p>
-    <p style="margin: 0 0 0 0;">
-      <span class="co-key">Engine</span> &nbsp;
-      {{ engine_note | default('58 quant models · 7-Layer Risk Defense') }}.
-    </p>
-  </div>
-
-  <div class="co-thin-rule"></div>
-
-  {# Legal partial — verbatim required. #}
-  {% include '_disclaimer.html' %}
-
-  <div class="co-thin-rule"></div>
-
-  <div class="co-sign">
-    {% with brand_kind='monogram', brand_size=64 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-    <div class="co-sign-house">PivoxQuant Risk Desk</div>
-    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
-    <div class="co-sign-time">Generated · {{ generated_at }}</div>
-  </div>
+  </section>
 
 </div>
 

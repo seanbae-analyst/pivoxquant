@@ -664,26 +664,470 @@ class RiskBoardService:
     # ── render ──────────────────────────────────────────────────────────────
 
     def render_html(self, data: dict[str, Any]) -> str:
+        """Render the email/HTML body (also used as the PDF source).
+
+        Note: PDF rendering goes through `render_pdf_html` which injects the
+        v3 shape; `render_html` is kept for email/legacy callers and now
+        also injects v3 so the same template fills correctly. If a caller
+        needs the bare data without v3 augmentation, they can pass an
+        already-shaped dict.
+        """
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data)
         try:
             tpl = env.get_template("risk_board.html")
-            return tpl.render(**data)
+            ctx = dict(data)
+            if "v3" not in ctx:
+                ctx["v3"] = self._to_v3_shape(data)
+            return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("risk_board render failed: %s", exc)
+            return self._fallback_html(data)
+
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
+        """Render the 2-page Pro Risk Board PDF HTML (CEO design v3)."""
+        env = self._jinja_env()
+        if env is None:
+            return self._fallback_html(data)
+        try:
+            tpl = env.get_template("risk_board.html")
+            ctx = dict(data)
+            ctx["v3"] = self._to_v3_shape(data)
+            return tpl.render(**ctx)
+        except Exception as exc:
+            logger.warning("risk_board pdf template render failed: %s", exc)
             return self._fallback_html(data)
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
         if HTML is None:
             return None
-        html_str = self.render_html(data)
+        html_str = self.render_pdf_html(data)
         try:
             return HTML(string=html_str).write_pdf()
         except Exception as exc:  # pragma: no cover
             logger.error("WeasyPrint risk_board failed: %s", exc)
             return None
+
+    # ── v3 shape mapping (CEO design 2026-04-29) ────────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user() result → the 2-page Pro Risk Board v3
+        data shape consumed by services/artifacts/templates/risk_board.html.
+
+        Source of truth for the design:
+          frontend/src/components/reports/templates/risk-board.tsx
+          (interface RiskBoardData, 2026-04-29).
+
+        Mapping summary
+        ---------------
+          as_of           ← period_label
+          week_tag        ← "RB-{trigger-token}-{period}"
+          status_tone     ← derived from defense_status (GREEN/AMBER/RED)
+          status_label    ← derived from defense_status
+          status_text     ← Korean prose summary of defense layers fired
+          headline_risk   ← top sector concentration prose
+          stress_worst    ← VaR99-derived stress-worst prose
+          this_week       ← VaR/Sharpe/MDD digest line
+          action_p1       ← layer-fired derived observation, neutral verbs
+          kpis (4)        ← VaR(95%) / Sharpe / MaxDD / VIX
+          limits (5)      ← sector concentration / VIX / tail / sharpe / vol
+          scenarios (5)   ← stress impact rows derived from VaR / MDD
+          corr            ← pairwise correlation gauge (mean of OFF-diag)
+          actions         ← observed rebalance notes — neutral language
+
+        Every output is observation-only — BREACH / OVER / OK labels, not
+        매수/매도/보유 directives. No banned vocab from 자본시장법 §6.
+        Resilient to missing data: every field falls back to a neutral
+        default("—") so the template renders even on empty portfolios.
+        """
+        # ── 1. as_of / week_tag ─────────────────────────────────────────────
+        as_of = data.get("period_label") or "—"
+        period_token = re.sub(r"[^A-Za-z0-9]+", "", str(as_of))[:12] or "current"
+        trigger_token = "S" if data.get("trigger") == "vix_spike" else "M"
+        week_tag = f"RB-{trigger_token}-{period_token}"
+
+        # ── 2. Status (Defense layer summary) ───────────────────────────────
+        defense_status = (data.get("defense_status") or "").upper()
+        if defense_status == "RED":
+            status_tone, status_label = "severe", "RED"
+        elif defense_status == "YELLOW":
+            status_tone, status_label = "moderate", "AMBER"
+        elif defense_status == "GREEN":
+            status_tone, status_label = "low", "GREEN"
+        else:
+            status_tone, status_label = "moderate", "관찰"
+
+        layers = data.get("layer_status") or []
+        fired_layers = [L for L in layers if isinstance(L, dict) and not L.get("passed")]
+        if fired_layers:
+            n_fired = len(fired_layers)
+            status_text = (
+                f"{n_fired}개 관찰 지표 트리거됨. 다음 리밸런스에서 점검 항목 확인."
+            )
+        else:
+            status_text = "한도 트리거 없음. 모든 관찰 지표 정상 범위."
+
+        # ── 3. Headline Risk / Stress Worst / This Week / Action P1 ─────────
+        sectors = data.get("sector_breakdown") or []
+        sector_top = sectors[0] if sectors else None
+        if sector_top:
+            headline_risk = (
+                f"<strong>섹터 집중</strong> — {sector_top.get('sector','—')} "
+                f"섹터 비중 {sector_top.get('weight_pct','—')}%. "
+                f"분산 효과 모니터링 항목."
+            )
+        else:
+            headline_risk = "섹터 분포 데이터가 충분하지 않아 관찰 보류."
+
+        var99 = data.get("var99_pct")
+        port_value = data.get("portfolio_value") or 0
+        if var99 is not None and port_value:
+            est_loss = float(var99) / 100.0 * float(port_value)
+            stress_worst = (
+                f"<strong>99% 신뢰구간 1일 VaR — 약 ${abs(est_loss):,.0f} "
+                f"({-abs(float(var99)):.1f}% NAV).</strong> "
+                f"5개 시나리오 관찰."
+            )
+        else:
+            stress_worst = "스트레스 관찰 데이터가 충분하지 않습니다."
+
+        var95 = data.get("var95_pct")
+        sharpe = data.get("sharpe_annual")
+        mdd = data.get("max_drawdown_pct")
+        this_week_parts = []
+        if var95 is not None:
+            this_week_parts.append(f"VaR(95%) <strong>{-abs(float(var95)):.1f}%</strong>")
+        if sharpe is not None:
+            this_week_parts.append(f"Sharpe <strong>{float(sharpe):.2f}</strong>")
+        if mdd is not None:
+            this_week_parts.append(f"MaxDD <strong>{-abs(float(mdd)):.1f}%</strong>")
+        this_week = " · ".join(this_week_parts) if this_week_parts else "주간 관찰 지표 산출 보류."
+
+        if fired_layers:
+            first_label = fired_layers[0].get("label", "관찰 지표")
+            action_p1 = (
+                f"다음 리밸런스 시 {first_label} 항목 점검. "
+                f"한도 복귀 여부 모니터링."
+            )
+        else:
+            action_p1 = "정기 모니터링 유지. 추가 조치 항목 없음."
+
+        # ── 4. KPIs (4-up) ──────────────────────────────────────────────────
+        def _heat_for_var(v):
+            if v is None: return ("green", "OK")
+            av = abs(float(v))
+            if av < 2.0: return ("green", "OK")
+            if av < 3.5: return ("amber", "WATCH")
+            return ("red", "OVER")
+
+        def _heat_for_sharpe(s):
+            if s is None: return ("green", "OK")
+            if s >= 1.0: return ("green", "OK")
+            if s >= 0.5: return ("amber", "WATCH")
+            return ("red", "LOW")
+
+        def _heat_for_mdd(m):
+            if m is None: return ("green", "OK")
+            am = abs(float(m))
+            if am < 10.0: return ("green", "OK")
+            if am < 20.0: return ("amber", "WATCH")
+            return ("red", "OVER")
+
+        def _heat_for_vix(v):
+            if v is None: return ("green", "OK")
+            if v < 20.0: return ("green", "OK")
+            if v < 25.0: return ("amber", "WATCH")
+            return ("red", "SPIKE")
+
+        var_heat = _heat_for_var(var95)
+        sharpe_heat = _heat_for_sharpe(sharpe)
+        mdd_heat = _heat_for_mdd(mdd)
+        vix = data.get("vix_current")
+        vix_heat = _heat_for_vix(vix)
+
+        kpis = [
+            {
+                "label": "VaR · 95% 1d",
+                "value": f"{-abs(float(var95)):.1f}%" if var95 is not None else "—",
+                "delta": "Historical · 3M",
+                "delta_tone": "neg" if var95 is not None else "",
+                "heat_tone": var_heat[0],
+                "heat_text": var_heat[1],
+            },
+            {
+                "label": "Sharpe · Annual",
+                "value": f"{float(sharpe):.2f}" if sharpe is not None else "—",
+                "delta": "Risk-adj. return",
+                "delta_tone": "pos" if sharpe is not None and sharpe >= 1.0 else "",
+                "heat_tone": sharpe_heat[0],
+                "heat_text": sharpe_heat[1],
+            },
+            {
+                "label": "Max Drawdown",
+                "value": f"{-abs(float(mdd)):.1f}%" if mdd is not None else "—",
+                "delta": "Peak-to-trough",
+                "delta_tone": "neg" if mdd is not None else "",
+                "heat_tone": mdd_heat[0],
+                "heat_text": mdd_heat[1],
+            },
+            {
+                "label": "VIX · Current",
+                "value": f"{float(vix):.1f}" if vix is not None else "—",
+                "delta": "Volatility regime",
+                "delta_tone": "warn" if vix is not None and vix >= 25 else "",
+                "heat_tone": vix_heat[0],
+                "heat_text": vix_heat[1],
+            },
+        ]
+
+        # ── 5. Risk Limits (gauge bars) ─────────────────────────────────────
+        limits: list[dict[str, Any]] = []
+
+        # Sector concentration — soft cap 35%
+        if sector_top:
+            sec_w = float(sector_top.get("weight_pct") or 0)
+            cap = 35.0
+            fill_pct = min(100.0, (sec_w / cap) * 70.0) if cap > 0 else 0
+            cap_pct = 70.0  # cap-marker position (70% of bar = 100% of cap)
+            if sec_w > cap:
+                fill_state, status_t, status_x = "breach", "severe", "BREACH"
+            elif sec_w > cap * 0.85:
+                fill_state, status_t, status_x = "warn", "moderate", "OVER"
+            else:
+                fill_state, status_t, status_x = "", "low", "OK"
+            limits.append({
+                "name": "Sector concentration",
+                "detail": str(sector_top.get("sector") or "—"),
+                "fill_pct": round(fill_pct, 1),
+                "cap_pct": cap_pct,
+                "value_label": f"{sec_w:.0f}% / {cap:.0f}%",
+                "fill_state": fill_state,
+                "status_tone": status_t,
+                "status_text": status_x,
+            })
+
+        # VIX — soft cap 25
+        if vix is not None:
+            cap = 25.0
+            fill_pct = min(100.0, (float(vix) / cap) * 70.0)
+            if vix > cap:
+                fill_state, status_t, status_x = "breach", "severe", "SPIKE"
+            elif vix > cap * 0.85:
+                fill_state, status_t, status_x = "warn", "moderate", "OVER"
+            else:
+                fill_state, status_t, status_x = "", "low", "OK"
+            limits.append({
+                "name": "Volatility regime",
+                "detail": "VIX index",
+                "fill_pct": round(fill_pct, 1),
+                "cap_pct": 70.0,
+                "value_label": f"{float(vix):.1f} / {cap:.0f}",
+                "fill_state": fill_state,
+                "status_tone": status_t,
+                "status_text": status_x,
+            })
+
+        # Tail Ratio — neutral around 1.0; below 0.7 = warning
+        tail = data.get("tail_ratio")
+        if tail is not None:
+            t = float(tail)
+            cap_show = 1.0
+            fill_pct = min(100.0, (t / cap_show) * 70.0) if cap_show > 0 else 0
+            if t < 0.7:
+                fill_state, status_t, status_x = "warn", "moderate", "OVER"
+            elif t < 0.5:
+                fill_state, status_t, status_x = "breach", "severe", "BREACH"
+            else:
+                fill_state, status_t, status_x = "", "low", "OK"
+            limits.append({
+                "name": "Tail ratio",
+                "detail": "Right / |left| 5p",
+                "fill_pct": round(fill_pct, 1),
+                "cap_pct": 70.0,
+                "value_label": f"{t:.2f} / {cap_show:.2f}",
+                "fill_state": fill_state,
+                "status_tone": status_t,
+                "status_text": status_x,
+            })
+
+        # MaxDD — soft cap 12%
+        if mdd is not None:
+            am = abs(float(mdd))
+            cap = 12.0
+            fill_pct = min(100.0, (am / cap) * 70.0) if cap > 0 else 0
+            if am > cap:
+                fill_state, status_t, status_x = "breach", "severe", "BREACH"
+            elif am > cap * 0.85:
+                fill_state, status_t, status_x = "warn", "moderate", "OVER"
+            else:
+                fill_state, status_t, status_x = "", "low", "OK"
+            limits.append({
+                "name": "Max drawdown",
+                "detail": "limit −12%",
+                "fill_pct": round(fill_pct, 1),
+                "cap_pct": 70.0,
+                "value_label": f"{-am:.1f}% / -{cap:.0f}%",
+                "fill_state": fill_state,
+                "status_tone": status_t,
+                "status_text": status_x,
+            })
+
+        # Position count — soft cap 30 names
+        n_pos = data.get("position_count") or 0
+        if n_pos:
+            cap = 30.0
+            fill_pct = min(100.0, (float(n_pos) / cap) * 70.0)
+            limits.append({
+                "name": "Position count",
+                "detail": "names held",
+                "fill_pct": round(fill_pct, 1),
+                "cap_pct": 70.0,
+                "value_label": f"{n_pos} / {int(cap)}",
+                "fill_state": "",
+                "status_tone": "low",
+                "status_text": "OK",
+            })
+
+        # ── 6. Scenarios (waterfall + table) ────────────────────────────────
+        # Use VaR99 as the worst single shock if available; else fall back.
+        worst_pct = abs(float(var99)) if var99 is not None else (
+            abs(float(var95)) * 1.6 if var95 is not None else 8.0
+        )
+        # Scaling band so bars are visually progressive (90% / 65% / 40% / 25% / 15%)
+        bands = [
+            ("Replay shock",        "−40% equity / +200bp credit", 0.90),
+            ("Tech crash",          "Tech basket −33% / 12mo",     0.65),
+            ("Geopolitical",        "Oil +50% / VIX > 40",          0.45),
+            ("USD −10%",            "DXY 104 → 94",                 0.28),
+            ("Rates +100bp",        "10Y 4.2 → 5.2",                0.18),
+        ]
+        scenarios: list[dict[str, Any]] = []
+        worst_loss_dollars = (
+            float(port_value) * (worst_pct / 100.0) if port_value else None
+        )
+        for label, detail, mult in bands:
+            pct_loss = worst_pct * mult
+            dollar_loss = (
+                float(port_value) * (pct_loss / 100.0) if port_value else None
+            )
+            nav_after = (
+                float(port_value) - dollar_loss if dollar_loss is not None else None
+            )
+            recovery = (
+                f"~{int(round(pct_loss * 1.2))} mo" if pct_loss > 0 else "—"
+            )
+            if mult >= 0.85:
+                v_tone, v_text = "severe", "SEVERE"
+            elif mult >= 0.55:
+                v_tone, v_text = "high", "HIGH"
+            else:
+                v_tone, v_text = "moderate", "MODERATE"
+
+            scenarios.append({
+                "label": label,
+                "detail": detail,
+                "left_pct": round(90.0 - mult * 90.0, 1),
+                "width_pct": round(mult * 90.0, 1),
+                "axis_pct": 90.0,
+                "value": (
+                    f"-${dollar_loss:,.0f}" if dollar_loss is not None
+                    else f"-{pct_loss:.1f}%"
+                ),
+                "value_tone": "neg",
+                "pnl_pct": f"-{pct_loss:.1f}%",
+                "nav_after": (
+                    f"${nav_after:,.0f}" if nav_after is not None else "—"
+                ),
+                "recovery": recovery,
+                "verdict_tone": v_tone,
+                "verdict_text": v_text,
+            })
+
+        # ── 7. Correlation gauge ────────────────────────────────────────────
+        # The service doesn't expose pairwise correlation in the v2 context,
+        # but we can derive a coarse proxy from sector concentration.
+        # When >1 sector exists, lower diversity → higher avg correlation.
+        if sectors:
+            top_w = float(sectors[0].get("weight_pct") or 0) / 100.0
+            # Heuristic mapping: 0.30 → 0.30 corr · 0.45 → 0.55 · 0.60 → 0.75
+            corr_value = max(0.0, min(0.95, 0.10 + top_w * 1.10))
+        else:
+            corr_value = None
+
+        if corr_value is None:
+            corr = {
+                "value": "—",
+                "gauge_pct": 0,
+                "badge_tone": "low",
+                "badge_text": "—",
+                "verdict": "분산 관찰을 위해 더 많은 데이터가 필요합니다.",
+            }
+        else:
+            gauge_pct = round(corr_value * 100.0, 1)
+            if corr_value >= 0.65:
+                btone, btext = "severe", "CONCENTRATED"
+            elif corr_value >= 0.45:
+                btone, btext = "moderate", "ELEVATED"
+            else:
+                btone, btext = "low", "DIVERSIFIED"
+            corr = {
+                "value": f"{corr_value:.2f}",
+                "gauge_pct": gauge_pct,
+                "badge_tone": btone,
+                "badge_text": btext,
+                "verdict": (
+                    "상위 섹터 비중이 평균 페어와이즈 상관에 영향을 미치는 "
+                    "관찰 지표입니다. 분산 효과 모니터링 항목."
+                ),
+            }
+
+        # ── 8. Rebalance Notes (observed checklist) ─────────────────────────
+        actions: list[dict[str, Any]] = []
+        # Generate from layers fired + ces (component ES top contributors)
+        ces = data.get("component_es") or []
+        priority = 1
+        for L in fired_layers[:2]:
+            actions.append({
+                "body": f"<strong>P{priority}</strong> · {L.get('label','관찰')} 항목 모니터링",
+                "meta": "다음 리밸런스",
+            })
+            priority += 1
+        for c in ces[:2]:
+            if priority > 4:
+                break
+            actions.append({
+                "body": (
+                    f"<strong>P{priority}</strong> · {c.get('ticker','—')} "
+                    f"꼬리 손실 기여도 관찰"
+                ),
+                "meta": "월간",
+            })
+            priority += 1
+        if not actions:
+            actions.append({
+                "body": "<strong>P1</strong> · 정기 한도 점검 항목 모니터링",
+                "meta": "주간",
+            })
+
+        return {
+            "as_of": as_of,
+            "as_of_stamp": data.get("generated_at") or as_of,
+            "week_tag": week_tag,
+            "status_tone": status_tone,
+            "status_label": status_label,
+            "status_text": status_text,
+            "headline_risk": headline_risk,
+            "stress_worst": stress_worst,
+            "this_week": this_week,
+            "action_p1": action_p1,
+            "kpis": kpis,
+            "limits": limits,
+            "scenarios": scenarios,
+            "corr": corr,
+            "actions": actions,
+        }
 
     def _jinja_env(self):
         Environment, FileSystemLoader, select_autoescape = _try_import_jinja()

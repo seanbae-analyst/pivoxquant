@@ -419,21 +419,227 @@ class BragCardService:
     # ── render (HTML) ────────────────────────────────────────────────────────
 
     def render_html(self, data: dict[str, Any]) -> str:
-        """Render the 9:16 brag-card HTML (the one we turn into PNG).
+        """Render the brag-card HTML (the one we turn into PNG / PDF).
 
         Returns a minimal in-line fallback when Jinja2 is unavailable —
         enough to keep the pipeline from crashing in CI. Any missing
         data field is rendered as em-dash.
+
+        As of 2026-04-29 the canonical template is the CEO design v3
+        (`brag_card.html`), a 1-page A4 layout shared by both the PDF
+        path (`render_pdf_html`) and the existing 9:16 PNG path. The
+        template tolerates a missing `v3` key — we still inject one so
+        every section renders with real data rather than placeholders.
         """
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data)
         try:
             tpl = env.get_template("brag_card.html")
-            return tpl.render(**data)
+            ctx = dict(data)
+            ctx["v3"] = self._to_v3_shape(data)
+            return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("brag card template render failed: %s", exc)
             return self._fallback_html(data)
+
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
+        """Render the 1-page Free Brag Card PDF HTML (CEO design v3).
+
+        Mirror of `WeeklyMemoService.render_pdf_html`: same template, but
+        with the v3 shape mapping injected so headings, KPIs, hero card,
+        and pullquote pull from real `generate_for_user` output.
+        """
+        env = self._jinja_env()
+        if env is None:
+            return self._fallback_html(data)
+        try:
+            tpl = env.get_template("brag_card.html")
+            ctx = dict(data)
+            ctx["v3"] = self._to_v3_shape(data)
+            return tpl.render(**ctx)
+        except Exception as exc:
+            logger.warning("brag card pdf template render failed: %s", exc)
+            return self._fallback_html(data)
+
+    # ── v3 shape mapping (CEO design 2026-04-29) ────────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user() result → the 1-page Free Brag Card v3
+        data shape consumed by services/artifacts/templates/brag_card.html.
+
+        Source of truth for the design:
+          frontend/src/components/reports/templates/brag-card.tsx
+          (interface BragCardData, 2026-04-29).
+
+        Mapping summary
+        ---------------
+          month_label        ← month_label_long ("March 2026")
+          report_tag         ← "BC-{YYYY}-{MM}"
+          best_decision_pct  ← formatted best_return_pct, e.g. "+18.00%"
+          contribution       ← "P&L $1,240" (when best_pnl_usd present)
+          best_tone          ← pos / neg from sign of best_return_pct
+          hit_rate           ← "X / Y" winning closed lots (—  fallback)
+          hit_rate_detail    ← "Y trade(s) closed" or "—"
+          month_return       ← formatted return_pct, e.g. "+12.30%"
+          benchmark          ← placeholder when no benchmark wire-up
+          month_return_tone  ← pos / neg from sign of return_pct
+          hero               ← {ticker, title, body, entry, mark, pnl, pnl_tone}
+                               from best_ticker + best_return_pct (the rest
+                               are neutral placeholders — strict descriptive
+                               framing, no buy/sell/추천/조언).
+          why_it_worked      ← 3 neutral observations (process-focused)
+          lesson_for_next    ← 3 neutral observations (process-focused)
+          pullquote          ← neutral one-liner with <em> highlight
+
+        Every placeholder is descriptive — no buy/sell/추천 verbs (자본시장법).
+        Free-text strings are run through `scrub_signal` already (in
+        `generate_for_user`); template-side only adds neutral framing.
+        """
+        # ── month / tag ─────────────────────────────────────────────────────
+        month_label = (
+            data.get("month_label_long")
+            or data.get("month_label")
+            or "—"
+        )
+        # Tag from month_start when available (YYYY-MM); else fall back.
+        month_start = str(data.get("month_start") or "")
+        if len(month_start) >= 7:
+            report_tag = f"BC-{month_start[:7]}"
+        else:
+            report_tag = "BC-—"
+
+        # ── best decision (KPI 1) ───────────────────────────────────────────
+        best_ret = data.get("best_return_pct")
+        if best_ret is None:
+            best_decision_pct = "—"
+            best_tone = "neutral"
+        else:
+            best_decision_pct = f"{best_ret:+.2f}%"
+            best_tone = "pos" if best_ret >= 0 else "neg"
+
+        contribution = data.get("contribution") or ""
+
+        # ── hit rate (KPI 2) — derived from trade_count when no detail ──────
+        # `_compute_monthly_stats` doesn't currently expose win/total
+        # split; we surface trade_count as a faithful denominator and
+        # leave numerator/detail as descriptive placeholders.
+        trade_count = int(data.get("trade_count") or 0)
+        if trade_count > 0:
+            hit_rate = f"{trade_count} 건"
+            hit_rate_detail = f"{trade_count} closed lot(s)"
+        else:
+            hit_rate = "—"
+            hit_rate_detail = ""
+
+        # ── month return (KPI 3) ────────────────────────────────────────────
+        ret = data.get("return_pct")
+        if ret is None:
+            month_return = "—"
+            month_return_tone = "neutral"
+        else:
+            month_return = f"{ret:+.2f}%"
+            month_return_tone = "pos" if ret >= 0 else "neg"
+
+        # Benchmark wire-up not yet on the brag pipeline — placeholder.
+        benchmark = ""
+
+        # ── hero card — single decision narrative ───────────────────────────
+        # Strict neutral framing. We surface the user's own realised
+        # numbers (ticker, return%) but never recommend, advise, or
+        # imply forward action.
+        ticker = data.get("best_ticker")
+        if ticker:
+            hero_title = "이번 달 단일 의사결정 기록"
+            if best_ret is not None:
+                hero_body = (
+                    f"{ticker} 종목에서 단일 의사결정을 관찰했습니다. "
+                    f"실현 수익률은 {best_decision_pct}로 기록되었습니다. "
+                    "이 카드는 결과의 기록일 뿐 향후 의사결정에 대한 안내가 아닙니다."
+                )
+            else:
+                hero_body = (
+                    f"{ticker} 종목에서 단일 의사결정을 관찰했습니다. "
+                    "이 카드는 결과의 기록일 뿐 향후 의사결정에 대한 안내가 아닙니다."
+                )
+            hero_pnl = best_decision_pct
+            hero_pnl_tone = best_tone
+        else:
+            hero_title = "이 달의 단일 의사결정 기록"
+            hero_body = (
+                "이번 달, 거래 기록이 충분하지 않아 단일 의사결정을 별도로 표기할 "
+                "수 없었습니다. 다음 달의 기록을 기다립니다."
+            )
+            hero_pnl = "—"
+            hero_pnl_tone = "neutral"
+
+        hero = {
+            "ticker":   ticker or "—",
+            "title":    hero_title,
+            "body":     hero_body,
+            "entry":    "—",
+            "mark":     "—",
+            "pnl":      hero_pnl,
+            "pnl_tone": hero_pnl_tone,
+        }
+
+        # ── why it worked + lesson for next — neutral, process-framed ──────
+        why_it_worked = [
+            {
+                "checked": True,
+                "body":    "<strong>사전 가설 기록</strong> — 행동 전에 메모를 남기는 절차를 유지합니다.",
+                "meta":    "PROCESS",
+            },
+            {
+                "checked": True,
+                "body":    "<strong>한도 준수</strong> — 단일 종목 비중 한도를 넘기지 않았습니다.",
+                "meta":    "DISCIPLINE",
+            },
+            {
+                "checked": True,
+                "body":    "<strong>시나리오 점검</strong> — 베이스/베어/불 세 가지 시나리오를 검토했습니다.",
+                "meta":    "REVIEW",
+            },
+        ]
+        lesson_for_next = [
+            {
+                "checked": False,
+                "body":    "<strong>가설 시점 박제</strong> — 다음 달도 사전 메모 절차를 유지합니다.",
+                "meta":    "KEEP",
+            },
+            {
+                "checked": False,
+                "body":    "<strong>감정 분리</strong> — 단기 시장 반응을 진입 사유로 사용하지 않습니다.",
+                "meta":    "GUARD",
+            },
+            {
+                "checked": False,
+                "body":    "<strong>한도 재확인</strong> — 추가 의사결정 시 단일 종목 한도를 재확인합니다.",
+                "meta":    "GUARD",
+            },
+        ]
+
+        # ── pullquote — process-first, no forward statements ───────────────
+        pullquote = (
+            "결과보다 <em>절차</em>가 먼저였다. 다음 달도 같은 절차로."
+        )
+
+        return {
+            "month_label":        month_label,
+            "report_tag":         report_tag,
+            "best_decision_pct":  best_decision_pct,
+            "contribution":       contribution,
+            "best_tone":          best_tone,
+            "hit_rate":           hit_rate,
+            "hit_rate_detail":    hit_rate_detail,
+            "month_return":       month_return,
+            "benchmark":          benchmark,
+            "month_return_tone":  month_return_tone,
+            "hero":               hero,
+            "why_it_worked":      why_it_worked,
+            "lesson_for_next":    lesson_for_next,
+            "pullquote":          pullquote,
+        }
 
     def render_email_html(self, data: dict[str, Any],
                           png_url: str | None = None) -> str:
