@@ -353,6 +353,8 @@ export default function ProfilePageV2() {
         }))
       : FALLBACK_PULSE_HISTORY;
 
+  const personaIsMock = persona?._isMock === true;
+
   return (
     <ErrorBoundary>
       {/* TOP TICKER — full bleed */}
@@ -362,6 +364,25 @@ export default function ProfilePageV2() {
       >
         <TopTicker />
       </div>
+
+      {/* Mock-data banner: shown until first trade flips persona to live */}
+      {personaIsMock && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mb-6 border border-[var(--pq-bronze)]/40 bg-[rgba(184,149,106,0.06)] px-4 py-3 rounded-[2px] flex items-start gap-3"
+        >
+          <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mt-0.5 shrink-0">
+            Sample
+          </div>
+          <p className="text-xs leading-relaxed text-[rgba(245,240,232,0.72)]">
+            샘플 데이터 — 거래 후 실데이터로 전환됩니다.{" "}
+            <span className="text-[rgba(245,240,232,0.5)]">
+              Persona figures below are illustrative until your first trade is observed.
+            </span>
+          </p>
+        </div>
+      )}
 
       {/* LIVING CFO STATUS — sticky hairline */}
       <div

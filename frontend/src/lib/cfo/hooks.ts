@@ -76,6 +76,12 @@ export interface PersonaResponse {
   last_computed_at: string | null;
   /** Drift delta vs declared persona. 0–100; >20 = material drift. */
   drift: number;
+  /**
+   * True when this payload is local mock data (backend 404/5xx fallback).
+   * UI surfaces a "sample data — switches to live after first trade" banner
+   * when set. Real backend responses MUST omit this field (or set false).
+   */
+  _isMock?: boolean;
 }
 
 export interface RollingWindowPoint {
@@ -187,6 +193,7 @@ function mockPersona(): PersonaResponse {
     })),
     last_computed_at: new Date().toISOString(),
     drift: 7,
+    _isMock: true,
   };
 }
 
