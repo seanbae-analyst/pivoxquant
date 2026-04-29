@@ -15,7 +15,8 @@
  * headings, JetBrains Mono numbers. No buy/sell/recommend language.
  */
 
-import { useState, useCallback, type FormEvent } from "react";
+import { useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import {
   Sparkles,
   Target,
@@ -25,7 +26,6 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
-  Search,
 } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
@@ -39,12 +39,14 @@ import {
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type {
   AiCoachingResponse,
   AiSwotResponse,
   AiCompetitorResponse,
   AiSectorTrendResponse,
   AiCommentaryResponse,
+  Position,
 } from "@/lib/types";
 
 /* ── Types ── */
@@ -91,12 +93,12 @@ const SECTION_CONFIG: Record<
   sectorTrend: {
     label: "Sector Trend",
     icon: TrendingUp,
-    description: "Industry and sector outlook",
+    description: "Industry and sector observation",
   },
   commentary: {
     label: "Stock Commentary",
     icon: MessageSquare,
-    description: "AI-generated stock opinion",
+    description: "AI-generated commentary on public data",
   },
 };
 
@@ -217,8 +219,26 @@ function AnalysisSectionCard({
 /* ── Main Page ── */
 
 export default function AiPage() {
-  const [ticker, setTicker] = useState("");
   const [activeTicker, setActiveTicker] = useState("");
+
+  /* Whitelist: user's holdings + watchlist (§101 회피 — 임의 ticker 금지) */
+  const positionsSwr = usePortfolioPositions<{ positions?: Position[] }>();
+  const watchlistSwr = useWatchlist();
+  const userTickers = useMemo(() => {
+    const set = new Map<string, string>();
+    (positionsSwr.data?.positions ?? []).forEach((p) => {
+      if (p.ticker) set.set(p.ticker.toUpperCase(), p.name || p.ticker);
+    });
+    (watchlistSwr.data?.watchlist ?? []).forEach((w) => {
+      if (w.ticker) {
+        const key = w.ticker.toUpperCase();
+        if (!set.has(key)) set.set(key, w.name || w.ticker);
+      }
+    });
+    return Array.from(set.entries()).map(([ticker, name]) => ({ ticker, name }));
+  }, [positionsSwr.data, watchlistSwr.data]);
+  const hasUserTickers = userTickers.length > 0;
+  const tickersLoading = positionsSwr.isLoading || watchlistSwr.isLoading;
 
   /* Coaching state */
   const [coaching, setCoaching] = useState<{
@@ -324,12 +344,17 @@ export default function AiPage() {
     [activeTicker, fetchSection],
   );
 
-  /* Handle ticker submit */
-  const handleTickerSubmit = useCallback(
-    (e: FormEvent) => {
-      e.preventDefault();
-      const t = ticker.trim().toUpperCase();
-      if (!t) return;
+  /* Handle ticker selection from dropdown */
+  const handleTickerSelect = useCallback(
+    (value: string) => {
+      const t = value.trim().toUpperCase();
+      if (!t) {
+        setActiveTicker("");
+        return;
+      }
+      // Whitelist guard — only holdings or watchlist tickers allowed.
+      const allowed = userTickers.some((u) => u.ticker === t);
+      if (!allowed) return;
       setActiveTicker(t);
       // Reset all sections
       setSections({
@@ -339,7 +364,7 @@ export default function AiPage() {
         commentary: { ...INITIAL_SECTION },
       });
     },
-    [ticker],
+    [userTickers],
   );
 
   return (
@@ -453,38 +478,62 @@ export default function AiPage() {
                 Stock Analysis
               </h2>
               <Caption className="mt-1 mb-4">
-                Enter a ticker to draw SWOT, competitor, sector and commentary notes.
+                Select one of your holdings or watchlist symbols to draw SWOT,
+                competitor, sector and commentary notes.
               </Caption>
 
-              <form
-                onSubmit={handleTickerSubmit}
-                className="flex gap-2"
-              >
-                <div className="relative flex-1 max-w-xs">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgba(245,240,232,0.4)]" />
-                  <input
-                    type="text"
-                    value={ticker}
-                    onChange={(e) => setTicker(e.target.value.toUpperCase())}
-                    placeholder="AAPL"
-                    className={cn(
-                      "w-full rounded-[2px] border border-[rgba(245,240,232,0.12)] bg-[rgba(255,255,255,0.02)] pl-9 pr-4 py-2.5 text-[13px] font-mono tracking-wide text-[var(--pq-ivory)]",
-                      "placeholder:text-[rgba(245,240,232,0.3)] outline-none transition-all duration-200",
-                      "focus:border-[var(--pq-bronze)] focus:bg-[rgba(255,255,255,0.04)]",
-                    )}
-                  />
+              {tickersLoading ? (
+                <div className="flex items-center gap-2 text-[12px] text-[rgba(245,240,232,0.5)]">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--pq-bronze)]" />
+                  Loading your symbols…
                 </div>
-                <button
-                  type="submit"
-                  disabled={!ticker.trim()}
-                  className={cn(
-                    ticker.trim() ? "pq-ink-btn-bronze" : "pq-ink-btn-ghost",
-                    !ticker.trim() && "opacity-40 cursor-not-allowed",
-                  )}
-                >
-                  Analyze
-                </button>
-              </form>
+              ) : hasUserTickers ? (
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <label className="sr-only" htmlFor="ai-ticker-select">
+                    Choose a symbol
+                  </label>
+                  <div className="relative flex-1 max-w-xs">
+                    <select
+                      id="ai-ticker-select"
+                      value={activeTicker}
+                      onChange={(e) => handleTickerSelect(e.target.value)}
+                      className={cn(
+                        "w-full appearance-none rounded-[2px] border border-[rgba(245,240,232,0.12)] bg-[rgba(255,255,255,0.02)] px-3 pr-9 py-2.5 text-[13px] font-mono tracking-wide text-[var(--pq-ivory)]",
+                        "outline-none transition-all duration-200",
+                        "focus:border-[var(--pq-bronze)] focus:bg-[rgba(255,255,255,0.04)]",
+                      )}
+                    >
+                      <option value="">내 보유 종목에서 선택</option>
+                      {userTickers.map((u) => (
+                        <option key={u.ticker} value={u.ticker}>
+                          {u.ticker} — {u.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgba(245,240,232,0.5)]" />
+                  </div>
+                  <span className="text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+                    {userTickers.length} symbol{userTickers.length === 1 ? "" : "s"} eligible
+                  </span>
+                </div>
+              ) : (
+                <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.015)] px-4 py-5">
+                  <p className="font-serif text-[14px] text-[var(--pq-ivory)]">
+                    보유 종목이나 관심종목을 먼저 추가하세요.
+                  </p>
+                  <Caption className="mt-1.5">
+                    AI 분석은 사용자의 보유/관심 종목에 한해 제공됩니다.
+                  </Caption>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link href="/portfolio" className="pq-ink-btn-bronze inline-flex items-center gap-1.5">
+                      포지션 추가
+                    </Link>
+                    <Link href="/watchlist" className="pq-ink-btn-ghost inline-flex items-center gap-1.5">
+                      관심종목 추가
+                    </Link>
+                  </div>
+                </div>
+              )}
 
               {activeTicker && (
                 <p className="mt-3 text-[10.5px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)]">
@@ -516,14 +565,14 @@ export default function AiPage() {
               </div>
             )}
 
-            {!activeTicker && (
+            {!activeTicker && hasUserTickers && (
               <div className="border-t border-[rgba(245,240,232,0.08)] pq-ink-empty text-center py-12">
                 <Fleuron size={14} />
                 <div className="font-serif text-[15px] text-[var(--pq-ivory)] mt-3">
                   No symbol selected.
                 </div>
                 <Caption className="mt-2">
-                  Enter a ticker above to begin observing.
+                  Choose one of your symbols above to begin observing.
                 </Caption>
               </div>
             )}

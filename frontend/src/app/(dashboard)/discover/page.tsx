@@ -28,8 +28,8 @@ import {
 import { apiFetch } from "@/lib/api";
 import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct, pctColorClass } from "@/lib/format";
-import { useDiscover } from "@/lib/hooks";
-import type { DiscoverResult } from "@/lib/types";
+import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
+import type { DiscoverResult, Position } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
@@ -121,7 +121,28 @@ export default function DiscoverPage() {
   const { data: sectorsLive } = useSWR<BackendSectorRow[]>(DISCOVER_SECTORS, jsonFetcher, discoverOpts);
   const { data: screenersLive } = useSWR<BackendScreeners>(DISCOVER_SCREENERS, jsonFetcher, discoverOpts);
 
-  const results = useMemo(() => data?.results ?? [], [data?.results]);
+  // §101 회피 (2026-04-29): Engine Scan 결과를 사용자 보유/관심 종목 화이트리스트로
+  // 한정. 백엔드도 동일 가드를 추가하나, 프론트에서도 백업 가드를 유지해
+  // 임의 종목 시그널이 노출되는 회색지대를 차단.
+  const positionsSwr = usePortfolioPositions<{ positions?: Position[] }>();
+  const watchlistSwr = useWatchlist();
+  const userTickerSet = useMemo(() => {
+    const s = new Set<string>();
+    (positionsSwr.data?.positions ?? []).forEach((p) => {
+      if (p.ticker) s.add(p.ticker.toUpperCase());
+    });
+    (watchlistSwr.data?.watchlist ?? []).forEach((w) => {
+      if (w.ticker) s.add(w.ticker.toUpperCase());
+    });
+    return s;
+  }, [positionsSwr.data, watchlistSwr.data]);
+  const hasUserScope = userTickerSet.size > 0;
+
+  const results = useMemo(() => {
+    const all = data?.results ?? [];
+    if (!hasUserScope) return [] as typeof all;
+    return all.filter((r) => r.ticker && userTickerSet.has(r.ticker.toUpperCase()));
+  }, [data?.results, userTickerSet, hasUserScope]);
   const hasLive = results.length > 0;
   const liveFailed = Boolean(error) && !hasLive;
 
@@ -185,23 +206,39 @@ export default function DiscoverPage() {
       : [],
     [sectorsLive],
   );
+  // §101 회피 (2026-04-29): Thematic Signals도 보유/관심 종목으로 한정.
+  // 임의 종목에 POSITIVE/NEGATIVE pill을 노출하면 자문 회색지대.
+  const filterToScope = useCallback(
+    <T extends { ticker: string }>(list: T[]) =>
+      hasUserScope
+        ? list.filter((x) => x.ticker && userTickerSet.has(x.ticker.toUpperCase()))
+        : [],
+    [hasUserScope, userTickerSet],
+  );
+
   const oversold = useMemo(
-    () => (screenersLive?.oversold_rsi?.length ? screenersLive.oversold_rsi : []).map((x) => ({
-      ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
-    })),
-    [screenersLive],
+    () => filterToScope(
+      (screenersLive?.oversold_rsi?.length ? screenersLive.oversold_rsi : []).map((x) => ({
+        ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
+      })),
+    ),
+    [screenersLive, filterToScope],
   );
   const highs52w = useMemo(
-    () => (screenersLive?.highs_52w?.length ? screenersLive.highs_52w : []).map((x) => ({
-      ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
-    })),
-    [screenersLive],
+    () => filterToScope(
+      (screenersLive?.highs_52w?.length ? screenersLive.highs_52w : []).map((x) => ({
+        ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
+      })),
+    ),
+    [screenersLive, filterToScope],
   );
   const earnings = useMemo(
-    () => (screenersLive?.earnings_beats?.length ? screenersLive.earnings_beats : []).map((x) => ({
-      ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
-    })),
-    [screenersLive],
+    () => filterToScope(
+      (screenersLive?.earnings_beats?.length ? screenersLive.earnings_beats : []).map((x) => ({
+        ticker: x.ticker, name: x.name, metric: x.metric, metricValue: x.metric_value,
+      })),
+    ),
+    [screenersLive, filterToScope],
   );
 
   const handleScan = useCallback(async () => {
@@ -317,9 +354,9 @@ export default function DiscoverPage() {
           )}
         </section>
 
-        {/* US Movers */}
+        {/* US Movers — neutral observation, public market data */}
         <section className="mb-12">
-          <SectionKicker eyebrow="US Markets" title="Top Movers — United States" sub="Top gainers and losers by 1D change." />
+          <SectionKicker eyebrow="US Markets" title="Today's Movers — United States" sub="Public market data — 1D change observation." />
           <div className="mt-5 grid gap-8 sm:grid-cols-2">
             {usGainers.length > 0
               ? <MoversBlock title="Gainers" rows={usGainers} />
@@ -330,9 +367,9 @@ export default function DiscoverPage() {
           </div>
         </section>
 
-        {/* KR Movers */}
+        {/* KR Movers — neutral observation, public market data */}
         <section className="mb-12">
-          <SectionKicker eyebrow="KR Markets" title="Top Movers — Korea" sub="KOSPI top gainers and losers." />
+          <SectionKicker eyebrow="KR Markets" title="Today's Movers — Korea" sub="KOSPI 1D change observation." />
           <div className="mt-5 grid gap-8 sm:grid-cols-2">
             {krGainers.length > 0
               ? <MoversBlock title="Gainers" rows={krGainers} />
@@ -376,35 +413,70 @@ export default function DiscoverPage() {
           )}
         </section>
 
-        {/* Thematic */}
+        {/* Thematic — limited to user's holdings + watchlist (§101 회피) */}
         <section className="mb-12">
-          <SectionKicker eyebrow="Screeners" title="Thematic Signals" sub="Observational filters across universes." />
-          <div className="mt-5 grid gap-8 sm:grid-cols-3">
-            {oversold.length > 0
-              ? <ThematicBlockInk title="Oversold (RSI < 32)" items={oversold} />
-              : <EmptyBlock title="Oversold (RSI < 32)" />}
-            {highs52w.length > 0
-              ? <ThematicBlockInk title="52-Week Highs" items={highs52w} />
-              : <EmptyBlock title="52-Week Highs" />}
-            {earnings.length > 0
-              ? <ThematicBlockInk title="Earnings Surprise" items={earnings} />
-              : <EmptyBlock title="Earnings Surprise" />}
-          </div>
+          <SectionKicker
+            eyebrow="Screeners"
+            title="Thematic Observations"
+            sub={
+              hasUserScope
+                ? "Observational filters — limited to your holdings and watchlist."
+                : "Add holdings or watchlist symbols to surface thematic observations."
+            }
+          />
+          {hasUserScope ? (
+            <div className="mt-5 grid gap-8 sm:grid-cols-3">
+              {oversold.length > 0
+                ? <ThematicBlockInk title="Oversold (RSI < 32)" items={oversold} />
+                : <EmptyBlock title="Oversold (RSI < 32)" />}
+              {highs52w.length > 0
+                ? <ThematicBlockInk title="52-Week Highs" items={highs52w} />
+                : <EmptyBlock title="52-Week Highs" />}
+              {earnings.length > 0
+                ? <ThematicBlockInk title="Earnings Surprise" items={earnings} />
+                : <EmptyBlock title="Earnings Surprise" />}
+            </div>
+          ) : (
+            <div className="pq-ink-empty mt-5 flex flex-col items-center gap-3 rounded border border-[rgba(245,240,232,0.06)] py-10 text-center">
+              <Fleuron />
+              <p className="text-[12px] text-[rgba(245,240,232,0.55)]">
+                보유 종목이나 관심종목을 추가하면 자동으로 분석합니다.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.push("/portfolio")}
+                  className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] underline underline-offset-2 hover:text-[var(--pq-ivory)] transition-colors"
+                >
+                  포지션 추가
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/watchlist")}
+                  className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.5)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.85)] transition-colors"
+                >
+                  관심종목 추가
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
-        {/* Live quant scan */}
+        {/* Live quant scan — limited to user's holdings + watchlist (§101 회피) */}
         <section className="mb-12">
           <SectionKicker
             eyebrow="Quant"
             title="Engine Scan"
             sub={
-              liveFailed
-                ? "Live scan temporarily unavailable."
-                : isLoading
-                  ? "Loading live quant scan…"
-                  : hasLive
-                    ? `${results.length} tickers observed.`
-                    : "Press Scan to run the live engine."
+              !hasUserScope
+                ? "보유 종목이나 관심종목을 추가하면 자동으로 분석합니다."
+                : liveFailed
+                  ? "Live scan temporarily unavailable."
+                  : isLoading
+                    ? "Loading live quant scan…"
+                    : hasLive
+                      ? `${results.length} of your symbols observed.`
+                      : "Press Scan to run the live engine."
             }
           />
           {hasLive && (

@@ -2611,8 +2611,17 @@ def _empty_check(user_id: int, artifact_type: str,
     # broader app context is half-loaded (test collection time, etc).
     from models import Position, TradeHistory
 
-    # 1) Service-level explicit flag wins (brag_card, monthly_brag set this).
+    # 1) Service-level explicit flag wins. brag_card / monthly_brag set
+    #    only `is_empty=True` → legacy default of "no_trades".
+    #    The 5 §101-grey services (earnings_prebrief, year_end_letter,
+    #    credit_rating, insider_mirror, pre_trade_checklist) additionally
+    #    set `empty_reason` ("not_in_portfolio" / "no_positions" /
+    #    "no_upcoming_earnings") which we surface verbatim so the
+    #    frontend EmptyState UI can branch.
     if isinstance(data, dict) and data.get("is_empty") is True:
+        explicit_reason = data.get("empty_reason")
+        if isinstance(explicit_reason, str) and explicit_reason:
+            return (explicit_reason, str(data.get("message") or explicit_reason))
         return ("no_trades", "first_trade_needed")
 
     # 2) Per-type prerequisite checks — covers services that don't mark

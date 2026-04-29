@@ -1071,9 +1071,41 @@ class EarningsPreBriefService:
                           ) -> Optional[dict[str, Any]]:
         """Spec-aligned alias — resolve the earnings_date from FMP when not
         supplied. Returns None when no upcoming earnings are found for
-        the ticker (rather than raising) so routes can 404 cleanly."""
+        the ticker (rather than raising) so routes can 404 cleanly.
+
+        Legal posture (자본시장법 §101 회피, 2026-04-29):
+            본 서비스는 **사용자 보유 종목만 분석**하는 자기 데이터 도구다.
+            보유하지 않은 종목 ticker 가 들어오면 ``is_empty=True`` 페이로드를
+            돌려 routes 레벨에서 EmptyState UI 로 전환되도록 한다. 시장 임의
+            종목 분석 가능성을 차단해 "불특정 다수 + 매매정보" 요건을 깬다.
+        """
+        ticker_norm = (ticker or "").strip().upper()
+        if not ticker_norm:
+            return None
+
+        # ── §101 가드: 보유 종목 검증 ────────────────────────────────────
+        try:
+            held = (
+                Position.query
+                .filter_by(user_id=user_id, ticker=ticker_norm)
+                .first()
+            )
+        except Exception as exc:
+            logger.debug("position lookup failed (user=%s ticker=%s): %s",
+                         user_id, ticker_norm, exc)
+            held = None
+
+        if held is None or float(held.shares or 0) <= 0:
+            return {
+                "is_empty":     True,
+                "empty_reason": "not_in_portfolio",
+                "ticker":       ticker_norm,
+                "message":      "보유 종목만 분석 가능합니다",
+                "user_id":      user_id,
+            }
+
         if earnings_date is None:
-            cal = _safe_get_earnings_calendar(ticker=ticker, days_ahead=7)
+            cal = _safe_get_earnings_calendar(ticker=ticker_norm, days_ahead=7)
             for c in cal:
                 dt = _parse_earnings_row_datetime(c)
                 if dt and dt >= datetime.now(timezone.utc).replace(tzinfo=None):
@@ -1081,8 +1113,14 @@ class EarningsPreBriefService:
                     calendar_row = c
                     break
         if earnings_date is None:
-            return None
-        return self.generate_for_position(user_id, ticker, earnings_date,
+            return {
+                "is_empty":     True,
+                "empty_reason": "no_upcoming_earnings",
+                "ticker":       ticker_norm,
+                "message":      "해당 종목의 다가오는 실적 일정이 없습니다",
+                "user_id":      user_id,
+            }
+        return self.generate_for_position(user_id, ticker_norm, earnings_date,
                                            calendar_row=calendar_row)
 
     def render_email(self, data: dict[str, Any],

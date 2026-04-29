@@ -1,5 +1,15 @@
 """Pre-Trade Checklist — persona-tailored 7-question self-check.
 
+매매 전 **자기점검용 양식** (Tools, not advice). 사용자가 직접
+매매 의사결정을 한 뒤 그 결정을 본인이 글로 적어 점검하는 도구이며,
+PivoxQuant 가 매매를 권유/추천/조언하지 않는다. 모든 질문은
+관찰형 / non-directive — "기록했는가?" / "확인했는가?" 형식.
+
+Legal posture (자본시장법 §101 회피, 2026-04-29):
+    본 도구는 사용자가 본인 행동을 본인이 점검하도록 돕는 양식 only.
+    종목 의견·시장 전망·매매 신호 일절 제공하지 않는다. 출력은 질문
+    리스트 (data) — 답은 사용자 본인이 적는다. AI 호출 0 건.
+
 Part of Living CFO Layer 2 (PERSONA_SPEC §3, §4). Surfaces a short
 self-interrogation right before the user commits to a trade, adapted to
 the behavioural bias that the declared persona is most vulnerable to.

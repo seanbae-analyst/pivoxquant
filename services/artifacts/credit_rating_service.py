@@ -343,12 +343,31 @@ class CreditRatingService:
 
     def generate_for_user(self, user_id: int,
                           as_of: date | None = None) -> dict[str, Any]:
+        """Compute portfolio self-rating for the user.
+
+        Legal posture (자본시장법 §101 회피, 2026-04-29):
+            **사용자 보유 포트폴리오 자체에 대한 자기 신용평가 도구**다.
+            보유 종목이 0 개면 ``is_empty=True`` 페이로드를 즉시 반환해
+            EmptyState 로 전환된다. 계산식은 모두 사용자 보유 데이터
+            기반(Position × FMP 정량 재무 지표) — 외부 종목 평가 서비스
+            아님. 헤더 disclaimer 가 본 사실을 명시한다.
+        """
         user = db.session.get(User, user_id)
         if not user:
             raise ValueError(f"user {user_id} not found")
 
         as_of = as_of or date.today()
         positions = Position.query.filter_by(user_id=user_id).all()
+
+        # ── §101 가드: 보유 종목 0 → empty payload ────────────────────────
+        if not positions:
+            return {
+                "is_empty":     True,
+                "empty_reason": "no_positions",
+                "user_id":      user_id,
+                "as_of":        as_of.isoformat(),
+                "message":      "보유 종목이 없습니다 — 자기 신용등급 계산 불가",
+            }
 
         div = _diversification_score(positions)
         liq = _liquidity_score(positions)
@@ -421,8 +440,13 @@ class CreditRatingService:
             change=change,
             factor_details=factor_details,
             position_count=len(positions),
-            disclaimer=("본 등급은 PivoxQuant 내부 스코어링에 근거한 자체 평가로, "
-                        "S&P·Moody's 등 공인 신용평가기관 등급이 아닙니다."),
+            disclaimer=(
+                "본 등급은 사용자 본인 보유 포트폴리오에 대한 자기 점검 도구로, "
+                "FMP 정량 재무 데이터를 PivoxQuant 내부 스코어링 공식에 그대로 "
+                "투입해 산출한 결과입니다. PivoxQuant 의 평가/추천이 아니며, "
+                "S&P·Moody's 등 공인 신용평가기관 등급도 아닙니다. "
+                "본인 외 종목에 대한 평가/조언이 아닙니다."
+            ),
         )
         return ctx.to_dict()
 

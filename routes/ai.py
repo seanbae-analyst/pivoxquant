@@ -16,6 +16,7 @@ from models import Position, SignalCache
 from security import ai_rate_limit
 from services.container import ai, fetcher
 from services import cache_service
+from services.access_guard import is_user_allowed_ticker, access_denied_response
 from services.legal_filter import scrub_response
 from ai_models import EarningsCallToneAnalyzer, AISectorRotation, AIRiskSummary
 from .decorators import api_auth, require_tier
@@ -34,6 +35,19 @@ def _scrub_and_jsonify(payload, status: int = 200):
     return jsonify(scrub_response(payload)), status
 
 
+def _extract_ticker_from_payload(d: dict) -> str:
+    """Pull ticker out of an AI request body, checking nested ``snapshot``
+    too — engine.analyze() output is typically the analysis_data and stores
+    the ticker at the top level. Empty string if missing.
+    """
+    if not isinstance(d, dict):
+        return ""
+    t = (d.get("ticker") or "").strip()
+    if not t and isinstance(d.get("snapshot"), dict):
+        t = (d["snapshot"].get("ticker") or "").strip()
+    return t.upper()
+
+
 @ai_bp.route("/status")
 @api_auth
 def status():
@@ -48,6 +62,13 @@ def swot():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
     d = request.get_json() or {}
+    # §101 회피 — SWOT 은 종목 단위 분석이므로 보유/관심 외 ticker 거부.
+    ticker = _extract_ticker_from_payload(d)
+    if not ticker:
+        return jsonify({"error": "ticker is required"}), 400
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
     result = ai.generate_swot(d)
     if result:
         return _scrub_and_jsonify(result)
@@ -63,6 +84,13 @@ def competitor():
         return jsonify({"error": "AI not configured"}), 503
     d = request.get_json() or {}
     ticker = d.get("ticker", "")
+    # §101 회피 — competitor 분석은 ticker 기준이므로 보유/관심 외 거부.
+    ticker_check = _extract_ticker_from_payload(d)
+    if not ticker_check:
+        return jsonify({"error": "ticker is required"}), 400
+    if not is_user_allowed_ticker(current_user.id, ticker_check):
+        body, status = access_denied_response()
+        return jsonify(body), status
     target_sector = d.get("sector", d.get("snapshot", {}).get("sector", ""))
     peers = []
     for sc in SignalCache.query.all():
@@ -86,6 +114,14 @@ def sector_trend():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
     d = request.get_json() or {}
+    # §101 회피 — sector-trend 가 ticker 와 함께 호출되는 경우 (예: Detail page
+    # context) 에는 ticker 화이트리스트 검사를 우선 적용. ticker 없이 sector
+    # 만으로 호출되는 경우 (Discover/Market 위젯) 는 통과 (sector 통계는 정보
+    # 매체성 데이터).
+    ticker_check = _extract_ticker_from_payload(d)
+    if ticker_check and not is_user_allowed_ticker(current_user.id, ticker_check):
+        body, status = access_denied_response()
+        return jsonify(body), status
     sector = d.get("sector", "")
     stocks = []
     for sc in SignalCache.query.all():
@@ -152,6 +188,11 @@ def commentary():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
     d = request.get_json() or {}
+    # §101 회피 — commentary 가 단일 ticker 분석과 함께 호출되는 경우만 가드.
+    ticker_check = _extract_ticker_from_payload(d)
+    if ticker_check and not is_user_allowed_ticker(current_user.id, ticker_check):
+        body, status = access_denied_response()
+        return jsonify(body), status
     result = ai.generate_commentary(d)
     if result:
         return _scrub_and_jsonify(result)
@@ -234,6 +275,11 @@ def earnings_tone():
 
     ticker = ticker.upper()
 
+    # §101 회피 — earnings tone 은 ticker 단위 분석이므로 화이트리스트 검사.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
+
     # 1) Cache hit — serve cached result regardless of tier (already paid for).
     #    But tier-gate: free users cannot retrieve results either.
     if not _earnings_tone_tier_ok(current_user):
@@ -282,6 +328,11 @@ def earnings_tone_get(ticker):
     ticker = ticker.upper().strip()
     if not ticker or len(ticker) > 20:
         return jsonify({"error": "Invalid ticker"}), 400
+
+    # §101 회피 — earnings tone 은 ticker 단위 분석이므로 화이트리스트 검사.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
 
     if not _earnings_tone_tier_ok(current_user):
         return jsonify({
