@@ -1,8 +1,7 @@
 """Shared route decorators."""
-import os
 from functools import wraps
 
-from flask import jsonify, request
+from flask import jsonify
 from flask_login import current_user
 
 from services.legal_filter import safe_scrub
@@ -63,24 +62,17 @@ def legal_scrub_response(f):
 
 
 def api_auth(f):
-    """Require authenticated user OR valid X-Admin-Secret header.
+    """Require an authenticated user.
 
-    Admin secret bypass — production cron / scheduled triggers (e.g. weekly
-    memo blast via GitHub Actions) call admin-gated endpoints without a user
-    session. ARTIFACT_TRIGGER_SECRET (production) or DEV_LOGIN_SECRET (dev)
-    in X-Admin-Secret header lets such callers through. Endpoint-level
-    `_check_cron_admin_secret()` still enforces the same secret again, so
-    the bypass is layered, not a replacement.
+    Cron / scheduled triggers must NOT use this decorator — apply
+    `_check_cron_admin_secret()` (defined in routes/artifacts.py) inside the
+    endpoint body instead. Earlier versions of this decorator allowed an
+    X-Admin-Secret bypass, but that caused user-data endpoints (e.g.
+    `/api/artifacts/list`, which dereferences `current_user.id`) to 500
+    when called with a valid admin secret but no user session.
     """
     @wraps(f)
     def wrapped(*a, **kw):
-        admin_provided = request.headers.get("X-Admin-Secret", "")
-        if admin_provided:
-            cron_secret = os.environ.get("ARTIFACT_TRIGGER_SECRET")
-            dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-            expected = cron_secret or dev_secret
-            if expected and admin_provided == expected:
-                return f(*a, **kw)
         if not current_user.is_authenticated:
             return jsonify({"error": "Login required"}), 401
         return f(*a, **kw)
