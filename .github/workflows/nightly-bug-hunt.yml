@@ -189,6 +189,7 @@ jobs:
 
       # ── Close stale issue if this run is clean ──
       - name: Close stale issue on recovery
+        continue-on-error: true
         if: steps.aggregate.outputs.severity == 'none'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

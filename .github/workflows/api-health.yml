@@ -82,6 +82,7 @@ jobs:
           fi
 
       - name: Close stale incident on recovery
+        continue-on-error: true
         if: steps.backend.outputs.failed != 'true' && steps.frontend.outputs.failed != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
