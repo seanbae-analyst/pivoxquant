@@ -364,7 +364,7 @@ function PillarCard({
           {token}
         </span>
       </div>
-      <div className={cn("mt-3 font-mono text-[28px] tabular-nums leading-none", textColor)}>
+      <div className={cn("pq-ink-num mt-3 leading-none", textColor)}>
         {safe.toFixed(0)}
         <span className="text-xs text-[rgba(245,240,232,0.4)] ml-1.5">/ 100</span>
       </div>
@@ -688,12 +688,12 @@ export default function StockDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
               {/* Identity column */}
               <div className="lg:col-span-5">
-                <div className="pq-field-label">Ticker</div>
+                <div className="pq-field-label">Symbol</div>
                 <h1 className="pq-detail-ticker-display mt-2">
-                  {ticker}
-                </h1>
-                <p className="mt-2 font-serif text-[15px] text-[rgba(245,240,232,0.68)] leading-snug">
                   {displayName}
+                </h1>
+                <p className="mt-2 font-mono tabular-nums text-[15px] text-[rgba(245,240,232,0.7)] leading-snug">
+                  {ticker}
                 </p>
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
                   <span className="pq-sent-chip pq-sent-chip--neu">
@@ -710,7 +710,7 @@ export default function StockDetailPage() {
                 </div>
                 <div className="mt-4">
                   <FieldLabel tone="muted">Market cap</FieldLabel>
-                  <div className="mt-1 font-mono tabular-nums text-[18px] text-[var(--pq-ivory)]">
+                  <div className="pq-ink-num mt-1 text-[18px]">
                     {fmtMcap(mcap, krw)}
                   </div>
                 </div>
@@ -778,7 +778,7 @@ export default function StockDetailPage() {
                 </div>
                 <div
                   className={cn(
-                    "mt-4 font-mono tabular-nums text-[40px] leading-none",
+                    "pq-detail-stat-value mt-4",
                     // KR convention (CEO directive 2026-04-26): POSITIVE → red, NEGATIVE → blue.
                     signalTone === "pos"
                       ? "text-[#D18888]"
@@ -1316,7 +1316,7 @@ export default function StockDetailPage() {
               />
               <div className="flex-1">
                 <FieldLabel>AI Assistant · context handoff</FieldLabel>
-                <div className="mt-1.5 font-serif text-[18px] text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors">
+                <div className="pq-detail-h2 mt-1.5 group-hover:text-[var(--pq-bronze-light)] transition-colors">
                   Ask Companion about {ticker ?? "this ticker"}
                 </div>
                 <p className="mt-2 pq-detail-caption">
@@ -1372,7 +1372,7 @@ export default function StockDetailPage() {
                 className="block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"
               >
                 <FieldLabel>{r.kind}</FieldLabel>
-                <div className="mt-2 font-serif text-[17px] text-[var(--pq-ivory)] group-hover:text-[var(--pq-bronze-light)] transition-colors">
+                <div className="pq-detail-h2 mt-2 group-hover:text-[var(--pq-bronze-light)] transition-colors">
                   {r.name}
                 </div>
                 <p className="mt-2 pq-detail-caption">{r.desc}</p>

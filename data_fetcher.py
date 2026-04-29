@@ -153,6 +153,10 @@ class DataFetcher:
         30-60s during fast markets. Falls back to latest bar if trade
         endpoint fails (e.g., illiquid symbols outside RTH).
         Returns {price, open, high, low, volume} or None.
+
+        Class-share normalization: Alpaca expects slash form (BRK/B) for
+        multi-class tickers. Accept callers passing BRK.B or BRK-B and
+        translate. Mirrors the dot/dash logic in `_get_history_alpaca`.
         """
         if not _alpaca_hist_available or not _alpaca_hist_client:
             return None
@@ -162,26 +166,39 @@ class DataFetcher:
                 StockLatestQuoteRequest,
                 StockLatestBarRequest,
             )
+
+            # Class-share normalize: BRK.B / BRK-B → BRK/B for Alpaca.
+            alpaca_symbol = ticker
+            if "-" in alpaca_symbol and not alpaca_symbol.startswith("^"):
+                alpaca_symbol = alpaca_symbol.replace("-", "/")
+            elif "." in alpaca_symbol and not alpaca_symbol.endswith(".KS") \
+                    and not alpaca_symbol.endswith(".KQ") \
+                    and not alpaca_symbol.startswith("^"):
+                base, _, suf = alpaca_symbol.rpartition(".")
+                if base and len(suf) == 1 and suf.isalpha():
+                    alpaca_symbol = f"{base}/{suf}"
+            lookup_key = alpaca_symbol  # Alpaca dict keys come back in the request form.
+
             # Latest trade — RTH only.
             try:
-                tr_req = StockLatestTradeRequest(symbol_or_symbols=[ticker])
+                tr_req = StockLatestTradeRequest(symbol_or_symbols=[alpaca_symbol])
                 trades = _alpaca_hist_client.get_stock_latest_trade(tr_req)
-                trade = trades.get(ticker) if trades else None
+                trade = trades.get(lookup_key) if trades else None
             except Exception:
                 trade = None
 
             # Latest quote — captures pre-market / after-hours bid/ask.
             try:
-                q_req = StockLatestQuoteRequest(symbol_or_symbols=[ticker])
+                q_req = StockLatestQuoteRequest(symbol_or_symbols=[alpaca_symbol])
                 quotes = _alpaca_hist_client.get_stock_latest_quote(q_req)
-                quote = quotes.get(ticker) if quotes else None
+                quote = quotes.get(lookup_key) if quotes else None
             except Exception:
                 quote = None
 
             try:
-                br_req = StockLatestBarRequest(symbol_or_symbols=[ticker])
+                br_req = StockLatestBarRequest(symbol_or_symbols=[alpaca_symbol])
                 bars = _alpaca_hist_client.get_stock_latest_bar(br_req)
-                bar = bars.get(ticker) if bars else None
+                bar = bars.get(lookup_key) if bars else None
             except Exception:
                 bar = None
 

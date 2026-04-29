@@ -33,12 +33,17 @@ class QuantEngine:
 
     DISCOVER_POOL = [
         # ── US: High-momentum / growth ──
-        "NVDA","TSLA","AAPL","MSFT","AMZN","GOOGL","META","AMD","PLTR","SMCI",
+        "NVDA","TSLA","AAPL","MSFT","AMZN","GOOGL","GOOG","META","AMD","PLTR","SMCI",
         "RXRX","IONQ","RKLB","HOOD","COIN","MSTR","CRWD","NET","DDOG","ZS",
         "SNOW","SHOP","SQ","PYPL","SOFI","RIVN","LCID","RBLX","U","SPOT",
         "NFLX","UBER","ABNB","DASH","OKTA","GTLB","PATH","AI","SOUN","BBAI",
         # ── US: Macro / value ──
         "BA","GM","F","GE","XOM","CVX","JPM","GS","MS","BAC",
+        # ── US: S&P 500 large-cap blue chips (added 2026-04-29 — DISCOVER_POOL P0) ──
+        "V","JNJ","WMT","PG","MA","HD","ABBV","KO","PFE","AVGO",
+        "COST","MRK","DIS","LLY","ADBE","CRM","BRK-B","MCD","CSCO","ORCL",
+        "ACN","TMO","ABT","NKE","INTC","IBM","QCOM","T","VZ","CAT",
+        "AXP","BLK","SCHW","SPGI","NOW","INTU","AMAT","BKNG","SBUX",
         # ── KR: Blue chip + growth ──
         "005930.KS","000660.KS","035720.KS","035420.KS","005380.KS",
         "207940.KS","006400.KS","051910.KS","003670.KS","066570.KS",

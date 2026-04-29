@@ -302,13 +302,60 @@ def _class_share_alt(ticker):
 
 # ── Quote (realtime-ish price) ──────────────────────────────────
 
+def _quote_price_sane(quote: dict) -> bool:
+    """Sanity-check an FMP /quote payload's price field.
+
+    Context (2026-04-29 P0): FMP occasionally returns a price field that is
+    out-of-band relative to the same payload's marketCap / sharesOutstanding —
+    e.g. NFLX: price=92.27 but marketCap=388.5B with ~430M shares outstanding,
+    implying ~$902/share. This is FMP's split-adjusted price-mismatch bug
+    (cause unknown — possibly a stale or mis-keyed split factor).
+
+    Heuristic: if price * sharesOutstanding diverges from marketCap by more
+    than 50%, treat the price as untrustworthy and let the caller fall
+    through to Alpaca. Returns True for any payload missing the cross-check
+    fields (no false negatives — this only fires on definitive mismatches).
+    """
+    if not isinstance(quote, dict):
+        return True
+    price = quote.get("price")
+    market_cap = quote.get("marketCap") or quote.get("mktCap")
+    shares = (
+        quote.get("sharesOutstanding")
+        or quote.get("shares_outstanding")
+        or quote.get("sharesOutstandingMln")
+    )
+    if not price or not market_cap or not shares:
+        return True  # Can't cross-check — trust upstream.
+    try:
+        price = float(price)
+        market_cap = float(market_cap)
+        shares = float(shares)
+    except (TypeError, ValueError):
+        return True
+    if price <= 0 or market_cap <= 0 or shares <= 0:
+        return True
+    implied_cap = price * shares
+    # Allow ±50% drift (handles intraday cap drift, share-count staleness).
+    if implied_cap < market_cap * 0.5 or implied_cap > market_cap * 1.5:
+        derived_price = market_cap / shares
+        logger.warning(
+            "FMP quote sanity fail for %s: price=%.2f market_cap=%.0f shares=%.0f "
+            "implied_cap=%.0f derived_price=%.2f — rejecting payload",
+            quote.get("symbol", "?"), price, market_cap, shares,
+            implied_cap, derived_price,
+        )
+        return False
+    return True
+
+
 def get_quote(ticker):
     """Get current quote. Cache 30s. Stale-while-revalidate when budget low.
 
     Fallback chain (US tickers only):
       1. 30s TTL cache
-      2. FMP /quote
-      3. Alpaca Market Data — when FMP returns None / 402 / budget-out
+      2. FMP /quote (sanity-checked against marketCap / sharesOutstanding)
+      3. Alpaca Market Data — when FMP returns None / 402 / budget-out / sanity-fail
       4. Stale cache (any age)
     """
     cache_key = f"quote:{ticker}"
@@ -322,8 +369,10 @@ def get_quote(ticker):
     data = _fmp_get("/quote", {"symbol": ticker})
     if data and isinstance(data, list) and len(data) > 0:
         result = data[0]
-        _set_cache(cache_key, result)
-        return result
+        if _quote_price_sane(result):
+            _set_cache(cache_key, result)
+            return result
+        # Sanity-fail: do NOT cache; fall through to Alpaca fallback below.
 
     # Class-share retry: FMP's stable /quote resolves BRK-B but not BRK.B
     # (confirmed: dotted form returns [], dash form returns full payload).
@@ -333,11 +382,12 @@ def get_quote(ticker):
         data = _fmp_get("/quote", {"symbol": alt})
         if data and isinstance(data, list) and len(data) > 0:
             result = data[0]
-            logger.info("FMP quote resolved %s via class-share alt %s", ticker, alt)
-            _set_cache(cache_key, result)
-            return result
+            if _quote_price_sane(result):
+                logger.info("FMP quote resolved %s via class-share alt %s", ticker, alt)
+                _set_cache(cache_key, result)
+                return result
 
-    # FMP miss → Alpaca fallback (US tickers only)
+    # FMP miss / sanity-fail → Alpaca fallback (US tickers only)
     if _is_us_ticker(ticker):
         ama = _ama()
         if ama is not None:
