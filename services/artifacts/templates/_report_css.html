@@ -1704,7 +1704,7 @@ table.ld-table td[class*="-val"] {
 [class*="-prose"]::first-letter {
   font-size: 4em !important;
   line-height: 0.85 !important;
-  float: left !important;
+  /* float: left !important removed for WeasyPrint 68.1 compat */
   padding: 2pt 6pt 0 0 !important;
   font-family: var(--pq-font-display, 'Playfair Display'), 'Source Serif 4', serif !important;
 }
