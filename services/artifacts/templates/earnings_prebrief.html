@@ -284,7 +284,7 @@
       </div>
       <div class="pq-pdf-gov-cell">
         <div class="lbl">Sources</div>
-        <div class="val">{{ _gov.sources | default('FMP · Alpaca · SEC EDGAR') }}</div>
+        <div class="val">{% if _gov.sources %}{{ _gov.sources }}{% else %}—{% endif %}</div>
       </div>
     </div>
 
