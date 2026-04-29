@@ -39,8 +39,12 @@ PERSONAS = [
     "quant", "speculator", "daytrader", "beginner",
 ]
 SECTIONS = ["opener", "data_focus", "risk_block"]
+# 2026-04-29: weekly_memo.html was redesigned to a 1-page Free template
+# (CEO design v3) that does not branch on persona. Persona-specific openers /
+# data-focus / risk-block sections still apply to quarterly_self_report.html
+# (the Pro+ flagship). The 24 persona partials remain on disk for the legacy
+# 6-page Goldman IC v2 archive and other tier templates.
 REPORTS = [
-    "weekly_memo.html",
     "quarterly_self_report.html",
 ]
 
@@ -268,11 +272,15 @@ def test_persona_report_renders(jinja_env, persona: str, report: str) -> None:
 
 @pytest.mark.parametrize("persona", PERSONAS)
 def test_persona_opener_phrase_unique(jinja_env, persona: str) -> None:
-    """Confirm the rendered weekly memo contains that persona's opener phrase
-    and none of the other 7 persona phrases (cross-leak guard).
+    """Confirm the rendered quarterly self-report contains that persona's
+    opener phrase and none of the other 7 persona phrases (cross-leak guard).
+
+    2026-04-29: switched from weekly_memo.html (now a 1-page Free template
+    that does not branch on persona) to quarterly_self_report.html where
+    persona-specific openers still apply.
     """
-    tpl = jinja_env.get_template("weekly_memo.html")
-    html = tpl.render(**_weekly_memo_context(persona))
+    tpl = jinja_env.get_template("quarterly_self_report.html")
+    html = tpl.render(**_quarterly_context(persona))
 
     expected = PERSONA_OPENER_PHRASES[persona]
     assert expected in html, (
@@ -296,8 +304,8 @@ def test_unknown_persona_macro_fallback(jinja_env) -> None:
     """When an unknown persona code is injected the macro falls back to
     the balanced partial — verified by the balanced opener phrase.
     """
-    tpl = jinja_env.get_template("weekly_memo.html")
-    ctx = _weekly_memo_context("totally_unknown_persona_xyz")
+    tpl = jinja_env.get_template("quarterly_self_report.html")
+    ctx = _quarterly_context("totally_unknown_persona_xyz")
     html = tpl.render(**ctx)
     # Balanced opener phrase is the fallback target.
     assert PERSONA_OPENER_PHRASES["balanced"] in html
@@ -305,8 +313,8 @@ def test_unknown_persona_macro_fallback(jinja_env) -> None:
 
 def test_missing_persona_macro_fallback(jinja_env) -> None:
     """When `persona` is omitted entirely the template default fires."""
-    tpl = jinja_env.get_template("weekly_memo.html")
-    ctx = _weekly_memo_context("balanced")
+    tpl = jinja_env.get_template("quarterly_self_report.html")
+    ctx = _quarterly_context("balanced")
     ctx.pop("persona", None)
     html = tpl.render(**ctx)
     # `{% set persona = persona | default('balanced') %}` → balanced branch.
