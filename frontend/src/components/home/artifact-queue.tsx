@@ -30,15 +30,7 @@ import {
   useCompanionHistory,
 } from "@/lib/cfo/useCompanion";
 
-interface BriefToday {
-  available?: boolean;
-  brief?: {
-    title?: string;
-    sent_at?: string;
-    delivered_at?: string;
-    read_at?: string | null;
-  };
-}
+// BriefToday shape removed 2026-04-29 — Morning Brief backend deprecated.
 
 const fetcher = <T,>(url: string) => apiFetch<T>(url);
 
@@ -104,11 +96,8 @@ export function ArtifactQueue() {
     return () => clearInterval(id);
   }, []);
 
-  const { data: brief } = useSWR<BriefToday>(
-    API.market.morningBriefToday,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 120_000 },
-  );
+  // Morning Brief SWR call removed 2026-04-29 — backend deprecated.
+  void fetcher;
 
   // "Portfolio Journal" is represented today by the Weekly Memo artifact
   // archive — pull the latest row of any type.
@@ -130,26 +119,10 @@ export function ArtifactQueue() {
     companionStatus?.entitlement_plans,
   );
 
-  /* ── Row 1: Morning Brief ── */
-  const briefSent =
-    brief?.brief?.delivered_at || brief?.brief?.sent_at || null;
-  const briefRead = Boolean(brief?.brief?.read_at);
-  const briefAvailable = brief?.available !== false && Boolean(brief?.brief);
-  const briefRow: QueueRow = {
-    id: "brief",
-    label: "Morning Brief",
-    title: brief?.brief?.title || "Today's brief",
-    meta: briefAvailable
-      ? briefSent
-        ? `Delivered ${relativePast(briefSent, now)}`
-        : "Delivered this morning"
-      : "No brief scheduled today.",
-    href: "/morning-brief",
-    Icon: FileText,
-    state: briefAvailable
-      ? { kind: briefRead ? "done" : "ready", text: briefRead ? "Read" : "New" }
-      : { kind: "waiting", text: "Idle" },
-  };
+  /* ── Row 1 (Morning Brief) — REMOVED 2026-04-29.
+   * Morning Brief artifact stream deprecated. The first row now leads with
+   * Portfolio Journal so this surface continues to render four rows when
+   * the companion is included; otherwise three. ── */
 
   /* ── Row 2: Portfolio Journal (= last artifact overall) ── */
   const lastArtifact = artifacts[0];
@@ -209,7 +182,7 @@ export function ArtifactQueue() {
       : { kind: "locked", text: "Locked" },
   };
 
-  const rows: QueueRow[] = [briefRow, journalRow, memoRow, companionRow];
+  const rows: QueueRow[] = [journalRow, memoRow, companionRow];
 
   return (
     <section

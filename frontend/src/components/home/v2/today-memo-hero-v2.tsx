@@ -14,7 +14,7 @@
  * - Eyebrow signature: "Drafted by AI · Reviewed by you".
  *
  * Data source: caller passes prepared `headline`, `body`, `audioDuration`,
- * `displayName`, `loading`. The host page wires `useMorningBrief()` →
+ * `displayName`, `loading`. (Morning Brief data source deprecated 2026-04-29) →
  * brief.insight / brief.summary as in V1.
  *
  * Legal: NO predictive/recommendation language; mockup body verified clean.
@@ -131,7 +131,7 @@ export function TodayMemoHeroV2({
         style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}
       >
         <Link
-          href="/morning-brief"
+          href="/reports"
           className="pq-cta-bronze"
           style={{
             display: "inline-flex",
@@ -155,7 +155,7 @@ export function TodayMemoHeroV2({
 
         {audioDuration ? (
           <Link
-            href="/morning-brief"
+            href="/reports"
             className="font-mono uppercase"
             style={{
               fontFamily:

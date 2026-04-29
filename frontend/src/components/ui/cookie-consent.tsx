@@ -23,11 +23,24 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-label="Cookie consent"
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white p-4 shadow-lg md:flex md:items-center md:justify-between md:gap-6 md:px-8"
+      className="fixed bottom-0 left-0 right-0 z-50 p-4 md:flex md:items-center md:justify-between md:gap-6 md:px-8"
+      style={{
+        backgroundColor: "var(--pq-ink)",
+        color: "var(--pq-ivory)",
+        borderTop: "1px solid var(--pq-border)",
+        boxShadow: "0 -8px 24px rgba(0,0,0,0.4)",
+      }}
     >
-      <p className="mb-3 text-sm text-slate-600 md:mb-0 md:flex-1">
+      <p
+        className="mb-3 text-sm md:mb-0 md:flex-1"
+        style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
+      >
         {t("cookieConsent.message")}{" "}
-        <a href="/privacy" className="underline">
+        <a
+          href="/privacy"
+          className="underline"
+          style={{ color: "var(--pq-bronze)" }}
+        >
           {t("cookieConsent.privacyPolicy")}
         </a>
       </p>
@@ -35,21 +48,38 @@ export function CookieConsent() {
         <button
           type="button"
           onClick={() => choose("rejected")}
-          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          className="px-4 py-2 text-sm font-medium transition-colors"
+          style={{
+            borderRadius: "var(--pq-radius-cta)",
+            border: "1px solid var(--pq-border)",
+            color: "rgba(var(--pq-ivory-rgb), 0.7)",
+            backgroundColor: "transparent",
+          }}
         >
           {t("cookieConsent.reject")}
         </button>
         <button
           type="button"
           onClick={() => choose("essential")}
-          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="px-4 py-2 text-sm font-medium transition-colors"
+          style={{
+            borderRadius: "var(--pq-radius-cta)",
+            border: "1px solid var(--pq-border)",
+            color: "rgba(var(--pq-ivory-rgb), 0.85)",
+            backgroundColor: "transparent",
+          }}
         >
           {t("cookieConsent.essentialOnly")}
         </button>
         <button
           type="button"
           onClick={() => choose("accepted")}
-          className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          className="px-4 py-2 text-sm font-semibold transition-colors"
+          style={{
+            borderRadius: "var(--pq-radius-cta)",
+            backgroundColor: "var(--pq-bronze)",
+            color: "var(--pq-ink)",
+          }}
         >
           {t("cookieConsent.acceptAll")}
         </button>

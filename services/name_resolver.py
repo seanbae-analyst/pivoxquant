@@ -25,7 +25,7 @@ Design notes
 - Pure-function by default. No DB session use in `resolve_stock_name`.
 - `lookup_name_from_signal_cache` is a separate, opt-in helper because it
   requires a Flask app-context + DB session. Callers that already hold one
-  (morning_brief_service, autotrader) use it; pure serializers don't.
+  use it; pure serializers don't.
 - All lookups are case-insensitive via `.upper()` in the underlying
   registries.
 - Legacy note: the pyKRX name fallback was removed (2026-04-19) — pyKRX

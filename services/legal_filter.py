@@ -297,6 +297,37 @@ def scrub_response(data: Any) -> Any:
     return data
 
 
+# ── Hard-drop compliance check (vocabulary deny-list) ──────────────────────
+# Used by ai_service.py / weekly_memo / self_audit to reject AI output that
+# slipped past scrub_text (e.g. AI generated "buy" / "추천" verbatim). When
+# this returns False the caller drops the text entirely and falls back to a
+# disclaimer string. Migrated 2026-04-29 from the now-removed
+# services.morning_brief_service module.
+_COMPLIANCE_FORBIDDEN_PATTERNS = [
+    r"추천", r"조언", r"권(?:고|유|장)",
+    r"매수", r"매도",
+    r"사세요", r"파세요", r"사라", r"팔아",
+    r"오를\s*것", r"내릴\s*것", r"오른다", r"내린다",
+    r"\b(?:buy|sell|recommend|advice|advise)\b",
+]
+_COMPLIANCE_FORBIDDEN_RE = re.compile(
+    "|".join(_COMPLIANCE_FORBIDDEN_PATTERNS), re.IGNORECASE
+)
+
+
+def is_compliant(text: str | None) -> bool:
+    """True iff `text` contains none of the forbidden advisory vocabulary.
+
+    Hard deny-list check (자본시장법 §6 미등록 투자자문업 방지). Callers
+    typically drop and replace non-compliant AI output with a neutral
+    disclaimer string. For surgical phrase replacement instead of hard-drop,
+    use ``scrub_text`` / ``safe_scrub``.
+    """
+    if not text:
+        return True
+    return _COMPLIANCE_FORBIDDEN_RE.search(text) is None
+
+
 __all__ = [
     "scrub_text",
     "safe_scrub",

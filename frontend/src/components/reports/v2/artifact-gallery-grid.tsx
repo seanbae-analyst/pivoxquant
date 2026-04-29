@@ -4,15 +4,15 @@
  * <ArtifactGalleryGrid /> — 3×2 gallery (6 cards) of `ArtifactKindCard`.
  *
  * One card per `ArtifactType` user-facing CFO artifact:
- *   1. Today's Memo            (morning_brief)
- *   2. Weekly Pulse            (weekly_memo)
- *   3. Earnings Pre-Brief      (earnings_prebrief)
- *   4. Brag Card               (monthly_brag)
- *   5. Year-End Letter         (custom)
- *   6. Quarterly Audit         (quarterly_review)
+ *   1. Weekly Pulse            (weekly_memo)
+ *   2. Earnings Pre-Brief      (earnings_prebrief)
+ *   3. Brag Card               (monthly_brag)
+ *   4. Year-End Letter         (custom)
+ *   5. Quarterly Audit         (quarterly_review)
  *
- * Note on `risk_report`: surfaced via the request box (§4) instead of the
- * gallery to keep the grid balanced at 6 user-facing artifacts.
+ * 2026-04-29: Today's Memo (morning_brief) entry retired — backend
+ * Morning Brief service deprecated. Grid now renders 5 user-facing
+ * artifacts; `risk_report` continues to surface via the request box (§4).
  *
  * The 18 `/reports/preview/*` static sample routes remain mounted and
  * untouched — each card's "See sample" CTA links into one of them.
@@ -34,16 +34,7 @@ function hasAccess(userTier: Tier, required: Tier): boolean {
 }
 
 const KIND_ENTRIES: Array<Omit<ArtifactKindEntry, "lastPublished" | "nextDue">> = [
-  {
-    displayName: "Today's Memo",
-    cadenceLabel: "Daily",
-    schedule: "Auto · 06:00 KST · Mon–Fri",
-    description:
-      "A one-page read on overnight prints, your book, and what to watch open.",
-    type: "morning_brief",
-    previewSlug: "morning-brief-plus",
-    minTier: "free",
-  },
+  // Today's Memo (morning_brief) entry REMOVED 2026-04-29 — backend deprecated.
   {
     displayName: "Weekly Pulse",
     cadenceLabel: "Weekly",

@@ -24,7 +24,7 @@ export function EarningsPreBriefCard() {
   // queue is being assembled. Mockup-driven, but legally honest.
   return (
     <HomeCard
-      href="/morning-brief"
+      href="/reports"
       eyebrow="Pre-Brief · 7-day window"
       cornerCta="Pre-brief ›"
     >

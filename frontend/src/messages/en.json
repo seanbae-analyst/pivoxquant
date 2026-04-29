@@ -1,7 +1,6 @@
 {
   "nav": {
     "home": "Home",
-    "morningBrief": "Morning Brief",
     "portfolio": "Portfolio",
     "market": "Market",
     "signals": "Signals",
@@ -274,36 +273,6 @@
     "text": "This service is for informational purposes only. Not investment advice. All investment decisions are your own responsibility.",
     "short": "For informational use only — not investment advice"
   },
-  "morningBrief": {
-    "title": "Morning Brief",
-    "today": "Today",
-    "yesterdayClose": "Yesterday's Close",
-    "portfolio": "My Portfolio",
-    "events": "Today's Events",
-    "insight": "AI Insight",
-    "viewAll": "View all",
-    "archive": "Archive",
-    "archiveSubtitle": "Past 30 days of morning briefs",
-    "disclaimer": "For informational purposes only. Investment decisions are your own responsibility.",
-    "noEvents": "No major events today",
-    "notAvailable": "Morning brief is prepared every day at 6:00 AM",
-    "notAvailableDesc": "We'll notify you when the new brief arrives",
-    "noPositionsTitle": "Get a personalized brief",
-    "noPositionsDesc": "Add positions to receive a portfolio-tailored brief",
-    "addPosition": "Add Position",
-    "noArchive": "No archive yet",
-    "noArchiveDesc": "No briefs generated in the last 30 days",
-    "filterAll": "All",
-    "filterWeek": "This week",
-    "filterMonth": "This month",
-    "eventTypes": {
-      "earnings": "Earnings",
-      "dividend": "Dividend",
-      "economic": "Economic Data",
-      "split": "Stock Split",
-      "ipo": "IPO"
-    }
-  },
   "settings": {
     "tabs": {
       "account": "Account",
@@ -381,8 +350,6 @@
     "notifications": {
       "title": "Notification Settings",
       "subtitle": "Manage push, email, and KakaoTalk alerts",
-      "morningBriefTitle": "Morning Brief Push",
-      "morningBriefDesc": "Receive your portfolio summary and daily events every morning",
       "timeLabel": "Delivery time (KST)",
       "timeHelp": "Push notifications are sent daily at this time (KST)",
       "emailTitle": "Email alerts",
@@ -559,7 +526,6 @@
     },
     "badge": {
       "weeklyMemo": "Weekly Memo",
-      "morningBrief": "Morning Brief",
       "earningsPrebrief": "Earnings Prebrief",
       "monthlyBrag": "Monthly Card",
       "quarterlyReview": "Quarterly Review",

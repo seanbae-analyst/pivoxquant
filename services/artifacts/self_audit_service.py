@@ -21,7 +21,7 @@ Entry points
 
 Compliance
 ----------
-- All prose routed through `morning_brief_service.is_compliant` regex.
+- All prose routed through `legal_filter.is_compliant` regex.
 - AI prompt forbids 매수/매도/추천/조언 words.
 - `_disclaimer.html` is included inside the PDF/HTML template.
 """
@@ -280,7 +280,7 @@ def _pattern_summary(scored: list[dict[str, Any]],
     additionally filtered through `is_compliant` and clipped to 500
     chars to guarantee the email stays short."""
     try:
-        from services.morning_brief_service import is_compliant
+        from services.legal_filter import is_compliant
     except Exception:
         def is_compliant(_: str) -> bool: return True  # pragma: no cover
 

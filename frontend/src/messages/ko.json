@@ -1,7 +1,6 @@
 {
   "nav": {
     "home": "홈",
-    "morningBrief": "아침 브리핑",
     "portfolio": "포트폴리오",
     "market": "시장",
     "signals": "시그널",
@@ -274,36 +273,6 @@
     "text": "본 서비스는 투자 정보 제공 목적으로만 운영됩니다. 투자 권유가 아니며, 투자 결과에 대한 책임은 투자자 본인에게 있습니다.",
     "short": "투자 정보 제공 전용 — 투자 권유 아님"
   },
-  "morningBrief": {
-    "title": "아침 브리핑",
-    "today": "오늘",
-    "yesterdayClose": "어제 마감",
-    "portfolio": "내 포트폴리오",
-    "events": "오늘 일정",
-    "insight": "AI 인사이트",
-    "viewAll": "전체 보기",
-    "archive": "아카이브",
-    "archiveSubtitle": "지난 30일간의 아침 브리핑",
-    "disclaimer": "정보 제공 목적이며, 투자 판단은 본인 책임입니다.",
-    "noEvents": "오늘 주요 일정 없음",
-    "notAvailable": "아침 브리핑은 매일 오전 6시에 준비됩니다",
-    "notAvailableDesc": "새로운 브리핑이 도착하면 알림을 보내드려요",
-    "noPositionsTitle": "개인화된 브리핑을 받으세요",
-    "noPositionsDesc": "포지션을 추가하면 포트폴리오 기반 맞춤 브리핑이 제공됩니다",
-    "addPosition": "포지션 추가",
-    "noArchive": "아카이브 없음",
-    "noArchiveDesc": "최근 30일간 생성된 브리핑이 없습니다",
-    "filterAll": "전체",
-    "filterWeek": "이번 주",
-    "filterMonth": "이번 달",
-    "eventTypes": {
-      "earnings": "실적 발표",
-      "dividend": "배당",
-      "economic": "경제 지표",
-      "split": "액면분할",
-      "ipo": "IPO"
-    }
-  },
   "settings": {
     "tabs": {
       "account": "계정",
@@ -381,8 +350,6 @@
     "notifications": {
       "title": "알림 설정",
       "subtitle": "푸시, 이메일, 카톡 알림을 관리하세요",
-      "morningBriefTitle": "아침 브리핑 푸시 알림",
-      "morningBriefDesc": "매일 아침, 포트폴리오 요약과 오늘의 일정을 받아보세요",
       "timeLabel": "발송 시간 (KST)",
       "timeHelp": "매일 이 시간에 푸시가 발송됩니다 (KST 기준)",
       "emailTitle": "이메일 알림",
@@ -559,7 +526,6 @@
     },
     "badge": {
       "weeklyMemo": "주간 메모",
-      "morningBrief": "아침 브리핑",
       "earningsPrebrief": "실적 프리브리프",
       "monthlyBrag": "월간 카드",
       "quarterlyReview": "분기 리뷰",

@@ -118,7 +118,7 @@ export function LivingCFOStatusBar() {
       summary: `${artifacts.length} delivered to your inbox.`,
       cta:
         artifacts.length === 0
-          ? { label: "Read the brief", href: "/morning-brief" }
+          ? { label: "Open the desk", href: "/reports" }
           : undefined,
     },
     {

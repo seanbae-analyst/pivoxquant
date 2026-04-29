@@ -65,7 +65,6 @@ EXPECTED_SCRUB_CALLERS = (
     "services/artifacts/dividend_income_service.py",
     "services/ai_service.py",
     "ai_service.py",
-    "services/morning_brief_service.py",
     "services/alert_service.py",
 )
 

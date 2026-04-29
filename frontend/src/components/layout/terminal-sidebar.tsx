@@ -33,7 +33,6 @@ import {
   Shield,
   Zap,
   MessageSquare,
-  Sun,
   FileText,
   Bell,
   Settings as SettingsIcon,
@@ -46,7 +45,7 @@ import type { LucideIcon } from "lucide-react";
 
 export type TerminalSidebarKey =
   | "home"
-  | "morning-brief"
+  // "morning-brief" key REMOVED 2026-04-29 — backend deprecated.
   | "reports"
   | "signals"
   | "portfolio"
@@ -85,8 +84,8 @@ const TOP: Item[] = [
 ];
 
 // ── ARTIFACTS — CFO 생산물 ──────────────────────────────────────────
+// REMOVED 2026-04-29: Morning Brief item retired (backend deprecated).
 const ARTIFACTS: Item[] = [
-  { key: "morning-brief", label: "Morning Brief", href: "/morning-brief", icon: Sun, hidden: true },
   { key: "reports", label: "Reports", href: "/reports", icon: FileText },
   { key: "signals", label: "Signals", href: "/signals", icon: Zap },
 ];

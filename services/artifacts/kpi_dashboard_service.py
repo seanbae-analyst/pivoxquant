@@ -306,11 +306,9 @@ def _cash_pct(user: User, portfolio_value: Optional[float]) -> Optional[float]:
 # ── public reusable helper ────────────────────────────────────────────────────
 #
 # `compute_kpis_for_user` is the canonical entry for any caller that wants the
-# 5-metric KPI snapshot without the email/artifact plumbing. Used by the
-# Morning Brief Plus integration (services/morning_brief_service.py) so the
-# daily 06:00 KST brief embeds the same numbers that the stand-alone daily
-# KPI email used to ship. Keep this free function — services that need the
-# raw metrics should NOT have to instantiate KPIDashboardService.
+# 5-metric KPI snapshot without the email/artifact plumbing. Keep this free
+# function — services that need the raw metrics should NOT have to
+# instantiate KPIDashboardService.
 
 def compute_kpis_for_user(user_id: int,
                           target_date: date | None = None) -> dict[str, Any]:

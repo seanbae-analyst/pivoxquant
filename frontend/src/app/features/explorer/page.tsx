@@ -15,7 +15,6 @@ const fadeUp: Variants = {
 const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.04 } } };
 
 const ARTIFACTS = [
-  { name: "Morning Brief Plus", tier: "PRO", tagline: "Pre-market orientation", format: "2-page PDF · daily 06:30 KST", sampleUrl: "/samples/morning_brief_plus.pdf" },
   { name: "Weekly Memo", tier: "PRO", tagline: "Monday briefing", format: "5-page PDF · Sunday 23:00 KST", sampleUrl: "/samples/weekly_memo.pdf" },
   { name: "Earnings Pre-Brief", tier: "PRO", tagline: "Day-before setup", format: "6-page PDF · day before earnings", sampleUrl: "/samples/earnings_prebrief.pdf" },
   { name: "AI Suite", tier: "PRO", tagline: "Eight-model pattern board", format: "In-app · nightly", sampleUrl: null },

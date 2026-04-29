@@ -33,7 +33,6 @@ def register_blueprints(app):
     from .share import share_bp
     from .simulate import simulate_bp
     from .counterfactual import counterfactual_bp
-    from .morning_brief import morning_brief_bp
     from .alt_data import alt_data_bp
     from .artifacts import artifacts_bp
     from .health import health_bp
@@ -70,7 +69,7 @@ def register_blueprints(app):
         ai_bp, watchlist_bp, backtest_bp,
         quant_bp, quant_composer_bp, realtime_bp, profile_bp, broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
-        counterfactual_bp, morning_brief_bp, alt_data_bp,
+        counterfactual_bp, alt_data_bp,
         artifacts_bp, admin_fmp_bp, admin_preview_bp,
         risk_bp, agent_bp, agent_admin_bp,
         twin_bp,

@@ -64,7 +64,6 @@ _ARTIFACT_DOWNLOAD_META = {
     "fomc_playbook":     ("application/pdf", "pdf"),
     "monthly_brag":      ("image/png",       "png"),
     "brag_card":         ("image/png",       "png"),
-    "morning_brief":     ("application/pdf", "pdf"),
     "quarterly_review":  ("application/pdf", "pdf"),
     "risk_report":       ("application/pdf", "pdf"),
     "custom":            ("application/pdf", "pdf"),

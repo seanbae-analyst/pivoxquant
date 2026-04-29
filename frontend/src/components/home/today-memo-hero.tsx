@@ -7,8 +7,8 @@
  * earnings pre-brief) — not a chat. This hero anchors the day's headline
  * in serif, lays out the brief body, and offers four Artifact CTA chips.
  *
- * Data source: same `MorningBriefResponse` the existing /home page already
- * fetches (`API.market.morningBriefToday`). We reuse the value via props
+ * Data source: legacy MorningBrief shape (deprecated 2026-04-29) the /home
+ * page used to fetch. We reuse the value via props
  * to avoid duplicating the SWR hook + re-rendering twice.
  *
  * Empty / loading / error states intentionally refuse mock fallbacks.
@@ -172,11 +172,11 @@ export function TodayMemoHero({
           }}
         >
           <Link
-            href="/reports?type=morning_brief"
+            href="/reports"
             className="pq-ink-btn-bronze"
             style={{ height: 32, padding: "0 14px", fontSize: 10 }}
           >
-            Open Today&rsquo;s Memo
+            Open the desk
           </Link>
           <Link
             href="/reports?type=weekly_memo"

@@ -1801,123 +1801,6 @@ SAMPLES: dict[str, dict] = {
         "engine_note": "Historical record only. Monthly KPI observation pipeline.",
     },
 
-    "morning_brief_plus.html": {
-        # Goldman IC v2 editorial — 6-page morning observation pack.
-        "user_name": USER_NAME,
-        "as_of": "2026-04-21",
-        "as_of_short": "2026-04-21",
-        "generated_at": GENERATED_AT,
-        "issue_number": 87,
-        "doc_ref": "PQ-MB-087 · v2026.04.21",
-        "hero_headline": [
-            "A morning is only",
-            "what it shows —",
-            "markets open, we watch.",
-        ],
-        "kpis_cover": {
-            "sp_futures_pct": 0.12,
-            "vix_level":      15.8,
-            "us10y_pct":      4.32,
-            "usdkrw":         1342,
-        },
-        "overnight_tape": [
-            -0.08, -0.05, -0.03, -0.01,  0.02,  0.05,  0.06,  0.04,
-             0.00,  0.03,  0.07,  0.09,  0.11,  0.14,  0.12,  0.10,
-             0.08,  0.05,  0.07,  0.10,  0.11,  0.12,  0.12,  0.12,
-        ],
-        "overnight_events": [
-            {"i": 3,  "label": "Nikkei close"},
-            {"i": 11, "label": "DAX open"},
-            {"i": 19, "label": "US pre-mkt tick"},
-        ],
-        "overnight_prose": {
-            "asia": (
-                "Asia observed a measured session — KOSPI held near flat at "
-                "2,684, Nikkei closed 0.41% lower against a firmer yen, and "
-                "Hang Seng recorded a 0.28% gain concentrated in the platform "
-                "cohort."
-            ),
-            "europe": (
-                "Europe opened with the Stoxx 600 up 0.14%, led by "
-                "industrials. The DAX tracked sideways around prior close "
-                "while autos recorded a small drag. Gilt yields drifted two "
-                "basis points higher in early trade."
-            ),
-            "premkt": (
-                "US pre-market observation shows S&P futures quoting +0.12% "
-                "and Nasdaq futures +0.21%, with the largest pre-open tick "
-                "recorded in the semiconductor cohort. Volumes remain thin "
-                "through the first hour of the US pre-open window."
-            ),
-        },
-        "macro_ladder": [
-            {"name": "DXY",            "level": "99.42",   "d1": "-0.14", "d5": "-0.62", "range": "97.8 — 106.5",  "spark": [0.20, 0.40, 0.30, 0.50, 0.60, 0.55, 0.45, 0.40]},
-            {"name": "Oil · WTI",      "level": "82.14",   "d1": "+0.42", "d5": "+1.28", "range": "66.1 — 87.4",   "spark": [0.30, 0.38, 0.48, 0.52, 0.58, 0.65, 0.70, 0.72]},
-            {"name": "Gold",           "level": "2,384",   "d1": "+0.18", "d5": "+0.94", "range": "1,992 — 2,421", "spark": [0.55, 0.60, 0.62, 0.68, 0.72, 0.78, 0.82, 0.86]},
-            {"name": "10Y Treasury",   "level": "4.32%",   "d1": "-0.02", "d5": "-0.08", "range": "3.86 — 4.74",   "spark": [0.62, 0.60, 0.58, 0.56, 0.55, 0.54, 0.53, 0.52]},
-            {"name": "2Y Treasury",    "level": "4.88%",   "d1": "-0.01", "d5": "-0.04", "range": "4.42 — 5.02",   "spark": [0.72, 0.70, 0.68, 0.66, 0.65, 0.64, 0.63, 0.62]},
-            {"name": "VIX",            "level": "15.80",   "d1": "+0.42", "d5": "-1.20", "range": "12.1 — 23.4",   "spark": [0.50, 0.45, 0.40, 0.38, 0.36, 0.38, 0.42, 0.40]},
-            {"name": "MOVE",           "level": "102.4",   "d1": "-0.80", "d5": "-3.10", "range": "88.2 — 128.7",  "spark": [0.58, 0.56, 0.52, 0.50, 0.48, 0.46, 0.44, 0.42]},
-            {"name": "HY Credit OAS",  "level": "348 bps", "d1": "+1",    "d5": "-4",    "range": "298 — 412",     "spark": [0.45, 0.46, 0.48, 0.48, 0.46, 0.44, 0.42, 0.40]},
-        ],
-        "today_calendar": [
-            {"time": "08:30 ET", "event": "Initial Jobless Claims",   "prior": "215 k",   "consensus": "218 k",    "note": "Weekly release, schedule item"},
-            {"time": "08:30 ET", "event": "Philadelphia Fed Index",   "prior": "3.2",     "consensus": "2.0",      "note": "Monthly, regional observation"},
-            {"time": "10:00 ET", "event": "Existing Home Sales",      "prior": "4.22M",   "consensus": "4.19M",    "note": "Monthly, seasonally adjusted"},
-            {"time": "10:30 ET", "event": "EIA Natural Gas Storage",  "prior": "+24 bcf", "consensus": "+30 bcf",  "note": "Weekly, informational"},
-            {"time": "13:00 ET", "event": "US 20Y Bond Auction",      "prior": "4.68%",   "consensus": "—",        "note": "Scheduled issuance"},
-            {"time": "AMC",      "event": "NFLX Q1 earnings",         "prior": "—",       "consensus": "EPS 4.54", "note": "Watchlist, informational only"},
-        ],
-        "sector_premkt": [
-            {"n": "Tech",     "v":  0.48},
-            {"n": "Semis",    "v":  0.72},
-            {"n": "Comms",    "v":  0.18},
-            {"n": "Cons.D",   "v": -0.14},
-            {"n": "Cons.S",   "v":  0.08},
-            {"n": "Health",   "v":  0.12},
-            {"n": "Indus",    "v":  0.22},
-            {"n": "Fin",      "v": -0.04},
-            {"n": "Util",     "v": -0.21},
-            {"n": "Energy",   "v":  0.34},
-            {"n": "Real Est", "v": -0.28},
-        ],
-        "fx_crosses": [
-            {"p": "EUR/USD", "l": "1.0842", "d": "+0.14"},
-            {"p": "USD/JPY", "l": "154.28", "d": "-0.08"},
-            {"p": "USD/KRW", "l": "1,342",  "d": "-0.22"},
-            {"p": "USD/CNH", "l": "7.242",  "d": "+0.04"},
-            {"p": "GBP/USD", "l": "1.2642", "d": "+0.18"},
-            {"p": "AUD/USD", "l": "0.6521", "d": "+0.11"},
-        ],
-        "rates_curve": [
-            {"t": "2Y",  "y": 4.88},
-            {"t": "5Y",  "y": 4.48},
-            {"t": "10Y", "y": 4.32},
-            {"t": "30Y", "y": 4.52},
-        ],
-        "vix_term": [
-            {"t": "VIX9D", "y": 14.2},
-            {"t": "VIX",   "y": 15.8},
-            {"t": "VIX3M", "y": 17.1},
-            {"t": "VIX6M", "y": 18.4},
-        ],
-        "observation_notes": [
-            "Morning quotes are snapshots — they will change by the bell.",
-            "Futures imply — they do not determine.",
-            "The calendar shows schedule, not outcome.",
-            "Correlation today is not causation tomorrow.",
-            "This page is informational only.",
-        ],
-        "pull_quote": (
-            "A morning brief is a lantern carried across wet streets — it "
-            "shows the next few steps, nothing beyond."
-        ),
-        "pull_quote_attribution": "PivoxQuant Morning Desk",
-        "typeset_in": "Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR",
-        "engine_note": "Historical record only. Morning observation pipeline.",
-        "LICENSE_NUMBER": None,
-    },
-
     "dd_checklist.html": {
         # Goldman IC v2 editorial — 6-page single-ticker DD observation.
         "user_name": USER_NAME,
@@ -2050,7 +1933,7 @@ PDF_TEMPLATES = {
     "year_end_letter.html", "capital_allocation.html", "insider_mirror.html",
     "self_audit.html", "burn_rate.html", "credit_rating.html",
     "dividend_income.html", "portfolio_segment.html",
-    "morning_brief_plus.html", "kpi_dashboard.html", "dd_checklist.html",
+    "kpi_dashboard.html", "dd_checklist.html",
     "sp500_backtest.html",
 }
 
@@ -2156,7 +2039,7 @@ def main() -> None:
     ]
     email_order = [
         "weekly_memo_email.html", "earnings_prebrief_email.html",
-        "brag_card_email.html", "morning_brief_plus.html",
+        "brag_card_email.html",
         "kpi_dashboard.html", "dd_checklist.html",
     ]
 
