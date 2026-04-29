@@ -156,18 +156,25 @@ export default function SignalsPageV1() {
             SIGNALS · {weekTag()}
           </div>
           <h1 className="pq-ink-h1 mt-2">The Clip Board</h1>
-          <p className="mt-2 max-w-xl font-serif text-sm text-[rgba(245,240,232,0.55)]">
-            Quantitative observations across {signals.length} covered tickers.
-            Clip any memo to unfold its four-pillar readout in place.
+          <p className="mt-1 text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+            내 포지션 시그널 — {signals.length} covered
           </p>
+          <p className="mt-2 max-w-xl font-serif text-sm text-[rgba(245,240,232,0.55)]">
+            My Holdings — Signals. Quantitative observations on your covered
+            tickers. Clip any memo to unfold its four-pillar readout in place.
+          </p>
+          {/* Objective threshold legend — score-based classification, not opinion. */}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] text-[rgba(245,240,232,0.55)]">
             <span className="pq-ink-pill pq-ink-pill--pos">Positive</span>
-            <span className="-ml-1">score &gt; 65</span>
+            <span className="-ml-1">= score ≥ 65</span>
             <span className="pq-ink-pill pq-ink-pill--neu">Neutral</span>
-            <span className="-ml-1">35–65</span>
+            <span className="-ml-1">= 35–65</span>
             <span className="pq-ink-pill pq-ink-pill--neg">Negative</span>
-            <span className="-ml-1">&lt; 35</span>
+            <span className="-ml-1">= score &lt; 35</span>
           </div>
+          <p className="mt-2 max-w-xl text-[11px] italic text-[rgba(245,240,232,0.45)]">
+            Objective classification by composite score — not advice or recommendation.
+          </p>
         </div>
         <button
           type="button"

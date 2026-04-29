@@ -116,8 +116,11 @@ def test_find_upcoming_earnings_empty_when_fmp_returns_nothing(
 def test_generate_for_user_returns_none_when_no_upcoming(
     app, pro_user, add_position, svc,
 ):
-    """When FMP has no future earnings rows for a ticker, the spec-
-    aligned `generate_for_user` returns None instead of raising."""
+    """When FMP has no future earnings rows for a held ticker, the spec-
+    aligned `generate_for_user` returns an empty-state payload (legal
+    §101 grey-zone fix, 2026-04-29). Routes layer maps this to
+    `{"status":"empty","reason":"no_upcoming_earnings"}`. Pre-2026-04-29
+    contract was None — frontend now reads the dict shape."""
     add_position(pro_user["id"], ticker="NONE", shares=1)
     with patch(
         "services.artifacts.earnings_prebrief_service._safe_get_earnings_calendar",
@@ -125,7 +128,26 @@ def test_generate_for_user_returns_none_when_no_upcoming(
     ):
         with app.app_context():
             data = svc.generate_for_user(pro_user["id"], "NONE")
-    assert data is None
+    assert isinstance(data, dict)
+    assert data.get("is_empty") is True
+    assert data.get("empty_reason") == "no_upcoming_earnings"
+
+
+def test_generate_for_user_blocks_unheld_ticker(
+    app, pro_user, add_position, svc,
+):
+    """§101 grey-zone fix (2026-04-29): the service is restricted to the
+    user's own holdings. Calling `generate_for_user` with a ticker the
+    user doesn't hold returns an empty-state payload instead of running
+    market-arbitrary analysis. Closes the "불특정 다수 + 매매정보"
+    requirement of 자본시장법 §101."""
+    add_position(pro_user["id"], ticker="AAPL", shares=10)
+    with app.app_context():
+        data = svc.generate_for_user(pro_user["id"], "TSLA")
+    assert isinstance(data, dict)
+    assert data.get("is_empty") is True
+    assert data.get("empty_reason") == "not_in_portfolio"
+    assert "보유 종목만" in (data.get("message") or "")
 
 
 # ─── 3. Claude — parse 5 expected questions ─────────────────────────────────

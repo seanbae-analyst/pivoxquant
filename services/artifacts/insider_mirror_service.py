@@ -326,6 +326,15 @@ class InsiderMirrorService:
 
     def generate_for_user(self, user_id: int,
                           anchor: date | None = None) -> dict[str, Any]:
+        """Insider Form 4 mirror restricted to the user's holdings.
+
+        Legal posture (자본시장법 §101 회피, 2026-04-29):
+            **사용자 보유 종목의 SEC Form 4 / DART 공시 알림** 도구다.
+            보유하지 않은 종목의 내부자 거래는 표시하지 않는다 — 보유 0 종목
+            이면 ``is_empty=True`` 페이로드 반환. 사실 그대로의 공시 미러링
+            만 제공하며, "내부자 거래의 의미" 또는 "타사 종목 매매 정보" 는
+            제공하지 않는다.
+        """
         user = db.session.get(User, user_id)
         if not user:
             raise ValueError(f"user {user_id} not found")
@@ -336,6 +345,16 @@ class InsiderMirrorService:
         positions = Position.query.filter_by(user_id=user_id).all()
         tickers = sorted({(p.ticker or "").upper() for p in positions
                            if p.ticker})
+
+        # ── §101 가드: 보유 종목 0 → empty payload ────────────────────────
+        if not tickers:
+            return {
+                "is_empty":     True,
+                "empty_reason": "no_positions",
+                "user_id":      user_id,
+                "period_label": f"{start} → {anchor}",
+                "message":      "보유 종목이 없습니다 — Insider Mirror 는 보유 종목 한정 공시 알림 도구입니다",
+            }
         us = [t for t in tickers if _region(t) == "US"]
         kr = [t for t in tickers if _region(t) == "KR"]
 
@@ -376,10 +395,12 @@ class InsiderMirrorService:
             dart_configured=dart_ok,
             trend_rows=trend_rows,
             disclaimer=(
-                "본 리포트는 공개된 SEC Form 4 및 DART 공시 자료를 "
-                "사실 그대로 나열한 것으로, 특정 매매를 권유·추천하지 "
-                "않습니다. PivoxQuant은 내부자 거래의 의미나 투자 "
-                "적합성에 대해 어떠한 판단도 제공하지 않습니다."
+                "본 리포트는 사용자 본인 보유 종목에 한정해 공개된 SEC Form 4 "
+                "및 DART 공시 자료를 사실 그대로 나열한 자기 데이터 알림 "
+                "도구입니다. 특정 매매를 권유·추천하지 않으며, 보유 종목 외 "
+                "타 종목의 내부자 거래 정보는 제공하지 않습니다. PivoxQuant 은 "
+                "내부자 거래의 의미나 투자 적합성에 대해 어떠한 판단도 "
+                "제공하지 않습니다."
             ),
         )
         return ctx.to_dict()

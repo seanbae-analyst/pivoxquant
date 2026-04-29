@@ -30,7 +30,8 @@ import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
 import { FieldLabel, StatRow } from "@/components/ui/editorial";
-import { useWatchlist } from "@/lib/hooks";
+import { useWatchlist, usePortfolioPositions } from "@/lib/hooks";
+import type { Position } from "@/lib/types";
 import {
   TrendingUp,
   TrendingDown,
@@ -381,6 +382,80 @@ function PillarCard({
   );
 }
 
+/* ── AccessDeniedScreen ──
+ * §101 회피 (2026-04-29): 보유/관심 종목이 아닌 임의 ticker 분석 차단.
+ * 사용자는 [관심 종목 추가] 1-click으로 즉시 해제 가능.
+ */
+function AccessDeniedScreen({
+  ticker,
+  onAddedToWatchlist,
+}: {
+  ticker: string;
+  onAddedToWatchlist: () => void;
+}) {
+  const router = useRouter();
+  const [adding, setAdding] = useState(false);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const handleAdd = useCallback(async () => {
+    setAdding(true);
+    setErrMsg(null);
+    try {
+      await apiFetch(WATCHLIST, {
+        method: "POST",
+        body: JSON.stringify({ ticker }),
+      });
+      toast.success("Added to watchlist");
+      onAddedToWatchlist();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed";
+      setErrMsg(msg);
+      toast.error(msg);
+    } finally {
+      setAdding(false);
+    }
+  }, [ticker, onAddedToWatchlist]);
+
+  return (
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-10 md:p-12 rounded-[2px] text-center max-w-2xl mx-auto">
+      <Eye className="mx-auto h-8 w-8 text-[var(--pq-bronze)]" strokeWidth={1.2} />
+      <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
+        분석은 보유/관심 종목 한정입니다.
+      </p>
+      <p className="mt-3 text-[13px] leading-relaxed text-[rgba(245,240,232,0.65)]">
+        <span className="font-mono tabular-nums text-[var(--pq-bronze)]">{ticker}</span>
+        {" "}분석은 관심종목 또는 보유 포지션으로 등록한 후 이용 가능합니다.
+        한 번 추가하면 즉시 분석을 볼 수 있습니다.
+      </p>
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={adding}
+          className="pq-ink-btn-bronze inline-flex items-center gap-1.5 disabled:opacity-40"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {adding ? "Adding…" : "관심 종목 추가"}
+        </button>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="pq-ink-btn-ghost inline-flex items-center gap-1.5"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
+        </button>
+      </div>
+      {errMsg ? (
+        <p className="mt-4 text-[11px] text-[rgba(209,136,136,0.8)]">{errMsg}</p>
+      ) : null}
+      <p className="mt-6 text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.4)]">
+        Observational research only · Not investment advice
+      </p>
+    </div>
+  );
+}
+
 /* ── Page ── */
 
 export default function StockDetailPage() {
@@ -499,9 +574,22 @@ export default function StockDetailPage() {
     }
   }, [ticker]);
 
-  const { data: watchlistData, mutate: refreshWatchlist } = useWatchlist();
+  const { data: watchlistData, mutate: refreshWatchlist, isLoading: watchlistLoading } = useWatchlist();
   const watchlistEntry = watchlistData?.watchlist?.find((w) => w.ticker === ticker);
   const inWatchlist = Boolean(watchlistEntry);
+
+  /* §101 회피 (2026-04-29): 보유/관심 종목 화이트리스트 검사.
+   * 보유 포지션 또는 관심종목에 등록된 ticker만 분석 페이지 진입 허용.
+   * AccessDeniedScreen에서 1-click으로 watchlist 추가 → 즉시 해제. */
+  const positionsSwr = usePortfolioPositions<{ positions?: Position[] }>();
+  const allowlistLoading = watchlistLoading || positionsSwr.isLoading;
+  const inPortfolio = useMemo(() => {
+    const upper = (ticker || "").toUpperCase();
+    return (positionsSwr.data?.positions ?? []).some(
+      (p) => (p.ticker || "").toUpperCase() === upper,
+    );
+  }, [positionsSwr.data, ticker]);
+  const isAllowed = inWatchlist || inPortfolio;
 
   const krw = isKrw(signal, ticker);
 
@@ -550,6 +638,29 @@ export default function StockDetailPage() {
           <Link href="/discover" className="mt-6 inline-block pq-ink-btn-bronze">
             Browse discover
           </Link>
+        </div>
+      </ErrorBoundary>
+    );
+  }
+
+  /* §101 화이트리스트 가드 — allowlist 로딩 후에 검증.
+   * 로딩 중에는 잠시 spinner-equivalent 빈 prelude를 표시(깜박임 방지). */
+  if (!allowlistLoading && !isAllowed) {
+    return (
+      <ErrorBoundary>
+        <div className="space-y-6">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.14em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
+          </button>
+          <AccessDeniedScreen
+            ticker={ticker}
+            onAddedToWatchlist={() => refreshWatchlist()}
+          />
         </div>
       </ErrorBoundary>
     );

@@ -8,6 +8,7 @@ from models import Position, SignalCache, InvestmentProfile
 from services import fx_service, cache_service, alert_service
 from services.container import engine
 from services.name_resolver import resolve_stock_name
+from services.access_guard import is_user_allowed_ticker, access_denied_response
 from .decorators import api_auth, legal_scrub_response
 
 
@@ -79,6 +80,10 @@ def get_signals():
 @legal_scrub_response
 def signal_detail(ticker):
     t_up = ticker.upper()
+    # §101 회피 — 보유/watchlist 종목만 분석 허용.
+    if not is_user_allowed_ticker(current_user.id, t_up):
+        body, status = access_denied_response()
+        return jsonify(body), status
     r = engine.analyze(t_up, current_user.available_capital,
                        getattr(current_user, "available_capital_krw", 0.0) or 0.0,
                        fx_rate=fx_service.get_rate(),
@@ -126,6 +131,10 @@ def scan():
     ticker = ((request.get_json() or {}).get("ticker") or "").strip().upper()
     if not ticker:
         return jsonify({"error": "Ticker required"}), 400
+    # §101 회피 — 보유/watchlist 종목만 스캔 허용.
+    if not is_user_allowed_ticker(current_user.id, ticker):
+        body, status = access_denied_response()
+        return jsonify(body), status
     r = engine.analyze(ticker, current_user.available_capital,
                        getattr(current_user, "available_capital_krw", 0.0) or 0.0,
                        fx_rate=fx_service.get_rate(),

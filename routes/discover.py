@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 
-from models import Position
+from models import Position, Watchlist
 from services import fx_service, cache_service
 from services.container import engine, fetcher
 from services.name_resolver import resolve_stock_name
@@ -42,13 +42,24 @@ def discover():
     cap_usd = current_user.available_capital or 0.0
     cap_krw = getattr(current_user, "available_capital_krw", 0.0) or 0.0
     owned = {p.ticker for p in Position.query.filter_by(user_id=current_user.id).all()}
-    pool = engine.DISCOVER_POOL
+    # §101 회피 — Discover 결과를 보유 + watchlist 종목으로 한정. engine
+    # DISCOVER_POOL 전체 분석을 제공하면 임의 ticker 분석 = 자문업 회색지대.
+    watched = {w.ticker for w in Watchlist.query.filter_by(user_id=current_user.id).all()}
+    # Case-insensitive match (DB rows may be lower/upper while DISCOVER_POOL
+    # is upper-case for US tickers and KRX 6자리 + .KS/.KQ for KR).
+    allowed = {t.upper() for t in (owned | watched) if t}
+    # Pool 자체를 사용자 스코프로 한정 (DISCOVER_POOL 와 교집합).
+    # allowed 가 비어 있으면 빈 결과 반환 — frontend EmptyState 가 watchlist
+    # 추가 CTA 를 노출.
+    pool = [t for t in engine.DISCOVER_POOL if t.upper() in allowed]
+
+    owned_upper = {t.upper() for t in owned if t}
 
     def _analyze_one(ticker):
         try:
             r = engine.analyze(ticker, cap_usd, cap_krw, fx_rate=fx_service.get_rate())
             if r:
-                r["already_owned"] = ticker in owned
+                r["already_owned"] = ticker.upper() in owned_upper
                 # Backfill name for long-tail listings whose snapshot returns
                 # only a ticker (pyKRX / us_stock_registry cover all KRX/US).
                 if not r.get("name") or r.get("name") == ticker:
@@ -65,6 +76,11 @@ def discover():
             r = f.result()
             if r:
                 results.append(r)
+
+    # Defense-in-depth: belt-and-suspenders filter post-analysis in case the
+    # pool restriction logic ever drifts. Drops any rows whose ticker isn't
+    # in the user's allowed set.
+    results = [r for r in results if r.get("ticker", "").upper() in allowed]
 
     order = {"POSITIVE": 0, "NEUTRAL": 1, "NEGATIVE": 2}
     results.sort(key=lambda x: (order.get(x.get("signal", ""), 9), -x.get("priority", 0)))
