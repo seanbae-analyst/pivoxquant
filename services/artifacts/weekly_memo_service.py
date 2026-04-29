@@ -82,7 +82,8 @@ def _try_import_weasyprint():
         from weasyprint import HTML  # type: ignore
         return HTML
     except Exception as exc:  # pragma: no cover — depends on env
-        logger.info("WeasyPrint unavailable (%s); PDF generation will be skipped.", exc)
+        # DIAG 2026-04-29: INFO → WARNING (Railway 로그 가시성 ↑)
+        logger.warning("WeasyPrint unavailable (%s); PDF generation will be skipped.", exc)
         return None
 
 
@@ -996,6 +997,14 @@ class WeeklyMemoService:
         data = self.generate_for_user(user.id, target_date=target_date)
         pdf_bytes = self.render_pdf(data)
         html_body = self.render_html(data)
+
+        # DIAG 2026-04-29: PDF 첨부 누락 추적
+        if pdf_bytes is None:
+            logger.warning("DIAG user=%s render_pdf returned None (WeasyPrint unavailable or fail)", user.id)
+        elif len(pdf_bytes) == 0:
+            logger.warning("DIAG user=%s render_pdf returned empty bytes", user.id)
+        else:
+            logger.info("DIAG user=%s render_pdf bytes=%d", user.id, len(pdf_bytes))
 
         sent = False
         if send:
