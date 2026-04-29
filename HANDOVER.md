@@ -1,9 +1,96 @@
-# PivoxQuant — 인수인계서 (2026-04-28 세션 종료 · v10 "V2 Tone Unification")
+# PivoxQuant — 인수인계서 (2026-04-29 세션 종료 · v11 "§101 면제 트랙 + Report 시스템")
 
 ## 이 문서의 원칙
 - **거짓 보고 금지**. 완료된 것은 완료, 미완은 미완.
 - 내가 이번 세션 **잘못 보고했던 것**도 §6 에 기록.
 - "대체로 OK" "거의 완료" 표현 금지. 숫자로.
+
+---
+
+## 🔥 2026-04-29 세션 — §101 면제 트랙 + Report 시스템 + 라이브 PDF 검증
+
+**12 commits 누적. main HEAD `9be4377`. CEO 결정: 유사투문 신고 X + 자기 데이터 한정 운영.**
+
+### Commits 누적
+
+| # | Commit | 핵심 |
+|---|--------|------|
+| 1 | `a7a09ef` | Morning Brief 백엔드 100% 제거 + 신규 유저 첫 5초 v3 (auth/onboarding/cookie/legal-modal) |
+| 2 | `9ec2817` | ai_service unused json/safe_scrub import (ruff F401) |
+| 3 | `1de7334` | detail H1 위계 (ticker→displayName) + 폰트 v3 5건 + persona mock 배너 + DISCOVER_POOL 50→90 + NFLX sanity + BRK.B normalization |
+| 4 | `5e9c779` | 통합 `POST /api/artifacts/generate` (18 type) + smoke 54/54 + weekly-memo cron + legal_filter 8 service + 회색지대 5 PDF 자기 데이터 한정 |
+| 5 | `faed24f` | 17 preview 페이지 실데이터 + EmptyState UI + TierGate Free/Pro/Premium + pricing "Coming Soon" |
+| 6 | `7c1d915` | §101 화이트리스트 가드 6 endpoint + AI dropdown + Discover/Detail scope-limited + AccessDeniedScreen |
+| 7 | `b907d05` | 8 워크플로우 close-stale `continue-on-error: true` |
+| 8 | `f77104f` | cron secret 분리 (`ARTIFACT_TRIGGER_SECRET`) + legal_filter 5 단어 (주목/흥미로운/긍정적펀더멘털/성장가능성/잠재력) |
+| 9 | `7cc7185` | api_auth admin secret bypass — production cron 정상화 (이전 결함: cron 401 영구 fail) |
+| 10 | `af1b16d` | alembic 003 idempotent + APScheduler next_run_time fix + email download_url '#' fallback + LICENSE_NUMBER placeholder 제거 |
+| 11 | `b7bf589` | weekly_memo render_pdf DIAG 로그 (WARNING) |
+| 12 | `9be4377` | Dockerfile WeasyPrint deps 강화 (libglib2.0-0/libpangocairo-1.0-0/libharfbuzz0b/libfribidi0/fonts-noto-cjk/fontconfig) |
+
+### §101 면제 트랙 (CEO 결정)
+- 19 PDF artifact 모두 자기 데이터 한정 — Personal Capital 모델
+- 6 endpoint 화이트리스트 가드 (signals/scan + ai/swot/competitor/sector-trend/commentary/earnings-tone)
+- legal_filter 47 patterns (42+5) + forbidden_terms.py 25+ 토큰
+- 17 service legal_filter 적용 + DisclaimerBanner layout-level 자동
+- 회색지대 5 PDF (earnings_prebrief/credit_rating/insider_mirror/year_end_letter/pre_trade_checklist) 모두 자기 데이터 + Empty 분기
+
+### 라이브 검증 (정직)
+
+| 영역 | 결과 |
+|---|---|
+| production /api/health | ✅ 200 |
+| weekly-memo trigger | ✅ 200 + success=1 (5+회 호출) |
+| backend pytest | ✅ 1303 passed / 0 failed |
+| ruff / tsc / build | ✅ 모두 clean (84/84 routes) |
+| smoke 18×3 | ✅ 54/54 |
+| **PDF 첨부 누락** | ❌ DIAG 로그 `render_pdf returned None` 확인. `9be4377` Dockerfile 강화 후 결과 미확인 (다음 세션) |
+| **이메일 본문 도착** | ✅ 사용자 메일 받음 (네이버 OAuth user.email) |
+
+### 발견된 결함 (정직)
+
+1. **Wave 1 backend-dev agent 잘못 권고** — `DEV_LOGIN_SECRET` Railway 추가 권고했는데 실제는 의도적 미설정 (dev bypass 회피). `f77104f`에서 별도 secret 분리.
+2. **api_auth admin bypass 누락** — cron이 X-Admin-Secret 헤더 가져도 401. `7cc7185` fix.
+3. **alembic 003 영구 fail** — Morning Brief 제거 후 chain에 남아 매 deploy DuplicateTable. `af1b16d` idempotent.
+4. **이메일 download URL '#'** — `download_url` 미전달 시 같은 페이지 새 탭. `af1b16d` fallback.
+5. **WeasyPrint production import fail** — DIAG 로그로 확인. `9be4377` Dockerfile 강화 후 미검증.
+
+### 사용자 ACTION 미해결 (다음 세션 시작 시)
+
+| # | 항목 | 우선순위 |
+|---|---|---|
+| 1 | **GitHub Actions billing 한도 ↑** ($5~10) — 모든 워크플로우 fail 원인 | 🔴 |
+| 2 | **Railway Deploy Logs `DIAG` 검색** → bytes=N 확인 | 🔴 |
+| 3 | **새 메일 PDF 첨부 확인** | 🔴 |
+| 4 | **SendGrid Sender 이름 변경** "StockPilot" → "PivoxQuant" | 🟠 |
+| 5 | **사업자등록 + 통신판매업 신고** | 🟠 |
+| 6 | **변호사 자문** (§101 면제 확정) — 50~80만원 | 🟠 |
+| 7 | **Stripe 4종 키** (사업자등록 후) | 🟢 |
+| 8 | **Cloudflare Email Routing** (사용자 100명+ 후) | 🟢 |
+
+### Railway env 상태
+
+- ✅ ARTIFACT_TRIGGER_SECRET / WEEKLY_MEMO_FROM_EMAIL=seanbae1521@gmail.com / FRED_API_KEY / RUN_SCHEDULER / SENDGRID_API_KEY / NAVER_CLIENT_ID/SECRET / BRAG_CARD_FROM_EMAIL / EARNINGS_PREBRIEF_FROM_EMAIL
+- ❌ 의도적 미설정: DEV_LOGIN_SECRET
+- ❌ 출시 후: STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET / STRIPE_PRICE_PRO / STRIPE_PRICE_PREMIUM
+
+### GitHub Secret
+
+- ✅ WEEKLY_MEMO_TRIGGER_SECRET = ARTIFACT_TRIGGER_SECRET 동일 값 (`9378645c...bda379`)
+- ✅ SENDGRID_API_KEY
+
+### 다음 세션 첫 ACTION 순서
+
+1. Railway Deploy Logs `DIAG` 검색 → 결과 따라 분기
+2. GitHub billing 한도 풀렸나 확인
+3. 이메일 발송자 이름 변경
+4. admin bypass + current_user 결함 fix (별 wave)
+
+### 알려진 미해결 결함 (다음 세션)
+
+1. **admin bypass + current_user 의존 endpoint 500** (`/api/artifacts/list` 등)
+2. **이메일 라이트 테마 vs v3 다크** — 사용자 의도 확인 필요
+3. **이메일 발송자 이름 "StockPilot"** — 사용자 ACTION
 
 ---
 
