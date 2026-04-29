@@ -68,6 +68,7 @@ jobs:
           fi
 
       - name: Close stale incident issues on success
+        continue-on-error: true
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

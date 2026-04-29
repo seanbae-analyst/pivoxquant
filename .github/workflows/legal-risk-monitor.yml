@@ -135,6 +135,7 @@ jobs:
           curl -sS -X POST "$SLACK_WEBHOOK_URL" -H 'Content-type: application/json' --data "$payload" || true
 
       - name: Close stale issue on recovery
+        continue-on-error: true
         if: ${{ steps.monitor.outputs.severity == 'none' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

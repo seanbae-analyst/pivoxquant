@@ -136,6 +136,7 @@ jobs:
   close-issue-on-success:
     name: Close stale incident on success
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs: [vitest, build-and-typecheck, playwright]
     if: success() && github.event_name == 'push'
     defaults:
