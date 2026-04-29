@@ -1,19 +1,23 @@
+"use client";
+
 /**
- * /reports/preview/quarterly-self-report — Report 06 (Pro · Quarterly · 2 pages)
+ * /reports/preview/quarterly-self-report — Wave 2 (2026-04-29).
+ * Pro tier. Backend type: `quarterly_self_report`.
  */
 
-import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
-import { QuarterlySelfReport } from "@/components/reports/templates/quarterly-self-report";
-
-export const metadata = {
-  title: "Quarterly Self Report · PivoxQuant",
-};
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
+import {
+  QuarterlySelfReport,
+  type QuarterlySelfReportData,
+} from "@/components/reports/templates/quarterly-self-report";
 
 export default function QuarterlySelfReportPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <QuarterlySelfReport />
-    </ReportSurface>
+    <ReportPreviewShell<QuarterlySelfReportData>
+      type="quarterly_self_report"
+      tier="pro"
+      emptyReason="insufficient_history"
+      render={(data) => <QuarterlySelfReport data={data} />}
+    />
   );
 }

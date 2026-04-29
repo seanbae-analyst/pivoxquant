@@ -1,19 +1,23 @@
+"use client";
+
 /**
- * /reports/preview/monthly-finance — Report 16 (Premium · Monthly · 4 pages)
+ * /reports/preview/monthly-finance — Wave 2 (2026-04-29).
+ * Premium tier. Backend type: `monthly_finance`.
  */
 
-import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
-import { MonthlyFinance } from "@/components/reports/templates/monthly-finance";
-
-export const metadata = {
-  title: "Monthly Finance · PivoxQuant",
-};
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
+import {
+  MonthlyFinance,
+  type MonthlyFinanceData,
+} from "@/components/reports/templates/monthly-finance";
 
 export default function MonthlyFinancePreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <MonthlyFinance />
-    </ReportSurface>
+    <ReportPreviewShell<MonthlyFinanceData>
+      type="monthly_finance"
+      tier="premium"
+      emptyReason="no_trades"
+      render={(data) => <MonthlyFinance data={data} />}
+    />
   );
 }

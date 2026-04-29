@@ -1,20 +1,23 @@
+"use client";
+
 /**
- * /reports/preview/kpi-dashboard — Report 17 (Premium · Monthly · 3 pages)
- * NOTE: Page 1 is the only DARK IC-pack cover in the 18-report system.
+ * /reports/preview/kpi-dashboard — Wave 2 (2026-04-29).
+ * Free tier. Real-data wired via <ReportPreviewShell />.
  */
 
-import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
-import { KpiDashboard } from "@/components/reports/templates/kpi-dashboard";
-
-export const metadata = {
-  title: "KPI Dashboard · PivoxQuant",
-};
+import { ReportPreviewShell } from "@/components/reports/report-preview-shell";
+import {
+  KpiDashboard,
+  type KpiDashboardData,
+} from "@/components/reports/templates/kpi-dashboard";
 
 export default function KpiDashboardPreviewPage() {
   return (
-    <ReportSurface>
-      <PdfToolbar />
-      <KpiDashboard />
-    </ReportSurface>
+    <ReportPreviewShell<KpiDashboardData>
+      type="kpi_dashboard"
+      tier="free"
+      emptyReason="no_positions"
+      render={(data) => <KpiDashboard data={data} />}
+    />
   );
 }

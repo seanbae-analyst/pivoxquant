@@ -371,7 +371,25 @@ export type ArtifactType =
   | "monthly_brag"
   | "quarterly_review"
   | "risk_report"
-  | "custom";
+  | "custom"
+  // ── Wave 2 (2026-04-29) — backend `_ARTIFACT_DISPATCH` 17/18 type union.
+  // Additive only; existing literals retained for archived rows.
+  | "brag_card"
+  | "self_audit"
+  | "risk_board"
+  | "year_end_letter"
+  | "quarterly_self_report"
+  | "kpi_dashboard"
+  | "dd_checklist"
+  | "dividend_income"
+  | "monthly_finance"
+  | "burn_rate"
+  | "capital_allocation"
+  | "credit_rating"
+  | "insider_mirror"
+  | "portfolio_segment"
+  | "pre_trade_checklist"
+  | "sp500_backtest";
 
 export interface Artifact {
   id: number;
