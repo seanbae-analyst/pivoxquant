@@ -43,6 +43,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, User
+from services.legal_filter import is_compliant, safe_scrub
 
 logger = logging.getLogger(__name__)
 
@@ -430,13 +431,19 @@ class CreditRatingService:
     def render_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
-            return self._fallback_html(data)
-        try:
-            tpl = env.get_template("credit_rating.html")
-            return tpl.render(**data)
-        except Exception as exc:
-            logger.warning("credit_rating template render failed: %s", exc)
-            return self._fallback_html(data)
+            html = self._fallback_html(data)
+        else:
+            try:
+                tpl = env.get_template("credit_rating.html")
+                html = tpl.render(**data)
+            except Exception as exc:
+                logger.warning("credit_rating template render failed: %s", exc)
+                html = self._fallback_html(data)
+        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
+        scrubbed = safe_scrub(html, context="credit_rating") or html
+        if not is_compliant(scrubbed):
+            logger.warning("legal_filter fail: credit_rating")
+        return scrubbed
 
     def _jinja_env(self):
         Environment, FileSystemLoader, select_autoescape = _try_import_jinja()

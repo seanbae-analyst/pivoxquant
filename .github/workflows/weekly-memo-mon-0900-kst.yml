@@ -1,0 +1,131 @@
+name: Weekly Memo Blast (Mon 09:00 KST)
+
+# Tier 1 artifact — Weekly Investor Memo. Fans out to every active
+# (paid + has-positions) user every Monday morning. The blast is the
+# entry point for the unified Artifact pipeline introduced in Wave 1.
+#
+# Runs against PRODUCTION via the existing /api/artifacts/weekly-memo/trigger
+# admin route, which is gated by `DEV_LOGIN_SECRET` server-side. The
+# secret value lives in GitHub Actions as `WEEKLY_MEMO_TRIGGER_SECRET`
+# and must match the env var deployed on Railway. (The historical name
+# `DEV_LOGIN_SECRET` is misleading — it gates several admin-only routes
+# in prod, not just dev login. Renaming is out-of-scope for Wave 1.)
+#
+# Schedule:
+#   cron: '0 0 * * 1'   →  Monday 00:00 UTC  =  Monday 09:00 KST
+# manual: workflow_dispatch (for replay / backfill)
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: 'Optional ISO date (YYYY-MM-DD). Default: today.'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  blast:
+    name: Trigger weekly memo blast
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RAILWAY_API_BASE: https://RAILWAY_BACKEND_HOST.up.railway.app
+      ADMIN_SECRET: ${{ secrets.WEEKLY_MEMO_TRIGGER_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sanity — admin secret present
+        run: |
+          if [ -z "${ADMIN_SECRET:-}" ]; then
+            echo "::error::WEEKLY_MEMO_TRIGGER_SECRET is not configured."
+            echo "Add it under Settings → Secrets → Actions, matching"
+            echo "the DEV_LOGIN_SECRET env var on Railway."
+            exit 1
+          fi
+
+      - name: Build trigger payload
+        id: payload
+        run: |
+          target_date="${{ github.event.inputs.target_date }}"
+          if [ -z "$target_date" ]; then
+            payload='{}'
+          else
+            payload=$(printf '{"target_date":"%s"}' "$target_date")
+          fi
+          echo "payload=$payload" >> "$GITHUB_OUTPUT"
+
+      - name: POST /api/artifacts/weekly-memo/trigger
+        id: trigger
+        run: |
+          set +e
+          response=$(curl -sS -m 120 -w "\nHTTP:%{http_code}" \
+            -X POST "$RAILWAY_API_BASE/api/artifacts/weekly-memo/trigger" \
+            -H "Content-Type: application/json" \
+            -H "X-Admin-Secret: $ADMIN_SECRET" \
+            -d '${{ steps.payload.outputs.payload }}')
+          code=$(echo "$response" | tail -n 1 | sed 's/HTTP://')
+          body=$(echo "$response" | sed '$d')
+          echo "HTTP $code"
+          echo "$body"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          {
+            echo "body<<EOF"
+            echo "$body"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          # Don't fail the step here — we want to record the failure
+          # in an issue below before exiting non-zero.
+
+      - name: Verify success
+        if: steps.trigger.outputs.code != '200'
+        run: |
+          echo "::error::Weekly memo trigger failed with HTTP ${{ steps.trigger.outputs.code }}"
+          exit 1
+
+      - name: Ensure weekly-memo label exists
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create weekly-memo \
+            --repo "$GITHUB_REPOSITORY" \
+            --color "5319E7" \
+            --description "Weekly Investor Memo blast log" 2>/dev/null || true
+
+      - name: Open log issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: ${{ steps.trigger.outputs.body }}
+          CODE: ${{ steps.trigger.outputs.code }}
+        run: |
+          today=$(TZ='Asia/Seoul' date +'%Y-%m-%d')
+          status_emoji='✅'
+          if [ "$CODE" != "200" ]; then status_emoji='🔴'; fi
+          title="${status_emoji} Weekly Memo Blast — ${today}"
+          {
+            echo "**HTTP**: ${CODE}"
+            echo ""
+            echo "**Response**:"
+            echo ""
+            echo '```json'
+            echo "${BODY}"
+            echo '```'
+            echo ""
+            echo "_Triggered via .github/workflows/weekly-memo-mon-0900-kst.yml_"
+          } > log_body.md
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$title" \
+            --body-file log_body.md \
+            --label weekly-memo 2>/dev/null \
+            || gh issue create \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$title" \
+              --body-file log_body.md

@@ -46,6 +46,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, User
+from services.legal_filter import is_compliant, safe_scrub
 
 logger = logging.getLogger(__name__)
 
@@ -456,13 +457,19 @@ class CapitalAllocationService:
     def render_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
-            return self._fallback_html(data)
-        try:
-            tpl = env.get_template("capital_allocation.html")
-            return tpl.render(**data)
-        except Exception as exc:
-            logger.warning("capital_allocation render failed: %s", exc)
-            return self._fallback_html(data)
+            html = self._fallback_html(data)
+        else:
+            try:
+                tpl = env.get_template("capital_allocation.html")
+                html = tpl.render(**data)
+            except Exception as exc:
+                logger.warning("capital_allocation render failed: %s", exc)
+                html = self._fallback_html(data)
+        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
+        scrubbed = safe_scrub(html, context="capital_allocation") or html
+        if not is_compliant(scrubbed):
+            logger.warning("legal_filter fail: capital_allocation")
+        return scrubbed
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
