@@ -416,7 +416,6 @@ def weekly_memo_history():
 
 
 @artifacts_bp.route("/weekly-memo/trigger", methods=["POST"])
-@api_auth
 def weekly_memo_trigger():
     """Manual trigger for the Sunday cron. Admin-only.
 
@@ -606,7 +605,6 @@ def monthly_brag_share_link(brag_id: int):
 
 
 @artifacts_bp.route("/monthly-brag/trigger", methods=["POST"])
-@api_auth
 def monthly_brag_trigger():
     """Manual trigger for the monthly cron. Admin-only.
 
@@ -802,7 +800,6 @@ def brag_card_share(share_token: str):
 
 
 @artifacts_bp.route("/brag-card/trigger", methods=["POST"])
-@api_auth
 def brag_card_trigger():
     """Manual trigger for the monthly cron. Admin-only (DEV_LOGIN_SECRET)."""
     err = _check_cron_admin_secret()
@@ -1009,7 +1006,6 @@ def earnings_prebrief_download(brief_id: int):
 
 
 @artifacts_bp.route("/earnings-prebrief/trigger", methods=["POST"])
-@api_auth
 def earnings_prebrief_trigger():
     """Manual trigger for the 15-min scan. Admin-only.
 
@@ -1070,7 +1066,6 @@ def kpi_dashboard_preview():
 
 
 @artifacts_bp.route("/kpi-dashboard/trigger", methods=["POST"])
-@api_auth
 def kpi_dashboard_trigger():
     """Manual trigger for the daily KPI cron. Admin-only.
 
@@ -1186,7 +1181,6 @@ def self_audit_download_latest():
 
 
 @artifacts_bp.route("/self-audit/trigger", methods=["POST"])
-@api_auth
 def self_audit_trigger():
     """Manual trigger for the quarterly cron. Admin-only.
 
@@ -1314,7 +1308,6 @@ def dd_checklist_submit():
 
 
 @artifacts_bp.route("/dd-checklist/trigger", methods=["POST"])
-@api_auth
 def dd_checklist_trigger():
     """Manual trigger for the T+3 cron. Admin-only. Same gating as
     weekly_memo/trigger."""
@@ -1414,7 +1407,6 @@ def burn_rate_download_latest():
 
 
 @artifacts_bp.route("/burn-rate/trigger", methods=["POST"])
-@api_auth
 def burn_rate_trigger():
     """Manual trigger for the monthly cron. Admin-only.
 
@@ -1476,7 +1468,6 @@ def credit_rating_preview():
 
 
 @artifacts_bp.route("/credit-rating/trigger", methods=["POST"])
-@api_auth
 def credit_rating_trigger():
     """Manual trigger for the monthly cron. Admin-only. Same gating as
     weekly_memo/trigger."""
@@ -1583,7 +1574,6 @@ def dividend_income_download_latest():
 
 
 @artifacts_bp.route("/dividend-income/trigger", methods=["POST"])
-@api_auth
 def dividend_income_trigger():
     """Manual trigger for the monthly dividend cron. Admin-only
     (DEV_LOGIN_SECRET + X-Admin-Secret header — same pattern as the
@@ -1689,7 +1679,6 @@ def monthly_finance_download_latest():
 
 
 @artifacts_bp.route("/monthly-finance/trigger", methods=["POST"])
-@api_auth
 def monthly_finance_trigger():
     """Manual trigger for the monthly finance cron. Admin-only."""
     err = _check_cron_admin_secret()
@@ -1796,7 +1785,6 @@ def risk_board_download_latest():
 
 
 @artifacts_bp.route("/risk-board/trigger", methods=["POST"])
-@api_auth
 def risk_board_trigger():
     """Manual trigger for the Risk Board deck. Admin-only.
 
@@ -1932,7 +1920,6 @@ def portfolio_segment_download_latest():
 
 
 @artifacts_bp.route("/portfolio-segment/trigger", methods=["POST"])
-@api_auth
 def portfolio_segment_trigger():
     """Manual trigger for the quarterly cron. Admin-only.
 
@@ -2098,7 +2085,6 @@ def capital_allocation_download(calc_id: int):
 
 
 @artifacts_bp.route("/capital-allocation/reminder-trigger", methods=["POST"])
-@api_auth
 def capital_allocation_reminder_trigger():
     """Admin-only manual trigger for the quarterly reminder email.
 
@@ -2194,7 +2180,6 @@ def insider_mirror_download_latest():
 
 
 @artifacts_bp.route("/insider-mirror/trigger", methods=["POST"])
-@api_auth
 def insider_mirror_trigger():
     """Admin-only manual trigger for the weekly insider mirror cron."""
     err = _check_cron_admin_secret()
@@ -2315,7 +2300,6 @@ def year_end_letter_download_latest():
 
 
 @artifacts_bp.route("/year-end-letter/trigger", methods=["POST"])
-@api_auth
 def year_end_letter_trigger():
     """Manual trigger for the annual cron. Admin-only.
 
@@ -2436,7 +2420,6 @@ def quarterly_self_report_download_latest():
 
 
 @artifacts_bp.route("/quarterly-self/trigger", methods=["POST"])
-@api_auth
 def quarterly_self_report_trigger():
     """Manual trigger for the quarterly cron. Admin-only.
 
@@ -2853,4 +2836,138 @@ def artifacts_generate():
         "reason":      None,
         "message":     None,
         "redirect":    None,
+    })
+
+
+# ═══════ DIAGNOSTICS ═══════
+# Production-safe diagnostic endpoint to confirm whether the WeasyPrint
+# pipeline (used by /weekly-memo and ~12 other PDF artifacts) is actually
+# functional inside the Railway container. The response body itself carries
+# the diagnostic — no need to grep Railway logs.
+#
+# Triggered by HANDOVER 2026-04-29 §결함 #5: PDF 첨부 누락. The DIAG log
+# lines added in commit b7bf589 were not visible to the user, so we surface
+# the same information through a callable endpoint.
+
+@artifacts_bp.route("/_diag/weasyprint", methods=["GET", "POST"])
+def diag_weasyprint():
+    """Probe the WeasyPrint pipeline end-to-end and return the result inline.
+
+    Gates: same as cron triggers — admin secret only.
+
+    Probes (each independent, all reported even if one fails):
+      1. import_weasyprint   — `from weasyprint import HTML`
+      2. render_minimal_pdf  — `HTML(string="<h1>Hi</h1>").write_pdf()`
+      3. render_korean_pdf   — same with a Korean character (Noto CJK check)
+      4. render_template_pdf — actual weekly_memo template against fake data
+      5. fonts_available     — fontconfig list of CJK fonts (best-effort)
+
+    Each probe captures both `ok` (bool) and the exception class+message
+    on failure. Native traceback omitted by default to keep the response
+    JSON-safe; pass `?traceback=1` to include it.
+    """
+    err = _check_cron_admin_secret()
+    if err:
+        return err
+
+    import sys
+    import traceback as tb_mod
+
+    include_tb = request.args.get("traceback") in ("1", "true", "yes")
+
+    def _probe(fn):
+        try:
+            return {"ok": True, "result": fn()}
+        except BaseException as exc:
+            payload = {
+                "ok":        False,
+                "error_cls": type(exc).__name__,
+                "error_msg": str(exc),
+            }
+            if include_tb:
+                payload["traceback"] = tb_mod.format_exc()
+            return payload
+
+    # 1. import
+    def _import():
+        from weasyprint import HTML  # type: ignore
+        import weasyprint  # type: ignore
+        return {
+            "weasyprint_version": getattr(weasyprint, "__version__", "?"),
+            "module_path":        getattr(weasyprint, "__file__", "?"),
+        }
+    probe_import = _probe(_import)
+
+    # 2. minimal render (only attempted if import succeeded)
+    def _minimal():
+        from weasyprint import HTML  # type: ignore
+        pdf = HTML(string="<!doctype html><html><body><h1>Hi</h1></body></html>").write_pdf()
+        return {"bytes": len(pdf or b""), "starts_with_pdf_magic": (pdf or b"")[:4] == b"%PDF"}
+    probe_minimal = _probe(_minimal) if probe_import.get("ok") else {
+        "ok": False, "skipped": True, "reason": "import failed",
+    }
+
+    # 3. Korean glyph render (catches missing Noto CJK)
+    def _korean():
+        from weasyprint import HTML  # type: ignore
+        pdf = HTML(string="<!doctype html><html><body><h1>주간 메모</h1></body></html>").write_pdf()
+        return {"bytes": len(pdf or b"")}
+    probe_korean = _probe(_korean) if probe_import.get("ok") else {
+        "ok": False, "skipped": True, "reason": "import failed",
+    }
+
+    # 4. real weekly_memo template (catches template / asset path issues)
+    def _template():
+        svc = WeeklyMemoService()
+        # Build a minimal valid `data` dict the template expects. We don't
+        # touch the DB — purely a render path check.
+        fake = {
+            "user_name":        "Diag User",
+            "week_number":      0,
+            "week_label":       "Diag Week",
+            "weekly_return_pct": 0.0,
+            "top_movers_up":     [],
+            "top_movers_down":   [],
+            "positions":         [],
+            "kpis":              {},
+            "subtitle":          "diagnostic",
+            "summary":           "diagnostic",
+            "disclaimer":        "diagnostic — not for distribution",
+        }
+        pdf = svc.render_pdf(fake)
+        return {
+            "bytes":               len(pdf or b"") if pdf else 0,
+            "render_pdf_returned": "bytes" if pdf else "None",
+        }
+    probe_template = _probe(_template) if probe_import.get("ok") else {
+        "ok": False, "skipped": True, "reason": "import failed",
+    }
+
+    # 5. Font availability via fontconfig (best-effort; fc-list may not exist)
+    def _fonts():
+        import shutil as _shutil
+        import subprocess as _sp
+        if not _shutil.which("fc-list"):
+            return {"fc_list_available": False}
+        out = _sp.run(["fc-list", ":lang=ko", "family"],
+                      capture_output=True, text=True, timeout=5)
+        families = sorted({ln.strip() for ln in out.stdout.splitlines() if ln.strip()})
+        return {
+            "fc_list_available": True,
+            "ko_font_count":     len(families),
+            "ko_font_families":  families[:20],  # cap to avoid huge payload
+        }
+    probe_fonts = _probe(_fonts)
+
+    return jsonify({
+        "ok":      probe_import.get("ok") and probe_template.get("ok"),
+        "python":  sys.version.split()[0],
+        "platform": sys.platform,
+        "probes": {
+            "import_weasyprint":   probe_import,
+            "render_minimal_pdf":  probe_minimal,
+            "render_korean_pdf":   probe_korean,
+            "render_template_pdf": probe_template,
+            "fonts_available":     probe_fonts,
+        },
     })
