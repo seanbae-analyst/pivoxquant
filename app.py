@@ -1241,14 +1241,16 @@ def _init_scheduler(app):
     # time. Useful for confirming cron registration in Railway logs.
     # NOT a fix — instrumentation only.
     try:
+        # APScheduler 4.x: Job 객체에 next_run_time 속성 없음. trigger 정보로 fallback.
         job_summary = [
-            (j.id, j.next_run_time.isoformat() if j.next_run_time else None)
+            (j.id, getattr(j, "next_run_time", None) or
+                   getattr(getattr(j, "trigger", None), "__class__", type(None)).__name__)
             for j in sched.get_jobs()
         ]
         logger.info(
             "scheduler.start pid=%s jobs=%s",
             os.getpid(),
-            job_summary,
+            [(jid, str(t)) for jid, t in job_summary],
         )
     except Exception:
         logger.exception("scheduler.start diagnostic logging failed")
