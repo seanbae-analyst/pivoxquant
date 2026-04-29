@@ -2971,3 +2971,180 @@ def diag_weasyprint():
             "fonts_available":     probe_fonts,
         },
     })
+
+
+@artifacts_bp.route("/_diag/weekly-memo-pipeline", methods=["GET", "POST"])
+def diag_weekly_memo_pipeline():
+    """End-to-end diagnostic for the weekly-memo pipeline using REAL user data.
+
+    Why: /_diag/weasyprint already proved WeasyPrint + template render with
+    fake data. If users still get emails without PDF attachments, the bug is
+    in the live pipeline (generate_for_user → render_pdf → send_email).
+    This endpoint runs the same path against an actual paid user but does
+    NOT send email, and surfaces every intermediate result.
+
+    Gates: admin secret only.
+
+    Query/body:
+        user_id   — int (optional). When omitted, picks the first paid user.
+
+    Returns each stage with bytes/keys/error so the bug is pinpointable
+    from a single curl response.
+    """
+    err = _check_cron_admin_secret()
+    if err:
+        return err
+
+    import traceback as tb_mod
+    from models import User, Position
+    from services.artifacts.weekly_memo_service import (
+        WeeklyMemoService, _PAID_TIERS,
+    )
+
+    body = request.get_json(silent=True) or {}
+    user_id_arg = body.get("user_id") or request.args.get("user_id")
+    try:
+        user_id_int = int(user_id_arg) if user_id_arg is not None else None
+    except (TypeError, ValueError):
+        return jsonify({"error": "user_id must be int"}), 400
+
+    # ── 1. pick user ────────────────────────────────────────────────────
+    if user_id_int is not None:
+        user = db.session.get(User, user_id_int)
+        if not user:
+            return jsonify({"error": f"user {user_id_int} not found"}), 404
+        pick_reason = "explicit"
+    else:
+        user = (
+            User.query
+            .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
+            .first()
+        )
+        if not user:
+            return jsonify({
+                "ok": False,
+                "stage": "pick_user",
+                "error": "no paid user exists (free-tier users skipped by run_weekly)",
+                "paid_tiers": list(_PAID_TIERS),
+            })
+        pick_reason = "first paid user"
+
+    user_info = {
+        "id":                user.id,
+        "email":             user.email,
+        "subscription_tier": user.subscription_tier,
+        "pick_reason":       pick_reason,
+    }
+
+    # ── 2. positions count ──────────────────────────────────────────────
+    pos_count = Position.query.filter_by(user_id=user.id).count()
+    if pos_count == 0:
+        return jsonify({
+            "ok":     False,
+            "stage":  "positions_check",
+            "user":   user_info,
+            "reason": "user has 0 positions — run_for_user returns None early "
+                      "(line 992-995). No memo is generated.",
+            "fix":    "Add at least one Position row for this user, or pass "
+                      "user_id of a user with positions.",
+        })
+
+    svc = WeeklyMemoService()
+    stages = {"positions_count": pos_count}
+
+    # ── 3. generate_for_user ────────────────────────────────────────────
+    try:
+        data = svc.generate_for_user(user.id)
+        stages["generate_for_user"] = {
+            "ok":      True,
+            "keys":    sorted(list(data.keys())) if isinstance(data, dict) else None,
+            "type":    type(data).__name__,
+        }
+    except Exception as exc:
+        return jsonify({
+            "ok":     False,
+            "stage":  "generate_for_user",
+            "user":   user_info,
+            "stages": stages,
+            "error":  {
+                "cls":       type(exc).__name__,
+                "msg":       str(exc),
+                "traceback": tb_mod.format_exc(),
+            },
+        })
+
+    # ── 4. render_pdf (the actual production path) ──────────────────────
+    pdf_bytes = None
+    render_error = None
+    try:
+        pdf_bytes = svc.render_pdf(data)
+    except Exception as exc:
+        render_error = {
+            "cls":       type(exc).__name__,
+            "msg":       str(exc),
+            "traceback": tb_mod.format_exc(),
+        }
+
+    if pdf_bytes is None:
+        # render_pdf swallows exceptions and returns None on failure (see
+        # weekly_memo_service.py:824-826). Re-execute the inner steps with
+        # exceptions exposed so we know WHY None was returned.
+        deeper = {}
+        try:
+            from services.artifacts.weekly_memo_service import (
+                _try_import_weasyprint,
+            )
+            HTML = _try_import_weasyprint()
+            deeper["weasyprint_imported"] = HTML is not None
+            if HTML is not None:
+                try:
+                    html_str = svc.render_pdf_html(data)
+                    deeper["pdf_html_chars"] = len(html_str)
+                    deeper["pdf_html_starts_with_doctype"] = (
+                        html_str.lstrip().lower().startswith("<!doctype")
+                        or html_str.lstrip().lower().startswith("<html")
+                    )
+                    try:
+                        pdf2 = HTML(string=html_str).write_pdf()
+                        deeper["direct_write_pdf_bytes"] = len(pdf2 or b"")
+                    except Exception as exc:
+                        deeper["direct_write_pdf_error"] = {
+                            "cls": type(exc).__name__,
+                            "msg": str(exc),
+                            "traceback": tb_mod.format_exc(),
+                        }
+                except Exception as exc:
+                    deeper["render_pdf_html_error"] = {
+                        "cls": type(exc).__name__,
+                        "msg": str(exc),
+                        "traceback": tb_mod.format_exc(),
+                    }
+        except Exception as exc:
+            deeper["bootstrap_error"] = str(exc)
+
+        return jsonify({
+            "ok":             False,
+            "stage":          "render_pdf",
+            "user":           user_info,
+            "stages":         stages,
+            "render_pdf_returned_None": True,
+            "outer_exception": render_error,  # may be None — render_pdf catches internally
+            "deep_probe":     deeper,
+            "interpretation": "render_pdf returned None for this user. Check "
+                              "deep_probe.{render_pdf_html_error|direct_write_pdf_error} "
+                              "for the underlying exception.",
+        })
+
+    # ── 5. success path ─────────────────────────────────────────────────
+    return jsonify({
+        "ok":     True,
+        "user":   user_info,
+        "stages": stages,
+        "render_pdf": {
+            "bytes":              len(pdf_bytes),
+            "starts_with_pdf_magic": pdf_bytes[:4] == b"%PDF",
+        },
+        "interpretation": "render_pdf produced bytes. If emails still ship "
+                          "without an attachment, the bug is downstream "
+                          "(send_email or SendGrid delivery).",
+    })
