@@ -2508,3 +2508,381 @@ def quarterly_self_report_trigger():
         return jsonify({"error": f"Manual run failed: {exc}"}), 500
 
     return jsonify({"ok": True, "summary": summary})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  UNIFIED /generate ENDPOINT  (Wave 1 — frontend v2 contract)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+#  Single entry point for the frontend "Generate" button. Dispatches to the
+#  matching artefact service by `type`. Replaces the per-type preview/trigger
+#  endpoints for the unified UX (those routes remain for legacy/QA flows).
+#
+#  Response contract (always 200 unless input is malformed):
+#      {
+#          "status":     "ready" | "empty" | "interactive",
+#          "type":       <slug>,
+#          "artifact_id": <int|null>,
+#          "data":       <payload dict | null>,
+#          "reason":     <empty-state code | null>,
+#          "message":    <human-readable | null>,
+#      }
+#
+#  Empty states are NOT errors. New users with no positions / no trades get
+#  `status="empty"` so the frontend can render an EmptyState UI prompting the
+#  first action. Three "interactive" types (pre_trade_checklist, dd_checklist,
+#  capital_allocation) are workflow artifacts driven by user input — calling
+#  /generate for them returns `status="interactive"` plus a `redirect` hint.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Import the remaining service classes lazily-at-module-level so the dispatch
+# table can resolve them by reference. Each import already exists above as a
+# late `noqa: E402` block; we re-bind here to keep the dispatch table
+# self-contained and grep-able. Imports are no-ops if the symbol already
+# exists in the module namespace.
+from services.artifacts.brag_card_service import BragCardService  # noqa: E402,F811
+from services.artifacts.burn_rate_service import BurnRateService  # noqa: E402,F811
+from services.artifacts.credit_rating_service import CreditRatingService  # noqa: E402,F811
+from services.artifacts.dividend_income_service import DividendIncomeService  # noqa: E402,F811
+from services.artifacts.earnings_prebrief_service import (  # noqa: E402,F811
+    EarningsPreBriefService,
+)
+from services.artifacts.insider_mirror_service import InsiderMirrorService  # noqa: E402,F811
+from services.artifacts.kpi_dashboard_service import KPIDashboardService  # noqa: E402,F811
+from services.artifacts.monthly_finance_service import MonthlyFinanceService  # noqa: E402,F811
+from services.artifacts.portfolio_segment_service import (  # noqa: E402,F811
+    PortfolioSegmentService,
+)
+from services.artifacts.quarterly_self_report_service import (  # noqa: E402,F811
+    QuarterlySelfReportService,
+)
+from services.artifacts.risk_board_service import RiskBoardService  # noqa: E402,F811
+from services.artifacts.self_audit_service import SelfAuditService  # noqa: E402,F811
+from services.artifacts.year_end_letter_service import YearEndLetterService  # noqa: E402,F811
+
+
+# Dispatch table: type → (ServiceClass, generator-method, artifact-db-type).
+# `artifact-db-type` is the value persisted on `Artifact.type` so /list and
+# /<id>/download routes round-trip cleanly. None ⇒ this artefact is not
+# persisted via /generate (interactive types).
+_ARTIFACT_DISPATCH: dict[str, tuple] = {
+    "weekly_memo":           (WeeklyMemoService,           "generate_for_user", "weekly_memo"),
+    "brag_card":             (BragCardService,             "generate_for_user", "brag_card"),
+    "monthly_brag":          (MonthlyBragService,          "generate_for_user", "monthly_brag"),
+    "earnings_prebrief":     (EarningsPreBriefService,     "generate_for_user", "earnings_prebrief"),
+    "self_audit":            (SelfAuditService,            "generate_for_user", "self_audit"),
+    "risk_board":            (RiskBoardService,            "generate_for_user", "risk_board"),
+    "year_end_letter":       (YearEndLetterService,        "generate_for_user", "year_end_letter"),
+    "quarterly_self_report": (QuarterlySelfReportService,  "generate_for_user", "quarterly_self_report"),
+    "kpi_dashboard":         (KPIDashboardService,         "generate_for_user", "kpi_dashboard"),
+    "dividend_income":       (DividendIncomeService,       "generate_for_user", "dividend_income"),
+    "monthly_finance":       (MonthlyFinanceService,       "generate_for_user", "monthly_finance"),
+    "burn_rate":             (BurnRateService,             "generate_for_user", "burn_rate"),
+    "capital_allocation":    None,   # interactive — POST /capital-allocation/calculate
+    "credit_rating":         (CreditRatingService,         "generate_for_user", "credit_rating"),
+    "insider_mirror":        (InsiderMirrorService,        "generate_for_user", "insider_mirror"),
+    "portfolio_segment":     (PortfolioSegmentService,     "generate_for_user", "portfolio_segment"),
+    "pre_trade_checklist":   None,   # interactive — POST /pre-trade/start
+    "dd_checklist":          None,   # interactive — POST /dd-checklist/submit
+}
+
+# Interactive types — frontend redirects to a dedicated UI instead of
+# generating from the unified button. Map → redirect path so the response
+# can hint the frontend without hard-coding URLs there.
+_INTERACTIVE_REDIRECTS: dict[str, str] = {
+    "capital_allocation":  "/api/artifacts/capital-allocation/calculate",
+    "pre_trade_checklist": "/api/pre-trade/start",
+    "dd_checklist":        "/api/artifacts/dd-checklist/pending",
+}
+
+# Per-type empty-state heuristics. These do NOT modify service code — they
+# inspect either the explicit `is_empty` flag (brag_card, monthly_brag) or
+# fall back to a pre-flight check on the user's data. Returning the standard
+# `(reason, message)` tuple lets the route shape one EmptyState response.
+def _empty_check(user_id: int, artifact_type: str,
+                 data: dict | None) -> tuple[str, str] | None:
+    """Return (reason, message) when the artefact has no real content.
+
+    None ⇒ data is renderable. Reasons are stable enums for frontend
+    EmptyState UI dispatch (do NOT translate them server-side; the
+    frontend i18n layer owns the user-facing copy).
+    """
+    # Lazy imports — keep the route module importable even when the
+    # broader app context is half-loaded (test collection time, etc).
+    from models import Position, TradeHistory
+
+    # 1) Service-level explicit flag wins (brag_card, monthly_brag set this).
+    if isinstance(data, dict) and data.get("is_empty") is True:
+        return ("no_trades", "first_trade_needed")
+
+    # 2) Per-type prerequisite checks — covers services that don't mark
+    #    `is_empty` but produce a hollow payload when the user has no
+    #    portfolio yet.
+    needs_positions = {
+        "weekly_memo", "risk_board", "credit_rating", "insider_mirror",
+        "portfolio_segment", "kpi_dashboard", "dividend_income",
+        "year_end_letter",
+    }
+    needs_trades = {
+        "self_audit", "quarterly_self_report", "monthly_finance",
+        "burn_rate",
+    }
+
+    if artifact_type in needs_positions:
+        try:
+            n = Position.query.filter_by(user_id=user_id).count()
+        except Exception:
+            n = 0
+        if n == 0:
+            return ("no_positions", "first_position_needed")
+
+    if artifact_type in needs_trades:
+        try:
+            n = TradeHistory.query.filter_by(user_id=user_id).count()
+        except Exception:
+            n = 0
+        if n == 0:
+            return ("no_trades", "first_trade_needed")
+
+    return None
+
+
+def _persist_generated(user_id: int, db_type: str,
+                       data: dict, pdf_bytes: bytes | None) -> Artifact:
+    """UPSERT a row into `artifacts` matching the per-service title shape.
+
+    Title scheme is intentionally loose — the unique constraint is
+    (user_id, type, title) so a re-generate within the same period
+    overwrites instead of duplicating. Each service's own title format
+    (e.g. "Week 17 Investor Memo — 2026-04-29") is used when present in
+    the data payload; otherwise we fall back to a date-stamped slug.
+    """
+    title = (
+        data.get("title")
+        or data.get("month_label_long")
+        or data.get("month_label")
+        or data.get("week_label")
+        or data.get("period_label")
+        or f"{db_type} — {date.today().isoformat()}"
+    )
+    title = str(title)[:200]
+
+    pdf_path: str | None = None
+    if pdf_bytes:
+        try:
+            base = Path(current_app.instance_path) / "artifacts" / str(user_id)
+            base.mkdir(parents=True, exist_ok=True)
+            stamp = date.today().isoformat()
+            path = base / f"{db_type}_{stamp}.pdf"
+            path.write_bytes(pdf_bytes)
+            pdf_path = str(path)
+        except Exception as exc:
+            current_app.logger.warning(
+                "PDF write failed (user=%s type=%s): %s", user_id, db_type, exc
+            )
+
+    row = (
+        Artifact.query
+        .filter_by(user_id=user_id, type=db_type, title=title)
+        .first()
+    )
+    if row:
+        row.data_json = data
+        if pdf_path:
+            row.pdf_path = pdf_path
+    else:
+        row = Artifact(
+            user_id=user_id,
+            type=db_type,
+            title=title,
+            data_json=data,
+            pdf_path=pdf_path,
+        )
+        db.session.add(row)
+    db.session.commit()
+    return row
+
+
+@artifacts_bp.route("/generate", methods=["POST"])
+@api_auth
+def artifacts_generate():
+    """Unified Generate endpoint — frontend "Generate" button.
+
+    Body (JSON):
+        {
+            "type":   <one of 17 artefact slugs>,    # required
+            "params": { ...optional kwargs... }       # optional
+        }
+
+    Allowed `params` keys (passed through to `generate_for_user`):
+        - target_date / month / target_month / as_of / quarter_end /
+          target_year / anchor   →  ISO date string ("YYYY-MM-DD")
+        - ticker                 →  string (earnings_prebrief only)
+        - anonymous              →  bool   (brag_card / monthly_brag)
+        - target_year            →  int    (year_end_letter)
+
+    Response (always JSON; HTTP 200 unless input is malformed):
+        {
+            "status":      "ready" | "empty" | "interactive",
+            "type":        <slug>,
+            "artifact_id": <int|null>,
+            "data":        <payload|null>,
+            "reason":      <enum|null>,
+            "message":     <code|null>,
+            "redirect":    <path|null>,    # interactive types only
+        }
+    """
+    body = request.get_json(silent=True) or {}
+    artifact_type = (body.get("type") or "").strip().lower()
+    params = body.get("params") or {}
+
+    if not isinstance(params, dict):
+        return jsonify({"error": "params must be a JSON object"}), 400
+
+    if not artifact_type:
+        return jsonify({"error": "type is required"}), 400
+
+    if artifact_type not in _ARTIFACT_DISPATCH:
+        return jsonify({
+            "error": f"unknown artifact type: {artifact_type}",
+            "allowed": sorted(_ARTIFACT_DISPATCH.keys()),
+        }), 400
+
+    # ── Interactive artefacts — short-circuit with a redirect hint ──────
+    entry = _ARTIFACT_DISPATCH[artifact_type]
+    if entry is None:
+        return jsonify({
+            "status":      "interactive",
+            "type":        artifact_type,
+            "artifact_id": None,
+            "data":        None,
+            "reason":      "interactive_workflow",
+            "message":     f"{artifact_type}_requires_user_input",
+            "redirect":    _INTERACTIVE_REDIRECTS.get(artifact_type),
+        })
+
+    service_cls, method_name, db_type = entry
+
+    # ── Translate JSON params → kwargs the per-service method accepts ───
+    kwargs: dict = {}
+    date_keys = {
+        "target_date", "month", "target_month", "as_of",
+        "quarter_end", "anchor",
+    }
+    for key in date_keys:
+        raw = params.get(key)
+        if raw is None:
+            continue
+        try:
+            kwargs[key] = date.fromisoformat(str(raw))
+        except ValueError:
+            return jsonify({
+                "error": f"invalid {key} (expected YYYY-MM-DD)",
+            }), 400
+
+    if "target_year" in params:
+        try:
+            kwargs["target_year"] = int(params["target_year"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "target_year must be an integer"}), 400
+
+    if "anonymous" in params:
+        if not isinstance(params["anonymous"], bool):
+            return jsonify({"error": "anonymous must be a boolean"}), 400
+        kwargs["anonymous"] = params["anonymous"]
+
+    # earnings_prebrief is the one positional-required arg in the table —
+    # ticker is required, all the rest is optional kwargs.
+    positional: list = []
+    if artifact_type == "earnings_prebrief":
+        ticker = (params.get("ticker") or "").strip().upper()
+        if not ticker:
+            return jsonify({
+                "error": "earnings_prebrief requires params.ticker",
+            }), 400
+        positional.append(ticker)
+
+    # ── Cheap pre-flight empty check — avoids spinning up the heavy
+    #    pipeline for a brand-new user. The service is still called
+    #    *after* the check is None, so service-internal `is_empty`
+    #    payloads remain authoritative.
+    pre_empty = _empty_check(current_user.id, artifact_type, data=None)
+    if pre_empty is not None:
+        reason, message = pre_empty
+        return jsonify({
+            "status":      "empty",
+            "type":        artifact_type,
+            "artifact_id": None,
+            "data":        None,
+            "reason":      reason,
+            "message":     message,
+            "redirect":    None,
+        })
+
+    # ── Generate ────────────────────────────────────────────────────────
+    try:
+        svc = service_cls()
+        method = getattr(svc, method_name)
+        data = method(current_user.id, *positional, **kwargs)
+    except ValueError as exc:
+        # `generate_for_user` raises ValueError for "user not found" —
+        # surface as 400 not 500.
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.exception(
+            "artifacts.generate failed (user=%s type=%s): %s",
+            current_user.id, artifact_type, exc,
+        )
+        return jsonify({
+            "error": f"Generation failed: {exc}",
+            "type":  artifact_type,
+        }), 500
+
+    # ── Service-internal empty signal (e.g. brag_card.is_empty) ────────
+    post_empty = _empty_check(current_user.id, artifact_type, data=data)
+    if post_empty is not None:
+        reason, message = post_empty
+        return jsonify({
+            "status":      "empty",
+            "type":        artifact_type,
+            "artifact_id": None,
+            "data":        data,
+            "reason":      reason,
+            "message":     message,
+            "redirect":    None,
+        })
+
+    # ── Render PDF where supported (best-effort; absence is not fatal) ─
+    pdf_bytes: bytes | None = None
+    render_pdf = getattr(svc, "render_pdf", None)
+    if callable(render_pdf):
+        try:
+            pdf_bytes = render_pdf(data)
+        except Exception as exc:
+            current_app.logger.warning(
+                "render_pdf failed (user=%s type=%s): %s",
+                current_user.id, artifact_type, exc,
+            )
+
+    # ── Persist ─────────────────────────────────────────────────────────
+    try:
+        row = _persist_generated(current_user.id, db_type, data, pdf_bytes)
+        artifact_id = row.id
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.error(
+            "artifact persist failed (user=%s type=%s): %s",
+            current_user.id, artifact_type, exc,
+        )
+        artifact_id = None
+
+    return jsonify({
+        "status":      "ready",
+        "type":        artifact_type,
+        "artifact_id": artifact_id,
+        "data":        data,
+        "reason":      None,
+        "message":     None,
+        "redirect":    None,
+    })

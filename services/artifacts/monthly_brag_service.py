@@ -60,6 +60,7 @@ from typing import Any, Optional
 
 from extensions import db
 from models import Artifact, Position, TradeHistory, User, UserReferral
+from services.legal_filter import is_compliant, safe_scrub
 
 logger = logging.getLogger(__name__)
 
@@ -541,7 +542,7 @@ class MonthlyBragService:
                    f'border-radius:8px;font-weight:600;">'
                    f'공유 링크 열기</a></p>')
 
-        return f"""<!doctype html><html><body style="font-family:-apple-system,sans-serif;
+        html = f"""<!doctype html><html><body style="font-family:-apple-system,sans-serif;
 background:#0B0D12;color:#F6F3EC;padding:32px;">
 <h1 style="margin:0 0 16px;">{name}님의 {month} 수익률</h1>
 <p style="font-size:48px;margin:0 0 24px;color:#E2B96F;"><strong>{ret_str}</strong></p>
@@ -549,6 +550,11 @@ background:#0B0D12;color:#F6F3EC;padding:32px;">
 {cta}
 <p style="margin-top:32px;color:#8C8B87;font-size:12px;"><em>{disclaimer}</em></p>
 </body></html>"""
+        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
+        scrubbed = safe_scrub(html, context="monthly_brag") or html
+        if not is_compliant(scrubbed):
+            logger.warning("legal_filter fail: monthly_brag")
+        return scrubbed
 
     # ── send ─────────────────────────────────────────────────────────────────
 
