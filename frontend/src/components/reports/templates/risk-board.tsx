@@ -6,7 +6,7 @@
  * Page 1: Executive Summary (dl/dt/dd) + 4-up KPI row + Risk Limits
  *         (gauge bars with cap markers + status badges).
  * Page 2: Stress test waterfall + scenario table + correlation gauge +
- *         recommended actions checklist + governance + disclaimer.
+ *         observed actions checklist + governance + disclaimer.
  *
  * Compliance: All risk metrics are observation labels (BREACH / OVER / OK).
  * No buy/sell/hold language. Pro tier requires GovBlock — included on page 2.

@@ -46,6 +46,33 @@ from .decorators import api_auth, require_tier
 artifacts_bp = Blueprint("artifacts", __name__, url_prefix="/api/artifacts")
 
 
+def _check_cron_admin_secret() -> tuple[Response, int] | None:
+    """Cron trigger 인증 — production-safe.
+
+    `ARTIFACT_TRIGGER_SECRET`는 production cron 트리거용 별도 secret.
+    `DEV_LOGIN_SECRET`는 dev-login bypass + tier-upgrade 같은 dev/staging 기능용
+    (production 미설정 컨벤션). 두 secret 분리로 production cron 작동 + dev
+    bypass 미노출 동시 달성.
+
+    Returns:
+        None: 인증 통과
+        (Response, int): 401/404 응답
+    """
+    cron_secret = os.environ.get("ARTIFACT_TRIGGER_SECRET")
+    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
+
+    # cron secret 우선. 미설정 시 dev_secret로 fallback (dev/staging).
+    expected = cron_secret or dev_secret
+    if not expected:
+        return jsonify({"error": "Not found"}), 404
+
+    provided = request.headers.get("X-Admin-Secret", "")
+    if provided != expected:
+        return jsonify({"error": "Admin only"}), 403
+
+    return None
+
+
 # ═══════ UNIFIED ARTIFACTS API ═══════
 # Single-URL shape consumed by the frontend (`/api/artifacts/list`,
 # `/api/artifacts/<id>/download`, etc). Each call dispatches to the matching
@@ -399,13 +426,9 @@ def weekly_memo_trigger():
     This keeps the route effectively 404 in prod (where we leave
     `DEV_LOGIN_SECRET` unset — same convention as routes/dev_auth.py).
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     target_str = body.get("target_date")
@@ -591,13 +614,9 @@ def monthly_brag_trigger():
       1. `DEV_LOGIN_SECRET` env must be set (i.e. dev/staging).
       2. Caller must pass `X-Admin-Secret` header equal to it.
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     target_str = body.get("target_month")
@@ -786,13 +805,9 @@ def brag_card_share(share_token: str):
 @api_auth
 def brag_card_trigger():
     """Manual trigger for the monthly cron. Admin-only (DEV_LOGIN_SECRET)."""
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     target_str = body.get("target_month")
@@ -1004,13 +1019,9 @@ def earnings_prebrief_trigger():
 
     Body (optional): { "send": false } to preview without emailing.
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     send = body.get("send", True)
@@ -1067,13 +1078,9 @@ def kpi_dashboard_trigger():
       1. `DEV_LOGIN_SECRET` env must be set.
       2. Caller must pass `X-Admin-Secret` header equal to it.
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     target_str = body.get("target_date")
@@ -1188,13 +1195,9 @@ def self_audit_trigger():
     window. Defaults to today (which maps to whichever quarter the
     `_quarter_bounds` helper resolves).
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     qe_str = body.get("quarter_end")
@@ -1315,13 +1318,9 @@ def dd_checklist_submit():
 def dd_checklist_trigger():
     """Manual trigger for the T+3 cron. Admin-only. Same gating as
     weekly_memo/trigger."""
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     try:
         summary = DDChecklistService().run_daily()
@@ -1425,13 +1424,9 @@ def burn_rate_trigger():
     Body (optional): { "target_month": "2026-04-01" } to pin the run
     date (used by `_prev_month_bounds` to back-out the prior month).
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     target_str = body.get("target_month")
@@ -1485,13 +1480,9 @@ def credit_rating_preview():
 def credit_rating_trigger():
     """Manual trigger for the monthly cron. Admin-only. Same gating as
     weekly_memo/trigger."""
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     as_of_str = body.get("as_of")
@@ -1597,13 +1588,9 @@ def dividend_income_trigger():
     """Manual trigger for the monthly dividend cron. Admin-only
     (DEV_LOGIN_SECRET + X-Admin-Secret header — same pattern as the
     weekly_memo/trigger)."""
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     target_str = body.get("target_month")
@@ -1705,13 +1692,9 @@ def monthly_finance_download_latest():
 @api_auth
 def monthly_finance_trigger():
     """Manual trigger for the monthly finance cron. Admin-only."""
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     target_str = body.get("target_month")
@@ -1825,13 +1808,9 @@ def risk_board_trigger():
     Default: "monthly". `vix_spike` bypasses the threshold check and
     fires a deck to every Premium user (for QA).
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     trigger = (body.get("trigger") or "monthly").strip().lower()
@@ -1962,13 +1941,9 @@ def portfolio_segment_trigger():
     window. Defaults to today (which the `_quarter_bounds` helper maps
     to whichever quarter just closed).
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     qe_str = body.get("quarter_end")
@@ -2130,13 +2105,9 @@ def capital_allocation_reminder_trigger():
     Note: this ONLY sends reminder emails. It never runs calculations
     autonomously — that's deliberate for the legal posture.
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     try:
         summary = CapitalAllocationService().send_quarterly_reminder()
@@ -2226,13 +2197,9 @@ def insider_mirror_download_latest():
 @api_auth
 def insider_mirror_trigger():
     """Admin-only manual trigger for the weekly insider mirror cron."""
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     anchor_str = body.get("anchor")
@@ -2358,13 +2325,9 @@ def year_end_letter_trigger():
 
     Body (optional): { "target_year": 2026 }.
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     target_year = body.get("target_year")
@@ -2479,13 +2442,9 @@ def quarterly_self_report_trigger():
 
     Body (optional): { "quarter_end": "2026-03-31" }.
     """
-    dev_secret = os.environ.get("DEV_LOGIN_SECRET")
-    if not dev_secret:
-        return jsonify({"error": "Not found"}), 404
-
-    provided = request.headers.get("X-Admin-Secret", "")
-    if provided != dev_secret:
-        return jsonify({"error": "Admin only"}), 403
+    err = _check_cron_admin_secret()
+    if err:
+        return err
 
     body = request.get_json(silent=True) or {}
     qe_str = body.get("quarter_end")
