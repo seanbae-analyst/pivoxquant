@@ -78,7 +78,7 @@
         <dt>Status</dt>
         <dd>
           <span class="pq-pdf-badge {{ v3.status_tone | default('moderate') }}">
-            {{ v3.status_label | default('AMBER') }}
+            {{ v3.status_label | default('관찰') }}
           </span>
           &nbsp;{{ v3.status_text | default('한도 점검 결과 확인.') }}
         </dd>
@@ -135,7 +135,7 @@
         <div class="pq-pdf-limit-val">{{ L.value_label | default('—') }}</div>
         <div class="pq-pdf-limit-status">
           <span class="pq-pdf-badge {{ L.status_tone | default('low') }}">
-            {{ L.status_text | default('OK') }}
+            {{ L.status_text | default('정상') }}
           </span>
         </div>
       </div>
