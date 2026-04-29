@@ -369,6 +369,164 @@ def _macro_checklist() -> list[dict[str, Any]]:
     return checklist
 
 
+# ── portfolio value / YTD helpers (v3 PDF mapping) ───────────────────────────
+
+def _ticker_last_price(ticker: str) -> Optional[float]:
+    """Best-effort last-trade price. Re-uses the FMP cache + Alpaca fallback.
+
+    Order:
+      1. fmp_service.get_quote() — already has 30s TTL + sanity check
+      2. last close from price history
+      3. None → caller treats as missing-price (uses avg_cost proxy)
+    """
+    try:
+        import fmp_service as fmp  # type: ignore
+        q = fmp.get_quote(ticker)
+        if isinstance(q, dict):
+            for key in ("price", "last", "close", "previousClose"):
+                v = q.get(key)
+                if v is not None:
+                    try:
+                        fv = float(v)
+                        if fv > 0:
+                            return fv
+                    except (TypeError, ValueError):
+                        continue
+    except Exception as exc:
+        logger.debug("get_quote failed for %s: %s", ticker, exc)
+
+    hist = _safe_fetch_price_history(ticker, "1mo")
+    if hist is not None:
+        try:
+            closes = hist["Close"] if "Close" in hist else None
+            if closes is not None and len(closes) >= 1:
+                return float(closes.iloc[-1])
+        except Exception as exc:
+            logger.debug("history close fallback failed for %s: %s", ticker, exc)
+    return None
+
+
+def _is_kr_ticker(ticker: str) -> bool:
+    """Mirror of fmp_service._is_us_ticker — KR tickers end in .KS / .KQ."""
+    if not isinstance(ticker, str):
+        return False
+    return ticker.endswith(".KS") or ticker.endswith(".KQ")
+
+
+def _portfolio_value_usd(positions: list[Position]) -> Optional[float]:
+    """Sum (last_price × shares) across positions, USD-normalised.
+
+    KR positions use services.fx_service.get_rate() to convert to USD. If
+    last_price is unavailable we fall back to avg_cost so the headline still
+    reflects scale (clearly labelled in template metadata if needed).
+
+    Returns None when total is zero or positions list is empty.
+    """
+    if not positions:
+        return None
+    try:
+        from services import fx_service
+        krw_per_usd = fx_service.get_rate() or 1300.0
+    except Exception:
+        krw_per_usd = 1300.0
+    total_usd = 0.0
+    for p in positions:
+        try:
+            shares = float(p.shares or 0)
+            if shares <= 0:
+                continue
+            price = _ticker_last_price(p.ticker) or float(p.avg_cost or 0)
+            if price <= 0:
+                continue
+            mv = price * shares
+            if _is_kr_ticker(p.ticker) and krw_per_usd > 0:
+                mv = mv / krw_per_usd
+            total_usd += mv
+        except Exception as exc:
+            logger.debug("position value calc failed for %s: %s", p.ticker, exc)
+            continue
+    return round(total_usd, 2) if total_usd > 0 else None
+
+
+def _ytd_return_for_ticker(ticker: str) -> Optional[float]:
+    """% return from first trading day of the calendar year → latest close.
+
+    Pulls 1y history (covers the full YTD window even early in the year)
+    and takes the first close >= Jan 1 vs the most-recent close.
+    """
+    hist = _safe_fetch_price_history(ticker, "1y")
+    if hist is None:
+        return None
+    try:
+        closes = hist["Close"] if "Close" in hist else None
+        if closes is None or len(closes) < 2:
+            return None
+        year_start = date(date.today().year, 1, 1)
+        # Index might be DatetimeIndex or RangeIndex — handle both.
+        idx = closes.index
+        try:
+            mask = [d.date() >= year_start for d in idx]
+            ytd_closes = closes[mask]
+        except Exception:
+            # RangeIndex — best-effort: take last ~252 bars (1y) and use first.
+            ytd_closes = closes.tail(252)
+        if len(ytd_closes) < 2:
+            return None
+        first = float(ytd_closes.iloc[0])
+        last = float(ytd_closes.iloc[-1])
+        if first <= 0:
+            return None
+        return round((last / first - 1) * 100, 2)
+    except Exception as exc:
+        logger.debug("YTD return calc failed for %s: %s", ticker, exc)
+        return None
+
+
+def _portfolio_ytd_return(positions: list[Position]) -> Optional[float]:
+    """Equal-weighted YTD return across positions with available history.
+
+    Equal-weight is consistent with the weekly_return_pct calc in
+    generate_for_user() — keeps the two headline numbers comparable.
+    """
+    if not positions:
+        return None
+    rets: list[float] = []
+    for p in positions:
+        r = _ytd_return_for_ticker(p.ticker)
+        if r is not None:
+            rets.append(r)
+    if not rets:
+        return None
+    return round(sum(rets) / len(rets), 2)
+
+
+def _portfolio_sortino(positions: list[Position]) -> Optional[float]:
+    """Annualised Sortino ratio for the equal-weighted equity curve.
+
+    Re-uses risk_models.SortinoByPosition for consistency with the Risk
+    Dashboard. Returns None on insufficient data — caller hides the field.
+    """
+    try:
+        import numpy as np  # type: ignore  # noqa: F401  # gate for numpy presence
+    except Exception:
+        return None
+    built = _build_returns_matrix(positions, lookback_days=90)
+    if built is None:
+        return None
+    returns_matrix, weights, _tickers, _ohlc, _pv = built
+    try:
+        port_returns = (returns_matrix @ weights).tolist()
+        from risk_models import SortinoByPosition
+        out = SortinoByPosition.calculate(port_returns)
+        sr = out.get("sortino")
+        if sr is None:
+            return None
+        return round(float(sr), 2)
+    except Exception as exc:
+        logger.debug("Sortino calc failed: %s", exc)
+        return None
+
+
 def _risk_notes(positions: list[Position],
                 sector_alloc: dict[str, float],
                 top_down: list[dict]) -> list[str]:
@@ -831,17 +989,19 @@ class WeeklyMemoService:
           week_tag           ← "WK-{year}-{week_number}"
           portfolio_return   ← formatted weekly_return_pct, e.g. "+2.4%"
           benchmark_return   ← formatted "vs S&P {benchmark_pct}"
-          portfolio_value    ← placeholder "—" (TODO: positions × last_price)
-          portfolio_delta    ← placeholder ""  (TODO)
-          ytd_return         ← placeholder "—"  (TODO)
-          ytd_detail         ← placeholder ""   (TODO)
-          three_checks       ← AI-generated weekly observations (placeholder
-                                copy until the AI generation sprint lands).
-          trajectory         ← daily-return path (placeholder rebuild from
-                                weekly_return_pct until 5-day series surfaces
-                                in generate_for_user).
-          decision           ← AI-generated next-week observation (placeholder).
-          memo_to_self       ← AI-generated memo text (placeholder).
+          portfolio_value    ← positions × last_price, USD-normalised ($X,XXX)
+          portfolio_delta    ← weekly_return_pct × portfolio_value approx
+          ytd_return         ← equal-weighted YTD returns across positions
+          ytd_detail         ← "Sortino X.XX" via risk_models.SortinoByPosition
+          three_checks       ← AI-generated 3 weekly observations
+          trajectory         ← daily-return path (rebuilt from weekly_return_pct)
+          decision           ← AI-generated next-week single observation
+          memo_to_self       ← AI-generated next-week review notes
+
+        AI generation runs in a single Claude Haiku call (cost-controlled —
+        ~1 call per Pro user per Sunday). Every output is run through
+        legal_filter.safe_scrub + detect_prohibited; on filter rejection or
+        any exception the field falls back to a neutral placeholder.
 
         Every placeholder is descriptive — no buy/sell/추천 verbs (자본시장법).
         """
@@ -864,8 +1024,132 @@ class WeeklyMemoService:
         # ── trajectory path (5 daily returns, rebased) ──────────────────────
         trajectory = self._build_trajectory(wr, bm)
 
-        # ── three checks (AI placeholder until generation sprint) ───────────
-        three_checks = [
+        # ── portfolio value / delta / YTD (real data) ───────────────────────
+        portfolio_value_str, portfolio_delta_str = self._compute_portfolio_value(
+            data, wr,
+        )
+        ytd_return_str, ytd_detail_str, ytd_tone = self._compute_ytd_metrics(data)
+
+        # ── AI generation: three_checks + decision + memo_to_self ───────────
+        ai_block = self._generate_ai_v3_block(data)
+        three_checks = ai_block["three_checks"]
+        decision = ai_block["decision"]
+        memo_to_self = ai_block["memo_to_self"]
+
+        # ── week tag ────────────────────────────────────────────────────────
+        week_number = data.get("week_number") or 0
+        period_end = str(data.get("period_end") or "")
+        try:
+            year = period_end[:4] if period_end else ""
+            week_tag = f"WK-{year}-{week_number:02d}" if year else f"WK-{week_number:02d}"
+        except Exception:
+            week_tag = f"WK-{week_number}"
+
+        return {
+            "as_of":              period_end or "—",
+            "week_tag":           week_tag,
+            "portfolio_return":   portfolio_return,
+            "portfolio_return_tone": portfolio_return_tone,
+            "benchmark_return":   benchmark_return,
+            "portfolio_value":    portfolio_value_str,
+            "portfolio_delta":    portfolio_delta_str,
+            "ytd_return":         ytd_return_str,
+            "ytd_detail":         ytd_detail_str,
+            "ytd_tone":           ytd_tone,
+            "three_checks":       three_checks,
+            "trajectory":         trajectory,
+            "decision":           decision,
+            "memo_to_self":       memo_to_self,
+        }
+
+    # ── v3 helpers — real data computation ──────────────────────────────────
+
+    def _compute_portfolio_value(self, data: dict[str, Any],
+                                 weekly_return_pct: Optional[float]
+                                 ) -> tuple[str, str]:
+        """Return (portfolio_value_str, portfolio_delta_str) for the v3 KPI.
+
+        portfolio_value: USD-normalised total market value, formatted as
+                         "$1,234" or "$12,345". KR positions converted via fx.
+        portfolio_delta: 7-day delta approximation = wr * value (no snapshot
+                         history infra yet — clearly an approximation rather
+                         than a fabricated number).
+
+        Returns ("—", "") on missing data — caller still ships, template
+        falls through to its default("—") filter.
+        """
+        user_id = data.get("user_id")
+        if not user_id:
+            return "—", ""
+        try:
+            positions = Position.query.filter_by(user_id=user_id).all()
+        except Exception as exc:
+            logger.debug("portfolio_value: positions query failed: %s", exc)
+            return "—", ""
+
+        value = _portfolio_value_usd(positions)
+        if value is None or value <= 0:
+            return "—", ""
+
+        # Format: $1,234 (no cents — the headline KPI is scale, not precision).
+        if value >= 1_000_000:
+            value_str = f"${value/1_000_000:.2f}M"
+        elif value >= 10_000:
+            value_str = f"${value:,.0f}"
+        else:
+            value_str = f"${value:,.2f}"
+
+        # 7-day delta approximation. Without a snapshot table, we use
+        # weekly_return × current_value as the best descriptive proxy.
+        if weekly_return_pct is None:
+            delta_str = ""
+        else:
+            delta_usd = value * weekly_return_pct / 100.0
+            sign = "+" if delta_usd >= 0 else "−"
+            abs_delta = abs(delta_usd)
+            if abs_delta >= 10_000:
+                delta_str = f"{sign}${abs_delta:,.0f} 7d"
+            else:
+                delta_str = f"{sign}${abs_delta:,.2f} 7d"
+
+        return value_str, delta_str
+
+    def _compute_ytd_metrics(self, data: dict[str, Any]) -> tuple[str, str, str]:
+        """Return (ytd_return_str, ytd_detail_str, ytd_tone) for the v3 KPI.
+
+        ytd_return_str: "+12.4%" / "−3.1%" / "—"
+        ytd_detail_str: "Sortino 1.42" or "" when insufficient history
+        ytd_tone:       "pos" / "neg" / "neutral"
+        """
+        user_id = data.get("user_id")
+        if not user_id:
+            return "—", "", "neutral"
+        try:
+            positions = Position.query.filter_by(user_id=user_id).all()
+        except Exception as exc:
+            logger.debug("ytd: positions query failed: %s", exc)
+            return "—", "", "neutral"
+
+        ytd = _portfolio_ytd_return(positions)
+        if ytd is None:
+            ytd_return_str = "—"
+            ytd_tone = "neutral"
+        else:
+            ytd_return_str = f"{ytd:+.1f}%"
+            ytd_tone = "pos" if ytd >= 0 else "neg"
+
+        sortino = _portfolio_sortino(positions)
+        if sortino is None:
+            ytd_detail_str = ""
+        else:
+            ytd_detail_str = f"Sortino {sortino:.2f}"
+
+        return ytd_return_str, ytd_detail_str, ytd_tone
+
+    # ── v3 helpers — AI generation (three_checks / decision / memo) ─────────
+
+    def _placeholder_three_checks(self) -> list[dict[str, Any]]:
+        return [
             {
                 "body": "이번 주 점검 1 — 포트폴리오 섹터별 비중 변동 관찰",
                 "meta": "—",
@@ -883,33 +1167,238 @@ class WeeklyMemoService:
             },
         ]
 
-        # ── week tag ────────────────────────────────────────────────────────
-        week_number = data.get("week_number") or 0
-        period_end = str(data.get("period_end") or "")
+    _PLACEHOLDER_DECISION = (
+        "이번 주 점검 항목을 검토하세요. "
+        "다음 주 관찰을 위해 시장 조건과 포트폴리오 변동을 함께 살피세요."
+    )
+    _PLACEHOLDER_MEMO = (
+        "다음 주 검토 사항을 기록하세요. "
+        "관찰한 점, 주의할 부분, 확인이 필요한 데이터를 정리합니다."
+    )
+
+    def _ai_v3_fallback(self) -> dict[str, Any]:
+        return {
+            "three_checks": self._placeholder_three_checks(),
+            "decision":     self._PLACEHOLDER_DECISION,
+            "memo_to_self": self._PLACEHOLDER_MEMO,
+        }
+
+    def _build_ai_v3_prompt(self, data: dict[str, Any]) -> str:
+        """Compose the user-side prompt for the single Claude Haiku call.
+
+        Keeps the input compact — only fields that actually inform the three
+        outputs. Earnings / sector / risk-kpi summaries are pre-formatted to
+        stop the model fabricating numbers.
+        """
+        top_up = data.get("top_movers_up") or []
+        top_down = data.get("top_movers_down") or []
+        sector_changes = data.get("sector_changes") or []
+        sector_alloc = data.get("sector_alloc") or {}
+        macro = data.get("macro_checklist") or []
+        earnings = data.get("earnings_calendar") or []
+        risk_kpi = data.get("risk_kpi") or {}
+        risk_notes = data.get("risk_notes") or []
+
+        def _fmt_movers(rows: list[dict], limit: int = 3) -> str:
+            if not rows:
+                return "(none)"
+            return ", ".join(
+                f"{r.get('ticker','?')} {r.get('weekly_return_pct',0):+.1f}%"
+                for r in rows[:limit]
+            )
+
+        def _fmt_sector_changes(rows: list[dict], limit: int = 3) -> str:
+            if not rows:
+                return "(none)"
+            return ", ".join(
+                f"{r.get('sector','?')} {r.get('delta_pp',0):+.1f}pp"
+                for r in rows[:limit]
+            )
+
+        def _fmt_sector_alloc(d: dict[str, float], limit: int = 3) -> str:
+            if not d:
+                return "(none)"
+            items = list(d.items())[:limit]
+            return ", ".join(f"{k} {v:.0f}%" for k, v in items)
+
+        def _fmt_earnings(rows: list[dict], limit: int = 5) -> str:
+            if not rows:
+                return "(none)"
+            return ", ".join(
+                f"{r.get('ticker','?')} {r.get('date','')}"
+                for r in rows[:limit]
+            )
+
+        def _fmt_macro(rows: list[dict], limit: int = 3) -> str:
+            if not rows:
+                return "(none)"
+            return ", ".join(
+                f"{r.get('label', r.get('series_id','?'))} "
+                f"{r.get('value','?')}{r.get('units','')}"
+                for r in rows[:limit]
+            )
+
+        def _fmt_risk_kpi(d: dict[str, Any]) -> str:
+            if not d:
+                return "(none)"
+            parts = []
+            for k in ("var_1d_pct", "es_1d_pct", "mdd_pct", "tail_ratio"):
+                if k in d:
+                    parts.append(f"{k}={d[k]}")
+            return ", ".join(parts) or "(none)"
+
+        return (
+            "Generate 3 short Korean observations for a Weekly Memo PDF.\n"
+            "Tone: observational, descriptive only. NO advisory verbs.\n"
+            "Forbidden words: 추천/조언/매수/매도/사세요/파세요/목표가/유망/"
+            "buy/sell/recommend/advise/target.\n"
+            "Use only past-tense or present observation verbs (관찰됩니다, "
+            "기록되었습니다, 변동되었습니다).\n\n"
+            "Data:\n"
+            f"- top up: {_fmt_movers(top_up)}\n"
+            f"- top down: {_fmt_movers(top_down)}\n"
+            f"- sector changes: {_fmt_sector_changes(sector_changes)}\n"
+            f"- sector alloc: {_fmt_sector_alloc(sector_alloc)}\n"
+            f"- macro: {_fmt_macro(macro)}\n"
+            f"- earnings next week: {_fmt_earnings(earnings)}\n"
+            f"- risk kpi: {_fmt_risk_kpi(risk_kpi)}\n"
+            f"- risk notes: {' / '.join(risk_notes[:3]) or '(none)'}\n\n"
+            "Respond with EXACTLY this JSON shape (no markdown fence, no "
+            "extra prose):\n"
+            "{\n"
+            '  "three_checks": [\n'
+            '    {"body": "한국어 한 줄, 35자 이내, 관찰 톤", '
+            '"meta": "+X.X% 또는 X.Xpp 또는 — 형식의 짧은 메타"},\n'
+            '    {"body": "...", "meta": "..."},\n'
+            '    {"body": "...", "meta": "..."}\n'
+            "  ],\n"
+            '  "decision": "다음 주 단 하나의 관찰 포인트를 한국어 1-2문장으로. '
+            "관찰적/서술적 표현만 사용. 추천 어휘 금지.\",\n"
+            '  "memo_to_self": "다음 주 검토 사항 3개를 한국어로 (1) ~ (3) '
+            "번호와 함께 한 문장씩, 명령형 회피, 관찰 톤. 한 줄로 합쳐서 출력.\"\n"
+            "}\n"
+        )
+
+    def _generate_ai_v3_block(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Single Claude Haiku call → {three_checks, decision, memo_to_self}.
+
+        Failure paths (each returns the placeholder fallback for that field):
+          - ANTHROPIC_API_KEY missing            → full fallback
+          - daily AI budget exhausted            → full fallback
+          - any exception during call/parse      → full fallback
+          - JSON parse failure                   → full fallback
+          - any field hits forbidden vocab       → that field → placeholder
+        """
+        if not _ai_budget_available():
+            logger.info("weekly_memo: AI budget exhausted — using placeholders")
+            return self._ai_v3_fallback()
+
         try:
-            year = period_end[:4] if period_end else ""
-            week_tag = f"WK-{year}-{week_number:02d}" if year else f"WK-{week_number:02d}"
+            from ai_service import AIService  # late import — test isolation
+            svc = AIService()
+            if not svc.available or svc.client is None:
+                return self._ai_v3_fallback()
+        except Exception as exc:
+            logger.debug("AIService import/init failed: %s", exc)
+            return self._ai_v3_fallback()
+
+        try:
+            from ai_service import MODEL, SYSTEM_PROMPT
         except Exception:
-            week_tag = f"WK-{week_number}"
+            MODEL = "claude-haiku-4-5-20251001"
+            SYSTEM_PROMPT = ""
+
+        prompt = self._build_ai_v3_prompt(data)
+
+        try:
+            resp = svc.client.messages.create(
+                model=MODEL,
+                max_tokens=900,
+                system=SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            _ai_budget_consume()
+            text = resp.content[0].text if resp.content else ""
+        except Exception as exc:
+            logger.warning("weekly_memo AI call failed: %s", exc)
+            return self._ai_v3_fallback()
+
+        return self._parse_ai_v3_response(text)
+
+    def _parse_ai_v3_response(self, text: str) -> dict[str, Any]:
+        """Parse Claude JSON output → validated v3 fields with legal scrubbing.
+
+        Per-field fallback: if any field fails JSON parsing, scrub validation,
+        or the prohibited-vocab check, that single field reverts to its
+        placeholder. The other fields survive.
+        """
+        import json
+        import re
+
+        if not text or not isinstance(text, str):
+            return self._ai_v3_fallback()
+
+        # Strip optional markdown fences the model may add despite instructions.
+        cleaned = text.strip()
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+            cleaned = re.sub(r"\s*```$", "", cleaned)
+
+        try:
+            payload = json.loads(cleaned)
+        except Exception as exc:
+            logger.warning("weekly_memo AI JSON parse failed: %s", exc)
+            return self._ai_v3_fallback()
+
+        from services.legal_filter import detect_prohibited
+
+        def _safe_field(text_in: Any, fallback: str) -> str:
+            if not isinstance(text_in, str) or not text_in.strip():
+                return fallback
+            scrubbed = safe_scrub(text_in.strip(),
+                                  context="weekly_memo.v3.ai")
+            if not scrubbed:
+                return fallback
+            # Hard reject if still has a structural violation post-scrub.
+            if detect_prohibited(scrubbed):
+                logger.warning(
+                    "weekly_memo AI field rejected by legal filter (post-scrub)"
+                )
+                return fallback
+            return scrubbed
+
+        # ── three_checks (list of {body, meta}) ─────────────────────────────
+        raw_checks = payload.get("three_checks")
+        out_checks: list[dict[str, Any]] = []
+        if isinstance(raw_checks, list):
+            for item in raw_checks[:3]:
+                if not isinstance(item, dict):
+                    continue
+                body_in = item.get("body")
+                meta_in = item.get("meta") or "—"
+                # body is required, meta best-effort
+                body = _safe_field(body_in, "")
+                if not body:
+                    continue
+                meta = _safe_field(str(meta_in), "—")
+                out_checks.append({
+                    "body":    body,
+                    "meta":    meta or "—",
+                    "checked": True,
+                })
+        if len(out_checks) < 3:
+            # Pad with placeholders so the template always has 3 rows.
+            placeholders = self._placeholder_three_checks()
+            out_checks.extend(placeholders[len(out_checks):])
+        out_checks = out_checks[:3]
+
+        decision = _safe_field(payload.get("decision"), self._PLACEHOLDER_DECISION)
+        memo = _safe_field(payload.get("memo_to_self"), self._PLACEHOLDER_MEMO)
 
         return {
-            "as_of":              period_end or "—",
-            "week_tag":           week_tag,
-            "portfolio_return":   portfolio_return,
-            "portfolio_return_tone": portfolio_return_tone,
-            "benchmark_return":   benchmark_return,
-            "portfolio_value":    "—",
-            "portfolio_delta":    "",
-            "ytd_return":         "—",
-            "ytd_detail":         "",
-            "ytd_tone":           "neutral",
-            "three_checks":       three_checks,
-            "trajectory":         trajectory,
-            "decision":           "이번 주 점검 항목을 검토하세요. "
-                                  "다음 주 단 하나의 결정을 위해 시장 조건과 "
-                                  "포트폴리오 변동을 함께 살피세요.",
-            "memo_to_self":       "다음 주 검토 사항을 기록하세요. "
-                                  "관찰한 점, 주의할 부분, 확인이 필요한 데이터를 정리합니다.",
+            "three_checks": out_checks,
+            "decision":     decision,
+            "memo_to_self": memo,
         }
 
     @staticmethod

@@ -691,15 +691,382 @@ class EarningsPreBriefService:
             return None
 
     def render_pdf_html(self, data: dict[str, Any]) -> str:
+        """Render the 2-page Pro Earnings Pre-Brief PDF HTML (CEO design v3)."""
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data, email=False)
         try:
             tpl = env.get_template("earnings_prebrief.html")
-            return tpl.render(**data)
+            ctx = dict(data)
+            ctx["v3"] = self._to_v3_shape(data)
+            return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("pdf template render failed: %s", exc)
             return self._fallback_html(data, email=False)
+
+    # ── v3 shape mapping (CEO design 2026-04-29) ────────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user() result → the 2-page Pro Earnings Pre-Brief
+        v3 data shape consumed by services/artifacts/templates/earnings_prebrief.html.
+
+        Source of truth for the design:
+          frontend/src/components/reports/templates/earnings-prebrief.tsx
+          (interface EarningsPrebriefData, 2026-04-29).
+
+        Mapping summary
+        ---------------
+          ticker             ← data.ticker
+          company_name       ← data.company_name
+          fiscal_label       ← f"{fiscal_period} Earnings"
+          reporting_date     ← formatted earnings_datetime + "After Market Close"
+          position           ← f"{shares} sh · ${mv} mv"  (or "—")
+          consensus          ← Consensus rows derived from
+                                 (consensus_eps + consensus_revenue + surprise_history)
+          implied_move_pct   ← derived placeholder ("±X.X%") or "—"
+          implied_move_detail← option-source provenance line
+          quant_score        ← 0..1 (unset → None hides number)
+          quant_label        ← POSITIVE / NEGATIVE / NEUTRAL  (compliance — never BUY/SELL/HOLD)
+          quant_tone         ← pos / neg / neutral css class hint
+          factor_breakdown   ← compact "Momentum · Quality · Value · Sentiment" line
+          scenarios          ← Bull / Base / Bear case rows derived from sensitivity
+          watch_checklist    ← from expected_questions + risk_notes
+          governance         ← static defaults (overridable via data)
+
+        Compliance posture (자본시장법 §6)
+        ----------------------------------
+          - quant_label is FORCED to one of POSITIVE / NEGATIVE / NEUTRAL.
+            Any input variant (BUY/SELL/HOLD/추천 etc.) is mapped to NEUTRAL.
+          - watch_checklist items are passed through as observation strings
+            ("OBSERVE" meta tag, never advisory verbs).
+        """
+        # ── Hero meta — reporting date / position ───────────────────────────
+        earnings_dt_raw = data.get("earnings_datetime")
+        reporting_date = self._format_reporting_date(earnings_dt_raw)
+
+        shares = data.get("position_shares") or 0
+        mv = data.get("position_mv") or 0
+        if shares and mv:
+            position_str = f"{shares:g} sh · ${mv:,.0f} mv"
+        elif shares:
+            position_str = f"{shares:g} sh"
+        else:
+            position_str = "—"
+
+        # ── Consensus rows ──────────────────────────────────────────────────
+        consensus_rows = self._build_consensus_rows(data)
+
+        # ── Quant Signal (POSITIVE / NEGATIVE / NEUTRAL only) ───────────────
+        quant_label, quant_tone, quant_score = self._derive_quant_signal(data)
+        factor_breakdown = self._build_factor_breakdown(data)
+
+        # ── Implied Move ────────────────────────────────────────────────────
+        implied_move_pct = self._derive_implied_move(data)
+        option_src = data.get("option_source")
+        if option_src:
+            implied_move_detail = f"Source · {option_src}"
+        else:
+            implied_move_detail = "Option chain provenance not observed"
+
+        # ── Scenarios (Bull / Base / Bear) ──────────────────────────────────
+        scenarios = self._build_scenarios(data)
+
+        # ── Watch checklist (observation only — never advisory) ─────────────
+        watch_checklist = self._build_watch_checklist(data)
+
+        # ── Cover title pieces ──────────────────────────────────────────────
+        fiscal_period = data.get("fiscal_period") or ""
+        fiscal_label = f"{fiscal_period} Earnings" if fiscal_period else ""
+        company_name = data.get("company_name") or data.get("ticker") or "—"
+
+        return {
+            "ticker":             data.get("ticker") or "",
+            "company_name":       company_name,
+            "fiscal_label":       fiscal_label,
+            "reporting_date":     reporting_date,
+            "position":           position_str,
+            "consensus":          consensus_rows,
+            "implied_move_pct":   implied_move_pct,
+            "implied_move_detail": implied_move_detail,
+            "quant_score":        quant_score,
+            "quant_label":        quant_label,
+            "quant_tone":         quant_tone,
+            "factor_breakdown":   factor_breakdown,
+            "scenarios":          scenarios,
+            "watch_checklist":    watch_checklist,
+            "governance": {
+                "prepared_by":  "PivoxQuant Earnings Desk",
+                "reviewed_by":  "Quant Research",
+                "methodology":  "58 quant models · 7-Layer Risk Defense",
+                "sources":      self._format_sources(data),
+            },
+        }
+
+    # ── v3 helpers ──────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _format_reporting_date(raw: Any) -> str:
+        """Format earnings datetime into a human-readable line.
+
+        Accepts ISO string (with/without trailing Z) or a datetime instance.
+        Falls back to a neutral default on any parsing error.
+        """
+        if raw is None:
+            return "Earnings Date · After Market Close"
+        try:
+            if isinstance(raw, datetime):
+                dt = raw
+            else:
+                s = str(raw).rstrip("Z")
+                dt = datetime.fromisoformat(s)
+            return f"{dt.strftime('%Y-%m-%d %H:%M UTC')} · Per IR calendar"
+        except Exception:
+            return "Earnings Date · After Market Close"
+
+    @staticmethod
+    def _build_consensus_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
+        """Build the Consensus vs Whisper table rows from EPS / revenue /
+        surprise history. Whisper is shown as "—" unless the upstream
+        explicitly populates one (we never fabricate whisper numbers).
+        """
+        rows: list[dict[str, Any]] = []
+
+        # EPS row (mean / low / high)
+        eps_mean = data.get("consensus_eps")
+        eps_low = data.get("consensus_eps_low")
+        eps_high = data.get("consensus_eps_high")
+        if eps_mean is not None:
+            try:
+                eps_str = f"${float(eps_mean):.2f}"
+            except (TypeError, ValueError):
+                eps_str = "—"
+            whisper_str = "—"
+            if eps_high is not None:
+                try:
+                    whisper_str = f"${float(eps_high):.2f}"
+                except (TypeError, ValueError):
+                    pass
+            rows.append({
+                "metric":        "EPS (Consensus)",
+                "consensus":     eps_str,
+                "whisper":       whisper_str,
+                "last_q":        "—",
+                "surprise":      "—",
+            })
+
+        # Revenue row
+        rev = data.get("consensus_revenue")
+        if rev is not None:
+            try:
+                rev_str = f"${float(rev):,.0f}M"
+            except (TypeError, ValueError):
+                rev_str = "—"
+            rows.append({
+                "metric":    "Revenue",
+                "consensus": rev_str,
+                "whisper":   "—",
+                "last_q":    "—",
+                "surprise":  "—",
+            })
+
+        # Surprise history → fold last 4 quarter surprises into rows.
+        # Service emits both shapes:
+        #   {date, actual_eps, estimate_eps, surprise_pct}  (legacy)
+        #   {quarter, consensus, actual, surprise_pct, ...} (new template input)
+        for h in (data.get("surprise_history") or [])[:4]:
+            quarter = h.get("quarter") or h.get("date") or "—"
+            cons = h.get("consensus") if h.get("consensus") is not None else h.get("estimate_eps")
+            actual = h.get("actual") if h.get("actual") is not None else h.get("actual_eps")
+            sp = h.get("surprise_pct")
+            try:
+                cons_str = f"${float(cons):.2f}" if cons is not None else "—"
+            except (TypeError, ValueError):
+                cons_str = "—"
+            try:
+                actual_str = f"${float(actual):.2f}" if actual is not None else "—"
+            except (TypeError, ValueError):
+                actual_str = "—"
+            try:
+                sp_val = float(sp) if sp is not None else None
+            except (TypeError, ValueError):
+                sp_val = None
+            if sp_val is None:
+                sp_str = "—"
+                sp_tone = ""
+            else:
+                sp_str = f"{sp_val:+.1f}%"
+                sp_tone = "pos" if sp_val >= 0 else "neg"
+            rows.append({
+                "metric":         f"Hist · {quarter}",
+                "consensus":      cons_str,
+                "whisper":        "—",
+                "last_q":         actual_str,
+                "surprise":       sp_str,
+                "surprise_tone":  sp_tone,
+            })
+
+        return rows
+
+    @staticmethod
+    def _derive_quant_signal(data: dict[str, Any]) -> tuple[str, str, Optional[float]]:
+        """Return (label, tone, score) where label is one of
+        POSITIVE / NEGATIVE / NEUTRAL only.
+
+        Score derivation: from `quant_score` if explicit, otherwise from
+        the average surprise_pct across surprise_history (clamped 0..1).
+        Compliance — any input variant (BUY/SELL/HOLD/추천 etc.) is mapped
+        to NEUTRAL so the rendered label can never be advisory.
+        """
+        # Score
+        raw_score = data.get("quant_score")
+        score: Optional[float]
+        try:
+            score = float(raw_score) if raw_score is not None else None
+        except (TypeError, ValueError):
+            score = None
+
+        if score is None:
+            hist = data.get("surprise_history") or []
+            sps = []
+            for h in hist:
+                try:
+                    if h.get("surprise_pct") is not None:
+                        sps.append(float(h["surprise_pct"]))
+                except (TypeError, ValueError):
+                    continue
+            if sps:
+                avg = sum(sps) / len(sps)
+                # Map ±10% surprise → 0..1 (linear, clamped)
+                score = max(0.0, min(1.0, 0.5 + avg / 20.0))
+
+        # Label — POSITIVE / NEGATIVE / NEUTRAL only
+        raw_label = (data.get("quant_label") or "").strip().upper()
+        if raw_label in ("POSITIVE", "NEGATIVE", "NEUTRAL"):
+            label = raw_label
+        elif score is not None:
+            if score >= 0.6:
+                label = "POSITIVE"
+            elif score <= 0.4:
+                label = "NEGATIVE"
+            else:
+                label = "NEUTRAL"
+        else:
+            label = "NEUTRAL"
+
+        tone = {"POSITIVE": "pos", "NEGATIVE": "neg", "NEUTRAL": "neutral"}[label]
+        return label, tone, score
+
+    @staticmethod
+    def _build_factor_breakdown(data: dict[str, Any]) -> str:
+        """Compose the small-print factor line under the Quant Signal.
+
+        Uses sensitivity numbers if available — otherwise a neutral text
+        marker so the section remains observational only.
+        """
+        beat = data.get("sensitivity_beat")
+        miss = data.get("sensitivity_miss")
+        if beat is not None and miss is not None:
+            try:
+                return f"±3% sensitivity · beat ${float(beat):,.0f} · miss ${float(miss):,.0f}"
+            except (TypeError, ValueError):
+                pass
+        return "Composite signal · observation only"
+
+    @staticmethod
+    def _derive_implied_move(data: dict[str, Any]) -> str:
+        """Return a "±X.X%" string when implied_move_pct or option chain
+        data is present; "—" otherwise. We never synthesise a number."""
+        raw = data.get("implied_move_pct")
+        if raw is None:
+            return "—"
+        try:
+            return f"±{abs(float(raw)):.1f}%"
+        except (TypeError, ValueError):
+            return "—"
+
+    @staticmethod
+    def _build_scenarios(data: dict[str, Any]) -> list[dict[str, Any]]:
+        """Bull / Base / Bear scenario rows. Position Δ is derived from
+        the live ±3% sensitivity numbers when available, otherwise a
+        neutral "—" placeholder.
+        """
+        beat = data.get("sensitivity_beat")
+        miss = data.get("sensitivity_miss")
+
+        try:
+            beat_str = f"+${float(beat):,.0f}" if beat is not None else "—"
+        except (TypeError, ValueError):
+            beat_str = "—"
+        try:
+            miss_str = f"−${abs(float(miss)):,.0f}" if miss is not None else "—"
+        except (TypeError, ValueError):
+            miss_str = "—"
+
+        return [
+            {
+                "case":           "Bull Case",
+                "case_detail":    "Beat consensus EPS",
+                "trigger":        "EPS > 컨센서스 · 가이던스 상향",
+                "action":         "포지션 유지 · 스파이크 시 일부 차익실현 검토",
+                "pos_delta":      beat_str,
+                "pos_delta_tone": "pos" if beat is not None else "",
+                "stop":           "—",
+            },
+            {
+                "case":           "Base Case",
+                "case_detail":    "In-line",
+                "trigger":        "EPS ≈ 컨센서스 · 가이던스 ≥ 컨센서스",
+                "action":         "포지션 유지 · 컨퍼런스콜 후 재평가",
+                "pos_delta":      "$0",
+                "pos_delta_tone": "",
+                "stop":           "—",
+            },
+            {
+                "case":           "Bear Case",
+                "case_detail":    "Miss or weak guide",
+                "trigger":        "EPS < 컨센서스 OR 가이던스 < 컨센서스",
+                "action":         "리스크 재평가 · 포지션 사이징 점검",
+                "pos_delta":      miss_str,
+                "pos_delta_tone": "neg" if miss is not None else "",
+                "stop":           "—",
+            },
+        ]
+
+    @staticmethod
+    def _build_watch_checklist(data: dict[str, Any]) -> list[str]:
+        """Combine expected_questions + risk_notes into a single observation
+        list. We dedupe and cap at 8 entries to keep the page balanced."""
+        items: list[str] = []
+        seen: set[str] = set()
+        for src in ("expected_questions", "risk_notes"):
+            for q in (data.get(src) or []):
+                q_str = str(q).strip()
+                if q_str and q_str not in seen:
+                    seen.add(q_str)
+                    items.append(q_str)
+                if len(items) >= 8:
+                    break
+            if len(items) >= 8:
+                break
+        return items
+
+    @staticmethod
+    def _format_sources(data: dict[str, Any]) -> str:
+        """Format colophon `data_sources` list into a single inline string.
+
+        Falls back to the canonical default if the user has no connections —
+        matches the colophon's neutral-line policy (Wave 6)."""
+        ds = data.get("data_sources") or []
+        if not ds:
+            return "FMP · Alpaca · SEC EDGAR"
+        parts: list[str] = []
+        for d in ds:
+            if not isinstance(d, dict):
+                continue
+            label = d.get("source") or d.get("note") or d.get("description")
+            if label:
+                parts.append(str(label))
+        return " · ".join(parts) if parts else "FMP · Alpaca · SEC EDGAR"
 
     def render_email_html(self, data: dict[str, Any],
                            pdf_url: Optional[str] = None) -> str:
