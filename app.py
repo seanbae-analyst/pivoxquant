@@ -236,7 +236,7 @@ def create_app():
 
     # Background scheduler — opt-in to avoid duplicate execution under
     # multi-worker gunicorn (each worker would otherwise spin up its own
-    # scheduler, causing morning_brief / refresh jobs to fire N times).
+    # scheduler, causing weekly_memo / refresh jobs to fire N times).
     # Default off. Set RUN_SCHEDULER=1 in exactly one process (e.g. a
     # dedicated worker dyno, or when Procfile is pinned to --workers 1).
     if os.environ.get("RUN_SCHEDULER", "0") == "1":
@@ -485,10 +485,10 @@ def _do_migrations():
         _add_column_if_missing("position_dd_checks", "risks_checked",      "BOOLEAN", default="0")
         _add_column_if_missing("position_dd_checks", "note",               "VARCHAR(500)")
 
-    # Morning briefs / portfolio shares / push subscriptions / signal_cache /
-    # watchlist — all their current columns are in the initial create_all
-    # snapshot. No post-creation additions observed. Declared here as a
-    # no-op safety net so future model additions auto-get a migration hook.
+    # Portfolio shares / push subscriptions / signal_cache / watchlist —
+    # all their current columns are in the initial create_all snapshot.
+    # No post-creation additions observed. Declared here as a no-op safety
+    # net so future model additions auto-get a migration hook.
 
     # Backfill FX rates
     from models import Position
@@ -556,20 +556,6 @@ def _init_scheduler(app):
                 except Exception as e:
                     logger.error(f"Scheduler failed {ticker}: {e}")
             logger.info(f"Scheduled refresh done — {len(tku)} tickers")
-
-    def _scheduled_morning_briefs():
-        """Generate personalised morning briefings for all onboarded users.
-
-        Fires at 06:00 Asia/Seoul daily. Each cycle is wrapped in an app
-        context because APScheduler jobs execute on their own thread.
-        """
-        from services.morning_brief_service import run_daily_briefs
-        with app.app_context():
-            try:
-                summary = run_daily_briefs()
-                logger.info(f"Morning brief scheduler run: {summary}")
-            except Exception as e:
-                logger.error(f"Morning brief scheduler failed: {e}")
 
     def _scheduled_weekly_memo():
         """Generate + email the weekly investor memo to Pro+ users.
@@ -971,15 +957,6 @@ def _init_scheduler(app):
 
     sched = BackgroundScheduler(timezone="UTC")
     sched.add_job(_scheduled_refresh, "interval", minutes=3, id="refresh")
-    sched.add_job(
-        _scheduled_morning_briefs,
-        trigger="cron",
-        hour=6, minute=0,
-        timezone="Asia/Seoul",
-        id="morning_brief_daily",
-        max_instances=1,
-        coalesce=True,
-    )
     # Sunday 08:00 KST — 주간 맥킨지 스타일 PDF 메모 (Pro+).
     sched.add_job(
         _scheduled_weekly_memo,
@@ -1259,12 +1236,10 @@ def _init_scheduler(app):
     )
 
     # ── Diagnostic — 2026-04-28 ────────────────────────────────────────────
-    # Tracks the suspected KST 15:00 firing for `morning_brief_daily`. Logs
-    # worker PID + every registered job's `next_run_time` (already converted
-    # to the job's own timezone by APScheduler) at scheduler-start time.
-    # Read these lines in Railway after the next dawn cycle to confirm
-    # whether the issue is (a) multi-worker race, (b) misfire grace catchup,
-    # or (c) something else. NOT a fix — instrumentation only.
+    # Logs worker PID + every registered job's `next_run_time` (already
+    # converted to the job's own timezone by APScheduler) at scheduler-start
+    # time. Useful for confirming cron registration in Railway logs.
+    # NOT a fix — instrumentation only.
     try:
         job_summary = [
             (j.id, j.next_run_time.isoformat() if j.next_run_time else None)

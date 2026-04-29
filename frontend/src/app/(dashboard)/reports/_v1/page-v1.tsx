@@ -50,7 +50,6 @@ interface CatalogEntry {
 
 const CATALOG: CatalogEntry[] = [
   { slug: "weekly_memo",           type: "weekly_memo",          title: "Weekly Memo",             cadence: "Every Sunday",   minTier: "free",    personas: ["all"] },
-  { slug: "morning_brief_plus",    type: "morning_brief",        title: "Morning Brief Plus",      cadence: "Every weekday",  minTier: "free",    personas: ["all"] },
   { slug: "brag_card",             type: "monthly_brag",         title: "Brag Card",               cadence: "Monthly",        minTier: "free",    personas: ["all"] },
   { slug: "earnings_prebrief",     type: "earnings_prebrief",    title: "Earnings Pre-Brief",      cadence: "Per event",      minTier: "pro",     personas: ["growth", "quant"] },
   { slug: "risk_board",            type: "risk_report",          title: "Risk Board",              cadence: "Weekly",         minTier: "pro",     personas: ["beginner", "balanced"] },

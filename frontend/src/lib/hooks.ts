@@ -15,8 +15,6 @@ import type {
   WatchlistResponse,
   WatchlistItem,
   AlertsResponse,
-  MorningBriefResponse,
-  MorningBriefArchiveResponse,
   GrowthScoreEntry,
   GrowthTodayResponse,
   GrowthWeeklyReport,
@@ -81,23 +79,11 @@ export function useAlerts() {
   });
 }
 
-/* ── Morning Brief ── */
-
-export function useMorningBrief() {
-  return useSWR<MorningBriefResponse>(
-    API.market.morningBriefToday,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000 * 10 },
-  );
-}
-
-export function useMorningBriefArchive() {
-  return useSWR<MorningBriefArchiveResponse>(
-    API.market.morningBriefArchive,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000 * 30 },
-  );
-}
+/* ── Morning Brief ── REMOVED 2026-04-29
+ * Backend Morning Brief service deprecated and deleted. Frontend hooks
+ * (useMorningBrief, useMorningBriefArchive) and types
+ * (MorningBriefResponse, MorningBriefArchiveResponse) removed in sync.
+ */
 
 /* ── Growth OS ── */
 
@@ -799,7 +785,7 @@ import type { Artifact } from "./types";
 export interface ArtifactStats {
   total: number;
   countYtd: number;
-  countMemos: number;       // morning_brief
+  countMemos: number;       // weekly_memo + legacy morning_brief
   countBriefs: number;      // earnings_prebrief
   countBragCards: number;   // monthly_brag
   byType: Partial<Record<ArtifactType, number>>;
@@ -840,7 +826,7 @@ export function deriveArtifactStats(artifacts: Artifact[]): ArtifactStats {
   return {
     total: artifacts.length,
     countYtd,
-    countMemos: byType.morning_brief ?? 0,
+    countMemos: byType.weekly_memo ?? 0,
     countBriefs: byType.earnings_prebrief ?? 0,
     countBragCards: byType.monthly_brag ?? 0,
     byType,

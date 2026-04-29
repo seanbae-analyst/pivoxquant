@@ -35,7 +35,6 @@ import {
   Shield,
   MessageSquare,
   BookHeart,
-  Sun,
   FileText,
   Bell,
   Settings as SettingsIcon,
@@ -76,8 +75,8 @@ type DrawerGroup = {
 //
 // 2026-04-27 per CEO: Morning Brief replaced with Reports (Artifacts
 // group sibling) on the primary bar so the mobile shell still has 4
-// primary destinations after hiding Morning Brief. /morning-brief
-// remains a valid deep link.
+// primary destinations after hiding Morning Brief.
+// 2026-04-29: Morning Brief deep link fully removed (backend deprecated).
 const PRIMARY_TABS: Tab[] = [
   { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
@@ -94,7 +93,7 @@ const DRAWER_GROUPS: DrawerGroup[] = [
   {
     label: "Artifacts",
     items: [
-      { href: "/morning-brief", label: "Morning Brief", icon: Sun, hidden: true },
+      // Morning Brief item REMOVED 2026-04-29 — backend deprecated.
       { href: "/reports", label: "Reports", icon: FileText },
       { href: "/signals", label: "Signals", icon: Zap },
     ],

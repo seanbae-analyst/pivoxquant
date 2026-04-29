@@ -44,7 +44,7 @@ import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 import { UpsellPlus } from "@/components/dashboard/upsell-plus";
 
 import { useAuth } from "@/lib/auth";
-import { useMorningBrief } from "@/lib/hooks";
+// Morning Brief deprecated 2026-04-29 — useMorningBrief removed.
 
 import { TodayMemoHeroV2 } from "@/components/home/v2/today-memo-hero-v2";
 import { HomeCardStyles } from "@/components/home/v2/home-card";
@@ -55,35 +55,15 @@ import { PositionsTopCard } from "@/components/home/v2/positions-top-card";
 import { SignalsCard } from "@/components/home/v2/signals-card";
 import { CompanionArchiveCard } from "@/components/home/v2/companion-archive-card";
 
-interface MorningBriefBody {
-  insight?: string;
-  summary?: string;
-  audio?: { duration?: string };
-}
-interface MorningBriefShape {
-  available?: boolean;
-  brief?: MorningBriefBody;
-}
+// Morning Brief types removed 2026-04-29 — backend deprecated.
 
 export default function HomePageV2() {
   const { user } = useAuth();
-  const { data: brief, isLoading: briefLoading } = useMorningBrief() as {
-    data: MorningBriefShape | undefined;
-    isLoading: boolean;
-  };
-
-  const heroHeadline =
-    brief?.available !== false
-      ? brief?.brief?.insight ?? brief?.brief?.summary ?? null
-      : null;
-  const heroBody =
-    brief?.available !== false &&
-    brief?.brief?.insight &&
-    brief?.brief?.summary &&
-    brief.brief.insight !== brief.brief.summary
-      ? brief.brief.summary ?? null
-      : null;
-  const audioDuration = brief?.brief?.audio?.duration ?? null;
+  // Morning Brief hook removed — hero now in empty/coming-soon state.
+  const heroHeadline: string | null = null;
+  const heroBody: string | null = null;
+  const audioDuration: string | null = null;
+  const briefLoading = false;
 
   const displayName = user?.name?.split(" ")[0] || "Observer";
 

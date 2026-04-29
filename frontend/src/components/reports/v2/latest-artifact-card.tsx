@@ -17,7 +17,7 @@ import type { Artifact, ArtifactType } from "@/lib/types";
 
 const TYPE_LABEL: Record<ArtifactType, string> = {
   weekly_memo: "Weekly Pulse",
-  morning_brief: "Today's Memo",
+  morning_brief: "Today's Memo (legacy)", // type retained for archived artifacts; surface deprecated 2026-04-29
   earnings_prebrief: "Earnings Pre-Brief",
   monthly_brag: "Brag Card",
   quarterly_review: "Quarterly Audit",

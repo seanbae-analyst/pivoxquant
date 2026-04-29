@@ -46,18 +46,7 @@ type Sheet = {
 
 /* Legal-safe titles only. No buy/sell/recommend/advice/추천/조언. */
 const SHEETS: Sheet[] = [
-  {
-    id: "morning-brief",
-    title: "Morning Brief",
-    subtitle: "April 22 · Pre-market research packet",
-    ticker: "SPY  AAPL  NVDA  MSFT  GOOGL",
-    lane: 0.18,
-    tilt: -3.2,
-    delay: -4,
-    duration: 32,
-    scale: 0.88,
-    alpha: 0.5,
-  },
+  // Morning Brief sheet REMOVED 2026-04-29 — backend deprecated.
   {
     id: "weekly-memo",
     title: "Weekly Memo",

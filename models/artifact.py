@@ -32,7 +32,6 @@ from extensions import db
 # can add new types without a migration.
 ARTIFACT_TYPES = {
     "weekly_memo",
-    "morning_brief",
     "brag_card",
     "monthly_brag",
     "earnings_pre",

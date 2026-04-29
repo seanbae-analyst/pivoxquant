@@ -5,8 +5,8 @@ Scope
 -----
   - 24 partial HTML files exist on disk (8 personas × 3 section types).
   - `_persona_macros.html` loads and dispatches correctly.
-  - 8 personas × 3 reports (weekly_memo / morning_brief_plus /
-    quarterly_self_report) render without error = 24 successful renders.
+  - 8 personas × 2 reports (weekly_memo / quarterly_self_report) render
+    without error = 16 successful renders.
   - Each persona opener contains a distinguishing phrase unique to that
     persona (so a template swap couldn't silently collapse branches).
   - Forbidden advisory vocabulary (BUY/SELL/HOLD/recommend/advice/should/
@@ -41,7 +41,6 @@ PERSONAS = [
 SECTIONS = ["opener", "data_focus", "risk_block"]
 REPORTS = [
     "weekly_memo.html",
-    "morning_brief_plus.html",
     "quarterly_self_report.html",
 ]
 
@@ -212,25 +211,6 @@ def _weekly_memo_context(persona: str) -> dict:
     }
 
 
-def _morning_brief_context(persona: str) -> dict:
-    return {
-        "persona":   persona,
-        "user_name": "Test User",
-        "as_of":     "2026-04-23",
-        "content":   {
-            "insight":    "관찰값 기반 개요.",
-            "disclaimer": "정보 제공 목적.",
-        },
-        "kpis":      {
-            "sp_futures_pct": 0.24,
-            "vix_level":      14.2,
-            "us10y_pct":      4.13,
-            "usdkrw":         1378,
-            "as_of":          "2026-04-23",
-        },
-    }
-
-
 def _quarterly_context(persona: str) -> dict:
     return {
         "persona":              persona,
@@ -265,7 +245,6 @@ def _quarterly_context(persona: str) -> dict:
 
 _CTX_BUILDERS = {
     "weekly_memo.html":            _weekly_memo_context,
-    "morning_brief_plus.html":     _morning_brief_context,
     "quarterly_self_report.html":  _quarterly_context,
 }
 

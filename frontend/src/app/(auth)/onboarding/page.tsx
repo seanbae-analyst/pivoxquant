@@ -77,17 +77,26 @@ function ProgressBar({ current, total, category }: { current: number; total: num
       {/* Header row */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <span
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: "rgba(var(--pq-ivory-rgb), 0.55)" }}
+          >
             {catMeta?.label ?? category}
           </span>
         </div>
-        <span className="text-xs tabular-nums font-medium text-slate-500">
+        <span
+          className="text-xs tabular-nums font-medium"
+          style={{ color: "rgba(var(--pq-ivory-rgb), 0.45)" }}
+        >
           {current} of {total}
         </span>
       </div>
 
       {/* Bar */}
-      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+      <div
+        className="relative h-1.5 w-full overflow-hidden rounded-full"
+        style={{ backgroundColor: "rgba(var(--pq-ivory-rgb), 0.08)" }}
+      >
         <motion.div
           className="absolute inset-y-0 left-0 rounded-full"
           style={{ background: "linear-gradient(90deg, var(--pq-bronze-light), var(--pq-bronze))" }}
@@ -118,15 +127,18 @@ function OptionCard({
       onClick={onSelect}
       whileTap={{ scale: 0.98 }}
       className={`
-        group relative flex w-full items-center gap-3 rounded-2xl border-2 px-5 py-4
+        group relative flex w-full items-center gap-3 border px-5 py-4
         text-left transition-all duration-300
         ${
           selected
-            ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]/[0.04] shadow-[0_0_0_1px_rgba(184,149,106,0.18)]"
-            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+            ? "border-[var(--pq-bronze-light)] bg-[rgba(184,149,106,0.08)] shadow-[0_0_0_1px_rgba(184,149,106,0.25)]"
+            : "border-[rgba(245,240,232,0.1)] bg-[rgba(245,240,232,0.02)] hover:border-[rgba(245,240,232,0.25)] hover:bg-[rgba(245,240,232,0.04)]"
         }
       `}
-      style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
+      style={{
+        transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+        borderRadius: "var(--pq-radius-card)",
+      }}
     >
       {/* Selection indicator */}
       <div
@@ -135,11 +147,11 @@ function OptionCard({
           ${
             selected
               ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]"
-              : "border-slate-300 bg-white group-hover:border-slate-400"
+              : "border-[rgba(245,240,232,0.3)] bg-transparent group-hover:border-[rgba(245,240,232,0.5)]"
           }
         `}
       >
-        {selected && <Check size={12} strokeWidth={3} className="text-white" />}
+        {selected && <Check size={12} strokeWidth={3} style={{ color: "var(--pq-ink)" }} />}
       </div>
 
       {/* Icon */}
@@ -147,9 +159,12 @@ function OptionCard({
 
       {/* Text */}
       <span
-        className={`text-[15px] leading-snug font-medium ${
-          selected ? "text-slate-900" : "text-slate-600 group-hover:text-slate-800"
-        }`}
+        className="text-[15px] leading-snug font-medium"
+        style={{
+          color: selected
+            ? "var(--pq-ivory)"
+            : "rgba(var(--pq-ivory-rgb), 0.7)",
+        }}
       >
         {option.label}
       </span>
@@ -173,35 +188,41 @@ function MultiOptionCard({
       onClick={onToggle}
       whileTap={{ scale: 0.98 }}
       className={`
-        group relative flex w-full items-center gap-3 rounded-2xl border-2 px-5 py-4
+        group relative flex w-full items-center gap-3 border px-5 py-4
         text-left transition-all duration-300
         ${
           selected
-            ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]/[0.04]"
-            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
+            ? "border-[var(--pq-bronze-light)] bg-[rgba(184,149,106,0.08)]"
+            : "border-[rgba(245,240,232,0.1)] bg-[rgba(245,240,232,0.02)] hover:border-[rgba(245,240,232,0.25)] hover:bg-[rgba(245,240,232,0.04)]"
         }
       `}
-      style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
+      style={{
+        transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+        borderRadius: "var(--pq-radius-card)",
+      }}
     >
       {/* Checkbox */}
       <div
         className={`
-          flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-200
+          flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border-2 transition-all duration-200
           ${
             selected
               ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]"
-              : "border-slate-300 bg-white group-hover:border-slate-400"
+              : "border-[rgba(245,240,232,0.3)] bg-transparent group-hover:border-[rgba(245,240,232,0.5)]"
           }
         `}
       >
-        {selected && <Check size={12} strokeWidth={3} className="text-white" />}
+        {selected && <Check size={12} strokeWidth={3} style={{ color: "var(--pq-ink)" }} />}
       </div>
 
       {/* Text */}
       <span
-        className={`text-[15px] leading-snug font-medium ${
-          selected ? "text-slate-900" : "text-slate-600 group-hover:text-slate-800"
-        }`}
+        className="text-[15px] leading-snug font-medium"
+        style={{
+          color: selected
+            ? "var(--pq-ivory)"
+            : "rgba(var(--pq-ivory-rgb), 0.7)",
+        }}
       >
         {option.label}
       </span>
@@ -227,8 +248,19 @@ function SliderInput({
     <div className="flex flex-col gap-6">
       {/* Current value display */}
       <div className="text-center">
-        <div className="mb-1 text-4xl font-bold text-[var(--pq-bronze-light)]">{value}</div>
-        <div className="text-sm font-medium text-slate-600">
+        <div
+          className="mb-1 text-4xl font-bold"
+          style={{
+            color: "var(--pq-bronze-light)",
+            fontFamily: "var(--font-display)",
+          }}
+        >
+          {value}
+        </div>
+        <div
+          className="text-sm font-medium"
+          style={{ color: "rgba(var(--pq-ivory-rgb), 0.75)" }}
+        >
           {currentOption?.label ?? ""}
         </div>
       </div>
@@ -247,10 +279,16 @@ function SliderInput({
 
         {/* Labels below */}
         <div className="mt-3 flex items-start justify-between">
-          <span className="max-w-[120px] text-xs text-slate-400 leading-tight">
+          <span
+            className="max-w-[120px] text-xs leading-tight"
+            style={{ color: "rgba(var(--pq-ivory-rgb), 0.5)" }}
+          >
             {question.min_label}
           </span>
-          <span className="max-w-[120px] text-right text-xs text-slate-400 leading-tight">
+          <span
+            className="max-w-[120px] text-right text-xs leading-tight"
+            style={{ color: "rgba(var(--pq-ivory-rgb), 0.5)" }}
+          >
             {question.max_label}
           </span>
         </div>
@@ -267,8 +305,8 @@ function SliderInput({
               flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all duration-200
               ${
                 Number(opt.value) === value
-                  ? "bg-accent text-slate-900 shadow-lg shadow-accent/30"
-                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  ? "bg-[var(--pq-bronze)] text-[var(--pq-ink)] shadow-lg shadow-[rgba(184,149,106,0.3)]"
+                  : "bg-[rgba(245,240,232,0.06)] text-[rgba(245,240,232,0.55)] hover:bg-[rgba(245,240,232,0.12)]"
               }
             `}
           >
@@ -293,14 +331,27 @@ function LegalStep({
       <div className="mb-2">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-lg">{"\u{1F6E1}\u{FE0F}"}</span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <span
+            className="text-xs font-semibold uppercase tracking-wider"
+            style={{ color: "var(--pq-bronze)", letterSpacing: "var(--pq-track-eyebrow)" }}
+          >
             Legal & Compliance
           </span>
         </div>
-        <h2 className="text-xl font-bold text-slate-900 leading-tight">
+        <h2
+          className="text-xl font-bold leading-tight"
+          style={{
+            color: "var(--pq-ivory)",
+            fontFamily: "var(--font-display)",
+            letterSpacing: "var(--pq-track-tight)",
+          }}
+        >
           {LEGAL_QUESTION.question}
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p
+          className="mt-1 text-sm"
+          style={{ color: "rgba(var(--pq-ivory-rgb), 0.6)" }}
+        >
           All confirmations are required to proceed.
         </p>
       </div>
@@ -314,24 +365,39 @@ function LegalStep({
             onClick={() => onToggle(String(opt.value))}
             whileTap={{ scale: 0.98 }}
             className={`
-              flex items-start gap-4 rounded-2xl border-2 px-5 py-4 text-left transition-all duration-300
+              flex items-start gap-4 border px-5 py-4 text-left transition-all duration-300
               ${
                 checked
-                  ? "border-[#10b981] bg-[#10b981]/[0.04]"
-                  : "border-slate-200 bg-white hover:border-slate-300"
+                  ? "border-[var(--pq-bronze-light)] bg-[rgba(184,149,106,0.08)]"
+                  : "border-[rgba(245,240,232,0.1)] bg-[rgba(245,240,232,0.02)] hover:border-[rgba(245,240,232,0.25)]"
               }
             `}
-            style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
+            style={{
+              transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+              borderRadius: "var(--pq-radius-card)",
+            }}
           >
             <div
               className={`
-                mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-200
-                ${checked ? "border-[#10b981] bg-[#10b981]" : "border-slate-300 bg-white"}
+                mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[2px] border-2 transition-all duration-200
+                ${
+                  checked
+                    ? "border-[var(--pq-bronze-light)] bg-[var(--pq-bronze-light)]"
+                    : "border-[rgba(245,240,232,0.3)] bg-transparent"
+                }
               `}
             >
-              {checked && <Check size={12} strokeWidth={3} className="text-white" />}
+              {checked && <Check size={12} strokeWidth={3} style={{ color: "var(--pq-ink)" }} />}
             </div>
-            <span className={`text-[14px] leading-relaxed ${checked ? "text-slate-800 font-medium" : "text-slate-600"}`}>
+            <span
+              className="text-[14px] leading-relaxed"
+              style={{
+                color: checked
+                  ? "var(--pq-ivory)"
+                  : "rgba(var(--pq-ivory-rgb), 0.7)",
+                fontWeight: checked ? 500 : 400,
+              }}
+            >
               {opt.label}
             </span>
           </motion.button>
@@ -368,7 +434,13 @@ function ResultScreen({
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.2, ...SPRING }}
-        className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-950 border border-accent shadow-xl shadow-accent/20"
+        className="mb-6 flex h-20 w-20 items-center justify-center"
+        style={{
+          backgroundColor: "rgba(184,149,106,0.08)",
+          border: "1px solid var(--pq-bronze)",
+          borderRadius: "var(--pq-radius-card)",
+          boxShadow: "0 8px 24px rgba(184,149,106,0.18)",
+        }}
       >
         <span className="text-3xl">{"\u{1F3AF}"}</span>
       </motion.div>
@@ -378,7 +450,11 @@ function ResultScreen({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="text-sm font-semibold uppercase tracking-wider text-slate-400"
+        className="text-sm font-semibold uppercase tracking-wider"
+        style={{
+          color: "var(--pq-bronze)",
+          letterSpacing: "var(--pq-track-eyebrow)",
+        }}
       >
         Your Investor Profile
       </motion.p>
@@ -388,8 +464,13 @@ function ResultScreen({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className="mt-2 text-center text-3xl font-bold tracking-tight"
+        style={{
+          fontFamily: "var(--font-display)",
+          color: "var(--pq-ivory)",
+          letterSpacing: "var(--pq-track-tight)",
+        }}
       >
-        <span className="gradient-text">{typeData.label}</span>
+        <span style={{ color: "var(--pq-bronze)" }}>{typeData.label}</span>
       </motion.h1>
 
       {/* Tagline */}
@@ -397,7 +478,8 @@ function ResultScreen({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="mt-3 max-w-sm text-center text-[15px] leading-relaxed text-slate-500"
+        className="mt-3 max-w-sm text-center text-[15px] leading-relaxed"
+        style={{ color: "rgba(var(--pq-ivory-rgb), 0.7)" }}
       >
         {highlights.tagline}
       </motion.p>
@@ -415,12 +497,25 @@ function ResultScreen({
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.7 + i * 0.1 }}
-            className="flex items-center gap-3 rounded-xl bg-[#10b981]/[0.06] px-4 py-3"
+            className="flex items-center gap-3 px-4 py-3"
+            style={{
+              backgroundColor: "rgba(184,149,106,0.06)",
+              border: "1px solid rgba(184,149,106,0.2)",
+              borderRadius: "var(--pq-radius-card)",
+            }}
           >
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#10b981]">
-              <Check size={14} strokeWidth={3} className="text-white" />
+            <div
+              className="flex h-6 w-6 items-center justify-center rounded-full"
+              style={{ backgroundColor: "var(--pq-bronze)" }}
+            >
+              <Check size={14} strokeWidth={3} style={{ color: "var(--pq-ink)" }} />
             </div>
-            <span className="text-sm font-medium text-slate-700">{feat}</span>
+            <span
+              className="text-sm font-medium"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.85)" }}
+            >
+              {feat}
+            </span>
           </motion.div>
         ))}
       </motion.div>
@@ -432,8 +527,14 @@ function ResultScreen({
         transition={{ delay: 1.0 }}
         onClick={onContinue}
         disabled={loading}
-        className="mt-10 flex w-full max-w-sm items-center justify-center gap-2 rounded-full bg-slate-950 px-8 py-4 text-base font-bold text-white shadow-lg shadow-accent/20 transition-all duration-300 hover:shadow-xl hover:shadow-accent/30 hover:bg-slate-900 active:scale-[0.98] disabled:opacity-60"
-        style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
+        className="mt-10 flex w-full max-w-sm items-center justify-center gap-2 px-8 py-4 text-base font-bold transition-all duration-300 hover:shadow-xl active:scale-[0.98] disabled:opacity-60"
+        style={{
+          transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+          backgroundColor: "var(--pq-bronze)",
+          color: "var(--pq-ink)",
+          borderRadius: "var(--pq-radius-cta)",
+          boxShadow: "0 8px 24px rgba(184,149,106,0.25)",
+        }}
       >
         {loading ? (
           <Loader2 size={20} className="animate-spin" />
@@ -669,7 +770,10 @@ export default function OnboardingPage() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center">
+      <div
+        className="flex min-h-[100dvh] items-center justify-center"
+        style={{ backgroundColor: "var(--pq-ink)" }}
+      >
         <Loader2 size={24} className="animate-spin text-[var(--pq-bronze-light)]" />
       </div>
     );
@@ -684,7 +788,13 @@ export default function OnboardingPage() {
 
   if (isResultScreen) {
     return (
-      <div className="min-h-[100dvh] bg-white">
+      <div
+        className="min-h-[100dvh]"
+        style={{
+          backgroundColor: "var(--pq-ink)",
+          color: "var(--pq-ivory)",
+        }}
+      >
         <div className="mx-auto max-w-lg">
           <ResultScreen
             investorType={investorType}
@@ -702,17 +812,39 @@ export default function OnboardingPage() {
   const category = isLegalStep ? "F" : (currentQuestion?.category ?? "A");
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-white">
+    <div
+      className="flex min-h-[100dvh] flex-col"
+      style={{
+        backgroundColor: "var(--pq-ink)",
+        color: "var(--pq-ivory)",
+      }}
+    >
       {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-slate-100 bg-white/80 backdrop-blur-xl px-4 py-3 sm:px-6">
+      <header
+        className="sticky top-0 z-20 backdrop-blur-xl px-4 py-3 sm:px-6"
+        style={{
+          borderBottom: "1px solid var(--pq-border)",
+          backgroundColor: "rgba(5,5,5,0.85)",
+        }}
+      >
         <div className="mx-auto max-w-lg">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-base font-bold text-slate-900">PivoxQuant</span>
+            <span
+              className="text-base font-bold"
+              style={{
+                color: "var(--pq-ivory)",
+                fontFamily: "var(--font-display)",
+                letterSpacing: "var(--pq-track-wordmark)",
+              }}
+            >
+              PivoxQuant
+            </span>
             <button
               type="button"
               onClick={handleSkip}
               disabled={skipping}
-              className="text-xs font-medium text-slate-400 transition-colors hover:text-slate-600 disabled:opacity-50"
+              className="text-xs font-medium transition-colors disabled:opacity-50"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.5)" }}
             >
               {skipping ? "Skipping…" : "Skip for now"}
             </button>
@@ -758,14 +890,24 @@ export default function OnboardingPage() {
       </main>
 
       {/* Footer navigation */}
-      <footer className="sticky bottom-0 z-20 border-t border-slate-100 bg-white/80 backdrop-blur-xl px-4 py-4 sm:px-6">
+      <footer
+        className="sticky bottom-0 z-20 backdrop-blur-xl px-4 py-4 sm:px-6"
+        style={{
+          borderTop: "1px solid var(--pq-border)",
+          backgroundColor: "rgba(5,5,5,0.85)",
+        }}
+      >
         <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
           {/* Back */}
           <button
             type="button"
             onClick={goBack}
             disabled={step === 0}
-            className="flex items-center gap-1 rounded-full px-5 py-2.5 text-sm font-semibold text-slate-500 transition-all duration-200 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+            className="flex items-center gap-1 px-5 py-2.5 text-sm font-semibold transition-all duration-200 disabled:opacity-30 disabled:hover:bg-transparent"
+            style={{
+              color: "rgba(var(--pq-ivory-rgb), 0.6)",
+              borderRadius: "var(--pq-radius-cta)",
+            }}
           >
             <ChevronLeft size={16} />
             Back
@@ -776,15 +918,15 @@ export default function OnboardingPage() {
             type="button"
             onClick={goNext}
             disabled={!isStepValid}
-            className={`
-              flex items-center gap-1 rounded-full px-7 py-2.5 text-sm font-bold transition-all duration-300
-              ${
-                isStepValid
-                  ? "bg-slate-950 text-white shadow-md shadow-accent/20 hover:bg-slate-800 hover:shadow-lg active:scale-[0.97]"
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
-              }
-            `}
-            style={{ transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)" }}
+            className="flex items-center gap-1 px-7 py-2.5 text-sm font-bold transition-all duration-300 active:scale-[0.97] disabled:cursor-not-allowed"
+            style={{
+              transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+              borderRadius: "var(--pq-radius-cta)",
+              backgroundColor: isStepValid ? "var(--pq-bronze)" : "rgba(var(--pq-ivory-rgb), 0.06)",
+              color: isStepValid ? "var(--pq-ink)" : "rgba(var(--pq-ivory-rgb), 0.35)",
+              boxShadow: isStepValid ? "0 6px 16px rgba(184,149,106,0.25)" : "none",
+              border: isStepValid ? "none" : "1px solid var(--pq-border)",
+            }}
           >
             {isLegalStep ? "See Results" : "Next"}
             <ChevronRight size={16} />
@@ -822,16 +964,34 @@ function QuestionScreen({
               className="h-1.5 w-1.5 rounded-full"
               style={{ backgroundColor: catMeta.color }}
             />
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <span
+              className="text-xs font-semibold uppercase tracking-wider"
+              style={{
+                color: "var(--pq-bronze)",
+                letterSpacing: "var(--pq-track-eyebrow)",
+              }}
+            >
               {catMeta.label}
             </span>
           </div>
         )}
-        <h2 className="text-xl font-bold text-slate-900 leading-tight sm:text-2xl">
+        <h2
+          className="text-xl font-bold leading-tight sm:text-2xl"
+          style={{
+            color: "var(--pq-ivory)",
+            fontFamily: "var(--font-display)",
+            letterSpacing: "var(--pq-track-tight)",
+          }}
+        >
           {question.question}
         </h2>
         {question.type === "multi" && (
-          <p className="mt-1.5 text-sm text-slate-500">Select all that apply</p>
+          <p
+            className="mt-1.5 text-sm"
+            style={{ color: "rgba(var(--pq-ivory-rgb), 0.6)" }}
+          >
+            Select all that apply
+          </p>
         )}
       </div>
 

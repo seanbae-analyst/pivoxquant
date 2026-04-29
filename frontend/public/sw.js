@@ -37,7 +37,7 @@ const NETWORK_ONLY_PATTERNS = [
   /\/api\/broker\/kis\//,
 ];
 
-const CACHE_FIRST_PATTERNS = [/\/api\/morning-brief/];
+const CACHE_FIRST_PATTERNS = [];
 
 // Read-mostly endpoints (no user mutations): SWR safe.
 // FRED macro data refreshes daily so a 2-hour SWR window is plenty, and

@@ -42,7 +42,6 @@ interface ReportEntry {
 const REPORTS: readonly ReportEntry[] = [
   // — Free (10) —
   { slug: "weekly-memo",           type: "Memo",           title: "Weekly Memo",            cadence: "Every Sunday",          tier: "Free" },
-  { slug: "morning-brief-plus",    type: "Brief",          title: "Morning Brief Plus",     cadence: "Every weekday",         tier: "Free" },
   { slug: "brag-card",             type: "Brag Card",      title: "Brag Card",              cadence: "Monthly",               tier: "Free" },
   { slug: "earnings-prebrief",     type: "Pre-Brief",      title: "Earnings Pre-Brief",     cadence: "On earnings ±24h",      tier: "Pro" },
   { slug: "dd-checklist",          type: "Checklist",      title: "DD Checklist",           cadence: "On demand",             tier: "Pro" },

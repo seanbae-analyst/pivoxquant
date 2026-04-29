@@ -82,14 +82,7 @@ interface WatchlistResponse {
   items?: WatchlistItem[];
   watchlist?: WatchlistItem[];
 }
-interface MorningBriefBody {
-  insight?: string;
-  summary?: string;
-}
-interface MorningBriefResponse {
-  available?: boolean;
-  brief?: MorningBriefBody;
-}
+// Morning Brief types removed 2026-04-29 — backend Morning Brief deprecated.
 interface SignalItem {
   id?: number | string;
   ticker?: string;
@@ -184,6 +177,7 @@ export default function HomePageV1() {
   // produced separate cache entries from `usePortfolioSummary` used by
   // other components (RealtimeProvider, dashboard sidebars), multiplying
   // portfolio calls on mount.
+  // Morning Brief SWR options retained for risk-summary call below.
   const briefOpts = {
     refreshInterval: 600_000,
     revalidateOnFocus: false,
@@ -208,11 +202,9 @@ export default function HomePageV1() {
   const { data: watch } = useWatchlist() as {
     data: WatchlistResponse | undefined;
   };
-  const { data: brief, isLoading: briefLoading } = useSWR<MorningBriefResponse>(
-    API.market.morningBriefToday,
-    fetcher,
-    briefOpts,
-  );
+  // Morning Brief deprecated — placeholders kept so existing JSX remains safe.
+  const brief: undefined = undefined;
+  const briefLoading = false;
   const { data: signalsData } = useSWR<SignalsResponse>(
     API.signals.all,
     fetcher,
@@ -250,24 +242,11 @@ export default function HomePageV1() {
       ? "KRW"
       : "USD";
 
-  const briefText =
-    brief?.available !== false
-      ? brief?.brief?.insight ?? brief?.brief?.summary ?? null
-      : null;
-
-  // Hero variant: prefer insight as headline, fall back to summary; if both
-  // exist, render summary as the body paragraph beneath the headline.
-  const heroHeadline =
-    brief?.available !== false
-      ? brief?.brief?.insight ?? brief?.brief?.summary ?? null
-      : null;
-  const heroBody =
-    brief?.available !== false &&
-    brief?.brief?.insight &&
-    brief?.brief?.summary &&
-    brief.brief.insight !== brief.brief.summary
-      ? brief.brief.summary ?? null
-      : null;
+  // Morning Brief deprecated 2026-04-29 — hero copy now empty-state by default.
+  void brief;
+  const briefText: string | null = null;
+  const heroHeadline: string | null = null;
+  const heroBody: string | null = null;
 
   const displayName = user?.name?.split(" ")[0] || "Observer";
 

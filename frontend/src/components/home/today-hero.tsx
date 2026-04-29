@@ -73,10 +73,7 @@ const EYEBROW_SUFFIX: Record<NormalizedPersonaId, string> = {
 
 /* ═══════════ Data shapes ═══════════ */
 
-interface BriefToday {
-  available?: boolean;
-  brief?: { title?: string; insight?: string; summary?: string };
-}
+// Morning Brief data shape removed 2026-04-29 — backend deprecated.
 
 interface HistoryPoint {
   date?: string;
@@ -192,11 +189,7 @@ export function TodayHero() {
   const { data: persona } = usePersona();
   const reduceMotion = useReducedMotion();
 
-  const { data: brief } = useSWR<BriefToday>(
-    API.market.morningBriefToday,
-    fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000, errorRetryCount: 1 },
-  );
+  // Morning Brief SWR removed 2026-04-29 — endpoint deprecated.
 
   const { data: history } = useSWR<HistoryResponse>(
     API.portfolio.history("5d"),
@@ -222,13 +215,8 @@ export function TodayHero() {
 
   const displayName = user?.name?.split(" ")[0] || "Observer";
 
-  const briefTitle =
-    brief?.available !== false
-      ? brief?.brief?.title ||
-        brief?.brief?.insight ||
-        brief?.brief?.summary ||
-        null
-      : null;
+  // Morning Brief deprecated — empty-state hero copy.
+  const briefTitle: string | null = null;
 
   /* ── Sparkline extraction. History response shape varies, so be
         tolerant: accept `history`, `series`, or `points`; on each
@@ -337,8 +325,8 @@ export function TodayHero() {
             {...stageAnim(0.24)}
             className="mt-6 flex flex-wrap items-center gap-2.5"
           >
-            <CtaInkBleed href="/morning-brief" variant="bronze">
-              Read this morning&rsquo;s brief
+            <CtaInkBleed href="/reports" variant="bronze">
+              Open the desk
               <span aria-hidden style={{ marginLeft: 2 }}>→</span>
             </CtaInkBleed>
             <CtaInkBleed href="/companion" variant="ghost">

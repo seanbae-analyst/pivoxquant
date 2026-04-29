@@ -119,26 +119,6 @@ const SAMPLES: readonly FlipSample[] = [
       closer: "Written in the voice of your chosen persona.",
     },
   },
-  {
-    name: "Morning Brief Plus",
-    subtitle: "Pre-market · 2 pages",
-    pageCount: "2 pages",
-    cadence: "Daily 07:30 KST",
-    excerpt:
-      "Overnight tape on your names, futures and dollar index snapshot, earnings day-plan for today's prints, macro cues drawn from the calendar.",
-    href: "/samples/morning_brief_plus.pdf",
-    preview: {
-      kicker: "Morning · Pre-Market",
-      heading: "Two pages before the open.",
-      lede: "A compact morning reading: overnight tape, futures and FX snapshot, the prints due before and after today's close.",
-      bullets: [
-        "Overnight moves on held names and watchlist benches.",
-        "Futures, dollar index, and rates tape summarized in one line each.",
-        "Day-plan of the prints with consensus bands inline.",
-      ],
-      closer: "Read between the coffee and the bell.",
-    },
-  },
 ];
 
 export default function ReportsPage() {

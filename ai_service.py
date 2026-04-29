@@ -14,24 +14,10 @@ logger = logging.getLogger(__name__)
 # ── Compliance filter ────────────────────────────────────────────────
 # 자본시장법 §6 미등록 투자자문업 위반 방지. AI가 '추천/매수/매도/
 # recommend/buy/sell' 같은 자문업 언어를 산출할 경우 응답을 면책 문구로
-# 교체한다. 사전 정의 패턴은 services.morning_brief_service 에서 관리.
+# 교체한다. 사전 정의 패턴은 services.legal_filter 에서 관리
+# (이전: services.morning_brief_service — 2026-04-29 제거).
+from services.legal_filter import is_compliant as _is_compliant
 from services.legal_filter import safe_scrub, scrub_signal
-
-try:
-    from services.morning_brief_service import is_compliant as _is_compliant
-except Exception:  # pragma: no cover — avoid import-time boot failure
-    import re as _re
-    _FALLBACK_RE = _re.compile(
-        r"추천|조언|권(?:고|유|장)|매수|매도|사세요|파세요|사라|팔아|"
-        r"오를\s*것|내릴\s*것|오른다|내린다|"
-        r"\b(?:buy|sell|recommend|advice|advise)\b",
-        _re.IGNORECASE,
-    )
-
-    def _is_compliant(text):
-        if not text:
-            return True
-        return _FALLBACK_RE.search(text) is None
 
 
 _DISCLAIMER_EN = (
@@ -500,90 +486,9 @@ Peers in same sector:
             logger.error(f"Competitor analysis error: {e}")
             return None
 
-    def generate_brief_insight(self, portfolio_changes, market_summary, events):
-        """Generate a ONE-LINE Korean neutral insight for the morning brief.
-
-        Strictly descriptive — no recommendations, predictions, or action verbs.
-        Caller MUST still run the compliance validator in
-        services.morning_brief_service._is_compliant() before persisting.
-
-        Returns a string (<=30 Korean chars) or None on failure so the caller
-        can fall back to rule-based text.
-        """
-        if not self.available:
-            return None
-        try:
-            tickers = ", ".join((c.get("ticker") or "?")
-                                for c in (portfolio_changes or [])[:5]) or "없음"
-            sp = (market_summary or {}).get("sp500", {}) or {}
-            nq = (market_summary or {}).get("nasdaq", {}) or {}
-            ks = (market_summary or {}).get("kospi", {}) or {}
-            vix = (market_summary or {}).get("vix", {}) or {}
-
-            def _pct(d):
-                v = d.get("change_pct") if isinstance(d, dict) else None
-                return f"{v:+.2f}" if isinstance(v, (int, float)) else "?"
-
-            def _val(d):
-                v = d.get("price") if isinstance(d, dict) else None
-                return f"{v}" if isinstance(v, (int, float)) else "?"
-
-            events_text = "; ".join(
-                f"{e.get('ticker','')} {e.get('type','')}".strip()
-                for e in (events or [])[:5]
-            ) or "없음"
-
-            prompt = f"""You are a neutral Korean market analyst. Write a ONE-LINE Korean insight (30자 이내) about market conditions.
-
-STRICT rules:
-- NO recommendations ("사세요", "파세요", "매수", "매도", "추천", "조언" 금지)
-- NO predictions ("오를 것", "내릴 것", "오른다", "내린다" 금지)
-- NO imperatives ("~해야", "~하라" 금지)
-- Use descriptive language only ("관찰됨", "변동성 확대", "주목")
-- Stay neutral, informational, factual only
-
-Input:
-- Portfolio tickers: {tickers}
-- Yesterday: S&P {_pct(sp)}%, NASDAQ {_pct(nq)}%, KOSPI {_pct(ks)}%
-- VIX: {_val(vix)}
-- Today's events: {events_text}
-
-Output ONLY a JSON object, no markdown:
-{{"insight": "..."}}"""
-
-            resp = self.client.messages.create(
-                model=MODEL,
-                max_tokens=120,
-                system="You are a neutral Korean market analyst. Output only JSON.",
-                messages=[{"role": "user", "content": prompt}],
-            )
-            text = resp.content[0].text.strip()
-            # Extract JSON even if the model wraps it in ```json ... ```
-            if "```" in text:
-                text = text.split("```", 2)[1]
-                if text.startswith("json"):
-                    text = text[4:]
-                text = text.strip()
-            try:
-                payload = json.loads(text)
-                insight = (payload.get("insight") or "").strip()
-                if not insight:
-                    return None
-                # Drop (return None) if compliance fails so caller falls
-                # back to rule-based text rather than showing a disclaimer.
-                if not _is_compliant(insight):
-                    return None
-                return safe_scrub(insight, context="ai_service.brief_insight")
-            except Exception:
-                fallback = text[:60] if text else None
-                if not fallback:
-                    return None
-                if not _is_compliant(fallback):
-                    return None
-                return safe_scrub(fallback, context="ai_service.brief_insight.fallback")
-        except Exception as e:
-            logger.error(f"Brief insight error: {e}")
-            return None
+    # NOTE: generate_brief_insight() removed 2026-04-29 along with the
+    # Morning Brief feature. The compliance validator (`_is_compliant`)
+    # remains imported above because other AI generators still use it.
 
     def generate_sector_trend(self, sector, stocks_in_sector):
         """Generate sector trend report."""

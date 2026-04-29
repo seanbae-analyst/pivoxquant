@@ -22,7 +22,7 @@ Design principles
    section/channel is skipped. Fallback questions are hardcoded so a
    brief always ships with 5 questions.
 5. No modifications to fmp_service / ai_service / push_service /
-   morning_brief_service / weekly_memo_service / engine.py / quant_models.
+   weekly_memo_service / engine.py / quant_models.
    All integration is read-only import + call.
 
 Storage
@@ -119,9 +119,9 @@ def _try_import_jinja():
         return None, None, None
 
 
-# ── AI budget (module-level; mirrors morning_brief / weekly_memo) ────────────
+# ── AI budget (module-level; mirrors weekly_memo) ────────────
 
-_AI_LIMIT = 100  # per UTC day — earnings are rarer than morning briefs
+_AI_LIMIT = 100  # per UTC day — earnings events are rare
 _ai_usage = {"day": None, "count": 0}
 _ai_lock = threading.Lock()
 

@@ -9,7 +9,6 @@ import Link from "next/link";
 
 const REPORTS: { slug: string; title: string; tier: string; cadence: string; pages: number }[] = [
   { slug: "weekly-memo", title: "Weekly Memo", tier: "Free", cadence: "Weekly", pages: 1 },
-  { slug: "morning-brief-plus", title: "Morning Brief Plus", tier: "Free", cadence: "Daily", pages: 1 },
   { slug: "brag-card", title: "Brag Card", tier: "Free", cadence: "Monthly", pages: 1 },
   { slug: "earnings-prebrief", title: "Earnings Pre-Brief", tier: "Pro", cadence: "Per-event", pages: 2 },
   { slug: "risk-board", title: "Risk Board", tier: "Pro", cadence: "Weekly", pages: 2 },

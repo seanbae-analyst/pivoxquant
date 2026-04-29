@@ -215,15 +215,6 @@ def get_prices_fast():
                     "sources": {t: p.get("source", "?") for t, p in prices.items()}})
 
 
-@market_bp.route("/morning-brief")
-@api_auth
-def morning_brief():
-    brief = fetcher.get_wall_street_brief()
-    macro = fetcher.get_macro_data()
-    gs_view = fetcher.generate_gs_view(macro)
-    return jsonify({**brief, "gs_view": gs_view})
-
-
 @market_bp.route("/market/overview")
 @api_auth
 def market_overview():

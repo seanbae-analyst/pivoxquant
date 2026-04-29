@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PivoxQuant v2 — Live Review (5 pages)</title>
+<style>
+  :root {
+    --pq-ink: #050505;
+    --pq-bronze: #B8956A;
+    --pq-bronze-deep: #6F5636;
+    --pq-ivory: #F5F0E8;
+    --pq-hairline: rgba(184, 149, 106, 0.18);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--pq-ink);
+    color: var(--pq-ivory);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+  }
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 44px;
+    background: rgba(5, 5, 5, 0.92);
+    border-bottom: 1px solid var(--pq-hairline);
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    gap: 18px;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+  .brand {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 16px;
+    color: var(--pq-bronze);
+    letter-spacing: 0.02em;
+  }
+  .meta {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: rgba(245, 240, 232, 0.45);
+  }
+  .login-hint {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--pq-bronze);
+    margin-left: auto;
+  }
+  .login-hint a {
+    color: var(--pq-ivory);
+    text-decoration: none;
+    border-bottom: 1px solid var(--pq-bronze);
+    padding-bottom: 1px;
+  }
+  .grid {
+    margin-top: 44px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1px;
+    background: var(--pq-hairline);
+    height: calc(100vh - 44px);
+  }
+  .panel {
+    background: var(--pq-ink);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .panel-label {
+    padding: 8px 14px;
+    background: rgba(184, 149, 106, 0.06);
+    border-bottom: 1px solid var(--pq-hairline);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--pq-bronze);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .panel-label a {
+    color: rgba(245, 240, 232, 0.45);
+    text-decoration: none;
+    font-size: 9px;
+  }
+  .panel-label a:hover { color: var(--pq-bronze); }
+  .panel iframe {
+    flex: 1;
+    width: 100%;
+    border: 0;
+    background: var(--pq-ink);
+  }
+  .panel.notes {
+    padding: 18px 22px;
+    overflow-y: auto;
+    background: rgba(184, 149, 106, 0.03);
+  }
+  .panel.notes h2 {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 22px;
+    margin: 0 0 10px 0;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  .panel.notes p {
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(245, 240, 232, 0.78);
+    margin: 0 0 12px 0;
+  }
+  .panel.notes ul {
+    margin: 0;
+    padding-left: 18px;
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: rgba(245, 240, 232, 0.7);
+  }
+  .panel.notes ul li { margin-bottom: 4px; }
+  .panel.notes code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    background: rgba(184, 149, 106, 0.08);
+    padding: 1px 5px;
+    color: var(--pq-bronze);
+    border-radius: 2px;
+  }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(184, 149, 106, 0.1);
+    color: var(--pq-bronze);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    border: 1px solid var(--pq-hairline);
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">PivoxQuant</span>
+  <span class="meta">v2 Live Review · 5 pages · feature flags ON</span>
+  <span class="login-hint">If pages show login: <a href="http://localhost:3000/login" target="_blank">open /login in new tab</a> first</span>
+</div>
+
+<div class="grid">
+
+  <div class="panel">
+    <div class="panel-label">
+      <span>Home v2 — /home</span>
+      <a href="http://localhost:3000/home" target="_blank">Open standalone ›</a>
+    </div>
+    <iframe src="http://localhost:3000/home" title="Home v2"></iframe>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">
+      <span>Portfolio v2 — /portfolio</span>
+      <a href="http://localhost:3000/portfolio" target="_blank">Open standalone ›</a>
+    </div>
+    <iframe src="http://localhost:3000/portfolio" title="Portfolio v2"></iframe>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">
+      <span>Risk v2 — /risk</span>
+      <a href="http://localhost:3000/risk" target="_blank">Open standalone ›</a>
+    </div>
+    <iframe src="http://localhost:3000/risk" title="Risk v2"></iframe>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">
+      <span>Signals v2 — /signals</span>
+      <a href="http://localhost:3000/signals" target="_blank">Open standalone ›</a>
+    </div>
+    <iframe src="http://localhost:3000/signals" title="Signals v2"></iframe>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">
+      <span>Reports v2 — /reports</span>
+      <a href="http://localhost:3000/reports" target="_blank">Open standalone ›</a>
+    </div>
+    <iframe src="http://localhost:3000/reports" title="Reports v2"></iframe>
+  </div>
+
+  <div class="panel notes">
+    <h2>검토 가이드</h2>
+    <p><span class="pill">Live</span> 진짜 dev server (<code>localhost:3000</code>)에서 띄운 v2 페이지 5장. mockup HTML이 아니라 실제 React 코드 + 백엔드 API 데이터.</p>
+    <p><strong>로그인 필요</strong> — dashboard 페이지는 인증 후 접근. 우측 상단 링크로 /login 새 탭에서 로그인 후 본 페이지 새로고침.</p>
+    <p><strong>v2 활성화 확인:</strong> 우측 상단 v2 톤 (Vantablack + Bronze + Playfair) 보이면 OK. v1 (밝은 white card 톤)이면 .env.local 적용 안 됨 — dev server 재시작 필요.</p>
+    <p><strong>체크 포인트:</strong></p>
+    <ul>
+      <li>Hero 48px Playfair + Bronze italic accent 톤</li>
+      <li>종목명 main 패턴 — 모든 테이블/카드</li>
+      <li>법적 라벨 — POSITIVE/NEGATIVE/NEUTRAL만</li>
+      <li>DisclaimerBanner footer 자동 마운트</li>
+      <li>portfolio: Add Position 모달 동작 (Hero CTA 클릭)</li>
+      <li>risk: 4 KPI gauge + 7-Layer breakdown + Correlation matrix (P1 fix됨)</li>
+      <li>signals: filter pill / top movers / timeline grid</li>
+      <li>reports: latest artifact + 6 갤러리 + 18 preview routes (각 카드 deep link)</li>
+    </ul>
+    <p><strong>문제 발견 시:</strong> 어떤 페이지/블록인지 + 화면 캡처 알려줘. 즉시 fix sub-agent 투입.</p>
+    <p><strong>OK면:</strong> GitHub PR #7 머지 (<a href="https://github.com/seanbae-analyst/pivoxquant/pull/7" target="_blank" style="color:var(--pq-bronze)">link</a>) → Vercel 자동 배포. Vercel env에 5개 flag 추가 시 prod에서도 v2.</p>
+  </div>
+
+</div>
+</body>
+</html>

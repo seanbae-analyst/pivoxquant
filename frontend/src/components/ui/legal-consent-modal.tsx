@@ -59,10 +59,10 @@ function Checkbox({
       id={id}
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all duration-200 ${
+      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[2px] border transition-all duration-200 ${
         checked
-          ? "border-[var(--sp-accent)] bg-[var(--sp-accent)]"
-          : "border-slate-300 bg-white hover:border-slate-400"
+          ? "border-[var(--pq-bronze)] bg-[var(--pq-bronze)]"
+          : "border-[rgba(245,240,232,0.3)] bg-transparent hover:border-[var(--pq-bronze-light)]"
       }`}
     >
       {checked && (
@@ -71,7 +71,7 @@ function Checkbox({
           height="10"
           viewBox="0 0 12 12"
           fill="none"
-          stroke="white"
+          stroke="var(--pq-ink)"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -129,13 +129,41 @@ export function LegalConsentModal({
       closeOnBackdrop={false}
       ariaLabel="가입 전 법적 동의"
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-slate-900">가입 전 확인</h2>
-        <p className="mt-1 text-xs text-slate-500">
+      <div
+        className="w-full max-w-md p-6"
+        style={{
+          backgroundColor: "var(--pq-ink)",
+          color: "var(--pq-ivory)",
+          border: "1px solid var(--pq-border)",
+          borderRadius: "var(--pq-radius-card)",
+          boxShadow: "0 24px 56px rgba(0,0,0,0.6)",
+        }}
+      >
+        <h2
+          className="text-lg font-bold"
+          style={{
+            fontFamily: "var(--font-display)",
+            color: "var(--pq-ivory)",
+            letterSpacing: "var(--pq-track-tight)",
+          }}
+        >
+          가입 전 확인
+        </h2>
+        <p
+          className="mt-1 text-xs"
+          style={{ color: "rgba(var(--pq-ivory-rgb), 0.6)" }}
+        >
           계속하려면 아래 필수 항목에 동의해 주세요.
         </p>
 
-        <div className="mt-5 space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+        <div
+          className="mt-5 space-y-3 p-4"
+          style={{
+            border: "1px solid var(--pq-border)",
+            backgroundColor: "rgba(var(--pq-ivory-rgb), 0.03)",
+            borderRadius: "var(--pq-radius-card)",
+          }}
+        >
           {/* 1. 이용약관 + 개인정보처리방침 */}
           <label
             htmlFor="consent_terms"
@@ -146,13 +174,17 @@ export function LegalConsentModal({
               checked={consents.terms}
               onChange={setConsent("terms")}
             />
-            <span className="text-xs leading-relaxed text-slate-600">
-              <strong className="text-slate-900">[필수]</strong>{" "}
+            <span
+              className="text-xs leading-relaxed"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
+            >
+              <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong>{" "}
               <Link
                 href="/terms"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline hover:text-slate-900"
+                className="underline"
+                style={{ color: "var(--pq-ivory)" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 이용약관
@@ -162,7 +194,8 @@ export function LegalConsentModal({
                 href="/privacy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline hover:text-slate-900"
+                className="underline"
+                style={{ color: "var(--pq-ivory)" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 개인정보처리방침
@@ -181,8 +214,11 @@ export function LegalConsentModal({
               checked={consents.non_advisory}
               onChange={setConsent("non_advisory")}
             />
-            <span className="text-xs leading-relaxed text-slate-600">
-              <strong className="text-slate-900">[필수]</strong> PivoxQuant는
+            <span
+              className="text-xs leading-relaxed"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
+            >
+              <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> PivoxQuant는
               자본시장법상 투자자문업이 아니며, 본 서비스의 모든 분석·리포트·시그널은
               정보 제공 목적임을 이해합니다.
             </span>
@@ -198,8 +234,11 @@ export function LegalConsentModal({
               checked={consents.age}
               onChange={setConsent("age")}
             />
-            <span className="text-xs leading-relaxed text-slate-600">
-              <strong className="text-slate-900">[필수]</strong> 만 14세 이상입니다.
+            <span
+              className="text-xs leading-relaxed"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
+            >
+              <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> 만 14세 이상입니다.
               (개인정보보호법 §22)
             </span>
           </label>
@@ -214,8 +253,11 @@ export function LegalConsentModal({
               checked={consents.marketing}
               onChange={setConsent("marketing")}
             />
-            <span className="text-xs leading-relaxed text-slate-600">
-              <span className="text-slate-500">[선택]</span> 마케팅 정보 수신에
+            <span
+              className="text-xs leading-relaxed"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
+            >
+              <span style={{ color: "rgba(var(--pq-ivory-rgb), 0.5)" }}>[선택]</span> 마케팅 정보 수신에
               동의합니다.
             </span>
           </label>
@@ -225,17 +267,23 @@ export function LegalConsentModal({
           type="button"
           disabled={!allRequired}
           onClick={handleSubmit}
-          className={`mt-5 w-full rounded-full px-4 py-3 text-sm font-semibold transition-all ${
-            allRequired
-              ? "bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.97]"
-              : "cursor-not-allowed bg-slate-100 text-slate-400"
-          }`}
+          className="mt-5 w-full px-4 py-3 text-sm font-semibold transition-all"
+          style={{
+            borderRadius: "var(--pq-radius-cta)",
+            backgroundColor: allRequired ? "var(--pq-bronze)" : "rgba(var(--pq-ivory-rgb), 0.06)",
+            color: allRequired ? "var(--pq-ink)" : "rgba(var(--pq-ivory-rgb), 0.35)",
+            cursor: allRequired ? "pointer" : "not-allowed",
+            border: allRequired ? "none" : "1px solid var(--pq-border)",
+          }}
         >
           동의하고 계속하기
         </button>
 
         {!allRequired && (
-          <p className="mt-2 text-center text-[11px] text-slate-400">
+          <p
+            className="mt-2 text-center text-[11px]"
+            style={{ color: "rgba(var(--pq-ivory-rgb), 0.4)" }}
+          >
             필수 항목 3개에 모두 동의해야 진행할 수 있습니다.
           </p>
         )}

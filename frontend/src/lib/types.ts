@@ -230,63 +230,16 @@ export interface LookupResult {
   is_korean?: boolean;
 }
 
-/* ── Morning Brief ── */
-
-export interface MorningBriefIndex {
-  price: number;
-  change_pct: number;
-}
-
-export interface MorningBriefPortfolioChange {
-  ticker: string;
-  /** Company display name. Backend guarantees non-empty (falls back to ticker). */
-  name: string;
-  change_pct: number;
-  direction: "up" | "down";
-}
-
-export interface MorningBriefEvent {
-  ticker: string;
-  /** Company display name. Backend guarantees non-empty (falls back to ticker). */
-  name: string;
-  event_type: string;
-  event_time: string;
-  description: string;
-}
-
-export interface MorningBriefContent {
-  market_summary: {
-    sp500?: MorningBriefIndex;
-    nasdaq?: MorningBriefIndex;
-    dow?: MorningBriefIndex;
-    kospi?: MorningBriefIndex;
-    kosdaq?: MorningBriefIndex;
-    vix?: MorningBriefIndex;
-  };
-  portfolio_changes: MorningBriefPortfolioChange[];
-  events: MorningBriefEvent[];
-  insight: string;
-}
-
-export interface MorningBriefResponse {
-  available: boolean;
-  brief?: MorningBriefContent;
-  message?: string;
-  generated_at?: string;
-  date?: string;
-}
-
-export interface MorningBriefArchiveItem {
-  date: string;
-  created_at?: string;
-  content: MorningBriefContent;
-}
-
-export interface MorningBriefArchiveResponse {
-  ok: boolean;
-  count: number;
-  briefs: MorningBriefArchiveItem[];
-}
+/* ── Morning Brief ── REMOVED 2026-04-29
+ * Backend Morning Brief service deprecated. All MorningBrief* types
+ * (MorningBriefIndex / MorningBriefPortfolioChange / MorningBriefEvent /
+ * MorningBriefContent / MorningBriefResponse / MorningBriefArchiveItem /
+ * MorningBriefArchiveResponse) removed in sync with the backend deletion.
+ *
+ * Note: `ArtifactType` retains the `"morning_brief"` literal (line ~410)
+ * so historical artifact rows persisted before the deprecation continue
+ * to deserialize without runtime errors.
+ */
 
 /* ── Counterfactual ("What-If") Simulator ── */
 

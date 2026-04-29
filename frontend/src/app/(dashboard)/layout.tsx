@@ -27,7 +27,6 @@ type DisclaimerKind = "signal" | "ai-analysis" | "coaching";
 /** Longest-prefix matching: more specific paths first. */
 const PATH_TO_TYPE: ReadonlyArray<readonly [string, DisclaimerKind]> = [
   // most specific / multi-segment first
-  ["/morning-brief", "signal"],
   ["/ai-chat", "ai-analysis"],
   ["/watchlist", "signal"],
   ["/portfolio", "signal"],

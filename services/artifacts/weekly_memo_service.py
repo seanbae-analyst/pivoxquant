@@ -20,10 +20,8 @@ Design principles
    is simply omitted. The memo ships with whatever sections are
    available.
 4. Compliance. Prose is descriptive — no "buy/sell/추천". We reuse
-   `morning_brief_service.is_compliant` as the final filter before
+   `legal_filter.is_compliant` as the final filter before
    any AI-generated text is persisted.
-5. No modifications to the Morning Brief pipeline. This service
-   imports read-only helpers only.
 6. Optional deps. WeasyPrint and SendGrid are imported lazily so tests
    that don't need PDF/email can run without the system libs. A memo
    with no PDF renderer installed still generates the data + HTML and
@@ -148,8 +146,8 @@ class MemoContext:
 
 
 # ── AI budget (module-level) ─────────────────────────────────────────────────
-# Same shape as morning_brief_service — keeps us under Claude Haiku budget
-# even when a large Pro cohort triggers the Sunday run at once.
+# Daily-counter pattern keeps us under Claude Haiku budget even when a large
+# Pro cohort triggers the Sunday run at once.
 _WEEKLY_AI_LIMIT = 200
 _ai_usage = {"day": None, "count": 0}
 _ai_lock = threading.Lock()
@@ -375,10 +373,10 @@ def _risk_notes(positions: list[Position],
                 top_down: list[dict]) -> list[str]:
     """Rule-based descriptive risk notes — never action advice.
 
-    Passes output through morning_brief compliance regex before returning.
+    Passes output through legal_filter.is_compliant regex before returning.
     """
     try:
-        from services.morning_brief_service import is_compliant
+        from services.legal_filter import is_compliant
     except Exception:
         def is_compliant(_: str) -> bool: return True  # pragma: no cover
 
