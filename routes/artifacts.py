@@ -2890,7 +2890,7 @@ def diag_weasyprint():
 
     # 1. import
     def _import():
-        from weasyprint import HTML  # type: ignore
+        from weasyprint import HTML  # type: ignore  # noqa: F401 — import-test
         import weasyprint  # type: ignore
         return {
             "weasyprint_version": getattr(weasyprint, "__version__", "?"),
