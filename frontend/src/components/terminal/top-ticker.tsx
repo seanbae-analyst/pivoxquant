@@ -226,11 +226,16 @@ export function TopTicker() {
     const kq = find(krIdx, "^KQ11");
     if (kq) m.set("KOSDAQ", kq);
     if (typeof fxData?.usd_krw === "number" && fxData.usd_krw > 0) {
+      // Pull change_1d_pct from the KR indices payload when available — the
+      // /api/market/fx endpoint only carries the level, but
+      // /api/market/indices?region=kr already exposes USDKRW with a daily
+      // change. Falls back to 0 when the indices endpoint is empty/loading.
+      const krUsdKrw = find(krIdx, "USDKRW");
       m.set("USDKRW", {
         ticker: "USDKRW",
         name: "USD/KRW",
         level: fxData.usd_krw,
-        change_1d_pct: 0,
+        change_1d_pct: krUsdKrw?.change_1d_pct ?? 0,
       });
     }
     return m;

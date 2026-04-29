@@ -36,6 +36,17 @@ def _serialize(w: Watchlist, overlay_entry: dict | None = None) -> dict:
     observed_at = o.get("observed_at")
     price_source = o.get("source") or "stale"
 
+    # Bug-hunter 2026-04-30: when the price overlay is empty/stale, fall
+    # back to SignalCache.data_json["change_pct"] (populated by signal
+    # cache builders + price_overlay.py:130). Without this fallback every
+    # watchlist row showed +0.00% even though detail/signals pages had
+    # the real change. Prefer stale-but-real over fake-zero.
+    if change_1d_pct is None and "change_pct" in sd:
+        try:
+            change_1d_pct = float(sd.get("change_pct"))
+        except (TypeError, ValueError):
+            change_1d_pct = None
+
     # Bug C (2026-04-24): Watchlist used to render "$0.0000" whenever the
     # overlay came up empty, even though SignalCache stored a valid
     # `price_display` like "$402.91". Derive a last-resort numeric price
