@@ -4,6 +4,8 @@ RUN apt-get update && apt-get install -y \
     libpq-dev gcc \
     libpango-1.0-0 libpangoft2-1.0-0 libcairo2 \
     libgdk-pixbuf-2.0-0 libgdk-pixbuf2.0-common \
+    libglib2.0-0 libpangocairo-1.0-0 libharfbuzz0b libfribidi0 \
+    fonts-noto-cjk fontconfig \
     libffi-dev libxml2 libxslt1.1 shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
