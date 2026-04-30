@@ -435,22 +435,128 @@ class DividendIncomeService:
 
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user(...) result onto the v3 1-page Free design
+        shape used by templates/dividend_income.html. Mirrors the React
+        component (frontend/src/components/reports/templates/dividend-income.tsx).
+
+        Missing fields fall through as em-dash placeholders. No directive
+        vocabulary (자본시장법 §17 forbidden) is ever produced.
+        """
+        rows = data.get("received_rows") or []
+        totals = data.get("received_totals") or {}
+        monthly = data.get("monthly_series") or []
+        ann_yield = data.get("annual_yield_est") or {}
+        forward = data.get("forward_totals") or {}
+
+        def _money(v: Any, *, signed: bool = False) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            sign = ("+" if n >= 0 else "−") if signed else ""
+            an = abs(n)
+            if an >= 1_000_000:
+                return f"{sign}${an/1_000_000:.2f}M"
+            if an >= 1_000:
+                return f"{sign}${an:,.0f}"
+            return f"{sign}${an:,.2f}"
+
+        def _pct(v: Any) -> str:
+            try:
+                return f"{float(v):.2f}%"
+            except (TypeError, ValueError):
+                return "—"
+
+        # KPI block — uses received_totals + ann_yield + forward
+        gross_usd = totals.get("gross_usd")
+        ytd_usd = totals.get("ytd_gross_usd") or totals.get("ytd_usd")
+        run_rate = forward.get("run_rate_usd") or ann_yield.get("annual_usd")
+
+        # Payments table — flatten received_rows
+        payments = []
+        for r in rows[:12]:  # cap at 12 to fit one page
+            payments.append({
+                "date":      r.get("ex_date") or r.get("pay_date") or r.get("date") or "—",
+                "ticker":    r.get("ticker") or "—",
+                "name":      r.get("name") or "",
+                "shares":    str(r.get("shares") or r.get("qty") or "—"),
+                "per_share": _money(r.get("per_share") or r.get("dividend_per_share")),
+                "received":  _money(r.get("gross_usd") or r.get("amount_usd") or r.get("amount")),
+                "yield_pct": _pct(r.get("yield_pct") or r.get("yield")),
+            })
+
+        # Top contributors — sort by gross descending, normalize bar pct
+        sorted_rows = sorted(rows, key=lambda r: r.get("gross_usd") or 0, reverse=True)
+        top_n = sorted_rows[:6]
+        max_amt = (top_n[0].get("gross_usd") or 0) if top_n else 0
+        contributors = []
+        for r in top_n:
+            amt = r.get("gross_usd") or 0
+            pct_bar = (amt / max_amt * 100.0) if max_amt > 0 else 0
+            contributors.append({
+                "ticker": r.get("ticker") or "—",
+                "pct":    round(pct_bar, 1),
+                "amount": _money(amt),
+                "flat":   pct_bar < 35,
+            })
+
+        # 12-month trail bars — geometry mirrors the TSX layout
+        trail_bars = []
+        if monthly:
+            vals = [(m.get("gross_usd") or 0) for m in monthly[-12:]]
+            mx = max(vals) if vals else 0
+            for i, v in enumerate(vals):
+                h = round((v / mx * 110.0) if mx > 0 else 0)
+                y = 142 - h
+                trail_bars.append({"x": 10 + i * 50, "y": y, "h": h})
+
+        return {
+            "as_of_label":     data.get("month_label") or "—",
+            "report_tag":      f"DI-{data.get('month_label','—')}",
+            "this_month":      {"value": _money(gross_usd), "delta": ""},
+            "ytd_income":      {"value": _money(ytd_usd) if ytd_usd else "—",
+                                 "delta": f"+{data.get('yoy_growth_pct','—')}% YoY" if data.get('yoy_growth_pct') else ""},
+            "yield_on_cost":   {"value": _pct(ann_yield.get("yield_on_cost_pct") or ann_yield.get("yield_pct")),
+                                 "delta": "portfolio avg"},
+            "run_rate":        {"value": _money(run_rate),
+                                 "delta": f"{_money((run_rate or 0)/12)}/mo" if run_rate else ""},
+            "payments":        payments,
+            "payments_count":  len(payments),
+            "total_received":  _money(gross_usd),
+            "avg_yield":       f"avg {_pct(ann_yield.get('avg_yield_pct'))}",
+            "top_contributors": contributors,
+            "trail_bars":      trail_bars,
+            "trail_caption":   None,
+            "last_month_label": (data.get("month_label") or "—")[-3:].upper(),
+            "reinvestment_note": None,  # falls back to template default
+        }
+
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
+        """Render the print-oriented v3 HTML. Caller is render_pdf()."""
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data)
         try:
+            ctx = dict(data)
+            ctx["v3"] = self._to_v3_shape(data)
             tpl = env.get_template("dividend_income.html")
-            return tpl.render(**data)
+            return tpl.render(**ctx)
         except Exception as exc:
-            logger.warning("dividend_income template render failed: %s", exc)
+            logger.warning("dividend_income v3 render failed: %s", exc)
             return self._fallback_html(data)
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        # Email body still uses the same template (single-template flow).
+        return self.render_pdf_html(data)
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
         if HTML is None:
             return None
-        html_str = self.render_html(data)
+        html_str = self.render_pdf_html(data)
         try:
             return HTML(string=html_str).write_pdf()
         except Exception as exc:  # pragma: no cover
