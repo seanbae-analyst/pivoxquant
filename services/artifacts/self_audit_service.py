@@ -514,7 +514,8 @@ class SelfAuditService:
             return self._fallback_html(data)
         try:
             ctx = dict(data)
-            ctx["v3"] = self._to_v3_shape(data)
+            from services.artifacts._name_enrich import enrich_v3_names
+            ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
             ctx["persona"] = self._resolve_persona(data)
             tpl = env.get_template("self_audit.html")
             return tpl.render(**ctx)

@@ -95,7 +95,7 @@
       <tbody>
         {% for b in v3.buys | default([]) %}
         <tr>
-          <td><span class="pq-pdf-ticker">{{ b.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ b.name | default(b.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ b.ticker }}</span></td>
           <td>{{ b.insider | default('—') }}</td>
           <td>{{ b.role | default('—') }}</td>
           <td class="right pos">{{ b.amount | default('—') }}</td>
@@ -123,7 +123,7 @@
       <tbody>
         {% for s in v3.sells | default([]) %}
         <tr>
-          <td><span class="pq-pdf-ticker">{{ s.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ s.name | default(s.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ s.ticker }}</span></td>
           <td>{{ s.insider | default('—') }}</td>
           <td>{{ s.role | default('—') }}</td>
           <td class="right neg">{{ s.amount | default('—') }}</td>

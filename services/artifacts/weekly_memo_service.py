@@ -930,7 +930,8 @@ class WeeklyMemoService:
         try:
             tpl = env.get_template("weekly_memo.html")
             ctx = self._with_persona(data)
-            ctx["v3"] = self._to_v3_shape(data)
+            from services.artifacts._name_enrich import enrich_v3_names
+            ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
             return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("pdf template render failed: %s", exc)

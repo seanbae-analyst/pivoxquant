@@ -180,7 +180,7 @@
       <tbody>
         {% for h in v3.top_bottom | default([]) %}
         <tr{% if h.bottom %} class="bottom-divider"{% endif %}>
-          <td><span class="pq-pdf-ticker">{{ h.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ h.name | default(h.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ h.ticker }}</span></td>
           <td>{{ h.name | default('') }}</td>
           <td class="right">{{ h.weight | default('—') }}</td>
           <td class="right {{ h.mtd_tone | default('neutral') }}">{{ h.mtd | default('—') }}</td>

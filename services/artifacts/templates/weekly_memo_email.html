@@ -13,7 +13,7 @@
 <div style="display:none;max-height:0;overflow:hidden;color:transparent;">
   Week {{ week_number }} portfolio review
   {% if weekly_return_pct is not none %}· {{ '%+.2f'|format(weekly_return_pct) }}%{% endif %}
-  {% if top_movers_up and top_movers_up|length > 0 %}· Top: {{ top_movers_up[0].ticker }}{% endif %}
+  {% if top_movers_up and top_movers_up|length > 0 %}· Top: {{ top_movers_up[0].name | default(top_movers_up[0].ticker, true) }}{% endif %}
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ec;padding:28px 0;">
@@ -72,11 +72,15 @@
         </div>
         <ol style="margin:0;padding-left:20px;font-size:11pt;line-height:1.75;color:#0a0a0a;font-family:'Source Serif 4',Georgia,serif;">
           {% if top_movers_up %}
-            <li style="margin-bottom:8px;">이번 주 상승 기여 1위: <strong>{{ top_movers_up[0].ticker }}</strong>
+            <li style="margin-bottom:8px;">이번 주 상승 기여 1위:
+              <strong>{{ top_movers_up[0].name | default(top_movers_up[0].ticker, true) }}</strong>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9pt;color:#8a8a8a;">{{ top_movers_up[0].ticker }}</span>
               (<span class="pos mono">{{ '%+.2f'|format(top_movers_up[0].weekly_return_pct) }}%</span>)</li>
           {% endif %}
           {% if top_movers_down %}
-            <li style="margin-bottom:8px;">이번 주 하락 기여 1위: <strong>{{ top_movers_down[0].ticker }}</strong>
+            <li style="margin-bottom:8px;">이번 주 하락 기여 1위:
+              <strong>{{ top_movers_down[0].name | default(top_movers_down[0].ticker, true) }}</strong>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:9pt;color:#8a8a8a;">{{ top_movers_down[0].ticker }}</span>
               (<span class="neg mono">{{ '%+.2f'|format(top_movers_down[0].weekly_return_pct) }}%</span>)</li>
           {% endif %}
           {% if earnings_calendar %}
