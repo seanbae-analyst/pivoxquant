@@ -194,7 +194,7 @@
       <tbody>
         {% for d in v3.best_decisions | default([]) %}
         <tr>
-          <td><span class="pq-pdf-ticker">{{ d.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ d.name | default(d.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ d.ticker }}</span></td>
           <td>{{ d.buy_date }}</td>
           <td class="right">{{ d.outcome }}</td>
           <td class="right {{ d.tone | default('neutral') }}">{{ d.return }}</td>
@@ -213,7 +213,7 @@
       <tbody>
         {% for d in v3.worst_decisions | default([]) %}
         <tr>
-          <td><span class="pq-pdf-ticker">{{ d.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ d.name | default(d.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ d.ticker }}</span></td>
           <td>{{ d.buy_date }}</td>
           <td class="right">{{ d.outcome }}</td>
           <td class="right {{ d.tone | default('neutral') }}">{{ d.return }}</td>
@@ -291,7 +291,7 @@
       <tbody>
         {% for t in v3.thesis_checks | default([]) %}
         <tr>
-          <td><span class="pq-pdf-ticker">{{ t.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ t.name | default(t.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ t.ticker }}</span></td>
           <td class="right"><span class="pq-pdf-badge {{ t.verdict_tone }}">{{ t.verdict_label }}</span></td>
           <td>{{ t.note }}</td>
         </tr>
@@ -332,7 +332,7 @@
       <div class="pq-pdf-card" style="margin-bottom: 8px; padding: 10px 12px;">
         <div class="pq-pdf-flex-between">
           <div>
-            <span class="pq-pdf-ticker">{{ q.ticker }}</span>
+            <strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ q.name | default(q.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ q.ticker }}</span>
             <span style="margin-left: 8px; font-size: 11px; color: var(--r-ink-2);">{{ q.question }}</span>
           </div>
           <div style="font-family:var(--font-mono);font-size:11px;color:var(--r-ink-3);">

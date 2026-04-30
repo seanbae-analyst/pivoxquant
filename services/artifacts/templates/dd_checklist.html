@@ -103,7 +103,7 @@
       <tbody>
         {% for p in v3.positions | default([]) %}
         <tr>
-          <td><span class="pq-pdf-ticker">{{ p.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ p.name | default(p.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ p.ticker }}</span></td>
           <td class="right">{{ p.shares }}</td>
           <td class="right">{{ p.avg_cost }}</td>
           <td class="right">{{ p.cost_basis }}</td>

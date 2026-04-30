@@ -107,7 +107,7 @@
       <tbody>
         {% for c in v3.changes | default([]) %}
         <tr>
-          <td><span class="pq-pdf-ticker">{{ c.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ c.name | default(c.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ c.ticker }}</span></td>
           <td>{{ c.agency | default('—') }}</td>
           <td class="right">{{ c.prev | default('—') }}</td>
           <td class="right {{ c.now_tone | default('neutral') }}">{{ c.now | default('—') }}</td>
@@ -178,7 +178,7 @@
       <tbody>
         {% for c in v3.cds | default([]) %}
         <tr>
-          <td><span class="pq-pdf-ticker">{{ c.ticker }}</span></td>
+          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ c.name | default(c.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ c.ticker }}</span></td>
           <td class="right">{{ c.cds | default('—') }}</td>
           <td class="right {{ c.delta_tone | default('neutral') }}">{{ c.delta | default('—') }}</td>
           <td class="right {{ c.vs_implied_tone | default('neutral') }}">{{ c.vs_implied | default('—') }}</td>

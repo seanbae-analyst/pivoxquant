@@ -128,8 +128,8 @@
         <tr>
           <td>{{ p.date | default('—') }}</td>
           <td>
+            <strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ p.name | default(p.ticker, true) }}</strong>
             <span class="pq-pdf-ticker">{{ p.ticker | default('—') }}</span>
-            {{ p.name | default('') }}
           </td>
           <td class="right">{{ p.shares | default('—') }}</td>
           <td class="right">{{ p.per_share | default('—') }}</td>
@@ -180,7 +180,7 @@
             {% for c in v3.top_contributors | default([]) %}
             <div class="pq-pdf-alloc-row{% if c.flat %} flat{% endif %}">
               <span class="pq-pdf-alloc-name">
-                <span class="pq-pdf-ticker">{{ c.ticker }}</span>
+                <strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ c.name | default(c.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ c.ticker }}</span>
               </span>
               <span class="pq-pdf-alloc-bar">
                 <span class="pq-pdf-alloc-fill" style="width:{{ c.pct | default(0) }}%"></span>

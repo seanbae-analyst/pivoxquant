@@ -437,7 +437,8 @@ class BragCardService:
         try:
             tpl = env.get_template("brag_card.html")
             ctx = dict(data)
-            ctx["v3"] = self._to_v3_shape(data)
+            from services.artifacts._name_enrich import enrich_v3_names
+            ctx["v3"] = enrich_v3_names(self._to_v3_shape(data))
             ctx["persona"] = self._resolve_persona(data)
             return tpl.render(**ctx)
         except Exception as exc:
