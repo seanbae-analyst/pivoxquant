@@ -1,853 +1,192 @@
 {# ══════════════════════════════════════════════════════════════════════════
-   Self Audit — Goldman IC v2 Editorial Redesign (6-page flagship)
-   Quarterly portfolio self-audit. KPMG audit letter × Buffett checklist tone.
-   Observation only — no verdict, no directive, no claim about tomorrow.
+   Self Audit — Premium · 2-page · Quarterly (CEO design v3, 2026-04-30)
+
+   Note: standalone cron permanently disabled — Quarterly Self Report
+   absorbed Self Audit as Part 2. This artifact remains for admin debug
+   and historical preview.
+
+   Page 1: Cover · 4 KPIs (Trades / Win Rate / Avg Return / W:L) +
+            pattern summary + best/worst decisions
+   Page 2: Detailed decision table + Not-Claimed + Governance + Disclaimer
+
+   v3 shape (SelfAuditService._to_v3_shape):
+     v3.doc, v3.doc_short, v3.issued
+     v3.kpi_trades / kpi_winrate / kpi_avgret / kpi_avgret_tone / kpi_wl
+     v3.pattern_summary, v3.pullquote
+     v3.best_decisions / v3.worst_decisions  ({ticker, name, buy_date, outcome, return, tone})
+     v3.not_claimed (list[str]), v3.data_sources (list[str])
+
+   Compliance — observational only. No directive vocabulary.
    ══════════════════════════════════════════════════════════════════════════ #}
+{%- set v3 = v3 | default({}) -%}
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <title>Self Audit — {{ quarter_label }} — {{ user_name }}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 22mm 20mm 22mm 20mm;
-      @top-left {
-        content: "PIVOXQUANT  ·  SELF-AUDIT";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7.2pt;
-        letter-spacing: 0.36em;
-        text-transform: uppercase;
-        color: #B8956A;
-      }
-      @top-right {
-        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ quarter_label }}";
-        font-family: "JetBrains Mono", monospace;
-        font-size: 7pt;
-        letter-spacing: 0.14em;
-        color: #6B6B6B;
-      }
-      @bottom-left {
-        content: "A mirror held quietly — informational only.";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7pt;
-        font-style: italic;
-        color: #8a8a8a;
-      }
-      @bottom-right {
-        content: counter(page) " / " counter(pages);
-        font-family: "JetBrains Mono", monospace;
-        font-size: 8pt;
-        color: #4a4a4a;
-      }
-    }
-    @page :first {
-      @top-left { content: none; }
-      @top-right { content: none; }
-      @bottom-left { content: none; }
-      @bottom-right { content: none; }
-    }
-    {% include '_report_css.html' %}
-
-    /* ───────── P1 · COVER ───────── */
-    .cv { position: relative; padding-top: 0; }
-    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
-    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
-    .cv-issue {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
-      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
-    }
-    .cv-issue .cv-issue-key { color: #0A0A0A; }
-    .cv-hero {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 42pt; line-height: 1.14; letter-spacing: -0.02em;
-      color: #0A0A0A; margin: 44pt 0 44pt 0;
-    }
-    .cv-hero span { display: block; }
-    .cv-hero span + span { padding-left: 34pt; }
-    .cv-hero span + span + span { padding-left: 68pt; color: #B8956A; }
-    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; overflow: visible; }
-    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
-    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
-    .cv-kpi-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #8a8a8a; margin-bottom: 4pt;
-    }
-    .cv-kpi-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 18pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums; letter-spacing: -0.015em; line-height: 1.02;
-    }
-    .cv-kpi-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
-    }
-    .cv-foot {
-      margin-top: 40pt; text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 9pt; color: #6B6B6B; letter-spacing: 0.02em;
-    }
-    .cv-micro {
-      margin-top: 12pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; color: #8a8a8a;
-      text-align: center; line-height: 1.5; max-width: 420pt;
-      margin-left: auto; margin-right: auto;
-    }
-
-    /* ───────── Part / title / deck ───────── */
-    .sp-part {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin: 0 0 2pt 0;
-    }
-    .sp-title {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 26pt; font-weight: 400; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
-    }
-    .sp-deck {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
-      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
-    }
-
-    /* ───────── P2 · AUDIT LETTER ───────── */
-    .al-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed; }
-    .al-main { display: table-cell; width: 72%; vertical-align: top; }
-    .al-side { display: table-cell; width: 28%; vertical-align: top; }
-    .al-letter {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10.2pt; line-height: 1.62; color: #202020;
-    }
-    .al-letter p { margin: 0 0 9pt 0; text-align: justify; hyphens: auto; }
-    .al-letter > p:first-child::first-letter {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 32pt; line-height: 0.88; font-weight: 500;
-      color: #B8956A; /* float+padding removed for WeasyPrint 68.1 compat */ font-style: normal;
-    }
-    .al-sign {
-      margin-top: 18pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 9.5pt; color: #6B6B6B;
-    }
-    .al-sign-line { display: block; }
-
-    .sp-margin-block {
-      border-left: 0.35pt solid #B8956A;
-      padding: 2pt 0 2pt 9pt;
-      margin-bottom: 14pt;
-    }
-    .sp-margin-term {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 2pt;
-    }
-    .sp-margin-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 12pt; color: #0A0A0A;
-      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
-    }
-    .sp-margin-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8pt; line-height: 1.42; color: #6B6B6B; margin-top: 3pt;
-    }
-
-    /* ───────── P3 · AUDIT LADDER (10-point checklist) ───────── */
-    .ll-table {
-      width: 100%; border-collapse: collapse; margin: 6pt 0 0 0;
-      table-layout: fixed;
-    }
-    .ll-table th, .ll-table td {
-      padding: 7pt 6pt; text-align: left; vertical-align: top;
-      border-bottom: 0.25pt solid #e4dfd2;
-    }
-    .ll-table thead th {
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.18em; text-transform: uppercase;
-      color: #6B6B6B; font-weight: 600;
-    }
-    .ll-table th.num,
-    .ll-table td.num {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-    .ll-num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.5pt; color: #8a8a8a;
-    }
-    .ll-q {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.4pt; line-height: 1.45; color: #0A0A0A;
-    }
-    .ll-a {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 9pt; line-height: 1.45; color: #4a4a4a;
-    }
-    .ll-flag {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.18em; text-transform: uppercase;
-      font-weight: 600; text-align: center;
-      padding: 2pt 6pt;
-      display: inline-block;
-    }
-    .ll-flag-g { background: transparent; color: #2d5a2d; border: 0.4pt solid #2d5a2d; }
-    .ll-flag-y { background: transparent; color: #7a5a1a; border: 0.4pt solid #7a5a1a; }
-    .ll-flag-r { background: transparent; color: #7f1d1d; border: 0.4pt solid #7f1d1d; }
-    .ll-note {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.8pt; line-height: 1.4; color: #6B6B6B;
-    }
-
-    /* ───────── P4 · FLAG QUAD (2×2 small-multiples + right rail) ───── */
-    .rq-grid {
-      display: table; width: 100%;
-      border-collapse: separate; border-spacing: 14pt 0;
-    }
-    .rq-main { display: table-cell; width: 66%; vertical-align: top; }
-    .rq-side { display: table-cell; width: 34%; vertical-align: top; }
-    .rq-quads { display: table; width: 100%; border-collapse: collapse; }
-    .rq-quad {
-      display: table-cell; width: 50%;
-      padding: 12pt 14pt;
-      vertical-align: top; height: 200pt;
-    }
-    .rq-quad-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 3pt;
-    }
-    .rq-quad-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 14pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-    }
-    .rq-quad-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; color: #6B6B6B;
-      margin-top: 4pt; line-height: 1.4;
-    }
-    .rq-method {
-      padding: 12pt 0 0 12pt; font-size: 8pt;
-      border-left: 0.35pt solid #c9c4b8;
-    }
-    .rq-method-eyebrow {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.28em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 8pt;
-    }
-    .rq-method-item { margin-bottom: 9pt; }
-    .rq-method-item:last-child { margin-bottom: 0; }
-    .rq-method-term {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-weight: 600; font-size: 8.5pt; color: #0A0A0A;
-    }
-    .rq-method-def {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; line-height: 1.5;
-      color: #4a4a4a; margin-top: 1pt;
-    }
-
-    /* ───────── P5 · EDITORIAL ───────── */
-    .ed-quote-wrap {
-      min-height: 280pt;
-      padding: 40pt 40pt 26pt 40pt;
-      display: table; width: 100%; text-align: center;
-    }
-    .ed-quote-cell { display: table-cell; vertical-align: middle; }
-    .ed-quote {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 34pt; line-height: 1.24; letter-spacing: -0.015em;
-      color: #0A0A0A; margin: 0;
-    }
-    .ed-quote-attr {
-      margin-top: 22pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #B8956A;
-    }
-    .ed-quote-attr::before, .ed-quote-attr::after {
-      content: "——"; color: #B8956A; opacity: 0.5;
-      margin: 0 8pt; letter-spacing: 0;
-    }
-    .ed-not-head {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 8pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #0A0A0A; font-weight: 600;
-      margin-top: 26pt; padding-top: 12pt;
-      border-top: 0.5pt solid #0A0A0A;
-    }
-    .ed-not-list {
-      margin-top: 10pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.65; color: #202020;
-    }
-    .ed-not-item {
-      display: table; width: 100%;
-      padding: 3pt 0;
-      border-bottom: 0.15pt solid #e4dfd2;
-    }
-    .ed-not-item:last-child { border-bottom: none; }
-    .ed-not-cat {
-      display: table-cell; width: 140pt; vertical-align: top;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.2pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; padding-top: 2pt;
-    }
-    .ed-not-detail {
-      display: table-cell; vertical-align: top;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; color: #202020;
-    }
-
-    /* ───────── P6 · COLOPHON ───────── */
-    .co-wrap { padding: 0; text-align: left; }
-    .co-body p { margin: 0 0 8pt 0 !important; }
-    .co-head {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 4pt;
-    }
-    .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
-    .co-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.7; color: #202020; max-width: 440pt;
-    }
-    .co-body .co-key {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.4pt; letter-spacing: 0.18em; text-transform: uppercase;
-      color: #6B6B6B;
-    }
-    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
-    .co-sign { text-align: center; margin-top: 14pt; }
-    .co-sign-house {
-      margin-top: 16pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
-      color: #0A0A0A; font-weight: 500;
-    }
-    .co-sign-ref {
-      margin-top: 10pt;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
-    }
-    .co-sign-time {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
-    }
-
-    section.disclaimer.pq-disclaimer {
-      border: none !important;
-      border-top: 0.35pt solid #c9c4b8 !important;
-      padding: 10pt 0 0 0 !important;
-      margin: 16pt 0 0 0 !important;
-      background: transparent !important;
-      font-size: 7.6pt !important;
-      line-height: 1.5 !important;
-    }
-    section.disclaimer.pq-disclaimer h5.disclaimer__title {
-      font-family: "Geist", -apple-system, sans-serif !important;
-      font-size: 7pt !important;
-      letter-spacing: 0.32em !important;
-      text-transform: uppercase !important;
-      color: #B8956A !important;
-      margin: 0 0 6pt 0 !important;
-    }
-  </style>
+  <title>Self Audit — {{ quarter_label | default('—') }} — {{ user_name | default('Reader') }}</title>
+  <style>{% include '_self_audit_v3_css.html' %}</style>
 </head>
 <body>
 
-{% set _issue_no = issue_number | default(5) %}
-{% set _doc_ref = doc_ref | default('PQ-SA-' ~ ('%02d' % _issue_no) ~ ' · v2026.04.21') %}
-{% set _hero = hero_headline | default(['Ten questions.', 'Ten answers, honest', 'or otherwise.']) %}
-{% set _audit_score = audit_score | default(8.2) %}
-{% set _red_flags = red_flags | default(0) %}
-{% set _yellow_flags = yellow_flags | default(2) %}
-{% set _review_date = review_date | default('2026-04-21') %}
+<div class="pq-report">
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 1 · COVER
-   ══════════════════════════════════════════════════════════════════════════ #}
-<section class="cv">
+  {# ═════════════════════════ PAGE 1 — COVER + PATTERN + DECISIONS ═════════════════════════ #}
+  <section class="pq-pdf-page">
 
-  <div class="cv-wordmark">
-    {% with brand_kind='wordmark', brand_size=340 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-  </div>
-
-  <div class="cv-rule-thin"></div>
-  <div class="cv-issue">
-    ISSUE <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
-    &nbsp;·&nbsp; SELF-AUDIT
-    &nbsp;·&nbsp; {{ quarter_label }}
-  </div>
-  <div class="cv-rule-thin"></div>
-
-  <h1 class="cv-hero">
-    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
-  </h1>
-
-  <div class="cv-rule-thin"></div>
-
-  <div class="cv-kpi4">
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Audit Score</div>
-      <div class="cv-kpi-value">{{ '%.1f'|format(_audit_score) }}/10</div>
-      <div class="cv-kpi-foot">Ten-point observational ladder.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Red Flags</div>
-      <div class="cv-kpi-value {% if _red_flags > 0 %}r-neg{% endif %}">{{ _red_flags }}</div>
-      <div class="cv-kpi-foot">Items requiring immediate review.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Yellow Flags</div>
-      <div class="cv-kpi-value">{{ _yellow_flags }}</div>
-      <div class="cv-kpi-foot">Items to monitor next quarter.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Review Date</div>
-      <div class="cv-kpi-value">{{ _review_date }}</div>
-      <div class="cv-kpi-foot">Signed off by self, for self.</div>
-    </div>
-  </div>
-
-  <p class="cv-foot">
-    Prepared for {{ user_name }} &nbsp;·&nbsp; A record, not a report card.
-  </p>
-  <p class="cv-micro">
-    This audit is a descriptive self-observation. Past performance does not
-    guarantee future results. 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.
-  </p>
-</section>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 2 · AUDIT LETTER
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part I · The Audit Letter</p>
-<h2 class="sp-title">A note in the margin of one's own book</h2>
-<p class="sp-deck">
-  The quarterly self-audit is a private letter — one signed and countersigned
-  by the same hand, with the patience of a ledger and the honesty of a mirror.
-</p>
-
-<div class="al-grid">
-  <div class="al-main">
-    <div class="al-letter">
-      {% if audit_letter %}
-        {% for para in audit_letter %}<p>{{ para }}</p>{% endfor %}
-      {% else %}
-        <p>
-          This is the fifth quarterly audit of the book, and the first to open
-          with no red flag. Position sizing held inside the self-set bound on
-          every day of the quarter; the largest single name peaked at 9.2% of
-          NAV on one session, still below the 10% ceiling.
-        </p>
-        <p>
-          Cash reserve sat between 14% and 22% throughout, comfortably above
-          the self-set floor of 10%. Trading frequency ran at 1.8 closes per
-          week, near the trailing four-quarter baseline. The observation
-          journal carries an entry for every closed lot, with one gap of two
-          sessions noted in early March.
-        </p>
-        <p>
-          Two yellow flags are opened this quarter. First, the watchlist has
-          grown to 41 names without a pruning pass — double the self-set
-          working list of 20. Second, dividend receipts were posted to the
-          ledger within two weeks of receipt rather than the standard three
-          sessions.
-        </p>
-        <p>
-          The book's pattern this quarter is one of quiet composure. Mistakes
-          were of omission, not of commission; none of them were structural.
-          The audit closes with the observation that the habits most worth
-          keeping are the ones least easily seen — the stop that was never
-          tested, the position that was never over-sized.
-        </p>
-        <p>
-          This letter is a self-reading of the account's surface. It names no
-          future and claims no insight beyond what the statements already
-          quietly confirm.
-        </p>
-      {% endif %}
-    </div>
-
-    <div class="al-sign">
-      <span class="al-sign-line">Signed quietly,</span>
-      <span class="al-sign-line">— {{ user_name }}, self-auditor</span>
-      <span class="al-sign-line">{{ _review_date }}</span>
-    </div>
-  </div>
-
-  <div class="al-side">
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Positions Reviewed</div>
-      <div class="sp-margin-value">{{ positions_reviewed | default(14) }}</div>
-      <div class="sp-margin-body">
-        Open positions at the close of the quarter that received a row-level
-        checklist pass.
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>SELF AUDIT</strong>
+        <span>{{ v3.doc | default('—') }} &middot; 01/02</span>
       </div>
     </div>
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Journal Entries</div>
-      <div class="sp-margin-value">{{ journal_entries | default(28) }}</div>
-      <div class="sp-margin-body">
-        Dated notes attached to trades or watchlist actions during the audited
-        quarter.
-      </div>
-    </div>
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Audit Duration</div>
-      <div class="sp-margin-value">{{ audit_duration_min | default(38) }} min</div>
-      <div class="sp-margin-body">
-        Time spent walking the ten-point checklist and writing this letter.
-      </div>
-    </div>
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Prior Quarter Score</div>
-      <div class="sp-margin-value">{{ prior_audit_score | default('7.8') }}/10</div>
-      <div class="sp-margin-body">
-        Q4 2025 audit closed with one yellow flag on position-sizing discipline.
-      </div>
-    </div>
-  </div>
-</div>
 
+    <div class="pq-pdf-gold-rule"></div>
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 3 · AUDIT LADDER — 10-point checklist
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
+    <div class="pq-pdf-eyebrow">Decision Quality Audit &middot; Quarterly</div>
+    <h1 class="pq-pdf-cover-title">
+      {{ quarter_label | default('—') }}<br/>
+      <em>self-audit.</em>
+    </h1>
 
-<p class="sp-part">Part II · Ten-Point Ladder</p>
-<h2 class="sp-title">The checklist, walked without hurry</h2>
-<p class="sp-deck">
-  Ten questions, answered in plain prose. Each row carries a green, yellow,
-  or red flag and a one-line note — the audit's compact alphabet.
-</p>
+    <p class="pq-pdf-cover-sub">
+      KPMG 감사 보고서 톤의 본인 거래 회고. 각 거래는 3개월 forward 가격 또는
+      sell 가격 기준으로 관찰됩니다. 권유 없음 &mdash; 본인의 결정 기록 한정.
+    </p>
 
-{% set _checklist = checklist | default([
-  {'q': 'Is position sizing within observed bounds?',
-   'a': 'Yes — largest single position peaked at 9.2% of NAV.',
-   'flag': 'green', 'note': 'Inside the 10% self-set ceiling on every session.'},
-  {'q': 'Has any single position exceeded 10% of NAV?',
-   'a': 'No exceedance recorded.',
-   'flag': 'green', 'note': 'Concentration stayed below the self-set bound.'},
-  {'q': 'Are stop-observation levels documented?',
-   'a': 'Documented for all 14 open positions.',
-   'flag': 'green', 'note': 'Journal entries tagged with level and rationale.'},
-  {'q': 'Is cash reserve above the self-set threshold?',
-   'a': 'Yes — between 14% and 22% across the quarter.',
-   'flag': 'green', 'note': 'Floor of 10% held comfortably.'},
-  {'q': 'Has trading frequency increased beyond baseline?',
-   'a': '1.8 closes per week, near trailing 4Q baseline of 1.7.',
-   'flag': 'green', 'note': 'No meaningful acceleration observed.'},
-  {'q': 'Are observed losses documented with context?',
-   'a': 'Eight closed lots at a loss; each with a journal note.',
-   'flag': 'green', 'note': 'Context includes thesis, exit reason, lesson field.'},
-  {'q': 'Has the watchlist been pruned this quarter?',
-   'a': 'Watchlist at 41 names; last pruning pass 140 days ago.',
-   'flag': 'yellow', 'note': 'Pass overdue — schedule in the next fortnight.'},
-  {'q': 'Are broker statements reconciled?',
-   'a': 'Reconciled to the cent through the quarter-end cutoff.',
-   'flag': 'green', 'note': 'Reconciled to connected broker records.'},
-  {'q': 'Are dividend receipts recorded?',
-   'a': 'Eight events recorded, two with posting lag beyond three sessions.',
-   'flag': 'yellow', 'note': 'Recording lag is a small process hygiene item.'},
-  {'q': 'Has the observation journal been updated?',
-   'a': '28 entries this quarter; one two-session gap in early March.',
-   'flag': 'green', 'note': 'Gap noted and closed with a retrospective entry.'},
-]) %}
-
-<table class="ll-table">
-  <thead>
-    <tr>
-      <th style="width:5%;">No</th>
-      <th style="width:34%;">Question</th>
-      <th style="width:28%;">Answer</th>
-      <th style="width:10%;">Flag</th>
-      <th style="width:23%;">Note</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for item in _checklist %}
-      <tr>
-        <td><span class="ll-num">{{ '%02d' % loop.index }}</span></td>
-        <td><span class="ll-q">{{ item.q }}</span></td>
-        <td><span class="ll-a">{{ item.a }}</span></td>
-        <td>
-          {% if item.flag == 'green' %}
-            <span class="ll-flag ll-flag-g">Green</span>
-          {% elif item.flag == 'yellow' %}
-            <span class="ll-flag ll-flag-y">Yellow</span>
-          {% else %}
-            <span class="ll-flag ll-flag-r">Red</span>
-          {% endif %}
-        </td>
-        <td><span class="ll-note">{{ item.note }}</span></td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 4 · FLAG QUAD — 2×2 small-multiples + audit notes
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part III · Flag Quad</p>
-<h2 class="sp-title">Four small charts, one quiet reading</h2>
-<p class="sp-deck">
-  The ten-point ladder condenses into four visual cuts — distribution, trend,
-  categories, duration. Grid lines stay deliberately quiet.
-</p>
-
-{% set _flag_dist = flag_dist | default({'green': 8, 'yellow': 2, 'red': 0}) %}
-{% set _score_trend = score_trend | default([7.0, 7.4, 7.8, 8.2]) %}
-{% set _cat_flags = cat_flags | default([
-  {'cat': 'Process',     'count': 2},
-  {'cat': 'Sizing',      'count': 1},
-  {'cat': 'Recording',   'count': 1},
-  {'cat': 'Watchlist',   'count': 1},
-  {'cat': 'Reconcile',   'count': 0},
-]) %}
-{% set _duration = audit_duration | default([
-  {'cat': 'Review',   'min': 12},
-  {'cat': 'Ledger',   'min':  8},
-  {'cat': 'Letter',   'min': 10},
-  {'cat': 'Flagging', 'min':  8},
-]) %}
-
-<div class="rq-grid">
-  <div class="rq-main">
-    <div class="rq-quads">
-
-      <div class="rq-quad">
-        <div class="rq-quad-label">Flag Distribution</div>
-        <div class="rq-quad-value">
-          <span class="r-pos">{{ _flag_dist.green }}</span>
-          &nbsp;/&nbsp;
-          <span style="color:#7a5a1a;">{{ _flag_dist.yellow }}</span>
-          &nbsp;/&nbsp;
-          <span class="r-neg">{{ _flag_dist.red }}</span>
+    <div style="margin-top: 14px;">
+      <div class="pq-pdf-kpi-row cols-4">
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Trades</div>
+          <div class="pq-pdf-kpi-val">{{ v3.kpi_trades | default('—') }}</div>
+          <div class="pq-pdf-kpi-delta">감사 대상 거래</div>
         </div>
-        {% set _tot = _flag_dist.green + _flag_dist.yellow + _flag_dist.red %}
-        {% if _tot == 0 %}{% set _tot = 1 %}{% endif %}
-        {% set _gw = 180 * _flag_dist.green / _tot %}
-        {% set _yw = 180 * _flag_dist.yellow / _tot %}
-        {% set _rw = 180 * _flag_dist.red / _tot %}
-        <svg viewBox="0 0 180 40" width="100%" height="100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:10pt;">
-          <rect x="0" y="16" width="{{ _gw }}" height="14" fill="#4a7a4a" fill-opacity="0.7"/>
-          <rect x="{{ _gw }}" y="16" width="{{ _yw }}" height="14" fill="#b8922c" fill-opacity="0.7"/>
-          <rect x="{{ _gw + _yw }}" y="16" width="{{ _rw }}" height="14" fill="#7f1d1d" fill-opacity="0.7"/>
-          <text x="0" y="10" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">GREEN · YELLOW · RED</text>
-          <text x="180" y="10" text-anchor="end" fill="#6B6B6B" font-size="6.5" font-family="JetBrains Mono, monospace">{{ _tot }} items</text>
-        </svg>
-        <div class="rq-quad-foot">Ten items scored this quarter. Zero red flags opened.</div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Win Rate</div>
+          <div class="pq-pdf-kpi-val">{{ v3.kpi_winrate | default('—') }}</div>
+          <div class="pq-pdf-kpi-delta">실현 거래 기준</div>
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Avg Return</div>
+          <div class="pq-pdf-kpi-val {{ v3.kpi_avgret_tone | default('neutral') }}">{{ v3.kpi_avgret | default('—') }}</div>
+          <div class="pq-pdf-kpi-delta">평균 수익률</div>
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">W : L</div>
+          <div class="pq-pdf-kpi-val">{{ v3.kpi_wl | default('—') }}</div>
+          <div class="pq-pdf-kpi-delta">승 : 패</div>
+        </div>
       </div>
+    </div>
 
-      <div class="rq-quad">
-        <div class="rq-quad-label">Audit Score · 4 Quarters</div>
-        <div class="rq-quad-value">{{ '%.1f'|format(_score_trend[-1]) }}/10</div>
-        {% set _smin = _score_trend | min %}
-        {% set _smax = _score_trend | max %}
-        {% if _smax == _smin %}{% set _smax = _smin + 1 %}{% endif %}
-        {% set _pts = [] %}
-        {% set _W = 180 %}
-        {% set _H = 40 %}
-        {% set _Tp = 6 %}
-        {% set _Bp = 6 %}
-        {% set _Lp = 6 %}
-        {% set _Rp = 6 %}
-        {% set _PW = _W - _Lp - _Rp %}
-        {% set _PH = _H - _Tp - _Bp %}
-        {% for v in _score_trend %}
-          {% set _x = _Lp + loop.index0 * _PW / (_score_trend | length - 1) %}
-          {% set _y = _Tp + _PH - ((v - _smin) / (_smax - _smin)) * _PH %}
-          {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+    {% if v3.pullquote %}
+    <blockquote class="pq-pdf-pullquote">{{ v3.pullquote }}</blockquote>
+    {% endif %}
+
+    {% if v3.pattern_summary %}
+    <div class="pq-pdf-callout">
+      <div class="pq-pdf-callout-label">Pattern Summary &middot; AI 관찰</div>
+      <p>{{ v3.pattern_summary }}</p>
+    </div>
+    {% endif %}
+
+    <h2 class="pq-pdf-section-title sm">Best 3 Decisions</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr><th>Ticker</th><th>Buy Date</th><th class="right">Outcome</th><th class="right">Return</th></tr>
+      </thead>
+      <tbody>
+        {% for d in v3.best_decisions | default([]) %}
+        <tr>
+          <td><span class="pq-pdf-ticker">{{ d.ticker }}</span></td>
+          <td>{{ d.buy_date }}</td>
+          <td class="right">{{ d.outcome }}</td>
+          <td class="right {{ d.tone | default('neutral') }}">{{ d.return }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center;color:var(--r-ink-3);padding:14px 0;">데이터 누적 후 표시</td></tr>
         {% endfor %}
-        {% set _last = _pts[-1].split(',') %}
-        <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" height="100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:10pt;">
-          <line x1="{{ _Lp }}" y1="{{ _Tp + _PH / 2 }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH / 2 }}" stroke="#c9c4b8" stroke-width="0.25" stroke-dasharray="2,2"/>
-          <polyline points="{{ _pts | join(' ') }}" fill="none" stroke="#0A0A0A" stroke-width="1.2" stroke-linejoin="round"/>
-          <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="2" fill="#B8956A"/>
-          <text x="0" y="10" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">Q1 25 · Q4 · Q1 26</text>
-        </svg>
-        <div class="rq-quad-foot">Trailing four quarters on the same ten-point ladder.</div>
-      </div>
+      </tbody>
+    </table>
 
-      <div class="rq-quad">
-        <div class="rq-quad-label">Flag Categories</div>
-        <div class="rq-quad-value">{{ _cat_flags | length }}</div>
-        {% set _cmax = (_cat_flags | map(attribute='count') | list | max) %}
-        {% if _cmax == 0 %}{% set _cmax = 1 %}{% endif %}
-        {% set _bw = 180 / (_cat_flags | length) %}
-        <svg viewBox="0 0 180 40" width="100%" height="100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:10pt;">
-          {% for c in _cat_flags %}
-            {% set _h = (c.count / _cmax) * 26 %}
-            {% set _x = loop.index0 * _bw + 2 %}
-            <rect x="{{ _x }}" y="{{ 34 - _h }}" width="{{ _bw - 4 }}" height="{{ _h }}" fill="#B8956A" fill-opacity="0.55"/>
-            <text x="{{ _x + (_bw - 4) / 2 }}" y="38" text-anchor="middle" fill="#6B6B6B" font-size="5.6" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ c.cat[:6] }}</text>
-          {% endfor %}
-        </svg>
-        <div class="rq-quad-foot">Where yellow-or-red flags concentrate this quarter.</div>
-      </div>
-
-      <div class="rq-quad">
-        <div class="rq-quad-label">Audit Duration</div>
-        {% set _tmin = (_duration | map(attribute='min') | list | sum) %}
-        <div class="rq-quad-value">{{ _tmin }} min</div>
-        {% set _dmax = (_duration | map(attribute='min') | list | max) %}
-        {% if _dmax == 0 %}{% set _dmax = 1 %}{% endif %}
-        {% set _bw2 = 180 / (_duration | length) %}
-        <svg viewBox="0 0 180 40" width="100%" height="100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:10pt;">
-          {% set _cum = 0 %}
-          {% set _shades = ['#B8956A', '#a88866', '#c9a982', '#d8bd9e'] %}
-          {% for d in _duration %}
-            {% set _w = (d.min / _tmin) * 180 %}
-            <rect x="{{ _cum }}" y="14" width="{{ _w }}" height="14" fill="{{ _shades[loop.index0 % 4] }}" fill-opacity="0.75"/>
-            <text x="{{ _cum + _w / 2 }}" y="25" text-anchor="middle" fill="#F7F5EF" font-size="6" font-family="JetBrains Mono, monospace">{{ d.min }}</text>
-            {% set _cum = _cum + _w %}
-          {% endfor %}
-          <text x="0" y="10" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">REVIEW · LEDGER · LETTER · FLAG</text>
-        </svg>
-        <div class="rq-quad-foot">Minutes per stage. A quiet forty-minute evening.</div>
-      </div>
-
+    <div class="pq-pdf-page-footer">
+      <span>Self Audit &middot; Premium &middot; Decision Quality</span>
+      <span>Page 01</span>
     </div>
-  </div>
 
-  <div class="rq-side">
-    <div class="rq-method">
-      <div class="rq-method-eyebrow">Audit Notes</div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On sizing</span>
-        <div class="rq-method-def">The 10% single-name ceiling is self-set; the book ran with headroom throughout.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On watchlist hygiene</span>
-        <div class="rq-method-def">Pruning pass is overdue by roughly ninety days — the single item worth the next session.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On journal continuity</span>
-        <div class="rq-method-def">One two-session gap in early March, closed retrospectively. Continuity is a habit, not an event.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On reconciliation</span>
-        <div class="rq-method-def">Both broker statements matched to the cent through the quarter-end cutoff.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On the audit itself</span>
-        <div class="rq-method-def">Forty minutes is a fair interval — neither cursory nor padded. Same cadence next quarter.</div>
+    {% include '_disclaimer.html' %}
+
+  </section>
+
+  {# ═════════════════════════ PAGE 2 — WORST DECISIONS + COLOPHON ═════════════════════════ #}
+  <section class="pq-pdf-page">
+
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>SELF AUDIT</strong>
+        <span>{{ v3.doc_short | default('—') }} &middot; 02/02</span>
       </div>
     </div>
-  </div>
-</div>
 
+    <div class="pq-pdf-gold-rule"></div>
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 5 · EDITORIAL
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
+    <h2 class="pq-pdf-section-title sm">Worst 3 Decisions</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr><th>Ticker</th><th>Buy Date</th><th class="right">Outcome</th><th class="right">Return</th></tr>
+      </thead>
+      <tbody>
+        {% for d in v3.worst_decisions | default([]) %}
+        <tr>
+          <td><span class="pq-pdf-ticker">{{ d.ticker }}</span></td>
+          <td>{{ d.buy_date }}</td>
+          <td class="right">{{ d.outcome }}</td>
+          <td class="right {{ d.tone | default('neutral') }}">{{ d.return }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center;color:var(--r-ink-3);padding:14px 0;">데이터 누적 후 표시</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-<p class="sp-part">Part IV · Editorial</p>
-<h2 class="sp-title">What the mirror does not see</h2>
-<p class="sp-deck">
-  A single sentence to hold in mind, and a short list of things this audit
-  was never meant to verify. The honest boundaries of a private practice.
-</p>
+    <h2 class="pq-pdf-section-title sm">What This Audit Does Not Claim</h2>
+    <ul style="font-size:11px;line-height:1.7;color:var(--r-ink-2);padding-left:16pt;margin-top:6pt;">
+      {% for n in v3.not_claimed | default([]) %}
+      <li>{{ n }}</li>
+      {% endfor %}
+    </ul>
 
-<div class="ed-quote-wrap">
-  <div class="ed-quote-cell">
-    <blockquote class="ed-quote">
-      {{ pull_quote | default("An audit is a mirror held quietly — not a judge's bench.") }}
-    </blockquote>
-    <div class="ed-quote-attr">{{ pull_quote_attribution | default("The Audit Voice") }}</div>
-  </div>
-</div>
+    {% if v3.data_sources %}
+    <h2 class="pq-pdf-section-title sm">Data Sources</h2>
+    <ul style="font-size:10px;line-height:1.6;color:var(--r-ink-3);padding-left:16pt;font-family:var(--font-mono);">
+      {% for s in v3.data_sources %}
+      <li>{{ s }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
 
-<div class="ed-not-head">What this audit does not verify</div>
-<div class="ed-not-list">
-  {% set _notv = not_verified | default([
-    {'category':'Tax correctness',       'detail':'Filings, withholding, and allowable deductions sit outside this ladder.'},
-    {'category':'Regulatory compliance', 'detail':'Broker-side rule compliance is assumed, not checked row by row.'},
-    {'category':'Future conduct',        'detail':'A self-audit records the quarter past, never the one ahead.'},
-    {'category':'Personal integrity',    'detail':'Honesty is a prerequisite of the exercise, not its output.'},
-    {'category':'Market outcomes',       'detail':'The account owns the decisions; the market owns the weather.'},
-  ]) %}
-  {% for n in _notv %}
-    <div class="ed-not-item">
-      <div class="ed-not-cat">{{ n.category }}</div>
-      <div class="ed-not-detail">{{ n.detail }}</div>
+    <div class="pq-pdf-govblock">
+      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Premium</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Quarterly (absorbed)</div></div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Methodology</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}3-month forward 또는 sell 가격 기준 &middot; 본인 거래 한정{% endif %}</div>
+      </div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Sources</div>
+        <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}TradeHistory &middot; FMP price history{% endif %}</div>
+      </div>
     </div>
-  {% endfor %}
-</div>
 
+    <div class="pq-pdf-page-footer">
+      <span>Self Audit &middot; Premium &middot; Quarterly Self Report 흡수</span>
+      <span>Page 02</span>
+    </div>
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 6 · COLOPHON
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
+    {% include '_disclaimer.html' %}
 
-<div class="co-wrap">
-
-  <div class="co-head">Colophon</div>
-  <div class="co-rule-small"></div>
-
-  <div class="co-body">
-    <p style="margin: 0 0 10pt 0;">
-      Prepared for <strong>{{ user_name }}</strong> on
-      <strong>{{ _review_date }}</strong>. Issue
-      <strong>No. {{ '%02d' % _issue_no }}</strong> ·
-      {{ quarter_label }}.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data sources</span> &nbsp;
-      {# Wave 5 — the self-audit scoring uses the user's own
-         TradeHistory plus forward market prices from our system data
-         sources. We surface the observation journal because the audit
-         narrative reflects user-entered decision notes. If the service
-         fails to populate `data_sources`, we prefer silence over a
-         fabricated "Broker statements" claim. #}
-      {% set _ds = data_sources | default([]) %}
-      {% if _ds %}{{ _ds | join(' · ') }}.{% else %}Data sources not specified.{% endif %}
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Typeset in</span> &nbsp;
-      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
-    </p>
-    <p style="margin: 0 0 0 0;">
-      <span class="co-key">Engine</span> &nbsp;
-      {{ engine_note | default('Historical record only. Quarterly self-observation ladder') }}.
-    </p>
-  </div>
-
-  <div class="co-thin-rule"></div>
-
-  {% include '_disclaimer.html' %}
-
-  <div class="co-thin-rule"></div>
-
-  <div class="co-sign">
-    {% with brand_kind='monogram', brand_size=64 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-    <div class="co-sign-house">PivoxQuant Research Desk</div>
-    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
-    <div class="co-sign-time">Generated · {{ generated_at | default('2026-04-21') }}</div>
-  </div>
-
+  </section>
 </div>
 
 </body>

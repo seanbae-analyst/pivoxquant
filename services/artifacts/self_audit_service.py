@@ -411,24 +411,103 @@ class SelfAuditService:
         )
         return ctx.to_dict()
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    _NOT_CLAIMED: list[str] = [
+        "본 리포트는 매수·매도 권유가 아닙니다.",
+        "과거 거래 결과는 미래 수익률을 보장하지 않습니다.",
+        "관찰 기준 (3개월 forward 또는 sell 가격) 외 다른 척도는 사용하지 않습니다.",
+        "투자자문 또는 일임 서비스가 아닙니다.",
+        "세무·법률 자문이 아닙니다.",
+    ]
+
+    _PULLQUOTE_DEFAULT = (
+        "Self-review is the small hinge on which large habits turn — "
+        "기록은 판결이 아니라 습관의 작은 경첩입니다."
+    )
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user(...) onto the v3 2-page Premium shape."""
+        quarter_label = data.get("quarter_label") or "—"
+        as_of = data.get("generated_at") or data.get("period_end") or "—"
+        as_of_label = str(as_of).split("T")[0] if as_of else "—"
+
+        def _pct(v: Any, signed: bool = True) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            return f"{n:+.2f}%" if signed else f"{n:.1f}%"
+
+        def _tone(v: Any) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "neutral"
+            if n > 0:
+                return "pos"
+            if n < 0:
+                return "neg"
+            return "neutral"
+
+        def _decision_rows(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+            out = []
+            for r in (rows or [])[:3]:
+                ret = r.get("return_pct")
+                out.append({
+                    "ticker":   r.get("ticker") or "—",
+                    "name":     r.get("name") or r.get("ticker") or "—",
+                    "buy_date": r.get("buy_date") or "—",
+                    "outcome":  r.get("outcome") or "—",
+                    "return":   _pct(ret),
+                    "tone":     _tone(ret),
+                })
+            return out
+
+        win_rate = data.get("win_rate_pct")
+        avg_ret = data.get("avg_return_pct")
+
+        return {
+            "doc":             f"Self Audit · {quarter_label}",
+            "doc_short":       quarter_label,
+            "issued":          f"Issued · {as_of_label}",
+            "kpi_trades":      str(data.get("trades_total") or 0),
+            "kpi_winrate":     (_pct(win_rate, signed=False)
+                                if win_rate is not None else "—"),
+            "kpi_avgret":      _pct(avg_ret),
+            "kpi_avgret_tone": _tone(avg_ret),
+            "kpi_wl":          f"{data.get('wins') or 0} / {data.get('losses') or 0}",
+            "pattern_summary": data.get("pattern_summary") or "",
+            "best_decisions":  _decision_rows(data.get("best_decisions")),
+            "worst_decisions": _decision_rows(data.get("worst_decisions")),
+            "pullquote":       self._PULLQUOTE_DEFAULT,
+            "not_claimed":     list(self._NOT_CLAIMED),
+            "data_sources":    data.get("data_sources") or [],
+        }
+
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data)
         try:
+            ctx = dict(data)
+            ctx["v3"] = self._to_v3_shape(data)
             tpl = env.get_template("self_audit.html")
-            return tpl.render(**data)
+            return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("self_audit template render failed: %s", exc)
             return self._fallback_html(data)
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
         if HTML is None:
             return None
-        html_str = self.render_html(data)
+        html_str = self.render_pdf_html(data)
         try:
             return HTML(string=html_str).write_pdf()
         except Exception as exc:  # pragma: no cover

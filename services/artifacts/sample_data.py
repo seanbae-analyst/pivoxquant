@@ -881,10 +881,46 @@ def sample_year_end_letter() -> dict[str, Any]:
 
 
 def sample_capital_allocation() -> dict[str, Any]:
+    """Capital Allocation \u2014 Premium 2-page \u00b7 What-If Calculator (v3).
+
+    Mirrors `CapitalAllocationService.calculate_for_user()` output shape:
+    cash_amount + portfolio_ccy + scenarios list (4 ScenarioResult.to_dict()
+    rows). Per legal posture the renderer NEVER ranks scenarios.
+    """
     return {
         "user_id":       SAMPLE_USER_ID,
         "user_name":     SAMPLE_USER_NAME,
         "generated_at":  _now_iso(),
+        "calc_token":    "samp_calc_token_xyz",
+        "cash_amount":   100_000.0,
+        "portfolio_ccy": "USD",
+        "scenarios": [
+            {"label": "Diversify Existing", "type": "diversify_existing",
+             "tickers": ["AAPL", "MSFT", "NVDA"], "weights": [0.34, 0.33, 0.33],
+             "return_cagr": 14.20, "volatility": 22.50, "max_dd": -28.40,
+             "sharpe": 0.63, "note": "past 5y window"},
+            {"label": "New Ticker \u00b7 TSLA", "type": "new_ticker",
+             "tickers": ["TSLA"], "weights": [1.0],
+             "return_cagr": 18.40, "volatility": 48.20, "max_dd": -71.30,
+             "sharpe": 0.38, "note": "past 5y window"},
+            {"label": "Hold Cash", "type": "cash",
+             "tickers": [], "weights": [],
+             "return_cagr": 0.0, "volatility": 0.0, "max_dd": 0.0,
+             "sharpe": None, "note": "USD cash baseline"},
+            {"label": "Dividend ETF \u00b7 SCHD", "type": "dividend_etf",
+             "tickers": ["SCHD"], "weights": [1.0],
+             "return_cagr": 9.80, "volatility": 14.20, "max_dd": -18.40,
+             "sharpe": 0.69, "note": "past 5y window"},
+        ],
+        "etf_whitelist": {
+            "SCHD": "Schwab U.S. Dividend Equity ETF",
+            "VYM":  "Vanguard High Dividend Yield ETF",
+        },
+        "disclaimer": (
+            "\ubcf8 \uacb0\uacfc\ub294 \uacfc\uac70 5\ub144 \uac00\uaca9 \ub370\uc774\ud130\uc5d0 \uae30\ubc18\ud55c \ud1b5\uacc4\uc801 \uad00\ucc30\uc774\uba70, "
+            "\ud5a5\ud6c4 \uc218\uc775\ub960\uc744 \ubcf4\uc7a5\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4."
+        ),
+        # \u2500\u2500 legacy editorial fields (kept for rollback; v3 ignores) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
         "issue_number":  1,
         "doc_ref":       "PQ-CA-01 \u00b7 v2026.04.22",
         "hero_headline": [

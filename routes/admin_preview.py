@@ -213,6 +213,10 @@ _RENDER: dict[str, Callable[[str], tuple[bytes | str, str]]] = {
         "services.artifacts.dd_checklist_service",
         "DDChecklistService",
         sample_data.sample_dd_checklist, fmt),
+    "sp500_backtest":         lambda fmt: _render_standard(
+        "services.artifacts.sp500_backtest_service",
+        "SP500BacktestService",
+        sample_data.sample_sp500_backtest, fmt),
     "brag_card":              _render_brag_card,
     "monthly_brag":           _render_monthly_brag,
 }
