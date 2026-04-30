@@ -7,11 +7,11 @@
 
 ---
 
-## 🔥 2026-04-30 세션 — PDF 첨부 박멸 + 11 PDFs v3 + fake-data leak 박멸
+## 🔥 2026-04-30 세션 — PDF 첨부 박멸 + 11 PDFs v3 + fake-data leak 박멸 + 코드 정리
 
-**19 commits 누적. main HEAD `e91b069`. 17 PDF 중 11개 v3 디자인 변환 완료. 5 cron 일시정지 → 2 재활성화.**
+**21 commits 누적. main HEAD `7a06a55`. 17 PDF 중 11개 v3 디자인 변환 완료. 5 cron 일시정지 → 2 재활성화. ruff F841 17건 cleanup.**
 
-### Commits 누적 (19개 = 18 작업 + 1 HANDOVER)
+### Commits 누적 (21개 = 18 작업 + 1 HANDOVER + 1 정정 + 1 cleanup)
 
 | # | Commit | 핵심 |
 |---|--------|------|
@@ -33,6 +33,9 @@
 | 16 | `048fc85` | credit-rating v3 3-page Premium Quarterly 변환 |
 | 17 | `6554c0f` | burn-rate v3 1-page Pro + cron 재활성화 |
 | 18 | `4a0c64d` | monthly-finance v3 1-page Premium + cron 재활성화 |
+| 19 | `e91b069` | docs(handover): 2026-04-30 세션 v12 정리 |
+| 20 | `5fe8bde` | docs(handover): 카운트 정정 (18→19, HEAD 4a0c64d→e91b069) |
+| 21 | `7a06a55` | chore: ruff F841 17건 unused-variable 정리 |
 
 ### 라이브 검증 (정직)
 
@@ -119,6 +122,45 @@
 7. **watchlist change_1d_pct 항상 0%** — SignalCache fallback 추가 (commit c67d1a1)
 8. **USDKRW change rate 하드코딩 0** — krIdx에서 lookup (commit c67d1a1)
 9. **Weekly Memo placeholder 5종** (portfolio_value/delta/ytd/ytd_detail/three_checks/decision/memoToSelf) → 실 데이터 + Claude Haiku AI (commit 86ae1a2)
+
+### 코드 정리 (commit `7a06a55`)
+
+**완료**: ruff F841 17건 unused-variable 일괄 제거 (autotrader.py 제외 — deprecated 보존).
+
+| 파일 | 변수 |
+|---|---|
+| engine.py:1123 | mr_score |
+| quant_models.py:56 | n |
+| questionnaire.py:714 | monthly_score |
+| risk_defense.py:471 | excess |
+| routes/auth.py:530 | token |
+| routes/counterfactual.py:390 | peak_idx |
+| routes/quant.py:1219 | shares_outstanding |
+| scripts/legal_monitor/monitor.py:184 | lowered_full |
+| scripts/self_healing/scan_railway_logs.py:117 | window_start |
+| services/artifacts/brag_card_service.py:1020 | end |
+| services/artifacts/earnings_prebrief_service.py:836 | eps_low |
+| services/artifacts/monthly_brag_service.py:721 | end |
+| services/artifacts/risk_board_service.py:1007 | worst_loss_dollars |
+| services/artifacts/sample_data.py | today × 3 |
+
+검증: pytest 1302 / 0 fail · 회귀 0 · 14 files / +15/-17 lines
+
+**보류 (위험성 평가 후 자율 fix 회피)**:
+
+| 후보 | 보류 사유 |
+|---|---|
+| Frontend eslint 17 errors (set-state-in-effect / component-in-render) | logic 변경 위험 — mount-localStorage 패턴 손상 가능. 별도 sprint에서 React 18 best-practice refactor. |
+| 11 `_*_v3_css.html` base copy 통합 (1 base + per-PDF override) | 각 PDF specific 미세 차이. 통합 시 회귀 위험. 모든 cron 정상 발송 검증 후 진행. |
+| AnalyticsResponse / SearchResult exported types (frontend lib/types.ts) | 진짜 unused지만 미래 API contract 의도일 수도. 백엔드와 align 후 결정. |
+| `_report_css.html` (옛 Goldman v2 6 templates 의존) | 옛 6 templates (capital_allocation, dd_checklist, quarterly_self_report, self_audit, sp500_backtest, year_end_letter) v3 변환 후 deprecate 가능. 현재는 cron 정지 상태로 보존. |
+| Backend dead code (autotrader, KIS 주문 disabled 코드) | `rollback 가능하도록 보존` (CLAUDE.md 명시). 영구 보존. |
+| Backend frontend lib/hooks 미사용 SWR keys | 추가 수동 검사 필요. 시간 소요. 별도 sprint. |
+
+다음 세션 cleanup 후보 (CEO 결정 필요):
+1. **Frontend eslint** — set-state-in-effect 패턴 21곳을 useSyncExternalStore 또는 lazy initial state로 refactor (큰 작업, React 패턴 이해 필요)
+2. **`_report_css.html` deprecate** — 옛 6 templates 모두 v3 변환 완료 후 _report_css.html 통째 삭제
+3. **Frontend 추가 dead code** — vulture-style 도구 없이 수동 grep, 시간 소요
 
 ### 사용자 ACTION 미해결 (다음 세션 시작 시)
 
