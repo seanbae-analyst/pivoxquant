@@ -26,7 +26,7 @@
 | 2차 (`cf6fd50`) | verbose `set -eux` | SUCCESS | 0 variants |
 | 3차 (`914ad27`) | `find ... -exec cp` | SUCCESS | 0 variants |
 | 4차 (`005779a`) | fc-cache after playwright | SUCCESS | 0 variants |
-| 5차 (`f0cec05`) | Variable TTF + `lang=ko` fontconfig | 빌드중 | 다음 세션 확인 |
+| 5차 (`f0cec05`) | Variable TTF + `lang=ko` fontconfig | SUCCESS | **✅ 5 variants — Pretendard / Variable / Black / ExtraBold / ExtraLight** |
 
 **진단 endpoint 코드 분석 결과**: `routes/artifacts.py:2952` 에서 `fc-list :lang=ko family` 호출. Pretendard OTF가 fontconfig의 lang=ko 필터를 통과하지 못함 → 5차 시도는 (a) PretendardVariable.ttf 추가 + (b) `/etc/fonts/conf.d/99-pretendard-ko.conf` 로 명시적 lang=ko 매핑. **한글 PDF 생성 자체에는 영향 없음 (Noto CJK fallback 작동)** — 디자인 톤만 차이.
 
