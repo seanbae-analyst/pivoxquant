@@ -563,24 +563,162 @@ class YearEndLetterService:
         )
         return ctx.to_dict()
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    _NOT_CLAIMED_DEFAULT: list[str] = [
+        "다음 해 시장 전망 또는 종목 전망.",
+        "복제 가능한 청사진 또는 매매 전략.",
+        "투자자문 또는 일임 서비스.",
+        "관찰 품질의 미래 보장.",
+        "세무 또는 법률 자문.",
+    ]
+
+    _PULLQUOTE_DEFAULT = (
+        "한 해는 도래한 것이 아니라 작은 결정들로 만들어졌습니다. "
+        "대부분 평범했고, 몇 개는 후회되었으며, 어떤 것도 예측되지 않았습니다."
+    )
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user(...) onto the v3 4-page Premium shape.
+
+        Mirrors the editorial Buffett-letter cadence used elsewhere in v3 set
+        (cover · letter · year recap · watch + colophon). Empty fields fall
+        back to em-dash; service stays observational only — no directives.
+        """
+        year = data.get("year") or "—"
+        as_of = data.get("generated_at") or data.get("period_end") or "—"
+        as_of_label = str(as_of).split("T")[0] if as_of else "—"
+
+        def _pct(v: Any, signed: bool = True) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            return f"{n:+.2f}%" if signed else f"{n:.1f}%"
+
+        def _tone(v: Any) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "neutral"
+            if n > 0:
+                return "pos"
+            if n < 0:
+                return "neg"
+            return "neutral"
+
+        ytd = data.get("ytd_return_pct")
+        bench = data.get("benchmark_pct")
+        alpha = data.get("alpha_pct")
+        win = data.get("win_rate_pct")
+        trades = data.get("total_trades")
+
+        sectors_raw = data.get("sector_contribution") or []
+        sector_rows: list[dict[str, Any]] = []
+        for s in sectors_raw[:8]:
+            avg = s.get("avg_return_pct")
+            sector_rows.append({
+                "sector":      s.get("sector") or "—",
+                "trades":      s.get("trade_count") or 0,
+                "avg_return":  _pct(avg),
+                "tone":        _tone(avg),
+            })
+
+        def _decision_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            out = []
+            for r in rows[:3]:
+                ret = r.get("return_pct")
+                out.append({
+                    "ticker":    r.get("ticker") or "—",
+                    "name":      r.get("name") or r.get("ticker") or "—",
+                    "buy_date":  r.get("buy_date") or "—",
+                    "shares":    r.get("shares") or 0,
+                    "buy_price": r.get("buy_price"),
+                    "sell_price": r.get("sell_price"),
+                    "outcome":   r.get("outcome") or "—",
+                    "return":    _pct(ret),
+                    "tone":      _tone(ret),
+                })
+            return out
+
+        watch_items = []
+        for w in (data.get("watch_items") or [])[:6]:
+            watch_items.append({
+                "date":  w.get("date") or "—",
+                "label": w.get("label") or "—",
+            })
+
+        letter_paragraphs = data.get("letter_paragraphs") or []
+        if not letter_paragraphs and data.get("shareholder_letter"):
+            letter_paragraphs = [
+                p.strip() for p in str(data["shareholder_letter"]).split("\n\n")
+                if p.strip()
+            ]
+
+        risk_p = data.get("risk_profile") or "—"
+        realized = data.get("realized_style") or "—"
+        score = data.get("consistency_score")
+        consistency_label = (
+            f"{score}/100" if isinstance(score, (int, float)) else "—"
+        )
+
+        return {
+            "doc":             f"Year-End · {year}",
+            "doc_short":       f"Year-End · {year}",
+            "cover_year":      str(year),
+            "cover_title":     f"{year}년",
+            "issued":          f"Issued · {as_of_label}",
+            "kpi_pnl_label":   "Return · YTD",
+            "kpi_pnl_value":   _pct(ytd),
+            "kpi_pnl_tone":    _tone(ytd),
+            "kpi_bench_label": "Benchmark · YTD",
+            "kpi_bench_value": _pct(bench),
+            "kpi_bench_tone":  _tone(bench),
+            "kpi_alpha_label": "Alpha",
+            "kpi_alpha_value": _pct(alpha),
+            "kpi_alpha_tone":  _tone(alpha),
+            "kpi_winrate_label": "Win Rate",
+            "kpi_winrate_value": _pct(win, signed=False) if win is not None else "—",
+            "kpi_winrate_tone":  "neutral",
+            "trades_total":      trades if trades is not None else "—",
+            "pullquote":         self._PULLQUOTE_DEFAULT,
+            "letter_paragraphs": letter_paragraphs,
+            "sector_rows":       sector_rows,
+            "best_decisions":    _decision_rows(data.get("best_decisions") or []),
+            "worst_decisions":   _decision_rows(data.get("worst_decisions") or []),
+            "consistency_notes": data.get("consistency_notes") or "",
+            "risk_profile":      risk_p,
+            "realized_style":    realized,
+            "consistency_label": consistency_label,
+            "watch_items":       watch_items,
+            "not_claimed":       list(self._NOT_CLAIMED_DEFAULT),
+        }
+
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data)
         try:
+            ctx = dict(data)
+            ctx["v3"] = self._to_v3_shape(data)
             tpl = env.get_template("year_end_letter.html")
-            return tpl.render(**data)
+            html = tpl.render(**ctx)
         except Exception as exc:
             logger.warning("year_end_letter template render failed: %s", exc)
             return self._fallback_html(data)
+        scrubbed = _safe_scrub(html) or html
+        return scrubbed
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
         if HTML is None:
             return None
-        html_str = self.render_html(data)
+        html_str = self.render_pdf_html(data)
         try:
             return HTML(string=html_str).write_pdf()
         except Exception as exc:  # pragma: no cover
