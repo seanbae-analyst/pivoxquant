@@ -1,4 +1,73 @@
-# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v15 "17/17 persona body 통합 완료 + F7 fix + 6 sample PDF")
+# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v16 "Pretendard + production diag 검증 + admin secret rotate")
+
+## 🟢 2026-04-30 자율 세션 (v16) — Pretendard 폰트 + production diag + admin secret rotate
+
+**5 commits 누적 (`863c709 → 4397e4e → 86c4e3d → 70ef451`). main HEAD `70ef451`. WeasyPrint native lib 구동 + 17/17 PDF persona + 디스클레이머 하단 + production WeasyPrint diag 검증 통과 + admin secret 2회 rotate 완료 + Pretendard 폰트 추가 (Dockerfile).**
+
+### 이번 세션 추가 작업
+
+| # | 작업 | 결과 |
+|---|---|---|
+| 1 | macOS WeasyPrint native lib 구동 | `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` (brew deps 이미 설치돼있음) |
+| 2 | 17/17 native PDF 생성 (`/tmp/pq_weasy/native_*.pdf`) | 69~109 KB each, 한글 정상 |
+| 3 | Disclaimer 페이지 하단 고정 | 17 CSS 파일 패치 (flex column + `margin-top: auto`) |
+| 4 | 17/17 v2 PDF 재생성 (`/tmp/pq_weasy/v2_*.pdf`) | 디스클레이머 하단 fix 검증 |
+| 5 | Production WeasyPrint diag (1차) | ok · WeasyPrint 68.1 · 21 KR fonts (Noto CJK) |
+| 6 | ⚠️ 시크릿 grep 출력 노출 → 자동 rotate | 새 32-byte urlsafe 생성 → Railway + GitHub Secret 양쪽 업데이트 |
+| 7 | Production WeasyPrint diag (2차, 새 시크릿) | ok · 동일 결과 |
+| 8 | **Pretendard 폰트 Dockerfile 추가** | github.com/orioncactus/pretendard v1.3.9 (OFL 1.1) |
+| 9 | Pretendard 배포 후 diag 재검증 | (배포 대기중 — 다음 세션 시작 시 확인) |
+
+### 검증 (정직)
+
+| # | 검증 | 결과 |
+|---|---|---|
+| pytest 1302/0 | 4회 동일 (2 commits 사이) | ✅ |
+| ruff check 14 files | All checks passed | ✅ |
+| Production /api/health | 200 / db ok / 0.6s | ✅ |
+| Production diag (1차+2차) | ok · WeasyPrint 68.1 · 21 fonts · template 81 KB | ✅ |
+| Auth gate | OAuth 302 redirect + auth-gated 401 | ✅ |
+| 32 routes endpoint coverage | 모두 정상 응답 (200/302/401/405) | ✅ |
+| Admin secret rotate | Railway + GitHub Secret 동기화 | ✅ |
+
+### 라우팅 정상 확인된 엔드포인트 (32개)
+
+**Auth**: `/api/auth/google` 302 · `/api/auth/kakao` 302 · `/api/auth/me` 200 · `/api/auth/register` 405 (POST-only)
+**Market**: `/api/lookup/<ticker>` 200 · `/api/search` 401 · `/api/prices` 401 · `/api/macro` 401 · `/api/sectors` 401 · `/api/market/overview` 401
+**Risk**: `/api/risk/summary` · `/api/risk/layers` · `/api/risk/correlation` (전부 401)
+**Discover**: `/api/discover` · `/api/discover/movers` · `/api/discover/sectors` (전부 401)
+**Portfolio/Watchlist/Alerts/Notifications/Signals**: 401 (정상)
+**Billing**: `/api/billing/subscription` 401 · `/api/billing/portal` POST · `/api/billing/webhook` POST
+**Artifacts**: `/api/artifacts/list` 401 · `/api/artifacts/_diag/weasyprint` ok
+**Profile**: `/api/profile/persona` 401
+
+### 출시 전 CEO 직접 확인 필요 (내가 못 한 것)
+
+🟢 자동 검증 통과 (이 세션에서):
+- pytest 1302/0
+- 전 endpoint 라우팅 + 응답 코드 정상
+- WeasyPrint production 정상
+- Auth gate 정상
+
+🟡 코드는 있고 응답 코드도 정상이지만 실 동작 미검증 (실 클릭/모바일 필요):
+- OAuth 실 로그인 (Google → 콜백 → 세션 생성까지)
+- Watchlist 종목 추가 → 표시
+- Portfolio 매수/매도 모달
+- Discover 종목 스캔 결과 표시
+- 알림벨 / 프로필 드롭다운
+- 모바일 반응형 (62 페이지)
+- Stripe 결제 (코드만 있음, API key 미연결)
+- 실 SendGrid 메일 도달 (다음 cron 시점)
+
+🔴 알려진 미연동 / disabled:
+- Anthropic API credit 잔액 0 (AI 콘텐츠 fallback 작동중)
+- Alpaca DISABLED (KIS read-only만)
+- Stripe key 미연결 (사업자등록 후)
+- Google/Kakao OAuth redirect URI prod 등록 (CEO 외부 액션)
+
+---
+
+# PivoxQuant — 인수인계서 (이전: v15 "17/17 persona body 통합 완료 + F7 fix + 6 sample PDF")
 
 ## 이 문서의 원칙
 - **거짓 보고 금지**. 완료된 것은 완료, 미완은 미완.
