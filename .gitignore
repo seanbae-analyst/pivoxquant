@@ -56,7 +56,9 @@ logs/
 # Per-user artifact storage (Premium PDF outputs / monthly_brag PNGs)
 # — written by services in services/artifacts/*; project-root-level dir.
 # Per-user PDFs land at artifacts/{kind}/{user_id}/.
-artifacts/
+# Leading slash anchors at repo root so we don't accidentally hide
+# services/artifacts/ source code.
+/artifacts/
 
 # Nightly bug hunt local artifacts
 nightly_artifacts/

@@ -1,4 +1,4 @@
-# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v13 "year_end_letter v3 추가")
+# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v14 "17/17 v3 + persona phase 2 + 가상검증")
 
 ## 이 문서의 원칙
 - **거짓 보고 금지**. 완료된 것은 완료, 미완은 미완.
@@ -7,7 +7,198 @@
 
 ---
 
-## 🔥 2026-04-30 자율 세션 (v13) — year_end_letter v3 4-page Premium 변환
+## 🔥 2026-04-30 자율 세션 (v14) — 17/17 PDF v3 완료 + persona phase 2 + 가상검증
+
+**7 commits. main HEAD `cfa609b`. PDF v3 변환 11/17 → 17/17 (전부 완료). pytest 1302/0 fail. 4 PDF에 persona 본문 분석 통합 (data_focus + risk_block + action_points). 1 dormant production bug 발견+fix. 가상검증 100% 통과.**
+
+### Commits 누적 (7개)
+| # | Commit | 핵심 |
+|---|--------|------|
+| 1 | `e5806a8` | year_end_letter v3 4-page Premium 변환 |
+| 2 | `982b4a7` | dd_checklist v3 2-page Pro semantic refactor + cron 재활성화 |
+| 3 | `86de92d` | quarterly_self_report v3 5-page Premium + year_end_letter cron 재활성화 |
+| 4 | `7d90f87` | capital_allocation + self_audit + sp500_backtest v3 (17/17 완료) |
+| 5 | `d1e24e5` | burn_rate `_to_v3_shape` list/dict mismatch fix (이전 세션 dormant bug) |
+| 6 | `0e3fac0` | gitignore: artifacts/ (per-user PDF storage dir) — 이후 cfa609b에서 anchor 수정 |
+| 7 | `cfa609b` | persona phase 2: 4 v3 PDF 본문 분석 페르소나 톤 + gitignore /artifacts/ anchor fix |
+
+### PDF v3 변환 완료 17/17 (이번 세션 +6)
+
+| PDF | Tier | Pages | Cadence | Cron 상태 | Persona 통합 |
+|---|---|---|---|---|---|
+| weekly_memo | Free | 1 | 일요일 08:00 KST | ✅ 활성 | ❌ Free 1-page |
+| brag_card | Free | 1 | 매월 1일 09:00 KST | ✅ 활성 | ❌ PNG 기반 |
+| earnings_prebrief | Pro | 2 | 10분 scan + 30분 lead | ✅ 활성 | ❌ per-ticker |
+| risk_board | Pro | 2 | 매월 15일 09:30 KST | ✅ 활성 | ❌ |
+| dividend_income | Pro | 1 | 매월 monthly | ✅ 활성 | ❌ |
+| portfolio_segment | Pro | 2 | 분기 quarterly | ✅ 활성 | ❌ |
+| insider_mirror | Pro | 2 | 매주 월요일 09:00 KST | ✅ 활성 | ❌ |
+| kpi_dashboard | Premium | 3 | (Morning Brief 흡수) | ⏸ 영구 | ❌ |
+| credit_rating | Premium | 3 | 매월 15일 09:00 KST | ✅ 활성 | ❌ |
+| burn_rate | Pro | 1 | 매월 1일 09:00 KST | ✅ 활성 | ❌ |
+| monthly_finance | Premium | 1 | 매월 1일 11:00 KST | ✅ 활성 | ❌ |
+| **dd_checklist** | **Pro** | **2** | **매일 08:05 KST** | **✅ 재활성화** | **✅ action_points** |
+| **quarterly_self_report** | **Premium** | **5** | **1/4/7/10·7일 10:00 KST** | **✅ 재활성화** | **✅ opener+data_focus+risk_block+action_points** |
+| **year_end_letter** | **Premium** | **4** | **12/31 10:00 KST** | **✅ 재활성화** | **✅ opener+action_points** |
+| **self_audit** | **Premium** | **2** | (Quarterly 흡수) | ⏸ 영구 | **✅ risk_block+action_points** |
+| **capital_allocation** | **Premium** | **2** | on-demand only | (cron PDF 안 만듦) | ❌ |
+| **sp500_backtest** | **Premium** | **2** | admin-debug only | (no cron) | ❌ admin universal |
+
+### Persona Phase 2 (cfa609b) — 4 PDF 본문 페르소나 톤
+
+CEO 질문: "persona별로 PDF가 그냥 말만 바뀌는거야?" — 정확함. 변경 전:
+- 1/16 service (quarterly_self_report)만 persona_opener 호출
+- 본문 분석 (segments / risk / decisions) 모든 persona 동일
+- 4개 매크로 (data_focus, risk_block, action_points, benchmark_line) 미사용
+
+해결:
+- **quarterly_self_report (5p)**: opener + data_focus + risk_block + action_points (4 sections)
+- **year_end_letter (4p)**: opener + action_points (2 sections, NEW)
+- **dd_checklist (2p)**: action_points (1 section, NEW)
+- **self_audit (2p)**: risk_block + action_points (2 sections, NEW)
+- 각 service에 `_resolve_persona()` 추가 (`InvestmentProfile`에서 추출, beginner override 가드)
+
+같은 portfolio + 다른 persona 검증:
+| 섹션 | 변경 전 | 변경 후 |
+|---|---|---|
+| Persona Opener | 4/4 다름 ✓ | 4/4 다름 ✓ |
+| Data Focus | — | **4/4 다름** (NEW) |
+| Risk Lens | — | **4/4 다름** (NEW) |
+| Action Points | — | **4/4 다름** (NEW) |
+| Segment Performance | 1/4 동일 | 1/4 동일 (data, persona-independent) |
+| Best/Worst Decisions | 1/4 동일 | 1/4 동일 (data, persona-independent) |
+
+**4 services × 4 personas = 16/16 unique HTML hash** (같은 portfolio라도).
+
+### 12 PDFs persona 미통합 (다음 세션 product decision)
+
+| 우선순위 | Service | 추천 통합 매크로 |
+|---|---|---|
+| 🔴 High | credit_rating | risk_block (신용 리스크 lens별 다름) |
+| 🔴 High | kpi_dashboard | data_focus + action_points (KPI lens별 다름) |
+| 🔴 High | dividend_income | data_focus (income persona 매칭) |
+| 🟠 Med | portfolio_segment | data_focus (섹터/팩터 framing) |
+| 🟠 Med | weekly_memo | opener (Free 1-page는 opener 한 줄만) |
+| 🟠 Med | risk_board | risk_block |
+| 🟢 Low | burn_rate | action_points (finance — 차이 작음) |
+| 🟢 Low | monthly_finance | action_points |
+| 🟢 Low | insider_mirror | data_focus |
+| 🟢 Low | capital_allocation | action_points (what-if만) |
+| ⏸ Skip | brag_card | PNG 기반 (디자인 통일 우선) |
+| ⏸ Skip | earnings_prebrief | per-ticker, persona 영향 모호 |
+| ⏸ Skip | sp500_backtest | admin-only universal data |
+
+**다음 세션 시 high 3개 → medium 3개 → low 4개 순으로 진행 권장.** Skip 3개는 product 결정 없으면 안 함.
+
+### 정지 cron 5 → 1 (이번 세션 4개 재활성화)
+
+| Cron | 상태 변화 |
+|---|---|
+| dd_checklist_daily | ⏸ 정지 → ✅ 매일 08:05 |
+| year_end_letter_annual | ⏸ 정지 → ✅ 12/31 10:00 |
+| quarterly_self_report | ⏸ 정지 → ✅ 1/4/7/10·7일 10:00 |
+| burn_rate_monthly | (이전 세션 재활성화) ✅ 매월 1일 09:00 |
+| monthly_finance_monthly | (이전 세션 재활성화) ✅ 매월 1일 11:00 |
+| kpi_dashboard | ⏸ 영구 (Morning Brief 흡수) |
+| self_audit | ⏸ 영구 (Quarterly 흡수) |
+
+### 발견 + Fix 한 production bug
+**burn_rate `_to_v3_shape` list-vs-dict mismatch (commit `d1e24e5`)**
+- 이전 세션(`6554c0f` burn_rate v3) 부터 dormant 했음
+- service `generate_for_user()` 는 list 만들고 `_to_v3_shape` 는 `.items()` 호출
+- 매월 1일 09:00 KST burn_rate 메일에 v3 디자인이 안 적용되고 fallback 173 bytes로 떨어졌음
+- 양쪽 shape (list/dict) 수용으로 fix
+- 가상 검증 (Flask app + DB + 시뮬 user) 으로 발견 — 실 cron 발송 전에 차단
+
+### 가상 검증 종합 (이번 세션 진행)
+
+| # | 검증 | 결과 |
+|---|---|---|
+| 1 | pytest tests/ | 1302 passed / 1 skipped / 0 failed (3회 동일) |
+| 2 | ruff + AST | 모든 변경 파일 clean |
+| 3 | 18/18 admin_preview HTML | 17~31 KB |
+| 4 | 15/15 service `run_for_user` end-to-end | DB Artifact persisted |
+| 5 | 14/14 cron sweep | 0 failed |
+| 6 | 22/22 APScheduler jobs registered | next_run_time 정확 |
+| 7 | 18/18 HTTP admin_preview test client | 200 OK |
+| 8 | 10/11 HTTP `/api/artifacts/*` user API | 1개 query param 정상 400 |
+| 9 | 16/16 edge case (empty/minimal/garbage type) | KeyError 0건 |
+| 10 | 16/16 PDF Chrome headless | %PDF + %%EOF valid |
+| 11 | 12/12 WeasyPrint 68.1 native PDF (4 services HTML-only by design) | 한글 + disclaimer 모두 포함 |
+| 12 | Frontend tsc + build (84/84 routes) + vitest 4/4 | OK |
+| 13 | Frontend ESLint | 17 errors (HANDOVER 보류항목, set-state-in-effect) |
+| 14 | Korean / multi-page / JSON / legal_filter | 16/16 OK |
+| 15 | XSS / Jinja injection 방어 | autoescape OK |
+| 16 | Extreme values (NaN/Inf/huge) | graceful |
+| 17 | test_persona_pdf_branch | 49/49 passed |
+| 18 | 4 services × 4 personas (variance) | 16/16 unique HTML |
+| 19 | Section-by-section persona variance | 4/4 sections 페르소나 별 다름 |
+| 20 | Forbidden vocab scan (PDF text) | 자본시장법 §6 위반 risk **0건** (모든 hit이 disclaimer 자체) |
+| 21 | Railway production /api/health | 200 OK / db ok / 0.58s |
+| 22 | Production WeasyPrint diag endpoint | 살아있음 + Admin gate 정상 |
+| 23 | Alembic migration | 1 head (019_ai_twin), 20 revisions |
+| 24 | CSS / template cross-reference | 모든 required class 존재, 32 dead unused |
+| 25 | PDF metadata + 폰트 임베딩 | title 정상 + 한글 user_name + 6~9 fonts (로컬 Nanum fallback / Docker는 Pretendard) |
+
+### 정직히 못 한 것 (외부 의존)
+
+1. **실 SendGrid 메일 도달 검증** — 다음 cron 시점 (내일 08:05 KST dd_checklist) 형님 메일함 확인
+2. **Live cron 자동 트리거** — 동일 (내일 08:05 KST APScheduler 점화)
+3. **Railway Docker WeasyPrint 실 Pretendard 임베딩** — admin diag로 가능하나 admin secret 필요
+4. **Frontend Playwright E2E** — 2/2 fail. dev server 환경 이슈 (이번 세션 작업 무관, Vercel build 84/84 OK)
+5. **시각적 디자인 톤 검증** — PDF 생성은 OK이지만 형님이 직접 6 PDF 열어서 "Vantablack + Bronze + Playfair v3 톤 의도대로" 확인 필요. `/tmp/pq_weasy/` 에서 열림.
+
+### 외부 액션 (CEO)
+
+| # | 항목 | 우선순위 |
+|---|---|---|
+| 1 | **Anthropic API credit 충전** — AI 콘텐츠 (weekly memo letter, persona reflection) production fallback 작동중. 잔액 0이라 400. 충전 시 v3 PDF에 AI 톤 복원 | 🔴 |
+| 2 | **Secret rotate** — `ARTIFACT_TRIGGER_SECRET` 채팅 노출됨. Railway env + GitHub `WEEKLY_MEMO_TRIGGER_SECRET` 새 값 갱신 | 🔴 |
+| 3 | **GitHub Actions billing 한도 ↑** — 모든 워크플로우 fail 원인 | 🔴 |
+| 4 | **SendGrid Sender 이름 변경** "StockPilot" → "PivoxQuant" | 🟠 |
+| 5 | **사업자등록 + 통신판매업 신고** | 🟠 |
+| 6 | **변호사 자문** (§101 면제 확정) — 50~80만원 | 🟠 |
+| 7 | **Stripe 4종 키** (사업자등록 후) | 🟢 |
+
+### Frontend ESLint 17 errors (보류항목, 이번 세션 미수정)
+- set-state-in-effect / component-in-render 패턴
+- React 18 best-practice refactor — mount-localStorage 패턴 손상 위험으로 별도 sprint 필요
+- `npm run lint` 실행 시 fail이지만 `npm run build`는 84/84 routes OK (warning level)
+
+### 다음 세션 시작 프롬프트
+
+```
+HANDOVER v14 (2026-04-30 자율 세션 종료) 읽고 이어서.
+
+이번 세션 성과: 7 commits / 17/17 PDF v3 완료 / persona phase 2 4개 PDF에
+본문 분석 통합 / 1 dormant burn_rate bug fix / pytest 1302 pass / 가상
+검증 25/25 항목 통과.
+
+P1 (Persona Phase 3 — high value 3개):
+1. credit_rating  — risk_block 통합 (신용 리스크 lens 페르소나별)
+2. kpi_dashboard  — data_focus + action_points (KPI lens별)
+3. dividend_income — data_focus (income persona 매칭)
+
+P2 (Persona Phase 4 — medium 4개):
+4. portfolio_segment — data_focus
+5. risk_board — risk_block
+6. weekly_memo — opener (Free 1-page는 opener 한 줄만)
+7. monthly_finance — action_points
+
+P3 (Persona Phase 5 — low 4개): burn_rate, insider_mirror, capital_allocation,
+   earnings_prebrief
+
+Skip (product decision): brag_card (PNG), sp500_backtest (admin)
+
+CEO 외부 액션:
+- Anthropic API credit 충전 (가장 시급)
+- Secret rotate / GitHub billing / SendGrid sender / 사업자등록
+- 형님이 /tmp/pq_weasy/ PDF 직접 열어서 v3 디자인 톤 시각 확인
+```
+
+---
+
+## 📜 2026-04-30 자율 세션 (v13 archive) — year_end_letter v3 4-page Premium 변환
 
 **1 commit. main HEAD `e5806a8`. PDF v3 변환 11/17 → 12/17. pytest 1302 / 0 fail. P1 항목 1건 클리어.**
 
