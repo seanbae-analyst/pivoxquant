@@ -3,16 +3,21 @@
 
    Cadence: 1/7, 4/7, 7/7, 10/7 10:00 KST. Premium tier only.
 
-   Persona: 1 section (opener) is persona-toned via pm.persona_opener.
+   Persona: 4 sections persona-toned via pm.persona_* macros.
             Test guard: tests/test_persona_pdf_branch.py — opener phrase
             of the active persona MUST appear; cross-leak guard ensures
             no other persona's phrase appears.
 
+     · Page 2 — `pm.persona_opener`        (8-persona-specific tone)
+     · Page 3 — `pm.persona_data_focus`    (sector/factor framing per persona)
+     · Page 4 — `pm.persona_risk_block`    (risk lens per persona)
+     · Page 5 — `pm.persona_action_points` (informational checklist per persona)
+
    Page 1: Cover · 4 KPIs (Quarterly Return / Win Rate / Net Cash Flow / Closing)
    Page 2: Persona Opener + MD&A + pull quote
-   Page 3: Segment Performance + Decision Quality (best 3 / worst 3)
-   Page 4: Risk Factors + Internal Controls + Thesis Reality Check
-   Page 5: Thesis Checklist + Watch + Not-Claimed + Governance + Disclaimer
+   Page 3: Persona Data Focus + Segment Performance + Decision Quality (best/worst 3)
+   Page 4: Persona Risk Block + Risk Factors + Internal Controls + Thesis Reality Check
+   Page 5: Thesis Checklist + Persona Action Points + Watch + Not-Claimed + Governance + Disclaimer
 
    v3 shape (QuarterlySelfReportService._to_v3_shape):
      v3.doc, v3.doc_short, v3.issued
@@ -147,6 +152,11 @@
 
     <div class="pq-pdf-gold-rule"></div>
 
+    <div class="pq-pdf-eyebrow">Data Focus &middot; {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-prose">
+      {{ pm.persona_data_focus(persona, v3.data_focus_metrics | default({})) }}
+    </div>
+
     <h2 class="pq-pdf-section-title sm">Segment Performance &middot; 섹터별 P/L</h2>
     <table class="pq-pdf-table">
       <thead>
@@ -235,6 +245,11 @@
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
+
+    <div class="pq-pdf-eyebrow">Risk Lens &middot; {{ pm.persona_label(persona) }}</div>
+    <div class="pq-pdf-prose">
+      {{ pm.persona_risk_block(persona, v3.risk_kpi | default({})) }}
+    </div>
 
     <h2 class="pq-pdf-section-title sm">Risk Factors &middot; 리스크 관찰</h2>
     <table class="pq-pdf-table">
@@ -330,6 +345,12 @@
       <div style="color:var(--r-ink-3);text-align:center;padding:14px 0;font-size:11px;">기록된 thesis 없음</div>
       {% endfor %}
     </div>
+
+    <h2 class="pq-pdf-section-title sm">Action Points &middot; {{ pm.persona_label(persona) }} 관찰 체크리스트</h2>
+    <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
+      페르소나별 정보 관찰 항목입니다. 매수·매도 권유가 아닌 본인이 직접 점검할 데이터 포인트.
+    </p>
+    {{ pm.persona_action_points(persona, v3.positions | default([])) }}
 
     <h2 class="pq-pdf-section-title sm">Watch &middot; 다음 분기 관찰</h2>
     <table class="pq-pdf-table">

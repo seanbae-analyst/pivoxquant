@@ -26,6 +26,8 @@
    Compliance — 본인 데이터 한정. No buy/sell/추천/조언. T+3 self-review prompt.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set persona = persona | default('balanced') -%}
+{%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
 <html lang="ko">
 <head>
@@ -169,6 +171,12 @@
       </div>
       {% endfor %}
     </div>
+
+    <h2 class="pq-pdf-section-title sm">Action Points &middot; {{ pm.persona_label(persona) }} 관찰 체크리스트</h2>
+    <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
+      페르소나별 정보 관찰 항목입니다. 매수·매도 권유가 아니며 본인이 직접 점검할 데이터 포인트.
+    </p>
+    {{ pm.persona_action_points(persona, v3.positions | default([])) }}
 
     <h2 class="pq-pdf-section-title sm">What This Checklist Does Not Claim</h2>
     <ul style="font-size:11px;line-height:1.7;color:var(--r-ink-2);padding-left:16pt;margin-top:6pt;">

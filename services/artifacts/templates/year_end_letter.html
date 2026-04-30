@@ -24,6 +24,8 @@
    prose routes through services.legal_filter.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- set persona = persona | default('balanced') -%}
+{%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
 <html lang="ko">
 <head>
@@ -98,8 +100,13 @@
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Shareholder Letter &middot; 본인 회고</div>
+    <div class="pq-pdf-eyebrow">Shareholder Letter &middot; {{ pm.persona_label(persona) }} &middot; 본인 회고</div>
     <h2 class="pq-pdf-section-title">{{ v3.cover_year | default(year) }}년 한 해의 기록</h2>
+
+    {# Persona-toned year opener — sets the lens before the Buffett letter prose. #}
+    <div class="pq-pdf-prose">
+      {{ pm.persona_opener(persona, user_name) }}
+    </div>
 
     {% if v3.pullquote %}
     <blockquote class="pq-pdf-pullquote">{{ v3.pullquote }}</blockquote>
@@ -244,6 +251,12 @@
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
+
+    <h2 class="pq-pdf-section-title sm">Action Points &middot; {{ pm.persona_label(persona) }} 관찰 체크리스트</h2>
+    <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
+      페르소나별 정보 관찰 항목입니다. 매수·매도 권유가 아니며 다음 해에 본인이 직접 점검할 데이터 포인트.
+    </p>
+    {{ pm.persona_action_points(persona, v3.watch_items | default([])) }}
 
     <h2 class="pq-pdf-section-title sm">Watch Ahead &middot; 다음 해 관찰 일정</h2>
     <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:10px;">
