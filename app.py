@@ -1026,29 +1026,33 @@ def _init_scheduler(app):
     # (Premium, 15p Self 10-K + Thesis Reality Check). Self Audit 의 기능을
     # Part 2 로 흡수. portfolio_segment_quarterly 와 같은 10:00 슬롯이지만
     # 서비스가 독립적으로 User 쿼리/FMP 호출을 분산해 수행하므로 충돌 없음.
-    sched.add_job(
-        _scheduled_quarterly_self_report,
-        trigger="cron",
-        month="1,4,7,10",
-        day=7,
-        hour=10, minute=0,
-        timezone="Asia/Seoul",
-        id="quarterly_self_report",
-        max_instances=1,
-        coalesce=True,
-    )
+    # 2026-04-30 PAUSED: template default array leak 3건 (sharpe_series /
+    # holding_hist / spark) — 표시광고법 §3 위험. 데이터 매핑 + v3 변환 후 재활성화.
+    # sched.add_job(
+    #     _scheduled_quarterly_self_report,
+    #     trigger="cron",
+    #     month="1,4,7,10",
+    #     day=7,
+    #     hour=10, minute=0,
+    #     timezone="Asia/Seoul",
+    #     id="quarterly_self_report",
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
     # 매년 12/31 10:00 KST — Year-End Investor Letter (Premium, 6p PDF).
     # 연간 Buffett 톤 회고 서한. Download-only — share 링크 없음.
-    sched.add_job(
-        _scheduled_year_end_letter,
-        trigger="cron",
-        month=12, day=31,
-        hour=10, minute=0,
-        timezone="Asia/Seoul",
-        id="year_end_letter_annual",
-        max_instances=1,
-        coalesce=True,
-    )
+    # 2026-04-30 PAUSED: template default array leak (sparkline_pts) — 표시광고법
+    # §3 위험. 데이터 매핑 + v3 변환 후 재활성화 (다음 cron 2026-12-31).
+    # sched.add_job(
+    #     _scheduled_year_end_letter,
+    #     trigger="cron",
+    #     month=12, day=31,
+    #     hour=10, minute=0,
+    #     timezone="Asia/Seoul",
+    #     id="year_end_letter_annual",
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
     # 매일 08:00 KST — DD 체크리스트 T+3 프롬프트 이메일 (Pro+).
     # 2026-04-30 PAUSED: backend service가 fundamentals/peer 데이터 매핑 미완성
     # → template default fallback (FCF [73.4 80.2 92.9 96.4 99.8] 등 가짜 array)
@@ -1064,16 +1068,18 @@ def _init_scheduler(app):
     #     coalesce=True,
     # )
     # 매월 1일 09:00 KST — Burn Rate Report PDF (Pro+). 전월 거래 집계.
-    sched.add_job(
-        _scheduled_burn_rate,
-        trigger="cron",
-        day=1,
-        hour=9, minute=0,
-        timezone="Asia/Seoul",
-        id="burn_rate_monthly",
-        max_instances=1,
-        coalesce=True,
-    )
+    # 2026-04-30 PAUSED: template default 'save_rate_series=[58,61,...]'
+    # 가짜 array leak 위험 (표시광고법 §3). 데이터 매핑 + v3 변환 후 재활성화.
+    # sched.add_job(
+    #     _scheduled_burn_rate,
+    #     trigger="cron",
+    #     day=1,
+    #     hour=9, minute=0,
+    #     timezone="Asia/Seoul",
+    #     id="burn_rate_monthly",
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
     # 매월 15일 09:00 KST — Credit Rating Self-Assessment 이메일 (Pro+).
     sched.add_job(
         _scheduled_credit_rating,
@@ -1097,17 +1103,18 @@ def _init_scheduler(app):
         coalesce=True,
     )
     # 매월 1일 11:00 KST — Monthly Finance Report PDF (Premium).
-    # 1시간 뒤로 분리해 Dividend Statement와 FMP 예산이 겹치지 않게 한다.
-    sched.add_job(
-        _scheduled_monthly_finance,
-        trigger="cron",
-        day=1,
-        hour=11, minute=0,
-        timezone="Asia/Seoul",
-        id="monthly_finance_monthly",
-        max_instances=1,
-        coalesce=True,
-    )
+    # 2026-04-30 PAUSED: template default array leak (표시광고법 §3 위험).
+    # 데이터 매핑 + v3 변환 후 재활성화.
+    # sched.add_job(
+    #     _scheduled_monthly_finance,
+    #     trigger="cron",
+    #     day=1,
+    #     hour=11, minute=0,
+    #     timezone="Asia/Seoul",
+    #     id="monthly_finance_monthly",
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
     # 매월 15일 09:30 KST — Risk Board Meeting Deck (Premium) 월간 에디션.
     sched.add_job(
         _scheduled_risk_board_monthly,
