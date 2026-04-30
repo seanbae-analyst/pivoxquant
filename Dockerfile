@@ -11,22 +11,23 @@ RUN apt-get update && apt-get install -y \
 
 # ── Pretendard font (PDF v3 디자인 의도, OFL 라이센스) ────────────────────
 # Source: github.com/orioncactus/pretendard (Kil Hyung-jin, OFL 1.1).
-# Required for v3 templates (Vantablack + Bronze + Playfair) — the
-# fonts-noto-cjk fallback works for 한글 rendering but loses the
-# tabular-num + designed weight ladder that v3 specifies.
-# Verbose + verified install (silent failure caused issue 2026-04-30).
+# Required for v3 templates (Vantablack + Bronze + Playfair).
+# Approach: extract whole zip, then move OTF files into fontconfig dir.
+# Avoids shell-quoting / glob issues with `unzip filter "pattern"`.
 RUN set -eux \
-    && mkdir -p /usr/share/fonts/opentype/pretendard \
+    && mkdir -p /tmp/pretendard-extract /usr/share/fonts/opentype/pretendard \
     && cd /tmp \
     && wget --tries=3 --timeout=30 \
        -O pretendard.zip \
        https://github.com/orioncactus/pretendard/releases/download/v1.3.9/Pretendard-1.3.9.zip \
-    && unzip -j pretendard.zip "public/static/*.otf" \
-       -d /usr/share/fonts/opentype/pretendard/ \
+    && unzip pretendard.zip -d /tmp/pretendard-extract/ \
+    && find /tmp/pretendard-extract/public/static -maxdepth 1 -name '*.otf' \
+       -exec cp {} /usr/share/fonts/opentype/pretendard/ \; \
     && ls -la /usr/share/fonts/opentype/pretendard/ \
-    && rm -f pretendard.zip \
-    && fc-cache -f -v 2>&1 | tail -5 \
-    && fc-list | grep -i pretendard | head -5
+    && rm -rf /tmp/pretendard.zip /tmp/pretendard-extract \
+    && fc-cache -f -v 2>&1 | tail -3 \
+    && (fc-list | grep -i pretendard | head -5 \
+        || (echo "FATAL: Pretendard not in fc-list after fc-cache" && exit 1))
 
 WORKDIR /app
 COPY requirements.txt .
