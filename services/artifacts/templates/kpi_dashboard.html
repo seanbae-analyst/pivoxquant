@@ -1,947 +1,245 @@
 {# ══════════════════════════════════════════════════════════════════════════
-   KPI Dashboard — Goldman IC v2 Editorial Redesign (6-page)
-   Monthly portfolio KPI observation. Palantir × Bloomberg editorial.
-   Brand v2: wordmark (cover) · monogram (colophon) · submark (running-head).
+   KPI Dashboard — Premium · 3-page · Monthly (CEO design v3, 2026-04-30)
+
+   Source: frontend/src/components/reports/templates/kpi-dashboard.tsx
+   1:1 port of the React component into a print-oriented Jinja template.
+
+   Page 1: Cover (light, matches Premium covers per CEO 2026-04-27)
+   Page 2: Executive Summary + 12-row Performance Scorecard
+   Page 3: Decisions Log table + 3-up Decision cards + 12M Trend SVG +
+            Governance + Disclaimer
+
+   v3 shape (KPIDashboardService._to_v3_shape):
+     v3.doc, v3.nav_eom, v3.nav_eom_delta,
+     v3.ytd_return, v3.ytd_delta, v3.sharpe, v3.sharpe_delta,
+     v3.status, v3.status_delta, v3.issued,
+     v3.scorecard (list of {kpi, mtd, ytd, m12, target, status_tone, status_label}),
+     v3.decisions (list of {date, decision, thesis, size, result, result_tone, verdict_tone, verdict_label}),
+     v3.decision_cards (list of {priority, title, body, badge_tone, badge_label})
+
+   Compliance — IC pack tone. BUY/SELL labels are HISTORICAL decision log
+   entries (not current advice). Outcomes are factual.
    ══════════════════════════════════════════════════════════════════════════ #}
+{%- set v3 = v3 | default({}) -%}
 <!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <title>KPI Dashboard — {{ period_label }} — {{ user_name }}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 22mm 20mm 22mm 20mm;
-      @top-left {
-        content: "PIVOXQUANT  ·  KPI DASHBOARD";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7.2pt;
-        letter-spacing: 0.36em;
-        text-transform: uppercase;
-        color: #B8956A;
-      }
-      @top-right {
-        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ period_label }}";
-        font-family: "JetBrains Mono", monospace;
-        font-size: 7pt;
-        letter-spacing: 0.14em;
-        color: #6B6B6B;
-      }
-      @bottom-left {
-        content: "Observation only — not a directive.";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7pt;
-        font-style: italic;
-        color: #8a8a8a;
-      }
-      @bottom-right {
-        content: counter(page) " / " counter(pages);
-        font-family: "JetBrains Mono", monospace;
-        font-size: 8pt;
-        color: #4a4a4a;
-      }
-    }
-    @page :first {
-      @top-left { content: none; }
-      @top-right { content: none; }
-      @bottom-left { content: none; }
-      @bottom-right { content: none; }
-    }
-    {% include '_report_css.html' %}
-
-    /* ───────────────────── P1 · COVER ─────────────────────────────── */
-    .cv { position: relative; padding-top: 0; }
-    .cv-wordmark { text-align: center; margin: 6pt auto 14pt auto; }
-    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
-    .cv-issue {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
-      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
-    }
-    .cv-issue .cv-issue-key { color: #0A0A0A; }
-    .cv-hero {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 38pt; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A;
-      margin: 30pt 0 30pt 0; padding: 0;
-    }
-    .cv-hero span { display: block; }
-    .cv-hero span + span { padding-left: 30pt; }
-    .cv-hero span + span + span { padding-left: 60pt; color: #B8956A; }
-    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 18pt; table-layout: fixed; overflow: visible; }
-    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
-    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
-    .cv-kpi-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8a8a8a; margin-bottom: 4pt;
-    }
-    .cv-kpi-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 18pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -0.015em; line-height: 1.02;
-    }
-    .cv-kpi-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
-    }
-    .cv-slug {
-      margin-top: 22pt; text-align: center;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.38em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600;
-    }
-    .cv-foot {
-      margin-top: 18pt; text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt; color: #6B6B6B; letter-spacing: 0.02em;
-    }
-
-    .sp-part {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin: 0 0 2pt 0;
-    }
-    .sp-title {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 26pt; font-weight: 400; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
-    }
-    .sp-deck {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
-      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
-    }
-
-    /* ───────────────────── P2 · NAV SPREAD ────────────────────────── */
-    .sp-grid {
-      display: table; width: 100%; border-collapse: separate;
-      border-spacing: 14pt 0; margin-top: 6pt;
-      table-layout: fixed;
-    }
-    .sp-grid > .sp-main   { display: table-cell; width: 70%; vertical-align: top; }
-    .sp-grid > .sp-margin { display: table-cell; width: 30%; vertical-align: top; }
-    .sp-fig-title {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; margin-bottom: 6pt;
-    }
-    .sp-fig-caption {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
-      line-height: 1.4; margin-top: 6pt; max-width: 360pt;
-    }
-    .sp-prose {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; line-height: 1.58; color: #202020;
-    }
-    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
-    .sp-prose > p:first-child::first-letter {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 28pt; line-height: 0.88; font-weight: 500;
-      color: #B8956A; /* float+padding removed for WeasyPrint 68.1 compat */ font-style: normal;
-    }
-    .sp-margin-block {
-      border-left: 0.35pt solid #B8956A;
-      padding: 2pt 0 2pt 9pt; margin-bottom: 12pt;
-    }
-    .sp-margin-term {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.4pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 2pt;
-    }
-    .sp-margin-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 12pt; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-    }
-    .sp-margin-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8pt; line-height: 1.42; color: #6B6B6B; margin-top: 2pt;
-    }
-
-    /* ───────────────────── P3 · KPI LADDER ────────────────────────── */
-    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
-    .ld-table th, .ld-table td {
-      padding: 5pt 6pt; text-align: left; vertical-align: middle;
-      border-bottom: 0.25pt solid #e4dfd2;
-    }
-    .ld-table thead th {
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.16em;
-      text-transform: uppercase; color: #6B6B6B;
-      font-weight: 600;
-    }
-    .ld-table th.num,
-    .ld-table td.num {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-    .ld-table td.num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.8pt;
-    }
-    .ld-metric {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.4pt; color: #0A0A0A; font-weight: 500;
-    }
-
-    /* ───────────────────── P4 · QUAD ──────────────────────────────── */
-    .rq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; }
-    .rq-main { display: table-cell; width: 66%; vertical-align: top; }
-    .rq-side { display: table-cell; width: 34%; vertical-align: top; }
-    .rq-quads { display: table; width: 100%; border-collapse: collapse; }
-    .rq-quad-row { display: table-row; }
-    .rq-quad {
-      display: table-cell; width: 50%;
-      padding: 12pt 14pt;
-      vertical-align: top; height: 165pt;
-    }
-    .rq-quad-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 3pt;
-    }
-    .rq-quad-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 13pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-    }
-    .rq-quad-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; color: #6B6B6B;
-      margin-top: 4pt; line-height: 1.4;
-    }
-    .rq-notes {
-      padding: 12pt 0 0 12pt; font-size: 8pt;
-      border-left: 0.35pt solid #c9c4b8;
-    }
-    .rq-notes-eyebrow {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.28em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 8pt;
-    }
-    .rq-notes-item { margin-bottom: 8pt; padding-left: 16pt; text-indent: -16pt; }
-    .rq-notes-item:last-child { margin-bottom: 0; }
-    .rq-notes-num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.6pt; color: #B8956A; font-weight: 600;
-      letter-spacing: 0.04em; margin-right: 6pt;
-    }
-    .rq-notes-def {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.2pt; line-height: 1.5; color: #4a4a4a; display: inline;
-    }
-
-    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
-    .ed-quote-wrap {
-      min-height: 300pt; padding: 40pt 40pt 20pt 40pt;
-      display: table; width: 100%; text-align: center;
-    }
-    .ed-quote-cell { display: table-cell; vertical-align: middle; }
-    .ed-quote {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 38pt; line-height: 1.22;
-      letter-spacing: -0.015em; color: #0A0A0A; margin: 0;
-    }
-    .ed-quote-attr {
-      margin-top: 26pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #B8956A;
-    }
-    .ed-quote-attr::before, .ed-quote-attr::after {
-      content: "——"; color: #B8956A; opacity: 0.5;
-      margin: 0 8pt; letter-spacing: 0;
-    }
-    .ed-notans-head {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; margin-top: 26pt;
-      padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
-    }
-    .ed-notans-grid {
-      display: table; width: 100%; border-collapse: separate;
-      border-spacing: 18pt 0; margin-top: 10pt;
-    }
-    .ed-notans-col { display: table-cell; width: 50%; vertical-align: top; }
-    .ed-notans-item {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; line-height: 1.6;
-      color: #202020; margin-bottom: 8pt;
-      padding-left: 24pt; text-indent: -24pt;
-    }
-    .ed-notans-num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8pt; color: #B8956A;
-      font-weight: 600; letter-spacing: 0.04em;
-      margin-right: 10pt;
-    }
-
-    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
-    .co-wrap { padding: 0; text-align: left; }
-    .co-body p { margin: 0 0 8pt 0 !important; }
-    .co-head {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 4pt;
-    }
-    .co-rule-small {
-      width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0;
-    }
-    .co-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.7;
-      color: #202020; max-width: 440pt;
-    }
-    .co-body .co-key {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.4pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #6B6B6B;
-    }
-    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
-    .co-sign { text-align: center; margin-top: 14pt; }
-    .co-sign-house {
-      margin-top: 16pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #0A0A0A; font-weight: 500;
-    }
-    .co-sign-ref {
-      margin-top: 10pt;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
-    }
-    .co-sign-time {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
-    }
-    section.disclaimer.pq-disclaimer {
-      border: none !important;
-      border-top: 0.35pt solid #c9c4b8 !important;
-      padding: 10pt 0 0 0 !important;
-      margin: 16pt 0 0 0 !important;
-      background: transparent !important;
-      font-size: 7.6pt !important;
-      line-height: 1.5 !important;
-    }
-    section.disclaimer.pq-disclaimer h5.disclaimer__title {
-      font-family: "Geist", -apple-system, sans-serif !important;
-      font-size: 7pt !important;
-      letter-spacing: 0.32em !important;
-      text-transform: uppercase !important;
-      color: #B8956A !important;
-      margin: 0 0 6pt 0 !important;
-    }
-  </style>
+  <title>KPI Dashboard — {{ v3.doc | default(month_label) }} — {{ user_name }}</title>
+  <style>{% include '_kpi_dashboard_v3_css.html' %}</style>
 </head>
 <body>
 
-{# ── local helpers ─────────────────────────────────────────────────────── #}
-{% set _issue_no = issue_number | default(4) %}
-{% set _doc_ref = doc_ref | default('PQ-KPI-' ~ ('%02d' % _issue_no)) %}
-{% set _hero = hero_headline | default([
-  'Numbers are the vocabulary.',
-  'Observation is the grammar.',
-  "This is a month's sentence.",
-]) %}
+<div class="pq-report">
 
-{% set _kpi_nav    = kpi_nav_label | default(none) %}
-{% set _kpi_mtd    = kpi_mtd_pct   | default(2.4) %}
-{% set _kpi_ytd    = kpi_ytd_pct   | default(8.7) %}
-{% set _kpi_sharpe = kpi_sharpe    | default(0.94) %}
+  {# ═════════════════════════ PAGE 1 — COVER ═════════════════════════ #}
+  <section class="pq-pdf-page">
 
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 1 · COVER
-   ══════════════════════════════════════════════════════════════════════════ #}
-<section class="cv">
-
-  <div class="cv-wordmark">
-    {% with brand_kind='wordmark', brand_size=260 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-  </div>
-
-  <div class="cv-rule-thin"></div>
-  <div class="cv-issue">
-    KPI DASHBOARD <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
-    &nbsp;·&nbsp; {{ period_label | default('April 2026') }}
-    &nbsp;·&nbsp; PORTFOLIO OBSERVATION
-  </div>
-  <div class="cv-rule-thin"></div>
-
-  <h1 class="cv-hero">
-    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
-  </h1>
-
-  <div class="cv-rule-thin"></div>
-
-  <div class="cv-kpi4">
-    {% if _kpi_nav %}
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">NAV</div>
-      <div class="cv-kpi-value">{{ _kpi_nav }}</div>
-      <div class="cv-kpi-foot">Net asset value, month-end mark.</div>
-    </div>
-    {% endif %}
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">MTD Return</div>
-      <div class="cv-kpi-value {% if _kpi_mtd >= 0 %}r-pos{% else %}r-neg{% endif %}">
-        {{ '%+.1f'|format(_kpi_mtd) }}%
-      </div>
-      <div class="cv-kpi-foot">Month-to-date, net of realised costs.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">YTD Return</div>
-      <div class="cv-kpi-value {% if _kpi_ytd >= 0 %}r-pos{% else %}r-neg{% endif %}">
-        {{ '%+.1f'|format(_kpi_ytd) }}%
-      </div>
-      <div class="cv-kpi-foot">Year-to-date, realised and unrealised.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Sharpe</div>
-      <div class="cv-kpi-value">{{ '%.2f'|format(_kpi_sharpe) }}</div>
-      <div class="cv-kpi-foot">Rolling 30D annualised.</div>
-    </div>
-  </div>
-
-  <div class="cv-slug">KPI DASHBOARD &middot; {{ period_label | default('April 2026') }} &middot; No. {{ '%02d' % _issue_no }}</div>
-
-  <p class="cv-foot">
-    <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
-  </p>
-</section>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 2 · NAV SPREAD — daily MTD equity curve with best/worst markers
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part I · NAV Walk</p>
-<h2 class="sp-title">The month, drawn as a single line</h2>
-<p class="sp-deck">
-  Daily NAV marks for the month. Bronze markers record the best and worst
-  observed days. The line is a record, not a prediction.
-</p>
-
-<div class="sp-grid">
-  <div class="sp-main">
-
-    <div class="sp-fig-title">Fig. 1 · Daily NAV walk · {{ period_label | default('April 2026') }}</div>
-
-    {% set _nav = nav_curve | default([124440, 124680, 124920, 125110, 124880, 124940, 125220, 125480, 125710, 125940, 126220, 126040, 125810, 126110, 126480, 126820, 127110, 127380, 127210, 127450]) %}
-    {% set _nmin = _nav | min %}
-    {% set _nmax = _nav | max %}
-    {% set _pad = (_nmax - _nmin) * 0.12 %}
-    {% if _pad == 0 %}{% set _pad = 1 %}{% endif %}
-    {% set _lo = _nmin - _pad %}
-    {% set _hi = _nmax + _pad %}
-    {% set _span = _hi - _lo %}
-
-    {% set _W = 520 %}
-    {% set _H = 200 %}
-    {% set _Tp = 18 %}{% set _Bp = 30 %}{% set _Lp = 6 %}{% set _Rp = 18 %}
-    {% set _PW = _W - _Lp - _Rp %}
-    {% set _PH = _H - _Tp - _Bp %}
-
-    {% set _pts = [] %}
-    {% for v in _nav %}
-      {% set _x = _Lp + loop.index0 * _PW / (_nav | length - 1) %}
-      {% set _y = _Tp + _PH - ((v - _lo) / _span) * _PH %}
-      {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-    {% endfor %}
-
-    {% set _bi = nav_best_day_index | default(15) %}
-    {% set _wi = nav_worst_day_index | default(4) %}
-    {% set _bx = _Lp + _bi * _PW / (_nav | length - 1) %}
-    {% set _by = _Tp + _PH - ((_nav[_bi] - _lo) / _span) * _PH %}
-    {% set _wx = _Lp + _wi * _PW / (_nav | length - 1) %}
-    {% set _wy = _Tp + _PH - ((_nav[_wi] - _lo) / _span) * _PH %}
-
-    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
-         xmlns="http://www.w3.org/2000/svg" aria-label="Daily NAV walk" role="img"
-         style="display:block; overflow:visible;">
-
-      {% for gy in [0.25, 0.5, 0.75] %}
-        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH * gy }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH * gy }}"
-              stroke="#E8E4DA" stroke-width="0.3"/>
-      {% endfor %}
-
-      <!-- area under curve -->
-      <polygon points="{{ _pts | join(' ') }} {{ _W - _Rp }},{{ _Tp + _PH }} {{ _Lp }},{{ _Tp + _PH }}"
-               fill="#B8956A" fill-opacity="0.10"/>
-
-      <!-- NAV line -->
-      <polyline points="{{ _pts | join(' ') }}"
-                fill="none" stroke="#0A0A0A" stroke-width="1.4" stroke-linejoin="round"/>
-
-      <!-- best day marker -->
-      <circle cx="{{ '%.2f' % _bx }}" cy="{{ '%.2f' % _by }}" r="3" fill="#B8956A"/>
-      <circle cx="{{ '%.2f' % _bx }}" cy="{{ '%.2f' % _by }}" r="6" fill="none" stroke="#B8956A" stroke-width="0.4" opacity="0.45"/>
-      <line x1="{{ '%.2f' % _bx }}" y1="{{ '%.2f' % _by }}"
-            x2="{{ '%.2f' % (_bx + 36) }}" y2="{{ '%.2f' % (_by - 22) }}"
-            stroke="#B8956A" stroke-width="0.5"/>
-      <text x="{{ '%.2f' % (_bx + 39) }}" y="{{ '%.2f' % (_by - 24) }}"
-            fill="#B8956A" font-size="8.5" font-family="Source Serif 4, Georgia, serif" font-style="italic">
-        Best · {{ nav_best_day_delta | default('+0.81%') }}
-      </text>
-
-      <!-- worst day marker -->
-      <circle cx="{{ '%.2f' % _wx }}" cy="{{ '%.2f' % _wy }}" r="3" fill="#A84C4C"/>
-      <circle cx="{{ '%.2f' % _wx }}" cy="{{ '%.2f' % _wy }}" r="6" fill="none" stroke="#A84C4C" stroke-width="0.4" opacity="0.45"/>
-      <line x1="{{ '%.2f' % _wx }}" y1="{{ '%.2f' % _wy }}"
-            x2="{{ '%.2f' % (_wx + 28) }}" y2="{{ '%.2f' % (_wy + 22) }}"
-            stroke="#A84C4C" stroke-width="0.5"/>
-      <text x="{{ '%.2f' % (_wx + 31) }}" y="{{ '%.2f' % (_wy + 24) }}"
-            fill="#A84C4C" font-size="8.5" font-family="Source Serif 4, Georgia, serif" font-style="italic">
-        Worst · {{ nav_worst_day_delta | default('-0.24%') }}
-      </text>
-
-      <!-- start / end labels -->
-      {% set _first = _pts[0].split(',') %}
-      {% set _last = _pts[-1].split(',') %}
-      <circle cx="{{ _first[0] }}" cy="{{ _first[1] }}" r="1.8" fill="#0A0A0A"/>
-      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="2.2" fill="#0A0A0A"/>
-
-      <!-- x-axis ticks (first, mid, last) -->
-      <text x="{{ _Lp }}" y="{{ _H - 14 }}" text-anchor="start"
-            fill="#8a8a8a" font-size="7.5" font-family="JetBrains Mono, monospace" letter-spacing="0.08em">Day 01</text>
-      <text x="{{ _Lp + _PW/2 }}" y="{{ _H - 14 }}" text-anchor="middle"
-            fill="#8a8a8a" font-size="7.5" font-family="JetBrains Mono, monospace" letter-spacing="0.08em">Day {{ (_nav | length // 2) }}</text>
-      <text x="{{ _W - _Rp }}" y="{{ _H - 14 }}" text-anchor="end"
-            fill="#8a8a8a" font-size="7.5" font-family="JetBrains Mono, monospace" letter-spacing="0.08em">Day {{ _nav | length }}</text>
-
-      <!-- y-axis top/bottom -->
-      <text x="{{ _W - _Rp + 3 }}" y="{{ _Tp + 4 }}" fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">{{ '%.0f' % _hi }}</text>
-      <text x="{{ _W - _Rp + 3 }}" y="{{ _Tp + _PH + 2 }}" fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">{{ '%.0f' % _lo }}</text>
-    </svg>
-
-    <div class="sp-fig-caption">
-      Fig. 1. Daily NAV marks for the month. Bronze marker &mdash; best
-      observed day. Faint red &mdash; worst observed day. The line is drawn
-      from realised close-of-day values.
-    </div>
-
-    <div class="sp-prose" style="margin-top: 14pt; border-top: 0.35pt solid #c9c4b8; padding-top: 10pt;">
-      <p>The book opened the month at {{ '%s'|format(_nav[0]) }} and closed
-        at {{ '%s'|format(_nav[-1]) }}. The path was neither straight nor
-        smooth &mdash; the strongest single day recorded
-        {{ nav_best_day_delta | default('+0.81%') }}; the softest recorded
-        {{ nav_worst_day_delta | default('-0.24%') }}. The shape of the
-        walk is a historical fact.</p>
-      <p>Mean daily return, annualised, stands at {{ '%+.1f'|format(_kpi_mtd * 12) }}%.
-        The reading should not be extrapolated.</p>
-    </div>
-
-  </div>
-
-  <div class="sp-margin">
-
-    {% if _kpi_nav %}
-    <div class="sp-margin-block" style="margin-top: 0;">
-      <div class="sp-margin-term">NAV · Month-end</div>
-      <div class="sp-margin-value">{{ _kpi_nav }}</div>
-      <div class="sp-margin-body">Net asset value at last observed close.</div>
-    </div>
-    {% endif %}
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Best Day</div>
-      <div class="sp-margin-value">{{ nav_best_day_delta | default('+0.81%') }}</div>
-      <div class="sp-margin-body">Largest single-day NAV gain this month.</div>
-    </div>
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Worst Day</div>
-      <div class="sp-margin-value">{{ nav_worst_day_delta | default('-0.24%') }}</div>
-      <div class="sp-margin-body">Largest single-day NAV loss this month.</div>
-    </div>
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Sharpe · 30D</div>
-      <div class="sp-margin-value">{{ '%.2f'|format(_kpi_sharpe) }}</div>
-      <div class="sp-margin-body">Rolling 30 trading-day annualised Sharpe.</div>
-    </div>
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Range</div>
-      <div class="sp-margin-value" style="font-size:10pt;">{{ '%.0f'|format(_nmin) }} — {{ '%.0f'|format(_nmax) }}</div>
-      <div class="sp-margin-body">Observed NAV range this month.</div>
-    </div>
-  </div>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 3 · KPI LADDER — 10-row metric table with sparklines
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part II · KPI Ladder</p>
-<h2 class="sp-title">Ten metrics, read as a single page</h2>
-<p class="sp-deck">
-  Each row a separate metric; each sparkline a 7-point trailing reading.
-  Bronze dot marks the most recent observation.
-</p>
-
-{% set _kpi_rows = kpi_ladder | default([]) %}
-{% if _kpi_rows %}
-<table class="ld-table">
-  <thead>
-    <tr>
-      <th style="width:18%;">Metric</th>
-      <th class="num" style="width:13%;">Current</th>
-      <th class="num" style="width:12%;">Last Mo.</th>
-      <th class="num" style="width:12%;">3M Avg</th>
-      <th class="num" style="width:11%;">YTD</th>
-      <th style="width:16%;">52W Range</th>
-      <th style="width:18%;">Trajectory</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for r in _kpi_rows %}
-      {% set _spark = r.spark | default([0,0,0,0,0,0,0]) %}
-      {% set _smax = _spark | map('abs') | max %}
-      {% if _smax == 0 %}{% set _smax = 1 %}{% endif %}
-      {% set _smin_v = _spark | min %}
-      {% set _smax_v = _spark | max %}
-      {% set _srange = _smax_v - _smin_v %}
-      {% if _srange == 0 %}{% set _srange = 1 %}{% endif %}
-      {% set _sw = 110 %}
-      {% set _sh = 20 %}
-      {% set _sp = [] %}
-      {% for v in _spark %}
-        {% set _x = loop.index0 * _sw / (_spark | length - 1) %}
-        {% set _y = _sh - 2 - ((v - _smin_v) / _srange) * (_sh - 4) %}
-        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-      {% endfor %}
-      {% set _lastpt = _sp[-1].split(',') %}
-      <tr>
-        <td><span class="ld-metric">{{ r.metric }}</span></td>
-        <td class="num">{{ r.current }}</td>
-        <td class="num r-muted">{{ r.last_mo }}</td>
-        <td class="num r-muted">{{ r.avg_3m }}</td>
-        <td class="num">{{ r.ytd }}</td>
-        <td><span style="font-family:'JetBrains Mono',monospace; font-size:7.6pt; color:#8a8a8a;">{{ r.range }}</span></td>
-        <td>
-          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="32"
-               preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg"
-               style="display:block; vertical-align:middle;">
-            <polyline points="{{ _sp | join(' ') }}"
-                      stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
-          </svg>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-  <p class="r-muted">Metrics were not resolvable for this window.</p>
-{% endif %}
-
-<p style="margin-top: 4pt; font-family: 'Source Serif 4', Georgia, serif; font-size: 8.8pt; line-height: 1.5; color: #4a4a4a; font-style: italic;">
-  Spark ranges are normalised within each row; heights are not comparable
-  across metrics. Bronze dot marks the most recent observation. Thresholds
-  on any metric are self-set, not universal.
-</p>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 4 · ATTRIBUTION QUAD — 2×2 small-multiples + right-rail notes
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part III · Attribution &amp; Shape</p>
-<h2 class="sp-title">Four frames, sampled this month</h2>
-<p class="sp-deck">
-  Return attribution by sector, the distribution of realised trades, the
-  distribution of holding periods, and the rolling Sharpe. Each frame is
-  historical observation.
-</p>
-
-<div class="rq-grid">
-  <div class="rq-main">
-
-    <div class="rq-quads">
-      <div class="rq-quad-row">
-
-        <!-- Q1: Return attribution by sector -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Return Attribution · Sector</div>
-          <div class="rq-quad-value">{{ '%+.2f'|format(_kpi_mtd) }}%</div>
-          {% set _ra = return_attribution | default([
-            {'name':'Technology','v':3.84},
-            {'name':'Healthcare','v':0.50},
-            {'name':'Financials','v':0.61},
-            {'name':'Energy','v':0.46},
-            {'name':'Industrials','v':0.37},
-            {'name':'Staples','v':0.11},
-            {'name':'Cons. Disc.','v':-0.20},
-            {'name':'REITs','v':-0.04},
-          ]) %}
-          {% set _ramax = (_ra | map(attribute='v') | map('abs') | max) %}
-          <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            <line x1="0" y1="26" x2="180" y2="26" stroke="#c9c4b8" stroke-width="0.3"/>
-            {% for a in _ra %}
-              {% set _h = (a.v | abs) / _ramax * 18 %}
-              {% set _bw = 180 / (_ra | length) - 2 %}
-              {% set _bx = loop.index0 * (180 / (_ra | length)) + 1 %}
-              {% if a.v >= 0 %}
-                {% set _fill = '#B8956A' %}{% set _y = 26 - _h %}
-              {% else %}
-                {% set _fill = '#A84C4C' %}{% set _y = 26 %}
-              {% endif %}
-              <rect x="{{ _bx }}" y="{{ _y }}" width="{{ _bw }}" height="{{ _h }}"
-                    fill="{{ _fill }}" fill-opacity="0.70"/>
-            {% endfor %}
-            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">RETURN CONTRIBUTION · pp</text>
-          </svg>
-          <div class="rq-quad-foot">Bronze · positive contribution. Faint red · negative.</div>
-        </div>
-
-        <!-- Q2: Win/Loss distribution -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Trade Outcome Distribution</div>
-          <div class="rq-quad-value">{{ winloss_label | default('58% Win · 42% Loss') }}</div>
-          {% set _wlb = winloss_bins   | default([-6,-4,-2,0,2,4,6]) %}
-          {% set _wlc = winloss_counts | default([2,4,8,14,18,10,4]) %}
-          {% set _wlcmax = _wlc | max %}
-          <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
-            {% for i in range(_wlb | length) %}
-              {% set _h = (_wlc[i] / _wlcmax) * 30 %}
-              {% set _bw = 180 / (_wlb | length) - 2 %}
-              {% set _bx = i * (180 / (_wlb | length)) + 1 %}
-              {% if _wlb[i] < 0 %}{% set _c = '#A84C4C' %}{% set _op = 0.55 %}{% else %}{% set _c = '#B8956A' %}{% set _op = 0.75 %}{% endif %}
-              <rect x="{{ _bx }}" y="{{ 42 - _h }}" width="{{ _bw }}" height="{{ _h }}"
-                    fill="{{ _c }}" fill-opacity="{{ _op }}"/>
-            {% endfor %}
-            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">REALISED TRADE RETURNS · %</text>
-          </svg>
-          <div class="rq-quad-foot">All realised trades this month, binned by return.</div>
-        </div>
-      </div>
-
-      <div class="rq-quad-row">
-
-        <!-- Q3: Holding period distribution -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Holding Period · Days</div>
-          <div class="rq-quad-value">{{ hold_median | default('24 days · median') }}</div>
-          {% set _hb = hold_bins   | default(['0-7','8-14','15-30','31-60','61+']) %}
-          {% set _hc = hold_counts | default([6,10,22,14,8]) %}
-          {% set _hcmax = _hc | max %}
-          <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
-            {% for i in range(_hb | length) %}
-              {% set _h = (_hc[i] / _hcmax) * 28 %}
-              {% set _bw = 180 / (_hb | length) - 6 %}
-              {% set _bx = i * (180 / (_hb | length)) + 3 %}
-              <rect x="{{ _bx }}" y="{{ 42 - _h }}" width="{{ _bw }}" height="{{ _h }}"
-                    fill="#B8956A" fill-opacity="0.70"/>
-              <text x="{{ _bx + _bw/2 }}" y="47"
-                    text-anchor="middle" fill="#6B6B6B"
-                    font-size="6" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ _hb[i] }}</text>
-            {% endfor %}
-            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">HOLDING DAYS · BIN COUNT</text>
-          </svg>
-          <div class="rq-quad-foot">Closed-position holding-day histogram.</div>
-        </div>
-
-        <!-- Q4: Rolling 30D Sharpe -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Rolling Sharpe · 30D</div>
-          <div class="rq-quad-value">{{ '%.2f'|format(_kpi_sharpe) }}</div>
-          {% set _rs = rolling_sharpe | default([0.52, 0.58, 0.61, 0.68, 0.72, 0.78, 0.82, 0.86, 0.88, 0.91, 0.93, 0.94]) %}
-          {% set _rsmin = _rs | min %}
-          {% set _rsmax = _rs | max %}
-          {% set _rsrange = _rsmax - _rsmin %}
-          {% if _rsrange == 0 %}{% set _rsrange = 1 %}{% endif %}
-          {% set _rspts = [] %}
-          {% for v in _rs %}
-            {% set _x = loop.index0 * 180 / (_rs | length - 1) %}
-            {% set _y = 40 - ((v - _rsmin) / _rsrange) * 28 %}
-            {% set _ = _rspts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-          {% endfor %}
-          <svg viewBox="0 0 180 48" width="100%" height="88" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            <line x1="0" y1="42" x2="180" y2="42" stroke="#c9c4b8" stroke-width="0.3"/>
-            <polyline points="{{ _rspts | join(' ') }}"
-                      fill="none" stroke="#0A0A0A" stroke-width="1.1" stroke-linejoin="round"/>
-            {% set _rslast = _rspts[-1].split(',') %}
-            <circle cx="{{ _rslast[0] }}" cy="{{ _rslast[1] }}" r="1.8" fill="#B8956A"/>
-            <text x="0" y="7" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">30D ANNUALISED SHARPE</text>
-          </svg>
-          <div class="rq-quad-foot">Rolling annualised Sharpe, 30 trading-day window.</div>
-        </div>
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>KPI DASHBOARD &middot; IC PACK</strong>
+        <span>{{ v3.doc | default('—') }}</span>
       </div>
     </div>
 
-    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
-      Fig. 2. Four frames drawn from realised statements. Bronze marks the
-      benign direction; faint red marks the loss direction.
-    </div>
-
-  </div>
-
-  <div class="rq-side">
-    <div class="rq-notes">
-      <div class="rq-notes-eyebrow">Right Rail · Notes</div>
-      {% set _rails = right_rail_notes | default([
-        'All metrics are observed ex-post, from realised statements.',
-        'Thresholds are self-set, not universal.',
-        'Metrics describe behaviour; they do not direct it.',
-        'Rolling windows are 30 trading days.',
-        'Informational only — not a portfolio instruction.',
-      ]) %}
-      {% for note in _rails %}
-      <div class="rq-notes-item">
-        <span class="rq-notes-num">{{ '%02d' % loop.index }}</span>
-        <span class="rq-notes-def">{{ note }}</span>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 5 · EDITORIAL
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part IV · Editorial</p>
-<h2 class="sp-title">What the desk is sitting with</h2>
-<p class="sp-deck">
-  A sentence held by the research desk this month, and the short list of
-  questions this dashboard, by construction, does not answer.
-</p>
-
-<div class="ed-quote-wrap">
-  <div class="ed-quote-cell">
-    <blockquote class="ed-quote">
-      {{ pull_quote | default("A dashboard is a room's mirror — it shows the shape you've taken today, not the shape you intend.") }}
-    </blockquote>
-    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Research Desk") }}</div>
-  </div>
-</div>
-
-<div class="ed-notans-head">What this dashboard does not answer</div>
-
-{% set _notans = not_answered | default([
-  'Whether any metric is appropriate for a given objective.',
-  'Forward-looking projections of NAV or Sharpe.',
-  'Tax consequences of realised trades.',
-  'Regime shifts outside the observation window.',
-  'Personal cash-flow timing.',
-]) %}
-{% set _half = ((_notans | length) / 2) | round(0, 'ceil') | int %}
-
-<div class="ed-notans-grid">
-  <div class="ed-notans-col">
-    {% for item in _notans[:_half] %}
-      <div class="ed-notans-item">
-        <span class="ed-notans-num">{{ '%02d' % loop.index }}</span>{{ item }}
-      </div>
-    {% endfor %}
-  </div>
-  <div class="ed-notans-col">
-    {% for item in _notans[_half:] %}
-      <div class="ed-notans-item">
-        <span class="ed-notans-num">{{ '%02d' % (_half + loop.index) }}</span>{{ item }}
-      </div>
-    {% endfor %}
-  </div>
-</div>
-
-<p style="margin-top: 14pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 7.6pt; color: #8a8a8a; text-align: center; line-height: 1.5;">
-  <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
-</p>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 6 · COLOPHON
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<div class="co-wrap">
-
-  <div class="co-head">Colophon</div>
-  <div class="co-rule-small"></div>
-
-  <div class="co-body">
-    <p style="margin: 0 0 10pt 0;">
-      Prepared for <strong>{{ user_name }}</strong> on
-      <strong>{{ generated_at }}</strong>. KPI Dashboard
-      <strong>No. {{ '%02d' % _issue_no }}</strong> &middot;
-      Period <strong>{{ period_label | default('April 2026') }}</strong>.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data sources</span>
-    </p>
-    {# Wave 6 — 'Alpaca · Paper account statements' prose-embedded
-       fallback removed. A Samsung-only KR user would otherwise receive
-       a KPI dashboard claiming Alpaca as their broker (표시광고법 §3).
-       Service populates `data_sources` from real connections via
-       `resolve_user_data_lineage`; empty list renders a neutral line. #}
-    {% set _ds = data_sources | default([]) %}
-    {% if _ds %}
-      {% for d in _ds %}
-        <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-          <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key | default(d.source | default('')) }}</span>
-          <span>{{ d.value | default(d.description | default('')) }}</span>
-        </p>
-      {% endfor %}
-    {% else %}
-      <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-        Data sources not specified. Connect your broker in Settings to see data lineage.
+    <div style="margin-top: 30mm;">
+      <div class="pq-pdf-cover-eyebrow">Investment Committee Pack &middot; Monthly</div>
+      <h1 class="pq-pdf-cover-title" style="font-size: 64px;">
+        {{ v3.cover_month | default(month_label | default('—')) }} <em>KPI Dashboard.</em>
+      </h1>
+      <p class="pq-pdf-cover-sub">
+        A single source of truth for the portfolio. One page, every metric that matters
+        &mdash; return, risk, efficiency, decision quality. One decision this month, with its rationale.
       </p>
+    </div>
+
+    <div style="margin-top: auto; padding-top: 30mm;">
+      <div class="pq-pdf-cover-meta-grid">
+        <div class="cell">
+          <div class="lbl">NAV &middot; EOM</div>
+          <div class="val">{{ v3.nav_eom | default('—') }}</div>
+        </div>
+        <div class="cell">
+          <div class="lbl">Return &middot; YTD</div>
+          <div class="val">{{ v3.ytd_return | default('—') }}</div>
+        </div>
+        <div class="cell">
+          <div class="lbl">Sharpe &middot; 12M</div>
+          <div class="val">{{ v3.sharpe | default('—') }}</div>
+        </div>
+        <div class="cell">
+          <div class="lbl">Status</div>
+          <div class="val">{{ v3.status | default('—') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pq-pdf-cover-foot">
+      <span>{{ v3.issued | default('—') }}</span>
+    </div>
+
+  </section>
+
+  {# ═════════════════════════ PAGE 2 — EXEC SUMMARY + SCORECARD ═════════════════════════ #}
+  <section class="pq-pdf-page">
+
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>KPI DASHBOARD</strong>
+        <span>{{ v3.doc_short | default('— · 02/03') }}</span>
+      </div>
+    </div>
+
+    <div class="pq-pdf-execsum">
+      <div class="stamp">{{ v3.exec_stamp | default('—') }}</div>
+      <dl>
+        {% for r in v3.exec_rows | default([]) %}
+        <dt>{{ r.term }}</dt>
+        <dd>{{ r.body | safe }}</dd>
+        {% endfor %}
+      </dl>
+    </div>
+
+    <h2 class="pq-pdf-section-title dry">Performance Scorecard &middot; vs targets (MoM)</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr>
+          <th>KPI</th>
+          <th class="right">MTD</th>
+          <th class="right">YTD</th>
+          <th class="right">12M</th>
+          <th class="right">Target</th>
+          <th class="right">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in v3.scorecard | default([]) %}
+        <tr>
+          <td><strong>{{ s.kpi }}</strong></td>
+          <td class="right">{{ s.mtd | default('—') }}</td>
+          <td class="right">{{ s.ytd | default('—') }}</td>
+          <td class="right">{{ s.m12 | default('—') }}</td>
+          <td class="right">{{ s.target | default('—') }}</td>
+          <td class="right">
+            <span class="pq-pdf-heat {{ s.status_tone | default('green') }}">{{ s.status_label | default('—') }}</span>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">스코어카드 데이터 누적 후 표시</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="pq-pdf-page-footer">
+      <span>KPI Dashboard &middot; Premium &middot; IC Pack</span>
+      <span>Page 02</span>
+    </div>
+
+    {% include '_disclaimer.html' %}
+
+  </section>
+
+  {# ═════════════════════════ PAGE 3 — DECISIONS + GOVERNANCE ═════════════════════════ #}
+  <section class="pq-pdf-page">
+
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>KPI DASHBOARD</strong>
+        <span>{{ v3.doc_short | default('— · 03/03') }}</span>
+      </div>
+    </div>
+
+    <div class="pq-pdf-gold-rule"></div>
+
+    <h2 class="pq-pdf-section-title dry">Decisions Log &middot; 이번 분기 결정과 결과</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Decision</th>
+          <th>Thesis</th>
+          <th class="right">Size</th>
+          <th class="right">Result</th>
+          <th class="right">Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in v3.decisions | default([]) %}
+        <tr>
+          <td>{{ d.date | default('—') }}</td>
+          <td><strong>{{ d.decision | default('—') }}</strong></td>
+          <td>{{ d.thesis | default('—') }}</td>
+          <td class="right">{{ d.size | default('—') }}</td>
+          <td class="right {{ d.result_tone | default('') }}">{{ d.result | default('—') }}</td>
+          <td class="right">
+            <span class="pq-pdf-badge {{ d.verdict_tone | default('low') }}">{{ d.verdict_label | default('—') }}</span>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">의사결정 기록 누적 후 표시</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2 class="pq-pdf-section-title dry">Decisions This Period &middot; 이번 달 의사결정 요약</h2>
+    <div class="pq-pdf-three-col">
+      {% for c in v3.decision_cards | default([]) %}
+      <div class="pq-pdf-card">
+        <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4)">{{ c.priority | default('') }}</div>
+        <h3 style="font-size:14px;margin:6px 0;font-weight:600">{{ c.title | default('—') }}</h3>
+        <p style="font-size:11px;color:var(--r-ink-3);line-height:1.5">{{ c.body | default('—') }}</p>
+        <div style="margin-top:10px">
+          <span class="pq-pdf-badge {{ c.badge_tone | default('info') }}">{{ c.badge_label | default('—') }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if v3.has_trend %}
+    <h2 class="pq-pdf-section-title dry">12-Month KPI Trend &middot; indexed to 100</h2>
+    <div class="pq-pdf-card">
+      <svg viewBox="0 0 600 160" preserveAspectRatio="none" style="width:100%;height:160px;">
+        <line x1="0" y1="40"  x2="600" y2="40"  stroke="#ececec" stroke-width="1"/>
+        <line x1="0" y1="80"  x2="600" y2="80"  stroke="#ececec" stroke-width="1"/>
+        <line x1="0" y1="120" x2="600" y2="120" stroke="#ececec" stroke-width="1"/>
+        {% if v3.trend_path_nav %}<path d="{{ v3.trend_path_nav }}" stroke="#0e0e0e" stroke-width="2" fill="none"/>{% endif %}
+        {% if v3.trend_path_bench %}<path d="{{ v3.trend_path_bench }}" stroke="#c0c0c0" stroke-width="1.4" fill="none" stroke-dasharray="3 3"/>{% endif %}
+        {% if v3.trend_path_sharpe %}<path d="{{ v3.trend_path_sharpe }}" stroke="#c9963f" stroke-width="1.6" fill="none" stroke-dasharray="2 3"/>{% endif %}
+      </svg>
+      <div class="pq-pdf-flex-between" style="margin-top:8px;font-size:10px;font-family:var(--font-mono)">
+        <div style="display:flex;gap:18px">
+          <span><span style="display:inline-block;width:8px;height:8px;margin-right:5px;background:#0e0e0e"></span>Portfolio NAV</span>
+          <span><span style="display:inline-block;width:8px;height:8px;margin-right:5px;background:#c0c0c0"></span>S&amp;P 500</span>
+          <span><span style="display:inline-block;width:8px;height:8px;margin-right:5px;background:#c9963f"></span>Sharpe (12M rolling)</span>
+        </div>
+      </div>
+    </div>
     {% endif %}
 
-    <p style="margin: 10pt 0 10pt 0;">
-      <span class="co-key">Typeset in</span> &nbsp;
-      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono') }}.
-    </p>
-    <p style="margin: 0 0 0 0;">
-      <span class="co-key">Engine</span> &nbsp;
-      {{ engine_note | default('Historical record only. Monthly KPI observation pipeline.') }}.
-    </p>
-  </div>
+    <div class="pq-pdf-govblock">
+      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Premium</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Monthly &middot; IC Pack</div></div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Methodology</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}Portfolio KPI &middot; vs targets &middot; 자기 보유 데이터 한정{% endif %}</div>
+      </div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Sources</div>
+        <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
+      </div>
+    </div>
 
-  <div class="co-thin-rule"></div>
+    <div class="pq-pdf-page-footer">
+      <span>KPI Dashboard &middot; Premium &middot; IC Pack</span>
+      <span>Page 03</span>
+    </div>
 
-  {% include '_disclaimer.html' %}
+    {% include '_disclaimer.html' %}
 
-  <div class="co-thin-rule"></div>
-
-  <div class="co-sign">
-    {% with brand_kind='monogram', brand_size=64 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-    <div class="co-sign-house">PivoxQuant Research Desk</div>
-    <div class="co-sign-ref">Doc ref &middot; {{ _doc_ref }}</div>
-    <div class="co-sign-time">Generated &middot; {{ generated_at }}</div>
-  </div>
-
+  </section>
 </div>
 
 </body>

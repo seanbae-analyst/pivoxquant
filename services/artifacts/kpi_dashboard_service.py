@@ -381,24 +381,101 @@ class KPIDashboardService:
         # and the Morning Brief Plus integration share one code path.
         return compute_kpis_for_user(user_id, target_date=target_date)
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map KPI data onto v3 3-page Premium IC Pack shape.
+
+        Mirrors frontend/src/components/reports/templates/kpi-dashboard.tsx.
+        Missing fields fall back to em-dash. No directive vocabulary.
+        Scorecard/decisions/trend 데이터는 별도 sprint에서 매핑 — 현재는
+        empty list로 표시 (template 이 빈 상태 안내 메시지 표출).
+        """
+        as_of = data.get("as_of")
+        as_of_label = str(as_of) if as_of else "—"
+        try:
+            month_label = (as_of.strftime("%b %Y")
+                           if hasattr(as_of, "strftime") else as_of_label[:7])
+        except Exception:
+            month_label = as_of_label
+
+        pv = data.get("portfolio_value")
+        ytd = data.get("ytd_return_pct")
+        sharpe = data.get("sharpe_annual")
+        mdd = data.get("max_drawdown_pct")
+
+        def _money(v):
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            if n >= 1_000_000:
+                return f"${n/1_000_000:.2f}M"
+            if n >= 1_000:
+                return f"${n/1_000:.0f}k"
+            return f"${n:,.0f}"
+
+        def _pct(v):
+            try:
+                return f"{float(v):+.1f}%"
+            except (TypeError, ValueError):
+                return "—"
+
+        sharpe_str = f"{sharpe:.2f}" if sharpe is not None else "—"
+        return {
+            "doc":         f"{month_label} · KPI · 01/03",
+            "doc_short":   month_label,
+            "cover_month": month_label,
+            "nav_eom":     _money(pv),
+            "nav_eom_delta": "",
+            "ytd_return":  _pct(ytd),
+            "ytd_delta":   "",
+            "sharpe":      sharpe_str,
+            "sharpe_delta": "",
+            "status":      "관찰",
+            "status_delta": "",
+            "issued":      f"Issued · {as_of_label}",
+            "exec_stamp":  f"As of {as_of_label}",
+            "exec_rows":   [
+                {"term": "Period Return",
+                 "body": f"<strong>YTD {_pct(ytd)}</strong> &middot; 자기 보유 데이터 한정 관찰."},
+                {"term": "Risk Status",
+                 "body": f"Sharpe (12M) {sharpe_str} &middot; Max DD {_pct(mdd)} &middot; 한도 점검은 별도 항목."},
+                {"term": "Operations",
+                 "body": f"Turnover {_pct(data.get('turnover_ratio'))} &middot; Cash {_pct(data.get('cash_pct'))} &middot; 보유 종목 {data.get('position_count') or '—'}개."},
+                {"term": "Decision Quality",
+                 "body": "결정 품질 지표 별도 집계 후 표시."},
+                {"term": "Committee Decision",
+                 "body": "이번 달 단일 결정은 별도 검토 항목."},
+            ],
+            "scorecard":      [],
+            "decisions":      [],
+            "decision_cards": [],
+            "has_trend":      False,
+        }
+
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             html = self._fallback_html(data)
         else:
             try:
+                ctx = dict(data)
+                ctx["v3"] = self._to_v3_shape(data)
                 tpl = env.get_template("kpi_dashboard.html")
-                html = tpl.render(**data)
+                html = tpl.render(**ctx)
             except Exception as exc:
-                logger.warning("kpi dashboard template render failed: %s", exc)
+                logger.warning("kpi dashboard v3 render failed: %s", exc)
                 html = self._fallback_html(data)
-        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
         scrubbed = safe_scrub(html, context="kpi_dashboard") or html
         if not is_compliant(scrubbed):
             logger.warning("legal_filter fail: kpi_dashboard")
         return scrubbed
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def _jinja_env(self):
         Environment, FileSystemLoader, select_autoescape = _try_import_jinja()
