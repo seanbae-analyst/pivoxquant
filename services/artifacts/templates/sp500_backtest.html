@@ -1,1106 +1,177 @@
 {# ══════════════════════════════════════════════════════════════════════════
-   S&P 500 Ten-Year Observation — Backtest Record (6-page editorial)
-   Goldman IC / CFO grade. Observational only — not advisory.
-   All numbers derived from docs/BACKTEST_RESULTS.md. Hand-crafted inline SVG.
+   SP500 Backtest — Premium · 2-page · admin-debug (CEO design v3, 2026-04-30)
+
+   No cron, no email, no per-user data. Renders the published
+   `docs/BACKTEST_RESULTS.md` observation window (2021-12 to 2026-04,
+   Strategy C: TSMOM + MeanReversion).
+
+   Page 1: Cover · 4 hero KPIs (CAGR / Sharpe / Alpha / 2022 spread)
+            + annual ladder table (year × strategy/spy/alpha/mdd/sharpe)
+            + pull quote
+   Page 2: Not-Claimed + Governance + Disclaimer
+
+   v3 shape (SP500BacktestService._to_v3_shape):
+     v3.doc, v3.doc_short, v3.issued
+     v3.kpi_cagr / kpi_sharpe / kpi_alpha / kpi_2022 (+ tones)
+     v3.period_start, v3.period_end
+     v3.annual_rows  ({year, strategy, spy, alpha, mdd, sharpe + tones})
+     v3.pullquote (str)
+     v3.not_claimed (list[str])
+
+   Compliance — observational only. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
+{%- set v3 = v3 | default({}) -%}
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <title>S&amp;P 500 Backtest — Ten-Year Observation — Issue No. {{ '%02d' % (issue_number | default(1)) }}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 22mm 20mm 22mm 20mm;
-      @top-left {
-        content: "PIVOXQUANT  ·  BACKTEST RECORD";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7.2pt;
-        letter-spacing: 0.36em;
-        text-transform: uppercase;
-        color: #B8956A;
-      }
-      @top-right {
-        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  PQ-BT-01  ·  v2026.04.21";
-        font-family: "JetBrains Mono", monospace;
-        font-size: 7pt;
-        letter-spacing: 0.14em;
-        color: #6B6B6B;
-      }
-      @bottom-left {
-        content: "Observational. Informational only. Past performance does not guarantee future results.";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7pt;
-        font-style: italic;
-        color: #8a8a8a;
-      }
-      @bottom-right {
-        content: counter(page) " / " counter(pages);
-        font-family: "JetBrains Mono", monospace;
-        font-size: 8pt;
-        color: #4a4a4a;
-      }
-    }
-    @page :first {
-      @top-left { content: none; }
-      @top-right { content: none; }
-      @bottom-left { content: none; }
-      @bottom-right { content: none; }
-    }
-    {% include '_report_css.html' %}
-
-    /* ───────────────────── P1 · COVER ─────────────────────────────── */
-    .cv { position: relative; padding-top: 0; }
-    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
-    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
-    .cv-issue {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
-      text-align: center; font-variant-numeric: tabular-nums;
-      padding: 10pt 0;
-    }
-    .cv-issue .cv-issue-key { color: #0A0A0A; }
-    .cv-hero {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 40pt; line-height: 1.08;
-      letter-spacing: -0.022em; color: #0A0A0A;
-      margin: 30pt 0 30pt 0; padding: 0;
-    }
-    .cv-hero span { display: block; }
-    .cv-hero span + span { padding-left: 40pt; }
-    .cv-hero span + span + span { padding-left: 80pt; color: #B8956A; }
-    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 28pt; table-layout: fixed; }
-    .cv-kpi { display: table-cell; width: 25%; padding: 4pt 10pt; vertical-align: top; overflow: visible; }
-    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; padding-left: 12pt; }
-    .cv-kpi-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8a8a8a;
-      margin-bottom: 4pt;
-    }
-    .cv-kpi-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 20pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -0.015em; line-height: 1.02;
-    }
-    .cv-kpi-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.5pt; color: #8a8a8a;
-      margin-top: 3pt;
-    }
-    .cv-foot {
-      margin-top: 36pt; text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 9pt;
-      color: #6B6B6B; letter-spacing: 0.02em;
-    }
-    .cv-micro-disclaim {
-      margin-top: 16pt;
-      text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 9pt;
-      color: #8a8a8a;
-    }
-
-    /* ───────────────────── P2 · EQUITY SPREAD ─────────────────────── */
-    .sp-part {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin: 0 0 2pt 0;
-    }
-    .sp-title {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 26pt; font-weight: 400;
-      line-height: 1.08; letter-spacing: -0.02em;
-      color: #0A0A0A; margin: 0 0 6pt 0;
-    }
-    .sp-deck {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 10.5pt;
-      color: #4a4a4a; line-height: 1.4;
-      margin: 0 0 14pt 0; max-width: 380pt;
-    }
-    .sp-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed; }
-    .sp-grid > .sp-main { display: table-cell; width: 72%; vertical-align: top; }
-    .sp-grid > .sp-margin { display: table-cell; width: 28%; vertical-align: top; }
-    .sp-fig-title {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; margin-bottom: 6pt;
-    }
-    .sp-fig-caption {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt;
-      color: #8a8a8a; line-height: 1.4;
-      margin-top: 6pt; max-width: 360pt;
-    }
-    .sp-prose {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; line-height: 1.58; color: #202020;
-      margin-top: 14pt; border-top: 0.35pt solid #c9c4b8;
-      padding-top: 10pt;
-    }
-    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
-    .sp-prose > p:first-child::first-letter {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 28pt; line-height: 0.88;
-      font-weight: 500; color: #B8956A;
-      /* float+padding removed for WeasyPrint 68.1 compat */ font-style: normal;
-    }
-    .sp-margin-block {
-      border-left: 0.35pt solid #B8956A;
-      padding: 2pt 0 2pt 9pt;
-      margin-bottom: 12pt;
-    }
-    .sp-margin-term {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.4pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 2pt;
-    }
-    .sp-margin-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 12pt; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -0.01em;
-    }
-    .sp-margin-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8pt; line-height: 1.42;
-      color: #6B6B6B; margin-top: 2pt;
-    }
-
-    /* ───────────────────── P3 · ANNUAL LADDER ─────────────────────── */
-    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
-    .ld-table th, .ld-table td {
-      padding: 6pt 6pt; text-align: left; vertical-align: middle;
-      border-bottom: 0.25pt solid #e4dfd2;
-    }
-    .ld-table thead th {
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #6B6B6B;
-      font-weight: 600;
-    }
-    .ld-table tfoot td {
-      border-top: 0.35pt solid #c9c4b8;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.2pt; letter-spacing: 0.12em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; padding-top: 10pt;
-    }
-    .ld-table td.num {
-      text-align: right;
-      font-family: "JetBrains Mono", monospace;
-      font-variant-numeric: tabular-nums;
-      font-size: 9pt;
-    }
-    .ld-yr {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-weight: 600; font-size: 9.5pt;
-      letter-spacing: 0.02em; color: #0A0A0A;
-    }
-    .ld-heatmap-wrap {
-      display: block; margin: 8pt auto 6pt auto; text-align: center;
-    }
-    .ld-heatmap-cap {
-      display: block; text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.2pt;
-      color: #8a8a8a; margin-top: 4pt;
-    }
-
-    /* ───────────────────── P4 · RISK DASHBOARD ────────────────────── */
-    .rq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; table-layout: fixed; }
-    .rq-main { display: table-cell; width: 70%; vertical-align: top; }
-    .rq-side { display: table-cell; width: 30%; vertical-align: top; }
-    .rq-quads { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; }
-    .rq-quad {
-      display: table-cell; width: 50%;
-      padding: 6pt 8pt;
-      vertical-align: top; height: 160pt;
-    }
-    .rq-quad-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 3pt;
-    }
-    .rq-quad-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 14pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-    }
-    .rq-quad-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.8pt;
-      color: #6B6B6B; margin-top: 4pt; line-height: 1.4;
-    }
-    .rq-method {
-      padding: 10pt 0;
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-size: 8pt;
-    }
-    .rq-quad svg { width: 100%; max-height: 98pt; }
-    .rq-method-eyebrow {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.28em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 8pt;
-    }
-    .rq-method-item { margin-bottom: 9pt; }
-    .rq-method-item:last-child { margin-bottom: 0; }
-    .rq-method-term {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-weight: 600; font-size: 8.5pt; color: #0A0A0A;
-    }
-    .rq-method-def {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt;
-      line-height: 1.5; color: #4a4a4a;
-      margin-top: 1pt;
-    }
-
-    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
-    .ed-quote-wrap {
-      min-height: 280pt;
-      padding: 20pt 14mm 24pt 14mm;
-      display: table; width: 100%; text-align: center;
-    }
-    .ed-quote-cell { display: table-cell; vertical-align: middle; }
-    .ed-quote {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 38pt; line-height: 1.22;
-      letter-spacing: -0.015em; color: #0A0A0A;
-      margin: 0 auto; max-width: 150mm;
-    }
-    .ed-quote-attr {
-      margin-top: 22pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #B8956A;
-    }
-    .ed-quote-attr::before,
-    .ed-quote-attr::after {
-      content: "——"; color: #B8956A; opacity: 0.5;
-      margin: 0 8pt; letter-spacing: 0;
-    }
-    .ed-col2 {
-      display: table; width: 100%;
-      border-collapse: separate; border-spacing: 18pt 0;
-      margin-top: 20pt;
-      border-top: 0.5pt solid #0A0A0A;
-      padding-top: 14pt;
-    }
-    .ed-col {
-      display: table-cell; width: 50%; vertical-align: top;
-    }
-    .ed-col-head {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; margin-bottom: 9pt;
-    }
-    .ed-limit-item {
-      display: table; width: 100%;
-      padding: 4pt 0;
-      border-bottom: 0.15pt solid #e4dfd2;
-    }
-    .ed-limit-item:last-child { border-bottom: none; }
-    .ed-limit-num {
-      display: table-cell; width: 18pt;
-      vertical-align: top;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8pt; color: #B8956A;
-      padding-top: 2pt;
-    }
-    .ed-limit-detail {
-      display: table-cell; vertical-align: top;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.4pt; line-height: 1.5;
-      color: #202020;
-    }
-    .ed-foot-legal {
-      margin-top: 18pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 6.8pt;
-      color: #8a8a8a; text-align: center;
-      letter-spacing: 0.06em;
-    }
-
-    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
-    .co-wrap { padding: 0; text-align: left; }
-    .co-body p { margin: 0 0 8pt 0 !important; }
-    .co-head {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 4pt;
-    }
-    .co-rule-small {
-      width: 28pt; height: 0.5pt;
-      background: #0A0A0A;
-      margin: 0 0 12pt 0;
-    }
-    .co-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.7;
-      color: #202020; max-width: 440pt;
-    }
-    .co-body .co-key {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.4pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #6B6B6B;
-    }
-    .co-thin-rule {
-      height: 0.35pt; background: #c9c4b8; margin: 12pt 0;
-    }
-    .co-sign { text-align: center; margin-top: 14pt; }
-    .co-sign-house {
-      margin-top: 16pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 500;
-    }
-    .co-sign-ref {
-      margin-top: 10pt;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
-    }
-    .co-sign-time {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
-    }
-    section.disclaimer.pq-disclaimer {
-      padding: 10pt 0 !important;
-      margin: 16pt 0 0 0 !important;
-      border-top: 0.5pt solid #0A0A0A !important;
-      font-size: 7.6pt !important;
-      line-height: 1.5 !important;
-    }
-    section.disclaimer.pq-disclaimer h5.disclaimer__title {
-      font-family: "Geist", -apple-system, sans-serif !important;
-      font-size: 7pt !important;
-      letter-spacing: 0.32em !important;
-      text-transform: uppercase !important;
-      color: #B8956A !important;
-      margin: 0 0 6pt 0 !important;
-    }
-  </style>
+  <title>SP500 Backtest — {{ v3.doc_short | default('—') }}</title>
+  <style>{% include '_sp500_backtest_v3_css.html' %}</style>
 </head>
 <body>
 
-{# ── local helpers ──────────────────────────────────────────────────────── #}
-{% set _issue_no = issue_number | default(1) %}
-{% set _doc_ref = doc_ref | default('PQ-BT-01 · v2026.04.21') %}
-{% set _hero = hero_headline | default([
-  'Four years, four hundred names.',
-  'One rule, measured in the open.',
-  'Observations — historical, not forward-looking.'
-]) %}
+<div class="pq-report">
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 1 · COVER
-   ══════════════════════════════════════════════════════════════════════════ #}
-<section class="cv">
+  {# ═════════════════════════ PAGE 1 — COVER + KPI + ANNUAL LADDER ═════════════════════════ #}
+  <section class="pq-pdf-page">
 
-  <div class="cv-wordmark">
-    {% with brand_kind='wordmark', brand_size=280 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-  </div>
-
-  <div class="cv-rule-thin"></div>
-  <div class="cv-issue">
-    BACKTEST <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
-    &nbsp;·&nbsp; S&amp;P 500 UNIVERSE
-    &nbsp;·&nbsp; {{ period_start | default('2021-12-01') }} — {{ period_end | default('2026-04-17') }}
-  </div>
-  <div class="cv-rule-thin"></div>
-
-  <h1 class="cv-hero">
-    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
-  </h1>
-
-  <div class="cv-rule-thin"></div>
-
-  <div class="cv-kpi4">
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">CAGR</div>
-      <div class="cv-kpi-value r-pos">{{ '%.2f' | format(hero_cagr | default(21.19)) }}%</div>
-      <div class="cv-kpi-foot">Compounded annual, Strategy C.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Sharpe</div>
-      <div class="cv-kpi-value">{{ '%.2f' | format(hero_sharpe | default(0.94)) }}</div>
-      <div class="cv-kpi-foot">Observed, over the window.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Alpha · p.a.</div>
-      <div class="cv-kpi-value r-pos">+{{ '%.2f' | format(hero_alpha | default(9.66)) }}%</div>
-      <div class="cv-kpi-foot">Spread to SPY total return.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">2022 · vs SPY</div>
-      <div class="cv-kpi-value r-pos">+{{ '%.1f' | format(hero_2022_spread | default(23.2)) }}pp</div>
-      <div class="cv-kpi-foot">Bear-window observation.</div>
-    </div>
-  </div>
-
-  <p class="cv-foot">
-    Prepared by the PivoxQuant Research Desk &nbsp;·&nbsp; Observational record, informational only.
-  </p>
-  <p class="cv-micro-disclaim">
-    Observational. Informational only. Past performance does not guarantee future results.
-  </p>
-</section>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 2 · EQUITY SPREAD — 68/32 magazine grid
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part I · The Observation</p>
-<h2 class="sp-title">A four-year walk, measured at the close</h2>
-<p class="sp-deck">
-  One hundred thousand dollars seeded in December 2021, marked daily against the
-  S&amp;P 500 total-return line. The bronze band names the bear window of 2022.
-</p>
-
-<div class="sp-grid">
-  <div class="sp-main">
-
-    <div class="sp-fig-title">Fig. 1 · Equity walk · Strategy C vs SPY</div>
-
-    {% set _eq = equity_series | default([
-      {'x':'2021-12','y':100000},{'x':'2022-04','y':104600},{'x':'2022-10','y':104600},
-      {'x':'2023-04','y':118200},{'x':'2023-10','y':132100},{'x':'2024-04','y':152000},
-      {'x':'2024-10','y':169400},{'x':'2025-04','y':189100},{'x':'2025-10','y':205300},
-      {'x':'2026-04','y':218240}
-    ]) %}
-    {% set _bm = benchmark_series | default([
-      {'x':'2021-12','y':100000},{'x':'2022-04','y':92400},{'x':'2022-10','y':81400},
-      {'x':'2023-04','y':92100},{'x':'2023-10','y':101100},{'x':'2024-04','y':119800},
-      {'x':'2024-10','y':131200},{'x':'2025-04','y':143600},{'x':'2025-10','y':147900},
-      {'x':'2026-04','y':151100}
-    ]) %}
-
-    {% set _all_y = (_eq | map(attribute='y') | list) + (_bm | map(attribute='y') | list) %}
-    {% set _ymax = (_all_y | max) %}
-    {% set _ymin = (_all_y | min) %}
-    {% if _ymax == _ymin %}{% set _ymax = _ymin + 1 %}{% endif %}
-    {% set _yr = _ymax - _ymin %}
-    {% set _pad = 0.08 * _yr %}
-    {% set _lo = _ymin - _pad %}
-    {% set _hi = _ymax + _pad %}
-    {% set _span = _hi - _lo %}
-
-    {% set _W = 520 %}
-    {% set _H = 200 %}
-    {% set _Tp = 18 %}
-    {% set _Bp = 34 %}
-    {% set _Lp = 8 %}
-    {% set _Rp = 28 %}
-    {% set _PW = _W - _Lp - _Rp %}
-    {% set _PH = _H - _Tp - _Bp %}
-
-    {% set _eq_pts = [] %}
-    {% for d in _eq %}
-      {% set _x = _Lp + loop.index0 * _PW / (_eq | length - 1) %}
-      {% set _y = _Tp + _PH - ((d.y - _lo) / _span) * _PH %}
-      {% set _ = _eq_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-    {% endfor %}
-    {% set _bm_pts = [] %}
-    {% for d in _bm %}
-      {% set _x = _Lp + loop.index0 * _PW / (_bm | length - 1) %}
-      {% set _y = _Tp + _PH - ((d.y - _lo) / _span) * _PH %}
-      {% set _ = _bm_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-    {% endfor %}
-
-    {# Bear 2022 band — index 1 → 2 in the default series #}
-    {% set _band_start_idx = bear_band_start | default(1) %}
-    {% set _band_end_idx = bear_band_end | default(2) %}
-    {% set _band_x0 = _Lp + _band_start_idx * _PW / (_eq | length - 1) %}
-    {% set _band_x1 = _Lp + _band_end_idx * _PW / (_eq | length - 1) %}
-
-    {# Annotation target — mid of band #}
-    {% set _ann_x = (_band_x0 + _band_x1) / 2 %}
-    {% set _ann_ai = ((_band_start_idx + _band_end_idx) / 2) | int %}
-    {% set _ann_y = _Tp + _PH - ((_eq[_ann_ai].y - _lo) / _span) * _PH %}
-
-    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
-         xmlns="http://www.w3.org/2000/svg" aria-label="Equity walk, Strategy C vs SPY" role="img"
-         style="display:block; overflow:visible;">
-
-      <!-- quiet gridlines -->
-      {% for gy in [0.25, 0.5, 0.75] %}
-        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH * gy }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH * gy }}"
-              stroke="#E8E4DA" stroke-width="0.3"/>
-      {% endfor %}
-
-      <!-- Bear 2022 vertical band -->
-      <rect x="{{ '%.2f' % _band_x0 }}" y="{{ _Tp }}"
-            width="{{ '%.2f' % (_band_x1 - _band_x0) }}" height="{{ _PH }}"
-            fill="#B8956A" fill-opacity="0.09"/>
-      <line x1="{{ '%.2f' % _band_x0 }}" y1="{{ _Tp }}"
-            x2="{{ '%.2f' % _band_x0 }}" y2="{{ _Tp + _PH }}"
-            stroke="#B8956A" stroke-width="0.45" stroke-dasharray="2,2" opacity="0.6"/>
-      <line x1="{{ '%.2f' % _band_x1 }}" y1="{{ _Tp }}"
-            x2="{{ '%.2f' % _band_x1 }}" y2="{{ _Tp + _PH }}"
-            stroke="#B8956A" stroke-width="0.45" stroke-dasharray="2,2" opacity="0.6"/>
-
-      <!-- SPY dashed, faint -->
-      <polyline points="{{ _bm_pts | join(' ') }}"
-                fill="none" stroke="#8a8a8a" stroke-width="0.9" stroke-dasharray="3,2.5"/>
-
-      <!-- Strategy C thick ink line -->
-      <polyline points="{{ _eq_pts | join(' ') }}"
-                fill="none" stroke="#0A0A0A" stroke-width="1.6" stroke-linejoin="round"/>
-
-      <!-- End dots -->
-      {% set _last = _eq_pts[-1].split(',') %}
-      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="2.4" fill="#0A0A0A"/>
-      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="4.6" fill="none" stroke="#0A0A0A" stroke-width="0.35" opacity="0.3"/>
-      {% set _blast = _bm_pts[-1].split(',') %}
-      <circle cx="{{ _blast[0] }}" cy="{{ _blast[1] }}" r="1.8" fill="#8a8a8a"/>
-
-      <!-- End labels -->
-      <text x="{{ (_last[0] | float) + 6 }}" y="{{ (_last[1] | float) + 2 }}"
-            fill="#0A0A0A" font-size="7.8" font-family="JetBrains Mono, monospace"
-            font-variant-numeric="tabular-nums">$218K</text>
-      <text x="{{ (_blast[0] | float) + 6 }}" y="{{ (_blast[1] | float) + 2 }}"
-            fill="#8a8a8a" font-size="7.2" font-family="JetBrains Mono, monospace"
-            font-variant-numeric="tabular-nums">$151K</text>
-
-      <!-- Bear callout arrow -->
-      {% set _cx = _ann_x + 70 %}
-      {% set _cy = _Tp + 18 %}
-      <line x1="{{ '%.2f' % _ann_x }}" y1="{{ '%.2f' % (_Tp + 4) }}"
-            x2="{{ '%.2f' % (_cx - 2) }}" y2="{{ '%.2f' % _cy }}"
-            stroke="#B8956A" stroke-width="0.5"/>
-      <text x="{{ '%.2f' % _cx }}" y="{{ '%.2f' % (_cy - 2) }}"
-            fill="#B8956A" font-size="8.2" font-family="Source Serif 4, Georgia, serif" font-style="italic">
-        Bear 2022 &nbsp;·&nbsp; Strategy +4.6 &nbsp;/&nbsp; SPY −18.6
-      </text>
-
-      <!-- x-axis ticks -->
-      {% set _year_ticks = [
-        {'lbl':"'22", 'idx':0},
-        {'lbl':"'23", 'idx':2},
-        {'lbl':"'24", 'idx':4},
-        {'lbl':"'25", 'idx':6},
-        {'lbl':"'26", 'idx':9}
-      ] %}
-      {% for t in _year_ticks %}
-        {% set _tx = _Lp + t.idx * _PW / (_eq | length - 1) %}
-        <line x1="{{ '%.2f' % _tx }}" y1="{{ _Tp + _PH }}" x2="{{ '%.2f' % _tx }}" y2="{{ _Tp + _PH + 3 }}"
-              stroke="#8a8a8a" stroke-width="0.3"/>
-        <text x="{{ '%.2f' % _tx }}" y="{{ _Tp + _PH + 14 }}" text-anchor="middle"
-              fill="#8a8a8a" font-size="7.8" font-family="JetBrains Mono, monospace"
-              letter-spacing="0.08em">{{ t.lbl }}</text>
-      {% endfor %}
-
-      <!-- y-axis bounds -->
-      <text x="{{ _W - _Rp + 3 }}" y="{{ _Tp + 4 }}"
-            fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">${{ (_hi / 1000) | int }}K</text>
-      <text x="{{ _W - _Rp + 3 }}" y="{{ _Tp + _PH + 2 }}"
-            fill="#8a8a8a" font-size="7" font-family="JetBrains Mono, monospace">${{ (_lo / 1000) | int }}K</text>
-
-      <!-- legend inline -->
-      <g transform="translate({{ _Lp }}, {{ _H - 4 }})" font-family="Source Serif 4, serif" font-size="8" fill="#4a4a4a">
-        <line x1="0" y1="-3" x2="14" y2="-3" stroke="#0A0A0A" stroke-width="1.6"/>
-        <text x="18" y="0" font-style="italic">Strategy C</text>
-        <line x1="96" y1="-3" x2="110" y2="-3" stroke="#8a8a8a" stroke-width="0.9" stroke-dasharray="3,2.5"/>
-        <text x="114" y="0" font-style="italic">SPY · total return</text>
-      </g>
-    </svg>
-
-    <div class="sp-fig-caption">
-      Fig. 1. Cumulative equity on a $100,000 seed, marked monthly. Solid line · Strategy C.
-      Dashed line · SPY total return. The bronze band names the 2022 bear window.
-    </div>
-
-    <div class="sp-prose">
-      <p>$100,000 seeded December 2021 became $218,240 at the close of April 17, 2026 —
-      an observation, not a prescription. Over the same window, a passive SPY position
-      reached roughly $151,100. The spread is wider than in any single calendar year.</p>
-      <p>Drawdowns were not avoided. They were survived. The maximum peak-to-trough
-      observation was −23.82%. SPY's was −24.50%. The difference is narrow — the
-      measured value of the record is less about dodging the tail and more about
-      the path the book took through it.</p>
-    </div>
-
-  </div>
-
-  <div class="sp-margin">
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Sharpe</div>
-      <div class="sp-margin-value">0.94</div>
-      <div class="sp-margin-body">
-        Observed across the full window — not annualised into the future.
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>SP500 BACKTEST</strong>
+        <span>{{ v3.doc | default('—') }} &middot; 01/02</span>
       </div>
     </div>
 
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Beta vs SPY</div>
-      <div class="sp-margin-value">0.87</div>
-      <div class="sp-margin-body">
-        Observed beta over the observation window. A book that moves with
-        the market, not ahead of it.
+    <div class="pq-pdf-gold-rule"></div>
+
+    <div class="pq-pdf-eyebrow">Strategy C Observation &middot; TSMOM + MeanReversion</div>
+    <h1 class="pq-pdf-cover-title">
+      과거의 기록.<br/>
+      <em>미래의 약속이 아닙니다.</em>
+    </h1>
+
+    <p class="pq-pdf-cover-sub">
+      {{ v3.period_start | default('—') }} ~ {{ v3.period_end | default('—') }} 관찰 구간의
+      백테스트 시뮬레이션 기록입니다. 본 페이지는 어떠한 매매 전략도 권유하지 않으며,
+      시장은 같은 강을 두 번 흐르지 않습니다.
+    </p>
+
+    <div style="margin-top: 14px;">
+      <div class="pq-pdf-kpi-row cols-4">
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">CAGR</div>
+          <div class="pq-pdf-kpi-val {{ v3.kpi_cagr_tone | default('neutral') }}">{{ v3.kpi_cagr | default('—') }}</div>
+          <div class="pq-pdf-kpi-delta">관찰 구간 연환산</div>
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Sharpe</div>
+          <div class="pq-pdf-kpi-val">{{ v3.kpi_sharpe | default('—') }}</div>
+          <div class="pq-pdf-kpi-delta">위험 조정 비율</div>
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Alpha vs SPY</div>
+          <div class="pq-pdf-kpi-val {{ v3.kpi_alpha_tone | default('neutral') }}">{{ v3.kpi_alpha | default('—') }}</div>
+          <div class="pq-pdf-kpi-delta">초과 관찰</div>
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">2022 Spread</div>
+          <div class="pq-pdf-kpi-val {{ v3.kpi_2022_tone | default('neutral') }}">{{ v3.kpi_2022 | default('—') }}</div>
+          <div class="pq-pdf-kpi-delta">베어 구간 격차</div>
+        </div>
       </div>
     </div>
 
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Rebalance</div>
-      <div class="sp-margin-value">Monthly</div>
-      <div class="sp-margin-body">
-        Close-to-close monthly rebalance. 10 bps one-way slippage assumption.
-      </div>
-    </div>
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Window</div>
-      <div class="sp-margin-value">4.4 yrs</div>
-      <div class="sp-margin-body">
-        2021-12-01 through 2026-04-17. 53 monthly rebalance dates.
-      </div>
-    </div>
-  </div>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 3 · ANNUAL LADDER + CORRELATION HEATMAP
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part II · The Annual Ladder</p>
-<h2 class="sp-title">Year by year, read in sequence</h2>
-<p class="sp-deck">
-  Each row is a calendar year observed in isolation. Sparklines normalise
-  in-place — peaks read against the row's own distribution.
-</p>
-
-{% set _rows = annual_rows | default([
-  {'year':'2022','strategy':4.6,'spy':-18.6,'alpha':23.2,'mdd':-19.8,'sharpe':0.72,
-   'spark':[0, -1.2, -2.8, -1.1, 1.4, 2.1, 3.2, 4.0, 4.6]},
-  {'year':'2023','strategy':26.4,'spy':24.2,'alpha':2.2,'mdd':-8.1,'sharpe':1.24,
-   'spark':[0, 2.8, 5.1, 9.4, 12.2, 16.8, 19.1, 22.4, 26.4]},
-  {'year':'2024','strategy':28.1,'spy':23.3,'alpha':4.8,'mdd':-9.4,'sharpe':1.18,
-   'spark':[0, 3.4, 7.8, 11.2, 14.8, 18.2, 21.8, 24.9, 28.1]},
-  {'year':'2025','strategy':22.7,'spy':12.8,'alpha':9.9,'mdd':-13.2,'sharpe':0.98,
-   'spark':[0, 1.8, 4.4, 7.1, 10.8, 14.2, 17.8, 20.4, 22.7]},
-  {'year':'YTD 2026','strategy':6.3,'spy':2.1,'alpha':4.2,'mdd':-6.4,'sharpe':0.88,
-   'spark':[0, 1.2, 2.4, 3.8, 4.9, 5.6, 6.0, 6.2, 6.3]}
-]) %}
-
-<table class="ld-table">
-  <thead>
-    <tr>
-      <th style="width:13%;">Year</th>
-      <th class="num" style="width:12%;">Strategy C</th>
-      <th class="num" style="width:11%;">SPY</th>
-      <th class="num" style="width:11%;">Alpha</th>
-      <th class="num" style="width:11%;">Max DD</th>
-      <th class="num" style="width:10%;">Sharpe</th>
-      <th style="width:32%; padding-left:10pt;">Twelve-Month Trajectory</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for r in _rows %}
-      {% set _spark = r.spark %}
-      {% set _tabs_max = _spark | map('abs') | max %}
-      {% if _tabs_max == 0 %}{% set _tabs_max = 1 %}{% endif %}
-      {% set _sw = 140 %}
-      {% set _sh = 26 %}
-      {% set _sp = [] %}
-      {% for v in _spark %}
-        {% set _x = loop.index0 * _sw / (_spark | length - 1) %}
-        {% set _y = _sh / 2 - (v / (_tabs_max * 2)) * (_sh - 4) %}
-        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-      {% endfor %}
-      {% set _lastpt = _sp[-1].split(',') %}
-      <tr>
-        <td><span class="ld-yr">{{ r.year }}</span></td>
-        <td class="num {% if r.strategy >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.1f' | format(r.strategy) }}%</td>
-        <td class="num {% if r.spy >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.1f' | format(r.spy) }}%</td>
-        <td class="num {% if r.alpha >= 0 %}r-pos{% else %}r-neg{% endif %}">{{ '%+.1f' | format(r.alpha) }}pp</td>
-        <td class="num r-muted">{{ '%.1f' | format(r.mdd) }}%</td>
-        <td class="num">{{ '%.2f' | format(r.sharpe) }}</td>
-        <td style="padding-left:10pt;">
-          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
-            <line x1="0" y1="{{ _sh/2 }}" x2="{{ _sw }}" y2="{{ _sh/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
-            <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.95" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="2.0" fill="#B8956A"/>
-          </svg>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-  <tfoot>
-    <tr>
-      <td>Full window</td>
-      <td class="num r-pos">+21.19% CAGR</td>
-      <td class="num r-pos">+12.55%</td>
-      <td class="num r-pos">+9.66pp</td>
-      <td class="num r-muted">-23.82%</td>
-      <td class="num">0.94</td>
-      <td style="padding-left:10pt;">—</td>
-    </tr>
-  </tfoot>
-</table>
-
-<div class="co-thin-rule" style="margin: 14pt 0;"></div>
-
-{# ── Correlation heatmap 6×6 ── #}
-{% set _cm = corr_matrix | default([
-  [1.00, 0.78, 0.74, -0.12, 0.18, -0.42],
-  [0.78, 1.00, 0.92, -0.32, 0.08, -0.68],
-  [0.74, 0.92, 1.00, -0.28, 0.04, -0.62],
-  [-0.12, -0.32, -0.28, 1.00, 0.22, 0.14],
-  [0.18, 0.08, 0.04, 0.22, 1.00, -0.08],
-  [-0.42, -0.68, -0.62, 0.14, -0.08, 1.00]
-]) %}
-{% set _cl = corr_labels | default([]) %}
-
-<div class="ld-heatmap-wrap">
-  <div class="sp-fig-title" style="text-align:center;">Fig. 2 · Pairwise observed correlation · full window</div>
-  {% set _cell = 30 %}
-  {% set _hl = 60 %}
-  {% set _hm_w = _hl + _cell * 6 + 10 %}
-  {% set _hm_h = _hl + _cell * 6 + 6 %}
-  <svg viewBox="0 0 {{ _hm_w }} {{ _hm_h }}" width="85%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block; margin: 0 auto; max-width: 360pt;">
-    {% for c in range(6) %}
-      <text x="{{ _hl + c * _cell + _cell/2 }}" y="{{ _hl - 6 }}" text-anchor="middle"
-            fill="#4a4a4a" font-size="7.4" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ (_cl[c] if _cl|length > c else '') | string | truncate(10, True, '') }}</text>
-    {% endfor %}
-    {% for r in range(6) %}
-      <text x="{{ _hl - 5 }}" y="{{ _hl + r * _cell + _cell/2 + 2.5 }}" text-anchor="end"
-            fill="#4a4a4a" font-size="7.4" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ (_cl[r] if _cl|length > r else '') | string | truncate(10, True, '') }}</text>
-    {% endfor %}
-    {% for r in range(6) %}
-      {% for c in range(6) %}
-        {% set _val = _cm[r][c] %}
-        {% set _av = _val if _val >= 0 else -_val %}
-        {% if _val >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
-        <rect x="{{ _hl + c * _cell + 0.5 }}" y="{{ _hl + r * _cell + 0.5 }}"
-              width="{{ _cell - 1 }}" height="{{ _cell - 1 }}"
-              fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}"
-              stroke="#ffffff" stroke-width="0.5"/>
-        <text x="{{ _hl + c * _cell + _cell/2 }}" y="{{ _hl + r * _cell + _cell/2 + 2.8 }}"
-              text-anchor="middle" font-size="8.2" font-family="JetBrains Mono, monospace"
-              fill="{{ '#0A0A0A' if _av < 0.5 else '#F5F0E8' }}">{{ '%.2f' | format(_val) }}</text>
-      {% endfor %}
-    {% endfor %}
-  </svg>
-  <span class="ld-heatmap-cap">
-    Fig. 2. Observed pairwise correlation of daily returns. Bronze shades positive
-    co-movement; oxblood, negative. The VIX column is the structural anti-correlate.
-  </span>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 4 · RISK DASHBOARD — 2x2 small-multiples + methodology sidebar
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part III · Risk Dashboard</p>
-<h2 class="sp-title">Readings around the path</h2>
-<p class="sp-deck">
-  Four risk dimensions, sampled over the observation window. Methodology
-  notes sit on the right rail so the page reads as a single object.
-</p>
-
-<div class="rq-grid">
-  <div class="rq-main">
-
-    <div class="rq-quads">
-      <!-- Q1 · Rolling 12M Sharpe -->
-      <div class="rq-quad">
-        <div class="rq-quad-label">Q1 · Rolling 12M Sharpe</div>
-        <div class="rq-quad-value">0.94 <span style="font-size:8pt; color:#8a8a8a; letter-spacing:0.04em;">observed</span></div>
-        {% set _rs = rolling_sharpe | default([0.42, 0.58, 0.71, 0.68, 0.82, 0.94, 1.12, 1.24, 1.18, 1.02, 0.98, 0.88, 0.94]) %}
-        {% set _rs_max = 1.4 %}
-        {% set _rs_pts = [] %}
-        {% for v in _rs %}
-          {% set _x = 4 + loop.index0 * 172 / (_rs | length - 1) %}
-          {% set _y = 74 - (v / _rs_max) * 58 %}
-          {% set _ = _rs_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
+    <h2 class="pq-pdf-section-title sm">Annual Ladder &middot; 연도별 관찰</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th class="right">Strategy</th>
+          <th class="right">SPY</th>
+          <th class="right">Alpha</th>
+          <th class="right">Max DD</th>
+          <th class="right">Sharpe</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in v3.annual_rows | default([]) %}
+        <tr>
+          <td><strong>{{ r.year }}</strong></td>
+          <td class="right {{ r.strategy_tone | default('neutral') }}">{{ r.strategy }}</td>
+          <td class="right {{ r.spy_tone | default('neutral') }}">{{ r.spy }}</td>
+          <td class="right {{ r.alpha_tone | default('neutral') }}">{{ r.alpha }}</td>
+          <td class="right neg">{{ r.mdd }}</td>
+          <td class="right">{{ r.sharpe }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">관찰 구간 데이터 없음</td></tr>
         {% endfor %}
-        <svg viewBox="0 0 180 80" width="100%" height="84" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
-          {% for gy in [0.5, 1.0] %}
-            {% set _gy = 74 - (gy / _rs_max) * 58 %}
-            <line x1="4" y1="{{ _gy }}" x2="176" y2="{{ _gy }}" stroke="#E8E4DA" stroke-width="0.25"/>
-            <text x="0" y="{{ _gy + 2 }}" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">{{ gy }}</text>
-          {% endfor %}
-          <polyline points="{{ _rs_pts | join(' ') }}" fill="none" stroke="#0A0A0A" stroke-width="1.1" stroke-linejoin="round"/>
-          {% set _rse = _rs_pts[-1].split(',') %}
-          <circle cx="{{ _rse[0] }}" cy="{{ _rse[1] }}" r="1.8" fill="#B8956A"/>
-        </svg>
-        <div class="rq-quad-foot">Twelve-month rolling Sharpe, stepped monthly over the observation window.</div>
-      </div>
+      </tbody>
+    </table>
 
-      <!-- Q2 · Underwater -->
-      <div class="rq-quad">
-        <div class="rq-quad-label">Q2 · Underwater curve</div>
-        <div class="rq-quad-value r-neg">−23.82%</div>
-        {% set _uw = underwater | default([0, -2.1, -8.4, -14.2, -19.6, -23.82, -18.4, -11.2, -4.8, 0, -3.2, -8.1, -4.4, 0, -2.8, -6.1, -9.4, -4.8, 0, -5.2, -11.4, -13.2, -6.8, 0, -3.4, -6.4]) %}
-        {% set _uw_pts_top = [] %}
-        {% for v in _uw %}
-          {% set _x = 4 + loop.index0 * 172 / (_uw | length - 1) %}
-          {% set _y = 6 + ((-v) / 25) * 66 %}
-          {% set _ = _uw_pts_top.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-        {% endfor %}
-        <svg viewBox="0 0 180 80" width="100%" height="84" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
-          <line x1="4" y1="6" x2="176" y2="6" stroke="#c9c4b8" stroke-width="0.3"/>
-          <text x="0" y="8" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">0%</text>
-          <polygon points="4,6 {{ _uw_pts_top | join(' ') }} 176,6" fill="#A84C4C" fill-opacity="0.14"/>
-          <polyline points="{{ _uw_pts_top | join(' ') }}" fill="none" stroke="#A84C4C" stroke-width="0.9"/>
-          <text x="0" y="74" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">-25%</text>
-        </svg>
-        <div class="rq-quad-foot">Peak-to-trough observation. The deepest point sits in 2022.</div>
-      </div>
-
-      <!-- Q3 · Monthly return histogram -->
-      <div class="rq-quad">
-        <div class="rq-quad-label">Q3 · Monthly return histogram</div>
-        <div class="rq-quad-value">53 <span style="font-size:8pt; color:#8a8a8a; letter-spacing:0.04em;">months</span></div>
-        {% set _hist = histogram_bins | default([
-          {'edge':-15,'count':0},{'edge':-12,'count':1},{'edge':-9,'count':2},{'edge':-6,'count':4},
-          {'edge':-3,'count':6},{'edge':0,'count':8},{'edge':3,'count':12},{'edge':6,'count':10},
-          {'edge':9,'count':6},{'edge':12,'count':3},{'edge':15,'count':1}
-        ]) %}
-        {% set _hmax = _hist | map(attribute='count') | max %}
-        <svg viewBox="0 0 180 80" width="100%" height="84" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
-          <line x1="4" y1="70" x2="176" y2="70" stroke="#c9c4b8" stroke-width="0.3"/>
-          {% set _bw = 172 / (_hist | length) %}
-          {% for b in _hist %}
-            {% set _x = 4 + loop.index0 * _bw %}
-            {% set _h = (b.count / _hmax) * 58 %}
-            {% set _fill = '#A84C4C' if b.edge < 0 else '#0A0A0A' %}
-            {% set _op = 0.35 if b.edge < 0 else 1 %}
-            <rect x="{{ '%.2f' % (_x + 0.6) }}" y="{{ '%.2f' % (70 - _h) }}"
-                  width="{{ '%.2f' % (_bw - 1.2) }}" height="{{ '%.2f' % _h }}"
-                  fill="{{ _fill }}" fill-opacity="{{ _op }}"/>
-          {% endfor %}
-          {# zero tick #}
-          {% set _zx = 4 + (_hist | length / 2) * _bw %}
-          <line x1="{{ '%.2f' % _zx }}" y1="6" x2="{{ '%.2f' % _zx }}" y2="72"
-                stroke="#B8956A" stroke-width="0.35" stroke-dasharray="2,2" opacity="0.5"/>
-          <text x="4" y="78" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">-15%</text>
-          <text x="176" y="78" text-anchor="end" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">+15%</text>
-        </svg>
-        <div class="rq-quad-foot">Month-over-month returns. Negative bars rendered in faint oxblood.</div>
-      </div>
-
-      <!-- Q4 · Empirical vs normal -->
-      <div class="rq-quad">
-        <div class="rq-quad-label">Q4 · Return distribution vs normal</div>
-        <div class="rq-quad-value">Skew −0.18</div>
-        {% set _emp = empirical_dist | default([
-          {'x':-15,'y':0.1},{'x':-12,'y':0.4},{'x':-9,'y':1.2},{'x':-6,'y':3.4},
-          {'x':-3,'y':6.8},{'x':0,'y':9.2},{'x':3,'y':11.8},{'x':6,'y':9.4},
-          {'x':9,'y':5.8},{'x':12,'y':2.8},{'x':15,'y':0.9}
-        ]) %}
-        {% set _nrm = normal_dist | default([
-          {'x':-15,'y':0.3},{'x':-12,'y':0.9},{'x':-9,'y':2.4},{'x':-6,'y':4.6},
-          {'x':-3,'y':7.4},{'x':0,'y':9.6},{'x':3,'y':10.1},{'x':6,'y':8.2},
-          {'x':9,'y':4.9},{'x':12,'y':2.1},{'x':15,'y':0.6}
-        ]) %}
-        {% set _emax = (_emp | map(attribute='y') | list + _nrm | map(attribute='y') | list) | max %}
-        {% set _nrm_pts = [] %}
-        {% for p in _nrm %}
-          {% set _x = 4 + loop.index0 * 172 / (_nrm | length - 1) %}
-          {% set _y = 70 - (p.y / _emax) * 58 %}
-          {% set _ = _nrm_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-        {% endfor %}
-        <svg viewBox="0 0 180 80" width="100%" height="84" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:4pt;">
-          <line x1="4" y1="70" x2="176" y2="70" stroke="#c9c4b8" stroke-width="0.3"/>
-          {% set _bw = 172 / (_emp | length) %}
-          {% for p in _emp %}
-            {% set _x = 4 + loop.index0 * _bw %}
-            {% set _h = (p.y / _emax) * 58 %}
-            <rect x="{{ '%.2f' % (_x + 0.6) }}" y="{{ '%.2f' % (70 - _h) }}"
-                  width="{{ '%.2f' % (_bw - 1.2) }}" height="{{ '%.2f' % _h }}"
-                  fill="#0A0A0A" fill-opacity="0.18"/>
-          {% endfor %}
-          <polyline points="{{ _nrm_pts | join(' ') }}" fill="none" stroke="#B8956A" stroke-width="1.0"/>
-          <text x="4" y="78" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">-15%</text>
-          <text x="176" y="78" text-anchor="end" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">+15%</text>
-        </svg>
-        <div class="rq-quad-foot">Empirical (ink bars) vs a matched-mean normal (bronze line).</div>
-      </div>
-    </div>
-
-    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
-      Fig. 3. Four risk readings, sampled over the observation window. Ink marks
-      the record; bronze, the reference overlay; oxblood, the loss direction.
-    </div>
-
-  </div>
-
-  <div class="rq-side">
-    <div class="rq-method">
-      <div class="rq-method-eyebrow">Methodology</div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Universe</span>
-        <div class="rq-method-def">S&amp;P 500 constituents at each rebalance date. Survivorship bias acknowledged.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Weighting</span>
-        <div class="rq-method-def">Equal-weight top-decile ranking, rebalanced monthly at the close.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Transaction cost</span>
-        <div class="rq-method-def">10 bps one-way slippage assumed across all trades.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Commission</span>
-        <div class="rq-method-def">$0 per trade — post-2019 zero-commission broker reality.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">Benchmark</span>
-        <div class="rq-method-def">SPY total return, dividends reinvested. Observed over the same daily closes.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 5 · EDITORIAL — pull quote + what-this-does-not-show
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part IV · Editorial</p>
-<h2 class="sp-title">What the record says, and what it does not</h2>
-<p class="sp-deck">
-  A single sentence the research desk is sitting with, and the quiet catalogue
-  of items no backtest can see.
-</p>
-
-<div class="ed-quote-wrap">
-  <div class="ed-quote-cell">
-    <blockquote class="ed-quote">
-      {{ pull_quote | default("A backtest is a memoir of markets past — not a map of markets to come.") }}
-    </blockquote>
-    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Research Desk") }}</div>
-  </div>
-</div>
-
-<div class="ed-col2">
-  <div class="ed-col">
-    <div class="ed-col-head">What this observation does not show</div>
-    {% set _limits_a = limits_left | default([
-      {'n':'01','text':'Tax drag on realised gains — the record is pre-tax.'},
-      {'n':'02','text':'Personal withdrawals or deposits that alter the compounding path.'},
-      {'n':'03','text':'Slippage in thinly-traded constituents beyond the 10 bps assumption.'},
-    ]) %}
-    {% for it in _limits_a %}
-      <div class="ed-limit-item">
-        <div class="ed-limit-num">{{ it.n }}</div>
-        <div class="ed-limit-detail">{{ it.text }}</div>
-      </div>
-    {% endfor %}
-  </div>
-  <div class="ed-col">
-    <div class="ed-col-head">&nbsp;</div>
-    {% set _limits_b = limits_right | default([
-      {'n':'04','text':'Regime shifts not present in the observation window — the next four years are not the last four.'},
-      {'n':'05','text':'Live execution latency and partial fills, which the monthly-close record cannot see.'},
-    ]) %}
-    {% for it in _limits_b %}
-      <div class="ed-limit-item">
-        <div class="ed-limit-num">{{ it.n }}</div>
-        <div class="ed-limit-detail">{{ it.text }}</div>
-      </div>
-    {% endfor %}
-  </div>
-</div>
-
-<p class="ed-foot-legal">
-  Observational. Informational only. Not investment advice.
-</p>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 6 · COLOPHON
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<div class="co-wrap">
-
-  <div class="co-head">Colophon &nbsp;·&nbsp; Data &amp; Record</div>
-  <div class="co-rule-small"></div>
-
-  <div class="co-body">
-    <p style="margin: 0 0 10pt 0;">
-      Observation window · <strong>{{ period_start | default('2021-12-01') }} — {{ period_end | default('2026-04-17') }}</strong> &nbsp;·&nbsp;
-      Rebalance cadence · <strong>monthly close</strong>.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Constituents</span> &nbsp;
-      S&amp;P 500 constituents — SEC EDGAR + FMP v4 Stable.
-    </p>
-    {# Wave 6 — direct 'Alpaca Market Data (IEX consolidated).' string
-       removed. This backtest runs on public index data; price-data
-       provenance now injected from `resolve_user_data_lineage` (or
-       elided when no user context). #}
-    {% if price_data_source %}
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Price data</span> &nbsp;
-      {{ price_data_source }}
-    </p>
-    {% else %}
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Price data</span> &nbsp;
-      Historical daily closes · index constituents.
-    </p>
+    {% if v3.pullquote %}
+    <blockquote class="pq-pdf-pullquote">{{ v3.pullquote }}</blockquote>
     {% endif %}
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Risk-free</span> &nbsp;
-      3-Month T-Bill via FRED (DGS3MO).
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Typeset in</span> &nbsp;
-      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono') }}.
-    </p>
-    <p style="margin: 0 0 0 0;">
-      <span class="co-key">Note</span> &nbsp;
-      Past performance does not guarantee future results. This document is
-      informational and does not constitute investment advice.
-    </p>
-  </div>
 
-  <div class="co-thin-rule"></div>
+    <div class="pq-pdf-page-footer">
+      <span>SP500 Backtest &middot; Premium &middot; Observation only</span>
+      <span>Page 01</span>
+    </div>
 
-  {# Verbatim legal partial — do not modify. #}
-  {% include '_disclaimer.html' %}
+    {% include '_disclaimer.html' %}
 
-  <div class="co-thin-rule"></div>
+  </section>
 
-  <div class="co-sign">
-    {% with brand_kind='monogram', brand_size=64 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-    <div class="co-sign-house">PivoxQuant Research Desk</div>
-    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
-    <div class="co-sign-time">Generated · {{ generated_at | default('2026-04-21') }}</div>
-  </div>
+  {# ═════════════════════════ PAGE 2 — NOT-CLAIMED + COLOPHON ═════════════════════════ #}
+  <section class="pq-pdf-page">
 
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip premium">PREMIUM</span>SP500 BACKTEST</strong>
+        <span>{{ v3.doc_short | default('—') }} &middot; 02/02</span>
+      </div>
+    </div>
+
+    <div class="pq-pdf-gold-rule"></div>
+
+    <h2 class="pq-pdf-section-title sm">What This Report Does Not Claim</h2>
+    <ul style="font-size:11px;line-height:1.7;color:var(--r-ink-2);padding-left:16pt;margin-top:6pt;">
+      {% for n in v3.not_claimed | default([]) %}
+      <li>{{ n }}</li>
+      {% endfor %}
+    </ul>
+
+    <div class="pq-pdf-callout">
+      <div class="pq-pdf-callout-label">Backtest Methodology</div>
+      <p>Strategy C 는 두 모형 (TSMOM, MeanReversion) 의 단순 평균 가중 결합입니다.
+        백테스트는 transaction cost (10 bps), slippage (5 bps), Sharpe / Sortino /
+        Calmar 비율을 모두 계산에 포함합니다. 결과는 과거 관찰 구간의 시뮬레이션
+        기록이며, 같은 결과가 미래 시점에 재현되지 않을 수 있습니다.</p>
+    </div>
+
+    <div class="pq-pdf-govblock">
+      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Premium</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Admin-debug</div></div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Methodology</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}TSMOM + MeanReversion &middot; 50/50 weight{% endif %}</div>
+      </div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Sources</div>
+        <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}docs/BACKTEST_RESULTS.md &middot; FMP price history{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="pq-pdf-page-footer">
+      <span>SP500 Backtest &middot; Premium &middot; Past observation only</span>
+      <span>Page 02</span>
+    </div>
+
+    {% include '_disclaimer.html' %}
+
+  </section>
 </div>
 
 </body>

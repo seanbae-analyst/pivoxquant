@@ -452,16 +452,104 @@ class CapitalAllocationService:
         }
         return data
 
+    # ---------- v3 design shape (CEO redesign 2026-04-30) ------------------
+
+    _NOT_CLAIMED: list[str] = [
+        "본 계산기는 어떠한 배분도 권유·추천하지 않습니다.",
+        "과거 5년 통계는 향후 수익률을 보장하지 않습니다.",
+        "시나리오 간 우열을 비교·평가하지 않습니다.",
+        "세무·법률 자문이 아닙니다.",
+        "본인이 입력한 시나리오의 과거 사실만 요약한 도구입니다.",
+    ]
+
+    _PULLQUOTE_DEFAULT = (
+        "배분은 미래에 대한 판결이 아닙니다 — 날씨가 바뀌기 전에 본인이 선택한 안식처입니다."
+    )
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map calculate_for_user(...) onto v3 2-page Premium shape.
+
+        Renders 4 scenario cards side-by-side. Per legal posture, NEVER
+        ranks scenarios — formatting is identical across all four.
+        """
+        ccy = (data.get("portfolio_ccy") or "USD").upper()
+        cash = data.get("cash_amount")
+        as_of = data.get("generated_at") or "—"
+        as_of_label = str(as_of).split("T")[0] if as_of else "—"
+
+        def _money(v: Any) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            sym = "₩" if ccy == "KRW" else "$"
+            if abs(n) >= 1_000_000:
+                return f"{sym}{n/1_000_000:.2f}M"
+            if abs(n) >= 1_000:
+                return f"{sym}{n/1_000:.0f}k"
+            return f"{sym}{n:,.0f}"
+
+        def _pct(v: Any) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            return f"{n:+.2f}%"
+
+        def _tone(v: Any) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "neutral"
+            if n > 0:
+                return "pos"
+            if n < 0:
+                return "neg"
+            return "neutral"
+
+        scenarios = []
+        for sc in (data.get("scenarios") or [])[:_MAX_SCENARIOS]:
+            scenarios.append({
+                "label":       sc.get("label") or "—",
+                "type":        sc.get("type") or "—",
+                "tickers":     sc.get("tickers") or [],
+                "tickers_str": ", ".join(sc.get("tickers") or []) or "—",
+                "cagr":        _pct(sc.get("return_cagr")),
+                "cagr_tone":   _tone(sc.get("return_cagr")),
+                "vol":         (f"{float(sc.get('volatility')):.2f}%"
+                                if sc.get("volatility") is not None else "—"),
+                "max_dd":      _pct(sc.get("max_dd")),
+                "max_dd_tone": _tone(sc.get("max_dd")),
+                "sharpe":      (f"{float(sc.get('sharpe')):.2f}"
+                                if sc.get("sharpe") is not None else "—"),
+                "note":        sc.get("note") or "",
+            })
+
+        return {
+            "doc":            f"Capital Allocation · {as_of_label}",
+            "doc_short":      as_of_label,
+            "issued":         f"Issued · {as_of_label}",
+            "kpi_cash":       _money(cash),
+            "kpi_ccy":        ccy,
+            "kpi_scenarios":  str(len(scenarios)) if scenarios else "—",
+            "kpi_window":     "5년",
+            "scenarios":      scenarios,
+            "pullquote":      self._PULLQUOTE_DEFAULT,
+            "not_claimed":    list(self._NOT_CLAIMED),
+        }
+
     # ---------- rendering ---------------------------------------------------
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             html = self._fallback_html(data)
         else:
             try:
+                ctx = dict(data)
+                ctx["v3"] = self._to_v3_shape(data)
                 tpl = env.get_template("capital_allocation.html")
-                html = tpl.render(**data)
+                html = tpl.render(**ctx)
             except Exception as exc:
                 logger.warning("capital_allocation render failed: %s", exc)
                 html = self._fallback_html(data)
@@ -470,6 +558,9 @@ class CapitalAllocationService:
         if not is_compliant(scrubbed):
             logger.warning("legal_filter fail: capital_allocation")
         return scrubbed
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
