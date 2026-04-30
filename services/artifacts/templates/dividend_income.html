@@ -61,13 +61,22 @@
     <div class="pq-pdf-gold-rule"></div>
 
     {# ───────── 3. Eyebrow ───────── #}
-    <div class="pq-pdf-eyebrow">Dividend Income · Monthly</div>
+    <div class="pq-pdf-eyebrow">Dividend Income · Monthly · {{ pm.persona_label(persona) }}</div>
 
-    {# ───────── 4. Cover title ───────── #}
-    <h1 class="pq-pdf-cover-title">
-      Cash, <em>arrived</em>&mdash;<br/>
-      every dollar that landed this month.
+    {# ───────── 4. Cover title — data-driven (CEO 평 redesign 2026-05-01) ───────── #}
+    <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      이번 달 배당
+      {%- if v3.this_month and v3.this_month.value %}
+        <strong style="color:var(--r-pos);">{{ v3.this_month.value }}</strong>.
+      {%- else %}
+        입금 내역.
+      {%- endif %}
     </h1>
+    <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+      {% if v3.payments_count %}{{ v3.payments_count }}개 종목에서 입금 · {% endif %}
+      {% if v3.ytd_income and v3.ytd_income.value %}YTD <strong>{{ v3.ytd_income.value }}</strong> · {% endif %}
+      {% if v3.run_rate and v3.run_rate.value %}연 환산 <strong>{{ v3.run_rate.value }}</strong>{% endif %}
+    </p>
 
     {# ───────── 5. KPI row (4-up) ───────── #}
     <div style="margin-top: 24px;">

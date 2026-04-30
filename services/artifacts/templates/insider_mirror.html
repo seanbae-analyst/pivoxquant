@@ -45,14 +45,18 @@
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Insider Mirror &middot; Weekly</div>
-    <h1 class="pq-pdf-cover-title">
-      Insiders are <em>buying</em>&mdash;<br/>
-      the signals worth following this week.
+    <div class="pq-pdf-eyebrow">Insider Mirror &middot; Weekly &middot; {{ pm.persona_label(persona) }}</div>
+    <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      이번 주 내부자 매수
+      {%- if v3.cluster_buys and v3.cluster_buys.value %}
+        <strong style="color:var(--r-pos);">{{ v3.cluster_buys.value }}</strong>건.
+      {%- else %}
+        시그널.
+      {%- endif %}
     </h1>
-    <p class="pq-pdf-cover-sub">
-      Form 4 only. Cluster buys, CEO+CFO pairs, first-time buyers &mdash;
-      extracted after the noise is filtered out.
+    <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+      Form 4 정제 — Cluster · CEO+CFO 동반 · 10b5-1 제외.
+      {% if v3.hit_rate and v3.hit_rate.value %} 12개월 적중률 <strong>{{ v3.hit_rate.value }}</strong>{% endif %}
     </p>
 
     <div style="margin-top: 24px;">

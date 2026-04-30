@@ -63,13 +63,15 @@
 
     <div style="margin-top: 28mm;">
       <div class="pq-pdf-cover-eyebrow">Self 10-K + Thesis Reality Check &middot; Quarterly</div>
-      <h1 class="pq-pdf-cover-title">
-        {{ quarter_label | default('—') }}<br/>
-        <em>self-review.</em>
+      <h1 style="font-family:var(--font-serif);font-size:34px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+        {{ quarter_label | default('—') }} 분기 회고
+        {%- if v3.kpi_qrn_value and v3.kpi_qrn_value != '—' %}
+          — <strong style="color:{% if '-' in (v3.kpi_qrn_value or '') %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.kpi_qrn_value }}</strong>.
+        {%- else %}.
+        {%- endif %}
       </h1>
-      <p class="pq-pdf-cover-sub">
-        분기에 내린 본인의 결정을 정직하게 기록합니다. 시장 전망 없음 &mdash;
-        본인의 기록 한정. 본 보고서는 권유가 아닌 회고입니다.
+      <p style="font-size:14px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+        분기 본인 결정 기록 — 권유 아닌 회고. 시장 전망 없음.
       </p>
     </div>
 

@@ -46,12 +46,16 @@
 
     <div style="margin-top: 30mm;">
       <div class="pq-pdf-cover-eyebrow">Investment Committee Pack &middot; Monthly</div>
-      <h1 class="pq-pdf-cover-title" style="font-size: 64px;">
-        {{ v3.cover_month | default(month_label | default('—')) }} <em>KPI Dashboard.</em>
+      <h1 style="font-family:var(--font-serif);font-size:34px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+        {{ v3.cover_month | default(month_label | default('—')) }} KPI
+        {%- if v3.nav_eom and v3.nav_eom != '—' %}
+          — NAV <strong>{{ v3.nav_eom }}</strong>.
+        {%- else %}
+          대시보드.
+        {%- endif %}
       </h1>
-      <p class="pq-pdf-cover-sub">
-        A single source of truth for the portfolio. One page, every metric that matters
-        &mdash; return, risk, efficiency, decision quality. One decision this month, with its rationale.
+      <p style="font-size:14px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+        한 페이지 — 수익 · 리스크 · 효율 · 의사결정 품질 + 이번 달 한 가지 결정.
       </p>
     </div>
 

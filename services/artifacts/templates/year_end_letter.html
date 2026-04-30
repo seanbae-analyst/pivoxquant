@@ -50,13 +50,18 @@
 
     <div style="margin-top: 28mm;">
       <div class="pq-pdf-cover-eyebrow">Annual Investor Letter &middot; Year-End</div>
-      <h1 class="pq-pdf-cover-title">
-        {{ v3.cover_title | default('—') }}<br/>
-        <em>a record, not a verdict.</em>
+      <h1 style="font-family:var(--font-serif);font-size:34px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+        {{ v3.cover_year | default(year | default('—')) }}년
+        {%- if v3.kpi_pnl_value and v3.kpi_pnl_value != '—' %}
+          <strong style="color:{% if '-' in (v3.kpi_pnl_value or '') %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.kpi_pnl_value }}</strong>.
+        {%- else %}
+          한 해 기록.
+        {%- endif %}
       </h1>
-      <p class="pq-pdf-cover-sub">
-        12개월의 본인 거래 기록을 한 권의 서한으로 정리. 본 서한은 권유가 아닌 회고이며
-        모든 결정의 주체는 귀하 본인입니다. 시장 전망/예측 없음 &mdash; 본인의 결정 한정.
+      <p style="font-size:14px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+        12개월 본인 거래 회고 — 권유가 아닌 기록.
+        {% if v3.kpi_winrate_value and v3.kpi_winrate_value != '—' %} 승률 <strong>{{ v3.kpi_winrate_value }}</strong>{% endif %}
+        {% if v3.kpi_alpha_value and v3.kpi_alpha_value != '—' %} · 알파 <strong>{{ v3.kpi_alpha_value }}</strong>{% endif %}
       </p>
     </div>
 

@@ -59,13 +59,22 @@
     {# ───────── 2. Eyebrow (with persona label) ───────── #}
     <div class="pq-pdf-eyebrow">Brag Card · Monthly · {{ pm.persona_label(persona) }}</div>
 
-    {# ───────── 3. Cover title ───────── #}
-    <h1 class="pq-pdf-cover-title">
-      The month&rsquo;s <em>best call</em>&mdash;<br/>
-      one page worth bragging about.
+    {# ───────── 3. Cover title — data-driven (CEO 평 redesign 2026-05-01) ───────── #}
+    <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      {%- if v3.month_return %}
+        이번 달 <strong style="color:{% if v3.month_return_tone == 'neg' %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.month_return }}</strong>.
+      {%- elif v3.best_decision_pct %}
+        이번 달 최고: <strong style="color:var(--r-pos);">{{ v3.best_decision_pct }}</strong>.
+      {%- else %}
+        이번 달 한 페이지 요약.
+      {%- endif %}
     </h1>
-    <p class="pq-pdf-cover-sub">
-      One decision that wasn&rsquo;t luck &mdash; proven on paper, kept for next month&rsquo;s self.
+    <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+      한 달의 결정 한 건 — 운이 아닌 기록.
+      {% if v3.hero and v3.hero.ticker %}
+        {% if v3.hero.title %}<strong>{{ v3.hero.title }}</strong>가 {% endif %}
+      {% endif %}
+      {% if v3.hit_rate %}적중률 <strong>{{ v3.hit_rate }}</strong>{% endif %}
     </p>
 
     {# ───────── 3b. Persona Highlight Metric ───────── #}

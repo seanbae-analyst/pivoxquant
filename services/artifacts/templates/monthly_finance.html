@@ -39,12 +39,17 @@
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Monthly Finance &middot; Personal CFO Statement</div>
-    <h1 class="pq-pdf-cover-title">
-      {{ v3.month_label | default(month_label | default('—')) }} <em>월간 재무 기록부.</em>
+    <div class="pq-pdf-eyebrow">Monthly Finance &middot; Personal CFO Statement &middot; {{ pm.persona_label(persona) }}</div>
+    <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      {{ v3.month_label | default(month_label | default('—')) }} 살림
+      {%- if v3.nav and v3.nav.value -%}
+        <span style="color:var(--r-ink-3);font-weight:400;font-size:22px;"> · NAV <strong style="color:var(--r-ink);">{{ v3.nav.value }}</strong></span>
+      {%- endif -%}
+      .
     </h1>
-    <p class="pq-pdf-cover-sub">
-      NAV &middot; Cash &middot; Liquidity &middot; Runway. 한 달의 살림.
+    <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+      현금 · 비용 · 세금 · runway 4가지를 한 페이지로.
+      {% if v3.runway and v3.runway.value %} 현재 runway: <strong>{{ v3.runway.value }}</strong>{% endif %}
     </p>
 
     <div style="margin-top: 24px;">

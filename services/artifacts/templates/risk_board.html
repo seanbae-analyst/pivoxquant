@@ -70,7 +70,21 @@
     </div>
 
     {# ───────── 2. Eyebrow ───────── #}
-    <div class="pq-pdf-eyebrow">Risk Board · Weekly Observation</div>
+    <div class="pq-pdf-eyebrow">Risk Board · Weekly Observation · {{ pm.persona_label(persona) }}</div>
+
+    {# ───────── 2b. Cover headline (data-driven, redesign 2026-05-01) ───────── #}
+    <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      이번 주 리스크
+      {%- if v3.status_label %}
+        <strong style="color:{% if v3.status_tone == 'severe' or v3.status_tone == 'high' %}var(--r-neg){% elif v3.status_tone == 'moderate' %}var(--r-warn){% else %}var(--r-pos){% endif %};">{{ v3.status_label }}</strong>.
+      {%- else %}
+        보드.
+      {%- endif %}
+    </h1>
+    <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 10px;">
+      VaR · 한도 · 스트레스 시나리오 · 리밸런싱 관찰.
+      {% if v3.headline_risk %} {{ v3.headline_risk }}{% endif %}
+    </p>
 
     {# ───────── 3. ExecSum ───────── #}
     <div class="pq-pdf-execsum">

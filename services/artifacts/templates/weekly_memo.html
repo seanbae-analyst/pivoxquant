@@ -57,13 +57,19 @@
     {# ───────── 2. Eyebrow ───────── #}
     <div class="pq-pdf-eyebrow">Weekly Memo · Every Sunday · {{ pm.persona_label(persona) }}</div>
 
-    {# ───────── 3. Cover title ───────── #}
-    <h1 class="pq-pdf-cover-title">
-      This week, <em>one page</em>—<br/>
-      be the <em>CFO</em> of your portfolio.
+    {# ───────── 3. Cover title — data-driven (CEO 평 redesign 2026-05-01) ───────── #}
+    <h1 style="font-family:var(--font-serif);font-size:32px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      이번 주
+      {%- if v3.portfolio_return %}
+        <strong style="color:{% if v3.portfolio_return_tone == 'neg' %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.portfolio_return }}</strong>.
+      {%- else %}
+        포트폴리오 한 페이지 요약.
+      {%- endif %}
     </h1>
-    <p class="pq-pdf-cover-sub">
-      Three signals that mattered, one decision for next week. The rest is noise.
+    <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+      관찰된 3개 시그널 + 다음 주 1개 결정 포인트.
+      {% if v3.portfolio_value %}현재 가치: <strong>{{ v3.portfolio_value }}</strong>{% endif %}
+      {% if v3.ytd_return %} · YTD <strong>{{ v3.ytd_return }}</strong>{% endif %}
     </p>
 
     {# ───────── 3b. Persona Opener (1-line, Free tier minimal footprint) ───────── #}

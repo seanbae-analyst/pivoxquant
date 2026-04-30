@@ -43,11 +43,19 @@
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Portfolio Segment &middot; Monthly</div>
-    <h1 class="pq-pdf-cover-title">
-      <em>Decomposed</em>&mdash;sector, factor, region.<br/>
-      where the bets actually are.
+    <div class="pq-pdf-eyebrow">Portfolio Segment &middot; Monthly &middot; {{ pm.persona_label(persona) }}</div>
+    <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      포트폴리오 분해
+      {%- if v3.holdings and v3.holdings.value %}
+        — <strong>{{ v3.holdings.value }}</strong>개 종목.
+      {%- else %}.
+      {%- endif %}
     </h1>
+    <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+      섹터 · 팩터 · 지역 분해.
+      {% if v3.nav and v3.nav.value %} NAV <strong>{{ v3.nav.value }}</strong>{% endif %}
+      {% if v3.active_share and v3.active_share.value %} · Active Share <strong>{{ v3.active_share.value }}</strong>{% endif %}
+    </p>
 
     <div style="margin-top: 18px;">
       <div class="pq-pdf-kpi-row cols-4">
