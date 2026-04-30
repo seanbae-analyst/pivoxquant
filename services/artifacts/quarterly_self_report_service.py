@@ -676,18 +676,185 @@ class QuarterlySelfReportService:
         )
         return ctx.to_dict()
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    _NOT_CLAIMED: list[str] = [
+        "다음 분기 시장 전망 또는 종목 전망.",
+        "복제 가능한 청사진 또는 매매 전략.",
+        "투자자문 또는 일임 서비스.",
+        "관찰 품질의 미래 보장.",
+        "세무 또는 법률 자문.",
+    ]
+
+    _PULLQUOTE_DEFAULT = (
+        "분기는 도래한 것이 아니라 작은 결정들로 만들어졌습니다. "
+        "본 보고서는 그 결정들을 정직하게 기록한 것이며, 다음 분기를 예측하지 않습니다."
+    )
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user(...) onto the v3 5-page Premium shape.
+
+        Persona macro (pm.persona_opener) is rendered directly in the template
+        on Page 2 — `data['persona']` is already injected by `_with_persona()`.
+        Empty fields fall back to em-dash. No directive vocabulary.
+        """
+        quarter_label = data.get("quarter_label") or "—"
+        as_of = data.get("generated_at") or data.get("period_end") or "—"
+        as_of_label = str(as_of).split("T")[0] if as_of else "—"
+
+        def _pct(v: Any, signed: bool = True) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            return f"{n:+.2f}%" if signed else f"{n:.1f}%"
+
+        def _money(v: Any) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            if abs(n) >= 1_000_000:
+                return f"${n/1_000_000:.2f}M"
+            if abs(n) >= 1_000:
+                return f"${n/1_000:.0f}k"
+            return f"${n:,.0f}"
+
+        def _tone(v: Any) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "neutral"
+            if n > 0:
+                return "pos"
+            if n < 0:
+                return "neg"
+            return "neutral"
+
+        qrn = data.get("quarterly_return_pct")
+        net_cf = data.get("net_cash_flow")
+        opening = data.get("opening_value")
+        closing = data.get("closing_value")
+
+        segments = []
+        for s in (data.get("segments") or [])[:8]:
+            segments.append({
+                "sector": s.get("sector") or "—",
+                "trades": s.get("trade_count") or 0,
+                "pnl":    _money(s.get("pnl")),
+                "tone":   _tone(s.get("pnl")),
+            })
+
+        risk_factors = []
+        for r in (data.get("risk_factors") or [])[:6]:
+            risk_factors.append({
+                "factor": r.get("factor") or "—",
+                "note":   r.get("note") or "—",
+            })
+
+        controls = []
+        for c in (data.get("internal_controls") or []):
+            controls.append({
+                "code":    c.get("code") or "—",
+                "name":    c.get("name") or "—",
+                "present": bool(c.get("present", True)),
+            })
+
+        dq = data.get("decision_quality") or {}
+        def _decision_rows(rows: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+            out = []
+            for r in (rows or [])[:3]:
+                ret = r.get("return_pct")
+                out.append({
+                    "ticker":    r.get("ticker") or "—",
+                    "name":      r.get("name") or r.get("ticker") or "—",
+                    "buy_date":  r.get("buy_date") or "—",
+                    "outcome":   r.get("outcome") or "—",
+                    "return":    _pct(ret),
+                    "tone":      _tone(ret),
+                })
+            return out
+
+        thesis_checks = []
+        for t in (data.get("thesis_checks") or [])[:8]:
+            verdict = (t.get("verdict") or "pending").lower()
+            verdict_tone = "pos" if verdict in ("valid", "ok") else (
+                "warn" if verdict == "warning" else "neutral"
+            )
+            thesis_checks.append({
+                "ticker":  t.get("ticker") or "—",
+                "verdict": verdict,
+                "verdict_label": {"valid": "유효", "warning": "주의", "ok": "유효",
+                                  "pending": "대기"}.get(verdict, verdict),
+                "verdict_tone":  verdict_tone,
+                "note":    t.get("note") or "—",
+            })
+
+        thesis_checklist = []
+        for t in (data.get("thesis_checklist") or [])[:10]:
+            thesis_checklist.append({
+                "ticker":   t.get("ticker") or "—",
+                "question": t.get("question") or "이 thesis가 여전히 유효합니까?",
+            })
+
+        watch_items = []
+        for w in (data.get("watch_items") or [])[:6]:
+            watch_items.append({
+                "date":  w.get("date") or "—",
+                "label": w.get("label") or "—",
+            })
+
+        win_rate = dq.get("win_rate_pct")
+
+        return {
+            "doc":             f"Quarterly Self Report · {quarter_label}",
+            "doc_short":       quarter_label,
+            "issued":          f"Issued · {as_of_label}",
+            "kpi_qrn_label":   "Quarterly Return",
+            "kpi_qrn_value":   _pct(qrn),
+            "kpi_qrn_tone":    _tone(qrn),
+            "kpi_winrate_label": "Win Rate",
+            "kpi_winrate_value": _pct(win_rate, signed=False) if win_rate is not None else "—",
+            "kpi_netcf_label": "Net Cash Flow",
+            "kpi_netcf_value": _money(net_cf),
+            "kpi_netcf_tone":  _tone(net_cf),
+            "kpi_closing_label": "Closing Value",
+            "kpi_closing_value": _money(closing),
+            "opening_value_str": _money(opening),
+            "trades_total":      dq.get("trades_total") or 0,
+            "wins":              dq.get("wins") or 0,
+            "losses":            dq.get("losses") or 0,
+            "pattern_summary":   dq.get("pattern_summary") or "",
+            "mdna":              data.get("mdna") or "",
+            "pullquote":         self._PULLQUOTE_DEFAULT,
+            "segments":          segments,
+            "risk_factors":      risk_factors,
+            "controls":          controls,
+            "best_decisions":    _decision_rows(dq.get("best_decisions")),
+            "worst_decisions":   _decision_rows(dq.get("worst_decisions")),
+            "thesis_checks":     thesis_checks,
+            "thesis_checklist":  thesis_checklist,
+            "watch_items":       watch_items,
+            "not_claimed":       list(self._NOT_CLAIMED),
+        }
+
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data)
         try:
+            ctx = self._with_persona(data)
+            ctx["v3"] = self._to_v3_shape(data)
             tpl = env.get_template("quarterly_self_report.html")
-            return tpl.render(**self._with_persona(data))
+            return tpl.render(**ctx)
         except Exception as exc:
             logger.warning("quarterly_self_report render failed: %s", exc)
             return self._fallback_html(data)
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def _with_persona(self, data: dict[str, Any]) -> dict[str, Any]:
         """Inject the `persona` context variable. See weekly_memo_service

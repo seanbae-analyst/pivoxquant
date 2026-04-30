@@ -1023,36 +1023,37 @@ def _init_scheduler(app):
     #     coalesce=True,
     # )
     # 분기 +7일 (1/7, 4/7, 7/7, 10/7) 10:00 KST — Quarterly Self Report
-    # (Premium, 15p Self 10-K + Thesis Reality Check). Self Audit 의 기능을
-    # Part 2 로 흡수. portfolio_segment_quarterly 와 같은 10:00 슬롯이지만
-    # 서비스가 독립적으로 User 쿼리/FMP 호출을 분산해 수행하므로 충돌 없음.
-    # 2026-04-30 PAUSED: template default array leak 3건 (sharpe_series /
-    # holding_hist / spark) — 표시광고법 §3 위험. 데이터 매핑 + v3 변환 후 재활성화.
-    # sched.add_job(
-    #     _scheduled_quarterly_self_report,
-    #     trigger="cron",
-    #     month="1,4,7,10",
-    #     day=7,
-    #     hour=10, minute=0,
-    #     timezone="Asia/Seoul",
-    #     id="quarterly_self_report",
-    #     max_instances=1,
-    #     coalesce=True,
-    # )
-    # 매년 12/31 10:00 KST — Year-End Investor Letter (Premium, 6p PDF).
+    # (Premium, 5-page Premium v3 redesign · Self 10-K + Thesis Reality Check).
+    # Self Audit 의 기능을 Part 2 로 흡수. portfolio_segment_quarterly 와 같은
+    # 10:00 슬롯이지만 서비스가 독립적으로 User 쿼리/FMP 호출을 분산해 수행하므로 충돌 없음.
+    # 2026-04-30: v3 변환 + _to_v3_shape() 데이터 매핑 완료. fake-data leak (sharpe_series,
+    # holding_hist, spark hardcoded array) 박멸. persona 분기 보존
+    # (test_persona_pdf_branch.py 49/49 통과). 재활성화.
+    sched.add_job(
+        _scheduled_quarterly_self_report,
+        trigger="cron",
+        month="1,4,7,10",
+        day=7,
+        hour=10, minute=0,
+        timezone="Asia/Seoul",
+        id="quarterly_self_report",
+        max_instances=1,
+        coalesce=True,
+    )
+    # 매년 12/31 10:00 KST — Year-End Investor Letter (Premium, 4p v3 PDF).
     # 연간 Buffett 톤 회고 서한. Download-only — share 링크 없음.
-    # 2026-04-30 PAUSED: template default array leak (sparkline_pts) — 표시광고법
-    # §3 위험. 데이터 매핑 + v3 변환 후 재활성화 (다음 cron 2026-12-31).
-    # sched.add_job(
-    #     _scheduled_year_end_letter,
-    #     trigger="cron",
-    #     month=12, day=31,
-    #     hour=10, minute=0,
-    #     timezone="Asia/Seoul",
-    #     id="year_end_letter_annual",
-    #     max_instances=1,
-    #     coalesce=True,
-    # )
+    # 2026-04-30: v3 4-page Premium 변환 + _to_v3_shape() 데이터 매핑 완료. 옛
+    # template default array leak (sparkline_pts hardcoded) 박멸. 재활성화.
+    sched.add_job(
+        _scheduled_year_end_letter,
+        trigger="cron",
+        month=12, day=31,
+        hour=10, minute=0,
+        timezone="Asia/Seoul",
+        id="year_end_letter_annual",
+        max_instances=1,
+        coalesce=True,
+    )
     # 매일 08:05 KST — DD Checklist T+3 self-review 이메일 (Pro+).
     # 2026-04-30: v3 2-page Pro 변환 + semantic 변경 (single-ticker IC pack →
     # multi-position T+3 self-review prompt) 완료. service _to_v3_shape() 데이터
