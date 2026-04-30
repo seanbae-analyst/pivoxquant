@@ -450,24 +450,61 @@ class CreditRatingService:
         )
         return ctx.to_dict()
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map self-rating composite onto v3 3-page Premium shape.
+
+        Mirrors frontend/src/components/reports/templates/credit-rating.tsx.
+        Backend produces portfolio self-rating (composite/grade); per-ticker
+        agency ratings + CDS spreads not yet sourced → empty-state placeholder.
+        """
+        as_of = data.get("as_of")
+        as_of_label = str(as_of) if as_of else "—"
+        mo = getattr(as_of, "month", 0)
+        yr = getattr(as_of, "year", "—")
+        quarter_label = f"Q{(mo - 1) // 3 + 1} {yr}" if mo else as_of_label[:7]
+
+        return {
+            "doc":             f"{quarter_label} · CR",
+            "doc_short":       quarter_label,
+            "cover_title":     quarter_label,
+            "reviewed":        str(data.get("position_count") or "—"),
+            "upgrades":        "—",
+            "downgrades":      "—",
+            "on_watch":        "—",
+            "issued":          f"Issued · {as_of_label}",
+            "pullquote":       "“주식이 환상을 팔 때, 채권은 진실을 말한다.” — 분기 신용 점검의 한 줄.",
+            "distribution":    [],
+            "changes":         [],
+            "watch_primary":   None,
+            "watch_secondary": [],
+            "cds":             [],
+            "cfo_note":        None,
+        }
+
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             html = self._fallback_html(data)
         else:
             try:
+                ctx = dict(data)
+                ctx["v3"] = self._to_v3_shape(data)
                 tpl = env.get_template("credit_rating.html")
-                html = tpl.render(**data)
+                html = tpl.render(**ctx)
             except Exception as exc:
-                logger.warning("credit_rating template render failed: %s", exc)
+                logger.warning("credit_rating v3 render failed: %s", exc)
                 html = self._fallback_html(data)
-        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
         scrubbed = safe_scrub(html, context="credit_rating") or html
         if not is_compliant(scrubbed):
             logger.warning("legal_filter fail: credit_rating")
         return scrubbed
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def _jinja_env(self):
         Environment, FileSystemLoader, select_autoescape = _try_import_jinja()
