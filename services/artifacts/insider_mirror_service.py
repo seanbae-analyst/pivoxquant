@@ -405,31 +405,122 @@ class InsiderMirrorService:
         )
         return ctx.to_dict()
 
+    # ---------- v3 design shape (CEO redesign 2026-04-30) -------------------
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user(...) onto v3 2-page Pro shape.
+
+        Mirrors frontend/src/components/reports/templates/insider-mirror.tsx.
+        Missing fields fall back to em-dash. No directive vocabulary.
+        """
+        events = data.get("events") or []
+
+        def _is_buy(e):
+            t = (e.get("transaction_type") or e.get("type") or "").lower()
+            return "buy" in t or "purchase" in t or "p" == t.strip()
+
+        def _amt(e) -> float:
+            try:
+                return float(e.get("usd_value") or e.get("amount_usd") or e.get("value") or 0)
+            except (TypeError, ValueError):
+                return 0.0
+
+        def _money(v: float, *, signed: bool = True) -> str:
+            sign = ("+" if v >= 0 else "−")
+            an = abs(v)
+            if an >= 1_000_000:
+                return f"{sign if signed else ''}${an/1_000_000:.1f}M"
+            if an >= 1_000:
+                return f"{sign if signed else ''}${an/1_000:.0f}k"
+            return f"{sign if signed else ''}${an:,.0f}"
+
+        buy_events = sorted([e for e in events if _is_buy(e)], key=_amt, reverse=True)
+        sell_events = sorted([e for e in events if not _is_buy(e)], key=_amt, reverse=True)
+
+        buys: list[dict[str, Any]] = []
+        for e in buy_events[:5]:
+            amt = _amt(e)
+            buys.append({
+                "ticker":      e.get("ticker") or "—",
+                "insider":     e.get("insider_name") or e.get("name") or "—",
+                "role":        e.get("title") or e.get("role") or "—",
+                "amount":      _money(amt),
+                "date":        (e.get("date") or e.get("filing_date") or "—")[-5:] if e.get("date") else "—",
+                "signal":      e.get("signal_label") or "—",
+                "signal_tone": e.get("signal_tone") or "neutral",
+            })
+
+        sells: list[dict[str, Any]] = []
+        for e in sell_events[:5]:
+            amt = -_amt(e)
+            is_10b5 = bool(e.get("is_10b5_1") or "10b5" in (e.get("plan") or "").lower())
+            sells.append({
+                "ticker":   e.get("ticker") or "—",
+                "insider":  e.get("insider_name") or e.get("name") or "—",
+                "role":     e.get("title") or e.get("role") or "—",
+                "amount":   _money(amt),
+                "plan":     "10b5-1" if is_10b5 else "discretionary",
+                "flag":     "routine" if is_10b5 else "⚠ NON-10b5-1",
+                "flag_tone": "neutral" if is_10b5 else "neg",
+            })
+
+        cluster_count = sum(1 for e in events if "cluster" in (e.get("signal_label") or "").lower())
+        ceo_cfo_pair = sum(1 for e in events if "CEO" in (e.get("title") or "") or "CFO" in (e.get("title") or ""))
+        non_plan_sells = sum(1 for e in sell_events if not bool(e.get("is_10b5_1")))
+
+        period_label = data.get("period_label") or "—"
+
+        return {
+            "as_of_label":    period_label,
+            "report_tag":     f"IM-{period_label.replace(' ', '-')[:20]}",
+            "cluster_buys":   {"value": str(cluster_count) if cluster_count else "—",
+                                "detail": "5+ insiders, 30d"},
+            "ceo_cfo_pair":   {"value": str(ceo_cfo_pair) if ceo_cfo_pair else "—",
+                                "detail": "강한 신호"},
+            "non_plan_sells": {"value": str(non_plan_sells) if non_plan_sells else "—",
+                                "detail": "주의 list"},
+            "hit_rate":       {"value": "—", "detail": "백테스트 누적 후 표시"},
+            "buys":           buys,
+            "sells":          sells,
+            "featured":       buys[0] if buys else None,
+            "has_backtest":   False,  # backtest 데이터 미구축
+            "mirror_path":    "",
+            "benchmark_path": "",
+            "mirror_24m":     {"value": "—", "delta": ""},
+            "win_rate":       {"value": "—", "detail": ""},
+            "avg_hold":       {"value": "—", "detail": ""},
+            "how_to_use":     "시그널은 시그널일 뿐. 90일 후 자동 점검, 가설 깨지면 청산. 미러는 출발점.",
+        }
+
     # ---------- rendering ---------------------------------------------------
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             html = self._fallback_html(data)
         else:
             try:
+                ctx = dict(data)
+                ctx["v3"] = self._to_v3_shape(data)
                 tpl = env.get_template("insider_mirror.html")
-                html = tpl.render(**data)
+                html = tpl.render(**ctx)
             except Exception as exc:
-                logger.warning("insider_mirror render failed: %s", exc)
+                logger.warning("insider_mirror v3 render failed: %s", exc)
                 html = self._fallback_html(data)
-        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
         scrubbed = safe_scrub(html, context="insider_mirror") or html
         if not is_compliant(scrubbed):
             logger.warning("legal_filter fail: insider_mirror")
         return scrubbed
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
         if HTML is None:
             return None
         try:
-            return HTML(string=self.render_html(data)).write_pdf()
+            return HTML(string=self.render_pdf_html(data)).write_pdf()
         except Exception as exc:  # pragma: no cover
             logger.error("WeasyPrint insider_mirror failed: %s", exc)
             return None
