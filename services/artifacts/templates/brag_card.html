@@ -30,6 +30,7 @@
    Compliance — every label uses neutral framing. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
 <html lang="ko">
 <head>
@@ -55,8 +56,8 @@
       </div>
     </div>
 
-    {# ───────── 2. Eyebrow ───────── #}
-    <div class="pq-pdf-eyebrow">Brag Card · Monthly</div>
+    {# ───────── 2. Eyebrow (with persona label) ───────── #}
+    <div class="pq-pdf-eyebrow">Brag Card · Monthly · {{ pm.persona_label(persona) }}</div>
 
     {# ───────── 3. Cover title ───────── #}
     <h1 class="pq-pdf-cover-title">
@@ -66,6 +67,11 @@
     <p class="pq-pdf-cover-sub">
       One decision that wasn&rsquo;t luck &mdash; proven on paper, kept for next month&rsquo;s self.
     </p>
+
+    {# ───────── 3b. Persona Highlight Metric ───────── #}
+    <div style="margin-top:12px;font-size:11px;color:var(--r-ink-3);">
+      {{ pm.brag_card_highlight_metric(persona) }}
+    </div>
 
     {# ───────── 4. KPI row ───────── #}
     <div style="margin-top: 24px;">
