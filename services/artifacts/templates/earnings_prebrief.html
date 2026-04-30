@@ -43,6 +43,7 @@
      v3.governance ({prepared_by, reviewed_by, methodology, sources})
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- import 'partials/_persona_macros.html' as pm -%}
 {%- set _ticker = v3.ticker | default(ticker) | default('') -%}
 {%- set _fiscal = v3.fiscal_label | default(fiscal_period) | default('') -%}
 <!doctype html>
@@ -182,6 +183,9 @@
       <span>PivoxQuant · Confidential · Pro Tier</span>
       <span>Earnings Pre-Brief · 01 / 02</span>
     </div>
+
+    {# ───────── 8b. Persona Focus block (per-ticker earnings lens) ───────── #}
+    {{ pm.earnings_prebrief_focus(persona) }}
 
     {# ───────── 9. Disclaimer (legal partial) ───────── #}
     {% include '_disclaimer.html' %}

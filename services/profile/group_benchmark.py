@@ -313,6 +313,12 @@ def _aggregate_metrics(
     # window even though it touches all 8 persona buckets.
     all_users_stats = _all_users_baseline(cutoff, window_days)
 
+    # Behavioural sub-score medians — F7 persona_avg surface.
+    # ``services.behavior.scorer._persona_avg_with_floor`` reads these
+    # five keys from the metrics dict; without them every behavioural
+    # score response returns ``persona_avg = None``. We compute the
+    # weekly score per user (no persistence) and aggregate medians.
+    sub_score_medians = _aggregate_behavioral_sub_scores(user_ids)
     metrics: dict = {
         "avg_cagr": _safe_median(per_user_cagr),
         "avg_sharpe": _safe_median(per_user_sharpe),
@@ -334,7 +340,45 @@ def _aggregate_metrics(
         "persona": persona,
         "window_days": window_days,
     }
+    metrics.update(sub_score_medians)
     return metrics
+
+
+def _aggregate_behavioral_sub_scores(user_ids: list[int]) -> dict[str, float]:
+    """Compute median behavioural sub-scores across the persona group.
+
+    Returns the 5 SUB_SCORE_KEYS as float medians (0-100). Empty when
+    no user produced a usable score — caller treats that as
+    "comparison not available". Lazy-imported to avoid circular
+    dependency with ``services.behavior.scorer``.
+    """
+    if not user_ids:
+        return {}
+    try:
+        from services.behavior.scorer import compute_weekly_score
+        from models import SUB_SCORE_KEYS
+    except Exception:
+        return {}
+
+    buckets: dict[str, list[float]] = {k: [] for k in SUB_SCORE_KEYS}
+    for uid in user_ids:
+        try:
+            row = compute_weekly_score(uid, persist=False)
+        except Exception:
+            continue
+        sub = row.get("sub_scores") if isinstance(row, dict) else None
+        if not isinstance(sub, dict):
+            continue
+        for k in SUB_SCORE_KEYS:
+            v = sub.get(k)
+            if isinstance(v, (int, float)) and _finite(float(v)):
+                buckets[k].append(float(v))
+
+    out: dict[str, float] = {}
+    for k, vals in buckets.items():
+        if vals:
+            out[k] = round(float(statistics.median(vals)), 2)
+    return out
 
 
 # ─────────────────────────────────────────────────────────────────────

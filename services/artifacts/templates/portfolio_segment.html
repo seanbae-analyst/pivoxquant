@@ -18,6 +18,7 @@
    Compliance — decomposition only. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
 <html lang="ko">
 <head>
@@ -191,6 +192,12 @@
         {% endfor %}
       </tbody>
     </table>
+
+    <h2 class="pq-pdf-section-title sm">Data Focus &middot; {{ pm.persona_label(persona) }}</h2>
+    <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
+      페르소나별 섹터·팩터 관찰 톤입니다. 정보 제공 목적이며 매수·매도 권유가 아닙니다.
+    </p>
+    {{ pm.persona_data_focus(persona, v3.data_focus_metrics | default({})) }}
 
     <div style="margin-top: 18px;">
       <div class="pq-pdf-callout flat">

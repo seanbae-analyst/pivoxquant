@@ -534,6 +534,34 @@ class DividendIncomeService:
             "reinvestment_note": None,  # falls back to template default
         }
 
+    def _resolve_persona(self, data: dict[str, Any]) -> str:
+        """Same persona contract as weekly_memo / quarterly_self_report.
+
+        Note: dividend_income inherently fits the ``income`` persona —
+        the resolver still routes via InvestmentProfile so users with a
+        different declared persona (e.g. growth-tilt with a satellite
+        dividend sleeve) get *their* tone, not a forced income lens.
+        """
+        if "persona" in data and data["persona"]:
+            try:
+                from services.artifacts.persona_resolver import resolve_persona_from_code
+                return resolve_persona_from_code(data["persona"])
+            except Exception:
+                return "income"
+        user_id = data.get("user_id")
+        if user_id is None:
+            return "income"
+        try:
+            from services.artifacts.persona_resolver import (
+                DEFAULT_PERSONA, resolve_persona,
+            )
+            from models import InvestmentProfile
+            profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
+            return resolve_persona(profile) if profile else DEFAULT_PERSONA
+        except Exception as exc:
+            logger.debug("dividend_income persona resolution failed: %s", exc)
+            return "income"
+
     def render_pdf_html(self, data: dict[str, Any]) -> str:
         """Render the print-oriented v3 HTML. Caller is render_pdf()."""
         env = self._jinja_env()
@@ -542,6 +570,7 @@ class DividendIncomeService:
         try:
             ctx = dict(data)
             ctx["v3"] = self._to_v3_shape(data)
+            ctx["persona"] = self._resolve_persona(data)
             tpl = env.get_template("dividend_income.html")
             return tpl.render(**ctx)
         except Exception as exc:

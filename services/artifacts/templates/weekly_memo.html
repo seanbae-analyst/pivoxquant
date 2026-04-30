@@ -28,6 +28,7 @@
      v3.decision, v3.memo_to_self
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
 <html lang="ko">
 <head>
@@ -54,7 +55,7 @@
     </div>
 
     {# ───────── 2. Eyebrow ───────── #}
-    <div class="pq-pdf-eyebrow">Weekly Memo · Every Sunday</div>
+    <div class="pq-pdf-eyebrow">Weekly Memo · Every Sunday · {{ pm.persona_label(persona) }}</div>
 
     {# ───────── 3. Cover title ───────── #}
     <h1 class="pq-pdf-cover-title">
@@ -64,6 +65,11 @@
     <p class="pq-pdf-cover-sub">
       Three signals that mattered, one decision for next week. The rest is noise.
     </p>
+
+    {# ───────── 3b. Persona Opener (1-line, Free tier minimal footprint) ───────── #}
+    <div style="margin-top:14px;font-size:11px;color:var(--r-ink-3);line-height:1.6;border-left:2pt solid var(--r-rule);padding-left:10pt;">
+      {{ pm.persona_opener(persona, user_name) }}
+    </div>
 
     {# ───────── 4. KPI row ───────── #}
     <div style="margin-top: 24px;">
