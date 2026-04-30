@@ -14,16 +14,19 @@ RUN apt-get update && apt-get install -y \
 # Required for v3 templates (Vantablack + Bronze + Playfair) — the
 # fonts-noto-cjk fallback works for 한글 rendering but loses the
 # tabular-num + designed weight ladder that v3 specifies.
-# Failure tolerated — render still falls back to Noto CJK.
-RUN mkdir -p /usr/share/fonts/truetype/pretendard \
-    && wget -q --tries=3 --timeout=30 \
-       -O /tmp/pretendard.zip \
+# Verbose + verified install (silent failure caused issue 2026-04-30).
+RUN set -eux \
+    && mkdir -p /usr/share/fonts/opentype/pretendard \
+    && cd /tmp \
+    && wget --tries=3 --timeout=30 \
+       -O pretendard.zip \
        https://github.com/orioncactus/pretendard/releases/download/v1.3.9/Pretendard-1.3.9.zip \
-    && unzip -q -j /tmp/pretendard.zip 'public/static/*.otf' \
-       -d /usr/share/fonts/truetype/pretendard/ \
-    && rm -f /tmp/pretendard.zip \
-    && fc-cache -f -v >/dev/null 2>&1 \
-    || echo "WARNING: Pretendard install failed; falling back to Noto CJK"
+    && unzip -j pretendard.zip "public/static/*.otf" \
+       -d /usr/share/fonts/opentype/pretendard/ \
+    && ls -la /usr/share/fonts/opentype/pretendard/ \
+    && rm -f pretendard.zip \
+    && fc-cache -f -v 2>&1 | tail -5 \
+    && fc-list | grep -i pretendard | head -5
 
 WORKDIR /app
 COPY requirements.txt .
