@@ -1,4 +1,4 @@
-# PivoxQuant — 인수인계서 (2026-04-29 세션 종료 · v11 "§101 면제 트랙 + Report 시스템")
+# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v12 "PDF v3 디자인 + fake-data 박멸")
 
 ## 이 문서의 원칙
 - **거짓 보고 금지**. 완료된 것은 완료, 미완은 미완.
@@ -6,6 +6,199 @@
 - "대체로 OK" "거의 완료" 표현 금지. 숫자로.
 
 ---
+
+## 🔥 2026-04-30 세션 — PDF 첨부 박멸 + 11 PDFs v3 + fake-data leak 박멸
+
+**18 commits 누적. main HEAD `4a0c64d`. 17 PDF 중 11개 v3 디자인 변환 완료. 5 cron 일시정지 → 2 재활성화.**
+
+### Commits 누적 (18개)
+
+| # | Commit | 핵심 |
+|---|--------|------|
+| 1 | `f9b93e6` | admin_auth bypass decorator 제거 + WeasyPrint 진단 endpoint /_diag/weasyprint |
+| 2 | `3d2a5c1` | weekly-memo pipeline real-user probe endpoint /_diag/weekly-memo-pipeline |
+| 3 | `233162b` | base64 폰트 35개 추출 (CSS 10.5MB → 66KB, 99.4% 감소) |
+| 4 | `f77f786` | ::first-letter + float:left 제거 (WeasyPrint 68.1 AssertionError 회피) |
+| 5 | `4ce379d` | weekly_memo v3 1-page Free 변환 |
+| 6 | `c67d1a1` | bug-hunter #4/#5 + ruff F401 (watchlist change_pct fallback + USDKRW change rate) |
+| 7 | `86ae1a2` | brag/earnings/risk v3 + Weekly placeholder 5종 → 실 데이터 + Claude AI |
+| 8 | `a37e470` | earnings_prebrief broker leak (표시광고법 §3) + risk_board KR i18n |
+| 9 | `a96060c` | /api/artifacts/stats + /by-month server-side aggregation |
+| 10 | `ee36a19` | dividend-income v3 1-page Pro 변환 |
+| 11 | `081455e` | portfolio-segment v3 2-page Pro 변환 |
+| 12 | `069253e` | dd_checklist daily cron 일시정지 (fake-data leak 위험) |
+| 13 | `1503585` | burn_rate / monthly_finance / quarterly_self_report / year_end_letter cron 일시정지 |
+| 14 | `10f4be9` | insider-mirror v3 2-page Pro 변환 |
+| 15 | `6e89480` | kpi-dashboard v3 3-page Premium IC Pack 변환 |
+| 16 | `048fc85` | credit-rating v3 3-page Premium Quarterly 변환 |
+| 17 | `6554c0f` | burn-rate v3 1-page Pro + cron 재활성화 |
+| 18 | `4a0c64d` | monthly-finance v3 1-page Premium + cron 재활성화 |
+
+### 라이브 검증 (정직)
+
+| 영역 | 결과 |
+|---|---|
+| pytest 전체 | ✅ 1302 passed / 1 skipped / 0 failed |
+| ruff F401 | ✅ 0 errors |
+| 11 services render_pdf_html(fake) | ✅ 19~22 KB HTML 정상 생성 |
+| WeasyPrint production import | ✅ v68.1 OK (진단 endpoint 확인) |
+| Production 메일 첨부 PDF | ✅ 175KB (weekly_memo v3, 형님 본인 메일함 확인) |
+| GitHub Actions billing | ❌ 여전 fail (CEO 액션 필요) |
+
+### PDF v3 변환 완료 (11개)
+
+| PDF | Tier | Pages | Cadence | Cron 상태 |
+|---|---|---|---|---|
+| weekly_memo | Free | 1 | 일요일 08:00 KST | ✅ 활성 |
+| brag_card | Free | 1 | 매월 1일 09:00 KST | ✅ 활성 |
+| earnings_prebrief | Pro | 2 | 10분 scan + 30분 lead | ✅ 활성 |
+| risk_board | Pro | 2 | 매월 15일 09:30 KST | ✅ 활성 |
+| dividend_income | Pro | 1 | 매월 monthly | ✅ 활성 |
+| portfolio_segment | Pro | 2 | 분기 quarterly | ✅ 활성 |
+| insider_mirror | Pro | 2 | 매주 월요일 09:00 KST | ✅ 활성 |
+| kpi_dashboard | Premium | 3 | (Morning Brief에 흡수, cron 자체 disabled) | ⏸ 영구 |
+| credit_rating | Premium | 3 | 매월 15일 09:00 KST | ✅ 활성 |
+| burn_rate | Pro | 1 | 매월 1일 09:00 KST | ✅ **재활성화** |
+| monthly_finance | Premium | 1 | 매월 1일 11:00 KST | ✅ **재활성화** |
+
+### PDF v3 미변환 (6개)
+
+| PDF | Tier | Pages | Cron 상태 | 이유 |
+|---|---|---|---|---|
+| dd_checklist | Pro | 2 | ⏸ 정지 | template fake-data leak 5건 + service 데이터 매핑 미구축 (per-ticker fundamentals fetch 필요) |
+| quarterly_self_report | Premium | 15 | ⏸ 정지 (1/4/7/10/7) | 큰 작업, persona 분기 보존 필요 |
+| year_end_letter | Premium | 6 | ⏸ 정지 (12/31) | 시간 여유 있음 |
+| self_audit | Premium | 4 | ⏸ 영구 (Quarterly Self Report 흡수) | cron 자체 disabled |
+| sp500_backtest | Premium | 2 | (no cron, on-demand) | 백테스트 service 자체 미구축 (`_ARTIFACT_DISPATCH` 미등록) |
+| capital_allocation | Premium | 2 | (cron은 reminder only) | What-If Calculator on-demand 시에만 PDF 생성. cron은 PDF 안 만듦 (안전) |
+
+### Cron 상태 매트릭스 (전체)
+
+| Cron | 발송 빈도 | leak | 상태 |
+|---|---|---|---|
+| weekly_memo | 일요일 | 0 | ✅ v3 |
+| earnings_prebrief | 10분 scan | 0 | ✅ v3 |
+| risk_board_monthly | 15일 | 0 | ✅ v3 |
+| brag_card | 매월 1일 | 0 | ✅ v3 |
+| portfolio_segment_quarterly | 분기 | 0 | ✅ v3 |
+| dividend_income_monthly | 매월 | 0 | ✅ v3 |
+| insider_mirror_weekly | 월요일 | 0 | ✅ v3 |
+| credit_rating_monthly | 15일 | 0 | ✅ v3 |
+| **burn_rate_monthly** | 5/1 | 0 (변환됨) | ✅ **재활성화** |
+| **monthly_finance_monthly** | 5/1 (11:00) | 0 (변환됨) | ✅ **재활성화** |
+| dd_checklist_daily | 매일 8:05 | 5 | ⏸ 정지 |
+| quarterly_self_report | 1/4/7/10/7 | 3 | ⏸ 정지 |
+| year_end_letter_annual | 12/31 | 1 | ⏸ 정지 |
+| kpi_dashboard | (Morning Brief 흡수) | 5 | ⏸ 영구 |
+| self_audit | (Quarterly 흡수) | 1 | ⏸ 영구 |
+| capital_allocation_reminder | 분기 +14 | (PDF 안 만듦) | ✅ 안전 |
+
+### Inbox 영향 (CEO)
+
+이번 세션 이후 형님 메일함:
+- **DD Checklist 매일 8:05** → 더 이상 안 옴 (cron 정지)
+- **Weekly Memo 일요일 08:00** → v3 디자인 + 실 데이터 + Claude AI 콘텐츠
+- **Earnings Pre-Brief 실적 30분 전** → v3 디자인
+- **Risk Board 매월 15일** → v3 디자인
+- **Brag Card 매월 1일** → v3 디자인
+- **Burn Rate 5/1 09:00** → v3 디자인 (재활성화)
+- **Monthly Finance 5/1 11:00** → v3 디자인 (재활성화)
+- **Insider Mirror 매주 월요일** → v3 디자인
+- **Credit Rating 매월 15일** → v3 디자인 (Q2 시작)
+- **Dividend Income 매월** → v3 디자인
+- **Portfolio Segment 분기** → v3 디자인
+
+### 발견된 결함 + 처리
+
+1. **WeasyPrint 68.1 ::first-letter + float:left AssertionError** — 18 templates에서 float 제거 (commit f77f786)
+2. **CSS 10.5MB base64 폰트 leak** — 35개 woff2로 추출 (commit 233162b)
+3. **api_auth admin bypass + current_user 의존 endpoint 500** — decorator 분리 (commit f9b93e6)
+4. **earnings_prebrief broker name 하드코딩** ("FMP · Alpaca · SEC EDGAR") — 표시광고법 §3 위반 → conditional gating (commit a37e470)
+5. **risk_board AMBER/OK 영문 default** → 한국어 (commit a37e470)
+6. **8개 templates fake-data array default** (FCF/quarterly_revenue/margin/peer/spark/etc) — 5 cron 일시정지 (commit 069253e + 1503585), burn_rate + monthly_finance 변환 후 재활성화
+7. **watchlist change_1d_pct 항상 0%** — SignalCache fallback 추가 (commit c67d1a1)
+8. **USDKRW change rate 하드코딩 0** — krIdx에서 lookup (commit c67d1a1)
+9. **Weekly Memo placeholder 5종** (portfolio_value/delta/ytd/ytd_detail/three_checks/decision/memoToSelf) → 실 데이터 + Claude Haiku AI (commit 86ae1a2)
+
+### 사용자 ACTION 미해결 (다음 세션 시작 시)
+
+| # | 항목 | 우선순위 |
+|---|---|---|
+| 1 | **Secret rotate** — `ARTIFACT_TRIGGER_SECRET` 채팅 노출됨. Railway env + GitHub `WEEKLY_MEMO_TRIGGER_SECRET` 새 값 갱신 | 🔴 |
+| 2 | **GitHub Actions billing 한도 ↑** ($5~10) — 모든 워크플로우 fail 원인. Settings → Billing | 🔴 |
+| 3 | **SendGrid Sender 이름 변경** "StockPilot" → "PivoxQuant" — SendGrid 콘솔 Sender Identity | 🟠 |
+| 4 | **이메일 라이트 vs v3 다크 결정** — 현재 이메일 본문(weekly_memo_email.html 등)은 라이트 톤. PDF 첨부는 v3. 통일 의도 확인 필요 | 🟠 |
+| 5 | **사업자등록 + 통신판매업 신고** | 🟠 |
+| 6 | **변호사 자문** (§101 면제 확정) — 50~80만원 | 🟠 |
+| 7 | **Stripe 4종 키** (사업자등록 후) | 🟢 |
+
+### 다음 세션 우선순위 (남은 PDF + 추가 작업)
+
+#### 🔴 P0 — 정지된 cron 재활성화 (남은 3개)
+
+1. **dd_checklist** — backend service에 per-ticker fundamentals fetch 추가 (FMP get_ratios + get_income_statement + get_cash_flow → quarterly_revenue + margin_* + fcf_history + peer_bars). v3 변환 + 데이터 매핑 + cron 재활성화. **가장 큰 작업**.
+2. **quarterly_self_report** — 15-page Premium. persona 분기 보존 필수 (test_persona_pdf_branch.py 통과). v3 변환 + 데이터 매핑. **시간 여유 (다음 cron 7/7)**.
+3. **year_end_letter** — 6-page Premium. v3 변환. **시간 여유 (12/31)**.
+
+#### 🟠 P1 — on-demand PDF v3 변환
+
+4. **sp500_backtest** — backend service 자체 없음. service 신규 + `_ARTIFACT_DISPATCH` 등록 + v3 변환. **별도 sprint**.
+5. **capital_allocation** — on-demand calculator. PDF 자체는 v3 미변환 + 2 leak (portfolio_vs_6040_p/b). cron은 안전 (reminder only).
+6. **self_audit** — Quarterly Self Report에 흡수됨. 단독 PDF는 사용 안 됨. v3 변환 우선순위 낮음 (admin debug only).
+
+#### 🟠 P1 — 이메일 본문 templates 점검
+
+7. **weekly_memo_email.html / brag_card_email.html / earnings_prebrief_email.html** 등 이메일 본문 — 라이트 톤. 형님이 v3 다크 통일 원하면 변환. (현재 의도 확인 필요)
+
+#### 🟡 P2 — 데이터 정확도
+
+8. **portfolio_value 7d delta 근사** — `_compute_portfolio_value`가 `weekly_return × value`로 근사. `position_snapshot` 테이블 신설로 정확화.
+9. **YTD return chain-link 정확화** — 현재 종목별 1y price history equal-weight. daily 시리즈 cumulative chain-link으로.
+10. **Mirror 24m / Win Rate / Avg Hold** (insider_mirror) — 백테스트 누적 데이터 부재로 placeholder. backend mirror tracking 시스템 구축 후 채움.
+11. **Quarter rating changes / CDS spreads** (credit_rating) — agency rating data + CDS 데이터 미연동.
+12. **KPI scorecard / decisions / 12M trend** (kpi_dashboard) — 목표 vs 실적 + 의사결정 로그 + chart 데이터 매핑.
+
+#### 🟢 P3 — 기타
+
+13. **bug-hunter 보류 16건** (CEO 깨어났을 때 봤던 라이브 진단)
+    - #1 005930.KS detail 404 (KR ticker 백엔드 미지원)
+    - #2 Discover 503 (FMP plan / backend 문제)
+    - #3 AAPLUSTRAD.BO 잔재 watchlist (DB cleanup)
+    - #6 Add Position 검증 silent fail
+    - #7/#8 SEO canonical / title 중복
+    - #9 약관 draft 표시 (legal review)
+    - #10 add-symbol-modal cream 배경 (디자인 결정)
+    - 기타 MEDIUM/LOW 9건
+
+### 다음 세션 시작 프롬프트
+
+```
+HANDOVER v12 (2026-04-30 세션 종료) 읽고 이어서.
+
+이번 세션 성과: 18 commits / 11 PDFs v3 변환 / 2 cron 재활성화 (burn_rate
++ monthly_finance) / 5 cron 일시정지 / Weekly Memo placeholder → 실 데이터 + AI.
+
+P0 (즉시):
+1. dd_checklist v3 변환 + service per-ticker fundamentals fetch + cron 재활성화
+2. Secret rotate (CEO)
+3. GitHub Actions billing (CEO)
+
+P1 (이번 주):
+4. quarterly_self_report v3 (persona 분기 보존)
+5. year_end_letter v3
+6. 이메일 본문 templates 라이트/다크 결정 + 변환
+7. SendGrid sender 이름 (CEO)
+
+CEO 외부:
+- Secret rotate
+- GitHub billing
+- SendGrid sender
+- 사업자등록 / 변호사 / Stripe
+```
+
+---
+
+## 📜 2026-04-29 세션 (v11 archive)
 
 ## 🔥 2026-04-29 세션 — §101 면제 트랙 + Report 시스템 + 라이브 PDF 검증
 
