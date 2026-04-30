@@ -1699,7 +1699,55 @@ def sample_kpi_dashboard() -> dict[str, Any]:
 
 
 def sample_dd_checklist() -> dict[str, Any]:
-    """DD Checklist — Goldman IC v2 6-page single-ticker observational report."""
+    """DD Checklist — Pro 2-page · T+3 multi-position self-review prompt (v3).
+
+    Mirrors `DDChecklistService.run_for_user()` output shape: pending list of
+    positions (T+3 or older, unchecked) + as_of + disclaimer. The v3 template
+    derives KPIs (count, oldest, avg age) from `pending` via `_to_v3_shape`.
+    """
+    today = _today()
+    return {
+        "user_id":      SAMPLE_USER_ID,
+        "user_name":    SAMPLE_USER_NAME,
+        "as_of":        today.isoformat(),
+        "generated_at": _now_iso(),
+        "pending": [
+            {
+                "position_id": 1001,
+                "ticker":      "AAPL",
+                "shares":      12.0,
+                "avg_cost":    178.40,
+                "added_at":    (today - timedelta(days=5)).isoformat() + "T09:30:00Z",
+                "days_since":  5,
+            },
+            {
+                "position_id": 1002,
+                "ticker":      "MSFT",
+                "shares":      6.0,
+                "avg_cost":    412.85,
+                "added_at":    (today - timedelta(days=4)).isoformat() + "T10:05:00Z",
+                "days_since":  4,
+            },
+            {
+                "position_id": 1003,
+                "ticker":      "NVDA",
+                "shares":      4.0,
+                "avg_cost":    895.20,
+                "added_at":    (today - timedelta(days=3)).isoformat() + "T14:20:00Z",
+                "days_since":  3,
+            },
+        ],
+        "disclaimer":   "정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
+    }
+
+
+def _sample_dd_checklist_legacy_unused() -> dict[str, Any]:
+    """OLD 6-page IC pack sample — retained as reference only.
+
+    Preserved per CLAUDE.md `rollback 가능하도록 보존` (autotrader.py 동일 정책).
+    Not registered in artifact_samples mapping; safe to delete in a future cleanup
+    sprint after the v3 template ships and stabilises.
+    """
     _today()
     return {
         "user_id":     SAMPLE_USER_ID,

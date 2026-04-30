@@ -153,24 +153,154 @@ class DDChecklistService:
         db.session.commit()
         return row
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    _SELF_REVIEW_QUESTIONS: list[dict[str, str]] = [
+        {"key": "financials",  "label": "재무 상태",
+         "prompt": "최근 분기 손익·현금흐름·부채 구조를 직접 확인했는가?"},
+        {"key": "moat",        "label": "경제적 해자",
+         "prompt": "이 회사가 경쟁사 대비 가지는 지속 가능한 강점을 한 줄로 적을 수 있는가?"},
+        {"key": "management",  "label": "경영진",
+         "prompt": "CEO/CFO 최근 12개월 행적과 자본 배치 결정을 확인했는가?"},
+        {"key": "valuation",   "label": "밸류에이션",
+         "prompt": "현재 가격이 적정한지 본인 기준 (PER/PSR/FCF 멀티플 등)으로 검증했는가?"},
+        {"key": "risks",       "label": "리스크",
+         "prompt": "투자 thesis가 깨지는 시나리오 3가지를 미리 적어두었는가?"},
+    ]
+
+    _NOT_CLAIMED: list[str] = [
+        "본 체크리스트는 매수·매도 권유가 아닙니다.",
+        "본 문서는 자동 생성된 자기 점검 프롬프트이며, 종목 분석이 아닙니다.",
+        "5개 질문은 가이드일 뿐 종목별 깊이 있는 DD를 대체하지 않습니다.",
+        "제공된 가격·수량은 본인이 입력한 데이터를 그대로 표시한 것입니다.",
+    ]
+
+    def _ai_reflection(self, pending: list[dict[str, Any]]) -> str:
+        """One-paragraph Buffett-tone self-review reflection.
+
+        Descriptive only — no recommendations. Falls back to a deterministic
+        sentence when Claude Haiku is unavailable. Routed through legal_filter.
+        """
+        n = len(pending)
+        tickers = ", ".join((p.get("ticker") or "—") for p in pending[:5])
+        days_max = max((p.get("days_since") or 0 for p in pending), default=0)
+
+        fallback = (
+            f"이번 점검에는 {n}개 포지션이 올라와 있습니다. "
+            f"가장 오래된 항목은 매수 후 {days_max}일이 지났습니다. "
+            "체크리스트는 수익을 보장하지 않습니다 — "
+            "다만 매수 직후의 흥분이 잦아든 시점에서 본인의 thesis를 다시 읽는 것은 "
+            "기록을 남기는 가장 단순한 방법입니다. 답이 'No' 인 항목은 thesis가 약해진 "
+            "지점입니다. 결정의 주체는 귀하 본인입니다."
+        )
+
+        try:
+            import ai_service  # type: ignore
+            svc_ = getattr(ai_service, "ai_service", None) or ai_service.AIService()
+            if not getattr(svc_, "available", False):
+                return safe_scrub(fallback, context="dd_checklist") or fallback
+            prompt = (
+                "아래는 한 투자자가 매수한 지 3일 이상 지난 본인 포지션 목록이다. "
+                "Warren Buffett 의 주주 서한 톤(겸손·장기·절제)으로 1 문단(3-4 문장, "
+                "한국어)의 '체크리스트 자기 점검 권유 글' 을 작성하라.\n"
+                "\n"
+                "**자본시장법 §6 / §101 회피 규칙**\n"
+                "- 시장 전망/의견/예측 금지. 종목에 대한 견해 일절 금지.\n"
+                "- 사용자 본인 매수 기록만 회고. 다른 종목 언급 금지.\n"
+                "- 추천/매수/매도/조언/목표가/예측/유망/주목 같은 단어 금지.\n"
+                "- '귀하' 또는 '당신'으로 독자를 지칭.\n"
+                "- 5가지 질문 (재무/해자/경영진/밸류에이션/리스크) 자체에 대한 답은 하지 말 것 — "
+                "  사용자가 직접 답하도록 권유만.\n"
+                "\n"
+                f"점검 대상 포지션: {tickers}\n"
+                f"포지션 수: {n}, 가장 오래된 매수 후 일수: {days_max}\n"
+            )
+            resp = svc_.client.messages.create(
+                model=ai_service.MODEL,
+                max_tokens=400,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(
+                getattr(b, "text", "") for b in (resp.content or [])
+                if getattr(b, "type", "") == "text"
+            ).strip()
+            scrubbed = safe_scrub(text, context="dd_checklist") or text
+            return (scrubbed[:1200] if scrubbed else fallback) or fallback
+        except Exception as exc:
+            logger.debug("dd_checklist AI reflection failed: %s", exc)
+            return safe_scrub(fallback, context="dd_checklist") or fallback
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map run_for_user(...) onto the v3 2-page Pro design shape.
+
+        Service produces a multi-position T+3 pending list (matches
+        DDCheck table semantics). v3 shape: cover KPIs + positions table +
+        5-question self-review grid + AI reflection + watch / colophon.
+
+        Empty fields fall back to em-dash. No directive vocabulary.
+        """
+        pending = data.get("pending") or []
+        as_of = data.get("as_of") or "—"
+        positions: list[dict[str, Any]] = []
+        for p in pending[:12]:
+            shares = p.get("shares") or 0
+            avg = p.get("avg_cost") or 0
+            try:
+                cost = float(shares) * float(avg)
+            except (TypeError, ValueError):
+                cost = 0.0
+            positions.append({
+                "ticker":     p.get("ticker") or "—",
+                "shares":     f"{float(shares):.2f}" if shares else "—",
+                "avg_cost":   f"{float(avg):.2f}" if avg else "—",
+                "cost_basis": f"${cost:,.0f}" if cost > 0 else "—",
+                "added_at":   (p.get("added_at") or "—").split("T")[0],
+                "days_since": p.get("days_since") if p.get("days_since") is not None else "—",
+            })
+
+        days_max = max((p.get("days_since") or 0 for p in pending), default=0)
+        days_avg_int = (
+            round(sum((p.get("days_since") or 0) for p in pending) / len(pending))
+            if pending else 0
+        )
+
+        return {
+            "doc":           f"DD Checklist · {as_of}",
+            "doc_short":     f"DD · {as_of}",
+            "issued":        f"Issued · {as_of}",
+            "kpi_pending":   str(len(pending)) if pending else "—",
+            "kpi_oldest":    f"{days_max}일" if days_max else "—",
+            "kpi_avg_age":   f"{days_avg_int}일" if days_avg_int else "—",
+            "kpi_questions": "5",
+            "positions":     positions,
+            "questions":     list(self._SELF_REVIEW_QUESTIONS),
+            "reflection":    self._ai_reflection(pending),
+            "pullquote":     "체크리스트는 수익을 보장하지 않습니다. 다만 매수 직후의 흥분이 잦아든 시점에서 본인의 thesis를 다시 읽도록 권유합니다.",
+            "not_claimed":   list(self._NOT_CLAIMED),
+        }
+
     # ── render / email ──────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             html = self._fallback_html(data)
         else:
             try:
+                ctx = dict(data)
+                ctx["v3"] = self._to_v3_shape(data)
                 tpl = env.get_template("dd_checklist.html")
-                html = tpl.render(**data)
+                html = tpl.render(**ctx)
             except Exception as exc:
                 logger.warning("dd_checklist template render failed: %s", exc)
                 html = self._fallback_html(data)
-        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선 (사용자 입력 기반).
         scrubbed = safe_scrub(html, context="dd_checklist") or html
         if not is_compliant(scrubbed):
             logger.warning("legal_filter fail: dd_checklist")
         return scrubbed
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def _jinja_env(self):
         Environment, FileSystemLoader, select_autoescape = _try_import_jinja()
