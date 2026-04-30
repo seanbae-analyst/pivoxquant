@@ -2,7 +2,7 @@
 
 ## 🟢 2026-04-30 자율 세션 (v17, 형님 자는 동안) — F7 tests + 출시 체크리스트 + Pretendard 4회
 
-**누적 commits 이번 마라톤 세션 9개. main HEAD `458760d`. pytest 1305 / 1 skipped / 0 failed (F7 sub-score 단위 테스트 3개 추가). docs/LAUNCH_DDAY_CHECKLIST.md 신규 (사업자등록·§101 면제·Stripe·OAuth·시각 검증 30개 항목 정리). Pretendard 폰트 4회 시도 — 각 단계마다 fc-list `:lang=ko` 필터 미통과 원인 추적.**
+**누적 commits 이번 마라톤 세션 9개 + 본 v17 entry 1개. pytest 1305 / 1 skipped / 0 failed (F7 sub-score 단위 테스트 3개 추가). docs/LAUNCH_DDAY_CHECKLIST.md 신규 (사업자등록·§101 면제·Stripe·OAuth·시각 검증 30개 항목 정리). Pretendard 폰트 4회 시도 — 각 단계마다 fc-list `:lang=ko` 필터 미통과 원인 추적.**
 
 ### 이번 자율 세션 추가 commits
 
