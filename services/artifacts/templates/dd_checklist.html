@@ -1,32 +1,30 @@
 {# ══════════════════════════════════════════════════════════════════════════
-   DD Checklist — Pro · 2-page · Daily T+3 Self-Review (CEO design v3, 2026-04-30)
+   DD Checklist — Pro · 2-page · Daily T+3 (Redesign 2026-05-01)
 
-   Cadence: 매일 08:05 KST. Pro+ tier only. T+3 매수 후 본인 자기 점검 프롬프트.
-
-   Semantic change (2026-04-30): old 6-page single-ticker IC pack template
-   replaced with multi-position T+3 review prompt — matches what
-   DDChecklistService.pending_for_user() actually produces. Removes the
-   fake-data leak surface (quarterly_revenue/fcf_history/peer_bars hardcoded
-   arrays) that caused cron suspension.
-
-   Page 1: Cover · 4 KPIs (pending count · oldest days · avg age · question count)
-            + pending positions table + pull quote + AI reflection
-   Page 2: 5 self-review questions (Y/N grid for the user) + watch/not-claimed
-            + Governance + Disclaimer
+   2026-05-01 redesign motivation (CEO 평): "양식 걍 개구림".
+   Issues with v3 (2026-04-30):
+     - Cover title 2-줄 시적 카피가 일일 운영 톤과 안 맞음
+     - Pullquote 중앙 배치 어색
+     - 5 Questions 카드 중복적
+     - Page 1 positions 비면 텅 빈 느낌
+   New design:
+     - 실용적 1줄 헤더 ("오늘 점검할 N개 종목")
+     - KPI 4-up + Positions table + 5 Questions inline 모두 page 1
+     - Page 2: Action Points + Not-claimed + Governance 만 (간결)
+     - Pullquote는 footer 위 small italic 1줄
 
    v3 shape (DDChecklistService._to_v3_shape):
-     v3.doc, v3.doc_short, v3.issued
      v3.kpi_pending / kpi_oldest / kpi_avg_age / kpi_questions
-     v3.positions (list of {ticker, shares, avg_cost, cost_basis, added_at, days_since})
-     v3.questions (list of {key, label, prompt})
-     v3.reflection (AI Buffett-tone paragraph)
+     v3.positions (list of {ticker, name, shares, avg_cost, cost_basis,
+                            added_at, days_since})
+     v3.questions (list of {label, prompt})
      v3.pullquote (str)
+     v3.reflection (str)
      v3.not_claimed (list[str])
 
-   Compliance — 본인 데이터 한정. No buy/sell/추천/조언. T+3 self-review prompt.
+   Compliance: T+3 self-review prompt only. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
-{%- set persona = persona | default('balanced') -%}
 {%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
 <html lang="ko">
@@ -39,93 +37,134 @@
 
 <div class="pq-report">
 
-  {# ═════════════════════════ PAGE 1 — COVER + POSITIONS + REFLECTION ═════════════════════════ #}
+  {# ═════════════════════════ PAGE 1 — POSITIONS + 5 QUESTIONS ═════════════════════════ #}
   <section class="pq-pdf-page">
 
     <div class="pq-pdf-header">
       <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
       <div class="pq-pdf-meta">
         <strong><span class="pq-pdf-tier-chip pro">PRO</span>DD CHECKLIST</strong>
-        <span>{{ v3.doc | default('—') }} &middot; 01/02</span>
+        <span>{{ v3.doc | default(as_of | default('—')) }} &middot; 01/02</span>
       </div>
     </div>
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Due Diligence Checklist &middot; T+3 Self-Review</div>
-    <h1 class="pq-pdf-cover-title">
-      매수 후 사흘.<br/>
-      <em>본인의 thesis</em>를 다시 읽을 시간.
-    </h1>
+    <div class="pq-pdf-eyebrow">DD Checklist &middot; T+3 Self-Review &middot; {{ pm.persona_label(persona) }}</div>
 
-    <p class="pq-pdf-cover-sub">
-      매수 직후의 흥분이 잦아든 시점에서, 본인이 적어둔 투자 근거를 다시 점검합니다.
-      체크리스트는 종목 분석이 아니라 자기 점검 프롬프트입니다 &mdash; 답은 본인이 적습니다.
+    {# ───────── 1. 실용 헤더 ───────── #}
+    <h1 style="font-family:var(--font-serif);font-size:28px;font-weight:500;line-height:1.2;margin:8px 0 4px;letter-spacing:-0.01em;">
+      {%- if v3.positions and v3.positions | length > 0 -%}
+        오늘 점검할 <strong style="color:var(--r-warn)">{{ v3.positions | length }}개</strong> 종목.
+      {%- else -%}
+        오늘 점검 대상 없음.
+      {%- endif -%}
+    </h1>
+    <p style="font-size:12px;line-height:1.55;color:var(--r-ink-3);margin:0 0 14px;">
+      매수 후 사흘이 지난 보유 종목입니다. 매수 직후의 흥분이 가라앉은 시점 — 본인의 thesis를
+      다시 읽고 5개 자기 점검 질문에 답하세요. <strong>답은 본인이 적습니다.</strong>
     </p>
 
-    <div style="margin-top: 14px;">
-      <div class="pq-pdf-kpi-row cols-4">
-        <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Pending</div>
-          <div class="pq-pdf-kpi-val">{{ v3.kpi_pending | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">점검 대상 포지션</div>
-        </div>
-        <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Oldest</div>
-          <div class="pq-pdf-kpi-val">{{ v3.kpi_oldest | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">매수 후 최장 경과</div>
-        </div>
-        <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Avg Age</div>
-          <div class="pq-pdf-kpi-val">{{ v3.kpi_avg_age | default('—') }}</div>
-          <div class="pq-pdf-kpi-delta">평균 보유 기간</div>
-        </div>
-        <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Questions</div>
-          <div class="pq-pdf-kpi-val">{{ v3.kpi_questions | default('5') }}</div>
-          <div class="pq-pdf-kpi-delta">자기 점검 항목</div>
-        </div>
+    {# ───────── 2. KPI 4-up ───────── #}
+    <div class="pq-pdf-kpi-row cols-4" style="margin-bottom:16px;">
+      <div class="pq-pdf-kpi">
+        <div class="pq-pdf-kpi-lbl">Pending</div>
+        <div class="pq-pdf-kpi-val">{{ v3.kpi_pending | default('—') }}</div>
+        <div class="pq-pdf-kpi-delta">점검 대상 종목 수</div>
+      </div>
+      <div class="pq-pdf-kpi">
+        <div class="pq-pdf-kpi-lbl">Oldest</div>
+        <div class="pq-pdf-kpi-val">{{ v3.kpi_oldest | default('—') }}</div>
+        <div class="pq-pdf-kpi-delta">최장 경과</div>
+      </div>
+      <div class="pq-pdf-kpi">
+        <div class="pq-pdf-kpi-lbl">Avg Age</div>
+        <div class="pq-pdf-kpi-val">{{ v3.kpi_avg_age | default('—') }}</div>
+        <div class="pq-pdf-kpi-delta">평균 보유</div>
+      </div>
+      <div class="pq-pdf-kpi">
+        <div class="pq-pdf-kpi-lbl">Questions</div>
+        <div class="pq-pdf-kpi-val">{{ v3.kpi_questions | default('5') }}</div>
+        <div class="pq-pdf-kpi-delta">자기 점검 항목</div>
       </div>
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Positions Pending Review &middot; 점검 대상</h2>
-    <table class="pq-pdf-table">
+    {# ───────── 3. Positions Table ───────── #}
+    {% if v3.positions and v3.positions | length > 0 %}
+    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">점검 대상 포지션</h2>
+    <table class="pq-pdf-table" style="margin-bottom:16px;">
       <thead>
         <tr>
-          <th>Ticker</th>
-          <th class="right">Shares</th>
-          <th class="right">Avg Cost</th>
-          <th class="right">Cost Basis</th>
-          <th class="right">Added</th>
-          <th class="right">Days</th>
+          <th>종목</th>
+          <th class="right">보유</th>
+          <th class="right">평단</th>
+          <th class="right">총 매수금</th>
+          <th class="right">매수일</th>
+          <th class="right">D+</th>
         </tr>
       </thead>
       <tbody>
-        {% for p in v3.positions | default([]) %}
+        {% for p in v3.positions %}
         <tr>
-          <td><strong style="font-family:var(--font-serif);font-weight:500;font-size:13px;">{{ p.name | default(p.ticker, true) }}</strong> <span class="pq-pdf-ticker">{{ p.ticker }}</span></td>
+          <td>
+            <strong style="font-family:var(--font-serif);font-weight:500;font-size:14px;">{{ p.name | default(p.ticker, true) }}</strong>
+            <span class="pq-pdf-ticker">{{ p.ticker }}</span>
+          </td>
           <td class="right">{{ p.shares }}</td>
           <td class="right">{{ p.avg_cost }}</td>
           <td class="right">{{ p.cost_basis }}</td>
           <td class="right">{{ p.added_at }}</td>
-          <td class="right">{{ p.days_since }}</td>
+          <td class="right" style="font-weight:500;">{{ p.days_since }}</td>
         </tr>
-        {% else %}
-        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">
-          현재 T+3 점검 대상 포지션이 없습니다.
-        </td></tr>
         {% endfor %}
       </tbody>
     </table>
-
-    {% if v3.pullquote %}
-    <blockquote class="pq-pdf-pullquote">{{ v3.pullquote }}</blockquote>
+    {% else %}
+    <div style="background:var(--r-bg-soft);border-radius:6px;padding:24px;text-align:center;color:var(--r-ink-3);font-size:13px;margin-bottom:16px;">
+      매수 후 사흘이 지난 보유 종목이 없습니다.
+      <br/><span style="font-size:11px;color:var(--r-ink-4);margin-top:6px;display:inline-block;">
+      신규 매수 시 자동으로 다음 발송에 포함됩니다.
+    </span>
+    </div>
     {% endif %}
 
-    <div class="pq-pdf-callout">
-      <div class="pq-pdf-callout-label">Self-Review Reflection &middot; 자기 점검 안내</div>
-      <p>{{ v3.reflection | default('체크리스트는 수익을 보장하지 않습니다. 본인의 thesis를 다시 읽는 도구입니다.') }}</p>
-    </div>
+    {# ───────── 4. 5 Questions Inline (compact list) ───────── #}
+    <h2 class="pq-pdf-section-title sm" style="margin-top:8px;">5가지 자기 점검</h2>
+    <p style="font-size:10px;color:var(--r-ink-3);margin:0 0 10px;">
+      각 항목에 본인이 직접 Y / N. 'No'가 많을수록 thesis가 약해진 신호.
+      앱에서 응답을 기록하면 다음 발송에 반영됩니다.
+    </p>
+
+    <ol style="margin:0;padding:0;list-style:none;counter-reset:dd-q;">
+      {% for q in v3.questions | default([]) %}
+      <li style="display:flex;justify-content:space-between;align-items:flex-start;
+                 padding:10px 12px;border:0.5pt solid var(--r-rule);border-radius:4px;
+                 margin-bottom:6px;background:#fff;">
+        <div style="flex:1;padding-right:12px;">
+          <div style="font-family:var(--font-mono);font-size:8px;letter-spacing:1.4px;
+                      text-transform:uppercase;color:var(--r-ink-4);margin-bottom:3px;">
+            Q{{ loop.index }} &middot; {{ q.label }}
+          </div>
+          <div style="font-family:var(--font-serif);font-size:13px;line-height:1.4;
+                      color:var(--r-ink);font-weight:500;">{{ q.prompt }}</div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--r-ink-3);
+                    flex-shrink:0;display:flex;gap:4px;">
+          <span style="border:1pt solid var(--r-rule);padding:6px 12px;border-radius:4px;
+                       width:22px;text-align:center;font-weight:500;">Y</span>
+          <span style="border:1pt solid var(--r-rule);padding:6px 12px;border-radius:4px;
+                       width:22px;text-align:center;font-weight:500;">N</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+
+    {% if v3.pullquote %}
+    <p style="font-size:10px;color:var(--r-ink-4);font-style:italic;margin-top:14px;
+              line-height:1.5;text-align:center;">
+      &mdash; {{ v3.pullquote }}
+    </p>
+    {% endif %}
 
     <div class="pq-pdf-page-footer">
       <span>DD Checklist &middot; Pro &middot; T+3 Self-Review</span>
@@ -136,7 +175,7 @@
 
   </section>
 
-  {# ═════════════════════════ PAGE 2 — 5 QUESTIONS + WATCH + COLOPHON ═════════════════════════ #}
+  {# ═════════════════════════ PAGE 2 — ACTION + GOVERNANCE ═════════════════════════ #}
   <section class="pq-pdf-page">
 
     <div class="pq-pdf-header">
@@ -149,36 +188,24 @@
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <h2 class="pq-pdf-section-title sm">5 Self-Review Questions &middot; 5가지 자기 점검</h2>
-    <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:14px;">
-      각 항목에 대해 본인이 직접 Y / N 으로 답을 적습니다. 'No'가 많을수록 thesis가 약해진 신호입니다.
-      웹 또는 모바일 앱의 DD Checklist 화면에서 응답을 기록하면 다음 발송 시점에 반영됩니다.
-    </p>
-
-    <div class="pq-pdf-alloc-list">
-      {% for q in v3.questions | default([]) %}
-      <div class="pq-pdf-card" style="margin-bottom: 12px;">
-        <div class="pq-pdf-flex-between">
-          <div>
-            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4)">Q{{ loop.index }} &middot; {{ q.label }}</div>
-            <h3 style="font-family:var(--font-serif);font-size:15px;margin:4px 0 0;font-weight:500">{{ q.prompt }}</h3>
-          </div>
-          <div style="font-family:var(--font-mono);font-size:11px;color:var(--r-ink-3);min-width:80px;text-align:right">
-            <span style="border:0.5pt solid var(--r-rule);padding:3px 8px;margin-right:4px;">Y</span>
-            <span style="border:0.5pt solid var(--r-rule);padding:3px 8px;">N</span>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <h2 class="pq-pdf-section-title sm">Action Points &middot; {{ pm.persona_label(persona) }} 관찰 체크리스트</h2>
-    <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:8px;">
-      페르소나별 정보 관찰 항목입니다. 매수·매도 권유가 아니며 본인이 직접 점검할 데이터 포인트.
+    {# ───────── 5. Persona Action Points ───────── #}
+    <h2 class="pq-pdf-section-title sm">관찰 체크리스트 &middot; {{ pm.persona_label(persona) }}</h2>
+    <p style="font-size:11px;color:var(--r-ink-3);margin-bottom:10px;">
+      페르소나별로 thesis 점검 시 같이 확인하면 좋은 데이터 포인트입니다.
+      매수·매도 권유가 아닙니다.
     </p>
     {{ pm.persona_action_points(persona, v3.positions | default([])) }}
 
-    <h2 class="pq-pdf-section-title sm">What This Checklist Does Not Claim</h2>
+    {# ───────── 6. AI Reflection ───────── #}
+    {% if v3.reflection %}
+    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">Reflection</h2>
+    <div class="pq-pdf-callout">
+      <p style="font-size:12px;line-height:1.6;color:var(--r-ink-2);margin:0;">{{ v3.reflection }}</p>
+    </div>
+    {% endif %}
+
+    {# ───────── 7. Disclosure ───────── #}
+    <h2 class="pq-pdf-section-title sm" style="margin-top:18px;">What This Checklist Does Not Claim</h2>
     <ul style="font-size:11px;line-height:1.7;color:var(--r-ink-2);padding-left:16pt;margin-top:6pt;">
       {% for n in v3.not_claimed | default([]) %}
       <li>{{ n }}</li>
@@ -190,7 +217,7 @@
       <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Daily &middot; T+3</div></div>
       <div class="pq-pdf-gov-cell">
         <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}본인 매수 기록 + 5-question 자기 점검 프롬프트{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}본인 매수 기록 + 5-question 자기 점검{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
         <div class="lbl">Sources</div>
