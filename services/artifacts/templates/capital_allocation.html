@@ -44,15 +44,17 @@
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">What-If Calculator &middot; On-demand</div>
-    <h1 class="pq-pdf-cover-title">
-      배분은 미래에 대한 판결이 아니라<br/>
-      <em>본인이 선택한 안식처</em>입니다.
+    <div class="pq-pdf-eyebrow">What-If Calculator &middot; On-demand &middot; {{ pm.persona_label(persona) }}</div>
+    <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      자본 배분 What-If
+      {%- if v3.kpi_cash and v3.kpi_cash != '—' %}
+        — 입력 현금 <strong>{{ v3.kpi_cash }}</strong>.
+      {%- else %}.
+      {%- endif %}
     </h1>
-
-    <p class="pq-pdf-cover-sub">
-      본 페이지는 사용자가 직접 입력한 시나리오의 과거 5년 통계만 요약합니다.
-      어떠한 배분도 권유·추천·평가하지 않습니다 &mdash; 시나리오 간 우열은 표시하지 않습니다.
+    <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+      본인 입력 시나리오의 과거 5년 통계 요약.
+      어떠한 배분도 권유·추천·평가하지 않으며 우열을 표시하지 않습니다.
     </p>
 
     <div style="margin-top: 14px;">

@@ -47,9 +47,13 @@
     <div class="pq-pdf-gold-rule"></div>
 
     <div class="pq-pdf-eyebrow">Strategy C Observation &middot; TSMOM + MeanReversion &middot; {{ pm.persona_label(persona) }}</div>
-    <h1 class="pq-pdf-cover-title">
-      과거의 기록.<br/>
-      <em>미래의 약속이 아닙니다.</em>
+    <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+      Strategy C
+      {%- if v3.kpi_cagr and v3.kpi_cagr != '—' %}
+        — CAGR <strong style="color:{% if v3.kpi_cagr_tone == 'neg' %}var(--r-neg){% else %}var(--r-pos){% endif %};">{{ v3.kpi_cagr }}</strong>.
+      {%- else %}
+        백테스트.
+      {%- endif %}
     </h1>
 
     <p class="pq-pdf-cover-sub">

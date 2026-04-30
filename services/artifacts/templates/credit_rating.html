@@ -35,13 +35,19 @@
 
     <div style="margin-top: 30mm;">
       <div class="pq-pdf-cover-eyebrow">Credit Rating Review &middot; Quarterly</div>
-      <h1 class="pq-pdf-cover-title">
-        {{ v3.cover_title | default('—') }}<br/>
-        <em>credit watch.</em>
+      <h1 style="font-family:var(--font-serif);font-size:34px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
+        분기 신용 점검
+        {%- if v3.on_watch and v3.on_watch != '—' and v3.on_watch != '0' %}
+          — Watch <strong style="color:var(--r-warn);">{{ v3.on_watch }}</strong>건.
+        {%- elif v3.reviewed and v3.reviewed != '—' %}
+          — <strong>{{ v3.reviewed }}</strong>개 종목 검토.
+        {%- else %}.
+        {%- endif %}
       </h1>
-      <p class="pq-pdf-cover-sub">
-        분기 신용 점검 &mdash; 보유 종목의 공시 평가 + CDS 스프레드 관찰.
-        등급 변경 + Watch List + 채권 시장의 선행 신호.
+      <p style="font-size:14px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
+        보유 종목 공시 등급 + CDS 스프레드 관찰.
+        {% if v3.upgrades and v3.upgrades != '—' %} Upgrade <strong>{{ v3.upgrades }}</strong>{% endif %}
+        {% if v3.downgrades and v3.downgrades != '—' %} · Downgrade <strong>{{ v3.downgrades }}</strong>{% endif %}
       </p>
     </div>
 
