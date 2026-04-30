@@ -136,6 +136,32 @@ class SP500BacktestService:
             "not_claimed":     list(self._NOT_CLAIMED),
         }
 
+    def _resolve_persona(self, data: dict[str, Any]) -> str:
+        """Same persona contract as weekly_memo / quarterly_self_report.
+
+        Note: sp500_backtest is admin-debug only with universal data —
+        persona only colours the eyebrow label (no body branching).
+        """
+        if "persona" in data and data["persona"]:
+            try:
+                from services.artifacts.persona_resolver import resolve_persona_from_code
+                return resolve_persona_from_code(data["persona"])
+            except Exception:
+                return "balanced"
+        user_id = data.get("user_id")
+        if user_id is None:
+            return "balanced"
+        try:
+            from services.artifacts.persona_resolver import (
+                DEFAULT_PERSONA, resolve_persona,
+            )
+            from models import InvestmentProfile
+            profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
+            return resolve_persona(profile) if profile else DEFAULT_PERSONA
+        except Exception as exc:
+            logger.debug("sp500_backtest persona resolution failed: %s", exc)
+            return "balanced"
+
     def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
@@ -144,6 +170,7 @@ class SP500BacktestService:
             try:
                 ctx = dict(data)
                 ctx["v3"] = self._to_v3_shape(data)
+                ctx["persona"] = self._resolve_persona(data)
                 tpl = env.get_template("sp500_backtest.html")
                 html = tpl.render(**ctx)
             except Exception as exc:

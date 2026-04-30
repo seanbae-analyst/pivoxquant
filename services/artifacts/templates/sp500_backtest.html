@@ -21,6 +21,7 @@
    Compliance — observational only. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
+{%- import 'partials/_persona_macros.html' as pm -%}
 <!doctype html>
 <html lang="ko">
 <head>
@@ -45,7 +46,7 @@
 
     <div class="pq-pdf-gold-rule"></div>
 
-    <div class="pq-pdf-eyebrow">Strategy C Observation &middot; TSMOM + MeanReversion</div>
+    <div class="pq-pdf-eyebrow">Strategy C Observation &middot; TSMOM + MeanReversion &middot; {{ pm.persona_label(persona) }}</div>
     <h1 class="pq-pdf-cover-title">
       과거의 기록.<br/>
       <em>미래의 약속이 아닙니다.</em>

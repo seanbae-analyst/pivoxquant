@@ -1,4 +1,4 @@
-# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v14 "17/17 v3 + persona phase 2 + 가상검증")
+# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v15 "17/17 persona body 통합 완료 + F7 fix + 6 sample PDF")
 
 ## 이 문서의 원칙
 - **거짓 보고 금지**. 완료된 것은 완료, 미완은 미완.
@@ -7,7 +7,94 @@
 
 ---
 
-## 🔥 2026-04-30 자율 세션 (v14) — 17/17 PDF v3 완료 + persona phase 2 + 가상검증
+## 🟢 2026-04-30 자율 세션 (v15) — 17/17 persona body 통합 + F7 + dividend_tilt + 6 샘플 PDF
+
+**1 commit (`863c709`). main HEAD `863c709`. 17/17 PDF persona body branching 완료. pytest 1302/0 fail. F7 persona_avg group_benchmark fix. dividend_tilt 플래그 forward-compat. audit-code 7/7 PASS. 6개 sample PDF `/tmp/pq_weasy/` 생성 (시각 검증 대기).**
+
+### 변경 파일 (25개)
+| 파일 | 변경 |
+|---|---|
+| `services/profile/group_benchmark.py` | F7 fix — `_aggregate_behavioral_sub_scores()` 추가, scorer.compute_weekly_score 호출해서 5 SUB_SCORE_KEYS 중앙값을 metrics 딕셔너리에 주입 |
+| `services/artifacts/persona_resolver.py` | `_V2_PROFILE_MAP` (8 토큰), `dividend_tilt` 속성 truthy 체크, `_is_truthy()` 헬퍼 |
+| 12 service files | `_resolve_persona()` 메서드 + `ctx["persona"]` 주입 |
+| 13 templates | `{%- import 'partials/_persona_macros.html' as pm -%}` + 매크로 호출 |
+
+### PDF persona 통합 17/17 (sp500_backtest 포함)
+| 우선순위 | Service | 매크로 |
+|---|---|---|
+| 🔴 High | credit_rating | persona_risk_block (page 3, before CFO Note) |
+| 🔴 High | kpi_dashboard | persona_data_focus (p2) + persona_action_points (p3) |
+| 🔴 High | dividend_income | persona_data_focus (5b, before Payments) |
+| 🟠 Med | portfolio_segment | persona_data_focus (before CFO Note) |
+| 🟠 Med | weekly_memo | opener label + persona_opener block (Free 1p) |
+| 🟠 Med | risk_board | persona_risk_block (page 2, before GovBlock) |
+| 🟢 Low | burn_rate | persona_action_points |
+| 🟢 Low | monthly_finance | persona_action_points |
+| 🟢 Low | insider_mirror | persona_data_focus |
+| 🟢 Low | capital_allocation | persona_action_points |
+| 🆕 Bonus | earnings_prebrief | earnings_prebrief_focus 매크로 wire (이전 세션부터 미사용) |
+| 🆕 Bonus | brag_card | brag_card_highlight_metric 매크로 + eyebrow persona label |
+| 🆕 Bonus | sp500_backtest | persona label only (admin universal — body 분기 안 함) |
+| ✅ 기존 | quarterly_self_report, year_end_letter, dd_checklist, self_audit | 이전 세션 통합 (cfa609b) |
+
+**합계: 17/17 PDF persona-tracked.**
+
+### 검증 (정직)
+| # | 검증 | 결과 |
+|---|---|---|
+| 1 | pytest tests/ (전체) | 1302 passed / 1 skipped / 0 failed (2회 동일) |
+| 2 | persona slice (test_persona_*, test_group_benchmark, test_behavioral_score) | 415/415 passed |
+| 3 | F7 fix sub-scores 추가 후 group_benchmark + behavioral_score 테스트 | 34/34 passed |
+| 4 | persona_resolver 8 매트릭스 (V2/V1/dividend_tilt/beginner override/investment_goal) | 통과 |
+| 5 | 14 services × 8 personas variance | **112/112 unique HTML hash** |
+| 6 | earnings_prebrief + brag_card + sp500_backtest variance | 각 8/8 unique |
+| 7 | ruff check (변경된 14개 파일) | All checks passed |
+| 8 | audit-code 검수 | 7/7 PASS (contract/forbidden vocab/매크로 인자/circular import) |
+| 9 | Chrome headless PDF 변환 | 6/6 OK (`/tmp/pq_weasy/*__persona.pdf`) |
+
+### 6개 시각 검증 대기 (CEO 직접 열기)
+`/tmp/pq_weasy/` 에 6개 신규 sample PDF 생성:
+- `weekly_memo__growth.pdf` (412 KB)
+- `credit_rating__value.pdf` (725 KB)
+- `kpi_dashboard__quant.pdf` (61 KB)
+- `dividend_income__income.pdf` (426 KB)
+- `risk_board__speculator.pdf` (591 KB)
+- `brag_card__beginner.pdf` (498 KB)
+
+각 PDF는 v3 디자인 (Vantablack + Bronze + Playfair) + persona body 분기 통합. 직접 열어서 톤·구도 확인 필요.
+
+### 정직히 못 한 것 (외부 의존)
+1. **WeasyPrint native PDF** — 로컬 macOS libgobject-2.0-0 미설치. Chrome headless로 우회 (production Docker는 Pretendard 임베딩 OK).
+2. **Anthropic API credit** — weekly_memo letter 생성 시 400 (잔액 0). production fallback 작동중.
+3. **HANDOVER.md 사전 작성된 v15 섹션은 남겨둠** — v14 archive 그대로 유지.
+4. **Live cron 발송** — 다음 cron (오늘 23:00 KST persona_snapshot_weekly) 시점에 형님 메일함에서 확인 필요.
+5. **시각적 디자인 톤 검증** — 형님이 직접 6 PDF 열어서 v3 톤 의도대로인지 확인 필요.
+
+### 이번 세션 다른 cron / 이슈 미변동
+- 정지 cron 5 → 1 (v14 그대로 유지)
+- Frontend ESLint 17 errors (별도 sprint)
+- Anthropic credit / Secret rotate / GitHub Actions billing (CEO 외부 액션 그대로)
+
+### 다음 세션 시작 프롬프트
+
+```
+HANDOVER v15 (2026-04-30 자율 세션 종료) 읽고 이어서.
+
+이번 세션 성과: 1 commit (863c709) / 17/17 PDF persona body 완성 / F7 fix /
+dividend_tilt forward-compat / pytest 1302 pass / audit-code 7/7 PASS /
+6 sample PDF 시각 검증 대기.
+
+다음 우선순위:
+1. 형님 /tmp/pq_weasy/ 6 sample PDF 시각 확인 → v3 디자인 톤 OK인지 결정
+2. Anthropic API credit 충전 (weekly_memo letter AI 톤 복원)
+3. Secret rotate (ARTIFACT_TRIGGER_SECRET)
+4. 라이브 cron 발송 검증 (다음 cron 시점)
+5. CEO 외부 액션 (사업자등록 / 통신판매업 / 변호사 자문)
+```
+
+---
+
+## 📜 2026-04-30 자율 세션 (v14 archive) — 17/17 PDF v3 완료 + persona phase 2 + 가상검증
 
 **7 commits. main HEAD `cfa609b`. PDF v3 변환 11/17 → 17/17 (전부 완료). pytest 1302/0 fail. 4 PDF에 persona 본문 분석 통합 (data_focus + risk_block + action_points). 1 dormant production bug 발견+fix. 가상검증 100% 통과.**
 
