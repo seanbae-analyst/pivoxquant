@@ -1,4 +1,95 @@
-# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v16 "Pretendard + production diag 검증 + admin secret rotate")
+# PivoxQuant — 인수인계서 (2026-04-30 자율 세션 종료 · v17 "F7 unit tests + 출시 체크리스트 + Pretendard 4회 시도")
+
+## 🟢 2026-04-30 자율 세션 (v17, 형님 자는 동안) — F7 tests + 출시 체크리스트 + Pretendard 4회
+
+**누적 commits 이번 마라톤 세션 9개. main HEAD `458760d`. pytest 1305 / 1 skipped / 0 failed (F7 sub-score 단위 테스트 3개 추가). docs/LAUNCH_DDAY_CHECKLIST.md 신규 (사업자등록·§101 면제·Stripe·OAuth·시각 검증 30개 항목 정리). Pretendard 폰트 4회 시도 — 각 단계마다 fc-list `:lang=ko` 필터 미통과 원인 추적.**
+
+### 이번 자율 세션 추가 commits
+
+| # | Commit | 핵심 |
+|---|---|---|
+| 1 | `863c709` | F7 sub-scores fix + dividend_tilt + 12 PDFs persona body 통합 |
+| 2 | `4397e4e` | sp500_backtest persona label (17/17 complete) + HANDOVER v15 |
+| 3 | `86c4e3d` | CSS pin disclaimer to page bottom (17 stylesheets) |
+| 4 | `70ef451` | Pretendard install (1차 시도) |
+| 5 | `cf6fd50` | Pretendard verbose + fail-fast (2차 시도) |
+| 6 | `914ad27` | Pretendard via find+cp (3차 시도) |
+| 7 | `005779a` | fc-cache after playwright (4차 시도) |
+| 8 | `f0cec05` | Pretendard variable + lang=ko fontconfig + F7 unit tests |
+| 9 | `458760d` | docs: 출시 D-day 체크리스트 + §101 면제 자문 가이드 |
+
+### Pretendard 추적 기록 (정직)
+
+| 시도 | 접근 | 빌드 | 진단 결과 |
+|---|---|---|---|
+| 1차 (`70ef451`) | `unzip -q -j 'pattern'` | SUCCESS | 0 variants (silent fail) |
+| 2차 (`cf6fd50`) | verbose `set -eux` | SUCCESS | 0 variants |
+| 3차 (`914ad27`) | `find ... -exec cp` | SUCCESS | 0 variants |
+| 4차 (`005779a`) | fc-cache after playwright | SUCCESS | 0 variants |
+| 5차 (`f0cec05`) | Variable TTF + `lang=ko` fontconfig | 빌드중 | 다음 세션 확인 |
+
+**진단 endpoint 코드 분석 결과**: `routes/artifacts.py:2952` 에서 `fc-list :lang=ko family` 호출. Pretendard OTF가 fontconfig의 lang=ko 필터를 통과하지 못함 → 5차 시도는 (a) PretendardVariable.ttf 추가 + (b) `/etc/fonts/conf.d/99-pretendard-ko.conf` 로 명시적 lang=ko 매핑. **한글 PDF 생성 자체에는 영향 없음 (Noto CJK fallback 작동)** — 디자인 톤만 차이.
+
+### 이번 자율 세션 추가 작업
+
+| # | 작업 | 결과 |
+|---|---|---|
+| 10 | F7 sub-score 단위 테스트 3개 추가 (`tests/test_group_benchmark.py`) | 3/3 pass · 전체 1302 → **1305 passed** |
+| 11 | 백엔드 cleanup — 10개 orphan `__pycache__ 2` 디렉토리 삭제 | 빌드 아티팩트만, 코드 무손실 |
+| 12 | 출시 D-day 체크리스트 (`docs/LAUNCH_DDAY_CHECKLIST.md`) | 30개 항목 + §101 자문 가이드 |
+| 13 | 프론트 cleanup 시도 → 보류 | `frontend/CLAUDE.md` "lib/ 건드리지 말 것" 룰 발견. skip. |
+
+### 검증 (정직)
+
+| # | 검증 | 결과 |
+|---|---|---|
+| pytest 전체 (3회 실행) | 1305 passed / 1 skipped / 0 failed | ✅ |
+| F7 단위 테스트 신규 3개 | 3/3 passed | ✅ |
+| ruff lint 14 files | All checks passed | ✅ |
+| Production /api/health | 200 / db ok / 0.6s | ✅ |
+| Admin secret rotate (2회) | Railway + GitHub Secret 동기화 | ✅ |
+| 32 production endpoints 라우팅 | 모두 정상 응답 | ✅ |
+| Pretendard 4회 시도 | 빌드 SUCCESS but `:lang=ko` 필터 미통과 (5차 빌드중) | ⏳ |
+| Frontend tsc baseline | clean | ✅ |
+| Backend orphan dirs cleanup | 10/10 삭제 | ✅ |
+
+### 자는 동안 진행 못한 것 (정직)
+
+1. ❌ **Pretendard 5차 결과** — 빌드 진행중, 다음 세션 시작 시 진단 호출 결과 확인
+2. ❌ **Frontend 미사용 컴포넌트 cleanup** — `frontend/CLAUDE.md` 룰 위반. 별도 sprint
+3. ❌ **시각 검증** — CEO 직접 PDF 17개 열어보기 (`/tmp/pq_weasy/v2_*.pdf`)
+4. ❌ **OAuth 실 로그인 검증** — 자격증명 필요
+5. ❌ **모바일 반응형 검증** — 실 디바이스 필요
+
+### 다음 세션 시작 프롬프트
+
+```
+HANDOVER v17 (2026-04-30 자율 세션 종료) 읽고 이어서.
+docs/LAUNCH_DDAY_CHECKLIST.md 도 같이 확인.
+
+이번 자율 세션 성과:
+- 9 commits (863c709 → 458760d)
+- 17/17 PDF persona body + 디스클레이머 하단 고정
+- F7 fix + 단위 테스트 3개 추가 → pytest 1305 passed
+- 32 production endpoint 라우팅 검증
+- 출시 D-day 체크리스트 30개 항목 정리
+- Pretendard 4회 시도 (fontconfig :lang=ko 필터 이슈, 5차 빌드중)
+
+다음 우선순위:
+1. /tmp/pq_weasy/v2_*.pdf 17개 시각 확인 (CEO 직접)
+2. Pretendard 5차 (commit f0cec05) deploy 후 diag 결과 확인
+3. CEO 외부 액션:
+   - Anthropic API credit 충전 (5분)
+   - GitHub Actions billing $5 한도 (5분)
+   - 변호사 자문 일정 (50~80만원, §101 + 父 명의 사업자 리스크)
+   - 사업자등록 (본인 명의 권장)
+4. OAuth 실 로그인 검증
+5. 모바일 반응형 검증 (62 페이지)
+```
+
+---
+
+# PivoxQuant — 인수인계서 (이전: v16 "Pretendard + production diag 검증 + admin secret rotate")
 
 ## 🟢 2026-04-30 자율 세션 (v16) — Pretendard 폰트 + production diag + admin secret rotate
 
