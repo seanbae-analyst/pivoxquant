@@ -1050,16 +1050,19 @@ def _init_scheduler(app):
         coalesce=True,
     )
     # 매일 08:00 KST — DD 체크리스트 T+3 프롬프트 이메일 (Pro+).
-    # 5분 차이를 두어 KPI job과 겹치지 않게 한다.
-    sched.add_job(
-        _scheduled_dd_checklist,
-        trigger="cron",
-        hour=8, minute=5,
-        timezone="Asia/Seoul",
-        id="dd_checklist_daily",
-        max_instances=1,
-        coalesce=True,
-    )
+    # 2026-04-30 PAUSED: backend service가 fundamentals/peer 데이터 매핑 미완성
+    # → template default fallback (FCF [73.4 80.2 92.9 96.4 99.8] 등 가짜 array)
+    # 이 사용자에게 발송 → 표시광고법 §3 기만표시 위험. 데이터 매핑 + v3 디자인
+    # 변환 완료 후 cron 재활성화 예정.
+    # sched.add_job(
+    #     _scheduled_dd_checklist,
+    #     trigger="cron",
+    #     hour=8, minute=5,
+    #     timezone="Asia/Seoul",
+    #     id="dd_checklist_daily",
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
     # 매월 1일 09:00 KST — Burn Rate Report PDF (Pro+). 전월 거래 집계.
     sched.add_job(
         _scheduled_burn_rate,
