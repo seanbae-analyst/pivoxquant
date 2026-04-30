@@ -1103,18 +1103,18 @@ def _init_scheduler(app):
         coalesce=True,
     )
     # 매월 1일 11:00 KST — Monthly Finance Report PDF (Premium).
-    # 2026-04-30 PAUSED: template default array leak (표시광고법 §3 위험).
-    # 데이터 매핑 + v3 변환 후 재활성화.
-    # sched.add_job(
-    #     _scheduled_monthly_finance,
-    #     trigger="cron",
-    #     day=1,
-    #     hour=11, minute=0,
-    #     timezone="Asia/Seoul",
-    #     id="monthly_finance_monthly",
-    #     max_instances=1,
-    #     coalesce=True,
-    # )
+    # 2026-04-30: v3 변환 + _to_v3_shape() 데이터 매핑 완료. fake-data
+    # leak 박멸. 재활성화.
+    sched.add_job(
+        _scheduled_monthly_finance,
+        trigger="cron",
+        day=1,
+        hour=11, minute=0,
+        timezone="Asia/Seoul",
+        id="monthly_finance_monthly",
+        max_instances=1,
+        coalesce=True,
+    )
     # 매월 15일 09:30 KST — Risk Board Meeting Deck (Premium) 월간 에디션.
     sched.add_job(
         _scheduled_risk_board_monthly,

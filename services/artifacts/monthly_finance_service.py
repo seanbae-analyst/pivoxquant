@@ -584,24 +584,150 @@ class MonthlyFinanceService:
         )
         return ctx.to_dict()
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map MonthlyFinanceContext (cash/cost/runway) onto v3 1-page Premium.
+
+        Backend produces personal cash/cost statement; frontend tsx covers
+        4-page CFO statement. v3 layout adapted to backend semantics with
+        the critical KPIs surfaced.
+        """
+        cash = data.get("cash") or {}
+        positions_mv = data.get("positions_mv") or {}
+        cost_breakdown = data.get("cost_breakdown") or {}
+        tax_estimate = data.get("tax_estimate") or {}
+        liquidity_ratio = data.get("liquidity_ratio")
+        runway_months = data.get("runway_months")
+
+        def _money(v) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            an = abs(n)
+            sign = "−" if n < 0 else ""
+            if an >= 1_000_000:
+                return f"{sign}${an/1_000_000:.2f}M"
+            if an >= 1_000:
+                return f"{sign}${an/1_000:.1f}k"
+            return f"{sign}${an:,.0f}"
+
+        try:
+            nav_total = float(cash.get("total_usd") or 0) + float(positions_mv.get("total_usd") or 0)
+        except (TypeError, ValueError):
+            nav_total = 0.0
+        try:
+            cash_total = float(cash.get("total_usd") or 0)
+        except (TypeError, ValueError):
+            cash_total = 0
+        try:
+            burn_total = sum(
+                float(cost_breakdown.get(k) or 0)
+                for k in ("commission", "tx_tax", "cgt_est", "fx_spread", "slippage")
+            )
+        except (TypeError, ValueError):
+            burn_total = 0
+
+        cost_rows = []
+        for label, key, note in [
+            ("Commission", "commission", "거래 수수료"),
+            ("Tax (Tx)", "tx_tax", "거래세"),
+            ("Tax (CGT est)", "cgt_est", "양도세 추정"),
+            ("FX Spread", "fx_spread", "환전 스프레드"),
+            ("Slippage", "slippage", "체결가 차이"),
+        ]:
+            try:
+                amt = float(cost_breakdown.get(key) or 0)
+            except (TypeError, ValueError):
+                amt = 0
+            if amt or burn_total:
+                pct_str = f"{(amt/burn_total)*100:.1f}%" if burn_total else "—"
+                cost_rows.append({
+                    "category": label,
+                    "amount":   _money(amt) if amt else "—",
+                    "pct":      pct_str,
+                    "detail":   note,
+                })
+
+        tax_rows = []
+        for label, key, note in [
+            ("이번 달 양도세 추정", "cgt_estimate_month", "월간 누적"),
+            ("연간 양도세 추정", "cgt_estimate_year", "연간 누적"),
+            ("배당세 추정", "dividend_tax", "원천징수"),
+        ]:
+            try:
+                amt_f = float(tax_estimate.get(key) or 0)
+            except (TypeError, ValueError):
+                amt_f = 0
+            if amt_f:
+                tax_rows.append({
+                    "category": label,
+                    "amount":   _money(amt_f),
+                    "detail":   note,
+                })
+
+        cash_alloc = []
+        if cash:
+            try:
+                usd = float(cash.get("usd") or 0)
+                krw = float(cash.get("krw_usd_eq") or cash.get("krw") or 0)
+            except (TypeError, ValueError):
+                usd = krw = 0
+            tot = usd + krw
+            if tot > 0:
+                cash_alloc = [
+                    {"name": "USD", "pct": round((usd/tot)*100, 1),
+                     "pct_display": f"{(usd/tot)*100:.1f}%",
+                     "flat": (usd/tot)*100 < 35},
+                    {"name": "KRW", "pct": round((krw/tot)*100, 1),
+                     "pct_display": f"{(krw/tot)*100:.1f}%",
+                     "flat": (krw/tot)*100 < 35},
+                ]
+
+        ml = data.get("month_label") or "—"
+        return {
+            "month_label": ml,
+            "report_tag":  f"MF-{ml.replace(' ', '-')}",
+            "nav":         {"value": _money(nav_total) if nav_total else "—",
+                             "detail": "EOM 합산"},
+            "cash":        {"value": _money(cash_total) if cash_total else "—",
+                             "detail": "USD 환산"},
+            "liquidity_ratio": {
+                "value":  f"{liquidity_ratio:.2f}" if liquidity_ratio is not None else "—",
+                "detail": "Cash / Burn",
+            },
+            "runway":      {"value": f"{runway_months:.1f}" if runway_months is not None else "—",
+                             "detail": "현재 burn 기준"},
+            "cost_rows":   cost_rows,
+            "tax_rows":    tax_rows,
+            "cash_alloc":  cash_alloc,
+            "cfo_note":    None,
+        }
+
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             return self._fallback_html(data)
         try:
+            ctx = dict(data)
+            ctx["v3"] = self._to_v3_shape(data)
             tpl = env.get_template("monthly_finance.html")
-            return tpl.render(**data)
+            return tpl.render(**ctx)
         except Exception as exc:
-            logger.warning("monthly_finance template render failed: %s", exc)
+            logger.warning("monthly_finance v3 render failed: %s", exc)
             return self._fallback_html(data)
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
         if HTML is None:
             return None
-        html_str = self.render_html(data)
+        html_str = self.render_pdf_html(data)
         try:
             return HTML(string=html_str).write_pdf()
         except Exception as exc:  # pragma: no cover
