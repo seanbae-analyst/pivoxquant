@@ -181,7 +181,7 @@ def _hit_with_negation_filter(text: str, terms: set[str]) -> list[str]:
     """Like ``_scan_text_for_terms`` but drops a hit when the surrounding
     ±120-char window contains a negation marker."""
     hits: list[str] = []
-    lowered_full = text.lower()
+    text.lower()
     for term in terms:
         if any(ord(c) > 127 for c in term):
             # Hangul substring

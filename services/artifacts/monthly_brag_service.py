@@ -718,7 +718,7 @@ background:#0B0D12;color:#F6F3EC;padding:32px;">
             start, end = _previous_month_bounds(date.today())
         else:
             start = target_month.replace(day=1)
-            end = start.replace(day=monthrange(start.year, start.month)[1])
+            start.replace(day=monthrange(start.year, start.month)[1])
 
         users = User.query.all()
 

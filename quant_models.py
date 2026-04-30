@@ -53,7 +53,7 @@ class StatArb:
         if spread is None or len(spread) < 20:
             return None
 
-        n = len(spread)
+        len(spread)
         mu = np.mean(spread)
         sigma = np.std(spread)
 

@@ -486,7 +486,7 @@ def sample_risk_board() -> dict[str, Any]:
     Returns every field the redesigned `risk_board.html` template reads.
     All numbers are descriptive observations; no recommendations or targets.
     """
-    today = _today()
+    _today()
     return {
         # ── meta ─────────────────────────────────────────────────────────
         "user_id":       SAMPLE_USER_ID,
@@ -1397,7 +1397,7 @@ def sample_credit_rating() -> dict[str, Any]:
 
 
 def sample_dividend_income() -> dict[str, Any]:
-    today = _today()
+    _today()
     return {
         "user_id":      SAMPLE_USER_ID,
         "user_name":    SAMPLE_USER_NAME,
@@ -1700,7 +1700,7 @@ def sample_kpi_dashboard() -> dict[str, Any]:
 
 def sample_dd_checklist() -> dict[str, Any]:
     """DD Checklist — Goldman IC v2 6-page single-ticker observational report."""
-    today = _today()
+    _today()
     return {
         "user_id":     SAMPLE_USER_ID,
         "user_name":   SAMPLE_USER_NAME,

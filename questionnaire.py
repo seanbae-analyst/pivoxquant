@@ -711,7 +711,7 @@ def calculate_profile_v2(answers: dict) -> dict:
 
     # A4: Monthly investable
     monthly_map = {"lt100": 1, "100_500": 3, "500_2k": 5, "2k_5k": 7, "5k_plus": 10}
-    monthly_score = monthly_map.get(answers.get("monthly_investable", ""), 3)
+    monthly_map.get(answers.get("monthly_investable", ""), 3)
 
     # A5: Income stability -> inverse risk capacity
     stability_map = {"very_stable": 8, "stable": 6, "variable": 4, "volatile": 2, "student": 1}
