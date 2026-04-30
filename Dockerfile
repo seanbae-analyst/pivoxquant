@@ -12,10 +12,15 @@ RUN apt-get update && apt-get install -y \
 # ── Pretendard font (PDF v3 디자인 의도, OFL 라이센스) ────────────────────
 # Source: github.com/orioncactus/pretendard (Kil Hyung-jin, OFL 1.1).
 # Required for v3 templates (Vantablack + Bronze + Playfair).
-# Approach: extract whole zip, then move OTF files into fontconfig dir.
-# Avoids shell-quoting / glob issues with `unzip filter "pattern"`.
+# Install BOTH static OTF + variable TTF — variable font carries richer
+# language coverage metadata so fontconfig's `:lang=ko` filter picks it
+# up (the static OTFs alone failed this filter on 2026-04-30).
+# Plus an explicit fontconfig snippet that asserts Korean lang coverage.
 RUN set -eux \
-    && mkdir -p /tmp/pretendard-extract /usr/share/fonts/opentype/pretendard \
+    && mkdir -p /tmp/pretendard-extract \
+                /usr/share/fonts/opentype/pretendard \
+                /usr/share/fonts/truetype/pretendard \
+                /etc/fonts/conf.d \
     && cd /tmp \
     && wget --tries=3 --timeout=30 \
        -O pretendard.zip \
@@ -23,8 +28,12 @@ RUN set -eux \
     && unzip pretendard.zip -d /tmp/pretendard-extract/ \
     && find /tmp/pretendard-extract/public/static -maxdepth 1 -name '*.otf' \
        -exec cp {} /usr/share/fonts/opentype/pretendard/ \; \
+    && cp /tmp/pretendard-extract/public/variable/PretendardVariable.ttf \
+          /usr/share/fonts/truetype/pretendard/ \
     && ls -la /usr/share/fonts/opentype/pretendard/ \
+                /usr/share/fonts/truetype/pretendard/ \
     && rm -rf /tmp/pretendard.zip /tmp/pretendard-extract \
+    && printf '<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n<fontconfig>\n  <match target="scan">\n    <test name="family"><string>Pretendard</string></test>\n    <edit name="lang" mode="append"><string>ko</string></edit>\n  </match>\n  <match target="scan">\n    <test name="family"><string>Pretendard Variable</string></test>\n    <edit name="lang" mode="append"><string>ko</string></edit>\n  </match>\n</fontconfig>\n' > /etc/fonts/conf.d/99-pretendard-ko.conf \
     && fc-cache -f -v 2>&1 | tail -3 \
     && (fc-list | grep -i pretendard | head -5 \
         || (echo "FATAL: Pretendard not in fc-list after fc-cache" && exit 1))
