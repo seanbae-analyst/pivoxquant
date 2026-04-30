@@ -978,17 +978,26 @@ def _init_scheduler(app):
         max_instances=1,
         coalesce=True,
     )
-    # 15분 간격 — MVP #3 Earnings Pre-Brief scan. The service's internal
-    # window matcher ensures only positions ~30 min away from their
-    # earnings actually trigger a send, so this cadence is safe.
-    sched.add_job(
-        _scheduled_earnings_prebrief,
-        trigger="interval",
-        minutes=15,
-        id="earnings_prebrief_scan",
-        max_instances=1,
-        coalesce=True,
-    )
+    # ── DISABLED (2026-05-01): per-ticker email spam ──────────────────────
+    # CEO complaint 2026-05-01 morning: "티커번호만 크게 오고 그리고 종목하나당
+    # 이메일 하나오는데 ㅈㄴ많아 하나에 모든 종목이 오게끔해야지". The current
+    # `run_scan` dispatches one email per (user, ticker, earnings_dt) match —
+    # a user with 5 holdings reporting same week receives 5 emails.
+    #
+    # Plan: replace with `run_scan_digest` that groups matches by user and
+    # sends one consolidated digest email per user (all today's tickers in
+    # one envelope). Cron will be re-enabled with the digest version in a
+    # follow-up commit. Until then the scan stays paused so no further
+    # spam reaches inboxes.
+    #
+    # sched.add_job(
+    #     _scheduled_earnings_prebrief,
+    #     trigger="interval",
+    #     minutes=15,
+    #     id="earnings_prebrief_scan",
+    #     max_instances=1,
+    #     coalesce=True,
+    # )
     # ── DISABLED (2026-04-19): KPI Dashboard → Morning Brief Plus 통합 ──
     # 5-메트릭 KPI 카드는 이제 06:00 KST Morning Brief 이메일 상단에 포함된다.
     # 스케줄러 job은 제거됐지만 `_scheduled_kpi_dashboard` 함수 + 서비스 +
