@@ -696,6 +696,30 @@ class YearEndLetterService:
 
     # ── render ──────────────────────────────────────────────────────────────
 
+    def _resolve_persona(self, data: dict[str, Any]) -> str:
+        """Resolve persona for the year-end letter — same contract as
+        weekly_memo / quarterly_self_report. Falls back to balanced when
+        the user has no InvestmentProfile or experience_level=beginner
+        gates the persona to beginner."""
+        if "persona" in data and data["persona"]:
+            try:
+                from services.artifacts.persona_resolver import resolve_persona_from_code
+                return resolve_persona_from_code(data["persona"])
+            except Exception:
+                return "balanced"
+        user_id = data.get("user_id")
+        if user_id is None:
+            return "balanced"
+        try:
+            from services.artifacts.persona_resolver import (
+                DEFAULT_PERSONA, resolve_persona,
+            )
+            profile = InvestmentProfile.query.filter_by(user_id=user_id).first()
+            return resolve_persona(profile) if profile else DEFAULT_PERSONA
+        except Exception as exc:
+            logger.debug("year_end_letter persona resolution failed: %s", exc)
+            return "balanced"
+
     def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
@@ -703,6 +727,7 @@ class YearEndLetterService:
         try:
             ctx = dict(data)
             ctx["v3"] = self._to_v3_shape(data)
+            ctx["persona"] = self._resolve_persona(data)
             tpl = env.get_template("year_end_letter.html")
             html = tpl.render(**ctx)
         except Exception as exc:
