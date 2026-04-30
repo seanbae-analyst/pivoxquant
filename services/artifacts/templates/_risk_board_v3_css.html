@@ -196,6 +196,8 @@ html, body {
   page-break-after: always;
   color: var(--r-ink);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 .pq-pdf-page:last-of-type { page-break-after: auto; }
 
@@ -736,3 +738,10 @@ html, body {
   letter-spacing: 0.5px;
 }
 .pq-report .disclaimer__meta a { color: var(--r-ink-3); text-decoration: none; }
+
+/* ─── Disclaimer pinned to page bottom (per CEO 2026-04-30) ─── */
+.pq-pdf-page-footer,
+.pq-pdf-page > .pq-disclaimer,
+.pq-pdf-page > .disclaimer {
+  margin-top: auto;
+}
