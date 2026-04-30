@@ -1,982 +1,225 @@
 {# ══════════════════════════════════════════════════════════════════════════
-   Portfolio Segment — Goldman IC v2 Editorial Redesign (6-page)
-   Portfolio decomposition: sector · style · size · region.
-   McKinsey portfolio review × Morningstar style-box editorial.
+   Portfolio Segment — Pro · 2-page · Monthly (CEO design v3, 2026-04-30)
+
+   Source: frontend/src/components/reports/templates/portfolio-segment.tsx
+   1:1 port of the React component into a print-oriented Jinja template.
+
+   Page 1: KPI row · Sector alloc · Geography (2-col with FX card)
+   Page 2: Factor table · Top 5 + Bottom 3 holdings · CFO Note · Governance
+
+   v3 shape (PortfolioSegmentService._to_v3_shape):
+     v3.as_of_label, v3.nav / holdings / avg_pos / active_share ({value, delta})
+     v3.sectors, v3.geography (list of {name, pct, pct_display, tone, flat})
+     v3.fx (list of {ccy, pct}), v3.fx_note
+     v3.factors (list of {factor, exposure, vs_bench, vs_bench_tone, mtd, mtd_tone, ytd, ytd_tone})
+     v3.top_bottom (list of {ticker, name, weight, mtd, mtd_tone, ytd, ytd_tone, contrib, contrib_tone, bottom})
+     v3.cfo_note (str)
+
+   Compliance — decomposition only. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
+{%- set v3 = v3 | default({}) -%}
 <!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <title>Portfolio Segment — {{ period_label }} — {{ user_name }}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 22mm 20mm 22mm 20mm;
-      @top-left {
-        content: "PIVOXQUANT  ·  PORTFOLIO SEGMENT";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7.2pt;
-        letter-spacing: 0.36em;
-        text-transform: uppercase;
-        color: #B8956A;
-      }
-      @top-right {
-        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ period_label }}";
-        font-family: "JetBrains Mono", monospace;
-        font-size: 7pt;
-        letter-spacing: 0.14em;
-        color: #6B6B6B;
-      }
-      @bottom-left {
-        content: "Observation only — not a directive.";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7pt;
-        font-style: italic;
-        color: #8a8a8a;
-      }
-      @bottom-right {
-        content: counter(page) " / " counter(pages);
-        font-family: "JetBrains Mono", monospace;
-        font-size: 8pt;
-        color: #4a4a4a;
-      }
-    }
-    @page :first {
-      @top-left { content: none; }
-      @top-right { content: none; }
-      @bottom-left { content: none; }
-      @bottom-right { content: none; }
-    }
-    {% include '_report_css.html' %}
-
-    /* ───────────────────── P1 · COVER ─────────────────────────────── */
-    .cv { position: relative; padding-top: 0; }
-    .cv-wordmark { text-align: center; margin: 6pt auto 14pt auto; }
-    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
-    .cv-issue {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
-      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
-    }
-    .cv-issue .cv-issue-key { color: #0A0A0A; }
-    .cv-hero {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 38pt; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A;
-      margin: 30pt 0 30pt 0; padding: 0;
-    }
-    .cv-hero span { display: block; }
-    .cv-hero span + span { padding-left: 30pt; }
-    .cv-hero span + span + span { padding-left: 60pt; color: #B8956A; }
-    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 18pt; table-layout: fixed; overflow: visible; }
-    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
-    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
-    .cv-kpi-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #8a8a8a; margin-bottom: 4pt;
-    }
-    .cv-kpi-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 18pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -0.015em; line-height: 1.02;
-    }
-    .cv-kpi-value.sm { font-size: 11pt; }
-    .cv-kpi-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
-    }
-    .cv-slug {
-      margin-top: 22pt; text-align: center;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.38em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600;
-    }
-    .cv-foot {
-      margin-top: 18pt; text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt; color: #6B6B6B; letter-spacing: 0.02em;
-    }
-
-    .sp-part {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin: 0 0 2pt 0;
-    }
-    .sp-title {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 26pt; font-weight: 400; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
-    }
-    .sp-deck {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
-      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
-    }
-
-    /* ───────────────────── P2 · TREEMAP SPREAD ────────────────────── */
-    .sp-grid {
-      display: table; width: 100%; border-collapse: separate;
-      border-spacing: 14pt 0; margin-top: 6pt;
-      table-layout: fixed;
-    }
-    .sp-grid > .sp-main   { display: table-cell; width: 70%; vertical-align: top; }
-    .sp-grid > .sp-margin { display: table-cell; width: 30%; vertical-align: top; }
-    .sp-fig-title {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; margin-bottom: 6pt;
-    }
-    .sp-fig-caption {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
-      line-height: 1.4; margin-top: 6pt; max-width: 360pt;
-    }
-    .sp-prose {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; line-height: 1.58; color: #202020;
-    }
-    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
-    .sp-prose > p:first-child::first-letter {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 28pt; line-height: 0.88; font-weight: 500;
-      color: #B8956A; /* float+padding removed for WeasyPrint 68.1 compat */ font-style: normal;
-    }
-    .sp-marg-list {
-      margin-top: 12pt; border-top: 0.35pt solid #c9c4b8; padding-top: 8pt;
-    }
-    .sp-marg-item {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt;
-      color: #6B6B6B; margin: 0 0 4pt 0;
-    }
-
-    /* ───────────────────── P3 · LADDER ────────────────────────────── */
-    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
-    .ld-table th, .ld-table td {
-      padding: 5pt 6pt; text-align: left; vertical-align: middle;
-      border-bottom: 0.25pt solid #e4dfd2;
-    }
-    .ld-table thead th {
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.4pt; letter-spacing: 0.16em;
-      text-transform: uppercase; color: #6B6B6B;
-      font-weight: 600;
-    }
-    .ld-table th.num,
-    .ld-table td.num {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-    .ld-table td.num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.6pt;
-    }
-    .ld-segment {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.2pt; color: #0A0A0A; font-weight: 500;
-    }
-
-    /* ───────────────────── P4 · QUAD ──────────────────────────────── */
-    .rq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; }
-    .rq-main { display: table-cell; width: 66%; vertical-align: top; }
-    .rq-side { display: table-cell; width: 34%; vertical-align: top; }
-    .rq-quads { display: table; width: 100%; border-collapse: collapse; }
-    .rq-quad-row { display: table-row; }
-    .rq-quad {
-      display: table-cell; width: 50%;
-      padding: 12pt 14pt;
-      vertical-align: top; height: 170pt;
-    }
-    .rq-quad-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.22em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 3pt;
-    }
-    .rq-quad-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 13pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-    }
-    .rq-quad-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; color: #6B6B6B;
-      margin-top: 4pt; line-height: 1.4;
-    }
-    .rq-notes {
-      padding: 12pt 0 0 12pt; font-size: 8pt;
-      border-left: 0.35pt solid #c9c4b8;
-    }
-    .rq-notes-eyebrow {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.28em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 8pt;
-    }
-    .rq-notes-item { margin-bottom: 8pt; padding-left: 16pt; text-indent: -16pt; }
-    .rq-notes-item:last-child { margin-bottom: 0; }
-    .rq-notes-num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.6pt; color: #B8956A; font-weight: 600;
-      letter-spacing: 0.04em; margin-right: 6pt;
-    }
-    .rq-notes-def {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.2pt; line-height: 1.5; color: #4a4a4a; display: inline;
-    }
-
-    /* ───────────────────── P5 · EDITORIAL ─────────────────────────── */
-    .ed-quote-wrap {
-      min-height: 300pt; padding: 40pt 40pt 20pt 40pt;
-      display: table; width: 100%; text-align: center;
-    }
-    .ed-quote-cell { display: table-cell; vertical-align: middle; }
-    .ed-quote {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 38pt; line-height: 1.22;
-      letter-spacing: -0.015em; color: #0A0A0A; margin: 0;
-    }
-    .ed-quote-attr {
-      margin-top: 26pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #B8956A;
-    }
-    .ed-quote-attr::before, .ed-quote-attr::after {
-      content: "——"; color: #B8956A; opacity: 0.5;
-      margin: 0 8pt; letter-spacing: 0;
-    }
-    .ed-notans-head {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 8pt; letter-spacing: 0.32em;
-      text-transform: uppercase; color: #0A0A0A;
-      font-weight: 600; margin-top: 26pt;
-      padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
-    }
-    .ed-notans-grid {
-      display: table; width: 100%; border-collapse: separate;
-      border-spacing: 18pt 0; margin-top: 10pt;
-    }
-    .ed-notans-col { display: table-cell; width: 50%; vertical-align: top; }
-    .ed-notans-item {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; line-height: 1.6;
-      color: #202020; margin-bottom: 8pt;
-      padding-left: 24pt; text-indent: -24pt;
-    }
-    .ed-notans-num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8pt; color: #B8956A;
-      font-weight: 600; letter-spacing: 0.04em;
-      margin-right: 10pt;
-    }
-
-    /* ───────────────────── P6 · COLOPHON ──────────────────────────── */
-    .co-wrap { padding: 0; text-align: left; }
-    .co-body p { margin: 0 0 8pt 0 !important; }
-    .co-head {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #B8956A;
-      font-weight: 600; margin-bottom: 4pt;
-    }
-    .co-rule-small {
-      width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0;
-    }
-    .co-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.7;
-      color: #202020; max-width: 440pt;
-    }
-    .co-body .co-key {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.4pt; letter-spacing: 0.18em;
-      text-transform: uppercase; color: #6B6B6B;
-    }
-    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
-    .co-sign { text-align: center; margin-top: 14pt; }
-    .co-sign-house {
-      margin-top: 16pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.42em;
-      text-transform: uppercase; color: #0A0A0A; font-weight: 500;
-    }
-    .co-sign-ref {
-      margin-top: 10pt;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
-    }
-    .co-sign-time {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
-    }
-    section.disclaimer.pq-disclaimer {
-      border: none !important;
-      border-top: 0.35pt solid #c9c4b8 !important;
-      padding: 10pt 0 0 0 !important;
-      margin: 16pt 0 0 0 !important;
-      background: transparent !important;
-      font-size: 7.6pt !important;
-      line-height: 1.5 !important;
-    }
-    section.disclaimer.pq-disclaimer h5.disclaimer__title {
-      font-family: "Geist", -apple-system, sans-serif !important;
-      font-size: 7pt !important;
-      letter-spacing: 0.32em !important;
-      text-transform: uppercase !important;
-      color: #B8956A !important;
-      margin: 0 0 6pt 0 !important;
-    }
-  </style>
+  <title>Portfolio Segment — {{ v3.as_of_label | default(quarter_label) }} — {{ user_name }}</title>
+  <style>{% include '_portfolio_segment_v3_css.html' %}</style>
 </head>
 <body>
 
-{# ── local helpers ─────────────────────────────────────────────────────── #}
-{% set _issue_no = issue_number | default(4) %}
-{% set _doc_ref = doc_ref | default('PQ-PS-' ~ ('%02d' % _issue_no)) %}
-{% set _hero = hero_headline | default([
-  'A portfolio is a choir.',
-  'Each voice a sector, style, or region.',
-  'We listen, then write down what we hear.',
-]) %}
+<div class="pq-report">
 
+  {# ═════════════════════════ PAGE 1 ═════════════════════════ #}
+  <section class="pq-pdf-page">
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 1 · COVER
-   ══════════════════════════════════════════════════════════════════════════ #}
-<section class="cv">
-
-  <div class="cv-wordmark">
-    {% with brand_kind='wordmark', brand_size=260 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-  </div>
-
-  <div class="cv-rule-thin"></div>
-  <div class="cv-issue">
-    PORTFOLIO SEGMENT <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
-    &nbsp;·&nbsp; {{ period_label | default('April 2026') }}
-    &nbsp;·&nbsp; OBSERVATION
-  </div>
-  <div class="cv-rule-thin"></div>
-
-  <h1 class="cv-hero">
-    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
-  </h1>
-
-  <div class="cv-rule-thin"></div>
-
-  <div class="cv-kpi4">
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Sectors</div>
-      <div class="cv-kpi-value">{{ kpi_sectors | default(8) }}</div>
-      <div class="cv-kpi-foot">Distinct GICS sectors held.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Styles</div>
-      <div class="cv-kpi-value sm">{{ kpi_styles_label | default('Growth · Value · Core') }}</div>
-      <div class="cv-kpi-foot">Morningstar style taxonomy.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Regions</div>
-      <div class="cv-kpi-value sm">{{ kpi_regions_label | default('US · International') }}</div>
-      <div class="cv-kpi-foot">MSCI region classification.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">HHI · Concentration</div>
-      <div class="cv-kpi-value">{{ '{:,}'.format(kpi_hhi | default(1840)) }}</div>
-      <div class="cv-kpi-foot">Herfindahl-Hirschman Index.</div>
-    </div>
-  </div>
-
-  <div class="cv-slug">PORTFOLIO SEGMENT &middot; {{ period_label | default('April 2026') }} &middot; No. {{ '%02d' % _issue_no }}</div>
-
-  <p class="cv-foot">
-    <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
-  </p>
-</section>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 2 · TREEMAP SPREAD — hand-crafted SVG nested rectangles
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part I · Segment Shape</p>
-<h2 class="sp-title">The rooms the portfolio fills</h2>
-<p class="sp-deck">
-  Each rectangle is a sector; the area of each rectangle is the share of
-  book value. Bronze shading reads return — darker shades, stronger returns
-  observed this month. The treemap records, it does not prescribe.
-</p>
-
-<div class="sp-grid">
-  <div class="sp-main">
-
-    <div class="sp-fig-title">Fig. 1 · Segment treemap · {{ period_label | default('April 2026') }}</div>
-
-    {# ── Simple row-packed treemap. Rows filled left-to-right by weight. #}
-    {% set _seg = treemap_segments | default([
-      {'name':'Technology','weight':32.5,'ret':11.8},
-      {'name':'Healthcare','weight':14.2,'ret':3.5},
-      {'name':'Financials','weight':12.8,'ret':4.8},
-      {'name':'Consumer Disc.','weight':9.5,'ret':-2.1},
-      {'name':'Consumer Staples','weight':8.1,'ret':1.4},
-      {'name':'Industrials','weight':7.2,'ret':5.2},
-      {'name':'Energy','weight':5.6,'ret':8.2},
-      {'name':'REITs','weight':4.8,'ret':-0.8},
-      {'name':'Cash','weight':3.1,'ret':0.2},
-      {'name':'International','weight':2.2,'ret':3.1},
-    ]) %}
-
-    {% set _tot = _seg | map(attribute='weight') | sum %}
-
-    {# Manually assign rows: biggest first — row1 (top) has 2 segments (weight 1-2),
-       row2 has 3 segments, row3 has 5 segments.  #}
-    {% set _W = 480 %}
-    {% set _H = 260 %}
-    {% set _row1_h = 140 %}
-    {% set _row2_h = 70 %}
-    {% set _row3_h = 50 %}
-
-    {# Row 1 — first 2 segments (largest) #}
-    {% set _row1 = _seg[0:2] %}
-    {% set _row1_total = _row1 | map(attribute='weight') | sum %}
-
-    {# Row 2 — next 3 #}
-    {% set _row2 = _seg[2:5] %}
-    {% set _row2_total = _row2 | map(attribute='weight') | sum %}
-
-    {# Row 3 — remaining #}
-    {% set _row3 = _seg[5:] %}
-    {% set _row3_total = _row3 | map(attribute='weight') | sum %}
-
-    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%"
-         preserveAspectRatio="none"
-         xmlns="http://www.w3.org/2000/svg" aria-label="Segment treemap" role="img"
-         style="display:block;">
-
-      {# --- Row 1 (top band) --- #}
-      {% set _x = 0 %}
-      {% for s in _row1 %}
-        {% set _w = _W * s.weight / _row1_total %}
-        {% set _ret_norm = (s.ret + 4) / 20 %}
-        {% if _ret_norm < 0.10 %}{% set _ret_norm = 0.10 %}{% endif %}
-        {% if _ret_norm > 0.90 %}{% set _ret_norm = 0.90 %}{% endif %}
-        {% if s.ret >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
-        <rect x="{{ _x }}" y="0" width="{{ _w }}" height="{{ _row1_h }}"
-              fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _ret_norm }}"
-              stroke="#F7F5EF" stroke-width="1.4"/>
-        <text x="{{ _x + 10 }}" y="24" fill="#F7F5EF"
-              font-family="Geist, sans-serif" font-size="10.5" font-weight="600" letter-spacing="0.05em">{{ s.name }}</text>
-        <text x="{{ _x + 10 }}" y="42" fill="#F7F5EF" fill-opacity="0.85"
-              font-family="JetBrains Mono, monospace" font-size="8.4">{{ '%.1f'|format(s.weight) }}%</text>
-        <text x="{{ _x + 10 }}" y="{{ _row1_h - 10 }}" fill="#F7F5EF" fill-opacity="0.85"
-              font-family="Source Serif 4, serif" font-style="italic" font-size="8.2">
-          MTD {{ '%+.1f'|format(s.ret) }}%
-        </text>
-        {% set _x = _x + _w %}
-      {% endfor %}
-
-      {# --- Row 2 (middle band) --- #}
-      {% set _x = 0 %}
-      {% set _y2 = _row1_h %}
-      {% for s in _row2 %}
-        {% set _w = _W * s.weight / _row2_total %}
-        {% set _ret_norm = (s.ret + 4) / 20 %}
-        {% if _ret_norm < 0.10 %}{% set _ret_norm = 0.10 %}{% endif %}
-        {% if _ret_norm > 0.90 %}{% set _ret_norm = 0.90 %}{% endif %}
-        {% if s.ret >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
-        <rect x="{{ _x }}" y="{{ _y2 }}" width="{{ _w }}" height="{{ _row2_h }}"
-              fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _ret_norm }}"
-              stroke="#F7F5EF" stroke-width="1.4"/>
-        <text x="{{ _x + 7 }}" y="{{ _y2 + 18 }}" fill="#F7F5EF"
-              font-family="Geist, sans-serif" font-size="8.5" font-weight="600" letter-spacing="0.04em">{{ s.name }}</text>
-        <text x="{{ _x + 7 }}" y="{{ _y2 + 32 }}" fill="#F7F5EF" fill-opacity="0.85"
-              font-family="JetBrains Mono, monospace" font-size="7.6">{{ '%.1f'|format(s.weight) }}%</text>
-        <text x="{{ _x + 7 }}" y="{{ _y2 + _row2_h - 8 }}" fill="#F7F5EF" fill-opacity="0.85"
-              font-family="Source Serif 4, serif" font-style="italic" font-size="7.4">
-          {{ '%+.1f'|format(s.ret) }}%
-        </text>
-        {% set _x = _x + _w %}
-      {% endfor %}
-
-      {# --- Row 3 (bottom strip) --- #}
-      {% set _x = 0 %}
-      {% set _y3 = _row1_h + _row2_h %}
-      {% for s in _row3 %}
-        {% set _w = _W * s.weight / _row3_total %}
-        {% set _ret_norm = (s.ret + 4) / 20 %}
-        {% if _ret_norm < 0.10 %}{% set _ret_norm = 0.10 %}{% endif %}
-        {% if _ret_norm > 0.90 %}{% set _ret_norm = 0.90 %}{% endif %}
-        {% if s.ret >= 0 %}{% set _fill = '#B8956A' %}{% else %}{% set _fill = '#A84C4C' %}{% endif %}
-        <rect x="{{ _x }}" y="{{ _y3 }}" width="{{ _w }}" height="{{ _row3_h }}"
-              fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _ret_norm }}"
-              stroke="#F7F5EF" stroke-width="1.4"/>
-        <text x="{{ _x + 5 }}" y="{{ _y3 + 14 }}" fill="#F7F5EF"
-              font-family="Geist, sans-serif" font-size="7.4" font-weight="600" letter-spacing="0.03em">{{ s.name }}</text>
-        <text x="{{ _x + 5 }}" y="{{ _y3 + 26 }}" fill="#F7F5EF" fill-opacity="0.85"
-              font-family="JetBrains Mono, monospace" font-size="6.8">{{ '%.1f'|format(s.weight) }}%</text>
-        <text x="{{ _x + 5 }}" y="{{ _y3 + _row3_h - 6 }}" fill="#F7F5EF" fill-opacity="0.85"
-              font-family="Source Serif 4, serif" font-style="italic" font-size="6.6">
-          {{ '%+.1f'|format(s.ret) }}%
-        </text>
-        {% set _x = _x + _w %}
-      {% endfor %}
-    </svg>
-
-    <div class="sp-fig-caption">
-      Fig. 1. Rectangle area reads book-share by segment. Fill opacity reads
-      return &mdash; darker shades, stronger observed return. Bronze
-      indicates positive return; faint red indicates negative.
-    </div>
-
-  </div>
-
-  <div class="sp-margin">
-    <div class="sp-prose">
-      <p>The book sits mostly in Technology &mdash; nearly a third by weight
-        &mdash; with Healthcare and Financials forming the second tier. The
-        remaining seven segments split the lower band. The treemap reads
-        what the book already holds; it is a month-end snapshot.</p>
-      <p>Concentration as measured by Herfindahl-Hirschman stands at
-        {{ '{:,}'.format(kpi_hhi | default(1840)) }}. The figure is informational.
-        It is a single observation of one statistical property of the
-        current weights.</p>
-    </div>
-
-    <div class="sp-marg-list">
-      <p class="sp-marg-item">Method &nbsp;·&nbsp; GICS sector taxonomy.</p>
-      <p class="sp-marg-item">Sample &nbsp;·&nbsp; Month-end holdings.</p>
-      <p class="sp-marg-item">Next review &nbsp;·&nbsp; monthly close.</p>
-    </div>
-  </div>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 3 · SEGMENT LADDER — 10-row table
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part II · Segment Ladder</p>
-<h2 class="sp-title">Each segment, read on its own line</h2>
-<p class="sp-deck">
-  Weights measured at month-end; drift read against the prior month's
-  reference. Return and volatility contributions are portfolio-level
-  observations, not per-segment directives.
-</p>
-
-{% set _ladder = segment_ladder | default([]) %}
-{% if _ladder %}
-<table class="ld-table">
-  <thead>
-    <tr>
-      <th style="width:18%;">Segment</th>
-      <th class="num" style="width:10%;">Weight</th>
-      <th class="num" style="width:10%;">Target</th>
-      <th class="num" style="width:9%;">Drift</th>
-      <th class="num" style="width:12%;">Return Contrib</th>
-      <th class="num" style="width:10%;">Vol Contrib</th>
-      <th class="num" style="width:8%;">Beta</th>
-      <th style="width:23%;">Trajectory</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for p in _ladder %}
-      {% set _spark = p.spark | default([0,0,0,0,0,0,0,0]) %}
-      {% set _smin = _spark | min %}
-      {% set _smax = _spark | max %}
-      {% set _srange = _smax - _smin %}
-      {% if _srange == 0 %}{% set _srange = 1 %}{% endif %}
-      {% set _sw = 100 %}
-      {% set _sh = 20 %}
-      {% set _sp = [] %}
-      {% for v in _spark %}
-        {% set _x = loop.index0 * _sw / (_spark | length - 1) %}
-        {% set _y = _sh - 2 - ((v - _smin) / _srange) * (_sh - 4) %}
-        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-      {% endfor %}
-      {% set _lastpt = _sp[-1].split(',') %}
-      <tr>
-        <td><span class="ld-segment">{{ p.segment }}</span></td>
-        <td class="num">{{ '%.1f'|format(p.weight) }}%</td>
-        <td class="num r-muted">{{ '%.1f'|format(p.target) }}%</td>
-        <td class="num {% if p.drift.startswith('+') %}r-accent{% else %}r-muted{% endif %}">{{ p.drift }}</td>
-        <td class="num {% if p.ret_contrib.startswith('+') %}r-pos{% else %}r-neg{% endif %}">{{ p.ret_contrib }}</td>
-        <td class="num">{{ p.vol_contrib }}</td>
-        <td class="num">{{ '%.2f'|format(p.beta) }}</td>
-        <td>
-          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="32"
-               preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg"
-               style="display:block; vertical-align:middle;">
-            <polyline points="{{ _sp | join(' ') }}"
-                      stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
-          </svg>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-{% else %}
-  <p class="r-muted">Ladder rows were not resolvable for this window.</p>
-{% endif %}
-
-<p style="margin-top: 4pt; font-family: 'Source Serif 4', Georgia, serif; font-size: 8.8pt; line-height: 1.5; color: #4a4a4a; font-style: italic;">
-  Reference weights are user-configured; drift is the observed deviation
-  from those references. Return and volatility contributions are written at
-  the portfolio level and do not add linearly &mdash; covariance bends the
-  accounting.
-</p>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 4 · QUAD — style box / region split / sector rotation / corr mini-heatmap
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part III · Four Frames</p>
-<h2 class="sp-title">Lenses stacked, each reading a different axis</h2>
-<p class="sp-deck">
-  Style box, region split, sector rotation, segment correlations. Each
-  frame a different lens on the same month-end book.
-</p>
-
-<div class="rq-grid">
-  <div class="rq-main">
-
-    <div class="rq-quads">
-      <div class="rq-quad-row">
-
-        <!-- Q1: Style box 3x3 -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Style Box · 3 × 3</div>
-          <div class="rq-quad-value">{{ style_box_label | default('Large Growth · 18%') }}</div>
-          {% set _sb = style_box | default([[0.08,0.12,0.04],[0.06,0.14,0.06],[0.24,0.18,0.08]]) %}
-          {% set _sbl = style_box_labels | default({'rows':['Small','Mid','Large'],'cols':['Value','Core','Growth']}) %}
-          <svg viewBox="0 0 180 68" width="100%" height="120" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            {% set _cw = 38 %}
-            {% set _ch = 16 %}
-            {% set _gx = 34 %}
-            {% set _gy = 8 %}
-            {% for r in range(3) %}
-              {% for c in range(3) %}
-                {% set _v = _sb[r][c] %}
-                {% set _op = _v * 3.5 %}
-                {% if _op > 1 %}{% set _op = 1 %}{% endif %}
-                <rect x="{{ _gx + c * _cw }}" y="{{ _gy + r * _ch }}"
-                      width="{{ _cw - 1 }}" height="{{ _ch - 1 }}"
-                      fill="#B8956A" fill-opacity="{{ '%.2f' % _op }}"
-                      stroke="#F7F5EF" stroke-width="0.5"/>
-                <text x="{{ _gx + c * _cw + _cw/2 }}" y="{{ _gy + r * _ch + _ch/2 + 2 }}"
-                      text-anchor="middle"
-                      fill="{{ '#0A0A0A' if _op < 0.45 else '#F7F5EF' }}"
-                      font-size="6" font-family="JetBrains Mono, monospace">{{ '%.0f'|format(_v * 100) }}%</text>
-              {% endfor %}
-            {% endfor %}
-            {# row labels #}
-            {% for r in range(3) %}
-              <text x="{{ _gx - 4 }}" y="{{ _gy + r * _ch + _ch/2 + 2 }}"
-                    text-anchor="end" fill="#4a4a4a"
-                    font-size="6.4" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ _sbl.rows[r] | upper }}</text>
-            {% endfor %}
-            {# col labels #}
-            {% for c in range(3) %}
-              <text x="{{ _gx + c * _cw + _cw/2 }}" y="{{ _gy + 3 * _ch + 12 }}"
-                    text-anchor="middle" fill="#4a4a4a"
-                    font-size="6.4" font-family="Geist, sans-serif" letter-spacing="0.08em">{{ _sbl.cols[c] | upper }}</text>
-            {% endfor %}
-          </svg>
-          <div class="rq-quad-foot">Weight percent by size &times; style intersection.</div>
-        </div>
-
-        <!-- Q2: Region split -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Region Split</div>
-          <div class="rq-quad-value">{{ region_label | default('US · 72.5%') }}</div>
-          {% set _rs = region_split | default([
-            {'name':'US','v':72.5},
-            {'name':'Intl Dev.','v':18.4},
-            {'name':'EM','v':6.0},
-            {'name':'Cash','v':3.1},
-          ]) %}
-          <svg viewBox="0 0 180 68" width="100%" height="120" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            {% set _cursor = 0 %}
-            {% for r in _rs %}
-              {% set _w = 170 * r.v / 100 %}
-              {% set _op = 0.40 + loop.index0 * 0.18 %}
-              {% if _op > 0.95 %}{% set _op = 0.95 %}{% endif %}
-              <rect x="{{ 5 + _cursor }}" y="28" width="{{ _w }}" height="14"
-                    fill="#B8956A" fill-opacity="{{ _op }}"
-                    stroke="#F7F5EF" stroke-width="0.6"/>
-              <text x="{{ 5 + _cursor + _w/2 }}" y="52"
-                    text-anchor="middle" fill="#4a4a4a"
-                    font-size="6.6" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ r.name }}</text>
-              <text x="{{ 5 + _cursor + _w/2 }}" y="62"
-                    text-anchor="middle" fill="#6B6B6B"
-                    font-size="6.4" font-family="JetBrains Mono, monospace">{{ '%.1f'|format(r.v) }}%</text>
-              {% set _cursor = _cursor + _w %}
-            {% endfor %}
-            <text x="5" y="16" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">REGION · WEIGHT %</text>
-          </svg>
-          <div class="rq-quad-foot">MSCI region classification, month-end weights.</div>
-        </div>
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>PORTFOLIO SEGMENT</strong>
+        <span>{{ v3.as_of_label | default(quarter_label | default('—')) }} &middot; 01/02</span>
       </div>
+    </div>
 
-      <div class="rq-quad-row">
+    <div class="pq-pdf-gold-rule"></div>
 
-        <!-- Q3: Sector rotation 12M -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Sector Rotation · 12M</div>
-          <div class="rq-quad-value">{{ rotation_label | default('Top 4 · TR') }}</div>
-          {% set _rot = sector_rotation | default([
-            {'name':'Technology','series':[0,1.2,2.8,3.4,4.1,5.2,6.1,7.4,8.8,9.6,10.8,11.8]},
-            {'name':'Energy','series':[0,0.8,1.4,2.2,2.8,3.6,4.4,5.2,6.1,6.8,7.6,8.2]},
-            {'name':'Financials','series':[0,0.4,0.8,1.2,1.8,2.2,2.8,3.2,3.8,4.2,4.6,4.8]},
-            {'name':'Healthcare','series':[0,0.2,0.6,0.9,1.3,1.6,2.1,2.4,2.8,3.1,3.3,3.5]},
-          ]) %}
-          {% set _rot_all = [] %}
-          {% for s in _rot %}{% for v in s.series %}{% set _ = _rot_all.append(v) %}{% endfor %}{% endfor %}
-          {% set _rmin = _rot_all | min %}
-          {% set _rmax = _rot_all | max %}
-          {% set _rrange = _rmax - _rmin %}
-          {% if _rrange == 0 %}{% set _rrange = 1 %}{% endif %}
-          <svg viewBox="0 0 180 68" width="100%" height="120" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            <line x1="5" y1="58" x2="175" y2="58" stroke="#c9c4b8" stroke-width="0.3"/>
-            {% set _colors = ['#0A0A0A','#B8956A','#6B6B6B','#A84C4C'] %}
-            {% set _styles = ['','','stroke-dasharray="2,2"','stroke-dasharray="3,1"'] %}
-            {% for s in _rot %}
-              {% set _pts = [] %}
-              {% for v in s.series %}
-                {% set _x = 5 + loop.index0 * 170 / (s.series | length - 1) %}
-                {% set _y = 58 - ((v - _rmin) / _rrange) * 40 %}
-                {% set _ = _pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-              {% endfor %}
-              {% set _ci = loop.index0 %}
-              <polyline points="{{ _pts | join(' ') }}"
-                        fill="none"
-                        stroke="{{ _colors[_ci] }}"
-                        stroke-width="{{ '1.2' if _ci < 2 else '0.9' }}"
-                        {% if _styles[_ci] %}stroke-dasharray="{{ _styles[_ci].split('\"')[1] }}"{% endif %}/>
-              {% set _end = _pts[-1].split(',') %}
-              <text x="{{ (_end[0] | float) + 2 }}" y="{{ (_end[1] | float) + 2 }}"
-                    fill="{{ _colors[_ci] }}"
-                    font-family="Geist, sans-serif" font-size="5.8" letter-spacing="0.04em">{{ s.name[:4] }}</text>
-            {% endfor %}
-            <text x="5" y="16" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">TOTAL RETURN · CUMULATIVE %</text>
-          </svg>
-          <div class="rq-quad-foot">Top-4 sectors by observed 12M return.</div>
+    <div class="pq-pdf-eyebrow">Portfolio Segment &middot; Monthly</div>
+    <h1 class="pq-pdf-cover-title">
+      <em>Decomposed</em>&mdash;sector, factor, region.<br/>
+      where the bets actually are.
+    </h1>
+
+    <div style="margin-top: 18px;">
+      <div class="pq-pdf-kpi-row cols-4">
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">NAV</div>
+          <div class="pq-pdf-kpi-val">{{ v3.nav.value | default('—') }}</div>
+          {% if v3.nav.delta %}<div class="pq-pdf-kpi-delta pos">{{ v3.nav.delta }}</div>{% endif %}
         </div>
-
-        <!-- Q4: Segment correlation mini-heatmap -->
-        <div class="rq-quad">
-          <div class="rq-quad-label">Correlation · 5 × 5</div>
-          <div class="rq-quad-value">{{ corr_label | default('Tech-Fin · 0.54') }}</div>
-          {% set _cl = segment_corr_labels | default(['Tech','Fin','Health','Energy','REITs']) %}
-          {% set _cm = segment_corr_matrix | default([
-            [1.00, 0.54, 0.38, 0.22, 0.41],
-            [0.54, 1.00, 0.32, 0.28, 0.48],
-            [0.38, 0.32, 1.00, 0.18, 0.36],
-            [0.22, 0.28, 0.18, 1.00, 0.24],
-            [0.41, 0.48, 0.36, 0.24, 1.00],
-          ]) %}
-          <svg viewBox="0 0 180 68" width="100%" height="120" preserveAspectRatio="none"
-               xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-            {% set _cw = 11 %}
-            {% set _ch = 9 %}
-            {% set _gx = 32 %}
-            {% set _gy = 10 %}
-            {% for r in range(5) %}
-              {% for c in range(5) %}
-                {% set _val = _cm[r][c] %}
-                {% if r == c %}
-                  <rect x="{{ _gx + c * _cw }}" y="{{ _gy + r * _ch }}"
-                        width="{{ _cw - 0.5 }}" height="{{ _ch - 0.5 }}"
-                        fill="#f7f3ec" stroke="#c9c4b8" stroke-width="0.3"/>
-                {% else %}
-                  {% set _av = _val if _val >= 0 else -_val %}
-                  {% set _fill = '#B8956A' if _val >= 0 else '#A84C4C' %}
-                  <rect x="{{ _gx + c * _cw }}" y="{{ _gy + r * _ch }}"
-                        width="{{ _cw - 0.5 }}" height="{{ _ch - 0.5 }}"
-                        fill="{{ _fill }}" fill-opacity="{{ '%.2f' % _av }}"
-                        stroke="#F7F5EF" stroke-width="0.3"/>
-                {% endif %}
-              {% endfor %}
-              <text x="{{ _gx - 3 }}" y="{{ _gy + r * _ch + _ch/2 + 1.5 }}"
-                    text-anchor="end" fill="#4a4a4a"
-                    font-size="5.4" font-family="Geist, sans-serif" letter-spacing="0.04em">{{ _cl[r] }}</text>
-            {% endfor %}
-            {% for c in range(5) %}
-              <text x="{{ _gx + c * _cw + _cw/2 }}" y="{{ _gy - 2 }}"
-                    text-anchor="middle" fill="#4a4a4a"
-                    font-size="5.4" font-family="Geist, sans-serif" letter-spacing="0.04em">{{ _cl[c] }}</text>
-            {% endfor %}
-            <text x="5" y="66" fill="#6B6B6B" font-size="6.2" font-family="Geist, sans-serif" letter-spacing="0.12em">BRONZE POS · FAINT-RED NEG</text>
-          </svg>
-          <div class="rq-quad-foot">90D Pearson among top five segments.</div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Holdings</div>
+          <div class="pq-pdf-kpi-val">{{ v3.holdings.value | default('—') }}</div>
+          {% if v3.holdings.delta %}<div class="pq-pdf-kpi-delta">{{ v3.holdings.delta }}</div>{% endif %}
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Avg Position</div>
+          <div class="pq-pdf-kpi-val">{{ v3.avg_pos.value | default('—') }}</div>
+          {% if v3.avg_pos.delta %}<div class="pq-pdf-kpi-delta">{{ v3.avg_pos.delta }}</div>{% endif %}
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Active Share</div>
+          <div class="pq-pdf-kpi-val">{{ v3.active_share.value | default('—') }}</div>
+          {% if v3.active_share.delta %}<div class="pq-pdf-kpi-delta">{{ v3.active_share.delta }}</div>{% endif %}
         </div>
       </div>
     </div>
 
-    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
-      Fig. 2. Four lenses on the same month-end book. Each frame is
-      descriptive &mdash; a single observation on a single axis.
-    </div>
-
-  </div>
-
-  <div class="rq-side">
-    <div class="rq-notes">
-      <div class="rq-notes-eyebrow">Right Rail · Notes</div>
-      {% set _rails = right_rail_notes | default([
-        'Segmentation is a lens, not a prescription.',
-        'Boundaries are conventions — GICS, MSCI, or style-box.',
-        'Weights are observed month-end, not intra-month.',
-        'Concentration is surfaced for transparency.',
-        'Informational only — not a portfolio instruction.',
-      ]) %}
-      {% for note in _rails %}
-      <div class="rq-notes-item">
-        <span class="rq-notes-num">{{ '%02d' % loop.index }}</span>
-        <span class="rq-notes-def">{{ note }}</span>
+    <h2 class="pq-pdf-section-title sm">Sector &middot; 섹터 분해</h2>
+    <div class="pq-pdf-alloc-list">
+      {% for s in v3.sectors | default([]) %}
+      <div class="pq-pdf-alloc-row{% if s.flat %} flat{% endif %}">
+        <span class="pq-pdf-alloc-name"><strong>{{ s.name }}</strong></span>
+        <span class="pq-pdf-alloc-bar">
+          <span class="pq-pdf-alloc-fill" style="width:{{ s.pct | default(0) }}%"></span>
+        </span>
+        <span class="pq-pdf-alloc-pct{% if s.tone == 'neg' %} neg{% endif %}">{{ s.pct_display | default(s.pct ~ '%') }}</span>
       </div>
       {% endfor %}
     </div>
-  </div>
-</div>
 
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 5 · EDITORIAL
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part IV · Editorial</p>
-<h2 class="sp-title">What the desk is sitting with</h2>
-<p class="sp-deck">
-  A sentence the desk is holding this month, and the short list of questions
-  this segment report, by construction, does not answer.
-</p>
-
-<div class="ed-quote-wrap">
-  <div class="ed-quote-cell">
-    <blockquote class="ed-quote">
-      {{ pull_quote | default("Segments are not strategies — they are the chairs your decisions happened to sit in.") }}
-    </blockquote>
-    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Research Desk") }}</div>
-  </div>
-</div>
-
-<div class="ed-notans-head">What this segment report does not answer</div>
-
-{% set _notans = not_answered | default([
-  'Whether any single weight is appropriate for a given household.',
-  'Tax consequences of rebalancing between segments.',
-  'Forward-looking style or sector rotation.',
-  'Correlated news shocks outside the observation window.',
-  'Personal liquidity needs by segment.',
-]) %}
-{% set _half = ((_notans | length) / 2) | round(0, 'ceil') | int %}
-
-<div class="ed-notans-grid">
-  <div class="ed-notans-col">
-    {% for item in _notans[:_half] %}
-      <div class="ed-notans-item">
-        <span class="ed-notans-num">{{ '%02d' % loop.index }}</span>{{ item }}
+    <h2 class="pq-pdf-section-title sm">Geography &middot; 지역</h2>
+    <div class="pq-pdf-two-col">
+      <div>
+        <div class="pq-pdf-alloc-list">
+          {% for g in v3.geography | default([]) %}
+          <div class="pq-pdf-alloc-row{% if g.flat %} flat{% endif %}">
+            <span class="pq-pdf-alloc-name"><strong>{{ g.name }}</strong></span>
+            <span class="pq-pdf-alloc-bar">
+              <span class="pq-pdf-alloc-fill" style="width:{{ g.pct | default(0) }}%"></span>
+            </span>
+            <span class="pq-pdf-alloc-pct">{{ g.pct_display | default(g.pct ~ '%') }}</span>
+          </div>
+          {% endfor %}
+        </div>
       </div>
-    {% endfor %}
-  </div>
-  <div class="ed-notans-col">
-    {% for item in _notans[_half:] %}
-      <div class="ed-notans-item">
-        <span class="ed-notans-num">{{ '%02d' % (_half + loop.index) }}</span>{{ item }}
+      <div>
+        <div class="pq-pdf-col-title">FX Exposure</div>
+        <div class="pq-pdf-card">
+          {% for f in v3.fx | default([]) %}
+          <div class="pq-pdf-flex-between"{% if not loop.last %} style="margin-bottom: 12px;"{% endif %}>
+            <div style="font-family: var(--font-mono); font-size: 10px; color: var(--r-ink-3);">{{ f.ccy }}</div>
+            <div style="font-family: var(--font-serif); font-size: 24px; font-weight: 500;">{{ f.pct }}</div>
+          </div>
+          {% endfor %}
+          <hr class="pq-pdf-divider"/>
+          <div style="font-size: 10px; color: var(--r-ink-3);">{{ v3.fx_note | default('환노출 분포만 관찰. 헤지 의사결정은 별도 검토 항목.') }}</div>
+        </div>
       </div>
-    {% endfor %}
-  </div>
-</div>
+    </div>
 
-<p style="margin-top: 14pt; font-family: 'Source Serif 4', Georgia, serif; font-style: italic; font-size: 7.6pt; color: #8a8a8a; text-align: center; line-height: 1.5;">
-  <em>Past performance does not guarantee future results. This document is informational and does not constitute investment advice. &nbsp;·&nbsp; 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.</em>
-</p>
+    <div class="pq-pdf-page-footer">
+      <span>Portfolio Segment &middot; Pro</span>
+      <span>Page 01</span>
+    </div>
 
+    {% include '_disclaimer.html' %}
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 6 · COLOPHON
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
+  </section>
 
-<div class="co-wrap">
+  {# ═════════════════════════ PAGE 2 ═════════════════════════ #}
+  <section class="pq-pdf-page">
 
-  <div class="co-head">Colophon</div>
-  <div class="co-rule-small"></div>
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>PORTFOLIO SEGMENT</strong>
+        <span>{{ v3.as_of_label | default(quarter_label | default('—')) }} &middot; 02/02</span>
+      </div>
+    </div>
 
-  <div class="co-body">
-    <p style="margin: 0 0 10pt 0;">
-      Prepared for <strong>{{ user_name }}</strong> on
-      <strong>{{ generated_at }}</strong>. Portfolio Segment
-      <strong>No. {{ '%02d' % _issue_no }}</strong> &middot;
-      Period <strong>{{ period_label | default('April 2026') }}</strong>.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data sources</span>
-    </p>
-    {# Wave 6 — 'Broker statements · month-end' prose-embedded fallback
-       removed. 'Broker statements' implies a broker connection we may
-       not have; Wave 5 TestNoHardcodedDataSources already forbids the
-       literal in list defaults. Service populates `data_sources` via
-       `resolve_user_data_lineage`; empty list renders neutral line. #}
-    {% set _ds = data_sources | default([]) %}
-    {% if _ds %}
-      {% for d in _ds %}
-        <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-          <span style="font-family: 'Geist', sans-serif; font-size: 7pt; letter-spacing: 0.18em; text-transform: uppercase; color: #B8956A; margin-right: 6pt;">{{ d.key | default(d.source | default('')) }}</span>
-          <span>{{ d.value | default(d.description | default('')) }}</span>
-        </p>
-      {% endfor %}
-    {% else %}
-      <p style="margin: 0 0 5pt 18pt; font-size: 9.2pt;">
-        Data sources not specified. Connect your broker in Settings to see data lineage.
-      </p>
-    {% endif %}
+    <div class="pq-pdf-gold-rule"></div>
 
-    <p style="margin: 10pt 0 10pt 0;">
-      <span class="co-key">Typeset in</span> &nbsp;
-      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono') }}.
-    </p>
-    <p style="margin: 0 0 0 0;">
-      <span class="co-key">Engine</span> &nbsp;
-      {{ engine_note | default('Historical record only. Portfolio segmentation pipeline.') }}.
-    </p>
-  </div>
+    <h2 class="pq-pdf-section-title sm">Factor &middot; 팩터 노출</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr>
+          <th>Factor</th>
+          <th class="right">Exposure</th>
+          <th class="right">vs S&amp;P</th>
+          <th class="right">MTD Contrib</th>
+          <th class="right">YTD Contrib</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in v3.factors | default([]) %}
+        <tr>
+          <td><strong>{{ f.factor }}</strong></td>
+          <td class="right">{{ f.exposure | default('—') }}</td>
+          <td class="right {{ f.vs_bench_tone | default('neutral') }}">{{ f.vs_bench | default('—') }}</td>
+          <td class="right {{ f.mtd_tone | default('neutral') }}">{{ f.mtd | default('—') }}</td>
+          <td class="right {{ f.ytd_tone | default('neutral') }}">{{ f.ytd | default('—') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">팩터 데이터 부족</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-  <div class="co-thin-rule"></div>
+    <h2 class="pq-pdf-section-title sm">Top 5 + Bottom 3 Holdings</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Name</th>
+          <th class="right">Weight</th>
+          <th class="right">MTD</th>
+          <th class="right">YTD</th>
+          <th class="right">Contrib MTD</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in v3.top_bottom | default([]) %}
+        <tr{% if h.bottom %} class="bottom-divider"{% endif %}>
+          <td><span class="pq-pdf-ticker">{{ h.ticker }}</span></td>
+          <td>{{ h.name | default('') }}</td>
+          <td class="right">{{ h.weight | default('—') }}</td>
+          <td class="right {{ h.mtd_tone | default('neutral') }}">{{ h.mtd | default('—') }}</td>
+          <td class="right {{ h.ytd_tone | default('neutral') }}">{{ h.ytd | default('—') }}</td>
+          <td class="right {{ h.contrib_tone | default('neutral') }}">{{ h.contrib | default('—') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">보유 종목 없음</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-  {% include '_disclaimer.html' %}
+    <div style="margin-top: 18px;">
+      <div class="pq-pdf-callout flat">
+        <div class="pq-pdf-callout-label">CFO&rsquo;s Note</div>
+        <p>{{ v3.cfo_note | default('포트폴리오 분해 결과를 별도 검토. 섹터 한도, 팩터 노출, 환노출 항목 점검.') }}</p>
+      </div>
+    </div>
 
-  <div class="co-thin-rule"></div>
+    <div class="pq-pdf-govblock">
+      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Pro</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Monthly</div></div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Methodology</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}Position-level decomposition &middot; 자기 보유 데이터 한정{% endif %}</div>
+      </div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Sources</div>
+        <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
+      </div>
+    </div>
 
-  <div class="co-sign">
-    {% with brand_kind='monogram', brand_size=64 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-    <div class="co-sign-house">PivoxQuant Research Desk</div>
-    <div class="co-sign-ref">Doc ref &middot; {{ _doc_ref }}</div>
-    <div class="co-sign-time">Generated &middot; {{ generated_at }}</div>
-  </div>
+    <div class="pq-pdf-page-footer">
+      <span>Portfolio Segment &middot; Pro &middot; pivoxquant.com</span>
+      <span>Page 02</span>
+    </div>
 
+    {% include '_disclaimer.html' %}
+
+  </section>
 </div>
 
 </body>

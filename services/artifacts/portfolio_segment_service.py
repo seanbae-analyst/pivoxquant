@@ -433,30 +433,153 @@ class PortfolioSegmentService:
         )
         return ctx.to_dict()
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map generate_for_user(...) onto the v3 2-page Pro design shape
+        used by templates/portfolio_segment.html. Mirrors the React component.
+
+        Missing fields fall back to em-dash. No directive vocabulary.
+        """
+        sectors_raw = data.get("sector_rows") or []
+        regions_raw = data.get("region_rows") or []
+        styles_raw  = data.get("style_rows") or []
+        ccy = (data.get("portfolio_ccy") or "USD").upper()
+        nav = data.get("portfolio_value")
+        narrative = data.get("narrative") or ""
+        label = data.get("quarter_label") or "—"
+
+        def _money(v: Any) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            if n >= 1_000_000_000:
+                return f"${n/1_000_000_000:.2f}B"
+            if n >= 1_000_000:
+                return f"${n/1_000_000:.2f}M"
+            if n >= 1_000:
+                return f"${n/1_000:.0f}k"
+            return f"${n:,.0f}"
+
+        holdings_count = sum(int(r.get("count") or 0) for r in sectors_raw) or len(sectors_raw)
+        avg_pos = (100.0 / holdings_count) if holdings_count else 0
+        kpi = {
+            "nav":          {"value": _money(nav), "delta": ""},
+            "holdings":     {"value": str(holdings_count) if holdings_count else "—",
+                              "delta": "보유 종목 수"},
+            "avg_pos":      {"value": f"{avg_pos:.1f}%" if avg_pos else "—",
+                              "delta": "균등 분배 기준"},
+            "active_share": {"value": "—", "delta": "vs 벤치마크"},
+        }
+
+        def _alloc_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            if not rows:
+                return []
+            max_pct = max((float(r.get("weight_pct") or 0) for r in rows), default=0)
+            out = []
+            for r in rows[:8]:
+                pct = float(r.get("weight_pct") or 0)
+                bar = (pct / max_pct * 100.0) if max_pct > 0 else 0
+                out.append({
+                    "name":        r.get("name") or r.get("label") or "—",
+                    "pct":         round(bar, 1),
+                    "pct_display": f"{pct:.1f}%",
+                    "tone":        None,
+                    "flat":        bar < 35,
+                })
+            return out
+
+        sectors = _alloc_rows(sectors_raw)
+        for s_view, s_raw in zip(sectors, sectors_raw):
+            try:
+                w = float(s_raw.get("weight_pct") or 0)
+                if w > 35.0:
+                    s_view["tone"] = "neg"
+                    s_view["pct_display"] = f"{w:.1f}% / 35% lim"
+            except (TypeError, ValueError):
+                pass
+
+        geography = _alloc_rows(regions_raw)
+
+        usd_pct = krw_pct = 0.0
+        for r in regions_raw:
+            name = (r.get("name") or "").lower()
+            try:
+                pct = float(r.get("weight_pct") or 0)
+            except (TypeError, ValueError):
+                pct = 0.0
+            if "kr" in name or "korea" in name:
+                krw_pct += pct
+            else:
+                usd_pct += pct
+        if usd_pct or krw_pct:
+            fx = [
+                {"ccy": "USD", "pct": f"{usd_pct:.0f}%"},
+                {"ccy": "KRW", "pct": f"{krw_pct:.0f}%"},
+            ]
+        else:
+            fx = [{"ccy": ccy, "pct": "100%"}]
+
+        factors: list[dict[str, Any]] = []
+        for r in styles_raw[:6]:
+            ret = r.get("return_pct")
+            tone = "pos" if (ret or 0) > 0 else ("neg" if (ret or 0) < 0 else "neutral")
+            factors.append({
+                "factor":         r.get("name") or "—",
+                "exposure":       f"{float(r.get('weight_pct') or 0):.2f}",
+                "vs_bench":       "—",
+                "vs_bench_tone":  "neutral",
+                "mtd":            f"{ret:+.2f}%" if ret is not None else "—",
+                "mtd_tone":       tone,
+                "ytd":            "—",
+                "ytd_tone":       "neutral",
+            })
+
+        return {
+            "as_of_label":   label,
+            "report_tag":    f"PS-{label.replace(' ', '-')}",
+            "nav":           kpi["nav"],
+            "holdings":      kpi["holdings"],
+            "avg_pos":       kpi["avg_pos"],
+            "active_share":  kpi["active_share"],
+            "sectors":       sectors,
+            "geography":     geography,
+            "fx":            fx,
+            "fx_note":       "환노출 분포 관찰. 헤지 결정은 별도 항목.",
+            "factors":       factors,
+            "top_bottom":    [],
+            "cfo_note":      narrative or "포트폴리오 분해 결과를 별도 검토.",
+        }
+
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             html = self._fallback_html(data)
         else:
             try:
+                ctx = dict(data)
+                ctx["v3"] = self._to_v3_shape(data)
                 tpl = env.get_template("portfolio_segment.html")
-                html = tpl.render(**data)
+                html = tpl.render(**ctx)
             except Exception as exc:
-                logger.warning("portfolio_segment render failed: %s", exc)
+                logger.warning("portfolio_segment v3 render failed: %s", exc)
                 html = self._fallback_html(data)
-        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
         scrubbed = safe_scrub(html, context="portfolio_segment") or html
         if not is_compliant(scrubbed):
             logger.warning("legal_filter fail: portfolio_segment")
         return scrubbed
 
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
+
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
         if HTML is None:
             return None
-        html_str = self.render_html(data)
+        html_str = self.render_pdf_html(data)
         try:
             return HTML(string=html_str).write_pdf()
         except Exception as exc:  # pragma: no cover
