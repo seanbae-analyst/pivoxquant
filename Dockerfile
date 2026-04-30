@@ -40,6 +40,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN playwright install chromium --with-deps \
     || echo "WARNING: playwright install failed; Brag Card PNG will be skipped"
 
+# ── Re-register Pretendard AFTER playwright (which can overwrite fc cache) ──
+# playwright --with-deps apt-installs fonts that trigger fontconfig
+# rebuild. Re-running fc-cache here ensures Pretendard is in the final
+# system-wide fontconfig index. Fail-fast if Pretendard not found.
+RUN set -eux \
+    && fc-cache -f -v 2>&1 | tail -3 \
+    && (fc-list | grep -i pretendard | head -3 \
+        || (echo "FATAL: Pretendard missing from fc-list at runtime" \
+            && ls -la /usr/share/fonts/opentype/pretendard/ \
+            && exit 1))
+
 COPY . .
 
 # ── Journal Companion safety default ────────────────────────────────────────
