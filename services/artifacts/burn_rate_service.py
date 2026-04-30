@@ -462,14 +462,25 @@ class BurnRateService:
                     "detail":   note,
                 })
 
-        bm_data = data.get("by_market") or {}
+        # by_market: service.generate_for_user produces a *list* of
+        # {market, trades, burn} rows; sample_data sometimes ships a *dict*
+        # ({"us": {...}, "kr": {...}}). Normalise both shapes here so the
+        # v3 cron path renders, not just the preview path.
+        bm_raw = data.get("by_market") or []
+        if isinstance(bm_raw, dict):
+            bm_pairs = [(k, v) for k, v in bm_raw.items()]
+        elif isinstance(bm_raw, list):
+            bm_pairs = [(r.get("market") or "—", r) for r in bm_raw if isinstance(r, dict)]
+        else:
+            bm_pairs = []
+
         by_market = []
-        if bm_data:
+        if bm_pairs:
             try:
-                tot = sum(float((v or {}).get("burn") or 0) for v in bm_data.values())
+                tot = sum(float((v or {}).get("burn") or 0) for _, v in bm_pairs)
             except Exception:
                 tot = 0
-            for name, info in bm_data.items():
+            for name, info in bm_pairs:
                 try:
                     val = float((info or {}).get("burn") or 0)
                 except (TypeError, ValueError):

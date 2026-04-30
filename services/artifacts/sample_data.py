@@ -1287,6 +1287,13 @@ def sample_burn_rate() -> dict[str, Any]:
             {"cat": "Utilities",     "this":  152, "last":  148, "avg3":  150, "yoy":  1.3, "spark": [0.45, 0.46, 0.48, 0.50, 0.48, 0.50, 0.52, 0.50]},
             {"cat": "Health",        "this":  118, "last":   84, "avg3":  102, "yoy":  4.0, "spark": [0.30, 0.32, 0.34, 0.40, 0.42, 0.46, 0.50, 0.54]},
         ],
+        # by_market — burn split across US vs KR books (service expects dict).
+        # Without this, _to_v3_shape() previously raised "'list' object has no
+        # attribute 'items'" → admin preview fell back to 173-byte stub.
+        "by_market": {
+            "us": {"burn": 2120.0, "trades": 28},
+            "kr": {"burn":  710.0, "trades":  9},
+        },
         "share_quad": [
             {"n": "Housing",   "v": 1180},
             {"n": "Food",      "v":  420},
@@ -1338,10 +1345,6 @@ def sample_burn_rate() -> dict[str, Any]:
         "burn_total":       639_000,
         "portfolio_value": 51_000_000,
         "burn_pct":         1.25,
-        "by_market": [
-            {"market": "US", "trades": 11, "notional": 21_000_000, "burn": 542_000},
-            {"market": "KR", "trades":  7, "notional": 11_500_000, "burn":  97_000},
-        ],
         "disclaimer": DISCLAIMER,
     }
 
