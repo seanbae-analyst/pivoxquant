@@ -1,860 +1,228 @@
 {# ══════════════════════════════════════════════════════════════════════════
-   Dividend Income — Goldman IC v2 Editorial Redesign (6-page flagship)
-   Monthly dividend observation · YTD + YoY.  Observation only.
+   Dividend Income — Pro · 1-page · Monthly (CEO design v3, 2026-04-30)
+
+   Source: frontend/src/components/reports/templates/dividend-income.tsx
+   1:1 port of the React component into a print-oriented Jinja template.
+
+   Sections (top → bottom):
+     1. Header        — pivoxquant wordmark + PRO chip + asOf
+     2. GoldRule
+     3. Eyebrow       — "Dividend Income · Monthly"
+     4. Cover title   — "Cash, arrived—every dollar that landed this month."
+     5. KPI row       — Received this Month / YTD Income / Yield on Cost / Run Rate (12m)
+     6. Payments table
+     7. Two-col body  — 12-Month Income Trail (SVG bar chart) | Top Contributors
+     8. Reinvestment callout
+     9. Governance block + Page footer
+    10. Disclaimer    — _disclaimer.html (자본시장법 verbatim)
+
+   v3 shape (built by DividendIncomeService._to_v3_shape):
+     v3.as_of_label, v3.report_tag,
+     v3.this_month  ({value, delta}),
+     v3.ytd_income  ({value, delta}),
+     v3.yield_on_cost ({value, delta}),
+     v3.run_rate ({value, delta}),
+     v3.payments (list of {date, ticker, name, shares, per_share, received, yield_pct}),
+     v3.payments_count, v3.total_received, v3.avg_yield,
+     v3.top_contributors (list of {ticker, pct, amount, flat}),
+     v3.trail_bars (list of {x, y, h}),  # 12-month SVG bar geometry
+     v3.reinvestment_note (str)
+
+   Compliance — observation only. No buy/sell/추천/조언 directive vocab.
    ══════════════════════════════════════════════════════════════════════════ #}
+{%- set v3 = v3 | default({}) -%}
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <title>Dividend Income — {{ month_label }} — {{ user_name }}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 22mm 20mm 22mm 20mm;
-      @top-left {
-        content: "PIVOXQUANT  ·  DIVIDEND INCOME";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7.2pt;
-        letter-spacing: 0.36em;
-        text-transform: uppercase;
-        color: #B8956A;
-      }
-      @top-right {
-        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  PQ-DI-04";
-        font-family: "JetBrains Mono", monospace;
-        font-size: 7pt;
-        letter-spacing: 0.14em;
-        color: #6B6B6B;
-      }
-      @bottom-left {
-        content: "Monthly dividend record — informational only.";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7pt;
-        font-style: italic;
-        color: #8a8a8a;
-      }
-      @bottom-right {
-        content: counter(page) " / " counter(pages);
-        font-family: "JetBrains Mono", monospace;
-        font-size: 8pt;
-        color: #4a4a4a;
-      }
-    }
-    @page :first {
-      @top-left { content: none; }
-      @top-right { content: none; }
-      @bottom-left { content: none; }
-      @bottom-right { content: none; }
-    }
-    {% include '_report_css.html' %}
-
-    /* ───────── P1 · COVER ───────── */
-    .cv { position: relative; padding-top: 0; }
-    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
-    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
-    .cv-issue {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
-      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
-    }
-    .cv-issue .cv-issue-key { color: #0A0A0A; }
-    .cv-hero {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 44pt; line-height: 1.12; letter-spacing: -0.02em;
-      color: #0A0A0A; margin: 44pt 0 44pt 0;
-    }
-    .cv-hero span { display: block; }
-    .cv-hero span + span { padding-left: 36pt; }
-    .cv-hero span + span + span { padding-left: 72pt; color: #B8956A; }
-    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; overflow: visible; }
-    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
-    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
-    .cv-kpi-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #8a8a8a; margin-bottom: 4pt;
-    }
-    .cv-kpi-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 18pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums; letter-spacing: -0.015em; line-height: 1.02;
-    }
-    .cv-kpi-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
-    }
-    .cv-foot {
-      margin-top: 40pt; text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 9pt; color: #6B6B6B; letter-spacing: 0.02em;
-    }
-
-    /* ───────── Shared ───────── */
-    .sp-part {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin: 0 0 2pt 0;
-    }
-    .sp-title {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 26pt; font-weight: 400; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
-    }
-    .sp-deck {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
-      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
-    }
-
-    /* ───────── P2 · SPREAD (60/40) ───────── */
-    .sp-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed; }
-    .sp-main { display: table-cell; width: 70%; vertical-align: top; }
-    .sp-margin { display: table-cell; width: 30%; vertical-align: top; }
-    .sp-fig-title {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.18em; text-transform: uppercase;
-      color: #0A0A0A; font-weight: 600; margin-bottom: 6pt;
-    }
-    .sp-fig-caption {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
-      line-height: 1.4; margin-top: 6pt;
-    }
-    .sp-prose {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.6; color: #202020;
-      border-top: 0.35pt solid #c9c4b8; padding-top: 10pt; margin-top: 14pt;
-    }
-    .sp-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
-    .sp-prose > p:first-child::first-letter {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 28pt; line-height: 0.88; font-weight: 500;
-      color: #B8956A; /* float+padding removed for WeasyPrint 68.1 compat */ font-style: normal;
-    }
-    .sp-margin-block {
-      border-left: 0.35pt solid #B8956A;
-      padding: 2pt 0 2pt 9pt; margin-bottom: 12pt;
-    }
-    .sp-margin-term {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 2pt;
-    }
-    .sp-margin-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 12pt; color: #0A0A0A;
-      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
-    }
-    .sp-margin-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8pt; line-height: 1.45; color: #6B6B6B; margin-top: 2pt;
-    }
-
-    /* ───────── P3 · LADDER ───────── */
-    .ld-table { width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0; table-layout: fixed; }
-    .ld-table th, .ld-table td {
-      padding: 7pt 5pt; text-align: left; vertical-align: middle;
-      border-bottom: 0.25pt solid #e4dfd2;
-    }
-    .ld-table thead th {
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.18em; text-transform: uppercase;
-      color: #6B6B6B; font-weight: 600;
-    }
-    .ld-table th.num,
-    .ld-table td.num {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-    .ld-table td.num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.8pt;
-    }
-    .ld-tkr {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-weight: 600; font-size: 9.2pt; letter-spacing: 0.02em; color: #0A0A0A;
-    }
-    .ld-note {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8pt; color: #4a4a4a;
-    }
-
-    /* ───────── P4 · QUAD ───────── */
-    .aq-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; }
-    .aq-main { display: table-cell; width: 66%; vertical-align: top; }
-    .aq-side { display: table-cell; width: 34%; vertical-align: top; }
-    .aq-quads { display: table; width: 100%; border-collapse: collapse; }
-    .aq-quad {
-      display: table-cell; width: 50%; padding: 12pt 14pt;
-      vertical-align: top; height: 180pt;
-    }
-    .aq-quad-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 3pt;
-    }
-    .aq-quad-sub {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; color: #6B6B6B; margin-bottom: 4pt;
-    }
-    .aq-rail { padding: 12pt 0 0 12pt; border-left: 0.35pt solid #c9c4b8; }
-    .aq-rail-eyebrow {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.28em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 8pt;
-    }
-    .aq-rail-item {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9pt; line-height: 1.5; color: #202020;
-      padding: 6pt 0; border-bottom: 0.15pt solid #e4dfd2;
-    }
-    .aq-rail-item:last-child { border-bottom: none; }
-    .aq-rail-n {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.2pt; color: #B8956A; margin-right: 6pt;
-    }
-
-    /* ───────── P5 · EDITORIAL ───────── */
-    .ed-quote-wrap {
-      min-height: 320pt; padding: 50pt 40pt 30pt 40pt;
-      display: table; width: 100%; text-align: center;
-    }
-    .ed-quote-cell { display: table-cell; vertical-align: middle; }
-    .ed-quote {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 34pt; line-height: 1.24; letter-spacing: -0.015em;
-      color: #0A0A0A; margin: 0;
-    }
-    .ed-quote-attr {
-      margin-top: 26pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #B8956A;
-    }
-    .ed-quote-attr::before, .ed-quote-attr::after {
-      content: "——"; color: #B8956A; opacity: 0.5; margin: 0 8pt; letter-spacing: 0;
-    }
-    .ed-watch-head {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 8pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #0A0A0A; font-weight: 600;
-      margin-top: 26pt; padding-top: 12pt; border-top: 0.5pt solid #0A0A0A;
-    }
-    .ed-twocol { display: table; width: 100%; margin-top: 10pt; border-collapse: separate; border-spacing: 18pt 0; }
-    .ed-col { display: table-cell; width: 50%; vertical-align: top; }
-    .ed-col ol {
-      margin: 0; padding: 0 0 0 18pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.6; color: #202020;
-    }
-    .ed-col ol li { margin-bottom: 6pt; }
-    .ed-legal {
-      font-size: 6pt; color: #8a8a8a; margin-top: 16pt;
-      font-family: "Source Serif 4", Georgia, serif; font-style: italic; line-height: 1.4;
-    }
-
-    /* ───────── P6 · COLOPHON ───────── */
-    .co-wrap { padding: 0; text-align: left; }
-    .co-body p { margin: 0 0 8pt 0 !important; }
-    .co-head {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 4pt;
-    }
-    .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
-    .co-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.7; color: #202020; max-width: 440pt;
-    }
-    .co-body .co-key {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.4pt; letter-spacing: 0.18em; text-transform: uppercase; color: #6B6B6B;
-    }
-    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
-    .co-sign { text-align: center; margin-top: 14pt; }
-    .co-sign-house {
-      margin-top: 16pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
-      color: #0A0A0A; font-weight: 500;
-    }
-    .co-sign-ref {
-      margin-top: 10pt;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
-    }
-    .co-sign-time {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
-    }
-    section.disclaimer.pq-disclaimer {
-      border: none !important;
-      border-top: 0.35pt solid #c9c4b8 !important;
-      padding: 10pt 0 0 0 !important;
-      margin: 16pt 0 0 0 !important;
-      background: transparent !important;
-      font-size: 7.6pt !important;
-      line-height: 1.5 !important;
-    }
-    section.disclaimer.pq-disclaimer h5.disclaimer__title {
-      font-family: "Geist", -apple-system, sans-serif !important;
-      font-size: 7pt !important;
-      letter-spacing: 0.32em !important;
-      text-transform: uppercase !important;
-      color: #B8956A !important;
-      margin: 0 0 6pt 0 !important;
-    }
-  </style>
+  <title>Dividend Income — {{ v3.as_of_label | default(month_label) }} — {{ user_name }}</title>
+  <style>{% include '_dividend_income_v3_css.html' %}</style>
 </head>
 <body>
 
-{% set _issue_no = issue_number | default(4) %}
-{% set _doc_ref = doc_ref | default('PQ-DI-04 · v2026.04.22') %}
-{% set _hero = hero_headline | default([
-    'Dividends are slow letters.',
-    'Written quarterly,',
-    'opened monthly.'
-]) %}
+<div class="pq-report">
+  <section class="pq-pdf-page">
 
-{# ═════════════ P1 · COVER ═════════════ #}
-<section class="cv">
-
-  <div class="cv-wordmark">
-    {% with brand_kind='wordmark', brand_size=340 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-  </div>
-
-  <div class="cv-rule-thin"></div>
-  <div class="cv-issue">
-    DIVIDEND INCOME
-    &nbsp;·&nbsp; April 2026
-    &nbsp;·&nbsp; <span class="cv-issue-key">YTD</span>
-  </div>
-  <div class="cv-rule-thin"></div>
-
-  <h1 class="cv-hero">
-    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
-  </h1>
-
-  <div class="cv-rule-thin"></div>
-
-  {% set _kpi = kpis_cover | default({
-    'ytd_usd':        3240,
-    'monthly_usd':     412,
-    'yield_pct':       2.8,
-    'yoy_growth_pct':  6.4,
-  }) %}
-
-  <div class="cv-kpi4">
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">YTD DIVIDENDS</div>
-      <div class="cv-kpi-value">${{ '{:,}'.format(_kpi.ytd_usd) }}</div>
-      <div class="cv-kpi-foot">Gross of withholding, calendar year.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">MONTHLY</div>
-      <div class="cv-kpi-value">${{ '{:,}'.format(_kpi.monthly_usd) }}</div>
-      <div class="cv-kpi-foot">April, gross of withholding.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">YIELD</div>
-      <div class="cv-kpi-value">{{ '%.1f' % _kpi.yield_pct }}%</div>
-      <div class="cv-kpi-foot">Trailing twelve months / NAV.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">YOY GROWTH</div>
-      <div class="cv-kpi-value {% if _kpi.yoy_growth_pct >= 0 %}r-pos{% else %}r-neg{% endif %}">
-        {{ '%+.1f' % _kpi.yoy_growth_pct }}%
+    {# ───────── 1. Header ───────── #}
+    <div class="pq-pdf-header">
+      <div>
+        <span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span>
       </div>
-      <div class="cv-kpi-foot">Dividend dollars, year over year.</div>
+      <div class="pq-pdf-meta">
+        <strong>
+          <span class="pq-pdf-tier-chip pro">PRO</span>DIVIDEND INCOME
+        </strong>
+        <span>{{ v3.as_of_label | default(month_label | default('—')) }}</span>
+      </div>
     </div>
-  </div>
 
-  <p class="cv-foot">
-    Prepared for {{ user_name }} &nbsp;·&nbsp; Observation of dividend receipts.
-    Past performance does not guarantee future results.
-  </p>
-</section>
+    {# ───────── 2. Gold rule ───────── #}
+    <div class="pq-pdf-gold-rule"></div>
 
+    {# ───────── 3. Eyebrow ───────── #}
+    <div class="pq-pdf-eyebrow">Dividend Income · Monthly</div>
 
-{# ═════════════ P2 · SPREAD — Monthly bar chart ═════════════ #}
-<div class="r-page-break"></div>
+    {# ───────── 4. Cover title ───────── #}
+    <h1 class="pq-pdf-cover-title">
+      Cash, <em>arrived</em>&mdash;<br/>
+      every dollar that landed this month.
+    </h1>
 
-<p class="sp-part">Part I · Monthly Dividend Chart</p>
-<h2 class="sp-title">What the year paid, month by month</h2>
-<p class="sp-deck">
-  Twelve months of gross dividend receipts, observed from broker pay-dates.
-  Bronze highlights the month with the highest receipt to date.
-</p>
+    {# ───────── 5. KPI row (4-up) ───────── #}
+    <div style="margin-top: 24px;">
+      <div class="pq-pdf-kpi-row cols-4">
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Received this Month</div>
+          <div class="pq-pdf-kpi-val">{{ v3.this_month.value | default('—') }}</div>
+          {% if v3.this_month.delta %}
+          <div class="pq-pdf-kpi-delta pos">{{ v3.this_month.delta }}</div>
+          {% endif %}
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">YTD Income</div>
+          <div class="pq-pdf-kpi-val">{{ v3.ytd_income.value | default('—') }}</div>
+          {% if v3.ytd_income.delta %}
+          <div class="pq-pdf-kpi-delta pos">{{ v3.ytd_income.delta }}</div>
+          {% endif %}
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Yield on Cost</div>
+          <div class="pq-pdf-kpi-val">{{ v3.yield_on_cost.value | default('—') }}</div>
+          {% if v3.yield_on_cost.delta %}
+          <div class="pq-pdf-kpi-delta">{{ v3.yield_on_cost.delta }}</div>
+          {% endif %}
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">Run Rate (12m)</div>
+          <div class="pq-pdf-kpi-val">{{ v3.run_rate.value | default('—') }}</div>
+          {% if v3.run_rate.delta %}
+          <div class="pq-pdf-kpi-delta pos">{{ v3.run_rate.delta }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
 
-<div class="sp-grid">
-  <div class="sp-main">
-
-    <div class="sp-fig-title">Fig. 1 · Gross dividends received · trailing 12 months · USD</div>
-
-    {% set _monthly = monthly_bars | default([
-      {'m':'May','v':172},{'m':'Jun','v':318},{'m':'Jul','v':164},
-      {'m':'Aug','v':242},{'m':'Sep','v':188},{'m':'Oct','v':272},
-      {'m':'Nov','v':196},{'m':'Dec','v':412},{'m':'Jan','v':214},
-      {'m':'Feb','v':324},{'m':'Mar','v':226},{'m':'Apr','v':412}
-    ]) %}
-    {% set _mmax = _monthly | map(attribute='v') | list | max %}
-    {% if _mmax == 0 %}{% set _mmax = 1 %}{% endif %}
-
-    {% set _W = 440 %}
-    {% set _H = 220 %}
-    {% set _Tp = 22 %}
-    {% set _Bp = 32 %}
-    {% set _Lp = 30 %}
-    {% set _Rp = 12 %}
-    {% set _PW = _W - _Lp - _Rp %}
-    {% set _PH = _H - _Tp - _Bp %}
-    {% set _n = _monthly | length %}
-    {% set _bw = _PW / _n * 0.64 %}
-    {% set _bg = _PW / _n %}
-
-    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
-         xmlns="http://www.w3.org/2000/svg" aria-label="Monthly dividends" role="img"
-         style="display:block; overflow:visible;">
-
-      {% for gy in [0.25, 0.5, 0.75, 1.0] %}
-        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH - _PH * gy }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH - _PH * gy }}"
-              stroke="#E8E4DA" stroke-width="0.3"/>
-        <text x="{{ _Lp - 4 }}" y="{{ _Tp + _PH - _PH * gy + 2 }}" text-anchor="end"
-              fill="#8a8a8a" font-size="6.5" font-family="JetBrains Mono, monospace">${{ '%.0f' % (_mmax * gy) }}</text>
-      {% endfor %}
-
-      {# locate max index for bronze highlight #}
-      {% set _ns = namespace(hi_i=0) %}
-      {% for b in _monthly %}
-        {% if b.v == _mmax %}{% set _ns.hi_i = loop.index0 %}{% endif %}
-      {% endfor %}
-
-      {% for b in _monthly %}
-        {% set _x = _Lp + loop.index0 * _bg + (_bg - _bw) / 2 %}
-        {% set _h = (b.v / _mmax) * _PH %}
-        {% set _y = _Tp + _PH - _h %}
-        {% if loop.index0 == _ns.hi_i %}{% set _fill = '#B8956A' %}{% set _op = 0.85 %}{% else %}{% set _fill = '#0A0A0A' %}{% set _op = 0.72 %}{% endif %}
-        <rect x="{{ '%.2f' % _x }}" y="{{ '%.2f' % _y }}" width="{{ '%.2f' % _bw }}" height="{{ '%.2f' % _h }}"
-              fill="{{ _fill }}" fill-opacity="{{ _op }}"/>
-        <text x="{{ '%.2f' % (_x + _bw/2) }}" y="{{ _Tp + _PH + 10 }}" text-anchor="middle"
-              fill="#4a4a4a" font-size="6.6" font-family="Geist, sans-serif" letter-spacing="0.06em">{{ b.m }}</text>
-        {% if loop.index0 == _ns.hi_i %}
-        <text x="{{ '%.2f' % (_x + _bw/2) }}" y="{{ '%.2f' % (_y - 4) }}" text-anchor="middle"
-              fill="#B8956A" font-size="7.2" font-family="JetBrains Mono, monospace" font-weight="600">${{ b.v }}</text>
+    {# ───────── 6. Payments table ───────── #}
+    <h2 class="pq-pdf-section-title sm">This Month&rsquo;s Payments &middot; 입금 내역</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Holding</th>
+          <th class="right">Shares</th>
+          <th class="right">Per Share</th>
+          <th class="right">Received</th>
+          <th class="right">Yield</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in v3.payments | default([]) %}
+        <tr>
+          <td>{{ p.date | default('—') }}</td>
+          <td>
+            <span class="pq-pdf-ticker">{{ p.ticker | default('—') }}</span>
+            {{ p.name | default('') }}
+          </td>
+          <td class="right">{{ p.shares | default('—') }}</td>
+          <td class="right">{{ p.per_share | default('—') }}</td>
+          <td class="right pos">{{ p.received | default('—') }}</td>
+          <td class="right">{{ p.yield_pct | default('—') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">이번 달 수령 내역 없음</td></tr>
+        {% endfor %}
+        {% if v3.payments and v3.payments | length > 0 %}
+        <tr class="total">
+          <td colspan="4">Total &middot; {{ v3.payments_count | default(v3.payments | length) }} holdings</td>
+          <td class="right pos">{{ v3.total_received | default('—') }}</td>
+          <td class="right">{{ v3.avg_yield | default('—') }}</td>
+        </tr>
         {% endif %}
-      {% endfor %}
+      </tbody>
+    </table>
 
-      <line x1="{{ _Lp }}" y1="{{ _Tp + _PH }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH }}"
-            stroke="#0A0A0A" stroke-width="0.5"/>
-    </svg>
-
-    <div class="sp-fig-caption">
-      Fig. 1. Monthly gross dividend dollars. Bronze column marks the year's
-      highest month. Quarterly payers (March, June, September, December)
-      produce the visible step pattern.
-    </div>
-
-    <div class="sp-prose">
-      {% set _p = spread_prose | default([]) %}
-      {% if _p %}
-        {% for para in _p %}<p>{{ para }}</p>{% endfor %}
-      {% else %}
-        <p style="font-style:italic; color:#6B6B6B;">
-          Dividend commentary will appear here once monthly receipts post to the ledger.
-        </p>
-      {% endif %}
-    </div>
-
-  </div>
-
-  <div class="sp-margin">
-
-    {% set _mrg = dividend_margin | default({
-      'positions_paying': 14,
-      'positions_total':  22,
-      'largest_payer_pct': 18.4,
-      'withholding_pct':  11.2,
-    }) %}
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Payers</div>
-      <div class="sp-margin-value">{{ _mrg.positions_paying }} / {{ _mrg.positions_total }}</div>
-      <div class="sp-margin-body">Number of holdings that have paid a dividend inside the trailing-twelve-month window.</div>
-    </div>
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Largest payer</div>
-      <div class="sp-margin-value">{{ '%.1f' % _mrg.largest_payer_pct }}%</div>
-      <div class="sp-margin-body">Share of total dividends contributed by the single largest paying position.</div>
-    </div>
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Withholding</div>
-      <div class="sp-margin-value">{{ '%.1f' % _mrg.withholding_pct }}%</div>
-      <div class="sp-margin-body">Effective withholding rate across jurisdictions, observed from broker records.</div>
-    </div>
-
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Reinvestment</div>
-      <div class="sp-margin-value">Off</div>
-      <div class="sp-margin-body">DRIP is not enabled; dividends settle to cash and enter the monthly ledger.</div>
-    </div>
-
-  </div>
-</div>
-
-
-{# ═════════════ P3 · LADDER ═════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part II · Dividend Ladder</p>
-<h2 class="sp-title">The ten names writing the letters</h2>
-<p class="sp-deck">
-  Ten dividend-paying positions ordered by month-to-date contribution. Each
-  row reports shares held, per-share payment, frequency, ex-date, pay-date,
-  total received, and the trailing-twelve-month trajectory.
-</p>
-
-{% set _divs = dividend_rows | default([]) %}
-{% if _divs %}
-<table class="ld-table">
-  <thead>
-    <tr>
-      <th style="width:10%;">Symbol</th>
-      <th class="num" style="width:9%;">Shares</th>
-      <th class="num" style="width:10%;">Div/Share</th>
-      <th style="width:7%;">Freq</th>
-      <th style="width:12%;">Ex-date</th>
-      <th style="width:12%;">Pay-date</th>
-      <th class="num" style="width:10%;">Total</th>
-      <th style="width:20%;">Trajectory</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for d in _divs %}
-      {% set _sw = 80 %}
-      {% set _sh = 16 %}
-      {% set _sp = d.spark %}
-      {% set _smax = _sp | max %}
-      {% set _smin = _sp | min %}
-      {% if _smax == _smin %}{% set _smax = _smin + 0.01 %}{% endif %}
-      {% set _sppts = [] %}
-      {% for v in _sp %}
-        {% set _x = loop.index0 * _sw / (_sp | length - 1) %}
-        {% set _y = _sh - ((v - _smin) / (_smax - _smin)) * (_sh - 3) - 1.5 %}
-        {% set _ = _sppts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-      {% endfor %}
-      {% set _lastpt = _sppts[-1].split(',') %}
-      <tr>
-        <td><span class="ld-tkr">{{ d.sym }}</span></td>
-        <td class="num">{{ d.shares }}</td>
-        <td class="num">${{ '%.2f' % d.per_sh }}</td>
-        <td><span class="ld-note">{{ d.freq }}</span></td>
-        <td><span class="ld-note">{{ d.ex }}</span></td>
-        <td><span class="ld-note">{{ d.pay }}</span></td>
-        <td class="num r-pos">${{ '%.2f' % d.total }}</td>
-        <td>
-          <svg viewBox="0 0 {{ _sw }} {{ _sh }}" width="100%" height="28" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
-            <polyline points="{{ _sppts | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
-          </svg>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-{% else %}
-<p class="sp-deck" style="font-style:italic; color:#6B6B6B; margin-top: 20pt;">
-  No dividend receipts posted for this period.
-</p>
-{% endif %}
-
-<p class="sp-deck" style="margin-top: 10pt; font-size: 9.2pt;">
-  Frequencies: Q · quarterly, M · monthly, S · semi-annual, A · annual. Per-share
-  amounts are in issuer currency; totals here normalised to USD.
-</p>
-
-
-{# ═════════════ P4 · QUAD ═════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part III · Dividend Quad</p>
-<h2 class="sp-title">Four readings on where the income comes from</h2>
-<p class="sp-deck">
-  Sector mix, YoY growth by position, a calendar heatmap of the year, and
-  the relationship between yield and current price — four lenses on the
-  same stream.
-</p>
-
-<div class="aq-grid">
-  <div class="aq-main">
-
-    <div class="aq-quads">
-
-      {# ── Q1 · Sector dividend mix ── #}
-      <div class="aq-quad">
-        <div class="aq-quad-label">Q1 · Sector Dividend Mix</div>
-        <div class="aq-quad-sub">Share of YTD dividend dollars.</div>
-        {% set _sec = sector_mix | default([
-          {'s':'Staples',    'w':28.0},
-          {'s':'Financials', 'w':19.0},
-          {'s':'Energy',     'w':14.0},
-          {'s':'Healthcare', 'w':12.0},
-          {'s':'Comm.',      'w': 9.0},
-          {'s':'Industrials','w': 8.0},
-          {'s':'Tech',       'w': 6.0},
-          {'s':'Other',      'w': 4.0}
-        ]) %}
-        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-          {% set _bar_y = 44 %}
-          {% set _bar_h = 22 %}
-          {% set _ns = namespace(cx=12) %}
-          {% for s in _sec %}
-            {% set _w = (s.w / 100) * 216 %}
-            {% set _fill = '#B8956A' if loop.index0 % 2 == 0 else '#0A0A0A' %}
-            <rect x="{{ '%.2f' % _ns.cx }}" y="{{ _bar_y }}" width="{{ '%.2f' % _w }}" height="{{ _bar_h }}" fill="{{ _fill }}" fill-opacity="0.72"/>
-            {% if _w > 24 %}
-            <text x="{{ '%.2f' % (_ns.cx + _w/2) }}" y="{{ _bar_y + 14 }}" text-anchor="middle" fill="#F7F5EF" font-size="6.2" font-family="Geist, sans-serif" font-weight="600">{{ s.s }}</text>
+    {# ───────── 7. Two-col: 12m trail + Top contributors ───────── #}
+    <div style="margin-top: 24px;">
+      <div class="pq-pdf-two-col">
+        <div>
+          <div class="pq-pdf-col-title">12-Month Income Trail</div>
+          <div class="pq-pdf-card">
+            <svg viewBox="0 0 600 160" preserveAspectRatio="none" style="width:100%;height:160px;">
+              <line x1="0" y1="40" x2="600" y2="40" stroke="#ececec" stroke-width="1"/>
+              <line x1="0" y1="80" x2="600" y2="80" stroke="#ececec" stroke-width="1"/>
+              <line x1="0" y1="120" x2="600" y2="120" stroke="#ececec" stroke-width="1"/>
+              {% for b in v3.trail_bars | default([]) %}
+                <rect x="{{ b.x }}" y="{{ b.y }}" width="36" height="{{ b.h }}"
+                      fill="{% if loop.last %}#c9963f{% else %}#0e0e0e{% endif %}"/>
+              {% endfor %}
+              <text x="14"  y="156" font-family="var(--font-mono)" font-size="8" fill="#8a8a8a">JUL</text>
+              <text x="164" y="156" font-family="var(--font-mono)" font-size="8" fill="#8a8a8a">OCT</text>
+              <text x="314" y="156" font-family="var(--font-mono)" font-size="8" fill="#8a8a8a">JAN</text>
+              <text x="464" y="156" font-family="var(--font-mono)" font-size="8" fill="#8a8a8a">APR</text>
+              <text x="566" y="156" font-family="var(--font-mono)" font-size="8" fill="#8a8a8a">{{ v3.last_month_label | default('—') }}</text>
+            </svg>
+            {% if v3.trail_caption %}
+            <div style="font-size:10px;color:var(--r-ink-3);margin-top:8px;">{{ v3.trail_caption }}</div>
             {% endif %}
-            {% set _ns.cx = _ns.cx + _w %}
-          {% endfor %}
-          {# Legend below: show small + large #}
-          {% set _ly = 82 %}
-          {% for s in _sec %}
-            {% set _lx = 6 + (loop.index0 % 4) * 58 %}
-            {% set _lyi = _ly + (loop.index0 // 4) * 10 %}
-            <rect x="{{ _lx }}" y="{{ _lyi }}" width="6" height="6" fill="{{ '#B8956A' if loop.index0 % 2 == 0 else '#0A0A0A' }}" fill-opacity="0.72"/>
-            <text x="{{ _lx + 10 }}" y="{{ _lyi + 5 }}" fill="#0A0A0A" font-size="5.6" font-family="Geist, sans-serif">{{ s.s }} {{ '%.0f' % s.w }}%</text>
-          {% endfor %}
-        </svg>
-      </div>
-
-      {# ── Q2 · YoY growth by position ── #}
-      <div class="aq-quad">
-        <div class="aq-quad-label">Q2 · YoY Growth · Top 10</div>
-        <div class="aq-quad-sub">Dividend growth per position, %.</div>
-        {% set _yoy = yoy_growth | default([]) %}
-        {% if _yoy %}
-        {% set _ymx = _yoy | map(attribute='v') | map('abs') | list | max %}
-        {% if _ymx == 0 %}{% set _ymx = 1 %}{% endif %}
-        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-          {% for r in _yoy %}
-            {% set _y = loop.index0 * 10 + 6 %}
-            {% set _mid = 70 %}
-            {% set _w = (r.v | abs) / _ymx * 52 %}
-            {% set _x = _mid - _w if r.v < 0 else _mid %}
-            {% set _c = '#B8956A' if r.v >= 0 else '#A84C4C' %}
-            <rect x="{{ '%.2f' % _x }}" y="{{ _y }}" width="{{ '%.2f' % _w }}" height="7" fill="{{ _c }}" fill-opacity="0.72"/>
-            <text x="{{ _mid - 4 }}" y="{{ _y + 5.8 }}" text-anchor="end" fill="#0A0A0A" font-size="5.8" font-family="Geist, sans-serif" font-weight="600">{{ r.t }}</text>
-            <text x="{{ _mid + _w + 2 if r.v >= 0 else _mid + 2 }}" y="{{ _y + 5.8 }}" text-anchor="start" fill="#4a4a4a" font-size="5.6" font-family="JetBrains Mono, monospace">{{ '%+.1f' % r.v }}%</text>
-          {% endfor %}
-          <line x1="70" y1="2" x2="70" y2="108" stroke="#0A0A0A" stroke-width="0.3" opacity="0.55"/>
-        </svg>
-        {% else %}
-        <div style="font-style:italic; color:#6B6B6B; padding: 40pt 6pt; text-align:center;">
-          YoY growth data unavailable for this period.
+          </div>
         </div>
-        {% endif %}
-      </div>
-
-      {# ── Q3 · Calendar heatmap ── #}
-      <div class="aq-quad">
-        <div class="aq-quad-label">Q3 · Dividend Calendar Heatmap</div>
-        <div class="aq-quad-sub">12 months × days. Darker = more paid.</div>
-        {% set _cal = calendar_heatmap | default([
-          [0,0,0,0,1,0,0,0,2,0,0,0,3,0,0,0,0,2,0,0,1,0,0,0,3,0,0,0,2,0,0],
-          [0,1,0,0,2,0,0,0,3,0,0,0,0,0,2,0,0,0,4,0,0,0,1,0,0,0,2,0,0,0,0],
-          [0,0,2,0,0,0,1,0,0,0,3,0,0,2,0,0,0,0,4,0,0,0,1,0,0,0,2,0,0,0,3],
-          [1,0,0,0,2,0,0,0,0,1,0,0,3,0,0,0,2,0,0,0,0,3,0,0,1,0,0,0,2,0,0],
-          [0,0,1,0,0,0,2,0,0,0,1,0,0,3,0,0,0,0,2,0,0,0,4,0,0,0,1,0,0,0,0],
-          [0,2,0,0,0,1,0,0,3,0,0,0,2,0,0,0,0,4,0,0,0,1,0,0,2,0,0,0,3,0,0],
-          [0,0,0,1,0,0,0,2,0,0,0,3,0,0,0,2,0,0,0,4,0,0,1,0,0,0,2,0,0,0,0],
-          [1,0,0,0,2,0,0,0,0,3,0,0,1,0,0,0,2,0,0,0,4,0,0,0,1,0,0,0,2,0,3],
-          [0,0,1,0,0,0,2,0,0,0,0,1,0,0,0,3,0,0,2,0,0,0,0,4,0,0,0,1,0,0,0],
-          [0,2,0,0,0,3,0,0,1,0,0,0,2,0,0,0,0,3,0,0,0,4,0,0,1,0,0,0,2,0,0],
-          [0,0,0,2,0,0,0,1,0,0,3,0,0,0,2,0,0,0,0,4,0,0,1,0,0,0,2,0,0,0,0],
-          [1,0,0,0,2,0,0,0,0,1,0,0,3,0,0,0,2,0,0,0,0,4,0,0,1,0,0,0,2,0,3]
-        ]) %}
-        {% set _mlabels = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'] %}
-        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-          {% for row in range(12) %}
-            {% set _ylabel = 6 + row * 7 %}
-            <text x="22" y="{{ _ylabel + 5 }}" text-anchor="end" fill="#4a4a4a" font-size="4.6" font-family="Geist, sans-serif">{{ _mlabels[row] }}</text>
-            {% for col in range(31) %}
-              {% set _x = 26 + col * 6.6 %}
-              {% set _v = _cal[row][col] %}
-              {% if _v > 0 %}
-                {% set _op = 0.20 + (_v / 4) * 0.65 %}
-                <rect x="{{ '%.2f' % _x }}" y="{{ _ylabel }}" width="5.4" height="5.4" fill="#B8956A" fill-opacity="{{ '%.2f' % _op }}" stroke="#F7F5EF" stroke-width="0.3"/>
-              {% else %}
-                <rect x="{{ '%.2f' % _x }}" y="{{ _ylabel }}" width="5.4" height="5.4" fill="#f0ebe0" stroke="#F7F5EF" stroke-width="0.3"/>
-              {% endif %}
+        <div>
+          <div class="pq-pdf-col-title">Top Contributors &middot; 누가 벌어다 줬나</div>
+          <div class="pq-pdf-alloc-list">
+            {% for c in v3.top_contributors | default([]) %}
+            <div class="pq-pdf-alloc-row{% if c.flat %} flat{% endif %}">
+              <span class="pq-pdf-alloc-name">
+                <span class="pq-pdf-ticker">{{ c.ticker }}</span>
+              </span>
+              <span class="pq-pdf-alloc-bar">
+                <span class="pq-pdf-alloc-fill" style="width:{{ c.pct | default(0) }}%"></span>
+              </span>
+              <span class="pq-pdf-alloc-pct">{{ c.amount | default('—') }}</span>
+            </div>
             {% endfor %}
-          {% endfor %}
-        </svg>
-      </div>
-
-      {# ── Q4 · Yield vs price scatter ── #}
-      <div class="aq-quad">
-        <div class="aq-quad-label">Q4 · Yield vs Price</div>
-        <div class="aq-quad-sub">Trailing yield % × current price $.</div>
-        {% set _sc = yield_scatter | default([]) %}
-        {% if _sc %}
-        {% set _y_vals = _sc | map(attribute='y') | list %}
-        {% set _p_vals = _sc | map(attribute='p') | list %}
-        {% set _ymax = _y_vals | max %}
-        {% set _pmax = _p_vals | max %}
-        {% if _ymax == 0 %}{% set _ymax = 1 %}{% endif %}
-        {% if _pmax == 0 %}{% set _pmax = 1 %}{% endif %}
-        <svg viewBox="0 0 240 110" width="100%" height="162" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:6pt;">
-          <line x1="20" y1="90" x2="234" y2="90" stroke="#0A0A0A" stroke-width="0.35" opacity="0.55"/>
-          <line x1="20" y1="10" x2="20" y2="90" stroke="#0A0A0A" stroke-width="0.35" opacity="0.55"/>
-          {% for pt in _sc %}
-            {% set _x = 20 + (pt.p / _pmax) * 210 %}
-            {% set _y = 90 - (pt.y / _ymax) * 74 %}
-            {% set _r = 1.5 + (pt.sz / 60) * 3 %}
-            <circle cx="{{ '%.2f' % _x }}" cy="{{ '%.2f' % _y }}" r="{{ '%.2f' % _r }}" fill="#B8956A" fill-opacity="0.62"/>
-            <text x="{{ '%.2f' % (_x + _r + 1) }}" y="{{ '%.2f' % (_y + 1.6) }}" fill="#0A0A0A" font-size="5.4" font-family="Geist, sans-serif" font-weight="600">{{ pt.t }}</text>
-          {% endfor %}
-          <text x="234" y="104" text-anchor="end" fill="#8a8a8a" font-size="5.8" font-family="Geist, sans-serif" letter-spacing="0.08em">PRICE →</text>
-          <text x="12" y="14" fill="#8a8a8a" font-size="5.8" font-family="Geist, sans-serif" letter-spacing="0.08em">YIELD</text>
-        </svg>
-        {% else %}
-        <div style="font-style:italic; color:#6B6B6B; padding: 40pt 6pt; text-align:center;">
-          Yield scatter unavailable for this period.
+          </div>
         </div>
-        {% endif %}
       </div>
-
     </div>
 
-    <div class="sp-fig-caption" style="text-align:center; margin-top: 10pt;">
-      Fig. 2. Four quiet lenses on the dividend stream. Heatmap intensity is
-      bronze, deepening with larger single-day receipts. Scatter circle size
-      reads YTD contribution.
+    {# ───────── 8. Reinvestment callout ───────── #}
+    <div style="margin-top: 18px;">
+      <div class="pq-pdf-callout">
+        <div class="pq-pdf-callout-label">Reinvestment &middot; 다음 후보</div>
+        <p>{{ v3.reinvestment_note | default('이번 달 수령액 재배치 후보를 별도 검토. 동일 종목 추가 수량 또는 현금 보유 후 합산 가능.') }}</p>
+      </div>
     </div>
 
-  </div>
-
-  <div class="aq-side">
-    <div class="aq-rail">
-      <div class="aq-rail-eyebrow">Reading Notes</div>
-      {% set _rail = reading_notes | default([
-        'Dividends are gross of withholding unless stated.',
-        'Ex-date is the first day without the right to the payment.',
-        'Frequencies follow issuer convention, not fiscal calendar.',
-        'Yield is trailing-twelve-month sum / current price.',
-        'DRIP (automatic reinvestment) is not enabled on this book.'
-      ]) %}
-      {% for n in _rail %}
-        <div class="aq-rail-item"><span class="aq-rail-n">{{ '%02d' % loop.index }}</span>{{ n }}</div>
-      {% endfor %}
+    {# ───────── 9. Governance ───────── #}
+    <div class="pq-pdf-govblock">
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Tier</div>
+        <div class="val">Pro</div>
+      </div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Cadence</div>
+        <div class="val">Monthly &middot; 매월 1회</div>
+      </div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Methodology</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}Position-level dividend ledger &middot; 자기 보유 데이터 한정{% endif %}</div>
+      </div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Sources</div>
+        <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
+      </div>
     </div>
-  </div>
-</div>
 
+    {# ───────── 10. Page footer ───────── #}
+    <div class="pq-pdf-page-footer">
+      <span>Dividend Income &middot; Pro &middot; pivoxquant.com</span>
+      <span>{{ v3.as_of_label | default(month_label | default('—')) }}</span>
+    </div>
 
-{# ═════════════ P5 · EDITORIAL ═════════════ #}
-<div class="r-page-break"></div>
+    {# ───────── 11. Disclaimer ───────── #}
+    {% include '_disclaimer.html' %}
 
-<p class="sp-part">Part IV · Editorial</p>
-<h2 class="sp-title">What a dividend is and is not</h2>
-<p class="sp-deck">
-  A single sentence the desk is holding in mind, and the short list of
-  questions the dividend ledger is not equipped to settle.
-</p>
-
-<div class="ed-quote-wrap">
-  <div class="ed-quote-cell">
-    <blockquote class="ed-quote">
-      {{ pull_quote | default("A dividend is a kindness from a company to its owners — unremarkable until counted, cumulative once you do.") }}
-    </blockquote>
-    <div class="ed-quote-attr">{{ pull_quote_attribution | default("PivoxQuant Dividend Desk") }}</div>
-  </div>
-</div>
-
-<div class="ed-watch-head">What this dividend ledger cannot settle</div>
-<div class="ed-twocol">
-  <div class="ed-col">
-    <ol>
-      <li>Sustainability of the issuer's payout policy across the cycle.</li>
-      <li>Tax treatment across qualified and non-qualified brackets.</li>
-      <li>Currency risk on non-USD payers.</li>
-    </ol>
-  </div>
-  <div class="ed-col">
-    <ol start="4">
-      <li>Whether DRIP reinvestment is preferable for this reader.</li>
-      <li>The opportunity cost of yield against total return.</li>
-    </ol>
-  </div>
-</div>
-
-<p class="ed-legal">
-  Past performance does not guarantee future results. This document is
-  informational and does not constitute investment advice. &nbsp;·&nbsp;
-  본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.
-</p>
-
-
-{# ═════════════ P6 · COLOPHON ═════════════ #}
-<div class="r-page-break"></div>
-
-<div class="co-wrap">
-
-  <div class="co-head">Colophon</div>
-  <div class="co-rule-small"></div>
-
-  <div class="co-body">
-    <p style="margin: 0 0 10pt 0;">
-      Prepared for <strong>{{ user_name }}</strong> for
-      <strong>{{ month_label }}</strong>. Year-to-date reading of
-      the PivoxQuant Dividend Income series.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data · Receipts</span> &nbsp;
-      Broker statements &middot; pay-date confirmations.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data · Calendar</span> &nbsp;
-      NASDAQ dividend history &middot; issuer SEC 10-Q filings.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data · Per-share</span> &nbsp;
-      FMP v4 Stable &middot; issuer press releases.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Typeset in</span> &nbsp;
-      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
-    </p>
-    <p style="margin: 0 0 0 0;">
-      <span class="co-key">Engine</span> &nbsp;
-      {{ engine_note | default('Historical record only. Dividend observation pipeline.') }}.
-    </p>
-  </div>
-
-  <div class="co-thin-rule"></div>
-
-  {% include '_disclaimer.html' %}
-
-  <div class="co-thin-rule"></div>
-
-  <div class="co-sign">
-    {% with brand_kind='monogram', brand_size=64 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-    <div class="co-sign-house">PivoxQuant Dividend Desk</div>
-    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
-    <div class="co-sign-time">Generated · {{ generated_at | default(month_label) }}</div>
-  </div>
-
+  </section>
 </div>
 
 </body>
