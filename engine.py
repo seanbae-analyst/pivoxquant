@@ -1120,7 +1120,7 @@ class QuantEngine:
         try:
             mr = MeanReversion.analyze(close)
             if mr:
-                mr_score = mr["score"]
+                mr["score"]
                 z = mr["z_score"]
                 if z < -2:
                     score += 20

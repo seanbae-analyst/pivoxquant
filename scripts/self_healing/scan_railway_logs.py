@@ -114,7 +114,7 @@ def normalize_file(path: str) -> str:
 def extract_patterns(log_text: str) -> list[dict[str, Any]]:
     """Group traceback occurrences by (file, line, exception class)."""
     now = datetime.now(timezone.utc)
-    window_start = now - timedelta(minutes=WINDOW_MINUTES)
+    now - timedelta(minutes=WINDOW_MINUTES)
     groups: dict[str, dict[str, Any]] = {}
 
     for m in TRACEBACK_RE.finditer(log_text):

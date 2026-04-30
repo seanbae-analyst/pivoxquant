@@ -527,7 +527,7 @@ def kakao_callback():
     logger.info("OAuth callback: provider=kakao origin=%s state_ok=True", origin)
 
     try:
-        token = oauth.kakao.authorize_access_token()
+        oauth.kakao.authorize_access_token()
     except Exception:
         logger.exception("Kakao callback error")
         return redirect(f"{origin}/login?error=kakao_failed")

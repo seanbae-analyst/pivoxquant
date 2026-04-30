@@ -468,7 +468,7 @@ class RiskDefenseSystem:
 
             # Flag the largest position in the overweight sector
             largest = max(sector_positions, key=lambda p: p.get("value", 0))
-            excess = weight - self.config["max_sector_pct"]
+            weight - self.config["max_sector_pct"]
             actions["risk_exposure"].append(
                 (
                     largest.get("ticker", "?"),

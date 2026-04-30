@@ -1017,7 +1017,7 @@ class BragCardService:
             start, end = _previous_month_bounds(date.today())
         else:
             start = target_month.replace(day=1)
-            end = start.replace(day=monthrange(start.year, start.month)[1])
+            start.replace(day=monthrange(start.year, start.month)[1])
 
         users = User.query.all()
 

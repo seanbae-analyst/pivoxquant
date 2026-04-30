@@ -833,7 +833,7 @@ class EarningsPreBriefService:
 
         # EPS row (mean / low / high)
         eps_mean = data.get("consensus_eps")
-        eps_low = data.get("consensus_eps_low")
+        data.get("consensus_eps_low")
         eps_high = data.get("consensus_eps_high")
         if eps_mean is not None:
             try:

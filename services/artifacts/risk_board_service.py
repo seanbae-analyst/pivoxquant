@@ -1004,7 +1004,7 @@ class RiskBoardService:
             ("Rates +100bp",        "10Y 4.2 → 5.2",                0.18),
         ]
         scenarios: list[dict[str, Any]] = []
-        worst_loss_dollars = (
+        (
             float(port_value) * (worst_pct / 100.0) if port_value else None
         )
         for label, detail, mult in bands:

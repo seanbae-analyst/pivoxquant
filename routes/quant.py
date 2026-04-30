@@ -1216,7 +1216,7 @@ def _compute_short_signal(records, quote):
     # shortInterestRatio (days to cover), floatShort (% as decimal or pct).
     latest = records[0]
 
-    shares_outstanding = (quote or {}).get("sharesOutstanding", 0) or 0
+    (quote or {}).get("sharesOutstanding", 0) or 0
     avg_volume = (quote or {}).get("avgVolume", 0) or 0
     price = (quote or {}).get("price", 0) or 0
     volume = (quote or {}).get("volume", 0) or 0

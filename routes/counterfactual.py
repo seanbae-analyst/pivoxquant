@@ -361,7 +361,6 @@ def _extract_milestones(chart_data: list[dict], invested_principal_at_start: flo
 
     hit = set()
     peak_value = chart_data[0]["value"]
-    peak_idx = 0
     max_drawdown_pct = 0.0
     trough_idx: int | None = None
     ath_idx = 0
@@ -387,7 +386,6 @@ def _extract_milestones(chart_data: list[dict], invested_principal_at_start: flo
         # Peak / drawdown tracking
         if v > peak_value:
             peak_value = v
-            peak_idx = i
         elif peak_value > 0:
             dd_pct = (v - peak_value) / peak_value * 100.0
             if dd_pct < max_drawdown_pct:
