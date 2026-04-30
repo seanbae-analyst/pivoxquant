@@ -1,987 +1,159 @@
 {# ══════════════════════════════════════════════════════════════════════════
-   Burn Rate — Goldman IC v2 Editorial Redesign (6-page flagship)
-   개인 현금 소모율 / runway 월간 기록부 — Stripe CFO burn × Buffett frugality.
-   Observation only — no directive, no claim about tomorrow.
+   Burn Rate — Pro · 1-page · Monthly (CEO design v3, 2026-04-30)
+
+   Source: backend BurnRateService — portfolio trading cost burn.
+   (frontend tsx covers growth-co cash runway; backend covers user trading
+    cost burn — different concepts. v3 layout applied to backend semantics.)
+
+   Sections:
+     1. Header (PRO chip + month label)
+     2. GoldRule
+     3. Eyebrow + Cover title (이번 달 거래 비용 소모율)
+     4. KPI 4-up: 이번 달 burn / 거래 횟수 / 종합 burn % / 평균 거래당 비용
+     5. Cost Breakdown table (commission / tx_tax / cgt / fx_spread / slippage)
+     6. By-market alloc (US / KR)
+     7. CFO Note callout
+     8. Governance + Page footer
+     9. Disclaimer
+
+   v3 shape (BurnRateService._to_v3_shape):
+     v3.month_label, v3.report_tag,
+     v3.this_month / trades / burn_pct / avg_cost ({value, detail}),
+     v3.cost_rows (list of {category, amount, pct, detail}),
+     v3.by_market (list of {name, pct, pct_display, flat}),
+     v3.cfo_note (str)
+
+   Compliance — descriptive cost reporting. No buy/sell/추천/조언.
    ══════════════════════════════════════════════════════════════════════════ #}
+{%- set v3 = v3 | default({}) -%}
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8"/>
-  <title>Burn Rate — {{ period_label }} — {{ user_name }}</title>
-  <style>
-    @page {
-      size: A4;
-      margin: 22mm 20mm 22mm 20mm;
-      @top-left {
-        content: "PIVOXQUANT  ·  BURN RATE";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7.2pt;
-        letter-spacing: 0.36em;
-        text-transform: uppercase;
-        color: #B8956A;
-      }
-      @top-right {
-        content: "ISSUE No. " counter(page, decimal-leading-zero) "  ·  {{ period_label }}";
-        font-family: "JetBrains Mono", monospace;
-        font-size: 7pt;
-        letter-spacing: 0.14em;
-        color: #6B6B6B;
-      }
-      @bottom-left {
-        content: "A slow arithmetic — informational only.";
-        font-family: "Source Serif 4", Georgia, serif;
-        font-size: 7pt;
-        font-style: italic;
-        color: #8a8a8a;
-      }
-      @bottom-right {
-        content: counter(page) " / " counter(pages);
-        font-family: "JetBrains Mono", monospace;
-        font-size: 8pt;
-        color: #4a4a4a;
-      }
-    }
-    @page :first {
-      @top-left { content: none; }
-      @top-right { content: none; }
-      @bottom-left { content: none; }
-      @bottom-right { content: none; }
-    }
-    {% include '_report_css.html' %}
-
-    /* ───────── P1 · COVER ───────── */
-    .cv { position: relative; padding-top: 0; }
-    .cv-wordmark { text-align: center; margin: 12pt auto 24pt auto; }
-    .cv-rule-thin { height: 0.35pt; background: #0A0A0A; opacity: 0.55; width: 100%; margin: 0; }
-    .cv-issue {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 8.5pt; letter-spacing: 0.22em; color: #6B6B6B;
-      text-align: center; font-variant-numeric: tabular-nums; padding: 10pt 0;
-    }
-    .cv-issue .cv-issue-key { color: #0A0A0A; }
-    .cv-hero {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 42pt; line-height: 1.14; letter-spacing: -0.02em;
-      color: #0A0A0A; margin: 44pt 0 44pt 0;
-    }
-    .cv-hero span { display: block; }
-    .cv-hero span + span { padding-left: 34pt; }
-    .cv-hero span + span + span { padding-left: 68pt; color: #B8956A; }
-    .cv-kpi4 { display: table; width: 100%; border-collapse: collapse; margin-top: 26pt; table-layout: fixed; overflow: visible; }
-    .cv-kpi { display: table-cell; width: 25%; padding: 10pt 10pt 4pt 10pt; vertical-align: top; font-variant-numeric: tabular-nums; overflow: visible; }
-    .cv-kpi + .cv-kpi { border-left: 0.25pt solid #c9c4b8; }
-    .cv-kpi-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #8a8a8a; margin-bottom: 4pt;
-    }
-    .cv-kpi-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 18pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums; letter-spacing: -0.015em; line-height: 1.02;
-    }
-    .cv-kpi-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.5pt; color: #8a8a8a; margin-top: 3pt;
-    }
-    .cv-foot {
-      margin-top: 40pt; text-align: center;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 9pt; color: #6B6B6B; letter-spacing: 0.02em;
-    }
-    .cv-micro {
-      margin-top: 12pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; color: #8a8a8a;
-      text-align: center; line-height: 1.5; max-width: 420pt;
-      margin-left: auto; margin-right: auto;
-    }
-
-    /* ───────── Part / title / deck ───────── */
-    .sp-part {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin: 0 0 2pt 0;
-    }
-    .sp-title {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 26pt; font-weight: 400; line-height: 1.08;
-      letter-spacing: -0.02em; color: #0A0A0A; margin: 0 0 6pt 0;
-    }
-    .sp-deck {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 10.5pt; color: #4a4a4a;
-      line-height: 1.4; margin: 0 0 14pt 0; max-width: 380pt;
-    }
-
-    /* ───────── P2 · BURN SPREAD (60/40) ───────── */
-    .bs-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 14pt 0; margin-top: 6pt; table-layout: fixed; }
-    .bs-main { display: table-cell; width: 70%; vertical-align: top; }
-    .bs-side { display: table-cell; width: 30%; vertical-align: top; }
-    .bs-fig-title {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.6pt; letter-spacing: 0.18em; text-transform: uppercase;
-      color: #0A0A0A; font-weight: 600; margin-bottom: 6pt;
-    }
-    .bs-fig-caption {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 8.5pt; color: #8a8a8a;
-      line-height: 1.4; margin-top: 6pt; max-width: 360pt;
-    }
-    .bs-prose {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; line-height: 1.58; color: #202020;
-      margin-top: 0; padding-top: 0;
-    }
-    .bs-prose p { margin: 0 0 7pt 0; text-align: justify; hyphens: auto; }
-    .bs-prose > p:first-child::first-letter {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 28pt; line-height: 0.88; font-weight: 500;
-      color: #B8956A; /* float+padding removed for WeasyPrint 68.1 compat */ font-style: normal;
-    }
-
-    .sp-margin-block {
-      border-left: 0.35pt solid #B8956A;
-      padding: 2pt 0 2pt 9pt;
-      margin-bottom: 14pt;
-    }
-    .sp-margin-term {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.4pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 2pt;
-    }
-    .sp-margin-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 12pt; color: #0A0A0A;
-      font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
-    }
-    .sp-margin-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8pt; line-height: 1.42; color: #6B6B6B; margin-top: 3pt;
-    }
-
-    /* ───────── P3 · LEDGER ───────── */
-    .ld-table {
-      width: 100%; border-collapse: collapse; margin: 6pt 0 14pt 0;
-      table-layout: fixed;
-    }
-    .ld-table th, .ld-table td {
-      padding: 8pt 6pt; text-align: left; vertical-align: middle;
-      border-bottom: 0.25pt solid #e4dfd2;
-    }
-    .ld-table thead th {
-      border-top: 0.5pt solid #0A0A0A;
-      border-bottom: 0.5pt solid #0A0A0A;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.18em; text-transform: uppercase;
-      color: #6B6B6B; font-weight: 600;
-    }
-    .ld-table th.num,
-    .ld-table td.num {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
-    .ld-table td.num {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 9pt;
-    }
-    .ld-cat {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.5pt; color: #0A0A0A;
-    }
-
-    /* ───────── P4 · DIAGNOSTIC QUAD ───────── */
-    .rq-grid {
-      display: table; width: 100%;
-      border-collapse: separate; border-spacing: 14pt 0;
-    }
-    .rq-main { display: table-cell; width: 66%; vertical-align: top; }
-    .rq-side { display: table-cell; width: 34%; vertical-align: top; }
-    .rq-quads { display: table; width: 100%; border-collapse: collapse; }
-    .rq-quad {
-      display: table-cell; width: 50%;
-      padding: 12pt 14pt;
-      vertical-align: top; height: 190pt;
-    }
-    .rq-quad-label {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.8pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 3pt;
-    }
-    .rq-quad-value {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 16pt; font-weight: 500; color: #0A0A0A;
-      font-variant-numeric: tabular-nums;
-    }
-    .rq-quad-foot {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.8pt; color: #6B6B6B;
-      margin-top: 4pt; line-height: 1.4;
-    }
-    .rq-method {
-      padding: 12pt 0 0 12pt; font-size: 8pt;
-      border-left: 0.35pt solid #c9c4b8;
-    }
-    .rq-method-eyebrow {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 6.6pt; letter-spacing: 0.28em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 8pt;
-    }
-    .rq-method-item { margin-bottom: 9pt; }
-    .rq-method-item:last-child { margin-bottom: 0; }
-    .rq-method-term {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-weight: 600; font-size: 8.5pt; color: #0A0A0A;
-    }
-    .rq-method-def {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-size: 7.6pt; line-height: 1.5;
-      color: #4a4a4a; margin-top: 1pt;
-    }
-
-    /* ───────── P5 · EDITORIAL ───────── */
-    .ed-quote-wrap {
-      min-height: 280pt;
-      padding: 40pt 40pt 26pt 40pt;
-      display: table; width: 100%; text-align: center;
-    }
-    .ed-quote-cell { display: table-cell; vertical-align: middle; }
-    .ed-quote {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-style: italic; font-weight: 400;
-      font-size: 32pt; line-height: 1.26; letter-spacing: -0.015em;
-      color: #0A0A0A; margin: 0;
-    }
-    .ed-quote-attr {
-      margin-top: 22pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #B8956A;
-    }
-    .ed-quote-attr::before, .ed-quote-attr::after {
-      content: "——"; color: #B8956A; opacity: 0.5;
-      margin: 0 8pt; letter-spacing: 0;
-    }
-    .ed-not-head {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 8pt; letter-spacing: 0.32em; text-transform: uppercase;
-      color: #0A0A0A; font-weight: 600;
-      margin-top: 26pt; padding-top: 12pt;
-      border-top: 0.5pt solid #0A0A0A;
-    }
-    .ed-not-list {
-      margin-top: 10pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.65; color: #202020;
-    }
-    .ed-not-item {
-      display: table; width: 100%;
-      padding: 3pt 0;
-      border-bottom: 0.15pt solid #e4dfd2;
-    }
-    .ed-not-item:last-child { border-bottom: none; }
-    .ed-not-cat {
-      display: table-cell; width: 150pt; vertical-align: top;
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.2pt; letter-spacing: 0.22em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; padding-top: 2pt;
-    }
-    .ed-not-detail {
-      display: table-cell; vertical-align: top;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9.8pt; color: #202020;
-    }
-
-    /* ───────── P6 · COLOPHON ───────── */
-    .co-wrap { padding: 0; text-align: left; }
-    .co-body p { margin: 0 0 8pt 0 !important; }
-    .co-head {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 9pt; letter-spacing: 0.42em; text-transform: uppercase;
-      color: #B8956A; font-weight: 600; margin-bottom: 4pt;
-    }
-    .co-rule-small { width: 28pt; height: 0.5pt; background: #0A0A0A; margin: 0 0 12pt 0; }
-    .co-body {
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 10pt; line-height: 1.7; color: #202020; max-width: 440pt;
-    }
-    .co-body .co-key {
-      font-family: "Geist", -apple-system, sans-serif;
-      font-size: 7.4pt; letter-spacing: 0.18em; text-transform: uppercase;
-      color: #6B6B6B;
-    }
-    .co-thin-rule { height: 0.35pt; background: #c9c4b8; margin: 12pt 0; }
-    .co-sign { text-align: center; margin-top: 14pt; }
-    .co-sign-house {
-      margin-top: 16pt;
-      font-family: "Source Serif 4", Georgia, serif;
-      font-size: 8.5pt; letter-spacing: 0.42em; text-transform: uppercase;
-      color: #0A0A0A; font-weight: 500;
-    }
-    .co-sign-ref {
-      margin-top: 10pt;
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.4pt; letter-spacing: 0.06em; color: #8a8a8a;
-    }
-    .co-sign-time {
-      font-family: "JetBrains Mono", monospace;
-      font-size: 7.2pt; color: #8a8a8a; margin-top: 2pt;
-    }
-
-    section.disclaimer.pq-disclaimer {
-      border: none !important;
-      border-top: 0.35pt solid #c9c4b8 !important;
-      padding: 10pt 0 0 0 !important;
-      margin: 16pt 0 0 0 !important;
-      background: transparent !important;
-      font-size: 7.6pt !important;
-      line-height: 1.5 !important;
-    }
-    section.disclaimer.pq-disclaimer h5.disclaimer__title {
-      font-family: "Geist", -apple-system, sans-serif !important;
-      font-size: 7pt !important;
-      letter-spacing: 0.32em !important;
-      text-transform: uppercase !important;
-      color: #B8956A !important;
-      margin: 0 0 6pt 0 !important;
-    }
-  </style>
+  <title>Burn Rate — {{ v3.month_label | default(period_label) }} — {{ user_name }}</title>
+  <style>{% include '_burn_rate_v3_css.html' %}</style>
 </head>
 <body>
 
-{% set _issue_no = issue_number | default(12) %}
-{% set _doc_ref = doc_ref | default('PQ-BR-' ~ ('%02d' % _issue_no) ~ ' · v2026.04.21') %}
-{% set _hero = hero_headline | default(['A slow arithmetic.', 'Money walks out,', 'seldom in crowds.']) %}
-{% set _monthly_burn = monthly_burn_usd | default(2480) %}
-{% set _runway = runway_months | default(32) %}
-{% set _save_rate = savings_rate_pct | default(62.0) %}
-{% set _fixed_ratio = fixed_cost_ratio_pct | default(41.0) %}
+<div class="pq-report">
+  <section class="pq-pdf-page">
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 1 · COVER
-   ══════════════════════════════════════════════════════════════════════════ #}
-<section class="cv">
-
-  <div class="cv-wordmark">
-    {% with brand_kind='wordmark', brand_size=340 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-  </div>
-
-  <div class="cv-rule-thin"></div>
-  <div class="cv-issue">
-    ISSUE <span class="cv-issue-key">No. {{ '%02d' % _issue_no }}</span>
-    &nbsp;·&nbsp; BURN RATE
-    &nbsp;·&nbsp; {{ period_label_long | default(period_label) }}
-  </div>
-  <div class="cv-rule-thin"></div>
-
-  <h1 class="cv-hero">
-    {% for line in _hero %}<span>{{ line }}</span>{% endfor %}
-  </h1>
-
-  <div class="cv-rule-thin"></div>
-
-  <div class="cv-kpi4">
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Monthly Burn</div>
-      <div class="cv-kpi-value">${{ '{:,}'.format(_monthly_burn) }}</div>
-      <div class="cv-kpi-foot">Net cash leaving the account this month.</div>
+    <div class="pq-pdf-header">
+      <div><span class="pq-pdf-brand-name">pivox<span class="accent">quant</span></span></div>
+      <div class="pq-pdf-meta">
+        <strong><span class="pq-pdf-tier-chip pro">PRO</span>BURN RATE</strong>
+        <span>{{ v3.month_label | default(period_label | default('—')) }}</span>
+      </div>
     </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Runway</div>
-      <div class="cv-kpi-value">{{ _runway }} mo</div>
-      <div class="cv-kpi-foot">Months of burn covered by current liquid cash.</div>
+
+    <div class="pq-pdf-gold-rule"></div>
+
+    <div class="pq-pdf-eyebrow">Burn Rate &middot; Monthly Cost Audit</div>
+    <h1 class="pq-pdf-cover-title">
+      이번 달 <em>거래 비용</em>&mdash;<br/>
+      얼마가 새어 나갔는가.
+    </h1>
+    <p class="pq-pdf-cover-sub">
+      Commission &middot; tax &middot; FX spread &middot; slippage. 매수/매도가 만든 비용 누계, 이번 달치.
+    </p>
+
+    {# ───────── KPI 4-up ───────── #}
+    <div style="margin-top: 24px;">
+      <div class="pq-pdf-kpi-row cols-4">
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">이번 달 Burn</div>
+          <div class="pq-pdf-kpi-val">{{ v3.this_month.value | default('—') }}</div>
+          {% if v3.this_month.detail %}<div class="pq-pdf-kpi-delta neg">{{ v3.this_month.detail }}</div>{% endif %}
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">거래 횟수</div>
+          <div class="pq-pdf-kpi-val">{{ v3.trades.value | default('—') }}</div>
+          {% if v3.trades.detail %}<div class="pq-pdf-kpi-delta">{{ v3.trades.detail }}</div>{% endif %}
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">종합 Burn % NAV</div>
+          <div class="pq-pdf-kpi-val">{{ v3.burn_pct.value | default('—') }}</div>
+          {% if v3.burn_pct.detail %}<div class="pq-pdf-kpi-delta">{{ v3.burn_pct.detail }}</div>{% endif %}
+        </div>
+        <div class="pq-pdf-kpi">
+          <div class="pq-pdf-kpi-lbl">거래당 평균</div>
+          <div class="pq-pdf-kpi-val">{{ v3.avg_cost.value | default('—') }}</div>
+          {% if v3.avg_cost.detail %}<div class="pq-pdf-kpi-delta">{{ v3.avg_cost.detail }}</div>{% endif %}
+        </div>
+      </div>
     </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Savings Rate</div>
-      <div class="cv-kpi-value">{{ '%.0f'|format(_save_rate) }}%</div>
-      <div class="cv-kpi-foot">Share of income not spent, month to date.</div>
-    </div>
-    <div class="cv-kpi">
-      <div class="cv-kpi-label">Fixed Cost Ratio</div>
-      <div class="cv-kpi-value">{{ '%.0f'|format(_fixed_ratio) }}%</div>
-      <div class="cv-kpi-foot">Share of burn that repeats without variance.</div>
-    </div>
-  </div>
 
-  <p class="cv-foot">
-    Prepared for {{ user_name }} &nbsp;·&nbsp; A record of quiet exits.
-  </p>
-  <p class="cv-micro">
-    This ledger is a descriptive summary of observed spending. Past performance does
-    not guarantee future results. 본 자료는 과거 관찰 기록이며 투자자문이 아닙니다.
-  </p>
-</section>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 2 · BURN SPREAD (60/40) — 12-month stacked area + drop-cap prose
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part I · The Twelve-Month Walk</p>
-<h2 class="sp-title">A year of quiet subtraction</h2>
-<p class="sp-deck">
-  A stacked walk of the last twelve months across five household categories.
-  The line's quiet seasonality is noted in the margin.
-</p>
-
-{% set _burn_series = burn_series | default([
-  {'m':'May','housing':1180,'food':420,'transport':210,'leisure':310,'other':240},
-  {'m':'Jun','housing':1180,'food':380,'transport':240,'leisure':360,'other':210},
-  {'m':'Jul','housing':1180,'food':460,'transport':220,'leisure':520,'other':180},
-  {'m':'Aug','housing':1180,'food':470,'transport':200,'leisure':480,'other':220},
-  {'m':'Sep','housing':1180,'food':390,'transport':230,'leisure':290,'other':260},
-  {'m':'Oct','housing':1180,'food':420,'transport':250,'leisure':310,'other':240},
-  {'m':'Nov','housing':1180,'food':450,'transport':270,'leisure':380,'other':280},
-  {'m':'Dec','housing':1180,'food':520,'transport':320,'leisure':480,'other':340},
-  {'m':'Jan','housing':1180,'food':440,'transport':280,'leisure':220,'other':240},
-  {'m':'Feb','housing':1180,'food':410,'transport':230,'leisure':240,'other':220},
-  {'m':'Mar','housing':1180,'food':430,'transport':260,'leisure':280,'other':230},
-  {'m':'Apr','housing':1180,'food':420,'transport':240,'leisure':360,'other':280},
-]) %}
-
-<div class="bs-grid">
-  <div class="bs-main">
-    <div class="bs-fig-title">Fig. 1 · Twelve-month burn, stacked by category</div>
-
-    {% set _W = 520 %}
-    {% set _H = 240 %}
-    {% set _Tp = 18 %}
-    {% set _Bp = 30 %}
-    {% set _Lp = 32 %}
-    {% set _Rp = 18 %}
-    {% set _PW = _W - _Lp - _Rp %}
-    {% set _PH = _H - _Tp - _Bp %}
-    {% set _n = _burn_series | length %}
-
-    {# compute per-month totals and stacked segments #}
-    {% set _totals = [] %}
-    {% for d in _burn_series %}
-      {% set _t = d.housing + d.food + d.transport + d.leisure + d.other %}
-      {% set _ = _totals.append(_t) %}
-    {% endfor %}
-    {% set _ymax = _totals | max %}
-    {% set _ymax = (_ymax * 1.10) | int %}
-    {% if _ymax == 0 %}{% set _ymax = 1 %}{% endif %}
-
-    {# stacked layers bottom-up: housing, food, transport, leisure, other #}
-    {% set _layers = ['housing', 'food', 'transport', 'leisure', 'other'] %}
-    {% set _shades = ['#B8956A', '#a88866', '#c9a982', '#d8bd9e', '#e8d4b8'] %}
-
-    <svg viewBox="0 0 {{ _W }} {{ _H }}" width="100%" preserveAspectRatio="none"
-         xmlns="http://www.w3.org/2000/svg" aria-label="Twelve-month burn stacked area" role="img"
-         style="display:block; overflow:visible;">
-
-      <!-- gridlines -->
-      {% for gy in [0.25, 0.5, 0.75, 1.0] %}
-        <line x1="{{ _Lp }}" y1="{{ _Tp + _PH * (1 - gy) }}" x2="{{ _W - _Rp }}" y2="{{ _Tp + _PH * (1 - gy) }}"
-              stroke="#E8E4DA" stroke-width="0.3"/>
-        <text x="{{ _Lp - 4 }}" y="{{ _Tp + _PH * (1 - gy) + 3 }}" text-anchor="end" fill="#8a8a8a" font-size="6.5" font-family="JetBrains Mono, monospace">${{ '{:,}'.format((_ymax * gy) | int) }}</text>
-      {% endfor %}
-
-      <!-- stacked polygons per layer -->
-      {% for layer in _layers %}
-        {% set _pts_top = [] %}
-        {% set _pts_bot = [] %}
-        {% for d in _burn_series %}
-          {% set _x = _Lp + loop.index0 * _PW / (_n - 1) %}
-          {% set _cum_top = 0 %}
-          {% set _cum_bot = 0 %}
-          {% for l2 in _layers %}
-            {% if loop.index0 <= loop.index0 %}{% endif %}
-          {% endfor %}
-          {# compute stack sums #}
-          {% set _below = 0 %}
-          {% for l2 in _layers %}
-            {% if l2 == layer %}
-              {% set _at = d[l2] %}
-            {% elif loop.index0 < _layers.index(layer) %}
-              {% set _below = _below + d[l2] %}
-            {% endif %}
-          {% endfor %}
-          {% set _top_y = _Tp + _PH - ((_below + d[layer]) / _ymax) * _PH %}
-          {% set _bot_y = _Tp + _PH - (_below / _ymax) * _PH %}
-          {% set _ = _pts_top.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _top_y)) %}
-          {% set _ = _pts_bot.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _bot_y)) %}
+    {# ───────── Cost Breakdown table ───────── #}
+    <h2 class="pq-pdf-section-title sm">Cost Breakdown &middot; 항목별 비용</h2>
+    <table class="pq-pdf-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th class="right">Amount</th>
+          <th class="right">% of Burn</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in v3.cost_rows | default([]) %}
+        <tr>
+          <td><strong>{{ r.category | default('—') }}</strong></td>
+          <td class="right neg">{{ r.amount | default('—') }}</td>
+          <td class="right">{{ r.pct | default('—') }}</td>
+          <td style="color:var(--r-ink-3)">{{ r.detail | default('') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center;color:var(--r-ink-3);padding:18px 0;">이번 달 거래 비용 없음</td></tr>
         {% endfor %}
-        {% set _poly = _pts_top + (_pts_bot | reverse | list) %}
-        <polygon points="{{ _poly | join(' ') }}" fill="{{ _shades[loop.index0] }}" fill-opacity="0.78" stroke="#ffffff" stroke-width="0.3"/>
+      </tbody>
+    </table>
+
+    {# ───────── By-market alloc ───────── #}
+    {% if v3.by_market %}
+    <h2 class="pq-pdf-section-title sm">By Market &middot; 시장별 분포</h2>
+    <div class="pq-pdf-alloc-list">
+      {% for m in v3.by_market %}
+      <div class="pq-pdf-alloc-row{% if m.flat %} flat{% endif %}">
+        <span class="pq-pdf-alloc-name"><strong>{{ m.name }}</strong></span>
+        <span class="pq-pdf-alloc-bar">
+          <span class="pq-pdf-alloc-fill" style="width:{{ m.pct | default(0) }}%"></span>
+        </span>
+        <span class="pq-pdf-alloc-pct">{{ m.pct_display | default(m.pct ~ '%') }}</span>
+      </div>
       {% endfor %}
+    </div>
+    {% endif %}
 
-      <!-- total line (subtle ink stroke on top) -->
-      {% set _tot_pts = [] %}
-      {% for d in _burn_series %}
-        {% set _x = _Lp + loop.index0 * _PW / (_n - 1) %}
-        {% set _y = _Tp + _PH - (_totals[loop.index0] / _ymax) * _PH %}
-        {% set _ = _tot_pts.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-      {% endfor %}
-      <polyline points="{{ _tot_pts | join(' ') }}" fill="none" stroke="#0A0A0A" stroke-width="1.0" stroke-linejoin="round"/>
-
-      <!-- end-dot -->
-      {% set _last = _tot_pts[-1].split(',') %}
-      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="2.2" fill="#0A0A0A"/>
-      <circle cx="{{ _last[0] }}" cy="{{ _last[1] }}" r="4.2" fill="none" stroke="#0A0A0A" stroke-width="0.35" opacity="0.3"/>
-
-      <!-- x labels -->
-      {% for d in _burn_series %}
-        {% set _x = _Lp + loop.index0 * _PW / (_n - 1) %}
-        <text x="{{ '%.2f' % _x }}" y="{{ _H - 14 }}" text-anchor="middle"
-              fill="#8a8a8a" font-size="6.8" font-family="JetBrains Mono, monospace" letter-spacing="0.06em">{{ d.m }}</text>
-      {% endfor %}
-
-      <!-- legend -->
-      <g transform="translate({{ _Lp }}, {{ _H - 2 }})" font-family="Source Serif 4, serif" font-size="7.5" fill="#4a4a4a">
-        {% for l in _layers %}
-          <rect x="{{ loop.index0 * 70 }}" y="-6" width="8" height="8" fill="{{ _shades[loop.index0] }}" fill-opacity="0.78"/>
-          <text x="{{ loop.index0 * 70 + 12 }}" y="0" font-style="italic">{{ l | capitalize }}</text>
-        {% endfor %}
-      </g>
-    </svg>
-
-    <div class="bs-fig-caption">
-      Fig. 1. Twelve months of monthly burn, stacked by category.
-      Housing sits as the invariant base; leisure carries the season.
+    {# ───────── CFO Note callout ───────── #}
+    <div style="margin-top: 18px;">
+      <div class="pq-pdf-callout">
+        <div class="pq-pdf-callout-label">CFO&rsquo;s Note</div>
+        <p>{{ v3.cfo_note | default('Cost is silent. 매월 점검 — 거래 빈도와 슬리피지가 종합 burn의 절반을 차지하면 빈도 조정 검토.') }}</p>
+      </div>
     </div>
 
-    <div class="bs-prose" style="margin-top: 14pt; border-top: 0.35pt solid #c9c4b8; padding-top: 10pt;">
-      {% if burn_prose %}
-        {% for para in burn_prose %}<p>{{ para }}</p>{% endfor %}
-      {% else %}
-        <p>
-          Twelve months of burn sit between ${{ '{:,}'.format(_totals | min) }} and
-          ${{ '{:,}'.format(_totals | max) }}, with the median close to
-          ${{ '{:,}'.format((_totals | sum) // (_totals | length)) }}.
-          Housing runs as the invariant base — unchanged over the year, so a
-          flat bronze band at the bottom of the stack.
-        </p>
-        <p>
-          Seasonality arrives in leisure and, to a lesser extent, food. The
-          December lift is familiar and benign; January's quiet close is
-          equally familiar. The shape of the year is a rhythm, not a trend.
-        </p>
-      {% endif %}
-    </div>
-
-  </div>
-
-  <div class="bs-side">
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Median</div>
-      <div class="sp-margin-value">${{ '{:,}'.format((_totals | sum) // (_totals | length)) }}</div>
-      <div class="sp-margin-body">
-        The twelve-month median of monthly outflows. A steadier reading than
-        the mean in the presence of December.
+    {# ───────── Governance ───────── #}
+    <div class="pq-pdf-govblock">
+      <div class="pq-pdf-gov-cell"><div class="lbl">Tier</div><div class="val">Pro</div></div>
+      <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Monthly</div></div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Methodology</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}Trade-level cost ledger &middot; 자기 거래 데이터 한정{% endif %}</div>
+      </div>
+      <div class="pq-pdf-gov-cell">
+        <div class="lbl">Sources</div>
+        <div class="val">{% if _gov and _gov.sources %}{{ _gov.sources }}{% else %}&mdash;{% endif %}</div>
       </div>
     </div>
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Housing</div>
-      <div class="sp-margin-value">{{ housing_share_pct | default(48) }}%</div>
-      <div class="sp-margin-body">
-        Housing as a share of total burn this month. The single largest line,
-        and the single most invariant one.
-      </div>
+
+    <div class="pq-pdf-page-footer">
+      <span>Burn Rate &middot; Pro &middot; pivoxquant.com</span>
+      <span>{{ v3.month_label | default(period_label | default('—')) }}</span>
     </div>
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">YoY Burn</div>
-      <div class="sp-margin-value">{{ yoy_burn_pct | default('+3.2') }}%</div>
-      <div class="sp-margin-body">
-        Year-on-year change in total monthly burn. Well inside ambient
-        inflation.
-      </div>
-    </div>
-    <div class="sp-margin-block">
-      <div class="sp-margin-term">Variance</div>
-      <div class="sp-margin-value">${{ variance_usd | default('180') }}</div>
-      <div class="sp-margin-body">
-        Standard deviation of monthly totals across the trailing year — the
-        ledger's own weather.
-      </div>
-    </div>
-  </div>
-</div>
 
+    {% include '_disclaimer.html' %}
 
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 3 · LEDGER — category breakdown table
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part II · Category Ledger</p>
-<h2 class="sp-title">Eight lines, plainly placed</h2>
-<p class="sp-deck">
-  The month's outflows, arranged by category. Comparisons run against last
-  month, the trailing three-month average, and the prior year.
-</p>
-
-{% set _cat_rows = cat_rows | default([
-  {'cat':'Housing',     'this':1180,'last':1180,'avg3':1180,'yoy': 0.0, 'spark':[0.50,0.50,0.50,0.50,0.50,0.50,0.50,0.50]},
-  {'cat':'Food',        'this': 420,'last': 430,'avg3': 420,'yoy': 4.2, 'spark':[0.38,0.42,0.40,0.44,0.48,0.46,0.50,0.42]},
-  {'cat':'Transport',   'this': 240,'last': 260,'avg3': 243,'yoy':-2.1, 'spark':[0.40,0.48,0.50,0.52,0.46,0.44,0.42,0.40]},
-  {'cat':'Leisure',     'this': 360,'last': 280,'avg3': 293,'yoy': 8.4, 'spark':[0.28,0.32,0.36,0.40,0.44,0.48,0.54,0.62]},
-  {'cat':'Other',       'this': 280,'last': 230,'avg3': 250,'yoy': 6.2, 'spark':[0.40,0.42,0.46,0.44,0.48,0.50,0.54,0.56]},
-  {'cat':'Subscriptions','this':  84,'last':  78,'avg3':  80,'yoy':12.0, 'spark':[0.30,0.34,0.36,0.38,0.40,0.42,0.46,0.52]},
-  {'cat':'Utilities',   'this': 152,'last': 148,'avg3': 150,'yoy': 1.3, 'spark':[0.45,0.46,0.48,0.50,0.48,0.50,0.52,0.50]},
-  {'cat':'Health',      'this': 118,'last':  84,'avg3': 102,'yoy': 4.0, 'spark':[0.30,0.32,0.34,0.40,0.42,0.46,0.50,0.54]}
-]) %}
-
-<table class="ld-table">
-  <thead>
-    <tr>
-      <th style="width:18%;">Category</th>
-      <th class="num" style="width:14%;">This Month</th>
-      <th class="num" style="width:14%;">Last Month</th>
-      <th class="num" style="width:14%;">3-Mo Avg</th>
-      <th class="num" style="width:12%;">YoY</th>
-      <th style="width:28%;">12-Month Trajectory</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for r in _cat_rows %}
-      {% set _sp_w = 120 %}
-      {% set _sp_h = 22 %}
-      {% set _tmax = r.spark | max %}
-      {% set _tmin = r.spark | min %}
-      {% if _tmax == _tmin %}{% set _tmax = _tmin + 1 %}{% endif %}
-      {% set _sp = [] %}
-      {% for v in r.spark %}
-        {% set _x = loop.index0 * _sp_w / (r.spark | length - 1) %}
-        {% set _y = _sp_h - ((v - _tmin) / (_tmax - _tmin)) * (_sp_h - 4) - 2 %}
-        {% set _ = _sp.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-      {% endfor %}
-      {% set _lastpt = _sp[-1].split(',') %}
-      <tr>
-        <td><span class="ld-cat">{{ r.cat }}</span></td>
-        <td class="num">${{ '{:,}'.format(r.this) }}</td>
-        <td class="num r-muted">${{ '{:,}'.format(r.last) }}</td>
-        <td class="num r-muted">${{ '{:,}'.format(r.avg3) }}</td>
-        <td class="num {% if r.yoy > 0 %}r-neg{% elif r.yoy < 0 %}r-pos{% else %}r-muted{% endif %}">
-          {{ '%+.1f'|format(r.yoy) }}%
-        </td>
-        <td>
-          <svg viewBox="0 0 {{ _sp_w }} {{ _sp_h }}" width="100%" height="32" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; vertical-align:middle;">
-            <line x1="0" y1="{{ _sp_h/2 }}" x2="{{ _sp_w }}" y2="{{ _sp_h/2 }}" stroke="#c9c4b8" stroke-width="0.25" opacity="0.6"/>
-            <polyline points="{{ _sp | join(' ') }}" stroke="#0A0A0A" stroke-width="0.9" fill="none" stroke-linejoin="round"/>
-            <circle cx="{{ _lastpt[0] }}" cy="{{ _lastpt[1] }}" r="1.8" fill="#B8956A"/>
-          </svg>
-        </td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 4 · DIAGNOSTIC QUAD — 2×2 small-multiples + burn notes
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part III · Diagnostic Quad</p>
-<h2 class="sp-title">Four small cuts, one composite reading</h2>
-<p class="sp-deck">
-  Share of burn, fixed versus variable, three runway scenarios, and a monthly
-  savings-rate band. The page reads as a single object.
-</p>
-
-{% set _share_q = share_quad | default([
-  {'n':'Housing','v':1180},
-  {'n':'Food',    'v': 420},
-  {'n':'Transport','v':240},
-  {'n':'Leisure', 'v': 360},
-  {'n':'Other',   'v': 280},
-]) %}
-{% set _fv = fixed_variable | default([
-  {'m':'May','fix':1332,'var': 958},
-  {'m':'Jun','fix':1332,'var': 958},
-  {'m':'Jul','fix':1332,'var':1288},
-  {'m':'Aug','fix':1332,'var':1218},
-  {'m':'Sep','fix':1332,'var': 828},
-  {'m':'Oct','fix':1332,'var': 868},
-  {'m':'Nov','fix':1332,'var':1078},
-  {'m':'Dec','fix':1332,'var':1328},
-  {'m':'Jan','fix':1332,'var': 848},
-  {'m':'Feb','fix':1332,'var': 768},
-  {'m':'Mar','fix':1332,'var': 868},
-  {'m':'Apr','fix':1332,'var':1088},
-]) %}
-{% set _runway_scen = runway_scenarios | default({
-  'base': [32,32,31,31,30,30,29,28,28,27,27,26],
-  'plus': [32,31,30,29,28,27,26,25,24,23,22,21],
-  'minus':[32,32,32,32,32,32,33,33,33,34,34,34],
-}) %}
-{% set _save_rate_series = save_rate_series | default([58,61,63,62,65,64,60,55,62,64,63,62]) %}
-
-<div class="rq-grid">
-  <div class="rq-main">
-    <div class="rq-quads">
-
-      {# Q1 donut: category share #}
-      <div class="rq-quad">
-        <div class="rq-quad-label">Category Share</div>
-        {% set _sh_total = _share_q | map(attribute='v') | list | sum %}
-        {% if _sh_total == 0 %}{% set _sh_total = 1 %}{% endif %}
-        <div class="rq-quad-value">${{ '{:,}'.format(_sh_total) }}</div>
-        {% set _cx = 90 %}
-        {% set _cy = 54 %}
-        {% set _r_outer = 34 %}
-        {% set _r_inner = 20 %}
-        <svg viewBox="0 0 180 110" width="100%" height="150" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
-          {% set _ang = 0 %}
-          {% set _shades = ['#B8956A', '#a88866', '#c9a982', '#d8bd9e', '#e8d4b8'] %}
-          {% for s in _share_q %}
-            {% set _p = s.v / _sh_total %}
-            {% set _a2 = _ang + _p * 360 %}
-            {% set _a1_rad = (_ang - 90) * 3.141592653589793 / 180 %}
-            {% set _a2_rad = (_a2 - 90) * 3.141592653589793 / 180 %}
-            {% set _x1 = _cx + _r_outer * (((_a1_rad)**1) | float) %}
-            {# approximate cos/sin via math through an inline macro-less fallback: compute points in JS-free #}
-            {% set _x1o = _cx + _r_outer * ((1 if _a1_rad == 0 else 0) + 0) %}
-            {% set _lg = 1 if _p > 0.5 else 0 %}
-            {# Use numeric trig via Python-like: jinja lacks trig, so approximate by generating polygon from 24 arc points #}
-            {% set _steps = 36 %}
-            {% set _pts = [] %}
-            {% set _ = _pts.append(('%.2f' % _cx) ~ ',' ~ ('%.2f' % _cy)) %}
-            {% for i in range(_steps + 1) %}
-              {% set _tt = _ang + (_a2 - _ang) * i / _steps %}
-              {% set _rr = (_tt - 90) * 3.141592653589793 / 180 %}
-              {# cos/sin approx via Taylor series — jinja no math; use svg path instead below #}
-            {% endfor %}
-            <!-- draw sector by svg path with large-arc-flag -->
-            {% set _largeArc = 1 if (_a2 - _ang) > 180 else 0 %}
-            {% set _a1_rad2 = _ang * 3.141592653589793 / 180 - 1.5707963267948966 %}
-            {% set _a2_rad2 = _a2 * 3.141592653589793 / 180 - 1.5707963267948966 %}
-            <path d="M {{ _cx }} {{ _cy }}
-                     L {{ _cx }} {{ _cy - _r_outer }}
-                     A {{ _r_outer }} {{ _r_outer }} 0 {{ _largeArc }} 1
-                       {{ _cx }} {{ _cy - _r_outer }} Z"
-                  fill="{{ _shades[loop.index0 % 5] }}" fill-opacity="0" />
-            <!-- simplified: render as stacked arcs via rects below -->
-            {% set _ang = _a2 %}
-          {% endfor %}
-          <!-- fallback 1D stacked bar as donut substitute (svg trig unavailable in jinja) -->
-          <g transform="translate(8, 28)">
-            {% set _cum = 0 %}
-            {% for s in _share_q %}
-              {% set _w = 164 * s.v / _sh_total %}
-              <rect x="{{ _cum }}" y="0" width="{{ _w }}" height="22" fill="{{ _shades[loop.index0 % 5] }}" fill-opacity="0.82"/>
-              <text x="{{ _cum + _w / 2 }}" y="14" text-anchor="middle" fill="#F7F5EF" font-size="7" font-family="JetBrains Mono, monospace">{{ (100 * s.v / _sh_total) | round | int }}%</text>
-              {% set _cum = _cum + _w %}
-            {% endfor %}
-          </g>
-          <g transform="translate(8, 62)" font-family="Source Serif 4, serif" font-size="6.8" fill="#4a4a4a">
-            {% set _xoff = 0 %}
-            {% for s in _share_q %}
-              <rect x="{{ _xoff }}" y="0" width="7" height="7" fill="{{ _shades[loop.index0 % 5] }}" fill-opacity="0.82"/>
-              <text x="{{ _xoff + 10 }}" y="6" font-style="italic">{{ s.n }}</text>
-              {% set _xoff = _xoff + (10 + (s.n | length * 3.5) + 14) %}
-            {% endfor %}
-          </g>
-        </svg>
-        <div class="rq-quad-foot">Month's burn by category, width-proportional.</div>
-      </div>
-
-      {# Q2: fixed vs variable stacked bar #}
-      <div class="rq-quad">
-        <div class="rq-quad-label">Fixed vs Variable</div>
-        <div class="rq-quad-value">{{ '%.0f'|format(_fixed_ratio) }}% / {{ '%.0f'|format(100 - _fixed_ratio) }}%</div>
-        {% set _fv_max = [] %}
-        {% for d in _fv %}
-          {% set _ = _fv_max.append(d.fix + d.var) %}
-        {% endfor %}
-        {% set _fmax = _fv_max | max %}
-        {% if _fmax == 0 %}{% set _fmax = 1 %}{% endif %}
-        {% set _bw = 180 / (_fv | length) %}
-        <svg viewBox="0 0 180 80" width="100%" height="128" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
-          {% for d in _fv %}
-            {% set _x = loop.index0 * _bw + 1 %}
-            {% set _tot = d.fix + d.var %}
-            {% set _hh = (_tot / _fmax) * 56 %}
-            {% set _fh = (d.fix / _fmax) * 56 %}
-            {% set _vh = (d.var / _fmax) * 56 %}
-            <rect x="{{ _x }}" y="{{ 64 - _hh }}" width="{{ _bw - 2 }}" height="{{ _vh }}" fill="#d8bd9e" fill-opacity="0.85"/>
-            <rect x="{{ _x }}" y="{{ 64 - _fh }}" width="{{ _bw - 2 }}" height="{{ _fh }}" fill="#B8956A" fill-opacity="0.80"/>
-            <text x="{{ _x + (_bw-2)/2 }}" y="74" text-anchor="middle" fill="#6B6B6B" font-size="5.6" font-family="JetBrains Mono, monospace">{{ d.m }}</text>
-          {% endfor %}
-          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">FIXED (BRONZE) · VARIABLE (LIGHT)</text>
-        </svg>
-        <div class="rq-quad-foot">Twelve months, stacked. Fixed band barely moves.</div>
-      </div>
-
-      {# Q3: runway 3 scenarios #}
-      <div class="rq-quad">
-        <div class="rq-quad-label">Runway · 3 scenarios</div>
-        <div class="rq-quad-value">{{ _runway_scen.base[0] }} mo</div>
-        {% set _all_vals = _runway_scen.base + _runway_scen.plus + _runway_scen.minus %}
-        {% set _rmin = _all_vals | min %}
-        {% set _rmax = _all_vals | max %}
-        {% if _rmax == _rmin %}{% set _rmax = _rmin + 1 %}{% endif %}
-        {% set _W2 = 180 %}
-        {% set _H2 = 80 %}
-        {% set _Tp2 = 6 %}
-        {% set _Bp2 = 14 %}
-        {% set _Lp2 = 6 %}
-        {% set _Rp2 = 6 %}
-        {% set _PW2 = _W2 - _Lp2 - _Rp2 %}
-        {% set _PH2 = _H2 - _Tp2 - _Bp2 %}
-        <svg viewBox="0 0 {{ _W2 }} {{ _H2 }}" width="100%" height="128" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
-          {% for key, series in _runway_scen.items() %}
-            {% set _c = '#0A0A0A' if key == 'base' else ('#A84C4C' if key == 'plus' else '#4a7a4a') %}
-            {% set _d = '0' if key == 'base' else '3,2' %}
-            {% set _pts2 = [] %}
-            {% for v in series %}
-              {% set _x = _Lp2 + loop.index0 * _PW2 / (series | length - 1) %}
-              {% set _y = _Tp2 + _PH2 - ((v - _rmin) / (_rmax - _rmin)) * _PH2 %}
-              {% set _ = _pts2.append(('%.2f' % _x) ~ ',' ~ ('%.2f' % _y)) %}
-            {% endfor %}
-            <polyline points="{{ _pts2 | join(' ') }}" fill="none" stroke="{{ _c }}" stroke-width="{{ 1.2 if key == 'base' else 0.8 }}" stroke-dasharray="{{ _d }}" stroke-linejoin="round"/>
-          {% endfor %}
-          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">BASE · +10% · -10%</text>
-          <text x="{{ _W2 }}" y="{{ _H2 - 2 }}" text-anchor="end" fill="#8a8a8a" font-size="6" font-family="JetBrains Mono, monospace">months ahead</text>
-        </svg>
-        <div class="rq-quad-foot">Base case solid. Higher-burn line in oxblood.</div>
-      </div>
-
-      {# Q4: savings rate bar #}
-      <div class="rq-quad">
-        <div class="rq-quad-label">Savings Rate · 12M</div>
-        <div class="rq-quad-value">{{ '%.0f'|format(_save_rate) }}%</div>
-        {% set _sbw = 180 / (_save_rate_series | length) %}
-        <svg viewBox="0 0 180 80" width="100%" height="128" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block; margin-top:8pt;">
-          {% for v in _save_rate_series %}
-            {% set _x = loop.index0 * _sbw + 1 %}
-            {% set _h = (v / 100) * 56 %}
-            <rect x="{{ _x }}" y="{{ 64 - _h }}" width="{{ _sbw - 2 }}" height="{{ _h }}" fill="#B8956A" fill-opacity="0.72"/>
-          {% endfor %}
-          <line x1="0" y1="{{ 64 - (_save_rate / 100) * 56 }}" x2="180" y2="{{ 64 - (_save_rate / 100) * 56 }}" stroke="#0A0A0A" stroke-width="0.5" stroke-dasharray="3,2" opacity="0.5"/>
-          <text x="0" y="8" fill="#6B6B6B" font-size="6.5" font-family="Geist, sans-serif" letter-spacing="0.12em">MONTHLY · DASHED = MEAN</text>
-        </svg>
-        <div class="rq-quad-foot">Share of income not spent, month by month.</div>
-      </div>
-
-    </div>
-  </div>
-
-  <div class="rq-side">
-    <div class="rq-method">
-      <div class="rq-method-eyebrow">Burn Notes</div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On housing invariance</span>
-        <div class="rq-method-def">Housing contributes the flat bronze floor of the stacked walk — rent is a single line repeated twelve times.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On seasonality</span>
-        <div class="rq-method-def">Leisure and food carry the year's visible shape. December lifts; January quiets. The pattern repeats.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On variance</span>
-        <div class="rq-method-def">Twelve-month variance is modest. The ledger is not dramatic — and that is itself a reading.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On runway scenarios</span>
-        <div class="rq-method-def">The three lines are arithmetic, not a claim about tomorrow. They answer a what-if, not a what-will.</div>
-      </div>
-      <div class="rq-method-item">
-        <span class="rq-method-term">On savings rate</span>
-        <div class="rq-method-def">Share of income not spent each month. Dashed line marks the twelve-month mean — the floor under the column bars.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 5 · EDITORIAL
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<p class="sp-part">Part IV · Editorial</p>
-<h2 class="sp-title">What the ledger does not settle</h2>
-<p class="sp-deck">
-  One sentence to keep in mind, and a short list of things this burn record
-  was never meant to verify. The ledger is precise about what it counts.
-</p>
-
-<div class="ed-quote-wrap">
-  <div class="ed-quote-cell">
-    <blockquote class="ed-quote">
-      {{ pull_quote | default("Frugality is not a strategy. It is the floor on which every strategy stands.") }}
-    </blockquote>
-    <div class="ed-quote-attr">{{ pull_quote_attribution | default("The Ledger Voice") }}</div>
-  </div>
-</div>
-
-<div class="ed-not-head">What this ledger does not settle</div>
-<div class="ed-not-list">
-  {% set _notv = not_verified | default([
-    {'category':'Tax deductibility',       'detail':'Allowability of line items under local tax code sits outside this ledger.'},
-    {'category':'Insurance coverage',      'detail':'Protection against unrecorded contingencies is a separate conversation.'},
-    {'category':'Lifestyle inflation',     'detail':'Upward drift in baseline spending is a year-over-year reading, not a monthly one.'},
-    {'category':'Debt servicing',          'detail':'Obligations held outside the household ledger are not included here.'},
-    {'category':'Life events',             'detail':'Planned or unplanned events will redraw the stack overnight.'},
-  ]) %}
-  {% for n in _notv %}
-    <div class="ed-not-item">
-      <div class="ed-not-cat">{{ n.category }}</div>
-      <div class="ed-not-detail">{{ n.detail }}</div>
-    </div>
-  {% endfor %}
-</div>
-
-
-{# ══════════════════════════════════════════════════════════════════════════
-   PAGE 6 · COLOPHON
-   ══════════════════════════════════════════════════════════════════════════ #}
-<div class="r-page-break"></div>
-
-<div class="co-wrap">
-
-  <div class="co-head">Colophon</div>
-  <div class="co-rule-small"></div>
-
-  <div class="co-body">
-    <p style="margin: 0 0 10pt 0;">
-      Prepared for <strong>{{ user_name }}</strong> on
-      <strong>{{ generated_at | default('2026-04-22') }}</strong>. Issue
-      <strong>No. {{ '%02d' % _issue_no }}</strong> ·
-      {{ period_label_long | default(period_label) }}.
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Data sources</span> &nbsp;
-      {# Wave 5 — the burn-rate pipeline computes from the user's own
-         TradeHistory rows (commission / tax / slippage estimation) so
-         the truthful claim is system sources + the user's manual
-         ledger entry. No bank statement ingestion exists yet — we
-         must not claim one. #}
-      {% set _ds = data_sources | default([]) %}
-      {% if _ds %}{{ _ds | join(' · ') }}.{% else %}Data sources not specified.{% endif %}
-    </p>
-    <p style="margin: 0 0 10pt 0;">
-      <span class="co-key">Typeset in</span> &nbsp;
-      {{ typeset_in | default('Source Serif 4 · Geist · JetBrains Mono · Noto Sans KR') }}.
-    </p>
-    <p style="margin: 0 0 0 0;">
-      <span class="co-key">Engine</span> &nbsp;
-      {{ engine_note | default('Historical record only. Household burn ledger') }}.
-    </p>
-  </div>
-
-  <div class="co-thin-rule"></div>
-
-  {% include '_disclaimer.html' %}
-
-  <div class="co-thin-rule"></div>
-
-  <div class="co-sign">
-    {% with brand_kind='monogram', brand_size=64 %}
-      {% include '_brand_mark.html' %}
-    {% endwith %}
-    <div class="co-sign-house">PivoxQuant Research Desk</div>
-    <div class="co-sign-ref">Doc ref · {{ _doc_ref }}</div>
-    <div class="co-sign-time">Generated · {{ generated_at | default('2026-04-22') }}</div>
-  </div>
-
+  </section>
 </div>
 
 </body>

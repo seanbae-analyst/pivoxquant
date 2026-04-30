@@ -404,24 +404,124 @@ class BurnRateService:
         )
         return ctx.to_dict()
 
+    # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
+
+    def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Map BurnContext (trading cost burn) onto v3 1-page Pro shape.
+
+        Backend semantics: user trading cost burn (commission / tx_tax /
+        cgt / fx_spread / slippage). Frontend tsx covers growth-co cash
+        runway — different concept; v3 layout adapted to backend.
+        """
+        burn_total = data.get("burn_total") or 0
+        commission = data.get("commission_total") or 0
+        tx_tax = data.get("tx_tax_total") or 0
+        cgt = data.get("cgt_est_total") or 0
+        fx = data.get("fx_spread_total") or 0
+        slippage = data.get("slippage_total") or 0
+        notional = data.get("notional_total") or 0
+        trades = data.get("trades_total") or 0
+        burn_pct = data.get("burn_pct")
+        period_label = data.get("period_label") or "—"
+
+        def _money(v, *, signed: bool = False) -> str:
+            try:
+                n = float(v)
+            except (TypeError, ValueError):
+                return "—"
+            sign = ("−" if n > 0 and signed else "")
+            an = abs(n)
+            if an >= 1_000_000:
+                return f"{sign}${an/1_000_000:.2f}M"
+            if an >= 1_000:
+                return f"{sign}${an/1_000:.1f}k"
+            return f"{sign}${an:,.2f}"
+
+        def _pct_of(part: float, total: float) -> str:
+            if not total:
+                return "—"
+            return f"{(part/total)*100:.1f}%"
+
+        cost_rows = []
+        for label, amount, note in [
+            ("Commission", commission, "거래 수수료"),
+            ("Tax (Tx)", tx_tax, "거래세"),
+            ("Tax (CGT est)", cgt, "양도세 추정"),
+            ("FX Spread", fx, "환전 스프레드"),
+            ("Slippage", slippage, "체결가 차이"),
+        ]:
+            try:
+                amt_f = float(amount or 0)
+            except (TypeError, ValueError):
+                amt_f = 0
+            if amt_f or burn_total:
+                cost_rows.append({
+                    "category": label,
+                    "amount":   _money(amt_f, signed=True),
+                    "pct":      _pct_of(amt_f, burn_total),
+                    "detail":   note,
+                })
+
+        bm_data = data.get("by_market") or {}
+        by_market = []
+        if bm_data:
+            try:
+                tot = sum(float((v or {}).get("burn") or 0) for v in bm_data.values())
+            except Exception:
+                tot = 0
+            for name, info in bm_data.items():
+                try:
+                    val = float((info or {}).get("burn") or 0)
+                except (TypeError, ValueError):
+                    val = 0
+                pct = (val / tot * 100) if tot > 0 else 0
+                by_market.append({
+                    "name":        str(name).upper(),
+                    "pct":         round(pct, 1),
+                    "pct_display": f"{pct:.1f}%",
+                    "flat":        pct < 35,
+                })
+
+        avg_cost = (burn_total / trades) if trades > 0 else 0
+
+        return {
+            "month_label": period_label,
+            "report_tag":  f"BR-{str(period_label).replace(' ', '-')[:20]}",
+            "this_month":  {"value": _money(burn_total, signed=True),
+                             "detail": "이번 달 누계"},
+            "trades":      {"value": str(trades) if trades else "—",
+                             "detail": f"notional {_money(notional)}" if notional else ""},
+            "burn_pct":    {"value": f"{burn_pct:.2f}%" if burn_pct is not None else "—",
+                             "detail": "vs NAV"},
+            "avg_cost":    {"value": _money(avg_cost, signed=True) if avg_cost else "—",
+                             "detail": "거래당"},
+            "cost_rows":   cost_rows,
+            "by_market":   by_market,
+            "cfo_note":    None,
+        }
+
     # ── render ──────────────────────────────────────────────────────────────
 
-    def render_html(self, data: dict[str, Any]) -> str:
+    def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
             html = self._fallback_html(data)
         else:
             try:
+                ctx = dict(data)
+                ctx["v3"] = self._to_v3_shape(data)
                 tpl = env.get_template("burn_rate.html")
-                html = tpl.render(**data)
+                html = tpl.render(**ctx)
             except Exception as exc:
-                logger.warning("burn_rate template render failed: %s", exc)
+                logger.warning("burn_rate v3 render failed: %s", exc)
                 html = self._fallback_html(data)
-        # Legal guard: 자본시장법 §6 미등록 투자자문업 방어선.
         scrubbed = safe_scrub(html, context="burn_rate") or html
         if not is_compliant(scrubbed):
             logger.warning("legal_filter fail: burn_rate")
         return scrubbed
+
+    def render_html(self, data: dict[str, Any]) -> str:
+        return self.render_pdf_html(data)
 
     def render_pdf(self, data: dict[str, Any]) -> Optional[bytes]:
         HTML = _try_import_weasyprint()
