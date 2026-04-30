@@ -1,4 +1,4 @@
-# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v12 "PDF v3 디자인 + fake-data 박멸")
+# PivoxQuant — 인수인계서 (2026-04-30 세션 종료 · v13 "year_end_letter v3 추가")
 
 ## 이 문서의 원칙
 - **거짓 보고 금지**. 완료된 것은 완료, 미완은 미완.
@@ -7,7 +7,86 @@
 
 ---
 
-## 🔥 2026-04-30 세션 — PDF 첨부 박멸 + 11 PDFs v3 + fake-data leak 박멸 + 코드 정리
+## 🔥 2026-04-30 자율 세션 (v13) — year_end_letter v3 4-page Premium 변환
+
+**1 commit. main HEAD `e5806a8`. PDF v3 변환 11/17 → 12/17. pytest 1302 / 0 fail. P1 항목 1건 클리어.**
+
+### Commit
+| # | Commit | 핵심 |
+|---|--------|------|
+| 1 | `e5806a8` | year_end_letter v3 4-page Premium 변환 (template 1153→397 lines, service _to_v3_shape + render_pdf_html, 신규 _year_end_letter_v3_css.html) |
+
+### 변경 파일
+- `services/artifacts/year_end_letter_service.py` — `_to_v3_shape()` + `render_pdf_html()` 추가, `render_html` alias 통일 (+144 lines)
+- `services/artifacts/templates/year_end_letter.html` — 6-page Goldman v2 IC pack → 4-page Premium v3 letter (1153 → 397 lines, -756 lines)
+- `services/artifacts/templates/_year_end_letter_v3_css.html` — credit_rating v3 css base 복사 + scope 주석만 갱신 (527 lines)
+
+### 4-page 구조 (v3)
+| Page | 내용 | 데이터 출처 |
+|---|---|---|
+| 1 Cover | Year + 4 KPI grid (YTD / Benchmark / Alpha / Win Rate) | service.generate_for_user (ytd_return_pct, benchmark_pct, alpha_pct, win_rate_pct) |
+| 2 Letter | Pull quote + Buffett-tone paragraphs (Claude Haiku 생성) | service.shareholder_letter / letter_paragraphs |
+| 3 Year Recap | Sector contribution + Best 3 / Worst 3 decisions + Consistency callout | service.sector_contribution / best_decisions / worst_decisions / consistency_notes |
+| 4 Watch Ahead | 다음 해 calendar + "What this letter does NOT claim" + Governance | service.watch_items + 정적 not_claimed list |
+
+### 라이브 검증 (정직)
+| 영역 | 결과 |
+|---|---|
+| pytest 전체 | ✅ 1302 passed / 1 skipped / 0 failed (104s) |
+| ruff check year_end_letter_service.py | ✅ all clean |
+| AST parse | ✅ OK |
+| render_pdf_html(sample_year_end_letter) | ✅ 27,256 bytes HTML, 4 page sections, pq-pdf-pullquote / pq-pdf-prose / Sector Contribution / Best 3 Decisions / Watch Ahead / Does Not Claim 모두 정상 |
+| render_pdf_html(service-shape mock) | ✅ 26,181 bytes HTML, NVDA best / FOMC watch / +16.80% / 62.5% / 한국어 consistency notes 모두 표시 |
+| legal_filter safe_scrub | ✅ "다음 해 시장 전망" → "시장 관찰 구간", "법률 자문" → "법률 정보 제공" 자동 변환 (의도된 동작) |
+| WeasyPrint render_pdf | 미검증 (production 의존, 다음 cron 12/31까지 시간 여유) |
+
+### Cron 상태
+- `year_end_letter_annual` cron — 12/31 10:00 KST. 변환 완료. **재활성화 별도 (CEO 결정 필요)** — 현재 일시정지 상태 유지.
+
+### 다음 세션 P0 (변경 없음)
+1. **dd_checklist v3** — 자율 세션 범위 외 (CEO product decision 필요): 6-page single-ticker IC pack template vs current multi-position T+3 pending list service의 semantic mismatch. 두 갈래:
+   - (a) per-ticker fundamentals fetch service expansion (FMP get_ratios + income_statement + cash_flow) + 단일 종목 IC pack 유지
+   - (b) artifact semantic 변경 (multi-position T+3 self-review prompt, 1-2 page Pro로 단순화)
+   → 자율모드에서 product 결정 회피. CEO 의사결정 후 진행.
+
+2. **quarterly_self_report v3** — 15-page Self 10-K + persona branching (`test_persona_pdf_branch.py`). 자율 세션 1회 범위 초과. 별도 sprint.
+
+3. **Secret rotate / GitHub billing / SendGrid sender** — CEO 외부 액션 (변경 없음).
+
+### 정직한 미완 사항
+1. ❌ **dd_checklist 변환 안 함** — 위 (a)(b) product decision 회피
+2. ❌ **quarterly_self_report 변환 안 함** — 15-page persona branching, 단일 세션 범위 초과
+3. ❌ **year_end_letter cron 재활성화 안 함** — CEO 컨펌 대기 (다음 cron 12/31, 시간 여유 충분)
+4. ❌ **Production WeasyPrint render_pdf 검증 안 함** — Railway production deploy 후 확인 필요
+5. ❌ **Live email 첨부 검증 안 함** — 12/31 cron 자동 발송 시점에 확인 가능
+
+### PDF v3 변환 진행률
+**Before**: 11/17 (weekly_memo, brag_card, earnings_prebrief, risk_board, dividend_income, portfolio_segment, insider_mirror, kpi_dashboard, credit_rating, burn_rate, monthly_finance)
+**After**: **12/17** (+ year_end_letter)
+**Remaining**: 5/17 (dd_checklist, quarterly_self_report, self_audit, sp500_backtest, capital_allocation)
+
+### 다음 세션 시작 프롬프트
+
+```
+HANDOVER v13 (2026-04-30 자율 세션 종료) 읽고 이어서.
+
+이번 세션 성과: 1 commit / year_end_letter v3 4-page Premium 변환 / pytest 1302 pass / 12/17 PDFs v3 완료.
+
+P0 (CEO product decision 필요):
+1. dd_checklist v3 — (a) per-ticker fundamentals fetch + 6-page IC pack 유지, OR
+                     (b) multi-position T+3 review prompt로 semantic 변경 (1-2 page Pro)
+
+P1:
+2. quarterly_self_report v3 — 15-page Premium, persona branching 보존
+3. year_end_letter cron 재활성화 — CEO 컨펌 후
+
+CEO 외부:
+- Secret rotate / GitHub billing / SendGrid sender / 사업자등록 / 변호사 / Stripe
+```
+
+---
+
+## 📜 2026-04-30 세션 (v12 archive) — PDF 첨부 박멸 + 11 PDFs v3 + fake-data leak 박멸 + 코드 정리
 
 **21 commits 누적. main HEAD `7a06a55`. 17 PDF 중 11개 v3 디자인 변환 완료. 5 cron 일시정지 → 2 재활성화. ruff F841 17건 cleanup.**
 
