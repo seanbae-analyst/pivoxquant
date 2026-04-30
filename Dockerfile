@@ -5,9 +5,25 @@ RUN apt-get update && apt-get install -y \
     libpango-1.0-0 libpangoft2-1.0-0 libcairo2 \
     libgdk-pixbuf-2.0-0 libgdk-pixbuf2.0-common \
     libglib2.0-0 libpangocairo-1.0-0 libharfbuzz0b libfribidi0 \
-    fonts-noto-cjk fontconfig \
+    fonts-noto-cjk fontconfig wget unzip ca-certificates \
     libffi-dev libxml2 libxslt1.1 shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
+
+# ── Pretendard font (PDF v3 디자인 의도, OFL 라이센스) ────────────────────
+# Source: github.com/orioncactus/pretendard (Kil Hyung-jin, OFL 1.1).
+# Required for v3 templates (Vantablack + Bronze + Playfair) — the
+# fonts-noto-cjk fallback works for 한글 rendering but loses the
+# tabular-num + designed weight ladder that v3 specifies.
+# Failure tolerated — render still falls back to Noto CJK.
+RUN mkdir -p /usr/share/fonts/truetype/pretendard \
+    && wget -q --tries=3 --timeout=30 \
+       -O /tmp/pretendard.zip \
+       https://github.com/orioncactus/pretendard/releases/download/v1.3.9/Pretendard-1.3.9.zip \
+    && unzip -q -j /tmp/pretendard.zip 'public/static/*.otf' \
+       -d /usr/share/fonts/truetype/pretendard/ \
+    && rm -f /tmp/pretendard.zip \
+    && fc-cache -f -v >/dev/null 2>&1 \
+    || echo "WARNING: Pretendard install failed; falling back to Noto CJK"
 
 WORKDIR /app
 COPY requirements.txt .
