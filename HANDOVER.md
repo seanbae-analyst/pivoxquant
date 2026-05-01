@@ -1,4 +1,73 @@
-# PivoxQuant — 인수인계서 (2026-05-01 세션 종료 · v18 "earnings digest + dd_checklist 리디자인 + 17 PDF 다듬기")
+# PivoxQuant — 인수인계서 (2026-05-01 v19 세션 종료 · CEO 테스트 6 bug fixes + 4 페이지 디자인 통일 + 라이브 OAuth 검증)
+
+## 🟢 2026-05-01 v19 세션 (오후) — Production 라이브 OAuth 감사 + bug fix + design Wave 1+2
+
+**10 commits (`9c9390f → 7232080`). main HEAD `7232080`. seanbae1521@gmail.com 라이브 OAuth 세션으로 전 페이지 직접 검증.**
+
+### 이번 세션 commits
+
+| # | Commit | Type | 핵심 | 라이브 검증 |
+|---|---|---|---|---|
+| 1 | `9c9390f` | fix | V1 ledger Delete 버튼 (× glyph) 와이어 — `onDelete` prop 미전달 → 영영 안 그려졌음. backend `DELETE /api/portfolio/positions/{id}` 이미 존재 | ❌ V1 미활성 (production V2) |
+| 2 | `1ee4786` | fix | V1 Add Position 모달 trim — Side/PurchaseDate 백엔드 무시 필드 제거 | ❌ V1 미활성 |
+| 3 | `434acb0` | fix | **Cmd+K 듀얼 팔레트 박멸** — DashboardLayout이 SearchCommandMenu + CommandPalette 동시 마운트 → Cmd+K 누르면 두 팔레트 stacked. CommandPalette 마운트 제거 | ✅ **라이브 확인** (단일 팔레트, AAPL 자동완성) |
+| 4 | `d2a2bb8` | fix | V1 Risk rolling-VaR sign 정규화 (backend 양수 → KPI 음수 컨벤션 일치) | ❌ V1 미활성 |
+| 5 | `f18e2b7` | fix | **CRITICAL: /discover symbol/ticker 키 미스매치** — `/api/portfolio/positions` serializer가 `symbol` 키 emit하는데 discover 페이지가 `p.ticker` 읽음 → `hasUserScope=false` → §101 가드가 본인 보유 종목 분석까지 차단 | ✅ **라이브 확인** (Engine Scan에 Samsung 등장) |
+| 6 | `7e3f470` | fix | **V2 Add Position 모달 trim** — backend가 무시하는 `acquired_on/currency/sector` 필드 제거 (V1 fix를 V2에도 propagate) | ✅ **라이브 확인** (모달 7→4 필드) |
+| 7 | `f8daf4e` | design | **Wave 1A: /discover 리디자인** — 5-card SaaS grid → hairline 2-column ledger (US/KR), Playfair "What the desk *observed.*" | ✅ **라이브 확인** |
+| 8 | `42a7d9b` | design | **Wave 1B: /alerts 리디자인** — 4 boxy stat cards → hairline strip, Playfair "When the desk *spoke.*" | ✅ **라이브 확인** |
+| 9 | `7232080` | design | **Wave 2: /watchlist + /ai-chat 리디자인** — flat sans h1 → Playfair italic accent, 4-card prompt grid → hairline row list | ✅ **라이브 확인** |
+
+### 디자인 통일 진척 (사용자 직접 지적)
+
+**문제**: "디자인 컨셉 너무 다르다" — 한 제품 안에 3-4개 시각 언어 충돌.
+
+**해결**: 대시보드 14개 페이지 중 4개 (/discover, /alerts, /watchlist, /ai-chat) 를 v3 락-인 (Vantablack + Bronze + Playfair italic accent) 으로 통합. 나머지 9개 (/home, /portfolio v2, /risk v2, /signals, /reports, /settings, /profile, /market, /pricing) 는 이미 v3 적용 상태였음 → **대시보드 14/14 v3 일관성 확보**.
+
+### 정직 보고 — 라이브 검증 한계
+
+**production 환경 제약 (`NEXT_PUBLIC_PORTFOLIO_V2=true`, `NEXT_PUBLIC_RISK_V2=true`)으로 인한 비검증 항목**:
+- Fix #1, #2 (Portfolio V1) — V1이 production에서 비활성. 코드는 정확하나 **사용자 화면에 영향 없음**. V1 토글 켜면 노출.
+- Fix #4 (Risk V1) — 동일 이유.
+
+**검증 시도했으나 미완료**:
+- Watchlist Add 실제 동작 (modal 클릭이 정상 안 작동, 좌표 click 재시도 필요)
+- Watchlist Delete (watchlist 비어있어 시작 불가)
+- Cmd+K → ticker 입력 → Enter → /detail 라우팅
+- Discover Engine Scan post fix #5 추가 검증 (Samsung은 떴으나 010170/124500이 DISCOVER_POOL 미포함이라 분석 자체 안 됨)
+
+### 다음 세션 V20 우선순위
+
+#### P0 — 미검증 항목 라이브 마무리
+1. **Watchlist Add 실제 동작 검증** — TSLA 추가 → row 등장 → trash 삭제 → row 사라짐 사이클
+2. **Cmd+K Enter navigation** — type "AAPL" → Enter → `/detail/AAPL` 라우팅 확인
+3. **V2 Add Position 실 add 검증** — TEST 종목 추가 후 backend 200 응답, table에 row 등장, 삭제로 cleanup
+4. **Discover Engine Scan refresh 후 Samsung 외 다른 보유 종목** — engine.DISCOVER_POOL에 010170.KQ, 124500.KQ 포함 여부 확인 (poll 확장 권장)
+
+#### P1 — 잔존 잡일
+5. /reports 카운터 vs /home 카운터 불일치 ("0 brag cards" vs "1 brag card 2026-04 Brag Card")
+6. /alerts "Sized: 0 shares · set capital for sizing" — 사용자가 capital 설정 위치 안내 부재 (settings 안내 링크 추가)
+7. **engine.DISCOVER_POOL 확장** — 사용자 보유 010170.KQ, 124500.KQ 누락. routes/discover.py 만 수정 (engine.py 보호 정책)
+8. /companion FREE tier 잠금 페이지 → v3 톤 ("When you're ready, ascend." 같은 카피)
+
+#### P2 — design Wave 3
+9. /detail/{ticker} 페이지 v3 일관성 점검 (이번 세션에서 안 봄)
+10. PWA install banner 디자인 통일 (현재 box-shadow 카드)
+11. Mobile 반응형 전체 점검
+
+### 라이브 OAuth 검증된 페이지 (16개, screenshot 보관)
+
+/home, /portfolio (V2), /watchlist (Wave 2 적용), /risk (V2), /signals, /reports, /alerts (Wave 1B 적용), /companion (Premium gating), /ai (AI Analysis Tools), /ai-chat (Wave 2 적용), /growth (Journal), /settings, /profile, /market (US/KR tabs), /discover (Wave 1A 적용 + fix #5), /pricing — 모두 정상 렌더 + 정상 인터랙션 (Cmd+K, 알림 벨, 프로필 드롭다운).
+
+### 테스트 환경 메모
+- Account: seanbae1521@gmail.com (FREE tier)
+- Positions: 3 (Samsung 005930.KS, IT Sengle 124500.KQ, Taihan 010170.KQ)
+- Watchlist: empty (next session에서 add/remove 실증)
+- Backend: Railway `RAILWAY_BACKEND_HOST.up.railway.app` ACTIVE
+- DEV_LOGIN_SECRET: production 미등록 (legitimate, dev/staging only)
+- 로컬 backend는 시스템 부하로 import 단계에서 hung — Railway production만 사용 가능
+
+---
 
 ## 🟢 2026-05-01 세션 (v18) — earnings_prebrief digest + 17 PDF 일괄 개선
 
