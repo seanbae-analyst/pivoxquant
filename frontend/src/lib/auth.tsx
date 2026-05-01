@@ -40,14 +40,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    // 2026-05-02: Railway cold-start could push /api/auth/me to ~10s on
+    // the first call after idle, exceeding the implicit Vercel proxy
+    // window and leaving the SPA stuck on its loading splash forever.
+    // Hard-cap the auth probe at 8s so the UI always unblocks — a
+    // timeout means "treat as unauthenticated for now"; the next 5-min
+    // refresh will pick up the warm-cache response when Railway is up.
+    const ctrl = new AbortController();
+    const timeoutId = setTimeout(() => ctrl.abort(), 8000);
     try {
       const data = await apiFetch<{ authenticated: boolean; user?: User }>(
         API.auth.me,
+        { signal: ctrl.signal },
       );
       setUser(data.authenticated ? (data.user ?? null) : null);
     } catch {
       setUser(null);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, []);
