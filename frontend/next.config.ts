@@ -38,10 +38,20 @@ const nextConfig: NextConfig = {
       {
         source: "/sw.js",
         headers: [
+          // 2026-05-02: Vercel CDN was caching /sw.js despite no-store
+          // (observed `x-vercel-cache: HIT`, `age: 264`). Browser-level
+          // Cache-Control alone doesn't reach the edge layer, so version
+          // bumps (sp-v5 → sp-v6) took 5-10 min to propagate to
+          // PWA-installed users. The CDN-Cache-Control + the explicit
+          // Vercel variant tell the edge to skip its own cache while
+          // s-maxage=0 covers any other shared cache between Vercel and
+          // the user.
           {
             key: "Cache-Control",
-            value: "no-cache, no-store, must-revalidate",
+            value: "public, max-age=0, s-maxage=0, must-revalidate",
           },
+          { key: "CDN-Cache-Control", value: "no-store" },
+          { key: "Vercel-CDN-Cache-Control", value: "no-store" },
           {
             key: "Content-Type",
             value: "application/javascript; charset=utf-8",
