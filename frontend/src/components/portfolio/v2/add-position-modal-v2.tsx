@@ -8,10 +8,14 @@
  *   - Form fields with mono labels + hairline-bottom inputs
  *   - "Save observation" CTA (legal-safe vocabulary)
  *
- * Backend contract (verified 2026-04-27):
+ * Backend contract (re-verified 2026-05-01 against routes/portfolio.py
+ * ::create_position_alias):
  *   POST PORTFOLIO_POSITIONS = `/api/portfolio/positions`
- *   payload: {symbol, side: "Long", quantity, price, purchase_date, note}
- *   (matches existing add-position-modal.tsx contract, untouched)
+ *   payload: {symbol, quantity, price, note}
+ *   The Position model has no `side` / `purchase_date` / `sector` /
+ *   `currency` columns, so collecting those fields in the form was
+ *   silently dropping user input. Mirrors V1 modal trim (commit
+ *   1ee4786) so V2 stops lying to the user about what gets saved.
  *
  * A11y: role=dialog, aria-modal, focus trap via useFocusTrap, Escape closes.
  */
@@ -28,19 +32,9 @@ interface AddPositionModalV2Props {
   onSuccess?: () => void;
 }
 
-const SECTOR_OPTIONS = [
-  "Technology",
-  "Communication",
-  "Consumer",
-  "Healthcare",
-  "Financials",
-  "Industrials",
-  "Energy",
-  "Materials",
-  "Utilities",
-  "Real Estate",
-  "Other",
-];
+// SECTOR_OPTIONS removed 2026-05-01 — sector is resolved server-side via
+// SignalCache (kr_stock_registry / FMP profile) and is NOT a Position
+// model column. User-picked sector was being dropped by the backend.
 
 export function AddPositionModalV2({
   open,
@@ -53,11 +47,6 @@ export function AddPositionModalV2({
   const [symbol, setSymbol] = React.useState("");
   const [shares, setShares] = React.useState("");
   const [avgCost, setAvgCost] = React.useState("");
-  const [acquiredAt, setAcquiredAt] = React.useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
-  const [currency, setCurrency] = React.useState<"USD" | "KRW">("USD");
-  const [sector, setSector] = React.useState("Technology");
   const [memo, setMemo] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -67,9 +56,6 @@ export function AddPositionModalV2({
       setSymbol("");
       setShares("");
       setAvgCost("");
-      setAcquiredAt(new Date().toISOString().slice(0, 10));
-      setCurrency("USD");
-      setSector("Technology");
       setMemo("");
       setSubmitting(false);
     }
@@ -109,16 +95,17 @@ export function AddPositionModalV2({
 
     setSubmitting(true);
     try {
+      // Backend `routes/portfolio.py::create_position_alias` reads only
+      // {symbol, quantity, price, note}. side / purchase_date / sector /
+      // currency have no Position-model column, so previously-collected
+      // values were silently dropped — UX was lying. Trim payload to
+      // match reality (mirrors V1 modal commit 1ee4786, 2026-05-01).
       await apiFetch(PORTFOLIO_POSITIONS, {
         method: "POST",
         body: JSON.stringify({
           symbol: sym,
-          side: "Long",
           quantity: sharesN,
           price: costN,
-          purchase_date: acquiredAt,
-          sector,
-          currency,
           note: memo.trim(),
         }),
       });
@@ -263,44 +250,6 @@ export function AddPositionModalV2({
               />
             </FormField>
           </div>
-
-          {/* Row 2: Date + Currency */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-            <FormField label="Acquired on">
-              <input
-                required
-                type="date"
-                value={acquiredAt}
-                onChange={(e) => setAcquiredAt(e.target.value)}
-                style={fieldInputStyle}
-              />
-            </FormField>
-            <FormField label="Currency">
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value as "USD" | "KRW")}
-                style={fieldInputStyle}
-              >
-                <option value="USD">USD · $</option>
-                <option value="KRW">KRW · ₩</option>
-              </select>
-            </FormField>
-          </div>
-
-          {/* Sector */}
-          <FormField label="Sector">
-            <select
-              value={sector}
-              onChange={(e) => setSector(e.target.value)}
-              style={fieldInputStyle}
-            >
-              {SECTOR_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </FormField>
 
           {/* Memo */}
           <FormField label="Memo (optional)">
