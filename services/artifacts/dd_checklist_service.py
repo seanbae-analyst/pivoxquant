@@ -326,6 +326,51 @@ class DDChecklistService:
     def render_html(self, data: dict[str, Any]) -> str:
         return self.render_pdf_html(data)
 
+    def render_email_html(self, data: dict[str, Any]) -> str:
+        """Render the email-specific body — separate from the PDF template.
+
+        2026-05-02: the PDF template references @font-face with file:///app
+        absolute paths (WeasyPrint convention). When that html was reused
+        as the email body the fonts failed to resolve in mail clients and
+        the result rendered with browser defaults — users described it as
+        "코드처럼 날아옴". The email template uses inline styles + a
+        system font stack only so every client renders correctly, and
+        links back into the in-app preview shell rather than embedding
+        the full layout.
+        """
+        env = self._jinja_env()
+        view_url = (
+            os.environ.get("FRONTEND_URL", "https://www.pivoxquant.com").rstrip("/")
+            + "/reports/preview/dd-checklist"
+        )
+        ctx = dict(data)
+        ctx["view_url"] = view_url
+        ctx["subject"] = f"오늘 점검할 {len(data.get('pending', []))}개 종목 — DD Checklist"
+        if env is not None:
+            try:
+                tpl = env.get_template("dd_checklist_email.html")
+                html = tpl.render(**ctx)
+                return safe_scrub(html, context="dd_checklist_email") or html
+            except Exception as exc:
+                logger.warning("dd_checklist email template render failed: %s", exc)
+        # Plain fallback — still readable in any client.
+        from html import escape
+        rows = "".join(
+            f"<tr><td style='padding:8px 0;font-family:monospace;color:#B8956A;'>"
+            f"{escape(p['ticker'])}</td>"
+            f"<td style='padding:8px 0;'>{p['shares']} shares</td>"
+            f"<td style='padding:8px 0;text-align:right;color:#888;'>"
+            f"+{p['days_since']}d</td></tr>"
+            for p in data.get("pending", [])[:8]
+        )
+        return f"""<!doctype html>
+<html><body style="font-family:-apple-system,Segoe UI,sans-serif;background:#0A0A0A;color:#F5F0E8;padding:24px;">
+<h2 style="font-family:Georgia,serif;color:#B8956A;">오늘 점검할 {len(data.get('pending', []))}개 종목</h2>
+<table style="width:100%;border-collapse:collapse;">{rows}</table>
+<p style="margin-top:24px;"><a href="{escape(view_url)}" style="color:#B8956A;">앱에서 자세히 보기 ›</a></p>
+<p style="font-size:11px;color:#666;margin-top:24px;">{escape(data.get('disclaimer',''))}</p>
+</body></html>"""
+
     def _jinja_env(self):
         Environment, FileSystemLoader, select_autoescape = _try_import_jinja()
         if Environment is None:
@@ -444,11 +489,15 @@ class DDChecklistService:
             "pending":     pending,
             "disclaimer":  "정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다.",
         }
-        html_body = self.render_html(data)
+        # 2026-05-02: use the email-specific template (inline styles +
+        # system font stack + CTA link). The PDF body keeps the heavy
+        # WeasyPrint @font-face setup; emails deserve their own minimal
+        # body or they render as plain code in Gmail/Outlook.
+        email_html = self.render_email_html(data)
         sent = False
         if send:
             try:
-                sent = self.send_email(user, html_body, len(pending))
+                sent = self.send_email(user, email_html, len(pending))
             except Exception as exc:
                 logger.error("dd send raised for user %s: %s", user.id, exc)
                 sent = False

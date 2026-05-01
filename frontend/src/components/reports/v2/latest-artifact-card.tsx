@@ -13,6 +13,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { API } from "@/lib/endpoints";
+import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import type { Artifact, ArtifactType } from "@/lib/types";
 
 const TYPE_LABEL: Record<ArtifactType, string> = {
@@ -223,7 +224,11 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             }}
           >
             <a
-              href={`${API.artifacts.download(artifact.id)}?inline=1`}
+              href={getArtifactViewerUrl({
+                id: artifact.id,
+                type: artifact.type,
+                has_file: artifact.has_file,
+              })}
               target="_blank"
               rel="noopener noreferrer"
               className="pq-ink-btn-bronze"

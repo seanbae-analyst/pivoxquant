@@ -1,0 +1,113 @@
+{#
+  ════════════════════════════════════════════════════════════════════════
+  DD Checklist — Email body (Pro+, daily T+3 reminder).
+
+  This template is DISTINCT from dd_checklist.html (PDF render).
+
+  Why: dd_checklist.html targets WeasyPrint and resolves @font-face via
+  file:///app/... absolute paths. Email clients (Gmail, Apple Mail, …)
+  can't read file:// URLs, so when that PDF template was reused as the
+  email body the result rendered with browser default fonts and stripped
+  layout — users described it as "코드처럼 날아옴".
+
+  This template instead follows the standard transactional-email pattern:
+    - Inline styles only (no <link>, no @font-face, no @import)
+    - System font stack only — every client renders correctly
+    - Short summary + single CTA back to the in-app preview shell
+    - All width/colour numbers literal so email-client prefix-strippers
+      don't trash them
+
+  Backend contract: services/artifacts/dd_checklist_service.py builds the
+  context with the same `data` dict that powers the PDF template; only a
+  small subset is consumed here (user_name, pending count + first 8 rows,
+  generated_at, view_url).
+  ════════════════════════════════════════════════════════════════════════
+#}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ subject or "오늘의 DD Checklist" }}</title>
+</head>
+<body style="margin:0;padding:0;background:#0A0A0A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#F5F0E8;line-height:1.6;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0A0A0A;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#0F0F0F;border:1px solid rgba(245,240,232,0.08);border-radius:4px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding:32px 36px 8px;">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:#B8956A;">
+                PivoxQuant · Due-Diligence
+              </div>
+              <h1 style="margin:18px 0 0;font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:28px;line-height:1.15;letter-spacing:-0.01em;color:#F5F0E8;">
+                {{ user_name }}님, 오늘 점검할
+                <span style="font-style:italic;color:#B8956A;">{{ pending|length }}개</span> 종목.
+              </h1>
+              <p style="margin:14px 0 0;font-size:14px;line-height:1.6;color:rgba(245,240,232,0.72);">
+                3일 전에 추가하신 포지션 — 메모를 다시 한 번 점검해 보세요.
+                각 종목별 5가지 자가 질문이 PivoxQuant 앱에 정리돼 있습니다.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Pending positions list (compact) -->
+          {% if pending %}
+          <tr>
+            <td style="padding:24px 36px 8px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(245,240,232,0.08);">
+                {% for p in pending[:8] %}
+                <tr>
+                  <td style="padding:12px 0 12px;border-bottom:1px solid rgba(245,240,232,0.06);font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12px;color:#B8956A;letter-spacing:0.04em;width:120px;">
+                    {{ p.ticker }}
+                  </td>
+                  <td style="padding:12px 0 12px;border-bottom:1px solid rgba(245,240,232,0.06);font-size:13px;color:rgba(245,240,232,0.78);">
+                    {{ p.shares }} shares
+                  </td>
+                  <td style="padding:12px 0 12px;border-bottom:1px solid rgba(245,240,232,0.06);text-align:right;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(245,240,232,0.45);">
+                    +{{ p.days_since }}d
+                  </td>
+                </tr>
+                {% endfor %}
+                {% if pending|length > 8 %}
+                <tr>
+                  <td colspan="3" style="padding:12px 0;font-size:12px;color:rgba(245,240,232,0.5);font-style:italic;">
+                    그 외 {{ pending|length - 8 }}개 종목은 앱에서 확인하세요.
+                  </td>
+                </tr>
+                {% endif %}
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- CTA -->
+          <tr>
+            <td style="padding:24px 36px 32px;" align="center">
+              <a href="{{ view_url }}"
+                 style="display:inline-block;padding:14px 32px;background:#B8956A;color:#0A0A0A;text-decoration:none;font-size:11px;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;border-radius:2px;">
+                Open in PivoxQuant ›
+              </a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 36px 28px;border-top:1px solid rgba(245,240,232,0.08);">
+              <p style="margin:0;font-size:11px;line-height:1.55;color:rgba(245,240,232,0.4);">
+                {{ disclaimer or "정보 제공 목적이며 투자 권유가 아닙니다. 투자 판단은 본인 책임입니다." }}
+              </p>
+              <p style="margin:8px 0 0;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(245,240,232,0.3);">
+                {{ as_of }} · PivoxQuant
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
