@@ -42,16 +42,18 @@ def discover():
     cap_usd = current_user.available_capital or 0.0
     cap_krw = getattr(current_user, "available_capital_krw", 0.0) or 0.0
     owned = {p.ticker for p in Position.query.filter_by(user_id=current_user.id).all()}
-    # §101 회피 — Discover 결과를 보유 + watchlist 종목으로 한정. engine
-    # DISCOVER_POOL 전체 분석을 제공하면 임의 ticker 분석 = 자문업 회색지대.
+    # §101 회피 — Discover 결과를 사용자가 직접 의사를 표명한 종목 (보유 +
+    # 워치리스트) 으로 한정. 임의 universe 분석은 자문업 회색지대.
     watched = {w.ticker for w in Watchlist.query.filter_by(user_id=current_user.id).all()}
-    # Case-insensitive match (DB rows may be lower/upper while DISCOVER_POOL
+    # Case-insensitive match (DB rows may be lower/upper while engine DISCOVER_POOL
     # is upper-case for US tickers and KRX 6자리 + .KS/.KQ for KR).
     allowed = {t.upper() for t in (owned | watched) if t}
-    # Pool 자체를 사용자 스코프로 한정 (DISCOVER_POOL 와 교집합).
-    # allowed 가 비어 있으면 빈 결과 반환 — frontend EmptyState 가 watchlist
-    # 추가 CTA 를 노출.
-    pool = [t for t in engine.DISCOVER_POOL if t.upper() in allowed]
+    # 2026-05-02: DISCOVER_POOL 교집합 제거 — 사용자 보유/워치리스트 종목 전체
+    # 분석. DISCOVER_POOL 미포함 KR 종목 (010170.KQ, 124500.KQ 등) 누락 문제 해결.
+    # 사용자가 명시적으로 추가한 종목만 보므로 §101 의도 (임의 universe 차단)
+    # 는 그대로 유지. 워치리스트 무한 추가 abuse 방지 위해 50개 cap.
+    DISCOVER_USER_POOL_CAP = 50
+    pool = sorted(allowed)[:DISCOVER_USER_POOL_CAP]
 
     owned_upper = {t.upper() for t in owned if t}
 
