@@ -9,7 +9,6 @@ import {
   CancelButton,
   PrimaryButton,
 } from "./portfolio-modal";
-import type { Side } from "./types";
 import { PORTFOLIO_POSITIONS } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
 
@@ -25,12 +24,8 @@ export function AddPositionModal({
   onSuccess,
 }: AddPositionModalProps) {
   const [symbol, setSymbol] = useState("");
-  const [side, setSide] = useState<Side>("Long");
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
-  const [date, setDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,12 +33,14 @@ export function AddPositionModal({
     e.preventDefault();
     if (submitting) return;
 
+    // Backend (routes/portfolio.py::create_position_alias) reads only
+    // {symbol, quantity, price, note}. The Position model has no `side` or
+    // `purchase_date` columns, so previously-collected values were silently
+    // dropped — matched UI to that reality (2026-05-01).
     const payload = {
       symbol: symbol.trim().toUpperCase(),
-      side,
       quantity: Number(quantity) || 0,
       price: Number(price) || 0,
-      purchase_date: date,
       note: notes.trim(),
     };
     if (!payload.symbol || payload.quantity <= 0 || payload.price <= 0) {
@@ -75,10 +72,8 @@ export function AddPositionModal({
 
   function reset() {
     setSymbol("");
-    setSide("Long");
     setQuantity("");
     setPrice("");
-    setDate(new Date().toISOString().slice(0, 10));
     setNotes("");
   }
 
@@ -124,31 +119,6 @@ export function AddPositionModal({
         </div>
 
         <div className="col-span-2 sm:col-span-1">
-          <Field label="Side">
-            <div className="flex h-10 overflow-hidden rounded-[2px] border border-[rgba(245,240,232,0.15)]">
-              {(["Long", "Short"] as Side[]).map((opt) => {
-                const active = side === opt;
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setSide(opt)}
-                    className={
-                      "flex-1 text-[13px] font-medium transition-colors " +
-                      (active
-                        ? "bg-[var(--pq-bronze,#B8956A)] text-[var(--pq-ink,#050505)]"
-                        : "bg-[rgba(255,255,255,0.02)] text-[rgba(245,240,232,0.6)] hover:bg-[rgba(245,240,232,0.06)]")
-                    }
-                  >
-                    {opt}
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
-        </div>
-
-        <div className="col-span-2 sm:col-span-1">
           <Field label="Quantity">
             <input
               required
@@ -174,18 +144,6 @@ export function AddPositionModal({
               placeholder="0.00"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-            />
-          </Field>
-        </div>
-
-        <div className="col-span-2 sm:col-span-1">
-          <Field label="Purchase Date">
-            <input
-              required
-              type="date"
-              className={inputClass}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
             />
           </Field>
         </div>
