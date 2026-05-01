@@ -281,10 +281,15 @@ def artifacts_download(artifact_id: int):
         except Exception:
             db.session.rollback()
 
+    # 2026-05-02: ?inline=1 lets the "Open full memo" CTA open the PDF
+    # in the browser's native viewer instead of forcing a download. The
+    # default (no flag) preserves the legacy attachment behaviour for
+    # the explicit "Download PDF" link so existing callers don't change.
+    inline = request.args.get("inline") in ("1", "true", "yes")
     return send_file(
         str(file_path),
         mimetype=mimetype,
-        as_attachment=True,
+        as_attachment=not inline,
         download_name=f"{artefact.type}_{artefact.id}.{ext}",
     )
 
