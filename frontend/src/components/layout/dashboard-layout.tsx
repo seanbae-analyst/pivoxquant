@@ -3,7 +3,6 @@
 import { TopBar } from "./top-bar";
 import { TerminalSidebar } from "./terminal-sidebar";
 import { BottomNav } from "./bottom-nav";
-import { CommandPalette } from "@/components/terminal/command-palette";
 
 /**
  * Dashboard shell — full-screen Vantablack.
@@ -53,8 +52,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <BottomNav />
       </div>
 
-      {/* Global Cmd+K terminal command palette — mounted once per layout */}
-      <CommandPalette />
+      {/*
+       * Global Cmd+K palette is mounted by <TopBar /> via
+       * <SearchCommandMenu />. The previous terminal-CommandPalette here
+       * registered a *second* document-level Cmd+K listener, so pressing
+       * the shortcut opened both palettes stacked on top of each other.
+       * Removed 2026-05-01; SearchCommandMenu is the single source of
+       * truth (live /api/search + Pages + Recents).
+       */}
     </div>
   );
 }
