@@ -128,26 +128,44 @@ export default function WatchlistPage() {
         </div>
       </header>
 
-      {/* Title + CTA */}
-        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="pq-ink-h1">Watchlist</h1>
-            <p className="mt-2 font-serif text-[15px] text-[var(--pq-ivory)]">
-              Symbols you are observing.
-            </p>
-            <Caption className="mt-1">
-              Nothing here is a recommendation. Informational only.
-            </Caption>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowAdd(true)}
-            className="pq-ink-btn-bronze"
+      {/* Title + CTA — promoted to Playfair-with-italic-accent (Wave 2,
+          2026-05-01). Was a flat sans `pq-ink-h1 "Watchlist"` which broke
+          from /portfolio v2 "Your *book.*", /risk v2 "Risk *board.*",
+          /signals "*observed* … *filtered*", /discover "What the desk
+          *observed.*", /alerts "When the desk *spoke.*". */}
+      <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1
+            className="font-serif"
+            style={{
+              fontFamily:
+                '"Playfair Display","Source Serif 4",Georgia,serif',
+              fontWeight: 500,
+              fontSize: "clamp(34px, 4.6vw, 52px)",
+              lineHeight: 1.06,
+              letterSpacing: "-0.022em",
+              color: "var(--pq-ivory)",
+            }}
           >
-            <Plus className="h-3.5 w-3.5" />
-            Add Symbol
-          </button>
+            Symbols you are{" "}
+            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+              observing.
+            </span>
+          </h1>
+          <Caption className="mt-3 max-w-[560px]">
+            Nothing here is a recommendation. A quiet ledger of what you have
+            chosen to keep an eye on — informational only.
+          </Caption>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowAdd(true)}
+          className="pq-ink-btn-bronze"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add Symbol
+        </button>
+      </div>
 
         {/* Table */}
         {isLoading ? (
@@ -160,10 +178,26 @@ export default function WatchlistPage() {
             ))}
           </div>
         ) : watchlist.length === 0 ? (
-          <div className="pq-ink-empty text-center py-16">
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
             <Fleuron size={16} />
-            <div className="font-serif text-xl text-[var(--pq-ivory)] mt-3">No symbols yet.</div>
-            <Caption className="mt-2">Add one to begin observing.</Caption>
+            <p
+              className="mt-2 font-serif"
+              style={{
+                fontFamily:
+                  '"Playfair Display","Source Serif 4",Georgia,serif',
+                fontSize: 22,
+                lineHeight: 1.2,
+                color: "var(--pq-ivory)",
+              }}
+            >
+              No symbols on{" "}
+              <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+                watch.
+              </span>
+            </p>
+            <Caption className="max-w-md">
+              Add one to begin observing — the ledger fills as you do.
+            </Caption>
           </div>
         ) : (
           <div className="overflow-x-auto">
