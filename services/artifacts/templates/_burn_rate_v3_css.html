@@ -191,8 +191,6 @@ html, body {
   page-break-after: always;
   color: var(--r-ink);
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
 }
 .pq-pdf-page:last-of-type { page-break-after: auto; }
 
@@ -530,9 +528,73 @@ html, body {
   display: none;
 }
 
-/* ─── Disclaimer pinned to page bottom (per CEO 2026-04-30) ─── */
-.pq-pdf-page-footer,
+/* ─── @page running disclaimer (CEO 2026-05-01: true A4 bottom) ─── */
+@page {
+  size: A4;
+  margin: 18mm 16mm 32mm 16mm;
+  @bottom-center {
+    content: element(running-disclaimer);
+    vertical-align: bottom;
+  }
+}
+.pq-disclaimer-runner {
+  position: running(running-disclaimer);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7.5px;
+  line-height: 1.5;
+  color: var(--r-ink-4);
+  border-top: 0.5pt solid var(--r-rule);
+  padding-top: 6px;
+  text-align: justify;
+}
+.pq-disclaimer-runner h5,
+.pq-disclaimer-runner .disclaimer__title {
+  font-size: 7px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--r-ink-3);
+  margin: 0 0 3px;
+  font-weight: 600;
+}
+.pq-disclaimer-runner p {
+  margin: 0 0 3px;
+}
+/* Hide the in-flow disclaimer copies — running element handles all pages */
 .pq-pdf-page > .pq-disclaimer,
 .pq-pdf-page > .disclaimer {
-  margin-top: auto;
+  display: none;
+}
+.pq-pdf-page {
+  page-break-after: always;
+}
+.pq-pdf-page:last-of-type {
+  page-break-after: auto;
+}
+/* Avoid awkward content splits */
+.pq-pdf-card,
+.pq-pdf-kpi-row,
+.pq-pdf-callout,
+.pq-pdf-govblock {
+  page-break-inside: avoid;
+}
+.pq-pdf-table thead {
+  display: table-header-group;
+}
+.pq-pdf-table tr {
+  page-break-inside: avoid;
+}
+
+/* page-break-after on headings */
+.pq-pdf-section-title,
+.pq-pdf-cover-title,
+h1, h2, h3 {
+  page-break-after: avoid;
+  break-after: avoid-page;
+}
+/* Orphans / widows — keep at least 3 lines together */
+.pq-report,
+.pq-pdf-page p,
+.pq-pdf-page li {
+  orphans: 3;
+  widows: 3;
 }
