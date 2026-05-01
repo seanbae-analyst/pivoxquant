@@ -82,7 +82,16 @@ def api_auth(f):
 # ── Tier-based access control ──────────────────────────────────────────────────
 
 # Tier hierarchy: free < pro < premium
-_TIER_RANK = {"free": 0, "pro": 1, "premium": 2}
+_TIER_RANK = {
+    "free": 0,
+    "pro": 1,
+    "premium": 2,
+    # 2026-05-02: Companion-tier names (routes/agent.py gate). Higher than
+    # "premium" so anyone holding premium_plus/founding_lifetime also passes
+    # legacy `@require_tier("premium")` decorators.
+    "premium_plus": 3,
+    "founding_lifetime": 4,
+}
 
 
 def require_tier(minimum_tier):
