@@ -828,7 +828,10 @@ export function deriveArtifactStats(artifacts: Artifact[]): ArtifactStats {
     countYtd,
     countMemos: byType.weekly_memo ?? 0,
     countBriefs: byType.earnings_prebrief ?? 0,
-    countBragCards: byType.monthly_brag ?? 0,
+    // 2026-05-02: count both monthly_brag (auto digest) and brag_card
+    // (one-off) — keep client-derived stats in lockstep with the server
+    // contract in routes/artifacts.py::artifacts_stats.
+    countBragCards: (byType.monthly_brag ?? 0) + (byType.brag_card ?? 0),
     byType,
     nextScheduled: null,
     latestIndexedAt: latestTs ? new Date(latestTs).toISOString() : null,
