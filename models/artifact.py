@@ -91,6 +91,12 @@ class Artifact(db.Model):
             "type":       self.type,
             "title":      self.title,
             "pdf_path":   self.pdf_path,
+            # 2026-05-02: explicit has_file flag mirrors the per-id
+            # /preview endpoint contract so list-consumers can route
+            # "Open" CTAs to /download (PDF inline) vs the frontend
+            # preview shell (HTML / unrendered) without a second
+            # round-trip per artefact.
+            "has_file":   bool(self.pdf_path),
             "data":       self.data_json or {},
             "sent_at":    self.sent_at.isoformat() + "Z" if self.sent_at else None,
             "opened_at":  self.opened_at.isoformat() + "Z" if self.opened_at else None,

@@ -31,6 +31,7 @@ import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
 import { FieldLabel, StatRow } from "@/components/ui/editorial";
 import { useWatchlist, usePortfolioPositions, useArtifacts } from "@/lib/hooks";
+import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import type { Position } from "@/lib/types";
 import {
   TrendingUp,
@@ -1492,7 +1493,7 @@ export default function StockDetailPage() {
                 return (
                   <a
                     key={a.id}
-                    href={`${API.artifacts.download(a.id)}?inline=1`}
+                    href={getArtifactViewerUrl({ id: a.id, type: a.type, has_file: a.has_file })}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"

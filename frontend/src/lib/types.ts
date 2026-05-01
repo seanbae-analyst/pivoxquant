@@ -403,6 +403,13 @@ export interface Artifact {
   data_preview?: Record<string, unknown> | null;
   size_bytes?: number | null;
   period_label?: string | null;
+  /**
+   * True when the backend has rendered a real file on disk for this
+   * row (PDF / PNG / HTML). Drives the "Open full memo" CTA — false
+   * means we route to the in-app preview shell instead of the
+   * download endpoint.
+   */
+  has_file?: boolean;
 }
 
 export interface ArtifactsListResponse {
