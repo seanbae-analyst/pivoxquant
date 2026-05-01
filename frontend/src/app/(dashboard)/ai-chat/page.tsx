@@ -133,29 +133,87 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="max-w-md mb-12">
-        <div className="pq-ink-kicker mb-4">Observation Assistant</div>
-        <h2 className="font-serif text-2xl text-[var(--pq-ivory)] mb-4">
-          Ask the desk.
+        <div
+          className="font-mono text-[10.5px] uppercase mb-4"
+          style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+        >
+          Observation Assistant
+        </div>
+        <h2
+          className="mb-4 font-serif"
+          style={{
+            fontFamily:
+              '"Playfair Display","Source Serif 4",Georgia,serif',
+            fontWeight: 500,
+            fontSize: 32,
+            lineHeight: 1.15,
+            letterSpacing: "-0.02em",
+            color: "var(--pq-ivory)",
+          }}
+        >
+          Ask the{" "}
+          <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+            desk.
+          </span>
         </h2>
-        <p className="text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">
+        <p
+          className="font-serif italic"
+          style={{
+            fontFamily: '"Source Serif 4",Georgia,serif',
+            fontSize: 13,
+            lineHeight: 1.55,
+            color: "rgba(245,240,232,0.6)",
+          }}
+        >
           Claude-augmented synthesis of your portfolio, market observations,
           and historical patterns. Every response is informational only —
           never a directive.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl w-full">
+      {/* Editorial prompt list — was a 4-card boxy grid (`border ... rounded
+          hover:border-bronze`) which read as a generic onboarding tile row.
+          Now hairline-divided rows with bronze "→" guide, matching the
+          ledger rhythm used by /risk v2 layer ladder + /discover overview. */}
+      <div
+        className="w-full max-w-2xl border-t"
+        style={{
+          borderTopColor: "rgba(184,149,106,0.32)",
+          borderTopWidth: 0.5,
+        }}
+      >
         {SUGGESTIONS.map((q) => (
           <button
             key={q}
             type="button"
             onClick={() => onPick(q)}
-            className="group px-5 py-4 border border-[rgba(245,240,232,0.08)] rounded-[2px] text-left text-[12.5px] leading-relaxed text-[rgba(245,240,232,0.75)] hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.03)] hover:text-[var(--pq-ivory)] transition-all duration-200 cursor-pointer"
+            className="group flex w-full items-baseline gap-4 border-b py-4 px-1 text-left transition-colors"
+            style={{
+              borderBottomColor: "rgba(245,240,232,0.06)",
+              borderBottomWidth: 0.5,
+              color: "rgba(245,240,232,0.75)",
+            }}
           >
-            <span className="text-[var(--pq-bronze)] font-serif text-[10px] mr-2">
+            <span
+              className="font-mono shrink-0"
+              style={{
+                fontSize: 11,
+                color: "var(--pq-bronze)",
+                letterSpacing: "0.05em",
+              }}
+            >
               →
             </span>
-            {q}
+            <span
+              className="font-serif"
+              style={{
+                fontFamily: '"Source Serif 4",Georgia,serif',
+                fontSize: 14,
+                lineHeight: 1.45,
+              }}
+            >
+              {q}
+            </span>
           </button>
         ))}
       </div>
@@ -345,15 +403,46 @@ function ChatInner() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-64px)] gap-0">
-      {/* Header — fixed top */}
-      <header className="pb-6 border-b border-[rgba(245,240,232,0.08)] flex items-start justify-between">
+      {/* Header — promoted to v3 lock-in (Wave 2, 2026-05-01). Was a flat
+          sans-style header that broke from /portfolio v2, /risk v2, /signals,
+          /discover, /alerts, /watchlist. */}
+      <header
+        className="pb-6 flex items-start justify-between border-b"
+        style={{
+          borderBottomColor: "rgba(245,240,232,0.08)",
+          borderBottomWidth: 0.5,
+        }}
+      >
         <div>
-          <div className="pq-ink-kicker mb-2">AI · Observation Assistant</div>
-          <h1 className="font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
-            What are you observing today?
+          <div
+            className="font-mono text-[10.5px] uppercase mb-3"
+            style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+          >
+            AI &middot; Observation Assistant
+          </div>
+          <h1
+            className="font-serif"
+            style={{
+              fontFamily:
+                '"Playfair Display","Source Serif 4",Georgia,serif',
+              fontWeight: 500,
+              fontSize: "clamp(28px, 3.6vw, 42px)",
+              lineHeight: 1.1,
+              letterSpacing: "-0.02em",
+              color: "var(--pq-ivory)",
+            }}
+          >
+            What are you{" "}
+            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+              observing
+            </span>{" "}
+            today?
           </h1>
         </div>
-        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mt-2">
+        <div
+          className="font-mono text-[10px] uppercase mt-2"
+          style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+        >
           {streaming ? "Streaming" : "Idle"}
         </div>
       </header>
