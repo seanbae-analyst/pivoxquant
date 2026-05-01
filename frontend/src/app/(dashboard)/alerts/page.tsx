@@ -14,6 +14,7 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
@@ -358,6 +359,15 @@ export default function AlertsPage() {
                           <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] truncate">
                             {a.message}
                           </div>
+                          {a.message?.includes("set capital for sizing") && (
+                            <Link
+                              href="/settings#capital"
+                              onClick={(e) => e.stopPropagation()}
+                              className="mt-1 inline-block text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
+                            >
+                              → Set capital in Settings
+                            </Link>
+                          )}
                         </div>
                       </div>
                     </td>

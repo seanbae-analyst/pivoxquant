@@ -228,7 +228,7 @@ function SeedCapitalSection() {
   };
 
   return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+    <div id="capital" className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] scroll-mt-24">
       <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Seed capital · Analysis basis
       </div>
