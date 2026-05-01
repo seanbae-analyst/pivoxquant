@@ -32,6 +32,12 @@ import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type { DiscoverResult, Position } from "@/lib/types";
 import { relativeTime, useNowTick } from "@/components/market/index-card";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
+import {
+  Caption,
+  Fleuron as PqFleuron,
+  FootSignature,
+  RuledKicker,
+} from "@/components/ui/editorial";
 
 // Mock fallback data was removed (2026-04-28). Displaying stale 2024 hard-coded
 // prices as if they were live misled users and created a capital-markets-law
@@ -262,10 +268,12 @@ export default function DiscoverPage() {
 
   return (
     <ErrorBoundary>
+      {/* Editorial header — RuledKicker matches /home, /portfolio v2, /risk v2.
+          Replaces the bare `pq-ink-kicker` span the old card-grid layout used. */}
       <header className="mb-8 flex items-center justify-between gap-4">
-        <span className="pq-ink-kicker">PIVOXQUANT · DISCOVER</span>
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-          {weekTag()}
+        <RuledKicker>PivoxQuant &middot; Discover &middot; {weekTag()}</RuledKicker>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+          {hasLoadError ? "Stale tape" : "Live observation"}
         </span>
       </header>
 
@@ -298,69 +306,149 @@ export default function DiscoverPage() {
         </div>
       )}
 
-      <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="pq-ink-h1">Discover</h1>
-            <p className="mt-2 font-serif text-sm text-[rgba(245,240,232,0.55)]">
-              Market observation across US and Korean markets — informational only.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleScan}
-            disabled={scanning}
-            className="pq-ink-btn-ghost disabled:opacity-40"
+      {/* Hero block — matches v3 lock-in convention: Eyebrow + Playfair
+          headline with italic accent (cf. /portfolio v2 "Your book.",
+          /risk v2 "Risk board.", /signals "The stream is observed,
+          not advised"). The old `pq-ink-h1` rendered as a flat sans
+          headline that broke the editorial tone. */}
+      <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div
+            className="font-mono text-[10.5px] uppercase"
+            style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
-            <RefreshCw className={cn("h-3.5 w-3.5", scanning && "animate-spin")} />
-            Scan
-          </button>
+            Discovery &middot; US + KR
+          </div>
+          <h1
+            className="mt-3 font-serif"
+            style={{
+              fontFamily:
+                '"Playfair Display","Source Serif 4",Georgia,serif',
+              fontWeight: 500,
+              fontSize: "clamp(34px, 4.6vw, 52px)",
+              lineHeight: 1.06,
+              letterSpacing: "-0.022em",
+              color: "var(--pq-ivory)",
+            }}
+          >
+            What the desk{" "}
+            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+              observed.
+            </span>
+          </h1>
+          <Caption className="mt-3 max-w-[560px]">
+            Market readings across US and Korean tape, plus a quant pass
+            limited to your holdings and watchlist. Informational only —
+            never instructions to trade.
+          </Caption>
         </div>
+        <button
+          type="button"
+          onClick={handleScan}
+          disabled={scanning}
+          className="pq-ink-btn-ghost disabled:opacity-40"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", scanning && "animate-spin")} />
+          Scan
+        </button>
+      </div>
 
-        {/* Market Overview */}
-        <section className="mb-12">
-          <SectionKicker eyebrow="Overview" title="Market Overview" sub="US · KR index levels (1D Δ)" />
+        {/* Market Overview — editorial hairline list (Wave 1, 2026-05-01)
+            replaces the 5-card SaaS grid that visually broke from the
+            v3 lock-in (Vantablack + Bronze + Playfair) used everywhere
+            else. Same data, two-column hairline strip grouped US / KR
+            so region affinity is glanceable. No card boxes, no bg
+            tiles — just hairline-divided rows like /risk v2 ladder. */}
+        <section className="mb-14">
+          <SectionKicker
+            eyebrow="Overview"
+            title="Where the tape stands."
+            sub="US and Korean index levels — observed at last print."
+          />
           {overviewItems.length > 0 ? (
-            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {overviewItems.map((o) => (
-                <div key={o.name} className="pq-ink-stat">
-                  <div className="pq-ink-label truncate">{o.name}</div>
-                  <div className="mt-2 font-mono tabular-nums text-[18px] text-[var(--pq-ivory)]">
-                    {o.level}
-                  </div>
-                  <div className={"mt-1 font-mono text-[11px] " + deltaCls(o.changePct)}>
-                    {fmtPct(o.changePct)}
-                  </div>
-                  {o.observed_at && (
-                    <div className="mt-1 flex items-center gap-1.5 text-[9.5px] text-[rgba(245,240,232,0.4)]">
-                      <span className="font-serif">Last obs <span className="font-mono tabular-nums">{relativeTime(o.observed_at, nowMs)}</span></span>
-                      {o.is_stale && (
-                        <span
-                          aria-label="Stale quote"
-                          title="Quote has not refreshed recently"
-                          className="inline-block h-1 w-1 rounded-full bg-yellow-500/70"
-                        />
-                      )}
+            <div className="mt-6 grid gap-x-12 gap-y-2 md:grid-cols-2">
+              {(["us", "kr"] as const).map((region) => {
+                const rows = overviewItems.filter((o) => {
+                  const name = o.name.toUpperCase();
+                  const isKr = name.includes("KOSPI") || name.includes("KOSDAQ");
+                  return region === "kr" ? isKr : !isKr;
+                });
+                if (rows.length === 0) return null;
+                return (
+                  <div key={region} className="flex flex-col">
+                    <div
+                      className="mb-2 font-mono text-[10px] uppercase"
+                      style={{
+                        letterSpacing: "0.22em",
+                        color: "var(--pq-bronze)",
+                      }}
+                    >
+                      {region === "us" ? "United States" : "Korea"}
                     </div>
-                  )}
-                </div>
-              ))}
+                    <div className="border-t border-[rgba(245,240,232,0.08)]">
+                      {rows.map((o) => (
+                        <div
+                          key={o.name}
+                          className="grid grid-cols-[1fr_auto_64px] items-baseline gap-3 border-b border-[rgba(245,240,232,0.06)] py-3"
+                        >
+                          <span
+                            className="font-serif text-[14px]"
+                            style={{ color: "var(--pq-ivory)" }}
+                          >
+                            {o.name}
+                          </span>
+                          <span
+                            className="font-mono tabular-nums text-[15px]"
+                            style={{ color: "var(--pq-ivory)" }}
+                          >
+                            {o.level}
+                          </span>
+                          <span
+                            className={
+                              "text-right font-mono tabular-nums text-[11.5px] " +
+                              deltaCls(o.changePct)
+                            }
+                          >
+                            {fmtPct(o.changePct)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Last-observed footnote — editorial caption tucked under
+                        the strip, not on every row, to keep the rhythm clean. */}
+                    {rows.some((r) => r.observed_at) && (
+                      <p
+                        className="mt-2 font-serif italic text-[10.5px]"
+                        style={{ color: "rgba(245,240,232,0.4)" }}
+                      >
+                        Last observed{" "}
+                        <span className="font-mono not-italic tabular-nums">
+                          {(() => {
+                            const fresh = rows
+                              .map((r) => r.observed_at)
+                              .filter(Boolean)[0] as string | undefined;
+                            return fresh ? relativeTime(fresh, nowMs) : "—";
+                          })()}
+                        </span>
+                        {rows.some((r) => r.is_stale) && (
+                          <span
+                            aria-label="Stale quote in this region"
+                            title="One or more quotes have not refreshed recently"
+                            className="ml-2 inline-block h-1 w-1 align-middle rounded-full bg-yellow-500/70"
+                          />
+                        )}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            // Empty state — fallback to MOCK_INDICES refused (stale 2024 values = legal misrepresentation risk).
-            // Display explicit "unavailable" state instead of fake numbers.
-            <div className="pq-ink-empty mt-4 flex flex-col items-center gap-3 rounded border border-[rgba(245,240,232,0.06)] py-10 text-center">
-              <Fleuron />
-              <p className="text-[12px] text-[rgba(245,240,232,0.4)]">
-                Index data unavailable — market feed may be offline.
-              </p>
-              <button
-                type="button"
-                onClick={() => mutate()}
-                className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.35)] underline underline-offset-2 hover:text-[rgba(245,240,232,0.6)] transition-colors"
-              >
-                Refresh
-              </button>
-            </div>
+            <EditorialEmpty
+              note="Index tape paused — market feed may be offline."
+              ctaLabel="Refresh"
+              onCta={() => mutate()}
+            />
           )}
         </section>
 
@@ -546,19 +634,30 @@ export default function DiscoverPage() {
             </div>
           )}
           {data?.cached && data.cached_at && (
-            <p className="mt-3 text-[10px] text-[rgba(245,240,232,0.4)]">
-              Cache timestamp: {new Date(data.cached_at).toLocaleString("en-US")}
+            <p className="mt-3 font-serif italic text-[10.5px] text-[rgba(245,240,232,0.4)]">
+              Cached at{" "}
+              <span className="font-mono not-italic tabular-nums">
+                {new Date(data.cached_at).toLocaleString("en-US")}
+              </span>
             </p>
           )}
         </section>
 
-      {/* Legal disclaimer mounted by (dashboard)/layout.tsx — do not re-mount. */}
+        {/* Editorial foot signature — matches /home, /portfolio v2, /risk v2,
+            /watchlist. Legal disclaimer is mounted by (dashboard)/layout.tsx. */}
+        <FootSignature note="PivoxQuant &middot; Observational research only &middot; Not investment advice" />
     </ErrorBoundary>
   );
 }
 
-/* ── local ink-themed blocks ── */
-
+/* ── editorial section primitives (Wave 1, 2026-05-01) ──
+ * The previous local helpers (SectionKicker / MoversBlock / EmptyBlock /
+ * ThematicBlockInk) used plain `pq-ink-label` + `pq-ink-h2` which produced
+ * a flat "fintech dashboard" tone. The page now matches the v3 lock-in
+ * (Vantablack + Bronze + Playfair) used by /home, /portfolio v2, /risk v2,
+ * /watchlist, and /signals — Eyebrow tracking 0.22em + serif headline +
+ * italic caption + bronze hairline above each section.
+ */
 function SectionKicker({
   eyebrow,
   title,
@@ -569,11 +668,88 @@ function SectionKicker({
   sub?: string;
 }) {
   return (
-    <div className="border-t border-[rgba(245,240,232,0.12)] pt-4">
-      <div className="pq-ink-label">{eyebrow}</div>
-      <h2 className="pq-ink-h2 mt-1">{title}</h2>
+    <div
+      className="border-t pt-5"
+      style={{ borderTopColor: "rgba(184,149,106,0.32)", borderTopWidth: 0.5 }}
+    >
+      <div
+        className="font-mono text-[10px] uppercase"
+        style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+      >
+        {eyebrow}
+      </div>
+      <h2
+        className="mt-2 font-serif"
+        style={{
+          fontFamily:
+            '"Playfair Display","Source Serif 4",Georgia,serif',
+          fontWeight: 500,
+          fontSize: "clamp(22px, 2.4vw, 28px)",
+          lineHeight: 1.18,
+          letterSpacing: "-0.018em",
+          color: "var(--pq-ivory)",
+        }}
+      >
+        {title}
+      </h2>
       {sub ? (
-        <p className="mt-1 text-[12px] text-[rgba(245,240,232,0.55)]">{sub}</p>
+        <p
+          className="mt-1.5 font-serif italic"
+          style={{
+            fontFamily: '"Source Serif 4",Georgia,serif',
+            fontSize: 12.5,
+            lineHeight: 1.5,
+            color: "rgba(245,240,232,0.55)",
+          }}
+        >
+          {sub}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Editorial empty-section state. Used when the upstream feed is down or
+ * when a region/screener has no data. Centered Fleuron + italic serif
+ * caption + optional ghost CTA. No fabricated rows — see legal note in
+ * the file header.
+ */
+function EditorialEmpty({
+  note,
+  ctaLabel,
+  onCta,
+}: {
+  note: string;
+  ctaLabel?: string;
+  onCta?: () => void;
+}) {
+  return (
+    <div className="mt-6 flex flex-col items-center gap-3 py-12 text-center">
+      <PqFleuron size={14} />
+      <p
+        className="font-serif italic"
+        style={{
+          fontFamily: '"Source Serif 4",Georgia,serif',
+          fontSize: 12.5,
+          color: "rgba(245,240,232,0.5)",
+        }}
+      >
+        {note}
+      </p>
+      {ctaLabel && onCta ? (
+        <button
+          type="button"
+          onClick={onCta}
+          className="font-mono text-[10px] uppercase underline underline-offset-4 transition-colors"
+          style={{
+            letterSpacing: "0.22em",
+            color: "rgba(245,240,232,0.5)",
+            textDecorationColor: "rgba(184,149,106,0.4)",
+          }}
+        >
+          {ctaLabel}
+        </button>
       ) : null}
     </div>
   );
@@ -610,18 +786,29 @@ function MoversBlock({
 }
 
 /**
- * Editorial empty state for individual blocks (Movers / Screeners). Renders a
- * titled placeholder so the page rhythm is preserved when an upstream feed is
- * down — never silently swap in fabricated rows.
+ * Editorial empty state for individual blocks (Movers / Screeners). Renders
+ * a titled placeholder so the page rhythm is preserved when an upstream
+ * feed is down — never silently swap in fabricated rows. Italic serif copy
+ * matches the Caption tone used elsewhere in the v3 lock-in.
  */
 function EmptyBlock({ title }: { title: string }) {
   return (
     <div>
-      <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+      <div
+        className="mb-2 font-mono text-[10px] uppercase"
+        style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
+      >
         {title}
       </div>
-      <p className="py-4 text-[12px] italic text-[rgba(245,240,232,0.4)]">
-        Data temporarily unavailable.
+      <p
+        className="py-4 font-serif italic"
+        style={{
+          fontFamily: '"Source Serif 4",Georgia,serif',
+          fontSize: 12,
+          color: "rgba(245,240,232,0.45)",
+        }}
+      >
+        Tape paused — feed temporarily unavailable.
       </p>
     </div>
   );
