@@ -159,3 +159,41 @@ class TestDiscoverRouteFilter:
         assert "TSLA" not in tickers
         assert "NVDA" not in tickers
         assert "GOOGL" not in tickers
+
+    def test_discover_includes_owned_tickers_not_in_curated_pool(
+        self, app, client, auth_user, add_position, monkeypatch,
+    ):
+        """Regression for HANDOVER v19 P1 #7 — KR mid-caps that the user
+        actually owns (e.g. 010170.KQ Taihan, 124500.KQ IT Sengle) were
+        filtered out by the previous DISCOVER_POOL ∩ allowed intersection.
+        After 2026-05-02 the pool is keyed off user demand directly, so
+        any owned/watched ticker is analysed regardless of whether it's
+        in engine.DISCOVER_POOL."""
+        from extensions import db
+        from models import Watchlist
+        add_position(auth_user["id"], ticker="010170.KQ")
+        with app.app_context():
+            db.session.add(Watchlist(user_id=auth_user["id"], ticker="124500.KQ"))
+            db.session.commit()
+
+        from routes import discover as discover_route
+        # DISCOVER_POOL deliberately does NOT contain either KR ticker.
+        monkeypatch.setattr(
+            discover_route.engine, "DISCOVER_POOL",
+            ["AAPL", "MSFT", "NVDA"],
+        )
+        monkeypatch.setattr(
+            discover_route.engine, "analyze",
+            lambda t, *a, **kw: {"ticker": t, "signal": "NEUTRAL", "priority": 1, "name": t},
+        )
+        from services import cache_service
+        cache_service.discover_cache.pop(auth_user["id"], None)
+
+        resp = client.get("/api/discover?force=1")
+        assert resp.status_code == 200
+        tickers = {r["ticker"] for r in resp.get_json()["results"]}
+        # Both owned + watched return analysis even though neither is in
+        # DISCOVER_POOL — the §101 boundary moved from "curated pool" to
+        # "user-demand pool".
+        assert "010170.KQ" in tickers
+        assert "124500.KQ" in tickers
