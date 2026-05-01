@@ -128,8 +128,18 @@ export default function DiscoverPage() {
   const watchlistSwr = useWatchlist();
   const userTickerSet = useMemo(() => {
     const s = new Set<string>();
+    // Backend `/api/portfolio/positions` (routes/portfolio.py::_build_positions_list)
+    // serializes the ticker under the `symbol` key, NOT `ticker` — the legacy
+    // /api/portfolio endpoint used `ticker`, which is what `Position` in
+    // lib/types.ts still names. Read both so this scope guard works regardless
+    // of which endpoint shape SWR happens to return; without `symbol`, every
+    // production user with positions saw "Add holdings or watchlist symbols"
+    // and the §101 scope filter blocked their own Engine Scan results
+    // (verified live 2026-05-01: 3 positions, hasUserScope still false).
     (positionsSwr.data?.positions ?? []).forEach((p) => {
-      if (p.ticker) s.add(p.ticker.toUpperCase());
+      const t =
+        (p as Position & { symbol?: string }).symbol ?? p.ticker;
+      if (t) s.add(t.toUpperCase());
     });
     (watchlistSwr.data?.watchlist ?? []).forEach((w) => {
       if (w.ticker) s.add(w.ticker.toUpperCase());
