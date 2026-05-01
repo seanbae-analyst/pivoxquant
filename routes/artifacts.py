@@ -3193,7 +3193,11 @@ def artifacts_stats():
         "countYtd":        count_ytd,
         "countMemos":      by_type.get("weekly_memo", 0),
         "countBriefs":     by_type.get("earnings_prebrief", 0),
-        "countBragCards":  by_type.get("monthly_brag", 0),
+        # 2026-05-02: include both monthly_brag (auto monthly digest) and
+        # brag_card (one-off cards) — /reports counter previously dropped
+        # brag_card rows so /home (total) and /reports (brag count)
+        # disagreed by N.
+        "countBragCards":  by_type.get("monthly_brag", 0) + by_type.get("brag_card", 0),
         "byType":          by_type,
         "nextScheduled":   None,
         "latestIndexedAt": latest.isoformat() if latest else None,
