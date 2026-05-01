@@ -1,4 +1,98 @@
-# PivoxQuant — 인수인계서 (2026-04-30 자율 세션 종료 · v17 "F7 unit tests + 출시 체크리스트 + Pretendard 4회 시도")
+# PivoxQuant — 인수인계서 (2026-05-01 세션 종료 · v18 "earnings digest + dd_checklist 리디자인 + 17 PDF 다듬기")
+
+## 🟢 2026-05-01 세션 (v18) — earnings_prebrief digest + 17 PDF 일괄 개선
+
+**11 commits (`f743568 → d6feb11`). main HEAD `d6feb11`. pytest 1305/0 fail.
+형님이 깬 후 직접 발견한 실 production 이슈 6건 모두 해결.**
+
+### 이번 세션 commits
+
+| # | Commit | 핵심 |
+|---|---|---|
+| 1 | `f743568` | earnings_prebrief cron 정지 (per-ticker spam 차단) |
+| 2 | `630b264` | 종목명 우선 표시 (17 PDF + 3 email) — _name_enrich helper |
+| 3 | `4397e4e` | (이전 세션) sp500_backtest persona |
+| 4 | `fabb54d` | dd_checklist 양식 전면 리디자인 — 시적 cover 제거 |
+| 5 | `c08bac7` | 13 PDF cover title data-driven 일괄 개선 |
+| 6 | `ae79e17` | @page running disclaimer + page-break-inside avoid |
+| 7 | `d34213c` | 오른쪽 치우침 fix (.pq-pdf-page width/padding 제거) |
+| 8 | `d6feb11` | **earnings_prebrief digest mode (1유저 1통) + cron 재활성화** |
+
+### CEO 평 → 해결 매핑
+
+| CEO 발화 | 해결 |
+|---|---|
+| "종목당 이메일 하나 ㅈㄴ많아 — 하나에 모든 종목" | digest mode: `run_scan_digest`로 user 그룹핑 |
+| "ticker번호만 크게 오고 종목 이름을 써라" | `_name_enrich.py` + 템플릿/CSS 일괄 swap |
+| "dd_checklist 양식 걍 개구림" | 1-page 통합, 시적 cover 제거, 5 Questions 컴팩트 |
+| "법적고지 페이지 진짜 맨 아래" | `@page { @bottom-center { content: element() }}` |
+| "중간에 짤리는데 양 페이지 넘어가면" | `page-break-inside: avoid` + h2 `page-break-after: avoid` |
+| "오른쪽으로 치우쳐져 있는데" | `.pq-pdf-page` width:auto + padding:0 (충돌 제거) |
+
+### 새 모듈 / 파일
+
+- `services/artifacts/_name_enrich.py` — name_resolver로 v3 dict 자동 보강
+- `services/artifacts/templates/_disclaimer_runner.html` — `position: running()` 래퍼
+- `services/artifacts/templates/earnings_prebrief_digest_email.html` — N종목 단일 이메일
+- `services/artifacts/earnings_prebrief_service.py` 새 메서드 5개:
+  - `run_scan_digest(send=True)` — user 그룹핑 + 1유저 1통
+  - `render_digest_email_html(user, entries, lead_minutes, as_of_label)`
+  - `_send_digest_email(user, html, entries)`
+  - `_already_sent_digest(user_id, today)` — daily dedup
+  - `_persist_digest_marker(user_id, count, today)`
+
+### 검증
+
+| 검증 | 결과 |
+|---|---|
+| pytest 전체 (3회 실행) | 1305 passed / 1 skipped / 0 failed |
+| Production /api/health | 200 / db ok |
+| Naver Search API (secret 재발급 후) | HTTP 200 — 한글 뉴스 정상 |
+| Pretendard production fc-list | 5 variants 등록 |
+| Digest render smoke test | 11,755 char HTML, 2 종목 카드, 2개 count, POSITIVE 라벨 모두 OK |
+| v10 17/17 PDFs | `/tmp/pq_weasy/v10_*.pdf` (가운데 정렬, A4 정상) |
+
+### 정직히 못 한 것
+
+1. ❌ **earnings_prebrief digest 실 production 발송 검증** — 다음 cron 시점 + 매칭 종목 있어야 확인 가능
+2. ❌ **v10 PDF 17개 시각 검증** — CEO 직접 (`open /tmp/pq_weasy/v10_*.pdf`)
+3. ❌ **earnings_prebrief digest 단위 테스트** — 새 메서드 5개에 대한 테스트 미작성 (P1)
+4. ❌ **Frontend 미사용 컴포넌트 cleanup** — `frontend/CLAUDE.md` "lib/ 건드리지 말 것" 룰 준수
+5. ❌ **OAuth 실 로그인** / **모바일 반응형** — CEO 직접 클릭 필요
+
+### 다음 세션 우선순위
+
+`docs/NEXT_SESSION_TODO.md` 신규 작성 — P0/P1/P2/P3 30+ 항목.
+
+핵심 P0:
+1. v10 PDF 17개 시각 검증 (CEO 직접)
+2. earnings_prebrief digest 실 cron 검증 (다음 매칭 시점 메일함 확인)
+3. CEO 외부 액션: Anthropic credit / GitHub billing $5 / 변호사 자문 / 사업자등록
+
+### 다음 세션 시작 프롬프트
+
+```
+HANDOVER v18 (2026-05-01 종료) + docs/NEXT_SESSION_TODO.md 읽고 이어서.
+
+이번 라운드 11 commits 완료:
+- earnings_prebrief digest mode (1유저 1통)
+- dd_checklist 전면 리디자인
+- 17 PDF cover headline data-driven
+- @page running disclaimer (페이지 진짜 맨 아래)
+- 페이지 짤림 / 오른쪽 치우침 fix
+- Naver API 401 정상화 (secret 재발급)
+- Pretendard production 적용 (5 variants)
+
+다음 우선순위:
+1. v10 PDF 17개 시각 검증 (CEO 직접)
+2. earnings_prebrief digest 실 cron 검증
+3. CEO 외부 액션 (Anthropic credit / GitHub billing / 변호사 / 사업자등록)
+4. v10 PDF 추가 디테일 피드백 받아 다듬기
+```
+
+---
+
+# PivoxQuant — 인수인계서 (이전: v17 "F7 unit tests + 출시 체크리스트 + Pretendard 4회 시도")
 
 ## 🟢 2026-04-30 자율 세션 (v17, 형님 자는 동안) — F7 tests + 출시 체크리스트 + Pretendard 4회
 
