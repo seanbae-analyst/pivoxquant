@@ -223,7 +223,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             }}
           >
             <a
-              href={API.artifacts.preview(artifact.id)}
+              href={`${API.artifacts.download(artifact.id)}?inline=1`}
               target="_blank"
               rel="noopener noreferrer"
               className="pq-ink-btn-bronze"
