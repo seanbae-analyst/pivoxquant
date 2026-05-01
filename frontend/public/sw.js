@@ -1,4 +1,15 @@
-// PivoxQuant Service Worker v5 (cache bust for v2 page rollout — Stage 12)
+// PivoxQuant Service Worker v6 (2026-05-02 — bug-fix wave + cold-start fix)
+// v5 → v6: invalidate v5 caches now that the round of fixes shipped:
+//   - frontend/src/lib/auth.tsx        (8s timeout on /api/auth/me)
+//   - reports v2 latest-artifact-card  (Open full memo routing)
+//   - /detail Related Observations     (real artefacts, no decoy PDFs)
+//   - dd_checklist email body          (separate from PDF template)
+//   - companion premium gate           (DEV_FOUNDING_EMAILS backdoor)
+// PWA-installed users on v5 were locked to the pre-fix HTML/JS bundles
+// even after Vercel redeployed; bumping CACHE_VERSION purges every
+// `sp-v5-*` cache the moment the new SW activates so users get the
+// new build artefacts on first navigation.
+//
 // v4 → v5: invalidate v4 caches now that home/portfolio/risk/signals/reports
 // shipped their v2 redesigns. PWA-installed users were holding v4 caches with
 // the old static asset hashes + the old cached navigation HTML, which would
@@ -15,7 +26,7 @@
 // error so SWR error handling (retry + error UI) actually runs. Bumping the
 // version string evicts the v3 caches via the activate step so users never
 // see a stale pre-fix cached 503 after upgrade.
-const CACHE_VERSION = "sp-v5";
+const CACHE_VERSION = "sp-v6";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
