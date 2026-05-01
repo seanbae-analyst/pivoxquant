@@ -1,4 +1,78 @@
-# PivoxQuant — 인수인계서 (2026-05-01 v19 세션 종료 · CEO 테스트 6 bug fixes + 4 페이지 디자인 통일 + 라이브 OAuth 검증)
+# PivoxQuant — 인수인계서 (2026-05-02 v20 세션 — 자율 야간 작업 · V20 P1 swept + cleanup + structure hardening)
+
+## 🟢 2026-05-02 v20 세션 (자율 야간 · 형님 자는 동안) — V20 P1 sweep + 8개 dead component drop + tsc CI gate
+
+**7 commits (`b298b72 → b36c03a`). main HEAD `b36c03a`. 형님이 자는 동안 자율 모드. 라이브 OAuth 클릭 검증은 브라우저 세션이 형님 머신에 잠겨 있어 보류 (정직 보고).**
+
+### 이번 세션 commits
+
+| # | Commit | Type | 핵심 | 검증 |
+|---|---|---|---|---|
+| 1 | `b298b72` | chore | v19 prep doc (`CRITICAL_BUG_VERIFICATION_2026-05-01.md`) → `docs/archive/` | — |
+| 2 | `0c3c73d` | fix(discover) | DISCOVER_POOL 교집합 제거 — 사용자 보유 KR 종목 (010170.KQ Taihan, 124500.KQ IT Sengle) 전체 분석. §101 reasoning 유지. 50개 cap. | pytest 14/14 access_guard ✓ |
+| 3 | `5df17bc` | fix(artifacts) | `countBragCards` = `monthly_brag` + `brag_card` (server + client). /home (total) vs /reports (count) N=N-1 mismatch 박멸. tests/test_artifacts_stats.py (4 cases) 신규. | pytest 4/4 ✓ |
+| 4 | `f477dcd` | fix(alerts) | "set capital for sizing" 메시지에 `→ Set capital in Settings` deep-link (`/settings#capital` 앵커 추가). | tsc clean |
+| 5 | `3a0e8d7` | design(companion) | FREE gate 헤드라인 → "When you're ready, ascend." (Playfair italic verb). KR 카피 한 줄로 단정. | tsc clean |
+| 6 | `3427089` | chore | 0-import 컴포넌트 8개 삭제 (~2,240 LOC): home/positions-ledger-paper, signal-paper, this-morning-paper, today-hero, landing/hero-data-stream, hero-artifact-preview, report-flip-deck, terminal/command-palette (v19 `434acb0`에서 unmount된 파일). | tsc clean + lint clean |
+| 7 | `b36c03a` | test+ci | tests/test_access_guard.py — 사용자 보유 ticker가 DISCOVER_POOL 밖에 있어도 분석되는지 positive test. frontend/package.json `typecheck` 스크립트. CI에 standalone `tsc --noEmit` 게이트 추가 (build 4분 대신 60초 fast-fail). | pytest 19/19 + tsc clean |
+
+### V20 우선순위 처리 결과
+
+| HANDOVER v19 next-session 항목 | 처리 결과 |
+|---|---|
+| **P0 #1** Watchlist Add/Delete 라이브 사이클 | ❌ **deferred** — 라이브 OAuth 세션이 형님 브라우저에 잠겨 있어 자율 모드에서 클릭 불가. 코드는 v19에서 검증 완료 (HANDOVER fix #6 참조). |
+| **P0 #2** Cmd+K Enter → /detail/{ticker} | ❌ **deferred** — 동일 이유. 코드 path: search-command.tsx → router.push(`/detail/${ticker}`)는 v19 fix #3에서 단일 팔레트 검증됨. |
+| **P0 #3** V2 Add Position 200 + table row + delete | ❌ **deferred** — 동일 이유. v19 fix #6에서 모달 7→4 필드 trim + 라이브 확인. |
+| **P0 #4** Discover Engine Scan 보유 종목 누락 | ✅ **fix #2** (`0c3c73d`) — pool intersection 제거. 010170.KQ / 124500.KQ가 DISCOVER_POOL 밖에 있어도 분석. |
+| **P1 #5** /reports vs /home brag-card 카운터 불일치 | ✅ **fix #3** (`5df17bc`) — server + client 양쪽에서 monthly_brag + brag_card 합산. |
+| **P1 #6** /alerts capital sizing 안내 부재 | ✅ **fix #4** (`f477dcd`) — "Sized: 0 shares · set capital for sizing" 메시지 아래 Settings deep-link 노출. |
+| **P1 #7** engine.DISCOVER_POOL 확장 | ✅ **fix #2** (P0 #4와 동일) — engine.py 보호 정책 준수, routes/discover.py 만 수정. |
+| **P1 #8** /companion FREE gate v3 톤 | ✅ **fix #5** (`3a0e8d7`) — "When you're ready, ascend." + KR 한 줄. |
+| **P2 #9** /detail v3 일관성 | ❌ **untouched** — 다음 세션. |
+| **P2 #10** PWA install banner v3 | ❌ **untouched** — 다음 세션. |
+| **P2 #11** Mobile 반응형 점검 | ❌ **untouched** — 라이브 디바이스 필요. |
+
+### 정직 보고 — 자율 모드 한계
+
+**Live OAuth 클릭 검증 보류 이유** (형님 요청한 "OAuth 라이브로 하나씩 클릭"):
+- production OAuth 세션은 형님 브라우저 (시리얼 디바이스)에 잠겨 있음. Claude in Chrome MCP가 활성이라도 자율 모드에서 OAuth provider (Google/Kakao) 인증을 형님 대신 통과시키는 것은 시스템 prompt §user_privacy에 의해 금지 (SSO/OAuth는 explicit per-action permission only).
+- 코드 레벨 검증은 모두 통과: `pytest 1309 / 0 fail`, `npx tsc --noEmit` clean, `npm run lint` clean, regression-guard `0 new`.
+- v19에서 이미 16개 페이지를 형님이 직접 라이브 OAuth로 클릭 검증함. v20의 변경은 v19 코드 위에 누적된 작은 patch 5건 + 컴포넌트 정리 1건 + CI 1건이라, 라이브 회귀 위험 표면은 좁음. 그래도 형님 일어나면 5분만:
+  1. /alerts에서 "set capital for sizing" 메시지가 떠 있는 알림이 있다면 새로 생긴 → Set capital 링크 클릭해서 /settings#capital 앵커가 정상 스크롤되는지
+  2. /companion에 들어가 "When you're ready, ascend." 헤드라인 렌더 확인
+  3. /reports 카운터 vs /home 카운터 일치 여부
+
+### 자율 세션 수치
+
+| 지표 | 값 |
+|---|---|
+| 신규 commits | 7 |
+| 신규 라인 | +96 |
+| 삭제 라인 | -2,240 (8 dead components) |
+| 신규 pytest | +4 (test_artifacts_stats.py) + 1 (test_access_guard new positive case) |
+| pytest 전체 | **1309 passed / 1 skipped / 0 failed** (98s, baseline 1305 → 1309) |
+| TypeScript 에러 | 0 |
+| ESLint 에러 | 0 |
+| Regression Guards | G1/G2 OK · G3-G5 baseline 미만 (no new) |
+
+### 다음 세션 V21 우선순위
+
+#### P0 — 형님 라이브 검증 (5-10분)
+1. v20 fix 5건 시각 확인 (위 정직 보고 표 참조)
+2. v19 P0 미검증 4건 (Watchlist cycle / Cmd+K Enter / V2 Add Position cycle / Discover post-fix)
+
+#### P1 — 디자인 일관성 잔여
+3. /detail/{ticker} v3 일관성 점검 (이번 세션도 안 봄)
+4. PWA install banner v3 톤 통일
+5. Mobile 반응형 (iPhone SE / 일반 안드로이드)
+
+#### P2 — 다음 cleanup wave
+6. lib/ 의 미사용 SWR hook 점검 (frontend/CLAUDE.md "lib/ 건드리지 말 것" 룰 — 2026-04-12 자 룰이라 v19/v20 누적 변경분 검토 필요)
+7. routes/ 의 deprecated alias 정리 (e.g. POST /api/portfolio/position 단수 vs /positions 복수)
+
+---
+
+# PivoxQuant — 인수인계서 (이전: v19 "CEO 테스트 6 bug fixes + 4 페이지 디자인 통일 + 라이브 OAuth 검증")
 
 ## 🟢 2026-05-01 v19 세션 (오후) — Production 라이브 OAuth 감사 + bug fix + design Wave 1+2
 
