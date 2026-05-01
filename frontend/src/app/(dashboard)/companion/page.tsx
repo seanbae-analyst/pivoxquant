@@ -116,7 +116,7 @@ function UpgradePrompt() {
             margin: 0,
           }}
         >
-          Personal Journal Companion
+          When you&rsquo;re ready, <em style={{ color: "var(--pq-bronze, #B8956A)" }}>ascend.</em>
         </h1>
         <p
           className="mt-4 font-serif"
@@ -127,7 +127,7 @@ function UpgradePrompt() {
           }}
         >
           A reflective companion that remembers what you wrote — not an advisor.
-          Available to <strong style={{ color: "var(--pq-bronze, #B8956A)" }}>Premium Plus</strong> and
+          Reserved for <strong style={{ color: "var(--pq-bronze, #B8956A)" }}>Premium Plus</strong> and
           Founding Lifetime members during Closed Beta.
         </p>
         <p
@@ -138,7 +138,7 @@ function UpgradePrompt() {
             color: "rgba(184, 149, 106, 0.85)",
           }}
         >
-          Premium Plus 또는 Founding Lifetime 멤버에게 제공됩니다.
+          준비가 되면, 한 단계 위로. Premium Plus · Founding Lifetime 멤버를 위한 동행.
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
