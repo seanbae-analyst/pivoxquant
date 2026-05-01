@@ -30,7 +30,7 @@ import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
 import { FieldLabel, StatRow } from "@/components/ui/editorial";
-import { useWatchlist, usePortfolioPositions } from "@/lib/hooks";
+import { useWatchlist, usePortfolioPositions, useArtifacts } from "@/lib/hooks";
 import type { Position } from "@/lib/types";
 import {
   TrendingUp,
@@ -582,6 +582,13 @@ export default function StockDetailPage() {
    * 보유 포지션 또는 관심종목에 등록된 ticker만 분석 페이지 진입 허용.
    * AccessDeniedScreen에서 1-click으로 watchlist 추가 → 즉시 해제. */
   const positionsSwr = usePortfolioPositions<{ positions?: Position[] }>();
+  // 2026-05-02: pull the user's 3 most recent artifacts so the
+  // "Related observations" section shows real artefacts they actually
+  // received instead of three hardcoded /samples/*.pdf decoys that had
+  // nothing to do with the current ticker. Backend `list` endpoint
+  // doesn't filter by ticker yet — we'd rather show real cross-ticker
+  // research than fake same-ticker samples.
+  const artifactsSwr = useArtifacts({ limit: 3 });
   const allowlistLoading = watchlistLoading || positionsSwr.isLoading;
   const inPortfolio = useMemo(() => {
     const upper = (ticker || "").toUpperCase();
@@ -1450,50 +1457,62 @@ export default function StockDetailPage() {
           <div className="mb-5 flex items-center gap-3">
             <FileText className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
             <div>
-              <div className="pq-section-kicker">Research library</div>
-              <h2 className="pq-detail-h2 mt-1.5">Related observations</h2>
+              <div className="pq-section-kicker">From your archive</div>
+              <h2 className="pq-detail-h2 mt-1.5">Recent artefacts</h2>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                slug: "weekly_memo",
-                name: "Weekly Memo",
-                desc: "Portfolio-wide context, authored every Sunday.",
-                kind: "PDF · 2 pages",
-              },
-              {
-                slug: "earnings_prebrief",
-                name: "Earnings Pre-Brief",
-                desc: "Ten-day forward earnings observation playbook.",
-                kind: "PDF · 4 pages",
-              },
-              {
-                slug: "dd_checklist",
-                name: "DD Checklist",
-                desc: "Structured due-diligence reference and markers.",
-                kind: "PDF · 3 pages",
-              },
-            ].map((r) => (
-              <a
-                key={r.slug}
-                href={`/samples/${r.slug}.pdf`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"
+          {artifactsSwr.artifacts.length === 0 ? (
+            <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-6 text-center">
+              <p className="pq-detail-caption">
+                No artefacts yet — your first weekly memo lands Sunday 07:00 KST.
+              </p>
+              <Link
+                href="/reports"
+                className="mt-3 inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
               >
-                <FieldLabel>{r.kind}</FieldLabel>
-                <div className="pq-detail-h2 mt-2 group-hover:text-[var(--pq-bronze-light)] transition-colors">
-                  {r.name}
-                </div>
-                <p className="mt-2 pq-detail-caption">{r.desc}</p>
-                <div className="mt-4 text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] opacity-60 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5">
-                  Open PDF
-                  <ExternalLink className="h-3 w-3" />
-                </div>
-              </a>
-            ))}
-          </div>
+                Open Reports
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {artifactsSwr.artifacts.slice(0, 3).map((a) => {
+                const label =
+                  a.type === "weekly_memo" ? "Weekly Memo"
+                  : a.type === "earnings_prebrief" ? "Earnings Pre-Brief"
+                  : a.type === "monthly_brag" || a.type === "brag_card" ? "Brag Card"
+                  : a.type === "dd_checklist" ? "DD Checklist"
+                  : a.type === "risk_board" ? "Risk Board"
+                  : a.type === "year_end_letter" ? "Year-End Letter"
+                  : (a.type || "Artifact").replace(/_/g, " ");
+                const date = a.sent_at;
+                const dateLabel = date
+                  ? new Date(date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+                  : "Archived";
+                return (
+                  <a
+                    key={a.id}
+                    href={`${API.artifacts.download(a.id)}?inline=1`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"
+                  >
+                    <FieldLabel>{dateLabel}</FieldLabel>
+                    <div className="pq-detail-h2 mt-2 group-hover:text-[var(--pq-bronze-light)] transition-colors">
+                      {label}
+                    </div>
+                    <p className="mt-2 pq-detail-caption truncate">
+                      {a.title || "Open the document for context."}
+                    </p>
+                    <div className="mt-4 text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] opacity-60 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1.5">
+                      Open
+                      <ExternalLink className="h-3 w-3" />
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* ── Footer fleuron ── */}
