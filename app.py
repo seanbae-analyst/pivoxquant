@@ -894,23 +894,23 @@ def _init_scheduler(app):
                 logger.error(f"Twin weekly scheduler failed: {e}")
 
     def _scheduled_earnings_prebrief():
-        """Scan every 15 min for positions whose earnings fire in ~30 min
-        (MVP #3). The service enforces dedup per (user, ticker,
-        earnings_dt) so a scan that fires at T-35 and another at T-25
-        won't double-send — the brief only emits inside the tight
-        `LEAD_MINUTES ± tolerance` window.
+        """Scan every 15 min for positions whose earnings fire in ~30 min.
 
-        Runs at 15-min cadence to comfortably contain the ±6-min match
-        window — a 30-min cadence would miss narrowly-scheduled
-        announcements. Per-user failures never block the next one.
+        2026-05-01 redesign — switched from per-ticker `run_scan` to
+        user-grouped `run_scan_digest`: one consolidated email per user
+        listing all matched tickers (CEO 평: '종목 하나당 이메일 하나
+        ㅈㄴ많아 — 하나에 모든 종목이 오게끔'). Daily dedup at user
+        level so even if scan fires multiple times in a day, each user
+        receives at most one digest per UTC day. Per-ticker Artifact
+        rows still persist for archive/download surfaces.
         """
         from services.artifacts.earnings_prebrief_service import (
             EarningsPrebriefService,
         )
         with app.app_context():
             try:
-                summary = EarningsPrebriefService().run_scan()
-                logger.info(f"Earnings pre-brief scan: {summary}")
+                summary = EarningsPrebriefService().run_scan_digest()
+                logger.info(f"Earnings pre-brief digest scan: {summary}")
             except Exception as e:
                 logger.error(f"Earnings pre-brief scan failed: {e}")
 
@@ -978,26 +978,19 @@ def _init_scheduler(app):
         max_instances=1,
         coalesce=True,
     )
-    # ── DISABLED (2026-05-01): per-ticker email spam ──────────────────────
-    # CEO complaint 2026-05-01 morning: "티커번호만 크게 오고 그리고 종목하나당
-    # 이메일 하나오는데 ㅈㄴ많아 하나에 모든 종목이 오게끔해야지". The current
-    # `run_scan` dispatches one email per (user, ticker, earnings_dt) match —
-    # a user with 5 holdings reporting same week receives 5 emails.
-    #
-    # Plan: replace with `run_scan_digest` that groups matches by user and
-    # sends one consolidated digest email per user (all today's tickers in
-    # one envelope). Cron will be re-enabled with the digest version in a
-    # follow-up commit. Until then the scan stays paused so no further
-    # spam reaches inboxes.
-    #
-    # sched.add_job(
-    #     _scheduled_earnings_prebrief,
-    #     trigger="interval",
-    #     minutes=15,
-    #     id="earnings_prebrief_scan",
-    #     max_instances=1,
-    #     coalesce=True,
-    # )
+    # ── RE-ENABLED (2026-05-01): digest mode ──────────────────────────────
+    # Was disabled to stop per-ticker email spam (5 holdings → 5 emails).
+    # Now switched to `run_scan_digest` — one consolidated email per
+    # user with all matched tickers as cards. Daily dedup at user level
+    # so the 15-min scan cadence doesn't double-send.
+    sched.add_job(
+        _scheduled_earnings_prebrief,
+        trigger="interval",
+        minutes=15,
+        id="earnings_prebrief_digest_scan",
+        max_instances=1,
+        coalesce=True,
+    )
     # ── DISABLED (2026-04-19): KPI Dashboard → Morning Brief Plus 통합 ──
     # 5-메트릭 KPI 카드는 이제 06:00 KST Morning Brief 이메일 상단에 포함된다.
     # 스케줄러 job은 제거됐지만 `_scheduled_kpi_dashboard` 함수 + 서비스 +

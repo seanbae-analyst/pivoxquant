@@ -1,0 +1,184 @@
+{# ══════════════════════════════════════════════════════════════════════════
+   Earnings Pre-Brief — Digest Email (one per user, N tickers consolidated).
+
+   Replaces the old per-ticker email blast (CEO 평 2026-05-01: '종목 하나당
+   이메일 하나 ㅈㄴ많아 — 하나에 모든 종목이 오게끔').
+
+   Used by: EarningsPreBriefService.render_digest_email_html(user, entries)
+
+   `entries` is a list of per-ticker dicts each containing the same shape
+   as the per-ticker template (ticker, company_name, fiscal_label,
+   reporting_date, position, consensus, implied_move_pct, quant_label,
+   quant_tone, scenarios, …).
+
+   Design:
+     - Single masthead + KPI row summary (N 종목 today)
+     - For each entry: card with company name (large), ticker (small),
+       reporting date, consensus EPS, implied move, quant label
+     - 'View full PDF' link per entry (if pdf_url provided per entry)
+     - Footer with one disclaimer
+   ═══════════════════════════════════════════════════════════════════════════ #}
+{%- set count = entries | length -%}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>실적 발표 {{ count }}개 종목 — {{ user_name | default('PivoxQuant') }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f2ec;font-family:'Geist','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',Helvetica,Arial,sans-serif;color:#0a0a0a;">
+
+<!-- Preview -->
+<div style="display:none;max-height:0;overflow:hidden;color:transparent;">
+  오늘 실적 발표 {{ count }}개 종목 사전 브리프
+  {% if entries and entries[0].company_name %}· {{ entries[0].company_name }}{% endif %}
+  {% if count > 1 %}외 {{ count - 1 }}건{% endif %}
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f2ec;padding:28px 0;">
+  <tr><td align="center">
+
+    <table role="presentation" width="640" cellpadding="0" cellspacing="0"
+           style="background:#ffffff;border:0.5px solid #e8e5dc;max-width:640px;">
+
+      <!-- Masthead -->
+      <tr><td style="padding:28px 36px 16px 36px;border-bottom:1px solid #e8e5dc;">
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-size:9pt;letter-spacing:0.26em;text-transform:uppercase;color:#B8956A;font-weight:600;">
+          PivoxQuant · Earnings Desk
+        </div>
+        <div style="font-family:'Geist',sans-serif;font-size:8pt;letter-spacing:0.14em;text-transform:uppercase;color:#8a8a8a;margin-top:6px;">
+          Pre-Earnings Digest · {{ as_of_label | default('Today') }}
+        </div>
+        <h1 style="margin:14px 0 4px 0;font-family:'Source Serif 4',Georgia,serif;font-size:26pt;font-weight:500;letter-spacing:-0.01em;color:#0a0a0a;line-height:1.15;">
+          오늘 실적 발표
+          <strong style="color:#0a0a0a;">{{ count }}개</strong> 종목.
+        </h1>
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:11pt;color:#4a4a4a;margin-top:4px;">
+          {{ user_name | default('투자자') }}님의 보유 종목 중 매칭된 결과입니다.
+        </div>
+      </td></tr>
+
+      <!-- Summary KPIs -->
+      <tr><td style="padding:18px 36px 14px 36px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="center" style="width:50%;padding:14px 0;border-right:0.5px solid #e8e5dc;">
+              <div style="font-family:'Geist',sans-serif;font-size:7.5pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">매칭 종목</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:22pt;font-weight:500;margin-top:8px;color:#0a0a0a;">{{ count }}</div>
+            </td>
+            <td align="center" style="width:50%;padding:14px 0;">
+              <div style="font-family:'Geist',sans-serif;font-size:7.5pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">발표 시점</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:14pt;font-weight:500;margin-top:8px;color:#0a0a0a;">~{{ lead_minutes | default(30) }}분 후</div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+
+      <!-- Per-ticker cards -->
+      {% for entry in entries %}
+      <tr><td style="padding:0 36px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+               style="border:0.5px solid #e8e5dc;border-radius:4px;margin-bottom:14px;">
+          <tr><td style="padding:16px 18px;">
+
+            <!-- Header: company name + ticker -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td>
+                  <div style="font-family:'Source Serif 4',Georgia,serif;font-size:18pt;font-weight:500;color:#0a0a0a;line-height:1.2;">
+                    {{ entry.company_name | default(entry.ticker) }}
+                  </div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10pt;color:#8a8a8a;letter-spacing:0.04em;margin-top:3px;">
+                    {{ entry.ticker }}
+                    {% if entry.fiscal_label %} · {{ entry.fiscal_label }}{% endif %}
+                  </div>
+                </td>
+                <td align="right" style="vertical-align:top;">
+                  <span style="display:inline-block;
+                               background:{% if entry.quant_tone == 'pos' %}#14532d{% elif entry.quant_tone == 'neg' %}#7f1d1d{% else %}#525252{% endif %};
+                               color:#fafaf7;font-family:'JetBrains Mono',monospace;
+                               font-size:8pt;letter-spacing:0.16em;text-transform:uppercase;
+                               padding:4px 10px;border-radius:3px;font-weight:600;">
+                    {{ entry.quant_label | default('NEUTRAL') }}
+                  </span>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Metrics row -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:14px;">
+              <tr>
+                <td style="width:33%;padding-right:12px;">
+                  <div style="font-family:'Geist',sans-serif;font-size:7pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">Reporting</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11pt;font-weight:500;margin-top:4px;color:#0a0a0a;">
+                    {{ entry.reporting_date | default('—') }}
+                  </div>
+                </td>
+                <td style="width:33%;padding-right:12px;border-left:0.5px solid #e8e5dc;padding-left:12px;">
+                  <div style="font-family:'Geist',sans-serif;font-size:7pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">Implied Move</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11pt;font-weight:500;margin-top:4px;color:#0a0a0a;">
+                    {{ entry.implied_move_pct | default('—') }}
+                  </div>
+                </td>
+                <td style="width:33%;border-left:0.5px solid #e8e5dc;padding-left:12px;">
+                  <div style="font-family:'Geist',sans-serif;font-size:7pt;letter-spacing:0.18em;text-transform:uppercase;color:#8a8a8a;font-weight:500;">Position</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:11pt;font-weight:500;margin-top:4px;color:#0a0a0a;">
+                    {{ entry.position | default('—') }}
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Consensus EPS (only if available) -->
+            {% if entry.consensus_eps %}
+            <div style="margin-top:14px;padding-top:10px;border-top:0.5px solid #e8e5dc;
+                        font-family:'Source Serif 4',Georgia,serif;font-size:11pt;color:#4a4a4a;line-height:1.5;">
+              컨센서스 EPS <strong style="color:#0a0a0a;">${{ entry.consensus_eps }}</strong>
+              {% if entry.whisper_eps %} · 휘스퍼 <strong>${{ entry.whisper_eps }}</strong>{% endif %}
+            </div>
+            {% endif %}
+
+            <!-- PDF link -->
+            {% if entry.pdf_url %}
+            <div style="margin-top:14px;text-align:center;">
+              <a href="{{ entry.pdf_url }}"
+                 style="display:inline-block;background:#0a0a0a;color:#fafaf7;text-decoration:none;
+                        font-family:'Geist',sans-serif;font-weight:600;padding:10px 24px;font-size:9pt;
+                        letter-spacing:0.14em;text-transform:uppercase;border-radius:0;">
+                전체 브리프 PDF →
+              </a>
+            </div>
+            {% endif %}
+
+          </td></tr>
+        </table>
+      </td></tr>
+      {% endfor %}
+
+      <!-- Footer note -->
+      <tr><td style="padding:18px 36px 24px 36px;border-top:1px solid #e8e5dc;">
+        <p style="font-family:'Source Serif 4',Georgia,serif;font-style:italic;font-size:9.5pt;color:#8a8a8a;margin:0;line-height:1.55;">
+          본 디지스트는 매일 1통으로 묶어 발송됩니다. 종목별 실적 발표 30분 전후
+          내부자 보유 한도, 컨센서스, Implied Move를 관찰값으로 정리했습니다.
+          매수·매도 권유가 아닙니다.
+        </p>
+      </td></tr>
+
+      <!-- Disclaimer -->
+      <tr><td style="padding:0 36px 22px 36px;">
+        {% include '_disclaimer.html' %}
+      </td></tr>
+
+    </table>
+
+    <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="margin-top:16px;max-width:640px;">
+      <tr><td align="center" style="font-family:'JetBrains Mono',monospace;font-size:7.5pt;color:#8a8a8a;letter-spacing:0.1em;">
+        PivoxQuant · pivoxquant.com · For information only
+      </td></tr>
+    </table>
+
+  </td></tr>
+</table>
+
+</body>
+</html>

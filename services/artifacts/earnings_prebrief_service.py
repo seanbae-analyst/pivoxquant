@@ -1330,6 +1330,57 @@ class EarningsPreBriefService:
                     .first())
         return bool(existing and existing.sent_at)
 
+    def _already_sent_digest(self, user_id: int,
+                              today: Optional[date] = None) -> bool:
+        """Daily-level dedup for digest emails.
+
+        Once a user receives one digest today, additional cron runs in
+        the same day must not send another digest even if more tickers
+        match. Per-ticker `_already_sent` still persists Artifact rows
+        for downstream features.
+
+        Marker is stored as an Artifact row of type
+        ``earnings_prebrief_digest`` with title = ``digest-YYYY-MM-DD``.
+        """
+        today = today or datetime.now(timezone.utc).date()
+        marker_title = f"digest-{today.isoformat()}"
+        existing = (Artifact.query
+                    .filter_by(user_id=user_id,
+                               type="earnings_prebrief_digest",
+                               title=marker_title)
+                    .first())
+        return bool(existing and existing.sent_at)
+
+    def _persist_digest_marker(self, user_id: int, count: int,
+                                today: Optional[date] = None) -> Artifact:
+        """Persist a daily marker row so subsequent cron runs skip this
+        user. ``data_json`` records the ticker count for telemetry."""
+        today = today or datetime.now(timezone.utc).date()
+        marker_title = f"digest-{today.isoformat()}"
+        existing = (Artifact.query
+                    .filter_by(user_id=user_id,
+                               type="earnings_prebrief_digest",
+                               title=marker_title)
+                    .first())
+        now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+        if existing:
+            existing.data_json = {"date": today.isoformat(),
+                                   "tickers": count}
+            existing.sent_at = now_naive
+            artefact = existing
+        else:
+            artefact = Artifact(
+                user_id=user_id,
+                type="earnings_prebrief_digest",
+                title=marker_title,
+                data_json={"date": today.isoformat(),
+                            "tickers": count},
+                sent_at=now_naive,
+            )
+            db.session.add(artefact)
+        db.session.commit()
+        return artefact
+
     # ── orchestration ──────────────────────────────────────────────────────
 
     def run_for_match(self, user: User, ticker: str,
@@ -1435,6 +1486,235 @@ class EarningsPreBriefService:
             "skipped":     skipped,
         }
         logger.info("earnings prebrief scan: %s", summary)
+        return summary
+
+    # ── DIGEST mode (CEO redesign 2026-05-01) ─────────────────────────────
+    # Replaces per-ticker email blast (`run_scan` + `_send_email` for each
+    # match) with a SINGLE consolidated email per user listing all
+    # matched tickers. Dedup is daily-per-user, not per (user, ticker).
+
+    def render_digest_email_html(self, user: User,
+                                  entries: list[dict[str, Any]],
+                                  *, lead_minutes: int = 30,
+                                  as_of_label: Optional[str] = None) -> str:
+        """Render the multi-ticker digest email HTML.
+
+        `entries` is a list of per-ticker data dicts (each shaped like
+        what `generate_for_position` returns). The template iterates
+        and renders one card per entry.
+        """
+        env = self._jinja_env()
+        if env is None:
+            return self._fallback_digest_html(user, entries)
+        try:
+            tpl = env.get_template("earnings_prebrief_digest_email.html")
+            return tpl.render(
+                user_name=getattr(user, "name", "") or getattr(user, "email", ""),
+                entries=entries,
+                lead_minutes=lead_minutes,
+                as_of_label=as_of_label or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            )
+        except Exception as exc:
+            logger.warning("digest email render failed: %s", exc)
+            return self._fallback_digest_html(user, entries)
+
+    def _fallback_digest_html(self, user: User,
+                               entries: list[dict[str, Any]]) -> str:
+        """Plain HTML fallback when Jinja is unavailable."""
+        from html import escape
+        rows = "".join(
+            f"<li><strong>{escape(e.get('company_name', e.get('ticker', '?')))}</strong> "
+            f"<code>{escape(e.get('ticker', '?'))}</code> · "
+            f"{escape(e.get('reporting_date', '—'))}</li>"
+            for e in entries
+        )
+        return (
+            f"<!doctype html><html><body>"
+            f"<h1>오늘 실적 발표 {len(entries)}개 종목</h1>"
+            f"<ul>{rows}</ul>"
+            f"<p><em>매수·매도 권유가 아닙니다.</em></p>"
+            f"</body></html>"
+        )
+
+    def _send_digest_email(self, user: User, html_body: str,
+                            entries: list[dict[str, Any]]) -> bool:
+        """Send a single digest email per user. SendGrid → SMTP → skip.
+
+        Subject summarises the count and leading ticker. Per-ticker PDFs
+        are NOT attached (link to platform instead) — keeps mail size
+        manageable when multiple tickers match.
+        """
+        if getattr(user, "email_opt_out", False):
+            logger.info("digest skipped: user %s opted out (global)", user.id)
+            return False
+        if getattr(user, "email_opt_out_earnings", False):
+            logger.info("digest skipped: user %s opted out (earnings)", user.id)
+            return False
+
+        from_email = os.environ.get(
+            "EARNINGS_PREBRIEF_FROM_EMAIL",
+            os.environ.get("WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"),
+        )
+        count = len(entries)
+        first_ticker = entries[0].get("ticker", "?") if entries else "?"
+        if count == 1:
+            subject = f"[Pre-Brief] ${first_ticker} 실적 발표"
+        else:
+            subject = f"[Pre-Brief] 오늘 {count}개 종목 실적 발표"
+
+        sg_key = os.environ.get("SENDGRID_API_KEY")
+        if sg_key:
+            try:
+                from sendgrid import SendGridAPIClient  # type: ignore
+                from sendgrid.helpers.mail import Mail  # type: ignore
+                mail = Mail(from_email=from_email, to_emails=user.email,
+                            subject=subject, html_content=html_body)
+                SendGridAPIClient(sg_key).send(mail)
+                return True
+            except Exception as exc:
+                logger.error("SendGrid digest send failed for user %s: %s",
+                             user.id, exc)
+                return False
+
+        smtp_host = os.environ.get("SMTP_HOST")
+        if smtp_host:
+            try:
+                import smtplib
+                from email.message import EmailMessage
+                msg = EmailMessage()
+                msg["From"] = from_email
+                msg["To"] = user.email
+                msg["Subject"] = subject
+                msg.set_content("HTML-only; view in an HTML-capable client.")
+                msg.add_alternative(html_body, subtype="html")
+                with smtplib.SMTP(smtp_host) as s:
+                    s.send_message(msg)
+                return True
+            except Exception as exc:
+                logger.error("SMTP digest send failed for user %s: %s",
+                             user.id, exc)
+                return False
+
+        logger.info("no email transport configured; digest skipped for user %s",
+                    user.id)
+        return False
+
+    def run_scan_digest(self, *, send: bool = True) -> dict[str, Any]:
+        """User-grouped variant of `run_scan` — one digest email per user.
+
+        Differences vs `run_scan`:
+          1. Matches are grouped by user_id, then per-user rendered as a
+             single multi-ticker email body via
+             `render_digest_email_html`.
+          2. Daily dedup at the user level (`_already_sent_digest`) — a
+             user receives at most one digest per UTC day even if the
+             scan fires multiple times.
+          3. Per-ticker Artifact rows are still persisted via
+             `_persist` so downstream features (e.g. archive list, PDF
+             on-demand download) keep working unchanged.
+
+        Cron callable. Never raises.
+        """
+        lead = _lead_minutes()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        today = now.date()
+        target_window_start = now + timedelta(minutes=lead - _MATCH_TOLERANCE_MIN)
+        target_window_end   = now + timedelta(minutes=lead + _MATCH_TOLERANCE_MIN)
+
+        try:
+            candidates = self.get_upcoming_earnings(
+                hours=max(1, (lead + _MATCH_TOLERANCE_MIN) // 60 + 1),
+            )
+        except Exception as exc:
+            logger.error("scan_digest: get_upcoming_earnings raised: %s", exc)
+            return {"attempted": 0, "users_sent": 0, "tickers": 0,
+                    "skipped_users": 0, "failed": 0, "error": str(exc)}
+
+        in_window = [c for c in candidates
+                     if target_window_start <= c["earnings_dt"] <= target_window_end]
+
+        # Group matches by user_id.
+        by_user: dict[int, list[dict[str, Any]]] = {}
+        for row in in_window:
+            uid = row["user_id"]
+            by_user.setdefault(uid, []).append(row)
+
+        users_sent = 0
+        skipped_users = 0
+        ticker_total = 0
+        failed = 0
+
+        for uid, rows in by_user.items():
+            user = db.session.get(User, uid)
+            if user is None:
+                continue
+
+            # Daily dedup at user level
+            if self._already_sent_digest(uid, today):
+                skipped_users += 1
+                continue
+
+            # Build per-ticker entries (assemble + persist Artifact, but
+            # do NOT send per-ticker email)
+            entries: list[dict[str, Any]] = []
+            for row in rows:
+                try:
+                    data = self.generate_for_position(
+                        uid, row["ticker"], row["earnings_dt"],
+                        calendar_row=row.get("calendar_row"),
+                    )
+                except Exception as exc:
+                    logger.error("digest assembly failed user=%s ticker=%s: %s",
+                                 uid, row["ticker"], exc)
+                    continue
+                entries.append(data)
+                # Persist Artifact even before send so PDF download works
+                pdf_bytes = self.render_pdf(data)
+                self._persist(uid, data, pdf_bytes, row["earnings_dt"], False)
+                ticker_total += 1
+
+            if not entries:
+                skipped_users += 1
+                continue
+
+            # Render single digest email
+            try:
+                html_body = self.render_digest_email_html(
+                    user, entries,
+                    lead_minutes=lead,
+                    as_of_label=today.isoformat(),
+                )
+            except Exception as exc:
+                logger.error("digest render failed for user %s: %s", uid, exc)
+                failed += 1
+                continue
+
+            sent_ok = False
+            if send:
+                try:
+                    sent_ok = self._send_digest_email(user, html_body, entries)
+                except Exception as exc:
+                    logger.error("digest send raised for user %s: %s", uid, exc)
+                    failed += 1
+
+            if sent_ok or not send:
+                self._persist_digest_marker(uid, len(entries), today)
+                users_sent += 1
+            else:
+                failed += 1
+
+        summary = {
+            "now":           now.isoformat() + "Z",
+            "lead_minutes":  lead,
+            "candidates":    len(candidates),
+            "in_window":     len(in_window),
+            "users_total":   len(by_user),
+            "users_sent":    users_sent,
+            "tickers":       ticker_total,
+            "skipped_users": skipped_users,
+            "failed":        failed,
+        }
+        logger.info("earnings prebrief scan_digest: %s", summary)
         return summary
 
     # ── spec-aligned aliases ───────────────────────────────────────────────
