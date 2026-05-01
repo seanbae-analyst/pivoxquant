@@ -153,15 +153,35 @@ export default function AlertsPage() {
   return (
     <ErrorBoundary>
       <div className="space-y-8">
-        {/* ── Header ── */}
+        {/* ── Editorial header (Wave 1, 2026-05-01) ──
+            Promoted the headline to the v3 Playfair-with-italic-accent
+            convention used by /portfolio v2 ("Your *book.*"), /risk v2
+            ("Risk *board.*"), /signals ("*observed* … *filtered*"), and
+            now /discover ("What the desk *observed.*"). Was a flat
+            sans h1 "Alerts". */}
         <header className="flex items-start justify-between gap-4">
           <div>
             <RuledKicker>Signals desk &middot; Alerts history</RuledKicker>
-            <h1 className="mt-2 font-serif text-2xl md:text-3xl text-[var(--pq-ivory)]">
-              Alerts
+            <h1
+              className="mt-3 font-serif"
+              style={{
+                fontFamily:
+                  '"Playfair Display","Source Serif 4",Georgia,serif',
+                fontWeight: 500,
+                fontSize: "clamp(34px, 4.6vw, 52px)",
+                lineHeight: 1.06,
+                letterSpacing: "-0.022em",
+                color: "var(--pq-ivory)",
+              }}
+            >
+              When the desk{" "}
+              <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+                spoke.
+              </span>
             </h1>
-            <Caption className="mt-1">
-              Every observation the desk has dispatched. Informational only.
+            <Caption className="mt-3 max-w-[560px]">
+              Every observation the desk has dispatched — kept as a record,
+              never an instruction.
             </Caption>
           </div>
 
@@ -178,23 +198,37 @@ export default function AlertsPage() {
           )}
         </header>
 
-        {/* ── 4-stat strip ── */}
-        <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* ── Hairline metric strip (Wave 1, 2026-05-01) ──
+            Was a 4-card boxy grid (`bg-[rgba(255,255,255,0.02)] border ...
+            rounded-[2px]`) which read as a generic SaaS dashboard tile
+            row and broke from the v3 lock-in. Now ledger-style hairline
+            rows: bronze eyebrow + tabular-mono numeral, divided only
+            by 0.5px hairlines. Same 4 metrics, no boxes. */}
+        <section
+          className="grid grid-cols-2 gap-x-12 gap-y-5 sm:grid-cols-4 border-t pt-5"
+          style={{
+            borderTopColor: "rgba(184,149,106,0.32)",
+            borderTopWidth: 0.5,
+          }}
+        >
           {[
             { label: "Total", value: stats.total },
             { label: "Unread", value: stats.unread },
             { label: "Today", value: stats.today },
             { label: "This week", value: stats.week },
           ].map((s) => (
-            <div
-              key={s.label}
-              className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]"
-            >
-              <div className="pq-ink-label text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+            <div key={s.label} className="flex flex-col">
+              <span
+                className="font-mono text-[10px] uppercase"
+                style={{
+                  letterSpacing: "0.22em",
+                  color: "var(--pq-bronze)",
+                }}
+              >
                 {s.label}
-              </div>
+              </span>
               <div className="mt-2">
-                <NumDisplay size={26}>{s.value}</NumDisplay>
+                <NumDisplay size={28}>{s.value}</NumDisplay>
               </div>
             </div>
           ))}
@@ -224,32 +258,57 @@ export default function AlertsPage() {
 
         {/* ── List ── */}
         {isLoading ? (
-          <div className="space-y-2">
+          // Editorial skeleton — hairline-divided rows match the actual
+          // table rhythm, no rounded card boxes.
+          <div className="border-t" style={{ borderTopColor: "rgba(245,240,232,0.08)", borderTopWidth: 0.5 }}>
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="h-16 rounded-[2px] bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] animate-pulse"
+                className="h-12 border-b animate-pulse"
+                style={{
+                  borderBottomColor: "rgba(245,240,232,0.06)",
+                  borderBottomWidth: 0.5,
+                  background: "rgba(245,240,232,0.02)",
+                }}
               />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-12 rounded-[2px] text-center">
+          // Editorial empty state — Fleuron + serif headline + italic
+          // caption, no card wrapper. Matches /watchlist empty state +
+          // FootSignature pattern in /portfolio v2 / /risk v2.
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
             <Fleuron size={16} />
-            <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
-              No observations recorded yet.
+            <p
+              className="mt-2 font-serif"
+              style={{
+                fontFamily:
+                  '"Playfair Display","Source Serif 4",Georgia,serif',
+                fontSize: 22,
+                lineHeight: 1.2,
+                color: "var(--pq-ivory)",
+              }}
+            >
+              The desk has been{" "}
+              <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+                quiet.
+              </span>
             </p>
-            <Caption className="mt-2">
-              Signals, risk events, and price thresholds will appear here as we observe them.
+            <Caption className="max-w-md">
+              Signals, risk events, and price thresholds will be recorded
+              here as we observe them.
             </Caption>
             <BellOff
-              className="mx-auto mt-4 h-5 w-5 text-[var(--pq-bronze)]"
+              className="mt-2 h-4 w-4 opacity-50"
+              style={{ color: "var(--pq-bronze)" }}
               strokeWidth={1.2}
               aria-hidden="true"
             />
           </div>
         ) : (
-          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] overflow-hidden">
-            <div className="overflow-x-auto">
+          // Bare hairline table — drop the rounded card wrapper that was
+          // out of step with /portfolio v2, /risk v2, /signals, /discover.
+          <div className="overflow-x-auto">
             <table className="pq-ink-table w-full min-w-[520px]">
               <thead>
                 <tr>
@@ -309,7 +368,6 @@ export default function AlertsPage() {
                 ))}
               </tbody>
             </table>
-            </div>
           </div>
         )}
 
