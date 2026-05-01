@@ -65,15 +65,26 @@ class User(UserMixin, db.Model):
     def effective_tier(self) -> str:
         """Tier after applying dev overrides.
 
-        Any email listed in `DEV_PREMIUM_EMAILS` (comma-separated env var) is
-        treated as Premium regardless of their stored `subscription_tier`.
-        This is a dev/admin backdoor for owner accounts and invited testers —
-        it never downgrades, only upgrades. The stored column remains the
-        source of truth for Stripe billing state.
+        Two comma-separated env vars override the stored `subscription_tier`,
+        in priority order (highest tier wins, never downgrades):
+
+          DEV_FOUNDING_EMAILS  → "founding_lifetime"  (full access incl. Companion)
+          DEV_PREMIUM_EMAILS   → "premium"            (legacy, pre-Companion)
+
+        This is a dev/admin backdoor for owner accounts and invited testers.
+        Stripe billing state remains the source of truth — these only flip
+        runtime entitlement, not the stored column.
         """
-        raw = os.environ.get("DEV_PREMIUM_EMAILS", "") or ""
-        if raw and self.email:
-            allow = {e.strip().lower() for e in raw.split(",") if e.strip()}
-            if self.email.lower() in allow:
-                return "premium"
+        email = (self.email or "").lower()
+        if email:
+            founding_raw = os.environ.get("DEV_FOUNDING_EMAILS", "") or ""
+            if founding_raw:
+                founding = {e.strip().lower() for e in founding_raw.split(",") if e.strip()}
+                if email in founding:
+                    return "founding_lifetime"
+            premium_raw = os.environ.get("DEV_PREMIUM_EMAILS", "") or ""
+            if premium_raw:
+                premium = {e.strip().lower() for e in premium_raw.split(",") if e.strip()}
+                if email in premium:
+                    return "premium"
         return self.subscription_tier or "free"
