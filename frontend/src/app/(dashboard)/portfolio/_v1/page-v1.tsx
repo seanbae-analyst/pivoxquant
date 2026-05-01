@@ -218,6 +218,27 @@ export default function PortfolioPage() {
     mutate(`${PORTFOLIO_TRADES}?limit=8`);
   }
 
+  // Delete a recorded position. Confirms first because the action is
+  // destructive (removes the row from /api/portfolio/positions). The backend
+  // alias DELETE /api/portfolio/positions/{id} returns {ok:true} on success;
+  // any non-2xx is surfaced through the shared handleApiError path.
+  async function handleDelete(p: Position) {
+    const ok =
+      typeof window === "undefined"
+        ? true
+        : window.confirm(
+            `Remove ${p.symbol} from your records? This cannot be undone.`,
+          );
+    if (!ok) return;
+    try {
+      await apiFetch(`${PORTFOLIO_POSITIONS}/${p.id}`, { method: "DELETE" });
+      toast.success(`${p.symbol} removed.`);
+      refreshAll();
+    } catch (err) {
+      handleApiError(err, "Delete");
+    }
+  }
+
   // Book display currency — honors the first position's currency, else USD.
   const bookCurrency: "USD" | "KRW" =
     positions.find((p) => p.currency === "KRW") &&
@@ -323,6 +344,7 @@ export default function PortfolioPage() {
               observedAgo={observedAgo}
               onAddPosition={() => setAddOpen(true)}
               onAction={openAction}
+              onDelete={handleDelete}
             />
           </PaperDocument>
 
@@ -373,6 +395,7 @@ export default function PortfolioPage() {
               observedAgo={observedAgo}
               onAddPosition={() => setAddOpen(true)}
               onAction={openAction}
+              onDelete={handleDelete}
             />
           </PaperDocument>
 
