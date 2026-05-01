@@ -249,7 +249,19 @@ export default function RiskPage() {
       : DEMO_CORR_MATRIX;
   const displayVarPoints = useMemo(() => {
     if (rollingVar && rollingVar.length > 0) {
-      return rollingVar.map((p) => ({ date: p.date, value: p.var_pct }));
+      // Backend `routes/risk.py::rolling_var` returns var_pct as a positive
+      // magnitude (e.g. 2.5 for "2.5% 1-day VaR"). The Risk page convention
+      // — applied uniformly by the four KPI cards via fmtPct(_, "neg") and
+      // by buildDemoVarPoints() (which seeds values around -2.0) — is to
+      // render losses as a *signed negative percent* (e.g. "-2.50%"). Without
+      // this normalization the sparkline flipped from negative numbers in
+      // the demo state to positive numbers the moment real data arrived,
+      // contradicting the KPI cards above it. Math.abs guards against any
+      // future backend sign flip.
+      return rollingVar.map((p) => ({
+        date: p.date,
+        value: -Math.abs(p.var_pct),
+      }));
     }
     return buildDemoVarPoints();
   }, [rollingVar]);
