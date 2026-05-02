@@ -593,8 +593,18 @@ export default function StockDetailPage() {
   const allowlistLoading = watchlistLoading || positionsSwr.isLoading;
   const inPortfolio = useMemo(() => {
     const upper = (ticker || "").toUpperCase();
+    // 2026-05-02: backend serializer emits the column as `symbol` (see
+    // services/portfolio_serializer.py — frontend-shape rename). The
+    // earlier `p.ticker` read silently returned undefined for every
+    // row, so §101 access guard rejected every owned ticker. v19
+    // f18e2b7 patched the same shape mismatch in /discover; this is
+    // the second site. Read both keys so future renames degrade
+    // gracefully.
     return (positionsSwr.data?.positions ?? []).some(
-      (p) => (p.ticker || "").toUpperCase() === upper,
+      (p) => {
+        const t = (p as { ticker?: string; symbol?: string });
+        return ((t.ticker || t.symbol || "")).toUpperCase() === upper;
+      },
     );
   }, [positionsSwr.data, ticker]);
   const isAllowed = inWatchlist || inPortfolio;
