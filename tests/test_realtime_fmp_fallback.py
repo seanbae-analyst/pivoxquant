@@ -18,8 +18,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-import fmp_service
-from realtime_service import RealtimeService
+from services.data import fmp as fmp_service
+from services.data.realtime import RealtimeService
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

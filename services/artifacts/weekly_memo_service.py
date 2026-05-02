@@ -302,7 +302,7 @@ def _next_week_earnings(positions: list[Position]) -> list[dict[str, Any]]:
     if not positions:
         return []
     try:
-        import fmp_service as fmp  # type: ignore
+        from services.data import fmp as fmp  # type: ignore
     except Exception:
         return []
 
@@ -380,7 +380,7 @@ def _ticker_last_price(ticker: str) -> Optional[float]:
       3. None → caller treats as missing-price (uses avg_cost proxy)
     """
     try:
-        import fmp_service as fmp  # type: ignore
+        from services.data import fmp as fmp  # type: ignore
         q = fmp.get_quote(ticker)
         if isinstance(q, dict):
             for key in ("price", "last", "close", "previousClose"):

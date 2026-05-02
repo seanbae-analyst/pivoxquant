@@ -23,7 +23,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-import fmp_service
+from services.data import fmp as fmp_service
 from services.data import alpaca_market_adapter as ama
 
 

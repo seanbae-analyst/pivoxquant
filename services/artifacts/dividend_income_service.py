@@ -107,7 +107,7 @@ def _safe_dividends(ticker: str) -> list[dict[str, Any]]:
     sorted most-recent-first. Empty list on any failure.
     """
     try:
-        import fmp_service
+        from services.data import fmp as fmp_service
         rows = fmp_service.get_dividends(ticker) or []
     except Exception as exc:
         logger.debug("fmp dividends failed for %s: %s", ticker, exc)

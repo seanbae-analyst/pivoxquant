@@ -102,7 +102,7 @@ ROUND_TRIP_COST = 0.002  # 0.1% commission + 0.1% slippage
 def fetch_prices() -> dict:
     """Return dict of DataFrames (close/high/low/open/volume), index=date UTC-naive,
     columns=ticker. Uses PivoxQuant DataFetcher -> Alpaca (US, no rate limit)."""
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
     fetcher = DataFetcher()
 
     print(f"[data] downloading {len(ALL_TICKERS)} tickers via Alpaca (5y) ...")

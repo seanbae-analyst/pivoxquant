@@ -254,7 +254,7 @@ def _read_vix(now: datetime) -> float | None:
     Returns ``None`` on any failure / absence.
     """
     try:
-        from services import realtime_service as rt  # type: ignore
+        from services.data import realtime as rt  # type: ignore
         fn = getattr(rt, "get_vix", None)
         if callable(fn):
             v = fn()
@@ -282,7 +282,7 @@ def _ticker_moved_more_than(ticker: str, pct: float, now: datetime) -> bool:
     raising into the user's reflection start path.
     """
     try:
-        from services import realtime_service as rt  # type: ignore
+        from services.data import realtime as rt  # type: ignore
     except Exception:
         return False
     fn = getattr(rt, "last_hour_pct_change", None)

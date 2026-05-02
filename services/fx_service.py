@@ -55,7 +55,7 @@ def set_rate(rate: float):
 def _fetch_from_fmp() -> float | None:
     """Primary source: FMP."""
     try:
-        from fmp_service import get_fx_rate
+        from services.data.fmp import get_fx_rate
         rate = get_fx_rate("USDKRW")
         if rate and rate > 1000:
             return float(rate)

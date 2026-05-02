@@ -461,7 +461,7 @@ class RealtimeService:
             return payload
 
         try:
-            import fmp_service as fmp
+            from services.data import fmp as fmp
         except Exception as e:
             logger.warning(f"FMP import failed {ticker}: {e}")
             return None
@@ -514,7 +514,7 @@ class RealtimeService:
         the route stays 404 on legitimate lookup misses).
         """
         try:
-            import fmp_service as fmp
+            from services.data import fmp as fmp
         except Exception:
             return False
         try:

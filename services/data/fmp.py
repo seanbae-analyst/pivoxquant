@@ -1145,7 +1145,7 @@ def _edgar_fundamentals_fallback(ticker):
     data. Never raises.
     """
     try:
-        from edgar_service import EdgarService
+        from services.data.edgar import EdgarService
     except Exception as exc:  # pragma: no cover — import path
         logger.info("EDGAR fallback unavailable (%s)", exc)
         return []

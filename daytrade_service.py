@@ -219,7 +219,7 @@ class DayTradeService:
         regime_profile = "default"
         tp_mult, sl_mult = 2.0, 1.0  # ATR multipliers (default)
         try:
-            import fmp_service as fmp
+            from services.data import fmp as fmp
             from quant_models import AdaptiveParams
             hist = fmp.get_history(ticker, period="3mo")
             if not hist.empty and len(hist) >= 20:

@@ -41,7 +41,7 @@ def _check_current_eps(ticker):
                   or {"value": None, "pass": False, "reason": ...}.
     """
     try:
-        import fmp_service as fmp
+        from services.data import fmp as fmp
     except Exception as e:
         logger.warning(f"canslim C: fmp_service unavailable: {e}")
         return {"value": None, "pass": False, "reason": "fmp_service unavailable"}
@@ -80,7 +80,7 @@ def _check_annual_eps(ticker):
     Returns dict with per-year growth list + pass flag.
     """
     try:
-        import fmp_service as fmp
+        from services.data import fmp as fmp
     except Exception as e:
         logger.warning(f"canslim A: fmp_service unavailable: {e}")
         return {"value": None, "pass": False, "reason": "fmp_service unavailable"}
@@ -142,7 +142,7 @@ def _check_institutional(ticker, closes):
         }
 
     try:
-        import fmp_service as fmp
+        from services.data import fmp as fmp
         data = fmp.get_institutional_ownership(ticker)
     except Exception as e:
         logger.warning(f"canslim I fetch failed for {ticker}: {e}")

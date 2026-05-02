@@ -26,7 +26,7 @@ from unittest.mock import patch
 
 import pytest
 
-import fmp_service
+from services.data import fmp as fmp_service
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

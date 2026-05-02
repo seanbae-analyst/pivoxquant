@@ -183,7 +183,7 @@ class EarningsCallToneAnalyzer:
     def _fetch_transcript(cls, ticker):
         """Try to fetch latest earnings call transcript from FMP API."""
         try:
-            import fmp_service as fmp
+            from services.data import fmp as fmp
             # FMP stable endpoint for earnings call transcript
             data = fmp._fmp_get("/earning-call-transcript", {"symbol": ticker, "limit": 1})
             if data and isinstance(data, list) and len(data) > 0:

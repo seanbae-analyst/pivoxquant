@@ -57,7 +57,7 @@ class TestChart:
             m_rt.alpaca_available = False
             m_fetcher.get_price_history.return_value = pd.DataFrame()
             # Also patch fmp_service import inside the function scope.
-            with patch("fmp_service.get_history", return_value=pd.DataFrame()):
+            with patch("services.data.fmp.get_history", return_value=pd.DataFrame()):
                 r = client.get("/api/chart/AAPL?period=wrongvalue")
         assert r.status_code == 200
         d = r.get_json()
@@ -68,7 +68,7 @@ class TestChart:
 
 class TestProfile:
     def test_company_profile_returns_shape(self, client, auth_user):
-        with patch("fmp_service.get_info") as m_info:
+        with patch("services.data.fmp.get_info") as m_info:
             m_info.return_value = {
                 "shortName": "Apple Inc.",
                 "sector": "Technology",
@@ -87,7 +87,7 @@ class TestProfile:
         assert d["currency"] == "USD"
 
     def test_company_profile_korean_ticker(self, client, auth_user):
-        with patch("fmp_service.get_info") as m_info:
+        with patch("services.data.fmp.get_info") as m_info:
             m_info.return_value = {"shortName": "Samsung", "sector": "Tech",
                                     "industry": "Semi", "website": "", "country": "KR",
                                     "marketCap": 0, "longBusinessSummary": ""}
@@ -183,7 +183,7 @@ class TestMarketIndicesKR:
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("kis_service.KISService", MockKIS), \
-                patch("fmp_service.get_history", return_value=None):
+                patch("services.data.fmp.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.side_effect = _fetcher_hist
             r = client.get("/api/market/indices?region=kr")
@@ -226,7 +226,7 @@ class TestMarketIndicesKR:
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("kis_service.KISService", MockKIS), \
-                patch("fmp_service.get_history", return_value=None):
+                patch("services.data.fmp.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.return_value = None
             r = client.get("/api/market/indices?region=kr")
@@ -261,7 +261,7 @@ class TestMarketIndicesKR:
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("kis_service.KISService", MockKIS), \
-                patch("fmp_service.get_history", side_effect=_fmp_get_history):
+                patch("services.data.fmp.get_history", side_effect=_fmp_get_history):
             m_rt.kis_available = True
             m_f.get_price_history.return_value = None
             r = client.get("/api/market/indices?region=kr")
@@ -316,7 +316,7 @@ class TestMarketIndicesKR:
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("kis_service.KISService", MockKIS), \
-                patch("fmp_service.get_history", return_value=None):
+                patch("services.data.fmp.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.side_effect = _fetcher_hist
             r = client.get("/api/market/indices?region=kr")
@@ -365,7 +365,7 @@ class TestMarketIndicesKR:
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("kis_service.KISService", MockKIS), \
-                patch("fmp_service.get_history", return_value=None):
+                patch("services.data.fmp.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.side_effect = _fetcher_hist
             r = client.get("/api/market/indices?region=kr")
@@ -407,7 +407,7 @@ class TestMarketIndicesKR:
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
                 patch("kis_service.KISService", MockKIS), \
-                patch("fmp_service.get_history", return_value=None):
+                patch("services.data.fmp.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.return_value = None
             r = client.get("/api/market/indices?region=kr")

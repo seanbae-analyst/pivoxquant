@@ -948,7 +948,7 @@ def portfolio_history():
     positions = Position.query.filter_by(user_id=current_user.id).all()
     if not positions:
         return jsonify({"data": []})
-    import fmp_service as fmp
+    from services.data import fmp as fmp
 
     period = request.args.get("period", "5d")
     if period not in ("5d", "1mo", "3mo", "6mo", "1y"):

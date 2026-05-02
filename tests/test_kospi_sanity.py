@@ -19,16 +19,16 @@ import pytest
 
 def _make_fetcher_with_kis_quote(kis_price: float):
     """Build a DataFetcher whose KIS index_price returns a single value."""
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
 
     f = DataFetcher()
     return f, kis_price
 
 
-@patch("data_fetcher.fmp")
+@patch("services.data.fetcher.fmp")
 def test_kospi_in_range_published(mock_fmp):
     """KOSPI 2,650 (normal) → published to macro."""
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
 
     mock_fmp.get_quote.return_value = None
     mock_fmp.get_quotes_batch.return_value = {}
@@ -48,10 +48,10 @@ def test_kospi_in_range_published(mock_fmp):
     assert m.get("kosdaq", {}).get("price") == pytest.approx(880.12)
 
 
-@patch("data_fetcher.fmp")
+@patch("services.data.fetcher.fmp")
 def test_kospi_in_2026_range_published(mock_fmp):
     """KOSPI 6,641 (2026 re-rated) → published. Within [1500, 8000]."""
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
 
     mock_fmp.get_quote.return_value = None
     mock_fmp.get_quotes_batch.return_value = {}
@@ -72,10 +72,10 @@ def test_kospi_in_2026_range_published(mock_fmp):
     assert m.get("kosdaq", {}).get("price") == pytest.approx(880.12)
 
 
-@patch("data_fetcher.fmp")
+@patch("services.data.fetcher.fmp")
 def test_kospi_extreme_glitch_still_dropped(mock_fmp):
     """KOSPI 660,000 (100x unit glitch) → still dropped, not published."""
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
 
     mock_fmp.get_quote.return_value = None
     mock_fmp.get_quotes_batch.return_value = {}
@@ -98,10 +98,10 @@ def test_kospi_extreme_glitch_still_dropped(mock_fmp):
 
 
 @patch.dict(os.environ, {"PIVOX_KOSPI_RANGE": "60000,80000"})
-@patch("data_fetcher.fmp")
+@patch("services.data.fetcher.fmp")
 def test_kospi_env_override_widens_range(mock_fmp):
     """Operator can widen the bounds explicitly via env after verifying upstream."""
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
 
     mock_fmp.get_quote.return_value = None
     mock_fmp.get_quotes_batch.return_value = {}

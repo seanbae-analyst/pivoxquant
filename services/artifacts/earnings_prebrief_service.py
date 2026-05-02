@@ -213,7 +213,7 @@ class PreBriefContext:
 def _safe_fetch_quote(ticker: str) -> Optional[dict]:
     """Thin wrapper around fmp_service.get_quote — never raises."""
     try:
-        import fmp_service as fmp  # type: ignore
+        from services.data import fmp as fmp  # type: ignore
         q = fmp.get_quote(ticker)
         return q if isinstance(q, dict) else (q[0] if isinstance(q, list) and q else None)
     except Exception as exc:
@@ -228,7 +228,7 @@ def _safe_get_earnings_calendar(ticker: Optional[str] = None,
     Returns [] if FMP unavailable / disabled / errors.
     """
     try:
-        import fmp_service as fmp  # type: ignore
+        from services.data import fmp as fmp  # type: ignore
         rows = fmp.get_earnings_calendar(ticker=ticker, days_ahead=days_ahead)
         return rows if isinstance(rows, list) else []
     except Exception as exc:
@@ -239,7 +239,7 @@ def _safe_get_earnings_calendar(ticker: Optional[str] = None,
 def _safe_get_quarterly_eps(ticker: str, quarters: int = 4) -> list[dict]:
     """Last N quarters of EPS actuals + estimates for surprise history."""
     try:
-        import fmp_service as fmp  # type: ignore
+        from services.data import fmp as fmp  # type: ignore
         rows = fmp.get_quarterly_eps(ticker, quarters=quarters)
         return rows if isinstance(rows, list) else []
     except Exception as exc:
@@ -249,7 +249,7 @@ def _safe_get_quarterly_eps(ticker: str, quarters: int = 4) -> list[dict]:
 
 def _safe_get_news(ticker: str, limit: int = 8) -> list[dict]:
     try:
-        import fmp_service as fmp  # type: ignore
+        from services.data import fmp as fmp  # type: ignore
         rows = fmp.get_news(ticker, limit=limit)
         return rows if isinstance(rows, list) else []
     except Exception as exc:

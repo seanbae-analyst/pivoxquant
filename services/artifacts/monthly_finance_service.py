@@ -130,7 +130,7 @@ def _safe_price(ticker: str) -> Optional[float]:
 
 def _safe_dividends(ticker: str) -> list[dict[str, Any]]:
     try:
-        import fmp_service
+        from services.data import fmp as fmp_service
         rows = fmp_service.get_dividends(ticker) or []
     except Exception as exc:
         logger.debug("dividends lookup failed for %s: %s", ticker, exc)
@@ -153,7 +153,7 @@ def _safe_earnings_calendar(ticker: str) -> Optional[date]:
     """Next earnings date for a ticker. Uses FMP's earnings calendar when
     available; returns None on any failure."""
     try:
-        import fmp_service
+        from services.data import fmp as fmp_service
         fn = getattr(fmp_service, "get_earnings_calendar", None)
         if fn is None:
             return None
