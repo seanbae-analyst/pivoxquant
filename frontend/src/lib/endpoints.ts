@@ -233,6 +233,15 @@ export const API = {
     status: "/api/agent/status",
     waitlist: "/api/agent/waitlist",
   },
+  // Pre-Trade Friction (Feature 6) — self-imposed cooldown + reflection.
+  // Backend never places an order; /proceed only stamps "user finished
+  // thinking". See routes/pre_trade.py and services/pre_trade/friction.py.
+  preTrade: {
+    start: "/api/pre-trade/start",
+    status: (id: number) => `/api/pre-trade/${id}`,
+    proceed: (id: number) => `/api/pre-trade/${id}/proceed`,
+    cancel: (id: number) => `/api/pre-trade/${id}/cancel`,
+  },
 } as const;
 
 // Portfolio (added 2026-04-22) — frontend-shape aliases for the new /portfolio page.

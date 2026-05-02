@@ -40,6 +40,7 @@ import {
   BookHeart,
   TrendingUp,
   UserCircle,
+  Gavel,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -58,6 +59,7 @@ export type TerminalSidebarKey =
   | "ai"
   | "alerts"
   | "companion"
+  | "pre-trade"
   | "growth"
   | "profile"
   | "settings";
@@ -109,6 +111,11 @@ const RESEARCH: Item[] = [
 // ── SYSTEM — 알림·도구·설정 ────────────────────────────────────────
 const SYSTEM: Item[] = [
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
+  // 2026-05-02: Pre-Trade Checklist surfaced in nav. Backend Feature 6
+  // shipped 2026-04-30 but the dashboard page was missing — landing
+  // promised "Seven questions before every trade" with nothing behind
+  // it. Now wired.
+  { key: "pre-trade", label: "Pre-Trade", href: "/pre-trade", icon: Gavel },
   { key: "companion", label: "Companion", href: "/companion", icon: BookHeart },
   { key: "growth", label: "Journal", href: "/growth", icon: TrendingUp },
   { key: "profile", label: "Profile · Persona", href: "/profile", icon: UserCircle },
