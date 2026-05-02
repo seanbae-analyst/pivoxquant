@@ -18,7 +18,7 @@ from services.container import ai, fetcher
 from services import cache_service
 from services.access_guard import is_user_allowed_ticker, access_denied_response
 from services.legal_filter import scrub_response
-from ai_models import EarningsCallToneAnalyzer, AISectorRotation, AIRiskSummary
+from services.ai.models import EarningsCallToneAnalyzer, AISectorRotation, AIRiskSummary
 from .decorators import api_auth, require_tier
 
 logger = logging.getLogger(__name__)

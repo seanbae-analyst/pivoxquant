@@ -41,6 +41,10 @@ ALLOWED_FILES = {
     # Consumers already verified to use price_overlay.apply_price_overlay
     "routes/realtime.py",
     "routes/market.py",
+    # AI service only reads `price_display` from upstream dicts to build
+    # Claude prompts (text-only); it does not emit `price_display` back to
+    # clients. Upstream producers already passed the fallback guard.
+    "services/ai/service.py",
 }
 
 

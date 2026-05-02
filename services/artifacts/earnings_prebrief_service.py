@@ -427,7 +427,7 @@ def _call_claude_for_questions(ticker: str, fiscal_period: str,
         return []
 
     try:
-        from ai_service import AIService  # type: ignore
+        from services.ai.service import AIService  # type: ignore
     except Exception as exc:
         logger.debug("ai_service import failed: %s", exc)
         return []
