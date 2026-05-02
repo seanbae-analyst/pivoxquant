@@ -30,11 +30,11 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from quant_models import (
+from services.quant.models import (
     StatArb, MeanReversion, MomentumBreakout,
     VolatilityRegime, RegimeSwitching, MLSignal, AdaptiveParams,
 )
-from backtester import Backtester
+from services.quant.backtester import Backtester
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -877,27 +877,27 @@ class TestSignalLabels:
         return violations
 
     def test_no_buy_sell_hold_in_quant_models(self):
-        """quant_models.py must not use BUY/SELL/HOLD as signal values."""
-        filepath = os.path.join(PROJECT_ROOT, "quant_models.py")
+        """services/quant/models.py must not use BUY/SELL/HOLD as signal values."""
+        filepath = os.path.join(PROJECT_ROOT, "services", "quant", "models.py")
         violations = self._scan_file_for_signal_strings(filepath)
         assert len(violations) == 0, (
-            f"Found BUY/SELL/HOLD signal strings in quant_models.py: {violations}"
+            f"Found BUY/SELL/HOLD signal strings in services/quant/models.py: {violations}"
         )
 
     def test_no_buy_sell_hold_in_engine(self):
-        """engine.py must not use BUY/SELL/HOLD as signal values."""
-        filepath = os.path.join(PROJECT_ROOT, "engine.py")
+        """services/quant/engine.py must not use BUY/SELL/HOLD as signal values."""
+        filepath = os.path.join(PROJECT_ROOT, "services", "quant", "engine.py")
         violations = self._scan_file_for_signal_strings(filepath)
         assert len(violations) == 0, (
-            f"Found BUY/SELL/HOLD signal strings in engine.py: {violations}"
+            f"Found BUY/SELL/HOLD signal strings in services/quant/engine.py: {violations}"
         )
 
     def test_no_buy_sell_hold_in_backtester(self):
-        """backtester.py must not use BUY/SELL/HOLD as signal values."""
-        filepath = os.path.join(PROJECT_ROOT, "backtester.py")
+        """services/quant/backtester.py must not use BUY/SELL/HOLD as signal values."""
+        filepath = os.path.join(PROJECT_ROOT, "services", "quant", "backtester.py")
         violations = self._scan_file_for_signal_strings(filepath)
         assert len(violations) == 0, (
-            f"Found BUY/SELL/HOLD signal strings in backtester.py: {violations}"
+            f"Found BUY/SELL/HOLD signal strings in services/quant/backtester.py: {violations}"
         )
 
 
@@ -929,12 +929,12 @@ class TestRemovedFields:
         return violations
 
     def test_engine_no_removed_fields(self):
-        """engine.py should not have active rec_shares/rec_investment/sell_pct/sell_timing."""
-        filepath = os.path.join(PROJECT_ROOT, "engine.py")
+        """services/quant/engine.py should not have active rec_shares/rec_investment/sell_pct/sell_timing."""
+        filepath = os.path.join(PROJECT_ROOT, "services", "quant", "engine.py")
         banned = ["rec_shares", "rec_investment", "sell_pct", "sell_timing"]
         violations = self._scan_for_removed_keys(filepath, banned)
         assert len(violations) == 0, (
-            f"Found removed fields still active in engine.py: {violations}"
+            f"Found removed fields still active in services/quant/engine.py: {violations}"
         )
 
 

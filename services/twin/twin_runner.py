@@ -186,7 +186,7 @@ class _ScoredCandidate:
 def _engine_universe() -> list[str]:
     """Resolve the paper universe. Centralised so tests can patch it."""
     try:
-        from engine import QuantEngine
+        from services.quant.engine import QuantEngine
         return list(QuantEngine.DISCOVER_POOL)
     except Exception:
         return list(DEFAULT_UNIVERSE)

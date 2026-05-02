@@ -16,10 +16,10 @@ import pandas as pd
 import fmp_service as fmp
 import logging
 from data_fetcher import DataFetcher
-from quant_models import (MeanReversion, MomentumBreakout, VolatilityRegime, RegimeSwitching, MLSignal,
+from services.quant.models import (MeanReversion, MomentumBreakout, VolatilityRegime, RegimeSwitching, MLSignal,
                           VarianceRatioFilter, TSMOM, FiftyTwoWeekHigh,
                           DonchianBreakout, DualMomentum, CorrelationRegime)
-from signal_models import DispositionEffect, OrderFlowImbalance, AnchoringBias, SentimentPriceDivergence
+from services.quant.signals import DispositionEffect, OrderFlowImbalance, AnchoringBias, SentimentPriceDivergence
 
 logger = logging.getLogger(__name__)
 _fetcher = DataFetcher()
@@ -223,7 +223,7 @@ class QuantEngine:
         # ── Macro Environment Adjustment ──
         # VIX: raise the bar when market is fearful
         try:
-            from quant_models import VIXStrategy
+            from services.quant.models import VIXStrategy
             vix_data = VIXStrategy().analyze()
             vix = vix_data.get("vix", 20)
             if vix > 30:
@@ -242,7 +242,7 @@ class QuantEngine:
 
         # Cross-Asset Momentum: macro headwind/tailwind
         try:
-            from quant_models import CrossAssetMomentum
+            from services.quant.models import CrossAssetMomentum
             cam = CrossAssetMomentum().analyze()
             macro_regime = cam.get("macro_regime", "NEUTRAL")
             if macro_regime in ("RISK_OFF", "LIQUIDATION"):
@@ -362,7 +362,7 @@ class QuantEngine:
         # Take-profit / stop-loss targets (adaptive via 3-Layer regime model)
         beta = snapshot.get("beta") or 1.0
         try:
-            from quant_models import AdaptiveParams
+            from services.quant.models import AdaptiveParams
             ap = AdaptiveParams.calculate(
                 hist["Close"].values, hist["High"].values,
                 hist["Low"].values, hist["Volume"].values

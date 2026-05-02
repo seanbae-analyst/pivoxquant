@@ -2,7 +2,7 @@
 from __future__ import annotations
 from typing import Any
 
-from engine import QuantEngine
+from services.quant.engine import QuantEngine
 from data_fetcher import DataFetcher
 from ai_service import AIService
 from daytrade_service import DayTradeService

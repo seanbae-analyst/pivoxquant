@@ -140,7 +140,7 @@ def fetch_prices() -> dict:
 # ──────────────────────────────────────────────────────────────────────────────
 # Scoring — reuse Backtester._calc_score (the real PivoxQuant quant score)
 # ──────────────────────────────────────────────────────────────────────────────
-from backtester import Backtester  # noqa: E402
+from services.quant.backtester import Backtester  # noqa: E402
 
 
 def score_asof(bundle: dict, ticker: str, asof: pd.Timestamp) -> float | None:
