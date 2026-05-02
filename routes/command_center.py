@@ -10,15 +10,46 @@ SSE 스트리밍, 활동 로깅, Obsidian vault 저장을 제공한다.
 
 import os
 import json
+import logging
 import queue
 import threading
 from collections import deque
 from datetime import datetime, timezone, timedelta
 
 from flask import Blueprint, request, jsonify, Response, send_from_directory
-from security import general_rate_limit
+from flask_login import current_user
 
-# NOTE: 인증 미적용 (CEO 내부용 도구, 프로덕션 배포 시 @api_auth 데코레이터 필수)
+from security import general_rate_limit
+from .decorators import api_auth
+
+logger = logging.getLogger(__name__)
+
+
+# ── Admin gate (ADMIN_EMAILS env var, same pattern as routes/admin_fmp.py) ───
+
+def _admin_emails() -> set[str]:
+    """Parse the ``ADMIN_EMAILS`` env var into a set of lowercased addresses."""
+    raw = os.getenv("ADMIN_EMAILS", "")
+    return {e.strip().lower() for e in raw.split(",") if e.strip()}
+
+
+def _deny_non_admin():
+    """Return a 403 JSON response when ``current_user`` is not an admin.
+
+    Returns ``None`` when the user *is* an admin so the route can proceed.
+    Mirrors ``routes.admin_fmp._deny_non_admin`` so we fail closed when
+    ``ADMIN_EMAILS`` is missing in the environment. Pair with ``@api_auth``
+    so unauthenticated callers get 401 (not 403) — surfacing the auth gap
+    cleanly while still locking the endpoint to admins.
+    """
+    admins = _admin_emails()
+    if not admins:
+        logger.warning("ADMIN_EMAILS not configured — denying command-center route")
+        return jsonify({"error": "Admin access not configured"}), 403
+    email = (getattr(current_user, "email", "") or "").lower()
+    if email not in admins:
+        return jsonify({"error": "Forbidden"}), 403
+    return None
 
 # ── Blueprint ────────────────────────────────────────────────────────────────
 
@@ -30,12 +61,20 @@ _FRONTEND_DIR = os.path.join(
 
 
 @command_center_bp.route("/command-center")
+@api_auth
 def serve_command_center():
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
     return send_from_directory(_FRONTEND_DIR, "command-center.html")
 
 
 @command_center_bp.route("/agents")
+@api_auth
 def serve_agents_preview():
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
     return send_from_directory(_FRONTEND_DIR, "agents-preview.html")
 
 
@@ -177,6 +216,7 @@ def _write_obsidian(entry: dict) -> None:
 # ── POST /api/command-center/log ─────────────────────────────────────────────
 
 @command_center_bp.route("/api/command-center/log", methods=["POST"])
+@api_auth
 @general_rate_limit
 def log_activity():
     """Log an agent/skill activity.
@@ -187,6 +227,10 @@ def log_activity():
         command     — command description (required)
         status      — completed | in_progress | waiting (required)
     """
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
+
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "JSON body required"}), 400
@@ -220,8 +264,12 @@ def log_activity():
 # ── GET /api/command-center/stream ───────────────────────────────────────────
 
 @command_center_bp.route("/api/command-center/stream")
+@api_auth
 def stream():
     """SSE endpoint — pushes new log entries to connected clients."""
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
 
     def _event_stream():
         q: queue.Queue = queue.Queue(maxsize=256)
@@ -245,6 +293,7 @@ def stream():
                     # Heartbeat to keep connection alive
                     yield ": heartbeat\n\n"
         except GeneratorExit:
+            logger.debug("silent-fallback: _event_stream", exc_info=True)
             pass
         finally:
             with _sub_lock:
@@ -265,8 +314,12 @@ def stream():
 # ── GET /api/command-center/stats ────────────────────────────────────────────
 
 @command_center_bp.route("/api/command-center/stats")
+@api_auth
 def stats():
     """Return current activity statistics."""
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
     with _lock:
         entries = list(_log_store)
 
@@ -293,6 +346,7 @@ def stats():
 # ── POST /api/command-center/dispatch ────────────────────────────────────────
 
 @command_center_bp.route("/api/command-center/dispatch", methods=["POST"])
+@api_auth
 @general_rate_limit
 def dispatch():
     """CEO dispatches a command to an agent or skill.
@@ -305,6 +359,10 @@ def dispatch():
     예: "/review app.py 보안 점검" -> target="/review", command="app.py 보안 점검"
     스킬명이 없으면 target="general"로 기본값 설정.
     """
+    denied = _deny_non_admin()
+    if denied is not None:
+        return denied
+
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "JSON body required"}), 400
