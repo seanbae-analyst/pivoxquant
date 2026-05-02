@@ -137,15 +137,23 @@ export async function middleware(request: NextRequest) {
   const hasCookie = !!request.cookies.get(LOCALE_COOKIE)?.value;
 
   // ─── CSP ─────────────────────────────────────────────────────────────────
-  // TODO(security): Migrate `script-src` from 'unsafe-inline' to nonce-based.
-  //   Next.js 16 still emits inline bootstrap scripts (hydration payload,
-  //   `__next_f` flight chunks) without nonce attributes by default. Removing
-  //   'unsafe-inline' today breaks hydration across the whole app. Track the
-  //   upstream RFC before flipping this — once Next wires the nonce through
-  //   automatically, replace 'unsafe-inline' with `'nonce-${nonce}'` and add
-  //   'strict-dynamic' for transitively loaded chunks.
-  //   `style-src` must keep 'unsafe-inline' — Tailwind 4 inlines arbitrary
-  //   utility styles and shadcn/Radix primitives set inline style props.
+  // Per-request nonce (B7 migration 2026-05-02). The base64-encoded UUID is
+  // injected into the request headers as `x-nonce`; Next.js 16 reads that
+  // header and automatically attaches it to its emitted inline bootstrap
+  // scripts (hydration payload, `__next_f` flight chunks). Manually authored
+  // inline `<script>` tags must read the nonce via `headers().get("x-nonce")`
+  // in `next/headers` and pass it as the `nonce` prop. See app/layout.tsx.
+  //
+  // `script-src` drops 'unsafe-inline' in prod and uses `'nonce-…'` +
+  // `'strict-dynamic'` instead — strict-dynamic lets a nonced script load
+  // further chunks transitively without us having to enumerate every CDN.
+  // Modern browsers honor strict-dynamic and ignore the host allowlist;
+  // legacy browsers ignore strict-dynamic and fall back to the host list,
+  // so 'self' is kept for safety.
+  //
+  // `style-src` MUST keep 'unsafe-inline' — Tailwind 4 inlines arbitrary
+  // utility styles and shadcn/Radix primitives set inline `style` props.
+  // Migrating styles is a separate, larger effort.
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
   const isDev = process.env.NODE_ENV === "development";
@@ -153,10 +161,12 @@ export async function middleware(request: NextRequest) {
     ? "'self' http://localhost:5050 ws://localhost:3000 ws://localhost:* https://*.railway.app https://cdn.jsdelivr.net https://api.stripe.com https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com"
     : "'self' https://*.railway.app https://cdn.jsdelivr.net https://api.stripe.com https://*.sentry.io https://accounts.google.com https://kapi.kakao.com https://kauth.kakao.com";
 
-  // Dev keeps 'unsafe-eval' for React Fast Refresh. Prod drops it.
+  // Dev keeps 'unsafe-eval' + 'unsafe-inline' for React Fast Refresh / HMR
+  // (webpack injects literal `eval(…)` and inline `<script>` runtime patches
+  // that don't carry a nonce). Prod drops both and switches to nonce + strict-dynamic.
   const scriptSrc = isDev
     ? "'self' 'unsafe-inline' 'unsafe-eval'"
-    : "'self' 'unsafe-inline'";
+    : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
 
   const cspHeader = `
     default-src 'self';
