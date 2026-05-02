@@ -370,9 +370,19 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         </div>
       </div>
 
-      {/* Hidden link wrapper for accessibility — entire card navigates */}
+      {/* Hidden link wrapper for accessibility — entire card navigates.
+          2026-05-02: this overlay was still pointing at the JSON preview
+          endpoint and intercepting the visible "Open full memo" button
+          (absolute inset-0 catches every click). Route through the same
+          helper as the visible CTA so the click target matches. */}
       <Link
-        href={API.artifacts.preview(artifact.id)}
+        href={getArtifactViewerUrl({
+          id: artifact.id,
+          type: artifact.type,
+          has_file: artifact.has_file,
+        })}
+        target="_blank"
+        rel="noopener noreferrer"
         aria-label={`${typeLabel} — open full artifact`}
         className="absolute inset-0"
         style={{ overflow: "hidden", textIndent: "-9999px" }}
