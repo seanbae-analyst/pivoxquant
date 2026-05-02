@@ -9,10 +9,14 @@
  * consumer sees fresh data without refetching.
  *
  * Features:
- *  - Exponential backoff reconnection (1s -> 2s -> 4s -> ... -> max 30s)
+ *  - Exponential backoff with jitter (1s → 2s → 4s → 8s → 16s → 32s → 60s cap)
+ *    plus 50-100% jitter multiplier to prevent thundering-herd reconnects
+ *    after a backend restart
+ *  - Reconnect paused while document.visibilityState !== "visible"
+ *  - Reset attempt counter on successful onopen
  *  - Heartbeat detection (SSE comment lines)
  *  - Direction-aware updatedTickers (tracks "up" | "down" per ticker)
- *  - Automatic cleanup on provider unmount
+ *  - Automatic cleanup on provider unmount (cancels pending reconnect timers)
  *  - Throttled updates (max 2 state updates/sec)
  */
 
@@ -109,12 +113,18 @@ const RealtimeContext = createContext<RealtimeState>(INITIAL_STATE);
 
 /* ── Constants ── */
 
-/** Base delay for exponential backoff (ms). */
-const BASE_DELAY_MS = 1_000;
-/** Maximum reconnection delay (ms). */
-const MAX_DELAY_MS = 30_000;
+/**
+ * Exponential-backoff schedule for SSE reconnects (ms).
+ * Indexed by `retryRef.current`; values past the end are clamped to the
+ * final entry (60 s). Each scheduled delay is multiplied by a jitter factor
+ * in [0.5, 1.0) to spread reconnect attempts after a backend restart and
+ * avoid a thundering herd.
+ */
+const RECONNECT_DELAYS_MS = [
+  1_000, 2_000, 4_000, 8_000, 16_000, 32_000, 60_000,
+] as const;
 /** Stop reconnecting after this many consecutive failures. */
-const MAX_RETRIES = 5;
+const MAX_RETRIES = RECONNECT_DELAYS_MS.length;
 /** Duration to keep the flash indicator visible (ms). */
 const FLASH_DURATION_MS = 1_500;
 /** Minimum interval between state updates (ms) — throttle. */
@@ -156,12 +166,19 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const retryRef = useRef(0);
   const lastUpdateRef = useRef(0);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Pending reconnect timer (must be cleared on cleanup so unmount is clean). */
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Previous prices — used to determine direction. */
   const prevPricesRef = useRef<Record<string, number>>({});
   const connectRef = useRef<() => void>(() => {});
 
   const connect = useCallback(() => {
-    // Tear down existing connection
+    // Tear down existing connection + any pending reconnect timer so we
+    // don't end up with two EventSources racing.
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
     if (esRef.current) {
       esRef.current.close();
       esRef.current = null;
@@ -319,7 +336,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       esRef.current = null;
       setState((s) => ({ ...s, connected: false }));
 
+      // Explicit disconnect (cleanup / unmount / logout / tab hidden):
+      // never schedule a reconnect.
       if (ac.signal.aborted) return;
+
+      // Pause reconnect attempts while the tab is hidden — the
+      // visibilitychange effect will trigger a fresh connect() once the
+      // user returns. Don't burn through the retry budget in the
+      // background.
+      if (typeof document !== "undefined" && document.hidden) return;
 
       // Give up after MAX_RETRIES consecutive failures
       if (retryRef.current >= MAX_RETRIES) {
@@ -327,15 +352,24 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Exponential backoff: 1s, 2s, 4s, 8s, ... max 30s
-      const delay = Math.min(
-        BASE_DELAY_MS * 2 ** retryRef.current,
-        MAX_DELAY_MS,
-      );
+      // Exponential backoff schedule (1s, 2s, 4s, 8s, 16s, 32s, 60s cap)
+      // with 50–100% jitter to avoid thundering-herd reconnects when the
+      // backend restarts and many clients hit it at once.
+      const baseDelay =
+        RECONNECT_DELAYS_MS[
+          Math.min(retryRef.current, RECONNECT_DELAYS_MS.length - 1)
+        ];
+      const jittered = baseDelay * (0.5 + Math.random() * 0.5);
       retryRef.current += 1;
-      setTimeout(() => {
-        if (!ac.signal.aborted) connectRef.current();
-      }, delay);
+
+      // Track the timer so cleanup can cancel a pending reconnect.
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null;
+        if (ac.signal.aborted) return;
+        if (typeof document !== "undefined" && document.hidden) return;
+        connectRef.current();
+      }, jittered);
     };
   }, []);
 
@@ -357,16 +391,28 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    /** Explicit disconnect — used by logout / no-positions / hidden-tab /
+     *  unmount branches. Aborts the AbortController so a queued reconnect
+     *  bails out, closes any open EventSource, and cancels a pending
+     *  reconnect timer (otherwise it would re-open a connection after
+     *  unmount). */
+    const teardown = () => {
+      abortRef.current?.abort();
+      esRef.current?.close();
+      esRef.current = null;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+
     // Only connect SSE when user is authenticated AND owns >=1 position.
     // B6: portfolio-stream returns 400 for users with no positions, which
     // triggered the SSE `onerror` → 5 retries → persistent 400 spam in
     // the network log. Wait for usePortfolio() to resolve before connecting,
     // and auto-(dis)connect as positions appear or go to zero.
     if (!user) {
-      // Tear down any existing connection on logout
-      abortRef.current?.abort();
-      esRef.current?.close();
-      esRef.current = null;
+      teardown();
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(INITIAL_STATE);
       return;
@@ -376,18 +422,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       // Either portfolio still loading, or user truly has 0 positions.
       // Either way, don't open the stream yet. When positions.length
       // transitions 0 → >0 this effect re-runs and connects.
-      abortRef.current?.abort();
-      esRef.current?.close();
-      esRef.current = null;
+      teardown();
       return;
     }
 
     // P0-2 FIX: don't open SSE from a background tab. When the tab becomes
     // visible again, this effect re-runs and we connect fresh.
     if (!visible) {
-      abortRef.current?.abort();
-      esRef.current?.close();
-      esRef.current = null;
+      teardown();
       return;
     }
 
@@ -396,9 +438,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     retryRef.current = 0;
     connect();
     return () => {
-      abortRef.current?.abort();
-      esRef.current?.close();
-      esRef.current = null;
+      teardown();
       if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
     };
   }, [user, hasPositions, visible, connect]);
