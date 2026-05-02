@@ -182,7 +182,7 @@ class TestMarketIndicesKR:
 
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
-                patch("kis_service.KISService", MockKIS), \
+                patch("services.kis.service.KISService", MockKIS), \
                 patch("fmp_service.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.side_effect = _fetcher_hist
@@ -225,7 +225,7 @@ class TestMarketIndicesKR:
 
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
-                patch("kis_service.KISService", MockKIS), \
+                patch("services.kis.service.KISService", MockKIS), \
                 patch("fmp_service.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.return_value = None
@@ -260,7 +260,7 @@ class TestMarketIndicesKR:
 
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
-                patch("kis_service.KISService", MockKIS), \
+                patch("services.kis.service.KISService", MockKIS), \
                 patch("fmp_service.get_history", side_effect=_fmp_get_history):
             m_rt.kis_available = True
             m_f.get_price_history.return_value = None
@@ -315,7 +315,7 @@ class TestMarketIndicesKR:
 
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
-                patch("kis_service.KISService", MockKIS), \
+                patch("services.kis.service.KISService", MockKIS), \
                 patch("fmp_service.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.side_effect = _fetcher_hist
@@ -364,7 +364,7 @@ class TestMarketIndicesKR:
 
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
-                patch("kis_service.KISService", MockKIS), \
+                patch("services.kis.service.KISService", MockKIS), \
                 patch("fmp_service.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.side_effect = _fetcher_hist
@@ -406,7 +406,7 @@ class TestMarketIndicesKR:
 
         with patch("routes.market.fetcher") as m_f, \
                 patch("services.container.realtime") as m_rt, \
-                patch("kis_service.KISService", MockKIS), \
+                patch("services.kis.service.KISService", MockKIS), \
                 patch("fmp_service.get_history", return_value=None):
             m_rt.kis_available = True
             m_f.get_price_history.return_value = None

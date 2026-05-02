@@ -766,7 +766,7 @@ Reply ONLY in this exact JSON format, nothing else:
 
         if kis_ready:
             try:
-                from kis_service import KISService
+                from services.kis.service import KISService
                 _kis = KISService()
                 for code, key, sanity in [
                     ("0001", "kospi",  _KOSPI_RANGE),
@@ -1190,7 +1190,7 @@ Reply ONLY in this exact JSON format, nothing else:
             # Get KIS access token via the process-wide token manager
             # (avoids racing with RealtimeService / KISService for KIS's
             # 1-token-per-minute quota — see kis_token_manager.py).
-            from kis_token_manager import get_kis_token_manager
+            from services.kis.token_manager import get_kis_token_manager
             access_token = get_kis_token_manager().get_token()
             if not access_token:
                 return None

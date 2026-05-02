@@ -34,7 +34,7 @@ def scan():
             logger.warning(f"US scan error: {e}")
 
     try:
-        from kis_service import KISService
+        from services.kis.service import KISService
         kis = KISService()
         if kis.available:
             held_kr = set()
@@ -73,7 +73,7 @@ def scan():
 def analyze(ticker):
     if ticker.isdigit() and len(ticker) == 6:
         try:
-            from kis_service import KISService
+            from services.kis.service import KISService
             import numpy as np
             kis = KISService()
             if not kis.available:
@@ -213,7 +213,7 @@ def stream():
                     except Exception:
                         pass
                 try:
-                    from kis_service import KISService
+                    from services.kis.service import KISService
                     kis = KISService()
                     if kis.available:
                         for code in ['005930', '000660', '035420', '005380', '006400', '051910']:

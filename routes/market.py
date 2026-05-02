@@ -680,7 +680,7 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     # short-circuit internally. Keeps the KR-indices tiles alive when
     # realtime init is briefly degraded.
     try:
-        from kis_service import KISService
+        from services.kis.service import KISService
         _svc = KISService()
         for _code in _kis_code_candidates:
             idx = _svc.get_index_price(_code)
@@ -722,7 +722,7 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     # history endpoint whenever realtime init was degraded, sending us to
     # the unit-divergent FMP path.
     try:
-        from kis_service import KISService
+        from services.kis.service import KISService
         _svc = KISService()
         for _code in _kis_code_candidates:
             hist = _svc.get_index_history(_code, period="1y")

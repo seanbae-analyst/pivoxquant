@@ -293,7 +293,7 @@ class RealtimeService:
                 return None
             self._kis_ws_attempted = True
             try:
-                from kis_websocket_service import KISWebSocketService
+                from services.kis.websocket_service import KISWebSocketService
                 svc = KISWebSocketService(on_price=self._on_ws_tick)
                 if not svc.available:
                     logger.info("KIS WS not available (library missing or creds), using polling")
@@ -347,7 +347,7 @@ class RealtimeService:
         Keeps the old method name so existing internal callers work unchanged.
         """
         try:
-            from kis_token_manager import get_kis_token_manager
+            from services.kis.token_manager import get_kis_token_manager
             return get_kis_token_manager().get_token()
         except Exception as e:
             logger.error(f"KIS token manager error: {e}")

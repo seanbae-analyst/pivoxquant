@@ -41,6 +41,11 @@ ALLOWED_FILES = {
     # Consumers already verified to use price_overlay.apply_price_overlay
     "routes/realtime.py",
     "routes/market.py",
+    # KIS websocket emits price_display in raw broker payload before
+    # routes/realtime.py merges it through price_overlay.apply_price_overlay.
+    # Was implicitly out-of-scope when at project root (kis_websocket_service.py);
+    # consolidated into services/kis/ on 2026-05-02 — preserve allow-list status.
+    "services/kis/websocket_service.py",
 }
 
 
