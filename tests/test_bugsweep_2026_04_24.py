@@ -273,7 +273,7 @@ class TestKrIndicesKisGate:
 
         with patch("routes.market.fetcher") as m_f, \
              patch("services.container.realtime") as m_rt, \
-             patch("kis_service.KISService", _MockKIS), \
+             patch("services.kis.service.KISService", _MockKIS), \
              patch("fmp_service.get_history", return_value=None):
             # The regression: realtime.kis_available = False but
             # KISService credentials are valid.

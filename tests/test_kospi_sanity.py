@@ -36,7 +36,7 @@ def test_kospi_in_range_published(mock_fmp):
 
     f = DataFetcher()
     with patch("services.container.realtime") as mock_rt, \
-         patch("kis_service.KISService") as MockKis:
+         patch("services.kis.service.KISService") as MockKis:
         mock_rt.kis_available = True
         MockKis.return_value.get_index_price.side_effect = lambda code: (
             {"price": 2650.45, "change_pct": 0.42} if code == "0001"
@@ -59,7 +59,7 @@ def test_kospi_in_2026_range_published(mock_fmp):
 
     f = DataFetcher()
     with patch("services.container.realtime") as mock_rt, \
-         patch("kis_service.KISService") as MockKis:
+         patch("services.kis.service.KISService") as MockKis:
         mock_rt.kis_available = True
         MockKis.return_value.get_index_price.side_effect = lambda code: (
             {"price": 6641.02, "change_pct": 0.42} if code == "0001"
@@ -83,7 +83,7 @@ def test_kospi_extreme_glitch_still_dropped(mock_fmp):
 
     f = DataFetcher()
     with patch("services.container.realtime") as mock_rt, \
-         patch("kis_service.KISService") as MockKis:
+         patch("services.kis.service.KISService") as MockKis:
         mock_rt.kis_available = True
         MockKis.return_value.get_index_price.side_effect = lambda code: (
             {"price": 660000.0, "change_pct": 0.42} if code == "0001"
@@ -109,7 +109,7 @@ def test_kospi_env_override_widens_range(mock_fmp):
 
     f = DataFetcher()
     with patch("services.container.realtime") as mock_rt, \
-         patch("kis_service.KISService") as MockKis:
+         patch("services.kis.service.KISService") as MockKis:
         mock_rt.kis_available = True
         MockKis.return_value.get_index_price.side_effect = lambda code: (
             {"price": 70000.0, "change_pct": 0.42} if code == "0001" else None

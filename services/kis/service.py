@@ -125,7 +125,7 @@ class KISService:
         collapses those competing calls into one.
         """
         try:
-            from kis_token_manager import get_kis_token_manager
+            from services.kis.token_manager import get_kis_token_manager
             token = get_kis_token_manager().get_token()
             # Mirror into self for legacy callers that peek at attributes.
             if token:
