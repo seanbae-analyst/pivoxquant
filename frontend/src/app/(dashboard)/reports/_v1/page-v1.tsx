@@ -21,6 +21,7 @@ import { FileText, Lock, Download, Eye } from "lucide-react";
 import { useArtifacts } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
+import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import { cn } from "@/lib/utils";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
@@ -97,7 +98,13 @@ function ArtifactCard({
   // /public/samples/ (underscored) until headless-Chrome rebuild lands.
   const previewRoute = `/reports/preview/${entry.slug.replace(/_/g, "-")}`;
   const samplePdf = `/samples/${entry.slug}.pdf`;
-  const viewHref = live ? API.artifacts.preview(live.id) : previewRoute;
+  // 2026-05-02: route a real artefact through the type-aware helper —
+  // PDF types open inline, HTML-only types (dd_checklist, kpi_dashboard,
+  // credit_rating) open the in-app preview shell. Without this users
+  // saw the raw JSON preview payload in a new tab.
+  const viewHref = live
+    ? getArtifactViewerUrl({ id: live.id, type: live.type, has_file: live.has_file })
+    : previewRoute;
   const downloadHref = live ? API.artifacts.download(live.id) : samplePdf;
 
   const lastGenerated =
