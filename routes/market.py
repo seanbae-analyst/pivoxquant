@@ -12,6 +12,7 @@ from services import fx_service
 from services.container import fetcher, realtime
 from services.market_status import get_market_status
 from services.name_resolver import resolve_stock_name
+from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -63,14 +64,15 @@ def search_stocks():
 
     # 1b) Allow raw 6-digit codes as a passthrough (any KRX ticker, even
     # if not in the static registry — KIS will resolve at lookup time).
+    # Use normalize_ticker so 035760 (CJ ENM, KOSDAQ) routes to .KQ.
     bare = query.strip()
     if bare.isdigit() and len(bare) == 6:
-        candidate = f"{bare}.KS"
-        if candidate not in seen:
+        candidate = normalize_ticker(bare)
+        if candidate and candidate not in seen:
             results.append({
                 "ticker":    candidate,
                 "name":      candidate,
-                "exchange":  "KOSPI",
+                "exchange":  "KOSDAQ" if candidate.endswith(".KQ") else "KOSPI",
                 "currency":  "KRW",
                 "is_korean": True,
             })
@@ -331,9 +333,9 @@ def chart_data(ticker):
     period = request.args.get("period", "6mo")
     if period not in ("1mo", "3mo", "6mo", "1y", "2y", "1d", "5d"):
         period = "6mo"
-    ticker = ticker.strip().upper()
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    # Normalize at the input boundary — handles bare 6-digit codes,
+    # routes KOSDAQ to .KQ instead of the legacy .KS default.
+    ticker = normalize_ticker(ticker)
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
 
     # Normalize hyphenated class-share tickers for Alpaca (BRK-B → BRK/B).
@@ -471,9 +473,7 @@ def earnings_calendar():
 @market_bp.route("/peers/<ticker>")
 @api_auth
 def peer_comparison(ticker):
-    ticker = ticker.strip().upper()
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    ticker = normalize_ticker(ticker)
     c = db.session.get(SignalCache, ticker)
     if not c or not c.data_json:
         return jsonify({"error": "Analyze this stock first"}), 404
@@ -511,9 +511,7 @@ def peer_comparison(ticker):
 @market_bp.route("/market/profile/<ticker>")
 @api_auth
 def company_profile(ticker):
-    ticker = ticker.strip().upper()
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    ticker = normalize_ticker(ticker)
     is_korean = ticker.endswith(".KS") or ticker.endswith(".KQ")
     try:
         import fmp_service as fmp
@@ -977,9 +975,7 @@ def market_indices():
 @market_bp.route("/dividend/<ticker>")
 @api_auth
 def dividend_data(ticker):
-    ticker = ticker.strip().upper()
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    ticker = normalize_ticker(ticker)
     try:
         import fmp_service as fmp
         info = fmp.get_info(ticker)
