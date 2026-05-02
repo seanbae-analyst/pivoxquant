@@ -297,7 +297,12 @@ def edit_position(pid):
         return jsonify({"error": "Shares and average cost must be positive"}), 400
     p.shares = shares
     p.avg_cost = cost
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("edit_position commit failed")
+        return jsonify({"error": "Failed to update position"}), 500
     cache_service.cache_ticker(p.ticker, current_user.available_capital, engine)
     return jsonify({"ok": True})
 
@@ -310,8 +315,13 @@ def del_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
         return jsonify({"error": "Position not found"}), 404
-    db.session.delete(p)
-    db.session.commit()
+    try:
+        db.session.delete(p)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("del_position failed")
+        return jsonify({"error": "Failed to delete position"}), 500
     return jsonify({"ok": True})
 
 
@@ -1020,20 +1030,34 @@ def portfolio_history():
     period = request.args.get("period", "5d")
     if period not in ("5d", "1mo", "3mo", "6mo", "1y"):
         period = "5d"
-    all_values = {}
-    for p in positions:
+
+    # PERF-004: Parallelize history fetches across positions. Previous serial
+    # loop was O(n) FMP RTTs (often 800ms+ each). ThreadPoolExecutor with a
+    # small pool keeps the upstream rate manageable while cutting wall time
+    # to roughly the slowest single fetch.
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _fetch_one(p):
         try:
-            h = fmp.get_history(p.ticker, period=period)
-            if h.empty:
-                continue
-            for date, row in h.iterrows():
-                ds = date.strftime("%Y-%m-%d")
-                if ds not in all_values:
-                    all_values[ds] = 0
-                all_values[ds] += float(row["Close"]) * p.shares
+            return p, fmp.get_history(p.ticker, period=period)
         except Exception:
             logger.debug("silent-fallback: portfolio_history", exc_info=True)
-            pass
+            return p, None
+
+    all_values = {}
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        for p, h in ex.map(_fetch_one, positions):
+            if h is None or h.empty:
+                continue
+            try:
+                for date, row in h.iterrows():
+                    ds = date.strftime("%Y-%m-%d")
+                    if ds not in all_values:
+                        all_values[ds] = 0
+                    all_values[ds] += float(row["Close"]) * p.shares
+            except Exception:
+                logger.debug("silent-fallback: portfolio_history", exc_info=True)
+                pass
 
     if not all_values:
         return jsonify({"data": []})
