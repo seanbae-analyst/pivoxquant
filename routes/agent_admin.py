@@ -35,6 +35,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from extensions import db
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,7 @@ def _invalidate_kill_cache() -> None:
 
 
 @agent_admin_bp.route("/kill", methods=["POST"])
+@general_rate_limit
 def kill() -> Any:
     """POST /api/admin/agent/kill
 
@@ -183,6 +185,7 @@ def kill() -> Any:
 
 
 @agent_admin_bp.route("/revive", methods=["POST"])
+@general_rate_limit
 def revive() -> Any:
     """POST /api/admin/agent/revive
 
@@ -457,6 +460,7 @@ def waitlist_list() -> Any:
 
 
 @agent_admin_bp.route("/purge-expired", methods=["POST"])
+@general_rate_limit
 def purge_expired_route() -> Any:
     """POST /api/admin/agent/purge-expired
 

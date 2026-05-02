@@ -9,6 +9,7 @@ from flask_login import current_user
 
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth, legal_scrub_response
+from security import general_rate_limit
 
 quant_bp = Blueprint("quant", __name__, url_prefix="/api")
 
@@ -2112,6 +2113,7 @@ def performance_ledger():
 @quant_bp.route("/tools/position-sizing", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def position_sizing_calculator():
     """Kelly Criterion-based position sizing calculator.
 
@@ -3127,6 +3129,7 @@ _RISK_X_CACHE_TTL = 300  # 5 minutes
 @quant_bp.route("/risk/conditional-drawdown", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def risk_conditional_drawdown():
     """Conditional Drawdown at Risk (CDDaR) for the user's portfolio.
 
@@ -3187,6 +3190,7 @@ def risk_conditional_drawdown():
 @quant_bp.route("/risk/tail-ratio", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def risk_tail_ratio():
     """Tail Ratio — |95th pct| / |5th pct| of portfolio daily returns.
 
@@ -3237,6 +3241,7 @@ def risk_tail_ratio():
 @quant_bp.route("/risk/sortino-by-position", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def risk_sortino_by_position():
     """Per-position Sortino ratio (downside-only risk-adjusted return).
 
@@ -3319,6 +3324,7 @@ def risk_sortino_by_position():
 @quant_bp.route("/risk/ledoit-wolf-shrinkage", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def risk_ledoit_wolf_shrinkage():
     """Ledoit-Wolf shrinkage covariance estimator for the user's portfolio.
 

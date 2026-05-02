@@ -16,6 +16,7 @@ from collections import deque
 from datetime import datetime, timezone, timedelta
 
 from flask import Blueprint, request, jsonify, Response, send_from_directory
+from security import general_rate_limit
 
 # NOTE: 인증 미적용 (CEO 내부용 도구, 프로덕션 배포 시 @api_auth 데코레이터 필수)
 
@@ -176,6 +177,7 @@ def _write_obsidian(entry: dict) -> None:
 # ── POST /api/command-center/log ─────────────────────────────────────────────
 
 @command_center_bp.route("/api/command-center/log", methods=["POST"])
+@general_rate_limit
 def log_activity():
     """Log an agent/skill activity.
 
@@ -291,6 +293,7 @@ def stats():
 # ── POST /api/command-center/dispatch ────────────────────────────────────────
 
 @command_center_bp.route("/api/command-center/dispatch", methods=["POST"])
+@general_rate_limit
 def dispatch():
     """CEO dispatches a command to an agent or skill.
 

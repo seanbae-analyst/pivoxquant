@@ -12,6 +12,7 @@ from services.container import engine
 from services.name_resolver import resolve_stock_name
 from services.price_overlay import overlay_prices, parse_price_display
 from .decorators import api_auth
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,7 @@ def get_watchlist():
 
 @watchlist_bp.route("", methods=["POST"])
 @api_auth
+@general_rate_limit
 def add():
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip().upper()
@@ -125,6 +127,7 @@ def add():
 
 @watchlist_bp.route("/<int:wid>", methods=["DELETE"])
 @api_auth
+@general_rate_limit
 def remove(wid):
     w = db.session.get(Watchlist, wid)
     if not w or w.user_id != current_user.id:
@@ -141,6 +144,7 @@ def remove(wid):
 
 @watchlist_bp.route("/<int:wid>", methods=["PATCH"])
 @api_auth
+@general_rate_limit
 def update(wid):
     """Patch the note on an existing watchlist row.
 

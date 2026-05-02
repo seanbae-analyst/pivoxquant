@@ -14,6 +14,7 @@ from services import fx_service
 from services.name_resolver import resolve_stock_name
 from services.price_overlay import parse_price_display
 from .decorators import api_auth
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ share_bp = Blueprint("share", __name__, url_prefix="/api/portfolio/share")
 
 @share_bp.route("", methods=["POST"])
 @api_auth
+@general_rate_limit
 def create_share():
     """Create a 7-day public share token for the authenticated user's portfolio."""
     token = secrets.token_urlsafe(16)

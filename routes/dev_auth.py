@@ -15,6 +15,7 @@ from flask_login import login_user
 
 from extensions import db
 from models.user import User
+from security import auth_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ _TEST_EMAIL = "test@pivoxquant.dev"
 
 
 @dev_auth_bp.route("/api/auth/dev-login", methods=["POST"])
+@auth_rate_limit
 def dev_login():
     """Create or find a test user and log them in. CSRF-exempt (see security.py)."""
     secret = os.environ.get("DEV_LOGIN_SECRET")
@@ -60,6 +62,7 @@ def dev_login():
 
 
 @dev_auth_bp.route("/api/auth/dev-upgrade", methods=["POST"])
+@auth_rate_limit
 def dev_upgrade():
     """Upgrade a user's subscription tier. Requires DEV_LOGIN_SECRET."""
     secret = os.environ.get("DEV_LOGIN_SECRET")

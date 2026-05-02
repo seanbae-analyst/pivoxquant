@@ -440,6 +440,7 @@ def sell_position(pid):
 
 @portfolio_bp.route("/capital", methods=["PUT"])
 @api_auth
+@trade_rate_limit
 def set_capital():
     d = request.get_json() or {}
     cap_usd = float(d.get("capital_usd") or d.get("capital") or 0)

@@ -9,6 +9,7 @@ from extensions import db
 from models import User
 from flask_login import current_user
 from .decorators import api_auth
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ def _get_or_create_customer(user):
 
 @billing_bp.route("/create-checkout", methods=["POST"])
 @api_auth
+@general_rate_limit
 def create_checkout():
     """Create a Stripe Checkout session for Pro or Premium plan."""
     d = request.get_json() or {}
@@ -271,6 +273,7 @@ def get_subscription():
 
 @billing_bp.route("/portal", methods=["POST"])
 @api_auth
+@general_rate_limit
 def create_portal():
     """Create a Stripe Customer Portal session for managing subscription."""
     if not current_user.stripe_customer_id:

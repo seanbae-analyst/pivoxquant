@@ -12,6 +12,7 @@ from flask_login import current_user
 from extensions import db
 from models import PushSubscription
 from .decorators import api_auth
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ push_bp = Blueprint("push", __name__, url_prefix="/api/push")
 
 @push_bp.route("/subscribe", methods=["POST"])
 @api_auth
+@general_rate_limit
 def subscribe():
     """Save a push subscription for the current user."""
     data = request.get_json(force=True)
@@ -54,6 +56,7 @@ def subscribe():
 
 @push_bp.route("/unsubscribe", methods=["POST"])
 @api_auth
+@general_rate_limit
 def unsubscribe():
     """Remove a push subscription."""
     data = request.get_json(force=True)

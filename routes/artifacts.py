@@ -42,6 +42,7 @@ from services.artifacts.weekly_memo_service import WeeklyMemoService
 from services.name_resolver import resolve_stock_name
 
 from .decorators import api_auth, require_tier
+from security import artifact_rate_limit, general_rate_limit
 
 artifacts_bp = Blueprint("artifacts", __name__, url_prefix="/api/artifacts")
 
@@ -296,6 +297,7 @@ def artifacts_download(artifact_id: int):
 
 @artifacts_bp.route("/<int:artifact_id>/read", methods=["POST"])
 @api_auth
+@general_rate_limit
 def artifacts_mark_read(artifact_id: int):
     """Mark an artifact as read. Owner-only. Idempotent."""
     artefact = db.session.get(Artifact, artifact_id)
@@ -329,6 +331,7 @@ def artifacts_mark_read(artifact_id: int):
 @artifacts_bp.route("/weekly-memo/preview", methods=["POST", "GET"])
 @api_auth
 @require_tier("pro")
+@artifact_rate_limit
 def weekly_memo_preview():
     """Generate (don't email) a preview memo for the current user.
 
@@ -421,6 +424,7 @@ def weekly_memo_history():
 
 
 @artifacts_bp.route("/weekly-memo/trigger", methods=["POST"])
+@artifact_rate_limit
 def weekly_memo_trigger():
     """Manual trigger for the Sunday cron. Admin-only.
 
@@ -457,6 +461,7 @@ def weekly_memo_trigger():
 
 @artifacts_bp.route("/monthly-brag/preview", methods=["POST", "GET"])
 @api_auth
+@artifact_rate_limit
 def monthly_brag_preview():
     """Generate (don't email) a preview brag card for the current user.
 
@@ -610,6 +615,7 @@ def monthly_brag_share_link(brag_id: int):
 
 
 @artifacts_bp.route("/monthly-brag/trigger", methods=["POST"])
+@artifact_rate_limit
 def monthly_brag_trigger():
     """Manual trigger for the monthly cron. Admin-only.
 
@@ -657,6 +663,7 @@ from services.artifacts.brag_card_service import BragCardService  # noqa: E402
 
 @artifacts_bp.route("/brag-card/preview", methods=["GET", "POST"])
 @api_auth
+@artifact_rate_limit
 def brag_card_preview():
     """Generate (don't email) a preview brag card PNG for the current user.
 
@@ -805,6 +812,7 @@ def brag_card_share(share_token: str):
 
 
 @artifacts_bp.route("/brag-card/trigger", methods=["POST"])
+@artifact_rate_limit
 def brag_card_trigger():
     """Manual trigger for the monthly cron. Admin-only (DEV_LOGIN_SECRET)."""
     err = _check_cron_admin_secret()
@@ -834,6 +842,7 @@ def brag_card_trigger():
 
 @artifacts_bp.route("/brag-card/privacy", methods=["POST"])
 @api_auth
+@artifact_rate_limit
 def brag_card_privacy():
     """Toggle anonymous mode for brag cards.
 
@@ -1011,6 +1020,7 @@ def earnings_prebrief_download(brief_id: int):
 
 
 @artifacts_bp.route("/earnings-prebrief/trigger", methods=["POST"])
+@artifact_rate_limit
 def earnings_prebrief_trigger():
     """Manual trigger for the 15-min scan. Admin-only.
 
@@ -1071,6 +1081,7 @@ def kpi_dashboard_preview():
 
 
 @artifacts_bp.route("/kpi-dashboard/trigger", methods=["POST"])
+@artifact_rate_limit
 def kpi_dashboard_trigger():
     """Manual trigger for the daily KPI cron. Admin-only.
 
@@ -1186,6 +1197,7 @@ def self_audit_download_latest():
 
 
 @artifacts_bp.route("/self-audit/trigger", methods=["POST"])
+@artifact_rate_limit
 def self_audit_trigger():
     """Manual trigger for the quarterly cron. Admin-only.
 
@@ -1250,6 +1262,7 @@ def dd_checklist_pending():
 @artifacts_bp.route("/dd-checklist/submit", methods=["POST"])
 @api_auth
 @require_tier("pro")
+@artifact_rate_limit
 def dd_checklist_submit():
     """Record the user's 5-item Y/N review for one position.
 
@@ -1313,6 +1326,7 @@ def dd_checklist_submit():
 
 
 @artifacts_bp.route("/dd-checklist/trigger", methods=["POST"])
+@artifact_rate_limit
 def dd_checklist_trigger():
     """Manual trigger for the T+3 cron. Admin-only. Same gating as
     weekly_memo/trigger."""
@@ -1412,6 +1426,7 @@ def burn_rate_download_latest():
 
 
 @artifacts_bp.route("/burn-rate/trigger", methods=["POST"])
+@artifact_rate_limit
 def burn_rate_trigger():
     """Manual trigger for the monthly cron. Admin-only.
 
@@ -1473,6 +1488,7 @@ def credit_rating_preview():
 
 
 @artifacts_bp.route("/credit-rating/trigger", methods=["POST"])
+@artifact_rate_limit
 def credit_rating_trigger():
     """Manual trigger for the monthly cron. Admin-only. Same gating as
     weekly_memo/trigger."""
@@ -1579,6 +1595,7 @@ def dividend_income_download_latest():
 
 
 @artifacts_bp.route("/dividend-income/trigger", methods=["POST"])
+@artifact_rate_limit
 def dividend_income_trigger():
     """Manual trigger for the monthly dividend cron. Admin-only
     (DEV_LOGIN_SECRET + X-Admin-Secret header — same pattern as the
@@ -1684,6 +1701,7 @@ def monthly_finance_download_latest():
 
 
 @artifacts_bp.route("/monthly-finance/trigger", methods=["POST"])
+@artifact_rate_limit
 def monthly_finance_trigger():
     """Manual trigger for the monthly finance cron. Admin-only."""
     err = _check_cron_admin_secret()
@@ -1790,6 +1808,7 @@ def risk_board_download_latest():
 
 
 @artifacts_bp.route("/risk-board/trigger", methods=["POST"])
+@artifact_rate_limit
 def risk_board_trigger():
     """Manual trigger for the Risk Board deck. Admin-only.
 
@@ -1925,6 +1944,7 @@ def portfolio_segment_download_latest():
 
 
 @artifacts_bp.route("/portfolio-segment/trigger", methods=["POST"])
+@artifact_rate_limit
 def portfolio_segment_trigger():
     """Manual trigger for the quarterly cron. Admin-only.
 
@@ -1972,6 +1992,7 @@ from services.artifacts.capital_allocation_service import (  # noqa: E402
 @artifacts_bp.route("/capital-allocation/calculate", methods=["POST"])
 @api_auth
 @require_tier("premium")
+@artifact_rate_limit
 def capital_allocation_calculate():
     """Run the What-If calculator with up to 4 caller-supplied scenarios.
 
@@ -2090,6 +2111,7 @@ def capital_allocation_download(calc_id: int):
 
 
 @artifacts_bp.route("/capital-allocation/reminder-trigger", methods=["POST"])
+@artifact_rate_limit
 def capital_allocation_reminder_trigger():
     """Admin-only manual trigger for the quarterly reminder email.
 
@@ -2185,6 +2207,7 @@ def insider_mirror_download_latest():
 
 
 @artifacts_bp.route("/insider-mirror/trigger", methods=["POST"])
+@artifact_rate_limit
 def insider_mirror_trigger():
     """Admin-only manual trigger for the weekly insider mirror cron."""
     err = _check_cron_admin_secret()
@@ -2305,6 +2328,7 @@ def year_end_letter_download_latest():
 
 
 @artifacts_bp.route("/year-end-letter/trigger", methods=["POST"])
+@artifact_rate_limit
 def year_end_letter_trigger():
     """Manual trigger for the annual cron. Admin-only.
 
@@ -2425,6 +2449,7 @@ def quarterly_self_report_download_latest():
 
 
 @artifacts_bp.route("/quarterly-self/trigger", methods=["POST"])
+@artifact_rate_limit
 def quarterly_self_report_trigger():
     """Manual trigger for the quarterly cron. Admin-only.
 
@@ -2661,6 +2686,7 @@ def _persist_generated(user_id: int, db_type: str,
 
 @artifacts_bp.route("/generate", methods=["POST"])
 @api_auth
+@artifact_rate_limit
 def artifacts_generate():
     """Unified Generate endpoint — frontend "Generate" button.
 
@@ -2855,6 +2881,7 @@ def artifacts_generate():
 # the same information through a callable endpoint.
 
 @artifacts_bp.route("/_diag/weasyprint", methods=["GET", "POST"])
+@general_rate_limit
 def diag_weasyprint():
     """Probe the WeasyPrint pipeline end-to-end and return the result inline.
 
@@ -2979,6 +3006,7 @@ def diag_weasyprint():
 
 
 @artifacts_bp.route("/_diag/weekly-memo-pipeline", methods=["GET", "POST"])
+@general_rate_limit
 def diag_weekly_memo_pipeline():
     """End-to-end diagnostic for the weekly-memo pipeline using REAL user data.
 

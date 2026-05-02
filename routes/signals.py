@@ -10,6 +10,7 @@ from services.container import engine
 from services.name_resolver import resolve_stock_name
 from services.access_guard import is_user_allowed_ticker, access_denied_response
 from .decorators import api_auth, legal_scrub_response
+from security import general_rate_limit
 
 
 def _get_profile_params():
@@ -105,6 +106,7 @@ def signal_detail(ticker):
 @signals_bp.route("/signals/refresh", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def refresh():
     positions = Position.query.filter_by(user_id=current_user.id).all()
     pos_map = {p.ticker: p for p in positions}
@@ -127,6 +129,7 @@ def refresh():
 @signals_bp.route("/scan", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def scan():
     ticker = ((request.get_json() or {}).get("ticker") or "").strip().upper()
     if not ticker:

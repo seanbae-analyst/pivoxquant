@@ -30,6 +30,7 @@ from models import Position, Alert, SignalCache
 from services.serializers import serialize_alert
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth, legal_scrub_response
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,7 @@ def unread_count():
 
 @alerts_bp.route("/read-all", methods=["POST"])
 @api_auth
+@general_rate_limit
 def read_all():
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     try:
@@ -106,6 +108,7 @@ def read_all():
 
 @alerts_bp.route("/<int:alert_id>/read", methods=["POST"])
 @api_auth
+@general_rate_limit
 def mark_one_read(alert_id: int):
     a = Alert.query.filter_by(id=alert_id, user_id=current_user.id).first()
     if a is None:
@@ -123,6 +126,7 @@ def mark_one_read(alert_id: int):
 
 @alerts_bp.route("/<int:alert_id>", methods=["DELETE"])
 @api_auth
+@general_rate_limit
 def delete_one(alert_id: int):
     a = Alert.query.filter_by(id=alert_id, user_id=current_user.id).first()
     if a is None:
@@ -141,6 +145,7 @@ def delete_one(alert_id: int):
 
 @alerts_bp.route("/read", methods=["POST"])
 @api_auth
+@general_rate_limit
 def mark_read():
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     try:
@@ -157,6 +162,7 @@ def mark_read():
 
 @alerts_bp.route("/clear", methods=["POST"])
 @api_auth
+@general_rate_limit
 def clear():
     try:
         Alert.query.filter_by(user_id=current_user.id).delete()
@@ -233,6 +239,7 @@ def _is_admin_email(email: str | None) -> bool:
 
 @alerts_bp.route("/admin/check", methods=["POST"])
 @api_auth
+@general_rate_limit
 def admin_check_alerts():
     """Manually trigger the alert-generation cron. Admin-only.
 
