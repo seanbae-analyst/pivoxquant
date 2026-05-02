@@ -25,9 +25,8 @@ import { toast } from "sonner";
 import { Gavel, ChevronRight, RotateCcw, Check, X, AlertCircle } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { Caption, Fleuron, FootSignature } from "@/components/ui/editorial";
+import { Caption, FootSignature, RuledKicker } from "@/components/ui/editorial";
 
 const MIN_RATIONALE_CHARS = 50;
 
@@ -218,27 +217,33 @@ export default function PreTradePage() {
 
   return (
     <ErrorBoundary>
-      <DisclaimerBanner type="signal" />
-      <div className="space-y-10 pb-16">
-        {/* ── Editorial header ── */}
+      <div className="space-y-10 pb-12">
+        {/* ── Editorial header (v3 lock-in: Playfair + italic accent,
+              matches /alerts "When the desk *spoke.*", /portfolio
+              "Your *book.*", /risk "Risk *board.*"). Layout already
+              mounts a single DisclaimerBanner — pages MUST NOT mount
+              their own.  */}
         <header className="space-y-3">
-          <Caption>Signature · Pre-Trade Checklist</Caption>
+          <RuledKicker>Signature &middot; Pre-Trade Checklist</RuledKicker>
           <h1
-            className="font-serif text-[var(--pq-ivory)]"
+            className="mt-3 font-serif text-[var(--pq-ivory)]"
             style={{
-              fontSize: "clamp(1.875rem, 3.6vw, 2.75rem)",
-              lineHeight: 1.08,
-              letterSpacing: "-0.02em",
+              fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
+              fontSize: "clamp(34px, 4.6vw, 52px)",
+              lineHeight: 1.06,
+              letterSpacing: "-0.022em",
             }}
           >
-            Seven questions.{" "}
-            <em style={{ color: "var(--pq-bronze)" }}>Before every trade.</em>
+            Seven questions{" "}
+            <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+              before every trade.
+            </span>
           </h1>
-          <p className="font-serif max-w-xl text-[15px] leading-relaxed text-[rgba(245,240,232,0.65)]">
-            진입 결정 앞에 서는 7개의 관문. 당신의 논리를 스스로 검증할 기회다.
-            이것은 조언이 아니라 규율이다.
-          </p>
+          <Caption className="mt-3 max-w-[560px]">
+            진입 결정 앞에 서는 7개의 관문. 당신의 논리를 스스로 검증할
+            기회다 — 조언이 아니라 규율이다.
+          </Caption>
         </header>
 
         {phase === "setup" && (
@@ -280,7 +285,10 @@ export default function PreTradePage() {
           />
         )}
 
-        <Fleuron />
+        {/* ── Single foot signature (v3 convention). Layout owns the
+              global disclaimer above; this footer is the editorial
+              sign-off — fleuron + italic byline, no separate caveats
+              repeated per phase. */}
         <FootSignature />
       </div>
     </ErrorBoundary>
@@ -572,9 +580,6 @@ function CooldownStep({
           {isReady ? "I am ready · 진행" : "Wait…"}
         </button>
       </div>
-      <p className="text-[11px] text-[rgba(245,240,232,0.4)] text-right">
-        Proceed는 거래 권유가 아니며, 본인 브로커 앱에서 직접 주문을 넣어야 합니다.
-      </p>
     </section>
   );
 }
@@ -638,12 +643,37 @@ function TerminalStep({
 /* ─── Helpers ────────────────────────────────────────────────────────── */
 
 function SectionLabel({ n, title }: { n: number; title: string }) {
+  // Hairline divider above + bronze 2-digit eyebrow + Playfair section
+  // title — same convention as /alerts ledger rows ("Total / Unread /
+  // Today / This week" hairline strip).
   return (
-    <div className="flex items-baseline gap-3">
-      <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+    <div
+      className="flex items-baseline gap-4 border-t pt-5"
+      style={{ borderTopColor: "rgba(184,149,106,0.32)", borderTopWidth: 0.5 }}
+    >
+      <span
+        className="font-mono uppercase"
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.22em",
+          color: "var(--pq-bronze)",
+        }}
+      >
         {String(n).padStart(2, "0")}
       </span>
-      <h2 className="font-serif text-[20px] text-[var(--pq-ivory)]">{title}</h2>
+      <h2
+        className="font-serif"
+        style={{
+          fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
+          fontWeight: 500,
+          fontSize: "clamp(20px, 2.4vw, 26px)",
+          lineHeight: 1.15,
+          letterSpacing: "-0.012em",
+          color: "var(--pq-ivory)",
+        }}
+      >
+        {title}
+      </h2>
     </div>
   );
 }
