@@ -433,7 +433,7 @@ class AdditionalFundamentals:
             <  1.0  -> "위험"  (at risk of short-term solvency issues)
         """
         try:
-            from fmp_service import get_balance_sheet
+            from services.data.fmp import get_balance_sheet
         except Exception:
             return {"value": None, "status": "DATA_UNAVAILABLE",
                     "reason": "fmp_service unavailable"}
@@ -506,7 +506,7 @@ class AdditionalFundamentals:
         "무차입" separately if desired.
         """
         try:
-            from fmp_service import get_income_statement
+            from services.data.fmp import get_income_statement
         except Exception:
             return {"value": None, "status": "DATA_UNAVAILABLE",
                     "reason": "fmp_service unavailable"}
