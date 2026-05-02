@@ -3,7 +3,8 @@ import json
 import logging
 import threading
 from datetime import datetime, timezone
-from flask import Blueprint, current_app, request, jsonify
+from functools import wraps
+from flask import Blueprint, current_app, request, jsonify, make_response
 from flask_login import current_user
 
 from extensions import db
@@ -18,6 +19,50 @@ from .decorators import api_auth, legal_scrub_response
 logger = logging.getLogger(__name__)
 
 portfolio_bp = Blueprint("portfolio", __name__, url_prefix="/api/portfolio")
+
+
+# ── Deprecation marker for legacy singular `/position` endpoints ─────────────
+# 2026-05-02: frontend (endpoints.ts) was migrated to the plural
+# `/positions[/<id>]` aliases. The singular handlers remain so existing
+# pytest coverage and any out-of-tree callers keep working, but every call
+# emits a warning log + RFC 8594 Deprecation/Sunset response headers so
+# operators can monitor real-world usage before final removal.
+_SINGULAR_POSITION_SUNSET = "Sun, 01 Nov 2026 00:00:00 GMT"
+
+
+def _deprecated_singular(plural_hint: str):
+    """Decorator that wraps a Flask view to emit deprecation telemetry.
+
+    - logger.warning on every call (one-line, with user_id + path)
+    - adds `Deprecation: true`, `Sunset: <date>`, and a `Link` header
+      pointing at the recommended plural endpoint
+    - response body is unchanged so existing clients are unaffected
+    """
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                uid = getattr(current_user, "id", None)
+            except Exception:
+                uid = None
+            logger.warning(
+                "deprecated_singular_position_endpoint path=%s user_id=%s use_instead=%s",
+                request.path, uid, plural_hint,
+            )
+            rv = fn(*args, **kwargs)
+            try:
+                resp = make_response(rv)
+                resp.headers.setdefault("Deprecation", "true")
+                resp.headers.setdefault("Sunset", _SINGULAR_POSITION_SUNSET)
+                resp.headers.setdefault(
+                    "Link", f'<{plural_hint}>; rel="successor-version"',
+                )
+                return resp
+            except Exception:
+                # Defensive: never break the response just to attach a header.
+                return rv
+        return wrapper
+    return decorator
 
 
 def _cache_ticker_async(app, ticker: str, capital: float):
@@ -159,6 +204,7 @@ def get_portfolio():
 @portfolio_bp.route("/position", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/positions")
 def add_position():
     # Tier check: Free users limited to 3 positions
     # Use effective_tier so DEV_PREMIUM_EMAILS can bypass the free-plan cap.
@@ -234,6 +280,7 @@ def add_position():
 @portfolio_bp.route("/position/<int:pid>", methods=["PUT"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/positions/<id>")
 def edit_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
@@ -253,6 +300,7 @@ def edit_position(pid):
 @portfolio_bp.route("/position/<int:pid>", methods=["DELETE"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/positions/<id>")
 def del_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
@@ -265,6 +313,7 @@ def del_position(pid):
 @portfolio_bp.route("/position/<int:pid>/buy", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/trades")
 def buy_more(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
@@ -318,6 +367,7 @@ def buy_more(pid):
 @portfolio_bp.route("/position/buy-new", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/trades")
 def buy_new_position():
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip().upper()
@@ -370,6 +420,7 @@ def buy_new_position():
 @portfolio_bp.route("/position/<int:pid>/sell", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/trades")
 def sell_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
