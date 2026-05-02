@@ -1,5 +1,6 @@
 """Quant strategy routes: VIX strategy, cross-asset momentum, stat-arb, risk analytics."""
 import json
+import logging
 import math
 import time as _time
 
@@ -10,6 +11,8 @@ from flask_login import current_user
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth, legal_scrub_response
 from security import general_rate_limit
+
+logger = logging.getLogger(__name__)
 
 quant_bp = Blueprint("quant", __name__, url_prefix="/api")
 
@@ -158,9 +161,16 @@ def regime_report():
         if not positions:
             return jsonify({"error": "No positions in portfolio"}), 400
 
+        # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+        pos_tickers = [p.ticker for p in positions]
+        cache_map = {
+            c.ticker: c
+            for c in SignalCache.query.filter(SignalCache.ticker.in_(pos_tickers)).all()
+        } if pos_tickers else {}
+
         pos_with_value = []
         for p in positions:
-            cached = SignalCache.query.get(p.ticker)
+            cached = cache_map.get(p.ticker)
             sd = json.loads(cached.data_json) if cached and cached.data_json else {}
             price = sd.get("price", p.avg_cost)
             mv = price * p.shares
@@ -332,11 +342,18 @@ def _load_positions_with_prices():
     if not positions:
         return [], 0.0
 
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     fx_rate = fx_service.get_rate()  # USD → KRW
     items = []
     total_value = 0.0
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
@@ -2514,6 +2531,7 @@ def signal_herding():
             stock_returns_list.append(sr)
             included_tickers.append(t)
         except Exception:
+            logger.debug("silent-fallback: signal_herding", exc_info=True)
             continue
 
     if len(stock_returns_list) < 3:
@@ -2604,6 +2622,7 @@ def extended_indicators(ticker):
         if profile:
             float_shares = profile.get("floatShares") or profile.get("sharesFloat")
     except Exception:
+        logger.debug("silent-fallback: extended_indicators", exc_info=True)
         pass
 
     payload = {
@@ -2671,6 +2690,7 @@ def correlation_matrix():
                     all_dates.add(ds)
             ticker_returns[ticker] = date_ret
         except Exception:
+            logger.debug("silent-fallback: correlation_matrix", exc_info=True)
             continue
 
     included = [t for t in tickers if t in ticker_returns]
@@ -2806,6 +2826,7 @@ def sector_heatmap():
                 "month_return": round(float(month_ret), 2),
             })
         except Exception:
+            logger.debug("silent-fallback: sector_heatmap", exc_info=True)
             continue
 
     if not sectors:
@@ -2864,6 +2885,7 @@ def canslim_screener(ticker):
         from edgar_service import EdgarService
         fundamentals = EdgarService.get_fundamentals(ticker)
     except Exception:
+        logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
     # Float shares from FMP profile
@@ -2873,6 +2895,7 @@ def canslim_screener(ticker):
         if profile:
             float_shares = profile.get("floatShares") or profile.get("sharesFloat")
     except Exception:
+        logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
     # Market regime from RegimeSwitching
@@ -2882,6 +2905,7 @@ def canslim_screener(ticker):
         if rs:
             regime = rs.get("regime")
     except Exception:
+        logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
     result = CANSLIMScreener.score(ticker, closes, volumes, fundamentals, regime, float_shares=float_shares)
@@ -2929,6 +2953,7 @@ def interest_rate_regime():
             import os
             fred_key = os.environ.get("FRED_API_KEY")
         except Exception:
+            logger.debug("silent-fallback: interest_rate_regime", exc_info=True)
             pass
 
         if fred_key:
@@ -2949,6 +2974,7 @@ def interest_rate_regime():
                     fed_rate_current = float(obs[0]["value"])
                     fed_rate_6m_ago = float(obs[6]["value"])
     except Exception:
+        logger.debug("silent-fallback: interest_rate_regime", exc_info=True)
         pass
 
     # Fallback: hardcoded rates (updated periodically)
@@ -3005,11 +3031,18 @@ def risk_defense_status():
 
     fetcher = DataFetcher()
 
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     # Build position list with weights, values, sectors
     pos_list = []
     total_value = 0
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
         mv = price * p.shares
@@ -3043,6 +3076,7 @@ def risk_defense_status():
                 returns_cols.append(daily_rets)
                 valid_tickers.append(pos["ticker"])
         except Exception:
+            logger.debug("silent-fallback: risk_defense_status", exc_info=True)
             pass
 
     returns_matrix = None
@@ -3066,6 +3100,7 @@ def risk_defense_status():
         if vix_data and "current_vix" in vix_data:
             vix = vix_data["current_vix"]
     except Exception:
+        logger.debug("silent-fallback: risk_defense_status", exc_info=True)
         pass
 
     # Get current regime
@@ -3076,6 +3111,7 @@ def risk_defense_status():
         if regime_data and "regime" in regime_data:
             regime = regime_data["regime"]
     except Exception:
+        logger.debug("silent-fallback: risk_defense_status", exc_info=True)
         pass
 
     # Run defense system

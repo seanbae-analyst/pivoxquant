@@ -11,6 +11,9 @@ from services.name_resolver import resolve_stock_name
 from services.access_guard import is_user_allowed_ticker, access_denied_response
 from .decorators import api_auth, legal_scrub_response
 from security import general_rate_limit
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _get_profile_params():
@@ -26,9 +29,14 @@ signals_bp = Blueprint("signals", __name__, url_prefix="/api")
 @legal_scrub_response
 def get_signals():
     tickers = {p.ticker for p in Position.query.filter_by(user_id=current_user.id).all()}
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(list(tickers))).all()
+    } if tickers else {}
     out = []
     for t in tickers:
-        c = SignalCache.query.get(t)
+        c = cache_map.get(t)
         if c and c.data_json:
             try:
                 d = json.loads(c.data_json)
@@ -60,10 +68,12 @@ def get_signals():
                             try:
                                 cache_service.cache_ticker(ticker, cap, engine)
                             except Exception:
+                                logger.debug("silent-fallback: _refresh", exc_info=True)
                                 pass
 
                     Thread(target=_refresh, daemon=True).start()
                 except Exception:
+                    logger.debug("silent-fallback: get_signals", exc_info=True)
                     pass
         else:
             # No row at all — surface as stale so the client can show "—" / skeleton.

@@ -76,6 +76,12 @@ def get_shared_portfolio(token):
     fx_rate = fx_service.get_rate()
 
     positions = Position.query.filter_by(user_id=share.user_id).all()
+    # Batch-load SignalCache for all positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
     out = []
     total_value_usd = 0.0
     scores = []
@@ -83,7 +89,7 @@ def get_shared_portfolio(token):
     total_current = 0.0
 
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
 
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")

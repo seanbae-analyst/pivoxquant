@@ -193,6 +193,7 @@ def get_prices_fast():
                 c.data_json = json.dumps(sd, ensure_ascii=False)
                 c.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             except Exception:
+                logger.debug("silent-fallback: get_prices_fast", exc_info=True)
                 pass
     try:
         db.session.commit()
@@ -435,6 +436,13 @@ def earnings_calendar():
     positions = Position.query.filter_by(user_id=current_user.id).all()
     earnings = []
 
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     for p in positions:
         try:
             is_etf = p.ticker in ('TSLL', 'ETHU', 'SPY', 'QQQ', 'TLT', 'GLD', 'USO', 'UUP') or 'ETF' in (p.ticker or '')
@@ -445,7 +453,7 @@ def earnings_calendar():
                 for entry in cal[:1]:  # Take the nearest earnings date
                     ds = entry.get("date", "")[:10]
                     if ds:
-                        c = db.session.get(SignalCache, p.ticker)
+                        c = cache_map.get(p.ticker)
                         sd = json.loads(c.data_json) if c and c.data_json else {}
                         earnings.append({
                             "ticker": p.ticker,
@@ -454,6 +462,7 @@ def earnings_calendar():
                             "score": sd.get("score", 0),
                         })
         except Exception:
+            logger.debug("silent-fallback: earnings_calendar", exc_info=True)
             pass
     earnings.sort(key=lambda x: x.get("date", "9999"))
     return jsonify({"earnings": earnings})
@@ -473,6 +482,9 @@ def peer_comparison(ticker):
     if sector in ("Unknown", "ETF"):
         return jsonify({"peers": [], "sector": sector, "message": "No sector peers available"})
 
+    # Intentional global scan: peer comparison ranks every ticker in the
+    # target sector. Single query (not N+1). A sector column on SignalCache
+    # would let this become an indexed filter; deferred to schema migration.
     all_cached = SignalCache.query.all()
     peers = []
     for sc in all_cached:
@@ -489,6 +501,7 @@ def peer_comparison(ticker):
                     "is_target": sc.ticker == ticker,
                 })
         except Exception:
+            logger.debug("silent-fallback: peer_comparison", exc_info=True)
             pass
     peers.sort(key=lambda x: -x.get("score", 0))
     rank = next((i + 1 for i, p in enumerate(peers) if p["is_target"]), 0)
@@ -873,6 +886,7 @@ def market_indices():
                 if mv.get("price"):
                     usdkrw_level = float(mv["price"])
             except Exception:
+                logger.debug("silent-fallback: market_indices", exc_info=True)
                 pass
         if usdkrw_level:
             # Pull 1y FX history from FMP for sparkline + 52W range + d/d%.

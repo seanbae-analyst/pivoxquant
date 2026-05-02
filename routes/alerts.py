@@ -179,9 +179,15 @@ def clear():
 @legal_scrub_response
 def price_check():
     positions = Position.query.filter_by(user_id=current_user.id).all()
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
     alerts = []
     for p in positions:
-        c = SignalCache.query.get(p.ticker)
+        c = cache_map.get(p.ticker)
         if not c or not c.data_json:
             continue
         sd = json.loads(c.data_json)
