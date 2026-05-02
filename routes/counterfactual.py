@@ -26,6 +26,7 @@ from datetime import date, datetime, timedelta
 from flask import Blueprint, jsonify, request
 
 from services.fx_service import get_rate as _fx_get_rate
+from services.fx_service import get_rate_at as _fx_get_rate_at
 from services.name_resolver import resolve_stock_name
 
 logger = logging.getLogger(__name__)
@@ -485,12 +486,14 @@ def counterfactual():
     # an NVDA (USD) ticker would be interpreted as $5M and inflate shares by
     # ~1,475× (the KRW/USD rate). Response values are emitted in this
     # user-facing currency so the UI reads naturally.
-    # TODO(fx-historical): uses CURRENT USD/KRW rate for both amount ingress
-    # and value egress — a 2020 amount should ideally be converted at the
-    # 2020 rate. Until we wire historical FX (fmp_service has the endpoint),
-    # the residual error is a per-unit ratio on the USD/KRW drift since the
-    # start date (single-digit % typically) — vastly smaller than the
-    # 1,475× bug this replaces.
+    # FX-historical (resolved 2026-05-02 / B9):
+    #   - Amount INGRESS  → fx_service.get_rate_at(start)  (rate at the
+    #     time the user *would have* bought)
+    #   - Value EGRESS    → fx_service.get_rate()          (today's spot,
+    #     correct for "what's it worth right now in your currency?")
+    # The end_value is *re-evaluated today*, so converting it at today's
+    # spot is the natural reading. Only the ingress (amount → shares)
+    # needs the historical rate, and that's what we apply.
     user_currency_raw = (request.args.get("currency") or "").strip().upper()
     user_currency: str | None = user_currency_raw if user_currency_raw in ("KRW", "USD") else None
 
@@ -602,22 +605,29 @@ def counterfactual():
     # amount to native BEFORE computing shares so shares = amount_native /
     # price yields a sane count regardless of (user currency, ticker
     # currency) combination.
+    #
+    # Historical FX (B9): the *ingress* conversion uses the rate AT
+    # `start` so a 2020 KRW input buying NVDA buys the right share count
+    # at the 2020 USD/KRW rate. Spot-rate fallback inside
+    # `fx_service.get_rate_at()` keeps the call infallible.
     native_currency = "KRW" if _is_korean(ticker) else "USD"
     effective_user_currency = user_currency or native_currency
-    fx_rate = None
+    fx_rate = None  # spot rate, used for response-time egress conversion
+    fx_rate_at_start = None  # historical rate, used for ingress conversion
     amount_native = amount
     if user_currency and user_currency != native_currency:
-        fx_rate = _fx_get_rate()  # USD → KRW (e.g., 1380)
-        if not fx_rate or fx_rate <= 0:
+        fx_rate = _fx_get_rate()  # USD → KRW spot (e.g., 1380)
+        fx_rate_at_start = _fx_get_rate_at(start)
+        if not fx_rate or fx_rate <= 0 or not fx_rate_at_start or fx_rate_at_start <= 0:
             return _error(
                 "DATA_UNAVAILABLE",
                 "환율 정보를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
                 http=503,
             )
         if user_currency == "KRW" and native_currency == "USD":
-            amount_native = amount / fx_rate
+            amount_native = amount / fx_rate_at_start
         elif user_currency == "USD" and native_currency == "KRW":
-            amount_native = amount * fx_rate
+            amount_native = amount * fx_rate_at_start
 
     # ── Core simulation ───────────────────────────────────────────
     chart_data, invested_total, shares_total, first_buy_price, first_buy_date = \
@@ -736,9 +746,11 @@ def _to_user_ccy(value_native: float, user_ccy: str | None, native_ccy: str, fx_
     """Convert a native-currency amount into the user-facing currency.
 
     - If user did not specify a currency, or it matches native, return as-is.
-    - KRW↔USD conversion uses the current USD/KRW rate from fx_service.
-      (See TODO(fx-historical) near the parsing block for the caveat about
-      point-in-time rates.)
+    - KRW↔USD conversion uses the *current* (spot) USD/KRW rate from
+      fx_service for value egress — i.e. "what is this worth in your
+      currency right now". For amount ingress (the user's historical
+      stake → native shares) the route applies the historical rate via
+      ``fx_service.get_rate_at(start)`` instead.
     """
     if not user_ccy or user_ccy == native_ccy or not fx_rate or fx_rate <= 0:
         return value_native
