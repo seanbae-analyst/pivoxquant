@@ -542,7 +542,13 @@ def _build_positions_list():
 
         out.append({
             "id": str(p.id),
+            # 2026-05-02: emit both `symbol` (frontend-shape rename used
+            # by /portfolio v2) and `ticker` (legacy key still read by
+            # /detail access guard, /home v1 holding tables, /signals
+            # widgets, /risk concentration aggregator). Single source of
+            # truth on the backend, all consumers keep working.
             "symbol": p.ticker,
+            "ticker": p.ticker,
             "name": name,
             "side": "Long",  # short positions not represented in DB
             "shares": p.shares,
