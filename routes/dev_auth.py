@@ -7,6 +7,7 @@ Security:
   - The route itself validates the shared secret from the request body.
 """
 
+import hmac
 import os
 import logging
 
@@ -33,7 +34,8 @@ def dev_login():
         return jsonify({"error": "Dev login disabled"}), 404
 
     body = request.get_json(silent=True) or {}
-    if body.get("secret") != secret:
+    # SEC-003: timing-safe comparison to prevent secret discovery via response-time side channel.
+    if not hmac.compare_digest(str(body.get("secret") or ""), secret):
         logger.warning("dev-login: invalid secret attempt")
         return jsonify({"error": "Invalid secret"}), 401
 
@@ -70,14 +72,21 @@ def dev_upgrade():
         return jsonify({"error": "Dev endpoints disabled"}), 404
 
     body = request.get_json(silent=True) or {}
-    if body.get("secret") != secret:
+    # SEC-003: timing-safe comparison to prevent secret discovery via response-time side channel.
+    if not hmac.compare_digest(str(body.get("secret") or ""), secret):
         logger.warning("dev-upgrade: invalid secret attempt")
         return jsonify({"error": "Invalid secret"}), 401
 
+    # SEC-003: restrict the upgradeable target to the dev test domain so a leaked
+    # DEV_LOGIN_SECRET cannot be turned into a free tier-upgrade for arbitrary
+    # real user emails. Test fixtures use *@pivoxquant.dev.
     email = (body.get("email") or "").strip().lower()
     tier = (body.get("tier") or "premium").strip().lower()
     if not email:
         return jsonify({"error": "email required"}), 400
+    if not email.endswith("@pivoxquant.dev"):
+        logger.warning("dev-upgrade: rejected non-dev email %s", email)
+        return jsonify({"error": "email must be a @pivoxquant.dev test address"}), 400
     if tier not in ("free", "pro", "premium"):
         return jsonify({"error": "tier must be free|pro|premium"}), 400
 

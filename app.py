@@ -958,7 +958,16 @@ def _init_scheduler(app):
                 logger.error(f"Persona snapshot weekly failed: {e}")
 
     sched = BackgroundScheduler(timezone="UTC")
-    sched.add_job(_scheduled_refresh, "interval", minutes=3, id="refresh")
+    # PERF-001: cap concurrent runs and coalesce missed runs so a slow refresh
+    # cannot stack up identical jobs on the scheduler thread pool.
+    sched.add_job(
+        _scheduled_refresh,
+        "interval",
+        minutes=3,
+        id="refresh",
+        max_instances=1,
+        coalesce=True,
+    )
     # Sunday 08:00 KST — 주간 맥킨지 스타일 PDF 메모 (Pro+).
     sched.add_job(
         _scheduled_weekly_memo,

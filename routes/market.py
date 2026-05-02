@@ -167,7 +167,10 @@ def search_stocks():
 
 
 @market_bp.route("/lookup/<ticker>")
+@api_auth
 def lookup_ticker(ticker):
+    # SEC-009: require an authenticated session before exposing the upstream
+    # quick-lookup (which can fan out to FMP/Alpaca and burn quota).
     result = fetcher.quick_lookup(ticker.strip().upper())
     if result:
         return jsonify(result)

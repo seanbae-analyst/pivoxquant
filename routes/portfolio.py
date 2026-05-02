@@ -226,8 +226,13 @@ def add_position():
         cost = float(d.get("avg_cost") or 0)
     except (TypeError, ValueError):
         return jsonify({"error": "Shares and average cost must be numbers"}), 400
-    if not ticker or shares <= 0 or cost <= 0:
-        return jsonify({"error": "Ticker, shares, and average cost required"}), 400
+    # SEC-004: Position.ticker is db.String(20). Reject before SQL so the DB
+    # never raises DataError (which would have bubbled up via the leaky
+    # f-string error response).
+    if not ticker or len(ticker) > 20:
+        return jsonify({"error": "Invalid ticker"}), 400
+    if shares <= 0 or cost <= 0:
+        return jsonify({"error": "Shares and average cost required"}), 400
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
     try:
@@ -254,7 +259,7 @@ def add_position():
     except Exception as e:
         db.session.rollback()
         logger.exception("add_position DB commit failed")
-        return jsonify({"error": f"Failed to save position: {e}"}), 500
+        return jsonify({"error": "Failed to save position"}), 500
 
     # Warm the signal cache in the background — see _cache_ticker_async.
     _cache_ticker_async(
@@ -373,7 +378,10 @@ def buy_new_position():
     ticker = (d.get("ticker") or "").strip().upper()
     shares = float(d.get("shares") or 0)
     price = float(d.get("price") or 0)
-    if not ticker or shares <= 0 or price <= 0:
+    # SEC-004: Position.ticker is db.String(20); validate before persisting.
+    if not ticker or len(ticker) > 20:
+        return jsonify({"error": "Invalid ticker"}), 400
+    if shares <= 0 or price <= 0:
         return jsonify({"error": "Ticker, shares, and price required"}), 400
 
     cost = shares * price
@@ -428,6 +436,12 @@ def sell_position(pid):
     d = request.get_json() or {}
     sell_shares = float(d.get("shares") or p.shares)
     sell_price = float(d.get("price") or 0)
+
+    # SEC-001: reject non-positive share counts. `float(d.get("shares") or p.shares)`
+    # passes negative numbers through (negative is truthy), which would invert the
+    # sign of proceeds/PnL and could be abused to credit the user.
+    if sell_shares <= 0:
+        return jsonify({"error": "Shares must be positive"}), 400
 
     cached = cache_service.get_signal(p.ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
@@ -626,7 +640,7 @@ def list_positions_alias():
         return jsonify({"positions": _build_positions_list()})
     except Exception as e:
         logger.exception("list_positions_alias failed")
-        return jsonify({"error": f"Failed to load positions: {e}"}), 500
+        return jsonify({"error": "Failed to load positions"}), 500
 
 
 @portfolio_bp.route("/summary", methods=["GET"])
@@ -711,7 +725,7 @@ def portfolio_summary_alias():
         })
     except Exception as e:
         logger.exception("portfolio_summary_alias failed")
-        return jsonify({"error": f"Failed to load summary: {e}"}), 500
+        return jsonify({"error": "Failed to load summary"}), 500
 
 
 @portfolio_bp.route("/trades", methods=["GET"])
@@ -747,7 +761,7 @@ def list_trades_alias():
         return jsonify({"trades": trades})
     except Exception as e:
         logger.exception("list_trades_alias failed")
-        return jsonify({"error": f"Failed to load trades: {e}"}), 500
+        return jsonify({"error": "Failed to load trades"}), 500
 
 
 @portfolio_bp.route("/positions", methods=["POST"])
@@ -809,7 +823,7 @@ def create_position_alias():
     except Exception as e:
         db.session.rollback()
         logger.exception("create_position_alias commit failed")
-        return jsonify({"error": f"Failed to save position: {e}"}), 500
+        return jsonify({"error": "Failed to save position"}), 500
 
     _cache_ticker_async(
         current_app._get_current_object(),
@@ -858,7 +872,7 @@ def patch_position_alias(pid):
     except Exception as e:
         db.session.rollback()
         logger.exception("patch_position_alias failed")
-        return jsonify({"error": f"Failed to update: {e}"}), 500
+        return jsonify({"error": "Failed to update"}), 500
     return jsonify({"ok": True, "id": str(p.id)})
 
 
@@ -875,7 +889,7 @@ def delete_position_alias(pid):
     except Exception as e:
         db.session.rollback()
         logger.exception("delete_position_alias failed")
-        return jsonify({"error": f"Failed to delete: {e}"}), 500
+        return jsonify({"error": "Failed to delete"}), 500
     return jsonify({"ok": True})
 
 
@@ -940,7 +954,7 @@ def create_trade_alias():
         except Exception as e:
             db.session.rollback()
             logger.exception("create_trade_alias buy failed")
-            return jsonify({"error": f"Failed to record trade: {e}"}), 500
+            return jsonify({"error": "Failed to record trade"}), 500
         return jsonify({
             "ok": True,
             "action": "buy",
@@ -982,7 +996,7 @@ def create_trade_alias():
     except Exception as e:
         db.session.rollback()
         logger.exception("create_trade_alias sell failed")
-        return jsonify({"error": f"Failed to record trade: {e}"}), 500
+        return jsonify({"error": "Failed to record trade"}), 500
     return jsonify({
         "ok": True,
         "action": "sell",

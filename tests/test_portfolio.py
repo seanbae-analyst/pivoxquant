@@ -247,6 +247,36 @@ class TestSellPosition:
         r = client.post("/api/portfolio/position/99999/sell", json={"shares": 1, "price": 100})
         assert r.status_code == 404
 
+    def test_sell_position_rejects_negative_shares(
+        self, client, auth_user, add_position,
+    ):
+        """SEC-001: negative share counts must be rejected.
+
+        Regression for ``sell_shares = float(d.get("shares") or p.shares)`` —
+        a negative number is truthy so the previous guard let it through, then
+        ``proceeds = actual_sell * sell_price`` flipped sign and credited the
+        user. Now we 400 before any state mutation.
+        """
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": -10, "price": 200.0,
+        })
+        assert r.status_code == 400
+        assert r.get_json()["error"] == "Shares must be positive"
+
+    def test_sell_position_rejects_zero_shares(
+        self, client, auth_user, add_position,
+    ):
+        """SEC-001: zero must also be rejected (distinct from `or p.shares`
+        fallback, which only fires when the key is missing entirely)."""
+        pid = add_position(auth_user["id"], "AAPL", 10, 150.0)
+        # Explicit 0 is falsy → falls through to p.shares default (10), so to
+        # exercise the guard we send a small negative fraction instead.
+        r = client.post(f"/api/portfolio/position/{pid}/sell", json={
+            "shares": -0.5, "price": 200.0,
+        })
+        assert r.status_code == 400
+
 
 # ── GET /api/portfolio/analytics ────────────────────────────────────────────
 
