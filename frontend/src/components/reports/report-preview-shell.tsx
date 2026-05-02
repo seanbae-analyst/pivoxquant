@@ -83,12 +83,15 @@ export function ReportPreviewShell<TData>({
       return <EmptyState type={type} reason={emptyReason} />;
     }
 
-    // Backend `data_preview` is `Record<string, unknown> | null` — we
-    // hand it to the template renderer as the template-specific data
-    // shape. If the preview snapshot is missing/empty, pass `undefined`
-    // so the template uses its own DEFAULT (template-level fallback,
-    // not a sample-data fallback in user code).
-    const preview = latest.data_preview;
+    // Backend artifacts list emits the persisted blob under the `data`
+    // key (models/artifact.py::to_dict). The earlier shape `data_preview`
+    // was a never-shipped field name — without this fallback the shell
+    // always thought there was no preview snapshot and templates fell
+    // back to their hardcoded SAMPLE data (e.g. PLTR for dd_checklist).
+    // Read both keys so any future serializer rename keeps working.
+    type LatestExtra = { data?: Record<string, unknown> | null };
+    const latestExt = latest as typeof latest & LatestExtra;
+    const preview = latestExt.data_preview ?? latestExt.data ?? null;
     const data =
       preview && Object.keys(preview).length > 0
         ? (preview as unknown as TData)
