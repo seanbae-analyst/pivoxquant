@@ -641,6 +641,8 @@ class KPIDashboardService:
 
     def run_daily(self, target_date: date | None = None) -> dict[str, Any]:
         """Cron target — 08:00 KST daily. Pro+ only."""
+        from services.artifacts import iter_users_chunked
+
         target_date = target_date or date.today()
 
         paid_users = (
@@ -650,7 +652,7 @@ class KPIDashboardService:
         )
 
         successes = failures = skipped = 0
-        for user in paid_users:
+        for user in iter_users_chunked(paid_users, label="kpi_dashboard.daily"):
             try:
                 result = self.run_for_user(user, target_date=target_date)
                 if result is None:

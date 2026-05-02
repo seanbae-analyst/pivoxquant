@@ -696,6 +696,8 @@ class SelfAuditService:
 
     def run_quarterly(self, quarter_end: date | None = None) -> dict[str, Any]:
         """Cron — quarter +7 days 08:00 KST. Premium only."""
+        from services.artifacts import iter_users_chunked
+
         quarter_end = quarter_end or date.today()
 
         users = (
@@ -705,7 +707,7 @@ class SelfAuditService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="self_audit.quarterly"):
             try:
                 result = self.run_for_user(user, quarter_end=quarter_end)
                 if result is None:

@@ -1453,9 +1453,13 @@ class EarningsPreBriefService:
         skipped = 0
         attempted = 0
 
+        # Chunk per-row PDF rendering so WeasyPrint memory is released
+        # between batches. See services/artifacts/__init__.py.
+        from services.artifacts import iter_users_chunked
+
         # Cache user objects so we don't re-query for every row.
         user_cache: dict[int, User] = {}
-        for row in in_window:
+        for row in iter_users_chunked(in_window, label="earnings_prebrief.scan"):
             uid = row["user_id"]
             if uid not in user_cache:
                 u = db.session.get(User, uid)
@@ -1650,7 +1654,14 @@ class EarningsPreBriefService:
         ticker_total = 0
         failed = 0
 
-        for uid, rows in by_user.items():
+        # Chunk over user-grouped rows so multiple PDFs per user release
+        # WeasyPrint memory between batches. See services/artifacts/__init__.py.
+        from services.artifacts import iter_users_chunked
+
+        user_groups = list(by_user.items())
+        for uid, rows in iter_users_chunked(
+            user_groups, label="earnings_prebrief.scan_digest",
+        ):
             user = db.session.get(User, uid)
             if user is None:
                 continue

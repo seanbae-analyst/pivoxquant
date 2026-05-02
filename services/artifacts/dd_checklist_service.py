@@ -505,6 +505,8 @@ class DDChecklistService:
 
     def run_daily(self) -> dict[str, Any]:
         """Cron — 08:00 KST daily. Pro+ only."""
+        from services.artifacts import iter_users_chunked
+
         users = (
             User.query
             .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
@@ -512,7 +514,7 @@ class DDChecklistService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="dd_checklist.daily"):
             try:
                 result = self.run_for_user(user)
                 if result is None:

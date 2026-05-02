@@ -1679,6 +1679,8 @@ class WeeklyMemoService:
 
     def run_weekly(self, target_date: date | None = None) -> dict[str, Any]:
         """Cron target — Sunday 08:00 KST. Pro+ users only."""
+        from services.artifacts import iter_users_chunked
+
         target_date = target_date or date.today()
 
         paid_users = (
@@ -1691,7 +1693,7 @@ class WeeklyMemoService:
         failures = 0
         skipped = 0
 
-        for user in paid_users:
+        for user in iter_users_chunked(paid_users, label="weekly_memo.weekly"):
             try:
                 result = self.run_for_user(user, target_date=target_date)
                 if result is None:

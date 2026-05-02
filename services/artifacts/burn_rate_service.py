@@ -731,6 +731,8 @@ class BurnRateService:
 
     def run_monthly(self, target_month: date | None = None) -> dict[str, Any]:
         """Cron — 1st of each month 09:00 KST. Pro+ only."""
+        from services.artifacts import iter_users_chunked
+
         today = target_month or date.today()
 
         users = (
@@ -740,7 +742,7 @@ class BurnRateService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="burn_rate.monthly"):
             try:
                 result = self.run_for_user(user, target_month=today)
                 if result is None:

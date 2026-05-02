@@ -659,6 +659,8 @@ class CreditRatingService:
 
     def run_monthly(self, as_of: date | None = None) -> dict[str, Any]:
         """Cron — 15th of each month 09:00 KST. Pro+ only."""
+        from services.artifacts import iter_users_chunked
+
         as_of = as_of or date.today()
 
         users = (
@@ -668,7 +670,7 @@ class CreditRatingService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="credit_rating.monthly"):
             try:
                 result = self.run_for_user(user, as_of=as_of)
                 if result is None:

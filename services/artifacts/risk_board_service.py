@@ -1324,6 +1324,8 @@ class RiskBoardService:
 
     def run_monthly(self, now: datetime | None = None) -> dict[str, Any]:
         """Cron — day 15 09:30 KST. Premium only."""
+        from services.artifacts import iter_users_chunked
+
         users = (
             User.query
             .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
@@ -1331,7 +1333,7 @@ class RiskBoardService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="risk_board.monthly"):
             try:
                 result = self.run_for_user(user, trigger="monthly", now=now)
                 if result is None:
@@ -1409,13 +1411,15 @@ class RiskBoardService:
             return result
 
         result["triggered"] = True
+        from services.artifacts import iter_users_chunked
+
         users = (
             User.query
             .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
             .all()
         )
         notified = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="risk_board.vix_spike"):
             try:
                 r = self.run_for_user(user, trigger="vix_spike", now=now)
                 if r is not None:
