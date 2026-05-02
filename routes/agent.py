@@ -104,7 +104,15 @@ _ENTITLED_PLANS = frozenset({"premium_plus", "founding_lifetime"})
 
 
 def _entitled(user: Any) -> bool:
-    plan = getattr(user, "plan", None) or getattr(user, "subscription_tier", None)
+    # 2026-05-02: prefer `effective_tier` so DEV_FOUNDING_EMAILS dev
+    # backdoor + future Stripe overrides flow through cleanly.
+    # Falls through to raw `plan` / `subscription_tier` for legacy
+    # callers / tests that mock a User without the property.
+    plan = (
+        getattr(user, "effective_tier", None)
+        or getattr(user, "plan", None)
+        or getattr(user, "subscription_tier", None)
+    )
     return plan in _ENTITLED_PLANS
 
 
