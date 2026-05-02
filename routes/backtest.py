@@ -9,7 +9,7 @@ backtest_bp = Blueprint("backtest", __name__, url_prefix="/api")
 @api_auth
 @legal_scrub_response
 def run_backtest(ticker):
-    from backtester import Backtester
+    from services.quant.backtester import Backtester
     period = request.args.get("period", "1y")
     try:
         capital = float(request.args.get("capital", "10000"))

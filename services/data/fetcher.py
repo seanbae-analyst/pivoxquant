@@ -1436,7 +1436,7 @@ Reply ONLY in this exact JSON format, nothing else:
         if tickers is None:
             # Import discover pool from engine if not provided
             try:
-                from engine import QuantEngine
+                from services.quant.engine import QuantEngine
                 tickers = QuantEngine.DISCOVER_POOL
             except ImportError:
                 logger.warning("Cannot import QuantEngine for discover pool")

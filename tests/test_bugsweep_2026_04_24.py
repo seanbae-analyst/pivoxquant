@@ -65,7 +65,7 @@ class TestRiskLayersPartialFallback:
 
         with patch("routes.risk.fetcher") as m_fetcher, \
              patch("services.container.realtime") as m_rt, \
-             patch("risk_defense.RiskDefenseSystem.check_all", side_effect=_boom):
+             patch("services.quant.risk_defense.RiskDefenseSystem.check_all", side_effect=_boom):
             m_fetcher.get_price_history.side_effect = _hist
             m_fetcher.get_macro_data.return_value = {"vix": 18.5}
             m_rt.get_prices_batch.return_value = {
@@ -110,7 +110,7 @@ class TestRiskLayersPartialFallback:
         """Unit: RiskDefenseSystem._layer1_var must not raise when
         the weights vector length disagrees with the returns_matrix
         column count (tickers dropped by _build_returns_matrix)."""
-        from risk_defense import RiskDefenseSystem
+        from services.quant.risk_defense import RiskDefenseSystem
 
         rds = RiskDefenseSystem.from_profile("steady_accumulator")
         rng = np.random.default_rng(0)
@@ -137,7 +137,7 @@ class TestRiskLayersPartialFallback:
 
     def test_risk_defense_handles_zero_sum_weights(self):
         """Unit: all-zero weights must NOT divide by zero / NaN-out."""
-        from risk_defense import RiskDefenseSystem
+        from services.quant.risk_defense import RiskDefenseSystem
 
         rds = RiskDefenseSystem.from_profile("steady_accumulator")
         matrix = np.zeros((30, 2))  # trivially short but shaped OK
