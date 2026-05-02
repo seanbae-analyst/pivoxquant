@@ -131,13 +131,133 @@ function toCheckItems(items: DdItem[]) {
   }));
 }
 
-export function DdChecklist({ data = DEFAULT }: { data?: DdChecklistData }) {
+/**
+ * Backend dd_checklist payload shape (from services/artifacts/dd_checklist_service.py).
+ * 2026-05-02: backend produces a T+3 multi-position review, NOT the
+ * per-ticker IC pack the static template was originally drawn for.
+ * When the live payload arrives we render its actual contents instead
+ * of falling back to the PLTR sample.
+ */
+interface BackendPendingRow {
+  ticker: string;
+  shares: number;
+  avg_cost: number;
+  added_at?: string;
+  days_since?: number;
+}
+
+interface BackendDdChecklistData {
+  as_of?: string;
+  user_name?: string;
+  pending?: BackendPendingRow[];
+  disclaimer?: string;
+}
+
+function isBackendShape(data: unknown): data is BackendDdChecklistData {
+  return !!data
+    && typeof data === "object"
+    && "pending" in (data as Record<string, unknown>)
+    && Array.isArray((data as { pending?: unknown }).pending);
+}
+
+function fmtMoney(n: number, korean: boolean): string {
+  if (!isFinite(n)) return "—";
+  if (korean) return `₩${Math.round(n).toLocaleString()}`;
+  return `$${n.toFixed(2)}`;
+}
+
+/** Render the real backend payload — the user's actual pending positions. */
+function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
+  const pending = data.pending ?? [];
+  const asOf = data.as_of || "";
+  const name = data.user_name || "";
+  return (
+    <PdfPage>
+      <PdfHeader tier="pro" title="DD CHECKLIST" meta={asOf ? `${asOf}` : ""} />
+      <PdfGoldRule />
+      <PdfEyebrow>Due Diligence · T+3 Self-Review</PdfEyebrow>
+      <PdfCoverTitle size={36}>
+        {name ? `${name}, ` : ""}
+        오늘 점검할 <em>{pending.length}개</em> 종목.
+      </PdfCoverTitle>
+      <div style={{ marginTop: 28, fontFamily: "var(--pq-font-serif), Georgia, serif" }}>
+        <p style={{ fontSize: 14, color: "var(--r-ink-2, #555)", margin: 0, lineHeight: 1.65 }}>
+          3일 전에 추가하신 포지션. 메모를 다시 한 번 점검해 보세요.
+        </p>
+      </div>
+      <div style={{ marginTop: 32, borderTop: "1px solid var(--r-rule, #e5e0d6)" }}>
+        {pending.map((p, i) => {
+          const krw = (p.ticker || "").toUpperCase().endsWith(".KS")
+            || (p.ticker || "").toUpperCase().endsWith(".KQ");
+          return (
+            <div
+              key={`${p.ticker}-${i}`}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "120px 1fr 1fr auto",
+                gap: 16,
+                padding: "16px 0",
+                borderBottom: "1px solid var(--r-rule, #efeae0)",
+                fontFamily: "var(--pq-font-mono), 'JetBrains Mono', monospace",
+                alignItems: "baseline",
+              }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--r-gold-deep, #8b6f47)", letterSpacing: "0.04em" }}>
+                {p.ticker}
+              </span>
+              <span style={{ fontSize: 13, color: "var(--r-ink-2)" }}>
+                {p.shares} shares
+              </span>
+              <span style={{ fontSize: 13, color: "var(--r-ink-3)" }}>
+                avg {fmtMoney(p.avg_cost, krw)}
+              </span>
+              <span style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+                +{p.days_since ?? "—"}d
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <PdfDisclaimer cadence="daily" />
+    </PdfPage>
+  );
+}
+
+export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unknown }) {
+  // 2026-05-02: render real data when the shell provided the backend
+  // payload; the static PLTR sample only renders when there is *no*
+  // user data, and even then it's labelled SAMPLE so users don't
+  // confuse it with their own holdings.
+  if (isBackendShape(dataInput)) {
+    return <BackendDdChecklistView data={dataInput} />;
+  }
+  const data: DdChecklistData = (dataInput as DdChecklistData) || DEFAULT;
   return (
     <>
       {/* ═══════ PAGE 1 ═══════ */}
       <PdfPage>
         <PdfHeader tier="pro" title="DD CHECKLIST" meta={`${data.asOf} · 01/02`} />
         <PdfGoldRule />
+
+        {/* SAMPLE banner — never let the static PLTR mockup be mistaken
+            for the user's own holdings. Only renders when no backend
+            payload is available. */}
+        <div
+          style={{
+            margin: "12px 0 4px",
+            padding: "10px 14px",
+            background: "rgba(184, 149, 106, 0.08)",
+            border: "1px solid rgba(184, 149, 106, 0.4)",
+            borderRadius: 2,
+            fontFamily: "var(--pq-font-mono), 'JetBrains Mono', monospace",
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "var(--r-gold-deep, #8b6f47)",
+          }}
+        >
+          ▍ Sample · 양식 — 실제 보유 데이터 아님
+        </div>
 
         <PdfEyebrow>Due Diligence · Pre-Entry</PdfEyebrow>
         <PdfCoverTitle size={42}>
