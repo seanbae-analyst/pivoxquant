@@ -51,7 +51,7 @@ def _stream_interval() -> int:
 def stream():
     user_id = current_user.id
 
-    # ── SSE connection limit check ──
+    # ── SSE connection limit check (atomic check + increment) ──
     with _sse_lock:
         if _sse_connections[user_id] >= _MAX_SSE_PER_USER:
             return jsonify({
@@ -59,15 +59,21 @@ def stream():
                 "error_kr": "동시 SSE 연결 수가 초과되었습니다.",
                 "code": "SSE_LIMIT_EXCEEDED",
             }), 429
+        _sse_connections[user_id] += 1
 
-    positions = Position.query.filter_by(user_id=user_id).all()
-    tickers = [p.ticker for p in positions]
-    if not tickers:
-        return jsonify({"error": "No positions"}), 400
+    try:
+        positions = Position.query.filter_by(user_id=user_id).all()
+        tickers = [p.ticker for p in positions]
+        if not tickers:
+            with _sse_lock:
+                _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
+            return jsonify({"error": "No positions"}), 400
+    except Exception:
+        with _sse_lock:
+            _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
+        raise
 
     def generate():
-        with _sse_lock:
-            _sse_connections[user_id] += 1
         try:
             while True:
                 try:
@@ -97,7 +103,7 @@ def portfolio_stream():
     """SSE endpoint: streams portfolio price updates every 30 seconds."""
     user_id = current_user.id
 
-    # ── SSE connection limit check ──
+    # ── SSE connection limit check (atomic check + increment) ──
     with _sse_lock:
         if _sse_connections[user_id] >= _MAX_SSE_PER_USER:
             return jsonify({
@@ -105,15 +111,21 @@ def portfolio_stream():
                 "error_kr": "동시 SSE 연결 수가 초과되었습니다.",
                 "code": "SSE_LIMIT_EXCEEDED",
             }), 429
+        _sse_connections[user_id] += 1
 
-    positions = Position.query.filter_by(user_id=user_id).all()
-    tickers = [p.ticker for p in positions]
-    if not tickers:
-        return jsonify({"error": "No positions"}), 400
+    try:
+        positions = Position.query.filter_by(user_id=user_id).all()
+        tickers = [p.ticker for p in positions]
+        if not tickers:
+            with _sse_lock:
+                _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
+            return jsonify({"error": "No positions"}), 400
+    except Exception:
+        with _sse_lock:
+            _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
+        raise
 
     def generate():
-        with _sse_lock:
-            _sse_connections[user_id] += 1
         try:
             while True:
                 try:

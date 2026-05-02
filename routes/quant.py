@@ -47,6 +47,22 @@ def add_disclaimer(response_dict, disclaimer_type="analysis"):
     response_dict["disclaimer"] = DISCLAIMERS.get(disclaimer_type, DISCLAIMERS["analysis"])
     return response_dict
 
+# MEM-001: bounded cache helper. Pre-fix the largest user-keyed caches were
+# unbounded — they could grow without limit on a single long-running worker.
+# 1000-entry cap with oldest-eviction is enough for our user count and keeps
+# memory steady. TODO: convert remaining unbounded caches in this file.
+def _bounded_set(cache: dict, key, value, max_size: int = 1000):
+    if len(cache) >= max_size and key not in cache:
+        try:
+            oldest = min(cache, key=lambda k: cache[k].get("ts", 0))
+            cache.pop(oldest, None)
+        except Exception:
+            # If eviction fails for any reason, fall through and just set —
+            # better a slightly oversized cache than a broken response.
+            pass
+    cache[key] = value
+
+
 _ca_cache: dict = {}  # {user_id: {"data": ..., "ts": ...}}
 _sa_cache: dict = {}  # {user_id: {"data": ..., "ts": ...}}
 
@@ -74,7 +90,7 @@ def cross_asset():
     from quant_models import CrossAssetMomentum
     result = CrossAssetMomentum.analyze()
     if result:
-        _ca_cache[uid] = {"data": result, "ts": now}
+        _bounded_set(_ca_cache, uid, {"data": result, "ts": now})
         return jsonify(result)
     return jsonify({"error": "Insufficient data"}), 500
 
@@ -117,7 +133,7 @@ def stat_arb_analysis():
 
     payload = {"pairs": results, "count": len(results)}
     add_disclaimer(payload, "simulation")
-    _sa_cache[uid] = {"data": payload, "ts": now}
+    _bounded_set(_sa_cache, uid, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -311,7 +327,7 @@ def regime_report():
     }
 
     add_disclaimer(payload, "analysis")
-    _regime_cache[uid] = {"data": payload, "ts": now, "key": cache_key}
+    _bounded_set(_regime_cache, uid, {"data": payload, "ts": now, "key": cache_key})
     return jsonify(payload)
 
 
@@ -557,7 +573,7 @@ def portfolio_var():
     }
 
     add_disclaimer(payload, "analysis")
-    _var_cache[uid] = {"data": payload, "ts": now}
+    _bounded_set(_var_cache, uid, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -686,7 +702,7 @@ def portfolio_drawdown():
     }
 
     add_disclaimer(payload, "analysis")
-    _dd_cache[uid] = {"data": payload, "ts": now}
+    _bounded_set(_dd_cache, uid, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -994,7 +1010,7 @@ def benchmark_analytics():
     }
 
     add_disclaimer(payload, "analysis")
-    _bench_cache[uid] = {"data": payload, "ts": now, "key": cache_key}
+    _bounded_set(_bench_cache, uid, {"data": payload, "ts": now, "key": cache_key})
     return jsonify(payload)
 
 
@@ -1408,7 +1424,7 @@ def short_interest_signal(ticker):
     payload = {"ticker": ticker, "name": resolve_stock_name(ticker) or ticker, **result}
     add_disclaimer(payload, "indicator")
 
-    _si_cache[ticker] = {"data": payload, "ts": now}
+    _bounded_set(_si_cache, ticker, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -1978,7 +1994,7 @@ def risk_component_es():
     }
 
     add_disclaimer(payload, "analysis")
-    _ces_cache[uid] = {"data": payload, "ts": now}
+    _bounded_set(_ces_cache, uid, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2310,7 +2326,7 @@ def signal_disposition(ticker):
         "disclaimer": DISCLAIMERS["indicator"],
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2361,7 +2377,7 @@ def signal_ofi(ticker):
         "disclaimer": DISCLAIMERS["indicator"],
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2427,7 +2443,7 @@ def signal_sentiment_divergence(ticker):
         **result,
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2478,7 +2494,7 @@ def signal_anchoring(ticker):
         "disclaimer": DISCLAIMERS["indicator"],
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2548,7 +2564,7 @@ def signal_herding():
         "disclaimer": DISCLAIMERS["indicator"],
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
