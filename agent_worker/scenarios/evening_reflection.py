@@ -103,18 +103,24 @@ def _scan_forbidden(text_content: str) -> list[str]:
 
 
 def _persist_reflection_questions(engine: Engine, questions: list[str], raw: str) -> int:
-    """INSERT reflection questions (answers=null) into growth_reflections."""
+    """INSERT reflection questions (answers=null) into growth_reflections.
+
+    Worker scenarios run as the founder/system user (user_id=0).
+    Per SEC-005, growth_reflections is now scoped by user_id.
+    """
     today = date.today()
+    founder_uid = 0
     with engine.begin() as conn:
         row = conn.execute(
             text(
                 """
-                INSERT INTO growth_reflections (date, questions, raw_response, created_at)
-                VALUES (:date, :questions, :raw, :now)
+                INSERT INTO growth_reflections (user_id, date, questions, raw_response, created_at)
+                VALUES (:uid, :date, :questions, :raw, :now)
                 RETURNING id
                 """
             ),
             {
+                "uid": founder_uid,
                 "date": today,
                 "questions": json.dumps(questions, ensure_ascii=False),
                 "raw": raw,
