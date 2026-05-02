@@ -972,6 +972,7 @@ class BragCardService:
             try:
                 setattr(artefact, "share_token", token)
             except Exception:
+                logger.debug("silent-fallback: Set share_token attribute if the column exists on the model. | _persist", exc_info=True)
                 pass
             db.session.add(artefact)
 
@@ -994,6 +995,7 @@ class BragCardService:
             try:
                 setattr(artefact, "share_token", new_token)
             except Exception:
+                logger.debug("silent-fallback: _persist", exc_info=True)
                 pass
             db.session.add(artefact)
             db.session.commit()

@@ -1,5 +1,6 @@
 """Real-time price streaming routes."""
 import json
+import logging
 import time
 import threading
 from collections import defaultdict
@@ -10,6 +11,8 @@ from models import Position
 from services.container import realtime
 from services.market_status import get_market_status
 from .decorators import api_auth
+
+logger = logging.getLogger(__name__)
 
 realtime_bp = Blueprint("realtime", __name__, url_prefix="/api/realtime")
 
@@ -78,6 +81,7 @@ def stream():
                 yield ": heartbeat\n\n"
                 time.sleep(_stream_interval())
         except GeneratorExit:
+            logger.debug("silent-fallback: generate", exc_info=True)
             pass
         finally:
             with _sse_lock:
@@ -151,6 +155,7 @@ def portfolio_stream():
                 yield ": heartbeat\n\n"
                 time.sleep(_stream_interval())
         except GeneratorExit:
+            logger.debug("silent-fallback: generate", exc_info=True)
             pass
         finally:
             with _sse_lock:

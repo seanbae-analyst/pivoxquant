@@ -318,6 +318,7 @@ class KISWebSocketService:
             try:
                 loop.close()
             except Exception:
+                logger.debug("silent-fallback: _run_loop", exc_info=True)
                 pass
             self._loop = None
 
@@ -377,6 +378,7 @@ class KISWebSocketService:
         try:
             await asyncio.wait_for(self._stop_event.wait(), timeout=seconds)
         except asyncio.TimeoutError:
+            logger.debug("silent-fallback: _run_loop", exc_info=True)
             pass
 
     async def _receive_loop(self, ws):
@@ -388,6 +390,7 @@ class KISWebSocketService:
                 try:
                     msg = msg.decode("utf-8", errors="ignore")
                 except Exception:
+                    logger.debug("silent-fallback: _run_loop", exc_info=True)
                     continue
 
             if not msg:
@@ -418,6 +421,7 @@ class KISWebSocketService:
             try:
                 await ws.send(json.dumps(obj))
             except Exception:
+                logger.debug("silent-fallback: Mirror back the same frame — keeps the connection alive. | _run_loop", exc_info=True)
                 pass
             return
 

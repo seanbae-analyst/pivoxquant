@@ -111,6 +111,7 @@ def log_agent_request(
 
             db.session.rollback()
         except Exception:  # pragma: no cover — defensive cleanup
+            logger.debug("silent-fallback: log_agent_request", exc_info=True)
             pass
 
 
@@ -143,5 +144,6 @@ def purge_expired() -> int:
 
             db.session.rollback()
         except Exception:  # pragma: no cover
+            logger.debug("silent-fallback: purge_expired", exc_info=True)
             pass
         return 0

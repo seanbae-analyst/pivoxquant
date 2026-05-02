@@ -141,6 +141,7 @@ class FREDService:
             try:
                 val = float(raw_val)
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: _fetch_observations", exc_info=True)
                 continue
             cleaned.append({"date": obs.get("date"), "value": val})
 

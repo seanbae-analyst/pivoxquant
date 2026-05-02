@@ -197,6 +197,7 @@ class AutoTrader:
                     "daily_pnl_pct": round((float(acc.equity) - self._initial_equity) / self._initial_equity * 100, 2) if self._initial_equity > 0 else 0,
                 }
             except Exception:
+                logger.debug("silent-fallback: get_status", exc_info=True)
                 pass
 
         # Korean paper trading stats
@@ -314,6 +315,7 @@ class AutoTrader:
                                     try:
                                         self._check_exits()
                                     except Exception:
+                                        logger.debug("silent-fallback: _run_loop", exc_info=True)
                                         pass
                                 if len(self._positions) < self.MAX_POSITIONS:
                                     self._scan_for_entries()
@@ -532,6 +534,7 @@ class AutoTrader:
                                 )
                                 signal_info["adaptive_params"] = ap
                         except Exception:
+                            logger.debug("silent-fallback: Attempt to attach adaptive params preview | _scan_for_entries", exc_info=True)
                             pass
                         self._propose_trade(
                             symbol, signal_info, "BUY", shares, price,
@@ -765,6 +768,7 @@ class AutoTrader:
             req = StockLatestBarRequest(symbol_or_symbols=symbols)
             bars = data_client.get_stock_latest_bar(req)
         except Exception:
+            logger.debug("silent-fallback: _check_position_circuit_breaker", exc_info=True)
             return
 
         for symbol in list(self._positions.keys()):
@@ -813,6 +817,7 @@ class AutoTrader:
                     self._simulate_sell_kr(code, pos["shares"], current_price, f"CIRCUIT BREAKER ({pnl_pct:.1f}%)")
                     self._circuit_breaker_state["position_stops"] += 1
             except Exception:
+                logger.debug("silent-fallback: _check_position_circuit_breaker_kr", exc_info=True)
                 pass
 
     def _check_portfolio_circuit_breaker(self):
@@ -829,6 +834,7 @@ class AutoTrader:
                 acc = self.api.get_account()
                 current_equity = float(acc.equity)
             except Exception:
+                logger.debug("silent-fallback: _check_portfolio_circuit_breaker", exc_info=True)
                 return
         else:
             current_equity = self._initial_equity if self._initial_equity else 0

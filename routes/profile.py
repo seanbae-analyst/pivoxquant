@@ -670,6 +670,7 @@ def _parse_window(raw: str | None) -> int | None:
     try:
         val = int(raw) if raw is not None else _DEFAULT_WINDOW
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _parse_window", exc_info=True)
         return None
     return val if val in VALID_WINDOWS else None
 

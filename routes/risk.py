@@ -139,6 +139,7 @@ def _portfolio_snapshot():
         macro = fetcher.get_macro_data()
         vix = macro.get("vix")
     except Exception:
+        logger.debug("silent-fallback: _portfolio_snapshot", exc_info=True)
         pass
 
     state = {
@@ -632,6 +633,7 @@ def risk_concentration():
                     if isinstance(sec, str) and sec.strip():
                         return sec.strip()
             except Exception:
+                logger.debug("silent-fallback: _resolve_sector", exc_info=True)
                 pass
             return "Unclassified"
 

@@ -225,6 +225,7 @@ def query() -> Any:
                 "message": "Journal Companion temporarily offline (ops kill switch).",
             }), 503
     except Exception:  # pragma: no cover — import-time safety
+        logger.debug("silent-fallback: closed on DB outage so refusal > leaky response. | query", exc_info=True)
         pass
 
     if not current_user.is_authenticated:
@@ -431,6 +432,7 @@ def waitlist() -> Any:
             from extensions import db as _db
             _db.session.rollback()
         except Exception:
+            logger.debug("silent-fallback: waitlist", exc_info=True)
             pass
         return jsonify({
             "error": "waitlist-store-failed",

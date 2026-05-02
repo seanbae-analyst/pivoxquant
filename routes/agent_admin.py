@@ -123,6 +123,7 @@ def is_agent_killed() -> bool:
         try:
             db.session.rollback()
         except Exception:
+            logger.debug("silent-fallback: is_agent_killed", exc_info=True)
             pass
         # Fail closed — better to refuse than to leak responses while
         # the operator's kill signal is stuck.

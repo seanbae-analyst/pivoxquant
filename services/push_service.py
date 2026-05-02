@@ -13,6 +13,7 @@ def notify_alert(user_id: int, alert_data: dict):
     try:
         from routes.push import send_push_to_user
     except ImportError:
+        logger.debug("silent-fallback: notify_alert", exc_info=True)
         return
 
     sig = alert_data.get("signal", "")
@@ -35,6 +36,7 @@ def notify_trade(user_id: int, ticker: str, action: str, shares: int, price: flo
     try:
         from routes.push import send_push_to_user
     except ImportError:
+        logger.debug("silent-fallback: notify_trade", exc_info=True)
         return
 
     title = "PivoxQuant — Trade Executed"
@@ -48,6 +50,7 @@ def notify_insight(user_id: int, title_text: str, body_text: str):
     try:
         from routes.push import send_push_to_user
     except ImportError:
+        logger.debug("silent-fallback: notify_insight", exc_info=True)
         return
 
     send_push_to_user(

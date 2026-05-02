@@ -70,6 +70,7 @@ def _compute_user_return(user_id: int, week_ending: date) -> tuple[float | None,
             invested += float(r.total_value or 0.0)
             pnl += float(r.pnl or 0.0)
         except (TypeError, ValueError):
+            logger.debug("silent-fallback: _compute_user_return", exc_info=True)
             continue
     if invested <= 0:
         return None, len(rows)

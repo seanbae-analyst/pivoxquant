@@ -71,4 +71,5 @@ def maybe_generate(user_id: int, r: dict):
         from services.push_service import notify_alert
         notify_alert(user_id, {"signal": sig, "ticker": ticker, "message": msg})
     except Exception:
+        logger.debug("silent-fallback: Send push notification (no-ops if not configured) | maybe_generate", exc_info=True)
         pass

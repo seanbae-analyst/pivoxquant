@@ -44,6 +44,7 @@ def _resolve(ticker: str) -> str | None:
         from services.serializers import _resolve_display_name
         return _resolve_display_name(ticker)
     except Exception:
+        logger.debug("silent-fallback: _resolve", exc_info=True)
         return None
 
 

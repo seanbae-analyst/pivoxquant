@@ -156,6 +156,7 @@ def _parse_date(s: str) -> date | None:
     try:
         return datetime.strptime(s.strip(), "%Y-%m-%d").date()
     except (ValueError, TypeError):
+        logger.debug("silent-fallback: _parse_date", exc_info=True)
         return None
 
 
@@ -178,6 +179,7 @@ def _safe_float(v) -> float | None:
             return None
         return f
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _safe_float", exc_info=True)
         return None
 
 

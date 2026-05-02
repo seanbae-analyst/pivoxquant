@@ -124,6 +124,7 @@ def _load_font(ImageFont, *candidates: str, size: int):
     try:
         return ImageFont.load_default()
     except Exception:
+        logger.debug("silent-fallback: Last-resort fallback — PIL's bundled bitmap. No size control | _load_font", exc_info=True)
         return None
 
 

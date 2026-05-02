@@ -36,6 +36,9 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _is_korean(ticker: str) -> bool:
@@ -53,6 +56,7 @@ def _kis_name(ticker: str) -> Optional[str]:
         from services.data import kis_market_adapter as kma
         return kma.get_name(ticker)
     except Exception:
+        logger.debug("silent-fallback: _kis_name", exc_info=True)
         return None
 
 
@@ -81,6 +85,7 @@ def resolve_stock_name(ticker: str) -> Optional[str]:
         from services import us_stock_registry
         return us_stock_registry.get_name(t)
     except Exception:
+        logger.debug("silent-fallback: resolve_stock_name", exc_info=True)
         # Registries load JSON at import time; any import/IO failure here
         # should never break a response. Swallow and fall through to None
         # so callers use the ticker fallback.
@@ -105,6 +110,7 @@ def lookup_name_from_signal_cache(ticker: str) -> Optional[str]:
         from extensions import db
         from models import SignalCache
     except Exception:
+        logger.debug("silent-fallback: lookup_name_from_signal_cache", exc_info=True)
         return None
     try:
         row = db.session.get(SignalCache, ticker)
@@ -114,5 +120,6 @@ def lookup_name_from_signal_cache(ticker: str) -> Optional[str]:
         if isinstance(name, str) and name.strip():
             return name.strip()
     except Exception:
+        logger.debug("silent-fallback: lookup_name_from_signal_cache", exc_info=True)
         return None
     return None

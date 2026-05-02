@@ -628,6 +628,7 @@ def portfolio_summary_alias():
             try:
                 today_pnl_usd += mv_usd * (float(chg_pct) / 100.0)
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: portfolio_summary_alias", exc_info=True)
                 pass
 
         today_pnl_pct = (today_pnl_usd / total_nav_usd * 100) if total_nav_usd else 0
@@ -966,6 +967,7 @@ def portfolio_history():
                     all_values[ds] = 0
                 all_values[ds] += float(row["Close"]) * p.shares
         except Exception:
+            logger.debug("silent-fallback: portfolio_history", exc_info=True)
             pass
 
     if not all_values:
@@ -981,6 +983,7 @@ def portfolio_history():
         if today_val > 0:
             all_values[today] = today_val
     except Exception:
+        logger.debug("silent-fallback: portfolio_history", exc_info=True)
         pass
 
     data = [{"date": k, "value": round(v, 2)} for k, v in sorted(all_values.items())]

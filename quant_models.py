@@ -543,6 +543,7 @@ class CrossAssetMomentum:
                     "trend": "up" if ret_1m > 0 else "down",
                 }
             except Exception:
+                logger.debug("silent-fallback: analyze", exc_info=True)
                 pass
 
         if len(data) < 3:

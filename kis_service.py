@@ -201,6 +201,7 @@ class KISService:
                     }
             return None
         except Exception:
+            logger.debug("silent-fallback: get_current_price", exc_info=True)
             return None
 
     def get_index_price(self, index_code: str):
@@ -310,6 +311,7 @@ class KISService:
                         headers=headers, params=params, timeout=10,
                     )
                 except Exception:
+                    logger.debug("silent-fallback: get_index_history", exc_info=True)
                     continue
                 if not r.ok:
                     continue
@@ -327,6 +329,7 @@ class KISService:
                     try:
                         close = float(close)
                     except (TypeError, ValueError):
+                        logger.debug("silent-fallback: get_index_history", exc_info=True)
                         continue
                     if close <= 0:
                         continue

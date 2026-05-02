@@ -178,6 +178,7 @@ def _ytd_return(positions: list[Position]) -> Optional[float]:
                 continue
             rets.append((last / first - 1) * 100)
         except Exception:
+            logger.debug("silent-fallback: _ytd_return", exc_info=True)
             continue
     if not rets:
         return None
@@ -212,6 +213,7 @@ def _equal_weight_daily_returns(positions: list[Position],
             if rets:
                 ticker_rets.append(rets)
         except Exception:
+            logger.debug("silent-fallback: _equal_weight_daily_returns", exc_info=True)
             continue
     if not ticker_rets:
         return []
@@ -285,6 +287,7 @@ def _turnover_ratio(user_id: int, portfolio_value: Optional[float]
         try:
             total += abs(float(r.total_value or 0))
         except Exception:
+            logger.debug("silent-fallback: _turnover_ratio", exc_info=True)
             continue
     return round(total / portfolio_value, 3)
 

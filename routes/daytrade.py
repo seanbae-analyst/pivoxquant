@@ -45,6 +45,7 @@ def scan():
                     if t.isdigit() and len(t) == 6:
                         held_kr.add(t)
             except Exception:
+                logger.debug("silent-fallback: scan", exc_info=True)
                 pass
             kr_results = kis.scan_momentum(held_tickers=held_kr) or []
             results.extend(kr_results)
@@ -211,6 +212,7 @@ def stream():
                     try:
                         prices.update(daytrade.get_latest_prices() or {})
                     except Exception:
+                        logger.debug("silent-fallback: generate", exc_info=True)
                         pass
                 try:
                     from kis_service import KISService
@@ -222,6 +224,7 @@ def stream():
                                 prices[code] = {"price": p["price"], "change_pct": p["change_pct"]}
                             time.sleep(0.55)
                 except Exception:
+                    logger.debug("silent-fallback: generate", exc_info=True)
                     pass
                 yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
             except Exception as e:

@@ -271,6 +271,7 @@ def _parse_earnings_row_datetime(row: dict) -> Optional[datetime]:
     try:
         d = date.fromisoformat(d_str)
     except ValueError:
+        logger.debug("silent-fallback: _parse_earnings_row_datetime", exc_info=True)
         return None
 
     t_raw = str(row.get("time") or "").strip().lower()
@@ -336,6 +337,7 @@ def _derive_consensus_revenue(calendar_row: dict) -> Optional[float]:
     try:
         rev_f = float(rev) if rev is not None else None
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _derive_consensus_revenue", exc_info=True)
         return None
     if rev_f is None or rev_f <= 0:
         return None
@@ -352,6 +354,7 @@ def _build_surprise_history(eps_rows: list[dict]) -> list[dict[str, Any]]:
             actual = float(row.get("actualEarningResult") or row.get("actualEPS") or 0)
             est = float(row.get("estimatedEarning") or row.get("epsEstimated") or 0)
         except (TypeError, ValueError):
+            logger.debug("silent-fallback: _build_surprise_history", exc_info=True)
             continue
         d_str = str(row.get("date", ""))[:10]
         if est == 0:
@@ -869,6 +872,7 @@ class EarningsPreBriefService:
                 try:
                     whisper_str = f"${float(eps_high):.2f}"
                 except (TypeError, ValueError):
+                    logger.debug("silent-fallback: _build_consensus_rows", exc_info=True)
                     pass
             rows.append({
                 "metric":        "EPS (Consensus)",
@@ -957,6 +961,7 @@ class EarningsPreBriefService:
                     if h.get("surprise_pct") is not None:
                         sps.append(float(h["surprise_pct"]))
                 except (TypeError, ValueError):
+                    logger.debug("silent-fallback: _derive_quant_signal", exc_info=True)
                     continue
             if sps:
                 avg = sum(sps) / len(sps)
@@ -993,6 +998,7 @@ class EarningsPreBriefService:
             try:
                 return f"±3% sensitivity · beat ${float(beat):,.0f} · miss ${float(miss):,.0f}"
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: _build_factor_breakdown", exc_info=True)
                 pass
         return "Composite signal · observation only"
 

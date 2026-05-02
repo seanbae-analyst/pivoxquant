@@ -285,6 +285,7 @@ def _run_migrations(app):
                         "SELECT pg_advisory_unlock(hashtext('pivoxquant_migrate'))"
                     ))
                 except Exception:  # pragma: no cover — best-effort cleanup
+                    logger.debug("silent-fallback: _run_migrations", exc_info=True)
                     pass
     else:
         # SQLite — single process, no contention possible.
@@ -505,6 +506,7 @@ def _do_migrations():
             db.session.commit()
             logger.info(f"Backfilled buy_fx_rate for {len(us_positions)} US positions (rate: {rate})")
     except Exception:
+        logger.debug("silent-fallback: _do_migrations", exc_info=True)
         pass
 
 

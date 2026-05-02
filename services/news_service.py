@@ -128,6 +128,7 @@ def _resolve_query(ticker: str) -> str:
         if name:
             return f"{name} 주가"
     except Exception:
+        logger.debug("silent-fallback: _resolve_query", exc_info=True)
         pass
     code = ticker.split(".")[0].strip()
     if code:

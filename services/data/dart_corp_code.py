@@ -232,6 +232,7 @@ def load_mapping(force: bool = False) -> dict[str, str]:
                     _mem_cache_ts = now  # treat as fresh for this process
                     return dict(_mem_cache)
             except (OSError, json.JSONDecodeError):
+                logger.debug("silent-fallback: load_mapping", exc_info=True)
                 pass
         return {}
 
@@ -280,4 +281,5 @@ def clear_cache() -> None:
         try:
             p.unlink()
         except OSError:
+            logger.debug("silent-fallback: clear_cache", exc_info=True)
             pass

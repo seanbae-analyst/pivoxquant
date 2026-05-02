@@ -132,6 +132,7 @@ def _safe_dividends(ticker: str) -> list[dict[str, Any]]:
                 out.append({"ex_date": ex_date, "amount": amt_f,
                             "pay_date": pay_date})
         except Exception:
+            logger.debug("silent-fallback: _safe_dividends", exc_info=True)
             continue
     out.sort(key=lambda x: x["ex_date"], reverse=True)
     return out

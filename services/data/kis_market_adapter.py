@@ -185,6 +185,7 @@ def get_history(ticker: str, period: str = "3mo") -> pd.DataFrame:
             try:
                 d = datetime.strptime(raw_date, "%Y%m%d")
             except ValueError:
+                logger.debug("silent-fallback: get_history", exc_info=True)
                 continue
             try:
                 rows.append({
@@ -196,6 +197,7 @@ def get_history(ticker: str, period: str = "3mo") -> pd.DataFrame:
                     "Volume": int(float(item.get("acml_vol", 0) or 0)),
                 })
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: get_history", exc_info=True)
                 continue
 
         if not rows:

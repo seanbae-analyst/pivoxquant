@@ -25,6 +25,7 @@ def _safe_growth(curr, prev):
         curr_f = float(curr)
         prev_f = float(prev)
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _safe_growth", exc_info=True)
         return None
     if prev_f == 0:
         return None

@@ -117,6 +117,7 @@ def _style_from_signal_or_sector(ticker: str, sector_canon: str) -> str:
             if isinstance(st, str) and st.strip():
                 return st.strip()
     except Exception:
+        logger.debug("silent-fallback: _style_from_signal_or_sector", exc_info=True)
         pass
     return _STYLE_SECTOR_MAP.get(sector_canon, "Growth")
 
@@ -498,6 +499,7 @@ class PortfolioSegmentService:
                     s_view["tone"] = "neg"
                     s_view["pct_display"] = f"{w:.1f}% / 35% lim"
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: _alloc_rows", exc_info=True)
                 pass
 
         geography = _alloc_rows(regions_raw)

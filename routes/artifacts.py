@@ -43,6 +43,9 @@ from services.name_resolver import resolve_stock_name
 
 from .decorators import api_auth, require_tier
 from security import artifact_rate_limit, general_rate_limit
+import logging
+
+logger = logging.getLogger(__name__)
 
 artifacts_bp = Blueprint("artifacts", __name__, url_prefix="/api/artifacts")
 
@@ -127,11 +130,13 @@ def _since_to_cutoff(since: str | None) -> datetime | None:
             days = int(since[:-1])
             return datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
     except ValueError:
+        logger.debug("silent-fallback: _since_to_cutoff", exc_info=True)
         return None
     # Fall-through: try to parse as ISO date ("2026-01-01")
     try:
         return datetime.fromisoformat(since)
     except ValueError:
+        logger.debug("silent-fallback: Fall-through: try to parse as ISO date ('2026-01-01') | _since_to_cutoff", exc_info=True)
         return None
 
 

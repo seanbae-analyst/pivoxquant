@@ -38,6 +38,7 @@ def _safe_float(v) -> float | None:
         f = float(s)
         return f if not _is_sentinel(f) else None
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _safe_float", exc_info=True)
         return None
 
 
@@ -86,6 +87,7 @@ def get_av_fundamentals(ticker: str) -> dict | None:
     try:
         d = r.json() or {}
     except Exception:
+        logger.debug("silent-fallback: get_av_fundamentals", exc_info=True)
         return None
 
     # Empty payload — AV returns {} for unknown symbols, ETFs, or rate-limited.

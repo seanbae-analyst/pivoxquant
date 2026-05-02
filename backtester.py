@@ -272,6 +272,7 @@ class Backtester:
                             if _vr_v8:
                                 _vol_regime = _vr_v8.get("regime", "NORMAL")
                         except Exception:
+                            logger.debug("silent-fallback: run", exc_info=True)
                             pass
 
                         _is_crisis = _vol_regime == "CRISIS"
@@ -641,7 +642,8 @@ class Backtester:
                     score += 8   # high CGO = selling pressure easing -> bullish
                 elif cgo < -0.15:
                     score -= 5   # deep underwater holders = reluctance to sell, potential overhang
-        except:
+        except Exception:
+            logger.debug("silent-fallback: Requires 252+ bars of closes + volumes for meaningful CGO ca | _calc_score", exc_info=True)
             pass
 
         # Order Flow Imbalance — Cont, Kukanov & Stoikov (2014)
@@ -658,7 +660,8 @@ class Backtester:
                     score += 6
                 elif pressure == "strong_selling":
                     score -= 6
-        except:
+        except Exception:
+            logger.debug("silent-fallback: Requires opens array; skipped if opens unavailable (backtest | _calc_score", exc_info=True)
             pass
 
         return max(0, min(100, score))

@@ -141,6 +141,7 @@ def _parse_iso(s: str | None) -> datetime | None:
             out = out.astimezone(out.tzinfo).replace(tzinfo=None)
         return out
     except (ValueError, TypeError):
+        logger.debug("silent-fallback: _parse_iso", exc_info=True)
         return None
 
 

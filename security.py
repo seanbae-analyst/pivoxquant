@@ -318,6 +318,7 @@ def init_security(app):
                             }), 401
                     return
             except (ValueError, TypeError):
+                logger.debug("silent-fallback: _enforce_session", exc_info=True)
                 pass
 
         if is_authenticated:

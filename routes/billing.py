@@ -135,6 +135,7 @@ def stripe_webhook():
         try:
             db.session.rollback()
         except Exception:
+            logger.debug("silent-fallback: stripe_webhook", exc_info=True)
             pass
         logger.exception(
             "Stripe webhook handler failed (event_type=%s, event_id=%s)",
@@ -264,6 +265,7 @@ def get_subscription():
             result["current_period_end"] = sub.get("current_period_end")
             result["cancel_at_period_end"] = sub.get("cancel_at_period_end", False)
         except stripe.StripeError:
+            logger.debug("silent-fallback: get_subscription", exc_info=True)
             pass
 
     return jsonify(result)

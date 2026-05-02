@@ -196,6 +196,7 @@ def _liquidity_score(positions: list[Position]) -> Optional[float]:
             weight = float(p.shares or 0) * float(p.avg_cost or 0)
             scores.append((s, max(weight, 1.0)))
         except Exception:
+            logger.debug("silent-fallback: _liquidity_score", exc_info=True)
             continue
     if not scores:
         return None
@@ -226,6 +227,7 @@ def _sharpe_and_dd(positions: list[Position]) -> tuple[Optional[float], Optional
             if rets:
                 ticker_rets.append(rets)
         except Exception:
+            logger.debug("silent-fallback: _sharpe_and_dd", exc_info=True)
             continue
     if not ticker_rets:
         return None, None
@@ -302,6 +304,7 @@ def _positions_mv(positions: list[Position]) -> float:
         try:
             total += float(p.shares or 0) * float(p.avg_cost or 0)
         except Exception:
+            logger.debug("silent-fallback: _positions_mv", exc_info=True)
             continue
     return total
 

@@ -479,6 +479,7 @@ def google_callback():
         try:
             db.session.rollback()
         except Exception:
+            logger.debug("silent-fallback: google_callback", exc_info=True)
             pass
         from urllib.parse import quote
         return redirect(
@@ -595,6 +596,7 @@ def kakao_callback():
         try:
             db.session.rollback()
         except Exception:
+            logger.debug("silent-fallback: kakao_callback", exc_info=True)
             pass
         from urllib.parse import quote
         return redirect(

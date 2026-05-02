@@ -79,6 +79,7 @@ def _safe_float(val: Any) -> float | None:
         f = float(s)
         return f if f != 0.0 else None
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _safe_float", exc_info=True)
         return None
 
 
@@ -111,6 +112,7 @@ def _rate_limit() -> None:
         from services.data import kis_market_adapter as kma
         kma._rate_limit()
     except Exception:
+        logger.debug("silent-fallback: _rate_limit", exc_info=True)
         # If adapter import fails, rely on KIS server-side throttling.
         pass
 

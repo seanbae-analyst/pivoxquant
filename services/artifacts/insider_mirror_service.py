@@ -304,6 +304,7 @@ def _trend_bucket(events: list[EventRow], weeks: int) -> list[dict[str, Any]]:
         try:
             d = date.fromisoformat(ev.transaction_date)
         except (ValueError, TypeError):
+            logger.debug("silent-fallback: _trend_bucket", exc_info=True)
             continue
         label = _week_label(d)
         if label in buckets:

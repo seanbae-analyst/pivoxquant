@@ -121,8 +121,10 @@ def _sector_for_ticker(ticker: str) -> str:
                 if sector:
                     return str(sector)
             except Exception:
+                logger.debug("silent-fallback: _sector_for_ticker", exc_info=True)
                 pass
     except Exception:
+        logger.debug("silent-fallback: _sector_for_ticker", exc_info=True)
         pass
     return "Unknown"
 

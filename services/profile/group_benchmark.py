@@ -365,6 +365,7 @@ def _aggregate_behavioral_sub_scores(user_ids: list[int]) -> dict[str, float]:
         try:
             row = compute_weekly_score(uid, persist=False)
         except Exception:
+            logger.debug("silent-fallback: _aggregate_behavioral_sub_scores", exc_info=True)
             continue
         sub = row.get("sub_scores") if isinstance(row, dict) else None
         if not isinstance(sub, dict):
@@ -394,6 +395,7 @@ def _realised_pnls(trades: list[TradeHistory]) -> list[float]:
         try:
             pct = float(t.pnl_pct or 0.0)
         except (TypeError, ValueError):
+            logger.debug("silent-fallback: _realised_pnls", exc_info=True)
             continue
         if _finite(pct):
             out.append(pct)
@@ -601,6 +603,7 @@ def _ticker_to_sector(ticker: str) -> str:
             if sec:
                 return str(sec)
         except Exception:
+            logger.debug("silent-fallback: _ticker_to_sector", exc_info=True)
             pass
     return _SECTOR_UNKNOWN
 

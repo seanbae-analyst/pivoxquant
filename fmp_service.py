@@ -993,6 +993,7 @@ def get_quarterly_eps(ticker, quarters=8):
         try:
             eps_f = float(eps)
         except (TypeError, ValueError):
+            logger.debug("silent-fallback: get_quarterly_eps", exc_info=True)
             continue
         out.append({
             "date": r.get("date"),
@@ -1016,6 +1017,7 @@ def get_annual_eps(ticker, years=4):
         try:
             eps_f = float(eps)
         except (TypeError, ValueError):
+            logger.debug("silent-fallback: get_annual_eps", exc_info=True)
             continue
         out.append({
             "date": r.get("date"),
@@ -1109,6 +1111,7 @@ def get_institutional_ownership(ticker):
                 total_shares += float(h.get("shares") or 0)
                 total_change += float(h.get("change") or 0)
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: get_institutional_ownership", exc_info=True)
                 continue
         change_pct = None
         if total_shares > 0:
