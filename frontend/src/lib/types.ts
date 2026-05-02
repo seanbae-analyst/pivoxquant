@@ -46,26 +46,6 @@ export interface PortfolioResponse {
   fx_rate: number;
 }
 
-export interface AnalyticsResponse {
-  total_value: number;
-  cash: number;
-  invested_pct: number;
-  sector_allocation: Record<string, number>;
-  ann_return_pct?: number;
-  ann_vol_pct?: number;
-  sharpe_ratio?: number;
-  max_drawdown_pct?: number;
-}
-
-export interface HistoryPoint {
-  date: string;
-  value: number;
-}
-
-export interface HistoryResponse {
-  data: HistoryPoint[];
-}
-
 /* ── Discover ── */
 
 export interface DiscoverResult {
@@ -204,16 +184,6 @@ export interface AlertItem {
 export interface AlertsResponse {
   alerts: AlertItem[];
   unread?: number;
-}
-
-/* ── Search ── */
-
-export interface SearchResult {
-  ticker: string;
-  name: string;
-  exchange?: string;
-  currency: string;
-  is_korean?: boolean;
 }
 
 /* ── Lookup ── */

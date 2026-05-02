@@ -28,7 +28,6 @@ import {
   PdfAllocList,
   PdfTable,
   PdfTicker,
-  PdfCard,
   PdfFlexBetween,
   PdfCallout,
   PdfSignRow,

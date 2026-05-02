@@ -347,8 +347,8 @@ export default function HomePageV1() {
   );
 
   /* Watchlist table rows */
-  const watchItems = watch?.items ?? watch?.watchlist ?? [];
   const watchRows: WatchRow[] = useMemo(() => {
+    const watchItems = watch?.items ?? watch?.watchlist ?? [];
     return watchItems.map((w, i) => {
       const ticker = w.ticker || w.symbol || `W-${i}`;
       return {
@@ -360,7 +360,7 @@ export default function HomePageV1() {
         market: w.market ?? "",
       };
     });
-  }, [watchItems]);
+  }, [watch?.items, watch?.watchlist]);
 
   const watchColumns: Column<WatchRow>[] = useMemo(
     () => [
@@ -443,8 +443,8 @@ export default function HomePageV1() {
   );
 
   /* Signals rows */
-  const signalsItems = signalsData?.signals ?? signalsData?.items ?? [];
   const signalRows: SignalRow[] = useMemo(() => {
+    const signalsItems = signalsData?.signals ?? signalsData?.items ?? [];
     return signalsItems.slice(0, 12).map((s, i) => ({
       id: s.id ?? `${s.ticker || i}`,
       ticker: s.ticker || s.symbol || "—",
@@ -452,7 +452,7 @@ export default function HomePageV1() {
       strength: s.strength ?? 0,
       observedAt: s.observed_at ?? "",
     }));
-  }, [signalsItems]);
+  }, [signalsData?.signals, signalsData?.items]);
 
   const signalColumns: Column<SignalRow>[] = useMemo(
     () => [

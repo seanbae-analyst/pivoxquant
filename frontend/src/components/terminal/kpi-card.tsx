@@ -20,7 +20,7 @@
  * Flash: 300ms bg wash on value change (green/red by delta sign).
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 export type KpiFormat = "currency" | "percent" | "plain";
 export type KpiSize = "sm" | "md";
@@ -121,29 +121,38 @@ export function KpiCard({
   suffix,
   className = "",
 }: KpiCardProps) {
-  const [flashCls, setFlashCls] = useState<"up" | "down" | null>(null);
+  // Flash background tinted up/down on value change. Implemented as a direct
+  // DOM mutation via ref so the effect doesn't need setState (which would
+  // trip react-hooks/set-state-in-effect).
+  const cardRef = useRef<HTMLDivElement>(null);
   const prevRef = useRef(value);
   useEffect(() => {
     const prev = prevRef.current;
-    if (
-      typeof prev === "number" &&
-      typeof value === "number" &&
-      prev !== value &&
-      Number.isFinite(prev) &&
-      Number.isFinite(value)
-    ) {
-      const dir: "up" | "down" = value > prev ? "up" : "down";
-      const reduced =
-        typeof window !== "undefined" &&
-        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      if (!reduced) {
-        setFlashCls(dir);
-        const id = setTimeout(() => setFlashCls(null), 300);
-        prevRef.current = value;
-        return () => clearTimeout(id);
-      }
-    }
     prevRef.current = value;
+    if (
+      typeof prev !== "number" ||
+      typeof value !== "number" ||
+      prev === value ||
+      !Number.isFinite(prev) ||
+      !Number.isFinite(value)
+    ) {
+      return;
+    }
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const dir: "up" | "down" = value > prev ? "up" : "down";
+    const tint =
+      dir === "up" ? "rgba(125,180,135,0.14)" : "rgba(209,136,136,0.14)";
+    el.style.backgroundColor = tint;
+    const id = window.setTimeout(() => {
+      // Restore baseline. Match the static `background` color below.
+      if (cardRef.current) cardRef.current.style.backgroundColor = "";
+    }, 300);
+    return () => window.clearTimeout(id);
   }, [value]);
 
   const deltaColor = useMemo(() => {
@@ -158,15 +167,9 @@ export function KpiCard({
   const valueSize = size === "sm" ? 18 : 22;
   const labelSize = size === "sm" ? 9.5 : 10.5;
 
-  const flashBg =
-    flashCls === "up"
-      ? "rgba(125,180,135,0.14)"
-      : flashCls === "down"
-        ? "rgba(209,136,136,0.14)"
-        : "transparent";
-
   return (
     <div
+      ref={cardRef}
       className={`pq-kpi-card ${className}`.trim()}
       style={{
         background: "#0B0E14",
@@ -177,7 +180,7 @@ export function KpiCard({
         gap: 6,
         position: "relative",
         transition: "background-color 0.3s ease, border-color 0.2s ease",
-        backgroundColor: flashBg === "transparent" ? "#0B0E14" : flashBg,
+        backgroundColor: "#0B0E14",
       }}
     >
       {/* Bronze label rule */}

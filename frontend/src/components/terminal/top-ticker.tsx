@@ -18,12 +18,49 @@
  * Legal: observation-only. No BUY/SELL/HOLD. No recommend / advise copy.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 import useSWR from "swr";
 import { useRealtimeContext } from "@/lib/realtime";
 import { sanitizeKrIndex } from "@/lib/format";
 import { MARKET_INDICES, API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
+
+/* Module-level 1Hz clock — useSyncExternalStore source.
+   Subscribers share a single setInterval; cleanup happens when none remain.   */
+let nowSnapshot: Date | null = null;
+const nowSubs = new Set<() => void>();
+let nowTimer: ReturnType<typeof setInterval> | null = null;
+function ensureNowTimer(): void {
+  if (nowTimer || typeof window === "undefined") return;
+  nowSnapshot = new Date();
+  nowTimer = setInterval(() => {
+    nowSnapshot = new Date();
+    nowSubs.forEach((l) => l());
+  }, 1000);
+}
+function subscribeNow(listener: () => void): () => void {
+  ensureNowTimer();
+  nowSubs.add(listener);
+  return () => {
+    nowSubs.delete(listener);
+    if (nowSubs.size === 0 && nowTimer) {
+      clearInterval(nowTimer);
+      nowTimer = null;
+    }
+  };
+}
+function getNowSnapshot(): Date | null {
+  return nowSnapshot;
+}
+function getNowServerSnapshot(): Date | null {
+  // Match the previous behavior: server and first client render see null.
+  return null;
+}
 
 /* Macro feed via /api/market/indices — SSE portfolio-stream carries position
  * tickers only, so the ribbon's macro symbols (SPX/NDX/KOSPI/KOSDAQ/VIX) used
@@ -89,31 +126,32 @@ function fmtKST(d: Date): string {
 }
 
 function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | null }) {
-  const [flash, setFlash] = useState<"up" | "down" | null>(null);
+  // Direct DOM-mutation flash: avoids setState-in-effect by writing the
+  // tinted background straight to the element via ref, then clearing it
+  // after 300ms. Behaves identically to the previous setState/setTimeout.
+  const cellRef = useRef<HTMLSpanElement>(null);
   const prevFlashRef = useRef<"up" | "down" | null>(null);
   useEffect(() => {
-    if (flashDir && flashDir !== prevFlashRef.current) {
-      const reduced =
-        typeof window !== "undefined" &&
-        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      prevFlashRef.current = flashDir;
-      if (!reduced) {
-        setFlash(flashDir);
-        const id = setTimeout(() => setFlash(null), 300);
-        return () => clearTimeout(id);
-      }
-      return;
-    }
+    const prev = prevFlashRef.current;
     prevFlashRef.current = flashDir;
+    if (!flashDir || flashDir === prev) return;
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) return;
+    const el = cellRef.current;
+    if (!el) return;
+    el.style.background =
+      flashDir === "up"
+        ? "rgba(125,180,135,0.22)"
+        : "rgba(209,136,136,0.22)";
+    const id = window.setTimeout(() => {
+      if (cellRef.current) cellRef.current.style.background = "transparent";
+    }, 300);
+    return () => window.clearTimeout(id);
   }, [flashDir]);
 
   const color = DIR_COLOR[snap.dir];
-  const bgFlash =
-    flash === "up"
-      ? "rgba(125,180,135,0.22)"
-      : flash === "down"
-        ? "rgba(209,136,136,0.22)"
-        : "transparent";
 
   // Respect reduced-motion at render time too, so the background transition
   // property is dropped entirely rather than merely starved of state changes.
@@ -123,11 +161,12 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
 
   return (
     <span
+      ref={cellRef}
       className="inline-flex items-center gap-2 whitespace-nowrap px-3 font-mono tabular-nums"
       style={{
         fontSize: 10.5,
         lineHeight: 1,
-        background: bgFlash,
+        background: "transparent",
         transition: reducedMotion ? "none" : "background-color 0.3s ease",
       }}
     >
@@ -244,12 +283,11 @@ export function TopTicker() {
   // Start with null so the server and the first client render agree
   // (both produce the placeholder). The real time is filled in after
   // mount, avoiding a hydration mismatch on the KST clock span.
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useSyncExternalStore(
+    subscribeNow,
+    getNowSnapshot,
+    getNowServerSnapshot,
+  );
 
   // Build rows: SSE detail wins (intra-second freshness for held tickers);
   // SWR macro feed fills the rest. Either path renders "—" if the symbol

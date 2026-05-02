@@ -26,7 +26,10 @@
 "use client";
 
 import useSWR from "swr";
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 
@@ -117,6 +120,81 @@ function writeHistory(messages: CompanionMessage[]): void {
   }
 }
 
+/**
+ * Module-level history store backing useSyncExternalStore. Lazily seeded
+ * from localStorage on the first client-side read so SSR and the first
+ * client render agree (both see []) and post-hydration we sync up.
+ */
+let historyCache: CompanionMessage[] | null = null;
+const historySubscribers = new Set<() => void>();
+
+function getHistorySnapshot(): CompanionMessage[] {
+  if (historyCache === null) historyCache = readHistory();
+  return historyCache;
+}
+
+function getHistoryServerSnapshot(): CompanionMessage[] {
+  return [];
+}
+
+function subscribeHistory(listener: () => void): () => void {
+  historySubscribers.add(listener);
+  return () => {
+    historySubscribers.delete(listener);
+  };
+}
+
+function setHistory(next: CompanionMessage[]): void {
+  historyCache = next;
+  writeHistory(next);
+  historySubscribers.forEach((l) => l());
+}
+
+/** Module-level boolean store for the disclaimer ack flag. */
+let disclaimerCache: boolean | null = null;
+const disclaimerSubscribers = new Set<() => void>();
+
+function readDisclaimer(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(LS_KEY_DISCLAIMER_ACK) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function getDisclaimerSnapshot(): boolean {
+  if (disclaimerCache === null) disclaimerCache = readDisclaimer();
+  return disclaimerCache;
+}
+
+function getDisclaimerServerSnapshot(): boolean {
+  return false;
+}
+
+function subscribeDisclaimer(listener: () => void): () => void {
+  disclaimerSubscribers.add(listener);
+  return () => {
+    disclaimerSubscribers.delete(listener);
+  };
+}
+
+function setDisclaimer(next: boolean): void {
+  disclaimerCache = next;
+  if (typeof window !== "undefined") {
+    try {
+      if (next) {
+        window.localStorage.setItem(LS_KEY_DISCLAIMER_ACK, "1");
+      } else {
+        window.localStorage.removeItem(LS_KEY_DISCLAIMER_ACK);
+      }
+    } catch {
+      /* noop */
+    }
+  }
+  disclaimerSubscribers.forEach((l) => l());
+}
+
 /* ─── Hooks ───────────────────────────────────────────────────────── */
 
 /**
@@ -160,31 +238,23 @@ export function useCompanionStatus() {
  * to localStorage synchronously so a hard refresh never drops a turn.
  */
 export function useCompanionHistory() {
-  const [messages, setMessages] = useState<CompanionMessage[]>([]);
-
-  // Hydrate on mount (client-only to avoid SSR mismatch).
-  useEffect(() => {
-    setMessages(readHistory());
-  }, []);
+  const messages = useSyncExternalStore(
+    subscribeHistory,
+    getHistorySnapshot,
+    getHistoryServerSnapshot,
+  );
 
   const append = useCallback((msg: CompanionMessage) => {
-    setMessages((prev) => {
-      const next = [...prev, msg];
-      writeHistory(next);
-      return next;
-    });
+    setHistory([...(historyCache ?? []), msg]);
   }, []);
 
   const update = useCallback((id: string, patch: Partial<CompanionMessage>) => {
-    setMessages((prev) => {
-      const next = prev.map((m) => (m.id === id ? { ...m, ...patch } : m));
-      writeHistory(next);
-      return next;
-    });
+    const prev = historyCache ?? [];
+    setHistory(prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
   }, []);
 
   const clear = useCallback(() => {
-    setMessages([]);
+    historyCache = [];
     if (typeof window !== "undefined") {
       try {
         window.localStorage.removeItem(LS_KEY_HISTORY);
@@ -192,6 +262,7 @@ export function useCompanionHistory() {
         /* noop */
       }
     }
+    historySubscribers.forEach((l) => l());
   }, []);
 
   return { messages, append, update, clear };
@@ -236,24 +307,13 @@ export function useDisclaimerAck(): {
   acknowledged: boolean;
   acknowledge: () => void;
 } {
-  const [acknowledged, setAcknowledged] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      setAcknowledged(window.localStorage.getItem(LS_KEY_DISCLAIMER_ACK) === "1");
-    } catch {
-      setAcknowledged(false);
-    }
-  }, []);
+  const acknowledged = useSyncExternalStore(
+    subscribeDisclaimer,
+    getDisclaimerSnapshot,
+    getDisclaimerServerSnapshot,
+  );
   const acknowledge = useCallback(() => {
-    setAcknowledged(true);
-    if (typeof window !== "undefined") {
-      try {
-        window.localStorage.setItem(LS_KEY_DISCLAIMER_ACK, "1");
-      } catch {
-        /* noop */
-      }
-    }
+    setDisclaimer(true);
   }, []);
   return { acknowledged, acknowledge };
 }

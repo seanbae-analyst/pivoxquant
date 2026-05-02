@@ -17,12 +17,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import useSWR from "swr";
 import { ArrowUpRight, Lock, Check, Clock, FileText, BookHeart } from "lucide-react";
 
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { API } from "@/lib/endpoints";
 import { useArtifacts } from "@/lib/hooks";
 import {
   useCompanionStatus,

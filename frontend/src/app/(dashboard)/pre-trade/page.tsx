@@ -138,8 +138,9 @@ export default function PreTradePage() {
   }, [submitting, ticker, side, sharesText, rationale, answers]);
 
   /* ── Step 3 polling — refresh seconds_remaining every second ── */
+  const reflectionId = reflection?.id;
   useEffect(() => {
-    if (phase !== "cooldown" || !reflection) return;
+    if (phase !== "cooldown" || !reflectionId) return;
 
     // Local clock decrement is cheap and matches what the user sees.
     // We re-fetch from the server every 5s as a belt-and-suspenders
@@ -154,7 +155,7 @@ export default function PreTradePage() {
 
     const serverSync = window.setInterval(async () => {
       try {
-        const r = await apiFetch<StartResponse>(API.preTrade.status(reflection.id));
+        const r = await apiFetch<StartResponse>(API.preTrade.status(reflectionId));
         setReflection(r.reflection);
         if (r.reflection.status === "proceeded" || r.reflection.status === "cancelled") {
           setPhase("terminal");
@@ -168,7 +169,7 @@ export default function PreTradePage() {
       window.clearInterval(localTick);
       window.clearInterval(serverSync);
     };
-  }, [phase, reflection?.id]);
+  }, [phase, reflectionId]);
 
   /* ── Proceed / Cancel ── */
   const proceed = useCallback(async () => {

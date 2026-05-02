@@ -27,9 +27,8 @@
  * the ambient text (aurora/particles/data stream).
  */
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useReducedMotion } from "motion/react";
 import { ArrowRight, FileText } from "lucide-react";
 
@@ -63,111 +62,6 @@ const HeroParticles = dynamic(
   () => import("./hero-particles").then((m) => m.HeroParticles),
   { ssr: false, loading: () => null },
 );
-
-/* ────────────────────────────────────────────────
-   Stats — count-up targets. `toRender` preserves the
-   original text (e.g. "+23.2pp") so the visual width
-   doesn't jump between the 0 state and the final state.
-   ──────────────────────────────────────────────── */
-type Stat = {
-  label: string;
-  value: string;
-  /** Numeric target (null → don't animate, use `value` as-is). */
-  target?: number;
-  /** Formatter for the animated number. */
-  format?: (n: number) => string;
-  tone?: "pos";
-};
-
-const STATS: readonly Stat[] = [
-  {
-    label: "CAGR",
-    value: "21.19%",
-    target: 21.19,
-    format: (n) => `${n.toFixed(2)}%`,
-  },
-  {
-    label: "Sharpe",
-    value: "0.94",
-    target: 0.94,
-    format: (n) => n.toFixed(2),
-  },
-  {
-    label: "2022 Bear",
-    value: "+23.2pp",
-    target: 23.2,
-    format: (n) => `+${n.toFixed(1)}pp`,
-    tone: "pos",
-  },
-  {
-    label: "Alpha",
-    value: "+9.66%",
-    target: 9.66,
-    format: (n) => `+${n.toFixed(2)}%`,
-    tone: "pos",
-  },
-] as const;
-
-/** Scroll-triggered count-up. Honors prefers-reduced-motion. */
-function useCountUp(target: number | undefined, enabled: boolean) {
-  const [value, setValue] = useState(target ?? 0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const firedRef = useRef(false);
-
-  useEffect(() => {
-    if (!enabled || target === undefined) return;
-    setValue(0);
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting && !firedRef.current) {
-            firedRef.current = true;
-            const duration = 1400;
-            const start = performance.now();
-            const tick = (now: number) => {
-              const t = Math.min(1, (now - start) / duration);
-              // ease-out cubic
-              const eased = 1 - Math.pow(1 - t, 3);
-              setValue(target * eased);
-              if (t < 1) requestAnimationFrame(tick);
-              else setValue(target);
-            };
-            requestAnimationFrame(tick);
-            io.disconnect();
-          }
-        }
-      },
-      { threshold: 0.3 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [target, enabled]);
-
-  return { value, ref };
-}
-
-function StatValue({ stat, animate }: { stat: Stat; animate: boolean }) {
-  const { value, ref } = useCountUp(stat.target, animate);
-  const display =
-    animate && stat.target !== undefined && stat.format
-      ? stat.format(value)
-      : stat.value;
-
-  return (
-    <span
-      ref={ref}
-      className="pq-stat-count font-mono text-[17px] leading-none sm:text-[19px]"
-      style={{
-        color: stat.tone === "pos" ? "#3C7A52" : "var(--pq-ivory)",
-        letterSpacing: "-0.01em",
-      }}
-    >
-      {display}
-    </span>
-  );
-}
 
 /* ══════════════════════════════════════════════════
    HERO v4

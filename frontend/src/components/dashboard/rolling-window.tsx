@@ -19,8 +19,6 @@ import { motion } from "motion/react";
 import {
   useRollingWindow,
   PERSONA_LABELS,
-  type RollingWindowPoint,
-  type PersonaId,
 } from "@/lib/cfo/hooks";
 
 type WindowKey = "window_30d" | "window_60d" | "window_90d";

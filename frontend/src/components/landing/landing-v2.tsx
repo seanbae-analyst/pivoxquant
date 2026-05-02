@@ -39,7 +39,7 @@ import ReportsGallery from "./reports-gallery";
 import { FilmGrain } from "./film-grain";
 import { SectionCurtain } from "./section-curtain";
 import { Eyebrow } from "./eyebrow";
-import { PQ_EASE, fadeUp, stagger } from "@/lib/motion";
+import { fadeUp, stagger } from "@/lib/motion";
 
 /* ───────────────────────── pricing data ───────────────────────── */
 
