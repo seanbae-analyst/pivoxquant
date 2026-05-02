@@ -107,7 +107,7 @@ def stat_arb_analysis():
         return jsonify(user_cache["data"])
 
     from quant_models import StatArb
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
 
     fetcher = DataFetcher()
     results = []
@@ -1409,7 +1409,7 @@ def short_interest_signal(ticker):
     if cache_entry and now - cache_entry["ts"] < _SI_CACHE_TTL:
         return jsonify(cache_entry["data"])
 
-    import fmp_service as fmp
+    from services.data import fmp as fmp
 
     records = fmp.get_short_interest(ticker)
     if not records:
@@ -1776,7 +1776,7 @@ def insider_signal(ticker):
     if ticker.endswith(".KS") or ticker.endswith(".KQ"):
         return jsonify({"error": "Insider data not available for Korean stocks"}), 400
 
-    import fmp_service
+    from services.data import fmp as fmp_service
 
     raw = fmp_service.get_insider_trades(ticker, limit=50)
     if raw is None:
@@ -2584,9 +2584,9 @@ def extended_indicators(ticker):
     Query params:
         period: lookback for technical indicators (default '6mo')
     """
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
     from indicators import AdditionalIndicators, AdditionalFundamentals
-    import fmp_service as fmp_svc
+    from services.data import fmp as fmp_svc
 
     ticker = ticker.strip().upper()
     period = request.args.get("period", "6mo")
@@ -2880,10 +2880,10 @@ def canslim_screener(ticker):
     YELLOW endpoint -- scoring model for informational purposes only.
     Does not constitute a buy/sell signal or investment advice.
     """
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
     from canslim import CANSLIMScreener
     from quant_models import RegimeSwitching
-    import fmp_service as fmp_svc
+    from services.data import fmp as fmp_svc
 
     ticker = ticker.strip().upper()
 
@@ -2898,7 +2898,7 @@ def canslim_screener(ticker):
     # Fundamentals from EDGAR (graceful fallback)
     fundamentals = None
     try:
-        from edgar_service import EdgarService
+        from services.data.edgar import EdgarService
         fundamentals = EdgarService.get_fundamentals(ticker)
     except Exception:
         logger.debug("silent-fallback: canslim_screener", exc_info=True)
@@ -3031,7 +3031,7 @@ def risk_defense_status():
     """
     from models import Position, SignalCache
     from risk_defense import RiskDefenseSystem
-    from data_fetcher import DataFetcher
+    from services.data.fetcher import DataFetcher
 
     uid = current_user.id
     now = _time.time()

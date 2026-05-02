@@ -34,7 +34,7 @@ class TestAdminFmpSmoke:
         client.post("/api/auth/login",
                     json={"email": admin["email"], "password": admin["password"]})
         with patch.dict(os.environ, {"ADMIN_EMAILS": "admin@pivoxquant.com"}), \
-             patch("fmp_service.get_api_usage", return_value={"daily_calls": 1}):
+             patch("services.data.fmp.get_api_usage", return_value={"daily_calls": 1}):
             r = client.get("/api/admin/fmp-usage")
         assert r.status_code == 200
         assert r.get_json() == {"daily_calls": 1}

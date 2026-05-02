@@ -34,10 +34,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 ALLOWED_FILES = {
     # Source of truth — defines parse_price_display itself.
     "services/price_overlay.py",
-    # realtime_service is a pass-through producer; consumers
+    # realtime is a pass-through producer; consumers
     # (routes/portfolio.py, routes/watchlist.py, routes/share.py)
     # all import price_overlay and run the fallback.
-    "realtime_service.py",
+    "services/data/realtime.py",
+    # fetcher is a producer that emits price_display via fmt_price; downstream
+    # consumers (engine.py, routes/*) wrap with apply_price_overlay before
+    # serving to clients. Pre-existing exemption when the file lived at the
+    # repo root (data_fetcher.py) — preserved here after the 2026-05-02 move.
+    "services/data/fetcher.py",
     # Consumers already verified to use price_overlay.apply_price_overlay
     "routes/realtime.py",
     "routes/market.py",

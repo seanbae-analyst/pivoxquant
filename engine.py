@@ -13,9 +13,9 @@ language-toggle feature in the frontend.
 
 import numpy as np
 import pandas as pd
-import fmp_service as fmp
+from services.data import fmp
 import logging
-from data_fetcher import DataFetcher
+from services.data.fetcher import DataFetcher
 from quant_models import (MeanReversion, MomentumBreakout, VolatilityRegime, RegimeSwitching, MLSignal,
                           VarianceRatioFilter, TSMOM, FiftyTwoWeekHigh,
                           DonchianBreakout, DualMomentum, CorrelationRegime)

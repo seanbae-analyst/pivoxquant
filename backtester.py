@@ -5,7 +5,7 @@ Tests quant strategies on historical data with adaptive regime-aware parameters.
 """
 
 import numpy as np
-from data_fetcher import DataFetcher
+from services.data.fetcher import DataFetcher
 import logging
 from quant_models import (MeanReversion, MomentumBreakout, VolatilityRegime,
                           RegimeSwitching, AdaptiveParams,

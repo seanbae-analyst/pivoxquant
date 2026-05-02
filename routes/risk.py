@@ -618,7 +618,7 @@ def risk_concentration():
         except Exception:
             _kr_sector = lambda _t: None  # type: ignore
         try:
-            import fmp_service as _fmp
+            from services.data import fmp as _fmp
         except Exception:
             _fmp = None
 
