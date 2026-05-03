@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 
 class TestLookup:
-    def test_us_ticker_response_shape(self, client):
+    def test_us_ticker_response_shape(self, client, auth_user):
         with patch("routes.market.fetcher") as m:
             m.quick_lookup.return_value = {
                 "ok": True, "ticker": "AAPL", "name": "Apple Inc.",
@@ -27,7 +27,7 @@ class TestLookup:
         assert d["price"] > 0
         assert "$" in d["price_display"]
 
-    def test_kr_ticker_response_shape(self, client):
+    def test_kr_ticker_response_shape(self, client, auth_user):
         with patch("routes.market.fetcher") as m:
             m.quick_lookup.return_value = {
                 "ok": True, "ticker": "005930.KS", "name": "Samsung Electronics",
@@ -42,9 +42,14 @@ class TestLookup:
         assert d["is_korean"] is True
         assert "₩" in d["price_display"]
 
-    def test_unknown_ticker_returns_404(self, client):
+    def test_unknown_ticker_returns_404(self, client, auth_user):
         with patch("routes.market.fetcher") as m:
             m.quick_lookup.return_value = None
             r = client.get("/api/lookup/ZZZZZ")
         assert r.status_code == 404
         assert r.get_json()["ok"] is False
+
+    def test_unauthenticated_returns_401(self, client):
+        """SEC-009: /api/lookup/<ticker> now requires authentication."""
+        r = client.get("/api/lookup/AAPL")
+        assert r.status_code == 401

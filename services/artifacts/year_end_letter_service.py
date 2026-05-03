@@ -121,8 +121,10 @@ def _sector_for_ticker(ticker: str) -> str:
                 if sector:
                     return str(sector)
             except Exception:
+                logger.debug("silent-fallback: _sector_for_ticker", exc_info=True)
                 pass
     except Exception:
+        logger.debug("silent-fallback: _sector_for_ticker", exc_info=True)
         pass
     return "Unknown"
 
@@ -908,6 +910,8 @@ class YearEndLetterService:
 
     def run_annual(self, target_year: int | None = None) -> dict[str, Any]:
         """Cron target — 12/31 10:00 KST. Premium users only."""
+        from services.artifacts import iter_users_chunked
+
         users = (
             User.query
             .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
@@ -915,7 +919,7 @@ class YearEndLetterService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="year_end_letter.annual"):
             try:
                 result = self.run_for_user(user, target_year=target_year)
                 if result is None:

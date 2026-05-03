@@ -1,5 +1,6 @@
 """Quant strategy routes: VIX strategy, cross-asset momentum, stat-arb, risk analytics."""
 import json
+import logging
 import math
 import time as _time
 
@@ -9,6 +10,9 @@ from flask_login import current_user
 
 from services.name_resolver import resolve_stock_name
 from .decorators import api_auth, legal_scrub_response
+from security import general_rate_limit
+
+logger = logging.getLogger(__name__)
 
 quant_bp = Blueprint("quant", __name__, url_prefix="/api")
 
@@ -43,6 +47,22 @@ def add_disclaimer(response_dict, disclaimer_type="analysis"):
     response_dict["disclaimer"] = DISCLAIMERS.get(disclaimer_type, DISCLAIMERS["analysis"])
     return response_dict
 
+# MEM-001: bounded cache helper. Pre-fix the largest user-keyed caches were
+# unbounded — they could grow without limit on a single long-running worker.
+# 1000-entry cap with oldest-eviction is enough for our user count and keeps
+# memory steady. TODO: convert remaining unbounded caches in this file.
+def _bounded_set(cache: dict, key, value, max_size: int = 1000):
+    if len(cache) >= max_size and key not in cache:
+        try:
+            oldest = min(cache, key=lambda k: cache[k].get("ts", 0))
+            cache.pop(oldest, None)
+        except Exception:
+            # If eviction fails for any reason, fall through and just set —
+            # better a slightly oversized cache than a broken response.
+            pass
+    cache[key] = value
+
+
 _ca_cache: dict = {}  # {user_id: {"data": ..., "ts": ...}}
 _sa_cache: dict = {}  # {user_id: {"data": ..., "ts": ...}}
 
@@ -70,7 +90,7 @@ def cross_asset():
     from quant_models import CrossAssetMomentum
     result = CrossAssetMomentum.analyze()
     if result:
-        _ca_cache[uid] = {"data": result, "ts": now}
+        _bounded_set(_ca_cache, uid, {"data": result, "ts": now})
         return jsonify(result)
     return jsonify({"error": "Insufficient data"}), 500
 
@@ -113,7 +133,7 @@ def stat_arb_analysis():
 
     payload = {"pairs": results, "count": len(results)}
     add_disclaimer(payload, "simulation")
-    _sa_cache[uid] = {"data": payload, "ts": now}
+    _bounded_set(_sa_cache, uid, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -157,9 +177,16 @@ def regime_report():
         if not positions:
             return jsonify({"error": "No positions in portfolio"}), 400
 
+        # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+        pos_tickers = [p.ticker for p in positions]
+        cache_map = {
+            c.ticker: c
+            for c in SignalCache.query.filter(SignalCache.ticker.in_(pos_tickers)).all()
+        } if pos_tickers else {}
+
         pos_with_value = []
         for p in positions:
-            cached = SignalCache.query.get(p.ticker)
+            cached = cache_map.get(p.ticker)
             sd = json.loads(cached.data_json) if cached and cached.data_json else {}
             price = sd.get("price", p.avg_cost)
             mv = price * p.shares
@@ -300,7 +327,7 @@ def regime_report():
     }
 
     add_disclaimer(payload, "analysis")
-    _regime_cache[uid] = {"data": payload, "ts": now, "key": cache_key}
+    _bounded_set(_regime_cache, uid, {"data": payload, "ts": now, "key": cache_key})
     return jsonify(payload)
 
 
@@ -331,11 +358,18 @@ def _load_positions_with_prices():
     if not positions:
         return [], 0.0
 
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     fx_rate = fx_service.get_rate()  # USD → KRW
     items = []
     total_value = 0.0
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")
@@ -539,7 +573,7 @@ def portfolio_var():
     }
 
     add_disclaimer(payload, "analysis")
-    _var_cache[uid] = {"data": payload, "ts": now}
+    _bounded_set(_var_cache, uid, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -668,7 +702,7 @@ def portfolio_drawdown():
     }
 
     add_disclaimer(payload, "analysis")
-    _dd_cache[uid] = {"data": payload, "ts": now}
+    _bounded_set(_dd_cache, uid, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -976,7 +1010,7 @@ def benchmark_analytics():
     }
 
     add_disclaimer(payload, "analysis")
-    _bench_cache[uid] = {"data": payload, "ts": now, "key": cache_key}
+    _bounded_set(_bench_cache, uid, {"data": payload, "ts": now, "key": cache_key})
     return jsonify(payload)
 
 
@@ -1390,7 +1424,7 @@ def short_interest_signal(ticker):
     payload = {"ticker": ticker, "name": resolve_stock_name(ticker) or ticker, **result}
     add_disclaimer(payload, "indicator")
 
-    _si_cache[ticker] = {"data": payload, "ts": now}
+    _bounded_set(_si_cache, ticker, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -1960,7 +1994,7 @@ def risk_component_es():
     }
 
     add_disclaimer(payload, "analysis")
-    _ces_cache[uid] = {"data": payload, "ts": now}
+    _bounded_set(_ces_cache, uid, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2112,6 +2146,7 @@ def performance_ledger():
 @quant_bp.route("/tools/position-sizing", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def position_sizing_calculator():
     """Kelly Criterion-based position sizing calculator.
 
@@ -2291,7 +2326,7 @@ def signal_disposition(ticker):
         "disclaimer": DISCLAIMERS["indicator"],
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2342,7 +2377,7 @@ def signal_ofi(ticker):
         "disclaimer": DISCLAIMERS["indicator"],
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2408,7 +2443,7 @@ def signal_sentiment_divergence(ticker):
         **result,
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2459,7 +2494,7 @@ def signal_anchoring(ticker):
         "disclaimer": DISCLAIMERS["indicator"],
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2512,6 +2547,7 @@ def signal_herding():
             stock_returns_list.append(sr)
             included_tickers.append(t)
         except Exception:
+            logger.debug("silent-fallback: signal_herding", exc_info=True)
             continue
 
     if len(stock_returns_list) < 3:
@@ -2528,7 +2564,7 @@ def signal_herding():
         "disclaimer": DISCLAIMERS["indicator"],
     }
 
-    _signal_cache[cache_key] = {"data": payload, "ts": now}
+    _bounded_set(_signal_cache, cache_key, {"data": payload, "ts": now})
     return jsonify(payload)
 
 
@@ -2602,6 +2638,7 @@ def extended_indicators(ticker):
         if profile:
             float_shares = profile.get("floatShares") or profile.get("sharesFloat")
     except Exception:
+        logger.debug("silent-fallback: extended_indicators", exc_info=True)
         pass
 
     payload = {
@@ -2669,6 +2706,7 @@ def correlation_matrix():
                     all_dates.add(ds)
             ticker_returns[ticker] = date_ret
         except Exception:
+            logger.debug("silent-fallback: correlation_matrix", exc_info=True)
             continue
 
     included = [t for t in tickers if t in ticker_returns]
@@ -2804,6 +2842,7 @@ def sector_heatmap():
                 "month_return": round(float(month_ret), 2),
             })
         except Exception:
+            logger.debug("silent-fallback: sector_heatmap", exc_info=True)
             continue
 
     if not sectors:
@@ -2862,6 +2901,7 @@ def canslim_screener(ticker):
         from edgar_service import EdgarService
         fundamentals = EdgarService.get_fundamentals(ticker)
     except Exception:
+        logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
     # Float shares from FMP profile
@@ -2871,6 +2911,7 @@ def canslim_screener(ticker):
         if profile:
             float_shares = profile.get("floatShares") or profile.get("sharesFloat")
     except Exception:
+        logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
     # Market regime from RegimeSwitching
@@ -2880,6 +2921,7 @@ def canslim_screener(ticker):
         if rs:
             regime = rs.get("regime")
     except Exception:
+        logger.debug("silent-fallback: canslim_screener", exc_info=True)
         pass
 
     result = CANSLIMScreener.score(ticker, closes, volumes, fundamentals, regime, float_shares=float_shares)
@@ -2927,6 +2969,7 @@ def interest_rate_regime():
             import os
             fred_key = os.environ.get("FRED_API_KEY")
         except Exception:
+            logger.debug("silent-fallback: interest_rate_regime", exc_info=True)
             pass
 
         if fred_key:
@@ -2947,6 +2990,7 @@ def interest_rate_regime():
                     fed_rate_current = float(obs[0]["value"])
                     fed_rate_6m_ago = float(obs[6]["value"])
     except Exception:
+        logger.debug("silent-fallback: interest_rate_regime", exc_info=True)
         pass
 
     # Fallback: hardcoded rates (updated periodically)
@@ -3003,11 +3047,18 @@ def risk_defense_status():
 
     fetcher = DataFetcher()
 
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     # Build position list with weights, values, sectors
     pos_list = []
     total_value = 0
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
         mv = price * p.shares
@@ -3041,6 +3092,7 @@ def risk_defense_status():
                 returns_cols.append(daily_rets)
                 valid_tickers.append(pos["ticker"])
         except Exception:
+            logger.debug("silent-fallback: risk_defense_status", exc_info=True)
             pass
 
     returns_matrix = None
@@ -3064,6 +3116,7 @@ def risk_defense_status():
         if vix_data and "current_vix" in vix_data:
             vix = vix_data["current_vix"]
     except Exception:
+        logger.debug("silent-fallback: risk_defense_status", exc_info=True)
         pass
 
     # Get current regime
@@ -3074,6 +3127,7 @@ def risk_defense_status():
         if regime_data and "regime" in regime_data:
             regime = regime_data["regime"]
     except Exception:
+        logger.debug("silent-fallback: risk_defense_status", exc_info=True)
         pass
 
     # Run defense system
@@ -3127,6 +3181,7 @@ _RISK_X_CACHE_TTL = 300  # 5 minutes
 @quant_bp.route("/risk/conditional-drawdown", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def risk_conditional_drawdown():
     """Conditional Drawdown at Risk (CDDaR) for the user's portfolio.
 
@@ -3187,6 +3242,7 @@ def risk_conditional_drawdown():
 @quant_bp.route("/risk/tail-ratio", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def risk_tail_ratio():
     """Tail Ratio — |95th pct| / |5th pct| of portfolio daily returns.
 
@@ -3237,6 +3293,7 @@ def risk_tail_ratio():
 @quant_bp.route("/risk/sortino-by-position", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def risk_sortino_by_position():
     """Per-position Sortino ratio (downside-only risk-adjusted return).
 
@@ -3319,6 +3376,7 @@ def risk_sortino_by_position():
 @quant_bp.route("/risk/ledoit-wolf-shrinkage", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def risk_ledoit_wolf_shrinkage():
     """Ledoit-Wolf shrinkage covariance estimator for the user's portfolio.
 

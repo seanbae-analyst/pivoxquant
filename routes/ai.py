@@ -8,10 +8,10 @@ Every AI response MUST pass through ``legal_filter.scrub_response`` before
 helper instead of calling ``jsonify`` directly.
 """
 import json
+import logging
 from flask import Blueprint, request, jsonify, Response
 from flask_login import current_user
 
-from extensions import db
 from models import Position, SignalCache
 from security import ai_rate_limit
 from services.container import ai, fetcher
@@ -20,6 +20,8 @@ from services.access_guard import is_user_allowed_ticker, access_denied_response
 from services.legal_filter import scrub_response
 from ai_models import EarningsCallToneAnalyzer, AISectorRotation, AIRiskSummary
 from .decorators import api_auth, require_tier
+
+logger = logging.getLogger(__name__)
 
 ai_bp = Blueprint("ai", __name__, url_prefix="/api/ai")
 
@@ -93,12 +95,17 @@ def competitor():
         return jsonify(body), status
     target_sector = d.get("sector", d.get("snapshot", {}).get("sector", ""))
     peers = []
+    # Intentional global scan: peer discovery requires sampling every cached
+    # ticker to find sector matches. Single query (not N+1). Sector column
+    # would let this become an indexed filter; deferred until SignalCache
+    # schema migration.
     for sc in SignalCache.query.all():
         try:
             sd = json.loads(sc.data_json) if sc.data_json else {}
             if sd.get("sector") == target_sector and sc.ticker != ticker:
                 peers.append(sd)
         except Exception:
+            logger.debug("silent-fallback: competitor", exc_info=True)
             pass
     result = ai.generate_competitor_analysis(d, peers[:8])
     if result:
@@ -124,12 +131,15 @@ def sector_trend():
         return jsonify(body), status
     sector = d.get("sector", "")
     stocks = []
+    # Intentional global scan: sector-trend aggregates every cached ticker
+    # in the sector. Single query (not N+1). See competitor() comment.
     for sc in SignalCache.query.all():
         try:
             sd = json.loads(sc.data_json) if sc.data_json else {}
             if sd.get("sector") == sector:
                 stocks.append(sd)
         except Exception:
+            logger.debug("silent-fallback: sector_trend", exc_info=True)
             pass
     result = ai.generate_sector_trend(sector, stocks[:10])
     if result:
@@ -150,9 +160,15 @@ def chat():
         return jsonify({"error": "Message required"}), 400
 
     positions = Position.query.filter_by(user_id=current_user.id).all()
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
     sig_cache = {}
     for p in positions:
-        c = db.session.get(SignalCache, p.ticker)
+        c = cache_map.get(p.ticker)
         if c and c.data_json:
             sig_cache[p.ticker] = json.loads(c.data_json)
 
@@ -224,9 +240,15 @@ def coaching():
     if not positions:
         return jsonify({"insight": "Add some positions first to use the AI Assistant!",
                         "insight_kr": "AI Assistant를 사용하려면 먼저 포지션을 추가하세요!"})
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
     sig_cache = {}
     for p in positions:
-        c = db.session.get(SignalCache, p.ticker)
+        c = cache_map.get(p.ticker)
         if c and c.data_json:
             sig_cache[p.ticker] = json.loads(c.data_json)
     context = ai.build_portfolio_context(current_user, positions, sig_cache)
@@ -397,10 +419,17 @@ def risk_summary():
     if not positions:
         return jsonify({"error": "No positions in portfolio"}), 400
 
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     total_value = 0.0
     max_position_value = 0.0
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
         mv = price * p.shares

@@ -12,7 +12,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
-import { Gavel, FileText } from "lucide-react";
+import { Gavel } from "lucide-react";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },

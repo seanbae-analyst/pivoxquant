@@ -318,6 +318,7 @@ def init_security(app):
                             }), 401
                     return
             except (ValueError, TypeError):
+                logger.debug("silent-fallback: _enforce_session", exc_info=True)
                 pass
 
         if is_authenticated:
@@ -454,6 +455,33 @@ def auth_rate_limit(f):
     """5 requests/minute — protects login/register (brute-force prevention)."""
     @wraps(f)
     @limiter.limit("5 per minute")
+    def wrapped(*args, **kwargs):
+        return f(*args, **kwargs)
+    return wrapped
+
+
+def artifact_rate_limit(f):
+    """3 requests/minute — protects PDF/artifact generation (WeasyPrint CPU cost).
+
+    Applied to artifacts.py trigger endpoints to prevent abuse of expensive
+    PDF generation pipelines (FMP fetch + AI summarisation + WeasyPrint render).
+    """
+    @wraps(f)
+    @limiter.limit("3 per minute")
+    def wrapped(*args, **kwargs):
+        return f(*args, **kwargs)
+    return wrapped
+
+
+def general_rate_limit(f):
+    """60 requests/minute — generic write-endpoint guard.
+
+    Applied to POST/PUT/DELETE endpoints that don't fit ai/trade/auth/artifact
+    buckets (e.g. alerts read/clear, watchlist add, profile update). Prevents
+    sustained abuse without throttling normal user activity.
+    """
+    @wraps(f)
+    @limiter.limit("60 per minute")
     def wrapped(*args, **kwargs):
         return f(*args, **kwargs)
     return wrapped

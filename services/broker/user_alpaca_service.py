@@ -220,4 +220,5 @@ def _to_float(val) -> Optional[float]:
     try:
         return float(val)
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _to_float", exc_info=True)
         return None

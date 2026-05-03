@@ -31,6 +31,7 @@ from services.pre_trade import (
 )
 
 from .decorators import api_auth
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ def _envelope(payload: dict, *, status: int = 200):
 
 @pre_trade_bp.route("/start", methods=["POST"])
 @api_auth
+@general_rate_limit
 def start():
     data = request.get_json(silent=True) or {}
     ticker = data.get("ticker")
@@ -94,6 +96,7 @@ def get_status(reflection_id: int):
 
 @pre_trade_bp.route("/<int:reflection_id>/proceed", methods=["POST"])
 @api_auth
+@general_rate_limit
 def proceed(reflection_id: int):
     try:
         result = proceed_reflection(reflection_id, current_user.id)
@@ -110,6 +113,7 @@ def proceed(reflection_id: int):
 
 @pre_trade_bp.route("/<int:reflection_id>/cancel", methods=["POST"])
 @api_auth
+@general_rate_limit
 def cancel(reflection_id: int):
     try:
         result = cancel_reflection(reflection_id, current_user.id)

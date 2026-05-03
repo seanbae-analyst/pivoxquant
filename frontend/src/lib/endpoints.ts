@@ -16,12 +16,11 @@ export const API = {
     list: "/api/portfolio",
     analytics: "/api/portfolio/analytics",
     history: (period: string) => `/api/portfolio/history?period=${period}`,
-    addPosition: "/api/portfolio/position",
-    editPosition: (id: number) => `/api/portfolio/position/${id}`,
-    deletePosition: (id: number) => `/api/portfolio/position/${id}`,
-    buyMore: (id: number) => `/api/portfolio/position/${id}/buy`,
-    sellShares: (id: number) => `/api/portfolio/position/${id}/sell`,
-    buyNew: "/api/portfolio/position/buy-new",
+    // Singular `/position` endpoints (addPosition / editPosition / deletePosition /
+    // buyMore / sellShares / buyNew) were removed 2026-05-02 — the frontend uses
+    // the plural `/api/portfolio/positions[/<id>]` aliases (see PORTFOLIO_POSITIONS
+    // and add-position-modal-v2.tsx). Backend handlers remain for back-compat
+    // but emit a Deprecation header and warning log on every call.
     capital: "/api/portfolio/capital",
   },
   signals: {

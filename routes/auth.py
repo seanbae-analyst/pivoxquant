@@ -27,7 +27,7 @@ from models import (
     InvestmentProfile, BrokerConnection, PushSubscription,
     PortfolioShare,
 )
-from security import auth_rate_limit
+from security import auth_rate_limit, general_rate_limit
 from services.serializers import serialize_user
 from .decorators import api_auth
 
@@ -355,6 +355,7 @@ def _do_logout_response():
 
 
 @auth_bp.route("/logout", methods=["POST"])
+@general_rate_limit
 def do_logout():
     """POST /api/auth/logout — primary logout endpoint.
 
@@ -364,6 +365,7 @@ def do_logout():
 
 
 @auth_alias_bp.route("/api/logout", methods=["POST"])
+@general_rate_limit
 def do_logout_alias():
     """POST /api/logout — shorter alias for the canonical /api/auth/logout.
 
@@ -477,6 +479,7 @@ def google_callback():
         try:
             db.session.rollback()
         except Exception:
+            logger.debug("silent-fallback: google_callback", exc_info=True)
             pass
         from urllib.parse import quote
         return redirect(
@@ -593,6 +596,7 @@ def kakao_callback():
         try:
             db.session.rollback()
         except Exception:
+            logger.debug("silent-fallback: kakao_callback", exc_info=True)
             pass
         from urllib.parse import quote
         return redirect(
@@ -609,6 +613,7 @@ def kakao_callback():
 
 @auth_bp.route("/delete-account", methods=["DELETE"])
 @api_auth
+@general_rate_limit
 def delete_account():
     """Delete user account and all associated data. Required by Korean PIPA."""
     user_id = current_user.id

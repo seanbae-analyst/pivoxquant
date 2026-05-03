@@ -29,6 +29,7 @@ from services import container as svc
 from services.twin import initialize_twin, generate_weekly_report
 
 from .decorators import api_auth
+from security import ai_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ def _envelope(data: dict | list, status: int = 200):
 
 @twin_bp.route("/initialize", methods=["POST"])
 @api_auth
+@ai_rate_limit
 def init_twin_endpoint():
     """Idempotent. Creates the user's $10K paper Twin if absent."""
     try:
@@ -256,6 +258,7 @@ def twin_comparison():
 
 @twin_bp.route("/weekly-reports/generate", methods=["POST"])
 @api_auth
+@ai_rate_limit
 def twin_generate_weekly():
     """Compute (or fetch) the user's weekly comparison row.
 

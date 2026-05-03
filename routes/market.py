@@ -12,6 +12,7 @@ from services import fx_service
 from services.container import fetcher, realtime
 from services.market_status import get_market_status
 from services.name_resolver import resolve_stock_name
+from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)
@@ -63,14 +64,15 @@ def search_stocks():
 
     # 1b) Allow raw 6-digit codes as a passthrough (any KRX ticker, even
     # if not in the static registry — KIS will resolve at lookup time).
+    # Use normalize_ticker so 035760 (CJ ENM, KOSDAQ) routes to .KQ.
     bare = query.strip()
     if bare.isdigit() and len(bare) == 6:
-        candidate = f"{bare}.KS"
-        if candidate not in seen:
+        candidate = normalize_ticker(bare)
+        if candidate and candidate not in seen:
             results.append({
                 "ticker":    candidate,
                 "name":      candidate,
-                "exchange":  "KOSPI",
+                "exchange":  "KOSDAQ" if candidate.endswith(".KQ") else "KOSPI",
                 "currency":  "KRW",
                 "is_korean": True,
             })
@@ -165,7 +167,10 @@ def search_stocks():
 
 
 @market_bp.route("/lookup/<ticker>")
+@api_auth
 def lookup_ticker(ticker):
+    # SEC-009: require an authenticated session before exposing the upstream
+    # quick-lookup (which can fan out to FMP/Alpaca and burn quota).
     result = fetcher.quick_lookup(ticker.strip().upper())
     if result:
         return jsonify(result)
@@ -193,6 +198,7 @@ def get_prices_fast():
                 c.data_json = json.dumps(sd, ensure_ascii=False)
                 c.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             except Exception:
+                logger.debug("silent-fallback: get_prices_fast", exc_info=True)
                 pass
     try:
         db.session.commit()
@@ -330,9 +336,9 @@ def chart_data(ticker):
     period = request.args.get("period", "6mo")
     if period not in ("1mo", "3mo", "6mo", "1y", "2y", "1d", "5d"):
         period = "6mo"
-    ticker = ticker.strip().upper()
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    # Normalize at the input boundary — handles bare 6-digit codes,
+    # routes KOSDAQ to .KQ instead of the legacy .KS default.
+    ticker = normalize_ticker(ticker)
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
 
     # Normalize hyphenated class-share tickers for Alpaca (BRK-B → BRK/B).
@@ -435,6 +441,13 @@ def earnings_calendar():
     positions = Position.query.filter_by(user_id=current_user.id).all()
     earnings = []
 
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     for p in positions:
         try:
             is_etf = p.ticker in ('TSLL', 'ETHU', 'SPY', 'QQQ', 'TLT', 'GLD', 'USO', 'UUP') or 'ETF' in (p.ticker or '')
@@ -445,7 +458,7 @@ def earnings_calendar():
                 for entry in cal[:1]:  # Take the nearest earnings date
                     ds = entry.get("date", "")[:10]
                     if ds:
-                        c = db.session.get(SignalCache, p.ticker)
+                        c = cache_map.get(p.ticker)
                         sd = json.loads(c.data_json) if c and c.data_json else {}
                         earnings.append({
                             "ticker": p.ticker,
@@ -454,6 +467,7 @@ def earnings_calendar():
                             "score": sd.get("score", 0),
                         })
         except Exception:
+            logger.debug("silent-fallback: earnings_calendar", exc_info=True)
             pass
     earnings.sort(key=lambda x: x.get("date", "9999"))
     return jsonify({"earnings": earnings})
@@ -462,9 +476,7 @@ def earnings_calendar():
 @market_bp.route("/peers/<ticker>")
 @api_auth
 def peer_comparison(ticker):
-    ticker = ticker.strip().upper()
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    ticker = normalize_ticker(ticker)
     c = db.session.get(SignalCache, ticker)
     if not c or not c.data_json:
         return jsonify({"error": "Analyze this stock first"}), 404
@@ -473,6 +485,9 @@ def peer_comparison(ticker):
     if sector in ("Unknown", "ETF"):
         return jsonify({"peers": [], "sector": sector, "message": "No sector peers available"})
 
+    # Intentional global scan: peer comparison ranks every ticker in the
+    # target sector. Single query (not N+1). A sector column on SignalCache
+    # would let this become an indexed filter; deferred to schema migration.
     all_cached = SignalCache.query.all()
     peers = []
     for sc in all_cached:
@@ -489,6 +504,7 @@ def peer_comparison(ticker):
                     "is_target": sc.ticker == ticker,
                 })
         except Exception:
+            logger.debug("silent-fallback: peer_comparison", exc_info=True)
             pass
     peers.sort(key=lambda x: -x.get("score", 0))
     rank = next((i + 1 for i, p in enumerate(peers) if p["is_target"]), 0)
@@ -498,9 +514,7 @@ def peer_comparison(ticker):
 @market_bp.route("/market/profile/<ticker>")
 @api_auth
 def company_profile(ticker):
-    ticker = ticker.strip().upper()
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    ticker = normalize_ticker(ticker)
     is_korean = ticker.endswith(".KS") or ticker.endswith(".KQ")
     try:
         import fmp_service as fmp
@@ -873,6 +887,7 @@ def market_indices():
                 if mv.get("price"):
                     usdkrw_level = float(mv["price"])
             except Exception:
+                logger.debug("silent-fallback: market_indices", exc_info=True)
                 pass
         if usdkrw_level:
             # Pull 1y FX history from FMP for sparkline + 52W range + d/d%.
@@ -963,9 +978,7 @@ def market_indices():
 @market_bp.route("/dividend/<ticker>")
 @api_auth
 def dividend_data(ticker):
-    ticker = ticker.strip().upper()
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    ticker = normalize_ticker(ticker)
     try:
         import fmp_service as fmp
         info = fmp.get_info(ticker)

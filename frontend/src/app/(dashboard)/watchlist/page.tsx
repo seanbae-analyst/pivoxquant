@@ -30,16 +30,6 @@ import {
   relativeTime,
 } from "@/components/ui/price-with-timestamp";
 
-function formatPrice(item: WatchlistItem): string {
-  if (item.price == null) return "—";
-  if (item.currency === "KRW") {
-    return `₩${Math.round(item.price).toLocaleString("en-US")}`;
-  }
-  return `$${item.price.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
 
 // Never synthesize 52W ranges from the current price — fabricated price
 // history rendered alongside live data is a misrepresentation risk under

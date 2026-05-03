@@ -12,20 +12,26 @@
  * full-screen dashboard shell. Single ivory hairline at the bottom.
  */
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Search } from "lucide-react";
 import { SearchCommandMenu, openSearchCommand } from "@/components/ui/search-command";
 import { NotificationDropdown } from "@/components/ui/notification-dropdown";
 import { ProfileDropdown } from "@/components/ui/profile-dropdown";
 
-export function TopBar() {
-  const [isMac, setIsMac] = useState(false);
+// UA detection is a static client-only fact; no real subscription.
+const noopSubscribe = () => () => {};
+const getIsMacSnapshot = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  return /mac/i.test(navigator.userAgent);
+};
+const getIsMacServerSnapshot = () => false;
 
-  useEffect(() => {
-    setIsMac(
-      typeof navigator !== "undefined" && /mac/i.test(navigator.userAgent),
-    );
-  }, []);
+export function TopBar() {
+  const isMac = useSyncExternalStore(
+    noopSubscribe,
+    getIsMacSnapshot,
+    getIsMacServerSnapshot,
+  );
 
   return (
     <>

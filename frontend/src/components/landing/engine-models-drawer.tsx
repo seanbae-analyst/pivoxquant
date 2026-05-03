@@ -15,12 +15,24 @@
  *  • Legal: measurement-only language. No BUY/SELL/HOLD/recommend/advice.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import type { Variants } from "motion/react";
 import { X } from "lucide-react";
 import { useFocusTrap } from "@/lib/useFocusTrap";
 import { PQ_EASE, fadeUp, stagger } from "@/lib/motion";
+
+/* ── md (≥768px) viewport store — useSyncExternalStore source ─── */
+function subscribeMdViewport(listener: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const mql = window.matchMedia("(min-width: 768px)");
+  mql.addEventListener("change", listener);
+  return () => mql.removeEventListener("change", listener);
+}
+function getMdViewportSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(min-width: 768px)").matches;
+}
 
 type Category =
   | "QUANT"
@@ -741,15 +753,11 @@ export default function EngineModelsDrawer() {
   // (Tailwind `hidden md:flex` / `md:hidden`) but only one is visible. We
   // activate the focus trap matching the current viewport so the hidden
   // drawer doesn't compete for Tab handling.
-  const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mql = window.matchMedia("(min-width: 768px)");
-    setIsDesktop(mql.matches);
-    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, []);
+  const isDesktop = useSyncExternalStore(
+    subscribeMdViewport,
+    getMdViewportSnapshot,
+    () => false,
+  );
 
   const desktopTrapRef = useFocusTrap<HTMLElement>(
     Boolean(selected) && isDesktop,

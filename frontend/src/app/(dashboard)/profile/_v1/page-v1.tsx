@@ -184,31 +184,50 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
 
 const DRIFT_ALERT_LS = "pq_cfo_drift_alerts_enabled";
 
+function readDriftAlertsLS(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(DRIFT_ALERT_LS) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+function readFeedbackCountLS(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = window.localStorage.getItem("pq_cfo_feedback_votes_v1");
+    if (!raw) return 0;
+    const map = JSON.parse(raw) as Record<string, string>;
+    return Object.keys(map).length;
+  } catch {
+    return 0;
+  }
+}
+
 function LivingCFOControls() {
   const { data: persona } = usePersona();
   const { data: pulse } = usePulse();
-  const [driftAlerts, setDriftAlerts] = useState<boolean>(true);
-  const [cadence, setCadence] = useState<"weekly" | "biweekly" | "monthly">(
-    "weekly",
-  );
-  const [feedbackCount, setFeedbackCount] = useState<number>(0);
+  // Lazy initializers run once per mount on the client; safe for SSR
+  // because LivingCFOControls is rendered inside a client tree.
+  const [driftAlerts, setDriftAlerts] = useState<boolean>(readDriftAlertsLS);
+  const [feedbackCount] = useState<number>(readFeedbackCountLS);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    setDriftAlerts(window.localStorage.getItem(DRIFT_ALERT_LS) !== "0");
-
-    try {
-      const raw = window.localStorage.getItem("pq_cfo_feedback_votes_v1");
-      if (raw) {
-        const map = JSON.parse(raw) as Record<string, string>;
-        setFeedbackCount(Object.keys(map).length);
-      }
-    } catch {
-      /* ignore */
-    }
-
-    if (pulse?.cadence) setCadence(pulse.cadence);
-  }, [pulse?.cadence]);
+  // Cadence is the React-recommended "derived state synced to server"
+  // pattern: track the server-side value and only override when the user
+  // makes a local change. https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [cadenceLocal, setCadence] = useState<
+    "weekly" | "biweekly" | "monthly" | null
+  >(null);
+  const [lastSyncedCadence, setLastSyncedCadence] = useState<
+    "weekly" | "biweekly" | "monthly" | null
+  >(null);
+  if (pulse?.cadence && pulse.cadence !== lastSyncedCadence) {
+    // Pulse SWR resolved a new server-side cadence — adopt it.
+    setLastSyncedCadence(pulse.cadence);
+    setCadence(pulse.cadence);
+  }
+  const cadence = cadenceLocal ?? pulse?.cadence ?? "weekly";
 
   const handleDriftToggle = (next: boolean) => {
     setDriftAlerts(next);

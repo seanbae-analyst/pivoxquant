@@ -87,6 +87,51 @@ interface CustomTooltipProps {
   currency: "USD" | "KRW";
 }
 
+function StateFrame({
+  children,
+  label,
+  height,
+}: {
+  children: React.ReactNode;
+  label?: string;
+  height: number;
+}) {
+  return (
+    <div
+      style={{
+        background: "var(--pq-card-bg-ink)",
+        border: "1px solid var(--pq-hairline-ink)",
+        height,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        textAlign: "center",
+        color: "rgba(245, 240, 232, 0.55)",
+        fontSize: 12,
+        lineHeight: 1.6,
+      }}
+    >
+      <div style={{ maxWidth: 320 }}>
+        {label && (
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontSize: 9,
+              letterSpacing: "0.24em",
+              color: "rgba(245, 240, 232, 0.4)",
+              marginBottom: 6,
+            }}
+          >
+            {label}
+          </div>
+        )}
+        <div className="font-serif">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function ChartTooltip({ active, payload, currency }: CustomTooltipProps) {
   if (!active || !payload || payload.length === 0) return null;
   const row = payload[0]?.payload;
@@ -177,63 +222,26 @@ export function EquityCurveChart({
 
   /* ── Empty / loading / error states ── */
 
-  const Frame = ({
-    children,
-    label,
-  }: {
-    children: React.ReactNode;
-    label?: string;
-  }) => (
-    <div
-      style={{
-        background: "var(--pq-card-bg-ink)",
-        border: "1px solid var(--pq-hairline-ink)",
-        height,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-        textAlign: "center",
-        color: "rgba(245, 240, 232, 0.55)",
-        fontSize: 12,
-        lineHeight: 1.6,
-      }}
-    >
-      <div style={{ maxWidth: 320 }}>
-        {label && (
-          <div
-            className="font-mono uppercase"
-            style={{
-              fontSize: 9,
-              letterSpacing: "0.24em",
-              color: "rgba(245, 240, 232, 0.4)",
-              marginBottom: 6,
-            }}
-          >
-            {label}
-          </div>
-        )}
-        <div className="font-serif">{children}</div>
-      </div>
-    </div>
-  );
-
   if (isLoading) {
-    return <Frame label="Loading">3-month equity curve resolving…</Frame>;
+    return (
+      <StateFrame label="Loading" height={height}>
+        3-month equity curve resolving…
+      </StateFrame>
+    );
   }
   if (error) {
     return (
-      <Frame label="Unavailable">
+      <StateFrame label="Unavailable" height={height}>
         Equity history failed to load. The page will retry automatically.
-      </Frame>
+      </StateFrame>
     );
   }
   if (rows.length === 0) {
     return (
-      <Frame label="No data">
+      <StateFrame label="No data" height={height}>
         No portfolio history yet. Add a position to see your 3-month
         equity curve.
-      </Frame>
+      </StateFrame>
     );
   }
 

@@ -241,8 +241,10 @@ def _sector_for_ticker(ticker: str) -> str:
                 if sector:
                     return str(sector)
             except Exception:
+                logger.debug("silent-fallback: _sector_for_ticker", exc_info=True)
                 pass
     except Exception:
+        logger.debug("silent-fallback: _sector_for_ticker", exc_info=True)
         pass
     return "Unknown"
 
@@ -322,6 +324,7 @@ def _next_week_earnings(positions: list[Position]) -> list[dict[str, Any]]:
             try:
                 d = date.fromisoformat(d_str)
             except ValueError:
+                logger.debug("silent-fallback: _next_week_earnings", exc_info=True)
                 continue
             if not (today <= d <= end):
                 continue
@@ -391,6 +394,7 @@ def _ticker_last_price(ticker: str) -> Optional[float]:
                         if fv > 0:
                             return fv
                     except (TypeError, ValueError):
+                        logger.debug("silent-fallback: _ticker_last_price", exc_info=True)
                         continue
     except Exception as exc:
         logger.debug("get_quote failed for %s: %s", ticker, exc)
@@ -509,6 +513,7 @@ def _portfolio_sortino(positions: list[Position]) -> Optional[float]:
     try:
         import numpy as np  # type: ignore  # noqa: F401  # gate for numpy presence
     except Exception:
+        logger.debug("silent-fallback: _portfolio_sortino", exc_info=True)
         return None
     built = _build_returns_matrix(positions, lookback_days=90)
     if built is None:
@@ -590,6 +595,7 @@ def _build_returns_matrix(positions: list["Position"],
     try:
         import numpy as np  # type: ignore
     except Exception:
+        logger.debug("silent-fallback: _build_returns_matrix", exc_info=True)
         return None
 
     if not positions:
@@ -1673,6 +1679,8 @@ class WeeklyMemoService:
 
     def run_weekly(self, target_date: date | None = None) -> dict[str, Any]:
         """Cron target — Sunday 08:00 KST. Pro+ users only."""
+        from services.artifacts import iter_users_chunked
+
         target_date = target_date or date.today()
 
         paid_users = (
@@ -1685,7 +1693,7 @@ class WeeklyMemoService:
         failures = 0
         skipped = 0
 
-        for user in paid_users:
+        for user in iter_users_chunked(paid_users, label="weekly_memo.weekly"):
             try:
                 result = self.run_for_user(user, target_date=target_date)
                 if result is None:

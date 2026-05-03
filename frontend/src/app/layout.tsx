@@ -5,6 +5,7 @@ import {
   Source_Serif_4,
   Playfair_Display,
 } from "next/font/google";
+import { headers } from "next/headers";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -175,11 +176,15 @@ export const metadata: Metadata = {
   category: "finance",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // CSP nonce — injected by middleware.ts as `x-nonce`. Manually authored
+  // inline <script> tags must carry this nonce so the strict-dynamic CSP
+  // (no 'unsafe-inline' in prod) doesn't block them.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="ko"
@@ -199,6 +204,7 @@ export default function RootLayout({
         />
         <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `if(window.matchMedia('(display-mode: standalone)').matches){document.documentElement.classList.add('pwa-standalone');}`,
           }}

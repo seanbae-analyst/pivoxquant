@@ -124,6 +124,7 @@ def _load_font(ImageFont, *candidates: str, size: int):
     try:
         return ImageFont.load_default()
     except Exception:
+        logger.debug("silent-fallback: Last-resort fallback — PIL's bundled bitmap. No size control | _load_font", exc_info=True)
         return None
 
 
@@ -720,12 +721,14 @@ background:#0B0D12;color:#F6F3EC;padding:32px;">
             start = target_month.replace(day=1)
             start.replace(day=monthrange(start.year, start.month)[1])
 
+        from services.artifacts import iter_users_chunked
+
         users = User.query.all()
 
         successes = 0
         failures = 0
 
-        for user in users:
+        for user in iter_users_chunked(users, label="monthly_brag.monthly"):
             try:
                 self.run_for_user(user, target_month=start)
                 successes += 1

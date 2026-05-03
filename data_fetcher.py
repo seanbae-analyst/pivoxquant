@@ -270,6 +270,7 @@ class DataFetcher:
                     from services import kr_stock_registry as _kr_reg
                     name = _kr_reg.get_name(ticker)
                 except Exception:
+                    logger.debug("silent-fallback: quick_lookup", exc_info=True)
                     pass
 
             if self.is_korean(ticker):
@@ -294,6 +295,7 @@ class DataFetcher:
                             if info_cached:
                                 name = info_cached.get("shortName") or info_cached.get("longName")
                         except Exception:
+                            logger.debug("silent-fallback: quick_lookup", exc_info=True)
                             pass
                 else:
                     # Alpaca failed — try FMP quote (may return None on 402)
@@ -576,6 +578,7 @@ Reply ONLY in this exact JSON format, nothing else:
                     d = r.json()["data"][0]
                     return {"value": int(d["value"]), "label": d["value_classification"]}
             except Exception:
+                logger.debug("silent-fallback: _fetch_fng", exc_info=True)
                 pass
             return {"value": 50, "label": "Neutral"}
         fng_future = executor.submit(_fetch_fng)
@@ -754,6 +757,7 @@ Reply ONLY in this exact JSON format, nothing else:
                 if 0 < lo < hi:
                     return (lo, hi)
             except Exception:
+                logger.debug("silent-fallback: _parse_range", exc_info=True)
                 pass
             return default
         # Default ranges per CEO directive 2026-04-29: ceiling pushed to
@@ -849,6 +853,7 @@ Reply ONLY in this exact JSON format, nothing else:
                     "spread": spread, "inverted": spread < 0,
                 }
         except Exception:
+            logger.debug("silent-fallback: Yield curve | get_enhanced_macro", exc_info=True)
             pass
 
         macro["fear_greed"] = fng_future.result(timeout=8)
@@ -1101,6 +1106,7 @@ Reply ONLY in this exact JSON format, nothing else:
             h = fmp.get_history(ticker, period=period)
             return h if h is not None and not h.empty else None
         except Exception:
+            logger.debug("silent-fallback: _get_history_fmp", exc_info=True)
             return None
 
     @staticmethod
@@ -1260,6 +1266,7 @@ Reply ONLY in this exact JSON format, nothing else:
                         if earliest_dt is None or dt < earliest_dt:
                             earliest_dt = dt
                     except (ValueError, TypeError):
+                        logger.debug("silent-fallback: _get_history_kis", exc_info=True)
                         continue
 
                 if not page_rows:
@@ -1390,6 +1397,7 @@ Reply ONLY in this exact JSON format, nothing else:
                     })
                     filled.add(sym)
         except Exception:
+            logger.debug("silent-fallback: get_sector_performance", exc_info=True)
             pass
 
         missing = [(sym, name) for sym, name in sectors if sym not in filled]

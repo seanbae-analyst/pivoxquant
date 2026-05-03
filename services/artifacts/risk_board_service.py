@@ -115,6 +115,7 @@ def _safe_price(ticker: str) -> Optional[float]:
             return None
         return float(hist["Close"].iloc[-1])
     except Exception:
+        logger.debug("silent-fallback: _safe_price", exc_info=True)
         return None
 
 
@@ -288,6 +289,7 @@ def _var_pct(rets: list[float], pct: float) -> Optional[float]:
         # VaR expressed as a positive loss % (e.g. 2.7 means -2.7%)
         return round(-q * 100, 2)
     except Exception:
+        logger.debug("silent-fallback: _var_pct", exc_info=True)
         return None
 
 
@@ -352,6 +354,7 @@ def _tail_ratio(rets: list[float]) -> Optional[float]:
             return None
         return round(right / abs(left), 2)
     except Exception:
+        logger.debug("silent-fallback: _tail_ratio", exc_info=True)
         return None
 
 
@@ -1321,6 +1324,8 @@ class RiskBoardService:
 
     def run_monthly(self, now: datetime | None = None) -> dict[str, Any]:
         """Cron — day 15 09:30 KST. Premium only."""
+        from services.artifacts import iter_users_chunked
+
         users = (
             User.query
             .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
@@ -1328,7 +1333,7 @@ class RiskBoardService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="risk_board.monthly"):
             try:
                 result = self.run_for_user(user, trigger="monthly", now=now)
                 if result is None:
@@ -1406,13 +1411,15 @@ class RiskBoardService:
             return result
 
         result["triggered"] = True
+        from services.artifacts import iter_users_chunked
+
         users = (
             User.query
             .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
             .all()
         )
         notified = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="risk_board.vix_spike"):
             try:
                 r = self.run_for_user(user, trigger="vix_spike", now=now)
                 if r is not None:
@@ -1430,6 +1437,7 @@ class RiskBoardService:
                 "last_notified_at": now.isoformat(),
             }))
         except Exception:
+            logger.debug("silent-fallback: run_vix_spike_check", exc_info=True)
             pass
 
         logger.info("risk_board vix_spike run: %s", result)

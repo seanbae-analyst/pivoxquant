@@ -168,6 +168,7 @@ def start():
 
 @autotrade_bp.route("/stop", methods=["POST"])
 @api_auth
+@trade_rate_limit
 def stop():
     trader = _trader()
     if trader is None:
@@ -244,6 +245,7 @@ def approve(trade_id):
 @autotrade_bp.route("/reject/<trade_id>", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@trade_rate_limit
 def reject(trade_id):
     """User rejects a pending trade."""
     trader = _trader()

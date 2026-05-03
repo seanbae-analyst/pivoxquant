@@ -14,6 +14,7 @@ from services import fx_service
 from services.name_resolver import resolve_stock_name
 from services.price_overlay import parse_price_display
 from .decorators import api_auth
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ share_bp = Blueprint("share", __name__, url_prefix="/api/portfolio/share")
 
 @share_bp.route("", methods=["POST"])
 @api_auth
+@general_rate_limit
 def create_share():
     """Create a 7-day public share token for the authenticated user's portfolio."""
     token = secrets.token_urlsafe(16)
@@ -74,6 +76,12 @@ def get_shared_portfolio(token):
     fx_rate = fx_service.get_rate()
 
     positions = Position.query.filter_by(user_id=share.user_id).all()
+    # Batch-load SignalCache for all positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
     out = []
     total_value_usd = 0.0
     scores = []
@@ -81,7 +89,7 @@ def get_shared_portfolio(token):
     total_current = 0.0
 
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
 
         is_kr = p.ticker.upper().endswith(".KS") or p.ticker.upper().endswith(".KQ")

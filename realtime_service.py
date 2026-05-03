@@ -192,6 +192,7 @@ class RealtimeService:
                         if p:
                             results[fut_map[fut]] = p
                     except Exception:
+                        logger.debug("silent-fallback: get_prices_batch", exc_info=True)
                         pass
 
         return results
@@ -336,6 +337,7 @@ class RealtimeService:
                 try:
                     self._kis_ws.stop()
                 except Exception:
+                    logger.debug("silent-fallback: stop_kis_ws", exc_info=True)
                     pass
                 self._kis_ws = None
 

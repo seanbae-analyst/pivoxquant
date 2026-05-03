@@ -262,6 +262,7 @@ export default function TopNav() {
   const pathname = usePathname();
   const rootRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lastPathname, setLastPathname] = useState(pathname);
 
   // Scroll shrink/opacity
   useEffect(() => {
@@ -271,11 +272,15 @@ export default function TopNav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close on route change
-  useEffect(() => {
-    setActiveKey(null);
-    setDrawerOpen(false);
-  }, [pathname]);
+  // Close on route change — compute during render so we don't queue a
+  // cascade of setStates from inside an effect. Tracking the previous
+  // pathname in state (rather than a ref) keeps us inside React's
+  // render-phase rules.
+  if (pathname !== lastPathname) {
+    setLastPathname(pathname);
+    if (activeKey !== null) setActiveKey(null);
+    if (drawerOpen) setDrawerOpen(false);
+  }
 
   // ESC closes mega dropdown
   useEffect(() => {

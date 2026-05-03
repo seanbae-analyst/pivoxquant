@@ -15,7 +15,7 @@
  * Visual: #0B0E14 bg, #1A1F2E hairline rules, bronze active-row cue.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 
 export type CellValue = string | number | null | undefined;
 
@@ -121,10 +121,11 @@ export function DataTable<R extends { id: string | number }>({
     [editing, focusIdx, onRowClick, sortedRows],
   );
 
-  useEffect(() => {
-    // Reset focus when rows shrink beneath it.
-    if (focusIdx >= sortedRows.length) setFocusIdx(sortedRows.length - 1);
-  }, [sortedRows.length, focusIdx]);
+  // Reset focus when rows shrink beneath it. Doing this during render avoids
+  // queuing a redundant render via setState-in-effect.
+  if (sortedRows.length > 0 && focusIdx >= sortedRows.length) {
+    setFocusIdx(sortedRows.length - 1);
+  }
 
   const rowCount = sortedRows.length;
 

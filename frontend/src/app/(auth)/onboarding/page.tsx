@@ -702,6 +702,7 @@ export default function OnboardingPage() {
       });
       await refresh();
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem("pivoxquant_onboarding_full_answers");
     } catch {
       // Fall through — still navigate so user isn't stuck if backend is down.
     } finally {
@@ -733,8 +734,9 @@ export default function OnboardingPage() {
       // Refresh user (onboarding_completed should flip to true)
       await refresh();
 
-      // Clean up stored progress
+      // Clean up stored progress + full-answers PII
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem("pivoxquant_onboarding_full_answers");
 
       router.replace("/home");
     } catch {

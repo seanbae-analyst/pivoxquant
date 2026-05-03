@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Download } from "lucide-react";
 
 // Chromium ships BeforeInstallPromptEvent; TS lib.dom doesn't type it yet.
@@ -20,6 +20,7 @@ export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Register the PWA service worker in production only (dev HMR conflicts).
@@ -48,11 +49,17 @@ export function InstallPrompt() {
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      window.setTimeout(() => setVisible(true), APPEAR_DELAY_MS);
+      timerRef.current = setTimeout(() => setVisible(true), APPEAR_DELAY_MS);
     };
 
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, []);
 
   const install = async () => {

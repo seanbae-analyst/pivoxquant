@@ -31,7 +31,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from models.investment_profile import InvestmentProfile
-from security import limiter
+from security import ai_rate_limit, limiter
 from services.agents.data_bridge import (
     load_ips_statements as _db_load_ips,
     load_journal_entries as _db_load_journal,
@@ -188,6 +188,7 @@ def _load_trade_history_proxy(user: Any) -> list[dict[str, Any]]:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @agent_bp.route("/query", methods=["POST"])
+@ai_rate_limit
 def query() -> Any:
     """POST /api/agent/query
 
@@ -224,6 +225,7 @@ def query() -> Any:
                 "message": "Journal Companion temporarily offline (ops kill switch).",
             }), 503
     except Exception:  # pragma: no cover — import-time safety
+        logger.debug("silent-fallback: closed on DB outage so refusal > leaky response. | query", exc_info=True)
         pass
 
     if not current_user.is_authenticated:
@@ -430,6 +432,7 @@ def waitlist() -> Any:
             from extensions import db as _db
             _db.session.rollback()
         except Exception:
+            logger.debug("silent-fallback: waitlist", exc_info=True)
             pass
         return jsonify({
             "error": "waitlist-store-failed",

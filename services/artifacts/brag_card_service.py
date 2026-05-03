@@ -972,6 +972,7 @@ class BragCardService:
             try:
                 setattr(artefact, "share_token", token)
             except Exception:
+                logger.debug("silent-fallback: Set share_token attribute if the column exists on the model. | _persist", exc_info=True)
                 pass
             db.session.add(artefact)
 
@@ -994,6 +995,7 @@ class BragCardService:
             try:
                 setattr(artefact, "share_token", new_token)
             except Exception:
+                logger.debug("silent-fallback: _persist", exc_info=True)
                 pass
             db.session.add(artefact)
             db.session.commit()
@@ -1044,13 +1046,15 @@ class BragCardService:
             start = target_month.replace(day=1)
             start.replace(day=monthrange(start.year, start.month)[1])
 
+        from services.artifacts import iter_users_chunked
+
         users = User.query.all()
 
         successes = 0
         failures = 0
         skipped = 0
 
-        for user in users:
+        for user in iter_users_chunked(users, label="brag_card.monthly"):
             try:
                 result = self.run_for_user(user, target_month=start)
                 if result is None:

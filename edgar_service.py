@@ -77,9 +77,9 @@ class EdgarService:
                     # Fallback: urllib (no requests installed)
                     import urllib.request
                     import ssl
+                    # Use default secure context (hostname check + cert verification ON).
+                    # Previously disabled both — that was a downgrade attack vector.
                     ctx = ssl.create_default_context()
-                    ctx.check_hostname = False
-                    ctx.verify_mode = ssl.CERT_NONE
                     req = urllib.request.Request(url, headers=_HEADERS)
                     with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
                         return json.loads(resp.read())

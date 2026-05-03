@@ -45,6 +45,7 @@ def scan():
                     if t.isdigit() and len(t) == 6:
                         held_kr.add(t)
             except Exception:
+                logger.debug("silent-fallback: scan", exc_info=True)
                 pass
             kr_results = kis.scan_momentum(held_tickers=held_kr) or []
             results.extend(kr_results)
@@ -204,31 +205,42 @@ def stream():
         return jsonify({"error": "Day trade not configured"}), 503
 
     def generate():
-        while True:
-            try:
-                prices = {}
-                if daytrade.available:
-                    try:
-                        prices.update(daytrade.get_latest_prices() or {})
-                    except Exception:
-                        pass
+        # Instantiate KIS once per stream rather than per loop iteration —
+        # avoids re-loading creds + token on every 10s tick.
+        try:
+            from kis_service import KISService
+            kis = KISService()
+        except Exception:
+            logger.debug("silent-fallback: KIS init", exc_info=True)
+            kis = None
+        try:
+            while True:
                 try:
-                    from kis_service import KISService
-                    kis = KISService()
-                    if kis.available:
-                        for code in ['005930', '000660', '035420', '005380', '006400', '051910']:
-                            p = kis.get_current_price(code)
-                            if p:
-                                prices[code] = {"price": p["price"], "change_pct": p["change_pct"]}
-                            time.sleep(0.55)
-                except Exception:
-                    pass
-                yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
-            except Exception as e:
-                import logging as _logging
-                _logging.getLogger(__name__).error(f"Daytrade stream error: {e}")
-                yield f"data: {json.dumps({'error': 'Price update failed'})}\n\n"
-            time.sleep(10)
+                    prices = {}
+                    if daytrade.available:
+                        try:
+                            prices.update(daytrade.get_latest_prices() or {})
+                        except Exception:
+                            logger.debug("silent-fallback: generate", exc_info=True)
+                            pass
+                    try:
+                        if kis and kis.available:
+                            for code in ['005930', '000660', '035420', '005380', '006400', '051910']:
+                                p = kis.get_current_price(code)
+                                if p:
+                                    prices[code] = {"price": p["price"], "change_pct": p["change_pct"]}
+                                time.sleep(0.55)
+                    except Exception:
+                        logger.debug("silent-fallback: generate", exc_info=True)
+                        pass
+                    yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
+                except Exception as e:
+                    import logging as _logging
+                    _logging.getLogger(__name__).error(f"Daytrade stream error: {e}")
+                    yield f"data: {json.dumps({'error': 'Price update failed'})}\n\n"
+                time.sleep(10)
+        except GeneratorExit:
+            return
 
     return Response(generate(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
