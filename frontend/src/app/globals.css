@@ -2943,9 +2943,192 @@ html {
 }
 
 /* ══════════════════════════════════════════════════════════
-   Hero — Right column: Friday Memo · Sealed (2026-05-03)
-   Static editorial mockup. Vantablack base + Bronze accents.
-   Pure CSS — no images, no API.
+   Hero — Right column: 7-Layer Pre-Trade Gate panel (2026-05-03)
+   Replaces the earlier Friday Memo card. Vantablack terminal +
+   bronze accents + italic editorial labels. Pure CSS, no images.
+   ══════════════════════════════════════════════════════════ */
+.pq-gate-card {
+  position: relative;
+  width: 320px;
+  align-self: start;
+  z-index: 3;
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.55));
+}
+.pq-gate-card-frame {
+  position: relative;
+  padding: 22px 22px 18px;
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      rgba(184, 149, 106, 0.05) 0%,
+      transparent 70%
+    ),
+    linear-gradient(180deg, #0a0907 0%, #050505 100%);
+  border: 1px solid rgba(184, 149, 106, 0.28);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(245, 240, 232, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+.pq-gate-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.pq-gate-card-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: "Geist", sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pq-bronze);
+  font-weight: 600;
+}
+.pq-gate-card-rule {
+  display: inline-block;
+  width: 16px;
+  height: 1px;
+  background-color: rgba(184, 149, 106, 0.7);
+}
+/* Live ping — soft bronze pulse */
+.pq-gate-card-ping {
+  position: relative;
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  align-items: center;
+  justify-content: center;
+}
+.pq-gate-card-ping-dot {
+  position: relative;
+  z-index: 2;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: var(--pq-bronze);
+  box-shadow: 0 0 6px rgba(184, 149, 106, 0.65);
+}
+.pq-gate-card-ping-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(184, 149, 106, 0.55);
+  animation: pq-gate-ping 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  transform-origin: center;
+}
+@keyframes pq-gate-ping {
+  0%   { transform: scale(0.5); opacity: 0.7; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.pq-gate-card-time {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed rgba(184, 149, 106, 0.22);
+}
+.pq-gate-card-time-mono {
+  font-family: "JetBrains Mono", "Menlo", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--pq-ivory);
+  letter-spacing: 0.02em;
+}
+.pq-gate-card-time-tz {
+  font-family: "Geist", sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.45);
+}
+.pq-gate-card-list {
+  list-style: none;
+  margin: 0 0 18px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.pq-gate-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-display), Georgia, "Source Serif 4", serif;
+  font-size: 13.5px;
+  color: rgba(245, 240, 232, 0.78);
+}
+.pq-gate-row-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: rgba(184, 149, 106, 0.7);
+  justify-self: center;
+}
+.pq-gate-row--watch .pq-gate-row-dot {
+  background-color: #d9a35a;
+  box-shadow: 0 0 6px rgba(217, 163, 90, 0.55);
+}
+.pq-gate-row-label {
+  font-style: italic;
+  letter-spacing: 0.005em;
+}
+.pq-gate-row-status {
+  font-family: "JetBrains Mono", "Menlo", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.pq-gate-row-status[data-state="ok"] {
+  color: rgba(184, 149, 106, 0.9);
+}
+.pq-gate-row-status[data-state="watch"] {
+  color: #d9a35a;
+}
+.pq-gate-card-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(184, 149, 106, 0.18);
+  font-family: "Geist", sans-serif;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: rgba(245, 240, 232, 0.55);
+}
+.pq-gate-card-foot-count {
+  font-family: "JetBrains Mono", "Menlo", monospace;
+  font-variant-numeric: tabular-nums;
+}
+.pq-gate-card-foot-count strong {
+  color: var(--pq-ivory);
+  font-weight: 600;
+}
+.pq-gate-card-foot-dot {
+  color: rgba(184, 149, 106, 0.45);
+}
+.pq-gate-card-foot-recheck {
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 11.5px;
+  color: rgba(184, 149, 106, 0.85);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pq-gate-card { filter: none; }
+  .pq-gate-card-ping-ring { animation: none; opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Legacy: Friday memo card (kept for any non-landing usage).
+   Replaced on the hero by .pq-gate-card above.
    ══════════════════════════════════════════════════════════ */
 .pq-friday-card {
   position: relative;

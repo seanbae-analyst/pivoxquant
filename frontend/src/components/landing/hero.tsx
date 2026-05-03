@@ -250,46 +250,77 @@ export function Hero() {
               </p>
             </div>
 
-            {/* ─── Right column: Friday memo · sealed (lg+ only) ─── */}
+            {/* ─── Right column: 7-Layer Pre-Trade Gate (lg+ only) ───
+                2026-05-03: previous Friday-memo card felt too decorative.
+                Replaced with a static panel that previews the 7-Layer Risk
+                Defense product surface (risk_defense.py) — the actual gate
+                a user passes through before submitting any order. Bloomberg-
+                terminal monospace + bronze status dots; italic labels keep
+                editorial warmth. Compliance-safe: shows GATE STATUS, never
+                advice or directional words. */}
             <aside
               aria-hidden
-              className={`pq-friday-card hidden lg:block ${animate ? "pq-reveal-left" : ""}`}
+              className={`pq-gate-card hidden lg:block ${animate ? "pq-reveal-left" : ""}`}
               style={d(1100)}
             >
-              <div className="pq-friday-card-paper">
-                {/* Wax seal */}
-                <div className="pq-friday-card-seal" aria-hidden>
-                  <span className="pq-friday-card-seal-mark">P</span>
+              <div className="pq-gate-card-frame">
+                {/* Eyebrow + live ping */}
+                <div className="pq-gate-card-head">
+                  <span className="pq-gate-card-eyebrow">
+                    <span aria-hidden className="pq-gate-card-rule" />
+                    PivoxQuant · Today&rsquo;s Gate
+                  </span>
+                  <span aria-hidden className="pq-gate-card-ping">
+                    <span className="pq-gate-card-ping-dot" />
+                    <span className="pq-gate-card-ping-ring" />
+                  </span>
                 </div>
 
-                {/* Eyebrow */}
-                <div className="pq-friday-card-eyebrow">
-                  <span aria-hidden className="pq-friday-card-rule" />
-                  PivoxQuant · Friday Memo
+                {/* Time stamp */}
+                <div className="pq-gate-card-time">
+                  <span className="pq-gate-card-time-mono">09:14:22</span>
+                  <span className="pq-gate-card-time-tz">KST</span>
                 </div>
 
-                {/* Issue line */}
-                <div className="pq-friday-card-issue">
-                  <span className="pq-friday-card-issue-week">Week 18</span>
-                  <span aria-hidden className="pq-friday-card-issue-dot">·</span>
-                  <span className="pq-friday-card-issue-year">2026</span>
-                </div>
+                {/* 7 layers */}
+                <ul className="pq-gate-card-list">
+                  {[
+                    { label: "VaR (95%)", state: "ok" as const },
+                    { label: "Correlation drift", state: "ok" as const },
+                    { label: "VIX regime", state: "watch" as const },
+                    { label: "Tail risk", state: "ok" as const },
+                    { label: "Daily P & L", state: "ok" as const },
+                    { label: "Sector cap", state: "ok" as const },
+                    { label: "Cash buffer", state: "ok" as const },
+                  ].map((row) => (
+                    <li
+                      key={row.label}
+                      className={`pq-gate-row pq-gate-row--${row.state}`}
+                    >
+                      <span aria-hidden className="pq-gate-row-dot" />
+                      <span className="pq-gate-row-label">{row.label}</span>
+                      <span
+                        aria-hidden
+                        className="pq-gate-row-status"
+                        data-state={row.state}
+                      >
+                        {row.state === "ok" ? "✓" : "⚠"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
 
-                {/* Body — italic Playfair pull quote, observation-only */}
-                <p className="pq-friday-card-body">
-                  Risk budget held inside the gate. Two pre-trade
-                  questions surfaced — one on sector concentration,
-                  one on the FX leg. Reflection saved.
-                </p>
-
-                {/* Editorial dotted leader */}
-                <div className="pq-friday-card-leader" aria-hidden />
-
-                {/* Foot — timestamp + sealed mark */}
-                <div className="pq-friday-card-foot">
-                  <span className="pq-friday-card-time">17:30 KST</span>
-                  <span aria-hidden className="pq-friday-card-foot-dot">·</span>
-                  <span className="pq-friday-card-sealed">Sealed</span>
+                {/* Foot — aggregate + recheck */}
+                <div className="pq-gate-card-foot">
+                  <span className="pq-gate-card-foot-count">
+                    <strong>6</strong> of 7 cleared
+                  </span>
+                  <span aria-hidden className="pq-gate-card-foot-dot">
+                    &middot;
+                  </span>
+                  <span className="pq-gate-card-foot-recheck">
+                    re-check 17:30
+                  </span>
                 </div>
               </div>
             </aside>
