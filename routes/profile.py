@@ -22,10 +22,14 @@ from flask_login import current_user
 
 from extensions import db
 from models import (
+    Alert,
     ArtifactFeedback,
     InvestmentProfile,
+    Position,
+    TradeHistory,
     VALID_CADENCES,
     VOTE_CHOICES,
+    Watchlist,
     WeeklyPulse,
 )
 from models.investment_profile import calculate_profile_type
@@ -1042,3 +1046,225 @@ def patch_email_preferences():
             "email_opt_out_earnings": bool(current_user.email_opt_out_earnings),
         },
     })
+
+
+# ── PIPA §35 정보주체 열람권 (Right to Access self-service) ─────────────
+# 개인정보보호법 §35 ① 정보주체는 본인의 개인정보 열람을 요구할 수 있다.
+# §35 ④ 개인정보처리자는 10일 이내에 열람할 수 있도록 해야 한다.
+#
+# privacy-ko.md 의 "[설정 > 개인정보 관리] 페이지에서 직접 처리" 약속에
+# 대응하는 self-service endpoint. 사용자가 본인 데이터를 즉시 다운로드.
+#
+# 보안:
+#   - login_required (api_auth) → 본인 데이터만 반환
+#   - 민감 시크릿 제외: stripe_customer_id, password_hash, oauth_id,
+#     refresh_token 등 → 응답에 포함 금지 (PII 최소 노출)
+#   - JSON download (Content-Disposition: attachment)
+#
+# 회귀 방지: query 는 모두 `user_id == current_user.id` 로 스코핑.
+# 다른 사용자 데이터는 어떤 경로로도 노출되지 않아야 한다 (테스트로 검증).
+
+# Caps to keep export size sane while still being PIPA-compliant
+# (사용자가 본인 정보를 "전부" 받을 수 있도록 충분히 크게).
+_EXPORT_TRADE_LIMIT = 5000   # >5000 trades 면 파일 분할이 필요한 사용자
+_EXPORT_ALERT_LIMIT = 1000   # 1년치 알림 충분
+
+
+def _iso_or_none(value):
+    """Safe ISO-8601 conversion. Returns None for None / non-datetime input."""
+    if value is None:
+        return None
+    try:
+        return value.isoformat()
+    except (AttributeError, TypeError):
+        return None
+
+
+def _serialize_user(user) -> dict:
+    """Serialize User row, excluding sensitive secrets per PIPA minimization.
+
+    Excluded on purpose:
+        - password_hash      : credential hash (never expose)
+        - stripe_customer_id : payment processor identifier
+        - oauth_id           : OAuth provider's internal user ID
+        - refresh_token      : broker connection tokens (handled separately
+                                in BrokerConnection if at all)
+
+    Included: identity (email, name), profile metadata, capital, tier,
+    consent flags.
+    """
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "avatar_url": getattr(user, "avatar_url", None),
+        "oauth_provider": getattr(user, "oauth_provider", None),
+        "created_at": _iso_or_none(getattr(user, "created_at", None)),
+        "available_capital_usd": getattr(user, "available_capital", None),
+        "available_capital_krw": getattr(user, "available_capital_krw", None),
+        "risk_profile": getattr(user, "risk_profile", None),
+        "subscription_tier": getattr(user, "subscription_tier", None),
+        "onboarding_completed": bool(getattr(user, "onboarding_completed", False)),
+        "profile_changes_left": getattr(user, "profile_changes_left", None),
+        "email_opt_out": bool(getattr(user, "email_opt_out", False)),
+        "email_opt_out_earnings": bool(
+            getattr(user, "email_opt_out_earnings", False)
+        ),
+    }
+
+
+def _serialize_position(p) -> dict:
+    return {
+        "id": p.id,
+        "ticker": p.ticker,
+        "shares": p.shares,
+        "avg_cost": p.avg_cost,
+        "buy_fx_rate": getattr(p, "buy_fx_rate", None),
+        "added_at": _iso_or_none(getattr(p, "added_at", None)),
+        "thesis": getattr(p, "thesis", None),
+        "thesis_status": getattr(p, "thesis_status", None),
+    }
+
+
+def _serialize_watchlist(w) -> dict:
+    return {
+        "id": w.id,
+        "ticker": w.ticker,
+        "note": getattr(w, "note", None),
+        "added_at": _iso_or_none(getattr(w, "added_at", None)),
+    }
+
+
+def _serialize_trade(t) -> dict:
+    return {
+        "id": t.id,
+        "ticker": t.ticker,
+        "name": getattr(t, "name", None),
+        "action": t.action,
+        "shares": t.shares,
+        "price_per_share": t.price_per_share,
+        "total_value": t.total_value,
+        "pnl": getattr(t, "pnl", None),
+        "pnl_pct": getattr(t, "pnl_pct", None),
+        "currency": getattr(t, "currency", None),
+        "traded_at": _iso_or_none(getattr(t, "traded_at", None)),
+    }
+
+
+def _serialize_alert(a) -> dict:
+    return {
+        "id": a.id,
+        "ticker": getattr(a, "ticker", None),
+        "kind": getattr(a, "kind", None),
+        "title": getattr(a, "title", None),
+        "body": getattr(a, "body", None),
+        "message": getattr(a, "message", None),
+        "signal": getattr(a, "signal", None),
+        "score": getattr(a, "score", None),
+        "is_read": bool(getattr(a, "is_read", False)),
+        "created_at": _iso_or_none(getattr(a, "created_at", None)),
+        "read_at": _iso_or_none(getattr(a, "read_at", None)),
+    }
+
+
+@profile_bp.route("/export", methods=["GET"])
+@api_auth
+@general_rate_limit
+def export_profile():
+    """PIPA §35 — Self-service personal data export.
+
+    Returns the authenticated user's complete personal data record as a
+    downloadable JSON file. This satisfies 개인정보보호법 §35 ① (정보주체
+    열람권) and §35 ④ (10일 이내 열람) by making the data available
+    instantly rather than requiring an email request workflow.
+
+    Scope: STRICTLY ``user_id == current_user.id``. Every query is
+    filtered by the current user's id. The endpoint never accepts a
+    user-id parameter — there is no admin-impersonation path.
+
+    Excluded (PII minimization):
+        - password_hash
+        - stripe_customer_id
+        - oauth_id / oauth refresh_token
+        - other users' rows (never queried)
+
+    Response headers:
+        Content-Type: application/json
+        Content-Disposition: attachment; filename="pivoxquant_export_<id>_<date>.json"
+
+    Frontend hook: settings page "내 데이터 다운로드" button (TBD, separate PR).
+    """
+    user = current_user
+    user_id = user.id
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    try:
+        positions = Position.query.filter_by(user_id=user_id).all()
+        watchlist = Watchlist.query.filter_by(user_id=user_id).all()
+        trades = (
+            TradeHistory.query
+            .filter_by(user_id=user_id)
+            .order_by(TradeHistory.traded_at.desc())
+            .limit(_EXPORT_TRADE_LIMIT)
+            .all()
+        )
+        alerts = (
+            Alert.query
+            .filter_by(user_id=user_id)
+            .order_by(Alert.created_at.desc())
+            .limit(_EXPORT_ALERT_LIMIT)
+            .all()
+        )
+        investment_profile = (
+            InvestmentProfile.query.filter_by(user_id=user_id).first()
+        )
+    except Exception:
+        logger.exception(
+            "profile.export_profile query failed (user_id=%s)", user_id,
+        )
+        return jsonify({"error": "Failed to compile export. Please try again."}), 500
+
+    payload = {
+        "format_version": "1.0",
+        "exported_at": now.isoformat() + "Z",
+        "legal_basis": "개인정보보호법 §35 (정보주체 열람권)",
+        "scope": "self_only",
+        "user": _serialize_user(user),
+        "positions": [_serialize_position(p) for p in positions],
+        "watchlist": [_serialize_watchlist(w) for w in watchlist],
+        "trade_history": [_serialize_trade(t) for t in trades],
+        "alerts": [_serialize_alert(a) for a in alerts],
+        "investment_profile": (
+            investment_profile.to_dict() if investment_profile else None
+        ),
+        "counts": {
+            "positions": len(positions),
+            "watchlist": len(watchlist),
+            "trade_history": len(trades),
+            "alerts": len(alerts),
+        },
+        "notes": {
+            "excluded_fields": [
+                "password_hash",
+                "stripe_customer_id",
+                "oauth_id",
+                "oauth_refresh_token",
+            ],
+            "trade_limit": _EXPORT_TRADE_LIMIT,
+            "alert_limit": _EXPORT_ALERT_LIMIT,
+            "contact": (
+                "If you need older records or additional data not included "
+                "here, contact privacy@pivoxquant.com per PIPA §35."
+            ),
+        },
+    }
+
+    response = jsonify(payload)
+    filename = f"pivoxquant_export_{user_id}_{now.strftime('%Y%m%d')}.json"
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+    # Prevent any intermediate caches from storing personal data.
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+    response.headers["Pragma"] = "no-cache"
+    return response
