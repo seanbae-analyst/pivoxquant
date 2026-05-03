@@ -76,9 +76,13 @@ interface ScenarioRow {
 }
 
 const DEFAULT: EarningsPrebriefData = {
-  ticker: "PLTR",
-  companyName: "Palantir Technologies",
-  fiscalLabel: "Q1 2026 · FY 2026 Earnings",
+  // Sample-only fixture. Numbers (Revenue $32.5B, EPS $5.12, Data Center
+  // Rev $26.1B) match NVDA-class disclosures, so the ticker/company are
+  // aligned with NVDA — the prior PLTR labeling created a $32B revenue
+  // mismatch (PLTR sub-$3B). Treat as illustrative; not a forecast.
+  ticker: "NVDA",
+  companyName: "NVIDIA Corporation",
+  fiscalLabel: "Q1 FY 2026 Earnings",
   reportingDate: "Earnings Date · After Market Close",
   position: "120 sh · 9.95% weight",
   consensus: [
@@ -147,6 +151,26 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
           meta={`${data.ticker} · 01 / 02`}
         />
         <PdfGoldRule />
+
+        {/* SAMPLE banner — never let the static NVDA mockup be mistaken
+            for the user's own holdings. Mirrors the DD Checklist pattern
+            so all sample-reports surfaces label themselves consistently. */}
+        <div
+          style={{
+            margin: "12px 0 4px",
+            padding: "10px 14px",
+            background: "rgba(184, 149, 106, 0.08)",
+            border: "1px solid rgba(184, 149, 106, 0.4)",
+            borderRadius: 2,
+            fontFamily: "var(--pq-font-mono), 'JetBrains Mono', monospace",
+            fontSize: 11,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "var(--r-gold-deep, #8b6f47)",
+          }}
+        >
+          ▍ Sample · 양식 — 실제 보유 데이터 아님
+        </div>
 
         <PdfEyebrow>Pre-Earnings Brief · For Growth / Quant Personas</PdfEyebrow>
         <PdfCoverTitle size={48}>

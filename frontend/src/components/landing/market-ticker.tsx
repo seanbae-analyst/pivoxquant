@@ -122,7 +122,7 @@ export function MarketTicker() {
   return (
     <div
       role="marquee"
-      aria-label="Global market snapshot ticker (static, indicative levels)"
+      aria-label="Global market snapshot ticker (as of 2026-04-25 close, indicative levels)"
       className="relative w-full max-w-full overflow-x-clip overflow-y-hidden border-b box-border"
       style={{
         height: 32,
@@ -181,7 +181,7 @@ export function MarketTicker() {
             className="mr-1.5 inline-block h-[5px] w-[5px] rounded-full align-middle"
             style={{ backgroundColor: "rgba(184, 149, 106, 0.55)" }}
           />
-          Recent snapshot · indicative levels
+          As of 2026-04-25 close · indicative levels
         </span>
       </div>
 
