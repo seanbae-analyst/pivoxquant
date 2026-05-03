@@ -22,6 +22,14 @@
   small subset is consumed here (user_name, pending count + first 8 rows,
   generated_at, view_url).
   ════════════════════════════════════════════════════════════════════════
+
+  ⚠️  LEGAL — DO NOT MODIFY DISCLAIMER FALLBACK WITHOUT REVIEW  ⚠️
+  The footer line `{{ disclaimer or "정보 제공 목적이며 …" }}` (around
+  line ~100) uses a SHORT 1-sentence fallback when no disclaimer is
+  passed by the service. Replacing the fallback with the canonical
+  _disclaimer.html boilerplate is a CONTENT change to 자본시장법 §6
+  면책 고지 — needs lawyer sign-off first. See NEEDS_CONFIG.md §11.
+  ════════════════════════════════════════════════════════════════════════
 #}
 <!doctype html>
 <html lang="ko">
