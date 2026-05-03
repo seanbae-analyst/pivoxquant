@@ -46,6 +46,7 @@ Untitled*.canvas
 .bkit/
 /tmp/
 .claude/settings.local.json
+.claude/worktrees/
 
 # Logs
 *.log
