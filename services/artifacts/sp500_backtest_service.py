@@ -162,6 +162,43 @@ class SP500BacktestService:
             logger.debug("sp500_backtest persona resolution failed: %s", exc)
             return "balanced"
 
+    def generate_for_user(
+        self,
+        user_id: int,
+        **_kwargs: Any,
+    ) -> dict[str, Any]:
+        """Return the published 10-year backtest observation record.
+
+        Surface
+        -------
+        Wired into ``routes/artifacts._ARTIFACT_DISPATCH`` so the unified
+        ``POST /api/artifacts/generate`` flow can issue the artefact. The
+        underlying record is universal (Strategy C observed against SPY
+        2021-12 → 2026-04) — the ``user_id`` is consumed only for persona
+        colouring on the cover eyebrow, never to scope returns.
+
+        Why no per-user variation
+        -------------------------
+        ``sp500_backtest`` is an *observation record*, not a per-user
+        attribution report. Mixing in user portfolio data here would
+        muddle the legal posture (``"관찰" / "기록"`` vocabulary in
+        ``_NOT_CLAIMED``) and slip toward 자본시장법 §6 territory. Keep it
+        clean: same numbers for every viewer, persona-tinted eyebrow only.
+        """
+        try:
+            from services.artifacts.sample_data import sample_sp500_backtest
+        except Exception as exc:  # pragma: no cover
+            logger.error("sp500_backtest data load failed: %s", exc)
+            raise
+        data = sample_sp500_backtest()
+        # Persona resolution lazily uses ``data["user_id"]`` if provided —
+        # the route helper does not pass it through, so we set it here so
+        # the persona eyebrow honours the caller's profile.
+        if user_id is not None:
+            data = dict(data)
+            data["user_id"] = int(user_id)
+        return data
+
     def render_pdf_html(self, data: dict[str, Any]) -> str:
         env = self._jinja_env()
         if env is None:
