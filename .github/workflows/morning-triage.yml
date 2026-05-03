@@ -54,10 +54,12 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # `allowed_tools` is NOT a valid input on @v1 — must go via claude_args.
-          # Without --allowedTools, the action's Claude hit permission_denials_count: 9
-          # and burned all 12 turns on denied bash calls. Single-line --allowedTools
-          # to keep YAML parser happy (multi-line claude_args also works but more verbose).
-          claude_args: '--max-turns 20 --model claude-sonnet-4-6 --allowedTools "Bash(gh:*) Read Grep Glob"'
+          # Verified syntax (2026-05-03) from
+          # https://github.com/anthropics/claude-code-action/blob/main/examples/ci-failure-auto-fix.yml:
+          #   claude_args: "--allowedTools 'Edit,MultiEdit,Write,Read,Glob,Grep,LS,Bash(git:*),Bash(npm:*),Bash(gh:*)'"
+          # Comma-separated tools, `Bash(<cmd>:*)` glob with COLON, outer double quotes
+          # + inner single quotes. Space-separated form silently fails (permission_denials_count: 9).
+          claude_args: "--max-turns 25 --model claude-sonnet-4-6 --allowedTools 'Read,Grep,Glob,Bash(gh issue list:*),Bash(gh issue view:*),Bash(gh issue comment:*),Bash(gh api:*),Bash(git log:*),Bash(git show:*)'"
           prompt: |
             You are PivoxQuant's morning triage (Layer B, 09:00 KST daily).
 
