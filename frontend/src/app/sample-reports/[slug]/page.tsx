@@ -16,6 +16,7 @@ import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
 
 import { WeeklyMemo } from "@/components/reports/templates/weekly-memo";
 import { BragCard } from "@/components/reports/templates/brag-card";
+import { MorningBriefPlus } from "@/components/reports/templates/morning-brief-plus";
 import { EarningsPrebrief } from "@/components/reports/templates/earnings-prebrief";
 import { RiskBoard } from "@/components/reports/templates/risk-board";
 import { QuarterlySelfReport } from "@/components/reports/templates/quarterly-self-report";
@@ -35,6 +36,7 @@ import { YearEndLetter } from "@/components/reports/templates/year-end-letter";
 const TEMPLATES = {
   "weekly-memo": { component: WeeklyMemo, title: "Weekly Memo" },
   "brag-card": { component: BragCard, title: "Brag Card" },
+  "morning-brief-plus": { component: MorningBriefPlus, title: "Morning Brief Plus" },
   "earnings-prebrief": { component: EarningsPrebrief, title: "Earnings Pre-Brief" },
   "risk-board": { component: RiskBoard, title: "Risk Board" },
   "quarterly-self-report": { component: QuarterlySelfReport, title: "Quarterly Self Report" },
