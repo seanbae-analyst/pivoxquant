@@ -376,6 +376,13 @@ def _do_migrations():
     # which is the safest default for the §50 default-deny posture.
     _add_column_if_missing("users", "marketing_consent_at", "TIMESTAMP")
     _add_column_if_missing("users", "marketing_consent_revoked_at", "TIMESTAMP")
+    # PIPA §28-8 (2024-09 시행) 국외이전 별도 동의 타임스탬프. Anthropic
+    # PBC / Stripe / Vercel / Railway (미국) 으로의 이전·위탁에 대한 명시적
+    # 별도 동의가 §28-8 의무이며, 본 컬럼이 NULL 이면 동의 미수령으로
+    # 간주한다. Managed via migration 024_cross_border_consent — 본 fallback
+    # 은 Alembic 미실행 박스(레거시 로컬 dev DB)를 위한 안전망이다.
+    _add_column_if_missing("users", "cross_border_consent_at", "TIMESTAMP")
+    _add_column_if_missing("users", "cross_border_consent_revoked_at", "TIMESTAMP")
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but
