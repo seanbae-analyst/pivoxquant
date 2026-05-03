@@ -5,12 +5,12 @@ from typing import Any
 from engine import QuantEngine
 from data_fetcher import DataFetcher
 from ai_service import AIService
-from daytrade_service import DayTradeService
+from services.trading.daytrade import DayTradeService
 from realtime_service import RealtimeService
 
-# REMOVED 2026-04-27 per CEO + legal: top-level `from autotrader import AutoTrader`
+# REMOVED 2026-04-27 per CEO + legal: top-level `from services.trading.autotrader import AutoTrader`
 # eliminated alongside the autotrade feature removal (투자일임업 등록 회피).
-# `autotrader.py` is preserved on disk for rollback; importing it here at module
+# `services/trading/autotrader.py` is preserved on disk for rollback; importing it here at module
 # load would still execute its module side-effects (AutoTrader class build,
 # circuit-breaker constants, etc.), which is undesirable when the feature is
 # disabled. Re-enable by restoring the import + the `init_trader()` body below.
@@ -34,7 +34,7 @@ def init_trader(db, Position, TradeHistory, app):
     rollback) do not crash with AttributeError. Returns None.
 
     Restore path:
-      1) Re-add `from autotrader import AutoTrader` at module top.
+      1) Re-add `from services.trading.autotrader import AutoTrader` at module top.
       2) Replace this body with the prior implementation (AutoTrader instance
          + optional KISService market-data binding).
       3) Re-enable the `svc.init_trader(...)` call in app.py.
