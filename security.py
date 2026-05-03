@@ -106,11 +106,18 @@ _CSRF_SAFE_METHODS = frozenset(["GET", "HEAD", "OPTIONS"])
 #     from hostile pages. Keeping it CSRF-exempt unblocks clients that can't
 #     attach the double-submit token (e.g. cookie-partitioning browsers,
 #     tools/tests that call the endpoint directly with just the session cookie).
+#   - `/api/email/unsubscribe` — 정통망법 §50 RFC 8058 one-click unsubscribe.
+#     Authenticated by HMAC-signed token (services.email_token), not session.
+#     Gmail/Outlook POST `List-Unsubscribe=One-Click` from their own infra and
+#     cannot attach a CSRF double-submit cookie. The endpoint is idempotent
+#     (re-click sets the same opt-out flag) and the worst a CSRF attack can do
+#     is opt the user OUT of marketing email — no data exposure / state change.
 _CSRF_EXEMPT_PREFIXES = (
     "/api/billing/webhook",
     "/api/auth/dev-login",
     "/api/auth/logout",
     "/api/logout",
+    "/api/email/unsubscribe",
 )
 
 
@@ -390,7 +397,12 @@ def init_security(app):
             "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             "img-src 'self' data: https:; "
-            "connect-src 'self'; "
+            # connect-src — keep aligned with frontend CSP (vercel.json).
+            # Stripe + Sentry + Kakao are required for billing, error
+            # reporting, and OAuth flows respectively. Without these the
+            # browser blocks legitimate XHR/fetch and silently breaks
+            # checkout / error reporting.
+            "connect-src 'self' https://api.stripe.com https://*.sentry.io https://kapi.kakao.com; "
             "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
             "object-src 'none'; "
             "base-uri 'self'; "

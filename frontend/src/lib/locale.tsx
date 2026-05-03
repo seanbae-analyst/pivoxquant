@@ -52,7 +52,12 @@ function readLocaleCookie(): Locale | null {
 
 function writeLocaleCookie(locale: Locale): void {
   if (typeof document === "undefined") return;
-  document.cookie = `${COOKIE_NAME}=${locale}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+  // Add `Secure` flag in production (HTTPS-only) so the locale cookie cannot
+  // leak over plaintext channels. Skip in development since localhost runs
+  // over HTTP and `Secure` would silently drop the cookie.
+  const secure =
+    process.env.NODE_ENV === "production" ? "; Secure" : "";
+  document.cookie = `${COOKIE_NAME}=${locale}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`;
 }
 
 /**
