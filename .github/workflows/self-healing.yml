@@ -46,6 +46,14 @@ jobs:
     timeout-minutes: 20
     continue-on-error: true   # alerting, not gating
 
+    # Effective flags. workflow_dispatch carries explicit inputs; schedule
+    # has none, so we fall back to the AUTOFIX_ENABLED repo variable.
+    # Default for cron is OFF (variable unset → '0') so the workflow stays
+    # in scan-only mode until the operator explicitly opts in via:
+    #   gh variable set AUTOFIX_ENABLED --body 1 --repo seanbae-analyst/pivoxquant
+    env:
+      AUTOFIX_ON: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.auto_pr == 'true') || (github.event_name == 'schedule' && vars.AUTOFIX_ENABLED == '1') || (github.event_name == 'repository_dispatch' && vars.AUTOFIX_ENABLED == '1') }}
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -149,8 +157,8 @@ jobs:
           echo "::notice::dry_run=true → skipped Claude Code Action invocation."
           echo "::notice::Patterns scanned but no patches generated. Inspect self_healing_artifacts/railway_patterns.jsonl in the artefact bundle."
 
-      - name: Apply patch + run pytest (only if patches exist and AUTO_PR=1)
-        if: ${{ github.event.inputs.auto_pr == 'true' && github.event.inputs.dry_run == 'false' }}
+      - name: Apply patch + run pytest (only if patches exist and autofix on)
+        if: ${{ env.AUTOFIX_ON == 'true' && github.event.inputs.dry_run != 'true' }}
         id: apply
         run: |
           set -e
