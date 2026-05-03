@@ -1,6 +1,7 @@
 """Billing routes: Stripe subscription checkout, webhooks, portal."""
 import os
 import logging
+from functools import wraps
 
 import stripe
 from flask import Blueprint, request, jsonify
@@ -29,6 +30,43 @@ PLAN_TIERS = {
     "pro": "pro",
     "premium": "premium",
 }
+
+
+# ── Business registration gate ──────────────────────────────────────────────
+#
+# 한국 법: 사업자등록(부가가치세법 §8) + 통신판매업 신고(전자상거래법 §12)가
+# 완료되지 않은 상태에서 결제를 활성화하면 위법.
+#  - 전자상거래법 §40: 1,000만원 이하 과태료 (신원정보 미표시)
+#  - 통신판매법 §43: 3,000만원 이하 과태료 (무신고 영업)
+#
+# Railway env에 BUSINESS_REGISTRATION_NUMBER + TELESELLER_REGISTRATION_NUMBER
+# 두 값이 모두 설정되기 전까지 모든 결제 endpoint를 503으로 차단.
+# (frontend도 /api/billing/availability를 호출해 결제 버튼을 disable해야 함.)
+
+def _business_registration_complete() -> bool:
+    """사업자등록 + 통신판매업 신고 둘 다 완료됐는지 확인."""
+    return bool(
+        os.environ.get("BUSINESS_REGISTRATION_NUMBER")
+        and os.environ.get("TELESELLER_REGISTRATION_NUMBER")
+    )
+
+
+def _registration_pending_response():
+    return jsonify({
+        "error": "Subscription not yet available",
+        "error_ko": "결제는 사업자등록 및 통신판매업 신고 완료 후 활성화됩니다",
+        "code": "BUSINESS_REGISTRATION_PENDING",
+    }), 503
+
+
+def require_business_registration(f):
+    """Decorator: 결제 관련 endpoint를 사업자등록 전까지 503으로 차단."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not _business_registration_complete():
+            return _registration_pending_response()
+        return f(*args, **kwargs)
+    return wrapper
 
 
 def _get_or_create_customer(user):
@@ -64,6 +102,7 @@ def _get_or_create_customer(user):
 @billing_bp.route("/create-checkout", methods=["POST"])
 @api_auth
 @general_rate_limit
+@require_business_registration
 def create_checkout():
     """Create a Stripe Checkout session for Pro or Premium plan."""
     d = request.get_json() or {}
@@ -276,6 +315,7 @@ def get_subscription():
 @billing_bp.route("/portal", methods=["POST"])
 @api_auth
 @general_rate_limit
+@require_business_registration
 def create_portal():
     """Create a Stripe Customer Portal session for managing subscription."""
     if not current_user.stripe_customer_id:
@@ -290,3 +330,25 @@ def create_portal():
     except stripe.StripeError as e:
         logger.error(f"Stripe portal error: {e}")
         return jsonify({"error": "Failed to create portal session."}), 500
+
+
+# ── Billing Availability ─────────────────────────────────────────────────────
+
+@billing_bp.route("/availability", methods=["GET"])
+def billing_availability():
+    """Whether checkout is enabled (frontend uses this to disable pricing CTAs).
+
+    No auth required — the pricing page is publicly visible and needs to know
+    whether to show the "Coming soon" state before the user logs in.
+    """
+    available = _business_registration_complete()
+    payload = {
+        "available": available,
+        "code": None if available else "BUSINESS_REGISTRATION_PENDING",
+        "message_ko": (
+            "결제 가능"
+            if available
+            else "결제는 사업자등록 및 통신판매업 신고 완료 후 활성화됩니다"
+        ),
+    }
+    return jsonify(payload)
