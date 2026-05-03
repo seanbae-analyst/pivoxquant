@@ -92,7 +92,11 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # `allowed_tools` is NOT a valid input on @v1 — pass via claude_args.
-          claude_args: '--max-turns 20 --model claude-sonnet-4-6 --allowedTools "Bash(gh:*) Bash(git:*) Read Write Grep Glob"'
+          # Verified syntax (2026-05-03) from
+          # https://github.com/anthropics/claude-code-action/blob/main/examples/ci-failure-auto-fix.yml:
+          #   claude_args: "--allowedTools 'Edit,MultiEdit,Write,Read,Glob,Grep,LS,Bash(git:*),Bash(gh:*)'"
+          # Comma-separated, `Bash(<cmd>:*)` with COLON, outer double + inner single quotes.
+          claude_args: "--max-turns 25 --model claude-sonnet-4-6 --allowedTools 'Read,Write,Grep,Glob,Bash(gh issue create:*),Bash(gh pr:*),Bash(git log:*),Bash(git show:*),Bash(git diff:*)'"
           prompt: |
             You are PivoxQuant's self-healing layer (Layer C).
 
