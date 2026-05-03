@@ -91,8 +91,8 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: --max-turns 14 --model claude-sonnet-4-6
-          allowed_tools: "Bash(gh issue *),Bash(git log *),Bash(cat *),Read,Write,Grep,Glob"
+          # `allowed_tools` is NOT a valid input on @v1 — pass via claude_args.
+          claude_args: '--max-turns 20 --model claude-sonnet-4-6 --allowedTools "Bash(gh:*) Bash(git:*) Read Write Grep Glob"'
           prompt: |
             You are PivoxQuant's self-healing layer (Layer C).
 

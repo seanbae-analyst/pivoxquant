@@ -53,8 +53,11 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: --max-turns 12 --model claude-sonnet-4-6
-          allowed_tools: "Bash(gh issue *),Bash(gh api *),Bash(git log *),Bash(cat *),Read,Grep,Glob"
+          # `allowed_tools` is NOT a valid input on @v1 — must go via claude_args.
+          # Without --allowedTools, the action's Claude hit permission_denials_count: 9
+          # and burned all 12 turns on denied bash calls. Single-line --allowedTools
+          # to keep YAML parser happy (multi-line claude_args also works but more verbose).
+          claude_args: '--max-turns 20 --model claude-sonnet-4-6 --allowedTools "Bash(gh:*) Read Grep Glob"'
           prompt: |
             You are PivoxQuant's morning triage (Layer B, 09:00 KST daily).
 
