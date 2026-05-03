@@ -107,6 +107,7 @@ export default function SignupPageV1() {
     marketing: false,
   });
   const [allRequired, setAllRequired] = useState(false);
+  const [pulseUnchecked, setPulseUnchecked] = useState(false);
 
   useEffect(() => {
     // Preserved verbatim from v1 behavior — derived-value refactor is out of
@@ -114,6 +115,18 @@ export default function SignupPageV1() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAllRequired(consents.terms && consents.non_advisory && consents.age);
   }, [consents]);
+
+  // Auto-clear the pulse highlight a moment after it fires.
+  useEffect(() => {
+    if (!pulseUnchecked) return;
+    const t = setTimeout(() => setPulseUnchecked(false), 900);
+    return () => clearTimeout(t);
+  }, [pulseUnchecked]);
+
+  const handleDisabledClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setPulseUnchecked(true);
+  };
 
   useEffect(() => {
     if (!loading && user) {
@@ -190,7 +203,10 @@ export default function SignupPageV1() {
         <p className="text-xs font-semibold text-slate-700">가입 전 확인</p>
 
         {/* 1. 이용약관 + 개인정보처리방침 */}
-        <label htmlFor="agree_terms" className="flex cursor-pointer items-start gap-2">
+        <label
+          htmlFor="agree_terms"
+          className={`flex cursor-pointer items-start gap-2 rounded-md transition-all ${pulseUnchecked && !consents.terms ? "ring-2 ring-rose-400/70 ring-offset-2 ring-offset-slate-50 motion-safe:animate-pulse" : ""}`}
+        >
           <Checkbox
             id="agree_terms"
             checked={consents.terms}
@@ -224,7 +240,7 @@ export default function SignupPageV1() {
         {/* 2. 투자자문업 아님 고지 (자본시장법) */}
         <label
           htmlFor="agree_non_advisory"
-          className="flex cursor-pointer items-start gap-2"
+          className={`flex cursor-pointer items-start gap-2 rounded-md transition-all ${pulseUnchecked && !consents.non_advisory ? "ring-2 ring-rose-400/70 ring-offset-2 ring-offset-slate-50 motion-safe:animate-pulse" : ""}`}
         >
           <Checkbox
             id="agree_non_advisory"
@@ -239,7 +255,10 @@ export default function SignupPageV1() {
         </label>
 
         {/* 3. 만 14세 이상 (PIPA §22) */}
-        <label htmlFor="agree_age" className="flex cursor-pointer items-start gap-2">
+        <label
+          htmlFor="agree_age"
+          className={`flex cursor-pointer items-start gap-2 rounded-md transition-all ${pulseUnchecked && !consents.age ? "ring-2 ring-rose-400/70 ring-offset-2 ring-offset-slate-50 motion-safe:animate-pulse" : ""}`}
+        >
           <Checkbox
             id="agree_age"
             checked={consents.age}
@@ -282,8 +301,8 @@ export default function SignupPageV1() {
         ) : (
           <button
             type="button"
-            disabled
             aria-disabled="true"
+            onClick={handleDisabledClick}
             className="flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-400"
           >
             <GoogleIcon />
@@ -303,8 +322,8 @@ export default function SignupPageV1() {
         ) : (
           <button
             type="button"
-            disabled
             aria-disabled="true"
+            onClick={handleDisabledClick}
             className="flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl border border-[#FEE500]/20 bg-[#FEE500]/50 px-4 py-3 text-sm font-medium text-[#191919]/40"
           >
             <KakaoIcon />
@@ -314,7 +333,10 @@ export default function SignupPageV1() {
       </div>
 
       {!allRequired && (
-        <p className="mt-3 text-center text-[11px] text-slate-400">
+        <p
+          className={`mt-3 text-center text-[12px] ${pulseUnchecked ? "text-rose-500 font-medium" : "text-slate-500"}`}
+          role={pulseUnchecked ? "alert" : undefined}
+        >
           필수 항목 3개에 모두 동의해야 가입할 수 있습니다.
         </p>
       )}
