@@ -231,6 +231,18 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full bg-background text-foreground antialiased">
+        {/*
+         * Skip link — WCAG 2.4.1 (Bypass Blocks, Level A). Visually hidden
+         * until keyboard-focused, then jumps to <main id="main-content">
+         * mounted by DashboardLayout / page-level <main> elements.
+         * Bronze chip on Vantablack matches design system v3 tokens.
+         */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:bg-[var(--pq-bronze)] focus:text-[var(--pq-ink)] focus:px-3 focus:py-2 focus:rounded-sm focus:font-mono focus:text-[11px] focus:uppercase focus:tracking-[0.18em] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--pq-bronze)]"
+        >
+          Skip to main content
+        </a>
         {/* CookieConsent / InstallPrompt sit INSIDE <Providers> so that
             useT() / useLocale() resolve against LocaleProvider. If mounted
             as body-level siblings they fell back to the default context

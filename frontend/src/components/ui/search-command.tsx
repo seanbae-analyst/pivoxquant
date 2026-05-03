@@ -265,6 +265,7 @@ export function SearchCommandMenu() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search ticker, page…"
+            aria-label="Search ticker or page"
             className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[color:var(--pq-muted)]"
             style={{ color: "var(--pq-ivory)" }}
           />

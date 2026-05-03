@@ -474,7 +474,11 @@ function ChatInner() {
       {/* Input — above disclaimer with breathing room */}
       <footer className="pt-6 mt-6 border-t border-[rgba(245,240,232,0.08)]">
         <form onSubmit={handleSubmit} className="relative">
+          <label htmlFor="ai-chat-input" className="sr-only">
+            AI 분석 질문 입력 · Ask the AI assistant about your portfolio
+          </label>
           <textarea
+            id="ai-chat-input"
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}

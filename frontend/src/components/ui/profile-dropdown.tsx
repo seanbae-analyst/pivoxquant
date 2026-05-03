@@ -78,6 +78,7 @@ export function ProfileDropdown() {
           type="button"
           onClick={() => setOpen((p) => !p)}
           aria-label="Profile menu"
+          aria-haspopup="menu"
           aria-expanded={open}
           className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-[rgba(139,111,71,0.08)]"
         >
@@ -165,6 +166,7 @@ export function ProfileDropdown() {
             <div style={{ borderTop: "0.5px solid var(--pq-hairline)" }} className="py-1.5">
               <button
                 type="button"
+                role="menuitem"
                 onClick={handleSignOut}
                 className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
                 style={{ color: "var(--pq-bronze)" }}
@@ -199,6 +201,7 @@ function MenuLink({
     <Link
       href={href}
       onClick={onNavigate}
+      role="menuitem"
       className={cn(
         "flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]",
       )}
@@ -222,6 +225,7 @@ function MenuButton({
   return (
     <button
       type="button"
+      role="menuitem"
       onClick={onClick}
       className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-[rgba(139,111,71,0.08)]"
       style={{ color: "var(--pq-ivory)" }}
