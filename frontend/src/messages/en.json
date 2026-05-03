@@ -237,7 +237,7 @@
       "notifications": "Notifications",
       "security": "Security",
       "plan": "Subscription Plan",
-      "connectAlpaca": "",
+      "connectAlpaca": "Connect Alpaca",
       "connectKIS": "Connect KIS",
       "deleteAccount": "Delete Account"
     }
@@ -315,21 +315,21 @@
     },
     "connections": {
       "title": "Broker Integrations",
-      "alpacaDesc": "",
+      "alpacaDesc": "Connect your Alpaca paper trading account to automatically import US stock positions.",
       "kisName": "Korea Investment & Securities",
       "kisDesc": "Read-only Korean equity sync via KIS API",
       "connected": "Connected",
       "notConnected": "Not connected",
-      "connectAlpaca": "",
+      "connectAlpaca": "Connect Alpaca",
       "comingSoon": "Coming Soon",
       "connecting": "Connecting...",
       "connect": "Connect",
       "cancel": "Cancel",
       "apiKey": "API Key",
       "apiSecret": "API Secret",
-      "alpacaConnectSuccess": "",
-      "alpacaConnectError": "",
-      "alpacaCredentialsRequired": "",
+      "alpacaConnectSuccess": "Alpaca connected",
+      "alpacaConnectError": "Failed to connect Alpaca. Please try again.",
+      "alpacaCredentialsRequired": "API key and secret are both required",
       "brokerNote": "Broker integrations enable read-only portfolio synchronization."
     },
     "language": {
