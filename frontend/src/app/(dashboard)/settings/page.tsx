@@ -14,8 +14,13 @@
  * No banned UI strings. POSITIVE / NEGATIVE / NEUTRAL only — never BUY/SELL.
  */
 
+import dynamic from "next/dynamic";
 import V1 from "./_v1/page-v1";
-import V2 from "./_v2/page-v2";
+
+// V2 is lazy-loaded — V1 is the active default (NEXT_PUBLIC_SETTINGS_V2 unset).
+// Splits the dormant V2 editorial CFO-room dials into its own chunk so the
+// initial bundle only carries the rendered variant. SSR remains enabled.
+const V2 = dynamic(() => import("./_v2/page-v2"));
 
 export default function SettingsPage() {
   const v2Enabled = process.env.NEXT_PUBLIC_SETTINGS_V2 === "true";
