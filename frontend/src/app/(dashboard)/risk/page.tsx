@@ -13,8 +13,13 @@
  * No banned UI strings. POSITIVE / NEGATIVE / NEUTRAL only.
  */
 
-import V1 from "./_v1/page-v1";
+import dynamic from "next/dynamic";
 import V2 from "./_v2/page-v2";
+
+// V1 is lazy-loaded — V2 is the active default (NEXT_PUBLIC_RISK_V2=true).
+// Splits the dormant V1 risk terminal into its own chunk so the initial
+// bundle only carries the rendered variant. SSR remains enabled (default).
+const V1 = dynamic(() => import("./_v1/page-v1"));
 
 export default function RiskPage() {
   const v2Enabled = process.env.NEXT_PUBLIC_RISK_V2 === "true";
