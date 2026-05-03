@@ -145,7 +145,16 @@ export default function DocsPage() {
           <p className="pq-caption">
             More questions? Email us · hello@pivoxquant.com
           </p>
-          <div className="flex items-center justify-center gap-4 mt-4">
+          <div className="flex items-center justify-center gap-4 mt-4 flex-wrap">
+            <a
+              href="https://github.com/seanbae-analyst/pivoxquant"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
+            >
+              GitHub
+            </a>
+            <span className="text-[rgba(245,240,232,0.3)]">·</span>
             <Link
               href="/terms"
               className="text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)]"
