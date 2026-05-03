@@ -47,6 +47,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from extensions import db
+from services.email.format_helpers import currency_prefix
 from models import Artifact, Position, User
 from services.legal_filter import safe_scrub, scrub_signal
 
@@ -1135,7 +1136,11 @@ class EarningsPreBriefService:
             return self._fallback_html(data, email=True, pdf_url=pdf_url)
         try:
             tpl = env.get_template("earnings_prebrief_email.html")
-            return tpl.render(pdf_url=pdf_url, **data)
+            # E3: pass currency symbol so KR tickers show ₩ instead of $
+            ctx = dict(data)
+            ctx.setdefault("currency_symbol",
+                           currency_prefix(data.get("ticker")))
+            return tpl.render(pdf_url=pdf_url, **ctx)
         except Exception as exc:
             logger.warning("email template render failed: %s", exc)
             return self._fallback_html(data, email=True, pdf_url=pdf_url)
@@ -1198,7 +1203,8 @@ class EarningsPreBriefService:
         try:
             from services.push_service import notify_insight
             ticker = data.get("ticker", "?")
-            title_text = f"${ticker} 실적 30분 전"
+            # E3: KR tickers (.KS / .KQ) use ₩, US tickers $.
+            title_text = f"{currency_prefix(ticker)}{ticker} 실적 30분 전"
             body_text = "예상 질문 5개 + 컨센서스 브리프 도착"
             # The underlying send_push_to_user accepts an explicit `url`
             # param; notify_insight hardcodes it. We call the lower-level
@@ -1263,7 +1269,8 @@ class EarningsPreBriefService:
         """
         period = _fiscal_period_label(earnings_date)
         ts = earnings_date.strftime("%Y-%m-%d %H:%M")
-        return f"${ticker} {period} Earnings Pre-Brief — {ts}"
+        # E3: KR tickers (.KS / .KQ) use ₩, US tickers $.
+        return f"{currency_prefix(ticker)}{ticker} {period} Earnings Pre-Brief — {ts}"
 
     def _persist(self, user_id: int, data: dict[str, Any],
                  pdf_bytes: Optional[bytes], earnings_date: datetime,
