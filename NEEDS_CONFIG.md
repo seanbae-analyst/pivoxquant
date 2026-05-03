@@ -55,10 +55,25 @@
 - [ ] `VAPID_PRIVATE_KEY` — `npx web-push generate-vapid-keys`
 - [ ] `VAPID_EMAIL` — `mailto:seanbae1521@gmail.com`
 
-### 2. Anthropic API credit 충전 (B2)
+### 2. Claude Max OAuth 토큰 셋업 (CI 자동화용)
 
-- [ ] https://console.anthropic.com → Billing → 최소 **$50** 충전 권장
-- 사용처: SWOT 생성, AI Chat, Sector 분석, Coaching, Pre-Brief expected questions
+> 2026-05-03 변경: 기존 "Anthropic API credit 충전" 항목을 OAuth로 교체. CI 자동화(morning-triage, self-healing)가 Claude Max 구독 자격으로 작동하면 월 $7~12 절감.
+
+- [ ] **`claude setup-token`** 로컬 실행 → 토큰 발급 (sk-ant-oat01-…, 1년 유효)
+- [ ] `gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo seanbae-analyst/pivoxquant` (또는 GitHub UI에서 secret 등록)
+- [ ] `gh workflow run morning-triage.yml -f dry_run=false` 으로 검증
+- [ ] (선택) 검증 완료 후 `gh secret delete ANTHROPIC_API_KEY` — CI에서 더 이상 사용 안 함
+
+상세 가이드: `docs/CLAUDE_CODE_OAUTH_SETUP.md`
+
+### 2-b. Anthropic API key (web app 런타임 + agent_worker용 — 별개)
+
+> CI는 OAuth로 충분하나 **런타임 코드(`ai_service.py` 등)와 `agent_worker/`(Slack 브릿지)는 여전히 Messages API 직접 호출**. OAuth 토큰은 Messages API에서 거부되므로 별도 API key가 필요.
+
+- [ ] https://console.anthropic.com → Billing → 충전 (사용량 따라 $20~50/월 예상)
+- [ ] 사용처: SWOT 생성, AI Chat, Sector 분석, Coaching, Pre-Brief expected questions, agent_worker(Slack)
+- [ ] Railway 변수에 `ANTHROPIC_API_KEY` 등록 (web 서비스). worker 서비스는 출시 후 활성화 결정
+- [ ] agent_worker 정책: API key 없으면 자동 dormant (`agent_worker/claude_client.py:21` fail-fast). Slack 통합 Phase 2로 미룬다면 worker 변수 비워두기
 
 ### 3. 도메인 + SendGrid sender authentication (B6 / E6)
 
