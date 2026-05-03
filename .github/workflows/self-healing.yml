@@ -57,7 +57,6 @@ jobs:
 
       - name: Install deps
         run: |
-          pip install "anthropic>=0.39.0"
           pip install -r requirements.txt || echo "::warning::requirements install failed"
           pip install pytest pytest-flask
 
@@ -75,16 +74,74 @@ jobs:
           RAILWAY_MIN_COUNT: '3'
         run: python3 scripts/self_healing/scan_railway_logs.py
 
-      - name: Propose fix patches
-        id: propose
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          SELF_HEALING_DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '0' || '1' }}
-          AUTO_PR: ${{ github.event.inputs.auto_pr == 'true' && '1' || '0' }}
-          SELF_HEALING_MAX_PATTERNS: '2'
-        run: python3 scripts/self_healing/propose_fix.py
+      # ── Migrated 2026-05-03 from `pip install anthropic` + ANTHROPIC_API_KEY
+      #    to `claude-code-action@v1` + CLAUDE_CODE_OAUTH_TOKEN (Claude Max
+      #    subscription). See docs/CLAUDE_CODE_OAUTH_SETUP.md.
+      #
+      #    The Python script `scripts/self_healing/propose_fix.py` is preserved
+      #    on disk for local testing with SELF_HEALING_DRY_RUN=1; CI no longer
+      #    invokes it. The system prompt below mirrors propose_fix.py:50-64
+      #    (SYSTEM_PROMPT) verbatim. The action's Claude must write each
+      #    proposed unified diff to `self_healing_artifacts/patches/<fp>.patch`
+      #    so downstream `Apply patch + run pytest` step glob remains valid.
+
+      - name: Propose fix patches via Claude Code Action
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: --max-turns 14 --model claude-sonnet-4-6
+          prompt: |
+            You are PivoxQuant's self-healing layer (Layer C).
+
+            ## Inputs on disk
+            - `self_healing_artifacts/railway_patterns.jsonl` — one JSON object
+              per recurring error pattern (fields: fingerprint, file, line,
+              exception, message, count, sample_lines).
+            - `self_healing_artifacts/history.json` — past attempts (24h
+              circuit breaker; 3 failed attempts on the same fingerprint =
+              skip + escalate).
+
+            ## Task
+            For up to **2** of the highest-count patterns:
+            1. Read the pattern's `file` at lines `max(1, line-40) .. line+40`
+               for context.
+            2. **Protected-path allowlist** — NEVER auto-patch:
+               - `autotrader.py`, `services/trading/autotrader.py`
+               - `risk_defense.py`, `services/quant/risk_*`
+               - `services/legal*`, `routes/auth*`, `security.py`
+               - `migrations/`, `billing/`
+               If the pattern's file matches any of these, do NOT generate a
+               patch — instead `gh issue create` with title
+               `[Self-healing] Cannot auto-fix <fingerprint> — protected path`
+               and label `autopilot,self-heal,escalation`.
+            3. Otherwise produce a MINIMAL unified diff that plausibly fixes
+               the root cause without changing public behavior. Write it to
+               `self_healing_artifacts/patches/<fingerprint>.patch` using the
+               Write tool.
+            4. If the root cause is unclear, write the single line
+               `INSUFFICIENT_EVIDENCE` to the patch file (the apply step
+               will skip it on `git apply --check` failure).
+
+            ## Strict patch rules (mirror propose_fix.py:50-64)
+            - Output only a unified diff (`--- a/...` / `+++ b/...`) — no
+              prose, no code fences inside the patch file.
+            - Do NOT touch files outside the one in the error.
+            - Do NOT add new dependencies.
+            - Do NOT silently swallow exceptions — `try/except` MUST log
+              the exception and return a safe fallback, never `pass`.
+            - Never modify kill-switch values or compliance-sensitive
+              constants (`enabled`, `legal_status`, autotrader flags).
+
+            ## Output budget
+            One patch per pattern, max 2 patterns per run. Stop after writing
+            the second patch even if more patterns exist.
+
+      - name: Dry-run notice
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "::notice::dry_run=true → skipped Claude Code Action invocation."
+          echo "::notice::Patterns scanned but no patches generated. Inspect self_healing_artifacts/railway_patterns.jsonl in the artefact bundle."
 
       - name: Apply patch + run pytest (only if patches exist and AUTO_PR=1)
         if: ${{ github.event.inputs.auto_pr == 'true' && github.event.inputs.dry_run == 'false' }}
