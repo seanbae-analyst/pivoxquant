@@ -8,6 +8,7 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { PushPermission } from "@/components/pwa/push-permission";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { RealtimeStatusBanner } from "@/components/ui/realtime-status-banner";
+import { flushPendingMarketingConsent } from "@/lib/consents";
 
 /* ──────────────────────────────────────────────────────────────────
    Path → DisclaimerBanner type resolver
@@ -80,6 +81,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       router.replace("/onboarding/broker");
     }
   }, [user, loading, router]);
+
+  // 정통망법 §50 ① — flush the staged signup-time consent snapshot to the
+  // backend the first time we see an authenticated user. The signup gate
+  // writes localStorage["pivox_signup_consents"] *before* the OAuth
+  // round-trip (when no session exists yet); this is the second leg that
+  // promotes the staged record to the server-side audit trail. Helper is
+  // idempotent and silent on failure — the user has already cleared the
+  // legal gate, and /settings/v2 marketing toggle is the recovery
+  // surface if Railway is cold during the flush. Depends on PR #73
+  // backend `/api/consents/marketing` POST endpoint.
+  useEffect(() => {
+    if (!loading && user) {
+      void flushPendingMarketingConsent();
+    }
+  }, [loading, user]);
 
   if (loading) {
     return (

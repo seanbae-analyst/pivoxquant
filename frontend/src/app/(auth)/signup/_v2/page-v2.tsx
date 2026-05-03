@@ -13,6 +13,13 @@
  *   `pivox_signup_consents` then redirect to API.auth.google / .kakao.
  * - Same CONSENT_STORAGE_KEY constant — OAuth callback handler stays
  *   binary-compatible with v1.
+ * - 정통망법 §50 ① server flush: the snapshot is staged in localStorage
+ *   pre-OAuth (no session yet), and `flushPendingMarketingConsent()` in
+ *   `frontend/src/lib/consents.ts` promotes it to the backend record
+ *   (POST /api/consents/marketing) on the first authenticated mount of
+ *   the (dashboard) layout. This page intentionally does NOT call the
+ *   server here — `current_user` does not yet exist when this handler
+ *   fires. Backend dependency: PR #73 (`routes/consents.py`).
  *
  * Visual layer only — Vantablack background, Bronze hairlines, Playfair H1,
  * Source Serif body, JetBrains Mono uppercase OAuth labels.
