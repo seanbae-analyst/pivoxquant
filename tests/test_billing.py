@@ -5,9 +5,22 @@ All Stripe SDK calls are mocked. Verifies:
   - Invalid plan names rejected
   - Checkout session creation flow
   - Webhook signature verification
+
+Note: 사업자등록 가드 (BUSINESS_REGISTRATION_NUMBER +
+TELESELLER_REGISTRATION_NUMBER) 가 결제 endpoint 앞단에 있으므로,
+기존 검증 테스트들은 가드를 통과시킨 뒤 plan/price 검증을 확인한다.
+가드 자체의 동작은 tests/test_billing_gate.py 에서 검증한다.
 """
 from unittest.mock import patch, MagicMock
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _registration_complete(monkeypatch):
+    """이 모듈의 모든 테스트는 사업자등록 가드를 통과한 뒤의 동작을 검증한다."""
+    monkeypatch.setenv("BUSINESS_REGISTRATION_NUMBER", "123-45-67890")
+    monkeypatch.setenv("TELESELLER_REGISTRATION_NUMBER", "2026-Seoul-1234")
 
 
 class TestCreateCheckout:
