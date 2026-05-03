@@ -40,26 +40,27 @@ interface ReportEntry {
 
 // Group ordering matches the dashboard catalog: Free → Pro → Premium.
 const REPORTS: readonly ReportEntry[] = [
-  // — Free (10) —
+  // — Free (2) —
   { slug: "weekly-memo",           type: "Memo",           title: "Weekly Memo",            cadence: "Every Sunday",          tier: "Free" },
   { slug: "brag-card",             type: "Brag Card",      title: "Brag Card",              cadence: "Monthly",               tier: "Free" },
+  // — Pro (10) —
+  { slug: "morning-brief-plus",    type: "Brief",          title: "Morning Brief Plus",     cadence: "Daily · Pre-market",    tier: "Pro" },
   { slug: "earnings-prebrief",     type: "Pre-Brief",      title: "Earnings Pre-Brief",     cadence: "On earnings ±24h",      tier: "Pro" },
   { slug: "dd-checklist",          type: "Checklist",      title: "DD Checklist",           cadence: "On demand",             tier: "Pro" },
   { slug: "risk-board",            type: "Risk",           title: "Risk Board",             cadence: "Weekly",                tier: "Pro" },
   { slug: "sp500-backtest",        type: "Backtest",       title: "S&P 500 Backtest",       cadence: "On demand",             tier: "Pro" },
   { slug: "portfolio-segment",     type: "Segment",        title: "Portfolio Segment",      cadence: "Monthly",               tier: "Pro" },
   { slug: "dividend-income",       type: "Income",         title: "Dividend Income",        cadence: "Monthly",               tier: "Pro" },
-  { slug: "monthly-finance",       type: "Finance",        title: "Monthly Finance",        cadence: "Monthly",               tier: "Premium" },
-  // — Pro (4) —
   { slug: "insider-mirror",        type: "Mirror",         title: "Insider Mirror",         cadence: "Weekly",                tier: "Pro" },
-  { slug: "kpi-dashboard",         type: "KPI",            title: "KPI Dashboard",          cadence: "Weekly",                tier: "Premium" },
+  { slug: "quarterly-self-report", type: "Self-Report",    title: "Quarterly Self Report",  cadence: "Quarterly",             tier: "Pro" },
+  { slug: "self-audit",            type: "Audit",          title: "Self Audit",             cadence: "On demand",             tier: "Pro" },
+  // — Premium (6) —
+  { slug: "monthly-finance",       type: "Finance",        title: "Monthly Finance",        cadence: "Monthly",               tier: "Premium" },
+  { slug: "kpi-dashboard",         type: "KPI",            title: "KPI Dashboard",          cadence: "Monthly",               tier: "Premium" },
   { slug: "capital-allocation",    type: "Allocation",     title: "Capital Allocation",     cadence: "Quarterly",             tier: "Premium" },
   { slug: "credit-rating",         type: "Rating",         title: "Credit Rating",          cadence: "Quarterly",             tier: "Premium" },
-  // — Premium (4) —
-  { slug: "quarterly-self-report", type: "Self-Report",    title: "Quarterly Self Report",  cadence: "Quarterly",             tier: "Pro" },
   { slug: "year-end-letter",       type: "Letter",         title: "Year-End Letter",        cadence: "Annual",                tier: "Premium" },
   { slug: "burn-rate",             type: "Burn",           title: "Burn Rate",              cadence: "Monthly",               tier: "Premium" },
-  { slug: "self-audit",            type: "Audit",          title: "Self Audit",             cadence: "On demand",             tier: "Pro" },
 ] as const;
 
 /* ── Tier badge ── */
@@ -272,7 +273,7 @@ export default function ReportsGallery() {
               color: "rgba(245,240,232,0.4)",
             }}
           >
-            10 Free · 4 Pro · 4 Premium
+            2 Free · 10 Pro · 6 Premium
           </span>
         </motion.div>
       </div>
