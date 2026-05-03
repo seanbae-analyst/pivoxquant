@@ -15,8 +15,13 @@
  * Legal: persona vocabulary only. No advice/recommend strings.
  */
 
+import dynamic from "next/dynamic";
 import ProfilePageV1 from "./_v1/page-v1";
-import ProfilePageV2 from "./_v2/page-v2";
+
+// V2 is lazy-loaded — V1 is the active default (NEXT_PUBLIC_PROFILE_V2 unset).
+// Splits the dormant V2 editorial layout into its own chunk so the initial
+// bundle only carries the rendered variant. SSR remains enabled (default).
+const ProfilePageV2 = dynamic(() => import("./_v2/page-v2"));
 
 export default function ProfilePage() {
   const v2Enabled = process.env.NEXT_PUBLIC_PROFILE_V2 === "true";
