@@ -397,7 +397,12 @@ def init_security(app):
             "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             "img-src 'self' data: https:; "
-            "connect-src 'self'; "
+            # connect-src — keep aligned with frontend CSP (vercel.json).
+            # Stripe + Sentry + Kakao are required for billing, error
+            # reporting, and OAuth flows respectively. Without these the
+            # browser blocks legitimate XHR/fetch and silently breaks
+            # checkout / error reporting.
+            "connect-src 'self' https://api.stripe.com https://*.sentry.io https://kapi.kakao.com; "
             "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; "
             "object-src 'none'; "
             "base-uri 'self'; "
