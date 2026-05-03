@@ -147,7 +147,7 @@ QUESTIONNAIRE = [
 def get_questionnaire():
     """Return the 20-question v2 questionnaire (falls back to v1 8-question)."""
     try:
-        from questionnaire import QUESTIONNAIRE_V2
+        from services.profile.questionnaire import QUESTIONNAIRE_V2
         return jsonify({"questions": QUESTIONNAIRE_V2})
     except ImportError:
         # Fallback to v1 if questionnaire.py not available
@@ -165,7 +165,7 @@ def submit_onboarding():
     # Try v2 classification first (20-question), fall back to v1
     profile_v2_result = None
     try:
-        from questionnaire import calculate_profile_v2
+        from services.profile.questionnaire import calculate_profile_v2
         profile_v2_result = calculate_profile_v2(answers)
         profile_type = profile_v2_result.get("investor_type", "risk_managed_growth")
     except (ImportError, Exception):
