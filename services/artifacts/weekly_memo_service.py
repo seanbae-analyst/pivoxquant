@@ -1542,7 +1542,8 @@ class WeeklyMemoService:
         from_email = os.environ.get(
             "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
-        subject = f"Week {datetime.now(timezone.utc).replace(tzinfo=None).isocalendar()[1]} Investor Memo"
+        _iso = datetime.now(timezone.utc).replace(tzinfo=None).isocalendar()
+        subject = f"Week {_iso[1]}, {_iso[0]} Investor Memo"
 
         # --- SendGrid ---
         sg_key = os.environ.get("SENDGRID_API_KEY")

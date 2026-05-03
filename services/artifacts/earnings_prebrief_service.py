@@ -1627,7 +1627,13 @@ class EarningsPreBriefService:
                 msg["Subject"] = subject
                 msg.set_content("HTML-only; view in an HTML-capable client.")
                 msg.add_alternative(html_body, subtype="html")
-                with smtplib.SMTP(smtp_host) as s:
+                port = int(os.environ.get("SMTP_PORT", "587"))
+                user_ = os.environ.get("SMTP_USER")
+                pw = os.environ.get("SMTP_PASSWORD")
+                with smtplib.SMTP(smtp_host, port, timeout=10) as s:
+                    s.starttls()
+                    if user_ and pw:
+                        s.login(user_, pw)
                     s.send_message(msg)
                 return True
             except Exception as exc:
