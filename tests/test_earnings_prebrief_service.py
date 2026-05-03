@@ -177,7 +177,7 @@ def test_claude_questions_parse_to_five(app, pro_user, add_position, svc):
     fake_ai.client = MagicMock()
     fake_ai.client.messages.create.return_value = fake_resp
 
-    with patch("ai_service.AIService", return_value=fake_ai), \
+    with patch("services.ai.service.AIService", return_value=fake_ai), \
          patch(
              "services.artifacts.earnings_prebrief_service._safe_get_earnings_calendar",
              return_value=[cal_row],

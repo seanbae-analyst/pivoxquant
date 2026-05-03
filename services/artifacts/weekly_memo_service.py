@@ -1301,7 +1301,7 @@ class WeeklyMemoService:
             return self._ai_v3_fallback()
 
         try:
-            from ai_service import AIService  # late import — test isolation
+            from services.ai.service import AIService  # late import — test isolation
             svc = AIService()
             if not svc.available or svc.client is None:
                 return self._ai_v3_fallback()
@@ -1310,7 +1310,7 @@ class WeeklyMemoService:
             return self._ai_v3_fallback()
 
         try:
-            from ai_service import MODEL, SYSTEM_PROMPT
+            from services.ai.service import MODEL, SYSTEM_PROMPT
         except Exception:
             MODEL = "claude-haiku-4-5-20251001"
             SYSTEM_PROMPT = ""
