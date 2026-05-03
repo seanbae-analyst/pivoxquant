@@ -284,10 +284,17 @@ def _parse_earnings_row_datetime(row: dict) -> Optional[datetime]:
         try:
             t = _time(int(hh), int(mm))
         except ValueError:
-            t = _time(20, 30)
+            logger.debug("invalid HH:MM in earnings row: %r — skipping", t_raw)
+            return None
     else:
-        # Default to amc — most S&P 500 report post-market.
-        t = _time(20, 30)
+        # 2026-05-02 fix — was: default to amc (20:30 UTC). That bucketed
+        # every ticker with a missing/unknown time field into the same
+        # 30-min match window, producing 22-ticker digest emails when
+        # FMP didn't populate `time`. Now: skip rows without an explicit
+        # bmo/amc/HH:MM signal — better to omit than to false-match.
+        if t_raw:
+            logger.debug("unrecognised earnings time %r — skipping row", t_raw)
+        return None
     return datetime.combine(d, t)
 
 
@@ -510,6 +517,11 @@ class EarningsPreBriefService:
             ticker_to_positions.setdefault(p.ticker.upper(), []).append(p)
 
         rows: list[dict[str, Any]] = []
+        # 2026-05-02 fix — dedup by (user_id, ticker). Was: emit one row
+        # per Position, so a user with 3 lots of AAPL got 3 entries in
+        # the same digest. Same earnings event regardless of lot count;
+        # combine shares so the prebrief shows total exposure.
+        seen: set[tuple[int, str]] = set()
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         for ticker, pos_list in ticker_to_positions.items():
             cal = _safe_get_earnings_calendar(ticker=ticker,
@@ -520,13 +532,31 @@ class EarningsPreBriefService:
                     continue
                 if not (now <= dt <= horizon):
                     continue
+                # Combine shares per user across multiple lots of the same ticker.
+                user_to_total: dict[int, tuple[float, float]] = {}
                 for p in pos_list:
+                    s = float(p.shares or 0)
+                    cost = float(p.avg_cost or 0)
+                    prev_s, prev_cost = user_to_total.get(p.user_id, (0.0, 0.0))
+                    new_s = prev_s + s
+                    # Weighted-average avg_cost across lots.
+                    new_cost = (
+                        ((prev_cost * prev_s) + (cost * s)) / new_s
+                        if new_s > 0
+                        else 0.0
+                    )
+                    user_to_total[p.user_id] = (new_s, new_cost)
+                for uid, (total_shares, blended_cost) in user_to_total.items():
+                    key = (uid, ticker)
+                    if key in seen:
+                        continue
+                    seen.add(key)
                     rows.append({
-                        "user_id":       p.user_id,
+                        "user_id":       uid,
                         "ticker":        ticker,
                         "earnings_dt":   dt,
-                        "shares":        float(p.shares or 0),
-                        "avg_cost":      float(p.avg_cost or 0),
+                        "shares":        total_shares,
+                        "avg_cost":      blended_cost,
                         "calendar_row":  c,
                     })
         rows.sort(key=lambda r: r["earnings_dt"])
@@ -1648,6 +1678,22 @@ class EarningsPreBriefService:
         for row in in_window:
             uid = row["user_id"]
             by_user.setdefault(uid, []).append(row)
+
+        # 2026-05-02 fix — defensive cap. Even after parser & dedup fixes,
+        # a user can in principle have many positions reporting in the same
+        # 12-min window (e.g. AAPL+MSFT+GOOG all amc on same day). Cap at
+        # 8 to keep the digest readable; surplus tickers are skipped this
+        # cycle but still get a per-ticker Artifact row for the archive
+        # surface. If this cap is hit in practice we'll see a WARNING.
+        DIGEST_TICKER_CAP = 8
+        for uid, rows in list(by_user.items()):
+            if len(rows) > DIGEST_TICKER_CAP:
+                logger.warning(
+                    "earnings digest cap hit: user=%s window-matches=%d cap=%d",
+                    uid, len(rows), DIGEST_TICKER_CAP,
+                )
+                # Keep the first N by earnings_dt (already sorted upstream).
+                by_user[uid] = rows[:DIGEST_TICKER_CAP]
 
         users_sent = 0
         skipped_users = 0
