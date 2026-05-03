@@ -22,7 +22,7 @@ if PROJECT_ROOT not in sys.path:
 @pytest.fixture
 def clean_token_env(monkeypatch, tmp_path):
     """Provide fake KIS credentials and redirect the cache file to a tmp path."""
-    import kis_token_manager as ktm
+    from services.kis import token_manager as ktm
 
     monkeypatch.setenv("KIS_APP_KEY", "TEST_KEY_123")
     monkeypatch.setenv("KIS_APP_SECRET", "TEST_SECRET_ABC")
@@ -47,7 +47,7 @@ class TestKISTokenManager:
 
     def test_missing_credentials_returns_none(self, monkeypatch, tmp_path):
         """When KIS_APP_KEY is unset, get_token() must return None — never crash."""
-        import kis_token_manager as ktm
+        from services.kis import token_manager as ktm
         monkeypatch.delenv("KIS_APP_KEY", raising=False)
         monkeypatch.delenv("KIS_APP_SECRET", raising=False)
         monkeypatch.setattr(ktm, "_CACHE_FILE", str(tmp_path / "nope.json"))
@@ -65,7 +65,7 @@ class TestKISTokenManager:
         manager._token = "cached-token-xyz"
         manager._expires_at = datetime.now() + timedelta(hours=11)
 
-        with patch("kis_token_manager.requests.post") as mock_post:
+        with patch("services.kis.token_manager.requests.post") as mock_post:
             t = manager.get_token()
 
         assert t == "cached-token-xyz"
@@ -86,7 +86,7 @@ class TestKISTokenManager:
             "access_token": "freshly-minted", "expires_in": 43200,
         }
 
-        with patch("kis_token_manager.requests.post", return_value=resp) as mock_post:
+        with patch("services.kis.token_manager.requests.post", return_value=resp) as mock_post:
             t = manager.get_token()
 
         assert t == "freshly-minted"
@@ -121,7 +121,7 @@ class TestKISTokenManager:
         def worker():
             results.append(manager.get_token())
 
-        with patch("kis_token_manager.requests.post", side_effect=slow_post):
+        with patch("services.kis.token_manager.requests.post", side_effect=slow_post):
             threads = [threading.Thread(target=worker) for _ in range(10)]
             for t in threads: t.start()
             for t in threads: t.join()

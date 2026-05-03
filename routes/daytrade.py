@@ -34,7 +34,7 @@ def scan():
             logger.warning(f"US scan error: {e}")
 
     try:
-        from kis_service import KISService
+        from services.kis.service import KISService
         kis = KISService()
         if kis.available:
             held_kr = set()
@@ -74,7 +74,7 @@ def scan():
 def analyze(ticker):
     if ticker.isdigit() and len(ticker) == 6:
         try:
-            from kis_service import KISService
+            from services.kis.service import KISService
             import numpy as np
             kis = KISService()
             if not kis.available:
@@ -208,7 +208,7 @@ def stream():
         # Instantiate KIS once per stream rather than per loop iteration —
         # avoids re-loading creds + token on every 10s tick.
         try:
-            from kis_service import KISService
+            from services.kis.service import KISService
             kis = KISService()
         except Exception:
             logger.debug("silent-fallback: KIS init", exc_info=True)

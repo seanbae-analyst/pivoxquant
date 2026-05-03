@@ -63,7 +63,14 @@ TOKEN_TTL_HOURS = 12
 REFRESH_BEFORE_HOURS = 1
 
 # ── Cache file ───────────────────────────────────────────────────────────
-_CACHE_FILE = os.path.join(os.path.dirname(__file__), ".kis_token_cache.json")
+# NOTE: kept at the project root (not next to this file) so the cache
+# location did not change when the module moved from root → services/kis/
+# on 2026-05-02. ``__file__`` is at services/kis/token_manager.py, so we
+# walk up two directories to reach the project root.
+_PROJECT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
+_CACHE_FILE = os.path.join(_PROJECT_ROOT, ".kis_token_cache.json")
 
 
 class KISTokenManager:

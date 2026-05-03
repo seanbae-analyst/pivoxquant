@@ -90,7 +90,7 @@ class TestGetHistory:
              "stck_clpr": "69800", "acml_vol": "10000000"},
         ]
 
-        with patch("kis_token_manager.get_kis_token_manager",
+        with patch("services.kis.token_manager.get_kis_token_manager",
                     return_value=_fake_token_manager()), \
              patch.object(kma.requests, "get",
                            return_value=self._fake_response(bars)):
@@ -104,7 +104,7 @@ class TestGetHistory:
         assert df["Close"].iloc[-1] == pytest.approx(70500.0)
 
     def test_empty_output(self, kis_env):
-        with patch("kis_token_manager.get_kis_token_manager",
+        with patch("services.kis.token_manager.get_kis_token_manager",
                     return_value=_fake_token_manager()), \
              patch.object(kma.requests, "get",
                            return_value=self._fake_response([])):
@@ -115,7 +115,7 @@ class TestGetHistory:
         resp = MagicMock()
         resp.ok = True
         resp.json.return_value = {"rt_cd": "1", "msg1": "invalid ticker"}
-        with patch("kis_token_manager.get_kis_token_manager",
+        with patch("services.kis.token_manager.get_kis_token_manager",
                     return_value=_fake_token_manager()), \
              patch.object(kma.requests, "get", return_value=resp):
             df = kma.get_history("999999.KS", "3mo")
@@ -125,14 +125,14 @@ class TestGetHistory:
         resp = MagicMock()
         resp.ok = False
         resp.status_code = 500
-        with patch("kis_token_manager.get_kis_token_manager",
+        with patch("services.kis.token_manager.get_kis_token_manager",
                     return_value=_fake_token_manager()), \
              patch.object(kma.requests, "get", return_value=resp):
             df = kma.get_history("005930.KS", "3mo")
         assert df.empty
 
     def test_request_raises(self, kis_env):
-        with patch("kis_token_manager.get_kis_token_manager",
+        with patch("services.kis.token_manager.get_kis_token_manager",
                     return_value=_fake_token_manager()), \
              patch.object(kma.requests, "get",
                            side_effect=RuntimeError("network down")):
@@ -163,7 +163,7 @@ class TestGetName:
             "rt_cd": "0",
             "output": {"hts_kor_isnm": "삼성전자", "prdt_name": "삼성전자보통주"},
         }
-        with patch("kis_token_manager.get_kis_token_manager",
+        with patch("services.kis.token_manager.get_kis_token_manager",
                     return_value=_fake_token_manager()), \
              patch.object(kma.requests, "get", return_value=resp):
             name = kma.get_name("005930.KS")
@@ -173,7 +173,7 @@ class TestGetName:
         resp = MagicMock()
         resp.ok = True
         resp.json.return_value = {"rt_cd": "0", "output": {}}
-        with patch("kis_token_manager.get_kis_token_manager",
+        with patch("services.kis.token_manager.get_kis_token_manager",
                     return_value=_fake_token_manager()), \
              patch.object(kma.requests, "get", return_value=resp):
             assert kma.get_name("005930.KS") is None
