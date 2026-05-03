@@ -12,13 +12,29 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 
 def _safe_next(next_url):
-    """Open redirect 방어: 스킴-relative(//evil.com) + 절대 URL 차단."""
+    """Open redirect 방어 + 폐기된 경로 차단.
+
+    - 스킴-relative (//evil.com) + 절대 URL 차단
+    - 존재하지 않는 Next.js 라우트 (/landing, /beta 등) → 유효 경로로 매핑
+    """
     if not next_url or not isinstance(next_url, str):
         return "/home"
     if next_url.startswith("//") or "://" in next_url:
         return "/home"
     if not next_url.startswith("/"):
         return "/home"
+
+    # Path-only 비교용: 쿼리스트링/프래그먼트 제거.
+    path_only = next_url.split("?", 1)[0].split("#", 1)[0].rstrip("/")
+
+    # 폐기/존재하지 않는 라우트 매핑.
+    # /landing → /home (OAuth 콜백 후 404 방지, P0 hotfix 2026-05-03)
+    # /beta → /beta-gate (실제 Next.js 라우트)
+    if path_only in ("/landing", ""):
+        return "/home"
+    if path_only == "/beta":
+        return "/beta-gate"
+
     return next_url
 
 from extensions import db
