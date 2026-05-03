@@ -160,6 +160,8 @@ export function AlpacaConnectModal({
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
+              aria-invalid={!!errorMsg}
+              aria-describedby={errorMsg ? "alpaca-error" : undefined}
               className="pq-ink-input w-full"
             />
           </div>
@@ -179,12 +181,14 @@ export function AlpacaConnectModal({
               onChange={(e) => setSecretKey(e.target.value)}
               placeholder="••••••••••••••••••••••••••••••••"
               autoComplete="off"
+              aria-invalid={!!errorMsg}
+              aria-describedby={errorMsg ? "alpaca-error" : undefined}
               className="pq-ink-input w-full"
             />
           </div>
 
           {errorMsg && (
-            <p className="text-[11px] text-[#d18888] leading-relaxed">
+            <p id="alpaca-error" role="alert" className="text-[11px] text-[#d18888] leading-relaxed">
               {errorMsg}
             </p>
           )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { TopBar } from "./top-bar";
 import { TerminalSidebar } from "./terminal-sidebar";
 import { BottomNav } from "./bottom-nav";
@@ -20,6 +21,23 @@ import { BottomNav } from "./bottom-nav";
  * available width (sidebar-excluded on desktop, full width on mobile).
  */
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  /*
+   * Skip-link target — both desktop and mobile shells render simultaneously
+   * (Tailwind `hidden md:flex` / `md:hidden` toggles `display`, the elements
+   * remain in the DOM). To avoid duplicate `id="main-content"` we attach the
+   * id to whichever <main> is currently visible based on viewport width.
+   * SSR pre-hydration: we default to `desktop` so server output matches the
+   * common case; the listener corrects post-mount. (WCAG 2.4.1 Level A.)
+   */
+  const [isDesktop, setIsDesktop] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   return (
     <div
       className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)] pq-dash-shell"
@@ -39,7 +57,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           <div data-pq-dash-topbar className="pq-dash-topbar">
             <TopBar />
           </div>
-          <main className="flex-1 px-8 md:px-10 py-8">{children}</main>
+          <main {...(isDesktop ? { id: "main-content" } : {})} className="flex-1 px-8 md:px-10 py-8">{children}</main>
         </div>
       </div>
 
@@ -48,7 +66,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div data-pq-dash-topbar className="pq-dash-topbar">
           <TopBar />
         </div>
-        <main className="flex-1 px-4 py-6 pb-24">{children}</main>
+        <main {...(!isDesktop ? { id: "main-content" } : {})} className="flex-1 px-4 py-6 pb-24">{children}</main>
         <BottomNav />
       </div>
 

@@ -126,6 +126,8 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
               autoComplete="off"
               autoCorrect="off"
               spellCheck={false}
+              aria-invalid={!!errorMsg}
+              aria-describedby={errorMsg ? "kis-error" : undefined}
               className="pq-ink-input w-full"
             />
           </div>
@@ -145,6 +147,8 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
               onChange={(e) => setAppSecret(e.target.value)}
               placeholder="••••••••••••••••••••"
               autoComplete="off"
+              aria-invalid={!!errorMsg}
+              aria-describedby={errorMsg ? "kis-error" : undefined}
               className="pq-ink-input w-full"
             />
           </div>
@@ -168,10 +172,14 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
                 }
                 placeholder="XXXXXXXX"
                 autoComplete="off"
+                aria-invalid={accountNo.length > 0 && !accountNoValid}
+                aria-describedby={
+                  accountNo.length > 0 && !accountNoValid ? "kis-account-no-hint" : undefined
+                }
                 className="pq-ink-input w-full tabular-nums"
               />
               {accountNo.length > 0 && !accountNoValid && (
-                <p className="mt-1.5 text-[10px] text-[#d18888]">
+                <p id="kis-account-no-hint" role="alert" className="mt-1.5 text-[10px] text-[#d18888]">
                   {t("brokerOnboarding.kis.accountNoHint")}
                 </p>
               )}
@@ -199,7 +207,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           </div>
 
           {errorMsg && (
-            <p className="text-[11px] text-[#d18888] leading-relaxed">
+            <p id="kis-error" role="alert" className="text-[11px] text-[#d18888] leading-relaxed">
               {errorMsg}
             </p>
           )}
