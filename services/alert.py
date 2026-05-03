@@ -78,11 +78,28 @@ def create_alert(
         )
         db.session.add(a)
         db.session.commit()
-        return a
     except Exception:
         db.session.rollback()
         logger.exception("alert.create_alert failed user_id=%s kind=%s", user_id, kind)
         return None
+
+    # Fan out to PWA Web Push. Silent fallback — push delivery must never
+    # cause the bell-alert insert to fail. Routed through push_service so
+    # the opt-out gate (정통망법 §50) is honoured uniformly.
+    try:
+        from services.push_service import notify_bell_alert
+        notify_bell_alert(
+            user_id=user_id,
+            kind=kind,
+            title=title,
+            body=body or "",
+            link=link or "/alerts",
+        )
+    except Exception:
+        logger.warning("push delivery failed for alert id=%s kind=%s",
+                       getattr(a, "id", None), kind, exc_info=True)
+
+    return a
 
 
 # ── Convenience wrappers ────────────────────────────────────────────────────
