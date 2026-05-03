@@ -161,6 +161,11 @@ export const API = {
     update: "/api/profile",
     questionnaire: "/api/profile/questionnaire",
     capital: "/api/profile/capital",
+    // Email opt-out preferences (정통망법 §50). Backend: PATCH
+    // routes/profile.py::patch_email_preferences. Body accepts either
+    // or both of `email_opt_out` (global) and `email_opt_out_earnings`
+    // (per-channel) as booleans. Returns committed values.
+    emailPreferences: "/api/profile/email-preferences",
     // Persona v2 — 9-dim classifier surface (backend: routes/profile.py).
     // See `frontend/src/lib/cfo/hooks.ts` for response shapes.
     personaDetail: (windowDays: number = 90) =>
