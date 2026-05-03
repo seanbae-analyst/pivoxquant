@@ -1319,9 +1319,25 @@ class EarningsPreBriefService:
                     .first())
         return bool(existing and existing.sent_at)
 
+    @staticmethod
+    def _digest_dedup_dates(today: Optional[date] = None) -> tuple[date, date]:
+        """Return (utc_date, kst_date) — both are checked for dedup.
+
+        Conservative dedup: a digest is "already sent today" if EITHER the
+        UTC-anchored marker OR the KST-anchored marker exists. This way a
+        user near KST midnight (= UTC 15:00) cannot receive two digests
+        across the boundary regardless of which calendar Korea or UTC
+        considers "today". Trade-off: dedup window is a superset of either
+        single-timezone window (24h–33h depending on cron firing time).
+        """
+        now_utc = datetime.now(timezone.utc)
+        utc_d = today or now_utc.date()
+        kst_d = today or (now_utc + timedelta(hours=9)).date()
+        return utc_d, kst_d
+
     def _already_sent_digest(self, user_id: int,
                               today: Optional[date] = None) -> bool:
-        """Daily-level dedup for digest emails.
+        """Daily-level dedup for digest emails (conservative UTC ∪ KST).
 
         Once a user receives one digest today, additional cron runs in
         the same day must not send another digest even if more tickers
@@ -1330,32 +1346,35 @@ class EarningsPreBriefService:
 
         Boundary
         --------
-        The "today" reference is the **UTC calendar date** because the
-        backend cron runs on UTC and earnings windows are matched in
-        UTC. Korean (KST = UTC+9) users near KST midnight (UTC 15:00)
-        could in theory see two digests across one KST calendar day if
-        cron fires on both sides of UTC midnight. Practical impact is
-        minimal because earnings_prebrief is gated on a market-hours
-        scan window. To shift to KST boundary, replace
-        ``datetime.now(timezone.utc).date()`` with a KST-aware helper.
+        Checks BOTH the UTC-anchored marker title (``digest-YYYY-MM-DD``)
+        and the KST-anchored marker title (``digest-kst-YYYY-MM-DD``).
+        Returns True if EITHER exists. This guarantees no duplicate
+        digest near KST midnight (UTC 15:00) regardless of which side of
+        either timezone boundary the cron fires on.
 
-        Marker is stored as an Artifact row of type
-        ``earnings_prebrief_digest`` with title = ``digest-YYYY-MM-DD``
-        (UTC).
+        See ``_digest_dedup_dates`` for the date-pair derivation.
         """
-        today = today or datetime.now(timezone.utc).date()
-        marker_title = f"digest-{today.isoformat()}"
+        utc_d, kst_d = self._digest_dedup_dates(today)
+        markers = [f"digest-{utc_d.isoformat()}",
+                   f"digest-kst-{kst_d.isoformat()}"]
         existing = (Artifact.query
-                    .filter_by(user_id=user_id,
-                               type="earnings_prebrief_digest",
-                               title=marker_title)
+                    .filter(Artifact.user_id == user_id,
+                            Artifact.type == "earnings_prebrief_digest",
+                            Artifact.title.in_(markers))
+                    .filter(Artifact.sent_at.isnot(None))
                     .first())
-        return bool(existing and existing.sent_at)
+        return existing is not None
 
     def _persist_digest_marker(self, user_id: int, count: int,
                                 today: Optional[date] = None) -> Artifact:
         """Persist a daily marker row so subsequent cron runs skip this
-        user. ``data_json`` records the ticker count for telemetry."""
+        user. ``data_json`` records the ticker count for telemetry.
+
+        Writes only the **UTC-anchored** marker (``digest-YYYY-MM-DD``).
+        ``_already_sent_digest`` checks both UTC and KST markers, so the
+        single UTC write is sufficient — the KST-anchored read is what
+        protects the boundary.
+        """
         today = today or datetime.now(timezone.utc).date()
         marker_title = f"digest-{today.isoformat()}"
         existing = (Artifact.query
