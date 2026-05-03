@@ -50,6 +50,27 @@ class User(UserMixin, db.Model):
     # behaviour. Managed via migration 021_email_opt_out.
     email_opt_out          = db.Column(db.Boolean, default=False,
                                         nullable=False, server_default="0")
+    # 정통망법 §50 ① marketing-consent proof of opt-in.
+    # ``email_opt_out`` (above) is a boolean kill-switch honoured by every
+    # email sender; the columns below capture the *evidentiary record* of
+    # the user's consent decision, which is what the act actually requires
+    # the sender to retain. Storing both timestamps separately (rather than
+    # a single boolean) preserves history when a user opts in, opts out,
+    # then opts in again — every state transition is recoverable.
+    #
+    #   marketing_consent_at         : timestamp when the user explicitly
+    #                                  opted in (NULL = never consented).
+    #   marketing_consent_revoked_at : timestamp of the most recent
+    #                                  revocation (NULL = never revoked,
+    #                                  or revoked then re-consented).
+    #
+    # Effective consent state == (marketing_consent_at is not None) AND
+    # (marketing_consent_revoked_at is None OR
+    #  marketing_consent_revoked_at < marketing_consent_at).
+    #
+    # Managed via migration 023_marketing_consent.
+    marketing_consent_at         = db.Column(db.DateTime, nullable=True)
+    marketing_consent_revoked_at = db.Column(db.DateTime, nullable=True)
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")
