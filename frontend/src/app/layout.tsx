@@ -184,7 +184,22 @@ export default async function RootLayout({
   // CSP nonce — injected by middleware.ts as `x-nonce`. Manually authored
   // inline <script> tags must carry this nonce so the strict-dynamic CSP
   // (no 'unsafe-inline' in prod) doesn't block them.
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  //
+  // Defense-in-depth (2026-05-03 P0 fix): wrap `headers()` in try/catch.
+  // Next.js may invoke this server component in contexts where the dynamic
+  // headers() API throws (e.g. RSC prefetch render before middleware ran,
+  // edge cases during static optimisation). A throw here propagates as a
+  // production-wide 500 across every page that mounts the root layout.
+  // Falling back to `undefined` is safe: the nonce is only consumed by the
+  // inline standalone-mode detection script below, which is non-critical
+  // (CSP simply blocks it without the nonce — display-mode class won't be
+  // applied, but the rest of the page renders).
+  let nonce: string | undefined;
+  try {
+    nonce = (await headers()).get("x-nonce") ?? undefined;
+  } catch {
+    nonce = undefined;
+  }
   return (
     <html
       lang="ko"
