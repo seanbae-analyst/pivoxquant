@@ -71,6 +71,16 @@ class User(UserMixin, db.Model):
     # Managed via migration 023_marketing_consent.
     marketing_consent_at         = db.Column(db.DateTime, nullable=True)
     marketing_consent_revoked_at = db.Column(db.DateTime, nullable=True)
+    # PIPA §28-8 (개인정보보호법, 2024-09 시행) — 국외이전 별도 동의 타임스탬프.
+    # Anthropic PBC (미국, Claude API), Stripe Inc. (미국), Vercel/Railway (미국)
+    # 으로의 개인정보 국외이전에 대한 *명시적 별도* 동의가 §28-8 의무이며,
+    # privacy-ko.md L189 의 "가입 시 간주 동의" 문구만으로는 요건을 충족하지 못한다.
+    # `cross_border_consent_at` 이 NULL 이면 동의 미수령(국외이전 차단 신호),
+    # 값이 채워지면 그 시점에 별도 체크박스 제출이 있었음을 입증한다.
+    # 철회 시 `cross_border_consent_revoked_at` 에 시각을 기록하고 신규 추론은
+    # 차단한다. Managed via migration 024_cross_border_consent.
+    cross_border_consent_at = db.Column(db.DateTime, nullable=True)
+    cross_border_consent_revoked_at = db.Column(db.DateTime, nullable=True)
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")
