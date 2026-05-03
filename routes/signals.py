@@ -68,13 +68,19 @@ def get_signals():
                             try:
                                 cache_service.cache_ticker(ticker, cap, engine)
                             except Exception:
-                                logger.debug("silent-fallback: _refresh", exc_info=True)
-                                pass
+                                logger.warning(
+                                    "background cache_ticker failed ticker=%s",
+                                    ticker,
+                                    exc_info=True,
+                                )
 
                     Thread(target=_refresh, daemon=True).start()
                 except Exception:
-                    logger.debug("silent-fallback: get_signals", exc_info=True)
-                    pass
+                    logger.warning(
+                        "failed to spawn background refresh ticker=%s",
+                        t,
+                        exc_info=True,
+                    )
         else:
             # No row at all — surface as stale so the client can show "—" / skeleton.
             out.append({

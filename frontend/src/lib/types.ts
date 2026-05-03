@@ -166,8 +166,20 @@ export interface WatchlistResponse {
 
 export interface AlertItem {
   id: number;
-  type: string;
-  message: string;
+  /**
+   * Alert kind/category from `services/serializers.py:serialize_alert`.
+   * Examples: "signal", "risk", "system", "observation". May be null for
+   * legacy alerts created before the `kind` column existed.
+   */
+  kind: string | null;
+  /** Short headline. Backend falls back to `message` when `title` is empty. */
+  title: string;
+  /** Long-form body text. Optional — null for short alerts. */
+  body: string | null;
+  /** Optional deep-link path (e.g. "/settings#capital"). */
+  link: string | null;
+  /** Legacy message field — kept for backward compatibility with v1 surfaces. */
+  message: string | null;
   ticker: string | null;
   /**
    * Company display name (e.g. "Samsung Electronics", "삼성전자", "Apple Inc.").
@@ -176,9 +188,22 @@ export interface AlertItem {
    * resolve a name. Null only when `ticker` is null.
    */
   name: string | null;
-  data: Record<string, unknown> | null;
+  signal?: string | null;
+  score?: number | null;
+  rec_shares?: number | null;
+  rec_investment?: number | null;
+  read_at?: string | null;
   is_read: boolean;
   created_at: string;
+  /**
+   * @deprecated Backend never returns this. Use `kind` instead.
+   * Kept optional for v1 callers — will be undefined at runtime.
+   */
+  type?: string;
+  /**
+   * @deprecated Backend never returns this. Kept optional for v1 callers.
+   */
+  data?: Record<string, unknown> | null;
 }
 
 export interface AlertsResponse {
