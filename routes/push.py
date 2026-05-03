@@ -86,16 +86,39 @@ def status():
 
 
 def send_push_to_user(user_id: int, title: str, body: str,
-                      url: str = "/alerts", actions: Optional[list] = None):
+                      url: str = "/alerts", actions: Optional[list] = None,
+                      transactional: bool = False):
     """Send push notification to all subscriptions for a user.
 
     Call this from services (e.g. alert_service) after creating an alert.
+
+    ``transactional=True`` bypasses the marketing opt-out gate
+    (``User.email_opt_out`` — 정통망법 §50). Use it only for service-info
+    pushes the user explicitly subscribed to (price alerts, portfolio
+    events, account sync, artifact-ready). Marketing pushes must leave
+    it ``False`` so opted-out users are silenced.
     """
     try:
         from pywebpush import webpush, WebPushException  # noqa: F401 — runtime exception type
     except ImportError:
         logger.warning("pywebpush not installed — skipping push notification")
         return
+
+    # 정통망법 §50 marketing opt-out gate. Mirrors the email path —
+    # ``User.email_opt_out`` is the global kill-switch that disables every
+    # marketing channel. Until a dedicated ``push_opt_out`` column exists
+    # we honour the email flag for non-transactional pushes.
+    if not transactional:
+        try:
+            from models import User
+            user = User.query.get(user_id)
+            if user is not None and bool(getattr(user, "email_opt_out", False)):
+                logger.info("push opt-out: user_id=%s skipped (email_opt_out=True)",
+                            user_id)
+                return
+        except Exception:
+            # Never fail-closed on push delivery for an unrelated DB hiccup.
+            logger.debug("opt-out gate lookup failed", exc_info=True)
 
     vapid_private = os.environ.get("VAPID_PRIVATE_KEY", "")
     vapid_email = os.environ.get("VAPID_EMAIL", "mailto:admin@pivoxquant.com")
