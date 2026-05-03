@@ -18,7 +18,15 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    // P3 (wave1-critical): only emit the boundary log in non-production.
+    // In production the `error.digest` is already shown to the user
+    // (and forwarded to Sentry by Next.js when configured), so dumping
+    // the raw Error to console.error pollutes prod browser consoles
+    // for end users without adding observability.
+    if (
+      typeof window !== "undefined" &&
+      process.env.NODE_ENV !== "production"
+    ) {
       console.error("[PivoxQuant:error-boundary]", error);
     }
   }, [error]);

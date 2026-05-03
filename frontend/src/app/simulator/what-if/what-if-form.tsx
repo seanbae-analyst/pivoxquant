@@ -153,9 +153,19 @@ export function WhatIfForm({
     }, 350);
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
+      // P1 (wave1-critical): abort any in-flight lookup so a late
+      // response can't write to a stale `setSuggestions` after unmount
+      // (or after the user picked a suggestion mid-flight).
+      abortRef.current?.abort();
+      abortRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tickerInput]);
+    // P1 (wave1-critical): include `value.ticker` in deps. The early-bail
+    // guard `q === value.ticker` reads the prop, so when the parent
+    // updates value.ticker (e.g. URL navigation, preset apply, suggestion
+    // pick) the effect must re-evaluate to avoid a stale comparison
+    // against a previous parent value. The bail prevents an unnecessary
+    // network call when tickerInput already matches the new parent ticker.
+  }, [tickerInput, value.ticker]);
 
   function pickSuggestion(r: LookupResult) {
     onChange({

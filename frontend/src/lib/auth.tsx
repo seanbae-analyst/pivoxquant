@@ -100,7 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       // Swallow logout errors — user intent is clear, and the server-side
       // session will either already be gone or expire naturally.
-      if (typeof console !== "undefined") {
+      // P3 (wave1-critical): only surface the warning in non-production
+      // to keep end-user consoles clean. Local state is cleared either way.
+      if (
+        typeof console !== "undefined" &&
+        process.env.NODE_ENV !== "production"
+      ) {
         console.warn("logout request failed (clearing local state anyway):", err);
       }
     } finally {
