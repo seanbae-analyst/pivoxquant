@@ -15,16 +15,16 @@ const fadeUp: Variants = {
 const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.04 } } };
 
 const ARTIFACTS = [
-  { name: "Weekly Memo", tier: "PRO", tagline: "Monday briefing", format: "5-page PDF · Sunday 23:00 KST", sampleUrl: "/samples/weekly_memo.pdf" },
-  { name: "Earnings Pre-Brief", tier: "PRO", tagline: "Day-before setup", format: "6-page PDF · day before earnings", sampleUrl: "/samples/earnings_prebrief.pdf" },
+  { name: "Weekly Memo", tier: "PRO", tagline: "Monday briefing", format: "5-page PDF · Sunday 23:00 KST", sampleUrl: "/sample-reports/weekly-memo" },
+  { name: "Earnings Pre-Brief", tier: "PRO", tagline: "Day-before setup", format: "6-page PDF · day before earnings", sampleUrl: "/sample-reports/earnings-prebrief" },
   { name: "AI Suite", tier: "PRO", tagline: "Eight-model pattern board", format: "In-app · nightly", sampleUrl: null },
   { name: "DD Checklist", tier: "PRO", tagline: "10-K / 10-Q reading aid", format: "Interactive · PDF export", sampleUrl: null },
   { name: "Burn Rate", tier: "PRO", tagline: "Cash runway worksheet", format: "In-app · PDF on demand", sampleUrl: null },
   { name: "Credit Rating", tier: "PRO", tagline: "Altman Z + coverage", format: "1-page PDF", sampleUrl: null },
   { name: "Monthly Finance", tier: "PREMIUM", tagline: "Month-in-review ledger", format: "8-page PDF · first of month", sampleUrl: null },
-  { name: "Risk Board Deck", tier: "PREMIUM", tagline: "Board-grade risk review", format: "12-slide PDF · weekly", sampleUrl: "/samples/risk_board.pdf" },
-  { name: "Quarterly Self-Report", tier: "PREMIUM", tagline: "Own-decisions audit", format: "10-page PDF · quarterly", sampleUrl: "/samples/quarterly_self_report.pdf" },
-  { name: "Year-End Letter", tier: "PREMIUM", tagline: "A letter to next year’s self", format: "14-page PDF · December", sampleUrl: "/samples/year_end_letter.pdf" },
+  { name: "Risk Board Deck", tier: "PREMIUM", tagline: "Board-grade risk review", format: "12-slide PDF · weekly", sampleUrl: "/sample-reports/risk-board" },
+  { name: "Quarterly Self-Report", tier: "PREMIUM", tagline: "Own-decisions audit", format: "10-page PDF · quarterly", sampleUrl: "/sample-reports/quarterly-self-report" },
+  { name: "Year-End Letter", tier: "PREMIUM", tagline: "A letter to next year’s self", format: "14-page PDF · December", sampleUrl: "/sample-reports/year-end-letter" },
   { name: "Capital Allocation", tier: "PREMIUM", tagline: "Allocation what-if", format: "In-app · PDF export", sampleUrl: null },
   { name: "Insider Mirror", tier: "PREMIUM", tagline: "Form 4 · DART feed", format: "Feed · weekly digest", sampleUrl: null },
   { name: "Portfolio Segment", tier: "PREMIUM", tagline: "Sector + region breakdown", format: "4-page PDF · weekly", sampleUrl: null },

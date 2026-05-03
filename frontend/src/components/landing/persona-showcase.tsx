@@ -249,7 +249,7 @@ export function PersonaShowcase() {
               </div>
 
               <Link
-                href={`/samples/weekly_memo.pdf`}
+                href={`/sample-reports/weekly-memo`}
                 className="mt-6 inline-flex items-center gap-1.5 self-start font-serif text-[11.5px] italic"
                 style={{
                   letterSpacing: "0.02em",
