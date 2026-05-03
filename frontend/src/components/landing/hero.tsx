@@ -174,9 +174,18 @@ export function Hero() {
 
               {/* H1 — LCP element. HeroTypography renders a plain span
                   statically, then swaps to a glyph layer after hydration. */}
+              {/* 2026-05-03: pq-silver-matte removed from H1.
+                  The class set `-webkit-text-fill-color: transparent` and
+                  relied on `background: linear-gradient + background-clip: text`
+                  for the visible color. When the gradient failed to paint
+                  (Chrome on certain GPU stacks; observed live at pivoxquant.com)
+                  the entire H1 rendered as transparent \u2192 invisible. The CEO
+                  direction was Playfair + bronze accent on "learns"; the
+                  silver-gradient effect was over-engineering. Solid ivory
+                  via .pq-hero-h1 color is guaranteed to render. */}
               <HeroTypography
                 id="pq-hero-heading"
-                className="pq-hero-h1 pq-silver-matte mb-7 font-serif font-normal"
+                className="pq-hero-h1 mb-7 font-serif font-normal"
                 startDelayMs={700}
                 segments={[
                   { text: "Your CFO\u00A0" },
