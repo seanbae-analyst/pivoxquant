@@ -68,10 +68,13 @@ const TONE_STYLE: Record<Tone, string | undefined> = {
 };
 
 const DEFAULT: DdChecklistData = {
+  // Sample fixture; price re-anchored 2026-04 to a plausible 2026 close
+  // (~$118) — the prior $28.40 figure was a 2024-era stale value that
+  // undermined the credibility of the rest of the checklist on inspection.
   asOf: "Apr 26, 2026 · DD-2026-04",
   ticker: "PLTR",
   company: "Palantir Technologies",
-  price: { value: "$28.40", delta: "+1.2% · MTD +18%" },
+  price: { value: "$118.40", delta: "+1.2% · MTD +18%" },
   targetSize: { value: "3.5%", detail: "$43,500 / $1.24M NAV" },
   ddScore: { value: "21/25", verdict: "PROCEED" },
   sectionA: [
