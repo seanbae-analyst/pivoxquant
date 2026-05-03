@@ -50,7 +50,7 @@ function relativeTime(dateStr: string): string {
   return `${Math.floor(days / 7)}w`;
 }
 
-function kindLabel(type: string): string {
+function kindLabel(type: string | null | undefined): string {
   if (!type) return "INFO";
   if (type.startsWith("signal")) return "SIGNAL";
   if (type.startsWith("risk")) return "RISK";
@@ -339,7 +339,7 @@ export default function AlertsPage() {
                     </td>
                     <td className="px-5 py-3">
                       <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
-                        {kindLabel(a.type)}
+                        {kindLabel(a.kind)}
                       </span>
                     </td>
                     <td className="px-5 py-3">
@@ -354,12 +354,12 @@ export default function AlertsPage() {
                               !a.is_read && "font-semibold",
                             )}
                           >
-                            {a.name || a.ticker || kindLabel(a.type)}
+                            {a.name || a.ticker || kindLabel(a.kind)}
                           </div>
                           <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] truncate">
-                            {a.message}
+                            {a.title || a.message}
                           </div>
-                          {a.message?.includes("set capital for sizing") && (
+                          {(a.body || a.message)?.includes("set capital for sizing") && (
                             <Link
                               href="/settings#capital"
                               onClick={(e) => e.stopPropagation()}
