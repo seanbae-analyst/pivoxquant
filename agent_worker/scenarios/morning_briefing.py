@@ -165,29 +165,37 @@ def _persist_briefing(engine: Engine, priorities: list[str], motivation: str, ra
 
 
 def _upsert_activity_score(engine: Engine, score: int) -> None:
-    """Create or update today's activity_score in growth_scores."""
+    """Create or update today's activity_score in growth_scores.
+
+    Worker scenarios run as the founder/system user (user_id=0). Per
+    SEC-005, growth_scores is now keyed on (user_id, date).
+    """
     today = date.today()
     yesterday = today - timedelta(days=1)
+    founder_uid = 0
 
     with engine.begin() as conn:
         # Calculate streak from yesterday
         prev = conn.execute(
-            text("SELECT streak_days FROM growth_scores WHERE date = :d"),
-            {"d": yesterday},
+            text(
+                "SELECT streak_days FROM growth_scores "
+                "WHERE date = :d AND user_id = :uid"
+            ),
+            {"d": yesterday, "uid": founder_uid},
         ).fetchone()
         streak = (prev.streak_days + 1) if prev else 1
 
         conn.execute(
             text(
                 """
-                INSERT INTO growth_scores (date, activity_score, streak_days)
-                VALUES (:date, :score, :streak)
-                ON CONFLICT (date) DO UPDATE
+                INSERT INTO growth_scores (user_id, date, activity_score, streak_days)
+                VALUES (:uid, :date, :score, :streak)
+                ON CONFLICT (user_id, date) DO UPDATE
                   SET activity_score = :score,
                       streak_days = :streak
                 """
             ),
-            {"date": today, "score": score, "streak": streak},
+            {"uid": founder_uid, "date": today, "score": score, "streak": streak},
         )
 
 
