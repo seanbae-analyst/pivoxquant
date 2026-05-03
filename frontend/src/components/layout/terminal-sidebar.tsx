@@ -136,9 +136,9 @@ function keyFromPath(pathname: string | null): TerminalSidebarKey | null {
 
 export function TerminalSidebar({
   active,
-  variant: _variant = "rail",
 }: {
   active?: TerminalSidebarKey;
+  /** Reserved for future layouts; currently fixed to "rail". */
   variant?: "rail";
 }) {
   const pathname = usePathname();

@@ -18,6 +18,9 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 from typing import Iterable, Mapping
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -62,6 +65,7 @@ def sector_hhi(weights: Mapping[str, float]) -> float:
         try:
             v = abs(float(value))
         except (TypeError, ValueError):
+            logger.debug("silent-fallback: sector_hhi", exc_info=True)
             continue
         if v <= 0:
             continue

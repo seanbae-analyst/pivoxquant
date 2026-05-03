@@ -188,6 +188,7 @@ class KISTokenManager:
             try:
                 os.chmod(_CACHE_FILE, stat.S_IRUSR | stat.S_IWUSR)  # 0o600
             except Exception:
+                logger.debug("silent-fallback: _save_to_file", exc_info=True)
                 pass
         except Exception as e:
             logger.debug("KIS token cache write failed: %s", e)

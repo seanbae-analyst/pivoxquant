@@ -34,6 +34,7 @@ from services.quant.composer import (
 from services.quant.model_catalog import CATEGORIES, MODEL_BY_NAME, MODEL_CATALOG
 
 from .decorators import api_auth, legal_scrub_response
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +203,7 @@ def get_composition():
 @quant_composer_bp.route("/", methods=["PUT"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def put_composition():
     """Replace the user's enabled list + weights atomically.
 
@@ -286,6 +288,7 @@ def _paper_backtest(enabled: list[str], weights: dict[str, float], ticker: str, 
 @quant_composer_bp.route("/backtest", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def post_backtest():
     """Paper backtest of a candidate composition. Body:
     ``{"enabled": [...], "weights": {...}, "ticker": "AAPL", "days": 90}``
@@ -329,6 +332,7 @@ def post_backtest():
 @quant_composer_bp.route("/preset", methods=["POST"])
 @api_auth
 @legal_scrub_response
+@general_rate_limit
 def post_preset():
     """Apply a persona preset (Feature 2). Body: ``{"persona_code": "quant"}``.
 

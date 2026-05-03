@@ -285,6 +285,7 @@ def _run_migrations(app):
                         "SELECT pg_advisory_unlock(hashtext('pivoxquant_migrate'))"
                     ))
                 except Exception:  # pragma: no cover — best-effort cleanup
+                    logger.debug("silent-fallback: _run_migrations", exc_info=True)
                     pass
     else:
         # SQLite — single process, no contention possible.
@@ -505,6 +506,7 @@ def _do_migrations():
             db.session.commit()
             logger.info(f"Backfilled buy_fx_rate for {len(us_positions)} US positions (rate: {rate})")
     except Exception:
+        logger.debug("silent-fallback: _do_migrations", exc_info=True)
         pass
 
 
@@ -956,7 +958,16 @@ def _init_scheduler(app):
                 logger.error(f"Persona snapshot weekly failed: {e}")
 
     sched = BackgroundScheduler(timezone="UTC")
-    sched.add_job(_scheduled_refresh, "interval", minutes=3, id="refresh")
+    # PERF-001: cap concurrent runs and coalesce missed runs so a slow refresh
+    # cannot stack up identical jobs on the scheduler thread pool.
+    sched.add_job(
+        _scheduled_refresh,
+        "interval",
+        minutes=3,
+        id="refresh",
+        max_instances=1,
+        coalesce=True,
+    )
     # Sunday 08:00 KST — 주간 맥킨지 스타일 PDF 메모 (Pro+).
     sched.add_job(
         _scheduled_weekly_memo,

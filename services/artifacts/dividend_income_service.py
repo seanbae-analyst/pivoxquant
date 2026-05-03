@@ -132,6 +132,7 @@ def _safe_dividends(ticker: str) -> list[dict[str, Any]]:
                 out.append({"ex_date": ex_date, "amount": amt_f,
                             "pay_date": pay_date})
         except Exception:
+            logger.debug("silent-fallback: _safe_dividends", exc_info=True)
             continue
     out.sort(key=lambda x: x["ex_date"], reverse=True)
     return out
@@ -753,6 +754,8 @@ class DividendIncomeService:
 
     def run_monthly(self, target_month: date | None = None) -> dict[str, Any]:
         """Cron — 1st of month 10:00 KST. Premium only."""
+        from services.artifacts import iter_users_chunked
+
         today = target_month or date.today()
 
         users = (
@@ -762,7 +765,7 @@ class DividendIncomeService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="dividend_income.monthly"):
             try:
                 result = self.run_for_user(user, as_of=today)
                 if result is None:

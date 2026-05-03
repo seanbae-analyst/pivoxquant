@@ -117,6 +117,7 @@ def _style_from_signal_or_sector(ticker: str, sector_canon: str) -> str:
             if isinstance(st, str) and st.strip():
                 return st.strip()
     except Exception:
+        logger.debug("silent-fallback: _style_from_signal_or_sector", exc_info=True)
         pass
     return _STYLE_SECTOR_MAP.get(sector_canon, "Growth")
 
@@ -498,6 +499,7 @@ class PortfolioSegmentService:
                     s_view["tone"] = "neg"
                     s_view["pct_display"] = f"{w:.1f}% / 35% lim"
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: _alloc_rows", exc_info=True)
                 pass
 
         geography = _alloc_rows(regions_raw)
@@ -769,6 +771,8 @@ class PortfolioSegmentService:
 
     def run_quarterly(self, quarter_end: date | None = None) -> dict[str, Any]:
         """Cron target — 1/7, 4/7, 7/7, 10/7 10:00 KST. Premium only."""
+        from services.artifacts import iter_users_chunked
+
         quarter_end = quarter_end or date.today()
         users = (
             User.query
@@ -777,7 +781,7 @@ class PortfolioSegmentService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="portfolio_segment.quarterly"):
             try:
                 result = self.run_for_user(user, quarter_end=quarter_end)
                 if result is None:

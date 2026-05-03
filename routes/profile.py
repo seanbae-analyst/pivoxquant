@@ -41,6 +41,7 @@ from services.profile import (
     detect_significant_drift,
 )
 from .decorators import api_auth
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,7 @@ def get_questionnaire():
 
 @profile_bp.route("/onboarding", methods=["POST"])
 @api_auth
+@general_rate_limit
 def submit_onboarding():
     """Submit onboarding answers → calculate profile → save → return result."""
     data = request.get_json() or {}
@@ -231,6 +233,7 @@ MAX_CAPITAL = 1_000_000_000.0
 
 @profile_bp.route("/capital", methods=["POST"])
 @api_auth
+@general_rate_limit
 def update_capital():
     """Update the user's seed capital used by signals/discover/portfolio analysis.
 
@@ -288,6 +291,7 @@ def update_capital():
 
 @profile_bp.route("", methods=["PUT"])
 @api_auth
+@general_rate_limit
 def update_profile():
     """Update profile (re-take questionnaire). Free users: 3 changes max."""
     if current_user.subscription_tier == "free" and current_user.profile_changes_left <= 0:
@@ -446,6 +450,7 @@ _ARTIFACT_ID_MAX_LEN = 64
 
 @profile_bp.route("/feedback", methods=["POST"])
 @api_auth
+@general_rate_limit
 def submit_feedback():
     """Record a section-level vote on a rendered artifact.
 
@@ -545,6 +550,7 @@ def get_pulse():
 
 @profile_bp.route("/pulse", methods=["POST"])
 @api_auth
+@general_rate_limit
 def submit_pulse():
     """Record a weekly pulse submission.
 
@@ -664,6 +670,7 @@ def _parse_window(raw: str | None) -> int | None:
     try:
         val = int(raw) if raw is not None else _DEFAULT_WINDOW
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _parse_window", exc_info=True)
         return None
     return val if val in VALID_WINDOWS else None
 
@@ -903,6 +910,7 @@ def get_persona_drift():
 
 @profile_bp.route("/persona-snapshot", methods=["POST"])
 @api_auth
+@general_rate_limit
 def post_persona_snapshot():
     """Take an immediate PersonaSnapshot for the authenticated user.
 

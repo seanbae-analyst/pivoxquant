@@ -56,6 +56,7 @@ def parse_price_display(display: Optional[str]) -> Optional[float]:
     try:
         v = float(m.group(0).replace(",", ""))
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: parse_price_display", exc_info=True)
         return None
     if v <= 0:
         return None

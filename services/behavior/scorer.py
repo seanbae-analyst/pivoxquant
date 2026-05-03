@@ -424,10 +424,12 @@ def _persona_avg_with_floor(persona: str) -> dict | None:
     try:
         from services.profile.group_benchmark import get_persona_stats
     except Exception:
+        logger.debug("silent-fallback: _persona_avg_with_floor", exc_info=True)
         return None
     try:
         stats = get_persona_stats(persona, 90)
     except Exception:
+        logger.debug("silent-fallback: _persona_avg_with_floor", exc_info=True)
         return None
     if not stats:
         return None

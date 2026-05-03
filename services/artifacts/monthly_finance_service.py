@@ -145,6 +145,7 @@ def _safe_dividends(ticker: str) -> list[dict[str, Any]]:
             amt = float(r.get("dividend") or r.get("adjDividend") or 0)
             out.append({"ticker": ticker, "ex_date": ex_date, "amount": amt})
         except Exception:
+            logger.debug("silent-fallback: _safe_dividends", exc_info=True)
             continue
     return out
 
@@ -165,6 +166,7 @@ def _safe_earnings_calendar(ticker: str) -> Optional[date]:
                 if d >= now:
                     return d
             except Exception:
+                logger.debug("silent-fallback: _safe_earnings_calendar", exc_info=True)
                 continue
     except Exception as exc:
         logger.debug("earnings calendar failed for %s: %s", ticker, exc)
@@ -922,6 +924,8 @@ class MonthlyFinanceService:
 
     def run_monthly(self, target_month: date | None = None) -> dict[str, Any]:
         """Cron — 1st of month 11:00 KST. Premium only."""
+        from services.artifacts import iter_users_chunked
+
         today = target_month or date.today()
 
         users = (
@@ -931,7 +935,7 @@ class MonthlyFinanceService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="monthly_finance.monthly"):
             try:
                 result = self.run_for_user(user, as_of=today)
                 if result is None:

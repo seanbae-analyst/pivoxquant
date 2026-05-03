@@ -36,6 +36,9 @@ from typing import Iterable
 from models import Position, TradeHistory, InvestmentProfile
 from .common_util import sector_hhi, to_diversity_score, utc_now as _utc_now
 from .fifo_util import fifo_match_closed_trades, fifo_open_position_ages
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -234,6 +237,7 @@ def _sector_map_from_positions(positions: Iterable[Position]) -> dict[str, str]:
                 if sec:
                     mapping[ticker] = sec
             except Exception:
+                logger.debug("silent-fallback: _sector_map_from_positions", exc_info=True)
                 pass
     return mapping
 

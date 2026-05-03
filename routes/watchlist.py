@@ -11,7 +11,9 @@ from services import cache_service
 from services.container import engine
 from services.name_resolver import resolve_stock_name
 from services.price_overlay import overlay_prices, parse_price_display
+from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth
+from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -93,16 +95,21 @@ def get_watchlist():
 
 @watchlist_bp.route("", methods=["POST"])
 @api_auth
+@general_rate_limit
 def add():
     d = request.get_json() or {}
-    ticker = (d.get("ticker") or "").strip().upper()
+    raw = (d.get("ticker") or "").strip()
     note = (d.get("note") or "").strip() or None
-    if not ticker:
+    if not raw:
         return jsonify({"error": "Ticker required"}), 400
     if note and len(note) > 500:
         return jsonify({"error": "Note too long (max 500 characters)"}), 400
-    if ticker.isdigit() and len(ticker) == 6:
-        ticker += ".KS"
+    # Single-source normalization: bare 6-digit code → registry-guided
+    # .KS/.KQ. Replaces the ad-hoc default-to-.KS rule that mis-routed
+    # KOSDAQ tickers (e.g. 035760 CJ ENM).
+    ticker = normalize_ticker(raw)
+    if not ticker:
+        return jsonify({"error": "Ticker required"}), 400
     existing = Watchlist.query.filter_by(user_id=current_user.id, ticker=ticker).first()
     if existing:
         return jsonify({"error": "Already in watchlist"}), 409
@@ -125,6 +132,7 @@ def add():
 
 @watchlist_bp.route("/<int:wid>", methods=["DELETE"])
 @api_auth
+@general_rate_limit
 def remove(wid):
     w = db.session.get(Watchlist, wid)
     if not w or w.user_id != current_user.id:
@@ -141,6 +149,7 @@ def remove(wid):
 
 @watchlist_bp.route("/<int:wid>", methods=["PATCH"])
 @api_auth
+@general_rate_limit
 def update(wid):
     """Patch the note on an existing watchlist row.
 

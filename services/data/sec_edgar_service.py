@@ -343,6 +343,7 @@ class SECEdgarService:
             try:
                 fd_date = datetime.strptime(fd, "%Y-%m-%d").date()
             except (ValueError, TypeError):
+                logger.debug("silent-fallback: get_form4_insider_trades", exc_info=True)
                 continue
             if fd_date < cutoff:
                 # filings are ordered newest-first; safe to break

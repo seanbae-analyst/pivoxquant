@@ -203,6 +203,7 @@ class DayTradeService:
                 score += 8
                 signals.append({"type": "bullish", "msg": f"Intraday Regime: {rs['label']}", "msg_kr": f"장중 체제: {rs['label_kr']}"})
         except Exception:
+            logger.debug("silent-fallback: 5. Quant Models on intraday data | analyze_short_term", exc_info=True)
             pass
 
         score = max(0, min(100, score))
@@ -239,6 +240,7 @@ class DayTradeService:
                     tp_mult, sl_mult = 1.0, 2.0   # tight TP, wide SL
                 # scalper keeps default 2.0, 1.0
         except Exception:
+            logger.debug("silent-fallback: analyze_short_term", exc_info=True)
             pass
 
         if signal == "POSITIVE":
@@ -302,6 +304,7 @@ class DayTradeService:
             try:
                 return self.analyze_short_term(sym)
             except Exception:
+                logger.debug("silent-fallback: _analyze", exc_info=True)
                 return None
         with ThreadPoolExecutor(max_workers=10) as ex:
             futures = {ex.submit(_analyze, s): s for s in DAY_TRADE_POOL}

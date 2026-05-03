@@ -685,7 +685,15 @@ export function PdfDonut({
   // Compute cumulative offsets for stroke-dasharray
   const RADIUS = 15.915;
   const CIRCUM = 2 * Math.PI * RADIUS; // ≈ 100 (intentional — 1pct = 1 unit)
-  let cumulative = 25; // start at 12 o'clock
+  // Precompute each segment's stroke-dashoffset so we don't mutate during render.
+  const segmentOffsets: number[] = [];
+  {
+    let cumulative = 25; // start at 12 o'clock
+    for (const seg of segments) {
+      segmentOffsets.push(-cumulative);
+      cumulative += seg.pct;
+    }
+  }
   return (
     <div className="pq-pdf-donut-wrap">
       <svg
@@ -702,8 +710,7 @@ export function PdfDonut({
         />
         {segments.map((seg, i) => {
           const dash = `${seg.pct} ${CIRCUM - seg.pct}`;
-          const offset = -cumulative;
-          cumulative += seg.pct;
+          const offset = segmentOffsets[i];
           return (
             <circle
               key={i}

@@ -188,6 +188,7 @@ class AIService:
                 if en and kr:
                     return en, kr
             except Exception:
+                logger.debug("silent-fallback: _parse_bilingual", exc_info=True)
                 pass
 
         # Method 2: --- separator

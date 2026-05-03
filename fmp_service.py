@@ -135,15 +135,17 @@ def _is_budget_exhausted():
 
 def _track_call():
     global _daily_calls, _daily_calls_reset
-    now = time.time()
-    if now - _daily_calls_reset > 86400:
-        _daily_calls = 0
-        _daily_calls_reset = now
-    _daily_calls += 1
-    if _daily_calls >= _BUDGET_HARD_STOP:
-        logger.warning(f"FMP HARD STOP: {_daily_calls}/{_FMP_DAILY_SOFT_LIMIT} calls used — blocking further API calls")
-    elif _daily_calls >= _BUDGET_STALE_THRESHOLD:
-        logger.warning(f"FMP budget low: {_daily_calls}/{_FMP_DAILY_SOFT_LIMIT} calls — returning stale cache when available")
+    with _cache_lock:
+        now = time.time()
+        if now - _daily_calls_reset > 86400:
+            _daily_calls = 0
+            _daily_calls_reset = now
+        _daily_calls += 1
+        current = _daily_calls
+    if current >= _BUDGET_HARD_STOP:
+        logger.warning(f"FMP HARD STOP: {current}/{_FMP_DAILY_SOFT_LIMIT} calls used — blocking further API calls")
+    elif current >= _BUDGET_STALE_THRESHOLD:
+        logger.warning(f"FMP budget low: {current}/{_FMP_DAILY_SOFT_LIMIT} calls — returning stale cache when available")
 
 
 def _is_endpoint_blocked(endpoint):
@@ -205,7 +207,8 @@ def _fmp_get(endpoint, params=None, timeout=5):
             return r.json()
         if r.status_code == 429:
             logger.error(f"FMP 429 rate limited on {endpoint} — stopping further calls this cycle")
-            _daily_calls = max(_daily_calls, _BUDGET_HARD_STOP)
+            with _cache_lock:
+                _daily_calls = max(_daily_calls, _BUDGET_HARD_STOP)
         elif r.status_code == 402:
             # 402 = FMP plan-gated endpoint OR per-second rate limit (10/sec on free plan).
             # Don't count this against the daily budget — the call wasn't served.
@@ -993,6 +996,7 @@ def get_quarterly_eps(ticker, quarters=8):
         try:
             eps_f = float(eps)
         except (TypeError, ValueError):
+            logger.debug("silent-fallback: get_quarterly_eps", exc_info=True)
             continue
         out.append({
             "date": r.get("date"),
@@ -1016,6 +1020,7 @@ def get_annual_eps(ticker, years=4):
         try:
             eps_f = float(eps)
         except (TypeError, ValueError):
+            logger.debug("silent-fallback: get_annual_eps", exc_info=True)
             continue
         out.append({
             "date": r.get("date"),
@@ -1109,6 +1114,7 @@ def get_institutional_ownership(ticker):
                 total_shares += float(h.get("shares") or 0)
                 total_change += float(h.get("change") or 0)
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: get_institutional_ownership", exc_info=True)
                 continue
         change_pct = None
         if total_shares > 0:

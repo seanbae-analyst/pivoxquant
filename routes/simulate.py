@@ -41,10 +41,17 @@ def _load_user_positions():
     if not positions:
         return [], 0.0
 
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    tickers = [p.ticker for p in positions]
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(tickers)).all()
+    } if tickers else {}
+
     items = []
     total = 0.0
     for p in positions:
-        cached = SignalCache.query.get(p.ticker)
+        cached = cache_map.get(p.ticker)
         sd = json.loads(cached.data_json) if cached and cached.data_json else {}
         price = sd.get("price", p.avg_cost)
         mv = price * p.shares

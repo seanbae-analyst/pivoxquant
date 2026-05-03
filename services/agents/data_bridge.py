@@ -61,6 +61,7 @@ def _to_float(value: Any) -> Optional[float]:
     try:
         return float(value)
     except (TypeError, ValueError):
+        logger.debug("silent-fallback: _to_float", exc_info=True)
         return None
 
 

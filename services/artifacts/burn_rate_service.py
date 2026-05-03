@@ -175,6 +175,7 @@ def _month_avg_price(ticker: str, period_start: date, period_end: date
             if len(sliced) >= 3:
                 return float(sum(sliced) / len(sliced))
         except Exception:
+            logger.debug("silent-fallback: Best-effort: slice by index if pandas DatetimeIndex availabl | _month_avg_price", exc_info=True)
             pass
         # Fallback — the tail ~21 points (approx one month of trading days).
         tail = closes.tail(21)
@@ -246,6 +247,7 @@ def _per_trade_components(tr: TradeHistory,
             diff = abs(px - avg) / avg
             slippage = notional * diff
     except Exception:
+        logger.debug("silent-fallback: _per_trade_components", exc_info=True)
         pass
 
     return {
@@ -265,6 +267,7 @@ def _portfolio_value_estimate(user_id: int) -> Optional[float]:
     try:
         positions = Position.query.filter_by(user_id=user_id).all()
     except Exception:
+        logger.debug("silent-fallback: _portfolio_value_estimate", exc_info=True)
         return None
     if not positions:
         return None
@@ -273,6 +276,7 @@ def _portfolio_value_estimate(user_id: int) -> Optional[float]:
         try:
             total += float(p.shares or 0) * float(p.avg_cost or 0)
         except Exception:
+            logger.debug("silent-fallback: _portfolio_value_estimate", exc_info=True)
             continue
     return total if total > 0 else None
 
@@ -727,6 +731,8 @@ class BurnRateService:
 
     def run_monthly(self, target_month: date | None = None) -> dict[str, Any]:
         """Cron — 1st of each month 09:00 KST. Pro+ only."""
+        from services.artifacts import iter_users_chunked
+
         today = target_month or date.today()
 
         users = (
@@ -736,7 +742,7 @@ class BurnRateService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="burn_rate.monthly"):
             try:
                 result = self.run_for_user(user, target_month=today)
                 if result is None:

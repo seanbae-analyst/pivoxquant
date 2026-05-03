@@ -95,6 +95,23 @@ function renderInline(text: string) {
   );
 }
 
+/**
+ * Renders pullquote text with whitelisted `<em>...</em>` emphasis.
+ * Avoids `dangerouslySetInnerHTML` — only `<em>` tags are recognized,
+ * everything else is rendered as plain text. Defends against XSS even
+ * if backend copy ever flows from untrusted input.
+ */
+function renderPullquote(text: string) {
+  const parts = text.split(/(<em>[^<]*<\/em>)/g);
+  return parts.map((p, i) =>
+    p.startsWith("<em>") && p.endsWith("</em>") ? (
+      <em key={i}>{p.slice(4, -5)}</em>
+    ) : (
+      <span key={i}>{p}</span>
+    ),
+  );
+}
+
 export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
   return (
     <PdfPage>
@@ -276,7 +293,7 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
 
       <div style={{ marginTop: 18 }}>
         <PdfPullquote>
-          <span dangerouslySetInnerHTML={{ __html: data.pullquote }} />
+          <span>{renderPullquote(data.pullquote)}</span>
         </PdfPullquote>
       </div>
 

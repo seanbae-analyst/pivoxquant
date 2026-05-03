@@ -3,7 +3,8 @@ import json
 import logging
 import threading
 from datetime import datetime, timezone
-from flask import Blueprint, current_app, request, jsonify
+from functools import wraps
+from flask import Blueprint, current_app, request, jsonify, make_response
 from flask_login import current_user
 
 from extensions import db
@@ -18,6 +19,50 @@ from .decorators import api_auth, legal_scrub_response
 logger = logging.getLogger(__name__)
 
 portfolio_bp = Blueprint("portfolio", __name__, url_prefix="/api/portfolio")
+
+
+# ── Deprecation marker for legacy singular `/position` endpoints ─────────────
+# 2026-05-02: frontend (endpoints.ts) was migrated to the plural
+# `/positions[/<id>]` aliases. The singular handlers remain so existing
+# pytest coverage and any out-of-tree callers keep working, but every call
+# emits a warning log + RFC 8594 Deprecation/Sunset response headers so
+# operators can monitor real-world usage before final removal.
+_SINGULAR_POSITION_SUNSET = "Sun, 01 Nov 2026 00:00:00 GMT"
+
+
+def _deprecated_singular(plural_hint: str):
+    """Decorator that wraps a Flask view to emit deprecation telemetry.
+
+    - logger.warning on every call (one-line, with user_id + path)
+    - adds `Deprecation: true`, `Sunset: <date>`, and a `Link` header
+      pointing at the recommended plural endpoint
+    - response body is unchanged so existing clients are unaffected
+    """
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                uid = getattr(current_user, "id", None)
+            except Exception:
+                uid = None
+            logger.warning(
+                "deprecated_singular_position_endpoint path=%s user_id=%s use_instead=%s",
+                request.path, uid, plural_hint,
+            )
+            rv = fn(*args, **kwargs)
+            try:
+                resp = make_response(rv)
+                resp.headers.setdefault("Deprecation", "true")
+                resp.headers.setdefault("Sunset", _SINGULAR_POSITION_SUNSET)
+                resp.headers.setdefault(
+                    "Link", f'<{plural_hint}>; rel="successor-version"',
+                )
+                return resp
+            except Exception:
+                # Defensive: never break the response just to attach a header.
+                return rv
+        return wrapper
+    return decorator
 
 
 def _cache_ticker_async(app, ticker: str, capital: float):
@@ -159,6 +204,7 @@ def get_portfolio():
 @portfolio_bp.route("/position", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/positions")
 def add_position():
     # Tier check: Free users limited to 3 positions
     # Use effective_tier so DEV_PREMIUM_EMAILS can bypass the free-plan cap.
@@ -180,8 +226,13 @@ def add_position():
         cost = float(d.get("avg_cost") or 0)
     except (TypeError, ValueError):
         return jsonify({"error": "Shares and average cost must be numbers"}), 400
-    if not ticker or shares <= 0 or cost <= 0:
-        return jsonify({"error": "Ticker, shares, and average cost required"}), 400
+    # SEC-004: Position.ticker is db.String(20). Reject before SQL so the DB
+    # never raises DataError (which would have bubbled up via the leaky
+    # f-string error response).
+    if not ticker or len(ticker) > 20:
+        return jsonify({"error": "Invalid ticker"}), 400
+    if shares <= 0 or cost <= 0:
+        return jsonify({"error": "Shares and average cost required"}), 400
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
     try:
@@ -208,7 +259,7 @@ def add_position():
     except Exception as e:
         db.session.rollback()
         logger.exception("add_position DB commit failed")
-        return jsonify({"error": f"Failed to save position: {e}"}), 500
+        return jsonify({"error": "Failed to save position"}), 500
 
     # Warm the signal cache in the background — see _cache_ticker_async.
     _cache_ticker_async(
@@ -234,6 +285,7 @@ def add_position():
 @portfolio_bp.route("/position/<int:pid>", methods=["PUT"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/positions/<id>")
 def edit_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
@@ -245,7 +297,12 @@ def edit_position(pid):
         return jsonify({"error": "Shares and average cost must be positive"}), 400
     p.shares = shares
     p.avg_cost = cost
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("edit_position commit failed")
+        return jsonify({"error": "Failed to update position"}), 500
     cache_service.cache_ticker(p.ticker, current_user.available_capital, engine)
     return jsonify({"ok": True})
 
@@ -253,18 +310,25 @@ def edit_position(pid):
 @portfolio_bp.route("/position/<int:pid>", methods=["DELETE"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/positions/<id>")
 def del_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
         return jsonify({"error": "Position not found"}), 404
-    db.session.delete(p)
-    db.session.commit()
+    try:
+        db.session.delete(p)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("del_position failed")
+        return jsonify({"error": "Failed to delete position"}), 500
     return jsonify({"ok": True})
 
 
 @portfolio_bp.route("/position/<int:pid>/buy", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/trades")
 def buy_more(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
@@ -318,12 +382,16 @@ def buy_more(pid):
 @portfolio_bp.route("/position/buy-new", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/trades")
 def buy_new_position():
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip().upper()
     shares = float(d.get("shares") or 0)
     price = float(d.get("price") or 0)
-    if not ticker or shares <= 0 or price <= 0:
+    # SEC-004: Position.ticker is db.String(20); validate before persisting.
+    if not ticker or len(ticker) > 20:
+        return jsonify({"error": "Invalid ticker"}), 400
+    if shares <= 0 or price <= 0:
         return jsonify({"error": "Ticker, shares, and price required"}), 400
 
     cost = shares * price
@@ -370,6 +438,7 @@ def buy_new_position():
 @portfolio_bp.route("/position/<int:pid>/sell", methods=["POST"])
 @trade_rate_limit
 @api_auth
+@_deprecated_singular("/api/portfolio/trades")
 def sell_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
@@ -377,6 +446,12 @@ def sell_position(pid):
     d = request.get_json() or {}
     sell_shares = float(d.get("shares") or p.shares)
     sell_price = float(d.get("price") or 0)
+
+    # SEC-001: reject non-positive share counts. `float(d.get("shares") or p.shares)`
+    # passes negative numbers through (negative is truthy), which would invert the
+    # sign of proceeds/PnL and could be abused to credit the user.
+    if sell_shares <= 0:
+        return jsonify({"error": "Shares must be positive"}), 400
 
     cached = cache_service.get_signal(p.ticker)
     sd = json.loads(cached.data_json) if cached and cached.data_json else {}
@@ -440,6 +515,7 @@ def sell_position(pid):
 
 @portfolio_bp.route("/capital", methods=["PUT"])
 @api_auth
+@trade_rate_limit
 def set_capital():
     d = request.get_json() or {}
     cap_usd = float(d.get("capital_usd") or d.get("capital") or 0)
@@ -574,7 +650,7 @@ def list_positions_alias():
         return jsonify({"positions": _build_positions_list()})
     except Exception as e:
         logger.exception("list_positions_alias failed")
-        return jsonify({"error": f"Failed to load positions: {e}"}), 500
+        return jsonify({"error": "Failed to load positions"}), 500
 
 
 @portfolio_bp.route("/summary", methods=["GET"])
@@ -627,6 +703,7 @@ def portfolio_summary_alias():
             try:
                 today_pnl_usd += mv_usd * (float(chg_pct) / 100.0)
             except (TypeError, ValueError):
+                logger.debug("silent-fallback: portfolio_summary_alias", exc_info=True)
                 pass
 
         today_pnl_pct = (today_pnl_usd / total_nav_usd * 100) if total_nav_usd else 0
@@ -658,7 +735,7 @@ def portfolio_summary_alias():
         })
     except Exception as e:
         logger.exception("portfolio_summary_alias failed")
-        return jsonify({"error": f"Failed to load summary: {e}"}), 500
+        return jsonify({"error": "Failed to load summary"}), 500
 
 
 @portfolio_bp.route("/trades", methods=["GET"])
@@ -694,7 +771,7 @@ def list_trades_alias():
         return jsonify({"trades": trades})
     except Exception as e:
         logger.exception("list_trades_alias failed")
-        return jsonify({"error": f"Failed to load trades: {e}"}), 500
+        return jsonify({"error": "Failed to load trades"}), 500
 
 
 @portfolio_bp.route("/positions", methods=["POST"])
@@ -756,7 +833,7 @@ def create_position_alias():
     except Exception as e:
         db.session.rollback()
         logger.exception("create_position_alias commit failed")
-        return jsonify({"error": f"Failed to save position: {e}"}), 500
+        return jsonify({"error": "Failed to save position"}), 500
 
     _cache_ticker_async(
         current_app._get_current_object(),
@@ -805,7 +882,7 @@ def patch_position_alias(pid):
     except Exception as e:
         db.session.rollback()
         logger.exception("patch_position_alias failed")
-        return jsonify({"error": f"Failed to update: {e}"}), 500
+        return jsonify({"error": "Failed to update"}), 500
     return jsonify({"ok": True, "id": str(p.id)})
 
 
@@ -822,7 +899,7 @@ def delete_position_alias(pid):
     except Exception as e:
         db.session.rollback()
         logger.exception("delete_position_alias failed")
-        return jsonify({"error": f"Failed to delete: {e}"}), 500
+        return jsonify({"error": "Failed to delete"}), 500
     return jsonify({"ok": True})
 
 
@@ -887,7 +964,7 @@ def create_trade_alias():
         except Exception as e:
             db.session.rollback()
             logger.exception("create_trade_alias buy failed")
-            return jsonify({"error": f"Failed to record trade: {e}"}), 500
+            return jsonify({"error": "Failed to record trade"}), 500
         return jsonify({
             "ok": True,
             "action": "buy",
@@ -929,7 +1006,7 @@ def create_trade_alias():
     except Exception as e:
         db.session.rollback()
         logger.exception("create_trade_alias sell failed")
-        return jsonify({"error": f"Failed to record trade: {e}"}), 500
+        return jsonify({"error": "Failed to record trade"}), 500
     return jsonify({
         "ok": True,
         "action": "sell",
@@ -953,19 +1030,34 @@ def portfolio_history():
     period = request.args.get("period", "5d")
     if period not in ("5d", "1mo", "3mo", "6mo", "1y"):
         period = "5d"
-    all_values = {}
-    for p in positions:
+
+    # PERF-004: Parallelize history fetches across positions. Previous serial
+    # loop was O(n) FMP RTTs (often 800ms+ each). ThreadPoolExecutor with a
+    # small pool keeps the upstream rate manageable while cutting wall time
+    # to roughly the slowest single fetch.
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _fetch_one(p):
         try:
-            h = fmp.get_history(p.ticker, period=period)
-            if h.empty:
-                continue
-            for date, row in h.iterrows():
-                ds = date.strftime("%Y-%m-%d")
-                if ds not in all_values:
-                    all_values[ds] = 0
-                all_values[ds] += float(row["Close"]) * p.shares
+            return p, fmp.get_history(p.ticker, period=period)
         except Exception:
-            pass
+            logger.debug("silent-fallback: portfolio_history", exc_info=True)
+            return p, None
+
+    all_values = {}
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        for p, h in ex.map(_fetch_one, positions):
+            if h is None or h.empty:
+                continue
+            try:
+                for date, row in h.iterrows():
+                    ds = date.strftime("%Y-%m-%d")
+                    if ds not in all_values:
+                        all_values[ds] = 0
+                    all_values[ds] += float(row["Close"]) * p.shares
+            except Exception:
+                logger.debug("silent-fallback: portfolio_history", exc_info=True)
+                pass
 
     if not all_values:
         return jsonify({"data": []})
@@ -980,6 +1072,7 @@ def portfolio_history():
         if today_val > 0:
             all_values[today] = today_val
     except Exception:
+        logger.debug("silent-fallback: portfolio_history", exc_info=True)
         pass
 
     data = [{"date": k, "value": round(v, 2)} for k, v in sorted(all_values.items())]

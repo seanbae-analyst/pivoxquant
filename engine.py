@@ -144,6 +144,7 @@ class QuantEngine:
                             "msg": f"Sector leader: {relative:+.0f}% vs {sector} ({sector_ret:+.1f}%)",
                             "msg_kr": f"섹터 대비 강세: {relative:+.0f}% vs {sector}"})
         except Exception:
+            logger.debug("silent-fallback: ── Sector Relative Strength ── | analyze", exc_info=True)
             pass
 
         # ── Adaptive Weights + Thresholds ──
@@ -238,6 +239,7 @@ class QuantEngine:
             elif vix < 15:
                 buy_thresh -= 2
         except Exception:
+            logger.debug("silent-fallback: VIX: raise the bar when market is fearful | analyze", exc_info=True)
             pass
 
         # Cross-Asset Momentum: macro headwind/tailwind
@@ -256,6 +258,7 @@ class QuantEngine:
                     "msg": "Macro regime: RISK_ON — tailwind for risk assets",
                     "msg_kr": "매크로: RISK_ON — 위험자산 순풍"})
         except Exception:
+            logger.debug("silent-fallback: Cross-Asset Momentum: macro headwind/tailwind | analyze", exc_info=True)
             pass
 
         # ── Common-Sense Filters ──
@@ -1015,6 +1018,7 @@ class QuantEngine:
                 ret = h["Close"].pct_change().dropna() * weight
                 combined = ret if combined is None else combined.add(ret, fill_value=0)
             except Exception:
+                logger.debug("silent-fallback: portfolio_analytics", exc_info=True)
                 pass
 
         result: dict = {
@@ -1081,6 +1085,7 @@ class QuantEngine:
             from ta.trend import ADXIndicator
             return ADXIndicator(high=high, low=low, close=close, window=n).adx()
         except Exception:
+            logger.debug("silent-fallback: _adx", exc_info=True)
             return None
 
     @staticmethod
@@ -1091,6 +1096,7 @@ class QuantEngine:
             stoch = StochasticOscillator(high=high, low=low, close=close)
             return stoch.stoch(), stoch.stoch_signal()
         except Exception:
+            logger.debug("silent-fallback: _stochastic", exc_info=True)
             return None
 
     @staticmethod
@@ -1100,6 +1106,7 @@ class QuantEngine:
             from ta.volume import OnBalanceVolumeIndicator
             return OnBalanceVolumeIndicator(close=close, volume=volume).on_balance_volume()
         except Exception:
+            logger.debug("silent-fallback: _obv", exc_info=True)
             return None
 
     # ── Advanced Quant Models ────────────────────────────────────────────────────
@@ -1143,6 +1150,7 @@ class QuantEngine:
                                  "msg": f"Mean Reversion: Price {z:.1f}σ above mean — extended",
                                  "msg_kr": f"평균회귀: 가격이 평균보다 {z:.1f}σ 위 — 과확장"})
         except Exception:
+            logger.debug("silent-fallback: 1. Mean Reversion (10% → maps to 0-100) | _quant_models", exc_info=True)
             pass
 
         # 2. Momentum Breakout (10%)
@@ -1161,6 +1169,7 @@ class QuantEngine:
                     for s in mb["signals"]:
                         sigs.append(s)
         except Exception:
+            logger.debug("silent-fallback: 2. Momentum Breakout (10%) | _quant_models", exc_info=True)
             pass
 
         # 3. Volatility Regime (10%)
@@ -1184,6 +1193,7 @@ class QuantEngine:
                                  "msg": f"Volatility: CRISIS ({vr['current_vol']:.0f}%) — cash is king",
                                  "msg_kr": f"변동성: 위기 ({vr['current_vol']:.0f}%) — 현금 보유 권고"})
         except Exception:
+            logger.debug("silent-fallback: 3. Volatility Regime (10%) | _quant_models", exc_info=True)
             pass
 
         # 4. Regime Switching (10%)
@@ -1216,6 +1226,7 @@ class QuantEngine:
                                  "msg": f"Regime Shift: {rs['shift_direction']}",
                                  "msg_kr": f"체제 전환: {rs['shift_kr']}"})
         except Exception:
+            logger.debug("silent-fallback: 4. Regime Switching (10%) | _quant_models", exc_info=True)
             pass
 
         # 5. ML Signal
@@ -1237,6 +1248,7 @@ class QuantEngine:
                                  "msg": f"ML Signal: NEUTRAL — {ml['votes_up']}↑ vs {ml['votes_down']}↓ votes (confidence {ml['confidence']:.0f}%)",
                                  "msg_kr": f"ML 시그널: 중립 — {ml['votes_up']}↑ vs {ml['votes_down']}↓ 투표 (신뢰도 {ml['confidence']:.0f}%)"})
         except Exception:
+            logger.debug("silent-fallback: 5. ML Signal | _quant_models", exc_info=True)
             pass
 
         # 6. Variance Ratio Filter — trending vs mean-reverting regime
@@ -1253,6 +1265,7 @@ class QuantEngine:
                              "msg": f"Variance Ratio: Mean-reverting regime (VR={vr_result['vr']:.2f})",
                              "msg_kr": f"분산비: 평균회귀 레짐 (VR={vr_result['vr']:.2f})"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 7. TSMOM — 12-month time-series momentum
@@ -1270,6 +1283,7 @@ class QuantEngine:
                              "msg": f"TSMOM: 12M return {tsmom_result['momentum_12m']:.1f}% (strength {tsmom_result['strength']:.2f})",
                              "msg_kr": f"TSMOM: 12개월 수익률 {tsmom_result['momentum_12m']:.1f}% (강도 {tsmom_result['strength']:.2f})"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 8. 52-Week High Momentum — nearness to 52-week high
@@ -1285,6 +1299,7 @@ class QuantEngine:
                              "msg": f"52W High: Only {high52_result['ratio']:.1%} of high (${high52_result['high_52w']:.2f}) — deep pullback",
                              "msg_kr": f"52주 고점: 고점 대비 {high52_result['ratio']:.1%} (${high52_result['high_52w']:.2f}) — 큰 폭 하락"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 9. Disposition Effect — Capital Gains Overhang (Frazzini 2006)
@@ -1308,6 +1323,7 @@ class QuantEngine:
                                      "msg": f"Disposition Effect: Low CGO ({cgo:.3f}) — no disposition pressure",
                                      "msg_kr": f"처분효과: 낮은 CGO ({cgo:.3f}) — 처분 압력 없음"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 10. Order Flow Imbalance — Cont, Kukanov & Stoikov (2014)
@@ -1331,6 +1347,7 @@ class QuantEngine:
                                      "msg": f"Order Flow: Strong selling pressure (OFI={ofi_result.get('ofi_normalized', 0):.3f})",
                                      "msg_kr": f"주문흐름: 강한 매도 압력 (OFI={ofi_result.get('ofi_normalized', 0):.3f})"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 11. Anchoring Bias — George & Hwang (2004)
@@ -1360,6 +1377,7 @@ class QuantEngine:
                     else:
                         anchor_result["boost"] = 1.0    # neutral zone
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 12b. Donchian Channel Breakout — Turtle Trading simplified (55/20)
@@ -1377,6 +1395,7 @@ class QuantEngine:
                              "msg": f"Donchian Breakout: Price broke 20-day low (${donchian_result.get('exit_level')})",
                              "msg_kr": f"돈치안 이탈: 20일 저가 이탈 (${donchian_result.get('exit_level')})"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 12c. Dual Momentum — Antonacci (absolute + relative vs SPY benchmark)
@@ -1399,6 +1418,7 @@ class QuantEngine:
                                      "msg": f"Dual Momentum: Asset {dual_mom_result['asset_return_12m']:.1f}% (absolute momentum fails)",
                                      "msg_kr": f"듀얼 모멘텀: 자산 {dual_mom_result['asset_return_12m']:.1f}% (절대 모멘텀 실패)"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 12d. Correlation Regime — diversification breakdown detector (sector basket)
@@ -1427,6 +1447,7 @@ class QuantEngine:
                                  "msg": f"Correlation Regime: Low ({corr_regime_result.get('avg_correlation')}) — stock-picking environment",
                                  "msg_kr": f"상관관계 레짐: 낮음 ({corr_regime_result.get('avg_correlation')}) — 개별종목 장세"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         # 12. Sentiment-Price Divergence — detect sentiment/price disconnect
@@ -1460,6 +1481,7 @@ class QuantEngine:
                                          "msg": f"Sentiment Divergence: Bearish — price rises but sentiment deteriorates ({spd_result.get('divergence_score', 0):.3f})",
                                          "msg_kr": f"센티먼트 괴리: 약세 — 가격 상승에도 심리 악화 ({spd_result.get('divergence_score', 0):.3f})"})
         except Exception:
+            logger.debug("silent-fallback: _quant_models", exc_info=True)
             pass
 
         return (max(0.0, min(100.0, score)), sigs, vr_result, tsmom_result, high52_result,

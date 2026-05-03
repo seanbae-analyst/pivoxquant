@@ -132,8 +132,10 @@ def _sector_for_ticker(ticker: str) -> str:
                 if sector:
                     return str(sector)
             except Exception:
+                logger.debug("silent-fallback: _sector_for_ticker", exc_info=True)
                 pass
     except Exception:
+        logger.debug("silent-fallback: _sector_for_ticker", exc_info=True)
         pass
     return "Unknown"
 
@@ -361,6 +363,7 @@ def _legal_matters(user_id: int, start: date, end: date) -> list[dict[str, Any]]
             "label": f"분기 내 거래 총 {tc}건 기록",
         })
     except Exception:
+        logger.debug("silent-fallback: _legal_matters", exc_info=True)
         pass
 
     # Broker connect rows (descriptive)
@@ -378,6 +381,7 @@ def _legal_matters(user_id: int, start: date, end: date) -> list[dict[str, Any]]
                     "label": f"증권사 연결: {getattr(c,'broker','unknown')}",
                 })
     except Exception:
+        logger.debug("silent-fallback: Broker connect rows (descriptive) | _legal_matters", exc_info=True)
         pass
     events.sort(key=lambda e: e["date"])
     return events
@@ -1057,6 +1061,8 @@ class QuarterlySelfReportService:
 
     def run_quarterly(self, quarter_end: date | None = None) -> dict[str, Any]:
         """Cron — quarter +7 days 10:00 KST. Premium only."""
+        from services.artifacts import iter_users_chunked
+
         quarter_end = quarter_end or date.today()
         users = (
             User.query
@@ -1065,7 +1071,7 @@ class QuarterlySelfReportService:
         )
 
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="quarterly_self_report.quarterly"):
             try:
                 result = self.run_for_user(user, quarter_end=quarter_end)
                 if result is None:

@@ -44,7 +44,9 @@ interface Props {
 
 export function WeeklyPulseCard({ open, onClose, inline, className }: Props) {
   const { data, submit } = usePulse();
-  const history = data?.history ?? [];
+  // Memo the array so the auto-open effect doesn't re-run on every render
+  // (a fresh `?? []` would otherwise be a new identity each pass).
+  const history = React.useMemo(() => data?.history ?? [], [data?.history]);
 
   // Auto-trigger logic: if `open` is undefined the host defers to the
   // component's own scheduler.
@@ -244,7 +246,7 @@ function PulseForm({
 
       <div>
         <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
-          Topics you're watching
+          Topics you&apos;re watching
         </div>
         <div className="flex flex-wrap gap-1.5">
           {TOPICS.map((t) => {

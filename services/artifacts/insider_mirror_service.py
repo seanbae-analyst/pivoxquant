@@ -304,6 +304,7 @@ def _trend_bucket(events: list[EventRow], weeks: int) -> list[dict[str, Any]]:
         try:
             d = date.fromisoformat(ev.transaction_date)
         except (ValueError, TypeError):
+            logger.debug("silent-fallback: _trend_bucket", exc_info=True)
             continue
         label = _week_label(d)
         if label in buckets:
@@ -711,6 +712,8 @@ class InsiderMirrorService:
 
     def run_weekly(self, anchor: date | None = None) -> dict[str, Any]:
         """Cron target — Mon 09:00 KST. Premium users only."""
+        from services.artifacts import iter_users_chunked
+
         anchor = anchor or datetime.now(timezone.utc).date()
         users = (
             User.query
@@ -718,7 +721,7 @@ class InsiderMirrorService:
             .all()
         )
         successes = failures = skipped = 0
-        for user in users:
+        for user in iter_users_chunked(users, label="insider_mirror.weekly"):
             try:
                 result = self.run_for_user(user, anchor=anchor)
                 if result is None:

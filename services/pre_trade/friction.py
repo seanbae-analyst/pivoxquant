@@ -261,6 +261,7 @@ def _read_vix(now: datetime) -> float | None:
             if v is not None:
                 return float(v)
     except Exception:
+        logger.debug("silent-fallback: _read_vix", exc_info=True)
         pass
     try:
         from services import cache_service as cs  # type: ignore
@@ -270,6 +271,7 @@ def _read_vix(now: datetime) -> float | None:
             if v is not None:
                 return float(v)
     except Exception:
+        logger.debug("silent-fallback: _read_vix", exc_info=True)
         pass
     return None
 
@@ -328,4 +330,5 @@ def _to_decimal(v: Any) -> Decimal | None:
     try:
         return Decimal(str(v))
     except Exception:
+        logger.debug("silent-fallback: _to_decimal", exc_info=True)
         return None

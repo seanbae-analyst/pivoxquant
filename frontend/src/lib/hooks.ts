@@ -247,38 +247,6 @@ export function usePortfolioPositions<T = any>() {
 export { useRealtimeContext } from "./realtime";
 export type { RealtimePriceDetail, PriceDirection, RealtimeState } from "./realtime";
 
-/* ── Macro tape (US 10Y / VIX / FX / Gold / WTI / Fear&Greed) ── */
-
-export interface MacroQuote { price: number; change_pct: number; name?: string }
-export interface MacroResponse {
-  vix?: number;
-  treasury_10y?: number;
-  sp500?: MacroQuote;
-  nasdaq?: MacroQuote;
-  dow?: MacroQuote;
-  russell2000?: MacroQuote;
-  kospi?: MacroQuote;
-  kosdaq?: MacroQuote;
-  gold?: MacroQuote;
-  silver?: MacroQuote;
-  oil_wti?: MacroQuote;
-  usdkrw?: MacroQuote;
-  eurusd?: MacroQuote;
-  usdjpy?: MacroQuote;
-  dxy?: MacroQuote;
-  btc?: MacroQuote;
-  fear_greed?: { value: number; label: string };
-  yield_curve?: Record<string, number>;
-}
-
-export function useMacro() {
-  return useSWR<MacroResponse>(API.market.macro, fetcher, {
-    refreshInterval: 60_000,
-    revalidateOnFocus: false,
-    dedupingInterval: 30_000,
-  });
-}
-
 /* ── Risk v2 (additive — does not modify any v1 hook) ──
  *
  * Five new hooks back the /risk v2 "Risk Board" page. Three call existing
@@ -752,20 +720,6 @@ export function resolveTickerName(
   return ticker;
 }
 
-/**
- * Convenience hook: returns a memoized `(ticker) => name` resolver
- * driven by the current watchlist + positions caches. Components that
- * already pull the underlying data can skip this and call
- * `resolveTickerName` directly.
- */
-export function useTickerNameResolver(): (ticker: string) => string {
-  const positionsSwr = usePortfolioPositions<{ positions?: Position[] }>();
-  const watchlistSwr = useWatchlist();
-  const positions = positionsSwr.data?.positions ?? [];
-  const watchlist = watchlistSwr.data?.watchlist ?? [];
-  return (ticker: string) => resolveTickerName(ticker, positions, watchlist);
-}
-
 // Re-export for downstream import convenience without a second import line.
 export type { SignalEntry, SignalsResponse, SignalFilters, SignalLabel };
 
@@ -842,20 +796,6 @@ export interface ArtifactArchiveMonth {
   month: string;            // "YYYY-MM"
   artifacts: Artifact[];
   count: number;
-}
-
-/**
- * Server-side groupby for the year timeline. When the backend endpoint
- * is missing, the caller can fall back to `deriveArchiveMonths(artifacts)`
- * which buckets the existing `useArtifacts` payload by sent_at month.
- */
-export function useArtifactArchive(month: string | null) {
-  const key = month ? `${API.artifacts.byMonth}?month=${month}` : null;
-  return useSWR<ArtifactArchiveMonth>(key, fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 120_000,
-    shouldRetryOnError: false,
-  });
 }
 
 /**
