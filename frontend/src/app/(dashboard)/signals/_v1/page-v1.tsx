@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { API } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
+import { PRICE_COLOR_HEX } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { FootSignature } from "@/components/ui/editorial";
@@ -193,7 +194,10 @@ export default function SignalsPageV1() {
       <div className="mb-6 grid grid-cols-3 gap-6 border-y border-[rgba(245,240,232,0.1)] py-4">
         <div>
           <div className="pq-ink-label">Positive</div>
-          <div className="mt-1 font-serif text-[26px] tabular-nums text-[#d18888]">
+          <div
+            className="mt-1 font-serif text-[26px] tabular-nums"
+            style={{ color: PRICE_COLOR_HEX.up }}
+          >
             {positive.length}
           </div>
         </div>
@@ -205,7 +209,10 @@ export default function SignalsPageV1() {
         </div>
         <div>
           <div className="pq-ink-label">Negative</div>
-          <div className="mt-1 font-serif text-[26px] tabular-nums text-[#7aa0c8]">
+          <div
+            className="mt-1 font-serif text-[26px] tabular-nums"
+            style={{ color: PRICE_COLOR_HEX.down }}
+          >
             {negative.length}
           </div>
         </div>
