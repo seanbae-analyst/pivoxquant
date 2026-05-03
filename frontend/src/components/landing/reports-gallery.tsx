@@ -91,7 +91,7 @@ function TierBadge({ tier }: { tier: Tier }) {
 function ReportCard({ entry }: { entry: ReportEntry }) {
   return (
     <Link
-      href={`/reports/preview/${entry.slug}`}
+      href={`/sample-reports/${entry.slug}`}
       aria-label={`${entry.title} — sample preview`}
       className="pq-reports-gallery-card group relative flex flex-col rounded-sm"
       style={{

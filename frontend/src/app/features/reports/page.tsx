@@ -26,7 +26,7 @@ const SAMPLES: readonly FlipSample[] = [
     cadence: "Delivered Mondays",
     excerpt:
       "Realized P&L from the last seven days, position drift, earnings events on your names, dividend calendar. Observation summary — never a recommendation.",
-    href: "/samples/weekly_memo.pdf",
+    href: "/sample-reports/weekly-memo",
     preview: {
       kicker: "Week 16 · Investor Memo",
       heading: "Seven days on the page.",
@@ -46,7 +46,7 @@ const SAMPLES: readonly FlipSample[] = [
     cadence: "Eve of print",
     excerpt:
       "Consensus revenue and EPS range, YoY comparisons, four-quarter guidance, business-specific metrics, prior earnings reaction pattern.",
-    href: "/samples/earnings_prebrief.pdf",
+    href: "/sample-reports/earnings-prebrief",
     preview: {
       kicker: "Earnings · Pre-Brief",
       heading: "What the Street expects tomorrow.",
@@ -66,7 +66,7 @@ const SAMPLES: readonly FlipSample[] = [
     cadence: "Quarterly board cut",
     excerpt:
       "Concentration, drawdown history, factor tilts, correlation map, tail clustering, regime badge. The deck a CIO reads before the risk committee.",
-    href: "/samples/risk_board.pdf",
+    href: "/sample-reports/risk-board",
     preview: {
       kicker: "Risk Board · Q2",
       heading: "The deck a committee reads.",
@@ -86,7 +86,7 @@ const SAMPLES: readonly FlipSample[] = [
     cadence: "End of quarter",
     excerpt:
       "Decisions logged during the quarter, position changes with rationale, realized outcomes against entry notes, pattern observations across trades.",
-    href: "/samples/quarterly_self_report.pdf",
+    href: "/sample-reports/quarterly-self-report",
     preview: {
       kicker: "Q-Review · Self-Audit",
       heading: "A quarter of your own decisions.",
@@ -106,7 +106,7 @@ const SAMPLES: readonly FlipSample[] = [
     cadence: "Delivered January 15",
     excerpt:
       "Annual P&L recap, decisions that compounded and those that didn't, patterns drawn from the decision log, observations on style drift.",
-    href: "/samples/year_end_letter.pdf",
+    href: "/sample-reports/year-end-letter",
     preview: {
       kicker: "FY · Annual Letter",
       heading: "A letter to next year's self.",

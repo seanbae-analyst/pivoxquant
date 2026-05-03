@@ -47,7 +47,7 @@ const FOUR: readonly PreviewPersona[] = [
     kr: "성장형",
     tagline: "High-beta compounders. Narrative-led.",
     italic: "미래 현금흐름에 베팅한다.",
-    sampleHref: "/samples/weekly_memo.pdf",
+    sampleHref: "/sample-reports/weekly-memo",
   },
   {
     code: "VA",
@@ -55,7 +55,7 @@ const FOUR: readonly PreviewPersona[] = [
     kr: "가치형",
     tagline: "Margin of safety. Balance-sheet first.",
     italic: "싼 값에 산다. 느리게 부자가 된다.",
-    sampleHref: "/samples/weekly_memo.pdf",
+    sampleHref: "/sample-reports/weekly-memo",
   },
   {
     code: "BA",
@@ -63,7 +63,7 @@ const FOUR: readonly PreviewPersona[] = [
     kr: "균형형",
     tagline: "Classic 60/40. Ballast over bravery.",
     italic: "평온한 복리.",
-    sampleHref: "/samples/weekly_memo.pdf",
+    sampleHref: "/sample-reports/weekly-memo",
   },
   {
     code: "BE",
@@ -71,7 +71,7 @@ const FOUR: readonly PreviewPersona[] = [
     kr: "입문 CFO",
     tagline: "First year. Learning the ropes.",
     italic: "처음 내 돈을 굴려본다.",
-    sampleHref: "/samples/weekly_memo.pdf",
+    sampleHref: "/sample-reports/weekly-memo",
   },
 ] as const;
 
