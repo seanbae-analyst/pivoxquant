@@ -2535,6 +2535,7 @@ from services.artifacts.quarterly_self_report_service import (  # noqa: E402,F81
 )
 from services.artifacts.risk_board_service import RiskBoardService  # noqa: E402,F811
 from services.artifacts.self_audit_service import SelfAuditService  # noqa: E402,F811
+from services.artifacts.sp500_backtest_service import SP500BacktestService  # noqa: E402
 from services.artifacts.year_end_letter_service import YearEndLetterService  # noqa: E402,F811
 
 
@@ -2561,6 +2562,9 @@ _ARTIFACT_DISPATCH: dict[str, tuple] = {
     "portfolio_segment":     (PortfolioSegmentService,     "generate_for_user", "portfolio_segment"),
     "pre_trade_checklist":   None,   # interactive — POST /pre-trade/start
     "dd_checklist":          None,   # interactive — POST /dd-checklist/submit
+    # Universal observation record (not per-user attribution). Persona only
+    # tints the eyebrow; numbers come from docs/BACKTEST_RESULTS.md.
+    "sp500_backtest":        (SP500BacktestService,        "generate_for_user", "sp500_backtest"),
 }
 
 # Interactive types — frontend redirects to a dedicated UI instead of
