@@ -211,13 +211,19 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    {
-      source:
-        "/((?!api|_next/static|_next/image|favicon.ico|icons|videos|sw.js|offline.html|logo|agents-preview).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
+    // P0 fix (2026-05-03): previously this matcher used `missing: [
+    //   { type: "header", key: "next-router-prefetch" },
+    //   { type: "header", key: "purpose", value: "prefetch" },
+    // ]` to skip the middleware on RSC prefetch requests. That caused a
+    // production-wide 500: when a `<Link>` triggered a prefetch (hover or
+    // viewport entry), the middleware was bypassed, so `x-nonce` was never
+    // injected. `app/layout.tsx` then called `headers().get("x-nonce")`
+    // which threw a Next.js dynamic-API error in the prefetch render
+    // context, surfacing as `__next_error__` (500), occasionally wrapped
+    // by Vercel as 503. Letting prefetch requests through the middleware
+    // restores the nonce and keeps the beta gate / locale logic consistent
+    // for prefetched payloads. layout.tsx also wraps `headers()` in
+    // try/catch as defense-in-depth — see that file.
+    "/((?!api|_next/static|_next/image|favicon.ico|icons|videos|sw.js|offline.html|logo|agents-preview).*)",
   ],
 };
