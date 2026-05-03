@@ -56,6 +56,7 @@ import { SettingsIdentityCardV2 } from "@/components/settings/v2/identity-card-v
 import { SignInProvidersCard } from "@/components/settings/v2/signin-providers-card";
 import { BrokerCardV2 } from "@/components/settings/v2/broker-card-v2";
 import { NotificationsMatrix } from "@/components/settings/v2/notifications-matrix";
+import { MarketingConsentCardV2 } from "@/components/settings/v2/marketing-consent-card";
 import { SubscriptionCardV2 } from "@/components/settings/v2/subscription-card-v2";
 import { PrivacyCardV2 } from "@/components/settings/v2/privacy-card-v2";
 
@@ -824,6 +825,14 @@ export default function SettingsPageV2() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* C3 · Marketing-consent record (정통망법 §50 ① · PR #73 backend).
+                Sits below the C1/C2 split because the audit-trail surface
+                is wider than 2 columns and the timestamp line needs the
+                full row for legibility on mobile. */}
+            <div style={{ marginTop: 12 }}>
+              <MarketingConsentCardV2 />
             </div>
           </section>
 
