@@ -22,6 +22,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { renderEditorialHeadline } from "@/lib/editorial-html";
 
 interface TodayMemoHeroV2Props {
   /** H1 line. May contain <span class="br">…</span> markup, rendered as-is. */
@@ -101,11 +102,12 @@ export function TodayMemoHeroV2({
           maxWidth: 940,
           margin: "0 0 28px 0",
         }}
-        // headlineHtml is sanitized at the source (server brief copy);
-        // mockup-style "br" accents require span markup. CSP-safe within
-        // our trust boundary (own backend), no user-generated content.
-        dangerouslySetInnerHTML={{ __html: headlineHtml }}
-      />
+      >
+        {/* Strict tag allowlist (<br/>, <span class="br">) — see
+            lib/editorial-html. Replaces dangerouslySetInnerHTML so any
+            future server-fed headline can't smuggle scripts. */}
+        {renderEditorialHeadline(headlineHtml)}
+      </h1>
 
       {bodyText ? (
         <p
