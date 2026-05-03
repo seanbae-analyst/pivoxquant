@@ -41,7 +41,7 @@ from services.profile import (
     detect_significant_drift,
 )
 from .decorators import api_auth
-from security import general_rate_limit
+from security import general_rate_limit, limiter
 
 logger = logging.getLogger(__name__)
 
@@ -953,4 +953,92 @@ def post_persona_snapshot():
         "ok": True,
         "snapshot": row.to_dict(),
         "disclaimer": DRIFT_DISCLAIMER,
+    })
+
+
+# ── Email preferences (정통망법 §50 compliance) ───────────────────────────
+# Honoured by every artefact email service in services/artifacts/*. Two
+# independent dials:
+#   - email_opt_out         : global kill switch (every email)
+#   - email_opt_out_earnings: per-channel kill switch for earnings pre-briefs
+#
+# Sent over CSRF-protected, cookie-authenticated PATCH so the toggles in
+# the Settings UI can update either or both flags atomically. Unauthenticated
+# callers receive a 401 from `@api_auth` before the handler runs. The
+# token-based public unsubscribe link (GET /api/email/unsubscribe) lives
+# in routes/email_preferences.py and bypasses CSRF on purpose — see that
+# module for the rationale.
+
+@profile_bp.route("/email-preferences", methods=["PATCH"])
+@api_auth
+@limiter.limit("30 per minute")
+def patch_email_preferences():
+    """Update one or both email opt-out flags.
+
+    Body (JSON, all keys optional):
+        email_opt_out:          bool
+        email_opt_out_earnings: bool
+
+    Omitted keys are left unchanged. Non-bool values for a present key
+    are rejected with HTTP 400. Returns the *committed* values so the
+    client can refresh its local state without an extra GET.
+
+    Response shape::
+
+        {
+            "ok": true,
+            "preferences": {
+                "email_opt_out": false,
+                "email_opt_out_earnings": false,
+            }
+        }
+    """
+    data = request.get_json(silent=True) or {}
+
+    def _coerce(value, field):
+        """Reject non-bool inputs explicitly — JSON ``null`` means "leave
+        as is" but an integer/string is a client bug we should surface."""
+        if value is None:
+            return None
+        if not isinstance(value, bool):
+            raise ValueError(f"{field} must be a boolean")
+        return value
+
+    try:
+        new_global = _coerce(data.get("email_opt_out"), "email_opt_out")
+        new_earnings = _coerce(
+            data.get("email_opt_out_earnings"),
+            "email_opt_out_earnings",
+        )
+    except ValueError as err:
+        return jsonify({"error": str(err)}), 400
+
+    if new_global is None and new_earnings is None:
+        return jsonify({
+            "error": (
+                "Provide at least one of email_opt_out or email_opt_out_earnings"
+            ),
+        }), 400
+
+    if new_global is not None:
+        current_user.email_opt_out = new_global
+    if new_earnings is not None:
+        current_user.email_opt_out_earnings = new_earnings
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "profile.patch_email_preferences commit failed (user_id=%s)",
+            current_user.id,
+        )
+        return jsonify({"error": "Failed to update email preferences"}), 500
+
+    return jsonify({
+        "ok": True,
+        "preferences": {
+            "email_opt_out": bool(current_user.email_opt_out),
+            "email_opt_out_earnings": bool(current_user.email_opt_out_earnings),
+        },
     })
