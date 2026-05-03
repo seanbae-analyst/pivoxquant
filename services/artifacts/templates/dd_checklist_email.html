@@ -31,6 +31,13 @@
   <title>{{ subject or "오늘의 DD Checklist" }}</title>
 </head>
 <body style="margin:0;padding:0;background:#0A0A0A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#F5F0E8;line-height:1.6;">
+
+<!-- Preview text -->
+<div style="display:none;max-height:0;overflow:hidden;color:transparent;">
+  T+3 DD Checklist · {{ pending_count or 0 }}건 미완료
+  {% if pending and pending|length > 0 %}· {{ pending[0].ticker | default('', true) }}{% endif %}
+</div>
+
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0A0A0A;padding:40px 20px;">
     <tr>
       <td align="center">

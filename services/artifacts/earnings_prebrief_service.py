@@ -1328,8 +1328,20 @@ class EarningsPreBriefService:
         match. Per-ticker `_already_sent` still persists Artifact rows
         for downstream features.
 
+        Boundary
+        --------
+        The "today" reference is the **UTC calendar date** because the
+        backend cron runs on UTC and earnings windows are matched in
+        UTC. Korean (KST = UTC+9) users near KST midnight (UTC 15:00)
+        could in theory see two digests across one KST calendar day if
+        cron fires on both sides of UTC midnight. Practical impact is
+        minimal because earnings_prebrief is gated on a market-hours
+        scan window. To shift to KST boundary, replace
+        ``datetime.now(timezone.utc).date()`` with a KST-aware helper.
+
         Marker is stored as an Artifact row of type
-        ``earnings_prebrief_digest`` with title = ``digest-YYYY-MM-DD``.
+        ``earnings_prebrief_digest`` with title = ``digest-YYYY-MM-DD``
+        (UTC).
         """
         today = today or datetime.now(timezone.utc).date()
         marker_title = f"digest-{today.isoformat()}"

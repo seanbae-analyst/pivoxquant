@@ -129,9 +129,29 @@
 
 ### 10. alembic heads 다중 가능성 모니터
 
-- [ ] 현재: `019_ai_twin (head)` 단일 — OK
-- [ ] Phase 2 PR 머지 후 `020_email_opt_out`이 추가됨 → `020_email_opt_out (head)`로 단일 유지 확인
+- [x] 현재 main: `021_email_opt_out (head)` 단일 — OK (2026-05-03 기준)
+- [ ] 새 마이그레이션 추가 시 `down_revision` 가장 최근 head로 명시
 - [ ] 분기 발생 시 `alembic merge` 사용
+
+### 11. 이메일 면책 고지 통합 — 법적 검토 필요 (E10/E11)
+
+**상황**: 5개 이메일 템플릿 중 disclaimer 처리 방식이 셋:
+- 3개(`weekly_memo`, `earnings_prebrief`, `earnings_prebrief_digest`) → `{% include '_disclaimer.html' %}` 사용. 자본시장법 §6 풀 면책 텍스트 (KO+EN, 7문장).
+- `brag_card_email.html` → 인라인 스타일 + **단축 텍스트** (KO+EN, 3문장). 주석에 "Mirrors the canonical copy from `_disclaimer.html` at 2026-04-23 snapshot" 명시되나 실제로는 축약본.
+- `dd_checklist_email.html` → `{{ disclaimer or "정보 제공 목적이며 투자 권유가 아닙니다..." }}` fallback (1문장).
+
+**Master Plan E10/E11 의도**: 셋 다 `_disclaimer.html`로 통일.
+
+**문제**: 위 두 템플릿의 단축 텍스트가 **변호사 사전 승인된 별도 텍스트일 가능성** 존재. 임의 교체 시 법적 텍스트 변경 위험.
+
+**액션 필요** (CEO + 변호사):
+- [ ] `LEGAL_CONSULT_PACKAGE.md`에 E10/E11 항목 추가
+- [ ] 변호사에게 질문: "5개 이메일 모두 `_disclaimer.html` 풀 텍스트로 통일해도 되는가? 또는 brag_card / dd_checklist는 단축본 유지가 맞는가?"
+- [ ] 답변에 따라 후속 PR:
+  - 통일 OK → `_disclaimer_email_inline.html` (인라인 스타일 풀 텍스트) 신규 + 5개 템플릿 모두 include
+  - 단축 유지 → 현재 상태로 락-인, 코드 주석에 "변호사 승인 단축본" 표기
+
+**왜 코드로 못 푸나**: 자본시장법 §6 미등록 투자자문업 방어선이 면책 텍스트 자체에 걸려있음. 텍스트 수정 = 방어선 변경 = 법무 책임 영역.
 
 ---
 
