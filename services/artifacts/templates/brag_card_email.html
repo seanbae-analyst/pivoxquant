@@ -10,7 +10,11 @@
      - disclaimer
    ══════════════════════════════════════════════════════════════════════════ #}
 <!doctype html>
-<html lang="en">
+{# Phase 7 audit E12 — body uses Korean copy ("당신의 월간 브래그 카드…")
+   so the lang attribute should be ko, not en. Matches the other 4
+   *_email.html templates and helps screen readers / Gmail's
+   translate-this-message banner pick the right pronunciation. #}
+<html lang="ko">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>

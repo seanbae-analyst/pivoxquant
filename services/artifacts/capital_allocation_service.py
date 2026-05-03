@@ -674,9 +674,6 @@ class CapitalAllocationService:
             .filter(User.subscription_tier.in_(list(_PAID_TIERS)))
             .all()
         )
-        from_email = os.environ.get(
-            "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
-        )
         subject = "PivoxQuant — 분기 Capital Allocation 체크인"
         body_html = (
             "<p>안녕하세요,</p>"
@@ -692,13 +689,23 @@ class CapitalAllocationService:
             "투자 판단은 본인 책임입니다.</p>"
         )
 
+        # Phase 7 — opt-out gating now lives inside ``EmailSender``.
+        # We still distinguish "sent OK" vs "skipped" via the bool
+        # return; a False return either means opt-out, no transport,
+        # or a logged failure (sender doesn't raise).
+        from services.email import EmailSender
+        sender = EmailSender()
+
         ok = skipped = failed = 0
         for u in paid:
-            if getattr(u, "email_opt_out", False):
-                skipped += 1
-                continue
             try:
-                if self._send_email(u, from_email, subject, body_html):
+                if sender.send(
+                    u,
+                    subject=subject,
+                    html_body=body_html,
+                    from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+                    from_default="reports@pivoxquant.com",
+                ):
                     ok += 1
                 else:
                     skipped += 1
@@ -715,67 +722,3 @@ class CapitalAllocationService:
         }
         logger.info("capital_allocation quarterly reminder: %s", summary)
         return summary
-
-    # ---------- internal: email plumbing (mirrors sibling services) ---------
-
-    def _send_email(self, user: User, from_email: str,
-                    subject: str, html_body: str) -> bool:
-        # ── Phase 2 P0 (정통망법 §50): one-click unsubscribe link ─────
-        # Build the per-user signed URL and inject it into both the
-        # email body (idempotent — no-op when the template already
-        # rendered ``{{ unsubscribe_url }}``) and the
-        # ``List-Unsubscribe`` headers honoured by Gmail / Outlook.
-        from services.email_token import (
-            build_unsubscribe_url,
-            inject_unsubscribe_footer,
-        )
-        _unsub_url = build_unsubscribe_url(user.id, kind="all")
-        html_body = inject_unsubscribe_footer(html_body, _unsub_url)
-        sg_key = os.environ.get("SENDGRID_API_KEY")
-        if sg_key:
-            try:
-                from sendgrid import SendGridAPIClient  # type: ignore
-                from sendgrid.helpers.mail import Mail  # type: ignore
-                mail = Mail(from_email=from_email, to_emails=user.email,
-                            subject=subject, html_content=html_body)
-                try:
-                    from sendgrid.helpers.mail import Header  # type: ignore
-                    mail.add_header(Header("List-Unsubscribe", f"<{_unsub_url}>"))
-                    mail.add_header(Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click"))
-                except Exception:
-                    logger.debug("List-Unsubscribe header injection failed", exc_info=True)
-                SendGridAPIClient(sg_key).send(mail)
-                return True
-            except Exception as exc:
-                logger.error("SendGrid capital_allocation reminder failed %s: %s",
-                             user.id, exc)
-                return False
-
-        smtp_host = os.environ.get("SMTP_HOST")
-        if smtp_host:
-            try:
-                import smtplib
-                from email.message import EmailMessage
-                msg = EmailMessage()
-                msg["From"] = from_email
-                msg["To"] = user.email
-                msg["Subject"] = subject
-                msg["List-Unsubscribe"] = f"<{_unsub_url}>"
-                msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-                msg.set_content("HTML-only; view in an HTML-capable client.")
-                msg.add_alternative(html_body, subtype="html")
-                port = int(os.environ.get("SMTP_PORT", "587"))
-                user_ = os.environ.get("SMTP_USER")
-                pw = os.environ.get("SMTP_PASSWORD")
-                with smtplib.SMTP(smtp_host, port, timeout=10) as s:
-                    s.starttls()
-                    if user_ and pw:
-                        s.login(user_, pw)
-                    s.send_message(msg)
-                return True
-            except Exception as exc:
-                logger.error("SMTP capital_allocation reminder failed %s: %s",
-                             user.id, exc)
-                return False
-
-        return False
