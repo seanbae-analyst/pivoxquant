@@ -473,3 +473,233 @@ def status() -> Any:
         "legal_status": "pending-counsel-review",
         "entitlement_plans": sorted(_ENTITLED_PLANS),
     })
+
+
+# ── PIPA: Agent data export & delete ─────────────────────────────────────────
+#
+# Two endpoints powering the "Agent memory" subsection on the user's profile
+# page (frontend/src/app/(dashboard)/profile/_v[12]/*). Required by the
+# personal information protection act (개인정보보호법 §35 access right + §36
+# correction/deletion right) — the user must be able to download and erase
+# server-side personal data on demand.
+#
+# Scope (intentionally conservative — Wave-2 closed-beta posture):
+#   * Export — UserAgentAudit rows belonging to the caller. Audit rows are
+#     stored under sha256(message) so we never round-trip the raw text;
+#     the export is therefore safe to hand back to the user verbatim.
+#     CompanionWaitlist rows linked to user_id are also returned for
+#     completeness (raw email is the user's own email).
+#   * Delete — wipes the same two tables for this user. The local
+#     `pq_*` localStorage keys (persona, pulse, history) are wiped by
+#     the frontend after this call returns, so a successful 200 fully
+#     clears server + client state.
+#
+# What is NOT touched here (deliberate):
+#   * users.* / investment_profiles.* — full account deletion lives at
+#     /api/auth/account (DELETE), which is the right surface for that.
+#   * artifacts / brag_cards — those are PDF deliverables, not "agent
+#     memory"; they have their own retention policy.
+
+@agent_bp.route("/export", methods=["GET"])
+def export_agent_data() -> Any:
+    """GET /api/agent/export
+
+    Returns a JSON blob the user can save locally (frontend triggers a
+    download via Blob + a.click).
+
+    Response shape (HTTP 200):
+        {
+            "exported_at":   ISO8601,
+            "user_id":       <int>,
+            "audit_rows":    [<UserAgentAudit.to_dict>, ...],
+            "waitlist_rows": [<CompanionWaitlist.to_dict>, ...],
+            "row_counts":    {"audit": N, "waitlist": M}
+        }
+
+    Errors:
+        401 — not authenticated.
+        500 — DB read failed (rolled back; payload describes the error).
+    """
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Login required"}), 401
+
+    request_id = uuid.uuid4().hex[:12]
+
+    try:
+        from datetime import datetime, timezone
+        from extensions import db  # noqa: F401  — ensure session is bound
+        from models.user_agent_audit import UserAgentAudit
+
+        audit_rows: list[dict[str, Any]] = []
+        try:
+            rows = (
+                UserAgentAudit.query
+                .filter_by(user_id=int(current_user.id))
+                .order_by(UserAgentAudit.generated_at.desc())
+                .limit(2000)  # hard cap — paranoia bound on payload size
+                .all()
+            )
+            for r in rows:
+                audit_rows.append({
+                    "request_id":    r.request_id,
+                    "persona_code":  r.persona_code,
+                    "user_message_len": int(r.user_message_len or 0),
+                    "raw_output_len":   int(r.raw_output_len or 0),
+                    "gate_verdict":  r.gate_verdict,
+                    "gate_reason":   r.gate_reason or "",
+                    "model":         r.model or "",
+                    "generated_at":  r.generated_at.isoformat() + "Z"
+                                     if r.generated_at else None,
+                })
+        except Exception as exc:
+            logger.debug("export: audit read failed: %s", exc)
+
+        waitlist_rows: list[dict[str, Any]] = []
+        try:
+            from models.companion_waitlist import CompanionWaitlist
+            wl_rows = (
+                CompanionWaitlist.query
+                .filter_by(user_id=int(current_user.id))
+                .all()
+            )
+            for w in wl_rows:
+                waitlist_rows.append({
+                    "email":           getattr(w, "email", None),
+                    "source":          getattr(w, "source", None),
+                    "persona_interest": getattr(w, "persona_interest", None),
+                    "created_at":      w.created_at.isoformat() + "Z"
+                                       if getattr(w, "created_at", None)
+                                       else None,
+                })
+        except Exception as exc:
+            logger.debug("export: waitlist read failed: %s", exc)
+
+        return jsonify({
+            "exported_at":   datetime.now(timezone.utc).isoformat(),
+            "user_id":       int(current_user.id),
+            "audit_rows":    audit_rows,
+            "waitlist_rows": waitlist_rows,
+            "row_counts": {
+                "audit":    len(audit_rows),
+                "waitlist": len(waitlist_rows),
+            },
+            "request_id":    request_id,
+        })
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            json.dumps({
+                "event": "agent.export.failed",
+                "request_id": request_id,
+                "user_id": int(getattr(current_user, "id", 0)),
+                "error": str(exc)[:200],
+            })
+        )
+        try:
+            from extensions import db as _db
+            _db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({
+            "error": "export-failed",
+            "message": "Could not assemble export. Try again shortly.",
+            "request_id": request_id,
+        }), 500
+
+
+@agent_bp.route("/delete", methods=["DELETE"])
+@agent_bp.route("", methods=["DELETE"])
+def delete_agent_data() -> Any:
+    """DELETE /api/agent/delete  (alias: DELETE /api/agent)
+
+    Wipes server-side agent memory for the calling user:
+      * UserAgentAudit  — all rows where user_id == current_user.id
+      * CompanionWaitlist — rows linked to user_id (raw email is removed)
+
+    Response shape (HTTP 200):
+        {
+            "deleted":     {"audit": N, "waitlist": M},
+            "deleted_at":  ISO8601,
+            "request_id":  <hex12>
+        }
+
+    Errors:
+        401 — not authenticated.
+        500 — DB write failed; transaction rolled back.
+
+    The frontend then wipes local `pq_*` keys; a successful 200 here
+    means the server-side trace is gone.
+    """
+    if not current_user.is_authenticated:
+        return jsonify({"error": "Login required"}), 401
+
+    request_id = uuid.uuid4().hex[:12]
+    user_id = int(current_user.id)
+
+    try:
+        from datetime import datetime, timezone
+        from extensions import db
+        from models.user_agent_audit import UserAgentAudit
+
+        deleted_audit = 0
+        deleted_wait = 0
+
+        try:
+            deleted_audit = (
+                UserAgentAudit.query
+                .filter_by(user_id=user_id)
+                .delete(synchronize_session=False)
+            )
+        except Exception as exc:
+            logger.debug("delete: audit wipe failed: %s", exc)
+            deleted_audit = 0
+
+        try:
+            from models.companion_waitlist import CompanionWaitlist
+            deleted_wait = (
+                CompanionWaitlist.query
+                .filter_by(user_id=user_id)
+                .delete(synchronize_session=False)
+            )
+        except Exception as exc:
+            logger.debug("delete: waitlist wipe failed: %s", exc)
+            deleted_wait = 0
+
+        db.session.commit()
+
+        logger.info(
+            json.dumps({
+                "event": "agent.data.deleted",
+                "request_id": request_id,
+                "user_id": user_id,
+                "audit_rows": int(deleted_audit or 0),
+                "waitlist_rows": int(deleted_wait or 0),
+            })
+        )
+
+        return jsonify({
+            "deleted": {
+                "audit":    int(deleted_audit or 0),
+                "waitlist": int(deleted_wait or 0),
+            },
+            "deleted_at": datetime.now(timezone.utc).isoformat(),
+            "request_id": request_id,
+        })
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            json.dumps({
+                "event": "agent.delete.failed",
+                "request_id": request_id,
+                "user_id": user_id,
+                "error": str(exc)[:200],
+            })
+        )
+        try:
+            from extensions import db as _db
+            _db.session.rollback()
+        except Exception:
+            pass
+        return jsonify({
+            "error": "delete-failed",
+            "message": "Could not delete agent data. Try again shortly.",
+            "request_id": request_id,
+        }), 500
