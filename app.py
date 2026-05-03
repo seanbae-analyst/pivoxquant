@@ -362,6 +362,12 @@ def _do_migrations():
     # migration 009_earnings_prebrief; this runtime hook covers existing
     # local dev DBs that boot without running Alembic.
     _add_column_if_missing("users", "email_opt_out_earnings", "BOOLEAN", default="0")
+    # Global marketing/transactional email opt-out (정통망법 §50). Added via
+    # migration 021_email_opt_out / 022_alerts_watchlist_dd_columns; this
+    # runtime hook is the P0 hotfix for legacy DBs (incl. Railway prod) that
+    # boot before Alembic completes — without this column the User SELECT
+    # raises ProgrammingError, causing /api/auth/login + /register 500s.
+    _add_column_if_missing("users", "email_opt_out", "BOOLEAN", default="0")
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but
