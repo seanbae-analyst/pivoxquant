@@ -71,7 +71,7 @@ _sa_cache: dict = {}  # {user_id: {"data": ..., "ts": ...}}
 @api_auth
 @legal_scrub_response
 def vix_strategy():
-    from quant_models import VIXStrategy
+    from services.quant.models import VIXStrategy
     result = VIXStrategy.analyze()
     if result:
         return jsonify(result)
@@ -87,7 +87,7 @@ def cross_asset():
     user_cache = _ca_cache.get(uid)
     if user_cache and user_cache.get("data") and now - user_cache.get("ts", 0) < 300:
         return jsonify(user_cache["data"])
-    from quant_models import CrossAssetMomentum
+    from services.quant.models import CrossAssetMomentum
     result = CrossAssetMomentum.analyze()
     if result:
         _bounded_set(_ca_cache, uid, {"data": result, "ts": now})
@@ -106,7 +106,7 @@ def stat_arb_analysis():
     if user_cache and user_cache.get("data") and now - user_cache.get("ts", 0) < 300:
         return jsonify(user_cache["data"])
 
-    from quant_models import StatArb
+    from services.quant.models import StatArb
     from services.data.fetcher import DataFetcher
 
     fetcher = DataFetcher()
@@ -153,7 +153,7 @@ def regime_report():
         ticker: optional single stock (if omitted, runs on user's top 5 holdings)
         period: lookback period (default '1y')
     """
-    from backtester import Backtester
+    from services.quant.backtester import Backtester
     from models import Position, SignalCache
 
     ticker = request.args.get("ticker")
@@ -1855,7 +1855,7 @@ def risk_volatility(ticker):
             "error": f"Insufficient OHLC data for {ticker} (need {window + 1}+ bars)",
         }), 400
 
-    from risk_models import GKYZVolatility
+    from services.quant.risk_metrics import GKYZVolatility
 
     opens = hist["Open"].tolist()
     highs = hist["High"].tolist()
@@ -1957,7 +1957,7 @@ def risk_component_es():
         dtype=np.float64,
     )
 
-    from risk_models import ComponentES
+    from services.quant.risk_metrics import ComponentES
 
     result = ComponentES.decompose(returns_matrix, weights, alpha=alpha)
 
@@ -2313,7 +2313,7 @@ def signal_disposition(ticker):
     if volumes is None:
         return jsonify({"error": "Volume data unavailable"}), 404
 
-    from signal_models import DispositionEffect
+    from services.quant.signals import DispositionEffect
 
     result = DispositionEffect.calculate(closes, volumes, window=window)
 
@@ -2364,7 +2364,7 @@ def signal_ofi(ticker):
     if opens is None or volumes is None:
         return jsonify({"error": "OHLCV data incomplete"}), 404
 
-    from signal_models import OrderFlowImbalance
+    from services.quant.signals import OrderFlowImbalance
 
     result = OrderFlowImbalance.calculate(opens, closes, volumes, window=window)
 
@@ -2413,7 +2413,7 @@ def signal_sentiment_divergence(ticker):
         return data_err
 
     from services.container import fetcher
-    from signal_models import SentimentPriceDivergence
+    from services.quant.signals import SentimentPriceDivergence
 
     sentiment_score, _ = fetcher.score_news_sentiment(ticker)
 
@@ -2481,7 +2481,7 @@ def signal_anchoring(ticker):
     if volumes is None:
         return jsonify({"error": "Volume data unavailable"}), 404
 
-    from signal_models import AnchoringBias
+    from services.quant.signals import AnchoringBias
 
     result = AnchoringBias.calculate(closes, volumes, window=window)
 
@@ -2523,7 +2523,7 @@ def signal_herding():
         window = 60
 
     from services.container import fetcher
-    from signal_models import HerdingIntensity
+    from services.quant.signals import HerdingIntensity
 
     basket = ["AAPL", "MSFT", "AMZN", "GOOGL", "META", "JPM", "JNJ", "XOM", "PG", "NVDA"]
     market_ticker = "SPY"
@@ -2585,7 +2585,7 @@ def extended_indicators(ticker):
         period: lookback for technical indicators (default '6mo')
     """
     from services.data.fetcher import DataFetcher
-    from indicators import AdditionalIndicators, AdditionalFundamentals
+    from services.quant.indicators import AdditionalIndicators, AdditionalFundamentals
     from services.data import fmp as fmp_svc
 
     ticker = ticker.strip().upper()
@@ -2881,8 +2881,8 @@ def canslim_screener(ticker):
     Does not constitute a buy/sell signal or investment advice.
     """
     from services.data.fetcher import DataFetcher
-    from canslim import CANSLIMScreener
-    from quant_models import RegimeSwitching
+    from services.quant.canslim import CANSLIMScreener
+    from services.quant.models import RegimeSwitching
     from services.data import fmp as fmp_svc
 
     ticker = ticker.strip().upper()
@@ -2948,7 +2948,7 @@ def interest_rate_regime():
     YELLOW endpoint -- macro regime for informational purposes only.
     Uses FRED API data or hardcoded current rates as fallback.
     """
-    from quant_models import InterestRateRegime
+    from services.quant.models import InterestRateRegime
 
     now = _time.time()
     cached = _ir_regime_cache.get("data")
@@ -3030,7 +3030,7 @@ def risk_defense_status():
     warnings, and risk exposure data.
     """
     from models import Position, SignalCache
-    from risk_defense import RiskDefenseSystem
+    from services.quant.risk_defense import RiskDefenseSystem
     from services.data.fetcher import DataFetcher
 
     uid = current_user.id
@@ -3111,7 +3111,7 @@ def risk_defense_status():
     # Get VIX if available
     vix = None
     try:
-        from quant_models import VIXStrategy
+        from services.quant.models import VIXStrategy
         vix_data = VIXStrategy.analyze()
         if vix_data and "current_vix" in vix_data:
             vix = vix_data["current_vix"]
@@ -3122,7 +3122,7 @@ def risk_defense_status():
     # Get current regime
     regime = "TRANSITION"
     try:
-        from quant_models import VolatilityRegime
+        from services.quant.models import VolatilityRegime
         regime_data = VolatilityRegime.detect()
         if regime_data and "regime" in regime_data:
             regime = regime_data["regime"]
@@ -3218,7 +3218,7 @@ def risk_conditional_drawdown():
     for r in daily_returns:
         pv.append(pv[-1] * (1.0 + r))
 
-    from risk_models import ConditionalDrawdown
+    from services.quant.risk_metrics import ConditionalDrawdown
     result = ConditionalDrawdown.calculate(pv, alpha=alpha)
 
     if result.get("cddar") is None:
@@ -3269,7 +3269,7 @@ def risk_tail_ratio():
     if not daily_returns or len(daily_returns) < 20:
         return jsonify({"error": "Insufficient history (need 20+ trading days)"}), 400
 
-    from risk_models import TailRatio
+    from services.quant.risk_metrics import TailRatio
     result = TailRatio.calculate(daily_returns)
 
     if result.get("tail_ratio") is None:
@@ -3323,7 +3323,7 @@ def risk_sortino_by_position():
         return jsonify({"error": "No positions to analyze"}), 400
 
     from services.container import fetcher
-    from risk_models import SortinoByPosition
+    from services.quant.risk_metrics import SortinoByPosition
 
     positions_out = []
     for it in items:
@@ -3438,7 +3438,7 @@ def risk_ledoit_wolf_shrinkage():
         for i, d in enumerate(common_dates):
             returns_matrix[i, j] = ticker_returns[tk].get(d, 0.0)
 
-    from risk_models import LedoitWolfShrinkage
+    from services.quant.risk_metrics import LedoitWolfShrinkage
 
     result = LedoitWolfShrinkage.estimate(returns_matrix)
     if result.get("shrunk_cov") is None:

@@ -7,7 +7,7 @@ Tests quant strategies on historical data with adaptive regime-aware parameters.
 import numpy as np
 from services.data.fetcher import DataFetcher
 import logging
-from quant_models import (MeanReversion, MomentumBreakout, VolatilityRegime,
+from services.quant.models import (MeanReversion, MomentumBreakout, VolatilityRegime,
                           RegimeSwitching, AdaptiveParams,
                           VarianceRatioFilter, TSMOM, FiftyTwoWeekHigh)
 
@@ -631,7 +631,7 @@ class Backtester:
         # Disposition Effect — Capital Gains Overhang (Frazzini 2006)
         # Requires 252+ bars of closes + volumes for meaningful CGO calculation
         try:
-            from signal_models import DispositionEffect
+            from services.quant.signals import DispositionEffect
             i = len(closes) - 1
             if i >= 252 and volumes is not None and len(volumes) > i:
                 disp = DispositionEffect.calculate(
@@ -649,7 +649,7 @@ class Backtester:
         # Order Flow Imbalance — Cont, Kukanov & Stoikov (2014)
         # Requires opens array; skipped if opens unavailable (backtester may only have closes)
         try:
-            from signal_models import OrderFlowImbalance
+            from services.quant.signals import OrderFlowImbalance
             i = len(closes) - 1
             if opens is not None and i >= 20:
                 ofi = OrderFlowImbalance.calculate(

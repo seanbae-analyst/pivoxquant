@@ -515,7 +515,7 @@ class CrossAssetMomentum:
     def analyze(cls):
         """Analyze cross-asset momentum and correlations — FMP API."""
         import pandas as pd
-        from services.data import fmp as fmp
+        from services.data import fmp
 
         tickers = list(cls.ASSETS.keys())
         data = {}
@@ -604,7 +604,7 @@ class VIXStrategy:
     @staticmethod
     def analyze():
         """Get current VIX regime and historical exposure levels."""
-        from services.data import fmp as fmp
+        from services.data import fmp
         try:
             h = fmp.get_history("^VIX", period="3mo")
             if h.empty or len(h) < 20:

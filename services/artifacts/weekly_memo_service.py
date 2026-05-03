@@ -521,7 +521,7 @@ def _portfolio_sortino(positions: list[Position]) -> Optional[float]:
     returns_matrix, weights, _tickers, _ohlc, _pv = built
     try:
         port_returns = (returns_matrix @ weights).tolist()
-        from risk_models import SortinoByPosition
+        from services.quant.risk_metrics import SortinoByPosition
         out = SortinoByPosition.calculate(port_returns)
         sr = out.get("sortino")
         if sr is None:
@@ -696,7 +696,7 @@ def _risk_kpi(positions: list["Position"]) -> dict[str, Any]:
 
     # 1. VaR + ES (Component ES returns both).
     try:
-        from risk_models import ComponentES
+        from services.quant.risk_metrics import ComponentES
         es_out = ComponentES.decompose(returns_matrix, weights, alpha=0.05)
         if es_out.get("portfolio_var") is not None:
             kpi["var_1d_pct"] = round(float(es_out["portfolio_var"]), 2)
@@ -707,7 +707,7 @@ def _risk_kpi(positions: list["Position"]) -> dict[str, Any]:
 
     # 2. Max Drawdown + trough / recovery weeks.
     try:
-        from risk_models import ConditionalDrawdown
+        from services.quant.risk_metrics import ConditionalDrawdown
         dd_out = ConditionalDrawdown.calculate(portfolio_values, alpha=0.05)
         if dd_out.get("max_dd") is not None:
             kpi["mdd_pct"] = round(float(dd_out["max_dd"]), 2)
@@ -742,7 +742,7 @@ def _risk_kpi(positions: list["Position"]) -> dict[str, Any]:
 
     # 3. Tail Ratio — on portfolio returns.
     try:
-        from risk_models import TailRatio
+        from services.quant.risk_metrics import TailRatio
         port_returns = returns_matrix @ weights
         tr_out = TailRatio.calculate(port_returns)
         if tr_out.get("tail_ratio") is not None:
@@ -752,7 +752,7 @@ def _risk_kpi(positions: list["Position"]) -> dict[str, Any]:
 
     # 4. GKYZ volatility — portfolio-weighted, only if every held ticker has OHLC.
     try:
-        from risk_models import GKYZVolatility
+        from services.quant.risk_metrics import GKYZVolatility
         gkyz_parts: list[tuple[float, float]] = []
         for t, w in zip(tickers, weights):
             ohlc = ohlc_map.get(t)
