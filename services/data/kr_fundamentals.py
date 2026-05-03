@@ -90,7 +90,7 @@ def _auth_headers(tr_id: str) -> dict | None:
     if not app_key or not app_secret:
         return None
     try:
-        from kis_token_manager import get_kis_token_manager
+        from services.kis.token_manager import get_kis_token_manager
         token = get_kis_token_manager().get_token()
     except Exception as exc:  # pragma: no cover — import/network path
         logger.info("KIS token manager unavailable (%s)", exc)
