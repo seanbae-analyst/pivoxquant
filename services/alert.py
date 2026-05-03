@@ -305,7 +305,7 @@ def _lookup_52w_range(ticker: str) -> tuple[Optional[float], Optional[float]]:
     FMP quote yearHigh/yearLow coverage is inconsistent for KRX.
     """
     try:
-        import fmp_service
+        from services.data import fmp as fmp_service
     except Exception:
         return None, None
     try:

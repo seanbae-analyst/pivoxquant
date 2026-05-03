@@ -73,7 +73,7 @@ def set_rate(rate: float):
 def _fetch_from_fmp() -> float | None:
     """Primary source: FMP."""
     try:
-        from fmp_service import get_fx_rate
+        from services.data.fmp import get_fx_rate
         rate = get_fx_rate("USDKRW")
         if rate and rate > 1000:
             return float(rate)
@@ -157,7 +157,7 @@ def _fetch_historical_window(start_iso: str, end_iso: str) -> dict[str, float]:
     logged at DEBUG only — the caller has a fallback chain.
     """
     try:
-        from fmp_service import _fmp_get  # noqa: PLC0415  (lazy import)
+        from services.data.fmp import _fmp_get  # noqa: PLC0415  (lazy import)
         # FMP stable historical endpoint. Symbol param accepts USDKRW.
         data = _fmp_get(
             "/historical-price-eod/full",

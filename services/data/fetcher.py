@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import requests
 
-import fmp_service as fmp
+from services.data import fmp
 
 logger = logging.getLogger(__name__)
 
