@@ -691,7 +691,7 @@ function SiteFooter() {
                 주소 {process.env.NEXT_PUBLIC_BUSINESS_ADDRESS}
               </>
             )}
-            &nbsp;·&nbsp; 이메일 <a href="mailto:seanbae1521@gmail.com" style={{ color: "inherit", textDecoration: "underline" }}>seanbae1521@gmail.com</a>
+            &nbsp;·&nbsp; 이메일 <a href="mailto:support@pivoxquant.com" style={{ color: "inherit", textDecoration: "underline" }}>support@pivoxquant.com</a>
             &nbsp;·&nbsp; 호스팅 Vercel · Railway
           </p>
         </div>

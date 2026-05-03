@@ -9,9 +9,9 @@ review_required: true
 reviewer: null
 service: "PivoxQuant"
 operator: "배상현 (예정 사업자등록자)"
-contact: "seanbae1521@gmail.com"
+contact: "support@pivoxquant.com"
 dpo_name: "배상현"
-dpo_email: "seanbae1521@gmail.com"
+dpo_email: "support@pivoxquant.com"
 regulatory_basis:
   - "개인정보 보호법(PIPA)"
   - "정보통신망 이용촉진 및 정보보호 등에 관한 법률(정보통신망법)"
@@ -226,7 +226,7 @@ Alpaca 연동은 **이용자 본인이 발급받은 API 키**를 회사에 등�
 
 1. **개인정보 다운로드 (열람권):** 로그인 후 `GET /api/profile/export` 호출 시 본인의 모든 개인정보가 JSON 파일로 즉시 다운로드됩니다. (설정 페이지의 "내 데이터 다운로드" 버튼을 통해 동일한 결과가 제공됩니다.)
 2. **회원 탈퇴 (삭제권):** 서비스 내 [설정] 페이지에서 직접 탈퇴 가능합니다.
-3. **이메일 요청:** `seanbae1521@gmail.com`로 서면 요청 시, 회사는 요청을 접수한 날로부터 **10일 이내**에 처리합니다.
+3. **이메일 요청:** `support@pivoxquant.com`로 서면 요청 시, 회사는 요청을 접수한 날로부터 **10일 이내**에 처리합니다.
 
 ### 3. 권리 행사 제한
 
@@ -288,7 +288,7 @@ Alpaca 연동은 **이용자 본인이 발급받은 API 키**를 회사에 등�
 
 - **성명:** 배상현 (대표)
 - **직책:** 대표 / 개인정보보호책임자 겸임
-- **이메일:** seanbae1521@gmail.com
+- **이메일:** support@pivoxquant.com
 - **접수 창구:** 웹사이트 내 [문의하기](mailto:hello@pivoxquant.com)
 
 개인정보 처리에 관한 문의, 권리 행사(열람·정정·삭제·처리정지 요구), 피해 구제 요청은 위 연락처로 접수하실 수 있습니다. 회사는 요청을 접수한 날로부터 10일 이내에 처리하도록 노력합니다.
@@ -330,7 +330,7 @@ Alpaca 연동은 **이용자 본인이 발급받은 API 키**를 회사에 등�
 개인정보 처리에 관한 문의는 다음 연락처로 접수합니다.
 
 - **개인정보 보호책임자:** 배상현
-- **이메일:** seanbae1521@gmail.com
+- **이메일:** support@pivoxquant.com
 - **처리 시간:** 문의 접수 후 영업일 기준 **10일 이내** 회신
 
 ---

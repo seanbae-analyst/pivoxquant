@@ -162,7 +162,7 @@ function DeleteAccountModal({ onClose }: { onClose: () => void }) {
         </p>
         <div className="flex items-center gap-3">
           <a
-            href="mailto:seanbae1521@gmail.com?subject=Account%20Deletion%20Request"
+            href="mailto:support@pivoxquant.com?subject=Account%20Deletion%20Request"
             className="flex-1 pq-ink-btn-bronze text-center"
           >
             Contact support

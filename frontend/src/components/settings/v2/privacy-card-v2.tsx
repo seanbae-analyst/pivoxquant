@@ -274,7 +274,7 @@ export function PrivacyCardV2({
   onRequestExport,
   onSignOut,
   signingOut,
-  deleteAccountMailto = "mailto:seanbae1521@gmail.com?subject=Account%20Deletion%20Request",
+  deleteAccountMailto = "mailto:support@pivoxquant.com?subject=Account%20Deletion%20Request",
 }: Props) {
   const [cookies, setCookies] = React.useState<CookieState>(DEFAULT_COOKIES);
   const [showDelete, setShowDelete] = React.useState(false);
