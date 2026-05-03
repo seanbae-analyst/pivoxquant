@@ -17,7 +17,12 @@
  *   5. Terminal — Proceeded or Cancelled
  *
  * Tone: v3 — Vantablack + Bronze + Playfair italic. POSITIVE / NEGATIVE /
- * NEUTRAL only. No BUY/SELL/HOLD/추천/조언 anywhere in the copy.
+ * NEUTRAL only. No directional advice tokens anywhere in the surfaced copy.
+ *
+ * Side labels: the legacy wire format on the backend stays untouched for
+ * data compat. The UI uses an internal Side enum ("ENTRY" / "EXIT") and
+ * renders "Long Entry · 진입" / "Position Exit · 정리" via sideLabel().
+ * See `@/lib/pre-trade` for the translation boundary.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -27,6 +32,13 @@ import { apiFetch, ApiError } from "@/lib/api";
 import { API } from "@/lib/endpoints";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { Caption, FootSignature, RuledKicker } from "@/components/ui/editorial";
+import {
+  type Side,
+  SIDE_LABEL_EN,
+  SIDE_LABEL_KO,
+  sideLabel,
+  sideToWire,
+} from "@/lib/pre-trade";
 
 const MIN_RATIONALE_CHARS = 50;
 
@@ -71,7 +83,7 @@ export default function PreTradePage() {
 
   // Step 1 — setup
   const [ticker, setTicker] = useState("");
-  const [side, setSide] = useState<"BUY" | "SELL">("BUY");
+  const [side, setSide] = useState<Side>("ENTRY");
   const [sharesText, setSharesText] = useState("");
   const [rationale, setRationale] = useState("");
 
@@ -112,7 +124,10 @@ export default function PreTradePage() {
       const sharesNum = sharesText.trim() === "" ? null : Number(sharesText);
       const body: Record<string, unknown> = {
         ticker: ticker.trim().toUpperCase(),
-        side,
+        // Serialize internal Side ("ENTRY"/"EXIT") to the legacy wire
+        // format that routes/pre_trade.py expects. Keeps DB schema and
+        // audit row stable while removing the literal from the UI.
+        side: sideToWire(side),
         rationale: rationale.trim(),
         devil_advocate: ackBlob,
       };
@@ -208,7 +223,7 @@ export default function PreTradePage() {
   const reset = useCallback(() => {
     setPhase("setup");
     setTicker("");
-    setSide("BUY");
+    setSide("ENTRY");
     setSharesText("");
     setRationale("");
     setAcks({});
@@ -300,7 +315,7 @@ export default function PreTradePage() {
 
 function SetupStep(props: {
   ticker: string; setTicker: (s: string) => void;
-  side: "BUY" | "SELL"; setSide: (s: "BUY" | "SELL") => void;
+  side: Side; setSide: (s: Side) => void;
   sharesText: string; setSharesText: (s: string) => void;
   rationale: string; setRationale: (s: string) => void;
   rationaleOk: boolean;
@@ -326,18 +341,19 @@ function SetupStep(props: {
         </Field>
         <Field label="Side">
           <div className="flex gap-2 mt-1">
-            {(["BUY", "SELL"] as const).map((s) => (
+            {(["ENTRY", "EXIT"] as const).map((s) => (
               <button
                 key={s}
                 type="button"
                 onClick={() => setSide(s)}
+                aria-label={sideLabel(s)}
                 className={`px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition-colors ${
                   side === s
                     ? "bg-[var(--pq-bronze)] text-[var(--pq-ink)]"
                     : "border border-[rgba(245,240,232,0.15)] text-[rgba(245,240,232,0.65)] hover:border-[var(--pq-bronze)]"
                 }`}
               >
-                {s}
+                {SIDE_LABEL_EN[s]} · {SIDE_LABEL_KO[s]}
               </button>
             ))}
           </div>
@@ -502,7 +518,7 @@ function CooldownStep({
         {/* Trade summary */}
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
-            {reflection.intended_side ?? "—"}
+            {sideLabel(reflection.intended_side)}
           </span>
           <span
             className="font-serif text-[28px] text-[var(--pq-ivory)]"
@@ -617,7 +633,7 @@ function TerminalStep({
             : "취소되었습니다. 다음 진입 결정 때 다시 7개 질문을 거치세요."}
         </p>
         <div className="border-t border-[rgba(245,240,232,0.06)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-[12px] font-mono text-[rgba(245,240,232,0.55)]">
-          <span>{reflection.intended_side ?? "—"} · {reflection.intended_ticker}</span>
+          <span>{sideLabel(reflection.intended_side)} · {reflection.intended_ticker}</span>
           {reflection.intended_shares !== null && <span>{reflection.intended_shares} shares</span>}
           <span>
             {proceeded
