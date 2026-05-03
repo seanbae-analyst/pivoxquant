@@ -4,7 +4,7 @@ from typing import Any
 
 from engine import QuantEngine
 from data_fetcher import DataFetcher
-from ai_service import AIService
+from services.ai.service import AIService
 from services.trading.daytrade import DayTradeService
 from realtime_service import RealtimeService
 
