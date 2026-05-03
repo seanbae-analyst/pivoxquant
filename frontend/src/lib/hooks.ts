@@ -42,6 +42,9 @@ export function useDiscover() {
   return useSWR<DiscoverResponse>(API.discover, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 600_000,
+    // P1 (wave1-critical): render-safe default — consumers reading
+    // `data.results` won't NPE during the initial undefined frame.
+    fallbackData: { results: [], cached: false },
   });
 }
 
@@ -49,6 +52,10 @@ export function useInvestmentProfile() {
   return useSWR<ProfileResponse>(API.profile.get, fetcher, {
     revalidateOnFocus: false,
     dedupingInterval: 300_000,
+    // P1 (wave1-critical): "logged-in but no profile yet" identity. Lets
+    // onboarding gates evaluate `has_profile` immediately without
+    // an interim undefined frame.
+    fallbackData: { profile: null, has_profile: false },
   });
 }
 
@@ -63,6 +70,9 @@ export function useWatchlist() {
     dedupingInterval: 2_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
+    // P1 (wave1-critical): empty-list default so iterating consumers
+    // don't NPE on `.map` during the first paint.
+    fallbackData: { watchlist: [] },
   });
 }
 
@@ -76,6 +86,9 @@ export function useAlerts() {
     dedupingInterval: 2_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
+    // P1 (wave1-critical): empty-list default so the notification bell
+    // and dropdown render safely on first paint.
+    fallbackData: { alerts: [], unread: 0 },
   });
 }
 
@@ -91,7 +104,13 @@ export function useGrowthData(range = "365d") {
   return useSWR<GrowthScoreEntry[]>(
     API.growth.data(range),
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60_000 },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      // P1 (wave1-critical): empty-array default so chart renderers
+      // (Recharts) don't NPE during initial render.
+      fallbackData: [],
+    },
   );
 }
 
@@ -107,7 +126,12 @@ export function useGrowthWeekly() {
   return useSWR<GrowthWeeklyReport[]>(
     API.growth.weekly,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 300_000 },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 300_000,
+      // P1 (wave1-critical): empty-array default for consumers that map.
+      fallbackData: [],
+    },
   );
 }
 
