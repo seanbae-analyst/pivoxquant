@@ -37,6 +37,7 @@ permissions:
   issues: write
   contents: write
   pull-requests: write
+  id-token: write   # required by anthropics/claude-code-action@v1 OAuth flow
 
 jobs:
   heal:
