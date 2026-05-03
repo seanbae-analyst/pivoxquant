@@ -1,0 +1,340 @@
+# PivoxQuant Design & Safety Regression Guards
+#
+# Seven guards covering design v3 regressions, security patterns, and
+# legal compliance issues discovered during the 2026-05-03 fix wave.
+# These complement the existing regression-guards.yml (G1-G5 pattern guards).
+#
+# Guards:
+#   DS1 FAIL — violet/purple gradient re-introduction (design v3 violation)
+#   DS2 FAIL — pq-paper-pos uses green instead of KR red
+#   DS3 FAIL — dangerouslySetInnerHTML newly added to frontend tsx
+#   DS4 FAIL — i18n messages/*.json contains empty string values
+#   DS5 FAIL — AlertItem interface in types.ts still has legacy type/data fields
+#   DS6 FAIL — BUY/SELL literals in user-facing tsx (자본시장법 위반)
+#   DS7 FAIL — N+1 query patterns in routes/ (for-loop + .get()/.first())
+#
+# NOTE: DS3 is a diff-based guard (only new additions block). DS5/DS6 currently
+#       FAIL on main because the fix PRs (frontend-wave2, design-v3) are not
+#       yet merged. This workflow is intentionally added ahead of those fixes
+#       so that once they land, regressions are caught immediately.
+#
+# Local invocation:
+#   python3 scripts/check_design_safety_guards.py
+#
+# After fix PRs are merged and all guards pass, remove the
+# `continue-on-error: true` from DS5/DS6/DS7 steps below.
+
+name: Design & Safety Guards
+
+on:
+  pull_request:
+    branches: ['**']
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  design-safety-guards:
+    name: Design / Safety regression guards
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ── DS1: Violet/purple gradient ban (design v3) ─────────────────────────
+      - name: DS1 — No violet/purple gradients in frontend
+        run: |
+          echo "=== DS1: Checking for violet/purple gradient patterns ==="
+          python3 - <<'PYEOF'
+          import re, sys
+          from pathlib import Path
+
+          # Patterns that indicate an ACTIVE use of violet/purple (not a comment)
+          ACTIVE_PATTERNS = re.compile(
+              r'\b(violet|from-purple-\d|via-purple-\d|to-purple-\d)\b|#8b5cf6',
+              re.IGNORECASE,
+          )
+
+          # Strip CSS block comments before scanning to avoid false positives
+          # on comment lines that document the ban (e.g. "/* no violet */")
+          def strip_all_comments(text):
+              # Remove /* ... */ block comments (CSS, TS, TSX) and // line comments
+              text = re.sub(r'/\*.*?\*/', ' ', text, flags=re.DOTALL)
+              text = re.sub(r'//[^\n]*', ' ', text)
+              return text
+
+          violations = []
+          extensions = {'.tsx', '.ts', '.css'}
+
+          for f in Path('frontend/src').rglob('*'):
+              if f.suffix not in extensions:
+                  continue
+              text = f.read_text(encoding='utf-8', errors='replace')
+              text = strip_all_comments(text)
+
+              for i, line in enumerate(text.splitlines(), 1):
+                  # Skip residual comment indicator lines
+                  stripped = line.strip()
+                  if stripped.startswith('*'):
+                      continue
+                  if ACTIVE_PATTERNS.search(line):
+                      violations.append(f'{f}:{i}: {line.strip()[:100]}')
+
+          if violations:
+              for v in violations:
+                  print(f'::error::DS1 FAIL — {v}')
+              print(f'\n{len(violations)} violet/purple gradient violation(s) found.')
+              print('Design v3 locks Vantablack + Bronze palette. See project_design_v3.md.')
+              sys.exit(1)
+
+          print('DS1 PASS — no active violet/purple gradient patterns found')
+          PYEOF
+
+      # ── DS2: KR color — pq-paper-pos must be KR red ─────────────────────────
+      - name: DS2 — pq-paper-pos must be KR red (not green)
+        run: |
+          echo "=== DS2: Checking pq-paper-pos color ==="
+          python3 - <<'EOF'
+          import re, sys
+
+          css_path = "frontend/src/app/globals.css"
+          try:
+              css = open(css_path).read()
+          except FileNotFoundError:
+              print(f"DS2 SKIP — {css_path} not found")
+              sys.exit(0)
+
+          # Check for green hex: #4a7a52 range
+          green_pattern = r'\.pq-paper-pos\s*\{[^}]*#4a7[0-9a-fA-F]{3}'
+          if re.search(green_pattern, css):
+              print("::error::DS2 FAIL — pq-paper-pos uses green (#4a7a...) — must be KR red")
+              sys.exit(1)
+
+          # Verify red-dominance if a color rule exists
+          m = re.search(r'\.pq-paper-pos\s*\{[^}]*color:\s*#([0-9a-fA-F]{6})', css)
+          if m:
+              h = m.group(1).lower()
+              r, g, b = int(h[0:2],16), int(h[2:4],16), int(h[4:6],16)
+              if not (r > g and r > b):
+                  print(f"::error::DS2 FAIL — pq-paper-pos color #{h} is not red-dominant (r={r} g={g} b={b})")
+                  sys.exit(1)
+              print(f"DS2 PASS — pq-paper-pos #{h} is red-dominant (r={r} g={g} b={b})")
+          else:
+              print("DS2 SKIP — pq-paper-pos color rule not found in globals.css")
+          EOF
+
+      # ── DS3: dangerouslySetInnerHTML new additions blocked ───────────────────
+      - name: DS3 — No new dangerouslySetInnerHTML in PR diff
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "=== DS3: Checking PR diff for new dangerouslySetInnerHTML ==="
+          NEW_USES=$(git diff origin/${{ github.base_ref }}...HEAD -- "frontend/src/**/*.tsx" \
+            | grep -E '^\+.*dangerouslySetInnerHTML' \
+            | grep -v '^+++' || true)
+          if [ -n "$NEW_USES" ]; then
+            echo "::error::DS3 FAIL — New dangerouslySetInnerHTML detected in PR diff."
+            echo "Use the allowlist renderer in frontend/src/components/editorial-html.tsx instead."
+            echo "$NEW_USES"
+            exit 1
+          fi
+          echo "DS3 PASS — no new dangerouslySetInnerHTML in this PR"
+
+      - name: DS3 — dangerouslySetInnerHTML full scan (push to main)
+        if: github.event_name == 'push'
+        run: |
+          echo "=== DS3: Full scan for dangerouslySetInnerHTML (push) ==="
+          COUNT=$(grep -rn "dangerouslySetInnerHTML" frontend/src/ --include="*.tsx" | wc -l || echo 0)
+          echo "DS3 INFO — found $COUNT existing dangerouslySetInnerHTML usages (baseline tracking)"
+
+      # ── DS4: i18n empty string ban ────────────────────────────────────────────
+      - name: DS4 — No empty strings in i18n messages
+        run: |
+          echo "=== DS4: Checking i18n messages for empty strings ==="
+          python3 - <<'EOF'
+          import json, sys, os
+
+          message_files = [
+              "frontend/src/messages/ko.json",
+              "frontend/src/messages/en.json",
+          ]
+
+          failures = []
+
+          def check(d, path, filename):
+              if not isinstance(d, dict):
+                  return
+              for k, v in d.items():
+                  full_path = f"{path}.{k}" if path else k
+                  if isinstance(v, dict):
+                      check(v, full_path, filename)
+                  elif v == "":
+                      failures.append(f"{filename}: [{full_path}] is empty string")
+
+          for f in message_files:
+              if not os.path.exists(f):
+                  print(f"DS4 SKIP — {f} not found")
+                  continue
+              data = json.load(open(f))
+              check(data, "", f)
+
+          if failures:
+              for fail in failures:
+                  print(f"::error::DS4 FAIL — {fail}")
+              print(f"\nTotal: {len(failures)} empty i18n key(s)")
+              sys.exit(1)
+
+          print("DS4 PASS — no empty i18n strings found")
+          EOF
+
+      # ── DS5: AlertItem type drift — legacy type/data fields ──────────────────
+      # NOTE: This guard currently FAILS on main. It will pass after
+      #       fix/frontend-wave2-types-deadcode is merged.
+      - name: DS5 — AlertItem must not have legacy type/data fields
+        continue-on-error: true
+        run: |
+          echo "=== DS5: Checking AlertItem interface for legacy fields ==="
+          TYPES_FILE="frontend/src/lib/types.ts"
+          if [ ! -f "$TYPES_FILE" ]; then
+            echo "DS5 SKIP — types.ts not found"
+            exit 0
+          fi
+
+          # Extract the AlertItem interface block
+          python3 - <<'PYEOF'
+          import re, sys
+
+          content = open("frontend/src/lib/types.ts").read()
+          m = re.search(r'export interface AlertItem\s*\{([^}]+)\}', content, re.DOTALL)
+          if not m:
+              print("DS5 SKIP — AlertItem interface not found")
+              sys.exit(0)
+
+          body = m.group(1)
+          # Legacy fields: lines that start with type: or data: (not in comments)
+          legacy = []
+          for line in body.splitlines():
+              stripped = line.strip()
+              if stripped.startswith("//") or stripped.startswith("*"):
+                  continue
+              if re.match(r'^type\s*[?:]', stripped):
+                  legacy.append(f"  type field: {stripped}")
+              if re.match(r'^data\s*[?:]', stripped):
+                  legacy.append(f"  data field: {stripped}")
+
+          if legacy:
+              print("::error::DS5 FAIL — AlertItem has legacy type/data fields. Backend now uses kind/title/body.")
+              for l in legacy:
+                  print(l)
+              print("Fix: remove type/data from AlertItem in frontend/src/lib/types.ts")
+              sys.exit(1)
+
+          print("DS5 PASS — AlertItem has no legacy type/data fields")
+          PYEOF
+
+      # ── DS6: BUY/SELL literal ban (자본시장법) ───────────────────────────────
+      # NOTE: This guard currently FAILS on main (pre-trade/page.tsx).
+      #       Will pass after the frontend legal fix is merged.
+      - name: DS6 — No BUY/SELL literals in user-facing tsx
+        continue-on-error: true
+        run: |
+          echo "=== DS6: Checking for BUY/SELL literals in tsx ==="
+          VIOLATIONS=$(grep -rn -E '"(BUY|SELL)"' \
+            frontend/src/app/ frontend/src/components/ \
+            --include="*.tsx" \
+            | grep -v -E "(POSITIVE|NEGATIVE|test|spec|//|comment|Comment)" || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::DS6 FAIL — BUY/SELL literal in user-facing tsx violates 자본시장법."
+            echo "Use POSITIVE/NEGATIVE or 진입/청산 instead."
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "DS6 PASS — no BUY/SELL literals in user-facing tsx"
+
+      # ── DS7: N+1 query pattern lint ───────────────────────────────────────────
+      # NOTE: This guard currently FAILS on main (routes/alerts.py, signals.py).
+      #       Will pass after the backend N+1 fix is merged.
+      - name: DS7 — No N+1 query patterns in routes/
+        continue-on-error: true
+        run: |
+          echo "=== DS7: Checking for N+1 query patterns in routes/ ==="
+          python3 - <<'PYEOF'
+          import ast, sys
+          from pathlib import Path
+
+          issues = []
+          for f in sorted(Path("routes").rglob("*.py")):
+              try:
+                  tree = ast.parse(f.read_text(encoding="utf-8"))
+              except SyntaxError as e:
+                  print(f"DS7 SKIP (parse error) — {f}: {e}")
+                  continue
+
+              for node in ast.walk(tree):
+                  if not isinstance(node, (ast.For, ast.AsyncFor)):
+                      continue
+                  for sub in ast.walk(node):
+                      if not isinstance(sub, ast.Call):
+                          continue
+                      if not isinstance(sub.func, ast.Attribute):
+                          continue
+                      if sub.func.attr not in ("get", "first"):
+                          continue
+                      dump = ast.dump(sub.func)
+                      if "query" in dump:
+                          issues.append(
+                              f"{f}:{node.lineno} — N+1 risk: "
+                              f".{sub.func.attr}() called inside for loop"
+                          )
+
+          if issues:
+              for i in issues:
+                  print(f"::error::DS7 FAIL — {i}")
+              print(f"\nTotal: {len(issues)} N+1 pattern(s) found")
+              sys.exit(1)
+
+          print("DS7 PASS — no N+1 query patterns found")
+          PYEOF
+
+      # ── Summary comment on PR ─────────────────────────────────────────────────
+      - name: Summarize failures on PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '### Design & Safety Guards — Failure Detected',
+              '',
+              'One or more design/safety regression guards failed.',
+              'See the job log for file:line details.',
+              '',
+              '| Guard | Description |',
+              '|-------|-------------|',
+              '| DS1 | Violet/purple gradient (design v3 violation) |',
+              '| DS2 | pq-paper-pos must be KR red |',
+              '| DS3 | New dangerouslySetInnerHTML added |',
+              '| DS4 | Empty i18n string value |',
+              '| DS5 | AlertItem legacy type/data fields |',
+              '| DS6 | BUY/SELL literal in user-facing tsx |',
+              '| DS7 | N+1 query pattern in routes/ |',
+              '',
+              'Guards DS5/DS6/DS7 are currently `continue-on-error: true`',
+              '(pending fix PRs). Remove that flag after the fix PRs merge.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });
