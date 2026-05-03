@@ -9,7 +9,7 @@ review_required: true
 reviewer: null
 service: "PivoxQuant"
 operator: "배상현 (예정 사업자등록자)"
-contact: "seanbae1521@gmail.com"
+contact: "support@pivoxquant.com"
 jurisdiction: "대한민국"
 governing_law: "대한민국 법률"
 court: "서울중앙지방법원"
@@ -166,7 +166,7 @@ disclaimer: "본 문서는 변호사 검토 전 초안(Draft)입니다. 서비�
 3. 단, 위 제한이 적용되더라도 다음의 경우에는 환불이 가능합니다.
    - 서비스 하자로 인해 정상 이용이 불가능한 경우
    - 회사의 귀책사유로 서비스 제공이 불가능한 경우
-4. 환불 요청은 `seanbae1521@gmail.com`으로 접수하며, 회사는 환불 사유 확인 후 **영업일 기준 14일 이내**에 처리합니다.
+4. 환불 요청은 `support@pivoxquant.com`으로 접수하며, 회사는 환불 사유 확인 후 **영업일 기준 14일 이내**에 처리합니다.
 5. 구독 해지 시, 해지 시점의 결제 주기 종료일까지 서비스를 이용할 수 있으며, 이후 자동 갱신이 중단됩니다.
 
 ### 4. 요금 변경
@@ -228,7 +228,7 @@ disclaimer: "본 문서는 변호사 검토 전 초안(Draft)입니다. 서비�
 서비스 이용 및 본 약관에 관한 문의는 다음 연락처로 접수합니다.
 
 - **운영자:** 배상현
-- **이메일:** seanbae1521@gmail.com
+- **이메일:** support@pivoxquant.com
 
 ---
 

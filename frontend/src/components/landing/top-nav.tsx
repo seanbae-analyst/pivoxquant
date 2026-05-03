@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { FilmGrain } from "./film-grain";
 import MobileDrawer from "./mobile-drawer";
+import { useAuth } from "@/lib/auth";
 
 /* ───────────────────────── types ───────────────────────── */
 
@@ -255,6 +256,7 @@ const itemVariants: Variants = {
 /* ───────────────────────── component ───────────────────────── */
 
 export default function TopNav() {
+  const { user } = useAuth();
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -466,7 +468,7 @@ export default function TopNav() {
             {/* Right cluster */}
             <div className="flex items-center gap-2">
               <Link
-                href="/login"
+                href={user ? "/home" : "/login"}
                 className="hidden font-serif text-[12.5px] transition-colors lg:inline-block"
                 style={{
                   color: "rgba(245,240,232,0.68)",
@@ -474,10 +476,10 @@ export default function TopNav() {
                   padding: "8px 12px",
                 }}
               >
-                Log in
+                {user ? (user.name?.trim() ? user.name : "Go to desk") : "Log in"}
               </Link>
               <Link
-                href="/signup"
+                href={user ? "/home" : "/signup"}
                 className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-4 font-serif text-[12.5px] transition-transform duration-200 active:scale-[0.98]"
                 style={{
                   // WCAG 2.5.5 AA — 44x44 minimum tap target. Was 36 (failed
@@ -492,7 +494,7 @@ export default function TopNav() {
                     "0 1px 0 rgba(255,240,220,0.22) inset, 0 0 0 0.5pt rgba(184,149,106,0.65)",
                 }}
               >
-                <span className="relative z-10">Meet your CFO</span>
+                <span className="relative z-10">{user ? "Open desk" : "Meet your CFO"}</span>
                 <ArrowRight
                   className="relative z-10 h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5"
                   aria-hidden

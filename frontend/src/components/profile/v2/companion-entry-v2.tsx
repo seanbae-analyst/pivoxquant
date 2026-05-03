@@ -22,7 +22,7 @@ import Link from "next/link";
 
 interface Props {
   entitled?: boolean;
-  /** Email shown in the confirmation copy. Falls back to seanbae1521@gmail.com per mockup. */
+  /** Email shown in the confirmation copy. Falls back to support@pivoxquant.com per mockup. */
   email?: string | null;
   waitlistDone?: boolean;
   submitting?: boolean;
