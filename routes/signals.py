@@ -120,9 +120,14 @@ def signal_detail(ticker):
 def refresh():
     positions = Position.query.filter_by(user_id=current_user.id).all()
     pos_map = {p.ticker: p for p in positions}
+    # Batch-load SignalCache for all user positions in a single query (avoid N+1).
+    cache_map = {
+        c.ticker: c
+        for c in SignalCache.query.filter(SignalCache.ticker.in_(list(pos_map.keys()))).all()
+    } if pos_map else {}
     done = []
     for t, p in pos_map.items():
-        cached = SignalCache.query.get(t)
+        cached = cache_map.get(t)
         cur_price = json.loads(cached.data_json).get("price", p.avg_cost) if cached and cached.data_json else p.avg_cost
         pnl_pct = (cur_price - p.avg_cost) / p.avg_cost * 100 if p.avg_cost > 0 else 0
         r = engine.analyze(t, current_user.available_capital,
