@@ -223,7 +223,7 @@ export function Hero() {
                 </CtaInkBleed>
 
                 <CtaInkBleed
-                  href="/samples/weekly_memo.pdf"
+                  href="/sample-reports/weekly-memo"
                   as="anchor"
                   variant="ghost"
                   target="_blank"
