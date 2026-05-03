@@ -24,6 +24,7 @@ from models import (
     AITwinPortfolio,
     AITwinTrade,
     AITwinWeeklyReport,
+    TradeHistory,
 )
 from services import container as svc
 from services.twin import initialize_twin, generate_weekly_report
@@ -91,16 +92,21 @@ def twin_portfolio():
         return _envelope({"initialized": False, "paper_label": "PAPER PORTFOLIO"}, status=200)
 
     # Mark to current price (best-effort). Failures degrade to cost basis
-    # so the UI always renders something sensible.
+    # so the UI always renders something sensible. Single batch call avoids
+    # per-position external API round-trips (N+1 → 1).
+    tickers = [pos.ticker for pos in twin.positions]
+    try:
+        price_map = svc.fetcher.get_prices_batch(tickers) if tickers else {}
+    except Exception:
+        logger.exception("twin_portfolio: get_prices_batch failed user=%s", current_user.id)
+        price_map = {}
+
     positions_payload: list[dict] = []
     market_value = 0.0
     for pos in twin.positions:
         row = pos.to_dict()
-        try:
-            snap = svc.fetcher.get_stock_snapshot(pos.ticker)
-            price_now = float(snap["price"]) if snap and snap.get("price") else float(pos.avg_cost or 0)
-        except Exception:
-            price_now = float(pos.avg_cost or 0)
+        snap = price_map.get(pos.ticker)
+        price_now = float(snap["price"]) if snap and snap.get("price") else float(pos.avg_cost or 0)
         row["price_now"] = price_now
         row["market_value"] = float(pos.shares or 0) * price_now
         market_value += row["market_value"]
@@ -209,22 +215,25 @@ def twin_comparison():
             "paper_label": "PAPER PORTFOLIO",
         }, status=200)
 
-    # Twin lifetime return (paper).
+    # Twin lifetime return (paper). Batch price fetch avoids per-position
+    # external API round-trips (N+1 → 1).
     starting = float(twin.starting_cash or 0)
     cash = float(twin.current_cash or 0)
     market_value = 0.0
+    tickers = [pos.ticker for pos in twin.positions]
+    try:
+        price_map = svc.fetcher.get_prices_batch(tickers) if tickers else {}
+    except Exception:
+        logger.exception("twin_comparison: get_prices_batch failed user=%s", current_user.id)
+        price_map = {}
     for pos in twin.positions:
-        try:
-            snap = svc.fetcher.get_stock_snapshot(pos.ticker)
-            price_now = float(snap["price"]) if snap and snap.get("price") else float(pos.avg_cost or 0)
-        except Exception:
-            price_now = float(pos.avg_cost or 0)
+        snap = price_map.get(pos.ticker)
+        price_now = float(snap["price"]) if snap and snap.get("price") else float(pos.avg_cost or 0)
         market_value += float(pos.shares or 0) * price_now
     twin_total = cash + market_value
     twin_lifetime_pct = ((twin_total - starting) / starting * 100.0) if starting > 0 else None
 
     # User lifetime return — sum of TradeHistory P&L since inception.
-    from models import TradeHistory
     user_trades = (
         TradeHistory.query
         .filter(
