@@ -578,90 +578,18 @@ class InsiderMirrorService:
 
     def send_email(self, user: User, pdf_bytes: Optional[bytes],
                    html_body: str, subject: str) -> bool:
-        if getattr(user, "email_opt_out", False):
-            return False
+        """Phase 7 — delegate to :class:`EmailSender`."""
+        from services.email import EmailSender
 
-        # ── Phase 2 P0 (정통망법 §50): one-click unsubscribe link ─────
-        # Build the per-user signed URL and inject it into both the
-        # email body (idempotent — no-op when the template already
-        # rendered ``{{ unsubscribe_url }}``) and the
-        # ``List-Unsubscribe`` headers honoured by Gmail / Outlook.
-        from services.email_token import (
-            build_unsubscribe_url,
-            inject_unsubscribe_footer,
+        return EmailSender().send(
+            user,
+            subject=subject,
+            html_body=html_body,
+            from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+            from_default="reports@pivoxquant.com",
+            pdf_bytes=pdf_bytes,
+            pdf_filename=f"insider_mirror_{user.id}.pdf",
         )
-        _unsub_url = build_unsubscribe_url(user.id, kind="all")
-        html_body = inject_unsubscribe_footer(html_body, _unsub_url)
-
-        from_email = os.environ.get(
-            "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
-        )
-
-        sg_key = os.environ.get("SENDGRID_API_KEY")
-        if sg_key:
-            try:
-                import base64
-                from sendgrid import SendGridAPIClient  # type: ignore
-                from sendgrid.helpers.mail import (  # type: ignore
-                    Mail, Attachment, FileContent, FileName, FileType,
-                    Disposition,
-                )
-                mail = Mail(from_email=from_email, to_emails=user.email,
-                            subject=subject, html_content=html_body)
-                if pdf_bytes:
-                    enc = base64.b64encode(pdf_bytes).decode()
-                    att = Attachment(
-                        FileContent(enc),
-                        FileName(f"insider_mirror_{user.id}.pdf"),
-                        FileType("application/pdf"),
-                        Disposition("attachment"),
-                    )
-                    mail.attachment = att
-                try:
-                    from sendgrid.helpers.mail import Header  # type: ignore
-                    mail.add_header(Header("List-Unsubscribe", f"<{_unsub_url}>"))
-                    mail.add_header(Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click"))
-                except Exception:
-                    logger.debug("List-Unsubscribe header injection failed", exc_info=True)
-                SendGridAPIClient(sg_key).send(mail)
-                return True
-            except Exception as exc:
-                logger.error("SendGrid insider_mirror send failed for user %s: %s",
-                             user.id, exc)
-                return False
-
-        smtp_host = os.environ.get("SMTP_HOST")
-        if smtp_host:
-            try:
-                import smtplib
-                from email.message import EmailMessage
-                msg = EmailMessage()
-                msg["From"] = from_email
-                msg["To"] = user.email
-                msg["Subject"] = subject
-                msg["List-Unsubscribe"] = f"<{_unsub_url}>"
-                msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-                msg.set_content("HTML-only; view in an HTML-capable client.")
-                msg.add_alternative(html_body, subtype="html")
-                if pdf_bytes:
-                    msg.add_attachment(pdf_bytes, maintype="application",
-                                       subtype="pdf",
-                                       filename=f"insider_mirror_{user.id}.pdf")
-                port = int(os.environ.get("SMTP_PORT", "587"))
-                user_ = os.environ.get("SMTP_USER")
-                pw = os.environ.get("SMTP_PASSWORD")
-                with smtplib.SMTP(smtp_host, port, timeout=10) as s:
-                    s.starttls()
-                    if user_ and pw:
-                        s.login(user_, pw)
-                    s.send_message(msg)
-                return True
-            except Exception as exc:
-                logger.error("SMTP insider_mirror send failed for user %s: %s",
-                             user.id, exc)
-                return False
-
-        return False
 
     # ---------- persist + orchestrate --------------------------------------
 

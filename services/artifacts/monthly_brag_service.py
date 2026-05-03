@@ -562,101 +562,31 @@ background:#0B0D12;color:#F6F3EC;padding:32px;">
     def send_email(self, user: User,
                    png_bytes: Optional[bytes],
                    html_body: str) -> bool:
-        """Deliver the brag card email. Mirrors WeeklyMemoService.send_email.
+        """Phase 7 — delegate to :class:`EmailSender`. PNG attachment.
 
-        Priority: SendGrid → SMTP → skip (dev).
-        Returns True on success, False on skip/failure. Never raises.
+        Two-tier from-email override (MONTHLY_BRAG_FROM_EMAIL →
+        WEEKLY_MEMO_FROM_EMAIL → default) is preserved by resolving
+        the chain here and passing the winning value as the
+        ``from_default`` so the sender's single ``os.environ.get``
+        produces the same result.
         """
-        if getattr(user, "email_opt_out", False):
-            logger.info("user %s opted out of email", user.id)
-            return False
+        from services.email import EmailSender
 
-        # ── Phase 2 P0 (정통망법 §50): one-click unsubscribe link ─────
-        # Build the per-user signed URL and inject it into both the
-        # email body (idempotent — no-op when the template already
-        # rendered ``{{ unsubscribe_url }}``) and the
-        # ``List-Unsubscribe`` headers honoured by Gmail / Outlook.
-        from services.email_token import (
-            build_unsubscribe_url,
-            inject_unsubscribe_footer,
+        # Two-tier env fallback — first specific, then global default.
+        # Keeps behaviour identical to the Phase 2 inlined chain.
+        fallback = os.environ.get(
+            "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
         )
-        _unsub_url = build_unsubscribe_url(user.id, kind="all")
-        html_body = inject_unsubscribe_footer(html_body, _unsub_url)
-
-        from_email = os.environ.get(
-            "MONTHLY_BRAG_FROM_EMAIL",
-            os.environ.get("WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"),
+        return EmailSender().send(
+            user,
+            subject="당신의 월간 브래그 카드가 도착했어요",
+            html_body=html_body,
+            from_env_var="MONTHLY_BRAG_FROM_EMAIL",
+            from_default=fallback,
+            pdf_bytes=png_bytes,
+            pdf_filename=f"pivoxquant_brag_{user.id}.png",
+            attachment_mime="image/png",
         )
-        subject = "당신의 월간 브래그 카드가 도착했어요"
-        attach_name = f"pivoxquant_brag_{user.id}.png"
-
-        # --- SendGrid ---
-        sg_key = os.environ.get("SENDGRID_API_KEY")
-        if sg_key:
-            try:
-                import base64
-                from sendgrid import SendGridAPIClient  # type: ignore
-                from sendgrid.helpers.mail import (  # type: ignore
-                    Mail, Attachment, FileContent, FileName, FileType, Disposition,
-                )
-                mail = Mail(from_email=from_email, to_emails=user.email,
-                            subject=subject, html_content=html_body)
-                if png_bytes:
-                    enc = base64.b64encode(png_bytes).decode()
-                    att = Attachment(
-                        FileContent(enc),
-                        FileName(attach_name),
-                        FileType("image/png"),
-                        Disposition("attachment"),
-                    )
-                    mail.attachment = att
-                try:
-                    from sendgrid.helpers.mail import Header  # type: ignore
-                    mail.add_header(Header("List-Unsubscribe", f"<{_unsub_url}>"))
-                    mail.add_header(Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click"))
-                except Exception:
-                    logger.debug("List-Unsubscribe header injection failed", exc_info=True)
-                SendGridAPIClient(sg_key).send(mail)
-                return True
-            except Exception as exc:
-                logger.error("SendGrid brag send failed for user %s: %s",
-                             user.id, exc)
-                return False
-
-        # --- SMTP fallback ---
-        smtp_host = os.environ.get("SMTP_HOST")
-        if smtp_host:
-            try:
-                import smtplib
-                from email.message import EmailMessage
-                msg = EmailMessage()
-                msg["From"] = from_email
-                msg["To"] = user.email
-                msg["Subject"] = subject
-                msg["List-Unsubscribe"] = f"<{_unsub_url}>"
-                msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-                msg.set_content("HTML-only; view in an HTML-capable client.")
-                msg.add_alternative(html_body, subtype="html")
-                if png_bytes:
-                    msg.add_attachment(png_bytes, maintype="image",
-                                       subtype="png", filename=attach_name)
-                port = int(os.environ.get("SMTP_PORT", "587"))
-                user_ = os.environ.get("SMTP_USER")
-                pw = os.environ.get("SMTP_PASSWORD")
-                with smtplib.SMTP(smtp_host, port, timeout=10) as s:
-                    s.starttls()
-                    if user_ and pw:
-                        s.login(user_, pw)
-                    s.send_message(msg)
-                return True
-            except Exception as exc:
-                logger.error("SMTP brag send failed for user %s: %s",
-                             user.id, exc)
-                return False
-
-        logger.info("no email provider configured — skipping brag "
-                    "send for user %s", user.id)
-        return False
 
     # ── persist + orchestrate ────────────────────────────────────────────────
 
