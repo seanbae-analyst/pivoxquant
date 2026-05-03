@@ -245,6 +245,14 @@ export const API = {
     proceed: (id: number) => `/api/pre-trade/${id}/proceed`,
     cancel: (id: number) => `/api/pre-trade/${id}/cancel`,
   },
+  // Marketing-consent record (정통망법 §50 ① — sender bears the burden of
+  // proving prior opt-in). Backend lives in routes/consents.py (PR #73).
+  // - GET    : returns { opted_in, marketing_consent_at, marketing_consent_revoked_at }
+  // - POST   : record explicit opt-in (clears prior revocation, flips email_opt_out=false)
+  // - DELETE : record revocation (sets email_opt_out=true)
+  consents: {
+    marketing: "/api/consents/marketing",
+  },
 } as const;
 
 // Portfolio (added 2026-04-22) — frontend-shape aliases for the new /portfolio page.
