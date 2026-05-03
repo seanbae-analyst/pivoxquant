@@ -117,6 +117,26 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
     <PdfPage>
       <PdfHeader tier="free" title="BRAG CARD" meta={`${data.monthLabel} · ${data.reportTag}`} />
 
+      {/* SAMPLE banner — never let the static PLTR mockup be mistaken
+          for the user's own holdings. Mirrors the DD Checklist pattern
+          so all sample-reports surfaces label themselves consistently. */}
+      <div
+        style={{
+          margin: "12px 0 4px",
+          padding: "10px 14px",
+          background: "rgba(184, 149, 106, 0.08)",
+          border: "1px solid rgba(184, 149, 106, 0.4)",
+          borderRadius: 2,
+          fontFamily: "var(--pq-font-mono), 'JetBrains Mono', monospace",
+          fontSize: 11,
+          letterSpacing: "0.18em",
+          textTransform: "uppercase",
+          color: "var(--r-gold-deep, #8b6f47)",
+        }}
+      >
+        ▍ Sample · 양식 — 실제 보유 데이터 아님
+      </div>
+
       <PdfEyebrow>Brag Card · Monthly</PdfEyebrow>
       <PdfCoverTitle size={42}>
         The month&apos;s <em>best call</em>—<br />
