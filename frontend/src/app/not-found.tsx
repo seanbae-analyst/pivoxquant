@@ -29,14 +29,11 @@ export default function NotFound() {
         </p>
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <Link
-            href="/home"
+            href="/"
             className="pq-ink-btn-bronze inline-flex items-center gap-2"
           >
             <Home className="h-3.5 w-3.5" />
             Back to desk
-          </Link>
-          <Link href="/" className="pq-ink-btn-ghost">
-            Landing
           </Link>
         </div>
         <p
