@@ -368,6 +368,14 @@ def _do_migrations():
     # boot before Alembic completes — without this column the User SELECT
     # raises ProgrammingError, causing /api/auth/login + /register 500s.
     _add_column_if_missing("users", "email_opt_out", "BOOLEAN", default="0")
+    # 정통망법 §50 ① marketing-consent evidentiary record. Added via
+    # migration 023_marketing_consent; this runtime hook covers boxes that
+    # boot without running Alembic (legacy local SQLite, fresh Railway
+    # services that race the alembic step). Both columns are nullable
+    # DateTimes — NULL on marketing_consent_at means "never consented",
+    # which is the safest default for the §50 default-deny posture.
+    _add_column_if_missing("users", "marketing_consent_at", "TIMESTAMP")
+    _add_column_if_missing("users", "marketing_consent_revoked_at", "TIMESTAMP")
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but
