@@ -243,6 +243,16 @@ function ChatInner() {
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, [input]);
 
+  // P1 (wave1-critical): abort any in-flight stream when the component
+  // unmounts so background fetches don't continue writing to a stale
+  // setMessages closure (and silently leak network/CPU).
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, []);
+
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
