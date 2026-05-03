@@ -2942,6 +2942,166 @@ html {
   font-family: var(--font-display), Georgia, "Source Serif 4", serif;
 }
 
+/* ══════════════════════════════════════════════════════════
+   Hero — Right column: Friday Memo · Sealed (2026-05-03)
+   Static editorial mockup. Vantablack base + Bronze accents.
+   Pure CSS — no images, no API.
+   ══════════════════════════════════════════════════════════ */
+.pq-friday-card {
+  position: relative;
+  width: 320px;
+  align-self: start;
+  z-index: 3;
+  /* Slight tilt so it feels like a card pinned beside the headline */
+  transform: rotate(-1.2deg);
+  filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.55));
+}
+.pq-friday-card-paper {
+  position: relative;
+  padding: 36px 30px 28px;
+  background:
+    radial-gradient(
+      ellipse 80% 60% at 50% 0%,
+      rgba(184, 149, 106, 0.08) 0%,
+      transparent 70%
+    ),
+    linear-gradient(180deg, #0c0a08 0%, #050505 100%);
+  border: 1px solid rgba(184, 149, 106, 0.28);
+  border-radius: 2px;
+  /* Subtle inner edge highlight for the bezel feel. */
+  box-shadow:
+    inset 0 1px 0 rgba(245, 240, 232, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+}
+/* Bronze wax-seal disc, top-right */
+.pq-friday-card-seal {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(245, 240, 232, 0.18) 0%, transparent 35%),
+    radial-gradient(circle at 50% 50%, #b8956a 0%, #8c6f4f 70%, #5d4a36 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(245, 240, 232, 0.08);
+}
+.pq-friday-card-seal-mark {
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 22px;
+  font-weight: 600;
+  color: rgba(15, 12, 8, 0.85);
+  letter-spacing: -0.02em;
+  /* Deboss-y feel via tiny dual shadow */
+  text-shadow:
+    0 1px 0 rgba(245, 240, 232, 0.18),
+    0 -1px 0 rgba(0, 0, 0, 0.35);
+}
+.pq-friday-card-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "Geist", sans-serif;
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pq-bronze);
+  margin-bottom: 18px;
+}
+.pq-friday-card-rule {
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  background-color: rgba(184, 149, 106, 0.7);
+}
+.pq-friday-card-issue {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--pq-ivory);
+  letter-spacing: -0.01em;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.pq-friday-card-issue-week {
+  font-style: italic;
+}
+.pq-friday-card-issue-dot {
+  color: rgba(184, 149, 106, 0.55);
+  font-size: 16px;
+}
+.pq-friday-card-issue-year {
+  font-family: "JetBrains Mono", "Menlo", monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(245, 240, 232, 0.55);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+.pq-friday-card-body {
+  font-family: var(--font-display), Georgia, "Source Serif 4", serif;
+  font-style: italic;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: rgba(245, 240, 232, 0.78);
+  margin: 0 0 22px 0;
+  /* Hanging-indent left ornament feel */
+  border-left: 1px solid rgba(184, 149, 106, 0.4);
+  padding-left: 14px;
+}
+.pq-friday-card-leader {
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    rgba(184, 149, 106, 0.5) 50%,
+    transparent 50%
+  );
+  background-size: 6px 1px;
+  background-repeat: repeat-x;
+  margin-bottom: 16px;
+}
+.pq-friday-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: "JetBrains Mono", "Menlo", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  color: rgba(245, 240, 232, 0.45);
+  letter-spacing: 0.08em;
+}
+.pq-friday-card-time {
+  color: rgba(245, 240, 232, 0.65);
+}
+.pq-friday-card-foot-dot {
+  color: rgba(184, 149, 106, 0.55);
+}
+.pq-friday-card-sealed {
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 11px;
+  color: var(--pq-bronze);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* Reduced motion: drop the tilt + shadow, keep the editorial card. */
+@media (prefers-reduced-motion: reduce) {
+  .pq-friday-card {
+    transform: none;
+    filter: none;
+  }
+}
+
 /* CTA ink-bleed — blob expansion on hover / click. */
 .pq-ink-blob {
   transform: scale(0.0);
