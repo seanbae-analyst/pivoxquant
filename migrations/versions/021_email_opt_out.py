@@ -1,7 +1,7 @@
 """Email Compliance P0 — global users.email_opt_out column.
 
-Revision ID: 020_email_opt_out
-Revises: 019_ai_twin
+Revision ID: 021_email_opt_out
+Revises: 020_growth_user_id
 Create Date: 2026-05-03
 
 Why this field
@@ -37,8 +37,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "020_email_opt_out"
-down_revision = "019_ai_twin"
+revision = "021_email_opt_out"
+down_revision = "020_growth_user_id"
 branch_labels = None
 depends_on = None
 

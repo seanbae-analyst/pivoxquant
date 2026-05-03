@@ -47,7 +47,7 @@ class User(UserMixin, db.Model):
     # provider. Distinct from `email_opt_out_earnings` (per-channel) so
     # users can mute *all* email or just the time-sensitive earnings
     # channel. Default False keeps existing users on the current
-    # behaviour. Managed via migration 020_email_opt_out.
+    # behaviour. Managed via migration 021_email_opt_out.
     email_opt_out          = db.Column(db.Boolean, default=False,
                                         nullable=False, server_default="0")
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
