@@ -45,6 +45,7 @@ def register_blueprints(app):
     from .pre_trade import pre_trade_bp  # Feature 6 — Pre-Trade Friction
     from .behavior import behavior_bp    # Feature 7 — Weekly Behavioural Score
     from .email_preferences import email_pref_bp  # 정통망법 §50 unsubscribe
+    from .consents import consents_bp  # 정통망법 §50 ① marketing-consent record
 
     # agent_worker is a sibling package and may be absent in some deploys
     # (it ships a Procfile + its own requirements). When it's unavailable
@@ -76,6 +77,7 @@ def register_blueprints(app):
         twin_bp,
         pre_trade_bp, behavior_bp,
         email_pref_bp,
+        consents_bp,
     ]
     if growth_bp is not None:
         blueprints.append(growth_bp)
