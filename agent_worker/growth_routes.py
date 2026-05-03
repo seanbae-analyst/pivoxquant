@@ -2,12 +2,20 @@
 
 Blueprint registered in routes/__init__.py.
 All endpoints require authentication via @api_auth.
+
+Security
+--------
+SEC-005 (2026-05-02): Every query against ``growth_reflections`` and
+``growth_scores`` is scoped by ``current_user.id``. Older deploys allowed
+IDOR (any user could read/update another user's reflection by guessing
+``reflection_id``). The fix lives in migration ``020_growth_user_id.py``.
 """
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
+from flask_login import current_user
 from sqlalchemy import text
 
 from extensions import db
@@ -42,12 +50,15 @@ def _compute_reflection_score(answers: list[str], mood: int | None) -> int:
     return min(100, char_score + mood_score)
 
 
-def _compute_streak(conn, today: date) -> int:
-    """Calculate consecutive days with a growth_scores entry."""
+def _compute_streak(conn, today: date, user_id: int) -> int:
+    """Calculate consecutive days with a growth_scores entry for this user."""
     yesterday = today - timedelta(days=1)
     prev = conn.execute(
-        text("SELECT streak_days FROM growth_scores WHERE date = :d"),
-        {"d": yesterday},
+        text(
+            "SELECT streak_days FROM growth_scores "
+            "WHERE date = :d AND user_id = :uid"
+        ),
+        {"d": yesterday, "uid": user_id},
     ).fetchone()
     return (prev.streak_days + 1) if prev else 1
 
@@ -80,10 +91,18 @@ def submit_reflection():
     if mood is not None and (not isinstance(mood, int) or mood < 1 or mood > 5):
         return jsonify({"error": "mood must be an integer 1-5"}), 400
 
-    # Verify the reflection exists
+    uid = int(current_user.id)
+
+    # Verify the reflection exists AND belongs to the calling user.
+    # Combining the ownership predicate with the lookup gives a uniform
+    # 404 for both "doesn't exist" and "belongs to someone else" — this
+    # avoids leaking ID-existence to an attacker probing for IDOR.
     row = db.session.execute(
-        text("SELECT id, date, answers FROM growth_reflections WHERE id = :id"),
-        {"id": reflection_id},
+        text(
+            "SELECT id, date, answers FROM growth_reflections "
+            "WHERE id = :id AND user_id = :uid"
+        ),
+        {"id": reflection_id, "uid": uid},
     ).fetchone()
 
     if not row:
@@ -100,7 +119,7 @@ def submit_reflection():
             SET answers = :answers,
                 mood = :mood,
                 answered_at = :now
-            WHERE id = :id
+            WHERE id = :id AND user_id = :uid
             """
         ),
         {
@@ -108,25 +127,36 @@ def submit_reflection():
             "mood": mood,
             "now": now,
             "id": reflection_id,
+            "uid": uid,
         },
     )
 
     # Compute and upsert growth_scores
     reflection_score = _compute_reflection_score(answers, mood)
     today = row.date
-    streak = _compute_streak(db.session, today)
+    # Drivers that lack a registered DATE adapter (e.g. SQLite under raw
+    # ``text()`` queries) return ISO strings instead of ``datetime.date``
+    # objects. Coerce so the streak math below is portable.
+    if isinstance(today, str):
+        today = date.fromisoformat(today)
+    streak = _compute_streak(db.session, today, uid)
 
     db.session.execute(
         text(
             """
-            INSERT INTO growth_scores (date, reflection_score, streak_days)
-            VALUES (:date, :score, :streak)
-            ON CONFLICT (date) DO UPDATE
+            INSERT INTO growth_scores (user_id, date, reflection_score, streak_days)
+            VALUES (:uid, :date, :score, :streak)
+            ON CONFLICT (user_id, date) DO UPDATE
               SET reflection_score = :score,
                   streak_days = :streak
             """
         ),
-        {"date": today, "score": reflection_score, "streak": streak},
+        {
+            "uid": uid,
+            "date": today,
+            "score": reflection_score,
+            "streak": streak,
+        },
     )
 
     db.session.commit()
@@ -160,17 +190,18 @@ def growth_data():
     days = days_map.get(range_param, 365)
 
     start_date = date.today() - timedelta(days=days)
+    uid = int(current_user.id)
 
     rows = db.session.execute(
         text(
             """
             SELECT date, activity_score, reflection_score, streak_days, total_score
             FROM growth_scores
-            WHERE date >= :start
+            WHERE date >= :start AND user_id = :uid
             ORDER BY date ASC
             """
         ),
-        {"start": start_date},
+        {"start": start_date, "uid": uid},
     ).fetchall()
 
     result = [
@@ -203,8 +234,9 @@ def today_summary():
     }
     """
     today = date.today()
+    uid = int(current_user.id)
 
-    # Briefing
+    # Briefing — growth_daily_logs is single-tenant founder data; not user-scoped.
     briefing_row = db.session.execute(
         text(
             """
@@ -231,18 +263,18 @@ def today_summary():
             "motivation": briefing_row.motivation,
         }
 
-    # Reflection
+    # Reflection — scoped to current user
     ref_row = db.session.execute(
         text(
             """
             SELECT id, questions, answers, mood
             FROM growth_reflections
-            WHERE date = :today
+            WHERE date = :today AND user_id = :uid
             ORDER BY id DESC
             LIMIT 1
             """
         ),
-        {"today": today},
+        {"today": today, "uid": uid},
     ).fetchone()
 
     reflection = None
@@ -266,16 +298,16 @@ def today_summary():
             "mood": ref_row.mood,
         }
 
-    # Score
+    # Score — scoped to current user
     score_row = db.session.execute(
         text(
             """
             SELECT activity_score, reflection_score, streak_days, total_score
             FROM growth_scores
-            WHERE date = :today
+            WHERE date = :today AND user_id = :uid
             """
         ),
-        {"today": today},
+        {"today": today, "uid": uid},
     ).fetchone()
 
     score = None
