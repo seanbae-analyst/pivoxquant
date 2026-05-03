@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { PushPermission } from "@/components/pwa/push-permission";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { RealtimeStatusBanner } from "@/components/ui/realtime-status-banner";
 
 /* ──────────────────────────────────────────────────────────────────
    Path → DisclaimerBanner type resolver
@@ -97,6 +98,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <DashboardLayout>
+      {/*
+        Realtime SSE connection indicator — mounted at the top of every
+        (dashboard) route so users immediately see when the price stream
+        is degraded (yellow = reconnecting) or failed (red = stale prices).
+        Renders nothing on the happy path. Subscribes only to status
+        slice via useRealtimeStatus() so price ticks don't re-render it.
+      */}
+      <RealtimeStatusBanner />
       {children}
       {/*
         Single-source legal disclaimer footer — mounted once for every
