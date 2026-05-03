@@ -1224,102 +1224,35 @@ class EarningsPreBriefService:
                      pdf_bytes: Optional[bytes],
                      html_body: str,
                      data: dict[str, Any]) -> bool:
-        """SendGrid → SMTP → skip. Same pattern as WeeklyMemoService.
+        """Phase 7 — delegate to :class:`EmailSender`.
 
-        Honors both the global `email_opt_out` flag and the Pre-Brief-
-        specific `email_opt_out_earnings` flag (added in migration 009)
-        so a user can silence earnings alerts without muting every
-        other artefact email.
+        Earnings has its own per-channel opt-out (``email_opt_out_earnings``)
+        layered on top of the global flag — passed via ``opt_out_attrs``
+        so the sender short-circuits on either. Two-tier from-email
+        override is preserved by resolving the chain inline.
         """
-        if getattr(user, "email_opt_out", False):
-            logger.info("user %s opted out of email (global)", user.id)
-            return False
-        if getattr(user, "email_opt_out_earnings", False):
-            logger.info("user %s opted out of earnings prebrief email", user.id)
-            return False
+        from services.email import EmailSender
 
-        # ── Phase 2 P0 (정통망법 §50): one-click unsubscribe link ─────
-        # Build the per-user signed URL and inject it into both the
-        # email body (idempotent — no-op when the template already
-        # rendered ``{{ unsubscribe_url }}``) and the
-        # ``List-Unsubscribe`` headers honoured by Gmail / Outlook.
-        from services.email_token import (
-            build_unsubscribe_url,
-            inject_unsubscribe_footer,
-        )
-        _unsub_url = build_unsubscribe_url(user.id, kind="all")
-        html_body = inject_unsubscribe_footer(html_body, _unsub_url)
-
-        from_email = os.environ.get(
-            "EARNINGS_PREBRIEF_FROM_EMAIL",
-            os.environ.get("WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"),
-        )
         ticker = data.get("ticker", "?")
-        subject = f"[Pre-Brief] ${ticker} — Earnings in {_lead_minutes()} min"
-
-        sg_key = os.environ.get("SENDGRID_API_KEY")
-        if sg_key:
-            try:
-                import base64
-                from sendgrid import SendGridAPIClient  # type: ignore
-                from sendgrid.helpers.mail import (  # type: ignore
-                    Mail, Attachment, FileContent, FileName, FileType, Disposition,
-                )
-                mail = Mail(from_email=from_email, to_emails=user.email,
-                            subject=subject, html_content=html_body)
-                if pdf_bytes:
-                    enc = base64.b64encode(pdf_bytes).decode()
-                    att = Attachment(
-                        FileContent(enc),
-                        FileName(f"prebrief_{ticker}_{user.id}.pdf"),
-                        FileType("application/pdf"),
-                        Disposition("attachment"),
-                    )
-                    mail.attachment = att
-                try:
-                    from sendgrid.helpers.mail import Header  # type: ignore
-                    mail.add_header(Header("List-Unsubscribe", f"<{_unsub_url}>"))
-                    mail.add_header(Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click"))
-                except Exception:
-                    logger.debug("List-Unsubscribe header injection failed", exc_info=True)
-                SendGridAPIClient(sg_key).send(mail)
-                return True
-            except Exception as exc:
-                logger.error("SendGrid send failed for user %s: %s", user.id, exc)
-                return False
-
-        smtp_host = os.environ.get("SMTP_HOST")
-        if smtp_host:
-            try:
-                import smtplib
-                from email.message import EmailMessage
-                msg = EmailMessage()
-                msg["From"] = from_email
-                msg["To"] = user.email
-                msg["Subject"] = subject
-                msg["List-Unsubscribe"] = f"<{_unsub_url}>"
-                msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-                msg.set_content("HTML-only; view in an HTML-capable client.")
-                msg.add_alternative(html_body, subtype="html")
-                if pdf_bytes:
-                    msg.add_attachment(pdf_bytes, maintype="application",
-                                       subtype="pdf",
-                                       filename=f"prebrief_{ticker}_{user.id}.pdf")
-                port = int(os.environ.get("SMTP_PORT", "587"))
-                user_ = os.environ.get("SMTP_USER")
-                pw = os.environ.get("SMTP_PASSWORD")
-                with smtplib.SMTP(smtp_host, port, timeout=10) as s:
-                    s.starttls()
-                    if user_ and pw:
-                        s.login(user_, pw)
-                    s.send_message(msg)
-                return True
-            except Exception as exc:
-                logger.error("SMTP send failed for user %s: %s", user.id, exc)
-                return False
-
-        logger.info("no email provider configured — skipping pre-brief email for user %s", user.id)
-        return False
+        # Two-tier env fallback — earnings-specific then global default.
+        fallback = os.environ.get(
+            "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
+        )
+        return EmailSender().send(
+            user,
+            subject=f"[Pre-Brief] ${ticker} — Earnings in {_lead_minutes()} min",
+            html_body=html_body,
+            from_env_var="EARNINGS_PREBRIEF_FROM_EMAIL",
+            from_default=fallback,
+            pdf_bytes=pdf_bytes,
+            pdf_filename=f"prebrief_{ticker}_{user.id}.pdf",
+            opt_out_attrs=("email_opt_out", "email_opt_out_earnings"),
+            # ``kind="all"`` matches the Phase 2 inlined behaviour —
+            # the unsubscribe route also supports ``kind="earnings"``
+            # for per-channel opt-out, but flipping that here changes
+            # the existing user-facing default. Out of scope for Phase 7.
+            unsubscribe_kind="all",
+        )
 
     # ── persist ────────────────────────────────────────────────────────────
 
@@ -1598,35 +1531,14 @@ class EarningsPreBriefService:
 
     def _send_digest_email(self, user: User, html_body: str,
                             entries: list[dict[str, Any]]) -> bool:
-        """Send a single digest email per user. SendGrid → SMTP → skip.
+        """Phase 7 — delegate to :class:`EmailSender` (HTML-only digest).
 
-        Subject summarises the count and leading ticker. Per-ticker PDFs
-        are NOT attached (link to platform instead) — keeps mail size
-        manageable when multiple tickers match.
+        Per-ticker PDFs are NOT attached on the digest path — when a
+        user has multiple tickers we'd blow past inbox size limits.
+        Subject summarises count + leading ticker.
         """
-        if getattr(user, "email_opt_out", False):
-            logger.info("digest skipped: user %s opted out (global)", user.id)
-            return False
-        if getattr(user, "email_opt_out_earnings", False):
-            logger.info("digest skipped: user %s opted out (earnings)", user.id)
-            return False
+        from services.email import EmailSender
 
-        # ── Phase 2 P0 (정통망법 §50): one-click unsubscribe link ─────
-        # Build the per-user signed URL and inject it into both the
-        # email body (idempotent — no-op when the template already
-        # rendered ``{{ unsubscribe_url }}``) and the
-        # ``List-Unsubscribe`` headers honoured by Gmail / Outlook.
-        from services.email_token import (
-            build_unsubscribe_url,
-            inject_unsubscribe_footer,
-        )
-        _unsub_url = build_unsubscribe_url(user.id, kind="all")
-        html_body = inject_unsubscribe_footer(html_body, _unsub_url)
-
-        from_email = os.environ.get(
-            "EARNINGS_PREBRIEF_FROM_EMAIL",
-            os.environ.get("WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"),
-        )
         count = len(entries)
         first_ticker = entries[0].get("ticker", "?") if entries else "?"
         if count == 1:
@@ -1634,56 +1546,18 @@ class EarningsPreBriefService:
         else:
             subject = f"[Pre-Brief] 오늘 {count}개 종목 실적 발표"
 
-        sg_key = os.environ.get("SENDGRID_API_KEY")
-        if sg_key:
-            try:
-                from sendgrid import SendGridAPIClient  # type: ignore
-                from sendgrid.helpers.mail import Mail  # type: ignore
-                mail = Mail(from_email=from_email, to_emails=user.email,
-                            subject=subject, html_content=html_body)
-                try:
-                    from sendgrid.helpers.mail import Header  # type: ignore
-                    mail.add_header(Header("List-Unsubscribe", f"<{_unsub_url}>"))
-                    mail.add_header(Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click"))
-                except Exception:
-                    logger.debug("List-Unsubscribe header injection failed", exc_info=True)
-                SendGridAPIClient(sg_key).send(mail)
-                return True
-            except Exception as exc:
-                logger.error("SendGrid digest send failed for user %s: %s",
-                             user.id, exc)
-                return False
-
-        smtp_host = os.environ.get("SMTP_HOST")
-        if smtp_host:
-            try:
-                import smtplib
-                from email.message import EmailMessage
-                msg = EmailMessage()
-                msg["From"] = from_email
-                msg["To"] = user.email
-                msg["Subject"] = subject
-                msg["List-Unsubscribe"] = f"<{_unsub_url}>"
-                msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-                msg.set_content("HTML-only; view in an HTML-capable client.")
-                msg.add_alternative(html_body, subtype="html")
-                port = int(os.environ.get("SMTP_PORT", "587"))
-                user_ = os.environ.get("SMTP_USER")
-                pw = os.environ.get("SMTP_PASSWORD")
-                with smtplib.SMTP(smtp_host, port, timeout=10) as s:
-                    s.starttls()
-                    if user_ and pw:
-                        s.login(user_, pw)
-                    s.send_message(msg)
-                return True
-            except Exception as exc:
-                logger.error("SMTP digest send failed for user %s: %s",
-                             user.id, exc)
-                return False
-
-        logger.info("no email transport configured; digest skipped for user %s",
-                    user.id)
-        return False
+        fallback = os.environ.get(
+            "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
+        )
+        return EmailSender().send(
+            user,
+            subject=subject,
+            html_body=html_body,
+            from_env_var="EARNINGS_PREBRIEF_FROM_EMAIL",
+            from_default=fallback,
+            opt_out_attrs=("email_opt_out", "email_opt_out_earnings"),
+            unsubscribe_kind="all",
+        )
 
     def run_scan_digest(self, *, send: bool = True) -> dict[str, Any]:
         """User-grouped variant of `run_scan` — one digest email per user.

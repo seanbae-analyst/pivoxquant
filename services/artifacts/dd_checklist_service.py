@@ -400,75 +400,22 @@ class DDChecklistService:
 </body></html>"""
 
     def send_email(self, user: User, html_body: str, pending_count: int) -> bool:
-        if getattr(user, "email_opt_out", False):
-            return False
-
-        # ── Phase 2 P0 (정통망법 §50): one-click unsubscribe link ─────
-        # Build the per-user signed URL and inject it into both the
-        # email body (idempotent — no-op when the template already
-        # rendered ``{{ unsubscribe_url }}``) and the
-        # ``List-Unsubscribe`` headers honoured by Gmail / Outlook.
-        from services.email_token import (
-            build_unsubscribe_url,
-            inject_unsubscribe_footer,
-        )
-        _unsub_url = build_unsubscribe_url(user.id, kind="all")
-        html_body = inject_unsubscribe_footer(html_body, _unsub_url)
+        """Phase 7 — delegate to :class:`EmailSender`. Pre-flight gates
+        ``pending_count <= 0`` (no checklist items → no email) and the
+        sender then handles opt-out + transport.
+        """
         if pending_count <= 0:
             return False
 
-        from_email = os.environ.get(
-            "WEEKLY_MEMO_FROM_EMAIL", "reports@pivoxquant.com"
+        from services.email import EmailSender
+
+        return EmailSender().send(
+            user,
+            subject=f"PivoxQuant DD Checklist — {pending_count}개 포지션 점검",
+            html_body=html_body,
+            from_env_var="WEEKLY_MEMO_FROM_EMAIL",
+            from_default="reports@pivoxquant.com",
         )
-        subject = f"PivoxQuant DD Checklist — {pending_count}개 포지션 점검"
-
-        sg_key = os.environ.get("SENDGRID_API_KEY")
-        if sg_key:
-            try:
-                from sendgrid import SendGridAPIClient  # type: ignore
-                from sendgrid.helpers.mail import Mail  # type: ignore
-                mail = Mail(from_email=from_email, to_emails=user.email,
-                            subject=subject, html_content=html_body)
-                try:
-                    from sendgrid.helpers.mail import Header  # type: ignore
-                    mail.add_header(Header("List-Unsubscribe", f"<{_unsub_url}>"))
-                    mail.add_header(Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click"))
-                except Exception:
-                    logger.debug("List-Unsubscribe header injection failed", exc_info=True)
-                SendGridAPIClient(sg_key).send(mail)
-                return True
-            except Exception as exc:
-                logger.error("SendGrid dd send failed for user %s: %s",
-                             user.id, exc)
-                return False
-
-        smtp_host = os.environ.get("SMTP_HOST")
-        if smtp_host:
-            try:
-                import smtplib
-                from email.message import EmailMessage
-                msg = EmailMessage()
-                msg["From"] = from_email
-                msg["To"] = user.email
-                msg["Subject"] = subject
-                msg["List-Unsubscribe"] = f"<{_unsub_url}>"
-                msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
-                msg.set_content("HTML-only; view in an HTML-capable client.")
-                msg.add_alternative(html_body, subtype="html")
-                port = int(os.environ.get("SMTP_PORT", "587"))
-                user_ = os.environ.get("SMTP_USER")
-                pw = os.environ.get("SMTP_PASSWORD")
-                with smtplib.SMTP(smtp_host, port, timeout=10) as s:
-                    s.starttls()
-                    if user_ and pw:
-                        s.login(user_, pw)
-                    s.send_message(msg)
-                return True
-            except Exception as exc:
-                logger.error("SMTP dd send failed for user %s: %s",
-                             user.id, exc)
-                return False
-        return False
 
     # ── persist + orchestrate ───────────────────────────────────────────────
 
