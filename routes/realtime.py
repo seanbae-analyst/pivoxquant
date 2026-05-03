@@ -79,16 +79,15 @@ def stream():
                 try:
                     prices = realtime.get_prices_batch(tickers)
                     yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
-                except Exception as e:
-                    import logging as _logging
-                    _logging.getLogger(__name__).error(f"SSE price stream error: {e}")
+                except Exception:
+                    logger.exception("SSE price stream error user=%s", user_id)
                     yield f"data: {json.dumps({'error': 'Price update failed'})}\n\n"
                 # Heartbeat to detect dead connections
                 yield ": heartbeat\n\n"
                 time.sleep(_stream_interval())
         except GeneratorExit:
-            logger.debug("silent-fallback: generate", exc_info=True)
-            pass
+            # Client closed the connection — expected, not an error.
+            logger.debug("SSE price stream closed user=%s", user_id)
         finally:
             with _sse_lock:
                 _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
@@ -160,15 +159,14 @@ def portfolio_stream():
                         "positions": positions_arr,
                     }, ensure_ascii=False)
                     yield f"data: {payload}\n\n"
-                except Exception as e:
-                    import logging as _logging
-                    _logging.getLogger(__name__).error(f"SSE portfolio stream error: {e}")
+                except Exception:
+                    logger.exception("SSE portfolio stream error user=%s", user_id)
                     yield f"data: {json.dumps({'error': 'Portfolio update failed'})}\n\n"
                 yield ": heartbeat\n\n"
                 time.sleep(_stream_interval())
         except GeneratorExit:
-            logger.debug("silent-fallback: generate", exc_info=True)
-            pass
+            # Client closed the connection — expected, not an error.
+            logger.debug("SSE portfolio stream closed user=%s", user_id)
         finally:
             with _sse_lock:
                 _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
