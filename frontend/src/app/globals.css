@@ -1000,11 +1000,13 @@
 @keyframes pq-cfo-glow {
   0% {
     color: var(--pq-ivory);
+    -webkit-text-fill-color: var(--pq-ivory);
     text-shadow: 0 0 0 rgba(163, 132, 92, 0);
     letter-spacing: -0.02em;
   }
   100% {
     color: var(--pq-bronze-light);
+    -webkit-text-fill-color: var(--pq-bronze-light);
     text-shadow: 0 0 28px rgba(163, 132, 92, 0.42);
     letter-spacing: -0.01em;
   }
@@ -1012,6 +1014,11 @@
 .pq-cfo-word {
   display: inline-block;
   color: var(--pq-ivory);
+  /* Defensive: parents that set -webkit-text-fill-color: transparent
+     (e.g. legacy .pq-silver-matte usage) would otherwise hide this word
+     even though `color` is set. Re-asserting -webkit-text-fill-color
+     ensures the bronze glow always paints. */
+  -webkit-text-fill-color: var(--pq-ivory);
   animation: pq-cfo-glow 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.9s forwards;
 }
 
@@ -2922,6 +2929,12 @@ html {
   font-weight: 600;
   line-height: 1.05;
   letter-spacing: -0.02em;
+  /* 2026-05-03: explicit ivory color so the H1 is visible without
+     depending on .pq-silver-matte's gradient + background-clip:text
+     trick. When -webkit-background-clip: text fails to paint (observed
+     live at pivoxquant.com on the deployed build), the matte class left
+     text transparent and the entire H1 disappeared. */
+  color: var(--pq-ivory);
 }
 .pq-hero-h1-static,
 .pq-hero-h1-glyphs {
