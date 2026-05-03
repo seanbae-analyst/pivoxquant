@@ -37,8 +37,6 @@ type AlertsListResponse = {
   unread: number;
 };
 
-type UnreadCountResponse = { count: number };
-
 function fetcher<T>(url: string): Promise<T> {
   return apiFetch<T>(url);
 }
@@ -72,19 +70,20 @@ export function NotificationDropdown() {
   // by `limit` query param at the service layer, so total payload is
   // unchanged when the caller is `useAlerts` (both issue `/api/alerts`
   // with no qs).
+  //
+  // P1 FIX (2026-05-03): unread count is derived from the same list
+  // response (backend includes `unread` aggregate at routes/alerts.py:73).
+  // The previous separate `useSWR(API.alerts.unreadCount)` call doubled
+  // the alerts polling rate (~3-4 req/min). Now: one SWR subscription,
+  // unread derived from `data.unread`. No backend change required.
   const { data, error, isLoading, mutate } = useSWR<AlertsListResponse>(
     API.alerts.list,
     fetcher,
     { refreshInterval: 60_000, revalidateOnFocus: true },
   );
-  const { data: countData, mutate: mutateCount } = useSWR<UnreadCountResponse>(
-    API.alerts.unreadCount,
-    fetcher,
-    { refreshInterval: 60_000, revalidateOnFocus: true },
-  );
 
   const items = (data?.alerts ?? []).slice(0, 10);
-  const unread = countData?.count ?? 0;
+  const unread = data?.unread ?? 0;
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -108,7 +107,6 @@ export function NotificationDropdown() {
       // swallow — mutate below will pick up server state either way
     }
     mutate();
-    mutateCount();
   }
 
   async function onItemClick(item: AlertRow) {
@@ -120,7 +118,6 @@ export function NotificationDropdown() {
         // best-effort
       }
       mutate();
-      mutateCount();
     }
     if (item.link) {
       router.push(item.link);
