@@ -30,8 +30,9 @@ DB is therefore a safe no-op.
 
 Chaining
 --------
-``down_revision = "019_ai_twin"`` keeps the Alembic history strictly
-linear (verified via ``alembic heads`` before authoring).
+``down_revision = "020_growth_user_id"`` (renamed from the original
+``020_email_opt_out``) keeps the Alembic history strictly linear after
+the SEC-005 PR landed `020_growth_user_id`.
 """
 from alembic import op
 import sqlalchemy as sa
