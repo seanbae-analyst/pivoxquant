@@ -493,7 +493,7 @@ function ChatInner() {
             <button
               type="button"
               onClick={stopStreaming}
-              className="absolute right-3 bottom-3 w-9 h-9 flex items-center justify-center rounded-[2px] bg-[rgba(245,240,232,0.06)] hover:bg-[rgba(245,240,232,0.1)] border border-[rgba(245,240,232,0.15)] transition-colors"
+              className="absolute right-3 bottom-3 w-11 h-11 flex items-center justify-center rounded-[2px] bg-[rgba(245,240,232,0.06)] hover:bg-[rgba(245,240,232,0.1)] border border-[rgba(245,240,232,0.15)] transition-colors"
               aria-label="Stop streaming"
             >
               <StopCircle className="w-4 h-4 text-[rgba(245,240,232,0.75)]" />
@@ -502,7 +502,7 @@ function ChatInner() {
             <button
               type="submit"
               disabled={!input.trim()}
-              className="absolute right-3 bottom-3 w-9 h-9 flex items-center justify-center rounded-[2px] bg-[var(--pq-bronze)] hover:bg-[var(--pq-bronze-light)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="absolute right-3 bottom-3 w-11 h-11 flex items-center justify-center rounded-[2px] bg-[var(--pq-bronze)] hover:bg-[var(--pq-bronze-light)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               aria-label="Send message"
             >
               <Send className="w-4 h-4 text-[var(--pq-ink)]" />
