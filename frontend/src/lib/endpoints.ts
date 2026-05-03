@@ -220,7 +220,6 @@ export const API = {
     stats: "/api/artifacts/stats",
     byMonth: "/api/artifacts/by-month",
     generate: "/api/artifacts/generate",
-    jobStatus: (jobId: string) => `/api/artifacts/job/${jobId}`,
   },
   admin: {
     artifactsList: "/api/admin/artifacts/list",
