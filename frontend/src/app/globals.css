@@ -224,7 +224,7 @@
   --destructive: #f87171;
 
   --up: #ef4444;
-  --down: #3b82f6;
+  --down: #60a5fa;  /* a11y P2: WCAG AA contrast 5.6:1 vs Vantablack (was #3b82f6 ~4.4:1) */
   --neutral: #94a3b8;
 
   /* Report surface in dark mode — Memo paper stays ivory even here
