@@ -35,7 +35,7 @@ export function DangerZoneCardV2({
   onDelete,
   exporting = false,
   deleting = false,
-  deleteAccountMailto = "mailto:seanbae1521@gmail.com?subject=Account%20Deletion%20Request",
+  deleteAccountMailto = "mailto:support@pivoxquant.com?subject=Account%20Deletion%20Request",
 }: Props) {
   return (
     <section

@@ -65,8 +65,13 @@ interface OAuthButtonsV2Props {
   onGoogleClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   /** Optional click handler for Kakao — runs alongside default href navigation. */
   onKakaoClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  /** Optional callback fired when a disabled button is clicked (so the parent
+   *  can pulse-highlight unchecked consent rows). */
+  onDisabledClick?: () => void;
   /** Visual variant for the disabled-state hint copy below buttons. */
   hint?: string;
+  /** When true, the hint is rendered with an alert role + warning tone. */
+  hintEmphasized?: boolean;
 }
 
 const buttonShellBase: React.CSSProperties = {
@@ -91,7 +96,9 @@ export function OAuthButtonsV2({
   disabled = false,
   onGoogleClick,
   onKakaoClick,
+  onDisabledClick,
   hint,
+  hintEmphasized = false,
 }: OAuthButtonsV2Props) {
   const enabledShell: React.CSSProperties = {
     ...buttonShellBase,
@@ -114,8 +121,8 @@ export function OAuthButtonsV2({
       {disabled ? (
         <button
           type="button"
-          disabled
           aria-disabled="true"
+          onClick={onDisabledClick}
           style={disabledShell}
         >
           <GoogleIcon />
@@ -136,8 +143,8 @@ export function OAuthButtonsV2({
       {disabled ? (
         <button
           type="button"
-          disabled
           aria-disabled="true"
+          onClick={onDisabledClick}
           style={disabledShell}
         >
           <KakaoIcon />
@@ -158,13 +165,16 @@ export function OAuthButtonsV2({
       {disabled && hint ? (
         <p
           className="font-mono uppercase"
+          role={hintEmphasized ? "alert" : undefined}
           style={{
             marginTop: 6,
             fontFamily:
               '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10,
             letterSpacing: "0.18em",
-            color: "rgba(245,240,232,0.40)",
+            color: hintEmphasized
+              ? "rgba(244,108,108,0.95)"
+              : "rgba(245,240,232,0.40)",
             textAlign: "center",
             textTransform: "uppercase",
           }}

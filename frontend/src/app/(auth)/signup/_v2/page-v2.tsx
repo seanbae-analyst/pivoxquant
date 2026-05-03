@@ -106,6 +106,7 @@ export default function SignupPageV2() {
     marketing: false,
   });
   const [allRequired, setAllRequired] = useState(false);
+  const [pulseUnchecked, setPulseUnchecked] = useState(false);
 
   useEffect(() => {
     // Preserved verbatim from v1 behavior — derived-value refactor is out of
@@ -113,6 +114,12 @@ export default function SignupPageV2() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAllRequired(consents.terms && consents.non_advisory && consents.age);
   }, [consents]);
+
+  useEffect(() => {
+    if (!pulseUnchecked) return;
+    const t = setTimeout(() => setPulseUnchecked(false), 900);
+    return () => clearTimeout(t);
+  }, [pulseUnchecked]);
 
   useEffect(() => {
     if (!loading && user) {
@@ -178,7 +185,19 @@ export default function SignupPageV2() {
     alignItems: "flex-start",
     gap: 12,
     cursor: "pointer",
+    padding: 4,
+    margin: -4,
+    borderRadius: 4,
+    transition: "box-shadow 200ms cubic-bezier(0.16,1,0.3,1)",
   };
+
+  const pulseRowStyle = (active: boolean): React.CSSProperties =>
+    active
+      ? {
+          boxShadow: "0 0 0 1.5px rgba(244,108,108,0.85)",
+          background: "rgba(244,108,108,0.06)",
+        }
+      : {};
 
   const requiredTagStyle: React.CSSProperties = {
     fontFamily:
@@ -297,7 +316,13 @@ export default function SignupPageV2() {
               background: "rgba(245,240,232,0.02)",
             }}
           >
-            <label htmlFor="agree_terms" style={consentRowStyle}>
+            <label
+              htmlFor="agree_terms"
+              style={{
+                ...consentRowStyle,
+                ...pulseRowStyle(pulseUnchecked && !consents.terms),
+              }}
+            >
               <CheckboxV2
                 id="agree_terms"
                 checked={consents.terms}
@@ -336,7 +361,13 @@ export default function SignupPageV2() {
               </span>
             </label>
 
-            <label htmlFor="agree_non_advisory" style={consentRowStyle}>
+            <label
+              htmlFor="agree_non_advisory"
+              style={{
+                ...consentRowStyle,
+                ...pulseRowStyle(pulseUnchecked && !consents.non_advisory),
+              }}
+            >
               <CheckboxV2
                 id="agree_non_advisory"
                 checked={consents.non_advisory}
@@ -350,7 +381,13 @@ export default function SignupPageV2() {
               </span>
             </label>
 
-            <label htmlFor="agree_age" style={consentRowStyle}>
+            <label
+              htmlFor="agree_age"
+              style={{
+                ...consentRowStyle,
+                ...pulseRowStyle(pulseUnchecked && !consents.age),
+              }}
+            >
               <CheckboxV2
                 id="agree_age"
                 checked={consents.age}
@@ -380,7 +417,9 @@ export default function SignupPageV2() {
             disabled={!allRequired}
             onGoogleClick={handleOAuthClick(API.auth.google)}
             onKakaoClick={handleOAuthClick(API.auth.kakao)}
+            onDisabledClick={() => setPulseUnchecked(true)}
             hint="필수 항목 3개에 모두 동의해야 가입할 수 있습니다."
+            hintEmphasized={pulseUnchecked}
           />
 
           <div
