@@ -537,6 +537,12 @@ function PreferencesSection() {
   const [pushSupported, setPushSupported] = useState(true);
   const [pushLoading, setPushLoading] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
+  // 정통망법 §50 — global + per-channel email opt-outs persisted server-side.
+  // Toggles read OPT-OUT semantics; UI flips them so the user sees
+  // "RECEIVE" semantics (checked = receiving).
+  const [emailOptOut, setEmailOptOut] = useState(false);
+  const [emailOptOutEarnings, setEmailOptOutEarnings] = useState(false);
+  const [emailPrefSaving, setEmailPrefSaving] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -548,7 +554,60 @@ function PreferencesSection() {
       .catch(() => setPushEnabled(false));
 
     setEmailEnabled(window.localStorage.getItem("sp_mb_email") === "1");
+
+    // Hydrate global + per-channel opt-out flags from /api/profile.
+    apiFetch<{
+      profile?: { email_opt_out?: boolean; email_opt_out_earnings?: boolean };
+      email_opt_out?: boolean;
+      email_opt_out_earnings?: boolean;
+    }>(API.profile.get)
+      .then((data) => {
+        // Tolerate both top-level and nested shapes (the GET handler
+        // returns the InvestmentProfile, but the User-level flags ride
+        // on the auth context — which is hydrated separately. We try
+        // both so the UI starts from the truth regardless of where
+        // backend chooses to surface them.)
+        const g = data?.email_opt_out ?? data?.profile?.email_opt_out;
+        const e =
+          data?.email_opt_out_earnings ?? data?.profile?.email_opt_out_earnings;
+        if (typeof g === "boolean") setEmailOptOut(g);
+        if (typeof e === "boolean") setEmailOptOutEarnings(e);
+      })
+      .catch(() => {
+        // Best-effort hydrate; default-false matches server defaults.
+      });
   }, []);
+
+  const patchEmailPrefs = useCallback(
+    async (patch: {
+      email_opt_out?: boolean;
+      email_opt_out_earnings?: boolean;
+    }) => {
+      setEmailPrefSaving(true);
+      try {
+        const resp = await apiFetch<{
+          ok: boolean;
+          preferences: {
+            email_opt_out: boolean;
+            email_opt_out_earnings: boolean;
+          };
+        }>(API.profile.emailPreferences, {
+          method: "PATCH",
+          body: JSON.stringify(patch),
+        });
+        setEmailOptOut(resp.preferences.email_opt_out);
+        setEmailOptOutEarnings(resp.preferences.email_opt_out_earnings);
+        toast.success("Email preferences saved.");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to save preferences.",
+        );
+      } finally {
+        setEmailPrefSaving(false);
+      }
+    },
+    [],
+  );
 
   const handlePushToggle = async (next: boolean) => {
     if (!pushSupported) {
@@ -619,6 +678,45 @@ function PreferencesSection() {
             checked={emailEnabled}
             onChange={handleEmailToggle}
             ariaLabel="Email"
+          />
+        </div>
+
+        {/* 정통망법 §50 — global marketing email opt-out (server-backed). */}
+        <div className="flex items-center justify-between pt-3 border-t border-[rgba(245,240,232,0.06)]">
+          <div>
+            <div className="font-serif text-base text-[var(--pq-ivory)]">
+              모든 마케팅 이메일 받지 않기
+            </div>
+            <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
+              Globally unsubscribe from all email — required by 정통망법 §50.
+            </div>
+          </div>
+          <Toggle
+            checked={emailOptOut}
+            onChange={(next) => patchEmailPrefs({ email_opt_out: next })}
+            disabled={emailPrefSaving}
+            ariaLabel="Global email opt-out"
+          />
+        </div>
+
+        {/* Per-channel: earnings pre-brief opt-out. */}
+        <div className="flex items-center justify-between pt-3 border-t border-[rgba(245,240,232,0.06)]">
+          <div>
+            <div className="font-serif text-base text-[var(--pq-ivory)]">
+              실적 발표 알림만 받지 않기
+            </div>
+            <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.5)]">
+              Mute time-sensitive earnings pre-briefs only — other emails
+              continue.
+            </div>
+          </div>
+          <Toggle
+            checked={emailOptOutEarnings}
+            onChange={(next) =>
+              patchEmailPrefs({ email_opt_out_earnings: next })
+            }
+            disabled={emailPrefSaving}
+            ariaLabel="Earnings pre-brief opt-out"
           />
         </div>
       </div>

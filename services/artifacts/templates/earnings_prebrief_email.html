@@ -125,6 +125,11 @@
         <p style="margin:12px 0 0 0;font-size:7.5pt;color:rgba(250,250,247,0.35);">
           이 알림을 더 이상 받지 않으시려면 앱 설정 &gt; 알림에서 "실적 발표 프리브리프"를 비활성화하세요.
         </p>
+        {% if unsubscribe_url %}
+        <p style="margin:8px 0 0 0;font-size:9pt;">
+          <a href="{{ unsubscribe_url }}" style="color:#8a8a8a;font-size:9pt;">이 메일 더 받지 않기 / Unsubscribe</a>
+        </p>
+        {% endif %}
       </td></tr>
     </table>
 

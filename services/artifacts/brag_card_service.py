@@ -734,6 +734,18 @@ class BragCardService:
             logger.info("user %s opted out of email", user.id)
             return False
 
+        # ── Phase 2 P0 (정통망법 §50): one-click unsubscribe link ─────
+        # Build the per-user signed URL and inject it into both the
+        # email body (idempotent — no-op when the template already
+        # rendered ``{{ unsubscribe_url }}``) and the
+        # ``List-Unsubscribe`` headers honoured by Gmail / Outlook.
+        from services.email_token import (
+            build_unsubscribe_url,
+            inject_unsubscribe_footer,
+        )
+        _unsub_url = build_unsubscribe_url(user.id, kind="all")
+        html_body = inject_unsubscribe_footer(html_body, _unsub_url)
+
         from_email = _from_email()
         subject = "당신의 월간 브래그 카드가 도착했어요"
         attach_name = f"pivoxquant_brag_{user.id}.png"
@@ -757,6 +769,12 @@ class BragCardService:
                         Disposition("attachment"),
                     )
                     mail.attachment = att
+                try:
+                    from sendgrid.helpers.mail import Header  # type: ignore
+                    mail.add_header(Header("List-Unsubscribe", f"<{_unsub_url}>"))
+                    mail.add_header(Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click"))
+                except Exception:
+                    logger.debug("List-Unsubscribe header injection failed", exc_info=True)
                 SendGridAPIClient(sg_key).send(mail)
                 return True
             except Exception as exc:
@@ -773,6 +791,8 @@ class BragCardService:
                 msg["From"] = from_email
                 msg["To"] = user.email
                 msg["Subject"] = subject
+                msg["List-Unsubscribe"] = f"<{_unsub_url}>"
+                msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
                 msg.set_content("HTML-only; view in an HTML-capable client.")
                 msg.add_alternative(html_body, subtype="html")
                 if png_bytes:

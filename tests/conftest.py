@@ -209,6 +209,10 @@ class CSRFTestClient:
         kw["headers"] = self._csrf_headers(kw.get("headers"))
         return self._c.delete(*a, **kw)
 
+    def patch(self, *a, **kw):
+        kw["headers"] = self._csrf_headers(kw.get("headers"))
+        return self._c.patch(*a, **kw)
+
     def set_cookie(self, *a, **kw):
         return self._c.set_cookie(*a, **kw)
 
