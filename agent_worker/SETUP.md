@@ -2,6 +2,17 @@
 
 Phase 1 autonomous agent worker를 프로덕션(Railway)에 올리기 위한 수동 작업 체크리스트. 순서대로 실행하세요.
 
+> ⚠️ **2026-05-03 업데이트** — Claude Max OAuth 마이그레이션 영향 알림
+>
+> CI 워크플로우(morning-triage / self-healing)는 2026-05-03에 `CLAUDE_CODE_OAUTH_TOKEN`(Claude Max 구독 자격) 기반으로 전환됨 (`docs/CLAUDE_CODE_OAUTH_SETUP.md` 참조). 그러나 **agent_worker는 Slack ↔ Claude 브릿지로 Anthropic Messages API를 직접 호출**하며 Messages API는 OAuth 토큰을 거부함. 따라서 agent_worker는 여전히 `ANTHROPIC_API_KEY`(per-token 과금)가 필요.
+>
+> **현재 정책 (Phase 2 deferred)**: `ANTHROPIC_API_KEY`가 없으면 worker는 첫 Claude 호출 시 `RuntimeError("ANTHROPIC_API_KEY not set")`를 던지고 종료 (`agent_worker/claude_client.py:21`). 즉 **`ANTHROPIC_API_KEY`를 비워두면 worker가 자동으로 dormant 상태**가 됨 — 별도 토글 환경변수 불필요.
+>
+> **PivoxQuant 출시 직후엔 worker를 켜지 않을 계획.** 웹 앱이 primary surface, Slack 통합은 Phase 2로 미룸. 켜고 싶을 때:
+> 1. Anthropic console에서 API key 발급 + credit 충전
+> 2. Railway worker 서비스 변수에 `ANTHROPIC_API_KEY` 추가
+> 3. 자동 재시작 → worker가 정상 기동
+
 ---
 
 ## 1. Slack 워크스페이스 + 알림 채널 생성
