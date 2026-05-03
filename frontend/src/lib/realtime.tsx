@@ -466,3 +466,34 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 export function useRealtimeContext(): RealtimeState {
   return useContext(RealtimeContext);
 }
+
+/* ── Status-only hook ── */
+
+/**
+ * Lightweight subscription to just the connection-status slice of
+ * RealtimeState — for components (banners, indicators) that only care
+ * whether the SSE stream is healthy and shouldn't re-render on every
+ * price tick.
+ *
+ * Returns:
+ *  - connected: SSE EventSource is currently open
+ *  - failed:    MAX_RETRIES exceeded — stream gave up; user is seeing stale prices
+ *  - lastUpdate: epoch ms of the last successful data event (null if never)
+ *
+ * Rendering rules (consumed by <RealtimeStatusBanner />):
+ *  - failed === true                         → red  "연결 실패"
+ *  - !connected && !failed                   → yellow "재연결 중"
+ *  - connected === true                      → no banner
+ */
+export function useRealtimeStatus(): {
+  connected: boolean;
+  failed: boolean;
+  lastUpdate: number | null;
+} {
+  const ctx = useContext(RealtimeContext);
+  return {
+    connected: ctx.connected,
+    failed: ctx.failed,
+    lastUpdate: ctx.lastUpdate,
+  };
+}
