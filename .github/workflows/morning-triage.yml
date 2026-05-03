@@ -36,19 +36,69 @@ jobs:
         with:
           fetch-depth: 50   # needed for `git log -n 1` on referenced files
 
-      - uses: actions/setup-python@v5
+      # ── Migrated 2026-05-03 from `pip install anthropic` + ANTHROPIC_API_KEY
+      #    to `claude-code-action@v1` + CLAUDE_CODE_OAUTH_TOKEN (Claude Max
+      #    subscription). See docs/CLAUDE_CODE_OAUTH_SETUP.md for one-time
+      #    `claude setup-token` flow.
+      #
+      #    The Python script `scripts/triage/morning_triage.py` is preserved on
+      #    disk for local smoke-testing with TRIAGE_DRY_RUN=1; CI no longer
+      #    invokes it. The system prompt + 5-section output format below
+      #    mirrors `morning_triage.py:49-80` (SYSTEM_PROMPT) verbatim so
+      #    behaviour stays consistent.
+
+      - name: Run morning triage via Claude Code Action
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: anthropics/claude-code-action@v1
         with:
-          python-version: '3.12'
-          cache: pip
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: --max-turns 12 --model claude-sonnet-4-6
+          prompt: |
+            You are PivoxQuant's morning triage (Layer B, 09:00 KST daily).
 
-      - name: Install anthropic SDK
-        run: pip install "anthropic>=0.39.0"
+            PivoxQuant is a Flask 3 + Next.js 16 Korean retail investment
+            platform (Railway + Vercel, PostgreSQL, Alpaca/KIS/FMP).
 
-      - name: Run morning triage
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          TRIAGE_DRY_RUN: ${{ github.event.inputs.dry_run == 'false' && '0' || '1' }}
-          TRIAGE_MAX_ISSUES: ${{ github.event.inputs.max_issues || '3' }}
-        run: python3 scripts/triage/morning_triage.py
+            ## Task
+            1. Use `gh issue list --repo ${{ github.repository }} --state open
+               --label nightly-bug-hunt --json number,title,body,labels,updatedAt
+               --limit 20` to fetch open bug-hunt issues.
+            2. Pick the top ${{ github.event.inputs.max_issues || '3' }} by
+               severity (label priority: critical > high > medium > low),
+               then by most recently updated.
+            3. For each chosen issue, read the body + any referenced files in
+               the repo (use `git log -n 1 -- <file>` for recency context).
+            4. Post a root-cause analysis comment using `gh issue comment
+               <number> --body-file <tmp>` in the EXACT 5-section format
+               below. Never modify code — this is advisory-only.
+
+            ## Strict rules
+            - Never invent evidence. If data is insufficient, say
+              "INSUFFICIENT_EVIDENCE" and list exactly what additional data is
+              needed.
+            - Do NOT recommend buying, selling, or holding any security.
+              This is an infrastructure context, not advisory.
+            - Respect the kill switch: `enabled=false` and
+              `legal_status=pending-counsel-review` on /api/agent/status are
+              intentional and MUST NOT be "fixed" to `true`.
+
+            ## Output format per issue (markdown)
+            ## Root Cause (most likely)
+            <one paragraph, cite specific file:line or endpoint from evidence>
+
+            ## Confidence
+            <low|medium|high> — <one sentence justification>
+
+            ## Fix proposal (max 3 lines)
+            1. <concrete change: file + diff sketch>
+            2. <concrete change>
+            3. <concrete change or "n/a">
+
+            ## Verification
+            <one-liner test or curl that will prove the fix>
+
+      - name: Dry-run notice
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "::notice::dry_run=true → skipped Claude Code Action invocation."
+          echo "::notice::Run locally with TRIAGE_DRY_RUN=1 python3 scripts/triage/morning_triage.py to inspect prompts."
