@@ -31,6 +31,14 @@ from .persona_history import (                            # noqa: F401
     iter_active_user_ids,
     run_weekly_snapshots,
 )
+from .questionnaire import (                              # noqa: F401
+    QUESTIONNAIRE_V2,
+    INVESTOR_TYPES,
+    LEGACY_TYPE_MAP,
+    calculate_profile_v2,
+    get_legacy_type,
+    get_preset,
+)
 
 __all__ = [
     "compute_persona_response",
@@ -49,4 +57,10 @@ __all__ = [
     "detect_significant_drift",
     "iter_active_user_ids",
     "run_weekly_snapshots",
+    "QUESTIONNAIRE_V2",
+    "INVESTOR_TYPES",
+    "LEGACY_TYPE_MAP",
+    "calculate_profile_v2",
+    "get_legacy_type",
+    "get_preset",
 ]
