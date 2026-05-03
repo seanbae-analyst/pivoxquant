@@ -2357,8 +2357,9 @@ i.italic,
   font-feature-settings: "tnum";
 }
 
-.pq-paper-pos { color: #4a7a52; }
-.pq-paper-neg { color: #a34a4a; }
+/* KR convention: 상승=빨강(▲), 하락=파랑(▼) — paper tone (lower saturation) */
+.pq-paper-pos { color: #b85b5b; }
+.pq-paper-neg { color: #5b7ab8; }
 .pq-paper-neu { color: rgba(20, 20, 20, 0.55); }
 
 /* Ledger row — hairline separator + hover lift */

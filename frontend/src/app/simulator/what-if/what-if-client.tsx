@@ -242,20 +242,34 @@ export function WhatIfClient() {
   }, [success, busy]);
 
   return (
-    <main className="min-h-[100dvh] bg-gradient-to-b from-white via-slate-50 to-white">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur">
+    <main
+      className="min-h-[100dvh]"
+      style={{ backgroundColor: "var(--pq-ink)" }}
+    >
+      {/* Top bar — Vantablack v3, ivory hairline border */}
+      <header
+        className="sticky top-0 z-30 border-b backdrop-blur"
+        style={{
+          backgroundColor: "rgba(5, 5, 5, 0.85)",
+          borderColor: "rgba(245, 240, 232, 0.1)",
+        }}
+      >
         <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
           <Link
             href="/"
-            className="flex items-center gap-2 text-sm font-bold text-slate-900"
+            className="flex items-center gap-2 text-sm font-medium"
+            style={{ color: "var(--pq-ivory)" }}
           >
-            <div className="h-6 w-6 rounded-lg bg-slate-900" />
+            <div
+              className="h-6 w-6 rounded-sm"
+              style={{ backgroundColor: "var(--pq-bronze)" }}
+            />
             PivoxQuant
           </Link>
           <Link
             href="/signup"
-            className="inline-flex h-8 items-center gap-1 rounded-full bg-slate-900 px-3.5 text-[11px] font-bold text-white transition hover:bg-slate-800"
+            className="pq-ink-btn-bronze"
+            style={{ height: "32px", padding: "0 14px", fontSize: "10px" }}
           >
             {t("common.signUp")}
             <ArrowUpRight className="h-3 w-3" />
@@ -264,21 +278,22 @@ export function WhatIfClient() {
       </header>
 
       <div className="mx-auto w-full max-w-3xl px-4 pb-12 pt-6 sm:pt-10">
-        {/* Hero */}
+        {/* Hero — Editorial v3: Eyebrow kicker → Playfair italic H1 → ivory sub */}
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="mb-6 sm:mb-8"
         >
-          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+          <div className="pq-ink-kicker mb-3 inline-flex items-center gap-1.5">
             <Clock className="h-3 w-3" />
             {t("whatIf.badge")}
           </div>
-          <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-            {t("whatIf.hero")}
-          </h1>
-          <p className="mt-2 text-sm text-slate-600 sm:text-base">
+          <h1 className="pq-ink-h1">{t("whatIf.hero")}</h1>
+          <p
+            className="mt-3 font-serif text-sm sm:text-base"
+            style={{ color: "rgba(245, 240, 232, 0.65)" }}
+          >
             {t("whatIf.sub")}
           </p>
         </motion.section>
@@ -291,12 +306,22 @@ export function WhatIfClient() {
           isLoading={busy}
         />
 
-        {/* Error surface */}
+        {/* Error surface — ink-themed, paper-blue (KR neg) framing */}
         {(error || apiError) && (
-          <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div
+            className="mt-4 flex items-start gap-2 rounded-sm border px-4 py-3 text-xs"
+            style={{
+              borderColor: "rgba(122, 160, 200, 0.35)",
+              backgroundColor: "rgba(122, 160, 200, 0.06)",
+              color: "rgba(245, 240, 232, 0.85)",
+            }}
+          >
+            <AlertCircle
+              className="mt-0.5 h-4 w-4 shrink-0"
+              style={{ color: "#7aa0c8" }}
+            />
             <div className="min-w-0">
-              <div className="font-semibold">
+              <div className="font-medium" style={{ color: "var(--pq-ivory)" }}>
                 {apiError?.error_code === "TICKER_NOT_FOUND"
                   ? t("whatIf.errors.notFound")
                   : apiError?.error_code === "DATE_BEFORE_LISTING"
@@ -310,7 +335,10 @@ export function WhatIfClient() {
                           : t("whatIf.errors.generic")}
               </div>
               {apiError?.suggestion?.value ? (
-                <div className="mt-1 text-[11px] text-rose-600">
+                <div
+                  className="mt-1 text-[11px]"
+                  style={{ color: "rgba(245, 240, 232, 0.55)" }}
+                >
                   → {apiError.suggestion.reason || apiError.suggestion.value}
                 </div>
               ) : null}
@@ -318,48 +346,71 @@ export function WhatIfClient() {
           </div>
         )}
 
-        {/* Result — anchored for smooth-scroll on calculate.
-            The wrapper is a plain block so the result stays in normal
-            document flow regardless of what <WhatIfResult> does internally. */}
+        {/* Result — anchored for smooth-scroll on calculate. */}
         <div ref={resultAnchorRef} className="relative">
           {success ? (
             <WhatIfResult data={success} shareUrl={shareUrl} />
           ) : busy ? (
-            <div className="mt-6 h-96 animate-pulse rounded-3xl border border-slate-200 bg-slate-50" />
+            <div
+              className="mt-6 h-96 animate-pulse rounded-sm border"
+              style={{
+                borderColor: "rgba(245, 240, 232, 0.08)",
+                backgroundColor: "rgba(255, 255, 255, 0.02)",
+              }}
+            />
           ) : null}
         </div>
 
-        {/* Disclaimer */}
-        <section className="mt-8 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-[11px] leading-relaxed text-slate-600">
-          <div className="mb-1 font-semibold text-slate-700">
+        {/* Disclaimer — ink-themed, bronze-tinted */}
+        <section
+          className="mt-8 rounded-sm border px-4 py-3 text-[11px] leading-relaxed"
+          style={{
+            borderColor: "rgba(184, 149, 106, 0.18)",
+            backgroundColor: "rgba(184, 149, 106, 0.04)",
+            color: "rgba(245, 240, 232, 0.55)",
+          }}
+        >
+          <div
+            className="pq-ink-label mb-2"
+            style={{ color: "var(--pq-bronze)" }}
+          >
             {t("whatIf.disclaimer.title")}
           </div>
           <p>{t("whatIf.disclaimer.ko")}</p>
-          <p className="mt-1 italic text-slate-500">
+          <p
+            className="mt-1 italic"
+            style={{ color: "rgba(245, 240, 232, 0.4)" }}
+          >
             {t("whatIf.disclaimer.en")}
           </p>
         </section>
 
-        {/* Conversion CTA */}
-        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white sm:p-8">
-          <h3 className="text-lg font-bold sm:text-xl">
+        {/* Conversion CTA — sober ink panel, bronze accent (no white CTA) */}
+        <section
+          className="mt-8 overflow-hidden rounded-sm border p-6 sm:p-8"
+          style={{
+            borderColor: "rgba(184, 149, 106, 0.25)",
+            backgroundColor: "rgba(255, 255, 255, 0.015)",
+          }}
+        >
+          <h3
+            className="font-serif italic text-lg sm:text-xl"
+            style={{ color: "var(--pq-ivory)" }}
+          >
             이 결과가 마음에 들었다면?
           </h3>
-          <p className="mt-1 text-sm text-slate-300">
+          <p
+            className="mt-2 text-sm"
+            style={{ color: "rgba(245, 240, 232, 0.6)" }}
+          >
             PivoxQuant에서 AI 퀀트 시그널로 포트폴리오를 관리해보세요.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              href="/signup"
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-xs font-bold text-slate-900 transition hover:bg-slate-100"
-            >
+            <Link href="/signup" className="pq-ink-btn-bronze">
               {t("common.getStarted")}
               <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
-            <Link
-              href="/"
-              className="inline-flex h-10 items-center rounded-full border border-white/20 px-5 text-xs font-bold text-white transition hover:bg-white/10"
-            >
+            <Link href="/" className="pq-ink-btn-ghost">
               {t("common.learnMore")}
             </Link>
           </div>
