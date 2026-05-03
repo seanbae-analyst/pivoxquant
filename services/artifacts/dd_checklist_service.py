@@ -402,6 +402,18 @@ class DDChecklistService:
     def send_email(self, user: User, html_body: str, pending_count: int) -> bool:
         if getattr(user, "email_opt_out", False):
             return False
+
+        # ── Phase 2 P0 (정통망법 §50): one-click unsubscribe link ─────
+        # Build the per-user signed URL and inject it into both the
+        # email body (idempotent — no-op when the template already
+        # rendered ``{{ unsubscribe_url }}``) and the
+        # ``List-Unsubscribe`` headers honoured by Gmail / Outlook.
+        from services.email_token import (
+            build_unsubscribe_url,
+            inject_unsubscribe_footer,
+        )
+        _unsub_url = build_unsubscribe_url(user.id, kind="all")
+        html_body = inject_unsubscribe_footer(html_body, _unsub_url)
         if pending_count <= 0:
             return False
 
@@ -417,6 +429,12 @@ class DDChecklistService:
                 from sendgrid.helpers.mail import Mail  # type: ignore
                 mail = Mail(from_email=from_email, to_emails=user.email,
                             subject=subject, html_content=html_body)
+                try:
+                    from sendgrid.helpers.mail import Header  # type: ignore
+                    mail.add_header(Header("List-Unsubscribe", f"<{_unsub_url}>"))
+                    mail.add_header(Header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click"))
+                except Exception:
+                    logger.debug("List-Unsubscribe header injection failed", exc_info=True)
                 SendGridAPIClient(sg_key).send(mail)
                 return True
             except Exception as exc:
@@ -433,6 +451,8 @@ class DDChecklistService:
                 msg["From"] = from_email
                 msg["To"] = user.email
                 msg["Subject"] = subject
+                msg["List-Unsubscribe"] = f"<{_unsub_url}>"
+                msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
                 msg.set_content("HTML-only; view in an HTML-capable client.")
                 msg.add_alternative(html_body, subtype="html")
                 port = int(os.environ.get("SMTP_PORT", "587"))

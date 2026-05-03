@@ -161,6 +161,11 @@
         <p style="margin:8px 0 0 0;font-family:'JetBrains Mono','Menlo',monospace;font-size:8px;letter-spacing:0.08em;color:#8a8a8a;">
           PivoxQuant &nbsp;·&nbsp; pivoxquant.com &nbsp;·&nbsp; informational use only &nbsp;·&nbsp; © 2026
         </p>
+        {% if unsubscribe_url %}
+        <p style="margin:8px 0 0 0;font-size:9pt;">
+          <a href="{{ unsubscribe_url }}" style="color:#8a8a8a;font-size:9pt;">이 메일 더 받지 않기 / Unsubscribe</a>
+        </p>
+        {% endif %}
       </td></tr>
 
     </table>
