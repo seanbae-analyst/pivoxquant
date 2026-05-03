@@ -137,14 +137,13 @@ export function Hero() {
       {/* ─── Spotlight wrapper ─── */}
       <HeroSpotlight className="relative">
         <div className="relative mx-auto max-w-7xl px-5 pb-24 pt-24 sm:px-8 sm:pb-32 sm:pt-28 lg:px-10 lg:pb-36 lg:pt-32">
-          {/* Single-composition Hero (2026-04-26): right-column persona
-              spotlight removed per CEO direction. The clock-dial PersonaGlyph
-              had no semantic link to "투자자 페르소나" and the eight personas
-              already have a dedicated home in the PersonasPreview section
-              below. Hero is now a single editorial column — left-aligned,
-              max-width capped — so a visitor reads exactly one message:
-              "Your CFO learns you." */}
-          <div className="relative">
+          {/* 2026-04-26: right-column persona spotlight removed per CEO.
+              2026-05-03: right column re-introduced as a static "Friday
+              memo · sealed" mockup card to balance the H1 column on lg+
+              screens (CEO note: "오른쪽이 너무 텅 비는데"). Mobile keeps
+              the single editorial column for clean LCP. The card is
+              non-interactive eye-candy — pure CSS, no API, no images. */}
+          <div className="relative grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
             {/* ─── Editorial copy column (single, max-width capped) ─── */}
             <div className="relative z-[3] max-w-3xl">
               {/* Masthead eyebrow */}
@@ -250,6 +249,50 @@ export function Hero() {
                 performance does not guarantee future results.
               </p>
             </div>
+
+            {/* ─── Right column: Friday memo · sealed (lg+ only) ─── */}
+            <aside
+              aria-hidden
+              className={`pq-friday-card hidden lg:block ${animate ? "pq-reveal-left" : ""}`}
+              style={d(1100)}
+            >
+              <div className="pq-friday-card-paper">
+                {/* Wax seal */}
+                <div className="pq-friday-card-seal" aria-hidden>
+                  <span className="pq-friday-card-seal-mark">P</span>
+                </div>
+
+                {/* Eyebrow */}
+                <div className="pq-friday-card-eyebrow">
+                  <span aria-hidden className="pq-friday-card-rule" />
+                  PivoxQuant · Friday Memo
+                </div>
+
+                {/* Issue line */}
+                <div className="pq-friday-card-issue">
+                  <span className="pq-friday-card-issue-week">Week 18</span>
+                  <span aria-hidden className="pq-friday-card-issue-dot">·</span>
+                  <span className="pq-friday-card-issue-year">2026</span>
+                </div>
+
+                {/* Body — italic Playfair pull quote, observation-only */}
+                <p className="pq-friday-card-body">
+                  Risk budget held inside the gate. Two pre-trade
+                  questions surfaced — one on sector concentration,
+                  one on the FX leg. Reflection saved.
+                </p>
+
+                {/* Editorial dotted leader */}
+                <div className="pq-friday-card-leader" aria-hidden />
+
+                {/* Foot — timestamp + sealed mark */}
+                <div className="pq-friday-card-foot">
+                  <span className="pq-friday-card-time">17:30 KST</span>
+                  <span aria-hidden className="pq-friday-card-foot-dot">·</span>
+                  <span className="pq-friday-card-sealed">Sealed</span>
+                </div>
+              </div>
+            </aside>
 
           </div>
         </div>
