@@ -21,7 +21,7 @@ from flask_login import current_user
 
 from models import Position
 from services.container import fetcher
-from risk_defense import RiskDefenseSystem
+from services.quant.risk_defense import RiskDefenseSystem
 from .decorators import api_auth, legal_scrub_response
 
 logger = logging.getLogger(__name__)

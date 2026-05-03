@@ -416,7 +416,7 @@ def _run_defense_layers(pos_records: list[dict[str, Any]],
         "warnings": [],
     }
     try:
-        from risk_defense import RiskDefenseSystem
+        from services.quant.risk_defense import RiskDefenseSystem
     except Exception as exc:
         logger.debug("risk_defense import failed: %s", exc)
         return default

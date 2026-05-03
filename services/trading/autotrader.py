@@ -464,7 +464,7 @@ class AutoTrader:
 
     def _scan_for_entries(self):
         """Scan watchlist using full quant engine (Tech + Fund + News + Quant Models)."""
-        from engine import QuantEngine
+        from services.quant.engine import QuantEngine
         qe = QuantEngine()
 
         for symbol in self.WATCH_LIST:
@@ -524,7 +524,7 @@ class AutoTrader:
                         }
                         # Attempt to attach adaptive params preview
                         try:
-                            from quant_models import AdaptiveParams
+                            from services.quant.models import AdaptiveParams
                             from services.data import fmp as fmp
                             h = fmp.get_history(symbol, period="3mo")
                             if not h.empty and len(h) >= 20:
@@ -568,7 +568,7 @@ class AutoTrader:
 
             # Calculate adaptive exit parameters
             try:
-                from quant_models import AdaptiveParams
+                from services.quant.models import AdaptiveParams
                 from services.data import fmp as fmp
                 h = fmp.get_history(symbol, period="3mo")
                 if not h.empty and len(h) >= 20:

@@ -174,7 +174,7 @@ def simulate_hrp():
             "disclaimer": DISCLAIMER,
         }), 400
 
-    from portfolio_models import HRP
+    from services.quant.portfolio import HRP
 
     try:
         result = HRP.allocate(returns_matrix, tickers=tickers)
@@ -246,7 +246,7 @@ def simulate_trp():
             "disclaimer": DISCLAIMER,
         }), 400
 
-    from portfolio_models import TailRiskParity
+    from services.quant.portfolio import TailRiskParity
 
     try:
         result = TailRiskParity.allocate(returns_matrix, tickers=tickers, alpha=alpha)
@@ -310,7 +310,7 @@ def simulate_mdp():
             "disclaimer": DISCLAIMER,
         }), 400
 
-    from portfolio_models import MaxDiversification
+    from services.quant.portfolio import MaxDiversification
 
     try:
         result = MaxDiversification.allocate(returns_matrix, tickers=tickers)
@@ -377,7 +377,7 @@ def simulate_erc():
             "disclaimer": DISCLAIMER,
         }), 400
 
-    from portfolio_models import EqualRiskContribution
+    from services.quant.portfolio import EqualRiskContribution
 
     try:
         result = EqualRiskContribution.allocate(returns_matrix, tickers=tickers)
@@ -444,7 +444,7 @@ def simulate_min_variance():
             "disclaimer": DISCLAIMER,
         }), 400
 
-    from portfolio_models import MinVariance
+    from services.quant.portfolio import MinVariance
 
     try:
         result = MinVariance.allocate(returns_matrix, tickers=tickers)
