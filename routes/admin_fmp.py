@@ -32,7 +32,7 @@ import os
 from flask import Blueprint, jsonify
 from flask_login import current_user, login_required
 
-import fmp_service
+from services.data import fmp as fmp_service
 
 logger = logging.getLogger(__name__)
 

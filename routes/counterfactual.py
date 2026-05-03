@@ -120,7 +120,7 @@ def _fetch_history_long(ticker: str, start: date):
     # Long-window path — skip the period-string indirection.
     # Prefer FMP (has deep history) for both US + KR.
     try:
-        import fmp_service as fmp
+        from services.data import fmp as fmp
         import pandas as pd
         from_date = start.strftime("%Y-%m-%d")
         to_date = date.today().strftime("%Y-%m-%d")

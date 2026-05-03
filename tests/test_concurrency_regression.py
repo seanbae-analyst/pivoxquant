@@ -15,7 +15,7 @@ def test_fmp_track_call_thread_safety():
     increments could race and lose updates. After fix, the entire reset+
     increment block is inside the lock — counter must be exact.
     """
-    import fmp_service
+    from services.data import fmp as fmp_service
 
     # Reset counter
     with fmp_service._cache_lock:

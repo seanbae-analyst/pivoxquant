@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from engine import QuantEngine
-from data_fetcher import DataFetcher
+from services.data.fetcher import DataFetcher
 from services.ai.service import AIService
 from services.trading.daytrade import DayTradeService
-from realtime_service import RealtimeService
+from services.data.realtime import RealtimeService
 
 # REMOVED 2026-04-27 per CEO + legal: top-level `from services.trading.autotrader import AutoTrader`
 # eliminated alongside the autotrade feature removal (투자일임업 등록 회피).

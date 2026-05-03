@@ -525,7 +525,7 @@ class AutoTrader:
                         # Attempt to attach adaptive params preview
                         try:
                             from quant_models import AdaptiveParams
-                            import fmp_service as fmp
+                            from services.data import fmp as fmp
                             h = fmp.get_history(symbol, period="3mo")
                             if not h.empty and len(h) >= 20:
                                 ap = AdaptiveParams.calculate(
@@ -569,7 +569,7 @@ class AutoTrader:
             # Calculate adaptive exit parameters
             try:
                 from quant_models import AdaptiveParams
-                import fmp_service as fmp
+                from services.data import fmp as fmp
                 h = fmp.get_history(symbol, period="3mo")
                 if not h.empty and len(h) >= 20:
                     ap = AdaptiveParams.calculate(

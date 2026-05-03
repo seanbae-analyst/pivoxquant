@@ -392,7 +392,7 @@ def chart_data(ticker):
         # Final fallback — FMP directly (indices, or when primaries failed).
         # Use original ticker — FMP stable accepts BRK-B and BRK.B forms.
         try:
-            import fmp_service as fmp
+            from services.data import fmp as fmp
             h = fmp.get_history(ticker, period=period)
             if h is None or h.empty:
                 return {
@@ -437,7 +437,7 @@ def chart_data(ticker):
 @market_bp.route("/earnings")
 @api_auth
 def earnings_calendar():
-    import fmp_service as fmp
+    from services.data import fmp as fmp
     positions = Position.query.filter_by(user_id=current_user.id).all()
     earnings = []
 
@@ -517,14 +517,14 @@ def company_profile(ticker):
     ticker = normalize_ticker(ticker)
     is_korean = ticker.endswith(".KS") or ticker.endswith(".KQ")
     try:
-        import fmp_service as fmp
+        from services.data import fmp as fmp
         info = fmp.get_info(ticker)
         sector = (info.get("sector") or "").strip()
         # "Unknown" is a common upstream placeholder when FMP has no KRX
         # coverage — treat it the same as an empty string so the
         # KOREAN_SECTORS curated table can supply the real sector.
         if is_korean and (not sector or sector.lower() == "unknown"):
-            from data_fetcher import KOREAN_SECTORS
+            from services.data.fetcher import KOREAN_SECTORS
             sector = KOREAN_SECTORS.get(ticker, "") or sector
         return jsonify({
             "ticker": ticker,
@@ -908,7 +908,7 @@ def market_indices():
             fx_is_stale = False
             fx_closes = None
             try:
-                import fmp_service as _fmp
+                from services.data import fmp as _fmp
                 for _sym in ("USDKRW", "USDKRW=X", "KRW=X"):
                     try:
                         fx_hist = _fmp.get_history(_sym, period="1y")
@@ -980,7 +980,7 @@ def market_indices():
 def dividend_data(ticker):
     ticker = normalize_ticker(ticker)
     try:
-        import fmp_service as fmp
+        from services.data import fmp as fmp
         info = fmp.get_info(ticker)
         div_yield = info.get("dividendYield", 0)
         dividends = fmp.get_dividends(ticker)

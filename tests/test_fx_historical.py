@@ -52,7 +52,7 @@ class TestGetRateAt:
             ("2020-06-15", 1208.75),
             ("2020-06-16", 1212.00),
         )
-        with patch("fmp_service._fmp_get", return_value=payload):
+        with patch("services.data.fmp._fmp_get", return_value=payload):
             r = fx_service.get_rate_at(target)
         assert r == 1208.75
         # Cache populated
@@ -66,21 +66,21 @@ class TestGetRateAt:
             ("2020-06-12", 1210.50),
             ("2020-06-15", 1208.75),
         )
-        with patch("fmp_service._fmp_get", return_value=payload):
+        with patch("services.data.fmp._fmp_get", return_value=payload):
             r = fx_service.get_rate_at(target)
         assert r == 1210.50
 
     def test_cache_hit_skips_fetch(self):
         target = date(2020, 6, 15)
         fx_service._hist_cache["2020-06-15"] = 1234.56
-        with patch("fmp_service._fmp_get") as m:
+        with patch("services.data.fmp._fmp_get") as m:
             r = fx_service.get_rate_at(target)
         assert r == 1234.56
         m.assert_not_called()
 
     def test_empty_payload_falls_back_to_spot(self):
         target = date(2020, 6, 15)
-        with patch("fmp_service._fmp_get", return_value=[]), \
+        with patch("services.data.fmp._fmp_get", return_value=[]), \
                 patch.object(fx_service, "get_rate", return_value=1380.0):
             r = fx_service.get_rate_at(target)
         assert r == 1380.0
@@ -92,7 +92,7 @@ class TestGetRateAt:
         # Simulate a recent miss
         import time as _t
         fx_service._hist_miss_ts["2020-06-15"] = _t.time()
-        with patch("fmp_service._fmp_get") as m, \
+        with patch("services.data.fmp._fmp_get") as m, \
                 patch.object(fx_service, "get_rate", return_value=1380.0):
             r = fx_service.get_rate_at(target)
         assert r == 1380.0
@@ -102,7 +102,7 @@ class TestGetRateAt:
         # FMP sometimes wraps bars in {"historical": [...]}
         target = date(2020, 6, 15)
         payload = {"historical": _bars(("2020-06-15", 1208.75))}
-        with patch("fmp_service._fmp_get", return_value=payload):
+        with patch("services.data.fmp._fmp_get", return_value=payload):
             r = fx_service.get_rate_at(target)
         assert r == 1208.75
 
@@ -113,7 +113,7 @@ class TestGetRateAt:
             ("2020-06-15", 0.0),
             ("2020-06-12", 1210.50),
         )
-        with patch("fmp_service._fmp_get", return_value=payload):
+        with patch("services.data.fmp._fmp_get", return_value=payload):
             r = fx_service.get_rate_at(target)
         # 06-15 was filtered, fell back to 06-12
         assert r == 1210.50
@@ -121,7 +121,7 @@ class TestGetRateAt:
     def test_iso_string_input(self):
         target = "2020-06-15"
         payload = _bars(("2020-06-15", 1208.75))
-        with patch("fmp_service._fmp_get", return_value=payload):
+        with patch("services.data.fmp._fmp_get", return_value=payload):
             r = fx_service.get_rate_at(target)
         assert r == 1208.75
 
