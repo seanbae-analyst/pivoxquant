@@ -17,6 +17,7 @@
  */
 
 import * as React from "react";
+import { renderEditorialHeadline } from "@/lib/editorial-html";
 
 interface AuthHeroV2Props {
   /** Mono uppercase eyebrow line, e.g. "PIVOXQUANT · ENTRY". */
@@ -78,8 +79,10 @@ export function AuthHeroV2({
           color: "var(--pq-ivory, #F5F0E8)",
           margin: "0 0 28px 0",
         }}
-        dangerouslySetInnerHTML={{ __html: headlineHtml }}
-      />
+      >
+        {/* Strict tag allowlist — see lib/editorial-html. */}
+        {renderEditorialHeadline(headlineHtml)}
+      </h1>
 
       {deck ? (
         <p
