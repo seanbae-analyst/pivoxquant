@@ -94,12 +94,12 @@ export default function ExplorerPage() {
                 >
                   {a.name}
                 </h3>
-                <p className="font-serif italic" style={{ color: "rgba(184,149,106,0.8)", fontSize: "12.5px" }}>
+                <p className="font-serif italic" style={{ color: "rgba(184,149,106,0.8)", fontSize: "13px" }}>
                   {a.tagline}
                 </p>
                 <p
                   className="font-serif"
-                  style={{ color: "rgba(245,240,232,0.55)", fontSize: "12.5px", lineHeight: 1.5 }}
+                  style={{ color: "rgba(245,240,232,0.55)", fontSize: "14px", lineHeight: 1.5 }}
                 >
                   {a.format}
                 </p>
@@ -112,7 +112,7 @@ export default function ExplorerPage() {
                       className="inline-flex items-center gap-1.5 font-serif italic"
                       style={{
                         color: "var(--pq-bronze)",
-                        fontSize: "11.5px",
+                        fontSize: "13px",
                         borderBottom: "0.5px solid rgba(184,149,106,0.4)",
                       }}
                     >
@@ -123,7 +123,7 @@ export default function ExplorerPage() {
                   ) : (
                     <span
                       className="inline-flex items-center gap-1.5 font-serif italic"
-                      style={{ color: "rgba(245,240,232,0.4)", fontSize: "11.5px" }}
+                      style={{ color: "rgba(245,240,232,0.4)", fontSize: "13px" }}
                     >
                       <Lock className="h-3 w-3" aria-hidden />
                       In-app only

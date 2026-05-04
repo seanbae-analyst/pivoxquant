@@ -36,7 +36,7 @@ export function TopBar() {
   return (
     <>
       <header
-        className="flex h-14 items-center justify-between gap-4 px-6"
+        className="flex h-14 items-center justify-between gap-4 px-4 md:px-6"
         style={{
           background: "var(--pq-ink)",
           borderBottom: "0.5px solid rgba(245, 240, 232, 0.08)",
@@ -67,7 +67,7 @@ export function TopBar() {
             Search ticker, page…
           </span>
           <kbd
-            className="rounded px-1.5 py-0.5 font-mono text-[10px]"
+            className="hidden md:inline-flex rounded px-1.5 py-0.5 font-mono text-[10px]"
             style={{
               border: "0.5px solid rgba(245, 240, 232, 0.15)",
               color: "rgba(245, 240, 232, 0.55)",
