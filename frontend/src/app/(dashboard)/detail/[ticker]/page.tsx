@@ -762,7 +762,7 @@ export default function StockDetailPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.14em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] transition-colors"
+          className="inline-flex min-h-[44px] items-center gap-1.5 -mx-2 px-2 py-2 text-[11px] tracking-[0.14em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back
@@ -1350,19 +1350,19 @@ export default function StockDetailPage() {
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
             {earningsForTicker.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-[13px]">
+                <table className="w-full text-[14px]">
                   <thead>
                     <tr className="text-left border-b border-[rgba(245,240,232,0.08)]">
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[10px] text-[rgba(245,240,232,0.45)]">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)]">
                         Date
                       </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[10px] text-[rgba(245,240,232,0.45)] text-right">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)] text-right">
                         EPS estimate
                       </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[10px] text-[rgba(245,240,232,0.45)] text-right">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)] text-right">
                         EPS actual
                       </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[10px] text-[rgba(245,240,232,0.45)] text-right">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)] text-right">
                         Revenue est.
                       </th>
                     </tr>

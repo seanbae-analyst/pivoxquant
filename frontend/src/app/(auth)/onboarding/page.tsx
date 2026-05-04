@@ -302,7 +302,7 @@ function SliderInput({
             type="button"
             onClick={() => onChange(Number(opt.value))}
             className={`
-              flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold transition-all duration-200
+              flex h-11 w-11 items-center justify-center rounded-full text-sm font-semibold transition-all duration-200
               ${
                 Number(opt.value) === value
                   ? "bg-[var(--pq-bronze)] text-[var(--pq-ink)] shadow-lg shadow-[rgba(184,149,106,0.3)]"
