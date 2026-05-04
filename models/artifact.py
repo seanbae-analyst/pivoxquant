@@ -65,7 +65,7 @@ class Artifact(db.Model):
     __tablename__ = "artifacts"
 
     id         = db.Column(db.Integer,    primary_key=True)
-    user_id    = db.Column(db.Integer,    db.ForeignKey("users.id"),
+    user_id    = db.Column(db.Integer,    db.ForeignKey("users.id", ondelete="CASCADE"),
                            nullable=False, index=True)
     type       = db.Column(db.String(40), nullable=False, index=True)
     title      = db.Column(db.String(200), nullable=False)
