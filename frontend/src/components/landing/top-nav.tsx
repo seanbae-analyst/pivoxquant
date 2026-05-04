@@ -603,6 +603,11 @@ export default function TopNav() {
                           <Link
                             href={item.href}
                             onClick={() => setActiveKey(null)}
+                            aria-current={
+                              pathname === item.href.split("#")[0]
+                                ? "page"
+                                : undefined
+                            }
                             className="group relative flex items-start gap-3.5 rounded-sm p-4 transition-colors duration-300"
                             style={{
                               border: "0.5px solid transparent",
