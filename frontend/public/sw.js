@@ -1,32 +1,28 @@
-// PivoxQuant Service Worker v6 (2026-05-02 — bug-fix wave + cold-start fix)
-// v5 → v6: invalidate v5 caches now that the round of fixes shipped:
-//   - frontend/src/lib/auth.tsx        (8s timeout on /api/auth/me)
-//   - reports v2 latest-artifact-card  (Open full memo routing)
-//   - /detail Related Observations     (real artefacts, no decoy PDFs)
-//   - dd_checklist email body          (separate from PDF template)
-//   - companion premium gate           (DEV_FOUNDING_EMAILS backdoor)
-// PWA-installed users on v5 were locked to the pre-fix HTML/JS bundles
-// even after Vercel redeployed; bumping CACHE_VERSION purges every
-// `sp-v5-*` cache the moment the new SW activates so users get the
-// new build artefacts on first navigation.
+// PivoxQuant Service Worker (CACHE_VERSION auto-injected at build time)
 //
-// v4 → v5: invalidate v4 caches now that home/portfolio/risk/signals/reports
-// shipped their v2 redesigns. PWA-installed users were holding v4 caches with
-// the old static asset hashes + the old cached navigation HTML, which would
-// keep serving v1 markup until next route fetch. Bumping CACHE_VERSION makes
-// the activate step delete every `sp-v4-*` cache the moment the new SW takes
-// control, so users get a clean slate against the new build artefacts.
+// CACHE_VERSION is rewritten by `scripts/inject-sw-version.mjs` (wired into
+// the `prebuild` npm script) to `pq-build-<git-sha>` on every Vercel /
+// GitHub / local build. The activate step keeps STATIC_CACHE + API_CACHE
+// for the *current* version and deletes every other cache, so any prior
+// build's caches (legacy `sp-v*` or older `pq-build-*`) are purged the
+// instant the new SW takes control. PWA-installed users always pick up
+// the latest HTML/JS/CSS hashes on first navigation after deploy without
+// requiring a manual version bump in this file.
 //
-// v3 → v4: networkFirst/cacheFirst no longer synthesize fake 503 "offline"
-// responses when fetch rejects. A fake 503 with Content-Type: application/json
-// and body `{"error":"offline"}` was being delivered to SWR as a *successful*
-// HTTP response, so SWR never entered its error state and the UI stayed stuck
-// on skeletons forever (dashboard / portfolio / watchlist / risk / home).
-// Now: serve cached response if we have one, otherwise re-throw the network
-// error so SWR error handling (retry + error UI) actually runs. Bumping the
-// version string evicts the v3 caches via the activate step so users never
-// see a stale pre-fix cached 503 after upgrade.
-const CACHE_VERSION = "sp-v6";
+// Historical context (do not delete — explains strategy decisions):
+//   - v3 → v4: networkFirst/cacheFirst stopped synthesizing fake 503
+//     "offline" responses when fetch rejects. A fabricated 503 with
+//     `{"error":"offline"}` was reaching SWR as a *successful* HTTP
+//     response, so SWR never entered its error state and the UI stayed
+//     stuck on skeletons forever. We now serve cached response if we
+//     have one, otherwise re-throw the network error so SWR error
+//     handling (retry + error UI) actually runs.
+//   - v4 → v5: home/portfolio/risk/signals/reports shipped v2 redesigns;
+//     bumping invalidated stale navigation HTML cached on PWAs.
+//   - v5 → v6: bug-fix wave (auth.tsx 8s timeout, reports routing,
+//     companion premium gate, etc.) needed cache flush.
+// Going forward, the build script does this work — no manual bump.
+const CACHE_VERSION = "__SW_BUILD_ID__";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const OFFLINE_URL = "/offline.html";
@@ -277,8 +273,15 @@ async function networkFirst(request, cacheName) {
 async function navigationHandler(request) {
   try {
     const response = await fetch(request);
-    const cache = await caches.open(STATIC_CACHE);
-    cache.put(request, response.clone());
+    // Only cache successful navigations. Previously we cached every
+    // response regardless of status, which meant a transient 500/502
+    // could be served from cache on the next offline reload — users
+    // would see the broken page instead of offline.html. Status 0
+    // (opaque) is also excluded since we cannot inspect it.
+    if (response.ok && response.status >= 200 && response.status < 300) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, response.clone());
+    }
     return response;
   } catch {
     const cached = await caches.match(request);
