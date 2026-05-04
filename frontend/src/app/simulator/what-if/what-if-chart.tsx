@@ -12,6 +12,7 @@
  */
 
 import { useMemo } from "react";
+import { useT } from "@/lib/locale";
 import {
   AreaChart,
   Area,
@@ -73,6 +74,7 @@ function ChartTooltip({
   payload?: TooltipPayloadItem[];
   currency?: "USD" | "KRW";
 }) {
+  const t = useT();
   if (!active || !payload?.length) return null;
   const point = payload[0]?.payload;
   if (!point) return null;
@@ -95,7 +97,7 @@ function ChartTooltip({
       ) : null}
       {investedItem && investedItem.value !== valueItem?.value ? (
         <p className="text-[11px] text-slate-500 tabular-nums">
-          Invested: {fmtFull(investedItem.value, currency)}
+          {t("whatIf.result.invested")}: {fmtFull(investedItem.value, currency)}
         </p>
       ) : null}
     </div>

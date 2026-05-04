@@ -23,6 +23,7 @@
  */
 
 import * as React from "react";
+import { useLocale } from "@/lib/locale";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { FootSignature } from "@/components/ui/editorial";
@@ -46,10 +47,6 @@ import { SectorExposureBlock } from "@/components/risk/v2/sector-exposure-block"
 import { RiskTimelineChart } from "@/components/risk/v2/risk-timeline-chart";
 import { CorrelationHeatmap } from "@/components/risk/v2/correlation-heatmap";
 
-function weekdayLabel(): string {
-  return new Date().toLocaleDateString("en-US", { weekday: "long" });
-}
-
 function derivePosture(
   layersCount: number,
   negatives: number,
@@ -61,6 +58,7 @@ function derivePosture(
 }
 
 export default function RiskPageV2() {
+  const { locale } = useLocale();
   const { data: summary } = useRiskSummary();
   const layersHook = useRiskLayers();
   const concentration = useConcentration(5);
@@ -112,7 +110,7 @@ export default function RiskPageV2() {
 
       {/* HERO */}
       <RiskHeroV2
-        eyebrow={`Risk · 7-Layer Defense · ${weekdayLabel()}`}
+        eyebrow={`Risk · 7-Layer Defense · ${new Date().toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", { weekday: "long" })}`}
         posture={posture}
         breachedCount={breachedCount}
         strainedCount={negatives}
