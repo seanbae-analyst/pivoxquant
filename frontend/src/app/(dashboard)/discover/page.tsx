@@ -483,7 +483,7 @@ export default function DiscoverPage() {
           <SectionKicker eyebrow="Rotation" title="Sector Rotation" sub="11 GICS sectors — 1D · 5D · 1M returns." />
           {sectorRows.length > 0 ? (
             <div className="mt-5 overflow-x-auto">
-              <table className="pq-ink-table">
+              <table className="pq-ink-table min-w-[480px]">
                 <thead>
                   <tr>
                     <th>Sector</th>
@@ -579,7 +579,7 @@ export default function DiscoverPage() {
           />
           {hasLive && (
             <div className="mt-5 overflow-x-auto">
-              <table className="pq-ink-table">
+              <table className="pq-ink-table min-w-[560px]">
                 <thead>
                   <tr>
                     <th>Symbol</th>
