@@ -104,20 +104,20 @@ export default function SettingsPageV2() {
         ? "premium"
         : "free";
 
+  const { t } = useLocale();
   const renewalLine = React.useMemo(() => {
     if (!subData?.current_period_end) return null;
     if (currentTier === "free") return null;
     const d = new Date(subData.current_period_end);
     if (Number.isNaN(d.getTime())) return null;
-    const formatted = d.toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    const formatted = d.toLocaleDateString(
+      locale === "ko" ? "ko-KR" : "en-US",
+      { day: "2-digit", month: "short", year: "numeric" },
+    );
     return subData.cancel_at_period_end
-      ? `cancels ${formatted}`
-      : `renews ${formatted}`;
-  }, [subData, currentTier]);
+      ? `${t("settings.subscription.cancelsOn")} ${formatted}`
+      : `${t("settings.subscription.renewsOn")} ${formatted}`;
+  }, [subData, currentTier, locale, t]);
 
   /* ── Brokers ── */
   const { data: brokerData, mutate: refreshBrokers } = useBrokerConnections();

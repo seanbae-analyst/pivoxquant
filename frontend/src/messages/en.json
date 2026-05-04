@@ -494,7 +494,7 @@
     "subtitle": "A library of reports your AI built for you",
     "empty": {
       "title": "No reports yet",
-      "description": "Your first report will arrive this Sunday."
+      "description": "Your first report will arrive every Sunday."
     },
     "filters": {
       "type": "Type",

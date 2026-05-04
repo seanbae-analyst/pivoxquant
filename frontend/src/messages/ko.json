@@ -317,7 +317,7 @@
       "title": "브로커 연동",
       "alpacaDesc": "Alpaca 페이퍼 트레이딩 계정을 연결해 미국 주식 포지션을 자동으로 가져옵니다.",
       "kisName": "한국투자증권",
-      "kisDesc": "KIS API를 통한 한국 주식 조회 (read-only)",
+      "kisDesc": "KIS API로 한국 주식 잔고를 자동 불러옵니다 (조회 전용)",
       "connected": "연결됨",
       "notConnected": "미연결",
       "connectAlpaca": "Alpaca 연결",
@@ -339,7 +339,7 @@
       "english": "English",
       "saved": "언어가 변경됐습니다"
     },
-    "dangerZone": "위험 구역",
+    "dangerZone": "계정 관리",
     "signOut": "로그아웃",
     "signingOut": "로그아웃 중...",
     "deleteAccount": "계정 삭제",
@@ -349,12 +349,12 @@
     "cancelBtn": "취소",
     "notifications": {
       "title": "알림 설정",
-      "subtitle": "푸시, 이메일, 카톡 알림을 관리하세요",
+      "subtitle": "푸시, 이메일, 카카오톡 알림을 관리하세요",
       "timeLabel": "발송 시간 (KST)",
       "timeHelp": "매일 이 시간에 푸시가 발송됩니다 (KST 기준)",
       "emailTitle": "이메일 알림",
       "emailDesc": "Pro 이상 플랜에서 이용 가능",
-      "kakaoTitle": "카톡 알림",
+      "kakaoTitle": "카카오톡 알림",
       "kakaoDesc": "Premium 플랜에서 곧 제공됩니다",
       "enable": "활성화",
       "disable": "비활성화",
@@ -434,7 +434,7 @@
       "krw": "원",
       "usd": "달러",
       "recurring": "매수 방식",
-      "lumpSum": "한번만",
+      "lumpSum": "일시 투자",
       "monthly": "월 적립",
       "weekly": "주 적립",
       "calculate": "계산하기",
@@ -458,7 +458,7 @@
       "chartTitle": "가치 성장 추이",
       "milestones": "마일스톤",
       "share": "공유",
-      "kakao": "카톡",
+      "kakao": "카카오톡",
       "twitter": "X (트위터)",
       "saveImage": "이미지 저장",
       "copyLink": "링크 복사",
@@ -494,7 +494,7 @@
     "subtitle": "AI가 당신을 위해 만든 리포트 라이브러리",
     "empty": {
       "title": "아직 리포트가 없어요",
-      "description": "첫 리포트는 이번 주 일요일에 도착합니다."
+      "description": "첫 리포트는 매주 일요일에 도착합니다."
     },
     "filters": {
       "type": "유형",
