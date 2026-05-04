@@ -255,7 +255,7 @@ export default function WatchlistPage() {
                           }}
                           disabled={removingId === item.id}
                           aria-label={`Remove ${item.ticker}`}
-                          className="inline-flex h-7 w-7 items-center justify-center text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] disabled:opacity-30"
+                          className="inline-flex h-11 w-11 -m-2 items-center justify-center text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] disabled:opacity-30"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
