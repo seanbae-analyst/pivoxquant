@@ -46,6 +46,7 @@ def register_blueprints(app):
     from .behavior import behavior_bp    # Feature 7 — Weekly Behavioural Score
     from .email_preferences import email_pref_bp  # 정통망법 §50 unsubscribe
     from .consents import consents_bp  # 정통망법 §50 ① marketing-consent record
+    from services.email.webhook import sendgrid_webhook_bp  # SendGrid Event Webhook
 
     # agent_worker is a sibling package and may be absent in some deploys
     # (it ships a Procfile + its own requirements). When it's unavailable
@@ -78,6 +79,7 @@ def register_blueprints(app):
         pre_trade_bp, behavior_bp,
         email_pref_bp,
         consents_bp,
+        sendgrid_webhook_bp,
     ]
     if growth_bp is not None:
         blueprints.append(growth_bp)

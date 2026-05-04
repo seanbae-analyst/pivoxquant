@@ -112,12 +112,17 @@ _CSRF_SAFE_METHODS = frozenset(["GET", "HEAD", "OPTIONS"])
 #     cannot attach a CSRF double-submit cookie. The endpoint is idempotent
 #     (re-click sets the same opt-out flag) and the worst a CSRF attack can do
 #     is opt the user OUT of marketing email — no data exposure / state change.
+#   - `/webhooks/sendgrid` — SendGrid Event Webhook, verified by ECDSA
+#     P-256 signature in services/email/webhook.py. The webhook is called
+#     by SendGrid's infrastructure which obviously can't attach our CSRF
+#     double-submit cookie; the signature check is the auth layer.
 _CSRF_EXEMPT_PREFIXES = (
     "/api/billing/webhook",
     "/api/auth/dev-login",
     "/api/auth/logout",
     "/api/logout",
     "/api/email/unsubscribe",
+    "/webhooks/sendgrid",
 )
 
 

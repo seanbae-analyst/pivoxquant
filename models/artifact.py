@@ -73,6 +73,14 @@ class Artifact(db.Model):
     pdf_path   = db.Column(db.String(500), nullable=True)
     sent_at    = db.Column(db.DateTime,   nullable=True)
     opened_at  = db.Column(db.DateTime,   nullable=True)
+    # SendGrid Event Webhook tracking (PR #86) — populated when the
+    # SendGrid event webhook posts open/bounce/unsubscribe events for
+    # the message that delivered this artefact. ``sg_message_id``
+    # mirrors the ``X-Message-Id`` header of the original outbound
+    # email so the webhook can map an arriving event back to the row.
+    bounced_at      = db.Column(db.DateTime, nullable=True)
+    unsubscribed_at = db.Column(db.DateTime, nullable=True)
+    sg_message_id   = db.Column(db.String(128), nullable=True, index=True)
     # Brag Card (MVP #2) — unguessable public-share handle. Other artefact
     # types may also use this in the future; the column is shared. Kept
     # nullable because legacy rows don't have one; UNIQUE enforced via
@@ -100,6 +108,8 @@ class Artifact(db.Model):
             "data":       self.data_json or {},
             "sent_at":    self.sent_at.isoformat() + "Z" if self.sent_at else None,
             "opened_at":  self.opened_at.isoformat() + "Z" if self.opened_at else None,
+            "bounced_at": self.bounced_at.isoformat() + "Z" if self.bounced_at else None,
+            "unsubscribed_at": self.unsubscribed_at.isoformat() + "Z" if self.unsubscribed_at else None,
             "created_at": self.created_at.isoformat() + "Z" if self.created_at else None,
         }
 
