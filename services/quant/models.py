@@ -668,7 +668,7 @@ class VIXStrategy:
                 "vix_history": [round(float(v), 1) for v in h["Close"].values[-30:]],
             }
         except Exception as e:
-            logger.error(f"VIX Strategy error: {e}")
+            logger.error("VIX Strategy error: %s", e)
             return None
 
 

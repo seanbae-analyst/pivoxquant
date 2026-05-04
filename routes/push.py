@@ -153,7 +153,7 @@ def send_push_to_user(user_id: int, title: str, body: str,
             err_msg = str(e)
             # Remove expired/invalid subscriptions
             if "410" in err_msg or "404" in err_msg:
-                logger.info(f"Removing expired push subscription {sub.id}")
+                logger.info("Removing expired push subscription %s", sub.id)
                 try:
                     db.session.delete(sub)
                     db.session.commit()
@@ -161,4 +161,4 @@ def send_push_to_user(user_id: int, title: str, body: str,
                     db.session.rollback()
                     logger.exception("push send cleanup failed for sub %s", sub.id)
             else:
-                logger.error(f"Push send failed for sub {sub.id}: {e}")
+                logger.error("Push send failed for sub %s: %s", sub.id, e)

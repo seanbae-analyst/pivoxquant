@@ -275,7 +275,7 @@ class AIService:
             # request_id / credit balance / internal error codes that
             # must not surface to end-users). Log full detail, yield a
             # fixed generic message.
-            logger.error(f"Chat stream error: {e}", exc_info=True)
+            logger.error("Chat stream error: %s", e, exc_info=True)
             yield (
                 "AI 서비스에 일시적인 문제가 발생했습니다. "
                 "잠시 후 다시 시도해주세요."

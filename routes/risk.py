@@ -519,7 +519,7 @@ def risk_correlation():
                       for row in c]
         return jsonify({"labels": labels, "matrix": matrix_out})
     except Exception as e:
-        logger.warning(f"risk.correlation failed: {e}", exc_info=True)
+        logger.warning("risk.correlation failed: %s", e, exc_info=True)
         return jsonify({"labels": [], "matrix": [], "is_demo": True,
                         "message": "Risk data temporarily unavailable"})
 
@@ -568,7 +568,7 @@ def rolling_var():
 
         return jsonify(out[-30:])
     except Exception as e:
-        logger.warning(f"risk.rolling_var failed: {e}", exc_info=True)
+        logger.warning("risk.rolling_var failed: %s", e, exc_info=True)
         return jsonify([])
 
 
@@ -678,7 +678,7 @@ def risk_concentration():
             "as_of":          as_of,
         })
     except Exception as e:
-        logger.warning(f"risk.concentration failed: {e}", exc_info=True)
+        logger.warning("risk.concentration failed: %s", e, exc_info=True)
         # Fail-safe: empty payload (200) so the gauge shows '—' rather than 404.
         return jsonify({
             "hhi":            0.0,

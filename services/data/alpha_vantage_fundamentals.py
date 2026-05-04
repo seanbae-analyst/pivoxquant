@@ -77,11 +77,11 @@ def get_av_fundamentals(ticker: str) -> dict | None:
             timeout=6,
         )
     except Exception as e:
-        logger.debug(f"AV OVERVIEW request failed for {ticker}: {e}")
+        logger.debug("AV OVERVIEW request failed for %s: %s", ticker, e)
         return None
 
     if not r.ok:
-        logger.debug(f"AV OVERVIEW {ticker} non-OK: {r.status_code}")
+        logger.debug("AV OVERVIEW %s non-OK: %s", ticker, r.status_code)
         return None
 
     try:
@@ -94,7 +94,7 @@ def get_av_fundamentals(ticker: str) -> dict | None:
     if not d or d.get("Symbol") != ticker:
         # Also catch the "Note" rate-limit response shape.
         if "Note" in d or "Information" in d:
-            logger.info(f"AV rate-limited on {ticker}")
+            logger.info("AV rate-limited on %s", ticker)
         return None
 
     out = {

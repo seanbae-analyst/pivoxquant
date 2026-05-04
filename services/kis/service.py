@@ -132,7 +132,7 @@ class KISService:
                 self.access_token = token
             return token
         except Exception as e:
-            logger.warning(f"KIS token manager error: {e}")
+            logger.warning("KIS token manager error: %s", e)
             return None
 
     def _headers(self):
@@ -255,7 +255,7 @@ class KISService:
                             }
             return None
         except Exception as e:
-            logger.debug(f"KIS index price {index_code} failed: {e}")
+            logger.debug("KIS index price %s failed: %s", index_code, e)
             return None
 
     def get_index_history(self, index_code: str, period: str = "1y"):
@@ -349,7 +349,7 @@ class KISService:
                 return parsed
             return None
         except Exception as e:
-            logger.debug(f"KIS index history {index_code} failed: {e}")
+            logger.debug("KIS index history %s failed: %s", index_code, e)
             return None
 
     def get_intraday_bars(self, stock_code, timeframe="1"):
@@ -581,7 +581,7 @@ class KISService:
                 headers=headers, params=params, timeout=10,
             )
             if not resp.ok:
-                logger.warning(f"KIS get_order_status HTTP {resp.status_code}")
+                logger.warning("KIS get_order_status HTTP %s", resp.status_code)
                 return {"ok": False, "orders": [], "error": f"HTTP {resp.status_code}"}
 
             data = resp.json()
@@ -804,7 +804,7 @@ class KISService:
                 })
 
             except Exception as e:
-                logger.debug(f"KIS scan skip {code}: {e}")
+                logger.debug("KIS scan skip %s: %s", code, e)
 
         # Held stocks first, then by score
         results.sort(key=lambda x: (-int(x.get("is_held", False)), -x.get("score", 0)))

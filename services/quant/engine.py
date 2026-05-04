@@ -67,7 +67,7 @@ class QuantEngine:
             fmp.prefetch_fundamentals(cls.DISCOVER_POOL)
             cls._pool_prefetched = True
         except Exception as e:
-            logger.warning(f"Discover pool prefetch failed: {e}")
+            logger.warning("Discover pool prefetch failed: %s", e)
 
     def _auto_prefetch_if_needed(self, ticker: str):
         """Auto-trigger pool prefetch on first discover pool ticker analysis.
@@ -488,7 +488,7 @@ class QuantEngine:
             from services import cache_service
             return cache_service.earnings_tone_cache_get(ticker)
         except Exception as e:
-            logger.warning(f"earnings_tone cache lookup failed for {ticker}: {e}")
+            logger.warning("earnings_tone cache lookup failed for %s: %s", ticker, e)
             return None
 
     # ── Technical Analysis ────────────────────────────────────────────────────

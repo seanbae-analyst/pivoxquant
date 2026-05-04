@@ -55,7 +55,7 @@ class DayTradeService:
                 self.available = True
                 logger.info("DayTrade Service initialized (Alpaca)")
             except Exception as e:
-                logger.warning(f"DayTrade init failed: {e}")
+                logger.warning("DayTrade init failed: %s", e)
 
     def get_latest_prices(self):
         """Get latest prices for all day trade pool symbols."""
@@ -77,7 +77,7 @@ class DayTradeService:
                 }
             return result
         except Exception as e:
-            logger.error(f"Latest prices error: {e}")
+            logger.error("Latest prices error: %s", e)
             return {}
 
     def get_intraday_bars(self, ticker, timeframe="5Min", limit=100):
@@ -110,7 +110,7 @@ class DayTradeService:
                 })
             return data
         except Exception as e:
-            logger.error(f"Intraday bars error {ticker}: {e}")
+            logger.error("Intraday bars error %s: %s", ticker, e)
             return []
 
     def analyze_short_term(self, ticker):

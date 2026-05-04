@@ -44,13 +44,13 @@ def _check_current_eps(ticker):
     try:
         from services.data import fmp
     except Exception as e:
-        logger.warning(f"canslim C: fmp_service unavailable: {e}")
+        logger.warning("canslim C: fmp_service unavailable: %s", e)
         return {"value": None, "pass": False, "reason": "fmp_service unavailable"}
 
     try:
         quarterly = fmp.get_quarterly_eps(ticker, quarters=6)
     except Exception as e:
-        logger.warning(f"canslim C fetch failed for {ticker}: {e}")
+        logger.warning("canslim C fetch failed for %s: %s", ticker, e)
         return {"value": None, "pass": False, "reason": "fetch error"}
 
     if not quarterly or len(quarterly) < 5:
@@ -83,13 +83,13 @@ def _check_annual_eps(ticker):
     try:
         from services.data import fmp
     except Exception as e:
-        logger.warning(f"canslim A: fmp_service unavailable: {e}")
+        logger.warning("canslim A: fmp_service unavailable: %s", e)
         return {"value": None, "pass": False, "reason": "fmp_service unavailable"}
 
     try:
         annual = fmp.get_annual_eps(ticker, years=4)
     except Exception as e:
-        logger.warning(f"canslim A fetch failed for {ticker}: {e}")
+        logger.warning("canslim A fetch failed for %s: %s", ticker, e)
         return {"value": None, "pass": False, "reason": "fetch error"}
 
     if not annual or len(annual) < 4:
@@ -146,7 +146,7 @@ def _check_institutional(ticker, closes):
         from services.data import fmp
         data = fmp.get_institutional_ownership(ticker)
     except Exception as e:
-        logger.warning(f"canslim I fetch failed for {ticker}: {e}")
+        logger.warning("canslim I fetch failed for %s: %s", ticker, e)
         data = None
 
     if data and data.get("available"):

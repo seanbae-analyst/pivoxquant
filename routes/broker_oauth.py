@@ -109,7 +109,7 @@ def kis_connect():
             **cleaned,
         )
     except Exception as exc:  # pragma: no cover
-        logger.error(f"kis_connect upsert failed user_id={current_user.id}: {exc}")
+        logger.error("kis_connect upsert failed user_id=%s: %s", current_user.id, exc)
         return jsonify({
             "error": "자격 증명 저장에 실패했습니다.",
             "code": "PERSIST_FAILED",
@@ -377,7 +377,7 @@ def alpaca_connect():
             secret_key=cleaned["secret_key"],
         )
     except Exception as exc:  # pragma: no cover
-        logger.error(f"alpaca_connect upsert failed user_id={current_user.id}: {exc}")
+        logger.error("alpaca_connect upsert failed user_id=%s: %s", current_user.id, exc)
         return jsonify({
             "error": "Could not persist Alpaca credentials.",
             "code": "PERSIST_FAILED",

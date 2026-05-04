@@ -135,7 +135,7 @@ class UserKISService:
             self.app_secret = decrypt(self._conn.encrypted_app_secret)
             self.account_no = decrypt(self._conn.encrypted_account_no)
         except Exception as exc:
-            logger.error(f"UserKIS decrypt failed user_id={user_id}: {exc}")
+            logger.error("UserKIS decrypt failed user_id=%s: %s", user_id, exc)
             raise UserKISError(
                 "DECRYPT_FAILED",
                 "KIS 자격 증명을 복호화할 수 없습니다. 재연결이 필요합니다.",
@@ -224,7 +224,7 @@ class UserKISService:
                 timeout=_REQUEST_TIMEOUT,
             )
         except requests.RequestException as exc:
-            logger.warning(f"UserKIS token HTTP error user_id={self.user_id}: {exc}")
+            logger.warning("UserKIS token HTTP error user_id=%s: %s", self.user_id, exc)
             self._record_failure("broker_down", f"network: {exc}")
             return {
                 "ok": False,
@@ -321,7 +321,7 @@ class UserKISService:
                 timeout=_REQUEST_TIMEOUT,
             )
         except requests.RequestException as exc:
-            logger.warning(f"UserKIS balance HTTP error user_id={self.user_id}: {exc}")
+            logger.warning("UserKIS balance HTTP error user_id=%s: %s", self.user_id, exc)
             self._record_failure("broker_down", f"network: {exc}")
             return {"ok": False, "code": "BROKER_DOWN", "error": "증권사 연결 실패."}
 
@@ -542,7 +542,7 @@ class UserKISService:
             from services import fx_service
             fx_rate = float(fx_service.get_rate() or 0) or 1380.0
         except Exception as exc:  # pragma: no cover — defensive
-            logger.debug(f"fx_service.get_rate failed: {exc}")
+            logger.debug("fx_service.get_rate failed: %s", exc)
             fx_rate = 1380.0
 
         overseas_value_usd = sum(

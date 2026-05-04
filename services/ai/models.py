@@ -56,7 +56,7 @@ def _get_client():
             logger.info("ai_models: Claude client initialized")
             return _client
         except Exception as e:
-            logger.warning(f"ai_models: Claude client init failed: {e}")
+            logger.warning("ai_models: Claude client init failed: %s", e)
             _client = False
             _client_available = False
     else:
@@ -89,7 +89,7 @@ def _claude_json(system_prompt, user_prompt, max_tokens=1500):
         logger.error(f"ai_models: JSON parse error: {e} — raw: {text[:200]}")
         return None
     except Exception as e:
-        logger.error(f"ai_models: Claude call failed: {e}")
+        logger.error("ai_models: Claude call failed: %s", e)
         return None
 
 
@@ -192,7 +192,7 @@ class EarningsCallToneAnalyzer:
                 if content and len(content) > 100:
                     return content
         except Exception as e:
-            logger.warning(f"EarningsCallToneAnalyzer: FMP transcript fetch failed for {ticker}: {e}")
+            logger.warning("EarningsCallToneAnalyzer: FMP transcript fetch failed for %s: %s", ticker, e)
         return None
 
     @classmethod
@@ -380,7 +380,7 @@ class AISectorRotation:
                 from services.container import fetcher
                 macro_data = fetcher.get_enhanced_macro()
             except Exception as e:
-                logger.error(f"AISectorRotation: Failed to fetch macro data: {e}")
+                logger.error("AISectorRotation: Failed to fetch macro data: %s", e)
                 return {"error": "Could not fetch macro data"}, 500
 
         if not macro_data:

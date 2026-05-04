@@ -62,7 +62,7 @@ class UserAlpacaService:
             self.key_id = decrypt(self._conn.encrypted_app_key)
             self.secret_key = decrypt(self._conn.encrypted_app_secret)
         except Exception as exc:
-            logger.error(f"UserAlpaca decrypt failed user_id={user_id}: {exc}")
+            logger.error("UserAlpaca decrypt failed user_id=%s: %s", user_id, exc)
             raise UserAlpacaError(
                 "DECRYPT_FAILED",
                 "Could not decrypt stored Alpaca credentials. Please reconnect.",
@@ -99,7 +99,7 @@ class UserAlpacaService:
         try:
             from alpaca.trading.client import TradingClient  # type: ignore
         except Exception as exc:  # pragma: no cover — missing dep
-            logger.error(f"alpaca-py not importable: {exc}")
+            logger.error("alpaca-py not importable: %s", exc)
             raise UserAlpacaError(
                 "BROKER_DOWN",
                 "Alpaca SDK unavailable on the server.",
@@ -108,7 +108,7 @@ class UserAlpacaService:
         try:
             return TradingClient(self.key_id, self.secret_key, paper=True)
         except Exception as exc:  # pragma: no cover
-            logger.warning(f"Alpaca TradingClient init failed: {exc}")
+            logger.warning("Alpaca TradingClient init failed: %s", exc)
             raise UserAlpacaError(
                 "BROKER_DOWN",
                 "Could not reach Alpaca paper API.",
@@ -131,7 +131,7 @@ class UserAlpacaService:
             return {"ok": False, "code": exc.code, "error": exc.message}
         except Exception as exc:  # auth errors typically surface here
             msg = str(exc)
-            logger.warning(f"Alpaca verify failed user_id={self.user_id}: {msg}")
+            logger.warning("Alpaca verify failed user_id=%s: %s", self.user_id, msg)
             code = "INVALID_CREDENTIALS" if "40" in msg else "BROKER_DOWN"
             self._record_failure(code.lower(), msg)
             return {
