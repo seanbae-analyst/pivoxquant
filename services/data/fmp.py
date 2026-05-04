@@ -143,9 +143,9 @@ def _track_call():
         _daily_calls += 1
         current = _daily_calls
     if current >= _BUDGET_HARD_STOP:
-        logger.warning(f"FMP HARD STOP: {current}/{_FMP_DAILY_SOFT_LIMIT} calls used — blocking further API calls")
+        logger.warning("FMP HARD STOP: %s/%s calls used — blocking further API calls", current, _FMP_DAILY_SOFT_LIMIT)
     elif current >= _BUDGET_STALE_THRESHOLD:
-        logger.warning(f"FMP budget low: {current}/{_FMP_DAILY_SOFT_LIMIT} calls — returning stale cache when available")
+        logger.warning("FMP budget low: %s/%s calls — returning stale cache when available", current, _FMP_DAILY_SOFT_LIMIT)
 
 
 def _is_endpoint_blocked(endpoint):
@@ -189,11 +189,11 @@ def _fmp_get(endpoint, params=None, timeout=5):
         logger.error("FMP_API_KEY not set")
         return None
     if _is_budget_exhausted():
-        logger.warning(f"FMP call blocked (budget exhausted at {_daily_calls}/{_FMP_DAILY_SOFT_LIMIT}): {endpoint}")
+        logger.warning("FMP call blocked (budget exhausted at %s/%s): %s", _daily_calls, _FMP_DAILY_SOFT_LIMIT, endpoint)
         return None
     if _is_endpoint_blocked(endpoint):
         # Endpoint is in 402 cooldown — short-circuit without network call
-        logger.debug(f"FMP {endpoint} skipped (402 cooldown active)")
+        logger.debug("FMP %s skipped (402 cooldown active)", endpoint)
         return None
     _track_call()
     url = f"{FMP_BASE}{endpoint}"
@@ -213,7 +213,7 @@ def _fmp_get(endpoint, params=None, timeout=5):
                 _record_success(endpoint)
                 return r.json()
             if r.status_code == 429:
-                logger.error(f"FMP 429 rate limited on {endpoint} — stopping further calls this cycle")
+                logger.error("FMP 429 rate limited on %s — stopping further calls this cycle", endpoint)
                 with _cache_lock:
                     _daily_calls = max(_daily_calls, _BUDGET_HARD_STOP)
                 return None
@@ -229,23 +229,23 @@ def _fmp_get(endpoint, params=None, timeout=5):
                 )
                 return None
             elif 500 <= r.status_code < 600 and attempts < 2:
-                logger.info(f"FMP {endpoint} returned {r.status_code} — retrying once")
+                logger.info("FMP %s returned %s — retrying once", endpoint, r.status_code)
                 import time as _t
                 _t.sleep(0.3)
                 continue
             else:
-                logger.warning(f"FMP {endpoint} returned {r.status_code}")
+                logger.warning("FMP %s returned %s", endpoint, r.status_code)
                 return None
         except requests.ConnectionError as e:
             if attempts < 2:
-                logger.info(f"FMP {endpoint} ConnectionError ({e}) — retrying once")
+                logger.info("FMP %s ConnectionError (%s) — retrying once", endpoint, e)
                 import time as _t
                 _t.sleep(0.3)
                 continue
-            logger.warning(f"FMP {endpoint} failed after retry: {e}")
+            logger.warning("FMP %s failed after retry: %s", endpoint, e)
             return None
         except Exception as e:
-            logger.warning(f"FMP {endpoint} failed: {e}")
+            logger.warning("FMP %s failed: %s", endpoint, e)
             return None
     return None
 
@@ -503,7 +503,7 @@ def _get_history_kr(ticker, period="3mo"):
     try:
         from services.data import kis_market_adapter as kma
     except Exception as exc:  # pragma: no cover — import path
-        logger.warning(f"kis_market_adapter unavailable: {exc}")
+        logger.warning("kis_market_adapter unavailable: %s", exc)
         _set_cache(cache_key, pd.DataFrame())
         return pd.DataFrame()
 
@@ -790,7 +790,7 @@ def get_info(ticker):
                 if q_eps and not info.get("trailingEps"):
                     info["trailingEps"] = q_eps
         except Exception as e:
-            logger.debug(f"fundamentals quote-fallback failed for {ticker}: {e}")
+            logger.debug("fundamentals quote-fallback failed for %s: %s", ticker, e)
 
     # ── KR fundamentals routing ────────────────────────────────────
     # FMP Starter has no KRX coverage, so US equities fallback-chain
@@ -808,7 +808,7 @@ def get_info(ticker):
                     if v is not None and not info.get(k):
                         info[k] = v
         except Exception as e:
-            logger.debug(f"KR fundamentals routing failed for {ticker}: {e}")
+            logger.debug("KR fundamentals routing failed for %s: %s", ticker, e)
 
     # ── Alpha Vantage fallback (US equities only) ─────────────────
     # FMP Starter omits P/E + EPS on NVDA/MSFT/TSLA/etc. AV free tier
@@ -839,7 +839,7 @@ def get_info(ticker):
                     if v is not None and not info.get(fmp_key):
                         info[fmp_key] = v
         except Exception as e:
-            logger.debug(f"AV fundamentals routing failed for {ticker}: {e}")
+            logger.debug("AV fundamentals routing failed for %s: %s", ticker, e)
 
     # ── Null-cache guard (US only) ─────────────────────────────────
     # If the critical fundamentals are still null for a non-ETF US
@@ -1303,7 +1303,7 @@ def prefetch_fundamentals(tickers):
     if not us_tickers:
         return
 
-    logger.info(f"FMP prefetch: warming cache for {len(us_tickers)} US tickers")
+    logger.info("FMP prefetch: warming cache for %s US tickers", len(us_tickers))
 
     # 1. Batch profiles (1 call per 50 tickers)
     for i in range(0, len(us_tickers), 50):
@@ -1323,7 +1323,7 @@ def prefetch_fundamentals(tickers):
     uncached_ratios = [t for t in us_tickers if not _get_cache(f"ratios_ttm:{t}", TTL_FUNDAMENTAL)]
     uncached_metrics = [t for t in us_tickers if not _get_cache(f"metrics_ttm:{t}", TTL_FUNDAMENTAL)]
     if uncached_ratios or uncached_metrics:
-        logger.info(f"FMP prefetch: {len(uncached_ratios)} ratios + {len(uncached_metrics)} metrics skipped (on-demand fetch preserves daily budget)")
+        logger.info("FMP prefetch: %s ratios + %s metrics skipped (on-demand fetch preserves daily budget)", len(uncached_ratios), len(uncached_metrics))
 
     # 4. Build get_info() cache from already-fetched components
     # This avoids get_info() making 3 sub-calls per ticker later

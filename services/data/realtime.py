@@ -55,7 +55,7 @@ class RealtimeService:
                 self.alpaca_available = True
                 logger.info("Realtime: Alpaca initialized (US stocks)")
             except Exception as e:
-                logger.warning(f"Alpaca init failed: {e}")
+                logger.warning("Alpaca init failed: %s", e)
 
         # Init KIS
         self.kis_key = os.environ.get("KIS_APP_KEY", "").strip()
@@ -69,7 +69,7 @@ class RealtimeService:
         )
         if self.kis_key and self.kis_secret:
             self.kis_available = True
-            logger.info(f"Realtime: KIS initialized (KR stocks) — base={self.kis_base} real={_use_real}")
+            logger.info("Realtime: KIS initialized (KR stocks) — base=%s real=%s", self.kis_base, _use_real)
 
     @staticmethod
     def is_korean(ticker):
@@ -132,7 +132,7 @@ class RealtimeService:
                     tr_req = StockLatestTradeRequest(symbol_or_symbols=us_tickers)
                     trades_map = self.alpaca_client.get_stock_latest_trade(tr_req) or {}
                 except Exception as te:
-                    logger.debug(f"Alpaca batch latest trade failed: {te}")
+                    logger.debug("Alpaca batch latest trade failed: %s", te)
 
                 req = StockLatestBarRequest(symbol_or_symbols=us_tickers)
                 bars = self.alpaca_client.get_stock_latest_bar(req) or {}
@@ -162,7 +162,7 @@ class RealtimeService:
                         "timestamp": ts,
                     }
             except Exception as e:
-                logger.warning(f"Alpaca batch failed: {e}")
+                logger.warning("Alpaca batch failed: %s", e)
 
         # KR: warm up WS subscriptions, then fetch per-ticker
         # (KIS REST doesn't support batch; WS pushes updates into cache)
@@ -223,7 +223,7 @@ class RealtimeService:
                     trade_price = float(trade.price)
                     trade_ts = trade.timestamp
             except Exception as te:
-                logger.debug(f"Alpaca latest trade failed {ticker}: {te}")
+                logger.debug("Alpaca latest trade failed %s: %s", ticker, te)
 
             # Latest quote — captures pre-market / after-hours via bid/ask.
             quote_price = None
@@ -243,7 +243,7 @@ class RealtimeService:
                         quote_price = ask
                     quote_ts = getattr(quote, "timestamp", None)
             except Exception as qe:
-                logger.debug(f"Alpaca latest quote failed {ticker}: {qe}")
+                logger.debug("Alpaca latest quote failed %s: %s", ticker, qe)
 
             # Bar for OHLC.
             req = StockLatestBarRequest(symbol_or_symbols=[ticker])
@@ -273,7 +273,7 @@ class RealtimeService:
                 "timestamp": trade_ts or (bar.timestamp.isoformat() if bar else datetime.now().isoformat()),
             }
         except Exception as e:
-            logger.warning(f"Alpaca price failed {ticker}: {e}")
+            logger.warning("Alpaca price failed %s: %s", ticker, e)
             return None
 
     # ── KIS WebSocket bootstrap (millisecond streaming) ───────
@@ -308,7 +308,7 @@ class RealtimeService:
                 logger.info("Realtime: KIS WebSocket streaming active")
                 return svc
             except Exception as e:
-                logger.warning(f"KIS WS init error: {e} — polling 폴백")
+                logger.warning("KIS WS init error: %s — polling 폴백", e)
                 return None
 
     def _on_ws_tick(self, data: dict):
@@ -328,7 +328,7 @@ class RealtimeService:
             if code.isdigit() and len(code) == 6:
                 self._price_cache[code] = data
         except Exception as e:
-            logger.debug(f"WS tick cache error: {e}")
+            logger.debug("WS tick cache error: %s", e)
 
     def stop_kis_ws(self):
         """Gracefully stop the KIS WebSocket (for shutdown hooks)."""
@@ -352,7 +352,7 @@ class RealtimeService:
             from services.kis.token_manager import get_kis_token_manager
             return get_kis_token_manager().get_token()
         except Exception as e:
-            logger.error(f"KIS token manager error: {e}")
+            logger.error("KIS token manager error: %s", e)
             return None
 
     def _get_kis_price(self, ticker):
@@ -415,7 +415,7 @@ class RealtimeService:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            logger.warning(f"KIS price failed {ticker}: {e}")
+            logger.warning("KIS price failed %s: %s", ticker, e)
             return None
 
     # ── FMP fallback ─────────────────────────────────────────
@@ -465,7 +465,7 @@ class RealtimeService:
         try:
             from services.data import fmp as fmp
         except Exception as e:
-            logger.warning(f"FMP import failed {ticker}: {e}")
+            logger.warning("FMP import failed %s: %s", ticker, e)
             return None
 
         # 1. Normal path — `fmp.get_quote` already layers fresh cache,
@@ -474,7 +474,7 @@ class RealtimeService:
         try:
             q = fmp.get_quote(ticker)
         except Exception as e:
-            logger.warning(f"FMP get_quote failed {ticker}: {e}")
+            logger.warning("FMP get_quote failed %s: %s", ticker, e)
 
         if q and isinstance(q, dict) and q.get("price", 0) and float(q.get("price") or 0) > 0:
             return _format_quote(q, is_stale=False)
@@ -501,7 +501,7 @@ class RealtimeService:
                         )
                         return formatted
         except Exception as e:
-            logger.debug(f"FMP stale cache probe failed {ticker}: {e}")
+            logger.debug("FMP stale cache probe failed %s: %s", ticker, e)
 
         # 3. Truly no data — let the caller decide 404 vs 503.
         return None

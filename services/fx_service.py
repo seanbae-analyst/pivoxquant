@@ -78,7 +78,7 @@ def _fetch_from_fmp() -> float | None:
         if rate and rate > 1000:
             return float(rate)
     except Exception as e:
-        logger.debug(f"FMP FX fetch failed: {e}")
+        logger.debug("FMP FX fetch failed: %s", e)
     return None
 
 
@@ -96,7 +96,7 @@ def _fetch_from_exchangerate_api() -> float | None:
             if rate and rate > 1000:
                 return float(rate)
     except Exception as e:
-        logger.debug(f"exchangerate-api FX fetch failed: {e}")
+        logger.debug("exchangerate-api FX fetch failed: %s", e)
     return None
 
 
@@ -119,11 +119,11 @@ def refresh():
         with _lock:
             _usdkrw = round(rate, 2)
             _usdkrw_ts = now
-        logger.debug(f"FX refreshed: {_usdkrw}")
+        logger.debug("FX refreshed: %s", _usdkrw)
     else:
         # Keep stale rate; do NOT update _usdkrw_ts so is_stale() stays truthful.
         age = int(now - _usdkrw_ts) if _usdkrw_ts else -1
-        logger.debug(f"FX refresh failed; using cached rate {_usdkrw} (age {age}s)")
+        logger.debug("FX refresh failed; using cached rate %s (age %ss)", _usdkrw, age)
 
 
 def init_async():
@@ -135,9 +135,9 @@ def init_async():
             with _lock:
                 _usdkrw = round(rate, 2)
                 _usdkrw_ts = time.time()
-            logger.info(f"USD/KRW initialized: {_usdkrw}")
+            logger.info("USD/KRW initialized: %s", _usdkrw)
         else:
-            logger.warning(f"USD/KRW init failed; using default: {_usdkrw}")
+            logger.warning("USD/KRW init failed; using default: %s", _usdkrw)
     threading.Thread(target=_fetch, daemon=True).start()
 
 
@@ -164,7 +164,7 @@ def _fetch_historical_window(start_iso: str, end_iso: str) -> dict[str, float]:
             {"symbol": "USDKRW", "from": start_iso, "to": end_iso},
         )
     except Exception as e:
-        logger.debug(f"FMP historical FX import/fetch failed: {e}")
+        logger.debug("FMP historical FX import/fetch failed: %s", e)
         return {}
 
     if not data:
@@ -266,7 +266,7 @@ def get_rate_at(d) -> float:
     # 4. Last-resort: spot rate, mark a miss so we don't hammer
     with _hist_lock:
         _hist_miss_ts[key] = time.time()
-    logger.debug(f"FX historical miss for {key}; falling back to spot {get_rate()}")
+    logger.debug("FX historical miss for %s; falling back to spot %s", key, get_rate())
     return get_rate()
 
 
@@ -282,7 +282,7 @@ def _refresh_fx_rate(app):
             with _lock:
                 _usdkrw = round(rate, 2)
                 _usdkrw_ts = now
-            logger.info(f"[fx-scheduler] USD/KRW refreshed: {_usdkrw}")
+            logger.info("[fx-scheduler] USD/KRW refreshed: %s", _usdkrw)
         else:
             age = int(now - _usdkrw_ts) if _usdkrw_ts else -1
             if _usdkrw_ts == 0.0 or age > STALE_SECONDS:

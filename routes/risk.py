@@ -35,7 +35,7 @@ def _user_positions() -> list[Position]:
     try:
         return Position.query.filter_by(user_id=current_user.id).all()
     except Exception as e:
-        logger.warning(f"risk._user_positions failed: {e}")
+        logger.warning("risk._user_positions failed: %s", e)
         return []
 
 
@@ -76,7 +76,7 @@ def _build_returns_matrix(tickers: list[str], days: int = 90):
                 continue
             series[t] = s
         except Exception as e:
-            logger.debug(f"risk: price history skip {t}: {e}")
+            logger.debug("risk: price history skip %s: %s", t, e)
             dropped.append(f"{t}(err)")
 
     if dropped:
@@ -512,7 +512,7 @@ def risk_correlation():
         try:
             c = np.corrcoef(sub.T)
         except Exception as e:
-            logger.warning(f"corr compute failed: {e}")
+            logger.warning("corr compute failed: %s", e)
             return jsonify({"labels": [], "matrix": []})
 
         matrix_out = [[round(float(v), 2) if np.isfinite(v) else 0.0 for v in row]
