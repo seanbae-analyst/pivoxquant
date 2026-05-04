@@ -80,15 +80,14 @@ def test_secret_key_fail_fast_in_production(monkeypatch):
     This test passes after fix/backend-wave1-critical is merged.
     """
     monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://dummy/x")  # avoid DATABASE_URL guard
     monkeypatch.delenv("SECRET_KEY", raising=False)
-    monkeypatch.delenv("DATABASE_URL", raising=False)
 
-    # Remove cached module so reload picks up new env
+    # Remove cached module so re-import triggers the import-time guard
     sys.modules.pop("config", None)
-    import config as config_module  # noqa: F401
 
     with pytest.raises(RuntimeError, match="SECRET_KEY"):
-        importlib.reload(config_module)
+        import config  # noqa: F401  # raises during import when SECRET_KEY missing
 
 
 def test_database_url_fail_fast_in_production(monkeypatch):
@@ -103,10 +102,9 @@ def test_database_url_fail_fast_in_production(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     sys.modules.pop("config", None)
-    import config as config_module  # noqa: F401
 
     with pytest.raises(RuntimeError, match="DATABASE_URL"):
-        importlib.reload(config_module)
+        import config  # noqa: F401  # raises during import when DATABASE_URL missing
 
 
 # ===========================================================================
