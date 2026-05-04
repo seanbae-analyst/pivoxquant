@@ -329,8 +329,9 @@ function SetupStep(props: {
     <section className="space-y-6">
       <SectionLabel n={1} title="The Trade · 거래 개요" />
       <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4">
-        <Field label="Ticker">
+        <Field label="Ticker" htmlFor="pre-trade-ticker">
           <input
+            id="pre-trade-ticker"
             value={ticker}
             onChange={(e) => setTicker(e.target.value)}
             placeholder="AAPL · 005930.KS"
@@ -358,8 +359,9 @@ function SetupStep(props: {
             ))}
           </div>
         </Field>
-        <Field label="Shares (optional)">
+        <Field label="Shares (optional)" htmlFor="pre-trade-shares">
           <input
+            id="pre-trade-shares"
             type="number"
             inputMode="decimal"
             value={sharesText}
@@ -370,8 +372,9 @@ function SetupStep(props: {
         </Field>
       </div>
 
-      <Field label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`}>
+      <Field label={`Thesis · 한 문단 (${MIN_RATIONALE_CHARS}자 이상)`} htmlFor="pre-trade-thesis">
         <textarea
+          id="pre-trade-thesis"
           value={rationale}
           onChange={(e) => setRationale(e.target.value)}
           rows={5}
@@ -695,7 +698,31 @@ function SectionLabel({ n, title }: { n: number; title: string }) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
+  // a11y P2 2026-05-03: support explicit htmlFor + id pattern for SR
+  // compatibility. Falls back to implicit-wrap when no id supplied
+  // (e.g. Side field that wraps a button group, not an input).
+  if (htmlFor) {
+    return (
+      <div className="block">
+        <label
+          htmlFor={htmlFor}
+          className="block text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1"
+        >
+          {label}
+        </label>
+        {children}
+      </div>
+    );
+  }
   return (
     <label className="block">
       <span className="block text-[10px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.5)] mb-1">

@@ -141,7 +141,7 @@ export default function RiskDefensePage() {
                       <span className="font-[var(--font-serif)] text-[18px] tracking-[0.04em] text-[var(--pq-ivory)]">
                         {layer.code}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.65)] tabular-nums">
                         {ordinal} / 07
                       </span>
                     </div>
@@ -210,7 +210,7 @@ export default function RiskDefensePage() {
               </div>
             </div>
           </div>
-          <p className="text-xs text-[rgba(245,240,232,0.48)] mt-3 text-center">
+          <p className="text-xs text-[rgba(245,240,232,0.65)] mt-3 text-center">
             Based on backtested data across 6-month market correction periods. Past performance does not guarantee future results.
           </p>
         </section>

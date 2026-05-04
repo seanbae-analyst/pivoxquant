@@ -799,7 +799,7 @@
   --pq-bronze: #B8956A;
   --pq-bronze-light: #A3845C;      /* Bronze light — underlines, hover accents */
   --pq-bronze-deep:  #6F5636;      /* Bronze deep — locked overlay, embossed seal */
-  --pq-muted: #6B6B6B;
+  --pq-muted: #8A8A8A; /* a11y P2 2026-05-03: contrast bump 3.95:1 → 5.0:1 vs Vantablack */
   --pq-border: rgba(245, 240, 232, 0.1);
   /* Hairline — 0.5px ink rule for dropdowns & editorial dividers on Ivory surfaces. */
   --pq-hairline: rgba(10, 10, 10, 0.12);
