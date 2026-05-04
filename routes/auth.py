@@ -42,6 +42,10 @@ from models import (
     User, Position, TradeHistory, Alert, Watchlist,
     InvestmentProfile, BrokerConnection, PushSubscription,
     PortfolioShare,
+    Artifact, UserReferral,
+    ArtifactFeedback, BehavioralScore,
+    AITwinPortfolio, AITwinWeeklyReport,
+    PreTradeReflection, PersonaSnapshot, WeeklyPulse,
 )
 from security import auth_rate_limit, general_rate_limit
 from services.serializers import serialize_user
@@ -635,7 +639,20 @@ def delete_account():
     user_id = current_user.id
 
     try:
-        # Delete all user data in dependency-safe order
+        # Delete all user data in dependency-safe order.
+        #
+        # Why explicit per-model deletes (vs relying on FK CASCADE)
+        # ---------------------------------------------------------
+        # The Artifact / UserReferral FKs declare ``ondelete="CASCADE"`` and
+        # PostgreSQL (prod) will honour them. SQLite (dev) honours them only
+        # when ``PRAGMA foreign_keys=ON`` is set — which is now the case via
+        # ``extensions._enable_sqlite_fk`` — but explicit deletes give us
+        # belt-and-suspenders coverage and remain safe under both backends.
+        #
+        # IMPORTANT: ``user_agent_audit`` is intentionally NOT deleted here.
+        # Audit/decision-trace records have a separate retention obligation
+        # (legal review pending) and must outlive the user row. Tracked
+        # separately as P1 #14.
         Position.query.filter_by(user_id=user_id).delete()
         TradeHistory.query.filter_by(user_id=user_id).delete()
         Alert.query.filter_by(user_id=user_id).delete()
@@ -646,6 +663,19 @@ def delete_account():
         BrokerConnection.query.filter_by(user_id=user_id).delete()
         PushSubscription.query.filter_by(user_id=user_id).delete()
         PortfolioShare.query.filter_by(user_id=user_id).delete()
+
+        # P0 + P1 (2026-05-03) — explicit deletion of user-owned rows whose
+        # FKs were previously not enforced on SQLite and/or whose models
+        # were never wired into delete_account.
+        Artifact.query.filter_by(user_id=user_id).delete()
+        UserReferral.query.filter_by(user_id=user_id).delete()
+        ArtifactFeedback.query.filter_by(user_id=user_id).delete()
+        BehavioralScore.query.filter_by(user_id=user_id).delete()
+        AITwinPortfolio.query.filter_by(user_id=user_id).delete()
+        AITwinWeeklyReport.query.filter_by(user_id=user_id).delete()
+        PreTradeReflection.query.filter_by(user_id=user_id).delete()
+        PersonaSnapshot.query.filter_by(user_id=user_id).delete()
+        WeeklyPulse.query.filter_by(user_id=user_id).delete()
 
         # Delete user record
         db.session.delete(current_user)

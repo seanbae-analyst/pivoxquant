@@ -420,6 +420,13 @@ def _do_migrations():
     _add_column_if_missing("artifacts", "sent_at", "TIMESTAMP")
     _add_column_if_missing("artifacts", "opened_at", "TIMESTAMP")
     _add_column_if_missing("artifacts", "share_token", "VARCHAR(32)")
+    # Migration 025 (SendGrid Event Webhook tracking) — keep the runtime
+    # ADD COLUMN guard in sync so legacy SQLite DBs (created before
+    # alembic was the canonical migrator) don't blow up on the first
+    # write to ``bounced_at`` / ``unsubscribed_at`` / ``sg_message_id``.
+    _add_column_if_missing("artifacts", "bounced_at", "TIMESTAMP")
+    _add_column_if_missing("artifacts", "unsubscribed_at", "TIMESTAMP")
+    _add_column_if_missing("artifacts", "sg_message_id", "VARCHAR(128)")
 
     # Broker connections — Week 1 (2026-04-18) added AES-256-GCM encrypted
     # credential columns. HIGH RISK of ProgrammingError on legacy DBs.

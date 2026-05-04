@@ -13,7 +13,7 @@ class BrokerConnection(db.Model):
     __tablename__ = "broker_connections"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     broker = db.Column(db.String(20), nullable=False)       # alpaca / kis / kiwoom
     access_token = db.Column(db.Text)                       # legacy (Alpaca)
     refresh_token = db.Column(db.Text)                      # legacy (Alpaca)
@@ -50,3 +50,10 @@ class BrokerConnection(db.Model):
             "consecutive_failures": self.consecutive_failures or 0,
             "has_credentials": bool(self.encrypted_app_key and self.encrypted_app_secret),
         }
+
+    __table_args__ = (
+        # One row per (user, broker). Enforced at the DB layer in
+        # migration 026.
+        db.UniqueConstraint("user_id", "broker",
+                             name="uq_broker_connections_user_broker"),
+    )

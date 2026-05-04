@@ -39,7 +39,7 @@ class UserReferral(db.Model):
     __tablename__ = "user_referrals"
 
     id            = db.Column(db.Integer,    primary_key=True)
-    user_id       = db.Column(db.Integer,    db.ForeignKey("users.id"),
+    user_id       = db.Column(db.Integer,    db.ForeignKey("users.id", ondelete="CASCADE"),
                               nullable=False, unique=True, index=True)
     referral_code = db.Column(db.String(16), nullable=False, unique=True, index=True)
     created_at    = db.Column(db.DateTime,   default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)

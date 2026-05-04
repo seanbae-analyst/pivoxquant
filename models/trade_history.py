@@ -5,7 +5,7 @@ from extensions import db
 class TradeHistory(db.Model):
     __tablename__ = "trade_history"
     id              = db.Column(db.Integer,  primary_key=True)
-    user_id         = db.Column(db.Integer,  db.ForeignKey("users.id"), nullable=False)
+    user_id         = db.Column(db.Integer,  db.ForeignKey("users.id"), nullable=False, index=True)
     ticker          = db.Column(db.String(20))
     name            = db.Column(db.String(100), default="")
     action          = db.Column(db.String(10))   # BUY | SELL
