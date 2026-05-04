@@ -170,7 +170,7 @@ export function MarketTicker() {
       />
       <div className="absolute inset-y-0 left-0 z-30 flex items-center pl-4 pr-3">
         <span
-          className="font-serif text-[9.5px] uppercase whitespace-nowrap"
+          className="font-serif text-[11px] uppercase whitespace-nowrap"
           style={{
             letterSpacing: "0.24em",
             color: "var(--pq-bronze)",
