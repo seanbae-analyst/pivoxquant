@@ -147,7 +147,7 @@ def _fetch_history_long(ticker: str, start: date):
                 df[col] = 0
         return df
     except Exception as e:
-        logger.warning(f"long-window fetch failed {ticker}: {e}")
+        logger.warning("long-window fetch failed %s: %s", ticker, e)
         return fetcher.get_price_history(ticker, period="5y")
 
 
@@ -444,7 +444,7 @@ def _simulate_benchmark(
     try:
         hist = _fetch_history_long(bench_ticker, start)
     except Exception as e:
-        logger.warning(f"benchmark fetch failed {bench_ticker}: {e}")
+        logger.warning("benchmark fetch failed %s: %s", bench_ticker, e)
         return None
 
     chart, invested, _shares, _fbp, _fbd = _compute_shares_series(
@@ -565,7 +565,7 @@ def counterfactual():
     try:
         hist = _fetch_history_long(ticker, start)
     except Exception as e:
-        logger.error(f"counterfactual fetch failed {ticker}: {e}")
+        logger.error("counterfactual fetch failed %s: %s", ticker, e)
         return _error(
             "DATA_UNAVAILABLE",
             "가격 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",

@@ -423,7 +423,7 @@ class Backtester:
                     logger.warning(f"{ticker}: suspicious {pct_chg*100:.0f}% daily move at index {ci} — possible split/data error")
             if abs(bh_return) > 500:
                 data_warning = f"Buy-and-hold return of {bh_return:.1f}% is unusually high. Data may contain unadjusted splits."
-                logger.warning(f"{ticker}: {data_warning}")
+                logger.warning("%s: %s", ticker, data_warning)
 
             wins = [t for t in trades if t.get("action") == "SELL" and t.get("pnl", 0) > 0]
             losses = [t for t in trades if t.get("action") == "SELL" and t.get("pnl", 0) <= 0]
@@ -521,7 +521,7 @@ class Backtester:
             }
 
         except Exception as e:
-            logger.error(f"Backtest error {ticker}: {e}")
+            logger.error("Backtest error %s: %s", ticker, e)
             return None
 
     @staticmethod

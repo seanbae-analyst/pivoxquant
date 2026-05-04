@@ -80,7 +80,7 @@ def _cache_ticker_async(app, ticker: str, capital: float):
             try:
                 cache_service.cache_ticker(ticker, capital, engine)
             except Exception as e:
-                logger.error(f"Background cache_ticker failed {ticker}: {e}")
+                logger.error("Background cache_ticker failed %s: %s", ticker, e)
 
     threading.Thread(target=_run, daemon=True).start()
 

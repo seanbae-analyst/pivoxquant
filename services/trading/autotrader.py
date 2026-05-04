@@ -117,7 +117,7 @@ class AutoTrader:
                 self.available = True
                 logger.info(f"AutoTrader initialized (Paper Trading) — Equity: ${self._initial_equity:,.2f}")
             except Exception as e:
-                logger.warning(f"AutoTrader init failed: {e}")
+                logger.warning("AutoTrader init failed: %s", e)
 
     def set_kis(self, kis_service):
         """Set KIS service for Korean stock data."""
@@ -136,7 +136,7 @@ class AutoTrader:
         self._logs.append(entry)
         if len(self._logs) > 200:
             self._logs = self._logs[-200:]
-        logger.info(f"[AutoTrader] {msg}")
+        logger.info("[AutoTrader] %s", msg)
 
     # ── Control ───────────────────────────────────────────
 

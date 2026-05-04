@@ -68,7 +68,7 @@ def discover():
                     r["name"] = resolve_stock_name(ticker) or ticker
             return r
         except Exception as e:
-            logger.warning(f"Discover skip {ticker}: {e}")
+            logger.warning("Discover skip %s: %s", ticker, e)
             return None
 
     results = []
@@ -169,7 +169,7 @@ def market_overview():
                 entry["proxy_ticker"] = data["proxy_ticker"]
             result.append(entry)
     except Exception as e:
-        logger.warning(f"discover.market-overview upstream failed: {e}")
+        logger.warning("discover.market-overview upstream failed: %s", e)
 
     if len(result) < 3:
         logger.warning(
@@ -220,7 +220,7 @@ def movers():
         gainers = [_fmt(r) for r in filtered[:10]]
         losers  = [_fmt(r) for r in list(reversed(filtered))[:10]]
     except Exception as e:
-        logger.debug(f"discover.movers live path skip: {e}")
+        logger.debug("discover.movers live path skip: %s", e)
 
     if len(gainers) < 3 or len(losers) < 3:
         logger.warning(
@@ -271,7 +271,7 @@ def sectors():
                 "m1":     round(d1 * 5.0, 2),
             })
     except Exception as e:
-        logger.warning(f"discover.sectors upstream failed: {e}")
+        logger.warning("discover.sectors upstream failed: %s", e)
 
     # Bug G (2026-04-24): FMP's sector-performance endpoint returns a full
     # list of 11 GICS sectors with `"0%"` on market-closed windows. We

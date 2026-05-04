@@ -125,4 +125,4 @@ def cache_ticker(ticker: str, capital: float, engine):
         if r:
             save_signal(ticker, r)
     except Exception as e:
-        logger.error(f"Cache update failed {ticker}: {e}")
+        logger.error("Cache update failed %s: %s", ticker, e)

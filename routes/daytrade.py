@@ -31,7 +31,7 @@ def scan():
             us_results = daytrade.scan_momentum() or []
             results.extend(us_results)
         except Exception as e:
-            logger.warning(f"US scan error: {e}")
+            logger.warning("US scan error: %s", e)
 
     try:
         from services.kis.service import KISService
@@ -50,7 +50,7 @@ def scan():
             kr_results = kis.scan_momentum(held_tickers=held_kr) or []
             results.extend(kr_results)
     except Exception as e:
-        logger.warning(f"KR scan error: {e}")
+        logger.warning("KR scan error: %s", e)
 
     if not results and not daytrade.available:
         return jsonify({"error": "Day trade not configured (Alpaca API key missing)"}), 503
@@ -160,7 +160,7 @@ def analyze(ticker):
                 "is_korean": True, "regime_profile": "",
             })
         except Exception as e:
-            logger.warning(f"KR daytrade error {ticker}: {e}")
+            logger.warning("KR daytrade error %s: %s", ticker, e)
         return jsonify({"error": f"No data for {ticker}"}), 404
 
     if not daytrade.available:
