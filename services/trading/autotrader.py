@@ -480,7 +480,7 @@ class AutoTrader:
 
                 score = analysis.get("score", 0)
                 price = analysis.get("price", 0)
-                rsi = None  # RSI is embedded in tech_score now
+                # RSI is embedded in tech_score now — no separate rsi variable needed
 
                 # Buy conditions — full quant score (Tech 30% + Fund 20% + News 10% + Quant 40%)
                 if score >= self.BUY_SCORE_MIN and price > 0:
@@ -695,7 +695,7 @@ class AutoTrader:
             # Use limit order at slightly below market price for reliable fills
             limit_price = round(price * 0.995, 2)  # 0.5% below current price
 
-            order = self.api.submit_order(
+            self.api.submit_order(
                 LimitOrderRequest(
                     symbol=symbol,
                     qty=shares,
