@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "render:samples": "node scripts/render-sample-pdfs.mjs --all",
+    "render:sample": "node scripts/render-sample-pdfs.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
