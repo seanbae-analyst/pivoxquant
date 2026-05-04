@@ -167,3 +167,79 @@ def test_export_empty_user_returns_valid_payload(client, auth_user):
     assert body["alerts"] == []
     assert body["investment_profile"] is None
     assert body["user"]["email"] == auth_user["email"]
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Wave 10 P2 — email opt-out flag must round-trip into the export
+# ─────────────────────────────────────────────────────────────────────
+
+
+def test_export_reflects_email_opt_out_state(app, client, auth_user):
+    """The export's ``user.email_opt_out`` must mirror the live DB column.
+
+    Why: PIPA §35 열람권 requires the user be able to *see* every
+    recorded consent state. Marketing opt-out is one of those — if
+    the export lies about it, the user cannot audit their own consents.
+    """
+    from extensions import db
+    from models import User
+
+    # Default: opt-out flags are False — confirm export agrees.
+    resp = client.get("/api/profile/export")
+    body = json.loads(resp.data)
+    assert body["user"]["email_opt_out"] is False
+    assert body["user"]["email_opt_out_earnings"] is False
+
+    # Flip both flags directly in DB (mimics a one-click unsubscribe).
+    with app.app_context():
+        u = db.session.get(User, auth_user["id"])
+        u.email_opt_out = True
+        u.email_opt_out_earnings = True
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    body = json.loads(resp.data)
+    assert body["user"]["email_opt_out"] is True
+    assert body["user"]["email_opt_out_earnings"] is True
+
+
+def test_export_excludes_password_and_payment_secrets_strictly(
+    app, client, auth_user,
+):
+    """Belt-and-braces — even when a user has an oauth_provider set, the
+    export must not leak any of the documented sensitive fields.
+
+    Complements the existing 'forbidden set' check by exercising a row
+    that actually has values for the secret columns rather than relying
+    on them being None on a freshly-built test user.
+    """
+    from extensions import db
+    from models import User
+
+    with app.app_context():
+        u = db.session.get(User, auth_user["id"])
+        # Populate every documented-excluded field to make sure the
+        # serializer does not pick them up via __dict__ iteration.
+        u.stripe_customer_id = "cus_TEST_DO_NOT_LEAK"
+        u.oauth_provider = "google"
+        u.oauth_id = "google_TEST_DO_NOT_LEAK"
+        db.session.commit()
+
+    resp = client.get("/api/profile/export")
+    assert resp.status_code == 200
+    body = json.loads(resp.data)
+    raw = resp.get_data(as_text=True)
+    # No sensitive *values* appear anywhere in the body — not in the
+    # user block, not in metadata, not as JSON keys.
+    assert "cus_TEST_DO_NOT_LEAK" not in raw
+    assert "google_TEST_DO_NOT_LEAK" not in raw
+    # The user block must not contain ANY of the secret keys. Note: the
+    # ``notes.excluded_fields`` array deliberately *names* these fields
+    # in plain text — that's a metadata documentation array, not a leak.
+    user_keys = set(body["user"].keys())
+    forbidden = {
+        "password_hash", "stripe_customer_id", "oauth_id",
+        "oauth_refresh_token", "refresh_token",
+    }
+    leaked = forbidden & user_keys
+    assert not leaked, f"Secret keys leaked into user block: {leaked}"
