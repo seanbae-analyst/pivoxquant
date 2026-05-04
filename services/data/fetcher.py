@@ -411,7 +411,7 @@ class DataFetcher:
 
             headlines = "\n".join(f"- {n['title']}" for n in news[:8])
 
-            client = anthropic.Anthropic(api_key=api_key)
+            client = anthropic.Anthropic(api_key=api_key, timeout=15.0, max_retries=1)
             resp = client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=300,

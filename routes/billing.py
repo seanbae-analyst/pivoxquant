@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 billing_bp = Blueprint("billing", __name__, url_prefix="/api/billing")
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+# Network resilience: cap default 80s timeout to 10s and limit retries to 2.
+# Prevents long-tail latency on Stripe API outages from blocking checkout flow.
+stripe.max_network_retries = 2
+stripe.api_request_timeout = 10
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICE_PRO = os.environ.get("STRIPE_PRICE_PRO", "")
 STRIPE_PRICE_PREMIUM = os.environ.get("STRIPE_PRICE_PREMIUM", "")

@@ -200,31 +200,54 @@ def _fmp_get(endpoint, params=None, timeout=5):
     p = {"apikey": FMP_KEY}
     if params:
         p.update(params)
-    try:
-        r = requests.get(url, params=p, timeout=timeout)
-        if r.status_code == 200:
-            _record_success(endpoint)
-            return r.json()
-        if r.status_code == 429:
-            logger.error(f"FMP 429 rate limited on {endpoint} — stopping further calls this cycle")
-            with _cache_lock:
-                _daily_calls = max(_daily_calls, _BUDGET_HARD_STOP)
-        elif r.status_code == 402:
-            # 402 = FMP plan-gated endpoint OR per-second rate limit (10/sec on free plan).
-            # Don't count this against the daily budget — the call wasn't served.
-            with _cache_lock:
-                _daily_calls = max(0, _daily_calls - 1)
-            _record_402(endpoint)
-            logger.warning(
-                f"FMP {endpoint} returned 402 (plan-gated or rate limited) — "
-                f"caller should fall back to Alpaca/KIS"
-            )
-        else:
-            logger.warning(f"FMP {endpoint} returned {r.status_code}")
-        return None
-    except Exception as e:
-        logger.warning(f"FMP {endpoint} failed: {e}")
-        return None
+
+    # Single 1-shot retry on 5xx or ConnectionError. 429/402 NEVER retried —
+    # 429 stops the cycle, 402 cools the endpoint. Retry doesn't increment
+    # daily call counter (already tracked above) but does sleep 0.3s.
+    attempts = 0
+    while attempts < 2:
+        attempts += 1
+        try:
+            r = requests.get(url, params=p, timeout=timeout)
+            if r.status_code == 200:
+                _record_success(endpoint)
+                return r.json()
+            if r.status_code == 429:
+                logger.error(f"FMP 429 rate limited on {endpoint} — stopping further calls this cycle")
+                with _cache_lock:
+                    _daily_calls = max(_daily_calls, _BUDGET_HARD_STOP)
+                return None
+            elif r.status_code == 402:
+                # 402 = FMP plan-gated endpoint OR per-second rate limit (10/sec on free plan).
+                # Don't count this against the daily budget — the call wasn't served.
+                with _cache_lock:
+                    _daily_calls = max(0, _daily_calls - 1)
+                _record_402(endpoint)
+                logger.warning(
+                    f"FMP {endpoint} returned 402 (plan-gated or rate limited) — "
+                    f"caller should fall back to Alpaca/KIS"
+                )
+                return None
+            elif 500 <= r.status_code < 600 and attempts < 2:
+                logger.info(f"FMP {endpoint} returned {r.status_code} — retrying once")
+                import time as _t
+                _t.sleep(0.3)
+                continue
+            else:
+                logger.warning(f"FMP {endpoint} returned {r.status_code}")
+                return None
+        except requests.ConnectionError as e:
+            if attempts < 2:
+                logger.info(f"FMP {endpoint} ConnectionError ({e}) — retrying once")
+                import time as _t
+                _t.sleep(0.3)
+                continue
+            logger.warning(f"FMP {endpoint} failed after retry: {e}")
+            return None
+        except Exception as e:
+            logger.warning(f"FMP {endpoint} failed: {e}")
+            return None
+    return None
 
 
 def endpoint_is_blocked(endpoint):

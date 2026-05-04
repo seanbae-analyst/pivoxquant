@@ -97,7 +97,7 @@ class AIService:
         if api_key:
             try:
                 import anthropic
-                self.client = anthropic.Anthropic(api_key=api_key)
+                self.client = anthropic.Anthropic(api_key=api_key, timeout=20.0, max_retries=1)
                 self.available = True
                 logger.info("AI Service initialized (Claude Haiku)")
             except Exception as e:

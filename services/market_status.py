@@ -42,6 +42,71 @@ KR_REG_CLOSE = time(15, 30)
 KR_AFTER_OPEN = time(15, 40)
 KR_AFTER_CLOSE = time(18, 0)
 
+# KR market holidays (KRX 휴장일).
+# 거래소 공식 휴장일 — 공휴일 + 대체공휴일 + 임시휴장.
+# 갱신: 매년 12월 KRX 발표 후 다음 연도 추가.
+# Format: (year, month, day) -> 사유 (Korean).
+KR_HOLIDAYS = {
+    # 2026
+    (2026, 1, 1): "신정",
+    (2026, 2, 16): "설날 연휴",
+    (2026, 2, 17): "설날",
+    (2026, 2, 18): "설날 연휴",
+    (2026, 3, 1): "삼일절",
+    (2026, 3, 2): "삼일절 대체공휴일",  # 삼일절이 일요일
+    (2026, 5, 5): "어린이날",
+    (2026, 5, 15): "부처님오신날",  # 정확한 음력 4월 8일
+    (2026, 6, 3): "공직선거",  # 21대 대선 (가능성)
+    (2026, 6, 6): "현충일",
+    (2026, 8, 15): "광복절",
+    (2026, 8, 17): "광복절 대체공휴일",  # 광복절이 토요일
+    (2026, 9, 24): "추석 연휴",
+    (2026, 9, 25): "추석",
+    (2026, 9, 26): "추석 연휴",
+    (2026, 9, 28): "추석 대체공휴일",  # 9/26이 토요일이라 월요일 대체
+    (2026, 10, 3): "개천절",
+    (2026, 10, 5): "개천절 대체공휴일",  # 개천절이 토요일
+    (2026, 10, 9): "한글날",
+    (2026, 12, 25): "성탄절",
+    (2026, 12, 31): "연말 휴장",
+    # 2027 (잠정 — 공식 발표 전)
+    (2027, 1, 1): "신정",
+    (2027, 2, 5): "설날 연휴",
+    (2027, 2, 8): "설날",
+    (2027, 2, 9): "설날 연휴",
+    (2027, 3, 1): "삼일절",
+    (2027, 5, 5): "어린이날",
+    (2027, 5, 13): "부처님오신날",  # 음력 4월 8일 (잠정)
+    (2027, 6, 7): "현충일 대체공휴일",  # 현충일(6/6)이 일요일
+    (2027, 8, 16): "광복절 대체공휴일",  # 광복절(8/15)이 일요일
+    (2027, 9, 14): "추석 연휴",
+    (2027, 9, 15): "추석",
+    (2027, 9, 16): "추석 연휴",
+    (2027, 10, 4): "개천절 대체공휴일",  # 개천절(10/3)이 일요일
+    (2027, 10, 11): "한글날 대체공휴일",  # 한글날(10/9)이 토요일
+    (2027, 12, 25): "성탄절",
+    (2027, 12, 31): "연말 휴장",
+}
+
+
+def is_kr_holiday(dt: datetime) -> tuple[bool, str]:
+    """Return (is_holiday, reason). dt는 KST 기준이어야 함."""
+    key = (dt.year, dt.month, dt.day)
+    if key in KR_HOLIDAYS:
+        return True, KR_HOLIDAYS[key]
+    return False, ""
+
+
+def _next_kr_trading_day(dt: datetime) -> datetime:
+    """Return the next KR trading day (skip weekends + holidays). dt는 KST."""
+    candidate = dt + timedelta(days=1)
+    # Cap to 14 days lookahead to avoid infinite loops on bad data.
+    for _ in range(14):
+        if candidate.weekday() < 5 and not is_kr_holiday(candidate)[0]:
+            return candidate
+        candidate += timedelta(days=1)
+    return candidate
+
 
 def _to_kst_str(dt: datetime) -> str:
     return dt.astimezone(KST).strftime("%H:%M")
@@ -100,9 +165,20 @@ def _kr_status_now() -> dict:
     t = now_kst.time()
     today_kst = now_kst.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    # Holiday check (highest priority — overrides time-of-day status).
+    is_hol, hol_reason = is_kr_holiday(now_kst)
+    if is_hol:
+        next_trading = _next_kr_trading_day(today_kst)
+        next_open = next_trading.replace(hour=KR_PRE_OPEN.hour, minute=KR_PRE_OPEN.minute)
+        return {"status": S_CLOSED, "label": f"휴장 ({hol_reason})", "next_event": "장 시작 전",
+                "next_event_kst": _to_kst_str(next_open), "tradable": False}
+
     if weekday >= 5:
         days_until_mon = 2 if weekday == 5 else 1
         next_open = today_kst + timedelta(days=days_until_mon)
+        # Skip holidays after weekend.
+        while is_kr_holiday(next_open)[0]:
+            next_open += timedelta(days=1)
         next_open = next_open.replace(hour=KR_PRE_OPEN.hour, minute=KR_PRE_OPEN.minute)
         return {"status": S_CLOSED, "label": "주말", "next_event": "장 시작 전",
                 "next_event_kst": _to_kst_str(next_open), "tradable": False}
@@ -124,7 +200,7 @@ def _kr_status_now() -> dict:
             next_kst = today_kst.replace(hour=KR_PRE_OPEN.hour, minute=KR_PRE_OPEN.minute)
         else:
             next_day = today_kst + timedelta(days=1)
-            while next_day.weekday() >= 5:
+            while next_day.weekday() >= 5 or is_kr_holiday(next_day)[0]:
                 next_day += timedelta(days=1)
             next_kst = next_day.replace(hour=KR_PRE_OPEN.hour, minute=KR_PRE_OPEN.minute)
         return {"status": S_CLOSED, "label": LABELS_KR[S_CLOSED], "next_event": "장 시작 전",

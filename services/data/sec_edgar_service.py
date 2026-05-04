@@ -96,32 +96,53 @@ class SECEdgarService:
 
     @classmethod
     def _http_get(cls, url: str, *, as_xml: bool = False) -> Any | None:
-        """GET with SEC-compliant headers, rate-limit, and safe error handling."""
+        """GET with SEC-compliant headers, rate-limit, and safe error handling.
+
+        Single 1-shot retry on 5xx or ConnectionError (0.5s sleep). 4xx
+        responses (404, 429) are NOT retried — they're deterministic.
+        Throttle (_MIN_REQUEST_INTERVAL) applied before EACH attempt to
+        respect SEC's 10 req/s cap even on retry.
+        """
         if _requests is None:
             logger.warning("requests not installed; SEC EDGAR disabled")
             return None
-        cls._throttle()
-        try:
-            resp = _requests.get(
-                url,
-                headers=_XML_HEADERS if as_xml else _HEADERS,
-                timeout=15,
-            )
-        except Exception as exc:  # pragma: no cover — network layer
-            logger.warning("SEC EDGAR request failed (%s): %s", url, exc)
-            return None
-        if resp.status_code != 200:
-            logger.warning(
-                "SEC EDGAR non-200 (%s): %s", resp.status_code, url
-            )
-            return None
-        if as_xml:
-            return resp.text
-        try:
-            return resp.json()
-        except ValueError:
-            logger.warning("SEC EDGAR JSON parse failed: %s", url)
-            return None
+        attempts = 0
+        while attempts < 2:
+            attempts += 1
+            cls._throttle()
+            try:
+                resp = _requests.get(
+                    url,
+                    headers=_XML_HEADERS if as_xml else _HEADERS,
+                    timeout=15,
+                )
+            except _requests.ConnectionError as exc:
+                if attempts < 2:
+                    logger.info("SEC EDGAR ConnectionError (%s) — retrying once", exc)
+                    time.sleep(0.5)
+                    continue
+                logger.warning("SEC EDGAR request failed after retry (%s): %s", url, exc)
+                return None
+            except Exception as exc:  # pragma: no cover — network layer
+                logger.warning("SEC EDGAR request failed (%s): %s", url, exc)
+                return None
+            if 500 <= resp.status_code < 600 and attempts < 2:
+                logger.info("SEC EDGAR %s on %s — retrying once", resp.status_code, url)
+                time.sleep(0.5)
+                continue
+            if resp.status_code != 200:
+                logger.warning(
+                    "SEC EDGAR non-200 (%s): %s", resp.status_code, url
+                )
+                return None
+            if as_xml:
+                return resp.text
+            try:
+                return resp.json()
+            except ValueError:
+                logger.warning("SEC EDGAR JSON parse failed: %s", url)
+                return None
+        return None
 
     # ── Cache helpers ─────────────────────────────────────────────────────────
     @staticmethod
