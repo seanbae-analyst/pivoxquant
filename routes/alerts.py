@@ -85,7 +85,7 @@ def unread_count():
         ).count()
     except Exception:
         logger.exception("alerts.unread_count failed")
-        return jsonify({"count": 0}), 500
+        return jsonify({"error": "Failed to load unread count", "count": 0}), 500
     return jsonify({"count": int(count)})
 
 
