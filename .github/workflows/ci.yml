@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: ["**"]
 
+# Cancel older runs on the same branch/PR when a new push arrives.
+# Saves minutes on rapid-push branches. schedule/workflow_dispatch keep
+# their own group so they never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
     name: Backend — lint

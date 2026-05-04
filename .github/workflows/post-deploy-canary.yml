@@ -5,6 +5,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Only one canary run matters per deploy. Cancel the previous one if a
+# new push to main arrives before the 180s sleep window completes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   issues: write
   contents: read
@@ -12,6 +18,7 @@ permissions:
 jobs:
   canary:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
