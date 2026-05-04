@@ -348,7 +348,8 @@ const fieldInputStyle: React.CSSProperties = {
   outline: "none",
   color: "var(--pq-ivory)",
   fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
-  fontSize: 14,
+  // 16px to prevent iOS Safari/Chrome auto-zoom on input focus
+  fontSize: 16,
   letterSpacing: "0.01em",
 };
 

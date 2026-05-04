@@ -1328,6 +1328,13 @@ button:hover > .pq-ink-pill,
   outline: 1px solid var(--pq-bronze-light);
   outline-offset: 2px;
 }
+/* Mobile: 44px touch target (WCAG 2.5.5 / Apple HIG) */
+@media (max-width: 767px) {
+  .pq-ink-btn-bronze {
+    height: 44px;
+    padding: 0 20px;
+  }
+}
 
 /* Ghost button on ink — ivory hairline border */
 .pq-ink-btn-ghost {
@@ -1422,6 +1429,12 @@ button:hover > .pq-ink-pill,
 .pq-ink-input:focus {
   outline: none;
   border-color: var(--pq-bronze);
+}
+/* Mobile: 16px to prevent iOS Safari/Chrome auto-zoom on focus */
+@media (max-width: 767px) {
+  .pq-ink-input {
+    font-size: 16px;
+  }
 }
 
 /* Empty state block on ink */

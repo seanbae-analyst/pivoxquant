@@ -239,7 +239,8 @@ export function SignalsFilterBar({
               borderRadius: "var(--pq-radius-cta, 2px)",
               padding: "8px 10px",
               fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
-              fontSize: 12,
+              // 16px to prevent iOS Safari/Chrome auto-zoom on input focus
+              fontSize: 16,
               color: "var(--pq-ivory, #F5F0E8)",
               letterSpacing: "0.04em",
               outline: "none",
