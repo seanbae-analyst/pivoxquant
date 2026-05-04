@@ -247,6 +247,12 @@ export function EquityCurveChart({
 
   /* ── Chart ── */
 
+  const firstRow = rows[0];
+  const lastRow = rows[rows.length - 1];
+  const directionLabel =
+    totalChangePct >= 0 ? "상승 ▲ up" : "하락 ▼ down";
+  const ariaLabel = `Portfolio equity curve, 3 months, ${rows.length} points, ${fmtTooltipMoney(firstRow.value, currency)} (${firstRow.date}) to ${fmtTooltipMoney(lastRow.value, currency)} (${lastRow.date}), ${totalChangePct >= 0 ? "+" : ""}${totalChangePct.toFixed(2)}% ${directionLabel}`;
+
   return (
     <div
       style={{
@@ -254,7 +260,17 @@ export function EquityCurveChart({
         border: "1px solid var(--pq-hairline-ink)",
         padding: "8px 4px 4px 4px",
       }}
+      role="img"
+      aria-label={ariaLabel}
     >
+      {/* Screen-reader-only data summary fallback */}
+      <span className="sr-only">
+        3-month portfolio equity curve. Window start{" "}
+        {fmtTooltipMoney(firstRow.value, currency)} on {firstRow.date}. Window
+        end {fmtTooltipMoney(lastRow.value, currency)} on {lastRow.date}.
+        Net change {totalChangePct >= 0 ? "+" : ""}
+        {totalChangePct.toFixed(2)} percent ({directionLabel}).
+      </span>
       <ResponsiveContainer width="100%" height={height}>
         <AreaChart
           data={rows}

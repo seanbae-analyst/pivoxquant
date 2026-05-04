@@ -147,8 +147,26 @@ export function WhatIfChart({
   const ChartEl = showInvestedLine ? ComposedChart : AreaChart;
   const isSparse = buyPoints.length > 0 && buyPoints.length < 40;
 
+  const firstPt = prepared[0];
+  const lastPt = prepared[prepared.length - 1];
+  const netDelta = lastPt.value - firstPt.value;
+  const netPct =
+    firstPt.value > 0 ? (netDelta / firstPt.value) * 100 : 0;
+  const directionLabel = netDelta >= 0 ? "상승 ▲ up" : "하락 ▼ down";
+  const ariaLabel = `What-if simulator growth chart, ${prepared.length} data points from ${firstPt.label} to ${lastPt.label}, ${fmtFull(firstPt.value, currency)} to ${fmtFull(lastPt.value, currency)} (${netPct >= 0 ? "+" : ""}${netPct.toFixed(1)}% ${directionLabel})${showInvestedLine ? `, with cumulative invested principal overlay${buyPoints.length > 0 ? ` and ${buyPoints.length} buy markers` : ""}` : ""}.`;
+
   return (
-    <div className="w-full overflow-hidden">
+    <div
+      className="w-full overflow-hidden"
+      role="img"
+      aria-label={ariaLabel}
+    >
+      <span className="sr-only">
+        Simulated portfolio value from {firstPt.label} (
+        {fmtFull(firstPt.value, currency)}) to {lastPt.label} (
+        {fmtFull(lastPt.value, currency)}). Net {netPct >= 0 ? "+" : ""}
+        {netPct.toFixed(1)} percent ({directionLabel}).
+      </span>
       <ResponsiveContainer width="100%" height={320} maxHeight={400}>
         <ChartEl
           data={prepared}

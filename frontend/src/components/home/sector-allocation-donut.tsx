@@ -227,6 +227,12 @@ export function SectorAllocationDonut({
 
   /* ── Donut + legend ── */
 
+  const topSectors = rows
+    .slice(0, 3)
+    .map((r) => `${r.sector} ${r.pct.toFixed(1)}%`)
+    .join(", ");
+  const ariaLabel = `Sector allocation donut chart, ${rows.length} sectors, total ${fmtMoney(totalValue, currency)}. Top: ${topSectors}.`;
+
   return (
     <div
       style={{
@@ -238,9 +244,11 @@ export function SectorAllocationDonut({
         gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.1fr)",
         gap: 12,
       }}
+      role="img"
+      aria-label={ariaLabel}
     >
       {/* ── Donut ── */}
-      <div style={{ position: "relative", minWidth: 0 }}>
+      <div style={{ position: "relative", minWidth: 0 }} aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
