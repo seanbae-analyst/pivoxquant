@@ -52,12 +52,33 @@ def serialize_trade(t) -> dict:
     }
 
 
+def _strip_signal_bracket_prefix(text: str | None) -> str | None:
+    """Defensive scrub: drop the legacy ``[POSITIVE]`` / ``[NEGATIVE]`` /
+    ``[NEUTRAL]`` bracket prefix that older alert_service rows persisted
+    into ``Alert.message`` / ``Alert.title``.
+
+    The structured ``signal`` field is what the UI badges off, so the
+    in-string enum was always redundant. Older rows still carry it; this
+    serializer strip keeps the API response clean during the rollout
+    window without touching the DB.
+    """
+    if not text:
+        return text
+    for prefix in ("[POSITIVE] ", "[NEGATIVE] ", "[NEUTRAL] "):
+        if text.startswith(prefix):
+            return text[len(prefix):]
+    return text
+
+
 def serialize_alert(a) -> dict:
     # Resolve once per alert. Cache-backed via services.name_resolver so
     # a list render costs ~O(unique tickers) DB hits at worst.
     name = _resolve_display_name(a.ticker) if a.ticker else None
     kind = getattr(a, "kind", None)
-    title = getattr(a, "title", None) or a.message or ""
+    raw_msg = a.message or ""
+    raw_title = getattr(a, "title", None) or raw_msg
+    title = _strip_signal_bracket_prefix(raw_title)
+    message = _strip_signal_bracket_prefix(raw_msg)
     return {
         "id": a.id,
         "ticker": a.ticker,
@@ -69,7 +90,7 @@ def serialize_alert(a) -> dict:
         "link": getattr(a, "link", None),
         "read_at": a.read_at.isoformat() if getattr(a, "read_at", None) else None,
         # Legacy fields
-        "message": a.message,
+        "message": message,
         "signal": a.signal,
         "score": a.score,
         "rec_shares": a.rec_shares,

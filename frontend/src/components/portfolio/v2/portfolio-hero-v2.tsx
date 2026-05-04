@@ -227,9 +227,9 @@ export function PortfolioHeroV2({
                 : undefined
             }
             tone={
-              todayPnl == null
+              todayPnl == null || todayPnl === 0
                 ? "neutral"
-                : todayPnl >= 0
+                : todayPnl > 0
                   ? "positive"
                   : "negative"
             }
@@ -238,9 +238,9 @@ export function PortfolioHeroV2({
             label="Unrealized"
             value={fmtMoneySigned(unrealized, navCurrency, loading)}
             tone={
-              unrealized == null
+              unrealized == null || unrealized === 0
                 ? "neutral"
-                : unrealized >= 0
+                : unrealized > 0
                   ? "positive"
                   : "negative"
             }
@@ -249,9 +249,9 @@ export function PortfolioHeroV2({
             label="Realized YTD"
             value={fmtMoneySigned(realizedYtd, navCurrency, loading)}
             tone={
-              realizedYtd == null
+              realizedYtd == null || realizedYtd === 0
                 ? "neutral"
-                : realizedYtd >= 0
+                : realizedYtd > 0
                   ? "positive"
                   : "negative"
             }
