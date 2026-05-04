@@ -2,7 +2,10 @@ name: Daily Legal Scan
 
 on:
   schedule:
-    - cron: '15 0 * * *'  # 00:15 UTC = 09:15 KST
+    # 2026-05-03 cost reduction: was daily (30 runs/mo), now Monday-only (4 runs/mo).
+    # Legal token patterns change infrequently; weekly cadence is sufficient.
+    # daily-api-smoke + legal-guard.yml (PR gate) cover interim regressions.
+    - cron: '15 0 * * 1'  # Monday 00:15 UTC = 09:15 KST
   workflow_dispatch:
 
 permissions:
