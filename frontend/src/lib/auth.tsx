@@ -4,9 +4,10 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useMemo,
   useState,
 } from "react";
+import useSWR from "swr";
 import { apiFetch } from "./api";
 import { API } from "./endpoints";
 
@@ -33,40 +34,69 @@ interface AuthCtx {
   refresh: () => Promise<void>;
 }
 
+interface MeResponse {
+  authenticated: boolean;
+  user?: User;
+}
+
 const AuthContext = createContext<AuthCtx | null>(null);
 
+// 2026-05-02: Railway cold-start could push /api/auth/me to ~10s on
+// the first call after idle, exceeding the implicit Vercel proxy
+// window and leaving the SPA stuck on its loading splash forever.
+// Hard-cap the auth probe at 8s so the UI always unblocks — a
+// timeout means "treat as unauthenticated for now"; the next 5-min
+// refresh will pick up the warm-cache response when Railway is up.
+const meFetcher = async (url: string): Promise<MeResponse> => {
+  const ctrl = new AbortController();
+  const timeoutId = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    return await apiFetch<MeResponse>(url, { signal: ctrl.signal });
+  } catch {
+    // Treat any failure (timeout / network / 401) as unauthenticated so the
+    // UI shell unblocks. A subsequent refresh will pick up the real state.
+    return { authenticated: false };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  // 2026-05-03: P1 fix — replace raw setInterval(refresh, 5min) with useSWR.
+  // React Strict Mode double-mounts the provider, which doubled the raw
+  // setInterval and produced the "7x duplicate /api/auth/me" pattern flagged
+  // by verify-ux. SWR dedupes concurrent in-flight requests and respects
+  // refreshInterval/dedupingInterval globally per cache key.
+  const { data, isLoading, mutate } = useSWR<MeResponse>(
+    API.auth.me,
+    meFetcher,
+    {
+      refreshInterval: 5 * 60 * 1000, // 5 min — matches prior cadence
+      dedupingInterval: 60 * 1000, // collapse duplicate calls within 60s
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      errorRetryCount: 2,
+      // The fetcher already converts errors to { authenticated: false } so
+      // SWR will not retry-storm on auth failures.
+    },
+  );
+
+  // Local override for logout — clears the user immediately without waiting
+  // for the network round-trip, mirroring the previous setUser(null) behavior.
+  const [logoutPending, setLogoutPending] = useState(false);
+
+  const user: User | null = logoutPending
+    ? null
+    : data?.authenticated
+      ? (data.user ?? null)
+      : null;
+
+  // Match prior semantics: loading is true only on the very first fetch.
+  const loading = isLoading && !data;
 
   const refresh = useCallback(async () => {
-    // 2026-05-02: Railway cold-start could push /api/auth/me to ~10s on
-    // the first call after idle, exceeding the implicit Vercel proxy
-    // window and leaving the SPA stuck on its loading splash forever.
-    // Hard-cap the auth probe at 8s so the UI always unblocks — a
-    // timeout means "treat as unauthenticated for now"; the next 5-min
-    // refresh will pick up the warm-cache response when Railway is up.
-    const ctrl = new AbortController();
-    const timeoutId = setTimeout(() => ctrl.abort(), 8000);
-    try {
-      const data = await apiFetch<{ authenticated: boolean; user?: User }>(
-        API.auth.me,
-        { signal: ctrl.signal },
-      );
-      setUser(data.authenticated ? (data.user ?? null) : null);
-    } catch {
-      setUser(null);
-    } finally {
-      clearTimeout(timeoutId);
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-    const interval = setInterval(refresh, 5 * 60 * 1000); // Refresh session every 5 min
-    return () => clearInterval(interval);
-  }, [refresh]);
+    await mutate();
+  }, [mutate]);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -74,9 +104,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      await refresh();
+      setLogoutPending(false);
+      await mutate();
     },
-    [refresh],
+    [mutate],
   );
 
   const signup = useCallback(
@@ -85,9 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         body: JSON.stringify({ email, password, name }),
       });
-      await refresh();
+      setLogoutPending(false);
+      await mutate();
     },
-    [refresh],
+    [mutate],
   );
 
   const logout = useCallback(async () => {
@@ -109,15 +141,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn("logout request failed (clearing local state anyway):", err);
       }
     } finally {
-      setUser(null);
+      setLogoutPending(true);
+      // Force the SWR cache to drop the authenticated payload so any
+      // subsequent revalidation reflects the logged-out state.
+      await mutate({ authenticated: false }, { revalidate: false });
     }
-  }, []);
+  }, [mutate]);
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, refresh }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthCtx>(
+    () => ({ user, loading, login, signup, logout, refresh }),
+    [user, loading, login, signup, logout, refresh],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
