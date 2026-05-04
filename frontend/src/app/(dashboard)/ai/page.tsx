@@ -512,7 +512,7 @@ export default function AiPage() {
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgba(245,240,232,0.5)]" />
                   </div>
-                  <span className="text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+                  <span className="text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.65)]">
                     {userTickers.length} symbol{userTickers.length === 1 ? "" : "s"} eligible
                   </span>
                 </div>

@@ -188,12 +188,14 @@ export default function SignupPageV2() {
   };
 
   const consentRowStyle: React.CSSProperties = {
+    // a11y P2 2026-05-03: vertical padding 14px expands hit area to >=44px
+    // (16px box + 28px padding). Negative margin preserves visual layout.
     display: "flex",
     alignItems: "flex-start",
     gap: 12,
     cursor: "pointer",
-    padding: 4,
-    margin: -4,
+    padding: "14px 4px",
+    margin: "-14px -4px",
     borderRadius: 4,
     transition: "box-shadow 200ms cubic-bezier(0.16,1,0.3,1)",
   };

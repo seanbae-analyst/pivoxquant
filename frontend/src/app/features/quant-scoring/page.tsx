@@ -185,7 +185,7 @@ export default function QuantScoringPage() {
                       <span className="font-[var(--font-serif)] text-[18px] tracking-[0.04em] text-[var(--pq-ivory)]">
                         {pillar.code}
                       </span>
-                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.48)] tabular-nums">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.65)] tabular-nums">
                         {ordinal} / 04
                       </span>
                     </div>
