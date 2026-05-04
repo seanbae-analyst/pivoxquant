@@ -256,7 +256,7 @@ def add_position():
                 thesis_status="pending" if thesis else "pending",
             ))
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         logger.exception("add_position DB commit failed")
         return jsonify({"error": "Failed to save position"}), 500
@@ -648,7 +648,7 @@ def list_positions_alias():
     """Simpler positions list tailored to the new frontend shape."""
     try:
         return jsonify({"positions": _build_positions_list()})
-    except Exception as e:
+    except Exception:
         logger.exception("list_positions_alias failed")
         return jsonify({"error": "Failed to load positions"}), 500
 
@@ -733,7 +733,7 @@ def portfolio_summary_alias():
             "fxRate": rate,
             "positionCount": len(positions),
         })
-    except Exception as e:
+    except Exception:
         logger.exception("portfolio_summary_alias failed")
         return jsonify({"error": "Failed to load summary"}), 500
 
@@ -769,7 +769,7 @@ def list_trades_alias():
                 "currency": t.currency or "USD",
             })
         return jsonify({"trades": trades})
-    except Exception as e:
+    except Exception:
         logger.exception("list_trades_alias failed")
         return jsonify({"error": "Failed to load trades"}), 500
 
@@ -830,7 +830,7 @@ def create_position_alias():
             )
             db.session.add(new_pos)
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         logger.exception("create_position_alias commit failed")
         return jsonify({"error": "Failed to save position"}), 500
@@ -879,7 +879,7 @@ def patch_position_alias(pid):
 
     try:
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         logger.exception("patch_position_alias failed")
         return jsonify({"error": "Failed to update"}), 500
@@ -896,7 +896,7 @@ def delete_position_alias(pid):
     try:
         db.session.delete(p)
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         logger.exception("delete_position_alias failed")
         return jsonify({"error": "Failed to delete"}), 500
@@ -961,7 +961,7 @@ def create_trade_alias():
         ))
         try:
             db.session.commit()
-        except Exception as e:
+        except Exception:
             db.session.rollback()
             logger.exception("create_trade_alias buy failed")
             return jsonify({"error": "Failed to record trade"}), 500
@@ -1003,7 +1003,7 @@ def create_trade_alias():
     ))
     try:
         db.session.commit()
-    except Exception as e:
+    except Exception:
         db.session.rollback()
         logger.exception("create_trade_alias sell failed")
         return jsonify({"error": "Failed to record trade"}), 500

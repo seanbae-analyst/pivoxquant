@@ -98,8 +98,6 @@ def _existing_unique_names(inspector, table: str) -> set:
 def upgrade() -> None:
     conn = op.get_bind()
     inspector = sa.inspect(conn)
-    bind_dialect = conn.dialect.name
-
     # ── 1. watchlist (user_id, ticker) UNIQUE ──────────────────────────
     wl_uniques = _existing_unique_names(inspector, "watchlist")
     if "uq_watchlist_user_ticker" not in wl_uniques:
