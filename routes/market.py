@@ -102,7 +102,7 @@ def search_stocks():
                 try:
                     parsed = resp.json()
                 except Exception as e:
-                    logger.warning(f"FMP search JSON parse failed: {e}")
+                    logger.warning("FMP search JSON parse failed: %s", e)
                     parsed = None
                 # Stable returns list[dict] on success. Legacy v3 would
                 # have returned {"Error Message": ...}; guard both.
@@ -129,9 +129,9 @@ def search_stocks():
                         f"FMP search returned error payload: {parsed.get('Error Message')}"
                     )
             else:
-                logger.warning(f"FMP search HTTP {resp.status_code}")
+                logger.warning("FMP search HTTP %s", resp.status_code)
         except Exception as e:
-            logger.warning(f"FMP search failed: {e}")
+            logger.warning("FMP search failed: %s", e)
 
     # 3) Fallback: match popular US tickers locally when FMP unavailable
     if not fmp_ok:
@@ -288,7 +288,7 @@ def get_fx_rates():
             "ttl_seconds": 60,
         })
     except Exception as e:
-        logger.error(f"FX endpoint error: {e}")
+        logger.error("FX endpoint error: %s", e)
         return jsonify({"error": "Unable to fetch FX rate"}), 500
 
 
@@ -369,7 +369,7 @@ def chart_data(ticker):
                         "observed_at": data[-1]["date"] if data else None,
                     }
             except Exception as e:
-                logger.warning(f"Alpaca intraday chart failed {ticker}: {e}")
+                logger.warning("Alpaca intraday chart failed %s: %s", ticker, e)
 
         # US daily (1mo+) — Alpaca primary via fetcher.get_price_history() (which already
         # routes Alpaca -> FMP fallback). For KR, same fetcher routes KIS -> FMP fallback.
@@ -387,7 +387,7 @@ def chart_data(ticker):
                             "data": data, "source": source,
                             "observed_at": data[-1]["date"] if data else None}
             except Exception as e:
-                logger.warning(f"Primary chart source failed {ticker}: {e}")
+                logger.warning("Primary chart source failed %s: %s", ticker, e)
 
         # Final fallback — FMP directly (indices, or when primaries failed).
         # Use original ticker — FMP stable accepts BRK-B and BRK.B forms.
@@ -405,7 +405,7 @@ def chart_data(ticker):
             return {"ticker": ticker, "period": period, "data": data, "source": "fmp",
                     "observed_at": data[-1]["date"] if data else None}
         except Exception as e:
-            logger.error(f"Chart FMP fallback error {ticker}: {e}")
+            logger.error("Chart FMP fallback error %s: %s", ticker, e)
             return None
 
     # Run chart fetch with a 6s hard wall-clock deadline.
@@ -417,10 +417,10 @@ def chart_data(ticker):
             fut = pool.submit(_fetch_chart)
             result = fut.result(timeout=6)
     except FuturesTimeout:
-        logger.warning(f"chart_data hard timeout (6s) for {ticker}/{period}")
+        logger.warning("chart_data hard timeout (6s) for %s/%s", ticker, period)
         result = None
     except Exception as e:
-        logger.error(f"Chart error {ticker}: {e}")
+        logger.error("Chart error %s: %s", ticker, e)
         result = None
 
     if result:
@@ -539,7 +539,7 @@ def company_profile(ticker):
             "currency": "KRW" if is_korean else "USD",
         })
     except Exception as e:
-        logger.error(f"Profile error {ticker}: {e}")
+        logger.error("Profile error %s: %s", ticker, e)
         return jsonify({"error": "Unable to fetch company profile"}), 500
 
 
@@ -597,7 +597,7 @@ def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
         if q and q.get("price"):
             level = float(q["price"])
     except Exception as e:
-        logger.debug(f"market.indices lookup {etf} failed: {e}")
+        logger.debug("market.indices lookup %s failed: %s", etf, e)
 
     # 2) History for sparkline + 52W + fallback level / change.
     #    Same engine as /api/chart/<ticker>?period=1y.
@@ -612,7 +612,7 @@ def _etf_snapshot(etf: str, display: str, ticker_alias: str) -> dict | None:
             if len(c):
                 closes = c
     except Exception as e:
-        logger.debug(f"market.indices history {etf} failed: {e}")
+        logger.debug("market.indices history %s failed: %s", etf, e)
 
     # Staleness guard (same policy as `_kis_index_snapshot`): reject any
     # history whose tail diverges from the live level by >30%. Protects
@@ -708,7 +708,7 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
                     )
                 break
     except Exception as e:
-        logger.debug(f"market.indices KIS {kis_code} failed: {e}")
+        logger.debug("market.indices KIS %s failed: %s", kis_code, e)
 
     # 2) History for sparkline + 52W + fallback level / change.
     #
@@ -750,7 +750,7 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
                     hist_source = "kis"
                     break
     except Exception as e:
-        logger.debug(f"market.indices KIS history {kis_code} failed: {e}")
+        logger.debug("market.indices KIS history %s failed: %s", kis_code, e)
 
     # 2b) FMP fallback ONLY when KIS history unavailable.
     if closes is None or len(closes) == 0:
@@ -762,7 +762,7 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
                     closes = c
                     hist_source = "fmp"
         except Exception as e:
-            logger.debug(f"market.indices fmp history {ticker} failed: {e}")
+            logger.debug("market.indices fmp history %s failed: %s", ticker, e)
 
     # 2c) Staleness guard — only meaningful when BOTH level and history
     # are available. If the tail of history diverges from the live level
@@ -921,7 +921,7 @@ def market_indices():
                             fx_closes = c
                             break
             except Exception as e:
-                logger.debug(f"market.indices USDKRW history failed: {e}")
+                logger.debug("market.indices USDKRW history failed: %s", e)
 
             if fx_closes is not None and len(fx_closes):
                 # Staleness guard mirrors the KR-index one: FMP USDKRW is
@@ -996,5 +996,5 @@ def dividend_data(ticker):
             "five_yr_avg_yield": None,
         })
     except Exception as e:
-        logger.error(f"Dividend error {ticker}: {e}")
+        logger.error("Dividend error %s: %s", ticker, e)
         return jsonify({"has_dividend": False, "error": "Unable to fetch dividend data"})

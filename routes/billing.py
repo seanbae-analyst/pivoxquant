@@ -130,7 +130,7 @@ def create_checkout():
         )
         return jsonify({"url": session.url})
     except stripe.StripeError as e:
-        logger.error(f"Stripe checkout error: {e}")
+        logger.error("Stripe checkout error: %s", e)
         return jsonify({"error": "Failed to create checkout session."}), 500
 
 
@@ -205,17 +205,17 @@ def _handle_checkout_completed(session_data):
             try:
                 user = db.session.get(User, int(user_id))
             except (ValueError, TypeError):
-                logger.error(f"Webhook: Invalid user_id in metadata: {user_id}")
+                logger.error("Webhook: Invalid user_id in metadata: %s", user_id)
                 user = None
     if not user:
-        logger.error(f"Webhook: No user found for customer {customer_id}")
+        logger.error("Webhook: No user found for customer %s", customer_id)
         return
 
     user.stripe_subscription_id = subscription_id
     user.subscription_tier = PLAN_TIERS.get(plan, "pro")
     user.subscription_status = "active"
     db.session.commit()
-    logger.info(f"User {user.id} subscribed to {plan}")
+    logger.info("User %s subscribed to %s", user.id, plan)
 
 
 def _handle_subscription_updated(subscription):
@@ -242,7 +242,7 @@ def _handle_subscription_updated(subscription):
         user.subscription_status = "inactive"
 
     db.session.commit()
-    logger.info(f"User {user.id} subscription updated: {status}")
+    logger.info("User %s subscription updated: %s", user.id, status)
 
 
 def _handle_subscription_deleted(subscription):
@@ -256,7 +256,7 @@ def _handle_subscription_deleted(subscription):
     user.subscription_status = "inactive"
     user.stripe_subscription_id = None
     db.session.commit()
-    logger.info(f"User {user.id} subscription deleted")
+    logger.info("User %s subscription deleted", user.id)
 
 
 def _handle_invoice_payment_failed(invoice):
@@ -332,7 +332,7 @@ def create_portal():
         )
         return jsonify({"url": session.url})
     except stripe.StripeError as e:
-        logger.error(f"Stripe portal error: {e}")
+        logger.error("Stripe portal error: %s", e)
         return jsonify({"error": "Failed to create portal session."}), 500
 
 

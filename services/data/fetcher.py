@@ -42,7 +42,7 @@ try:
             _alpaca_hist_available = True
             logger.info("DataFetcher: Alpaca historical client initialized (US price source)")
 except Exception as e:
-    logger.warning(f"DataFetcher: Alpaca init failed, will use FMP for US prices: {e}")
+    logger.warning("DataFetcher: Alpaca init failed, will use FMP for US prices: %s", e)
 
 # ── Korean Stock Registry ──────────────────────────────────────────────────────
 KOREAN_NAMES = {
@@ -245,7 +245,7 @@ class DataFetcher:
                 "volume": int(bar.volume) if bar else 0,
             }
         except Exception as e:
-            logger.debug(f"Alpaca latest quote failed {ticker}: {e}")
+            logger.debug("Alpaca latest quote failed %s: %s", ticker, e)
             return None
 
     def quick_lookup(self, ticker: str) -> "dict | None":
@@ -281,7 +281,7 @@ class DataFetcher:
                     if kis_data and kis_data.get("price"):
                         price = kis_data["price"]
                 except Exception as kis_err:
-                    logger.warning(f"KIS lookup failed {ticker}: {kis_err}")
+                    logger.warning("KIS lookup failed %s: %s", ticker, kis_err)
             else:
                 # US stocks: Alpaca first (unlimited), FMP fallback only if Alpaca fails
                 alp = self._alpaca_latest_quote(ticker)
@@ -329,7 +329,7 @@ class DataFetcher:
                 "is_korean":     self.is_korean(ticker),
             }
         except Exception as e:
-            logger.error(f"Quick lookup failed {ticker}: {e}")
+            logger.error("Quick lookup failed %s: %s", ticker, e)
             return None
 
     # ── Per-Ticker News ───────────────────────────────────────────────────────
@@ -353,7 +353,7 @@ class DataFetcher:
                 from services.news_service import get_news_naver
                 return get_news_naver(ticker)[:15]
             except Exception as ex:
-                logger.warning(f"Naver news failed {ticker}: {ex}")
+                logger.warning("Naver news failed %s: %s", ticker, ex)
                 return []
 
         # US branch — FMP only (paid, commercial-safe)
@@ -375,7 +375,7 @@ class DataFetcher:
                     "source":    entry.get("site", "FMP"),
                 })
         except Exception as ex:
-            logger.warning(f"FMP news fetch failed {ticker}: {ex}")
+            logger.warning("FMP news fetch failed %s: %s", ticker, ex)
 
         return items[:15]
 
@@ -447,7 +447,7 @@ Reply ONLY in this exact JSON format, nothing else:
                 "msg_kr": f"AI 뉴스 분석: {data.get('reason_kr', sentiment)} (점수 {score:.0f})"
             }]
         except Exception as e:
-            logger.debug(f"AI news scoring failed for {ticker}: {e}")
+            logger.debug("AI news scoring failed for %s: %s", ticker, e)
             return None
 
     def _score_news_keywords(self, ticker: str, news: list) -> tuple[float, list[dict]]:
@@ -502,7 +502,7 @@ Reply ONLY in this exact JSON format, nothing else:
         try:
             raw = fmp.get_general_news(limit=24) or []
         except Exception as ex:
-            logger.debug(f"FMP general news failed: {ex}")
+            logger.debug("FMP general news failed: %s", ex)
             raw = []
 
         for item in raw:
@@ -687,7 +687,7 @@ Reply ONLY in this exact JSON format, nothing else:
                         idx_data[sym] = (float(q["price"]),
                                           float(q.get("changesPercentage") or 0))
             except Exception as _ama_err:
-                logger.warning(f"Alpaca fallback failed: {_ama_err}")
+                logger.warning("Alpaca fallback failed: %s", _ama_err)
 
         # Equity indices — the ETF proxy price IS the level we publish. The
         # UI shows a single number + % change; using SPY=$708 instead of
@@ -790,7 +790,7 @@ Reply ONLY in this exact JSON format, nothing else:
                             "change_pct": self._safe(idx.get("change_pct", 0)),
                         }
             except Exception as e:
-                logger.debug(f"KIS index fetch failed: {e}")
+                logger.debug("KIS index fetch failed: %s", e)
 
         # FMP fallback for KR indices (rarely works on free tier)
         for sym, key, sanity in [
@@ -994,7 +994,7 @@ Reply ONLY in this exact JSON format, nothing else:
             try:
                 info = fmp.get_info(ticker) or {}
             except Exception as e:
-                logger.warning(f"fmp.get_info failed for {ticker}: {e}")
+                logger.warning("fmp.get_info failed for %s: %s", ticker, e)
                 info = {}
 
             # Use get_price_history() which routes through KIS for KR, Alpaca for US
@@ -1009,7 +1009,7 @@ Reply ONLY in this exact JSON format, nothing else:
                     if kis_data and kis_data.get("price"):
                         cur = float(kis_data["price"])
                 except Exception as kis_err:
-                    logger.warning(f"KIS snapshot price failed {ticker}: {kis_err}")
+                    logger.warning("KIS snapshot price failed %s: %s", ticker, kis_err)
             else:
                 # US: Alpaca primary (unlimited), FMP fallback on Alpaca failure
                 alp = self._alpaca_latest_quote(ticker)
@@ -1060,7 +1060,7 @@ Reply ONLY in this exact JSON format, nothing else:
                 "is_korean":      is_kr,
             }
         except Exception as e:
-            logger.error(f"Snapshot failed {ticker}: {e}")
+            logger.error("Snapshot failed %s: %s", ticker, e)
             return None
 
     _history_cache = {}  # {(ticker, period): (timestamp, data)}
@@ -1175,11 +1175,11 @@ Reply ONLY in this exact JSON format, nothing else:
                 if col not in df.columns:
                     df[col] = 0
 
-            logger.debug(f"Alpaca historical: {ticker} returned {len(df)} bars")
+            logger.debug("Alpaca historical: %s returned %s bars", ticker, len(df))
             return df
 
         except Exception as e:
-            logger.warning(f"Alpaca historical failed for {ticker}: {e}")
+            logger.warning("Alpaca historical failed for %s: %s", ticker, e)
             return None
 
     @staticmethod
@@ -1297,7 +1297,7 @@ Reply ONLY in this exact JSON format, nothing else:
             return df
 
         except Exception as e:
-            logger.warning(f"KIS historical failed for {ticker}: {e}")
+            logger.warning("KIS historical failed for %s: %s", ticker, e)
             return None
 
     def get_prices_batch(self, tickers: list[str]) -> dict:
@@ -1330,7 +1330,7 @@ Reply ONLY in this exact JSON format, nothing else:
                             "source":        "alpaca",
                         }
             except Exception as e:
-                logger.warning(f"Alpaca batch price fetch failed: {e}")
+                logger.warning("Alpaca batch price fetch failed: %s", e)
 
         # KR: KIS via realtime service (iterates internally)
         if kr_tickers:
@@ -1347,7 +1347,7 @@ Reply ONLY in this exact JSON format, nothing else:
                             "source":        p.get("source", "kis"),
                         }
             except Exception as e:
-                logger.warning(f"KIS batch price fetch failed: {e}")
+                logger.warning("KIS batch price fetch failed: %s", e)
 
         # FMP fallback for any ticker still missing
         missing = [t for t in tickers if t not in result]
@@ -1366,7 +1366,7 @@ Reply ONLY in this exact JSON format, nothing else:
                             "source":        "fmp",
                         }
             except Exception as e:
-                logger.debug(f"FMP batch fallback failed: {e}")
+                logger.debug("FMP batch fallback failed: %s", e)
 
         return result
 
@@ -1415,7 +1415,7 @@ Reply ONLY in this exact JSON format, nothing else:
                             "price":      round(float(q["price"]), 2),
                         })
             except Exception as exc:
-                logger.warning(f"Alpaca sector fallback failed: {exc}")
+                logger.warning("Alpaca sector fallback failed: %s", exc)
         return result
 
     # ── Pre-warm Cache ────────────────────────────────────────────────────────

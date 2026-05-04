@@ -42,7 +42,7 @@ def _compliance_filter(text, lang="en"):
         if _is_compliant(text):
             return text
     except Exception as e:  # pragma: no cover
-        logger.warning(f"Compliance check failed, returning disclaimer: {e}")
+        logger.warning("Compliance check failed, returning disclaimer: %s", e)
     logger.warning("AI response blocked by compliance filter; replacing with disclaimer.")
     return _DISCLAIMER_KR if lang == "kr" else _DISCLAIMER_EN
 
@@ -101,7 +101,7 @@ class AIService:
                 self.available = True
                 logger.info("AI Service initialized (Claude Haiku)")
             except Exception as e:
-                logger.warning(f"AI Service init failed: {e}")
+                logger.warning("AI Service init failed: %s", e)
 
     # ── Context Builders ──────────────────────────────────────────
 
@@ -316,7 +316,7 @@ Use these EXACT markers:
                 "commentary_kr": _compliance_filter(kr, "kr"),
             })
         except Exception as e:
-            logger.error(f"Commentary error: {e}")
+            logger.error("Commentary error: %s", e)
             return None
 
     def generate_morning_summary(self, brief_data):
@@ -359,7 +359,7 @@ Top Headlines:
                 "summary_kr": _compliance_filter(kr, "kr"),
             })
         except Exception as e:
-            logger.error(f"Morning summary error: {e}")
+            logger.error("Morning summary error: %s", e)
             return None
 
     def generate_coaching(self, portfolio_context):
@@ -393,7 +393,7 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean. Do NOT cu
                 "insight_kr": _compliance_filter(kr, "kr"),
             })
         except Exception as e:
-            logger.error(f"Coaching error: {e}")
+            logger.error("Coaching error: %s", e)
             return None
 
     def generate_swot(self, analysis_data):
@@ -434,7 +434,7 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
                 "swot_kr": _compliance_filter(kr, "kr"),
             })
         except Exception as e:
-            logger.error(f"SWOT error: {e}")
+            logger.error("SWOT error: %s", e)
             return None
 
     def generate_competitor_analysis(self, analysis_data, peers_data):
@@ -483,7 +483,7 @@ Peers in same sector:
                 "analysis_kr": _compliance_filter(kr, "kr"),
             })
         except Exception as e:
-            logger.error(f"Competitor analysis error: {e}")
+            logger.error("Competitor analysis error: %s", e)
             return None
 
     # NOTE: generate_brief_insight() removed 2026-04-29 along with the
@@ -533,5 +533,5 @@ Stocks in {sector}:
                 "sector": sector,
             })
         except Exception as e:
-            logger.error(f"Sector trend error: {e}")
+            logger.error("Sector trend error: %s", e)
             return None
