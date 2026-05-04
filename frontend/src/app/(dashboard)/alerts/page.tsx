@@ -309,76 +309,144 @@ export default function AlertsPage() {
         ) : (
           // Bare hairline table — drop the rounded card wrapper that was
           // out of step with /portfolio v2, /risk v2, /signals, /discover.
-          <div className="overflow-x-auto">
-            <table className="pq-ink-table w-full min-w-[520px]">
-              <thead>
-                <tr>
-                  <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
-                    Time
-                  </th>
-                  <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
-                    Kind
-                  </th>
-                  <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
-                    Title
-                  </th>
-                  <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
-                    Ticker
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((a) => (
-                  <tr
-                    key={a.id}
-                    onClick={() => handleAlertClick(a)}
-                    className="cursor-pointer"
-                  >
-                    <td className="px-5 py-3 text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
-                      {relativeTime(a.created_at)}
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+          // Mobile (P2 Wave B): card layout to avoid horizontal scroll.
+          <>
+            {/* Desktop / tablet — hairline table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="pq-ink-table w-full min-w-[520px]">
+                <thead>
+                  <tr>
+                    <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                      Time
+                    </th>
+                    <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                      Kind
+                    </th>
+                    <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                      Title
+                    </th>
+                    <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
+                      Ticker
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((a) => (
+                    <tr
+                      key={a.id}
+                      onClick={() => handleAlertClick(a)}
+                      className="cursor-pointer"
+                    >
+                      <td className="px-5 py-3 text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
+                        {relativeTime(a.created_at)}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
+                          {kindLabel(a.kind)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          {!a.is_read && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--pq-bronze)] shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <div
+                              className={cn(
+                                "font-serif text-base text-[var(--pq-ivory)] truncate",
+                                !a.is_read && "font-semibold",
+                              )}
+                            >
+                              {a.name || a.ticker || kindLabel(a.kind)}
+                            </div>
+                            <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] truncate">
+                              {a.title || a.message}
+                            </div>
+                            {(a.body || a.message)?.includes("set capital for sizing") && (
+                              <Link
+                                href="/settings#capital"
+                                onClick={(e) => e.stopPropagation()}
+                                className="mt-1 inline-block text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
+                              >
+                                → Set capital in Settings
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-xs font-mono text-[rgba(245,240,232,0.5)]">
+                        {a.ticker ?? "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile — hairline-divided card list */}
+            <ul
+              className="md:hidden border-t"
+              style={{
+                borderTopColor: "rgba(245,240,232,0.08)",
+                borderTopWidth: 0.5,
+              }}
+            >
+              {filtered.map((a) => (
+                <li
+                  key={a.id}
+                  onClick={() => handleAlertClick(a)}
+                  className="cursor-pointer px-1 py-3"
+                  style={{
+                    borderBottom: "0.5px solid rgba(245,240,232,0.06)",
+                  }}
+                >
+                  {/* Row 1 — Time · Kind · Ticker */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {!a.is_read && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--pq-bronze)] shrink-0" />
+                      )}
+                      <span className="text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
+                        {relativeTime(a.created_at)}
+                      </span>
+                      <span className="text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] whitespace-nowrap">
                         {kindLabel(a.kind)}
                       </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        {!a.is_read && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-[var(--pq-bronze)] shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                          <div
-                            className={cn(
-                              "font-serif text-base text-[var(--pq-ivory)] truncate",
-                              !a.is_read && "font-semibold",
-                            )}
-                          >
-                            {a.name || a.ticker || kindLabel(a.kind)}
-                          </div>
-                          <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] truncate">
-                            {a.title || a.message}
-                          </div>
-                          {(a.body || a.message)?.includes("set capital for sizing") && (
-                            <Link
-                              href="/settings#capital"
-                              onClick={(e) => e.stopPropagation()}
-                              className="mt-1 inline-block text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
-                            >
-                              → Set capital in Settings
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-xs font-mono text-[rgba(245,240,232,0.5)]">
+                    </div>
+                    <span className="text-xs font-mono text-[rgba(245,240,232,0.5)] whitespace-nowrap">
                       {a.ticker ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                  </div>
+
+                  {/* Row 2 — Title / message */}
+                  <div className="mt-1.5">
+                    <div
+                      className={cn(
+                        "font-serif text-[15px] text-[var(--pq-ivory)] leading-snug",
+                        !a.is_read && "font-semibold",
+                      )}
+                    >
+                      {a.name || a.ticker || kindLabel(a.kind)}
+                    </div>
+                    {(a.title || a.message) && (
+                      <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] leading-relaxed">
+                        {a.title || a.message}
+                      </div>
+                    )}
+                    {(a.body || a.message)?.includes("set capital for sizing") && (
+                      <Link
+                        href="/settings#capital"
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-1 inline-block text-[10px] uppercase tracking-[0.18em] text-[var(--pq-bronze)] hover:underline"
+                      >
+                        → Set capital in Settings
+                      </Link>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         {/* Editorial foot signature */}

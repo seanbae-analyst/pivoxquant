@@ -202,8 +202,8 @@ export function BottomNav() {
               <span
                 className="font-serif uppercase"
                 style={{
-                  fontSize: "9.5px",
-                  letterSpacing: "0.18em",
+                  fontSize: "11px",
+                  letterSpacing: "0.14em",
                   color:
                     moreActive || drawerOpen
                       ? "var(--pq-ivory)"
@@ -425,8 +425,8 @@ function BottomTab({ tab, active }: { tab: Tab; active: boolean }) {
         <span
           className="font-serif uppercase"
           style={{
-            fontSize: "9.5px",
-            letterSpacing: "0.18em",
+            fontSize: "11px",
+            letterSpacing: "0.14em",
             color: active ? "var(--pq-ivory)" : "rgba(245, 240, 232, 0.55)",
           }}
         >

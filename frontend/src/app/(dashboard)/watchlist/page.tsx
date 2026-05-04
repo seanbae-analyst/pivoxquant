@@ -190,82 +190,162 @@ export default function WatchlistPage() {
             </Caption>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="pq-ink-table">
-              <thead>
-                <tr>
-                  <th>Symbol</th>
-                  <th>Name</th>
-                  <th className="num">Last</th>
-                  <th className="num">1D Δ</th>
-                  <th>52W Range</th>
-                  <th>Note</th>
-                  <th className="num">Remove</th>
-                </tr>
-              </thead>
-              <tbody>
-                {watchlist.map((item) => {
-                  return (
-                    <tr
-                      key={item.id}
-                      className="cursor-pointer"
-                      onClick={() => router.push(`/detail/${item.ticker}`)}
-                    >
-                      <td className="font-mono text-[var(--pq-bronze)] tracking-wide">
+          <>
+            {/* Desktop / tablet — 7-column hairline table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="pq-ink-table">
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Name</th>
+                    <th className="num">Last</th>
+                    <th className="num">1D Δ</th>
+                    <th>52W Range</th>
+                    <th>Note</th>
+                    <th className="num">Remove</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {watchlist.map((item) => {
+                    return (
+                      <tr
+                        key={item.id}
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/detail/${item.ticker}`)}
+                      >
+                        <td className="font-mono text-[var(--pq-bronze)] tracking-wide">
+                          {item.ticker}
+                        </td>
+                        <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[240px]">
+                          {item.name || item.ticker}
+                        </td>
+                        <td className="num">
+                          <PriceWithTimestamp
+                            price={item.price}
+                            observedAt={item.observed_at}
+                            currency={item.currency}
+                            size="sm"
+                          />
+                        </td>
+                        <td
+                          className={
+                            // KR convention via single source (lib/format.ts): ▲ red, ▼ blue.
+                            "num " + pctColorClass(item.change_pct)
+                          }
+                        >
+                          {fmtPct(item.change_pct ?? 0)}
+                        </td>
+                        <td className="font-mono text-[11px] text-[rgba(245,240,232,0.55)]">
+                          {/* 52W range pending real backend field — see note above. */}
+                          —
+                        </td>
+                        <td className="text-[11px] text-[rgba(245,240,232,0.6)] truncate max-w-[220px]">
+                          {item.note && item.note.length > 0
+                            ? item.note
+                            : item.signal === "POSITIVE"
+                              ? "Observed — positive signal"
+                              : item.signal === "NEGATIVE"
+                                ? "Observed — negative signal"
+                                : "Observed — neutral"}
+                        </td>
+                        <td className="num">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemove(item);
+                            }}
+                            disabled={removingId === item.id}
+                            aria-label={`Remove ${item.ticker}`}
+                            className="inline-flex h-11 w-11 -m-2 items-center justify-center text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] disabled:opacity-30"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile — hairline-divided card list (P2 Wave B) */}
+            <ul
+              className="md:hidden border-t"
+              style={{
+                borderTopColor: "rgba(245,240,232,0.08)",
+                borderTopWidth: 0.5,
+              }}
+            >
+              {watchlist.map((item) => {
+                const noteText =
+                  item.note && item.note.length > 0
+                    ? item.note
+                    : item.signal === "POSITIVE"
+                      ? "Observed — positive signal"
+                      : item.signal === "NEGATIVE"
+                        ? "Observed — negative signal"
+                        : "Observed — neutral";
+                return (
+                  <li
+                    key={item.id}
+                    onClick={() => router.push(`/detail/${item.ticker}`)}
+                    className="cursor-pointer px-1 py-3"
+                    style={{
+                      borderBottom: "0.5px solid rgba(245,240,232,0.06)",
+                    }}
+                  >
+                    {/* Row 1 — Symbol + Name */}
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-mono text-[var(--pq-bronze)] text-[13px] tracking-wide whitespace-nowrap">
                         {item.ticker}
-                      </td>
-                      <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[240px]">
+                      </span>
+                      <span className="text-[12px] text-[rgba(245,240,232,0.65)] truncate text-right">
                         {item.name || item.ticker}
-                      </td>
-                      <td className="num">
-                        <PriceWithTimestamp
-                          price={item.price}
-                          observedAt={item.observed_at}
-                          currency={item.currency}
-                          size="sm"
-                        />
-                      </td>
-                      <td
+                      </span>
+                    </div>
+
+                    {/* Row 2 — Last + 1D Δ */}
+                    <div className="mt-1.5 flex items-center justify-between gap-3">
+                      <PriceWithTimestamp
+                        price={item.price}
+                        observedAt={item.observed_at}
+                        currency={item.currency}
+                        size="sm"
+                      />
+                      <span
                         className={
-                          // KR convention via single source (lib/format.ts): ▲ red, ▼ blue.
-                          "num " + pctColorClass(item.change_pct)
+                          "tabular-nums text-[13px] " +
+                          pctColorClass(item.change_pct)
                         }
                       >
                         {fmtPct(item.change_pct ?? 0)}
-                      </td>
-                      <td className="font-mono text-[11px] text-[rgba(245,240,232,0.55)]">
-                        {/* 52W range pending real backend field — see note above. */}
-                        —
-                      </td>
-                      <td className="text-[11px] text-[rgba(245,240,232,0.6)] truncate max-w-[220px]">
-                        {item.note && item.note.length > 0
-                          ? item.note
-                          : item.signal === "POSITIVE"
-                            ? "Observed — positive signal"
-                            : item.signal === "NEGATIVE"
-                              ? "Observed — negative signal"
-                              : "Observed — neutral"}
-                      </td>
-                      <td className="num">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemove(item);
-                          }}
-                          disabled={removingId === item.id}
-                          aria-label={`Remove ${item.ticker}`}
-                          className="inline-flex h-11 w-11 -m-2 items-center justify-center text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] disabled:opacity-30"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </span>
+                    </div>
+
+                    {/* Row 3 — Note + Remove */}
+                    <div className="mt-1.5 flex items-center justify-between gap-3">
+                      <span className="text-[11.5px] text-[rgba(245,240,232,0.55)] truncate flex-1 min-w-0">
+                        {noteText}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemove(item);
+                        }}
+                        disabled={removingId === item.id}
+                        aria-label={`Remove ${item.ticker}`}
+                        className="inline-flex h-11 w-11 -mr-2 items-center justify-center text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] disabled:opacity-30 shrink-0"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         )}
 
       {/* Editorial signature — legal disclaimer mounted by (dashboard)/layout.tsx */}
