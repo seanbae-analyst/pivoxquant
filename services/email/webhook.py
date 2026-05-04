@@ -87,7 +87,16 @@ def sendgrid_event():
     raw_body = request.get_data()
 
     public_key = os.environ.get("SENDGRID_WEBHOOK_PUBLIC_KEY")
-    if public_key:
+    if not public_key:
+        # In production, refuse to accept unsigned webhooks. SendGrid will
+        # retry on 5xx, so a missing key surfaces as a deploy-time alarm
+        # instead of silently allowing forged events into the DB.
+        if os.environ.get("FLASK_ENV") == "production":
+            logger.error(
+                "SENDGRID_WEBHOOK_PUBLIC_KEY missing in production — refusing webhook"
+            )
+            return jsonify({"error": "webhook key not configured"}), 503
+    else:
         signature = request.headers.get("X-Twilio-Email-Event-Webhook-Signature")
         timestamp = request.headers.get("X-Twilio-Email-Event-Webhook-Timestamp")
         if not _verify_signature(public_key, signature, timestamp, raw_body):

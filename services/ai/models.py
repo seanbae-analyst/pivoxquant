@@ -51,7 +51,7 @@ def _get_client():
     if api_key:
         try:
             import anthropic
-            _client = anthropic.Anthropic(api_key=api_key)
+            _client = anthropic.Anthropic(api_key=api_key, timeout=20.0, max_retries=1)
             _client_available = True
             logger.info("ai_models: Claude client initialized")
             return _client

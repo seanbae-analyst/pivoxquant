@@ -302,7 +302,15 @@ class EmailSender:
                 "SendGrid header injection failed", exc_info=True,
             )
 
-        SendGridAPIClient(sg_key).send(mail)
+        # SendGrid SDK는 python_http_client 기반. 기본 timeout이 무한이라
+        # send()가 hang될 수 있음 → 명시적 10s timeout 주입.
+        sg_client = SendGridAPIClient(sg_key)
+        try:
+            # python_http_client.Client.timeout 속성 (urllib2 timeout)
+            sg_client.client.timeout = 10
+        except Exception:
+            logger.debug("SendGrid timeout set failed", exc_info=True)
+        sg_client.send(mail)
         return True
 
     def _send_via_smtp(
