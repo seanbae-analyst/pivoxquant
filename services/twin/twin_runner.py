@@ -38,6 +38,7 @@ from models import (
     InvestmentProfile,
 )
 from services import container as svc
+from services.legal_filter import safe_scrub
 from services.profile.persona_classifier_v2 import classify_persona_multi
 
 logger = logging.getLogger(__name__)
@@ -384,6 +385,12 @@ def run_twin_decisions(
         db.session.add(new_pos)
         held_tickers.add(cand.ticker)
 
+        # 2026-05-04 — scrub rationale at write time (HANDOVER L1404 P0).
+        # cand.rationale flows from engine/scoring text that may contain
+        # advisory tokens ("강력 매수 추천" etc). Per 자본시장법 §17, a
+        # paper-trade record displayed back to the user must read as
+        # observational. legal_filter.safe_scrub maps banned tokens to
+        # neutral equivalents (e.g. "추천" → "분석"); None passes through.
         buy = AITwinTrade(
             twin_id=twin.id,
             ticker=cand.ticker,
@@ -391,7 +398,7 @@ def run_twin_decisions(
             shares=shares,
             price=price,
             executed_at=now,
-            rationale=cand.rationale,
+            rationale=safe_scrub(cand.rationale, context="twin.buy.rationale"),
             composite_score=Decimal(str(round(cand.composite_score, 2))),
             pnl_at_close=None,
             is_paper=True,
