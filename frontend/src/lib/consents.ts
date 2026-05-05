@@ -46,10 +46,17 @@ export interface MarketingConsentState {
   marketing_consent_revoked_at: string | null;
 }
 
+export interface CrossBorderConsentState {
+  opted_in: boolean;
+  cross_border_consent_at: string | null;
+  cross_border_consent_revoked_at: string | null;
+}
+
 interface SignupConsentSnapshot {
   terms?: boolean;
   non_advisory?: boolean;
   age?: boolean;
+  cross_border?: boolean;
   marketing?: boolean;
   consented_at?: string;
 }
@@ -162,5 +169,87 @@ export async function revokeMarketingConsent(): Promise<MarketingConsentState> {
     opted_in: !!res.opted_in,
     marketing_consent_at: res.marketing_consent_at ?? null,
     marketing_consent_revoked_at: res.marketing_consent_revoked_at ?? null,
+  };
+}
+
+
+// ── Cross-border data-transfer consent (PIPA §28-8) ──────────────────────
+//
+// 개인정보보호법 §28-8 (2024-09 시행): 개인정보 국외 이전 시 별도로 알리고
+// 명시적 동의를 받아야 함. PivoxQuant 의 모든 위탁처(Anthropic / Stripe /
+// Vercel / Railway / Google) 가 미국 소재이므로 모든 사용자에게 적용된다.
+
+/**
+ * Persist the staged cross-border consent (PIPA §28-8) snapshot to the
+ * backend after the OAuth round-trip. Mirrors flushPendingMarketingConsent
+ * — best-effort, silent failures.
+ *
+ * Note: do NOT clear the staging snapshot here. flushPendingMarketingConsent
+ * already does that on the same key, so we just observe it. Order: marketing
+ * flush should run first (it clears), then this cross-border flush sees a
+ * snapshot that's already been read once but not yet wiped — which is fine
+ * because the MARKETING_CONSENT_KEY clear is idempotent.
+ */
+export async function flushPendingCrossBorderConsent(): Promise<boolean> {
+  const staged = readStagedSnapshot();
+  if (!staged) return false;
+  if (!staged.cross_border) return true;
+
+  try {
+    await apiFetch<{ ok: boolean } & CrossBorderConsentState>(
+      API.consents.crossBorder,
+      { method: "POST" },
+    );
+  } catch (err) {
+    if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.warn("[consents] cross-border flush failed (non-fatal):", err);
+    }
+  }
+  return true;
+}
+
+/** GET the authenticated user's current cross-border consent record. */
+export async function fetchCrossBorderConsent(): Promise<CrossBorderConsentState | null> {
+  try {
+    const res = await apiFetch<{ ok: boolean } & CrossBorderConsentState>(
+      API.consents.crossBorder,
+    );
+    return {
+      opted_in: !!res.opted_in,
+      cross_border_consent_at: res.cross_border_consent_at ?? null,
+      cross_border_consent_revoked_at: res.cross_border_consent_revoked_at ?? null,
+    };
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
+      return null;
+    }
+    return null;
+  }
+}
+
+/** POST — record an explicit opt-in. Throws on backend failure. */
+export async function recordCrossBorderConsent(): Promise<CrossBorderConsentState> {
+  const res = await apiFetch<{ ok: boolean } & CrossBorderConsentState>(
+    API.consents.crossBorder,
+    { method: "POST" },
+  );
+  return {
+    opted_in: !!res.opted_in,
+    cross_border_consent_at: res.cross_border_consent_at ?? null,
+    cross_border_consent_revoked_at: res.cross_border_consent_revoked_at ?? null,
+  };
+}
+
+/** DELETE — record a revocation. Throws on backend failure. */
+export async function revokeCrossBorderConsent(): Promise<CrossBorderConsentState> {
+  const res = await apiFetch<{ ok: boolean } & CrossBorderConsentState>(
+    API.consents.crossBorder,
+    { method: "DELETE" },
+  );
+  return {
+    opted_in: !!res.opted_in,
+    cross_border_consent_at: res.cross_border_consent_at ?? null,
+    cross_border_consent_revoked_at: res.cross_border_consent_revoked_at ?? null,
   };
 }

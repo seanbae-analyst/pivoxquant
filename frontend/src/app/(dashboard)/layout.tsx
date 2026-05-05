@@ -8,7 +8,7 @@ import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { PushPermission } from "@/components/pwa/push-permission";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { RealtimeStatusBanner } from "@/components/ui/realtime-status-banner";
-import { flushPendingMarketingConsent } from "@/lib/consents";
+import { flushPendingCrossBorderConsent, flushPendingMarketingConsent } from "@/lib/consents";
 
 /* ──────────────────────────────────────────────────────────────────
    Path → DisclaimerBanner type resolver
@@ -94,6 +94,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading && user) {
       void flushPendingMarketingConsent();
+      void flushPendingCrossBorderConsent();
     }
   }, [loading, user]);
 
