@@ -86,34 +86,53 @@ export function InstallPrompt() {
       className="pointer-events-auto fixed bottom-4 left-4 right-4 z-50 md:bottom-6 md:left-auto md:right-6 md:w-[360px]"
     >
       <div
-        className="relative overflow-hidden rounded-[2px] border p-5 shadow-2xl backdrop-blur-md"
+        className="relative overflow-hidden p-5"
         style={{
-          background: "rgba(10, 10, 10, 0.96)",
-          borderColor: "rgba(139, 111, 71, 0.42)",
+          background: "#050505",
+          border: "1px solid rgba(245, 240, 232, 0.10)",
+          borderRadius: 2,
           color: "var(--pq-ivory)",
         }}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <div
-              className="mb-1 text-[10px] font-medium uppercase tracking-[0.24em]"
-              style={{ color: "var(--pq-bronze)" }}
+              className="mb-2 inline-flex items-center gap-2.5 font-mono uppercase"
+              style={{
+                color: "var(--pq-bronze)",
+                fontSize: "10px",
+                letterSpacing: "0.22em",
+                fontWeight: 500,
+              }}
             >
-              Install
+              <span
+                aria-hidden="true"
+                className="inline-block h-px w-6"
+                style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
+              />
+              <span>Install · 0.0KB</span>
             </div>
             <h3
               id="pq-install-title"
-              className="font-serif text-[18px] leading-tight"
-              style={{ color: "var(--pq-ivory)" }}
+              className="font-serif italic"
+              style={{
+                fontFamily:
+                  '"Playfair Display","Source Serif 4",Georgia,serif',
+                fontWeight: 500,
+                fontSize: "20px",
+                lineHeight: 1.2,
+                letterSpacing: "-0.018em",
+                color: "var(--pq-ivory)",
+              }}
             >
-              Add PivoxQuant to your dock.
+              데스크에 PivoxQuant를 더하세요.
             </h3>
           </div>
           <button
             type="button"
             onClick={dismiss}
             aria-label="Dismiss install prompt"
-            className="-mr-1 -mt-1 rounded-full p-1 transition-colors"
+            className="-mr-1 -mt-1 p-1 transition-colors"
             style={{ color: "rgba(245, 240, 232, 0.5)" }}
           >
             <X className="h-4 w-4" />
@@ -121,11 +140,17 @@ export function InstallPrompt() {
         </div>
         <p
           id="pq-install-body"
-          className="mb-5 text-[13px] leading-relaxed"
-          style={{ color: "rgba(245, 240, 232, 0.68)" }}
+          className="mb-5 font-serif"
+          style={{
+            fontFamily: '"Source Serif 4", Georgia, serif',
+            fontSize: "13px",
+            lineHeight: 1.55,
+            color: "rgba(245, 240, 232, 0.65)",
+            letterSpacing: "-0.003em",
+          }}
         >
-          Observe your portfolio from any window — installed, offline-ready,
-          with push alerts for material changes.
+          어느 창에서든 포트폴리오를 관찰하세요 — 설치형, 오프라인 지원,
+          중요한 변화 발생 시 푸시 알림.
         </p>
         <div className="flex gap-2">
           <button
@@ -134,14 +159,14 @@ export function InstallPrompt() {
             className="pq-ink-btn-bronze inline-flex flex-1 items-center justify-center gap-2"
           >
             <Download className="h-3.5 w-3.5" />
-            <span>Install</span>
+            <span>설치</span>
           </button>
           <button
             type="button"
             onClick={dismiss}
             className="pq-ink-btn-ghost"
           >
-            Not now
+            나중에
           </button>
         </div>
       </div>
