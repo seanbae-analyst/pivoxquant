@@ -54,6 +54,11 @@ interface Consents {
   terms: boolean;
   non_advisory: boolean;
   age: boolean;
+  // PIPA §28-8 (개인정보 국외 이전 별도 동의). 모든 위탁처(Anthropic /
+  // Stripe / Vercel / Railway / Google) 가 미국 소재이므로 모든 사용자에게
+  // 적용 — 필수 체크 항목.
+  cross_border: boolean;
+  // 정통망법 §50 marketing — 선택.
   marketing: boolean;
 }
 
@@ -104,6 +109,7 @@ export default function SignupPageV1() {
     terms: false,
     non_advisory: false,
     age: false,
+    cross_border: false,
     marketing: false,
   });
   const [allRequired, setAllRequired] = useState(false);
@@ -113,7 +119,12 @@ export default function SignupPageV1() {
     // Preserved verbatim from v1 behavior — derived-value refactor is out of
     // scope for the visual-only v2 task per CEO directive.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAllRequired(consents.terms && consents.non_advisory && consents.age);
+    setAllRequired(
+      consents.terms
+      && consents.non_advisory
+      && consents.age
+      && consents.cross_border,
+    );
   }, [consents]);
 
   // Auto-clear the pulse highlight a moment after it fires.
@@ -270,7 +281,32 @@ export default function SignupPageV1() {
           </span>
         </label>
 
-        {/* 4. 마케팅 수신 (선택) */}
+        {/* 4. 개인정보 국외 이전 (PIPA §28-8) */}
+        <label
+          htmlFor="agree_cross_border"
+          className={`flex cursor-pointer items-start gap-2 rounded-md transition-all ${pulseUnchecked && !consents.cross_border ? "ring-2 ring-rose-400/70 ring-offset-2 ring-offset-slate-50 motion-safe:animate-pulse" : ""}`}
+        >
+          <Checkbox
+            id="agree_cross_border"
+            checked={consents.cross_border}
+            onChange={setConsent("cross_border")}
+          />
+          <span className="text-xs leading-relaxed text-slate-600">
+            <strong className="text-slate-900">[필수]</strong> 개인정보의 국외
+            이전에 동의합니다. (PIPA §28-8 — Anthropic / Stripe / Vercel /
+            Railway / Google, 미국 소재 위탁처){" "}
+            <a
+              href="/privacy#cross-border"
+              target="_blank"
+              rel="noopener"
+              className="text-[var(--sp-accent)] underline"
+            >
+              보기
+            </a>
+          </span>
+        </label>
+
+        {/* 5. 마케팅 수신 (선택) */}
         <label
           htmlFor="agree_marketing"
           className="flex cursor-pointer items-start gap-2"
@@ -337,7 +373,7 @@ export default function SignupPageV1() {
           className={`mt-3 text-center text-[12px] ${pulseUnchecked ? "text-rose-500 font-medium" : "text-slate-500"}`}
           role={pulseUnchecked ? "alert" : undefined}
         >
-          필수 항목 3개에 모두 동의해야 가입할 수 있습니다.
+          필수 항목 4개에 모두 동의해야 가입할 수 있습니다.
         </p>
       )}
 

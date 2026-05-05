@@ -1,7 +1,7 @@
-# PivoxQuant 변호사 자문 패키지 (v2)
+# PivoxQuant 변호사 자문 패키지 (v2.3)
 
-- 작성일: 2026-05-04
-- 버전: v2 (2026-04-22 v1 갱신, 537 → 본 문서)
+- 작성일: 2026-05-04 (v2 → v2.3 2026-05-05 sync)
+- 버전: **v2.3** (2026-05-05) — v2.2 → safe_scrub merge `91fd01c` + autotrader 물리 삭제 `4bcc9ab` + cross_border 체크박스 `c9c6827` 반영. 상세는 §8 변경 이력 참조.
 - 작성자: 배상현 (1인 창업자, 대표이사 후보)
 - 회의 형태: 1회 대면(50~80만원), 후속 follow-up 가능
 - 본 패키지는 **현 코드/문서 grep 검증 결과**를 인용한 사실 진술서이며, 변호사 판단을 받기 위한 사전 준비 자료다. 본인 의견(추측)은 따로 표시한다.
@@ -60,6 +60,7 @@
 | `app.py` AutoTrader boot 호출 | **삭제 완료** — 잔존 주석 0건 |
 | `services/container.py` `init_trader()` no-op | **함수 자체 삭제** — `trader=None` 변수도 제거 |
 | 프론트엔드 `/autotrade` 페이지 | **제거됨** |
+| 후속 cleanup | `tests/test_autotrade_smoke.py` 삭제 — commit `d8088c7` (autotrader 물리 삭제 후 dangling import 검증 테스트만 남아있던 잔재) |
 | Rollback 가능성 | git tag `legal-pre-autotrader-removal` 만 (push 됨) — 코드 잔존 0건. 복원 시 `git checkout legal-pre-autotrader-removal -- services/trading/autotrader.py routes/autotrade.py` + 주변 호출 코드 직접 복원 필요 |
 
 ### 1-3. KIS read-only (한국투자증권 API)
