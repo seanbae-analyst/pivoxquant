@@ -8,9 +8,10 @@
  * so the happy path stays invisible.
  *
  * State → variant:
- *   - failed === true          → red banner ("실시간 데이터 연결 실패")
- *   - !connected && !failed    → yellow banner ("재연결 중")
- *   - connected === true       → null (no DOM)
+ *   - !streamActive                       → null (idle by design — no user / no positions / hidden tab)
+ *   - streamActive && failed              → red banner ("실시간 데이터 연결 실패")
+ *   - streamActive && !connected          → yellow banner ("재연결 중")
+ *   - streamActive && connected           → null (happy path)
  *
  * Why this exists:
  *   Before this component, `RealtimeProvider` tracked `connected` and
@@ -19,6 +20,11 @@
  *   showing without any visual indication that it had gone stale. Users
  *   could read a 5-minute-old quote as "fresh" and act on it. This banner
  *   makes the stale state explicit.
+ *
+ *   The streamActive gate prevents a known regression where the yellow
+ *   "재연결 중" banner stayed up forever for users with zero positions —
+ *   the provider intentionally does not open SSE in that state, but the
+ *   default `connected: false` made the banner think it was reconnecting.
  *
  * Law / neutrality:
  *   - "실시간 데이터" / "재연결" only — no advice / guarantee language.
@@ -33,7 +39,13 @@
 import { useRealtimeStatus } from "@/lib/realtime";
 
 export function RealtimeStatusBanner() {
-  const { connected, failed } = useRealtimeStatus();
+  const { connected, failed, streamActive } = useRealtimeStatus();
+
+  // Stream is intentionally idle (no user, no positions, hidden tab) —
+  // hide the banner entirely. Without this guard, the default `connected:
+  // false` would render a permanent yellow "재연결 중" for users with
+  // zero positions.
+  if (!streamActive) return null;
 
   // Happy path — hide.
   if (connected && !failed) return null;
