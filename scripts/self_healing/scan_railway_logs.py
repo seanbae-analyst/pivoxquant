@@ -64,8 +64,6 @@ ONELINE_RE = re.compile(
 
 # Files/paths we will NEVER attempt auto-fix on (critical surface).
 PROTECTED_PATHS = (
-    "autotrader.py",
-    "services/trading/autotrader.py",
     "services/trading/daytrade.py",
     "risk_defense.py",
     "services/legal_filter.py",

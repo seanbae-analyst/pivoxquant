@@ -58,7 +58,6 @@ stockpilot/
 ├── portfolio_models.py # HRP, TailRiskParity, MaxDiv, ERC, MinVariance
 ├── signal_models.py    # DispositionEffect, Herding, SentimentDivergence, OrderFlow, Anchoring
 ├── ai_models.py        # EarningsCallTone, SectorRotation, RiskSummary
-├── autotrader.py       # ⚠️ REMOVED 2026-04-27 per CEO + legal — 자동매매 기능 제거 (투자일임업 회피). 파일 유지(rollback용), routes/__init__.py에서 blueprint 등록 해제.
 ├── backtester.py       # 백테스트 (transaction costs, Sharpe/Sortino/Calmar)
 ├── data_fetcher.py     # Alpaca→FMP 폴백, KIS KR데이터
 ├── fmp_service.py      # FMP v4 stable API, TTL cache, budget enforcement
@@ -116,7 +115,7 @@ cd /Users/seanbae/Desktop/취준/stockpilot/frontend && npm run dev
 - Alpaca: paper trading 계정 (.env에 키 있음)
 
 ## 중요 원칙
-- **기존 백엔드 서비스 파일 수정 금지** — engine.py, quant_models.py, risk_defense.py 등은 완성 상태 (autotrader.py는 2026-04-27 비활성화 — 투자일임업 회피)
+- **기존 백엔드 서비스 파일 수정 금지** — engine.py, quant_models.py, risk_defense.py 등은 완성 상태. autotrade 기능은 2026-04-27 비활성화 → 2026-05-05 물리 삭제 (투자일임업 회피, rollback 은 git tag `legal-pre-autotrader-removal` 만)
 - **routes/, models/, services/ 구조 유지**
 - **API endpoints URL 변경 금지** — `endpoints.ts`와 1:1 매핑
 - **시그널 라벨: POSITIVE/NEGATIVE/NEUTRAL** — BUY/SELL/HOLD 절대 사용 금지 (자본시장법)

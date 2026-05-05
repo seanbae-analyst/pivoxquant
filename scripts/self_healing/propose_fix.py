@@ -9,10 +9,10 @@ Inputs
 
 Safety policy
 -------------
-1. Protected-path allowlist: error patterns in `autotrader.py`,
-   `risk_defense.py`, `services/legal*`, `billing/`, `routes/auth*`,
-   `security.py`, `migrations/` are NEVER auto-patched. Only an Issue is
-   filed to alert the CEO.
+1. Protected-path allowlist: error patterns in `risk_defense.py`,
+   `services/legal*`, `billing/`, `routes/auth*`, `security.py`,
+   `migrations/` are NEVER auto-patched. Only an Issue is filed to
+   alert the CEO.
 2. Dry-run first: default `SELF_HEALING_DRY_RUN=1`. Draft PR is only
    opened when `AUTO_PR=1` is explicitly set.
 3. 24-hour circuit breaker: if the same fingerprint was proposed

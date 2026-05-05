@@ -13,13 +13,6 @@ def register_blueprints(app):
     from .alerts import alerts_bp
     from .notifications import notifications_bp
     from .trades import trades_bp
-    # REMOVED 2026-04-27 per CEO + legal: autotrade blueprint disabled
-    # (자동매매 기능 제거 — 투자일임업 등록 회피).
-    # File routes/autotrade.py preserved for rollback. To restore:
-    #   1) Re-add: from .autotrade import autotrade_bp
-    #   2) Re-add autotrade_bp to the blueprints list below.
-    #   3) Re-enable autotrader.py worker boot in app.py.
-    # from .autotrade import autotrade_bp
     from .ai import ai_bp
     from .watchlist import watchlist_bp
     from .backtest import backtest_bp
@@ -68,7 +61,6 @@ def register_blueprints(app):
         health_bp,
         auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, daytrade_bp, alerts_bp, notifications_bp, trades_bp,
-        # REMOVED 2026-04-27 per CEO + legal: autotrade_bp,
         ai_bp, watchlist_bp, backtest_bp,
         quant_bp, quant_composer_bp, realtime_bp, profile_bp, broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
