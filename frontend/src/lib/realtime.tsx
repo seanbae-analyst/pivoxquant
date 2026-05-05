@@ -58,6 +58,15 @@ export interface RealtimeState {
   updatedTickers: Map<string, PriceDirection>;
   /** True when max retries exceeded — SSE gave up */
   failed: boolean;
+  /**
+   * True when the provider is actively trying to maintain an SSE connection
+   * (i.e. user is signed in, has positions, and tab is visible). False when
+   * the stream is intentionally torn down (logged out, 0 positions, hidden
+   * tab). Used by the status banner to distinguish "intentionally idle"
+   * from "trying but disconnected" — without this, the yellow "재연결 중"
+   * banner would show forever for any user with no positions.
+   */
+  streamActive: boolean;
 }
 
 /**
@@ -107,6 +116,7 @@ const INITIAL_STATE: RealtimeState = {
   lastUpdate: null,
   updatedTickers: new Map(),
   failed: false,
+  streamActive: false,
 };
 
 const RealtimeContext = createContext<RealtimeState>(INITIAL_STATE);
@@ -184,6 +194,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       esRef.current = null;
     }
 
+    // Mark the stream as actively trying — the status banner reads this
+    // to distinguish "intentionally idle" (no user / no positions / hidden
+    // tab) from "trying but disconnected" (yellow banner).
+    setState((s) => (s.streamActive ? s : { ...s, streamActive: true }));
+
     const ac = new AbortController();
     abortRef.current = ac;
 
@@ -192,7 +207,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
     es.onopen = () => {
       retryRef.current = 0;
-      setState((s) => ({ ...s, connected: true }));
+      setState((s) => ({ ...s, connected: true, streamActive: true }));
     };
 
     es.onmessage = (event) => {
@@ -246,6 +261,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           lastUpdate: now,
           updatedTickers: directionMap,
           failed: false,
+          streamActive: true,
         });
 
         // Clear flash after FLASH_DURATION_MS
@@ -404,6 +420,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
+      // Banner reads streamActive to know we're no longer trying — clears
+      // the persistent yellow "재연결 중" for users with no positions / hidden tab.
+      setState((s) =>
+        s.streamActive || s.connected
+          ? { ...s, streamActive: false, connected: false }
+          : s,
+      );
     };
 
     // Only connect SSE when user is authenticated AND owns >=1 position.
@@ -481,19 +504,22 @@ export function useRealtimeContext(): RealtimeState {
  *  - lastUpdate: epoch ms of the last successful data event (null if never)
  *
  * Rendering rules (consumed by <RealtimeStatusBanner />):
- *  - failed === true                         → red  "연결 실패"
- *  - !connected && !failed                   → yellow "재연결 중"
- *  - connected === true                      → no banner
+ *  - !streamActive                                 → no banner (idle by design)
+ *  - streamActive && failed                        → red  "연결 실패"
+ *  - streamActive && !connected && !failed         → yellow "재연결 중"
+ *  - streamActive && connected                     → no banner
  */
 export function useRealtimeStatus(): {
   connected: boolean;
   failed: boolean;
+  streamActive: boolean;
   lastUpdate: number | null;
 } {
   const ctx = useContext(RealtimeContext);
   return {
     connected: ctx.connected,
     failed: ctx.failed,
+    streamActive: ctx.streamActive,
     lastUpdate: ctx.lastUpdate,
   };
 }
