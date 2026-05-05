@@ -132,6 +132,76 @@ def record_marketing_consent():
     return jsonify({"ok": True, **_consent_state(current_user)})
 
 
+# ── Cross-border data-transfer consent (PIPA §28-8) ─────────────────────
+#
+# 개인정보보호법 §28-8 (2024-09 시행) — 개인정보 국외 이전 시 정보주체에게
+# 별도로 알리고 명시적 동의를 받아야 함. PivoxQuant 의 모든 위탁처
+# (Anthropic / Stripe / Vercel / Railway / Google) 가 미국 소재이므로
+# 전 사용자에게 적용된다. 본 엔드포인트는 동의 기록 계층만 다루고,
+# 향후 국외이전 코드 경로를 막는 runtime 가드는 별도 PR 에서 추가한다.
+
+def _cross_border_state(user) -> dict:
+    """Compute the effective cross-border consent payload (PIPA §28-8)."""
+    consent_at = getattr(user, "cross_border_consent_at", None)
+    revoked_at = getattr(user, "cross_border_consent_revoked_at", None)
+    is_opted_in = consent_at is not None and (
+        revoked_at is None or revoked_at < consent_at
+    )
+    return {
+        "cross_border_consent_at": consent_at.isoformat() if consent_at else None,
+        "cross_border_consent_revoked_at": (
+            revoked_at.isoformat() if revoked_at else None
+        ),
+        "opted_in": is_opted_in,
+    }
+
+
+@consents_bp.route("/cross-border", methods=["GET"])
+@api_auth
+def get_cross_border_consent():
+    """Return the authenticated user's cross-border consent record."""
+    return jsonify({"ok": True, **_cross_border_state(current_user)})
+
+
+@consents_bp.route("/cross-border", methods=["POST"])
+@api_auth
+def record_cross_border_consent():
+    """Persist explicit cross-border data transfer opt-in (PIPA §28-8)."""
+    now = _utcnow_naive()
+    current_user.cross_border_consent_at = now
+    current_user.cross_border_consent_revoked_at = None
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "consents.record_cross_border_consent commit failed (user_id=%s)",
+            getattr(current_user, "id", None),
+        )
+        return jsonify({"error": "Could not record consent"}), 500
+    return jsonify({"ok": True, **_cross_border_state(current_user)})
+
+
+@consents_bp.route("/cross-border", methods=["DELETE"])
+@api_auth
+def revoke_cross_border_consent():
+    """Record a cross-border consent revocation. Future cross-border data
+    flows for this user must short-circuit when the runtime kill-switch is
+    added (separate PR)."""
+    now = _utcnow_naive()
+    current_user.cross_border_consent_revoked_at = now
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception(
+            "consents.revoke_cross_border_consent commit failed (user_id=%s)",
+            getattr(current_user, "id", None),
+        )
+        return jsonify({"error": "Could not revoke consent"}), 500
+    return jsonify({"ok": True, **_cross_border_state(current_user)})
+
+
 @consents_bp.route("/marketing", methods=["DELETE"])
 @api_auth
 def revoke_marketing_consent():

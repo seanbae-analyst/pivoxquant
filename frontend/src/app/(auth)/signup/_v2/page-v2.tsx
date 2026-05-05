@@ -44,6 +44,11 @@ interface Consents {
   terms: boolean;
   non_advisory: boolean;
   age: boolean;
+  // PIPA §28-8 (개인정보 국외 이전 별도 동의). 모든 위탁처(Anthropic /
+  // Stripe / Vercel / Railway / Google) 가 미국 소재이므로 모든 사용자에게
+  // 적용 — 필수 체크 항목.
+  cross_border: boolean;
+  // 정통망법 §50 marketing — 선택.
   marketing: boolean;
 }
 
@@ -110,6 +115,7 @@ export default function SignupPageV2() {
     terms: false,
     non_advisory: false,
     age: false,
+    cross_border: false,
     marketing: false,
   });
   const [allRequired, setAllRequired] = useState(false);
@@ -119,7 +125,12 @@ export default function SignupPageV2() {
     // Preserved verbatim from v1 behavior — derived-value refactor is out of
     // scope for the visual-only v2 task per CEO directive.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAllRequired(consents.terms && consents.non_advisory && consents.age);
+    setAllRequired(
+      consents.terms
+      && consents.non_advisory
+      && consents.age
+      && consents.cross_border,
+    );
   }, [consents]);
 
   useEffect(() => {
@@ -408,6 +419,33 @@ export default function SignupPageV2() {
               </span>
             </label>
 
+            <label
+              htmlFor="agree_cross_border"
+              style={{
+                ...consentRowStyle,
+                ...pulseRowStyle(pulseUnchecked && !consents.cross_border),
+              }}
+            >
+              <CheckboxV2
+                id="agree_cross_border"
+                checked={consents.cross_border}
+                onChange={setConsent("cross_border")}
+              />
+              <span style={consentLabelStyle}>
+                <span style={requiredTagStyle}>[필수]</span>
+                개인정보의 국외 이전에 동의합니다. (PIPA §28-8 — Anthropic / Stripe / Vercel / Railway / Google, 미국 소재 위탁처)
+                {" "}
+                <a
+                  href="/privacy#cross-border"
+                  target="_blank"
+                  rel="noopener"
+                  style={{ marginLeft: 4, fontSize: "0.85em" }}
+                >
+                  보기
+                </a>
+              </span>
+            </label>
+
             <label htmlFor="agree_marketing" style={consentRowStyle}>
               <CheckboxV2
                 id="agree_marketing"
@@ -427,7 +465,7 @@ export default function SignupPageV2() {
             onGoogleClick={handleOAuthClick(API.auth.google)}
             onKakaoClick={handleOAuthClick(API.auth.kakao)}
             onDisabledClick={() => setPulseUnchecked(true)}
-            hint="필수 항목 3개에 모두 동의해야 가입할 수 있습니다."
+            hint="필수 항목 4개에 모두 동의해야 가입할 수 있습니다."
             hintEmphasized={pulseUnchecked}
           />
 

@@ -252,6 +252,7 @@ export const API = {
   // - DELETE : record revocation (sets email_opt_out=true)
   consents: {
     marketing: "/api/consents/marketing",
+    crossBorder: "/api/consents/cross-border",
   },
 } as const;
 
