@@ -53,10 +53,14 @@
 
 | 항목 | 상태 |
 |---|---|
-| 루트 `autotrader.py` 파일 | **삭제됨** (2026-05-04 검증: `ls /Users/seanbae/Desktop/취준/stockpilot/autotrader.py` → not found) |
-| `routes/autotrade.py` Blueprint 등록 | **해제됨** (`routes/__init__.py:16-22` 주석 처리, line 71 blueprints 리스트에서 제거) |
-| 프론트엔드 `/autotrade` 페이지 | **제거됨** (CLAUDE.md "autotrade REMOVED 2026-04-27 per legal" 명시) |
-| Rollback 가능성 | 코드 주석으로 복원 절차 보존 — 의도적, 변호사 사인 후 결정 |
+| 루트 `autotrader.py` 파일 | **삭제됨** |
+| `services/trading/autotrader.py` (1,321 lines AutoTrader 클래스) | **물리 삭제 완료** — commit `4bcc9ab` (2026-05-05) |
+| `routes/autotrade.py` (279 lines) | **물리 삭제 완료** — 동일 commit |
+| `routes/__init__.py` autotrade blueprint 등록 | **삭제 완료** — 잔존 주석 0건 |
+| `app.py` AutoTrader boot 호출 | **삭제 완료** — 잔존 주석 0건 |
+| `services/container.py` `init_trader()` no-op | **함수 자체 삭제** — `trader=None` 변수도 제거 |
+| 프론트엔드 `/autotrade` 페이지 | **제거됨** |
+| Rollback 가능성 | git tag `legal-pre-autotrader-removal` 만 (push 됨) — 코드 잔존 0건. 복원 시 `git checkout legal-pre-autotrader-removal -- services/trading/autotrader.py routes/autotrade.py` + 주변 호출 코드 직접 복원 필요 |
 
 ### 1-3. KIS read-only (한국투자증권 API)
 
@@ -236,14 +240,21 @@ APScheduler day_of_week=mon, hour=9 KST. Empty holdings → ...
 - 본인은 「개인정보 보호법」 제28조의8에 따른 안전조치를 이행합니다.
 ```
 
-`frontend/src/app/(auth)/signup/_v2/page-v2.tsx:44-47, 109-122`
+`frontend/src/app/(auth)/signup/_v2/page-v2.tsx` (commit `c9c6827`, 2026-05-05)
 ```typescript
-type Consents = { terms: boolean; non_advisory: boolean; age: boolean; marketing: boolean }
-const [consents, setConsents] = useState<Consents>({ terms: false, ..., marketing: false });
-setAllRequired(consents.terms && consents.non_advisory && consents.age);
+interface Consents {
+  terms: boolean;
+  non_advisory: boolean;
+  age: boolean;
+  cross_border: boolean;  // PIPA §28-8 — 필수 (2026-05-05 추가)
+  marketing: boolean;     // 정통망법 §50 — 선택
+}
+setAllRequired(
+  consents.terms && consents.non_advisory && consents.age && consents.cross_border,
+);
 ```
 
-→ 5번째 체크박스(국외 이전 동의) 미반영. PR #80은 backend 모델/migration만 추가됨, frontend follow-up 미진행 (HANDOVER_2026-05-04.md:62).
+→ **5번째 체크박스 추가됨** — `cross_border` (필수). 미체크 시 OAuth 가입 버튼 disabled. localStorage staging snapshot에 포함되어 OAuth 콜백 후 `flushPendingCrossBorderConsent()` 가 백엔드 `POST /api/consents/cross-border`로 명시 동의 시각을 영구 기록. backend는 이미 `migration 024_cross_border_consent.py` + `User.cross_border_consent_at/_revoked_at` 컬럼 + 3 endpoints (GET / POST / DELETE) 모두 적용됨.
 
 **c. 판단 요청**
 - (1) 처리방침 게시 + "이용자께서는 서비스 가입 시 아래 이전에 동의한 것으로 간주" 문구만으로 §28-8의 "별도 동의" 요건을 충족하는지(통상 별도 명시 동의 체크박스 필요로 해석).
@@ -665,16 +676,23 @@ $ grep -nE "from services.legal_filter|safe_scrub|persona=\\{persona\\}|paper ex
 - [ ] `privacy-ko.md` 동일 처리 (시행일 기재)
 - [ ] 사업자등록번호 / 통신판매업 신고번호 / 개인정보 보호책임자 연락처 부칙·제13조·제10조에 기입
 
-### 5-2. 누락 보완 (Q4 사인 후)
-- [ ] signup 화면 5번째 체크박스 추가: "국외 이전 동의 (PIPA §28-8)"
-- [ ] frontend `signup/_v2/page-v2.tsx`의 `Consents` 타입 + UI + localStorage payload 갱신
-- [ ] backend `routes/consents.py`에 cross_border 동의 컬럼 + migration 추가
+### 5-2. 누락 보완 (Q4 사인 후) — **선제 적용 완료** (commit `c9c6827`, 2026-05-05)
+- [x] signup 화면 5번째 체크박스 추가: "국외 이전 동의 (PIPA §28-8)"
+- [x] frontend `signup/_v2/page-v2.tsx` `Consents` 타입 + UI + localStorage payload 갱신
+- [x] backend `routes/consents.py`에 GET / POST / DELETE `/api/consents/cross-border` 추가 (migration 024 + 컬럼은 2026-05-03 사전 적용됨)
+- [x] `frontend/src/lib/consents.ts` `flushPendingCrossBorderConsent()` 헬퍼 추가
+- [x] dashboard layout에서 OAuth 콜백 후 자동 flush
+- [x] privacy-ko.md `<a id="cross-border">` anchor 추가
+- [ ] (Q4 사인 후) 변호사 권고 시 settings 페이지에 cross_border opt-out 토글 UI
+- [ ] (Q4 사인 후) 미국 위탁처로 데이터 보내기 전 runtime 가드 적용 (별도 PR — 본 commit은 동의 기록 계층만)
+- [ ] (Q4 사인 후) terms-ko §6-1 "이용 시 동의로 간주" 표현 → "별도 명시 동의" 으로 정정
 
-### 5-3. F5 AI Twin rationale 보완 (Q9 사인 후)
-> v2.1 갱신: BUY 경로(line 401)는 PR #116으로 이미 적용됨. 회귀 가드 테스트도 추가됨. 아래는 변호사가 SELL 경로 의도적 미적용을 거부할 경우의 follow-up.
-
-- [ ] (변호사가 SELL 경로 scrub 요구 시) `services/twin/twin_runner.py` line 305에 `safe_scrub(reason, context="twin.sell.reason")` 적용
-- [ ] (옵션) line 226의 `engine={rationale}` 단계에서 사전 scrub 추가 (방어 깊이 hardening)
+### 5-3. F5 AI Twin rationale 보완 (Q9 사인 후) — **선제 적용 완료** (commit `91fd01c` merge)
+- [x] BUY 경로 (`services/twin/twin_runner.py:401`) `safe_scrub(cand.rationale, ...)` 적용
+- [x] `tests/test_ai_twin.py::test_buy_rationale_is_scrubbed_at_write_time` 회귀 가드 추가
+- [x] `fix/twin-rationale-safe-scrub-2026-05-04` 브랜치 main 머지 완료
+- [ ] (변호사가 SELL 경로 scrub 요구 시) `services/twin/twin_runner.py:305`에 `safe_scrub(reason, context="twin.sell.reason")` 적용 — 현재 미적용은 의도적 (SELL `reason`은 결정성 내부 라벨만 사용)
+- [ ] (옵션) line 226 `engine={rationale}` 단계에서 사전 scrub 추가 (방어 깊이 hardening)
 
 ### 5-4. 회원탈퇴 정책 결정 (Q6 사인 후)
 - [ ] hard delete vs soft delete + 결제 분리 보존 결정 후 구현
@@ -780,6 +798,7 @@ $ grep -nE "from services.legal_filter|safe_scrub|persona=\\{persona\\}|paper ex
 | v1 | 2026-04-22 | 초안 작성 (537 lines) |
 | v2 | 2026-05-04 (자율 세션 1차) | 갱신: 유사투자자문업 미등록 결정 반영 / 5 PDF 자기 데이터 분기 검증 / signup 5번째 체크박스 누락 명시 / KIS read-only 라인 검증 / Alpaca kill switch 위치 검증 / F5 AI Twin rationale **미적용** 상태 명시 / 메모리 vs 코드 차이 표(13조 vs 18조) 투명 기재 / 10가지 grep 검증 로그 추가 |
 | **v2.1** | **2026-05-04 (자율 세션 2차)** | **F5 AI Twin rationale 수정 반영** — PR #116 (commits `907539f` + `1100f6d`)으로 `services/twin/twin_runner.py:401`에 `safe_scrub(cand.rationale, context="twin.buy.rationale")` 적용 + 회귀 가드 테스트 추가. Q9 위험 등급 MEDIUM → LOW. §6-10 검증 로그 갱신. v2 작성 시 grep 결과는 수정 적용 직전 상태였음 (작업 시간 차이) — 수정 후 grep 으로 재검증함. |
-| **v2.2** | **2026-05-04 (자율 세션 audit pass)** | **audit agent 정정 6건 반영**: (1) twin_runner.py 라인 번호 정확화 (import line 41, BUY scrub line 401, rationale lines 226/305) — 수정 후 직접 grep 으로 재확인. (2) `routes/broker_oauth.py` "9곳" → 6곳 (정의 309-327 + status 가드 260 + endpoint 가드 4곳: 365/414/435/451) — `grep -nE "_alpaca_kill_switch_response|ALPACA_ENABLED" routes/broker_oauth.py` 으로 재카운팅. (3) `forbidden_terms.py` 토큰 22 → 20 (영문 12 + 한국어 8) — frozenset 직접 카운팅. 한국어 (10) → (8). (4) `_COMPLIANCE_FORBIDDEN_PATTERNS` "9 advisory verbs" → "14 raw patterns (한국어 13 + 영문 alternation 1)". (5) §5-3에 v2.1 컨텍스트 단서 추가 (BUY 적용 완료, SELL은 변호사 답에 따라 follow-up). (6) §4-8 제목 "미적용 (Q9)" → "적용 (Q9, PR #116 머지 후 변호사 미팅 시점)" 으로 일관성 정정. **§101 "면제 트랙" 표현은 변호사가 직접 정정 가능하므로 미수정** (Q1에서 사인 받기). |
+| **v2.2** | **2026-05-04 (자율 세션 audit pass)** | **audit agent 정정 6건 반영**: (1) twin_runner.py 라인 번호 정확화 (import line 41, BUY scrub line 401, rationale lines 226/305) — 수정 후 직접 grep 으로 재확인. (2) `routes/broker_oauth.py` "9곳" → 6곳 (정의 309-327 + status 가드 260 + endpoint 가드 4곳: 365/414/435/451). (3) `forbidden_terms.py` 토큰 22 → 20 (영문 12 + 한국어 8) — frozenset 직접 카운팅. 한국어 (10) → (8). (4) `_COMPLIANCE_FORBIDDEN_PATTERNS` "9 advisory verbs" → "14 raw patterns (한국어 13 + 영문 alternation 1)". (5) §5-3에 v2.1 컨텍스트 단서 추가. (6) §4-8 제목 "미적용 (Q9)" → "적용 (Q9, PR #116 머지 후 변호사 미팅 시점)" 으로 정정. **§101 "면제 트랙" 표현은 변호사가 직접 정정 가능하므로 미수정** (Q1에서 사인 받기). |
+| **v2.3** | **2026-05-05 (자율 세션 — sync with reality)** | **선제 적용 3건 반영** — v2.2 미팅 직전이라 변호사 사인 *전*에 코드 적용을 마쳤음. (A) **safe_scrub 머지 완료** — `fix/twin-rationale-safe-scrub-2026-05-04` 브랜치 main 머지(merge commit `91fd01c`). v2.1/v2.2의 "PR open" 표현이 이제 "main 머지됨"으로 사실화. Q9 위험 LOW (사실). (B) **autotrader 물리 삭제** (commit `4bcc9ab`) — `services/trading/autotrader.py` 1,321 lines + `routes/autotrade.py` 279 lines + container/app/routes/__init__의 잔존 주석 6 파일 모두 제거. tag `legal-pre-autotrader-removal` (push 됨) 만 rollback 경로. §1-2 표 + §4-6 갱신. (C) **signup cross_border 체크박스** (commit `c9c6827`) — `frontend/src/app/(auth)/signup/_v2/page-v2.tsx` 5번째 [필수] 체크박스 추가, `frontend/src/lib/consents.ts` 4 helpers 추가, `routes/consents.py` 3 endpoints 추가, dashboard layout 자동 flush. §5-2 [x] 처리 + §2 Q4 본문 갱신. (D) leftover `tests/test_autotrade_smoke.py` 삭제 (commit `d8088c7`). |
 
 — 끝.
