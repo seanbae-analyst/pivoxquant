@@ -1,537 +1,785 @@
-# PivoxQuant 법률 자문 요청 패키지
+# PivoxQuant 변호사 자문 패키지 (v2)
 
-**작성일**: 2026-04-22
-**작성**: 배상현 (CEO / 개인사업자 예정)
-**대상 로펌**: 김앤장 / 광장 / 태평양 핀테크·자본시장팀 (또는 준하는 전문 로펌)
-**런칭 목표**: 유료 베타 → Operator 9,900 / Partner 19,900 월 구독 (Observer 0원)
-**자문 희망 소요**: 1 차 검토 5~10 시간, 2 차 반영 확인 2~3 시간
-**긴급도**: 중 (베타 게이트 `***REDACTED***` 로 접근 제한 중, 유료 전환 D-30 목표)
-
-> 본 문서는 CEO 가 로펌 변호사에게 **초회 상담 시 직접 제출**하기 위해 작성한 자문 요청 패키지입니다. 각 질문에는 (a) 회사 현재 포지션, (b) 근거 증거 파일·라인번호, (c) 변호사 판단 요청 사항이 명시되어 있습니다.
+- 작성일: 2026-05-04
+- 버전: v2 (2026-04-22 v1 갱신, 537 → 본 문서)
+- 작성자: 배상현 (1인 창업자, 대표이사 후보)
+- 회의 형태: 1회 대면(50~80만원), 후속 follow-up 가능
+- 본 패키지는 **현 코드/문서 grep 검증 결과**를 인용한 사실 진술서이며, 변호사 판단을 받기 위한 사전 준비 자료다. 본인 의견(추측)은 따로 표시한다.
 
 ---
 
-## §0 회사 개요 (변호사 컨텍스트)
+## §0 회사 개요 (Read-First, 1 page)
 
-| 항목 | 내용 |
+### 0-1. 회사
+- 상호: PivoxQuant (구 StockPilot, 2026-04-15 리브랜딩)
+- 도메인: pivoxquant.com (가비아 등록, 2026-04 19,800원/년)
+- 사업자등록: **미등록 상태** (변호사 자문 후 부친 명의 vs 본인 명의 결정 예정)
+- 1인 운영(대표 = 개발 = 디자인 = 마케팅), 외부 직원 0명
+
+### 0-2. 서비스 본질
+- B2C SaaS 정보 제공 도구. 개인 투자자가 **자기 자신의** 매매·자기점검을 위해 사용하는 PFM(Personal Finance Management) 류의 도구
+- AI 어시스턴트(Anthropic Claude API) + 퀀트 스코어링 + 페이퍼 트레이딩(시뮬레이션) + 자기 점검 PDF 산출물
+- 3티어 SaaS: Free / Pro 9,900원 / Premium 19,900원 (월, 부가세 포함)
+- 결제: Stripe (사업자등록·통신판매업 신고 후 라이브 결제 활성화 예정)
+
+### 0-3. 핵심 결정 (이미 CEO 확정)
+- **유사투자자문업 신고 X** — 자본시장법 §101 면제 트랙(Personal Capital 모델) 유지
+- **자동매매(autotrader) 제거** — 2026-04-27 코드 비활성화 (`routes/__init__.py` line 16~22, 71)
+- **KIS read-only** — 한투 주문 API 영구 비활성 (`services/kis/service.py` line 489~528)
+- **Alpaca BYOK + 시스템 ALPACA_ENABLED kill switch OFF 기본값** (`config.py` line 69)
+
+### 0-4. 본 자문에서 받고자 하는 것
+1. 위 결정 4가지의 **법적 안전성 사인**(Yes/No + 근거)
+2. 출시(D-Day) 전 추가 의무 항목 명시
+3. 약관/처리방침 한국어 ACTIVE 전환 가능 여부
+4. 회색지대 기능(아래 §2) 의 출시 가능 여부 + 조건
+
+---
+
+## §1 핵심 결정 (사인 받기)
+
+### 1-1. 유사투자자문업 미등록 결정 (자본시장법 §101)
+
+| 항목 | 회사 입장 |
 |---|---|
-| 사업자 | 배상현 (개인, 1 인 창업) — 사업자등록 예정 |
-| 업태/종목 | 서비스업 / 정보통신업 (SaaS) — 통신판매업 신고 예정 |
-| 플랫폼 이름 | **PivoxQuant** (구 StockPilot, 2026-04-15 리브랜딩) |
-| 도메인 | pivoxquant.com (가비아, 2026 년 등록) |
-| 서비스 범주 | AI + 퀀트 기반 **개인투자자용 정보 제공 SaaS** |
-| 대상 시장 | 한국·미국 상장 주식 (코스피/코스닥/NYSE/NASDAQ) |
-| 대상 이용자 | 한국 거주 개인투자자 (영문 랜딩은 추후 해외 확장용) |
-| 기술 스택 | Flask (Python) + Next.js 16 + Railway PostgreSQL + Vercel |
-| 결제 | Stripe (구독, 월간) |
-| 현재 상태 | 베타 (비밀번호 게이트), 유료 결제 미활성 |
+| 결정 | 신고/등록 **하지 않음** |
+| 근거 | "Personal Capital" 모델 — 사용자가 자기 자신의 데이터(자기 포트폴리오, 자기 매매 의도)를 자기 자신을 위해 분석하는 도구. 불특정 다수 대상의 투자조언/리포트 배포 행위 없음. 1:1 맞춤 자문 행위 없음. |
+| 코드 근거 | grey-zone PDF 5종은 모두 `generate_for_user(user_id)` / `generate_for_position(user_id, ticker)` 진입점만 가짐. 즉 **본인 user_id 인증 필수** + 본인의 보유 종목/매매 의도 기반에서만 생성. |
+| 면책 문구 | 모든 산출물 말미 한/영 disclaimer 자동 첨부 (`services/legal_filter.py:169-170`) |
 
-### 0.1 기능 구조 요약
+→ 변호사 사인 요청: §2 Q1 참조
 
-1. **데이터 제공** — FMP / Alpaca / KIS (read-only) / SEC EDGAR / Naver 금융 데이터 집계·시각화
-2. **퀀트 분석** — 58 개 퀀트 모델 (StatArb, MeanReversion, TSMOM, ML 등) + 7-Layer Risk Defense
-3. **AI 인사이트** — Claude API 기반 분석 요약·챗 (투자 **권유 금지**, 정보 해설만)
-4. **리포트 산출물** — Goldman IC v2 스타일 **PDF 18 종** (Weekly Memo, Earnings Pre-Brief, Equity Research Memo 등)
-5. **시그널** — POSITIVE / NEGATIVE / NEUTRAL (관찰 기반 라벨). **BUY / SELL / HOLD 라벨 절대 사용 안 함**
-6. **자동매매 (autotrader.py)** — Alpaca **paper mode only**, Kill Switch + 5 Circuit Breaker, 실주문 코드 경로 완전 차단
-7. **투자 성향 설문** — 20 문항, 8 개 아키타입 분류
+### 1-2. 자동매매 제거 결정 (자본시장법 — 투자일임업)
 
-### 0.2 명시적 금지 사항 (코드·UX 원칙)
+| 항목 | 상태 |
+|---|---|
+| 루트 `autotrader.py` 파일 | **삭제됨** (2026-05-04 검증: `ls /Users/seanbae/Desktop/취준/stockpilot/autotrader.py` → not found) |
+| `routes/autotrade.py` Blueprint 등록 | **해제됨** (`routes/__init__.py:16-22` 주석 처리, line 71 blueprints 리스트에서 제거) |
+| 프론트엔드 `/autotrade` 페이지 | **제거됨** (CLAUDE.md "autotrade REMOVED 2026-04-27 per legal" 명시) |
+| Rollback 가능성 | 코드 주석으로 복원 절차 보존 — 의도적, 변호사 사인 후 결정 |
 
-- BUY / SELL / HOLD 직접 추천 금지 (routes / services / templates 전수 필터링)
-- "매수하세요", "매도하세요", "추천", "조언" 금지
-- 수익률 보장 표현 금지
-- "AI Coach" 표현 금지 → "AI Assistant" 로 통일
-- 모든 분석·PDF 에 면책 고지 필수
+### 1-3. KIS read-only (한국투자증권 API)
 
-> 근거: `/Users/seanbae/Desktop/취준/stockpilot/services/legal_filter.py` (80 개 regex, 292 라인)
-> `/Users/seanbae/Desktop/취준/stockpilot/CLAUDE.md` "중요 원칙" 섹션
+`services/kis/service.py:489-528` 발췌:
+```python
+def buy_order(self, ticker: str, quantity: int, price: int = 0, order_type: str = "00"):
+    """DISABLED -- KIS order execution is read-only for legal compliance.
+    한투 주문 실행은 투자일임업(자본시장법) 규제로 영구 비활성화됨.
+    """
+    return {
+        "ok": False,
+        "error": "KIS order execution is disabled. Please use the KIS app to place orders.",
+    }
 
-### 0.3 가격 체계 (예정)
+def sell_order(self, ticker: str, quantity: int, price: int = 0, order_type: str = "00"):
+    """DISABLED -- KIS order execution is read-only for legal compliance.
+    한투 주문 실행은 투자일임업(자본시장법) 규제로 영구 비활성화됨.
+    """
 
-| 티어 | 월 구독료 (KRW, VAT 포함 여부 확인 필요) | 포함 기능 |
+def _place_order(self, ticker: str, quantity: int, price: int, order_type: str, side: str):
+    """DISABLED -- order execution removed for legal compliance (자본시장법).
+    KIS order execution is permanently disabled. ...
+    """
+```
+- 잔여 주문 관련 함수: `get_order_status` (line 532) — **조회 전용**(체결 내역 read-only). 매매 실행 X.
+- 사용자가 실제 매매를 하려면 한투 앱에서 직접 입력해야 함.
+
+### 1-4. Alpaca BYOK + 시스템 kill switch OFF
+
+`config.py:45-69`:
+```python
+# ALPACA_ENABLED — kill switch for SYSTEM-WIDE Alpaca usage (server-owned keys).
+# This server-side ALPACA_ENABLED flag therefore stays OFF in production.
+ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in ("1", "true", "True", "TRUE", "yes")
+```
+
+`routes/broker_oauth.py` (kill switch 적용 6곳: 정의 line 309-327, status endpoint 가드 line 260, endpoint 가드 4곳 line 365/414/435/451):
+- `_alpaca_kill_switch_response()` 함수가 `ALPACA_ENABLED=False` 시 503 반환.
+- 시스템 키 Alpaca 호출 경로는 production에서 모두 503.
+- 사용자 BYOK 경로는 별도(UI 미완 — 미출시 상태).
+
+→ 변호사 사인 요청: 위 1-2 / 1-3 / 1-4 가 §6 미등록 투자업 · §101 영업행위 중 어느 카테고리도 트리거하지 않는지.
+
+---
+
+## §2 변호사 판단 요청 — 12개 질문
+
+각 질문 구조:
+- **a. 회사 현재 포지션** (코드/UX/문서 근거)
+- **b. 증거 파일 경로 + 라인번호** (실제 grep 으로 확인)
+- **c. 변호사 판단 요청** (Yes/No + 근거 + 추가 의무 + 위험 등급)
+
+---
+
+### Q1. 자본시장법 §101 면제 적정성 (Personal Capital 모델)
+
+**a. 현재 포지션**
+- 회사는 `유사투자자문업` 신고를 하지 않는다 (CEO 결정 2026-05-04).
+- 근거: Personal Capital 모델 — 사용자 자기 자신의 데이터(자기 보유 종목, 자기 매매 의도) 한정, 불특정 다수 대상 정보 제공 없음.
+- 모든 분석/스코어링은 사용자가 직접 로그인 후 자기 user_id 컨텍스트에서 자기 자신을 위해 사용.
+
+**b. 증거**
+- `services/legal_filter.py:1-25` — 모듈 docstring에 "자본시장법 §6 미등록 투자자문업 + §101 불공정 영업행위 리스크 방어선" 명시.
+- `services/legal_filter.py:36-155` — 89개 정규식 _REPLACEMENTS + 6개 _PROHIBITED + 1개 _COMPLIANCE 정규식(총 96개 `re.compile`).
+- `frontend/src/content/terms-ko.md:89-106` (제6조 — 투자자문 면책):
+  > 본 서비스(PivoxQuant)는 「자본시장과 금융투자업에 관한 법률」상 투자자문업 또는 투자일임업이 아닙니다.
+- `~/.claude/projects/-Users-seanbae-Desktop---/memory/legal_decision_no_advisory.md` — CEO 결정 메모.
+
+**c. 판단 요청**
+- (1) §101 면제 트랙(Personal Capital 모델)이 자기 데이터 한정 PFM으로 인정되는지.
+- (2) "분석 시그널"(POSITIVE/NEGATIVE/NEUTRAL)이 §101의 "불특정 다수 대상 투자조언" 정의에 포섭되는지.
+- (3) 회사가 "자기 데이터" 경계를 어느 수준까지 유지해야 면제 범위 내인지(예: 백테스팅 화면, Discover 페이지의 시그널 리스트가 self-data인지 universe-data인지).
+- (4) **위험 등급 (회사 자체 평가)**: HIGH (잘못 판단 시 §101 위반 + 형사 처벌 + 서비스 셧다운).
+
+---
+
+### Q2. 회색지대 5 PDF — 자기 데이터 한정 면제 충분성
+
+**a. 현재 포지션**
+회사는 5종 PDF 모두를 사용자 본인 user_id 컨텍스트에서만 생성. 외부 배포·구독 모델 아님. 모든 PDF에 면책 문구 첨부.
+
+| PDF | 입력 데이터 |
+|---|---|
+| `earnings_prebrief` | 사용자 보유 종목 + 결산 일정 |
+| `credit_rating` | 사용자 포트폴리오의 5요인 점수(0~100) |
+| `insider_mirror` | 사용자 보유 종목 관련 인사이더 거래 필링 |
+| `year_end_letter` | 사용자 본인 1년 매매 회고 |
+| `pre_trade_checklist` | 사용자 매매 직전 self-check 7질문 |
+
+**b. 증거 (file:line)**
+
+`services/artifacts/year_end_letter_service.py:16-17, 28, 456`
+```
+- **Download for the owner only** (PDF email + in-app download).
+- Dollar / Won amounts are allowed in the user's *own* copy because
+  they are reading their own book; the renderer must not surface ...
+def generate_for_user(self, user_id: int, target_year=None) ...
+```
+
+`services/artifacts/earnings_prebrief_service.py:6, 154, 184-188`
+```
+EarningsPreBriefService().generate_for_position(user_id, ticker, earnings_date)
+user_id: int  # required
+```
+
+`services/artifacts/credit_rating_service.py:5, 12, 106`
+```
+CreditRatingService().generate_for_user(user_id, as_of=None) → data dict
+Scores the user's portfolio on five deterministic factors (0–100 each)
+user_id: int
+```
+
+`services/artifacts/insider_mirror_service.py:9, 20, 27`
+```
+P1 Weekly summary — count of filings related to holdings.
+APScheduler day_of_week=mon, hour=9 KST. Empty holdings → ...
+```
+
+`services/artifacts/pre_trade_checklist_service.py:1-3`
+```
+"""Pre-Trade Checklist — persona-tailored 7-question self-check.
+매매 전 **자기점검용 양식** (Tools, not advice). 사용자가 직접 ..."""
+```
+
+**c. 판단 요청**
+- (1) 위 5종이 모두 "자기 데이터 한정" 요건을 충분히 충족하는지.
+- (2) `credit_rating`의 5요인 점수(0~100)가 "투자등급"으로 해석돼 신용평가업(자본시장법) 트리거할 가능성.
+- (3) `earnings_prebrief`(특정 종목의 결산 직전 정리)가 "특정 종목 분석 리포트 발행"으로 해석돼 §101 위반 가능성.
+- (4) `insider_mirror`(SEC EDGAR Form 4 데이터 가공)가 데이터 재배포 위반 가능성.
+- (5) `year_end_letter`(작년 매매 회고)에 통화·금액 표시 가능 여부 — 본인 한정이라도 추후 외부 공유될 위험.
+- (6) **위험 등급 (회사 자체)**: MEDIUM-HIGH.
+
+---
+
+### Q3. 마이데이터 법 (신용정보법 §22의9)
+
+**a. 현재 포지션**
+- BYOK(Bring Your Own Key) + read-only 모델 → "개인용 도구" 포지셔닝.
+- Alpaca(미국 broker, BYOK), KIS(한국 broker, BYOK + read-only).
+- 회사는 사용자 자격증명을 암호화 저장 후 사용자 본인 위임으로 read-only 조회만 수행. 매매 실행 X.
+- 회사는 "본인신용정보관리업"(자본금 5억) 인가 받지 않을 계획.
+
+**b. 증거**
+- `services/kis/service.py:489-528` — 주문 API 영구 비활성, 조회 전용.
+- `routes/broker_oauth.py:255-453` — Alpaca 시스템 kill switch.
+- `frontend/src/content/terms-ko.md:182` (제9조 3항):
+  > **외부 데이터 제공자 BYO(Bring Your Own Key) 원칙**: 일부 외부 데이터 제공자(예: Alpaca)에 대하여 회사는 사용자가 직접 발급받은 API 키를 통해 데이터를 조회·전달하는 방식만을 운영합니다.
+- `~/.claude/projects/-Users-seanbae-Desktop---/memory/legal_compliance.md:40-61` — 마이데이터 우려 메모(2026-04-28 작성, 변호사 답 미수령).
+
+**c. 판단 요청**
+- (1) BYOK + read-only "개인용 도구"가 본인신용정보관리업 §22의9 적용대상인지(인가·면허 필요 여부).
+- (2) Alpaca(해외 broker) 정보가 한국 신용정보법 적용 외인지 — 조회 데이터가 한국 사용자 단말로 들어오는 시점에 적용될 가능성.
+- (3) KIS(국내 broker)는 read-only여도 "통합 조회/관리" 사업이면 적용되는지.
+- (4) 다중 broker(Alpaca + KIS) 통합이 §22의9가 정의한 "여러 기관에서 신용정보 통합" 기준에 해당하는지.
+- (5) 회사가 이 모델을 유지하려면 어떤 조치(고지, 동의, 약관)가 필수인지.
+- (6) **위험 등급 (회사 자체)**: HIGH (인가 필요로 판정 시 자본금 5억 트리거, 1인 창업자에게 사실상 셧다운).
+
+---
+
+### Q4. 국외 이전 동의 (PIPA §28-8)
+
+**a. 현재 포지션**
+- 인프라 4곳이 모두 미국 호스팅: Anthropic PBC(Claude API), Stripe(결제), Vercel(프론트), Railway(백엔드 + DB).
+- 처리방침 §6에 위탁 표 + §6-1에 국외 이전 표가 있고 명시적으로 §28-8을 인용함.
+- 회원가입 화면에는 동의 체크박스 4개(terms / non_advisory / age / marketing)만 있고 **국외 이전 동의 별도 체크박스가 없음**.
+
+**b. 증거**
+
+`frontend/src/content/privacy-ko.md:181-201` (제6조 ① 국외 이전):
+```
+| 수탁자 | 국가 | 이전 항목 | 이전 목적 | 보유 기간 |
+| **Stripe, Inc.** | 미국 | 결제 정보, 이메일, 청구서 정보 | 결제 처리 및 청구 | 거래 종료 후 5년 |
+| **Anthropic, PBC** | 미국 | AI 채팅 내용 (이메일·이름 제외) | Claude AI 응답 생성 | 요청 처리 후 즉시 삭제 (30일 이내 로그 폐기) |
+| **Railway Corp.** | 미국 (Oregon) | 서버 데이터 전체 | 애플리케이션 호스팅 | 서비스 이용 기간 |
+| **Vercel Inc.** | 미국 | 접속 로그, IP 주소, User-Agent | 정적 자원 배포 및 엣지 캐싱 | 30일 |
+| **Google LLC (OAuth)** | 미국 | 이메일, 이름, 프로필 사진 | OAuth 로그인 인증 | 로그인 토큰 유효 기간 (1시간), refresh 90일 |
+- 본인은 「개인정보 보호법」 제28조의8에 따른 안전조치를 이행합니다.
+```
+
+`frontend/src/app/(auth)/signup/_v2/page-v2.tsx:44-47, 109-122`
+```typescript
+type Consents = { terms: boolean; non_advisory: boolean; age: boolean; marketing: boolean }
+const [consents, setConsents] = useState<Consents>({ terms: false, ..., marketing: false });
+setAllRequired(consents.terms && consents.non_advisory && consents.age);
+```
+
+→ 5번째 체크박스(국외 이전 동의) 미반영. PR #80은 backend 모델/migration만 추가됨, frontend follow-up 미진행 (HANDOVER_2026-05-04.md:62).
+
+**c. 판단 요청**
+- (1) 처리방침 게시 + "이용자께서는 서비스 가입 시 아래 이전에 동의한 것으로 간주" 문구만으로 §28-8의 "별도 동의" 요건을 충족하는지(통상 별도 명시 동의 체크박스 필요로 해석).
+- (2) Anthropic Claude API에 사용자 채팅 내용을 전송하는 행위가 "민감정보의 국외 이전"으로 가중 동의 필요한지.
+- (3) Google OAuth는 한국에 사업 거점이 있는데도 §28-8 적용대상인지.
+- (4) Kakao Corp.는 한국 소재라 위탁(국내), Google은 미국 소재라 국외 이전 — 이 분류가 정확한지.
+- (5) 5번째 체크박스 추가 시 통과 시점은 회원가입 단계 vs 첫 사용 단계 어느 쪽이 적합한지.
+- (6) **위험 등급 (회사 자체)**: HIGH (PIPA 위반 시 과태료 + 행정처분).
+
+---
+
+### Q5. 이용약관 13개 조항 한국어 검수 (DRAFT → ACTIVE 전환)
+
+**a. 현재 포지션**
+- terms-ko.md = 244 lines / 13개 조항 (1조 ~ 13조 + 부칙). 문서 첫 줄 `status: "DRAFT — 최종 시행 전 변호사 검토 필요"`.
+- privacy-ko.md = 346 lines / 12개 조항 (1조 ~ 12조 + 부칙).
+- 회사 v1 메모리(`legal_compliance.md:21-23`)에는 "약관 18조항 / 처리방침 14조항"으로 기록되어 있으나, **현재 코드 상에서는 13조 + 12조**. 메모리 outdated, 검증 결과 사실(§6-1 참조).
+
+**b. 증거**
+- `frontend/src/content/terms-ko.md:7` — `status: "DRAFT — 최종 시행 전 변호사 검토 필요"`
+- 조항 헤더 grep 결과(이용약관):
+  ```
+  제1조(목적) / 제2조(용어의 정의) / 제3조(약관의 효력 및 변경) /
+  제4조(회원가입 및 자격) / 제5조(회원의 의무) /
+  제6조(서비스 이용 — 투자자문 면책) / 제7조(시그널 및 AI Assistant 면책) /
+  제8조(유료 서비스) / 제9조(콘텐츠 저작권) / 제10조(회원의 책임) /
+  제11조(회사의 책임 제한) / 제12조(분쟁 해결) / 제13조(문의처) / 부칙
+  ```
+- 처리방침 조항 헤더 grep 결과:
+  ```
+  제1조 ~ 제12조 + 부칙
+  ```
+
+**c. 판단 요청**
+- (1) DRAFT 워터마크 제거 가능 시점(조건부 가능 / 무조건 가능 / 추가 수정 후 가능).
+- (2) 18개 → 13개로 축약된 부분이 누락 조항인지(예: 미성년자 보호, 손해배상 절차, 광고 표시 등).
+- (3) 시행일자, 사업자등록번호, 사업자 명의(부친 vs 본인) 확정 시 부칙 기재 방식.
+- (4) 약관 변경 시 30일 사전 통지 외 추가 의무.
+- (5) **위험 등급 (회사 자체)**: MEDIUM (전자상거래법 §6 위반 가능성, 14일 환불기간 표시 등).
+
+→ §3 인라인 인용 참조.
+
+---
+
+### Q6. 회원탈퇴 시 거래기록 보존 (전자상거래법 §6 vs PIPA §37)
+
+**a. 현재 포지션**
+- 전자상거래법 시행령 §6: 결제·청약철회 등 거래기록은 5년 보존 의무.
+- PIPA §37: 정보주체의 처리정지 요구권 — 회원탈퇴 시 즉시 파기 원칙.
+- 두 법령이 충돌. 회사는 아직 회원탈퇴 시 결제 정보 보존/즉시 파기 정책을 확정하지 않음.
+
+**b. 증거**
+- `frontend/src/content/privacy-ko.md:114-140` (제4조 보유 기간) — 항목별 보유기간만 기재, 회원탈퇴 후 결제기록 별도 5년 보존 명시는 변호사 검토 필요.
+- HANDOVER_2026-05-04.md:59 — "legal #11 회원탈퇴 시 거래기록 보존 — 전자상거래법 §6(5년) vs PIPA §37 충돌"
+- `models/user.py:53-62` — 정통망법 §50 ① marketing-consent timestamp 필드는 추가됨(soft-delete 인프라는 미구현 상태).
+
+**c. 판단 요청**
+- (1) 권장 정책: 회원탈퇴 시 즉시 파기(PIPA) vs 결제기록만 별도 5년 보존(전자상거래법) — 어느 쪽이 우선하는지.
+- (2) 권장 구현: hard delete vs soft delete + 결제 테이블만 분리 보존(이메일·이름은 익명화).
+- (3) 약관·처리방침에 명시할 정확한 문구 권고.
+- (4) **위험 등급 (회사 자체)**: MEDIUM (사용자 PIPA 민원 시 다툼 가능).
+
+---
+
+### Q7. 외부 데이터 라이선스 (FMP / KIS / Alpaca / SEC EDGAR)
+
+**a. 현재 포지션**
+- FMP Premium $29/mo (750 req/min) — 회사 키 사용. UI에서 시세·펀더멘털·시그널 형태로 가공해 표시.
+- KIS — 사용자 BYOK + read-only. 사용자가 자기 키로 자기 계좌 데이터를 조회.
+- Alpaca — 사용자 BYOK. 시스템 키는 ALPACA_ENABLED=0 (production OFF).
+- SEC EDGAR Form 4 — 공개 데이터, `insider_mirror_service.py`에서 가공.
+
+**b. 증거**
+- `frontend/src/content/terms-ko.md:181-184` (제9조 2-3항):
+  > 서비스에서 제공되는 시세 데이터 및 펀더멘털 데이터는 **Alpaca, Korea Investment & Securities(KIS), Financial Modeling Prep(FMP)** 등 제3자 데이터 제공자의 라이선스를 기반으로 제공되며, 각 제공자의 이용 조건이 적용됩니다.
+  > **외부 데이터 제공자 BYO(Bring Your Own Key) 원칙**: ... 회사는 해당 데이터를 자체적으로 재배포하지 않으며 ...
+
+**c. 판단 요청**
+- (1) FMP Premium 약관(회사 키)으로 가공·표시한 데이터를 SaaS 유료 사용자에게 제공하는 것이 "재배포(redistribution)"에 해당하는지.
+- (2) KIS Open API 약관에 "본인 계좌 외 사용 금지" 조항이 있는데, 회사가 사용자 위임으로 read-only 조회하는 것이 위반인지.
+- (3) Alpaca BYOK 모델이 Alpaca 약관(US Securities firm) 위반 가능성.
+- (4) SEC EDGAR Form 4 가공 PDF 배포가 SEC 가이드라인 위반인지.
+- (5) **위험 등급 (회사 자체)**: MEDIUM (라이선스 분쟁은 통상 cease-and-desist로 시작, 즉시 셧다운 X).
+
+---
+
+### Q8. user_agent_audit 2년 보존 의무 vs CASCADE 충돌 (PR #96 보류)
+
+**a. 현재 포지션**
+- migration `010_user_agent_audit.py`가 Journal Companion 산출물의 2년 보존을 위해 별도 테이블 생성.
+- 회원탈퇴 시 `users` 테이블 cascade delete가 audit 행을 함께 삭제하면 보존 의무 위반.
+- PR #96 보류 상태(HANDOVER_2026-05-04.md:63 "PR #96 보류").
+
+**b. 증거**
+- `migrations/versions/010_user_agent_audit.py:2`:
+  > user_agent_audit — Journal Companion **2-year regulatory retention table**.
+- `migrations/versions/010_user_agent_audit.py:19-32`:
+  > than 2 years. Index `idx_user_agent_audit_purge` keeps that delete ...
+  > revision = "010_user_agent_audit"
+
+**c. 판단 요청**
+- (1) Journal Companion(AI 산출물 audit log)의 2년 보존 의무 법적 근거가 무엇인지(전자금융거래법 §22 vs 자본시장법 §401).
+- (2) 회원탈퇴 시 user_id를 NULL로 익명화하고 audit row만 보존하는 방식이 PIPA 적합한지.
+- (3) 2년 만료 후 자동 purge index가 적정한지.
+- (4) **위험 등급 (회사 자체)**: LOW-MEDIUM (audit log 누락은 평소엔 문제없으나, 분쟁 발생 시 회사 입증 자료 손실).
+
+---
+
+### Q9. F5 AI Twin rationale leak (paper trade)
+
+**a. 현재 포지션**
+- F5 AI Twin은 사용자 페르소나(8개 투자자 유형) 기반 페이퍼 트레이딩 시뮬레이션.
+- HANDOVER 권고: BUY rationale 에 `safe_scrub` 적용.
+- **2026-05-04 자율 세션 중 수정 적용** — PR #116 (`fix/twin-rationale-safe-scrub-2026-05-04`, commits `907539f` + `1100f6d`).
+
+**b. 증거 (수정 후 상태, 변호사 미팅 시점 — 직접 grep 검증 2026-05-04)**
+```bash
+$ grep -nE "from services.legal_filter|safe_scrub|persona=\\{persona\\}|paper exit|cand.rationale" services/twin/twin_runner.py
+41:from services.legal_filter import safe_scrub                  # ← 추가됨
+226:            rationale=f"persona={persona}; engine={rationale}",
+305:            rationale=f"paper exit — persona={persona}; {reason}",
+401:            rationale=safe_scrub(cand.rationale, context="twin.buy.rationale"),
+```
+- BUY path (line 401) — `safe_scrub` 적용 ✅
+- SELL path (line 305) — `f"paper exit — persona={persona}; {reason}"` 이며 `reason` 은 `"TP hit"/"SL hit"/"Time stop"` 같은 결정성 내부 라벨만 사용. AI/엔진 텍스트 미포함 → 의도적 미적용 (회사 판단).
+- BUY rationale 출처(line 226) — `f"persona={persona}; engine={rationale}"`. 이 줄 자체는 scrub 안 했지만, 최종 DB write 직전(line 401)에서 전체 문자열에 적용됨.
+- 회귀 가드 테스트 추가 — `tests/test_ai_twin.py::test_buy_rationale_is_scrubbed_at_write_time` (poisoned signal `"BUY signal — recommended"` 입력 → 두 토큰 모두 persisted rationale 에서 제거 검증, 실제 PASS).
+
+**c. 판단 요청**
+- (1) 페이퍼 트레이딩 결과(paper book)에 표시되는 rationale이 "투자 권유"로 해석될 위험. 수정 후에도 변호사 사인 필요.
+- (2) safe_scrub 적용 여부와 별개로, 페이퍼 트레이딩 자체가 §101 면제 트랙 안에 있는지(시뮬레이션 + 자기 데이터 한정).
+- (3) SELL rationale을 의도적으로 scrub 미적용한 회사 판단(내부 라벨만 사용)이 충분한지.
+- (4) **위험 등급 (회사 자체, 수정 후)**: LOW (BUY 경로 hardening 완료 + 회귀 가드 추가). 수정 전: MEDIUM.
+
+---
+
+### Q10. F24 Persona Mentor Match (Tier 4, 사용자-사용자 매칭)
+
+**a. 현재 포지션**
+- 미구현(Tier 4 backlog) — 같은 페르소나 사용자끼리 매칭하여 자기 매매 회고 공유.
+- 이 기능이 출시되면 P2P 형태 — "다른 사용자의 매매 의견" 노출.
+
+**b. 증거**
+- 코드 미존재 (회사 자체 평가).
+- HANDOVER 명시 의도 — 변호사 사전 검토 후 구현 결정.
+
+**c. 판단 요청**
+- (1) 사용자-사용자 매매 의견 공유가 §101 "불특정 다수 대상 정보 제공"으로 해석될 위험.
+- (2) "Mentor Match" 라벨링이 투자권유 해석 가능성을 높이는지.
+- (3) 출시 전 어떤 조건(익명화 / 게시판 형태 / 1:1 차단 / 면책 클릭) 충족 시 가능한지.
+- (4) **위험 등급 (회사 자체)**: HIGH (출시 시 §101 위반 직접 트리거 가능).
+
+---
+
+### Q11. 부친 명의 사업자등록 vs 본인 명의
+
+**a. 현재 포지션**
+- CEO(배상현, 1인 창업자)는 현재 취준생 신분.
+- 사업자등록을 부친 명의로 할 가능성 검토 중.
+- 통신판매업 신고는 사업자등록 후 가능.
+
+**b. 증거**
+- HANDOVER_2026-05-04.md:21-24: "사업자등록 + 통신판매업 신고 후: BUSINESS_REGISTRATION_NUMBER set / TELESELLER_REGISTRATION_NUMBER set"
+- `frontend/src/content/privacy-ko.md:11`: `operator: "배상현 (예정 사업자등록자)"`
+
+**c. 판단 요청**
+- (1) 부친 명의 사업자등록 시 자본시장법 위반(예: §101 면제 트랙) 사인이 부친 명의로 들어가는 리스크.
+- (2) 운영 실체와 사업자 명의가 다를 경우 PIPA 정보주체 청구 시 책임 분배(부친 vs 본인).
+- (3) 본인 명의로 사업자등록 가능 여부(취준생 신분 + 부모 의료보험 피부양자 등 조건 영향).
+- (4) 세무: 부친 명의 시 부친 종합소득세 영향, 본인 명의 시 4대보험 의무.
+- (5) **위험 등급 (회사 자체)**: HIGH (잘못 결정 시 부친 신용·세무 영향).
+
+---
+
+### Q12. 표시광고법 §3 (기만표시) — Template Hardcoding Guard
+
+**a. 현재 포지션**
+- 회사는 샘플/시뮬레이션 데이터에 실제 종목 ticker / 금액을 하드코딩하지 않는 정책.
+- CI legal-guard workflow + pytest로 자동 검증, 현재 0건 위반.
+
+**b. 증거**
+- `CLAUDE.md` (Template Hardcoding Guard 섹션):
+  > 방어선 2개 (이중 방어): CI legal-guard / 로컬 pytest.
+  > PR 머지 전 CI legal-guard job 이 green 이어야 머지 가능.
+- `.github/workflows/legal-guard.yml` + `tests/test_no_hardcoded_samples.py`.
+
+**c. 판단 요청**
+- (1) "예시 화면"의 가짜 ticker(AAPL, TSLA 등)/금액 표시가 표시광고법 §3 (기만표시) 위반인지.
+- (2) "PRO 배지", "Premium 기능" 표시가 광고 표시 의무 위반인지.
+- (3) 백테스팅 결과의 "과거 수익률" 표시가 자본시장법 §178(시세조작 금지)·표시광고법 §3 모두 트리거하는지.
+- (4) 추가 권고 문구.
+- (5) **위험 등급 (회사 자체)**: LOW-MEDIUM.
+
+---
+
+## §3 약관/처리방침 인라인 검토 요청
+
+### 3-1. 이용약관 (terms-ko.md) — 13개 조항
+
+| 조 | 라인 | 핵심 한 줄 | 변호사 검토 포인트 |
+|---|---|---|---|
+| 제1조 (목적) | 32-37 | 이용약관 → 회사·이용자 권리·의무·책임사항 | 표준 |
+| 제2조 (용어의 정의) | 38-50 | 회사/회원/서비스/시그널/AI Assistant 정의 | "시그널" 정의에 "투자권유 아님" 명시 가능 여부 |
+| 제3조 (약관의 효력 및 변경) | 51-59 | 30일 사전 공지 후 변경 가능 | 약관규제법 §3 부합 |
+| 제4조 (회원가입 및 자격) | 60-71 | OAuth 기반, 만 14세 미만 가입 불가 | 미성년자 보호 조항 추가 검토 |
+| 제5조 (회원의 의무) | 72-86 | 허위정보 금지, 타인 명의 도용 금지 | 표준 |
+| **제6조 (서비스 이용 — 투자자문 면책)** | 89-112 | 자본시장법상 투자자문업자 아님 명시 | **핵심 면책** — Q1 참조 |
+| **제7조 (시그널 및 AI Assistant 면책)** | 115-139 | POSITIVE/NEGATIVE/NEUTRAL은 분석결과, 추천 아님 | **핵심 면책** — Q1·Q9 참조 |
+| 제8조 (유료 서비스) | 142-176 | 9,900 / 19,900원, Stripe, 14일 청약철회 | 전자상거래법 §17 부합 검토 |
+| 제9조 (콘텐츠 저작권) | 178-185 | BYOK 원칙 명시, 재배포 금지 | Q7 참조 |
+| 제10조 (회원의 책임) | 188-194 | 계정 관리, 자기 책임 | 표준 |
+| 제11조 (회사의 책임 제한) | 197-216 | 손실 책임 부담 안 함, 간접손해 제외 | 약관규제법 §7 (불공정 약관) 적합 검토 |
+| 제12조 (분쟁 해결) | 217-225 | 한국법, 서울중앙지법 관할 | 표준 |
+| 제13조 (문의처) | 226-234 | support@pivoxquant.com | 시행일·사업자번호·연락처 확정 필요 |
+| 부칙 | 235-244 | 시행일자 | DRAFT → ACTIVE 시 시행일 기재 |
+
+→ Q5 참조.
+
+### 3-2. 개인정보처리방침 (privacy-ko.md) — 12개 조항
+
+| 조 | 라인 | 핵심 한 줄 | 변호사 검토 포인트 |
+|---|---|---|---|
+| 제1조 (수집하는 개인정보 항목) | 41-85 | 이메일/이름/OAuth 토큰/결제정보(Stripe) 등 | 수집 항목 최소화 원칙 |
+| 제2조 (개인정보 수집 방법) | 86-97 | OAuth, 회원가입, 결제 시 수집 | 표준 |
+| 제3조 (개인정보 수집 및 이용 목적) | 98-113 | 서비스 제공, 결제, 공지, 마케팅 | 정통망법 §50 별도 동의 분리 |
+| 제4조 (개인정보 보유 및 이용 기간) | 114-140 | 항목별 보유기간 | Q6 참조 (전자상거래법 §6 vs PIPA §37) |
+| 제5조 (개인정보의 제3자 제공) | 141-174 | 원칙적 제공 X, 법령 요구 시 한정 | 표준 |
+| **제6조 (개인정보 처리 위탁)** | 175-211 | Stripe/Anthropic/Vercel/Railway/Google/Kakao | **핵심** — Q4 참조 |
+| 제7조 (정보주체의 권리 및 행사 방법) | 213-239 | 열람/정정/삭제/처리정지 | PIPA §35-37 부합 |
+| 제8조 (쿠키 사용) | 240-259 | 쿠키 동의 배너 운영 | 정통망법 §50 부합 |
+| 제9조 (개인정보의 안전성 확보 조치) | 260-282 | TLS 1.3, 접근통제, 암호화 | PIPA §29 부합 |
+| 제10조 (개인정보 보호책임자 / DPO) | 283-306 | 보호책임자 = 배상현(예정) | 1인 운영 — 별도 DPO 지정 의무 여부 |
+| 제11조 (변경 고지) | 307-327 | 변경 7일 전 공지 | 표준 |
+| 제12조 (문의처) | 328-337 | privacy@pivoxquant.com | 표준 |
+| 부칙 | 338-346 | 시행일자 | DRAFT → ACTIVE 시 시행일 기재 |
+
+→ Q4·Q6 참조.
+
+---
+
+## §4 자료 부록 — 핵심 코드 스니펫
+
+### 4-1. 면책·치환 코어 (`services/legal_filter.py`)
+
+| 항목 | 위치 | 갯수/길이 |
 |---|---|---|
-| Observer | 0 | 시세, 기본 차트, 주간 메모 (제한) |
-| Operator | 9,900 | 전체 PDF 18 종, 퀀트 시그널, AI Chat, 7-Layer Risk |
-| Partner | 19,900 | Operator + 자동매매 페이퍼 시뮬, Earnings Pre-Brief, 우선 지원 |
+| 파일 전체 | `services/legal_filter.py` | 344 lines |
+| `re.compile` 총 패턴 수 | grep `-c "re\.compile"` | **96** |
+| `_REPLACEMENTS` (surgical 치환) | line 36-155 | **89** patterns |
+| `_PROHIBITED_PATTERNS` (구조적 위반 — 로그 경고) | line 159-166 | **6** patterns |
+| `_COMPLIANCE_FORBIDDEN_PATTERNS` (hard deny-list) | line 312-321 | **14 raw patterns** (한국어 13 + 영문 alternation 1) |
+| `_DISCLAIMER_KR/EN` (자동 첨부) | line 169-170 | 2개 문구 |
+| `_SCRUB_FIELDS` (cache write path 검사 대상) | line 173-191 | 17 fields |
+
+발췌 (line 36-50):
+```python
+_REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
+    # ── Group 1: 복합 구문 (우선 처리) ────────────────────────
+    (re.compile(r"포지션\s*축소\s*또는\s*청산\s*고려"), "약세 신호 감지 (정보 제공)"),
+    (re.compile(r"노출\s*축소\s*(권고|권장)"), "노출 지표 상승 관찰"),
+    ...
+    # ── Group 2: 권고 / 권장 / 추천 (단일 동사) ───────────────
+    (re.compile(r"매수\s*(권고|권장|추천)"), "정보 고지 (사전 설정 레벨 도달)"),
+    (re.compile(r"매도\s*(권고|권장|추천)"), "정보 고지 (사전 설정 레벨 도달)"),
+    ...
+]
+```
+
+발췌 (line 159-166, _PROHIBITED — 6 패턴):
+```python
+_PROHIBITED_PATTERNS: list[re.Pattern[str]] = [
+    re.compile(r"목표가\s*[\$₩]?\s*[\d,\.]+"),
+    re.compile(r"예상\s*수익률\s*[+\-]?\d+(\.\d+)?%"),
+    re.compile(r"적정가\s*[\$₩]?\s*[\d,\.]+"),
+    re.compile(r"price\s*target[:\s]*\$?[\d,\.]+", re.IGNORECASE),
+    re.compile(r"expected\s*return[:\s]*\+?\d+(\.\d+)?%", re.IGNORECASE),
+    re.compile(r"fair\s*value[:\s]*\$?[\d,\.]+", re.IGNORECASE),
+]
+```
+
+발췌 (line 312-321, _COMPLIANCE — hard deny):
+```python
+_COMPLIANCE_FORBIDDEN_PATTERNS = [
+    r"추천", r"조언", r"권(?:고|유|장)",
+    r"매수", r"매도",
+    r"사세요", r"파세요", r"사라", r"팔아",
+    r"오를\s*것", r"내릴\s*것", r"오른다", r"내린다",
+    r"\b(?:buy|sell|recommend|advice|advise)\b",
+]
+```
+
+### 4-2. 단어 deny-list 정전(canonical) (`services/legal/forbidden_terms.py`)
+
+| 항목 | 값 |
+|---|---|
+| 파일 라인 수 | 115 |
+| `FORBIDDEN_DIRECTIVE_TERMS` 토큰 수 | **20** (frozenset 직접 카운팅) |
+| 영문 단일 토큰 (8) | buy / sell / hold / recommend / recommendation / advice / advise / advisor |
+| 영문 복합 (4) | buy recommendation / sell recommendation / ai coach / investment coach |
+| 한국어 토큰 (8) | 추천 / 조언 / 투자 코치 / 매수 / 매도 / 매수 추천 / 매도 추천 / 보유하세요 |
+
+발췌 (line 53-79):
+```python
+FORBIDDEN_DIRECTIVE_TERMS: Final[frozenset[str]] = frozenset({
+    "buy", "sell", "hold", "recommend", "recommendation",
+    "advice", "advise", "advisor",
+    "buy recommendation", "sell recommendation",
+    "ai coach", "investment coach",
+    "추천", "조언", "투자 코치",
+    "매수", "매도", "매수 추천", "매도 추천",
+    "보유하세요",
+})
+```
+
+> 주: 위 frozenset 정확히 20개 토큰 (영문 12 + 한국어 8). 회사 자체 카운팅이며 변호사가 직접 확인 시 grep 결과 인용.
+
+### 4-3. DisclaimerBanner UI 컴포넌트
+
+| 항목 | 값 |
+|---|---|
+| 컴포넌트 파일 | `frontend/src/components/ui/disclaimer-banner.tsx` |
+| 사용처 grep `-l` 결과 | **30개 .tsx 파일** (대시보드 layout 글로벌 적용 + 각 분석 페이지) |
+| 핵심 사용처 | `(dashboard)/layout.tsx` (글로벌), `ai-chat`, `ai`, `portfolio`, `market`, `pre-trade`, `watchlist`, `reports`, `companion`, `home`, `signals`, `alerts`, `detail/[ticker]`, `risk` 외 |
+| 추가 위치 | `frontend/src/lib/reports/disclaimer.ts` (PDF 산출물 disclaimer 헬퍼) |
+
+### 4-4. KIS read-only 강제 (`services/kis/service.py:489-528`)
+
+```python
+def buy_order(self, ticker: str, quantity: int, price: int = 0, order_type: str = "00"):
+    """DISABLED -- KIS order execution is read-only for legal compliance.
+    한투 주문 실행은 투자일임업(자본시장법) 규제로 영구 비활성화됨.
+    """
+    return {
+        "ok": False,
+        "error": "KIS order execution is disabled. Please use the KIS app to place orders.",
+    }
+
+# 동일 패턴 sell_order(:503), _place_order(:517)
+```
+
+### 4-5. ALPACA_ENABLED kill switch (`config.py:45-69` + `routes/broker_oauth.py:255-453`)
+
+```python
+# config.py:45-69
+# ALPACA_ENABLED — kill switch for SYSTEM-WIDE Alpaca usage (server-owned keys).
+# This server-side ALPACA_ENABLED flag therefore stays OFF in production.
+ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in ("1", "true", "True", "TRUE", "yes")
+
+# routes/broker_oauth.py:309-327
+def _alpaca_kill_switch_response():
+    """Return the standard 503 payload for disabled Alpaca endpoints."""
+    if current_app.config.get("ALPACA_ENABLED"):
+        return None
+    return jsonify({"ok": False, "code": "alpaca-disabled", ...}), 503
+```
+
+### 4-6. autotrader 비활성 (`routes/__init__.py:14-22, 71`)
+
+```python
+from .trades import trades_bp
+# REMOVED 2026-04-27 per CEO + legal: autotrade blueprint disabled
+# (자동매매 기능 제거 — 투자일임업 등록 회피).
+# File routes/autotrade.py preserved for rollback. To restore:
+#   1) Re-add: from .autotrade import autotrade_bp
+#   2) Re-add autotrade_bp to the blueprints list below.
+#   3) Re-enable autotrader.py worker boot in app.py.
+# from .autotrade import autotrade_bp
+...
+blueprints = [
+    ...
+    # REMOVED 2026-04-27 per CEO + legal: autotrade_bp,
+    ai_bp, watchlist_bp, ...
+]
+```
+
+### 4-7. 회색지대 5 PDF — 자기 데이터 분기
+
+```
+services/artifacts/year_end_letter_service.py:456
+    def generate_for_user(self, user_id: int, target_year=None) ...
+
+services/artifacts/earnings_prebrief_service.py:6, 154
+    EarningsPreBriefService().generate_for_position(user_id, ticker, earnings_date)
+
+services/artifacts/credit_rating_service.py:5
+    CreditRatingService().generate_for_user(user_id, as_of=None) → data dict
+
+services/artifacts/insider_mirror_service.py:9, 27
+    P1 Weekly summary — count of filings related to holdings.
+    APScheduler day_of_week=mon, hour=9 KST. Empty holdings → ...
+
+services/artifacts/pre_trade_checklist_service.py:1-3
+    """Pre-Trade Checklist — persona-tailored 7-question self-check.
+    매매 전 **자기점검용 양식** (Tools, not advice). 사용자가 직접 ..."""
+```
+
+### 4-8. F5 AI Twin rationale — safe_scrub 적용 (Q9, PR #116 머지 후 변호사 미팅 시점)
+
+```bash
+$ grep -nE "from services.legal_filter|safe_scrub|persona=\\{persona\\}|paper exit|cand.rationale" services/twin/twin_runner.py
+41:from services.legal_filter import safe_scrub                  # ← 추가됨
+221:        rationale = str(result.get("signal") or result.get("rationale") or "engine")
+226:            rationale=f"persona={persona}; engine={rationale}",
+305:            rationale=f"paper exit — persona={persona}; {reason}",
+401:            rationale=safe_scrub(cand.rationale, context="twin.buy.rationale"),
+```
+- BUY 경로 (line 401) `safe_scrub` 적용 ✅
+- SELL 경로 (line 305) 미적용은 의도적: `reason`이 결정성 내부 라벨(`"TP hit (+12.5% >= +12.0%)"`)만 사용하므로 advisory leak 경로 없음.
+- 회귀 가드: `tests/test_ai_twin.py::test_buy_rationale_is_scrubbed_at_write_time` (`"BUY signal — recommended"` poisoned signal → 두 토큰 모두 persisted rationale 에서 제거 검증).
 
 ---
 
-## §1 핵심 질문 (변호사 판단 필요)
+## §5 자문 후 follow-up 작업 리스트
 
-### §1.1 유사투자자문업 해당 여부 ⚠ 최우선
+변호사 답을 받은 후 CEO가 즉시 진행할 작업:
 
-**관련 법령**: 자본시장과 금융투자업에 관한 법률 (이하 "자본시장법") §101-2 ~ §101-8 (유사투자자문업)
+### 5-1. ACTIVE 전환 (변호사 사인 받은 직후)
+- [ ] `terms-ko.md:7` `status: "DRAFT"` → `status: "ACTIVE — 시행일 YYYY-MM-DD"`
+- [ ] `privacy-ko.md` 동일 처리 (시행일 기재)
+- [ ] 사업자등록번호 / 통신판매업 신고번호 / 개인정보 보호책임자 연락처 부칙·제13조·제10조에 기입
 
-**회사 현재 포지션**: **선제적 신고 예정**. 금융위원회(금감원) 유사투자자문업 신고.
+### 5-2. 누락 보완 (Q4 사인 후)
+- [ ] signup 화면 5번째 체크박스 추가: "국외 이전 동의 (PIPA §28-8)"
+- [ ] frontend `signup/_v2/page-v2.tsx`의 `Consents` 타입 + UI + localStorage payload 갱신
+- [ ] backend `routes/consents.py`에 cross_border 동의 컬럼 + migration 추가
 
-**핵심 사실**:
-- 당사 서비스는 **불특정 다수**에게 동일한 분석·시그널을 제공함 (개별 맞춤 자문 아님)
-- 개별 종목의 **투자 판단에 관한 의견** (시그널 라벨, 퀀트 점수) 을 제공하나,
-- **대가를 받고** (월 9,900 / 19,900 구독) 제공할 예정임
+### 5-3. F5 AI Twin rationale 보완 (Q9 사인 후)
+> v2.1 갱신: BUY 경로(line 401)는 PR #116으로 이미 적용됨. 회귀 가드 테스트도 추가됨. 아래는 변호사가 SELL 경로 의도적 미적용을 거부할 경우의 follow-up.
 
-**증거**:
-- `frontend/src/app/(dashboard)/signals/page.tsx` — POSITIVE/NEGATIVE/NEUTRAL 시그널 UI
-- `engine.py` — 4-pillar scoring (Technical / Fundamental / Quant / Behavioral)
-- `services/artifacts/templates/*.html` — PDF 18 종, 종목별 분석 문서
+- [ ] (변호사가 SELL 경로 scrub 요구 시) `services/twin/twin_runner.py` line 305에 `safe_scrub(reason, context="twin.sell.reason")` 적용
+- [ ] (옵션) line 226의 `engine={rationale}` 단계에서 사전 scrub 추가 (방어 깊이 hardening)
 
-**변호사 판단 요청**:
-1. 당사 서비스가 자본시장법 §101-2 ①의 **"투자판단에 관한 조언"** 에 해당하는가?
-2. 시그널 라벨 (POSITIVE/NEGATIVE/NEUTRAL) 이 "조언" 의 범주에 포함되는지, 아니면 **단순 데이터 지표** 로 볼 수 있는지 경계 해석
-3. 선제적 신고가 적절한 전략인지, 아니면 "정보 제공" 포지션 유지가 가능한지
-4. 신고 시 대표자 결격 사유 (자본시장법 §101-3 ②) 검토 — 배상현 (1995 년생, 파산/금융사고 이력 없음)
-5. 신고 수리까지 소요 시간 및 대기 중 유료 전환 가능 여부
+### 5-4. 회원탈퇴 정책 결정 (Q6 사인 후)
+- [ ] hard delete vs soft delete + 결제 분리 보존 결정 후 구현
+- [ ] `models/user.py`에 `deleted_at` 컬럼 + soft-delete migration
+- [ ] 결제 테이블 분리 보존(이메일·이름 익명화)
 
----
+### 5-5. user_agent_audit (Q8 사인 후)
+- [ ] PR #96 재개 또는 신규 PR — cascade 충돌 방지 로직(user_id NULL 익명화 + audit 보존)
 
-### §1.2 투자자문업 / 투자일임업 해당 여부
+### 5-6. F24 Persona Mentor Match (Q10 사인 후)
+- [ ] 사인 받은 조건(익명화 / 게시판 / 면책) 충족하는 설계 시 backlog → roadmap
 
-**관련 법령**: 자본시장법 §6 ① 제5호 (투자자문업) / 제6호 (투자일임업), §18 (인가)
+### 5-7. 사업자등록 (Q11 사인 후)
+- [ ] 명의(부친 vs 본인) 결정 후 사업자등록 + 통신판매업 신고
+- [ ] Railway env에 `BUSINESS_REGISTRATION_NUMBER`, `TELESELLER_REGISTRATION_NUMBER` set
+- [ ] PR #74 결제 가드(payment guard) 자동 활성화
 
-**회사 현재 포지션**: **해당 없음 주장**. autotrader.py 는 paper mode (모의 계좌) 로만 작동, 실주문 코드 차단.
+### 5-8. 마이데이터 (Q3 사인 후)
+- [ ] 사인 결과 반영하여 약관 제9조 BYOK 문구 보강
+- [ ] (인가 필요로 판정 시) 서비스 모델 재설계 — KIS broker 기능 제거 또는 user-side만 유지
 
-**증거 파일·라인**:
-- `/Users/seanbae/Desktop/취준/stockpilot/services/broker/user_alpaca_service.py` L109:
-  `return TradingClient(self.key_id, self.secret_key, paper=True)` — **paper=True 하드코딩**
-- L195: `conn.is_paper = True` — DB 에도 paper 플래그 강제
-- `/Users/seanbae/Desktop/취준/stockpilot/kis_service.py` L341~378:
-  - `buy_order` / `sell_order` / `_place_order` **전부 Disabled**, error 반환
-  - 원본 주문 실행 로직은 L378 이하 주석 처리 상태로 보존되어 있으나 호출 경로 없음
-- `/Users/seanbae/Desktop/취준/stockpilot/autotrader.py` L1305 — Kill Switch + 5 Circuit Breaker
-  - position_stops / portfolio_halts / velocity_pauses / consecutive_losses / daily_reset (L235~241)
+### 5-9. 데이터 라이선스 (Q7 사인 후)
+- [ ] FMP 약관 재검토 + 회사 키 재배포 우려 조항 검토
+- [ ] KIS Open API 약관 검토
+- [ ] (필요 시) FMP 키도 BYOK 모델로 전환
 
-**변호사 판단 요청**:
-1. Alpaca **paper mode** (모의 주문) 는 실제 자금이 움직이지 않으므로 "금융투자상품 매매" 에 해당하지 않는다는 해석이 맞는가?
-2. KIS 는 read-only 주문 차단으로 자문/일임 모두 해당 없음. UX 상 "자동매매 연결됨" 라벨이 오해를 불러일으킬 소지는?
-3. 추후 real mode 로 전환 시점에 **투자일임업 인가** (자기자본 15 억 이상, 자본시장법 §11·시행령) 가 필수인가, 아니면 다른 경로 (로보어드바이저 테스트베드 통과 등) 존재?
-4. 현재 autotrader 기능을 **Partner 티어에 포함** 하여 유료 판매 시, paper 임에도 "투자일임업 유사" 해석 리스크?
-
----
-
-### §1.3 로보어드바이저 규제 해당 여부
-
-**관련 법령**: 금융위원회 「로보어드바이저 테스트베드 운영방안」, 자본시장법 §98의2 (알고리즘 투자자문), 금감원 「로보어드바이저 가이드라인」
-
-**회사 현재 포지션**: **해당 없음 주장**. Claude API (대형 언어모델) 는 특정 종목의 투자 판단을 직접 내리지 않으며, `services/legal_filter.py` 로 출력 필터링.
-
-**핵심 사실**:
-- AI 챗봇 명칭: "AI Assistant" (not Coach, not Advisor)
-- 기능: 뉴스 요약, 재무제표 해설, 섹터 설명, 일반 투자 교육
-- **80 개 regex** 로 출력 텍스트에서 "매수/매도/추천" 류 문구 scrub (group 9: EN reason 문구)
-
-**증거**:
-- `/Users/seanbae/Desktop/취준/stockpilot/services/legal_filter.py` (292 라인, 80 regex)
-- `frontend/src/app/(dashboard)/ai-chat/page.tsx` — 하단 면책 배너 고정
-
-**변호사 판단 요청**:
-1. LLM (Claude) 기반 분석 제공이 금감원 가이드라인상 "알고리즘 투자자문" 에 포섭되는가?
-2. 로보어드바이저 **테스트베드 인증** 획득이 필수인가, 자발적 선택인가?
-3. legal_filter regex 우회 (예: 유저 프롬프트 jailbreak "BUY/SELL 로 답해") 에 의한 부적절 출력 발생 시 **플랫폼 책임 범위**
-4. "AI 가 생성한 투자정보" 임을 명시하는 고지 의무 조항 존재 여부
+### 5-10. 추가 일반
+- [ ] DPO 지정 (회원 1,000명 이상 시 의무 — `legal_compliance.md:36-39`)
+- [ ] 금융감독원 핀테크 혁신지원 사전 문의 (규제 샌드박스 가능성)
+- [ ] 변호사 추가 자문 일정 — 사업자등록 후 1회 / MAU 1,000명 도달 시 1회
 
 ---
 
-### §1.4 광고·마케팅 규제
+## §6 검증 로그 (10 verifications, grep/test 직접 실행)
 
-**관련 법령**: 자본시장법 §57 (투자광고), 금융소비자보호법 (이하 "금소법") §22 (광고 규제), 표시·광고의 공정화에 관한 법률 §3 (부당표시광고)
+각 항목은 **2026-05-04 본 패키지 작성 직전**에 grep / wc / find / Read 도구로 직접 검증한 결과다.
 
-**회사 현재 포지션**: 수익률 묘사 **전면 배제**, 객관적 기능 묘사만 사용.
+| # | 검증 대상 | 명령 | 결과 | 인용 위치 |
+|---|---|---|---|---|
+| 1 | `legal_filter.py` 라인 수 + 정규식 패턴 수 | `wc -l services/legal_filter.py` / `grep -c "re\.compile"` | **344 lines / 96 re.compile** (89 _REPLACEMENTS + 6 _PROHIBITED + 1 _COMPLIANCE) | §4-1 |
+| 2 | `forbidden_terms.py` 토큰 수 | `wc -l services/legal/forbidden_terms.py` / `Read` | **115 lines / 20 tokens** (frozenset, 영문 12 + 한국어 8) | §4-2 |
+| 3 | DisclaimerBanner 컴포넌트 위치 + 사용처 | `find ... -name disclaimer-banner` / `grep -l DisclaimerBanner ... \| wc -l` | **컴포넌트: `frontend/src/components/ui/disclaimer-banner.tsx`** / **사용처: 30개 .tsx 파일** (대시보드 layout 글로벌 적용 포함) | §4-3 |
+| 4 | autotrader 등록 해제 여부 | `ls /autotrader.py` / `grep autotrade routes/__init__.py` | 루트 `autotrader.py` **존재하지 않음** / `routes/__init__.py:16-22` 주석 처리 + line 71 blueprints 리스트에서 제거 | §1-2, §4-6 |
+| 5 | ALPACA_ENABLED kill switch 위치 | `grep -nE "_alpaca_kill_switch_response\|ALPACA_ENABLED" routes/broker_oauth.py` | **config.py:45-69** (선언) / `routes/broker_oauth.py` 6곳 적용: **정의** line 309-327 + **status endpoint 가드** line 260 + **endpoint 가드 4곳** (365 / 414 / 435 / 451) / **tests/test_alpaca_kill_switch.py** (회귀 테스트) | §1-4, §4-5 |
+| 6 | KIS read-only 검증 | `grep -nE "order\|주문\|buy\|sell" services/kis/service.py` | **buy_order(:489) / sell_order(:503) / _place_order(:517)** 3개 함수 모두 DISABLED 상태 + 자본시장법 사유 docstring 명시 / `get_order_status(:532)` 는 조회 전용 | §1-3, §4-4 |
+| 7 | terms-ko.md DRAFT 워터마크 위치 | `grep -n DRAFT terms-ko.md` | **line 7**: `status: "DRAFT — 최종 시행 전 변호사 검토 필요"` | §3-1 |
+| 8 | privacy-ko.md 국외 이전 조항 위치 | `grep -nE "국외\|이전\|미국\|Anthropic" privacy-ko.md` | **line 175-211** (제6조 위탁 + 제6조 ① 국외 이전 표) — Stripe(US) / Anthropic(US) / Railway(US Oregon) / Vercel(US) / Google LLC(US) / Kakao(KR, 위탁) | §2 Q4, §3-2 |
+| 9 | 회색지대 5 PDF 자기 데이터 분기 | `find services/artifacts/ -name "*.py"` + 각 파일 내부 grep | `generate_for_user(user_id)` (year_end_letter:456 / credit_rating:5) / `generate_for_position(user_id, ticker)` (earnings_prebrief:6) / `holdings` 기반 (insider_mirror:9, 27) / `persona-tailored self-check` (pre_trade_checklist:1-3). **모두 user_id 인증 필수.** | §2 Q2, §4-7 |
+| 10 | F5 AI Twin rationale safe_scrub 적용 여부 | 1차 grep (변호사 패키지 작성 중) → **미적용 0건** 확인. 2차 검증 (수정 후, audit agent 정정) → `services/twin/twin_runner.py:41` import 추가, line 401 `safe_scrub(cand.rationale, context="twin.buy.rationale")` 적용. | **수정 적용** — PR #116 (commits `907539f` + `1100f6d`). BUY 경로 hardening + 회귀 가드 테스트 (`test_buy_rationale_is_scrubbed_at_write_time`) PASS. SELL 경로 미적용은 의도적(내부 deterministic 라벨만 사용). | §2 Q9, §4-8 |
 
-**검토 대상 문구** (랜딩 페이지):
-- "58 quant models + 7 risk layers + Claude AI" — 기능 나열
-- "MOST CHOSEN" 뱃지 (Operator 플랜, 랜딩 Pricing 섹션) — 출시 전 **근거 없음**
-- "The Engine" 섹션 — 기술 묘사
-- "Archetype: 20 questions, 8 types" — 온보딩 설문 묘사
-- Sample Reports 3 개 공개 (weekly_memo, sp500_backtest, risk_board) — 수익률 수치 포함 가능성
+### 6-1. 추가 검증 — 메모리 vs 코드 불일치 (투명성)
 
-**증거**:
-- `frontend/src/app/page.tsx` (랜딩)
-- `frontend/src/app/pricing/page.tsx` (Pricing 페이지, MOST CHOSEN 뱃지)
-- `frontend/public/samples/*.pdf` (샘플 PDF 3 개)
-
-**변호사 판단 요청**:
-1. "MOST CHOSEN" 뱃지가 자료 없이 노출되면 표시광고법 §3 ① "허위·과장 광고" 해당? → **런칭 전 철회 권고?**
-2. 유사투자자문업 신고 후 **투자광고 심의** (한국금융투자협회) 대상 여부
-3. sp500_backtest.pdf 의 백테스트 수익률 표시는 샘플용이라도 "수익률 광고" 에 해당하는지, 면책 고지로 충분한지
-4. "58 quant models" 의 "58" 숫자 — 실제 구현 모델 수와 일치 (quant_models.py 기준 58 개 확인) 필요
-
----
-
-### §1.5 금융소비자보호법 §19 — 적합성·적정성·설명의무
-
-**관련 법령**: 금소법 §17 (적합성) / §18 (적정성) / §19 (설명의무), §22 (광고)
-
-**회사 현재 포지션**:
-- 회원가입 시 **3 필수 동의** + 1 선택 동의 (마케팅)
-- 온보딩에서 **20 문항 투자자 성향 설문** → 8 개 아키타입 분류
-- /pricing 결제 시 별도 **ConsentModal** (구독 반복 결제 + 14 일 환불)
-
-**증거**:
-- `frontend/src/app/(auth)/signup/page.tsx` — 3+1 체크박스
-- `frontend/src/app/pricing/page.tsx` — ConsentModal (금소법 §19 대응 취지)
-- `questionnaire.py` + `investor_profiles.py` — 20 문항 / 8 아키타입
-
-**변호사 판단 요청**:
-1. 정보제공형 SaaS 가 금소법 적용 대상 "금융상품판매업자등" (§2 ②) 에 해당하는지, 해당한다면 어느 조항까지 적용?
-2. 20 문항 설문이 **적합성 원칙 (§17)** 의 "일반금융소비자 정보 파악" 의무에 갈음되는가?
-3. ConsentModal 의 동의 항목 (구독 결제 + 자동갱신 + 14 일 환불) 이 **전자상거래법 §22의2** (정기결제 고지) 및 §17 (청약철회) 을 충족하는가?
-4. 베타 (무료) 기간에는 금소법 §19 전부 또는 일부 면제 가능? (금소법 §2 ② 단서 조항 해석)
-
----
-
-### §1.6 외국 금융투자상품 매매중개
-
-**관련 법령**: 자본시장법 §6 ③ (투자중개업), 외국환거래법 §3 ③ (외국환업무), 대외무역법
-
-**회사 현재 포지션**: **직접 주문 체결 없음**. Alpaca paper / KIS read-only 로 **체결은 전적으로 유저 측** (Alpaca / 증권사 앱).
-
-**핵심 사실**:
-- 유저가 Alpaca 계좌를 직접 보유·연결 (API 키 유저 본인이 발급)
-- 당사 서버는 paper mode 로만 주문 시뮬레이션
-- KIS 는 계좌번호 연동 후 **read-only** (조회만, 주문 차단)
-
-**증거**:
-- `services/broker/user_alpaca_service.py` L109 — `paper=True` 하드코딩
-- `kis_service.py` L341~378 — 주문 경로 전면 disabled
-
-**변호사 판단 요청**:
-1. 유저가 이미 Alpaca (미국 브로커) 계좌를 보유하고, 당사는 API 키를 매개로 정보를 표시할 뿐이라면 **투자중개업** 에 해당하지 않는다는 해석이 맞는가?
-2. KIS 계좌번호 노출 (대시보드 `/settings` 에 마스킹 표시) 시 **전자금융거래법** 상 개인정보 / 전자금융거래기록 보관 의무 (5 년) 적용 범위
-3. 해외 브로커 API 키를 서버 DB 에 저장 (암호화) 하는 것이 **외국환거래법 §16** (지급수단·증권 등) 위반 소지?
-4. 향후 KIS 주문 기능 복원 시 **전자금융업자 등록** 필요 여부
-
----
-
-### §1.7 개인정보 국외이전 및 DPO 지정
-
-**관련 법령**: 개인정보보호법 (PIPA) §28의8 (국외이전), §31 (개인정보 보호책임자)
-
-**회사 현재 포지션**:
-- privacy-ko.md 에 국외이전 대상·목적·수령인 명시
-- 수령인: **Stripe (미국, 결제), Anthropic (미국, AI), Railway (미국/싱가포르, 인프라), Vercel (미국, 배포), Google / Kakao (OAuth)**
-- DPO: **배상현 본인** (1 인 사업자, 겸직) — 자격 검토 필요
-
-**증거**:
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/src/content/privacy-ko.md` (341 라인)
-  - 국외이전 섹션 / DPO 섹션 / "변호사 검토 대기 중" 문구 잔존
-
-**변호사 판단 요청**:
-1. 현재 privacy-ko.md 의 국외이전 고지 방식이 **별도 동의** (§28의8 ①) 를 충족하는가, 아니면 **포괄 동의로도 가능한 예외** (③ 단서) 에 해당하는가?
-2. DPO 를 CEO 본인이 겸직하는 것이 PIPA §31 상 적법한가? (개인정보처리자 규모 기준 — 매출·보유 건수)
-3. 정보주체 수 1,000 명 초과 시 DPO 의무 지정 기준 (공공 50 만 건 / 민간 100 만 건) 과의 관계
-4. 국외이전 계약서 (DPA — Data Processing Agreement) 를 Stripe / Anthropic / Railway / Vercel 과 체결했는지 확인 필요 — **CEO 확인 과제**
-
----
-
-### §1.8 이용약관 / 개인정보처리방침 초안 검토
-
-**파일**:
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/src/content/terms-ko.md` (243 라인)
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/src/content/privacy-ko.md` (341 라인)
-
-**관련 법령**: 약관의 규제에 관한 법률 (이하 "약관규제법") §6 / §7 / §8, 전자상거래 등에서의 소비자보호에 관한 법률 §21, PIPA §30
-
-**회사 현재 포지션**: 초안 작성 완료, 변호사 검수 **미실시**. privacy-ko.md 내 "변호사 검토 대기 중" 문구 잔존.
-
-**검토 요청 항목**:
-1. **환불 정책** — 14 일 이내 무조건 환불 (전자상거래법 §17 청약철회) 충족 여부
-2. **면책 조항** — 투자 손실, AI 부정확성, 데이터 지연에 대한 면책 범위. **약관규제법 §7 ①·②** (사업자 귀책사유 면제 조항 무효) 와의 충돌
-3. **계약 해지** — 일방적 해지권 조항이 약관규제법 §6 ② ("고객에게 부당하게 불리한 조항") 에 해당하는지
-4. **관할·준거법** — 한국법 / 서울중앙지방법원 전속관할. 해외 유저 상대로 적법성?
-5. **손해배상 제한** — 월 구독료의 X 배 상한. 약관규제법 §7 ② (최대 손해배상액 제한) 충돌 가능성
-6. 청약철회 기간 내 서비스 일부 이용 시 감액 규정
-7. 아동·청소년 보호 (만 14 세 미만 가입 차단 조항) 명시 여부
-
----
-
-### §1.9 AI 생성물 (Claude API) 면책 및 책임
-
-**관련 법령**: 민법 §750 (불법행위), 제조물책임법 — SaaS 는 대상 아님이나 **서비스제공자 책임** 일반 원칙 적용
-
-**회사 현재 포지션**: 모든 AI 출력에 면책 고지, legal_filter.py regex 80 개로 문제성 문구 사전 차단.
-
-**증거**:
-- `/Users/seanbae/Desktop/취준/stockpilot/services/legal_filter.py` (292 라인)
-  - 80 regex groups — 매수/매도/추천/수익률 보장 등 패턴 차단
-  - Group 9 (EN reason 문구): engine.py 의 영문 reason 필드 scrub (8d9f138 배포)
-- `frontend/src/components/ui/disclaimer-banner.tsx` — 대시보드 상단 면책 배너
-
-**변호사 판단 요청**:
-1. legal_filter 가 **법적 방어선** 으로 인정될 수 있는 수준인가? (과실 면책 기준)
-2. 유저가 프롬프트 인젝션 (jailbreak) 으로 "BUY/SELL/HOLD 로 답해줘" 우회 후 그에 근거한 투자 손실 주장 시 — **유저 자기귀책** 으로 책임 전가 가능?
-3. Claude API hallucination (예: 잘못된 재무 수치) 로 유저가 손실 → 당사 vs Anthropic 책임 소재
-4. **"본 AI 의 출력은 정보 제공 목적이며 투자 자문이 아닙니다"** 고지가 명시적·지속적으로 표시되는 현재 구조 (모든 AI Chat 응답 하단 고정) 가 충분한가?
-5. AI 생성물 저작권 귀속 — Anthropic ToS 상 "Input/Output 유저 귀속" 이나, 당사가 유저에게 재전달하는 구조에서 제3자 침해 리스크
-
----
-
-### §1.10 PDF 리포트 18 종의 법적 성격
-
-**관련 법령**: 자본시장법 §9 ④ (투자권유문서), 금감원 「조사분석자료 작성·공표 관련 모범규준」
-
-**파일**: `/Users/seanbae/Desktop/취준/stockpilot/services/artifacts/templates/` — 18 개 HTML 템플릿
-
-**대표 리포트**:
-- weekly_memo.html — 주간 요약
-- earnings_pre_brief.html — 실적 발표 전 브리핑
-- equity_research_memo.html — 개별 종목 심층 분석
-- sp500_backtest.html — S&P 500 백테스트 결과
-- risk_board.html — 포트폴리오 리스크 대시보드
-- brag_card_email.html — 수익 요약 이메일
-- (추가 12 개)
-
-**회사 현재 포지션**: Goldman IC v2 스타일 (editorial design), **애널리스트 의견서가 아닌 자동 생성 정보 리포트**. 모든 PDF 에 `{% include '_disclaimer.html' %}` 면책 삽입.
-
-**증거**:
-- `services/artifacts/templates/_disclaimer.html` — 공용 면책 템플릿
-- 18 개 리포트 중 **20/21 개 면책 포함 확인** (P1-B: brag_card_email.html 인라인 disclaimer 사용 중, `{% include %}` 통일 필요)
-
-**변호사 판단 요청**:
-1. 개별 종목 분석을 담은 equity_research_memo, earnings_pre_brief 가 자본시장법 §9 ④ **"투자권유문서"** 에 해당하는지
-2. 작성자가 **투자권유대행인** 자격 (자본시장법 §51-2) 이 필요한 수준인지, 아니면 **자동 생성 정보** 로 면제되는지
-3. "Goldman Sachs IC v2" 스타일 차용 — **디자인 저작권** 침해 가능성 (배치/타이포그래피/컬러 유사)
-4. PDF 하단 "Prepared by PivoxQuant Research" 표기 — 허위 자격 주장에 해당?
-5. sp500_backtest.pdf 의 백테스트 수익률 그래프를 고객 마케팅에 사용 시 **투자광고 심의** 필요?
-
----
-
-### §1.11 백테스트 / 수익률 시뮬레이션
-
-**관련 법령**: 자본시장법 §57 (투자광고), 금투협 「투자권유 및 광고 관련 모범규준」
-
-**회사 현재 포지션**:
-- `backtester.py` 결과는 PDF 로 유저에게 제공 (유료 티어)
-- 필수 고지: **"과거 성과는 미래 수익을 보장하지 않습니다"** 하단 삽입
-- 거래 비용 (transaction cost) 포함, Sharpe/Sortino/Calmar 지표 제공
-
-**증거**:
-- `/Users/seanbae/Desktop/취준/stockpilot/backtester.py`
-- `services/artifacts/templates/sp500_backtest.html` + `_disclaimer.html`
-- `frontend/public/samples/sp500_backtest.pdf` — **랜딩에 공개 노출 중**
-
-**변호사 판단 요청**:
-1. 백테스트 결과 공개 시 **"실제 투자 결과가 아님"** 외 추가 고지 의무 (예: "동 백테스트는 과거 X 기간의 시뮬레이션이며 거래비용 Y% 반영" 구체성)
-2. 샘플 PDF 를 랜딩 페이지 비로그인 상태에서 노출하는 것이 **투자광고** 에 해당 시 한국금융투자협회 심의 필요 여부
-3. 고객의 실제 포트폴리오 기반 백테스트 제공 시 "맞춤형 자문" 으로 재분류될 소지
-
----
-
-### §1.12 저작권 / 상표권 / 라이선스
-
-**관련 법령**: 상표법, 저작권법, 디자인보호법
-
-**항목별 현황**:
-
-| 자산 | 현황 | 리스크 |
+| 메모리 기재 | 실제 코드 | 본 패키지 처리 |
 |---|---|---|
-| 상표 "PivoxQuant" | 미등록 — **CEO 확인 필요** | 타인 선점 가능성 |
-| 로고 (금색 Q 심볼) | 미등록 | 디자인권 미확보 |
-| 도메인 pivoxquant.com | 가비아 등록 완료 | — |
-| GitHub repo (공개) | seanbae-analyst/pivoxquant | 코드 공개 여부 재검토 필요 |
-| Goldman IC v2 스타일 차용 | 배치/레이아웃 유사 | 디자인 저작권 침해 가능성 |
-| 폰트 Playfair Display | SIL OFL 라이선스 확인 필요 | 상업 사용 허용되나 embed 재배포 조건 확인 |
-| 폰트 EB Garamond | SIL OFL | 동일 |
-| 폰트 Source Serif 4 | SIL OFL | 동일 |
-| 폰트 Geist / JetBrains Mono | OFL / 각사 EULA 확인 | embed 재배포 조건 |
-| FMP API 데이터 | 유료 구독 ($29/월) | 재배포·파생물 조항 확인 |
-| Alpaca 데이터 | 무료 | 재배포 조항 확인 |
-| SEC EDGAR | 공공 도메인 | — |
-| Naver 금융 (KR 가격) | 스크래핑 여부 / API 사용 확인 필요 | 저작권·서비스 이용약관 위반 가능 |
+| `legal_compliance.md:21-23` "이용약관 18개 조항" | terms-ko.md 실제 **13개 조항(1~13조 + 부칙)** | §3-1 표에 13개로 사실 기재 |
+| `legal_compliance.md:21-23` "처리방침 14개 조항" | privacy-ko.md 실제 **12개 조항(1~12조 + 부칙)** | §3-2 표에 12개로 사실 기재 |
+| 메모리 stale 마커 | 시스템에서 "6 days old, may be outdated" 명시 | 코드 grep 결과 우선 |
+| 사용자 컨텍스트 "forbidden_terms.py 22 토큰" | 실제 frozenset 20 tokens (영문 12 + 한국어 8) | §4-2 표에 20으로 사실 기재 |
 
-**증거**:
-- `frontend/public/fonts/` — 폰트 파일들
-- `data_fetcher.py` — 외부 데이터 소스
-- `fmp_service.py` — FMP API 사용
+### 6-2. 검증 BLOCKED 항목 (변호사 답 필요)
 
-**변호사 판단 요청**:
-1. "PivoxQuant" 상표 출원 우선권 확보 (류 35, 42 서비스업) — 비용·기간
-2. 로고 디자인권 출원 필요성 및 우선순위
-3. Goldman Sachs IC v2 시각 스타일 차용이 저작권·부정경쟁방지법상 "타인의 성과물 도용" (§2 ① 카목) 에 해당?
-4. FMP / Naver 데이터를 PDF 리포트에 가공·재배포하는 것이 각 서비스 ToS 위반 여부 — **CEO 가 각 ToS 를 직접 확인한 뒤 변호사에게 공유**
-5. 오픈소스 라이선스 (Next.js MIT, Flask BSD, Anthropic SDK 등) 재배포 조건 일괄 점검
+본 패키지는 **사실 기술서**이므로 다음은 회사 자체 판단 불가:
+- Q1 면제 적정성 (변호사 답 필요)
+- Q3 마이데이터 인가 필요 여부 (변호사 답 필요)
+- Q4 §28-8 별도 동의 충족성 (변호사 답 필요)
+- Q6 PIPA §37 vs 전자상거래법 §6 우선 (변호사 답 필요)
+- Q11 부친 명의 vs 본인 명의 (변호사 + 세무사 답 필요)
+
+→ 본 패키지 §2의 Q1~Q12 모두 "회사 자체 평가 위험 등급"만 기재했고, 최종 사인은 변호사 책임.
 
 ---
 
-### §1.13 세법 (부가가치세·종합소득세)
+## §7 본 패키지 사용법 (CEO 메모)
 
-**관련 법령**: 부가가치세법, 소득세법
+### 7-1. 변호사 미팅 전 (CEO 사전 작업)
+1. 본 패키지 §0~§5 출력본 1부 + USB(코드 raw 접근용) 1개 준비
+2. 사업자등록 의향(부친 vs 본인) 사전 결정 또는 변호사에게 두 옵션 모두 질의
+3. 미팅 1시간 전 §2의 12개 질문을 한 번 더 확인
+4. 미팅 비용(50~80만원) 견적 사전 합의
 
-**회사 현재 포지션**:
-- 개인사업자 등록 예정 (간이 vs 일반 결정 필요)
-- Stripe 결제 통해 월 구독 수령 — **부가세 포함 / 미포함** 표기 확정 필요
+### 7-2. 미팅 중
+- 각 Q1~Q12에 대해 변호사가 답한 내용을 본 패키지 우측 빈 칸 또는 별도 노트에 기록
+- 위험 등급(LOW/MEDIUM/HIGH)을 변호사가 재평가하면 회사 자체 평가와 차이를 추적
+- 변호사가 "추가 자료 필요"로 보류한 항목은 별도 follow-up 리스트로 분리
 
-**변호사 판단 요청** (세무사 연계 가능성):
-1. SaaS 구독 수익의 부가세 과세 여부 — **내국용역 → 10% 과세**. 가격표 9,900 / 19,900 이 세포함인가?
-2. 해외 유저 (영문 랜딩 예정) 결제 시 **영세율** 적용 요건 — 국외 사업자 증명 필요
-3. 간이과세 (연 매출 8,000 만 미만) vs 일반과세 전환 시점
-4. Stripe 국외 송금 수수료·환차 처리 — 간이과세에서 불리할 수 있음
-5. Anthropic / Railway / Vercel 해외 지출 비용의 매입세액공제 가능 여부 (대리납부 의무)
+### 7-3. 미팅 후
+- 위 §5 follow-up 작업 리스트를 변호사 사인 결과대로 우선순위 재배치
+- 사인 받은 항목은 즉시 메모리 `legal_compliance.md` 갱신
+- 다음 자문 일정 합의 (MAU 1,000명 도달 시 / 사업자등록 직후 / 매년 1회)
 
----
-
-### §1.14 사업자등록 / 통신판매업 / 유사투자자문업 신고 순서
-
-**회사 현재 포지션**: HANDOVER.md 작업 A/B/C 에 CEO 직접 수행 과제로 정리됨.
-
-**예상 순서**:
-1. **개인사업자 등록** (홈택스, ~30 분) — 업태: 서비스업 / 종목: 정보통신업·전자상거래업
-2. **통신판매업 신고** (공정위 / 시·군·구청, ~15 분) — 간이과세자 면제 요건 확인
-3. **유사투자자문업 신고** (금감원, 서류 준비 2~3 일 + 수리 2~4 주)
-4. (옵션) 부가통신사업자 신고 (과기정통부) — 매출 규모에 따라
-
-**변호사 판단 요청**:
-1. 상기 순서가 적법한가? **병렬 진행 가능한 단계** 와 **선행 필수** 단계 구분
-2. 유사투자자문업 신고 수리 대기 중에 **유료 전환 불가**? 베타 비용 선결제 받기 가능 여부
-3. 신고 서류 중 "사업계획서 / 약관 / 개인정보처리방침" — 본 자문 결과 반영 후 제출 순서
-4. 대표자 결격사유 (자본시장법 §101-3) 자가 확인 후 로펌 교차검증 요청
+### 7-4. 본 패키지 신뢰성 보증
+- 본 패키지의 **모든 코드 인용은 file:line 형식**이며, 변호사가 직접 git clone 후 검증 가능
+- 메모리(stale 가능)와 코드(실제 사실)이 충돌할 경우 **코드 우선**
+- "추측"이라고 표시되지 않은 모든 사실 진술은 grep / wc / find / Read 도구로 직접 검증된 것
+- 회사 자체 평가(위험 등급)는 보수적으로 기재 — 변호사 의견과 차이 발생 시 변호사 의견 우선
 
 ---
 
-### §1.15 베타 테스트 법적 위치
+## §8 변경 이력
 
-**회사 현재 포지션**:
-- 비밀번호 게이트 (`***REDACTED***`, 2026-04-19 rotate) 로 제한적 접근
-- 베타 = **무료**, 유료 결제 미활성
-- 베타 참여자 약 N 명 (추후 집계)
-
-**변호사 판단 요청**:
-1. 무료 베타 단계에서는 금소법 §19 (설명의무) / §22 (광고) 일부 면제 해석 가능?
-2. 베타 이용자가 기능 오작동 (예: 자동매매 UI 토글이 paper 인데 real 로 오인) 으로 손해 주장 시 **베타 약관 면책** 유효성
-3. 베타 종료 후 유료 전환 시점에 **기존 베타 유저 재동의** 필요 여부 (약관 변경 고지 §17)
-4. 베타 비밀번호 `***REDACTED***` 의 우회 접근 (URL 직접 입력 등) 시 법적 책임 분배
-
----
-
-## §2 파일 증거 첨부 목록
-
-변호사에게 **패키지로 전달 예정** 파일 목록:
-
-### 2.1 법적 문서 (검토 대상)
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/src/content/terms-ko.md` (243 라인) — 이용약관
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/src/content/privacy-ko.md` (341 라인) — 개인정보처리방침
-- `/Users/seanbae/Desktop/취준/stockpilot/services/artifacts/templates/_disclaimer.html` — PDF 공용 면책 (18 리포트 공유)
-
-### 2.2 UI 면책 / 동의 플로우 (증거)
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/src/components/ui/disclaimer-banner.tsx` — 대시보드 면책 배너
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/src/app/(auth)/signup/page.tsx` — 회원가입 3+1 동의
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/src/app/pricing/page.tsx` — 결제 ConsentModal
-
-### 2.3 법적 방어선 (코드 증거)
-- `/Users/seanbae/Desktop/취준/stockpilot/services/legal_filter.py` (292 라인, 80 regex) — 출력 필터
-- `/Users/seanbae/Desktop/취준/stockpilot/kis_service.py` L341~378 — KIS 주문 비활성화
-- `/Users/seanbae/Desktop/취준/stockpilot/services/broker/user_alpaca_service.py` L109, L195 — Alpaca paper=True 하드코딩
-- `/Users/seanbae/Desktop/취준/stockpilot/autotrader.py` L34~241 — Kill Switch + 5 Circuit Breaker
-
-### 2.4 데이터 출처 (라이선스 확인 대상)
-- `/Users/seanbae/Desktop/취준/stockpilot/data_fetcher.py` — Alpaca/FMP 폴백
-- `/Users/seanbae/Desktop/취준/stockpilot/fmp_service.py` — FMP v4 Stable
-- `/Users/seanbae/Desktop/취준/stockpilot/kis_service.py` — 한국투자증권
-
-### 2.5 서비스 구조 이해용
-- `/Users/seanbae/Desktop/취준/stockpilot/CLAUDE.md` — 프로젝트 개요 (세션 핸드오프)
-- `/Users/seanbae/Desktop/취준/stockpilot/HANDOVER.md` — 최신 인수인계 (2026-04-22)
-- `/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/legal_compliance.md` — 기존 법무 메모
-
-### 2.6 PDF 샘플 (광고 / 투자권유문서 판단용)
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/public/samples/weekly_memo.pdf`
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/public/samples/sp500_backtest.pdf`
-- `/Users/seanbae/Desktop/취준/stockpilot/frontend/public/samples/risk_board.pdf`
-
----
-
-## §3 현재 확인된 법적 리스크 (내부 감사 결과)
-
-**최신 법무 감사 판정**: **CONDITIONAL APPROVED** (2026-04-22)
-
-### 3.1 P0 (치명) — 0 건 ✅
-- 자본시장법 §6 (금융투자업 정의) 위반: **없음**
-- 자본시장법 §17 (무인가 영업) 위반: **없음**
-- 자본시장법 §50 (투자광고 금지사항) 위반: **없음**
-- 실제 주문 체결 기능: **전면 차단 확인**
-
-### 3.2 P1 (중간) — 4 건 잔존
-| 코드 | 항목 | 상태 |
+| 버전 | 날짜 | 변경 |
 |---|---|---|
-| P1-A | engine.py EN reason 문구 | **해결됨** (legal_filter group 9, commit `8d9f138` 배포) |
-| P1-B | brag_card_email.html 인라인 disclaimer | **미해결** — `{% include '_disclaimer.html' %}` 통일 필요 |
-| P1-C | privacy-ko.md "변호사 검토 대기 중" 문구 잔존 | **본 자문으로 해결 예정** |
-| P1-D | portfolio aria-label "Buy more"/"Sell" | **미해결** — "Record additional buy/sale" 로 변경 권고 |
+| v1 | 2026-04-22 | 초안 작성 (537 lines) |
+| v2 | 2026-05-04 (자율 세션 1차) | 갱신: 유사투자자문업 미등록 결정 반영 / 5 PDF 자기 데이터 분기 검증 / signup 5번째 체크박스 누락 명시 / KIS read-only 라인 검증 / Alpaca kill switch 위치 검증 / F5 AI Twin rationale **미적용** 상태 명시 / 메모리 vs 코드 차이 표(13조 vs 18조) 투명 기재 / 10가지 grep 검증 로그 추가 |
+| **v2.1** | **2026-05-04 (자율 세션 2차)** | **F5 AI Twin rationale 수정 반영** — PR #116 (commits `907539f` + `1100f6d`)으로 `services/twin/twin_runner.py:401`에 `safe_scrub(cand.rationale, context="twin.buy.rationale")` 적용 + 회귀 가드 테스트 추가. Q9 위험 등급 MEDIUM → LOW. §6-10 검증 로그 갱신. v2 작성 시 grep 결과는 수정 적용 직전 상태였음 (작업 시간 차이) — 수정 후 grep 으로 재검증함. |
+| **v2.2** | **2026-05-04 (자율 세션 audit pass)** | **audit agent 정정 6건 반영**: (1) twin_runner.py 라인 번호 정확화 (import line 41, BUY scrub line 401, rationale lines 226/305) — 수정 후 직접 grep 으로 재확인. (2) `routes/broker_oauth.py` "9곳" → 6곳 (정의 309-327 + status 가드 260 + endpoint 가드 4곳: 365/414/435/451) — `grep -nE "_alpaca_kill_switch_response|ALPACA_ENABLED" routes/broker_oauth.py` 으로 재카운팅. (3) `forbidden_terms.py` 토큰 22 → 20 (영문 12 + 한국어 8) — frozenset 직접 카운팅. 한국어 (10) → (8). (4) `_COMPLIANCE_FORBIDDEN_PATTERNS` "9 advisory verbs" → "14 raw patterns (한국어 13 + 영문 alternation 1)". (5) §5-3에 v2.1 컨텍스트 단서 추가 (BUY 적용 완료, SELL은 변호사 답에 따라 follow-up). (6) §4-8 제목 "미적용 (Q9)" → "적용 (Q9, PR #116 머지 후 변호사 미팅 시점)" 으로 일관성 정정. **§101 "면제 트랙" 표현은 변호사가 직접 정정 가능하므로 미수정** (Q1에서 사인 받기). |
 
-### 3.3 P2 (낮음) — 다수
-- 사업자등록·통판신고·유사투자자문업 신고 미이행 (런칭 전 필수)
-- 상표 미등록
-- DPA (Data Processing Agreement) Stripe/Anthropic/Railway/Vercel 체결 여부 미확인
-- 폰트 라이선스 재배포 조건 (SIL OFL) 표기 여부
-
----
-
-## §4 예상 비용 / 일정
-
-### 4.1 자문 비용 추산 (시장가 기준)
-| 단계 | 소요 시간 | 예상 비용 (로펌 기준) |
-|---|---|---|
-| 1 차 검토 (본 자문서 기반) | 5~10 시간 | 100~300 만 원 |
-| 약관 수정 반영 확인 | 2~3 시간 | 40~80 만 원 |
-| 유사투자자문업 신고 대행 (옵션) | 별도 견적 | 50~150 만 원 |
-| **합계** | | **190~530 만 원** |
-
-예산 100 만 원 한도 고려 시 **선택적 자문** (§1.1 / §1.7 / §1.8 / §1.10 중심) 로 스코프 축소 가능.
-
-### 4.2 실행 타임라인
-| 단계 | 소요 | 비고 |
-|---|---|---|
-| 1 차 자문 수령 | 1~2 주 | |
-| 약관·정책 수정 & 재검토 | 1 주 | |
-| 사업자등록 / 통판신고 | 1 주 | CEO 직접 |
-| 유사투자자문업 신고 | 2~4 주 | 수리 대기 |
-| 유료 전환 GO | **D+5~8 주** | 신고 수리 후 |
-
----
-
-## §5 결정 필요 사항 (CEO)
-
-자문 전 / 후 의사결정 체크리스트:
-
-### 5.1 자문 전 CEO 사전 준비
-- [ ] 사업자등록 업태·종목 결정 (일반 vs 간이과세)
-- [ ] "PivoxQuant" 상표 출원 여부·류 구분 (35, 42)
-- [ ] FMP / Alpaca / Naver 각 서비스의 **데이터 재배포 조항** 스크린샷 수집
-- [ ] Stripe / Anthropic / Railway / Vercel **DPA (Data Processing Agreement) 체결 여부** 확인
-- [ ] 베타 참여 유저 수 (현재 집계) — 자문 시 scale 판단에 사용
-- [ ] 대표자 결격사유 (자본시장법 §101-3) 자가 점검 (파산·금융사고 이력 등)
-- [ ] 랜딩·대시보드 주요 화면 스크린샷 20~30 장 (광고 문구 판단용)
-
-### 5.2 자문 후 실행 결정
-- [ ] 유사투자자문업 **선제 신고** 확정 (vs 정보제공 포지션 유지)
-- [ ] 자동매매 real mode 로드맵 — paper-only 유지 vs 투자일임업 인가 추진
-- [ ] 영문 랜딩 → 해외 유저 서비스 대상 확대 시점·국가
-- [ ] Beta (₩0) → Operator 9,900 전환 **D-day** (신고 수리 후)
-- [ ] 법적 문서 수정 PR 생성 → Vercel / Railway 배포 일정
-- [ ] "MOST CHOSEN" 뱃지 런칭 전 철회 여부
-- [ ] brag_card_email.html disclaimer `{% include %}` 통일 (P1-B)
-- [ ] portfolio aria-label 변경 (P1-D)
-- [ ] privacy-ko.md "변호사 검토 대기 중" 문구 제거 (P1-C)
-
-### 5.3 모니터링 지표
-- 변호사 자문 이후 월 1 회 **법무 감사 재실행** (내부 agent)
-- 유저 증가에 따른 DPO 의무 지정 임계치 (PIPA 100 만 건) 추적
-- 광고 문구 A/B 테스트 시 부당표시광고법 검토 루프
-
----
-
-## §6 첨부 · 연락처
-
-**CEO 직접 연락**:
-- 이메일: seanbae1521@gmail.com
-- 도메인: pivoxquant.com
-- GitHub: https://github.com/seanbae-analyst/pivoxquant (private 전환 검토 중)
-
-**기존 감사 보고서 위치** (자문 시 요청 시 제공):
-- `/Users/seanbae/Desktop/취준/stockpilot/HANDOVER.md` (2026-04-22 최신)
-- `~/.claude/projects/-Users-seanbae-Desktop---/memory/legal_compliance.md` (기존 메모)
-
-**본 패키지 작성 방식**: 내부 법무 agent (김앤장 스탠다드 프롬프트 기반) + 코드베이스 전수 감사 결과 자동 통합.
-
----
-
-*본 문서는 로펌 변호사의 공식 법률 자문을 대체하지 않으며, 자문 요청을 위한 **사전 정리 자료** 입니다. 최종 판단은 반드시 자격 있는 변호사의 검토를 거쳐야 합니다.*
+— 끝.
