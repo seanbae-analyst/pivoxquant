@@ -15,7 +15,7 @@
  * DisclaimerBanner(signal) retained inside the hero block.
  */
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, type ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import Link from "next/link";
@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
-import { FieldLabel, StatRow } from "@/components/ui/editorial";
+import { FieldLabel, StatRow, FootSignature } from "@/components/ui/editorial";
 import { useWatchlist, usePortfolioPositions, useArtifacts } from "@/lib/hooks";
 import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import type { Position } from "@/lib/types";
@@ -379,6 +379,59 @@ function PillarCard({
       <p className="mt-3 pq-detail-body text-[13px]">
         {observation}
       </p>
+    </div>
+  );
+}
+
+/* ── SectionHead ──
+ * v3 editorial section header: bronze hairline + font-mono eyebrow +
+ * Playfair italic H2. Consolidates the previous `pq-section-kicker` + `pq-detail-h2`
+ * pair so every section in this page reads with the same Discover/Risk cadence.
+ */
+function SectionHead({
+  eyebrow,
+  title,
+  icon,
+}: {
+  eyebrow: string;
+  title: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      {icon ? <span className="shrink-0">{icon}</span> : null}
+      <div>
+        <div
+          className="inline-flex items-center gap-2.5 font-mono uppercase"
+          style={{
+            color: "var(--pq-bronze)",
+            fontSize: "10px",
+            letterSpacing: "0.22em",
+            fontWeight: 500,
+          }}
+        >
+          <span
+            aria-hidden="true"
+            className="inline-block h-px w-6"
+            style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
+          />
+          <span>{eyebrow}</span>
+        </div>
+        <h2
+          className="mt-1.5 font-serif italic"
+          style={{
+            fontFamily:
+              '"Playfair Display","Source Serif 4",Georgia,serif',
+            fontWeight: 500,
+            fontSize: "clamp(1.25rem, 1.9vw, 1.6rem)",
+            lineHeight: 1.18,
+            letterSpacing: "-0.018em",
+            color: "var(--pq-ivory)",
+          }}
+        >
+          {title}
+        </h2>
+      </div>
     </div>
   );
 }
@@ -941,10 +994,7 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <div>
-              <div className="pq-section-kicker">Price observation</div>
-              <h2 className="pq-detail-h2 mt-1.5">Price history</h2>
-            </div>
+            <SectionHead eyebrow="Price observation" title="Price history" />
             <div
               role="tablist"
               aria-label="Chart period"
@@ -987,8 +1037,7 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <div className="pq-section-kicker">Fundamentals</div>
-            <h2 className="pq-detail-h2 mt-1.5">Key ratios & valuation</h2>
+            <SectionHead eyebrow="Fundamentals" title="Key ratios & valuation" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1100,8 +1149,7 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <div className="pq-section-kicker">Quant breakdown</div>
-            <h2 className="pq-detail-h2 mt-1.5">Four-pillar composite</h2>
+            <SectionHead eyebrow="Quant breakdown" title="Four-pillar composite" />
           </div>
           {hasPillars ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1140,8 +1188,7 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <div className="pq-section-kicker">Recent coverage</div>
-            <h2 className="pq-detail-h2 mt-1.5">News feed</h2>
+            <SectionHead eyebrow="Recent coverage" title="News feed" />
           </div>
           {loadingNews ? (
             <div className="space-y-2">
@@ -1216,12 +1263,12 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         {insiderEligible && (
           <section>
-            <div className="mb-5 flex items-center gap-3">
-              <Eye className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
-              <div>
-                <div className="pq-section-kicker">Form 4 · 90 days</div>
-                <h2 className="pq-detail-h2 mt-1.5">Insider activity</h2>
-              </div>
+            <div className="mb-5">
+              <SectionHead
+                icon={<Eye className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
+                eyebrow="Form 4 · 90 days"
+                title="Insider activity"
+              />
             </div>
             <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] overflow-hidden">
               {insiderData.length > 0 ? (
@@ -1281,12 +1328,12 @@ export default function StockDetailPage() {
             AI Analysis — on-demand SWOT (POSITIVE/NEGATIVE/NEUTRAL framing)
            ══════════════════════════════════════════════════ */}
         <section>
-          <div className="mb-5 flex items-center gap-3">
-            <Sparkles className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
-            <div>
-              <div className="pq-section-kicker">AI assistant · observation</div>
-              <h2 className="pq-detail-h2 mt-1.5">AI analysis</h2>
-            </div>
+          <div className="mb-5">
+            <SectionHead
+              icon={<Sparkles className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
+              eyebrow="AI assistant · observation"
+              title="AI analysis"
+            />
           </div>
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
             {swot && (swot.swot_kr || swot.swot) ? (
@@ -1340,12 +1387,12 @@ export default function StockDetailPage() {
             Earnings calendar — next + last quarters
            ══════════════════════════════════════════════════ */}
         <section>
-          <div className="mb-5 flex items-center gap-3">
-            <CalendarDays className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
-            <div>
-              <div className="pq-section-kicker">Earnings · forward window</div>
-              <h2 className="pq-detail-h2 mt-1.5">Earnings calendar</h2>
-            </div>
+          <div className="mb-5">
+            <SectionHead
+              icon={<CalendarDays className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
+              eyebrow="Earnings · forward window"
+              title="Earnings calendar"
+            />
           </div>
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
             {earningsForTicker.length > 0 ? (
@@ -1415,12 +1462,12 @@ export default function StockDetailPage() {
             Institutional ownership — placeholder (backend endpoint pending)
            ══════════════════════════════════════════════════ */}
         <section>
-          <div className="mb-5 flex items-center gap-3">
-            <Building2 className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
-            <div>
-              <div className="pq-section-kicker">Institutional · 13F</div>
-              <h2 className="pq-detail-h2 mt-1.5">Institutional ownership</h2>
-            </div>
+          <div className="mb-5">
+            <SectionHead
+              icon={<Building2 className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
+              eyebrow="Institutional · 13F"
+              title="Institutional ownership"
+            />
           </div>
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
             <p className="pq-detail-caption">
@@ -1445,7 +1492,18 @@ export default function StockDetailPage() {
               />
               <div className="flex-1">
                 <FieldLabel>AI Assistant · context handoff</FieldLabel>
-                <div className="pq-detail-h2 mt-1.5 group-hover:text-[var(--pq-bronze-light)] transition-colors">
+                <div
+                  className="mt-1.5 font-serif italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
+                  style={{
+                    fontFamily:
+                      '"Playfair Display","Source Serif 4",Georgia,serif',
+                    fontWeight: 500,
+                    fontSize: "clamp(1.25rem, 1.9vw, 1.6rem)",
+                    lineHeight: 1.18,
+                    letterSpacing: "-0.018em",
+                    color: "var(--pq-ivory)",
+                  }}
+                >
                   Ask Companion about {ticker ?? "this ticker"}
                 </div>
                 <p className="mt-2 pq-detail-caption">
@@ -1465,12 +1523,12 @@ export default function StockDetailPage() {
             Related observations — Artifact links
            ══════════════════════════════════════════════════ */}
         <section>
-          <div className="mb-5 flex items-center gap-3">
-            <FileText className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
-            <div>
-              <div className="pq-section-kicker">From your archive</div>
-              <h2 className="pq-detail-h2 mt-1.5">Recent artefacts</h2>
-            </div>
+          <div className="mb-5">
+            <SectionHead
+              icon={<FileText className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
+              eyebrow="From your archive"
+              title="Recent artefacts"
+            />
           </div>
           {artifactsSwr.artifacts.length === 0 ? (
             <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-6 text-center">
@@ -1509,7 +1567,18 @@ export default function StockDetailPage() {
                     className="block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"
                   >
                     <FieldLabel>{dateLabel}</FieldLabel>
-                    <div className="pq-detail-h2 mt-2 group-hover:text-[var(--pq-bronze-light)] transition-colors">
+                    <div
+                      className="mt-2 font-serif italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
+                      style={{
+                        fontFamily:
+                          '"Playfair Display","Source Serif 4",Georgia,serif',
+                        fontWeight: 500,
+                        fontSize: "1.05rem",
+                        lineHeight: 1.2,
+                        letterSpacing: "-0.012em",
+                        color: "var(--pq-ivory)",
+                      }}
+                    >
                       {label}
                     </div>
                     <p className="mt-2 pq-detail-caption truncate">
@@ -1526,12 +1595,8 @@ export default function StockDetailPage() {
           )}
         </section>
 
-        {/* ── Footer fleuron ── */}
-        <footer className="pt-6 mt-4 border-t border-[rgba(245,240,232,0.06)] text-center">
-          <p className="pq-detail-caption">
-            PivoxQuant · Observational research only · Not investment advice
-          </p>
-        </footer>
+        {/* ── Footer fleuron (editorial signature) ── */}
+        <FootSignature />
       </div>
     </ErrorBoundary>
   );
