@@ -42,17 +42,19 @@ describe("SignupPageV2", () => {
     authState.loading = false;
   });
 
-  it("renders 3 mandatory consents + 1 optional marketing consent", () => {
+  it("renders 4 mandatory consents + 1 optional marketing consent", () => {
     render(<SignupPageV2 />);
 
-    // Three required + one optional = four checkboxes.
+    // Four required (terms / non_advisory / age / cross_border per
+    // PIPA §28-8 added 2026-05-04 commit c9c6827) + one optional = 5 checkboxes.
     const checkboxes = screen.getAllByRole("checkbox");
-    expect(checkboxes).toHaveLength(4);
+    expect(checkboxes).toHaveLength(5);
 
     // Specific labels by id.
     expect(document.getElementById("agree_terms")).toBeInTheDocument();
     expect(document.getElementById("agree_non_advisory")).toBeInTheDocument();
     expect(document.getElementById("agree_age")).toBeInTheDocument();
+    expect(document.getElementById("agree_cross_border")).toBeInTheDocument();
     expect(document.getElementById("agree_marketing")).toBeInTheDocument();
   });
 
@@ -71,16 +73,21 @@ describe("SignupPageV2", () => {
     expect(kakaoBtn).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("enables OAuth anchors after all 3 required consents are checked", async () => {
+  it("enables OAuth anchors after all 4 required consents are checked", async () => {
     const user = userEvent.setup();
     render(<SignupPageV2 />);
 
-    // Click the three required checkboxes.
+    // Click the four required checkboxes.
+    // 2026-05-04 (commit 7084f60 / c9c6827): cross_border added per
+    // PIPA §28-8 (Anthropic / Stripe / Vercel / Railway / Google in US).
     await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
     await user.click(
       screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
     );
     await user.click(screen.getByRole("checkbox", { name: /만 14세/ }));
+    await user.click(
+      screen.getByRole("checkbox", { name: /국외 이전에 동의/ }),
+    );
 
     // Now both OAuth controls collapse from <button> → <a>.
     const google = screen.getByText(/Continue with Google/i).closest("a");
