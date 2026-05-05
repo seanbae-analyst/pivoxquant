@@ -529,6 +529,67 @@ def test_no_real_money_field_anywhere():
             )
 
 
+def test_buy_rationale_is_scrubbed_at_write_time(app, make_user, monkeypatch):
+    """HANDOVER §3-B regression guard: ``AITwinTrade.rationale`` must be
+    routed through ``services.legal_filter.safe_scrub`` so engine-generated
+    advisory tokens never land in a user-visible paper-trade record.
+
+    Setup: the engine stub returns ``signal="buy recommended now"`` — a
+    string the ``_score_universe`` helper folds straight into the
+    candidate's ``rationale``. Without scrub the persisted row would
+    echo "buy" and "recommended" verbatim → 자본시장법 §17 leak.
+    Expected: the persisted rationale contains neither token.
+    """
+    from services.twin import initialize_twin, run_twin_decisions
+    from models import AITwinPortfolio, AITwinTrade
+    from services import container as svc
+
+    user = make_user()
+    # Poisoned signal: contains two distinct legal_filter scrub triggers
+    # ("BUY signal" and "recommended"). Engine→rationale path folds the
+    # signal value into the candidate's rationale verbatim — without the
+    # write-time scrub, both tokens would survive into the user-visible
+    # paper-trade record.
+    poisoned_signal = "BUY signal — recommended"
+
+    class _PoisonedEngine:
+        DISCOVER_POOL = ["AAA"]
+
+        def analyze(self, ticker, capital_usd=10_000.0, **_kw):
+            return {
+                "composite_score": 95.0,
+                "price": 100.0,
+                "signal": poisoned_signal,
+            }
+
+    class _StubFetcher:
+        def get_stock_snapshot(self, ticker):
+            return {"price": 100.0, "currency": "USD"}
+
+    with app.app_context():
+        monkeypatch.setattr(svc, "engine", _PoisonedEngine())
+        monkeypatch.setattr(svc, "fetcher", _StubFetcher())
+        with patch("services.twin.twin_runner._resolve_persona", return_value="balanced"):
+            initialize_twin(user["id"])
+            run_twin_decisions(user["id"], universe=["AAA"])
+        twin = AITwinPortfolio.query.filter_by(user_id=user["id"]).first()
+        trade = (AITwinTrade.query
+                 .filter_by(twin_id=twin.id, side="BUY", ticker="AAA")
+                 .first())
+        assert trade is not None, "expected a paper buy of AAA"
+        # Pin the scrub: legal_filter maps "BUY signal" → "POSITIVE
+        # indicator" and "recommended" → "note". We assert both source
+        # tokens are gone, not the exact replacement (filter table may
+        # evolve as legal review tightens phrasing).
+        rat = trade.rationale or ""
+        assert "BUY signal" not in rat, (
+            f"'BUY signal' leaked into rationale: {rat!r}"
+        )
+        assert "recommended" not in rat.lower(), (
+            f"'recommended' leaked into rationale: {rat!r}"
+        )
+
+
 def test_is_paper_default_true_in_model():
     """Sanity: the column-level default for ``AITwinTrade.is_paper`` is True.
 
