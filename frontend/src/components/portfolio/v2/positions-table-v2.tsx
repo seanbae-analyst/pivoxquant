@@ -297,9 +297,14 @@ export function PositionsTableV2({
             )}
           </div>
         ) : (
+          /* Mobile fix (2026-05-05): wrap the 8-col table in overflow-x-auto
+             so the table can horizontal-scroll within the section instead
+             of forcing the entire page to horizontal-scroll on mobile. */
+          <div className="overflow-x-auto" style={{ width: "100%" }}>
           <table
             style={{
               width: "100%",
+              minWidth: 700,
               borderCollapse: "collapse",
               fontFamily:
                 '"JetBrains Mono","SF Mono",ui-monospace,monospace',
@@ -357,6 +362,7 @@ export function PositionsTableV2({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
