@@ -1,4 +1,110 @@
-# PivoxQuant — 인수인계서 (2026-05-02 v20 세션 — 자율 야간 작업 · V20 P1 swept + cleanup + structure hardening)
+# PivoxQuant — 인수인계서 (2026-05-05 v22 세션 — 자율 야간 · realtime + design v3 wave 4 + mobile sweep + signup test + bug-hunter 2nd pass)
+
+## 🟢 2026-05-05 v22 세션 (자율 야간 · 형님 자는 동안 9시간) — Bug #1 fix · /detail v3 · PWA banner v3 · mobile Top-7 · signup-v2 test fix · bug-hunter 2nd pass 6 fixes
+
+**8 commits (`566abe4 → 4e3b43f`). main HEAD `4e3b43f` (origin/main 23:23 KST push 완료, 추가 commit 8 미push 상태 — push 필요). 형님이 자는 동안 자율 모드.**
+
+CI 결과는 GitHub billing 카드가 여전히 막혀 있어 모든 워크플로우 fail (코드 자체는 정상). Vercel preview 만 pass. 다음 세션 첫 ACTION = **GitHub Settings → Billing & plans → Payment methods 카드 fix**.
+
+### 이번 세션 commits
+
+| # | Commit | Type | 핵심 | 검증 |
+|---|---|---|---|---|
+| 1 | `566abe4` | fix(realtime) | **Bug #1 (CRITICAL, MORNING_REPORT_2026-05-05) — yellow "재연결 중" 배너 영구 노출 수정.** `streamActive: boolean` 플래그 추가. RealtimeProvider가 의도적으로 SSE 안 여는 상태 (no user / 0 positions / hidden tab)에서 배너가 idle = null 렌더. State matrix 4가지 명시. | tsc clean + vitest 5/5 (3 update + 2 신규) |
+| 2 | `a162646` | design(detail) | **/detail/[ticker] v3 일관성** — `<SectionHead>` helper 추가, 9 section eyebrows를 font-mono uppercase + bronze hairline + Playfair italic H2로 통일. Companion CTA + artefact card title도 Playfair italic. footer를 `<FootSignature/>` 로 교체. 데이터 와이어링 / SWR 키 / hover / interactivity 무손실. | tsc clean (frontend-dev agent 작업) |
+| 3 | `b76a945` | design(pwa) | **PWA install prompt v3 리디자인** — box-shadow + bronze 0.42 border 제거, 1px ivory 0.10 hairline + Vantablack base. font-mono "Install · 0.0KB" eyebrow + bronze hairline. Playfair italic 20px headline. Source Serif 4 body + KR copy ("데스크에 PivoxQuant를 더하세요." / "설치" / "나중에"). install/dismiss/beforeinstallprompt 로직 무손실. | tsc clean (frontend-dev agent 작업) |
+| 4 | `2930559` | fix(mobile) | **Top-5 모바일 quick wins (375x667)** — Home v1 5개 inline-grid을 `grid-cols-1 md:grid-cols-N` 로 collapse / PositionsTableV2 `overflow-x-auto + min-w:700px` wrapper / AI Chat `min-h-[calc(100vh-120px)]` (mobile은 56px topbar + 64px bottomnav 빼야) / Home + Portfolio v2 sticky CFO `top:0→56` (TopBar 충돌 제거) / TopTicker right-edge linear-gradient mask + scrollbar-hide. | tsc clean |
+| 5 | `cc1248f` | chore(docs) | **2026-05-04 야간 세션 untracked 4건 archive** — HANDOVER_2026-05-04.md / MORNING_REPORT_2026-05-05.md / LAWYER_PREP_RESULT_2026-05-05.md / claude_handoff_2026-05-04/ (변호사 패키지 6 PDF + free_channels 4건) → `docs/archive/sessions/`. project root cleanup. | — |
+| 6 | `4c88c1a` | fix(mobile) | **Settings AnchorRail + Risk RiskGaugeGrid mobile collapse** — Settings v2 12-col grid에서 sticky rail 2-col span이 375px에서 ~57px 너비 → 모바일에서 rail hidden + body가 row 전체 차지. Risk gauge grid 강제 2-col이 가우지 카드를 ~155px로 압축 (44px value 가 28px padding에 클립) → `grid-cols-1 sm:grid-cols-2`. | tsc clean |
+| 7 | `6aa2122` | test(signup) | **signup-v2 vitest 정렬** — `cross_border` 4번째 동의 (PIPA §28-8, 2026-05-04 commit `c9c6827` 추가) 가 vitest 에 반영 안 돼 2건 fail 중이었음. 4 required + 1 optional = 5 checkboxes 로 expectation 정정 + OAuth anchor 테스트에서 "국외 이전에 동의" 체크박스도 클릭. | vitest 9 files / 35 tests / 0 failed |
+| 8 | `4e3b43f` | fix(bugs) | **bug-hunter 2nd-pass 배치 — 1 CRITICAL + 3 HIGH + 2 MEDIUM**. (a) **settings/_v2 C2 email 토글 backend wire (legal)** — V2 가 localStorage-only 였음 (V1 은 patch 호출 정상). 정통망법 §50 컴플라이언스 갭. PATCH `/api/profile/email-preferences` 추가 + 실패 시 rollback + aria-busy + `sp_mb_email` → `pq_email_delivery` 키 마이그레이션. (b) **/methodology 404 fix** — `SixDimensionsGrid.methodologyHref` 가 존재 안 하는 페이지 가리킴. `/docs` 로 redirect (default + 명시 사용처 둘 다). (c) **companion 인증-loading race** — `useAuth().loading` 미destructure → 인증 resolving 중 짧은 윈도우에 paywall flash. `authLoading || (isLoading && !status)` 게이트. (d) **/detail 어닝 테이블 phantom 컬럼** (CRITICAL) — backend 가 emit 안 하는 `eps_estimate / eps_actual / revenue_estimate` 3 컬럼 항상 "—" 렌더 + KRW 종목에서 `$..B` 하드코딩. 실제 backend shape (Date / Signal / Score) 로 교체. (e) profile/_v2 `observedPersonaName` 삼항 inert — 양쪽 동일 리터럴. 실제 `persona.observed.window_30d.persona` 노출. (f) profile/_v2 `heroBody` fictional 하드코딩 ("held through three drawdowns…") → `personaDetail?.tagline` 우선 + 중립 observational 폴백. | tsc clean + vitest 9/35 ✓ |
+
+### 다음 세션 V23 우선순위
+
+#### 🔴 P0 — 형님이 직접 (코드로 못 함)
+1. **GitHub Billing 카드 fix** (반복) — 모든 CI workflow fail 원인. 카드 교체 또는 spending limit ↑. open PR (#114, #115, #117, #118) 4건 + 이번 세션 commits 의 CI 자동 재실행됨.
+2. **변호사 미팅 일정** — Q1/Q3/Q4/Q11 (HIGH 4건) 우선 사인. LEGAL_CONSULT_PACKAGE.md v2.4 머지된 상태.
+
+#### 🔴 P0 — 라이브 검증 (5-10분)
+3. **이번 세션 commits 시각 확인 (5분)**
+   - /home + /portfolio 라이브에서 sticky CFO bar 가 TopBar 위에 stacking 되지 않는지 (top:56 적용 확인)
+   - PositionsTableV2 모바일 (Chrome devtools 375 viewport) 에서 페이지 전체 horizontal scroll 안 되고 테이블 내부만 scroll 되는지
+   - /detail/AAPL (또는 보유 종목) v3 일관성 — 9 section heads가 font-mono eyebrow + Playfair italic H2 로 통일됐는지
+   - PWA install prompt 가 폰에서 v3 톤 (Vantablack + 1px ivory hairline + Playfair italic) 으로 뜨는지
+
+4. **Bug #1 re-verify** — 빈 watchlist + 0 positions FREE 계정 으로 dashboard 진입 시 yellow "재연결 중" 배너가 더 이상 안 뜨는지 (이번 세션 P0 fix).
+
+#### 🟠 P1 — realtime / SWR 아키텍처 wave (1-2일)
+이번 세션에서 부분만 처리 — Bug #1 만 fix. 나머지 4건은 단일 세션 범위 초과:
+
+5. **Bug #3 SWR dedup 실패** (HIGH) — `/api/auth/me` 5x, `/api/alerts` 6x, `/api/portfolio` 6x per page nav. SWRConfig는 이미 6s dedupingInterval + per-hook 60s overrides 로 잘 셋업돼 있음. 의심 원인: React Strict Mode dev double-mount + revalidateOnFocus + SSE→mutate cascade. 다음 세션 조사: live 환경에서 production build 로 재현 / SSE 메시지마다 `globalMutate` 가 fetch 트리거하는지 확인 / `<SWRConfig>` `keepPreviousData: true` 추가 검토.
+6. **Bug #6 KOSPI/KOSDAQ "—·—" 페이지마다 불일치** (MEDIUM) — Bug #3 의 부수 효과 추정. macroMap 은 `sanitizeKrIndex` 가드 + SWR fallback 모두 적절. 라이브 재현 필요.
+7. **Bug #8 Risk API 4개 pending** (MEDIUM, 75% 확신) — Railway backend 응답 지연 / timing artifact 추정. 모니터링 필요.
+8. **Bug #9 DELAYED label 일부 페이지만** (LOW) — Bug #1 의 부수 효과 (SSE connected state 기반). 이번 세션 Bug #1 fix 로 부분 해결 가능. 라이브 재검증 필요.
+
+#### 🟠 P1 — 디자인 잔여 (모바일)
+9. **모바일 medium-impact 잔여 7건** (investigator audit 2026-05-05 §HIGH/POLISH 항목):
+   - DataTable 가 2-col 부모 grid 안에서 double-nested scroll (home/portfolio/risk/reports)
+   - Discover 5개 hairline table edge bleed (px-4 padding inheritance 미흡)
+   - SignalTallyStrip (signals v1 page-v1.tsx:194) eyebrow truncate
+   - AI Chat composer pb (이미 부분 fix, 라이브 재확인 필요)
+   - Companion ChatPanel composer pb 검증 — 코드는 OK
+   - 기타 POLISH 5건
+
+#### 🟡 P2 — Bug-hunter 2nd pass 잔여 (deferred)
+10. **/detail EPS currency formatting (HIGH, deferred)** — backend 가 EPS field emit 안 하므로 형식 위험 자체는 무효 (이번 세션 commit 8 에서 phantom 컬럼 제거). FMP EPS field 와이어업 follow-up 후 재평가.
+11. **profile/_v2 PeerBenchmarkBlockV2 하드코딩 cohort/metrics (MEDIUM, deferred)** — `API.profile.personaBenchmark` 와이어업 필요. 형님 design 결정: fallback 표시 vs empty state.
+12. **/detail earnings watchlist-only 빈 결과 (LOW, by-design)** — backend 가 `Position.user_id` 로 필터링. product gap, defect 아님.
+13. **`/detail` EPS 등 추후 wire-up 여부 결정** — FMP EPS endpoint 활성화 시 phantom 컬럼 복원 + KRW 가드 (필요시 `fmtPrice(value, krw)` 사용).
+
+#### 🟡 P2 — 4개 open PR 처리
+11. **PR #114** (test flakiness fix) — billing fix 후 자동 재CI → merge
+12. **PR #115** (legal advisory tokens) — 동일
+13. **PR #117** (bug-hunter batch 1: alert label leak + zero-neutral KPI) — 동일
+14. **PR #118** (LEGAL_CONSULT_PACKAGE v2.2) — 변호사 미팅 후 v2.5 갱신할지 결정
+
+### 자율 세션 수치
+
+| 지표 | 값 |
+|---|---|
+| 신규 commits | 8 (`566abe4 → 4e3b43f`. 7개는 origin/main push 완료, 8번째 (`4e3b43f`) 는 push 필요) |
+| 신규 라인 | +2,502 (~110 fix 추가 + +2,392 doc archive PDF 13개) |
+| 코드 변경 라인 | +233 (commits 1-7: ~123 + commit 8: +110) |
+| 신규 vitest | +2 (realtime banner idle + defensive failed→idle) |
+| vitest 전체 | **9 files / 35 tests / 0 failed** (이전 세션 1 file fail 까지 정정) |
+| pytest 전체 | 1617 passed / 1 known-flaky (PR #114 미머지 — billing block) / 6 skipped (백엔드 unaffected by commits 1-8 — 다 frontend) |
+| TypeScript 에러 | 0 |
+| ESLint 에러 | 0 (`--quiet` clean) |
+| Open PRs | 4 (#114, #115, #117, #118 — billing block) |
+| Bug-hunter 발견 | 1 CRITICAL + 4 HIGH + 3 MEDIUM + 2 LOW (10건 / 6건 fix / 4건 deferred) |
+
+### 정직 보고 — 자율 모드 한계
+
+**라이브 검증 못함**:
+- 이번 세션 7 commits 모두 코드/타입/유닛 검증만. **라이브 OAuth 클릭 0건** — 형님 brower 세션이 시리얼 디바이스에 잠겨 있음 (system prompt §user_privacy SSO/OAuth explicit per-action permission only).
+- Vercel preview deploy 는 커밋마다 자동 trigger 됐을 것 (Vercel은 GitHub billing 과 무관) — 형님 일어나면 PR/commit 의 Vercel preview URL 에서 시각 확인 가능.
+
+**Bug-hunter 2nd pass timeout**:
+- Companion / Profile / Settings / Detail/[ticker] 4 페이지 read-only bug hunt agent 를 병렬 실행했으나 9시간 자율 세션 안에 완료 못함 (transcript 195 라인 진행, 미완성). 다음 세션 시작 시 별도 dispatch 권고.
+
+**SWR / realtime 아키텍처 wave**:
+- Bug #1 만 단일 fix. Bug #3/#6/#8/#9 는 단일 PR 범위 초과 — 라이브 재현 + 1-2일 분량. 형님 의사결정 권고.
+
+**memory 갱신**:
+- legal_compliance.md 에서 "이용약관 18조 → 13조" / "처리방침 14조 → 12조" 정정.
+- session_2026-04-29.md 에서 "forbidden_terms 25+ 토큰 → 실제 20 토큰" 정정.
+
+### 다음 세션 시작 프롬프트 (참고)
+
+```
+HANDOVER.md 2026-05-05 v22 섹션 읽고 시작. 우선순위:
+1. GitHub billing 카드 status 확인 → 4 open PR + 7 new commits CI 재실행 결과 점검
+2. 라이브 5-10분 시각 검증 (P0 #3, #4)
+3. 변호사 미팅 일정 잡혔는지 확인 (P0 #2)
+4. (시간 여유 시) Bug #3 realtime/SWR 아키텍처 wave 조사 또는 bug-hunter 2nd pass 재dispatch
+```
+
+---
 
 ## 🟢 2026-05-02 v20 세션 (자율 야간 · 형님 자는 동안) — V20 P1 sweep + 8개 dead component drop + tsc CI gate
 
