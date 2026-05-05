@@ -312,15 +312,26 @@ export default function ProfilePageV2() {
     );
   }
 
-  /* ── Hero copy ── */
+  /* ── Hero copy ──
+   * Bug-hunter 2026-05-05 MEDIUM: observedPersonaName ternary was inert
+   * (both branches returned the literal "Observed persona"). Surface the
+   * real persona label from `persona.observed.window_30d.persona` so the
+   * hero reflects the user's own data instead of a placeholder.
+   */
   const observedPersonaName =
     personaDetail?.label ??
-    (persona?.observed?.window_30d?.persona
-      ? "Observed persona"
-      : "Observed persona");
+    persona?.observed?.window_30d?.persona ??
+    "Observed persona";
 
+  /* heroBody was previously a hardcoded fictional summary ("held through
+   * three drawdowns, trimmed twice into strength…") rendered for every
+   * user regardless of activity. Prefer real persona tagline copy from
+   * the classifier when available, otherwise fall back to a neutral
+   * observational line — never invent activity that didn't happen.
+   * Bug-hunter 2026-05-05 MEDIUM. */
   const heroBody =
-    "Across the last 90 days you held through three drawdowns, trimmed twice into strength, and rotated cash on schedule. Your declared persona and your trades are in agreement for the second consecutive quarter.";
+    personaDetail?.tagline ??
+    "Your declared persona and your observed activity are recorded here. The desk surfaces what you actually did — no advice, no projection.";
 
   /* ── Pulse history (graceful fallback) ──
    * Backend `PulseEntry` carries (submitted_at, mood:1..5 Likert) — not the
@@ -495,8 +506,10 @@ export default function ProfilePageV2() {
           <PersonaEvolution bare />
         </section>
 
-        {/* BLOCK 4 — Six dimensions */}
-        <SixDimensionsGrid showHeader methodologyHref="/methodology" />
+        {/* BLOCK 4 — Six dimensions
+            methodologyHref points at /docs (was /methodology which 404'd —
+            bug-hunter 2026-05-05 HIGH finding). */}
+        <SixDimensionsGrid showHeader methodologyHref="/docs" />
 
         {/* BLOCK 5 — Peer benchmark */}
         <PeerBenchmarkBlockV2

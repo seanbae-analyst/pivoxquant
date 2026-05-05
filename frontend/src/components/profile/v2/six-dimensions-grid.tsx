@@ -80,7 +80,10 @@ interface Props {
 export function SixDimensionsGrid({
   dimensions,
   showHeader = true,
-  methodologyHref = "/methodology",
+  /* /methodology was a stub that 404s. Point at /docs (which carries the
+     Signals & Risk methodology section) until a dedicated methodology
+     page is shipped. Bug-hunter 2026-05-05 HIGH finding. */
+  methodologyHref = "/docs",
 }: Props) {
   const list = dimensions && dimensions.length === 6 ? dimensions : DEFAULT_DIMS;
 
