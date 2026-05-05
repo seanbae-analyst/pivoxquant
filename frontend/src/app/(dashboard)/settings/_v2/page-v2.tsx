@@ -365,31 +365,34 @@ export default function SettingsPageV2() {
       {/* HERO */}
       <SettingsHeroV2 />
 
-      {/* MAIN — sticky rail + 5 sections */}
+      {/* MAIN — sticky rail + 5 sections.
+          Mobile fix (2026-05-05): the 12-col grid + 2-col AnchorRail makes
+          the rail ~57px wide at 375px — unreadable. Hide the rail entirely
+          on mobile (a sticky 2-col label list adds no value when the user
+          is already paging through linearly), and let the body span the
+          whole row instead of `span 10`. md+ keeps the original layout. */}
       <main
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
           gap: 32,
           paddingTop: 48,
         }}
-        className="pq-settings-grid"
+        className="pq-settings-grid grid-cols-1 md:[grid-template-columns:repeat(12,minmax(0,1fr))]"
       >
         <div
           style={{ gridColumn: "span 2" }}
-          className="pq-settings-rail"
+          className="pq-settings-rail hidden md:block"
         >
           <AnchorRail />
         </div>
 
         <div
+          className="pq-settings-body md:[grid-column:span_10]"
           style={{
-            gridColumn: "span 10",
             display: "flex",
             flexDirection: "column",
             gap: 64,
           }}
-          className="pq-settings-body"
         >
           {/* SECTION A — Identity & security */}
           <section

@@ -264,12 +264,11 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
         </span>
       </div>
 
+      {/* Mobile fix (2026-05-05): force 2-col made each gauge ~155px at 375px,
+          clipping the 44px value number against the 28px card padding. Now
+          stacks 1-col below the sm breakpoint. */}
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-          gap: 12,
-        }}
+        className="grid gap-3 grid-cols-1 sm:grid-cols-2"
       >
         <BigGaugeCard
           eyebrow="VaR · 95% / 1-day"
