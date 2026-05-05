@@ -1,7 +1,7 @@
-# PivoxQuant 변호사 자문 패키지 (v2.3)
+# PivoxQuant 변호사 자문 패키지 (v2.4)
 
-- 작성일: 2026-05-04 (v2 → v2.3 2026-05-05 sync)
-- 버전: **v2.3** (2026-05-05) — v2.2 → safe_scrub merge `91fd01c` + autotrader 물리 삭제 `4bcc9ab` + cross_border 체크박스 `c9c6827` 반영. 상세는 §8 변경 이력 참조.
+- 작성일: 2026-05-04 (v2 → v2.4 2026-05-05 sync)
+- 버전: **v2.4** (2026-05-05) — v2.3 → 법령 조항 번호 4건 정정 (§6→§17, §22의9 행위규칙 vs §6 1항 1호의4 허가 분리, §178 표제 "부정거래"로 정확화, legal_filter.py docstring 동시 정정). 이전 변경은 §8 변경 이력 참조.
 - 작성자: 배상현 (1인 창업자, 대표이사 후보)
 - 회의 형태: 1회 대면(50~80만원), 후속 follow-up 가능
 - 본 패키지는 **현 코드/문서 grep 검증 결과**를 인용한 사실 진술서이며, 변호사 판단을 받기 위한 사전 준비 자료다. 본인 의견(추측)은 따로 표시한다.
@@ -103,7 +103,7 @@ ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in ("1", "true", 
 - 시스템 키 Alpaca 호출 경로는 production에서 모두 503.
 - 사용자 BYOK 경로는 별도(UI 미완 — 미출시 상태).
 
-→ 변호사 사인 요청: 위 1-2 / 1-3 / 1-4 가 §6 미등록 투자업 · §101 영업행위 중 어느 카테고리도 트리거하지 않는지.
+→ 변호사 사인 요청: 위 1-2 / 1-3 / 1-4 가 자본시장법 §17 (투자자문업·투자일임업 미등록 영업행위 금지) · §101 (유사투자자문업 신고 의무) 중 어느 카테고리도 트리거하지 않는지.
 
 ---
 
@@ -124,7 +124,7 @@ ALPACA_ENABLED = os.environ.get("ALPACA_ENABLED", "0").strip() in ("1", "true", 
 - 모든 분석/스코어링은 사용자가 직접 로그인 후 자기 user_id 컨텍스트에서 자기 자신을 위해 사용.
 
 **b. 증거**
-- `services/legal_filter.py:1-25` — 모듈 docstring에 "자본시장법 §6 미등록 투자자문업 + §101 불공정 영업행위 리스크 방어선" 명시.
+- `services/legal_filter.py:1-25` — 모듈 docstring에 "자본시장법 §17 (투자자문업/투자일임업 미등록 영업행위 금지) + §101 (유사투자자문업 신고 의무) 리스크 방어선" 명시 (2026-05-05 정정 — 이전 §6 인용은 부정확).
 - `services/legal_filter.py:36-155` — 89개 정규식 _REPLACEMENTS + 6개 _PROHIBITED + 1개 _COMPLIANCE 정규식(총 96개 `re.compile`).
 - `frontend/src/content/terms-ko.md:89-106` (제6조 — 투자자문 면책):
   > 본 서비스(PivoxQuant)는 「자본시장과 금융투자업에 관한 법률」상 투자자문업 또는 투자일임업이 아닙니다.
@@ -212,7 +212,7 @@ APScheduler day_of_week=mon, hour=9 KST. Empty holdings → ...
 - `~/.claude/projects/-Users-seanbae-Desktop---/memory/legal_compliance.md:40-61` — 마이데이터 우려 메모(2026-04-28 작성, 변호사 답 미수령).
 
 **c. 판단 요청**
-- (1) BYOK + read-only "개인용 도구"가 본인신용정보관리업 §22의9 적용대상인지(인가·면허 필요 여부).
+- (1) BYOK + read-only "개인용 도구"가 본인신용정보관리업 §6 1항 1호의4(허가 + 자본금 5억) 적용대상인지, 그리고 §22의9 행위규칙(스크래핑 금지·API 의무 등)이 적용되는지.
 - (2) Alpaca(해외 broker) 정보가 한국 신용정보법 적용 외인지 — 조회 데이터가 한국 사용자 단말로 들어오는 시점에 적용될 가능성.
 - (3) KIS(국내 broker)는 read-only여도 "통합 조회/관리" 사업이면 적용되는지.
 - (4) 다중 broker(Alpaca + KIS) 통합이 §22의9가 정의한 "여러 기관에서 신용정보 통합" 기준에 해당하는지.
@@ -445,7 +445,7 @@ $ grep -nE "from services.legal_filter|safe_scrub|persona=\\{persona\\}|paper ex
 **c. 판단 요청**
 - (1) "예시 화면"의 가짜 ticker(AAPL, TSLA 등)/금액 표시가 표시광고법 §3 (기만표시) 위반인지.
 - (2) "PRO 배지", "Premium 기능" 표시가 광고 표시 의무 위반인지.
-- (3) 백테스팅 결과의 "과거 수익률" 표시가 자본시장법 §178(시세조작 금지)·표시광고법 §3 모두 트리거하는지.
+- (3) 백테스팅 결과의 "과거 수익률" 표시가 자본시장법 §178(부정거래행위 등의 금지 — 특히 ② 중요사항의 허위·부실 표시)·§57(투자광고 규제 — 과거 재무상태/영업실적 표기 + 손실보전·이익보장 오인 방지)·표시광고법 §3(기만표시) 중 어느 것을 트리거하는지.
 - (4) 추가 권고 문구.
 - (5) **위험 등급 (회사 자체)**: LOW-MEDIUM.
 
@@ -801,5 +801,7 @@ $ grep -nE "from services.legal_filter|safe_scrub|persona=\\{persona\\}|paper ex
 | **v2.1** | **2026-05-04 (자율 세션 2차)** | **F5 AI Twin rationale 수정 반영** — PR #116 (commits `907539f` + `1100f6d`)으로 `services/twin/twin_runner.py:401`에 `safe_scrub(cand.rationale, context="twin.buy.rationale")` 적용 + 회귀 가드 테스트 추가. Q9 위험 등급 MEDIUM → LOW. §6-10 검증 로그 갱신. v2 작성 시 grep 결과는 수정 적용 직전 상태였음 (작업 시간 차이) — 수정 후 grep 으로 재검증함. |
 | **v2.2** | **2026-05-04 (자율 세션 audit pass)** | **audit agent 정정 6건 반영**: (1) twin_runner.py 라인 번호 정확화 (import line 41, BUY scrub line 401, rationale lines 226/305) — 수정 후 직접 grep 으로 재확인. (2) `routes/broker_oauth.py` "9곳" → 6곳 (정의 309-327 + status 가드 260 + endpoint 가드 4곳: 365/414/435/451). (3) `forbidden_terms.py` 토큰 22 → 20 (영문 12 + 한국어 8) — frozenset 직접 카운팅. 한국어 (10) → (8). (4) `_COMPLIANCE_FORBIDDEN_PATTERNS` "9 advisory verbs" → "14 raw patterns (한국어 13 + 영문 alternation 1)". (5) §5-3에 v2.1 컨텍스트 단서 추가. (6) §4-8 제목 "미적용 (Q9)" → "적용 (Q9, PR #116 머지 후 변호사 미팅 시점)" 으로 정정. **§101 "면제 트랙" 표현은 변호사가 직접 정정 가능하므로 미수정** (Q1에서 사인 받기). |
 | **v2.3** | **2026-05-05 (자율 세션 — sync with reality)** | **선제 적용 3건 반영** — v2.2 미팅 직전이라 변호사 사인 *전*에 코드 적용을 마쳤음. (A) **safe_scrub 머지 완료** — `fix/twin-rationale-safe-scrub-2026-05-04` 브랜치 main 머지(merge commit `91fd01c`). v2.1/v2.2의 "PR open" 표현이 이제 "main 머지됨"으로 사실화. Q9 위험 LOW (사실). (B) **autotrader 물리 삭제** (commit `4bcc9ab`) — `services/trading/autotrader.py` 1,321 lines + `routes/autotrade.py` 279 lines + container/app/routes/__init__의 잔존 주석 6 파일 모두 제거. tag `legal-pre-autotrader-removal` (push 됨) 만 rollback 경로. §1-2 표 + §4-6 갱신. (C) **signup cross_border 체크박스** (commit `c9c6827`) — `frontend/src/app/(auth)/signup/_v2/page-v2.tsx` 5번째 [필수] 체크박스 추가, `frontend/src/lib/consents.ts` 4 helpers 추가, `routes/consents.py` 3 endpoints 추가, dashboard layout 자동 flush. §5-2 [x] 처리 + §2 Q4 본문 갱신. (D) leftover `tests/test_autotrade_smoke.py` 삭제 (commit `d8088c7`). |
+
+| **v2.4** | **2026-05-05 (자율 세션 — 법 조항 번호 정정)** | **법령 조항 번호 4건 정정** (law.go.kr / casenote.kr 1차 검증 후). (A) **§6 → §17** — 자본시장법 §6은 "정의" 조항, **§17이 "투자자문업·투자일임업 미등록 영업행위 금지"** (3년 이하 징역 / 1억원 이하 벌금, §445 1호). §1-1·Q1 의 "§6 미등록 투자업" 표현 §17로 정정. (B) **§22의9 인용 정확화** — §22의9는 본인신용정보관리회사의 **행위규칙** (스크래핑 금지·API 의무). 인가·자본금(5억)은 **§6 1항 1호의4**. Q3에서 "§22의9 적용대상" 표현을 "§6 1항 1호의4 (허가) + §22의9 (행위규칙)"로 분리. (C) **§178 표제 정정** — §178은 "**부정거래행위 등의 금지**"이며 시세조작/시세조종은 §176. Q12 "§178(시세조작 금지)" → "§178(부정거래행위 등의 금지 — 중요사항의 허위·부실 표시)"로 정정. §57 광고 규제도 같은 줄에 추가. (D) `services/legal_filter.py:5` docstring 의 "§6 미등록 투자자문업" 표현도 §17로 동시 정정 (코드와 패키지 일관성). 이전 v2.3 까지의 §6 / §22의9 인용 부정확성은 **WebSearch 검증 안 한 학습 데이터 단언**이 원인 — 변호사 미팅 전 발견·정정 완료. |
 
 — 끝.
