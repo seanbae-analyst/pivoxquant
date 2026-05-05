@@ -2,9 +2,7 @@
 PivoxQuant — Per-user Alpaca (US equity paper) service.
 
 2026-04-22: Adds per-user Alpaca paper account linking alongside the existing
-per-user KIS flow. We intentionally do NOT modify `autotrader.py` (frozen); its
-env-var-driven `paper=True` Alpaca client remains the automation path. This
-service is read-only observation:
+per-user KIS flow. This service is read-only observation:
 
   - verify(): sanity-check credentials by minting an account snapshot
   - get_account(): returns equity/cash/buying_power for display

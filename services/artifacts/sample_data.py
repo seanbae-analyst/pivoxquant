@@ -1783,7 +1783,6 @@ def sample_dd_checklist() -> dict[str, Any]:
 def _sample_dd_checklist_legacy_unused() -> dict[str, Any]:
     """OLD 6-page IC pack sample — retained as reference only.
 
-    Preserved per CLAUDE.md `rollback 가능하도록 보존` (autotrader.py 동일 정책).
     Not registered in artifact_samples mapping; safe to delete in a future cleanup
     sprint after the v3 template ships and stabilises.
     """
