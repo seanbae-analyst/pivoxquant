@@ -27,7 +27,7 @@ import {
 import { ChatPanel } from "@/components/companion/chat-panel";
 
 export default function CompanionPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { data: status, isLoading } = useCompanionStatus();
 
   const entitled = hasCompanionEntitlement(
@@ -36,7 +36,12 @@ export default function CompanionPage() {
   );
 
   // Show skeleton while auth + status are resolving.
-  if (isLoading && !status) {
+  // Bug-hunter 2026-05-05 HIGH: previously only `isLoading && !status` was
+  // gated, so during the brief window where auth was still loading but
+  // status had resolved, `entitled` evaluated against an undefined tier
+  // and rendered the paywall. Authenticated, entitled users were seeing
+  // a flash of the UpgradePrompt on every page load.
+  if (authLoading || (isLoading && !status)) {
     return <LoadingShell />;
   }
 

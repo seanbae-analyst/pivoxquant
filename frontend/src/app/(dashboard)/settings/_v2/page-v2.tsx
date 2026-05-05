@@ -190,7 +190,11 @@ export default function SettingsPageV2() {
   const [pushEnabled, setPushEnabled] = React.useState(false);
   const [pushSupported, setPushSupported] = React.useState(true);
   const [pushLoading, setPushLoading] = React.useState(false);
+  /* C2 email delivery is now backend-truth. `emailEnabled === !email_opt_out`.
+     Hydrate from /api/profile on mount so users see their actual server-side
+     opt-out state, not a localStorage shadow that drifts. */
   const [emailEnabled, setEmailEnabled] = React.useState(false);
+  const [emailSaving, setEmailSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -201,7 +205,28 @@ export default function SettingsPageV2() {
         .then((s) => setPushEnabled(!!s))
         .catch(() => setPushEnabled(false));
     }
-    setEmailEnabled(window.localStorage.getItem("sp_mb_email") === "1");
+    /* Optimistic hydration from localStorage for first paint, then
+       authoritative hydration from backend. Prefer the new pq_ prefix
+       and fall back to the legacy StockPilot-era sp_mb_email key for
+       migration. */
+    const cached =
+      window.localStorage.getItem("pq_email_delivery") ??
+      window.localStorage.getItem("sp_mb_email");
+    if (cached === "1" || cached === "0") {
+      setEmailEnabled(cached === "1");
+    }
+    apiFetch<{
+      profile?: { email_opt_out?: boolean };
+      email_opt_out?: boolean;
+    }>(API.profile.get)
+      .then((data) => {
+        const optOut =
+          data?.email_opt_out ?? data?.profile?.email_opt_out ?? false;
+        setEmailEnabled(!optOut);
+      })
+      .catch(() => {
+        /* Best-effort hydrate; localStorage cache wins on failure. */
+      });
   }, []);
 
   const handlePushToggle = React.useCallback(
@@ -235,13 +260,43 @@ export default function SettingsPageV2() {
     [pushSupported],
   );
 
-  const handleEmailToggle = React.useCallback((next: boolean) => {
+  const handleEmailToggle = React.useCallback(async (next: boolean) => {
+    /* Backend-of-truth wire (Bug-hunter 2026-05-05 HIGH): the V1 settings
+       page always called PATCH /api/profile/email-preferences but V2 only
+       wrote localStorage — so V2 users toggling "off" still received
+       email. 정통망법 §50 + PIPA opt-out compliance requires the server
+       to know. Optimistic-update locally, persist via PATCH, rollback on
+       failure. */
+    const prev = emailEnabled;
     setEmailEnabled(next);
+    setEmailSaving(true);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem("sp_mb_email", next ? "1" : "0");
+      window.localStorage.setItem("pq_email_delivery", next ? "1" : "0");
+      window.localStorage.removeItem("sp_mb_email"); /* cleanup legacy key */
     }
-    toast.success(next ? "Email enabled." : "Email disabled.");
-  }, []);
+    try {
+      await apiFetch<{
+        ok: boolean;
+        preferences: { email_opt_out: boolean };
+      }>(API.profile.emailPreferences, {
+        method: "PATCH",
+        body: JSON.stringify({ email_opt_out: !next }),
+      });
+      toast.success(next ? "Email enabled." : "Email disabled.");
+    } catch (err) {
+      setEmailEnabled(prev);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("pq_email_delivery", prev ? "1" : "0");
+      }
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Could not save email preference.",
+      );
+    } finally {
+      setEmailSaving(false);
+    }
+  }, [emailEnabled]);
 
   /* ── Subscription actions ── */
   const handleManageBilling = React.useCallback(async () => {
@@ -794,6 +849,8 @@ export default function SettingsPageV2() {
                     role="switch"
                     aria-checked={emailEnabled}
                     aria-label="Email delivery"
+                    aria-busy={emailSaving || undefined}
+                    disabled={emailSaving}
                     onClick={() => handleEmailToggle(!emailEnabled)}
                     style={{
                       position: "relative",
@@ -807,7 +864,8 @@ export default function SettingsPageV2() {
                       transition: "background 200ms",
                       flexShrink: 0,
                       border: "none",
-                      cursor: "pointer",
+                      cursor: emailSaving ? "wait" : "pointer",
+                      opacity: emailSaving ? 0.6 : 1,
                     }}
                   >
                     <span

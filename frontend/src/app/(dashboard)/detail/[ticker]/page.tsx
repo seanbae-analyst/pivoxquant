@@ -1395,6 +1395,13 @@ export default function StockDetailPage() {
             />
           </div>
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
+            {/* Bug-hunter 2026-05-05 CRITICAL: backend `routes/market.py::earnings_calendar`
+                returns only {ticker, name, date, signal, score} — eps_estimate /
+                eps_actual / revenue_estimate are NOT emitted. The previous 4-col
+                table displayed "—" forever for those columns and mishandled KRW
+                tickers (revenue_estimate hardcoded `$…B`). Switched to the actual
+                backend shape: Date · Signal · Score. The KRW currency hazard is
+                eliminated since these fields are not currency-bound. */}
             {earningsForTicker.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-[14px]">
@@ -1403,14 +1410,11 @@ export default function StockDetailPage() {
                       <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)]">
                         Date
                       </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)] text-right">
-                        EPS estimate
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)]">
+                        Signal
                       </th>
                       <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)] text-right">
-                        EPS actual
-                      </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)] text-right">
-                        Revenue est.
+                        Score
                       </th>
                     </tr>
                   </thead>
@@ -1429,19 +1433,12 @@ export default function StockDetailPage() {
                               })
                             : "—"}
                         </td>
-                        <td className="py-2.5 text-right font-mono tabular-nums text-[var(--pq-ivory)]/75">
-                          {e.eps_estimate != null
-                            ? e.eps_estimate.toFixed(2)
-                            : "—"}
-                        </td>
-                        <td className="py-2.5 text-right font-mono tabular-nums text-[var(--pq-ivory)]">
-                          {e.eps_actual != null
-                            ? e.eps_actual.toFixed(2)
-                            : "—"}
+                        <td className="py-2.5 font-mono uppercase tracking-[0.18em] text-[11px] text-[var(--pq-ivory)]/85">
+                          {(e.signal as string | undefined) ?? "—"}
                         </td>
                         <td className="py-2.5 text-right font-mono tabular-nums text-[var(--pq-ivory)]/75">
-                          {e.revenue_estimate != null
-                            ? `$${(e.revenue_estimate / 1e9).toFixed(2)}B`
+                          {typeof e.score === "number"
+                            ? e.score.toFixed(2)
                             : "—"}
                         </td>
                       </tr>
