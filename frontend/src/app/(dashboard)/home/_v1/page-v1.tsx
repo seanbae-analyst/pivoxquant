@@ -544,11 +544,14 @@ export default function HomePageV1() {
         <TopTicker />
       </div>
 
-      {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════ */}
+      {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════
+          Mobile fix (2026-05-05): top:0 was overlapping the 56px TopBar
+          when scrolled. Anchor below the TopBar so the sticky bar slides
+          under the header rather than colliding with it. */}
       <div
         className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10 mb-4"
         style={{
-          top: 0,
+          top: 56,
           background: "rgba(10,10,10,0.78)",
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",
@@ -565,12 +568,12 @@ export default function HomePageV1() {
         displayName={displayName}
       />
 
-      {/* ═══════════ Row 1 — Today Brief │ Snapshot │ Risk Gauges ═══════════ */}
+      {/* ═══════════ Row 1 — Today Brief │ Snapshot │ Risk Gauges ═══════════
+          Mobile fix (2026-05-05): collapse 3-col to 1-col below md.
+          At 375px, three minmax(0, 1fr) columns produced ~115px each and
+          made all three cards illegible. */}
       <section
-        className="grid gap-3 mb-3"
-        style={{
-          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr)",
-        }}
+        className="grid gap-3 mb-3 grid-cols-1 md:[grid-template-columns:minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)]"
       >
         {/* Today Brief card — editorial summary */}
         <div
@@ -711,10 +714,7 @@ export default function HomePageV1() {
 
       {/* ═══════════ Row 2 — Positions │ Watchlist ═══════════ */}
       <section
-        className="grid gap-3 mb-3"
-        style={{
-          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
-        }}
+        className="grid gap-3 mb-3 grid-cols-1 md:[grid-template-columns:minmax(0,1.4fr)_minmax(0,1fr)]"
       >
         <div>
           <div
@@ -790,10 +790,7 @@ export default function HomePageV1() {
 
       {/* ═══════════ Row 2.5 — Equity Curve │ Sector Allocation ═══════════ */}
       <section
-        className="grid gap-3 mb-3"
-        style={{
-          gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
-        }}
+        className="grid gap-3 mb-3 grid-cols-1 md:[grid-template-columns:minmax(0,1.4fr)_minmax(0,1fr)]"
       >
         <div>
           <div
@@ -964,10 +961,7 @@ export default function HomePageV1() {
 
       {/* ═══════════ Row 4 — Signals │ Pulse Activity ═══════════ */}
       <section
-        className="grid gap-3 mb-3"
-        style={{
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-        }}
+        className="grid gap-3 mb-3 grid-cols-1 md:grid-cols-2"
       >
         <div>
           <div
@@ -1045,12 +1039,7 @@ export default function HomePageV1() {
       </section>
 
       {/* ═══════════ Row 5 — Companion entry │ Feedback ═══════════ */}
-      <section
-        className="grid gap-3 mb-5"
-        style={{
-          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-        }}
-      >
+      <section className="grid gap-3 mb-5 grid-cols-1 md:grid-cols-2">
         {/* Companion entry */}
         <Link
           href="/companion"

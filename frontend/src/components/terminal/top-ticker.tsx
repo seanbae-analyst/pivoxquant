@@ -353,8 +353,12 @@ export function TopTicker() {
   }, [rt.details, macroMap]);
 
   return (
+    /* Mobile fix (2026-05-05): the 6 cells + brand pip total ~700px which
+       overflows 375px viewport. overflow-x-auto already lets the strip
+       scroll; we add a right-fade mask so users discover the scrollable
+       content, and hide the scrollbar to keep the editorial tone. */
     <div
-      className="flex items-center overflow-x-auto"
+      className="flex items-center overflow-x-auto scrollbar-hide"
       role="status"
       aria-label="Market ticker"
       style={{
@@ -363,6 +367,10 @@ export function TopTicker() {
         background: "#0B0E14",
         borderTop: "1px solid #1A1F2E",
         borderBottom: "1px solid #1A1F2E",
+        WebkitMaskImage:
+          "linear-gradient(to right, black 0%, black 88%, transparent 100%)",
+        maskImage:
+          "linear-gradient(to right, black 0%, black 88%, transparent 100%)",
       }}
     >
       {/* Brand + clock pip */}

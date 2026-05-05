@@ -205,11 +205,14 @@ export default function PortfolioPageV2() {
         <TopTicker />
       </div>
 
-      {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════ */}
+      {/* ═══════════ LIVING CFO STATUS — sticky hairline ═══════════
+          Mobile fix (2026-05-05): top:0 was overlapping the 56px TopBar.
+          Anchor below the TopBar so the sticky bar slides under the
+          header rather than colliding with it. */}
       <div
         className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
-          top: 0,
+          top: 56,
           background: "rgba(5,5,5,0.78)",
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",

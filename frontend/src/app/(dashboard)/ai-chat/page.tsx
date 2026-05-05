@@ -412,7 +412,11 @@ function ChatInner() {
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-64px)] gap-0">
+    /* Mobile fix (2026-05-05): subtract both the 56px TopBar AND the 64px
+       BottomNav so the chat input area does not get clipped behind the
+       bottom navigation on small viewports. md+ keeps -64px since the
+       desktop layout has no bottom nav. */
+    <div className="flex flex-col min-h-[calc(100vh-120px)] md:min-h-[calc(100vh-64px)] gap-0">
       {/* Header — promoted to v3 lock-in (Wave 2, 2026-05-01). Was a flat
           sans-style header that broke from /portfolio v2, /risk v2, /signals,
           /discover, /alerts, /watchlist. */}
