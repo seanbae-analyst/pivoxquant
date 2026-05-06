@@ -266,7 +266,9 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           </svg>
         </PdfCard>
 
-        <div style={{ marginTop: 12 }}>
+        {/* 2026-05-06 ghost fix: marginTop 12→8 + 18→10 to compress
+            page-2 footprint so gov+disclaim atomic stays on this sheet. */}
+        <div style={{ marginTop: 8 }}>
           <PdfKpiRow
             cols={3}
             kpis={[
@@ -277,7 +279,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           />
         </div>
 
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: 10 }}>
           <PdfCallout label="How to Use">{data.howToUse}</PdfCallout>
         </div>
 

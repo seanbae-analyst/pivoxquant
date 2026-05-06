@@ -210,8 +210,10 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* ═══════ PAGE 2 ═══════ */}
-      <PdfPage>
+      {/* ═══════ PAGE 2 ═══════
+          2026-05-06 Strategy B: compact so body+gov+disclaim atomic fits one A4 sheet
+          (prevents disclosure-only ghost page push by chromium print engine). */}
+      <PdfPage compact>
         <PdfHeader tier="pro" title="SELF AUDIT" meta={`${data.asOf} · 02/02`} />
         <PdfGoldRule />
 

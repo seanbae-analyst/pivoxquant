@@ -197,8 +197,10 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 3 — DECISIONS + GOVERNANCE */}
-      <PdfPage>
+      {/* PAGE 3 — DECISIONS + GOVERNANCE
+          2026-05-06 Strategy B: compact so body+gov+disclaim atomic fits one A4 sheet
+          (prevents disclosure-only ghost page push). */}
+      <PdfPage compact>
         <PdfHeader tier="premium" title="KPI DASHBOARD" meta="Apr 2026 · 03/03" />
         <PdfGoldRule />
 

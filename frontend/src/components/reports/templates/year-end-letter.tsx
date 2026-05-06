@@ -287,8 +287,10 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 5 — NEXT YEAR + SIGN */}
-      <PdfPage>
+      {/* PAGE 5 — NEXT YEAR + SIGN
+          2026-05-06 Strategy B: compact so body+gov+disclaim atomic fits one A4 sheet
+          (prevents disclosure-only ghost page push). */}
+      <PdfPage compact>
         <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 05/05" />
 
         <PdfEyebrow>03 — Promises for Next Year</PdfEyebrow>
@@ -313,7 +315,11 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
         />
 
         <PdfSectionTitle variant="sm">The Letter · 내가 내게 보내는 편지</PdfSectionTitle>
-        <PdfNotes tall>{data.letterBody}</PdfNotes>
+        {/* 2026-05-06 ghost fix: removed `tall` (80mm min-height) — combined with
+            CheckList + KpiRow + SignRow + GovBlock + bilingual Disclaimer was
+            forcing disclaim onto a ghost sheet. Notes still reflows naturally
+            to fit the letter body. */}
+        <PdfNotes>{data.letterBody}</PdfNotes>
 
         <PdfSignRow left="Signed · Investor" right="Date" />
 

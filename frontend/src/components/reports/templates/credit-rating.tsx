@@ -265,7 +265,9 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
           </tbody>
         </PdfTable>
 
-        <div style={{ marginTop: 18 }}>
+        {/* 2026-05-06 ghost fix: marginTop 18→10 to compress page-3 footprint
+            so gov+disclaim atomic stays on this sheet. */}
+        <div style={{ marginTop: 10 }}>
           <PdfCallout flat label="CFO's Note">{data.cfoNote}</PdfCallout>
         </div>
 

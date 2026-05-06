@@ -224,8 +224,10 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* ═══════ PAGE 2 — STRESS TESTS + ACTIONS ═══════ */}
-      <PdfPage>
+      {/* ═══════ PAGE 2 — STRESS TESTS + ACTIONS ═══════
+          2026-05-06 Strategy B: compact so body+gov+disclaim atomic fits one A4 sheet
+          (prevents disclosure-only ghost page push by chromium print engine). */}
+      <PdfPage compact>
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"

@@ -270,7 +270,9 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
           <p style={{ color: "var(--r-ink-3)", marginTop: 8, fontSize: 11, lineHeight: 1.55 }}>{data.watch.note}</p>
         </div>
 
-        <div style={{ marginTop: 18 }}>
+        {/* 2026-05-06 ghost fix: marginTop 18→10 to compress page-2 footprint
+            so gov+disclaim atomic stays on this sheet. */}
+        <div style={{ marginTop: 10 }}>
           <PdfCallout label="CFO's Note">{data.cfoNote}</PdfCallout>
         </div>
 

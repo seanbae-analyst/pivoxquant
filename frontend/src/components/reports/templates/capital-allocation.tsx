@@ -311,7 +311,11 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
         />
 
         <PdfSectionTitle variant="sm">CFO&apos;s Memo</PdfSectionTitle>
-        <PdfNotes tall>{data.cfoMemo}</PdfNotes>
+        {/* 2026-05-06 ghost fix: removed `tall` (80mm min-height) — combined with
+            Pullquote + CheckList + SignRow + GovBlock + bilingual Disclaimer
+            (withBacktest = longer) was forcing disclaim onto a ghost sheet on
+            the already-compact page. Notes still reflows to fit memo body. */}
+        <PdfNotes>{data.cfoMemo}</PdfNotes>
 
         <PdfSignRow left="Approved · CFO of My Portfolio" right="Date" />
 
