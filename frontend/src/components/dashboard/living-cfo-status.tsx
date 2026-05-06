@@ -138,12 +138,26 @@ export function LivingCFOStatusBar() {
     },
   ];
 
+  /* The outer container handles "click anywhere on the bar to open the
+     modal" while each LayerDot is itself a <button> that opens with focus
+     on a specific layer. Using a <button> on the outer element nested
+     LayerDot buttons inside, which violates HTML — invalid markup +
+     hydration errors flooded the console (2026-05-06 live verify).
+     Switched to <div role="button"> with keyboard handlers so the same
+     a11y semantics survive without the nesting. */
   return (
     <>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-between gap-4 px-4 py-2 hover:bg-[rgba(255,255,255,0.015)] transition-colors"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
+        className="w-full flex items-center justify-between gap-4 px-4 py-2 hover:bg-[rgba(255,255,255,0.015)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
         style={{
           borderBottom: "0.5px solid rgba(184,149,106,0.22)",
           fontFamily: "var(--font-mono), ui-monospace",
@@ -169,7 +183,7 @@ export function LivingCFOStatusBar() {
             />
           ))}
         </div>
-      </button>
+      </div>
 
       <AnimatePresence>
         {open && (
