@@ -178,7 +178,7 @@ export default function ReportsPage() {
               className="hidden font-serif italic sm:inline"
               style={{
                 color: "rgba(245,240,232,0.45)",
-                fontSize: "11.5px",
+                fontSize: "12px",
               }}
             >
               Six samples. Flip a card to read a page.

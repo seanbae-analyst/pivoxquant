@@ -58,7 +58,7 @@ export function RuledKicker({
         display: "inline-flex",
         alignItems: "center",
         gap: 10,
-        fontSize: "9.5px",
+        fontSize: "12px",
         letterSpacing: "0.24em",
         textTransform: "uppercase",
         color: "var(--pq-bronze)",
@@ -118,7 +118,7 @@ export function Caption({
     <p
       className={`pq-caption font-serif ${className}`}
       style={{
-        fontSize: "11.5px",
+        fontSize: "12px",
         lineHeight: 1.4,
         color: "rgba(245,240,232,0.55)",
       }}
@@ -254,7 +254,7 @@ export function FieldLabel({
       className={`pq-field-label font-sans ${className}`}
       style={{
         display: "inline-block",
-        fontSize: "10.5px",
+        fontSize: "12px",
         letterSpacing: "0.12em",
         textTransform: "uppercase",
         color,

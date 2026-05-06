@@ -429,7 +429,7 @@ export default function HomePageV1() {
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.18em",
               color: "rgba(245,240,232,0.45)",
             }}
@@ -591,7 +591,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -724,7 +724,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -760,7 +760,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -800,7 +800,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -830,7 +830,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -869,7 +869,7 @@ export default function HomePageV1() {
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -971,7 +971,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -1006,7 +1006,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -1059,7 +1059,7 @@ export default function HomePageV1() {
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.24em",
               color: "var(--pq-bronze)",
             }}

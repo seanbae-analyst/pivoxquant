@@ -68,7 +68,7 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 9.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
             textTransform: "uppercase",
@@ -80,7 +80,7 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
           className="font-mono"
           style={{
             fontVariantNumeric: "tabular-nums",
-            fontSize: 11.5,
+            fontSize: 12,
             color: "rgba(245,240,232,0.82)",
           }}
         >

@@ -692,7 +692,7 @@ function SectionKicker({
         <p
           className="mt-1.5 font-serif italic"
           style={{
-            fontSize: 12.5,
+            fontSize: 14,
             lineHeight: 1.5,
             color: "rgba(245,240,232,0.55)",
           }}
@@ -725,7 +725,7 @@ function EditorialEmpty({
       <p
         className="font-serif italic"
         style={{
-          fontSize: 12.5,
+          fontSize: 14,
           color: "rgba(245,240,232,0.5)",
         }}
       >

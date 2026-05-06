@@ -120,7 +120,7 @@ export function SignalsCard() {
                   <span
                     className="font-mono uppercase"
                     style={{
-                      fontSize: 10.5,
+                      fontSize: 12,
                       letterSpacing: "0.22em",
                       textTransform: "uppercase",
                       color: colorForLabel(label),

@@ -134,7 +134,7 @@ function FrontFace({
           className="font-serif uppercase"
           style={{
             color: "rgba(184,149,106,0.7)",
-            fontSize: "9.5px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
           }}
         >
@@ -170,7 +170,7 @@ function FrontFace({
         className="mt-4 font-serif"
         style={{
           color: "rgba(245,240,232,0.68)",
-          fontSize: "13.5px",
+          fontSize: "14px",
           lineHeight: 1.6,
         }}
       >
@@ -188,7 +188,7 @@ function FrontFace({
           className="inline-flex items-center gap-1.5 font-serif italic"
           style={{
             color: "var(--pq-bronze)",
-            fontSize: "12.5px",
+            fontSize: "14px",
             borderBottom: "0.5px solid rgba(184,149,106,0.4)",
             paddingBottom: 2,
           }}
@@ -259,7 +259,7 @@ function BackFace({
           className="font-serif uppercase"
           style={{
             color: "rgba(111, 86, 54, 0.95)",
-            fontSize: "9.5px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
           }}
         >
@@ -293,7 +293,7 @@ function BackFace({
         className="relative z-10 mt-3 font-serif"
         style={{
           color: "rgba(42,31,19,0.78)",
-          fontSize: "12.5px",
+          fontSize: "14px",
           lineHeight: 1.55,
         }}
       >
@@ -307,7 +307,7 @@ function BackFace({
             className="font-serif"
             style={{
               color: "rgba(42,31,19,0.72)",
-              fontSize: "11.5px",
+              fontSize: "12px",
               lineHeight: 1.5,
               paddingLeft: 10,
               position: "relative",
@@ -540,7 +540,7 @@ function FrontFaceContent({
           className="font-serif uppercase"
           style={{
             color: "rgba(184,149,106,0.7)",
-            fontSize: "9.5px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
           }}
         >
@@ -571,7 +571,7 @@ function FrontFaceContent({
         className="mt-4 font-serif"
         style={{
           color: "rgba(245,240,232,0.68)",
-          fontSize: "13.5px",
+          fontSize: "14px",
           lineHeight: 1.6,
         }}
       >
@@ -588,7 +588,7 @@ function FrontFaceContent({
           className="inline-flex items-center gap-1.5 font-serif italic"
           style={{
             color: "var(--pq-bronze)",
-            fontSize: "12.5px",
+            fontSize: "14px",
             borderBottom: "0.5px solid rgba(184,149,106,0.4)",
             paddingBottom: 2,
           }}
@@ -638,7 +638,7 @@ function BackFaceContent({
           className="font-serif uppercase"
           style={{
             color: "rgba(111,86,54,0.95)",
-            fontSize: "9.5px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
           }}
         >
@@ -667,7 +667,7 @@ function BackFaceContent({
         className="relative z-10 mt-3 font-serif"
         style={{
           color: "rgba(42,31,19,0.78)",
-          fontSize: "12.5px",
+          fontSize: "14px",
           lineHeight: 1.55,
         }}
       >
@@ -680,7 +680,7 @@ function BackFaceContent({
             className="font-serif"
             style={{
               color: "rgba(42,31,19,0.72)",
-              fontSize: "11.5px",
+              fontSize: "12px",
               lineHeight: 1.5,
               paddingLeft: 10,
               position: "relative",

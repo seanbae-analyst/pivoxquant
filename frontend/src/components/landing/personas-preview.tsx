@@ -225,7 +225,7 @@ export default function PersonasPreview() {
                 className="font-serif"
                 style={{
                   color: "rgba(245,240,232,0.72)",
-                  fontSize: "13.5px",
+                  fontSize: "14px",
                   lineHeight: 1.55,
                   marginBottom: 8,
                 }}
@@ -250,7 +250,7 @@ export default function PersonasPreview() {
                   className="inline-flex items-center gap-1.5 font-serif italic"
                   style={{
                     color: "var(--pq-bronze-light, #B8956A)",
-                    fontSize: "11.5px",
+                    fontSize: "12px",
                     letterSpacing: "0.02em",
                     borderBottom: "0.5px solid rgba(184,149,106,0.4)",
                     paddingBottom: 2,

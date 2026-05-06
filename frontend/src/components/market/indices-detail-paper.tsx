@@ -162,7 +162,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
         </div>
         <div
           style={{
-            fontSize: 9.5,
+            fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "rgba(20,20,20,0.55)",
@@ -303,7 +303,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
             justifyContent: "space-between",
             marginTop: 3,
             fontVariantNumeric: "tabular-nums",
-            fontSize: 9.5,
+            fontSize: 12,
             color: "rgba(20,20,20,0.55)",
           }}
         className="font-mono" >
@@ -438,7 +438,7 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
                 </span>
                 <span
                   style={{
-                    fontSize: 10.5,
+                    fontSize: 12,
                     color: "rgba(20,20,20,0.55)",
                   }}
                 className="font-mono" >

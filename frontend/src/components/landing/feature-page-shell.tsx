@@ -163,7 +163,7 @@ export default function FeaturePageShell({
                   className="font-serif"
                   style={{
                     color: "rgba(245,240,232,0.6)",
-                    fontSize: "13.5px",
+                    fontSize: "14px",
                     lineHeight: 1.55,
                   }}
                 >
@@ -173,7 +173,7 @@ export default function FeaturePageShell({
                   className="mt-2 inline-flex items-center gap-1.5 font-serif italic"
                   style={{
                     color: "var(--pq-bronze)",
-                    fontSize: "12.5px",
+                    fontSize: "14px",
                   }}
                 >
                   Open
@@ -220,7 +220,7 @@ export default function FeaturePageShell({
           <p
             className="font-serif mx-auto"
             style={{
-              fontSize: "14.5px",
+              fontSize: "15px",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.58)",
               maxWidth: "32em",
@@ -236,7 +236,7 @@ export default function FeaturePageShell({
               style={{
                 backgroundColor: "var(--pq-bronze)",
                 color: "var(--pq-ink)",
-                fontSize: "13.5px",
+                fontSize: "14px",
                 letterSpacing: "0.02em",
               }}
             >
@@ -249,7 +249,7 @@ export default function FeaturePageShell({
               style={{
                 border: "0.75pt solid var(--pq-bronze)",
                 color: "var(--pq-bronze)",
-                fontSize: "13.5px",
+                fontSize: "14px",
                 letterSpacing: "0.02em",
               }}
             >
@@ -277,7 +277,7 @@ export default function FeaturePageShell({
           <div
             className="font-serif uppercase"
             style={{
-              fontSize: "10.5px",
+              fontSize: "12px",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.4)",
             }}

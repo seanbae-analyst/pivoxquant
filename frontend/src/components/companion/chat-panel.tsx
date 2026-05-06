@@ -277,7 +277,7 @@ function StickyHeader() {
           <span
             className="font-serif uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze, #B8956A)",
             }}
@@ -288,7 +288,7 @@ function StickyHeader() {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 9.5,
+            fontSize: 12,
             letterSpacing: "0.18em",
             color: "rgba(245, 240, 232, 0.55)",
           }}
@@ -325,7 +325,7 @@ function EmptyState() {
       <p
         className="mt-2 font-serif italic"
         style={{
-          fontSize: 12.5,
+          fontSize: 14,
           lineHeight: 1.65,
           color: "rgba(184, 149, 106, 0.8)",
         }}
@@ -357,7 +357,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
           <p
             className="font-serif italic"
             style={{
-              fontSize: 14.5,
+              fontSize: 15,
               lineHeight: 1.55,
               margin: 0,
               whiteSpace: "pre-wrap",
@@ -421,7 +421,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
             <span
               className="font-serif italic"
               style={{
-                fontSize: 12.5,
+                fontSize: 14,
                 color: "rgba(245, 240, 232, 0.55)",
               }}
             >
@@ -453,7 +453,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
             <p
               className="font-serif"
               style={{
-                fontSize: 14.5,
+                fontSize: 15,
                 lineHeight: 1.7,
                 color: "var(--pq-ivory, #F5F0E8)",
                 margin: 0,
@@ -467,7 +467,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
               <p
                 className="mt-3 font-serif italic"
                 style={{
-                  fontSize: 11.5,
+                  fontSize: 12,
                   lineHeight: 1.55,
                   color: "rgba(184, 149, 106, 0.85)",
                   margin: 0,
@@ -548,7 +548,7 @@ function Composer({
                 background: "rgba(239, 184, 143, 0.08)",
                 border: "0.5px solid rgba(239, 184, 143, 0.3)",
                 color: "rgba(239, 184, 143, 0.95)",
-                fontSize: 11.5,
+                fontSize: 12,
               }}
             >
               Rate limit reached · {rateRemaining}s until you can send again.
@@ -580,7 +580,7 @@ function Composer({
             className="w-full resize-none bg-transparent px-4 py-3 font-serif outline-none placeholder:italic"
             style={{
               color: "var(--pq-ivory, #F5F0E8)",
-              fontSize: 14.5,
+              fontSize: 15,
               lineHeight: 1.55,
               minHeight: 48,
               maxHeight: 180,
@@ -595,7 +595,7 @@ function Composer({
               id="companion-hint"
               className="font-serif italic"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 lineHeight: 1.4,
                 color: "rgba(245, 240, 232, 0.5)",
                 margin: 0,
@@ -608,7 +608,7 @@ function Composer({
                 id="companion-counter"
                 className="font-mono tabular-nums"
                 style={{
-                  fontSize: 10.5,
+                  fontSize: 12,
                   color: counterColor,
                 }}
                 aria-live="off"
