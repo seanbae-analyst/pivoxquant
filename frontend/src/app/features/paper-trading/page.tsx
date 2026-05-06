@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Paper Trading — PivoxQuant",
+  title: "Paper Trading",
   description:
     "Practice with real market data. Risk zero real money. Test all 40 quant models before committing real capital.",
 };

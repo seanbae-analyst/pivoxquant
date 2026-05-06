@@ -13,7 +13,7 @@ import { marked } from "marked";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침 - PivoxQuant",
+  title: "개인정보처리방침",
 };
 
 function stripFrontmatter(md: string): string {

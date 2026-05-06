@@ -9,7 +9,7 @@ import { Eyebrow } from "@/components/landing/eyebrow";
 import { SectionCurtain } from "@/components/landing/section-curtain";
 
 export const metadata: Metadata = {
-  title: "7-Layer Risk Defense — PivoxQuant",
+  title: "7-Layer Risk Defense",
   description:
     "Monitoring downside risk is the other half of return. A seven-layer observation system that surfaces risk concentrations in your portfolio.",
 };

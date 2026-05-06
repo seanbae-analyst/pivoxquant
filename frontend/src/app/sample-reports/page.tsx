@@ -28,7 +28,7 @@ const REPORTS: { slug: string; title: string; tier: string; cadence: string; pag
 ];
 
 export const metadata = {
-  title: "Sample Reports · PivoxQuant",
+  title: "Sample Reports",
 };
 
 export default function SampleReportsIndexPage() {
