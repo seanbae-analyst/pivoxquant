@@ -610,13 +610,21 @@
    Scoped strictly to @media print so the card never escapes layout on screen.
    Avoid `position: absolute` which, if the print rule leaked (historically
    observed when DevTools print-preview emulation is active), caused the
-   result card to overlay the viewport. */
+   result card to overlay the viewport.
+
+   2026-05-06 FIX (audit-driven): the prior global `body * { visibility:
+   hidden !important; }` rule applied to *every* print invocation across
+   the site, not just to the share-card capture flow. Playwright's
+   `page.pdf()` uses media="print" by default, so re-rendering the 18
+   sample PDFs blanked every page (1MB → 3KB shells, 0 text per page).
+   Scope the visibility-hide to a body-level class that the simulator
+   sets only when capturing the share card, so other print contexts
+   (PDF reports, regular Cmd-P) keep their content visible. */
 @media print {
-  @page { margin: 0; }
-  body * { visibility: hidden !important; }
-  #what-if-share-card,
-  #what-if-share-card * { visibility: visible !important; }
-  #what-if-share-card {
+  body.what-if-share-print * { visibility: hidden !important; }
+  body.what-if-share-print #what-if-share-card,
+  body.what-if-share-print #what-if-share-card * { visibility: visible !important; }
+  body.what-if-share-print #what-if-share-card {
     margin: 0 !important;
     width: 100% !important;
     box-shadow: none !important;

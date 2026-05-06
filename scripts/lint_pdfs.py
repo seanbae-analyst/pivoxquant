@@ -257,7 +257,30 @@ def lint_text(text: str):
 
 def lint_file(pdf_path: Path):
     text = extract_text(pdf_path)
-    return lint_text(text)
+    findings = lint_text(text)
+
+    # 2026-05-06 audit fix: blank-page guard. The empty-shell regression
+    # (1.5-3.5KB PDFs with text_len=0) silently passed every placeholder
+    # rule because there was no text to match. Treat near-empty PDFs as
+    # P0 directly so CI catches them. Real samples are 200KB+ with
+    # thousands of characters of text. Threshold of 100 chars covers
+    # 1-page brief reports while still flagging blanks.
+    if len(text.strip()) < 100:
+        findings.insert(0, {
+            "severity": "P0",
+            "rule": "Blank or near-empty PDF",
+            "match": f"<{len(text)} chars total>",
+            "context": (text[:80] or "<empty>"),
+            "hint": (
+                "PDF extracted to <100 chars of text. Likely a blank-page "
+                "shell from a renderer that captured before React "
+                "hydration finished, or an @media print rule that hid "
+                "all content. Check the renderer log and re-run with a "
+                "live dev server."
+            ),
+        })
+
+    return findings
 
 
 # ---------------------------------------------------------------------------

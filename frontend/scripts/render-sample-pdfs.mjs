@@ -66,6 +66,14 @@ async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1024, height: 1366 } });
   const page = await context.newPage();
+  // 2026-05-06: emulate "screen" media so all `@media print` rules in
+  // globals.css don't hide our content during PDF capture. The PDF
+  // engine in Playwright defaults to "print" media which triggered a
+  // simulator-only `body * { visibility: hidden !important; }` rule
+  // that turned the entire viewport invisible. We render in screen
+  // mode and let printBackground:true + the PDF page geometry
+  // produce print-quality output.
+  await page.emulateMedia({ media: "screen" });
 
   let ok = 0, fail = 0;
   for (const slug of targets) {
@@ -75,14 +83,42 @@ async function main() {
     try {
       console.log(`[render] ${slug} -> ${filename}`);
       await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+
+      // 2026-05-06 audit fix: wait for the actual report DOM, not just
+      // network idle. Networkidle can resolve before client-side React
+      // hydration finishes, producing blank-shell PDFs.
+      await page.waitForSelector(".pq-pdf-page, .pq-report", { timeout: 15000 });
+
+      // Quality gate: assert the rendered page has non-trivial text
+      // before writing the PDF, so a blank-page regression cannot pass
+      // CI silently.
+      const textLen = await page.evaluate(
+        () => (document.body?.innerText || "").length,
+      );
+      if (textLen < 200) {
+        throw new Error(
+          `rendered text too short (${textLen} chars) — likely blank page`,
+        );
+      }
+
       await page.pdf({
         path: outPath,
         format: "Letter",
         printBackground: true,
         margin: { top: "0.5in", bottom: "0.5in", left: "0.5in", right: "0.5in" },
       });
+
+      // Post-write size check — the empty-shell regression produced
+      // 1.5-3.5KB blanks; real samples are 200KB+.
+      const stat = fs.statSync(outPath);
+      if (stat.size < 30_000) {
+        throw new Error(
+          `saved PDF too small (${stat.size} bytes) — likely empty shell`,
+        );
+      }
+
       ok++;
-      console.log(`[saved] ${outPath}`);
+      console.log(`[saved] ${outPath} (${(stat.size / 1024).toFixed(1)}KB)`);
     } catch (err) {
       fail++;
       console.error(`[fail] ${slug}:`, err.message);

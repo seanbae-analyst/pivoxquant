@@ -142,11 +142,26 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
     // "Save image" or "Screenshot" affordances. On mobile this is the
     // expected flow (long-press → save / system screenshot); on desktop
     // we kick off window.print() scoped to the card via CSS @media print.
+    //
+    // 2026-05-06: scope the print rule via `body.what-if-share-print`
+    // class so it only applies to this capture (not to PDF report
+    // renders, normal Cmd-P, etc. — see globals.css `@media print`
+    // block for context).
     const node = cardRef.current;
     if (!node) return;
     try {
       if (typeof window !== "undefined" && typeof window.print === "function") {
-        window.print();
+        document.body.classList.add("what-if-share-print");
+        try {
+          window.print();
+        } finally {
+          // Remove the class on the next tick so the print dialog has
+          // already taken its snapshot of the styles. afterprint event
+          // would also work but is unreliable across browsers.
+          setTimeout(() => {
+            document.body.classList.remove("what-if-share-print");
+          }, 0);
+        }
       } else {
         toast.info("Long-press the card to save as image");
       }
