@@ -4126,8 +4126,25 @@ html {
   letter-spacing: 0.3px;
   text-align: justify;
   hyphens: auto;
+  /* 2026-05-06: keep the entire KO+EN disclosure on one page. Without
+     this the paragraph could split mid-sentence at a page break, and
+     the previous PdfGovBlock 4-column grid would be visually orphaned
+     from the disclosure that explains it. */
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 .pq-pdf-disclaimer strong { color: var(--r-ink-2); font-weight: 600; }
+
+/* Gov block + Disclosure must travel as one. If the gov block fits at
+   the bottom of a page but the disclosure paragraph below it does not,
+   the result is a 4-column header with no explanation immediately under
+   it — visually broken. break-after on gov forces the renderer to push
+   the gov block onto the next page when the following disclosure can't
+   fit on the current one. */
+.pq-pdf-gov-block {
+  break-after: avoid;
+  page-break-after: avoid;
+}
 
 /* Mini disclaimer — 1-line, 8pt for non-final pages.
    Positioned absolutely above the page footer so it never consumes
