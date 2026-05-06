@@ -248,9 +248,8 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
           ) : null}
         </div>
         <div
-          className={isPositive ? "pq-paper-pos" : "pq-paper-neg"}
+          className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
           style={{
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
             fontVariantNumeric: "tabular-nums",
             fontSize: 11,
             marginTop: 2,

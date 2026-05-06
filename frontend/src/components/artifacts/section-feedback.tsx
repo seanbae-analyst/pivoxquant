@@ -93,10 +93,9 @@ export function SectionFeedbackBar({
 
   return (
     <div
-      className={`flex items-center gap-2 ${className}`}
+      className={`flex items-center gap-2 font-mono ${className}`}
       role="group"
       aria-label="Section feedback"
-      style={{ fontFamily: "var(--font-mono), ui-monospace" }}
     >
       <span
         className="text-[9.5px] uppercase tracking-[0.22em]"
