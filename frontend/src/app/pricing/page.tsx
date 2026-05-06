@@ -203,8 +203,8 @@ const FAQ_ITEMS: FaqItem[] = [
     a: "Yes. Cancel from Settings › Subscription at any time. Your plan remains active until the next billing date, then converts automatically to Free.",
   },
   {
-    q: "Is this investment advice?",
-    a: "No. PivoxQuant is an informational research tool. Artifacts organize market data, financials, and observation points. We do not solicit or recommend the purchase or sale of any security. All decisions are the user's own.",
+    q: "Is this investment advice? (Disclaimer: it is not.)",
+    a: "No. PivoxQuant is an informational research tool. Artifacts organize market data, financials, and observation points. We do not solicit or suggest the purchase or sale of any security. All decisions are the user's own.",
   },
   {
     q: "Is VAT included in the price shown?",

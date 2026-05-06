@@ -193,6 +193,35 @@
      KR convention reserves #D18888 (muted red) for losses; --pq-error
      is the same hue, semantically distinct from `up/down` price colors. */
   --pq-error: #d18888;
+
+  /* ── Motion Tokens (motion-spec skill SoT) ──────────────────────────────
+     Added 2026-05-06 per .claude/skills/motion-spec/SKILL.md §2-A~2-C.
+     Single source of truth for duration / easing / distance.
+     CSS layer: use these tokens directly.
+     JS layer (framer-motion): import PQ_EASE from lib/motion.ts
+        (= --motion-easing-emphasized = cubic-bezier(0.16, 1, 0.3, 1)).
+     ─────────────────────────────────────────────────────────────────────── */
+  /* Duration */
+  --motion-duration-instant:  0ms;
+  --motion-duration-micro:    100ms;   /* tooltip / icon hover / SSE price flash */
+  --motion-duration-fast:     150ms;   /* button / input focus / color transition */
+  --motion-duration-base:     300ms;   /* card / modal / drawer */
+  --motion-duration-slow:     500ms;   /* page transition */
+  --motion-duration-chart:    800ms;   /* chart count-up / line drawing */
+  --motion-duration-skeleton: 1500ms;  /* skeleton shimmer loop */
+
+  /* Easing */
+  --motion-easing-linear:     linear;
+  --motion-easing-out:        cubic-bezier(0.0, 0.0, 0.2, 1);    /* Material 3 ease-out (entering) */
+  --motion-easing-in:         cubic-bezier(0.4, 0.0, 1.0, 1.0);  /* Material 3 ease-in (exiting) */
+  --motion-easing-in-out:     cubic-bezier(0.4, 0.0, 0.2, 1);    /* Material 3 standard */
+  --motion-easing-emphasized: cubic-bezier(0.16, 1, 0.3, 1);     /* PQ_EASE — page transitions / hero motion */
+  --motion-easing-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);    /* chart count-up (= --motion-easing-out, semantic split) */
+
+  /* Distance (transform translation amounts) */
+  --motion-distance-sm:  4px;   /* card hover translateY */
+  --motion-distance-md: 16px;   /* modal / drawer enter translateY */
+  --motion-distance-lg: 64px;   /* full-page slide (BANNED in app — reference only) */
 }
 
 /* ── Design tokens (dark) ── */
@@ -416,6 +445,9 @@
   0%   { background-color: color-mix(in srgb, var(--down) 14%, transparent); }
   100% { background-color: transparent; }
 }
+/* TODO motion-spec drift: spec §3-F is 100ms (--motion-duration-micro), current 900ms is 9× over.
+   Migrate per CEO ACK. Suggested phased: 900ms → 300ms (--motion-duration-base) → 100ms.
+   SoT: .claude/skills/motion-spec/SKILL.md §3-F SSE 가격 변동 */
 .price-flash-up   { animation: price-flash-up 900ms ease-out forwards; }
 .price-flash-down { animation: price-flash-down 900ms ease-out forwards; }
 
@@ -1541,8 +1573,11 @@ button:hover > .pq-ink-pill,
      Kept distinct from --pq-radius-card (4px, Wave 1C card system).
      Do not consolidate without a sweep of consumers. */
   --pq-radius-lg: 3px;
-  --pq-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --pq-ease-fast: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Deprecated motion aliases — migrate to --motion-easing-* over time.
+     Values forwarded from main :root motion tokens (motion-spec skill §2-B).
+     Kept for backward compat; do NOT delete without sweeping consumers. */
+  --pq-ease: var(--motion-easing-emphasized);  /* was: cubic-bezier(0.16, 1, 0.3, 1) — identical */
+  --pq-ease-fast: var(--motion-easing-in-out); /* was: cubic-bezier(0.4, 0, 0.2, 1) — identical */
   --pq-hairline-w: 0.5px;
 }
 
