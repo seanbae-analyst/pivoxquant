@@ -3708,26 +3708,21 @@ html {
 
 .pq-pdf-page {
   width: 210mm;
-  /* 2026-05-06 CEO: height 강제 적용. min-height (자동 늘어남) 가 한
-     PdfPage 에 콘텐츠 많이 우겨넣을 때 297mm 초과 → absolute footer/
-     disclaimer 와 visual overlap 또는 자동 sheet spread 로 ghost 페이지
-     발생. height 강제하면 1 sheet = 1 PdfPage 정확히. content 가
-     초과하면 다음 sheet 로 자동 break (CSS standard), flex column +
-     disclaimer margin-top:auto 가 잉여 공간 흡수. */
-  height: 297mm;
+  /* 2026-05-06: height 강제 (1edd177) 시도 후 11/18 PDF 마지막 페이지가
+     disclosure-only ghost 로 spread 됨 — body+gov+disclaim 합 257mm 초과
+     시 chromium print engine 이 gov+disclaim 을 다음 sheet 로 push 하지만
+     spread 된 sheet 에서는 flex column 이 sheet split 분배 못함. ghost
+     해소를 위해 min-height 으로 회귀 + flex/margin-top:auto 제거.
+     overlap 문제는 break-after:avoid (gov) + break-before:avoid (disclaim)
+     + monthly_finance IS/BS 분리 (b3dad2b) 로 처리. */
+  min-height: 297mm;
   background: var(--r-paper, #ffffff);
   margin: 24px auto;
   padding: 18mm 16mm 22mm;
-  /* border-box 로 padding 이 297mm 안에 포함. content area = 257mm vertical. */
   box-sizing: border-box;
   position: relative;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
   page-break-after: always;
-  /* 한 sheet 에 정확히 1 PdfPage 만 들어가도록 — content 가 257mm 초과
-     하면 다음 sheet 로 spread (이게 사장님 의도된 "넘기라고"). */
-  overflow: visible;
-  display: flex;
-  flex-direction: column;
   color: var(--r-ink, #0e0e0e);
 }
 .pq-pdf-page:last-of-type { page-break-after: auto; }
@@ -4148,10 +4143,13 @@ html {
    it — visually broken. break-after on gov forces the renderer to push
    the gov block onto the next page when the following disclosure can't
    fit on the current one. */
-.pq-pdf-gov-block {
-  break-after: avoid;
-  page-break-after: avoid;
-}
+/* 2026-05-06 ghost-page fix: removed break-after: avoid. It pushed gov
+   to the next sheet when body+gov+disclaim 합 height > 257mm, creating
+   a disclosure-only ghost last page on 10/18 PDFs. Now gov stays inline
+   at body end. break-inside: avoid (line 4184) still keeps the 4-column
+   grid atomic; .pq-pdf-disclaimer break-before: avoid keeps the
+   bilingual block from spilling. */
+.pq-pdf-gov-block {}
 
 /* Mini disclaimer — 1-line, 8pt for non-final pages.
    Positioned absolutely above the page footer so it never consumes
@@ -4707,13 +4705,17 @@ html {
   .pq-pdf-chart,
   svg, img { break-inside: avoid; page-break-inside: avoid; }
 
-  /* 2026-05-05 V5 layout: pin the final-page disclaimer to the very
-     bottom of the A4 sheet. Combined with the .pq-pdf-page flex column
-     above, margin-top: auto absorbs all leftover vertical space and
-     pushes the disclosure block (which is the last in-flow child on the
-     last page) flush against the page footer. break-inside: avoid still
-     applies from the existing .pq-pdf-disclaimer rule. */
-  .pq-pdf-disclaimer { margin-top: auto; }
+  /* 2026-05-06 ghost-page fix: removed `margin-top: auto`. After height:
+     297mm + flex column was forced, margin-top:auto + break-after:avoid
+     on gov-block produced a regression — when body+gov+disclaim 합 height
+     exceeded the 257mm content area, gov+disclaim got pushed to a NEW
+     sheet that lacks the .pq-pdf-page wrapper (raw print sheet, no flex
+     column), causing them to anchor to the top of that sheet with 70%
+     blank space below. 10 of 18 PDFs ended with disclosure-only ghost
+     last pages. Letting disclaimer flow inline at content end + adding
+     break-before:avoid below keeps gov+disclaim atomic with preceding
+     body and prevents the orphan-sheet pattern. */
+  .pq-pdf-disclaimer { break-before: avoid; page-break-before: avoid; }
   /* 2026-05-06 P0 fix: hide preview-only chrome that was leaking into
      PDFs — the toolbar's "PDF로 저장 / 인쇄" button, the cookie consent
      banner, and the Next.js dev toolbar (which shows up as a "N" circle
