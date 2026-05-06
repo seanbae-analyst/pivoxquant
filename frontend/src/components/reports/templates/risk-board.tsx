@@ -70,7 +70,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 01/02`}
+          meta={`${data.weekTag} · 01/03`}
         />
 
         <PdfExecSum
@@ -224,14 +224,12 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* ═══════ PAGE 2 — STRESS TESTS + ACTIONS ═══════
-          2026-05-06 Strategy B: compact so body+gov+disclaim atomic fits one A4 sheet
-          (prevents disclosure-only ghost page push by chromium print engine). */}
-      <PdfPage compact>
+      {/* ═══════ PAGE 2 — STRESS TESTS + ACTIONS ═══════ */}
+      <PdfPage>
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 02/02`}
+          meta={`${data.weekTag} · 02/03`}
         />
         <PdfGoldRule />
 
@@ -427,6 +425,17 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
           left="Risk Board · Pro · Internal"
           right="Page 02"
         />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* ═══════ PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) ═══════ */}
+      <PdfPage>
+        <PdfHeader
+          tier="pro"
+          title="RISK BOARD · WEEKLY"
+          meta={`${data.weekTag} · 03/03`}
+        />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="weekly" />
       </PdfPage>
     </>

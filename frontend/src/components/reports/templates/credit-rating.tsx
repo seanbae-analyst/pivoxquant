@@ -151,7 +151,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
 
       {/* PAGE 2 */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 02/03" />
+        <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 02/04" />
         <PdfGoldRule />
 
         <PdfPullquote>{data.pullquote}</PdfPullquote>
@@ -201,9 +201,10 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 3 — 2026-05-06: compact so gov+disclaim atomic fits one A4 */}
-      <PdfPage compact>
-        <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 03/03" />
+      {/* PAGE 3 — 2026-05-06 Strategy B Option 2: explicit disclaim-only PdfPage so
+          chromium print engine never pushes the disclaimer onto a ghost sheet. */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 03/04" />
         <PdfGoldRule />
 
         <PdfSectionTitle>Watchlist · 끊어질 위험</PdfSectionTitle>
@@ -265,9 +266,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
           </tbody>
         </PdfTable>
 
-        {/* 2026-05-06 ghost fix: marginTop 18→10 to compress page-3 footprint
-            so gov+disclaim atomic stays on this sheet. */}
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 18 }}>
           <PdfCallout flat label="CFO's Note">{data.cfoNote}</PdfCallout>
         </div>
 
@@ -275,6 +274,13 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
 
         <PdfGovBlock />
         <PdfPageFooter left="Credit Rating · Premium · Not investment advice" right="Page 03" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 4 — DISCLAIMER (atomic disclaim-only sheet) */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 04/04" />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="quarterly" />
       </PdfPage>
     </>

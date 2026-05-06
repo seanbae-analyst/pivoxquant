@@ -152,7 +152,7 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
 
       {/* PAGE 2 — EXECUTIVE SUMMARY + SCORECARD */}
       <PdfPage>
-        <PdfHeader tier="premium" title="KPI DASHBOARD" meta="Apr 2026 · 02/03" />
+        <PdfHeader tier="premium" title="KPI DASHBOARD" meta="Apr 2026 · 02/04" />
 
         <PdfExecSum
           stamp="As of Apr 30, 2026 · 23:59 UTC"
@@ -197,11 +197,9 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 3 — DECISIONS + GOVERNANCE
-          2026-05-06 Strategy B: compact so body+gov+disclaim atomic fits one A4 sheet
-          (prevents disclosure-only ghost page push). */}
-      <PdfPage compact>
-        <PdfHeader tier="premium" title="KPI DASHBOARD" meta="Apr 2026 · 03/03" />
+      {/* PAGE 3 — DECISIONS + GOVERNANCE */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="KPI DASHBOARD" meta="Apr 2026 · 03/04" />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="dry">Decisions Log · 이번 분기 결정과 결과</PdfSectionTitle>
@@ -268,6 +266,13 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
 
         <PdfGovBlock />
         <PdfPageFooter left="KPI Dashboard · Premium · IC Pack" right="Page 03" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 4 — DISCLAIMER (atomic disclaim-only sheet) */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="KPI DASHBOARD" meta="Apr 2026 · 04/04" />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="monthly" />
       </PdfPage>
     </>

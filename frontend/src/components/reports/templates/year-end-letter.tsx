@@ -156,7 +156,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 2 — PULLQUOTE + YEAR AT A GLANCE */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 02/05" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 02/06" />
         <PdfGoldRule />
 
         <PdfEyebrow>Opening</PdfEyebrow>
@@ -207,7 +207,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 3 — DECISIONS REVIEW */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 03/05" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 03/06" />
 
         <PdfEyebrow>01 — Decisions, Reviewed</PdfEyebrow>
         <PdfSectionTitle>Decisions · 올해 내린 결정들</PdfSectionTitle>
@@ -262,7 +262,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 4 — LESSONS */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 04/05" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 04/06" />
 
         <PdfEyebrow>02 — Lessons Learned</PdfEyebrow>
         <PdfSectionTitle>3 Lessons · 값비싼 교훈 세 가지</PdfSectionTitle>
@@ -287,11 +287,9 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 5 — NEXT YEAR + SIGN
-          2026-05-06 Strategy B: compact so body+gov+disclaim atomic fits one A4 sheet
-          (prevents disclosure-only ghost page push). */}
-      <PdfPage compact>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 05/05" />
+      {/* PAGE 5 — NEXT YEAR + SIGN */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 05/06" />
 
         <PdfEyebrow>03 — Promises for Next Year</PdfEyebrow>
         <PdfSectionTitle>To Next Year&apos;s Me · 내년의 나에게</PdfSectionTitle>
@@ -315,16 +313,19 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
         />
 
         <PdfSectionTitle variant="sm">The Letter · 내가 내게 보내는 편지</PdfSectionTitle>
-        {/* 2026-05-06 ghost fix: removed `tall` (80mm min-height) — combined with
-            CheckList + KpiRow + SignRow + GovBlock + bilingual Disclaimer was
-            forcing disclaim onto a ghost sheet. Notes still reflows naturally
-            to fit the letter body. */}
-        <PdfNotes>{data.letterBody}</PdfNotes>
+        <PdfNotes tall>{data.letterBody}</PdfNotes>
 
         <PdfSignRow left="Signed · Investor" right="Date" />
 
         <PdfGovBlock />
         <PdfPageFooter left="Year-End Letter · Premium · Personal" right="Page 05" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 6 — DISCLAIMER (atomic disclaim-only sheet) */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 06/06" />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="annual" withBacktest />
       </PdfPage>
     </>

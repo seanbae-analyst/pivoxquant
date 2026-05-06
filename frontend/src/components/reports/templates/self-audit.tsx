@@ -210,11 +210,9 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* ═══════ PAGE 2 ═══════
-          2026-05-06 Strategy B: compact so body+gov+disclaim atomic fits one A4 sheet
-          (prevents disclosure-only ghost page push by chromium print engine). */}
-      <PdfPage compact>
-        <PdfHeader tier="pro" title="SELF AUDIT" meta={`${data.asOf} · 02/02`} />
+      {/* ═══════ PAGE 2 ═══════ */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="SELF AUDIT" meta={`${data.asOf} · 02/03`} />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="sm">Bias Heatmap · 편향 분포</PdfSectionTitle>
@@ -335,6 +333,13 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
           left="Self Audit · Pro · Not investment advice"
           right="Page 02"
         />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* ═══════ PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) ═══════ */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="SELF AUDIT" meta={`${data.asOf} · 03/03`} />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="ondemand" />
       </PdfPage>
     </>

@@ -200,9 +200,10 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 2 — 2026-05-06: compact so gov+disclaim atomic fits one A4 */}
-      <PdfPage compact>
-        <PdfHeader tier="pro" title="INSIDER MIRROR" meta={`${data.asOf} · 02/02`} />
+      {/* PAGE 2 — 2026-05-06 Strategy B Option 2: explicit disclaim-only PdfPage so
+          chromium print engine never pushes the disclaimer onto a ghost sheet. */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="INSIDER MIRROR" meta={`${data.asOf} · 02/03`} />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="sm">Featured Signal · 이번 주 단일 베스트</PdfSectionTitle>
@@ -266,9 +267,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           </svg>
         </PdfCard>
 
-        {/* 2026-05-06 ghost fix: marginTop 12→8 + 18→10 to compress
-            page-2 footprint so gov+disclaim atomic stays on this sheet. */}
-        <div style={{ marginTop: 8 }}>
+        <div style={{ marginTop: 12 }}>
           <PdfKpiRow
             cols={3}
             kpis={[
@@ -279,12 +278,19 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           />
         </div>
 
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 18 }}>
           <PdfCallout label="How to Use">{data.howToUse}</PdfCallout>
         </div>
 
         <PdfGovBlock />
         <PdfPageFooter left="Insider Mirror · Pro · Past activity ≠ future returns" right="Page 02" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="INSIDER MIRROR" meta={`${data.asOf} · 03/03`} />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="weekly" />
       </PdfPage>
     </>
