@@ -4520,7 +4520,24 @@ html {
     width: 210mm !important;
     min-height: 297mm !important;
   }
-  .pq-pdf-toolbar { display: none !important; }
+  /* 2026-05-06 P0 fix: hide preview-only chrome that was leaking into
+     PDFs — the toolbar's "PDF로 저장 / 인쇄" button, the cookie consent
+     banner, and the Next.js dev toolbar (which shows up as a "N" circle
+     in the bottom-left). The pdf-primitives toolbar already had the
+     `.pq-pdf-toolbar` rule; this extends the same hide to the cookie
+     banner (now stamped with `data-cookie-banner` + `pq-cookie-banner`
+     classes for stable matching) and the Next.js dev portal selectors. */
+  .pq-pdf-toolbar,
+  .pq-cookie-banner,
+  [data-cookie-banner],
+  #cookie-banner,
+  .cookie-consent,
+  nextjs-portal,
+  [data-nextjs-toast],
+  [data-nextjs-toast-wrapper],
+  next-route-announcer,
+  #__next-build-watcher,
+  #__next-prerender-indicator { display: none !important; }
   body { background: #fff !important; }
 }
 @page { size: A4; margin: 0; }
