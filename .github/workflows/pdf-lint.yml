@@ -1,0 +1,40 @@
+name: PDF Sample Lint
+
+# Lints the committed sample PDFs in frontend/public/samples/ for template
+# placeholder leaks and output-quality issues. Runs whenever the PDFs or the
+# React templates that generate them change.
+#
+# Source script: scripts/lint_pdfs.py (pypdf-based, exit 1 on P0).
+# Hard-fails on P0; reports P1/P2 informationally.
+
+on:
+  pull_request:
+    paths:
+      - "frontend/public/samples/**.pdf"
+      - "frontend/src/components/reports/**"
+      - "scripts/lint_pdfs.py"
+      - ".github/workflows/pdf-lint.yml"
+  push:
+    branches: [main]
+    paths:
+      - "frontend/public/samples/**.pdf"
+      - "frontend/src/components/reports/**"
+      - "scripts/lint_pdfs.py"
+
+jobs:
+  lint-sample-pdfs:
+    name: Lint generated sample PDFs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pypdf
+        run: pip install --quiet pypdf
+
+      - name: Lint frontend/public/samples
+        run: python3 scripts/lint_pdfs.py frontend/public/samples
