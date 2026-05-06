@@ -103,12 +103,12 @@ const DEFAULT: YearEndLetterData = {
   decisionEvNote: "avg alpha per decision (vs do-nothing)",
   lessons: [
     { num: "Lesson 01", title: "시간이 옳다", body: "시장이 옳은 게 아니라 시간이 옳다. 좋은 thesis도 6개월 일찍 진입하면 18%씩 깎인다." },
-    { num: "Lesson 02", title: "메모 없는 매수는 도박", body: "가설 없이 들어간 자리는 빠질 때 변호할 근거도 없다. 25건 중 7건이 무메모, 그 7건의 평균 결과 −3.2%." },
+    { num: "Lesson 02", title: "메모 없는 매입은 도박", body: "가설 없이 들어간 자리는 빠질 때 변호할 근거도 없다. 25건 중 7건이 무메모, 그 7건의 평균 결과 −3.2%." },
     { num: "Lesson 03", title: "현금은 포지션이다", body: "현금 0%로 가득 채운 분기에 −9.8% MaxDD 발생. 다음 해는 5% 이하로 떨어지지 않는 룰." },
   ],
   costliestMistake: "TSLA 보류 — 가설은 옳았지만 사이즈가 제로였다. +18% 못 잡은 게 올해 가장 비싼 한 줄.",
   promises: [
-    { title: "Promise 1", body: "신규 진입 전 가설 메모 100%. 메모 없으면 매수 자동 차단", tag: "Rule 01" },
+    { title: "Promise 1", body: "신규 진입 전 가설 메모 100%. 메모 없으면 매입 자동 차단", tag: "Rule 01" },
     { title: "Promise 2", body: "현금 비중 5% 이하 진입 금지. dry powder 룰", tag: "Rule 02" },
     { title: "Promise 3", body: "단일 섹터 35% 한도 strict — 위반 시 다음 영업일 정상화", tag: "Rule 03" },
     { title: "Promise 4", body: "월간 의사결정 ≤ 5건. 분기 ≤ 12건. 양보다 질", tag: "Rule 04" },

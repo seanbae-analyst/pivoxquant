@@ -74,12 +74,12 @@ const DEFAULT: CapitalAllocationData = {
   sources: [
     { label: "월급 저축", pct: 62, amount: "$24,000" },
     { label: "배당 수입", pct: 38, amount: "$5,520" },
-    { label: "매도 차익 (PYPL)", pct: 74, amount: "$18,680", flat: true },
+    { label: "매각 차익 (PYPL)", pct: 74, amount: "$18,680", flat: true },
     { label: "기타 (보너스)", pct: 14, amount: "$0", flat: true },
   ],
   totalSources: "$48,200",
   uses: [
-    { label: "신규 매수 (NVDA, META)", pct: 78, amount: "$22,400" },
+    { label: "신규 매입 (NVDA, META)", pct: 78, amount: "$22,400" },
     { label: "기존 종목 추가", pct: 42, amount: "$10,400" },
     { label: "현금 적립", pct: 58, amount: "$15,400", flat: true },
     { label: "세금 / 수수료", pct: 0, amount: "$0", flat: true },
@@ -97,14 +97,14 @@ const DEFAULT: CapitalAllocationData = {
   ],
   totals: { deployed: "$48,200", current: "$50,942", ret: "+5.7%", irr: "+24%" },
   bestDollar: { name: "NVDA · +22.4%", body: "$12,400 → $15,180. 분기 deployed 자본의 26%가 알파의 64%를 만들었다. Concentration의 양면." },
-  worstDollar: { name: "META · −4.2%", body: "타이밍 문제. Thesis는 유효, 6개월 더 기다릴 가치 있음. 추가 매수 보류." },
+  worstDollar: { name: "META · −4.2%", body: "타이밍 문제. Thesis는 유효, 6개월 더 기다릴 가치 있음. 추가 매입 보류." },
   pullquote:
     "Capital allocation is the CEO's most important job. 그리고 당신이 그 CEO다.",
   plans: [
-    { title: "Plan 1", body: "월급 저축 30% 자동 매수 (SCHD + VOO)", priority: "P1" },
+    { title: "Plan 1", body: "월급 저축 30% 자동 매입 (SCHD + VOO)", priority: "P1" },
     { title: "Plan 2", body: "현금 $15k 중 $10k는 Q3 내 deploy, $5k는 dry powder 유지", priority: "P1" },
     { title: "Plan 3", body: "Tech 비중 단계적 −5%p (Q3 말까지)", priority: "P2" },
-    { title: "Plan 4", body: "신규 매수 후보: HD, ASML, COST 중 1개", priority: "P2" },
+    { title: "Plan 4", body: "신규 매입 후보: HD, ASML, COST 중 1개", priority: "P2" },
     { title: "Plan 5", body: "Deploy lag 7일 이내로 단축 (자동화 룰)", priority: "P3" },
   ],
   cfoMemo: "이번 분기 자본 배분에 대한 자유 서술…",

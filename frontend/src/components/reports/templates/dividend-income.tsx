@@ -82,7 +82,7 @@ const DEFAULT: DividendIncomeData = {
     { ticker: "PG", pct: 30, amount: "$60", flat: true },
   ],
   reinvestmentNote:
-    "받은 $1,842, 어디에 다시 심을 것인가. SCHD 12주 추가 매수 검토. 또는 현금 보유 후 다음 달 합산.",
+    "받은 $1,842, 어디에 다시 심을 것인가. SCHD 12주 추가 매입 검토. 또는 현금 보유 후 다음 달 합산.",
 };
 
 export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }) {
@@ -189,7 +189,7 @@ export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }
       </div>
 
       <div style={{ marginTop: 18 }}>
-        <PdfCallout label="Reinvestment · 다음 매수 후보">{data.reinvestmentNote}</PdfCallout>
+        <PdfCallout label="Reinvestment · 다음 매입 후보">{data.reinvestmentNote}</PdfCallout>
       </div>
 
       <PdfGovBlock />

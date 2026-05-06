@@ -77,7 +77,7 @@ const DEFAULT: BragCardData = {
   lessonForNext: [
     { body: "**가설 시점 박제** — 행동 전 메모를 남기는 습관, 다음달도 유지.", meta: "KEEP" },
     { body: "**감정 ≠ 신호** — 시장의 단기 반응은 진입의 기회이지 회피의 이유가 아니다.", meta: "REINFORCE" },
-    { body: "**한도 점검** — 추가 매수 시 단일 종목 한도 명확히 재확인.", meta: "GUARD" },
+    { body: "**한도 점검** — 추가 매입 시 단일 종목 한도 명확히 재확인.", meta: "GUARD" },
   ],
   pullquote:
     "운이 아니라 <em>프로세스</em>였다. 다음 달도 같은 프로세스로.",
