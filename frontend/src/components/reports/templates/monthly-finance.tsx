@@ -297,7 +297,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
             />
           </PdfCard>
 
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 24 }}>
             <PdfTwoCol>
               <div>
                 <PdfColTitle>Total Assets</PdfColTitle>
