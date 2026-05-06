@@ -7,23 +7,25 @@
 
 import Link from "next/link";
 
+// Tier values mirror services/artifacts/sample_data.py CATALOG (canonical
+// source of truth for technical access). Verified 2026-05-07.
 const REPORTS: { slug: string; title: string; tier: string; cadence: string; pages: number }[] = [
-  { slug: "weekly-memo", title: "Weekly Memo", tier: "Free", cadence: "Weekly", pages: 1 },
+  { slug: "weekly-memo", title: "Weekly Memo", tier: "Pro", cadence: "Weekly", pages: 1 },
   { slug: "brag-card", title: "Brag Card", tier: "Free", cadence: "Monthly", pages: 1 },
   { slug: "earnings-prebrief", title: "Earnings Pre-Brief", tier: "Pro", cadence: "Per-event", pages: 2 },
-  { slug: "risk-board", title: "Risk Board", tier: "Pro", cadence: "Weekly", pages: 2 },
-  { slug: "quarterly-self-report", title: "Quarterly Self Report", tier: "Pro", cadence: "Quarterly", pages: 2 },
-  { slug: "self-audit", title: "Self Audit", tier: "Pro", cadence: "On-demand", pages: 2 },
+  { slug: "risk-board", title: "Risk Board", tier: "Premium", cadence: "Weekly", pages: 2 },
+  { slug: "quarterly-self-report", title: "Quarterly Self Report", tier: "Premium", cadence: "Quarterly", pages: 2 },
+  { slug: "self-audit", title: "Self Audit", tier: "Premium", cadence: "On-demand", pages: 2 },
   { slug: "dd-checklist", title: "DD Checklist", tier: "Pro", cadence: "On-demand", pages: 2 },
-  { slug: "dividend-income", title: "Dividend Income", tier: "Pro", cadence: "Monthly", pages: 1 },
-  { slug: "insider-mirror", title: "Insider Mirror", tier: "Pro", cadence: "Weekly", pages: 2 },
+  { slug: "dividend-income", title: "Dividend Income", tier: "Premium", cadence: "Monthly", pages: 1 },
+  { slug: "insider-mirror", title: "Insider Mirror", tier: "Premium", cadence: "Weekly", pages: 2 },
   { slug: "sp500-backtest", title: "S&P 500 Backtest", tier: "Pro", cadence: "On-demand", pages: 2 },
-  { slug: "portfolio-segment", title: "Portfolio Segment", tier: "Pro", cadence: "Monthly", pages: 2 },
+  { slug: "portfolio-segment", title: "Portfolio Segment", tier: "Premium", cadence: "Monthly", pages: 2 },
   { slug: "capital-allocation", title: "Capital Allocation", tier: "Premium", cadence: "Quarterly", pages: 4 },
-  { slug: "credit-rating", title: "Credit Rating", tier: "Premium", cadence: "Quarterly", pages: 3 },
-  { slug: "burn-rate", title: "Burn Rate", tier: "Premium", cadence: "Monthly", pages: 2 },
+  { slug: "credit-rating", title: "Credit Rating", tier: "Pro", cadence: "Quarterly", pages: 3 },
+  { slug: "burn-rate", title: "Burn Rate", tier: "Pro", cadence: "Monthly", pages: 2 },
   { slug: "monthly-finance", title: "Monthly Finance", tier: "Premium", cadence: "Monthly", pages: 4 },
-  { slug: "kpi-dashboard", title: "KPI Dashboard", tier: "Premium", cadence: "Monthly", pages: 3 },
+  { slug: "kpi-dashboard", title: "KPI Dashboard", tier: "Pro", cadence: "Monthly", pages: 3 },
   { slug: "year-end-letter", title: "Year-End Letter", tier: "Premium", cadence: "Annual", pages: 5 },
 ];
 

@@ -30,7 +30,7 @@ const ARTIFACTS = [
   { name: "Portfolio Segment", tier: "PREMIUM", tagline: "Sector + region breakdown", format: "4-page PDF · weekly", sampleUrl: null },
   { name: "Dividend Income", tier: "PREMIUM", tagline: "Twelve-month income ledger", format: "6-page PDF · monthly", sampleUrl: null },
   { name: "Self Audit", tier: "PREMIUM", tagline: "Quarterly decision review", format: "8-page PDF · quarterly", sampleUrl: null },
-  { name: "Brag Card", tier: "PREMIUM", tagline: "Monthly highlight digest", format: "1-page PDF · monthly", sampleUrl: null },
+  { name: "Brag Card", tier: "FREE", tagline: "Monthly highlight digest", format: "1-page PDF · monthly", sampleUrl: null },
 ];
 
 export default function ExplorerPage() {
