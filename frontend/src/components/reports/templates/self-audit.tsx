@@ -33,6 +33,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 export interface SelfAuditData {
@@ -207,7 +208,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
         </PdfTable>
 
         <PdfPageFooter left="Self Audit · Pro" right="Page 01" />
-        <PdfDisclaimer cadence="ondemand" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* ═══════ PAGE 2 ═══════ */}

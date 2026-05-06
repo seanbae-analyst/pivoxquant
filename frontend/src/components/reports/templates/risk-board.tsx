@@ -33,6 +33,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 export interface RiskBoardData {
@@ -220,7 +221,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
           left="Risk Board · Pro · Internal use only"
           right="Page 01"
         />
-        <PdfDisclaimer cadence="weekly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* ═══════ PAGE 2 — STRESS TESTS + ACTIONS ═══════ */}

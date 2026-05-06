@@ -34,6 +34,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 interface FactorRow {
@@ -190,7 +191,7 @@ export function PortfolioSegment({ data = DEFAULT }: { data?: PortfolioSegmentDa
         </PdfTwoCol>
 
         <PdfPageFooter left="Portfolio Segment · Pro" right="Page 01" />
-        <PdfDisclaimer cadence="monthly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 2 */}

@@ -32,6 +32,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 interface BuyRow {
@@ -196,7 +197,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
         </PdfTable>
 
         <PdfPageFooter left="Insider Mirror · Pro" right="Page 01" />
-        <PdfDisclaimer cadence="weekly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 2 */}

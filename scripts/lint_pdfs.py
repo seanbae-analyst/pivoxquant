@@ -312,6 +312,46 @@ def lint_file(pdf_path: Path):
                 ),
             })
 
+    # 2026-05-05: ghost-page guard. Detects "disclosure spill" pattern where
+    # the full <PdfDisclaimer /> was placed on an intermediate page and pushed
+    # itself onto a near-empty next page. Heuristic:
+    #   - page char count < 500
+    #   - first 80 chars match disclosure keywords
+    #   - NOT the first page (cover pages can be legitimately short)
+    DISCLOSURE_KEYWORDS = (
+        "investment advice",
+        "observational",
+        "면책",
+        "anthropic claude",
+        "quantitative factor",
+        "is generated automatically",
+        "release. portions of this report",
+        "of an earnings announcement",
+        "(ai assistant)",
+    )
+    for idx, p in enumerate(page_texts):
+        text_strip = p.strip()
+        if idx == 0:
+            continue  # skip cover page
+        if len(text_strip) >= 500:
+            continue
+        head = text_strip[:160].lower()
+        # Only flag if the head looks like leftover disclosure prose, NOT
+        # legitimate sparse content like a sign block or thank-you page.
+        if any(kw in head for kw in DISCLOSURE_KEYWORDS):
+            findings.insert(0, {
+                "severity": "P1",
+                "rule": "Ghost disclosure-only page",
+                "match": f"<page {idx + 1}: {len(text_strip)} chars>",
+                "context": text_strip[:120].replace("\n", " "),
+                "hint": (
+                    "Page is <500 chars and starts with disclosure-leaking "
+                    "prose. The full <PdfDisclaimer /> on the previous page "
+                    "spilled. Use <PdfDisclaimerMini /> on intermediate "
+                    "pages and only the full block on the FINAL page."
+                ),
+            })
+
     return findings
 
 

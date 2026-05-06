@@ -34,6 +34,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 interface RatingChange {
@@ -197,7 +198,7 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
         </PdfTable>
 
         <PdfPageFooter left="Credit Rating · Premium" right="Page 02" />
-        <PdfDisclaimer cadence="quarterly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 3 */}

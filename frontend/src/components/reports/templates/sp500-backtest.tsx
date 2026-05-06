@@ -32,6 +32,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
   PdfFlexBetween,
 } from "../pdf-primitives";
 
@@ -203,7 +204,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
         </PdfTable>
 
         <PdfPageFooter left="S&P 500 Backtest · Pro" right="Page 01" />
-        <PdfDisclaimer cadence="ondemand" withBacktest />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 2 */}

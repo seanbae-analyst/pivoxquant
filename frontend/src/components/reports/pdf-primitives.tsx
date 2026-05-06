@@ -385,8 +385,11 @@ export function PdfPageFooter({
 }
 
 /* ────────────────────────────────────────────────────────────
-   Disclaimer block — required by 자본시장법 on every report page.
-   Renders both KO + EN copy (justified, mono).
+   Disclaimer block — required by 자본시장법.
+   Full version: KO + EN justified copy. Use ONCE per report on
+   the final page (alongside <PdfGovBlock />). Intermediate pages
+   should use <PdfDisclaimerMini /> to avoid spilling onto a
+   near-empty ghost page.
    ──────────────────────────────────────────────────────────── */
 
 export function PdfDisclaimer({
@@ -405,6 +408,26 @@ export function PdfDisclaimer({
       <p style={{ marginTop: 6 }}>
         <strong>Disclosure</strong> · {en}
       </p>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────
+   PdfDisclaimerMini — 1-line, 8pt mini disclosure for non-final
+   pages. Keeps a visible compliance hint on every page without
+   spilling the full KO+EN block (which causes near-empty ghost
+   pages). Use on every PdfPage EXCEPT the last. The last page
+   should render the full <PdfDisclaimer />.
+   ──────────────────────────────────────────────────────────── */
+
+export function PdfDisclaimerMini() {
+  return (
+    <div
+      className="pq-pdf-disclaimer-mini"
+      data-pq-disclaimer-mini="true"
+      aria-label="Observational research only"
+    >
+      관찰적 연구 목적 · 투자자문 아님 · OBSERVATIONAL RESEARCH ONLY · NOT INVESTMENT ADVICE
     </div>
   );
 }

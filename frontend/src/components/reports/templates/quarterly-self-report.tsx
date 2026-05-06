@@ -32,6 +32,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 export interface QuarterlySelfReportData {
@@ -232,7 +233,7 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
         </PdfTable>
 
         <PdfPageFooter left="Quarterly Self Report · Pro" right="Page 01" />
-        <PdfDisclaimer cadence="quarterly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* ═══════ PAGE 2 ═══════ */}
