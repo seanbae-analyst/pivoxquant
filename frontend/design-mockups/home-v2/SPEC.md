@@ -131,7 +131,7 @@ Routes: add `routes/brief.py::upcoming_earnings()`. Map in `endpoints.ts` as `AP
 | `--pq-hairline` | rgba(10,10,10,0.12) | card border, ticker rules, mini-row dividers |
 | `--pq-text-h1` | clamp 2.4–4.5rem | hero |
 | `--pq-text-h2` | — | section header "Six rooms." + card display numerals |
-| `--pq-text-eyebrow` (10.5px) + `--pq-track-eyebrow` | — | every card kicker |
+| `--pq-text-eyebrow` (12px) + `--pq-track-eyebrow` | — | every card kicker |
 | `--pq-radius-card` | 4px | every card |
 | `--pq-radius-cta` | 2px | hero CTA |
 | `--pq-positive` | #dc2626 | KR convention price up |
