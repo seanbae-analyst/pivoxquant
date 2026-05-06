@@ -485,6 +485,7 @@ export function LedgerBookPaper({
                             }}
                             aria-label={`Record additional purchase for ${p.symbol}`}
                             title="Record additional purchase"
+                            className="font-mono"
                             style={actionBtn}
                           >
                             +
@@ -497,6 +498,7 @@ export function LedgerBookPaper({
                             }}
                             aria-label={`Record sale for ${p.symbol}`}
                             title="Record sale"
+                            className="font-mono"
                             style={actionBtn}
                           >
                             −
@@ -509,6 +511,7 @@ export function LedgerBookPaper({
                             }}
                             aria-label={`Edit recorded entry for ${p.symbol}`}
                             title="Edit recorded entry"
+                            className="font-mono"
                             style={actionBtn}
                           >
                             ✎
@@ -522,6 +525,7 @@ export function LedgerBookPaper({
                               }}
                               aria-label={`Remove recorded entry for ${p.symbol}`}
                               title="Remove recorded entry"
+                              className="font-mono"
                               style={{ ...actionBtn, color: "rgba(163,74,74,0.7)" }}
                             >
                               ×
@@ -562,7 +566,6 @@ const actionBtn: React.CSSProperties = {
   border: "0.5px solid rgba(184,149,106,0.45)",
   background: "transparent",
   color: "#B8956A",
-  fontFamily: "var(--font-mono), ui-monospace, monospace",
   fontSize: 12,
   lineHeight: 1,
   cursor: "pointer",
