@@ -3724,7 +3724,7 @@ html {
   color: var(--r-ink, #0e0e0e);
 }
 .pq-pdf-page:last-of-type { page-break-after: auto; }
-.pq-pdf-page.compact { padding: 14mm 14mm 18mm; }
+.pq-pdf-page.compact { padding: 12mm 14mm 14mm; }
 
 .pq-pdf-header {
   display: flex;
@@ -4616,6 +4616,14 @@ html {
     margin: 0 !important;
     box-shadow: none !important;
     width: 210mm !important;
+    /* 2026-05-06 V4: use FIXED height (not min-height) so flex on the
+       column has actual leftover space to distribute. Without this, when
+       content is shorter than 297mm the page collapses to content-height
+       and `margin-top: auto` on .pq-pdf-disclaimer becomes a no-op — the
+       disclaimer ends up wherever the content ends, not at the sheet
+       bottom. Fixed 297mm + box-sizing:border-box (declared on the base
+       rule) keeps the box exactly one A4 sheet. */
+    height: 297mm !important;
     min-height: 297mm !important;
     /* 2026-05-05 V5 layout: column flex so the final-page disclaimer
        (with margin-top: auto on .pq-pdf-disclaimer below) gets pushed
@@ -4652,6 +4660,28 @@ html {
   .pq-pdf-section > * + * { margin-top: 22px; }
   .pq-pdf-section:first-child { margin-top: 8px; }
   .pq-pdf-section:last-child { margin-bottom: 8px; }
+
+  /* 2026-05-06: compact pages — tighten section + child gaps so dense
+     content (e.g. monthly_finance p4 = Cash Flow + Key Ratios + Liquidity
+     Tiers + Gov + bilingual Disclaim, sp500 p2 = Risk + Stress + Caveats
+     + Verdict + Gov + Disclaim) fits on one A4 sheet. Without this,
+     PdfGovBlock + PdfDisclaimer (atomic via break-inside:avoid + break-
+     after:avoid) gets pushed to a 3rd sheet. */
+  .pq-pdf-page.compact .pq-pdf-section { margin: 18px 0; }
+  .pq-pdf-page.compact .pq-pdf-section > * + * { margin-top: 14px; }
+  .pq-pdf-page.compact .pq-pdf-section-title { margin-bottom: 10px; padding-bottom: 6px; }
+  .pq-pdf-page.compact .pq-pdf-table { font-size: 10px; }
+  .pq-pdf-page.compact .pq-pdf-kpi-row { margin: 14px 0; }
+  /* gov + disclaimer footprint reduction on compact pages */
+  .pq-pdf-page.compact .pq-pdf-gov-block { margin-top: 14px; padding-top: 10px; gap: 16px; }
+  .pq-pdf-page.compact .pq-pdf-disclaimer { margin-top: 10px; padding-top: 8px; }
+  /* tighter table rows so dense compact pages fit */
+  .pq-pdf-page.compact .pq-pdf-table tbody td { padding: 6px 8px; }
+  .pq-pdf-page.compact .pq-pdf-table thead th { padding: 8px 8px 6px; }
+  /* tighter callout/checklist gap */
+  .pq-pdf-page.compact .pq-pdf-callout { padding: 12px 14px; }
+  /* checklist + alloc-list compress */
+  .pq-pdf-page.compact .pq-pdf-checklist > * + * { margin-top: 8px; }
 
   /* Section header → never separate from the body that follows
      (orphan header guard). Without break-after: avoid, sp500 p1 ends

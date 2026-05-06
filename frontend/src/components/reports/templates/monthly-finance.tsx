@@ -341,8 +341,12 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 4 — CASH FLOW + RATIOS + GOVERNANCE */}
-      <PdfPage>
+      {/* PAGE 4 — CASH FLOW + RATIOS + GOVERNANCE
+          2026-05-06: `compact` shrinks padding 18/16/22mm → 14/14/18mm
+          to fit Cash Flow + Key Ratios + Liquidity Tiers + Gov + bilingual
+          Disclaimer onto a single A4 sheet. Without compact, the disclaim
+          spilled to a 5th sheet (16_monthly_finance.pdf 5p regression). */}
+      <PdfPage compact>
         <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 04/04" />
         <PdfGoldRule />
 

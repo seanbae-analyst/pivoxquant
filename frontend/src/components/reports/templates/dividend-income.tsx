@@ -85,9 +85,11 @@ const DEFAULT: DividendIncomeData = {
     "받은 $1,842, 어디에 다시 심을 것인가. SCHD 12주 추가 매입 검토. 또는 현금 보유 후 다음 달 합산.",
 };
 
+// 2026-05-06: compact on the single PdfPage so gov+disclaim atomic
+// fits within one A4 sheet (was overflowing to a 2nd PDF sheet).
 export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }) {
   return (
-    <PdfPage>
+    <PdfPage compact>
       <PdfHeader tier="pro" title="DIVIDEND INCOME" meta={`${data.asOf} · DI-2026-04`} />
       <PdfGoldRule />
 

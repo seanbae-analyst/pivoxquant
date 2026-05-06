@@ -201,8 +201,8 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 3 */}
-      <PdfPage>
+      {/* PAGE 3 — 2026-05-06: compact so gov+disclaim atomic fits one A4 */}
+      <PdfPage compact>
         <PdfHeader tier="premium" title="CREDIT RATING" meta="Q1 2026 · 03/03" />
         <PdfGoldRule />
 

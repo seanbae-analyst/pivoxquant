@@ -291,8 +291,9 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 4 — NEXT QUARTER PLAN */}
-      <PdfPage>
+      {/* PAGE 4 — NEXT QUARTER PLAN
+          2026-05-06: compact so gov+disclaim atomic fits one A4 sheet */}
+      <PdfPage compact>
         <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 04/04" />
         <PdfGoldRule />
 
