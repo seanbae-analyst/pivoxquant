@@ -172,36 +172,41 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
           </svg>
         </PdfCard>
 
-        <PdfSectionTitle variant="sm">Annual Returns · 연간</PdfSectionTitle>
-        <PdfTable>
-          <thead>
-            <tr>
-              <th>Year</th>
-              <th className="right">Strategy</th>
-              <th className="right">S&amp;P 500</th>
-              <th className="right">Excess</th>
-              <th className="right">Max DD</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.annual.map((a) => (
-              <tr key={a.year}>
-                <td>{a.year}</td>
-                <td className={`right ${a.strategyTone}`}>{a.strategy}</td>
-                <td className={`right ${a.benchmarkTone}`}>{a.benchmark}</td>
-                <td className={`right ${a.excessTone}`}>{a.excess}</td>
-                <td className="right">{a.maxDd}</td>
+        {/* 2026-05-05 V5 layout: wrap header + table together so the
+            orphan-header pattern (header on p1, table on p2) cannot
+            occur. .pq-pdf-section gets break-inside: avoid in print. */}
+        <div className="pq-pdf-section">
+          <PdfSectionTitle variant="sm">Annual Returns · 연간</PdfSectionTitle>
+          <PdfTable>
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th className="right">Strategy</th>
+                <th className="right">S&amp;P 500</th>
+                <th className="right">Excess</th>
+                <th className="right">Max DD</th>
               </tr>
-            ))}
-            <tr className="total">
-              <td><strong>20Y</strong></td>
-              <td className="right">{data.totals.strategy}</td>
-              <td className="right">{data.totals.benchmark}</td>
-              <td className="right">{data.totals.excess}</td>
-              <td className="right">{data.totals.maxDd}</td>
-            </tr>
-          </tbody>
-        </PdfTable>
+            </thead>
+            <tbody>
+              {data.annual.map((a) => (
+                <tr key={a.year}>
+                  <td>{a.year}</td>
+                  <td className={`right ${a.strategyTone}`}>{a.strategy}</td>
+                  <td className={`right ${a.benchmarkTone}`}>{a.benchmark}</td>
+                  <td className={`right ${a.excessTone}`}>{a.excess}</td>
+                  <td className="right">{a.maxDd}</td>
+                </tr>
+              ))}
+              <tr className="total">
+                <td><strong>20Y</strong></td>
+                <td className="right">{data.totals.strategy}</td>
+                <td className="right">{data.totals.benchmark}</td>
+                <td className="right">{data.totals.excess}</td>
+                <td className="right">{data.totals.maxDd}</td>
+              </tr>
+            </tbody>
+          </PdfTable>
+        </div>
 
         <PdfPageFooter left="S&P 500 Backtest · Pro" right="Page 01" />
         <PdfDisclaimerMini />
