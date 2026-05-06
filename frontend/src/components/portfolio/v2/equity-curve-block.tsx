@@ -151,7 +151,7 @@ export function EquityCurveBlock({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -177,7 +177,7 @@ export function EquityCurveBlock({
                 onClick={() => setRange(r.key)}
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 10.5,
+                  fontSize: 12,
                   letterSpacing: "0.2em",
                   padding: "6px 12px",
                   background: active
@@ -390,7 +390,7 @@ function KpiCell({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.40)",
           marginBottom: 6,
@@ -437,7 +437,7 @@ function LegendSwatch({
       <span
         className="font-mono uppercase"
         style={{
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.55)",
         }}

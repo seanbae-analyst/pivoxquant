@@ -66,7 +66,7 @@ export function CompanionEntryV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
         }}
@@ -77,7 +77,7 @@ export function CompanionEntryV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 12,
@@ -129,7 +129,7 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.40)",
                 marginBottom: 8,
@@ -181,7 +181,7 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.40)",
                 marginBottom: 8,
@@ -226,7 +226,7 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.40)",
                 marginBottom: 8,

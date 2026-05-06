@@ -54,7 +54,7 @@ export function ProfileHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 28,
@@ -162,7 +162,7 @@ export function ProfileHeroV2({
           className="font-mono uppercase"
           style={{
             marginLeft: 16,
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
             textTransform: "uppercase",
