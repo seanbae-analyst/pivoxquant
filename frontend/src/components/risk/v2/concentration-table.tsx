@@ -34,7 +34,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -58,7 +58,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
           }}
@@ -134,7 +134,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                   <div
                     className="font-mono"
                     style={{
-                      fontSize: 10.5,
+                      fontSize: 12,
                       color: "rgba(245,240,232,0.40)",
                       letterSpacing: "0.14em",
                       marginTop: 4,
