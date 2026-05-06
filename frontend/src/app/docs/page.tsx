@@ -31,7 +31,7 @@ const SECTIONS = [
     items: [
       {
         q: "How often are reports generated?",
-        a: "Weekly Memo arrives Monday mornings. Morning Brief daily. Monthly/Quarterly reports on calendar.",
+        a: "Weekly Memo arrives Monday 07:00 KST. Morning Brief daily. Monthly/Quarterly reports on calendar.",
       },
       {
         q: "What tier gets which reports?",

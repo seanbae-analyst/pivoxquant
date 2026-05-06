@@ -621,7 +621,7 @@ export default function HomePageV1() {
           >
             {briefText
               ? briefText
-              : "No brief observed for this session. The weekly memo is assembled every Sunday 07:00 KST and will archive here."}
+              : "No brief observed for this session. The weekly memo lands every Monday 07:00 KST and will archive here."}
           </p>
         </div>
 

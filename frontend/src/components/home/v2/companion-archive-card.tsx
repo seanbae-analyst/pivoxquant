@@ -125,7 +125,7 @@ export function CompanionArchiveCard() {
             fontStyle: "italic",
           }}
         >
-          The archive is empty. Your first weekly memo lands Sunday 07:00 KST.
+          The archive is empty. Your first weekly memo lands Monday 07:00 KST.
         </p>
       )}
 

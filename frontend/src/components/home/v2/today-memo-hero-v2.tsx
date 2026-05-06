@@ -61,7 +61,7 @@ export function TodayMemoHeroV2({
   const fallbackHeadline =
     'You held through <span class="br">noise</span>.<br/>Cash buffer is doing the work — <span class="br">don\'t tax it.</span>';
   const fallbackBody =
-    "Today's memo is being assembled. The weekly editorial drops every Sunday 07:00 KST and archives below.";
+    "Today's memo is being assembled. The weekly editorial drops every Monday 07:00 KST and archives below.";
 
   const headlineHtml = loading
     ? "Drafting today's memo…"

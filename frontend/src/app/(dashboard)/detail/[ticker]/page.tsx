@@ -1526,7 +1526,7 @@ export default function StockDetailPage() {
           {artifactsSwr.artifacts.length === 0 ? (
             <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-6 text-center">
               <p className="pq-detail-caption">
-                No artefacts yet — your first weekly memo lands Sunday 07:00 KST.
+                No artefacts yet — your first weekly memo lands Monday 07:00 KST.
               </p>
               <Link
                 href="/reports"
