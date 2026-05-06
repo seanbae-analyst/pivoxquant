@@ -73,7 +73,6 @@ export function RiskTimelineChart({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -83,9 +82,8 @@ export function RiskTimelineChart({
             Timeline · 30 days
           </div>
           <h2
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontWeight: 500,
               fontSize: 32,
               letterSpacing: "-0.02em",
@@ -100,7 +98,6 @@ export function RiskTimelineChart({
           <span
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.40)",
@@ -111,7 +108,6 @@ export function RiskTimelineChart({
           <span
             className="font-mono"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 16,
               color: "var(--pq-ivory)",
               fontVariantNumeric: "tabular-nums",
@@ -143,7 +139,6 @@ export function RiskTimelineChart({
           <div
             className="font-serif"
             style={{
-              fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
               fontSize: 14,
               color: "rgba(245,240,232,0.55)",
               padding: "60px 0",
@@ -203,12 +198,11 @@ export function RiskTimelineChart({
               y={strainY - 4}
               textAnchor="end"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 10,
                 fill: "rgba(245,240,232,0.40)",
                 letterSpacing: "0.18em",
               }}
-            >
+            className="font-mono" >
               STRAIN · {strainThreshold}
             </text>
           </svg>
@@ -234,7 +228,6 @@ export function RiskTimelineChart({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                   fontSize: 10.5,
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
@@ -246,7 +239,6 @@ export function RiskTimelineChart({
               <div
                 className="font-mono"
                 style={{
-                  fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                   fontVariantNumeric: "tabular-nums",
                   fontSize: 22,
                   color: "var(--pq-ivory)",

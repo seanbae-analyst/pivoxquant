@@ -32,7 +32,6 @@ export function CorrelationHeatmap() {
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -42,10 +41,8 @@ export function CorrelationHeatmap() {
         Correlation · 90-day pairwise observation
       </div>
       <h2
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily:
-            'var(--pq-font-display,"Playfair Display",Georgia,serif)',
           fontWeight: 500,
           fontSize: 32,
           letterSpacing: "-0.02em",
@@ -58,8 +55,6 @@ export function CorrelationHeatmap() {
       <p
         className="font-serif"
         style={{
-          fontFamily:
-            'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
           fontSize: 13,
           color: "rgba(245,240,232,0.70)",
           lineHeight: 1.55,
