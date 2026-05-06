@@ -19,14 +19,6 @@ const geist = Geist({
   display: "swap",
 });
 
-// Heading font = Geist (same family, tighter usage)
-const geistHeading = Geist({
-  variable: "--font-heading",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  display: "swap",
-});
-
 // Tabular-nums mono for prices, ratios, tickers
 const mono = JetBrains_Mono({
   variable: "--font-mono",
@@ -203,7 +195,7 @@ export default async function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geist.variable} ${geistHeading.variable} ${mono.variable} ${serif.variable} ${display.variable} h-full antialiased`}
+      className={`${geist.variable} ${mono.variable} ${serif.variable} ${display.variable} h-full antialiased`}
     >
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

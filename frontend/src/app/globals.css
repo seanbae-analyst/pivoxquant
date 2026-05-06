@@ -48,7 +48,6 @@
   /* Typography */
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --font-heading: var(--font-heading);
   --font-serif: var(--font-serif);
 
   /* Report tokens — Artifact / Memo / PDF surfaces */
@@ -297,7 +296,7 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading), var(--font-sans), "Pretendard Variable", system-ui, sans-serif;
+    font-family: var(--font-sans), "Pretendard Variable", system-ui, sans-serif;
     letter-spacing: -0.01em;
     font-weight: 600;
   }
