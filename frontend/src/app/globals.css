@@ -4642,6 +4642,15 @@ html {
   .pq-pdf-two-col,
   section { break-inside: avoid; page-break-inside: avoid; }
 
+  /* 2026-05-06: section 간 vertical breathing room. CEO 시각 검증
+     "Balance Sheet 너무 위에 딱 붙어 있음 / 여유 없음" 후속 — wrapper
+     자체엔 spacing 정의가 없어서 컨텐츠가 페이지 상단에 몰리고 도넛 +
+     2-col 표가 빽빽하게 붙어 보임. 28px 섹션 간격 + child 사이 14px gap. */
+  .pq-pdf-section { margin: 28px 0; }
+  .pq-pdf-section > * + * { margin-top: 14px; }
+  .pq-pdf-section:first-child { margin-top: 8px; }
+  .pq-pdf-section:last-child { margin-bottom: 8px; }
+
   /* Section header → never separate from the body that follows
      (orphan header guard). Without break-after: avoid, sp500 p1 ends
      with `Annual Returns` header alone and the table moves to p2. */
