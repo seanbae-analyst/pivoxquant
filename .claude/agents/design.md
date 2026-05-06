@@ -64,7 +64,7 @@ You are the Design Director combining Apple's obsessive attention to detail with
 - **타이포 토큰:** 11단계 (`--pq-text-eyebrow|mono-sm|caption|body-sm|body|deck|quote|h3|h2|h1|display`) — 인라인 fontSize 금지
 - **CTA radius:** 모든 CTA `rounded-sm` (4px) 통일. `rounded-full`/`rounded-2xl`/`rounded-3xl` editorial 톤에서 금지
 - **Helper 강제:** `lib/format.ts`의 `pctColor` / `pctColorClass` / `priceDir` / `priceGlyph` / `PRICE_COLOR_HEX` / `PRICE_GLYPH` 사용. 인라인 색/글리프 금지
-- **공통 컴포넌트 강제:** `<Eyebrow>` (landing/eyebrow.tsx), `RuledKicker` / `Caption` / `Fleuron` / `FootSignature` / `NumDisplay` / `StatRow` (ui/editorial.tsx) 사용. 직접 `<span className="text-xs uppercase">` 금지
+- **공통 컴포넌트 강제:** `<Eyebrow>` (landing/eyebrow.tsx), `EditorialHead` / `RuledKicker` / `Caption` / `Fleuron` / `FootSignature` / `NumDisplay` / `StatRow` (ui/editorial.tsx) 사용. 직접 `<span className="text-xs uppercase">` / 인라인 `fontFamily: "Playfair..."` 금지
 - **Motion 단일 출처:** `lib/motion.ts` (`PQ_EASE` / `fadeUp` / `stagger` / `fadeIn`) — 한 곳에서만 정의
 - **detail 페이지 spacing:** `.pq-field-label` (letter-spacing: 0.12em) 토큰 사용
 
@@ -177,6 +177,11 @@ PWA safe-area 토큰: `--pq-safe-top` / `--pq-safe-bottom` / `--pq-safe-left` / 
 - **`<Eyebrow withDashLeft|Right>`** (`components/landing/eyebrow.tsx`)
   - 적용: section 라벨 (`<span className="text-xs uppercase tracking-*">` 직접 패턴 금지)
   - fallback: 단순 small-caps 라벨 → prop 없이 swap 가능
+- **`<EditorialHead>`** (`components/ui/editorial.tsx`)
+  - 적용: Playfair Display serif heading 18~40px (section/card 헤딩 텍스트). home/_v2 "Six rooms." / risk/_v2 "Notes." / settings/profile 카드 헤더 / watchlist empty-state / portfolio block headings 등
+  - props: `size` (18 | 22 | 26 | 30 | 32 | 36 | 40) / `tone` (`ivory` | `bronze` | `muted`) / `as` (h1|h2|h3|div|p)
+  - fallback: hero용 `clamp()` responsive heading은 별도 패턴 (현재 컴포넌트 미적용, 추후 hero variant 검토)
+  - 직접 `style={{ fontFamily: '"Playfair Display"...', fontSize: 18~40 }}` 금지
 - **`<NumDisplay>`** (`components/ui/editorial.tsx:136`)
   - 적용: Bloomberg-style 큰 숫자 (≥ 22px). portfolio summary / detail hero / risk KPI / home overview
   - tone prop: `pos` (KR red `#d18888`) | `neg` (KR blue `#7aa0c8`) | `neu` (ivory)
@@ -265,6 +270,7 @@ PWA safe-area 토큰: `--pq-safe-top` / `--pq-safe-bottom` / `--pq-safe-left` / 
 
 ### v3 컴포넌트 사용 (§7)
 - [ ] `<Eyebrow>` 사용 — 인라인 uppercase span 0건
+- [ ] `<EditorialHead>` 사용 — 인라인 `fontFamily: "Playfair..."` 직접 패턴 0건 (size 18~40)
 - [ ] `<RuledKicker>` / `<Caption>` / `<Fleuron>` / `<NumDisplay>` / `<StatRow>` 적절 사용
 - [ ] `<DisclaimerBanner>` 분석 페이지에 존재
 - [ ] 시그널: POSITIVE/NEGATIVE/NEUTRAL — BUY/SELL/HOLD 0건

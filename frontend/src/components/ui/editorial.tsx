@@ -132,6 +132,61 @@ export function Caption({
   );
 }
 
+/**
+ * Editorial heading — Playfair Display serif, used for v3 section/card
+ * headings sized 18~40px. Replaces inline `style={{ fontFamily: '"Playfair
+ * Display"...', fontSize: 22~40 }}` patterns scattered across dashboard
+ * pages. Anchors design.md §3 typography tokens (h3 = 30px, quote = 22px).
+ *
+ * - `size`: discrete px value (18 | 22 | 26 | 30 | 32 | 36 | 40)
+ * - `tone`: ivory (default) | bronze | muted
+ * - `as`: semantic tag (h1 | h2 | h3 | div | p)
+ *
+ * Children may include `<span>` runs for italic / bronze accents
+ * (matches existing pattern: "Tell the CFO <em>how you read.</em>").
+ */
+export function EditorialHead({
+  children,
+  size = 30,
+  tone = "ivory",
+  as = "h2",
+  className = "",
+  style,
+}: {
+  children: React.ReactNode;
+  size?: 18 | 22 | 26 | 30 | 32 | 36 | 40;
+  tone?: "ivory" | "bronze" | "muted";
+  as?: "h1" | "h2" | "h3" | "div" | "p";
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const Tag = as as React.ElementType;
+  const color =
+    tone === "bronze"
+      ? "var(--pq-bronze)"
+      : tone === "muted"
+      ? "rgba(245,240,232,0.55)"
+      : "var(--pq-ivory)";
+  return (
+    <Tag
+      className={`pq-editorial-head font-serif ${className}`}
+      style={{
+        fontFamily:
+          '"Playfair Display","Source Serif 4",Georgia,serif',
+        fontWeight: 500,
+        fontSize: size,
+        lineHeight: 1.15,
+        letterSpacing: "-0.02em",
+        color,
+        margin: 0,
+        ...style,
+      }}
+    >
+      {children}
+    </Tag>
+  );
+}
+
 /** Tabular-mono display numeric with tight tracking. Drop into stat cards. */
 export function NumDisplay({
   children,

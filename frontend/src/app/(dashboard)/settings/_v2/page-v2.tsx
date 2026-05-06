@@ -41,7 +41,7 @@ import {
 } from "@/lib/push";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { FootSignature } from "@/components/ui/editorial";
+import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 
@@ -479,20 +479,9 @@ export default function SettingsPageV2() {
                 >
                   A · Identity &amp; security
                 </div>
-                <div
-                  className="font-serif"
-                  style={{
-                    fontFamily:
-                      '"Playfair Display","Source Serif 4",Georgia,serif',
-                    fontWeight: 500,
-                    fontSize: 30,
-                    lineHeight: 1.15,
-                    letterSpacing: "-0.02em",
-                    color: "var(--pq-ivory)",
-                  }}
-                >
+                <EditorialHead size={30} as="div">
                   Who is signed in.
-                </div>
+                </EditorialHead>
               </div>
               <a
                 href="/profile"
@@ -617,18 +606,7 @@ export default function SettingsPageV2() {
                 >
                   C · Notifications · Channels × Events
                 </div>
-                <div
-                  className="font-serif"
-                  style={{
-                    fontFamily:
-                      '"Playfair Display","Source Serif 4",Georgia,serif',
-                    fontWeight: 500,
-                    fontSize: 30,
-                    lineHeight: 1.15,
-                    letterSpacing: "-0.02em",
-                    color: "var(--pq-ivory)",
-                  }}
-                >
+                <EditorialHead size={30} as="div">
                   When the CFO{" "}
                   <span
                     style={{
@@ -638,7 +616,7 @@ export default function SettingsPageV2() {
                   >
                     should reach you.
                   </span>
-                </div>
+                </EditorialHead>
               </div>
             </div>
 

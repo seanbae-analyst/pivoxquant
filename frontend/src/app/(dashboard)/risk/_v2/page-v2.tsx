@@ -26,7 +26,7 @@ import * as React from "react";
 import { useLocale } from "@/lib/locale";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { FootSignature } from "@/components/ui/editorial";
+import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 
 import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
@@ -164,19 +164,9 @@ export default function RiskPageV2() {
           >
             Methodology · How these are observed
           </div>
-          <h2
-            className="font-serif"
-            style={{
-              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
-              fontWeight: 500,
-              fontSize: 32,
-              letterSpacing: "-0.02em",
-              color: "var(--pq-ivory)",
-              margin: "0 0 22px 0",
-            }}
-          >
+          <EditorialHead size={32} as="h2" style={{ margin: "0 0 22px 0" }}>
             Notes.
-          </h2>
+          </EditorialHead>
           <ul
             style={{
               listStyle: "none",

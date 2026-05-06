@@ -35,7 +35,7 @@
 import * as React from "react";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { FootSignature } from "@/components/ui/editorial";
+import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 
 import { TopTicker } from "@/components/terminal/top-ticker";
 
@@ -131,21 +131,9 @@ export default function HomePageV2() {
             >
               The Book · Snapshot
             </div>
-            <h2
-              className="font-serif"
-              style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
-                fontWeight: 500,
-                fontSize: 40,
-                lineHeight: 1.1,
-                letterSpacing: "-0.02em",
-                color: "var(--pq-ivory)",
-                margin: 0,
-              }}
-            >
+            <EditorialHead size={40} as="h2">
               Six rooms.
-            </h2>
+            </EditorialHead>
           </div>
         </div>
 

@@ -27,6 +27,7 @@ import {
   ChevronUp,
   Loader2,
 } from "lucide-react";
+import { Eyebrow } from "@/components/landing/eyebrow";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
@@ -397,9 +398,9 @@ export default function AiPage() {
                 <Sparkles className="h-5 w-5 text-[var(--pq-bronze)]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+                <Eyebrow withDashLeft={false} className="flex">
                   Station I &middot; Portfolio
-                </div>
+                </Eyebrow>
                 <h2 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
                   Portfolio Insights
                 </h2>
@@ -471,9 +472,9 @@ export default function AiPage() {
           {/* ── Stock Analysis ── */}
           <section className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px]">
             <div className="p-5">
-              <div className="text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+              <Eyebrow withDashLeft={false} className="flex">
                 Station II &middot; Symbol
-              </div>
+              </Eyebrow>
               <h2 className="mt-1 font-serif text-xl text-[var(--pq-ivory)]">
                 Stock Analysis
               </h2>

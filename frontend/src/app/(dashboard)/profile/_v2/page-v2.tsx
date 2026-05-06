@@ -43,7 +43,7 @@ import {
 } from "@/lib/cfo/useCompanion";
 
 import { ErrorBoundary } from "@/components/ui/error-boundary";
-import { FootSignature } from "@/components/ui/editorial";
+import { EditorialHead, FootSignature } from "@/components/ui/editorial";
 import { TopTicker } from "@/components/terminal/top-ticker";
 import { LivingCFOStatusBar } from "@/components/dashboard/living-cfo-status";
 import { PersonaV2Card } from "@/components/dashboard/persona-v2-card";
@@ -485,24 +485,12 @@ export default function ProfilePageV2() {
           >
             03 · Evolution · 12-month rolling window
           </div>
-          <div
-            className="font-serif"
-            style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
-              fontWeight: 500,
-              fontSize: 30,
-              lineHeight: 1.15,
-              letterSpacing: "-0.02em",
-              color: "var(--pq-ivory)",
-              marginBottom: 20,
-            }}
-          >
+          <EditorialHead size={30} as="div" style={{ marginBottom: 20 }}>
             How your persona{" "}
             <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
               drifted.
             </span>
-          </div>
+          </EditorialHead>
           <PersonaEvolution bare />
         </section>
 
@@ -568,24 +556,12 @@ export default function ProfilePageV2() {
             >
               06 · Pulse · Weekly
             </div>
-            <div
-              className="font-serif"
-              style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
-                fontWeight: 500,
-                fontSize: 30,
-                lineHeight: 1.15,
-                letterSpacing: "-0.02em",
-                color: "var(--pq-ivory)",
-                marginBottom: 8,
-              }}
-            >
+            <EditorialHead size={30} as="div" style={{ marginBottom: 8 }}>
               Tell the CFO{" "}
               <span style={{ color: "var(--pq-bronze)", fontStyle: "italic" }}>
                 how you read.
               </span>
-            </div>
+            </EditorialHead>
             <p
               className="font-serif"
               style={{

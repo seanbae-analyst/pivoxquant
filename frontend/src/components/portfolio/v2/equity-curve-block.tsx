@@ -9,6 +9,7 @@
  */
 
 import * as React from "react";
+import { EditorialHead } from "@/components/ui/editorial";
 import { useEquityCurve, type EquityRange, type EquityPoint } from "./hooks-v2";
 
 interface EquityCurveBlockProps {
@@ -160,20 +161,9 @@ export function EquityCurveBlock({
           >
             Equity · Curve
           </div>
-          <h2
-            className="font-serif"
-            style={{
-              fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
-              fontWeight: 500,
-              fontSize: 30,
-              lineHeight: 1.1,
-              letterSpacing: "var(--pq-track-tight, -0.02em)",
-              color: "var(--pq-ivory)",
-              margin: 0,
-            }}
-          >
+          <EditorialHead size={30} as="h2" style={{ lineHeight: 1.1 }}>
             How the book moves.
-          </h2>
+          </EditorialHead>
         </div>
 
         {/* Timeframe pills */}

@@ -118,6 +118,45 @@ skill §2-A 의 regex 는 `import[^;]*\bX\b[^a-zA-Z0-9_]` — `grep -h` 가 line
 - frontend-dev이 file edit 0건 (BLOCKED). regression 없음.
 - feature_preservation 룰 강제 적용 — Playfair → mono 강제 swap 회피.
 
+### 2026-05-06 후속: EditorialHead 신설로 해소 (Option A 채택)
+
+7 sites + 후속 sweep 3 sites 가 신규 `<EditorialHead>` (Playfair serif heading, size 18~40) 로 마이그됨. NumDisplay false plan 폐기 + EditorialHead 로 정확히 재정렬.
+
+**컴포넌트 신설:** `frontend/src/components/ui/editorial.tsx` 에 `<EditorialHead>` 추가.
+- props: `size` (18 | 22 | 26 | 30 | 32 | 36 | 40) / `tone` (`ivory` | `bronze` | `muted`) / `as` (h1|h2|h3|div|p) / `className` / `style`
+- 인라인 fontFamily: '"Playfair Display"...' 패턴 흡수.
+- 자식 `<span>` 으로 italic / bronze accent 가능 (기존 패턴 보존).
+
+**마이그 결과 표:**
+
+| # | file:line | size / as | 결과 |
+|---|---|---|---|
+| 1 | home/_v2/page-v2.tsx:140 | 40 / h2 | ✅ EditorialHead size={40} as="h2" |
+| 2 | risk/_v2/page-v2.tsx:172 | 32 / h2 | ✅ EditorialHead size={32} as="h2" |
+| 3 | settings/_v2/page-v2.tsx:488 | 30 / div | ✅ EditorialHead size={30} as="div" |
+| 4 | settings/_v2/page-v2.tsx:626 | 30 / div | ✅ EditorialHead size={30} as="div" (span 자식 보존) |
+| 5 | profile/_v2/page-v2.tsx:494 | 30 / div | ✅ EditorialHead size={30} as="div" (span 자식 보존) |
+| 6 | profile/_v2/page-v2.tsx:577 | 30 / div | ✅ EditorialHead size={30} as="div" (span 자식 보존) |
+| 7 | watchlist/page.tsx:179 | 22 / p | ✅ EditorialHead size={22} as="p" |
+
+**확장 sweep (feedback_thorough_fixes 룰):**
+
+| # | file:line | size / as | 결과 |
+|---|---|---|---|
+| 8 | components/portfolio/v2/equity-curve-block.tsx:166 | 30 / h2 | ✅ EditorialHead size={30} as="h2" |
+| 9 | components/portfolio/v2/positions-table-v2.tsx:216 | 30 / h2 | ✅ EditorialHead size={30} as="h2" |
+| 10 | components/portfolio/v2/positions-table-v2.tsx:439 | 18 / div | ✅ EditorialHead size={18} as="div" (per-row name cell) |
+
+**SKIP (clamp() responsive hero pattern — 별도 hero variant 추후):**
+- `growth/page.tsx:205` — clamp(32px, 4.2vw, 48px) hero
+- `pre-trade/page.tsx:247` — clamp(34px, 4.6vw, 52px) hero
+- `pre-trade/page.tsx:687` — clamp(20px, 2.4vw, 26px) section heading
+- `components/portfolio/v2/portfolio-hero-v2.tsx:160` — clamp(32px, 4.2vw, 48px) hero
+
+위 4건은 EditorialHead 의 discrete `size` enum (18~40)에 맞지 않는 responsive `clamp()` 패턴이므로 별도 hero variant 도입까지 보존. v3 hero 패턴은 별도 task.
+
+**design.md §0 락-인 위반 0건:** Playfair Display serif 시각적 동등성 100% 유지 (font-family chain `"Playfair Display","Source Serif 4",Georgia,serif` 동일, fontWeight 500, letterSpacing -0.02em, lineHeight 1.15).
+
 ---
 
 ## 4. Eyebrow 마이그레이션 후보 (P1)
