@@ -47,25 +47,47 @@
 
 ## 3. 타이포그래피 (Typography)
 
-### 3.1 3축 서체 시스템
-- **Heading (Serif 신규)**: `Source Serif 4` — Memo 제목, Artifact 표지, 대시보드 섹션 헤더
-- **Body (Sans 유지)**: `Pretendard` / `Geist` — 본문, UI 라벨
-- **Numeric (Mono 유지)**: `IBM Plex Mono` — 가격, 수익률, 비율
+### 3.1 4축 서체 시스템
 
-### 3.2 왜 Serif인가
-Goldman/McKinsey 리포트는 100% Serif 헤딩이다. Serif = "이것은 읽히기 위해 쓰인 글" 이라는 신호. Sans-only UI는 대시보드, Serif 헤딩 UI는 보고서. 우리는 후자를 판다.
+코드는 Serif를 2갈래로 운영한다 (`frontend/src/app/layout.tsx`의 `display` + `serif` next/font 선언). 본 문서는 그 사실을 반영한다.
 
-**대안** (라이선스/로드 이슈 시): `EB Garamond` (무료, Google Fonts), `Crimson Pro` (수치 친화). Source Serif 4가 Adobe 오픈소스라 1순위.
+| 역할 | 폰트 | next/font 변수 | 사용처 |
+|---|---|---|---|
+| **Display Serif** | `Playfair Display` | `--font-display` / `--pq-font-display` | 랜딩 Hero H1, 카드 hero word, 마케팅 페이지 H1, splash wordmark, persona hero name, Brag Card 표지 |
+| **Reading Serif** | `Source Serif 4` | `--font-serif` / `--pq-font-serif` | Memo 본문, Artifact/Report H1~H3, dashboard 카드 본문, 인용문, 면책 고지 |
+| **Body Sans** | `Geist` (라틴) + `Pretendard` (한글) | `--font-sans` / `--pq-font-sans` | 본문, UI 라벨, 폼, 테이블 텍스트, 메타데이터 |
+| **Numeric Mono** | `JetBrains Mono` | `--font-mono` / `--pq-font-mono` | 가격, 수익률, 비율, 티커, KPI 숫자, eyebrow caption |
+
+> Pretendard는 layout.tsx에서 `<head>` CDN link로 fetch — Geist 라틴 fallback chain의 한글 슬롯을 채운다. next/font 변수 자체는 Geist만 가리킨다.
+
+### 3.2 왜 Serif가 두 개인가
+
+Goldman/McKinsey 리포트는 100% Serif 헤딩이다. Serif = "이것은 읽히기 위해 쓰인 글"이라는 신호. Sans-only UI는 대시보드, Serif 헤딩 UI는 보고서. 우리는 후자를 판다.
+
+**Display vs Reading 분리 원칙**:
+- **Playfair Display** — high-contrast Didone-adjacent face. 글자 stroke contrast가 강해 큰 사이즈(36px+)에서 표지의 **무게감**을 만든다. 본문 사이즈(14~18px)에서는 contrast가 가독성을 깎는다 → 표지 전용.
+- **Source Serif 4** — Adobe 오픈소스, reading-optimized x-height + low contrast. long-form 본문에서 눈이 안 피곤하게 읽힌다. Memo/Report 본문 전용.
+
+**Anti-pattern**: 한 페이지 안에 Display Serif와 Reading Serif를 같은 사이즈로 섞지 마라. 둘 다 죽는다. 표지 = Display, 본문 = Reading. 카드 제목처럼 18px 영역에 Serif가 필요하면 Reading 한 종류만 쓴다.
+
+**대안** (라이선스/로드 이슈 시): `EB Garamond` (무료, Google Fonts) — Reading slot 대체. Display slot에는 `Bodoni Moda` 또는 `DM Serif Display`. Playfair Display + Source Serif 4는 둘 다 Adobe/Google 오픈소스라 라이선스 깨끗.
 
 ### 3.3 위계
+
+H1은 사용 맥락에 따라 두 Serif가 갈린다.
+
 | 레벨 | 폰트 | 크기 | 용도 |
 |---|---|---|---|
-| H1 Display | Serif 600 | 48px / -0.02em | Artifact 표지, 랜딩 Hero |
-| H2 Section | Serif 600 | 32px | 대시보드 섹션 |
+| H1 Display Hero | **Display Serif (Playfair Display)** 500/600 | 48px / -0.02em (clamp) | 랜딩 Hero, 마케팅 페이지 H1, Brag Card 표지 |
+| H1 Report | **Reading Serif (Source Serif 4)** 600 | 48px | Artifact/Memo 표지, Earnings Pre-Brief 1p 티커 |
+| H2 Section | **Reading Serif (Source Serif 4)** 600 | 32px | 대시보드 섹션, Report H2 |
 | H3 Card | Sans 600 | 18px | 카드 제목 |
 | Body | Sans 400 | 15px | 본문 |
 | Numeric | Mono 500 | 가변 | 모든 숫자 |
 | Caption | Sans 400 | 12px / #94a3b8 | 메타데이터 (날짜, 출처) |
+| Eyebrow | Mono 500 uppercase | 12px / `--pq-track-eyebrow` 0.22em | 카드 kicker, 리포트 헤더 |
+
+> **드리프트 주의**: 대시보드 H1/H2 default는 코드상 Sans (`globals.css` h1-h6 룰). §10 DoD 체크리스트는 "H1/H2는 Serif"라 적시. 이 drift를 dashboard 전반으로 전환할지 여부는 별도 design decision이며, 본 §3.3은 *지향* 위계를 명시할 뿐 *현재 default*를 강제하지 않는다. `.report-surface` 또는 `.font-serif` 클래스를 opt-in해 Serif를 적용한다.
 
 ---
 
