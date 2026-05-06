@@ -3888,7 +3888,11 @@ html {
   border-collapse: collapse;
   font-size: 12px;
   font-family: var(--font-serif);
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
+.pq-pdf-table thead { break-inside: avoid; page-break-inside: avoid; }
+.pq-pdf-table tr { break-inside: avoid; page-break-inside: avoid; }
 .pq-pdf-table thead th {
   text-align: left;
   font-size: 9px;

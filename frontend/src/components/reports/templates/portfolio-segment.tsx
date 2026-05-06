@@ -134,13 +134,11 @@ export function PortfolioSegment({ data = DEFAULT }: { data?: PortfolioSegmentDa
         <PdfGoldRule />
 
         <PdfEyebrow>Portfolio Segment · Monthly</PdfEyebrow>
-        <PdfCoverTitle size={42}>
+        <PdfCoverTitle size={32}>
           <em>Decomposed</em>—sector, factor, region.
-          <br />
-          where the bets actually are.
         </PdfCoverTitle>
 
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: 12 }}>
           <PdfKpiRow
             kpis={[
               { label: "NAV", value: data.nav.value, delta: data.nav.delta, deltaTone: "pos" },

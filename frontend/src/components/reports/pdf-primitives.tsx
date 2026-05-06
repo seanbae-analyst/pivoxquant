@@ -232,7 +232,11 @@ export function PdfKpiRow({
    ──────────────────────────────────────────────────────────── */
 
 export function PdfTable({ children }: { children: ReactNode }) {
-  return <table className="pq-pdf-table">{children}</table>;
+  return (
+    <div className="pq-pdf-table-wrap" style={{ breakInside: "avoid", pageBreakInside: "avoid" }}>
+      <table className="pq-pdf-table">{children}</table>
+    </div>
+  );
 }
 
 export function PdfTicker({ children }: { children: ReactNode }) {

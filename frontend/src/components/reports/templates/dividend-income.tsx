@@ -88,7 +88,7 @@ const DEFAULT: DividendIncomeData = {
 export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }) {
   return (
     <PdfPage>
-      <PdfHeader tier="pro" title="DIVIDEND INCOME" meta={data.asOf} />
+      <PdfHeader tier="pro" title="DIVIDEND INCOME" meta={`${data.asOf} · DI-2026-04`} />
       <PdfGoldRule />
 
       <PdfEyebrow>Dividend Income · Monthly</PdfEyebrow>

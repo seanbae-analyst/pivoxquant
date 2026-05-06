@@ -135,7 +135,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
     <>
       {/* PAGE 1 */}
       <PdfPage>
-        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · 01/02`} />
+        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 01/02`} />
         <PdfGoldRule />
 
         <PdfEyebrow>Burn Rate · For Growth Holdings</PdfEyebrow>
@@ -198,7 +198,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
 
       {/* PAGE 2 */}
       <PdfPage>
-        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · 02/02`} />
+        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 02/02`} />
         <PdfGoldRule />
 
         <PdfEyebrow>02 — Critical Watch</PdfEyebrow>

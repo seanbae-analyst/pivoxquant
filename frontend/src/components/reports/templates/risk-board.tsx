@@ -209,8 +209,8 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
             {
               name: "Crypto exposure",
               detail: "direct + ETF",
-              fillPct: 30,
-              capPct: 100,
+              fillPct: 3,
+              capPct: 10,
               valueLabel: "3% / 10%",
               status: <PdfBadge tone="low">OK</PdfBadge>,
             },
