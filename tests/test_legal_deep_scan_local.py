@@ -243,11 +243,20 @@ def test_no_forbidden_directive_terms_in_user_facing_strings() -> None:
     jsx_text_re = re.compile(r">([^<>{}\n]{8,})<")
     # Prose string literal: a quoted string of 12+ chars containing a
     # space (so we skip "buy" but catch "buy this stock" / "권유합니다").
+    #
+    # NOTE: the inner class `[^"\\;{}]` rejects semicolons / braces so the
+    # regex doesn't sweep across two unrelated quoted literals separated
+    # by TS code (e.g. between `"@/lib/api"` and the next quoted prose,
+    # picking up `interface Foo { buy: ... }` as fake "prose"). Without
+    # this guard, TS object keys named `buy:`/`sell:` flag as violations.
     prose_literal_re = re.compile(
-        r'"((?=[^"]*\s)[^"\\]{12,}(?:\\.[^"\\]*)*)"'
+        r'"((?=[^"]*\s)[^"\\;{}]{12,}(?:\\.[^"\\;{}]*)*)"'
     )
+    # Korean negation forms — Hangul precomposed syllables differ between
+    # `아니` (0xC544 0xB2C8) and `아닌` (0xC544 0xB2CC). Each conjugation
+    # must be enumerated explicitly; substring matching does not work.
     negation_re = re.compile(
-        r"(아니|아닙|않|not\s|does\s+not|do\s+not|never\b|disclaimer|면책)",
+        r"(아니|아닌|아닙|아니다|아니라|아니며|아니지|않|not\s|\bno\s+advice|\bno\s+investment|does\s+not|do\s+not|never\b|disclaimer|면책)",
         re.IGNORECASE,
     )
 

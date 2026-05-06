@@ -84,8 +84,8 @@ const SECTIONS = [
     title: "Legal & Compliance",
     items: [
       {
-        q: "Is this investment advice?",
-        a: "No. PivoxQuant is not a licensed investment advisor. All content is observational and informational only.",
+        q: "Does PivoxQuant provide regulated guidance?",
+        a: "No. PivoxQuant is not a licensed investment advisor and does not provide investment advice. All content is observational and informational only.",
       },
       {
         q: "How is my data protected?",

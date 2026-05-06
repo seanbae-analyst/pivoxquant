@@ -161,25 +161,41 @@ PWA safe-area 토큰: `--pq-safe-top` / `--pq-safe-bottom` / `--pq-safe-left` / 
 - 절대 금지: 장식용 애니메이션, 바운스, 과도한 모션
 - `.pq-pulse-live` (실시간 dot) — **펄싱 dot + 정적 ticker 동시 사용 금지** (라이브 위장)
 
-## §7. v3 컴포넌트 의무 사용
+## §7. v3 컴포넌트 의무/권장 (2026-05-06 reconciliation)
 
-다음 컴포넌트가 존재하는데도 inline으로 작성하면 **fail**.
+> 이 절은 `editorial.tsx` 파일이 sub-component 7개를 갖는 점을 반영해 의무/권장 2단으로 분리됐다. 과거 "Editorial" 이라는 단일 컴포넌트가 의무처럼 보였으나, 실제로는 file header. component-usage-analytics dry-run 의 "Editorial 0 imports" 는 false signal. 자세한 reconciliation: `docs/V3_COMPONENT_MIGRATION_PLAN_2026-05-06.md`.
 
-### Landing/Editorial
-- **`<Eyebrow withDashLeft|Right>`** (`components/landing/eyebrow.tsx`) — 모든 eyebrow 라벨. `<span className="text-xs uppercase">` 직접 금지.
-- **`<RuledKicker>`** — section 헤더 위 ruled kicker
-- **`<Caption>`** — 이미지/차트 캡션
-- **`<Fleuron>`** — 섹션 디바이더 (`❦` 등 — `aria-hidden` 필수)
-- **`<FootSignature>`** — 페이지 푸터 서명
-- **`<NumDisplay>`** — Bloomberg-style 큰 숫자
-- **`<StatRow>`** — 라벨/값 row pair
+### 의무 (Mandatory — 적용 컨텍스트에서 미사용 시 PR fail)
 
-### Dashboard 분석 페이지
-- **`<DisclaimerBanner>`** (`components/ui/disclaimer-banner.tsx`) — Iron Rule 7 + legal-kr-fintech agent 연동. 분석/시그널/페르소나/추천 가까운 화면 전부 필수 (한글+영문 면책)
-- **시그널 색 컴포넌트:** `POSITIVE`/`NEGATIVE`/`NEUTRAL` 3색만. `BUY/SELL/HOLD/추천` 텍스트 절대 금지
+- **`<DisclaimerBanner>`** (`components/ui/disclaimer-banner.tsx`)
+  - 적용: 분석 / 시그널 / 페르소나 / 점수 표시 / KPI 카드 페이지 — 한글+영문 면책
+  - 근거: Iron Rule 7 + 자본시장법 §101 면제 의무 + legal-kr-fintech agent
+  - 누락 시: ENFORCE 단계 무관 즉시 fail (legal gate)
+- **`<TierGate>`** (`components/ui/tier-gate.tsx`)
+  - 적용: Free/Pro/Premium 잠금 표면. bronze deep `#6F5636` overlay
+  - fallback: 잠금 X 인 페이지에는 미사용 OK
+- **`<Eyebrow withDashLeft|Right>`** (`components/landing/eyebrow.tsx`)
+  - 적용: section 라벨 (`<span className="text-xs uppercase tracking-*">` 직접 패턴 금지)
+  - fallback: 단순 small-caps 라벨 → prop 없이 swap 가능
+- **`<NumDisplay>`** (`components/ui/editorial.tsx:136`)
+  - 적용: Bloomberg-style 큰 숫자 (≥ 22px). portfolio summary / detail hero / risk KPI / home overview
+  - tone prop: `pos` (KR red `#d18888`) | `neg` (KR blue `#7aa0c8`) | `neu` (ivory)
+  - fallback: 본문 텍스트 흐름 안의 작은 숫자는 inline 허용
+- **`<FootSignature>`** (`components/ui/editorial.tsx:258`)
+  - 적용: 모든 dashboard / 분석 페이지 footer (DisclaimerBanner 위)
+  - fallback: 랜딩/auth 페이지는 미사용 OK
 
-### Tier-gate
-- **`<TierGate>`** — Free/Pro/Premium 잠금 표면. bronze deep `#6F5636` overlay 사용
+### 권장 (Recommended — 직접 markup 허용. design polish 시 swap.)
+
+- **`<RuledKicker>`** (`editorial.tsx:48`) — section 헤더 위 ruled kicker. 디자인 폴리시 차원, 강제 X.
+- **`<Caption>`** (`editorial.tsx:113`) — 이미지/차트 캡션. alt text 는 의무지만 컴포넌트 swap 은 권장.
+- **`<Fleuron>`** (`editorial.tsx:17`) — 섹션 디바이더 (`❦` `aria-hidden`). 장식 — 권장.
+- **`<StatRow>`** (`editorial.tsx:228`) — 라벨/값 row pair. dense fundamentals panel 에 적합. 권장.
+
+### 시그널 색 정책 (의무, 컴포넌트 무관)
+
+- `POSITIVE` / `NEGATIVE` / `NEUTRAL` **3색 체계만**.
+- `BUY/SELL/HOLD/추천/조언/recommend/advice` 텍스트 **절대 금지** (Iron Rule 7).
 
 ## §8. lib/format.ts Helper 강제 사용
 

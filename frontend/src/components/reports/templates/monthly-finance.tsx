@@ -81,11 +81,11 @@ const DEFAULT: MonthlyFinanceData = {
   doc: "Apr 2026 · MF-2026-04 · 01/04",
   asOf: "Apr 30, 2026",
   navEom: "$1,242,150",
-  monthReturn: "+4.2%",
+  monthReturn: "+4.0%",
   ytdReturn: "+14.2%",
   issued: "May 1, 2026",
-  navEomKpi: { value: "$1,242k", delta: "+$50.7k MTD" },
-  netPnlMtd: { value: "+$48.5k", delta: "+3.91% NAV" },
+  navEomKpi: { value: "$1,242k", delta: "+$53k MTD" },
+  netPnlMtd: { value: "+$48k", delta: "+3.86% NAV" },
   alphaVsBench: { value: "+1.1%p", delta: "YTD +4.8%p" },
   sharpe: { value: "1.42", delta: "+0.08 vs prior" },
   income: [
@@ -107,14 +107,14 @@ const DEFAULT: MonthlyFinanceData = {
   ],
   liabilities: [
     { label: "Margin Debt", value: "$0" },
-    { label: "Tax Accrual", value: "$14.8k" },
+    { label: "Tax Accrual", value: "$0" },
     { label: "Other Liabilities", value: "$0" },
-    { label: "Owner's Equity (NAV)", value: "$1,227k", bold: true },
+    { label: "Owner's Equity (NAV)", value: "$1,242k", bold: true },
   ],
   totalLiab: "$1,242k",
   cashFlow: [
     { label: "Operating · 배당 + 이자", mtd: "+$2,460", mtdTone: "pos", ytd: "+$10,000", ytdTone: "pos" },
-    { label: "Investing · 매수 − 매도", mtd: "−$28,400", mtdTone: "neg", ytd: "−$84,200", ytdTone: "neg" },
+    { label: "Investing · 매입 − 매각", mtd: "−$28,400", mtdTone: "neg", ytd: "−$84,200", ytdTone: "neg" },
     { label: "Financing · 입출금", mtd: "+$5,000", mtdTone: "pos", ytd: "+$20,000", ytdTone: "pos" },
     { label: "Tax Paid", mtd: "−$3,840", mtdTone: "neg", ytd: "−$14,820", ytdTone: "neg" },
   ],
@@ -173,10 +173,10 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
         <PdfExecSum
           stamp={`As of ${data.asOf}`}
           rows={[
-            { term: "Period Return", body: <><strong>+4.2% MTD · +14.2% YTD</strong> — vs benchmark (S&amp;P 500) +3.1% / +9.4%. <strong>Alpha +1.1%p / +4.8%p.</strong></> },
-            { term: "NAV", body: <>$1,191k → <strong>$1,242k</strong> · 자본 유입 +$5k · 운용 손익 +$48.5k.</> },
+            { term: "Period Return", body: <><strong>+4.0% MTD · +14.2% YTD</strong> — vs benchmark (S&amp;P 500) +3.0% / +9.4%. <strong>Alpha +1.0%p / +4.8%p.</strong></> },
+            { term: "NAV", body: <>$1,189k → <strong>$1,242k</strong> · 자본 유입 +$5k · 운용 손익 +$48k.</> },
             { term: "P&L Drivers", body: "반도체 +$22k · 소프트웨어 +$11k · 헬스케어 −$4k · FX 손실 −$0.4k." },
-            { term: "Balance Sheet", body: "Equity 92% · Bonds 2% · Cash 6%. Margin debt 0. Tax accrual −$14.8k." },
+            { term: "Balance Sheet", body: "Equity 92% · Bonds 2% · Cash 6%. Margin debt 0. No outstanding liabilities." },
             { term: "Watch", body: <><PdfBadge tone="moderate">⚠</PdfBadge> USD 노출 88% — FX 헤지 검토. Tech 비중 42% — 한도 35% 초과.</> },
           ]}
         />

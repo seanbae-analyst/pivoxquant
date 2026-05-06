@@ -77,7 +77,7 @@ const DEFAULT: SelfAuditData = {
     { num: "R4", text: "−15% 자동 손절 트리거", status: "PASS", statusTone: "pos" },
     { num: "R5", text: "어닝 직전 24h 신규 진입 금지 — 어닝 6h 전 추가", status: "FAIL · 1×", statusTone: "neg" },
     { num: "R6", text: "주간 리밸런스 화/금에만", status: "PASS", statusTone: "pos" },
-    { num: "R7", text: "모든 매도 전 사후 메모 — 2건 누락", status: "FAIL · 2×", statusTone: "neg" },
+    { num: "R7", text: "모든 매각 전 사후 메모 — 2건 누락", status: "FAIL · 2×", statusTone: "neg" },
     { num: "R8", text: "현금 비중 5–15% 유지", status: "PASS · 8.2%", statusTone: "pos" },
   ],
   consistency: [

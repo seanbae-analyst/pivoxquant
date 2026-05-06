@@ -134,13 +134,13 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
             kpis={[
               { label: "Cluster Buys", value: data.clusterBuys.value, delta: data.clusterBuys.detail, deltaTone: "pos" },
               { label: "CEO+CFO 동반", value: data.ceoCfoPair.value, delta: data.ceoCfoPair.detail, deltaTone: "pos" },
-              { label: "10b5-1 제외 매도", value: data.nonPlanSells.value, delta: data.nonPlanSells.detail, deltaTone: "neg" },
+              { label: "10b5-1 제외 매각", value: data.nonPlanSells.value, delta: data.nonPlanSells.detail, deltaTone: "neg" },
               { label: "Mirror Hit Rate · 12m", value: data.hitRate.value, delta: data.hitRate.detail },
             ]}
           />
         </div>
 
-        <PdfSectionTitle variant="sm">Top Buys · 따라갈 만한 매수</PdfSectionTitle>
+        <PdfSectionTitle variant="sm">Top Acquisitions · 따라갈 만한 매입</PdfSectionTitle>
         <PdfTable>
           <thead>
             <tr>
@@ -168,7 +168,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           </tbody>
         </PdfTable>
 
-        <PdfSectionTitle variant="sm">Sells · 주의가 필요한 매도</PdfSectionTitle>
+        <PdfSectionTitle variant="sm">Dispositions · 주의가 필요한 매각</PdfSectionTitle>
         <PdfTable>
           <thead>
             <tr>
@@ -228,7 +228,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{data.featured.avgPrice}</div>
               </div>
               <div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }}>Last Insider Buy</div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }}>Last Insider Acquisition</div>
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{data.featured.lastBuy}</div>
               </div>
               <div>

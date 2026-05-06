@@ -372,8 +372,16 @@ jobs:
               "frontend/src/__tests__",
           )
           jsx_text_re = re.compile(r">([^<>{}\n]{8,})<")
-          prose_literal_re = re.compile(r'"((?=[^"]*\s)[^"\\]{12,}(?:\\.[^"\\]*)*)"')
-          negation_re = re.compile(r'(아니|아닙|않|not\s|does\s+not|do\s+not|never\b|disclaimer|면책)', re.IGNORECASE)
+          # Inner class rejects `;{}` so the regex can't sweep across two
+          # unrelated quoted literals separated by TS code (avoids picking
+          # up `interface Foo { buy: ... }` as fake "prose" between
+          # `"@/lib/api"` and the next quoted string). Mirror of the local
+          # pytest in tests/test_legal_deep_scan_local.py.
+          prose_literal_re = re.compile(r'"((?=[^"]*\s)[^"\\;{}]{12,}(?:\\.[^"\\;{}]*)*)"')
+          # Hangul precomposed syllables differ: `아니` (0xC544 0xB2C8)
+          # is not a substring of `아닌` (0xC544 0xB2CC). Enumerate each
+          # conjugation explicitly. Mirror of the local pytest.
+          negation_re = re.compile(r'(아니|아닌|아닙|아니다|아니라|아니며|아니지|않|not\s|\bno\s+advice|\bno\s+investment|does\s+not|do\s+not|never\b|disclaimer|면책)', re.IGNORECASE)
           violations = []
           for p in pathlib.Path("frontend/src").rglob("*.ts*"):
               if p in skip: continue

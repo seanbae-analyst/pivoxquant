@@ -47,7 +47,7 @@ const COPY: Record<EmptyStateReason, CopyEntry> = {
     eyebrow: "PORTFOLIO REQUIRED",
     title: "아직 보유 종목이 없어요",
     body:
-      "첫 매수 후 자동으로 생성됩니다. 포트폴리오에 포지션을 추가하면 다음 주기에 리포트가 도착해요.",
+      "첫 매입 기록 후 자동으로 생성됩니다. 포트폴리오에 포지션을 추가하면 다음 주기에 리포트가 도착해요.",
     ctaLabel: "포지션 추가",
     ctaHref: "/portfolio",
   },
@@ -55,7 +55,7 @@ const COPY: Record<EmptyStateReason, CopyEntry> = {
     eyebrow: "TRADES REQUIRED",
     title: "아직 거래 내역이 없어요",
     body:
-      "첫 거래 후 자동으로 생성됩니다. 매수·매도 기록이 쌓이면 리포트에 반영돼요.",
+      "첫 거래 후 자동으로 생성됩니다. 매입·매각 기록이 쌓이면 리포트에 반영돼요.",
     ctaLabel: "거래 추가",
     ctaHref: "/portfolio",
   },

@@ -114,7 +114,7 @@ const DEFAULT: KpiDashboardData = {
   decisionCards: [
     { priority: "P1 · By May 5", title: "Tech 섹터 −7%p", body: "한도 35% 복귀. NVDA 12% → 8%, AVGO 9% → 7%. 자본은 헬스케어 + Cash 보강.", badge: { tone: "severe", label: "BREACH 해소" } },
     { priority: "P2 · By May 10", title: "FX 헤지 USD 25%", body: "USD 단일 노출 88% → 65% 효과. 헤지 비용 연 ~0.4% 감수. 원달러 −5% 시 NAV 보호 +$28k.", badge: { tone: "moderate", label: "OVER 해소" } },
-    { priority: "P3 · By May 31", title: "DD 메모 100% 룰화", body: "신규 진입 전 가설 메모 의무화. 4월 75%에서 100%로. 메모 없는 매수 자동 알림.", badge: { tone: "info", label: "PROCESS" } },
+    { priority: "P3 · By May 31", title: "DD 메모 100% 룰화", body: "신규 진입 전 가설 메모 의무화. 4월 75%에서 100%로. 메모 없는 매입 자동 알림.", badge: { tone: "info", label: "PROCESS" } },
   ],
 };
 
