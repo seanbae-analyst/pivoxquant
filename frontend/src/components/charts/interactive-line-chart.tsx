@@ -269,11 +269,10 @@ export function InteractiveLineChart({
             {dateFormatter ? dateFormatter(hoverPoint.date) : hoverPoint.date}
           </div>
           <div
-            className="tabular-nums"
+            className="tabular-nums font-mono"
             style={{
               fontSize: "14px",
               color: "var(--pq-ivory, #F5F0E8)",
-              fontFamily: "var(--pq-font-mono, ui-monospace, monospace)",
             }}
           >
             {valueFormatter ? valueFormatter(hoverPoint.value) : hoverPoint.value.toFixed(2)}

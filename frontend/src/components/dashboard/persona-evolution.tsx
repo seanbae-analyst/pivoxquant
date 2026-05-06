@@ -373,14 +373,13 @@ function HoverCard({
   return (
     <div
       role="tooltip"
-      className="mt-3 inline-block"
+      className="mt-3 inline-block font-serif"
       style={{
         background: bare ? "rgba(10,10,10,0.85)" : "rgba(26,22,18,0.92)",
         color: bare ? "var(--pq-ivory)" : "#F5F0E8",
         border: `0.5px solid ${drifted ? "rgba(163,91,59,0.55)" : "rgba(184,149,106,0.35)"}`,
         padding: "10px 12px",
         borderRadius: 2,
-        fontFamily: "var(--font-serif), Georgia, serif",
         fontSize: 12,
       }}
     >
