@@ -314,10 +314,14 @@ def lint_file(pdf_path: Path):
 
     # 2026-05-05: ghost-page guard. Detects "disclosure spill" pattern where
     # the full <PdfDisclaimer /> was placed on an intermediate page and pushed
-    # itself onto a near-empty next page. Heuristic:
-    #   - page char count < 500
-    #   - first 80 chars match disclosure keywords
-    #   - NOT the first page (cover pages can be legitimately short)
+    # itself onto a near-empty next page.
+    #
+    # 2026-05-06 refinement: original heuristic (head matches disclosure
+    # keyword → P1) produced false positives on table-overflow tail pages
+    # that legitimately carry body rows + mini-disclaimer footer. Add a
+    # body-keyword override: if the page also contains real content
+    # markers (table headers, data values, KR section labels, etc.), the
+    # page is NOT a ghost regardless of disclosure keyword presence.
     DISCLOSURE_KEYWORDS = (
         "investment advice",
         "observational",
@@ -329,28 +333,45 @@ def lint_file(pdf_path: Path):
         "of an earnings announcement",
         "(ai assistant)",
     )
+    BODY_KEYWORDS = (
+        # Table / data markers — table-overflow tail pages have these
+        "what you said", "what you did", "ticker", "insider",
+        "scenario", "decision", "lesson", "promise", "thesis",
+        "kpi", "cohort", "burn", "runway", "rule", "trade",
+        "sector", "outcome", "match", "trigger",
+        # Korean section labels common to body pages
+        "수익률", "사이즈", "현금", "포지션", "진입", "메모",
+        # Numeric / currency markers (heuristic: data rows have these)
+        "$", "%", "▲", "▼",
+    )
     for idx, p in enumerate(page_texts):
         text_strip = p.strip()
         if idx == 0:
             continue  # skip cover page
         if len(text_strip) >= 500:
             continue
-        head = text_strip[:160].lower()
-        # Only flag if the head looks like leftover disclosure prose, NOT
-        # legitimate sparse content like a sign block or thank-you page.
-        if any(kw in head for kw in DISCLOSURE_KEYWORDS):
-            findings.insert(0, {
-                "severity": "P1",
-                "rule": "Ghost disclosure-only page",
-                "match": f"<page {idx + 1}: {len(text_strip)} chars>",
-                "context": text_strip[:120].replace("\n", " "),
-                "hint": (
-                    "Page is <500 chars and starts with disclosure-leaking "
-                    "prose. The full <PdfDisclaimer /> on the previous page "
-                    "spilled. Use <PdfDisclaimerMini /> on intermediate "
-                    "pages and only the full block on the FINAL page."
-                ),
-            })
+        body_blob = text_strip.lower()
+        head = body_blob[:160]
+        # Only flag if the head looks like leftover disclosure prose AND
+        # the page lacks body-content markers. table-overflow tails with
+        # rows + mini-disclaimer footer are not ghosts.
+        if not any(kw in head for kw in DISCLOSURE_KEYWORDS):
+            continue
+        if any(kw in body_blob for kw in BODY_KEYWORDS):
+            continue  # body present → not a ghost
+        findings.insert(0, {
+            "severity": "P1",
+            "rule": "Ghost disclosure-only page",
+            "match": f"<page {idx + 1}: {len(text_strip)} chars>",
+            "context": text_strip[:120].replace("\n", " "),
+            "hint": (
+                "Page is <500 chars, starts with disclosure-leaking "
+                "prose, and lacks body-content markers. The full "
+                "<PdfDisclaimer /> on the previous page spilled. Use "
+                "<PdfDisclaimerMini /> on intermediate pages and only "
+                "the full block on the FINAL page."
+            ),
+        })
 
     return findings
 

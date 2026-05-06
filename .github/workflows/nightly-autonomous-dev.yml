@@ -1,0 +1,529 @@
+name: Nightly Autonomous Dev
+
+# AUTOMATION_STRATEGY Phase 3A — most ambitious automation.
+# 매일 03:00 KST에 작업 큐(label="auto-eligible") 1건 픽업 → CC가 구현
+# → Draft PR + Slack alert. 사람은 아침에 검토만.
+#
+# COST = $0 incremental:
+#   - Anthropic API 직접 호출 금지 (feedback_no_extra_cost.md 룰)
+#   - 추론은 anthropics/claude-code-action@v1 + CLAUDE_CODE_OAUTH_TOKEN
+#     (Max 플랜 OAuth, /docs/CLAUDE_CODE_OAUTH_SETUP.md 참고)
+#   - 같은 패턴: morning-triage.yml (2026-05-03 마이그레이션)
+#
+# RUN BUDGET: ~5 min/night × 30 = 150 min/month → free tier 2000 min/mo 안.
+#
+# SAFETY (5 layers):
+#   1) Protected paths grep (autotrader|risk_defense|billing|auth|security|migrations)
+#   2) Draft PR only (`gh pr create --draft`) — branch protection은 사람 review 강제
+#   3) >30 files diff = abort (feedback_pr_workflow rule #3)
+#   4) Circuit breaker: 같은 issue 24h 내 3회 실패 → "auto-eligible" 라벨 자동 제거
+#   5) Daily kill switch: repo variable NIGHTLY_AUTO_DEV != "1" 이면 즉시 종료
+#
+# repository_dispatch trigger:
+#   외부 CC scheduled task (mcp__scheduled-tasks)가 워크플로우를 발화하고 싶을 때
+#   `gh api repos/<owner>/<repo>/dispatches -F event_type=cc_autonomous_dev`로 호출.
+#   payload.issue_id 가 있으면 큐 픽업을 스킵하고 그 issue 처리.
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 18:00 UTC = 03:00 KST (다음날)
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: '특정 issue 번호 강제 (비우면 큐 자동 픽업)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'true 면 PR 생성 안 함 (큐 픽업까지만)'
+        required: false
+        default: 'false'
+  repository_dispatch:
+    types: [cc_autonomous_dev]
+
+permissions:
+  contents: write          # 브랜치 push
+  pull-requests: write     # Draft PR 생성
+  issues: write            # 라벨 토글, 코멘트
+  id-token: write          # claude-code-action OAuth flow
+
+concurrency:
+  group: nightly-autonomous-dev
+  cancel-in-progress: false   # 이미 도는 게 있으면 새 트리거는 무시
+
+env:
+  PROTECTED_PATHS_REGEX: '^(autotrader|risk_defense|billing|auth|security|migrations|alembic)/|^app/(autotrader|risk_defense|billing|auth|security)/'
+  MAX_FILES_CHANGED: '30'
+  FAILURE_LOG: '.github/autonomous-dev-failures.json'
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────
+  # Job 1: kill-switch — repo variable로 즉시 정지 가능
+  # ──────────────────────────────────────────────────────────────────────
+  kill-switch:
+    name: Kill switch check
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: Read NIGHTLY_AUTO_DEV variable
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # repo variable이 없거나 "1"이 아니면 비활성
+          val="${{ vars.NIGHTLY_AUTO_DEV }}"
+          if [ "$val" = "1" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Kill switch OFF — proceeding"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Kill switch ON (NIGHTLY_AUTO_DEV='$val') — exiting"
+          fi
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Job 2: queue-pickup — 작업 큐에서 1건 픽업
+  # ──────────────────────────────────────────────────────────────────────
+  queue-pickup:
+    name: Pick one auto-eligible issue
+    needs: kill-switch
+    if: needs.kill-switch.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      issue_number: ${{ steps.pick.outputs.issue_number }}
+      issue_title: ${{ steps.pick.outputs.issue_title }}
+      issue_body_file: ${{ steps.pick.outputs.issue_body_file }}
+      have_work: ${{ steps.pick.outputs.have_work }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve issue number (dispatch payload > input > queue)
+        id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISPATCH_ISSUE: ${{ github.event.client_payload.issue_id }}
+          INPUT_ISSUE: ${{ github.event.inputs.issue_number }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/cc_dev
+
+          chosen=""
+          if [ -n "${DISPATCH_ISSUE:-}" ]; then
+            chosen="$DISPATCH_ISSUE"
+            echo "Using repository_dispatch issue: #$chosen"
+          elif [ -n "${INPUT_ISSUE:-}" ]; then
+            chosen="$INPUT_ISSUE"
+            echo "Using workflow_dispatch input: #$chosen"
+          else
+            # 큐 픽업: auto-eligible + difficulty:low + 보호 라벨 없음
+            # 우선순위: priority:high > medium > low, 같은 등급은 가장 오래된 것
+            gh issue list \
+              --repo "${{ github.repository }}" \
+              --state open \
+              --label "auto-eligible" \
+              --json number,title,labels,createdAt \
+              --limit 50 > /tmp/cc_dev/queue.json
+
+            # difficulty:low 만 + 'do-not-automate' 같은 차단 라벨 없는 것
+            chosen=$(jq -r '
+              [.[] | select(
+                (.labels | map(.name) | index("difficulty:low")) and
+                (.labels | map(.name) | index("do-not-automate") | not) and
+                (.labels | map(.name) | index("blocked") | not)
+              )] |
+              sort_by(
+                if (.labels | map(.name) | index("priority:high")) then 0
+                elif (.labels | map(.name) | index("priority:medium")) then 1
+                else 2 end,
+                .createdAt
+              ) | .[0].number // empty
+            ' /tmp/cc_dev/queue.json)
+          fi
+
+          if [ -z "$chosen" ]; then
+            echo "have_work=false" >> "$GITHUB_OUTPUT"
+            echo "Queue empty — nothing to do tonight"
+            exit 0
+          fi
+
+          # issue 본문 / 제목 가져오기
+          gh issue view "$chosen" \
+            --repo "${{ github.repository }}" \
+            --json number,title,body,labels > /tmp/cc_dev/issue.json
+
+          title=$(jq -r '.title' /tmp/cc_dev/issue.json)
+          jq -r '.body' /tmp/cc_dev/issue.json > /tmp/cc_dev/issue_body.md
+
+          echo "issue_number=$chosen" >> "$GITHUB_OUTPUT"
+          echo "issue_title=$title" >> "$GITHUB_OUTPUT"
+          echo "issue_body_file=/tmp/cc_dev/issue_body.md" >> "$GITHUB_OUTPUT"
+          echo "have_work=true" >> "$GITHUB_OUTPUT"
+          echo "Picked issue #$chosen: $title"
+
+      - name: Upload issue artifact
+        if: steps.pick.outputs.have_work == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: picked-issue
+          path: /tmp/cc_dev/
+          retention-days: 7
+
+      - name: Slack — work started
+        if: steps.pick.outputs.have_work == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ISSUE_NUM: ${{ steps.pick.outputs.issue_number }}
+          ISSUE_TITLE: ${{ steps.pick.outputs.issue_title }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "SLACK_WEBHOOK_URL unset — skipping"
+            exit 0
+          fi
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -n --arg num "$ISSUE_NUM" --arg t "$ISSUE_TITLE" --arg run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              '{text: ("[nightly-autonomous-dev] 오늘 밤 #" + $num + " 작업 시작: " + $t + "\n" + $run)}')" || true
+
+      - name: Slack — queue empty
+        if: steps.pick.outputs.have_work != 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then exit 0; fi
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d '{"text":"[nightly-autonomous-dev] 큐 비어있음 — 오늘 밤 SKIP"}' || true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Job 3: cc-implement — Claude Code (Max OAuth) 가 실제로 구현
+  # ──────────────────────────────────────────────────────────────────────
+  cc-implement:
+    name: Claude Code implementation
+    needs: queue-pickup
+    if: needs.queue-pickup.outputs.have_work == 'true' && github.event.inputs.dry_run != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    outputs:
+      branch_name: ${{ steps.branch.outputs.name }}
+      pr_url: ${{ steps.pr.outputs.url }}
+      status: ${{ steps.gate.outputs.status }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download picked issue
+        uses: actions/download-artifact@v4
+        with:
+          name: picked-issue
+          path: /tmp/cc_dev/
+
+      - name: Create working branch
+        id: branch
+        env:
+          ISSUE_NUM: ${{ needs.queue-pickup.outputs.issue_number }}
+        run: |
+          set -euo pipefail
+          ts=$(date -u +%Y%m%d)
+          name="auto/nightly-${ts}-issue-${ISSUE_NUM}"
+          git config user.name "pivoxquant-autodev[bot]"
+          git config user.email "autodev@pivoxquant.com"
+          git checkout -b "$name"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      # ── Anthropic 추론은 OAuth 토큰 (Max 플랜)으로만. ANTHROPIC_API_KEY 미사용 ──
+      - name: Run Claude Code implementation
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 보호 경로는 prompt에서 명시 + 후속 step 에서 grep 으로 한 번 더 차단.
+          # Bash glob 형식 검증: morning-triage.yml 에서 동작 확인됨.
+          claude_args: "--max-turns 60 --model claude-sonnet-4-6 --allowedTools 'Read,Write,Edit,MultiEdit,Glob,Grep,LS,Bash(git:*),Bash(pytest:*),Bash(python:*),Bash(npm:*),Bash(pnpm:*),Bash(node:*),Bash(jq:*),Bash(ls:*),Bash(cat:*),Bash(head:*),Bash(tail:*),Bash(wc:*)'"
+          prompt: |
+            You are PivoxQuant's nightly autonomous developer (03:00 KST).
+
+            Brand: **PivoxQuant** (NEVER write "stockpilot").
+            Stack: Flask 3 (gunicorn workers=1) + Next.js 16 + PostgreSQL on Railway.
+
+            ## The issue
+            Number: #${{ needs.queue-pickup.outputs.issue_number }}
+            Title: ${{ needs.queue-pickup.outputs.issue_title }}
+
+            Read the body at `/tmp/cc_dev/issue_body.md`.
+
+            ## Hard constraints (violations = automatic PR rejection)
+            1. **Protected paths — DO NOT modify**:
+               `autotrader/`, `risk_defense/`, `billing/`, `auth/`, `security/`,
+               `migrations/`, `alembic/`,
+               `app/autotrader/`, `app/risk_defense/`, `app/billing/`, `app/auth/`, `app/security/`.
+               If the fix requires touching these, STOP, write a comment to the
+               issue via `gh issue comment ${{ needs.queue-pickup.outputs.issue_number }} --body "BLOCKED: protected path required"`,
+               and exit without committing.
+
+            2. **No new alembic migrations**. If schema change is required, STOP
+               and comment "BLOCKED: schema migration required — needs human".
+
+            3. **Diff size**: keep total files changed ≤ 30 (feedback_pr_workflow rule #3).
+               If the fix naturally exceeds this, split is human's job — STOP + comment.
+
+            4. **Tests required**: every code change ships with at least one
+               new or updated test. Run `pytest -x -q` (or the closest project
+               equivalent) and ensure it passes locally before commit.
+
+            5. **No secrets/tokens** in code. No `print(env_var)`-style debug.
+
+            6. **Legal vocabulary**: do NOT introduce "투자자문", "투자조언",
+               "수익률 보장", "원금 보장", "확정 수익", "추천", "리딩",
+               "종목추천" or English equivalents in any user-visible string,
+               docstring, comment, or test fixture. Use neutral terms like
+               "정보 제공", "분석 결과", "참고 자료" instead.
+
+            ## Workflow
+            1. Read issue body at `/tmp/cc_dev/issue_body.md` carefully.
+            2. Use `Grep`/`Glob` to map the codebase. Make a short plan.
+            3. Implement minimum viable change.
+            4. Add/update tests.
+            5. Run `pytest -x -q` or relevant test command. Fix until green.
+            6. `git add` only the files you intentionally changed (no `git add -A`).
+            7. Commit with message:
+               ```
+               auto: <short summary> (#<issue>)
+
+               Refs #<issue>. Generated by nightly-autonomous-dev workflow.
+               ```
+            8. `git push origin HEAD` (the branch is pre-created).
+
+            ## Out of scope
+            Don't refactor unrelated code. Don't update docs unless the issue
+            explicitly asks. Don't add dependencies — if needed, STOP + comment.
+
+            Branch: ${{ steps.branch.outputs.name }}
+            Repo:   ${{ github.repository }}
+
+      - name: Verify Claude pushed something
+        id: pushed
+        run: |
+          set -euo pipefail
+          if git diff --quiet origin/main..HEAD; then
+            echo "Claude made no commits — treating as failure"
+            echo "result=empty" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=ok" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Safety gate 1: protected paths grep (Claude prompt 무시했을 경우 백스톱) ──
+      - name: Safety gate — protected paths
+        id: gate_paths
+        if: steps.pushed.outputs.result == 'ok'
+        run: |
+          set -euo pipefail
+          changed=$(git diff --name-only origin/main..HEAD)
+          echo "Changed files:"
+          echo "$changed"
+          if echo "$changed" | grep -E "$PROTECTED_PATHS_REGEX" >/dev/null; then
+            echo "::error::Protected path modified — aborting"
+            exit 1
+          fi
+
+      # ── Safety gate 2: file count cap ──
+      - name: Safety gate — diff size
+        id: gate_size
+        if: steps.pushed.outputs.result == 'ok'
+        run: |
+          set -euo pipefail
+          n=$(git diff --name-only origin/main..HEAD | wc -l | tr -d ' ')
+          echo "Files changed: $n (cap=$MAX_FILES_CHANGED)"
+          if [ "$n" -gt "$MAX_FILES_CHANGED" ]; then
+            echo "::error::Exceeded MAX_FILES_CHANGED ($n > $MAX_FILES_CHANGED)"
+            exit 1
+          fi
+
+      # ── Safety gate 3: pytest (final, post-CC) ──
+      - name: Setup Python
+        if: steps.pushed.outputs.result == 'ok'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps + pytest
+        if: steps.pushed.outputs.result == 'ok'
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+          pip install pytest
+
+      - name: Safety gate — pytest
+        id: gate
+        if: steps.pushed.outputs.result == 'ok'
+        run: |
+          set -euo pipefail
+          if pytest -x -q --maxfail=1 --timeout=120 2>&1 | tee /tmp/cc_dev/pytest.log; then
+            echo "status=pass" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=fail" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      # ── PR 생성 (Draft only) ──
+      - name: Create Draft PR
+        id: pr
+        if: steps.gate.outputs.status == 'pass'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUM: ${{ needs.queue-pickup.outputs.issue_number }}
+          ISSUE_TITLE: ${{ needs.queue-pickup.outputs.issue_title }}
+        run: |
+          set -euo pipefail
+          body=$(cat <<EOF
+          ## Auto-generated by nightly-autonomous-dev
+
+          Closes #${ISSUE_NUM}.
+
+          - **Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          - **Generated**: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          - **Model**: claude-sonnet-4-6 via claude-code-action@v1 (Max OAuth)
+          - **Cost**: \$0 incremental (Max plan, GitHub Actions free tier)
+
+          ### Safety gates passed
+          - Protected paths: clean
+          - Diff size: within cap (${MAX_FILES_CHANGED} files max)
+          - pytest: passing
+
+          ### Human review checklist (before marking ready)
+          - [ ] Diff matches issue intent
+          - [ ] No protected-path modification (sanity re-check)
+          - [ ] No legal-vocabulary violations
+          - [ ] No \`stockpilot\` references (must be \`PivoxQuant\`)
+          - [ ] Spot check at least one test added or updated
+          - [ ] alembic heads unchanged
+
+          > Auto-generated. Do NOT mark ready-for-review without human spot check.
+          EOF
+          )
+          url=$(gh pr create \
+            --draft \
+            --base main \
+            --head "${{ steps.branch.outputs.name }}" \
+            --title "auto: ${ISSUE_TITLE} (#${ISSUE_NUM})" \
+            --body "$body")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "PR created: $url"
+
+      - name: Upload pytest log on failure
+        if: always() && steps.gate.outputs.status == 'fail'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-failure-log
+          path: /tmp/cc_dev/pytest.log
+          retention-days: 14
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Job 4: post-status — Slack alert + circuit breaker
+  # ──────────────────────────────────────────────────────────────────────
+  post-status:
+    name: Post status & circuit breaker
+    needs: [queue-pickup, cc-implement]
+    if: always() && needs.queue-pickup.outputs.have_work == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Slack — completion (success)
+        if: needs.cc-implement.outputs.status == 'pass'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PR_URL: ${{ needs.cc-implement.outputs.pr_url }}
+          ISSUE_NUM: ${{ needs.queue-pickup.outputs.issue_number }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then exit 0; fi
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -n --arg url "$PR_URL" --arg num "$ISSUE_NUM" \
+              '{text: ("[nightly-autonomous-dev] PR 검토 대기: #" + $num + " → " + $url)}')" || true
+
+      - name: Slack — completion (failure)
+        if: needs.cc-implement.result == 'failure' || needs.cc-implement.outputs.status == 'fail'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ISSUE_NUM: ${{ needs.queue-pickup.outputs.issue_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then exit 0; fi
+          curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -n --arg num "$ISSUE_NUM" --arg url "$RUN_URL" \
+              '{text: ("[nightly-autonomous-dev] FAIL: #" + $num + " — 회로차단기 카운트 +1\n" + $url)}')" || true
+
+      # ── 회로차단기: 24h 내 같은 issue 3회 실패 → "auto-eligible" 라벨 제거 ──
+      - name: Circuit breaker — track failure
+        if: needs.cc-implement.result == 'failure' || needs.cc-implement.outputs.status == 'fail'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUM: ${{ needs.queue-pickup.outputs.issue_number }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p .github
+          file="$FAILURE_LOG"
+          [ -f "$file" ] || echo '[]' > "$file"
+
+          now=$(date -u +%s)
+          horizon=$((now - 86400))   # 24h ago
+
+          # 24h 안 항목만 남기고 새 실패 push
+          jq --argjson now "$now" --argjson horizon "$horizon" --arg issue "$ISSUE_NUM" '
+            [.[] | select(.ts >= $horizon)] + [{issue: $issue, ts: $now}]
+          ' "$file" > "${file}.new"
+          mv "${file}.new" "$file"
+
+          # 같은 issue 24h 내 카운트
+          count=$(jq --arg issue "$ISSUE_NUM" '[.[] | select(.issue == $issue)] | length' "$file")
+          echo "Issue #${ISSUE_NUM} failure count (24h): $count"
+
+          if [ "$count" -ge 3 ]; then
+            echo "::warning::Circuit breaker triggered for #${ISSUE_NUM}"
+            gh issue edit "$ISSUE_NUM" \
+              --repo "${{ github.repository }}" \
+              --remove-label "auto-eligible" --add-label "auto-failed-3x" || true
+            gh issue comment "$ISSUE_NUM" \
+              --repo "${{ github.repository }}" \
+              --body "Circuit breaker: 24h 내 3회 자동 구현 실패. \`auto-eligible\` 라벨 제거. 사람 검토 필요." || true
+
+            # Slack escalation
+            if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+              curl -sS -X POST "$SLACK_WEBHOOK_URL" \
+                -H 'Content-Type: application/json' \
+                -d "$(jq -n --arg num "$ISSUE_NUM" \
+                  '{text: ("[nightly-autonomous-dev] CIRCUIT BREAKER: #" + $num + " 24h 3회 실패 → auto-eligible 제거됨")}')" || true
+            fi
+          fi
+
+          # commit 갱신된 failure log
+          git config user.name "pivoxquant-autodev[bot]"
+          git config user.email "autodev@pivoxquant.com"
+          git add "$FAILURE_LOG"
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(autodev): update failure log for #${ISSUE_NUM}"
+            git push origin HEAD:main || echo "push to main blocked (expected if branch protection on); skipping"
+          fi

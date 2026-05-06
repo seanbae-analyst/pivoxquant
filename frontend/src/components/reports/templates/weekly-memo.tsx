@@ -26,7 +26,7 @@ import {
   PdfCallout,
   PdfNotes,
   PdfPageFooter,
-  PdfDisclaimer,
+  PdfDisclaimerMini,
   PdfSectionTitle,
 } from "../pdf-primitives";
 
@@ -214,7 +214,7 @@ export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
         right={`Weekly Memo · ${data.weekTag}`}
       />
 
-      <PdfDisclaimer cadence="weekly" />
+      <PdfDisclaimerMini />
     </PdfPage>
   );
 }

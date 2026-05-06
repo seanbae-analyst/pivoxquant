@@ -27,7 +27,7 @@ import {
   PdfCallout,
   PdfNotes,
   PdfPageFooter,
-  PdfDisclaimer,
+  PdfDisclaimerMini,
   PdfSectionTitle,
 } from "../pdf-primitives";
 
@@ -204,7 +204,7 @@ export function MorningBriefPlus({ data = DEFAULT_DATA }: { data?: MorningBriefP
         right={`Morning Brief Plus · ${data.briefTag}`}
       />
 
-      <PdfDisclaimer cadence="daily" />
+      <PdfDisclaimerMini />
     </PdfPage>
   );
 }
