@@ -200,8 +200,8 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 2 */}
-      <PdfPage>
+      {/* PAGE 2 — 2026-05-06: compact so gov+disclaim atomic fits one A4 */}
+      <PdfPage compact>
         <PdfHeader tier="pro" title="INSIDER MIRROR" meta={`${data.asOf} · 02/02`} />
         <PdfGoldRule />
 

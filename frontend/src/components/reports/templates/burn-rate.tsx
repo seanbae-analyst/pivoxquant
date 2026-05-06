@@ -196,8 +196,8 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 2 */}
-      <PdfPage>
+      {/* PAGE 2 — 2026-05-06: compact so gov+disclaim atomic fits one A4 */}
+      <PdfPage compact>
         <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 02/02`} />
         <PdfGoldRule />
 

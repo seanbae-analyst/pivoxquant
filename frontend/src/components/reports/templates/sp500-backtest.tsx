@@ -114,7 +114,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
     <>
       {/* PAGE 1 */}
       <PdfPage>
-        <PdfHeader tier="pro" title="S&P 500 BACKTEST" meta={`${data.asOf} · 01/02`} />
+        <PdfHeader tier="pro" title="S&P 500 BACKTEST" meta={`${data.asOf} · 01/03`} />
         <PdfGoldRule />
 
         <PdfEyebrow>Strategy Backtest · S&amp;P 500 Universe</PdfEyebrow>
@@ -212,9 +212,13 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 2 */}
+      {/* PAGE 2 — Risk Metrics + Stress Periods
+          2026-05-06: split former PAGE 2 (Risk + Stress + Caveats +
+          Verdict + Gov + Disclaim) into two logical PdfPages so the
+          final page anchors gov+disclaim properly with `margin-top:
+          auto` instead of overflowing to a near-empty 3rd sheet. */}
       <PdfPage>
-        <PdfHeader tier="pro" title="S&P 500 BACKTEST" meta={`${data.asOf} · 02/02`} />
+        <PdfHeader tier="pro" title="S&P 500 BACKTEST" meta={`${data.asOf} · 02/03`} />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="sm">Risk Metrics · 위험 지표</PdfSectionTitle>
@@ -277,6 +281,15 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
           </tbody>
         </PdfTable>
 
+        <PdfPageFooter left="S&P 500 Backtest · Pro · Past performance ≠ future results" right="Page 02" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 3 — Caveats + Verdict + Gov + Full Disclaim */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="S&P 500 BACKTEST" meta={`${data.asOf} · 03/03`} />
+        <PdfGoldRule />
+
         <PdfSectionTitle variant="sm">Caveats · 정직하게 말하면</PdfSectionTitle>
         <PdfCheckList
           items={data.caveats.map((c) => ({
@@ -291,7 +304,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
         </div>
 
         <PdfGovBlock />
-        <PdfPageFooter left="S&P 500 Backtest · Pro · Past performance ≠ future results" right="Page 02" />
+        <PdfPageFooter left="S&P 500 Backtest · Pro · Past performance ≠ future results" right="Page 03" />
         <PdfDisclaimer cadence="ondemand" withBacktest />
       </PdfPage>
     </>
