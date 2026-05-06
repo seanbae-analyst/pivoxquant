@@ -237,7 +237,7 @@ export function TodayMemoHero({
           >
             Daily brief lands at <span style={{ color: "var(--pq-bronze)" }}>09:00 KST</span>.
             <br />
-            Weekly memo every Sunday <span style={{ color: "var(--pq-bronze)" }}>07:00 KST</span>.
+            Weekly memo every Monday <span style={{ color: "var(--pq-bronze)" }}>07:00 KST</span>.
           </div>
         </div>
 
