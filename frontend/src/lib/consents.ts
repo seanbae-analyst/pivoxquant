@@ -118,7 +118,6 @@ export async function flushPendingMarketingConsent(): Promise<boolean> {
     // we swallow it. The /settings toggle is the recovery surface.
     if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
       // Helpful breadcrumb for local dev; never reaches users.
-      // eslint-disable-next-line no-console
       console.warn("[consents] flush failed (non-fatal):", err);
     }
   }
@@ -202,7 +201,6 @@ export async function flushPendingCrossBorderConsent(): Promise<boolean> {
     );
   } catch (err) {
     if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
       console.warn("[consents] cross-border flush failed (non-fatal):", err);
     }
   }
