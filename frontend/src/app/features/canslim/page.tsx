@@ -19,7 +19,7 @@ import {
 import { SectionCurtain } from "@/components/landing/section-curtain";
 
 export const metadata: Metadata = {
-  title: "CAN SLIM Stock Screener — PivoxQuant",
+  title: "CAN SLIM Stock Screener",
   description:
     "William O'Neil's systematic 7-factor method, automated. Screen stocks using the CAN SLIM strategy.",
 };

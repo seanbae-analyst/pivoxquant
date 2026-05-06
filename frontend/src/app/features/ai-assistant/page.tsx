@@ -12,7 +12,7 @@ import { SectionCurtain } from "@/components/landing/section-curtain";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 
 export const metadata: Metadata = {
-  title: "당신의 전속 리서치 데스크 — PivoxQuant",
+  title: "당신의 전속 리서치 데스크",
   description:
     "당신이 자는 동안 리포트가 만들어집니다. Morning Brief, Weekly Memo, Earnings Pre-Brief — 맥킨지 포맷의 분석물이 메일함에 도착합니다.",
 };

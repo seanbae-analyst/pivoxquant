@@ -68,7 +68,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const entry = TEMPLATES[slug as Slug];
   return {
-    title: entry ? `${entry.title} · PivoxQuant` : "Report · PivoxQuant",
+    title: entry ? entry.title : "Report",
   };
 }
 

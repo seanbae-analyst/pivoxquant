@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Book, HelpCircle, MessageSquare, FileText, Shield } from "lucide-react";
 
 export const metadata = {
-  title: "Docs · PivoxQuant",
+  title: "Docs",
   description: "Product documentation and help.",
 };
 

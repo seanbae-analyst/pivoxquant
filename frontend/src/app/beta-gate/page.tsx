@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import BetaGateForm from "./beta-gate-form";
 
 export const metadata: Metadata = {
-  title: "Private Beta · PivoxQuant",
+  title: "Private Beta",
   description: "PivoxQuant is currently in private beta.",
   robots: {
     index: false,

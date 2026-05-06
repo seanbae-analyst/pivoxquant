@@ -11,7 +11,7 @@ import { marked } from "marked";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "이용약관 - PivoxQuant",
+  title: "이용약관",
 };
 
 function stripFrontmatter(md: string): string {

@@ -10,7 +10,7 @@ import {
 import { SectionCurtain } from "@/components/landing/section-curtain";
 
 export const metadata: Metadata = {
-  title: "How Quant Scoring Works — PivoxQuant",
+  title: "How Quant Scoring Works",
   description:
     "Every stock gets a score from 0 to 100. Learn the 4 pillars behind PivoxQuant's quant scoring system.",
 };
