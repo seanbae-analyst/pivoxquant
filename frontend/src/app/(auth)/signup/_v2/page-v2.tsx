@@ -297,8 +297,6 @@ export default function SignupPageV2() {
             <span
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10.5,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze, #B8956A)",
@@ -308,10 +306,8 @@ export default function SignupPageV2() {
               Sign up
             </span>
             <h2
-              className="font-serif"
+              className="font-display"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontWeight: 500,
                 fontSize: 24,
                 lineHeight: 1.2,
@@ -505,8 +501,6 @@ export default function SignupPageV2() {
             className="font-mono uppercase"
             style={{
               marginTop: 6,
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10,
               letterSpacing: "0.20em",
               color: "rgba(245,240,232,0.40)",

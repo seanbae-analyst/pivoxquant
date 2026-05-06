@@ -320,10 +320,8 @@ export default function DiscoverPage() {
             Discovery &middot; US + KR
           </div>
           <h1
-            className="mt-3 font-serif"
+            className="mt-3 font-display"
             style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: "clamp(34px, 4.6vw, 52px)",
               lineHeight: 1.06,
@@ -679,10 +677,8 @@ function SectionKicker({
         {eyebrow}
       </div>
       <h2
-        className="mt-2 font-serif"
+        className="mt-2 font-display"
         style={{
-          fontFamily:
-            '"Playfair Display","Source Serif 4",Georgia,serif',
           fontWeight: 500,
           fontSize: "clamp(22px, 2.4vw, 28px)",
           lineHeight: 1.18,
@@ -696,7 +692,6 @@ function SectionKicker({
         <p
           className="mt-1.5 font-serif italic"
           style={{
-            fontFamily: '"Source Serif 4",Georgia,serif',
             fontSize: 12.5,
             lineHeight: 1.5,
             color: "rgba(245,240,232,0.55)",
@@ -730,7 +725,6 @@ function EditorialEmpty({
       <p
         className="font-serif italic"
         style={{
-          fontFamily: '"Source Serif 4",Georgia,serif',
           fontSize: 12.5,
           color: "rgba(245,240,232,0.5)",
         }}
@@ -803,7 +797,6 @@ function EmptyBlock({ title }: { title: string }) {
       <p
         className="py-4 font-serif italic"
         style={{
-          fontFamily: '"Source Serif 4",Georgia,serif',
           fontSize: 12,
           color: "rgba(245,240,232,0.45)",
         }}

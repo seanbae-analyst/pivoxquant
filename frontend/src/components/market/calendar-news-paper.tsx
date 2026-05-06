@@ -65,14 +65,13 @@ export function CalendarNewsPaper({
         <div className="pq-paper-kicker">The Sidebar</div>
         <h2
           style={{
-            fontFamily: "var(--font-serif), Georgia, serif",
             fontWeight: 400,
             fontSize: "clamp(1.3rem, 2.2vw, 1.7rem)",
             letterSpacing: "-0.01em",
             color: "#141414",
             margin: "4px 0 2px",
           }}
-        >
+        className="font-serif" >
           FX, Calendar &amp; Pulse
         </h2>
       </div>
@@ -93,14 +92,13 @@ export function CalendarNewsPaper({
           >
             <span
               style={{
-                fontFamily: "var(--font-serif), Georgia, serif",
                 fontWeight: 500,
                 fontSize: "clamp(1.6rem, 3vw, 2.1rem)",
                 color: "#141414",
                 fontVariantNumeric: "tabular-nums",
                 letterSpacing: "-0.015em",
               }}
-            >
+            className="font-serif" >
               {fxStatus.rate.toLocaleString("ko-KR", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
@@ -108,7 +106,6 @@ export function CalendarNewsPaper({
             </span>
             <span
               style={{
-                fontFamily: "var(--font-mono), ui-monospace, monospace",
                 fontSize: 10.5,
                 color: "rgba(20,20,20,0.55)",
                 textTransform: "uppercase",
@@ -117,7 +114,7 @@ export function CalendarNewsPaper({
                 alignItems: "center",
                 gap: 6,
               }}
-            >
+            className="font-mono" >
               {fxStatus.stale ? (
                 <span
                   aria-label="Stale"
@@ -208,14 +205,13 @@ export function CalendarNewsPaper({
                 />
                 <span
                   style={{
-                    fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontVariantNumeric: "tabular-nums",
                     fontSize: 10.5,
                     color: "var(--pq-bronze, #B8956A)",
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
                   }}
-                >
+                className="font-mono" >
                   {new Date(e.date).toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
@@ -223,25 +219,23 @@ export function CalendarNewsPaper({
                 </span>
                 <span
                   style={{
-                    fontFamily: "var(--font-serif), Georgia, serif",
                     fontSize: 12.5,
                     color: "#1a1a1a",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
                   }}
-                >
+                className="font-serif" >
                   {e.name || e.ticker}
                 </span>
                 <span
                   style={{
-                    fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontSize: 9.5,
                     textTransform: "uppercase",
                     letterSpacing: "0.18em",
                     color: "rgba(20,20,20,0.55)",
                   }}
-                >
+                className="font-mono" >
                   {e.ticker}
                 </span>
               </button>
@@ -276,24 +270,22 @@ export function CalendarNewsPaper({
               >
                 <span
                   style={{
-                    fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontVariantNumeric: "tabular-nums",
                     fontSize: 10.5,
                     color: "var(--pq-bronze, #B8956A)",
                     letterSpacing: "0.08em",
                   }}
-                >
+                className="font-mono" >
                   {row.time}
                 </span>
                 <p
                   style={{
-                    fontFamily: "var(--font-serif), Georgia, serif",
                     fontSize: 12.5,
                     lineHeight: 1.5,
                     color: "rgba(20,20,20,0.78)",
                     margin: 0,
                   }}
-                >
+                className="font-serif" >
                   {row.text}
                 </p>
               </div>
@@ -301,13 +293,12 @@ export function CalendarNewsPaper({
           ) : (
             <p
               style={{
-                fontFamily: "var(--font-serif), Georgia, serif",
                 fontSize: 12,
                 fontStyle: "italic",
                 color: "rgba(20,20,20,0.5)",
                 margin: "8px 0 0",
               }}
-            >
+            className="font-serif" >
               No recent pulse observations available.
             </p>
           )}

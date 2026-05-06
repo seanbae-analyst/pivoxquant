@@ -58,9 +58,8 @@ export function TopBar() {
             style={{ color: "var(--pq-bronze)" }}
           />
           <span
-            className="flex-1 text-sm italic"
+            className="flex-1 text-sm italic font-serif"
             style={{
-              fontFamily: "var(--font-serif), serif",
               color: "rgba(245, 240, 232, 0.45)",
             }}
           >

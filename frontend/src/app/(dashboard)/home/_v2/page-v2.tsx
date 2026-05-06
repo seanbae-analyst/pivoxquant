@@ -120,8 +120,6 @@ export default function HomePageV2() {
             <div
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10.5,
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",

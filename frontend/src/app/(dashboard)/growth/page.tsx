@@ -200,9 +200,8 @@ export default function GrowthPage() {
           </div>
 
           <h1
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: "clamp(32px, 4.2vw, 48px)",
               lineHeight: 1.05,
@@ -219,7 +218,6 @@ export default function GrowthPage() {
           <p
             className="font-serif"
             style={{
-              fontFamily: '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontSize: 17,
               lineHeight: 1.55,
               color: "rgba(245,240,232,0.82)",

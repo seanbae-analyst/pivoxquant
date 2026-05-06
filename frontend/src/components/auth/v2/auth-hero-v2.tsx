@@ -55,8 +55,6 @@ export function AuthHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.24em",
           color: "var(--pq-bronze, #B8956A)",
@@ -68,10 +66,8 @@ export function AuthHeroV2({
       </div>
 
       <h1
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily:
-            '"Playfair Display","Source Serif 4",Georgia,serif',
           fontWeight: 500,
           fontSize: "clamp(32px, 4.2vw, 48px)",
           lineHeight: 1.05,
@@ -88,8 +84,6 @@ export function AuthHeroV2({
         <p
           className="font-serif"
           style={{
-            fontFamily:
-              '"Source Serif 4","Iowan Old Style",Georgia,serif',
             fontSize: 17,
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.72)",
@@ -105,8 +99,6 @@ export function AuthHeroV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",

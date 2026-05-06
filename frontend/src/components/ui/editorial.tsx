@@ -96,7 +96,6 @@ export function DeckLine({
     <p
       className={`font-serif ${className}`}
       style={{
-        fontFamily: "var(--font-serif), Georgia, serif",
         fontSize: "clamp(1.1rem, 1.6vw, 1.35rem)",
         lineHeight: 1.25,
         color: "var(--pq-ivory)",
@@ -169,10 +168,8 @@ export function EditorialHead({
       : "var(--pq-ivory)";
   return (
     <Tag
-      className={`pq-editorial-head font-serif ${className}`}
+      className={`pq-editorial-head font-display${className}`}
       style={{
-        fontFamily:
-          '"Playfair Display","Source Serif 4",Georgia,serif',
         fontWeight: 500,
         fontSize: size,
         lineHeight: 1.15,
@@ -329,9 +326,8 @@ export function FootSignature({
         <Fleuron size={13} />
       </div>
       <p
-        className="pq-caption"
+        className="pq-caption font-serif"
         style={{
-          fontFamily: "var(--font-serif), Georgia, serif",
           fontStyle: "italic",
           fontSize: "11px",
           lineHeight: 1.45,

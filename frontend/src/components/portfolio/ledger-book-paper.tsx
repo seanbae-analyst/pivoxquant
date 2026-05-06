@@ -208,7 +208,6 @@ export function LedgerBookPaper({
           <div key={s.label} style={{ padding: "16px 0" }}>
             <div
               style={{
-                fontFamily: "var(--font-sans), system-ui, sans-serif",
                 fontSize: 9.5,
                 letterSpacing: "0.26em",
                 textTransform: "uppercase",
@@ -216,7 +215,7 @@ export function LedgerBookPaper({
                 marginBottom: 8,
                 fontWeight: 600,
               }}
-            >
+            className="font-sans" >
               {s.label}
             </div>
             <div
@@ -256,12 +255,11 @@ export function LedgerBookPaper({
         <div className="flex items-baseline justify-between" style={{ marginBottom: 10 }}>
           <div
             style={{
-              fontFamily: "var(--font-serif), Georgia, serif",
               fontSize: "clamp(1rem, 1.6vw, 1.125rem)",
               color: "#1a1a1a",
               letterSpacing: "-0.005em",
             }}
-          >
+          className="font-serif" >
             Positions
           </div>
           <div
@@ -364,7 +362,6 @@ export function LedgerBookPaper({
                       <td style={{ padding: "14px 6px 14px 0" }}>
                         <div
                           style={{
-                            fontFamily: "var(--font-serif), Georgia, serif",
                             fontSize: 14.5,
                             color: "#1a1a1a",
                             fontWeight: 500,
@@ -374,68 +371,63 @@ export function LedgerBookPaper({
                             textOverflow: "ellipsis",
                             maxWidth: 260,
                           }}
-                        >
+                        className="font-serif" >
                           {p.name}
                         </div>
                         <div
                           style={{
-                            fontFamily: "var(--font-mono), ui-monospace, monospace",
                             fontSize: 10,
                             color: "rgba(20,20,20,0.48)",
                             letterSpacing: "0.04em",
                             marginTop: 2,
                           }}
-                        >
+                        className="font-mono" >
                           {p.symbol} · {cur} · {p.sector || "—"}
                         </div>
                       </td>
                       <td
                         style={{
                           padding: "14px 6px",
-                          fontFamily: "var(--font-mono), ui-monospace, monospace",
                           fontSize: 10,
                           letterSpacing: "0.08em",
                           textTransform: "uppercase",
                           color: "rgba(20,20,20,0.6)",
                         }}
-                      >
+                      className="font-mono" >
                         {p.side}
                       </td>
                       <td
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontFamily: "var(--font-mono), ui-monospace, monospace",
                           fontSize: 12.5,
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.78)",
                         }}
-                      >
+                      className="font-mono" >
                         {p.shares.toLocaleString("en-US")}
                       </td>
                       <td
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontFamily: "var(--font-mono), ui-monospace, monospace",
                           fontSize: 12.5,
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.6)",
                         }}
-                      >
+                      className="font-mono" >
                         {fmtMoneyCell(p.avgCost, cur)}
                       </td>
                       <td
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontFamily: "var(--font-mono), ui-monospace, monospace",
                           fontSize: 13,
                           fontVariantNumeric: "tabular-nums",
                           color: "#1a1a1a",
                           fontWeight: 600,
                         }}
-                      >
+                      className="font-mono" >
                         <PriceWithTimestamp
                           price={p.current}
                           observedAt={p.observed_at}
@@ -447,12 +439,11 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontFamily: "var(--font-mono), ui-monospace, monospace",
                           fontSize: 12.5,
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.78)",
                         }}
-                      >
+                      className="font-mono" >
                         {fmtMoneyCell(mv, cur)}
                       </td>
                       <td
