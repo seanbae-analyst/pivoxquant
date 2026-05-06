@@ -71,7 +71,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
           marginBottom: 8,
@@ -167,7 +167,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   <span
                     className="font-mono uppercase"
                     style={{
-                      fontSize: 9.5,
+                      fontSize: 12,
                       letterSpacing: "0.2em",
                       padding: "3px 8px",
                       border: `1px solid ${tone.fg}`,
@@ -206,7 +206,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   <p
                     className="font-serif"
                     style={{
-                      fontSize: 12.5,
+                      fontSize: 14,
                       lineHeight: 1.5,
                       color: "rgba(245,240,232,0.70)",
                       margin: 0,
