@@ -56,7 +56,7 @@ export interface DividendIncomeData {
 }
 
 const DEFAULT: DividendIncomeData = {
-  asOf: "April 2026 · 2026",
+  asOf: "April 2026",
   thisMonth: { value: "$1,842", delta: "+$214 vs last" },
   ytdIncome: { value: "$18,420", delta: "+12.8% YoY" },
   yieldOnCost: { value: "4.18%", delta: "portfolio avg" },
@@ -82,7 +82,7 @@ const DEFAULT: DividendIncomeData = {
     { ticker: "PG", pct: 30, amount: "$60", flat: true },
   ],
   reinvestmentNote:
-    "Reinvest Text — 받은 $1,842, 어디에 다시 심을 것인가. SCHD 12주 추가 매수 검토. 또는 현금 보유 후 다음 달 합산.",
+    "받은 $1,842, 어디에 다시 심을 것인가. SCHD 12주 추가 매수 검토. 또는 현금 보유 후 다음 달 합산.",
 };
 
 export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }) {

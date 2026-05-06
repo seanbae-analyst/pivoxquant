@@ -82,7 +82,7 @@ const STATUS_TONE: Record<BurnStatus, string | undefined> = {
 };
 
 const DEFAULT: BurnRateData = {
-  asOf: "April 2026 · 2026",
+  asOf: "April 2026",
   tracked: { value: "8", detail: "unprofitable growth" },
   avgRunway: { value: "22 mo", detail: "2 below 12mo" },
   combinedCash: { value: "$48.2B", detail: "+$2.1B QoQ" },
