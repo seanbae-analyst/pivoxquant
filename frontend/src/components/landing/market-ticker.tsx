@@ -144,17 +144,21 @@ export function MarketTicker() {
         }}
       />
 
-      {/* Kicker — "Snapshot · YYYY-MM-DD HH:MM KST" editorial label, pinned
-          left. Backdrop is a FIXED-WIDTH solid ink block (not a partial
-          gradient) followed by a short gradient tail. Widened to 240 px so
-          the longer "SNAPSHOT · 2026-04-25 16:00 KST" copy never collides
-          with the marquee track. The pulsing dot was removed (2026-04-26)
-          to stop signalling "live" — values are static editorial fixtures. */}
+      {/* Kicker — "As of 2026-04-25 close · indicative levels" editorial label,
+          pinned left. Backdrop is a FIXED-WIDTH solid ink block (not a partial
+          gradient) followed by a short gradient tail.
+
+          2026-05-07: widened from 240→320 + marquee padding 288→368 because the
+          older 240+48 budget was tight (~296px text width @ 11px serif + 0.24em
+          tracking + pl-4) and "INDICATIVE LEVELS" trailing word could spill over
+          the marquee text at certain scroll positions, producing "INDICATIVE
+          IKEO/VSEIS" garbled overlap. Fixed by giving the kicker text 8% more
+          horizontal slack. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-y-0 left-0 z-20"
         style={{
-          width: 240,
+          width: 320,
           backgroundColor: "var(--pq-ink)",
         }}
       />
@@ -162,7 +166,7 @@ export function MarketTicker() {
         aria-hidden
         className="pointer-events-none absolute inset-y-0 z-20"
         style={{
-          left: 240,
+          left: 320,
           width: 48,
           background:
             "linear-gradient(to right, var(--pq-ink) 0%, transparent 100%)",
@@ -186,13 +190,13 @@ export function MarketTicker() {
       </div>
 
       {/* Marquee track — duplicated content for seamless wrap.
-          `pl-[18rem]` (288px) clears the 240px opaque kicker block + 48px
-          gradient tail. Kicker was widened in 2026-04-26 to fit the longer
-          "Snapshot · 2026-04-25 16:00 KST" label. `shrink-0` on each Row
-          prevents flex-container width calculations from shrinking the
-          symbol pills. Track sits at z-0 so both the kicker zone (z-20)
-          and right fade mask (z-10) render above it. */}
-      <div className="pq-marquee-track relative z-0 flex h-full w-max items-center pl-[18rem]">
+          `pl-[23rem]` (368px) clears the 320px opaque kicker block + 48px
+          gradient tail (2026-05-07: widened from 18rem/288 to 23rem/368 to
+          eliminate "INDICATIVE LEVELS" spillover seen in bug-hunter audit).
+          `shrink-0` on each Row prevents flex-container width calculations
+          from shrinking the symbol pills. Track sits at z-0 so both the
+          kicker zone (z-20) and right fade mask (z-10) render above it. */}
+      <div className="pq-marquee-track relative z-0 flex h-full w-max items-center pl-[23rem]">
         <Row ticks={SNAPSHOT} />
         <Row ticks={SNAPSHOT} ariaHidden />
       </div>
