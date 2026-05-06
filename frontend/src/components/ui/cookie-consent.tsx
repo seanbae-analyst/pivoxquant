@@ -23,7 +23,8 @@ export function CookieConsent() {
     <div
       role="dialog"
       aria-label="Cookie consent"
-      className="fixed bottom-0 left-0 right-0 z-50 p-4 md:flex md:items-center md:justify-between md:gap-6 md:px-8"
+      data-cookie-banner="true"
+      className="pq-cookie-banner fixed bottom-0 left-0 right-0 z-50 p-4 md:flex md:items-center md:justify-between md:gap-6 md:px-8"
       style={{
         backgroundColor: "var(--pq-ink)",
         color: "var(--pq-ivory)",

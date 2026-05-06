@@ -138,14 +138,15 @@ async function main() {
   const browser = await chromium.launch();
   const context = await browser.newContext({ viewport: { width: 1024, height: 1366 } });
   const page = await context.newPage();
-  // 2026-05-06: emulate "screen" media so all `@media print` rules in
-  // globals.css don't hide our content during PDF capture. The PDF
-  // engine in Playwright defaults to "print" media which triggered a
-  // simulator-only `body * { visibility: hidden !important; }` rule
-  // that turned the entire viewport invisible. We render in screen
-  // mode and let printBackground:true + the PDF page geometry
-  // produce print-quality output.
-  await page.emulateMedia({ media: "screen" });
+  // 2026-05-06 v2: emulate "print" media now that the simulator's
+  // visibility-hide rule is scoped to `body.what-if-share-print` (commit
+  // d8326ce) AND the report-side @media print rule hides PdfToolbar,
+  // CookieConsent, and Next.js dev portal selectors. Print emulation is
+  // the correct media context for PDF capture — it activates the
+  // `.pq-pdf-page { width: 210mm; min-height: 297mm }` A4 sizing rule
+  // and surfaces any print-only typography overrides. Without this, the
+  // toolbar/cookie/dev-portal chrome was getting baked into every page.
+  await page.emulateMedia({ media: "print" });
 
   let ok = 0, fail = 0;
   for (const slug of targets) {
@@ -173,11 +174,29 @@ async function main() {
         );
       }
 
+      // 2026-05-06 v2: defense-in-depth DOM scrub. The @media print rule in
+      // globals.css already hides PdfToolbar/CookieBanner/Next.js dev portal,
+      // but if a future regression reorders or unscopes that rule we still
+      // want zero leak. Removing the nodes outright also lets the layout
+      // engine reflow page breaks cleanly without 60px of phantom space.
+      await page.evaluate(() => {
+        const sel = '.pq-pdf-toolbar, .pq-cookie-banner, [data-cookie-banner], #cookie-banner, .cookie-consent, nextjs-portal, [data-nextjs-toast], [data-nextjs-toast-wrapper], next-route-announcer, #__next-build-watcher, #__next-prerender-indicator';
+        document.querySelectorAll(sel).forEach((n) => n.remove());
+      });
+
+      // 2026-05-06 v2: format=A4 to match the `.pq-pdf-page { width: 210mm;
+      // min-height: 297mm }` rule in globals.css. Letter (8.5"x11" = ~216mm
+      // x 279mm) is shorter than A4 (210x297mm), so each logical page was
+      // overflowing into a ghost page-2 — that's the "every other page is
+      // blank with only the cookie banner" symptom the audit found.
+      // Margin removed because @page { size: A4; margin: 0 } is already
+      // declared at the bottom of globals.css; passing a non-zero margin
+      // here was double-counting and contributing to the page-2 overflow.
       await page.pdf({
         path: outPath,
-        format: "Letter",
+        format: "A4",
         printBackground: true,
-        margin: { top: "0.5in", bottom: "0.5in", left: "0.5in", right: "0.5in" },
+        margin: { top: "0", bottom: "0", left: "0", right: "0" },
       });
 
       // Post-write size check — the empty-shell regression produced

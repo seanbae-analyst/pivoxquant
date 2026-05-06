@@ -127,6 +127,18 @@ RULES = [
      "Earnings Pre-brief의 키워드 슬롯.",
      False),
 
+    # 2026-05-06 v2: chrome-leak guards. Preview-only PdfToolbar +
+    # CookieConsent banner were being baked into rendered PDFs.
+    ("P0", r"PDF\s*로\s*저장|PDF\s*저장\s*/\s*인쇄",
+     "PdfToolbar 'PDF로 저장 / 인쇄' chrome leaked into PDF",
+     "프리뷰 전용 PdfToolbar 가 캡처에 포함됨.",
+     True),
+
+    ("P0", r"쿠키를\s*사용해\s*서비스\s*품질",
+     "Cookie consent banner leaked into PDF",
+     "CookieConsent 컴포넌트가 PDF 에 박힘.",
+     True),
+
     # ---- P1 — likely-wrong but not necessarily broken ----
     ("P1", r"\b(20\d{2})\s+\1\b",
      "Doubled year",
@@ -256,15 +268,17 @@ def lint_text(text: str):
 
 
 def lint_file(pdf_path: Path):
-    text = extract_text(pdf_path)
+    reader = PdfReader(str(pdf_path))
+    page_texts = []
+    for page in reader.pages:
+        try:
+            page_texts.append(page.extract_text() or "")
+        except Exception as e:  # pragma: no cover
+            page_texts.append(f"[extract error: {e}]")
+    text = "\n".join(page_texts)
     findings = lint_text(text)
 
-    # 2026-05-06 audit fix: blank-page guard. The empty-shell regression
-    # (1.5-3.5KB PDFs with text_len=0) silently passed every placeholder
-    # rule because there was no text to match. Treat near-empty PDFs as
-    # P0 directly so CI catches them. Real samples are 200KB+ with
-    # thousands of characters of text. Threshold of 100 chars covers
-    # 1-page brief reports while still flagging blanks.
+    # 2026-05-06 audit fix: blank-page guard.
     if len(text.strip()) < 100:
         findings.insert(0, {
             "severity": "P0",
@@ -275,10 +289,28 @@ def lint_file(pdf_path: Path):
                 "PDF extracted to <100 chars of text. Likely a blank-page "
                 "shell from a renderer that captured before React "
                 "hydration finished, or an @media print rule that hid "
-                "all content. Check the renderer log and re-run with a "
-                "live dev server."
+                "all content."
             ),
         })
+
+    # 2026-05-06 v2: page-count bloat guard. Detects Letter/A4 mismatch.
+    n_pages = len(page_texts)
+    if n_pages >= 4:
+        thin_pages = [i for i, p in enumerate(page_texts) if len(p.strip()) < 200]
+        if len(thin_pages) / n_pages >= 0.40:
+            findings.insert(0, {
+                "severity": "P0",
+                "rule": "Page count bloat (overflow / format mismatch)",
+                "match": f"<{len(thin_pages)}/{n_pages} pages thin>",
+                "context": (
+                    "thin pages: "
+                    + ", ".join(f"{i}={len(page_texts[i].strip())}" for i in thin_pages[:8])
+                ),
+                "hint": (
+                    "≥40% of pages have <200 chars. Likely Letter/A4 "
+                    "format mismatch — use format: 'A4' in render script."
+                ),
+            })
 
     return findings
 
