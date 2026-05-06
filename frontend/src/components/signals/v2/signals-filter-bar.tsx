@@ -168,7 +168,6 @@ export function SignalsFilterBar({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 9.5,
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.55)",
@@ -216,7 +215,6 @@ export function SignalsFilterBar({
             htmlFor={symbolInputId}
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 9.5,
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.55)",
@@ -238,14 +236,13 @@ export function SignalsFilterBar({
               border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
               borderRadius: "var(--pq-radius-cta, 2px)",
               padding: "8px 10px",
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               // 16px to prevent iOS Safari/Chrome auto-zoom on input focus
               fontSize: 16,
               color: "var(--pq-ivory, #F5F0E8)",
               letterSpacing: "0.04em",
               outline: "none",
             }}
-          />
+          className="font-mono" />
           {symbolHints && symbolHints.length > 0 && (
             <datalist id={dataListId}>
               {symbolHints.map((t) => (
@@ -289,12 +286,11 @@ export function SignalsFilterBar({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 10.5,
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
               }}
-            >
+            className="font-mono" >
               <RefreshCw
                 size={12}
                 strokeWidth={1.6}

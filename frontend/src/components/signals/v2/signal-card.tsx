@@ -132,9 +132,8 @@ export function SignalCard({ entry, resolveName }: Props) {
         {/* LEFT — name + ticker + rationale */}
         <div style={{ minWidth: 0 }}>
           <div
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontSize: 22,
               fontWeight: 500,
               letterSpacing: "-0.01em",
@@ -147,7 +146,6 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 11,
               letterSpacing: "0.14em",
               color: "rgba(245,240,232,0.45)",
@@ -161,8 +159,6 @@ export function SignalCard({ entry, resolveName }: Props) {
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
                 fontSize: 14,
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.78)",
@@ -180,7 +176,6 @@ export function SignalCard({ entry, resolveName }: Props) {
             <span
               className="font-mono uppercase"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 9.5,
                 letterSpacing: "0.2em",
                 padding: "3px 8px",
@@ -195,7 +190,6 @@ export function SignalCard({ entry, resolveName }: Props) {
             <span
               className="font-mono"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 11,
                 letterSpacing: "0.04em",
                 color: "rgba(245,240,232,0.55)",
@@ -227,7 +221,6 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 12,
               fontVariantNumeric: "tabular-nums",
               display: "flex",
@@ -245,7 +238,6 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 11,
               fontVariantNumeric: "tabular-nums",
               color: "rgba(245,240,232,0.55)",
@@ -256,7 +248,6 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 9.5,
               letterSpacing: "0.06em",
               color: "rgba(245,240,232,0.40)",

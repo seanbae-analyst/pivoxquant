@@ -110,13 +110,11 @@ export function SignalMemoStrip({
             <div className="flex items-center gap-2 flex-wrap">
               <span
                 style={{
-                  fontFamily:
-                    "var(--font-serif), 'Source Serif 4', Georgia, serif",
                   fontSize: 14,
                   color: "#1a1a1a",
                   letterSpacing: "-0.01em",
                   }}
-                className="truncate"
+                className="truncate font-serif"
               >
                 {item.name || item.ticker}
               </span>
@@ -125,7 +123,6 @@ export function SignalMemoStrip({
                   display: "inline-flex",
                   alignItems: "center",
                   padding: "2px 8px",
-                  fontFamily: "var(--font-sans), system-ui, sans-serif",
                   fontSize: 8.5,
                   letterSpacing: "0.22em",
                   textTransform: "uppercase",
@@ -136,20 +133,19 @@ export function SignalMemoStrip({
                   background: "transparent",
                   whiteSpace: "nowrap",
                 }}
-              >
+              className="font-sans" >
                 {signalLabel(item.signal)}
               </span>
             </div>
             <div
               style={{
-                fontFamily: "var(--font-mono), ui-monospace, monospace",
                 fontSize: 9.5,
                 letterSpacing: "0.16em",
                 color: "rgba(20,20,20,0.48)",
                 textTransform: "uppercase",
                 marginTop: 3,
               }}
-            >
+            className="font-mono" >
               {item.ticker}
               {item.sector ? ` · ${item.sector}` : ""}
             </div>
@@ -159,23 +155,21 @@ export function SignalMemoStrip({
           <div style={{ textAlign: "right", minWidth: 72 }}>
             <div
               style={{
-                fontFamily: "var(--font-mono), ui-monospace, monospace",
                 fontSize: 12.5,
                 fontVariantNumeric: "tabular-nums",
                 color: "#1a1a1a",
               }}
-            >
+            className="font-mono" >
               {formatPrice(item)}
             </div>
             <div
               style={{
-                fontFamily: "var(--font-mono), ui-monospace, monospace",
                 fontSize: 10.5,
                 fontVariantNumeric: "tabular-nums",
                 color: isPositive ? "#4a7a52" : "#a54545",
                 marginTop: 1,
               }}
-            >
+            className="font-mono" >
               {fmtPct(item?.change_pct ?? 0)}
             </div>
           </div>
@@ -184,27 +178,24 @@ export function SignalMemoStrip({
           <div style={{ textAlign: "right", width: 52 }}>
             <div
               style={{
-                fontFamily: "var(--font-sans), system-ui, sans-serif",
                 fontSize: 8.5,
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
                 color: "rgba(20,20,20,0.48)",
                 fontWeight: 600,
               }}
-            >
+            className="font-sans" >
               Score
             </div>
             <div
               style={{
-                fontFamily:
-                  "var(--font-serif), 'Source Serif 4', Georgia, serif",
                 fontSize: 18,
                 fontVariantNumeric: "tabular-nums",
                 color: "#141414",
                 lineHeight: 1.1,
                 marginTop: 2,
               }}
-            >
+            className="font-serif" >
               {Math.round(item.score ?? 0)}
             </div>
           </div>
@@ -240,7 +231,6 @@ export function SignalMemoStrip({
         >
           <div
             style={{
-              fontFamily: "var(--font-sans), system-ui, sans-serif",
               fontSize: 8.5,
               letterSpacing: "0.22em",
               textTransform: "uppercase",
@@ -248,19 +238,18 @@ export function SignalMemoStrip({
               fontWeight: 600,
               marginBottom: 6,
             }}
-          >
+          className="font-sans" >
             Observation
           </div>
           <p
             style={{
-              fontFamily: "var(--font-serif), Georgia, serif",
               fontSize: 12.5,
               lineHeight: 1.55,
               color: "rgba(20,20,20,0.78)",
               margin: 0,
               maxWidth: "58ch",
             }}
-          >
+          className="font-serif" >
             {signalExplanation(item.signal)}
           </p>
 
@@ -268,7 +257,6 @@ export function SignalMemoStrip({
           <div style={{ marginTop: 14 }}>
             <div
               style={{
-                fontFamily: "var(--font-sans), system-ui, sans-serif",
                 fontSize: 8.5,
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
@@ -276,7 +264,7 @@ export function SignalMemoStrip({
                 fontWeight: 600,
                 marginBottom: 8,
               }}
-            >
+            className="font-sans" >
               Four-Pillar Breakdown
             </div>
             <div
@@ -293,25 +281,21 @@ export function SignalMemoStrip({
                     <div className="flex items-baseline justify-between">
                       <span
                         style={{
-                          fontFamily:
-                            "var(--font-mono), ui-monospace, monospace",
                           fontSize: 8.5,
                           letterSpacing: "0.18em",
                           textTransform: "uppercase",
                           color: "rgba(20,20,20,0.55)",
                         }}
-                      >
+                      className="font-mono" >
                         {s.label}
                       </span>
                       <span
                         style={{
-                          fontFamily:
-                            "var(--font-mono), ui-monospace, monospace",
                           fontSize: 10.5,
                           fontVariantNumeric: "tabular-nums",
                           color: "#1a1a1a",
                         }}
-                      >
+                      className="font-mono" >
                         {s.value != null ? Math.round(s.value) : "—"}
                       </span>
                     </div>
@@ -350,11 +334,10 @@ export function SignalMemoStrip({
           >
             <span
               style={{
-                fontFamily: "var(--font-serif), Georgia, serif",
                 fontSize: 11,
                 color: "rgba(20,20,20,0.5)",
               }}
-            >
+            className="font-serif" >
               · indicator change observed
             </span>
             <button
@@ -364,7 +347,6 @@ export function SignalMemoStrip({
                 onOpenDetail();
               }}
               style={{
-                fontFamily: "var(--font-sans), system-ui, sans-serif",
                 fontSize: 10,
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
@@ -375,7 +357,7 @@ export function SignalMemoStrip({
                 padding: 0,
                 cursor: "pointer",
               }}
-              className="hover:underline"
+              className="hover:underline font-sans"
             >
               Open file →
             </button>
