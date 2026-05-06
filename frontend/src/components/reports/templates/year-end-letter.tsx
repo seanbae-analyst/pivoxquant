@@ -194,7 +194,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
               <text x="450" y="158" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">OCT</text>
               <text x="580" y="158" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">DEC</text>
             </svg>
-            <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 10, color: "var(--r-ink-3)", fontFamily: "var(--font-mono)" }}>
+            <div style={{ display: "flex", gap: 14, marginTop: 8, fontSize: 10, color: "var(--r-ink-3)", }} className="font-mono" >
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Portfolio</span>
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500</span>
             </div>
@@ -242,14 +242,14 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
             <div>
               <PdfColTitle>Hit Rate</PdfColTitle>
               <PdfCard>
-                <div style={{ fontFamily: "var(--font-serif)", fontSize: 48, fontWeight: 500 }}>{data.hitRate}</div>
+                <div style={{ fontSize: 48, fontWeight: 500 }} className="font-serif" >{data.hitRate}</div>
                 <div style={{ fontSize: 10, color: "var(--r-ink-3)", marginTop: 8 }}>{data.hitRateNote}</div>
               </PdfCard>
             </div>
             <div>
               <PdfColTitle>Decision EV</PdfColTitle>
               <PdfCard>
-                <div style={{ fontFamily: "var(--font-serif)", fontSize: 48, fontWeight: 500, color: "var(--r-pos)" }}>{data.decisionEv}</div>
+                <div style={{ fontSize: 48, fontWeight: 500, color: "var(--r-pos)" }} className="font-serif" >{data.decisionEv}</div>
                 <div style={{ fontSize: 10, color: "var(--r-ink-3)", marginTop: 8 }}>{data.decisionEvNote}</div>
               </PdfCard>
             </div>
@@ -269,10 +269,10 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
         {data.lessons.map((l) => (
           <PdfCard key={l.num}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               {l.num}
             </div>
-            <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 24, margin: "6px 0", fontWeight: 500 }}>
+            <h3 style={{ fontSize: 24, margin: "6px 0", fontWeight: 500 }} className="font-serif" >
               {l.title}
             </h3>
             <p style={{ color: "var(--r-ink-3)", marginTop: 8, lineHeight: 1.65 }}>{l.body}</p>

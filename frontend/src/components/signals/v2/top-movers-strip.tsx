@@ -71,7 +71,6 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
@@ -81,9 +80,8 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
         Top movers · By strength
       </div>
       <h2
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
           fontWeight: 500,
           fontSize: "clamp(26px, 3vw, 40px)",
           letterSpacing: "-0.02em",
@@ -139,10 +137,8 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
               >
                 {/* name-main (Playfair) — 종목명 main pattern */}
                 <div
-                  className="font-serif"
+                  className="font-display"
                   style={{
-                    fontFamily:
-                      'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                     fontSize: 17,
                     fontWeight: 500,
                     color: "var(--pq-ivory, #F5F0E8)",
@@ -157,7 +153,6 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                 <div
                   className="font-mono"
                   style={{
-                    fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                     fontSize: 10,
                     letterSpacing: "0.14em",
                     color: "rgba(245,240,232,0.45)",
@@ -172,8 +167,6 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   <span
                     className="font-mono uppercase"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-mono,"JetBrains Mono",monospace)',
                       fontSize: 9.5,
                       letterSpacing: "0.2em",
                       padding: "3px 8px",
@@ -213,8 +206,6 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   <p
                     className="font-serif"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
                       fontSize: 12.5,
                       lineHeight: 1.5,
                       color: "rgba(245,240,232,0.70)",
@@ -242,8 +233,6 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   <span
                     className="font-mono"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-mono,"JetBrains Mono",monospace)',
                       fontSize: 11,
                       fontVariantNumeric: "tabular-nums",
                       color: pctTone,
@@ -254,8 +243,6 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   <span
                     className="font-mono"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-mono,"JetBrains Mono",monospace)',
                       fontSize: 11,
                       fontVariantNumeric: "tabular-nums",
                       color: "rgba(245,240,232,0.40)",

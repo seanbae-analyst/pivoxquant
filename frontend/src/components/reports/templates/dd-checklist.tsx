@@ -184,7 +184,7 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
         {name ? `${name}, ` : ""}
         오늘 점검할 <em>{pending.length}개</em> 종목.
       </PdfCoverTitle>
-      <div style={{ marginTop: 28, fontFamily: "var(--pq-font-serif), Georgia, serif" }}>
+      <div style={{ marginTop: 28, }} className="font-serif" >
         <p style={{ fontSize: 14, color: "var(--r-ink-2, #555)", margin: 0, lineHeight: 1.65 }}>
           3일 전에 추가하신 포지션. 메모를 다시 한 번 점검해 보세요.
         </p>
@@ -202,10 +202,9 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
                 gap: 16,
                 padding: "16px 0",
                 borderBottom: "1px solid var(--r-rule, #efeae0)",
-                fontFamily: "var(--pq-font-mono), 'JetBrains Mono', monospace",
                 alignItems: "baseline",
               }}
-            >
+            className="font-mono" >
               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--r-gold-deep, #8b6f47)", letterSpacing: "0.04em" }}>
                 {p.ticker}
               </span>
@@ -253,13 +252,12 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
             background: "rgba(184, 149, 106, 0.08)",
             border: "1px solid rgba(184, 149, 106, 0.4)",
             borderRadius: 2,
-            fontFamily: "var(--pq-font-mono), 'JetBrains Mono', monospace",
             fontSize: 11,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--r-gold-deep, #8b6f47)",
           }}
-        >
+        className="font-mono" >
           ▍ Sample · 양식 — 실제 보유 데이터 아님
         </div>
 
@@ -331,9 +329,8 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               fontSize: 13,
               lineHeight: 1.7,
               color: "var(--r-ink-2)",
-              fontFamily: "var(--font-serif)",
             }}
-          >
+          className="font-serif" >
             {data.thesis}
           </p>
         </PdfCard>
@@ -352,12 +349,11 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">PROCEED</div>
               <div
                 style={{
-                  fontFamily: "var(--font-serif)",
                   fontSize: 34,
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
-              >
+              className="font-serif" >
                 {data.decisionScore}
               </div>
               <div style={{ fontSize: 10, color: "var(--r-ink-3)" }}>
@@ -370,12 +366,11 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">WAIT</div>
               <div
                 style={{
-                  fontFamily: "var(--font-serif)",
                   fontSize: 34,
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
-              >
+              className="font-serif" >
                 15–20
               </div>
               <div style={{ fontSize: 10, color: "var(--r-ink-3)" }}>
@@ -388,12 +383,11 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">REJECT</div>
               <div
                 style={{
-                  fontFamily: "var(--font-serif)",
                   fontSize: 34,
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
-              >
+              className="font-serif" >
                 &lt;15
               </div>
               <div style={{ fontSize: 10, color: "var(--r-ink-3)" }}>기각</div>

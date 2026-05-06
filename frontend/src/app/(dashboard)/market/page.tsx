@@ -429,13 +429,12 @@ export default function MarketPage() {
           <p
             style={{
               textAlign: "center",
-              fontFamily: "var(--font-serif), Georgia, serif",
               fontSize: 11.5,
               color: "rgba(245,240,232,0.4)",
               letterSpacing: "0.02em",
               marginTop: 32,
             }}
-          >
+          className="font-serif" >
             {active
               ? "Click the surfaced sheet again to return it to the stack."
               : "Click any sheet to draw it forward."}

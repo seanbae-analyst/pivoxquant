@@ -119,7 +119,6 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         <p
           className="font-serif"
           style={{
-            fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
             fontSize: 14.5,
             lineHeight: 1.65,
             color: "rgba(245,240,232,0.7)",
@@ -181,10 +180,8 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
           </span>
 
           <h2
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontWeight: 500,
               fontSize: 30,
               lineHeight: 1.15,
@@ -200,8 +197,6 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
                 fontSize: 14.5,
                 lineHeight: 1.65,
                 color: "rgba(245,240,232,0.78)",
@@ -324,10 +319,8 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
                   >
                     <div>
                       <div
-                        className="font-serif"
+                        className="font-display"
                         style={{
-                          fontFamily:
-                            'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                           fontWeight: 500,
                           fontSize: 18,
                           color: "var(--pq-ivory, #F5F0E8)",

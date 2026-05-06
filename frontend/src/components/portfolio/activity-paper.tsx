@@ -78,14 +78,13 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
 
       <h2
         style={{
-          fontFamily: "var(--font-serif), Georgia, serif",
           fontSize: "clamp(1.5rem, 2.4vw, 1.9rem)",
           lineHeight: 1.05,
           color: "#1a1a1a",
           letterSpacing: "-0.02em",
           marginTop: -4,
         }}
-      >
+      className="font-serif" >
         Recent entries.
       </h2>
 
@@ -113,7 +112,6 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
             <div key={dk}>
               <div
                 style={{
-                  fontFamily: "var(--font-sans), system-ui, sans-serif",
                   fontSize: 9.5,
                   letterSpacing: "0.26em",
                   textTransform: "uppercase",
@@ -123,7 +121,7 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
                   paddingBottom: 6,
                   borderBottom: "0.5px solid rgba(184,149,106,0.22)",
                 }}
-              >
+              className="font-sans" >
                 {prettyDate(dk)}
               </div>
               <ul
@@ -143,14 +141,13 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
                   return (
                     <li
                       key={t.id}
-                      className="pq-activity-row"
+                      className="pq-activity-row font-mono"
                       style={{
                         display: "flex",
                         alignItems: "baseline",
                         gap: 10,
                         padding: "4px 2px",
                         position: "relative",
-                        fontFamily: "var(--font-mono), ui-monospace, monospace",
                         fontSize: 12,
                         fontVariantNumeric: "tabular-nums",
                         color: "rgba(20,20,20,0.78)",
@@ -182,10 +179,8 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
                       <span
                         style={{
                           color: "rgba(20,20,20,0.45)",
-                          fontFamily:
-                            "var(--font-serif), Georgia, serif",
                           }}
-                      >
+                      className="font-serif" >
                         @
                       </span>
                       <span style={{ color: "rgba(20,20,20,0.78)" }}>
@@ -206,13 +201,12 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
           position: "absolute",
           bottom: 18,
           right: 22,
-          fontFamily: "var(--font-serif), Georgia, serif",
           fontSize: 10,
           color: "rgba(139,111,71,0.55)",
           letterSpacing: "0.06em",
         }}
         aria-hidden
-      >
+      className="font-serif" >
         · observed ·
       </div>
     </div>

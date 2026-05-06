@@ -418,10 +418,8 @@ function SectionHead({
           <span>{eyebrow}</span>
         </div>
         <h2
-          className="mt-1.5 font-serif italic"
+          className="mt-1.5 font-display italic"
           style={{
-            fontFamily:
-              '"Playfair Display","Source Serif 4",Georgia,serif',
             fontWeight: 500,
             fontSize: "clamp(1.25rem, 1.9vw, 1.6rem)",
             lineHeight: 1.18,
@@ -1490,10 +1488,8 @@ export default function StockDetailPage() {
               <div className="flex-1">
                 <FieldLabel>AI Assistant · context handoff</FieldLabel>
                 <div
-                  className="mt-1.5 font-serif italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
+                  className="mt-1.5 font-display italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
                   style={{
-                    fontFamily:
-                      '"Playfair Display","Source Serif 4",Georgia,serif',
                     fontWeight: 500,
                     fontSize: "clamp(1.25rem, 1.9vw, 1.6rem)",
                     lineHeight: 1.18,
@@ -1565,10 +1561,8 @@ export default function StockDetailPage() {
                   >
                     <FieldLabel>{dateLabel}</FieldLabel>
                     <div
-                      className="mt-2 font-serif italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
+                      className="mt-2 font-display italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
                       style={{
-                        fontFamily:
-                          '"Playfair Display","Source Serif 4",Georgia,serif',
                         fontWeight: 500,
                         fontSize: "1.05rem",
                         lineHeight: 1.2,

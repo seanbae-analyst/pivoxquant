@@ -201,8 +201,6 @@ export function PositionsTableV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -218,7 +216,6 @@ export function PositionsTableV2({
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 9.5,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
@@ -245,10 +242,9 @@ export function PositionsTableV2({
               padding: 40,
               textAlign: "center",
               color: "rgba(245,240,232,0.55)",
-              fontFamily: '"Source Serif 4",Georgia,serif',
               fontSize: 14,
             }}
-          >
+          className="font-serif" >
             Loading positions…
           </div>
         ) : rows.length === 0 ? (
@@ -257,9 +253,8 @@ export function PositionsTableV2({
               padding: 64,
               textAlign: "center",
               color: "rgba(245,240,232,0.55)",
-              fontFamily: '"Source Serif 4",Georgia,serif',
             }}
-          >
+          className="font-serif" >
             <p style={{ fontSize: 16, lineHeight: 1.5, margin: "0 0 20px 0" }}>
               No positions observed yet.
             </p>
@@ -273,8 +268,6 @@ export function PositionsTableV2({
                   padding: "10px 20px",
                   background: "var(--pq-bronze)",
                   color: "var(--pq-ink, #050505)",
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 11,
                   letterSpacing: "0.2em",
                   border: "none",
@@ -296,10 +289,8 @@ export function PositionsTableV2({
               width: "100%",
               minWidth: 700,
               borderCollapse: "collapse",
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             }}
-          >
+          className="font-mono" >
             <thead>
               <tr>
                 {headers.map((h) => (
@@ -308,10 +299,8 @@ export function PositionsTableV2({
                     scope="col"
                     aria-sort={ariaSort(h.key)}
                     onClick={() => onSort(h.key)}
-                    className="pq-pos-th"
+                    className="pq-pos-th font-mono"
                     style={{
-                      fontFamily:
-                        '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                       fontSize: 10.5,
                       letterSpacing: "0.22em",
                       textTransform: "uppercase",
@@ -433,8 +422,6 @@ function PositionRow({
         <div
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10.5,
             letterSpacing: "0.18em",
             color: "rgba(245,240,232,0.40)",
@@ -542,8 +529,6 @@ function PositionRow({
           className="sector-tag font-mono uppercase"
           style={{
             display: "inline-block",
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10,
             letterSpacing: "0.2em",
             padding: "4px 8px",
@@ -573,7 +558,6 @@ function RowActionBtn({
       onClick={onClick}
       className="font-mono uppercase"
       style={{
-        fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
         fontSize: 9.5,
         letterSpacing: "0.2em",
         padding: "4px 10px",

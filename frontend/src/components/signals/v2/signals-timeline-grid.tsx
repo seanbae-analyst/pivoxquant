@@ -73,7 +73,6 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-mono uppercase"
           style={{
-            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
@@ -85,7 +84,6 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-serif"
           style={{
-            fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
             fontSize: 13,
             color: "rgba(245,240,232,0.40)",
             padding: "48px 0",
@@ -104,7 +102,6 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-mono uppercase"
           style={{
-            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
@@ -122,9 +119,8 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           }}
         >
           <div
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontSize: 22,
               color: "var(--pq-ivory, #F5F0E8)",
               marginBottom: 8,
@@ -135,7 +131,6 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           <div
             className="font-serif"
             style={{
-              fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
               fontSize: 13,
               color: "rgba(245,240,232,0.55)",
             }}
@@ -152,7 +147,6 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
@@ -162,9 +156,8 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         Stream · {entries.length} observations
       </div>
       <h2
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
           fontWeight: 500,
           fontSize: "clamp(26px, 3vw, 40px)",
           letterSpacing: "-0.02em",
@@ -190,10 +183,8 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             }}
           >
             <h3
-              className="font-serif"
+              className="font-display"
               style={{
-                fontFamily:
-                  'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                 fontWeight: 500,
                 fontSize: 22,
                 letterSpacing: "-0.01em",
@@ -206,7 +197,6 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             <span
               className="font-mono uppercase"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 10.5,
                 letterSpacing: "0.18em",
                 color: "rgba(245,240,232,0.55)",

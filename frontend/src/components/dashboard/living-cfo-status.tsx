@@ -157,10 +157,9 @@ export function LivingCFOStatusBar() {
             setOpen(true);
           }
         }}
-        className="w-full flex items-center justify-between gap-4 px-4 py-2 hover:bg-[rgba(255,255,255,0.015)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)]"
+        className="w-full flex items-center justify-between gap-4 px-4 py-2 hover:bg-[rgba(255,255,255,0.015)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(184,149,106,0.4)] font-mono"
         style={{
           borderBottom: "0.5px solid rgba(184,149,106,0.22)",
-          fontFamily: "var(--font-mono), ui-monospace",
         }}
         aria-label="Living CFO status — click for details"
       >

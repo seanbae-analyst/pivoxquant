@@ -35,22 +35,20 @@ export default function SampleReportsIndexPage() {
   return (
     <main
       style={{
-        fontFamily: "var(--font-serif), Georgia, serif",
         background: "#ececec",
         minHeight: "100vh",
         padding: "48px 24px",
       }}
-    >
+    className="font-serif" >
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <div
           style={{
-            fontFamily: "var(--font-mono, Inter), system-ui",
             fontSize: 11,
             letterSpacing: "2px",
             textTransform: "uppercase",
             color: "#6b6b6b",
           }}
-        >
+        className="font-mono" >
           PivoxQuant · Design Preview
         </div>
         <h1
@@ -93,13 +91,12 @@ export default function SampleReportsIndexPage() {
             >
               <div
                 style={{
-                  fontFamily: "var(--font-mono, Inter), system-ui",
                   fontSize: 9,
                   letterSpacing: "1.6px",
                   textTransform: "uppercase",
                   color: "#8a8a8a",
                 }}
-              >
+              className="font-mono" >
                 {String(i + 1).padStart(2, "0")} · {r.tier} · {r.cadence}
               </div>
               <div
@@ -115,12 +112,11 @@ export default function SampleReportsIndexPage() {
               <div
                 style={{
                   marginTop: 14,
-                  fontFamily: "var(--font-mono, Inter), system-ui",
                   fontSize: 10,
                   color: "#8a8a8a",
                   letterSpacing: "0.5px",
                 }}
-              >
+              className="font-mono" >
                 {r.pages} {r.pages === 1 ? "page" : "pages"}
               </div>
             </Link>

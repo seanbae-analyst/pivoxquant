@@ -48,7 +48,6 @@ function ProxyPill({
         display: "inline-flex",
         alignItems: "center",
         gap: 4,
-        fontFamily: "var(--font-mono), ui-monospace, monospace",
         fontSize,
         letterSpacing: "0.18em",
         textTransform: "uppercase",
@@ -62,7 +61,7 @@ function ProxyPill({
         whiteSpace: "nowrap",
         fontStyle: "normal",
       }}
-    >
+    className="font-mono" >
       <span style={{ opacity: 0.75 }}>via</span>
       <span style={{ fontWeight: 600 }}>{proxy}</span>
     </span>
@@ -151,7 +150,6 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
         </div>
         <div
           style={{
-            fontFamily: "var(--font-serif), Georgia, serif",
             fontSize: 13,
             color: "#1a1a1a",
             marginTop: 2,
@@ -159,7 +157,7 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
           }}
-        >
+        className="font-serif" >
           {quote.name}
         </div>
       </div>
@@ -169,7 +167,6 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
           alignItems: "center",
           justifyContent: "flex-end",
           gap: 6,
-          fontFamily: "var(--font-mono), ui-monospace, monospace",
           fontVariantNumeric: "tabular-nums",
           fontSize: 14,
           color: "#141414",
@@ -180,14 +177,13 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
             ? `Level sourced from ${quote.proxy_ticker} ETF proxy.`
             : undefined
         }
-      >
+      className="font-mono" >
         {quote.proxy_ticker ? <ProxyPill proxy={quote.proxy_ticker} size="sm" /> : null}
         <span>{fmtLevel(quote.level, quote.format)}</span>
       </div>
       <div
-        className={isPositive ? "pq-paper-pos" : "pq-paper-neg"}
+        className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
         style={{
-          fontFamily: "var(--font-mono), ui-monospace, monospace",
           fontVariantNumeric: "tabular-nums",
           fontSize: 11.5,
           textAlign: "right",
@@ -252,18 +248,16 @@ export function OverviewPaper({
           </div>
           <div
             style={{
-              fontFamily: "var(--font-serif), Georgia, serif",
               fontSize: 13,
               color: "rgba(20,20,20,0.55)",
               marginTop: 3,
             }}
-          >
+          className="font-serif" >
             Levels as observed at last print.
           </div>
         </div>
         <div
           style={{
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
             fontSize: 10,
             textTransform: "uppercase",
             letterSpacing: "0.22em",
@@ -272,7 +266,7 @@ export function OverviewPaper({
             alignItems: "center",
             gap: 8,
           }}
-        >
+        className="font-mono" >
           <span
             aria-hidden
             style={{
@@ -302,7 +296,6 @@ export function OverviewPaper({
           <div className="pq-paper-kicker">Headline Index</div>
           <h2
             style={{
-              fontFamily: "var(--font-serif), Georgia, serif",
               fontWeight: 400,
               fontSize: "clamp(1.75rem, 3.2vw, 2.6rem)",
               lineHeight: 1.08,
@@ -310,18 +303,17 @@ export function OverviewPaper({
               color: "#141414",
               margin: "6px 0 4px",
             }}
-          >
+          className="font-serif" >
             {hero.name}
           </h2>
           <div
             style={{
-              fontFamily: "var(--font-mono), ui-monospace, monospace",
               fontSize: 10,
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.55)",
             }}
-          >
+          className="font-mono" >
             {hero.symbol}
             {hero.is_stale ? " · stale" : ""}
           </div>
@@ -373,9 +365,8 @@ export function OverviewPaper({
             ) : null}
           </div>
           <div
-            className={heroPositive ? "pq-paper-pos" : "pq-paper-neg"}
+            className={`font-mono ${heroPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
             style={{
-              fontFamily: "var(--font-mono), ui-monospace, monospace",
               fontVariantNumeric: "tabular-nums",
               fontSize: 14,
               marginTop: 4,
@@ -386,7 +377,6 @@ export function OverviewPaper({
           {hero.proxy_ticker ? (
             <div
               style={{
-                fontFamily: "var(--font-mono), ui-monospace, monospace",
                 fontSize: 10,
                 letterSpacing: "0.16em",
                 textTransform: "uppercase",
@@ -394,7 +384,7 @@ export function OverviewPaper({
                 marginTop: 4,
               }}
               title="Index level via ETF proxy — level is the ETF price, not the underlying index."
-            >
+            className="font-mono" >
               {proxyLabel(hero.proxy_ticker)}
             </div>
           ) : null}
@@ -414,14 +404,13 @@ export function OverviewPaper({
           style={{
             display: "flex",
             justifyContent: "space-between",
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
             fontSize: 10,
             letterSpacing: "0.16em",
             textTransform: "uppercase",
             color: "rgba(20,20,20,0.55)",
             marginTop: 6,
           }}
-        >
+        className="font-mono" >
           <span>30-day observation</span>
           <span>
             52W {fmtLevel(hero.weekLow52, hero.format)} &middot;{" "}

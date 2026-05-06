@@ -28,8 +28,6 @@ export function AuthLinkV2({ prompt, action, href }: AuthLinkV2Props) {
     <p
       className="font-serif"
       style={{
-        fontFamily:
-          '"Source Serif 4","Iowan Old Style",Georgia,serif',
         fontSize: 14,
         lineHeight: 1.5,
         color: "rgba(245,240,232,0.55)",
@@ -39,10 +37,8 @@ export function AuthLinkV2({ prompt, action, href }: AuthLinkV2Props) {
       {prompt}{" "}
       <Link
         href={href}
-        className="pq-auth-link-v2"
+        className="pq-auth-link-v2 font-mono"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 11,
           letterSpacing: "0.20em",
           textTransform: "uppercase",

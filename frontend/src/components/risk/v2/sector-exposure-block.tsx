@@ -82,7 +82,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -92,9 +91,8 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
             Exposure · By sector
           </div>
           <h2
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontWeight: 500,
               fontSize: 32,
               letterSpacing: "-0.02em",
@@ -108,7 +106,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
@@ -190,12 +187,11 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
               y="104"
               textAnchor="middle"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 11,
                 fill: "rgba(245,240,232,0.40)",
                 letterSpacing: "0.18em",
               }}
-            >
+            className="font-mono" >
               SECTORS
             </text>
             <text
@@ -203,19 +199,17 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
               y="128"
               textAnchor="middle"
               style={{
-                fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                 fontSize: 32,
                 fill: "var(--pq-ivory)",
                 fontWeight: 500,
               }}
-            >
+            className="font-display" >
               {sectorCount}
             </text>
           </svg>
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.40)",
@@ -239,7 +233,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -259,7 +252,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                 <th
                   className="font-mono uppercase"
                   style={{
-                    fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                     fontSize: 10.5,
                     letterSpacing: "0.22em",
                     color: "rgba(245,240,232,0.40)",
@@ -275,7 +267,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                 <th
                   className="font-mono uppercase"
                   style={{
-                    fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                     fontSize: 10.5,
                     letterSpacing: "0.22em",
                     color: "rgba(245,240,232,0.40)",
@@ -291,7 +282,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                 <th
                   className="font-mono uppercase"
                   style={{
-                    fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                     fontSize: 10.5,
                     letterSpacing: "0.22em",
                     color: "rgba(245,240,232,0.40)",
@@ -313,8 +303,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     colSpan={3}
                     className="font-serif"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
                       fontSize: 13,
                       color: "rgba(245,240,232,0.55)",
                       padding: "32px 0",
@@ -340,8 +328,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       <span
                         className="font-mono uppercase"
                         style={{
-                          fontFamily:
-                            'var(--pq-font-mono,"JetBrains Mono",monospace)',
                           fontSize: 10.5,
                           letterSpacing: "0.22em",
                           color:
@@ -365,10 +351,8 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     >
                       {/* 종목명 main pattern: name big, ticker small below */}
                       <div
-                        className="font-serif name"
+                        className="font-display name"
                         style={{
-                          fontFamily:
-                            'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                           fontWeight: 500,
                           fontSize: 16,
                           color: "var(--pq-ivory)",
@@ -380,8 +364,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       <div
                         className="font-mono"
                         style={{
-                          fontFamily:
-                            'var(--pq-font-mono,"JetBrains Mono",monospace)',
                           fontSize: 10,
                           color: "rgba(245,240,232,0.40)",
                           letterSpacing: "0.14em",
@@ -394,8 +376,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     <td
                       className="font-mono"
                       style={{
-                        fontFamily:
-                          'var(--pq-font-mono,"JetBrains Mono",monospace)',
                         fontVariantNumeric: "tabular-nums",
                         fontSize: 13,
                         color: "rgba(245,240,232,0.82)",
@@ -424,8 +404,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     <span
                       className="font-mono uppercase"
                       style={{
-                        fontFamily:
-                          'var(--pq-font-mono,"JetBrains Mono",monospace)',
                         fontSize: 10.5,
                         letterSpacing: "0.22em",
                         color: "rgba(245,240,232,0.40)",
@@ -441,10 +419,8 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     }}
                   >
                     <div
-                      className="font-serif name"
+                      className="font-display name"
                       style={{
-                        fontFamily:
-                          'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                         fontWeight: 500,
                         fontSize: 16,
                         color: "var(--pq-ivory)",
@@ -455,8 +431,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     <div
                       className="font-mono"
                       style={{
-                        fontFamily:
-                          'var(--pq-font-mono,"JetBrains Mono",monospace)',
                         fontSize: 10,
                         color: "rgba(245,240,232,0.40)",
                         letterSpacing: "0.14em",
@@ -469,8 +443,6 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                   <td
                     className="font-mono"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-mono,"JetBrains Mono",monospace)',
                       fontVariantNumeric: "tabular-nums",
                       fontSize: 13,
                       color: "rgba(245,240,232,0.82)",

@@ -100,52 +100,46 @@ export function ClipboardPaper({
           <div className="pq-paper-kicker">{kicker}</div>
           <div
             style={{
-              fontFamily:
-                "var(--font-serif), 'Source Serif 4', Georgia, serif",
               fontSize: "clamp(1.35rem, 2.2vw, 1.7rem)",
               lineHeight: 1.05,
               letterSpacing: "-0.02em",
               color: "#1a1a1a",
               marginTop: 4,
             }}
-          >
+          className="font-serif" >
             {title}
           </div>
           <div
             style={{
-              fontFamily: "var(--font-serif), Georgia, serif",
               fontSize: 11.5,
               color: "rgba(20,20,20,0.48)",
               marginTop: 2,
             }}
-          >
+          className="font-serif" >
             {toneLabel(tone)}
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div
             style={{
-              fontFamily: "var(--font-sans), system-ui, sans-serif",
               fontSize: 8.5,
               letterSpacing: "0.22em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.48)",
               fontWeight: 600,
             }}
-          >
+          className="font-sans" >
             Count
           </div>
           <div
             style={{
-              fontFamily:
-                "var(--font-serif), 'Source Serif 4', Georgia, serif",
               fontSize: 22,
               fontVariantNumeric: "tabular-nums",
               color: "#141414",
               lineHeight: 1.1,
               marginTop: 2,
             }}
-          >
+          className="font-serif" >
             {items.length}
           </div>
         </div>
@@ -170,12 +164,11 @@ export function ClipboardPaper({
             marginTop: 20,
             padding: "40px 0",
             textAlign: "center",
-            fontFamily: "var(--font-serif), Georgia, serif",
             fontSize: 13,
             color: "rgba(20,20,20,0.42)",
             borderTop: "0.5px solid rgba(184,149,106,0.22)",
           }}
-        >
+        className="font-serif" >
           {emptyMessage}
         </div>
       ) : (

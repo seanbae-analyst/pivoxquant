@@ -114,10 +114,8 @@ export function InstallPrompt() {
             </div>
             <h3
               id="pq-install-title"
-              className="font-serif italic"
+              className="font-display italic"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontWeight: 500,
                 fontSize: "20px",
                 lineHeight: 1.2,
@@ -142,7 +140,6 @@ export function InstallPrompt() {
           id="pq-install-body"
           className="mb-5 font-serif"
           style={{
-            fontFamily: '"Source Serif 4", Georgia, serif',
             fontSize: "13px",
             lineHeight: 1.55,
             color: "rgba(245, 240, 232, 0.65)",

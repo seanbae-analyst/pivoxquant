@@ -140,7 +140,7 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
 
         <PdfSectionTitle variant="sm">Strategy Definition · 전략 정의</PdfSectionTitle>
         <PdfCard>
-          <p style={{ fontSize: 13, lineHeight: 1.7, color: "var(--r-ink-2)", fontFamily: "var(--font-serif)" }}>
+          <p style={{ fontSize: 13, lineHeight: 1.7, color: "var(--r-ink-2)", }} className="font-serif" >
             {data.strategyDef}
           </p>
         </PdfCard>
@@ -148,10 +148,10 @@ export function Sp500Backtest({ data = DEFAULT }: { data?: Sp500BacktestData }) 
         <PdfSectionTitle variant="sm">Equity Curve · 20Y</PdfSectionTitle>
         <PdfCard>
           <PdfFlexBetween>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               Cumulative Return · 2006-01 → 2026-04
             </div>
-            <div style={{ display: "flex", gap: 14, fontSize: 10, color: "var(--r-ink-3)", fontFamily: "var(--font-mono)" }}>
+            <div style={{ display: "flex", gap: 14, fontSize: 10, color: "var(--r-ink-3)", }} className="font-mono" >
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Strategy</span>
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500 TR</span>
             </div>

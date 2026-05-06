@@ -140,10 +140,8 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
           Observation Assistant
         </div>
         <h2
-          className="mb-4 font-serif"
+          className="mb-4 font-display"
           style={{
-            fontFamily:
-              '"Playfair Display","Source Serif 4",Georgia,serif',
             fontWeight: 500,
             fontSize: 32,
             lineHeight: 1.15,
@@ -159,7 +157,6 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
         <p
           className="font-serif italic"
           style={{
-            fontFamily: '"Source Serif 4",Georgia,serif',
             fontSize: 13,
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.6)",
@@ -207,7 +204,6 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
             <span
               className="font-serif"
               style={{
-                fontFamily: '"Source Serif 4",Georgia,serif',
                 fontSize: 14,
                 lineHeight: 1.45,
               }}
@@ -435,10 +431,8 @@ function ChatInner() {
             AI &middot; Observation Assistant
           </div>
           <h1
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: "clamp(28px, 3.6vw, 42px)",
               lineHeight: 1.1,

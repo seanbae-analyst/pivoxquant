@@ -151,10 +151,8 @@ export default function ReportsPageV2() {
         <section aria-labelledby="latest-heading">
           <h2
             id="latest-heading"
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontWeight: 500,
               fontSize: "clamp(26px, 3.4vw, 40px)",
               lineHeight: 1.1,

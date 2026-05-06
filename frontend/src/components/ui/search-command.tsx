@@ -352,8 +352,8 @@ export function SearchCommandMenu() {
                     </span>
                     {p.hint && (
                       <span
-                        className="ml-3 flex-1 truncate text-xs"
-                        style={{ color: "var(--pq-muted)", fontFamily: "var(--font-serif), serif" }}
+                        className="ml-3 flex-1 truncate text-xs font-serif"
+                        style={{ color: "var(--pq-muted)", }}
                       >
                         {p.hint}
                       </span>

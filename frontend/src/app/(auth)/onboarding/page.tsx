@@ -249,10 +249,9 @@ function SliderInput({
       {/* Current value display */}
       <div className="text-center">
         <div
-          className="mb-1 text-4xl font-bold"
+          className="mb-1 text-4xl font-bold font-display"
           style={{
             color: "var(--pq-bronze-light)",
-            fontFamily: "var(--font-display)",
           }}
         >
           {value}
@@ -339,10 +338,9 @@ function LegalStep({
           </span>
         </div>
         <h2
-          className="text-xl font-bold leading-tight"
+          className="text-xl font-bold leading-tight font-display"
           style={{
             color: "var(--pq-ivory)",
-            fontFamily: "var(--font-display)",
             letterSpacing: "var(--pq-track-tight)",
           }}
         >
@@ -463,9 +461,8 @@ function ResultScreen({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="mt-2 text-center text-3xl font-bold tracking-tight"
+        className="mt-2 text-center text-3xl font-bold tracking-tight font-display"
         style={{
-          fontFamily: "var(--font-display)",
           color: "var(--pq-ivory)",
           letterSpacing: "var(--pq-track-tight)",
         }}
@@ -832,10 +829,9 @@ export default function OnboardingPage() {
         <div className="mx-auto max-w-lg">
           <div className="mb-3 flex items-center justify-between">
             <span
-              className="text-base font-bold"
+              className="text-base font-bold font-display"
               style={{
                 color: "var(--pq-ivory)",
-                fontFamily: "var(--font-display)",
                 letterSpacing: "var(--pq-track-wordmark)",
               }}
             >
@@ -978,10 +974,9 @@ function QuestionScreen({
           </div>
         )}
         <h2
-          className="text-xl font-bold leading-tight sm:text-2xl"
+          className="text-xl font-bold leading-tight sm:text-2xl font-display"
           style={{
             color: "var(--pq-ivory)",
-            fontFamily: "var(--font-display)",
             letterSpacing: "var(--pq-track-tight)",
           }}
         >
