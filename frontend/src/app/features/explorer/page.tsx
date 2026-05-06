@@ -37,9 +37,9 @@ export default function ExplorerPage() {
   const reduce = useReducedMotion();
   return (
     <FeaturePageShell
-      eyebrow="Catalogue · 17 Artifacts"
+      eyebrow={`Catalogue · ${ARTIFACTS.length} Artifacts`}
       title="Every artifact, opened one at a time."
-      deck="Pro unlocks seven. Premium unlocks all seventeen. Each artifact is a PDF or an in-app workbook, drawn from your actual holdings. No watchlists to curate. No recommendations."
+      deck="Each artifact is a PDF or an in-app workbook, drawn from your actual holdings. No watchlists to curate. No recommendations."
       seeAlso={[
         { eyebrow: "Architecture", title: "40-Model Engine", description: "The quant, risk, and AI stack.", href: "/features/engine" },
         { eyebrow: "Research", title: "Sample Reports", description: "Open a published PDF from the desk.", href: "/features/reports" },
@@ -72,7 +72,7 @@ export default function ExplorerPage() {
                     className="font-mono uppercase"
                     style={{ color: "rgba(184,149,106,0.6)", fontSize: "10px", letterSpacing: "0.22em" }}
                   >
-                    {String(i + 1).padStart(2, "0")} / 17
+                    {String(i + 1).padStart(2, "0")} / {String(ARTIFACTS.length).padStart(2, "0")}
                   </span>
                   <span
                     className="font-mono uppercase"
