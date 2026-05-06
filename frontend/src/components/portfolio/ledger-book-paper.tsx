@@ -219,9 +219,8 @@ export function LedgerBookPaper({
               {s.label}
             </div>
             <div
-              className={s.tone ?? ""}
+              className={`font-serif ${s.tone ?? ""}`}
               style={{
-                fontFamily: "var(--font-serif), Georgia, serif",
                 fontSize: "clamp(1.6rem, 3vw, 2rem)",
                 lineHeight: 1.05,
                 letterSpacing: "-0.02em",
@@ -233,10 +232,9 @@ export function LedgerBookPaper({
             </div>
             {s.sub && (
               <div
-                className={s.tone ?? ""}
+                className={`font-mono ${s.tone ?? ""}`}
                 style={{
                   marginTop: 4,
-                  fontFamily: "var(--font-mono), ui-monospace, monospace",
                   fontSize: 11,
                   letterSpacing: "0.02em",
                   color: s.tone ? undefined : "rgba(20,20,20,0.48)",
@@ -447,11 +445,10 @@ export function LedgerBookPaper({
                         {fmtMoneyCell(mv, cur)}
                       </td>
                       <td
-                        className={tone}
+                        className={`font-mono ${tone}`}
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontFamily: "var(--font-mono), ui-monospace, monospace",
                           fontSize: 12.5,
                           fontVariantNumeric: "tabular-nums",
                           fontWeight: 600,

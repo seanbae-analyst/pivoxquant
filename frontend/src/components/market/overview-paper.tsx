@@ -182,9 +182,8 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
         <span>{fmtLevel(quote.level, quote.format)}</span>
       </div>
       <div
-        className={isPositive ? "pq-paper-pos" : "pq-paper-neg"}
+        className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
         style={{
-          fontFamily: "var(--font-mono), ui-monospace, monospace",
           fontVariantNumeric: "tabular-nums",
           fontSize: 11.5,
           textAlign: "right",
@@ -366,9 +365,8 @@ export function OverviewPaper({
             ) : null}
           </div>
           <div
-            className={heroPositive ? "pq-paper-pos" : "pq-paper-neg"}
+            className={`font-mono ${heroPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
             style={{
-              fontFamily: "var(--font-mono), ui-monospace, monospace",
               fontVariantNumeric: "tabular-nums",
               fontSize: 14,
               marginTop: 4,

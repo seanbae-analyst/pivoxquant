@@ -26,12 +26,11 @@ export function Fleuron({
   return (
     <span
       aria-hidden="true"
-      className={`pq-fleuron ${className}`}
+      className={`pq-fleuron font-serif ${className}`}
       style={{
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "var(--font-serif), Georgia, serif",
         fontSize: `${size}px`,
         lineHeight: 1,
         letterSpacing: "0.4em",
@@ -54,12 +53,11 @@ export function RuledKicker({
 }) {
   return (
     <div
-      className={`pq-ink-kicker pq-ink-kicker--ruled ${className}`}
+      className={`pq-ink-kicker pq-ink-kicker--ruled font-sans ${className}`}
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: 10,
-        fontFamily: "var(--font-sans), system-ui, sans-serif",
         fontSize: "9.5px",
         letterSpacing: "0.24em",
         textTransform: "uppercase",
@@ -118,9 +116,8 @@ export function Caption({
 }) {
   return (
     <p
-      className={`pq-caption ${className}`}
+      className={`pq-caption font-serif ${className}`}
       style={{
-        fontFamily: "var(--font-serif), Georgia, serif",
         fontSize: "11.5px",
         lineHeight: 1.4,
         color: "rgba(245,240,232,0.55)",
@@ -205,10 +202,8 @@ export function NumDisplay({
       : "var(--pq-ivory)";
   return (
     <span
-      className={`pq-num-display ${className}`}
+      className={`pq-num-display font-mono ${className}`}
       style={{
-        fontFamily:
-          "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace",
         fontVariantNumeric: "tabular-nums",
         fontFeatureSettings: "\"tnum\"",
         fontSize: `${size}px`,
@@ -256,10 +251,9 @@ export function FieldLabel({
     tone === "muted" ? "rgba(245,240,232,0.55)" : "var(--pq-bronze)";
   return (
     <span
-      className={`pq-field-label ${className}`}
+      className={`pq-field-label font-sans ${className}`}
       style={{
         display: "inline-block",
-        fontFamily: "var(--font-sans), system-ui, sans-serif",
         fontSize: "10.5px",
         letterSpacing: "0.12em",
         textTransform: "uppercase",
