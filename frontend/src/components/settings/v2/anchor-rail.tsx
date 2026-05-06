@@ -66,7 +66,7 @@ export function AnchorRail() {
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 12,
@@ -85,7 +85,7 @@ export function AnchorRail() {
               display: "block",
               padding: "10px 0 10px 14px",
               borderLeft: `1px solid ${isActive ? "var(--pq-bronze)" : "var(--pq-hairline, rgba(245,240,232,0.08))"}`,
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.16em",
               color: isActive
                 ? "var(--pq-bronze)"

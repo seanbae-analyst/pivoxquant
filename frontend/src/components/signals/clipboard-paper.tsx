@@ -111,7 +111,7 @@ export function ClipboardPaper({
           </div>
           <div
             style={{
-              fontSize: 11.5,
+              fontSize: 12,
               color: "rgba(20,20,20,0.48)",
               marginTop: 2,
             }}
@@ -122,7 +122,7 @@ export function ClipboardPaper({
         <div style={{ textAlign: "right" }}>
           <div
             style={{
-              fontSize: 8.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.48)",

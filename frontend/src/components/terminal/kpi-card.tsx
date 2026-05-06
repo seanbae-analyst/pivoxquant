@@ -219,7 +219,7 @@ export function KpiCard({
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.16em",
               color: "rgba(245,240,232,0.45)",
             }}
@@ -234,7 +234,7 @@ export function KpiCard({
         <div
           className="font-mono tabular-nums"
           style={{
-            fontSize: 11.5,
+            fontSize: 12,
             color: deltaColor,
             letterSpacing: "0.02em",
           }}

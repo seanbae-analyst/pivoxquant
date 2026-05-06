@@ -109,7 +109,7 @@ export function PortfolioSnapshotCard() {
         className="font-mono"
         style={{
           fontVariantNumeric: "tabular-nums",
-          fontSize: 12.5,
+          fontSize: 14,
           color: deltaColor,
           marginBottom: 28,
         }}
@@ -151,7 +151,7 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               textTransform: "uppercase",
@@ -175,7 +175,7 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               textTransform: "uppercase",
@@ -199,7 +199,7 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               textTransform: "uppercase",

@@ -38,7 +38,7 @@ export function SignalsHeroV2({ eyebrow = "Signals · live", counts, loading = f
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
           marginBottom: 14,

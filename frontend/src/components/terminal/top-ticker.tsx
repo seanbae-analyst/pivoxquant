@@ -164,7 +164,7 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
       ref={cellRef}
       className="inline-flex items-center gap-2 whitespace-nowrap px-3 font-mono tabular-nums"
       style={{
-        fontSize: 10.5,
+        fontSize: 12,
         lineHeight: 1,
         background: "transparent",
         transition: reducedMotion ? "none" : "background-color 0.3s ease",
@@ -377,7 +377,7 @@ export function TopTicker() {
       <span
         className="inline-flex items-center gap-2 whitespace-nowrap pl-4 pr-3 font-mono"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           lineHeight: 1,
           color: "var(--pq-bronze, #B8956A)",
           letterSpacing: "0.2em",

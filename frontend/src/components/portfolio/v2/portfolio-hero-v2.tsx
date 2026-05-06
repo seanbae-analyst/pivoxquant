@@ -357,7 +357,7 @@ function HeroKpi({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 6,

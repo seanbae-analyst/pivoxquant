@@ -170,7 +170,7 @@ function ChartTooltip({ active, payload, currency }: CustomTooltipProps) {
       <div
         className="font-serif"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           color: "rgba(245,240,232,0.55)",
           marginTop: 2,
         }}

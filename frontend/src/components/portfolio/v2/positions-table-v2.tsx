@@ -201,7 +201,7 @@ export function PositionsTableV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -216,7 +216,7 @@ export function PositionsTableV2({
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 9.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
           }}
@@ -301,7 +301,7 @@ export function PositionsTableV2({
                     onClick={() => onSort(h.key)}
                     className="pq-pos-th font-mono"
                     style={{
-                      fontSize: 10.5,
+                      fontSize: 12,
                       letterSpacing: "0.22em",
                       textTransform: "uppercase",
                       fontWeight: 500,
@@ -389,7 +389,7 @@ function PositionRow({
 
   const cellStyle: React.CSSProperties = {
     padding: "16px 12px",
-    fontSize: 13.5,
+    fontSize: 14,
     color: "rgba(245,240,232,0.82)",
     borderBottom:
       "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
@@ -422,7 +422,7 @@ function PositionRow({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.18em",
             color: "rgba(245,240,232,0.40)",
             marginTop: 3,
@@ -558,7 +558,7 @@ function RowActionBtn({
       onClick={onClick}
       className="font-mono uppercase"
       style={{
-        fontSize: 9.5,
+        fontSize: 12,
         letterSpacing: "0.2em",
         padding: "4px 10px",
         background: "transparent",

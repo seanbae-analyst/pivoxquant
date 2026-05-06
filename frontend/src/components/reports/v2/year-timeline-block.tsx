@@ -131,7 +131,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                     className="font-mono"
                     style={{
                       fontVariantNumeric: "tabular-nums",
-                      fontSize: 10.5,
+                      fontSize: 12,
                       letterSpacing: "0.16em",
                       color: "rgba(245,240,232,0.45)",
                     }}
@@ -141,7 +141,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                   <div
                     className="font-serif"
                     style={{
-                      fontSize: 13.5,
+                      fontSize: 14,
                       color: "rgba(245,240,232,0.78)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",

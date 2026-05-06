@@ -124,7 +124,7 @@ export function SectorDonutBlock({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
@@ -200,7 +200,7 @@ export function SectorDonutBlock({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 9.5,
+                  fontSize: 12,
                   letterSpacing: "0.22em",
                   color: "rgba(245,240,232,0.40)",
                   marginBottom: 2,

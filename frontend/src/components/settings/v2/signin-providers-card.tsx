@@ -39,7 +39,7 @@ const ROW_LABEL_STYLE: React.CSSProperties = {
   color: "var(--pq-ivory)",
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
-  fontSize: 12.5,
+  fontSize: 14,
   color: "rgba(245,240,232,0.40)",
   marginTop: 2,
 };
@@ -47,7 +47,7 @@ const ROW_HELP_STYLE: React.CSSProperties = {
 const PILL_LINKED: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 8px",
-  fontSize: 9.5,
+  fontSize: 12,
   letterSpacing: "0.18em",
   textTransform: "uppercase",
   border: "1px solid rgba(184,149,106,0.15)",
@@ -175,7 +175,7 @@ export function SignInProvidersCard({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
         }}
@@ -186,7 +186,7 @@ export function SignInProvidersCard({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 16,
@@ -234,7 +234,7 @@ export function SignInProvidersCard({
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
           }}
@@ -246,7 +246,7 @@ export function SignInProvidersCard({
       <p
         className="font-serif"
         style={{
-          fontSize: 12.5,
+          fontSize: 14,
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.40)",
           marginTop: 12,

@@ -570,7 +570,7 @@ export default function TopNav() {
                           className="font-serif uppercase"
                           style={{
                             color: "var(--pq-bronze)",
-                            fontSize: "10.5px",
+                            fontSize: "12px",
                             letterSpacing: "0.22em",
                           }}
                         >
@@ -581,7 +581,7 @@ export default function TopNav() {
                         className="font-serif italic"
                         style={{
                           color: "rgba(245,240,232,0.78)",
-                          fontSize: "14.5px",
+                          fontSize: "15px",
                           lineHeight: 1.55,
                           maxWidth: 240,
                         }}
@@ -639,7 +639,7 @@ export default function TopNav() {
                                 className="mb-1 flex items-center gap-1.5 font-serif"
                                 style={{
                                   color: "var(--pq-ivory)",
-                                  fontSize: "13.5px",
+                                  fontSize: "14px",
                                   letterSpacing: "0",
                                   fontWeight: 500,
                                 }}
@@ -655,7 +655,7 @@ export default function TopNav() {
                                 className="font-serif"
                                 style={{
                                   color: "rgba(245,240,232,0.58)",
-                                  fontSize: "12.5px",
+                                  fontSize: "14px",
                                   lineHeight: 1.5,
                                 }}
                               >

@@ -253,7 +253,7 @@ function SidebarLink({ item, isActive }: { item: Item; isActive: boolean }) {
         className="flex items-center gap-2.5 rounded-sm font-serif uppercase transition-colors"
         style={{
           padding: "10px 14px",
-          fontSize: "12.5px",
+          fontSize: "14px",
           letterSpacing: "0.2em",
           color: isActive ? "var(--pq-ivory)" : "rgba(245,240,232,0.5)",
           backgroundColor: isActive

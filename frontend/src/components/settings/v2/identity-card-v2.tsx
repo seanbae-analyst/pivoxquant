@@ -34,7 +34,7 @@ const ROW_LABEL_STYLE: React.CSSProperties = {
   color: "var(--pq-ivory)",
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
-  fontSize: 12.5,
+  fontSize: 14,
   color: "rgba(245,240,232,0.40)",
   marginTop: 2,
 };
@@ -67,7 +67,7 @@ export function SettingsIdentityCardV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
         }}
@@ -78,7 +78,7 @@ export function SettingsIdentityCardV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 16,
@@ -147,7 +147,7 @@ export function SettingsIdentityCardV2({
           className="font-mono"
           style={{
             ...ROW_VALUE_STYLE,
-            fontSize: 12.5,
+            fontSize: 14,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",

@@ -59,7 +59,7 @@ function BigGaugeCard({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
         }}
@@ -128,7 +128,7 @@ function BigGaugeCard({
             display: "flex",
             justifyContent: "space-between",
             marginTop: 6,
-            fontSize: 9.5,
+            fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "rgba(245,240,232,0.40)",
@@ -142,7 +142,7 @@ function BigGaugeCard({
           className="font-mono uppercase"
           style={{
             marginTop: 10,
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: postureColor(posture),
           }}
@@ -223,7 +223,7 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -247,7 +247,7 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
           }}

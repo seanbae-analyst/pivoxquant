@@ -86,7 +86,7 @@ export function RecentTransactionsBlock({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
@@ -180,7 +180,7 @@ export function RecentTransactionsBlock({
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontSize: 12.5,
+                    fontSize: 14,
                     color: amountColor(signed),
                     whiteSpace: "nowrap",
                   }}

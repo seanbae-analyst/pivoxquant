@@ -73,7 +73,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
             marginBottom: 8,
@@ -102,7 +102,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
             marginBottom: 8,
@@ -147,7 +147,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
           marginBottom: 8,
@@ -197,7 +197,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: "0.18em",
                 color: "rgba(245,240,232,0.55)",
               }}

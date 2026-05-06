@@ -469,7 +469,7 @@ export default function SettingsPageV2() {
                 <div
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: 12,
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 8,
@@ -590,7 +590,7 @@ export default function SettingsPageV2() {
                 <div
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: 12,
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 8,
@@ -639,7 +639,7 @@ export default function SettingsPageV2() {
                     position: "absolute",
                     top: 14,
                     right: 14,
-                    fontSize: 9.5,
+                    fontSize: 12,
                     letterSpacing: "0.2em",
                     color: "rgba(245,240,232,0.40)",
                   }}
@@ -649,7 +649,7 @@ export default function SettingsPageV2() {
                 <div
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: 12,
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 12,
@@ -678,7 +678,7 @@ export default function SettingsPageV2() {
                     <div
                       className="font-serif"
                       style={{
-                        fontSize: 12.5,
+                        fontSize: 14,
                         color: "rgba(245,240,232,0.40)",
                         marginTop: 2,
                       }}
@@ -751,7 +751,7 @@ export default function SettingsPageV2() {
                     position: "absolute",
                     top: 14,
                     right: 14,
-                    fontSize: 9.5,
+                    fontSize: 12,
                     letterSpacing: "0.2em",
                     color: "rgba(245,240,232,0.40)",
                   }}
@@ -761,7 +761,7 @@ export default function SettingsPageV2() {
                 <div
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: 12,
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 12,
@@ -790,7 +790,7 @@ export default function SettingsPageV2() {
                     <div
                       className="font-serif"
                       style={{
-                        fontSize: 12.5,
+                        fontSize: 14,
                         color: "rgba(245,240,232,0.40)",
                         marginTop: 2,
                       }}
@@ -885,7 +885,7 @@ export default function SettingsPageV2() {
               marginTop: 32,
               padding: "18px 24px",
               border: "1px dashed rgba(245,240,232,0.14)",
-              fontSize: 12.5,
+              fontSize: 14,
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.40)",
             }}

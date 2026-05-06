@@ -241,7 +241,7 @@ export function BottomNav() {
               <span
                 className="font-serif uppercase"
                 style={{
-                  fontSize: "10.5px",
+                  fontSize: "12px",
                   letterSpacing: "0.24em",
                   color: "var(--pq-ivory)",
                 }}
@@ -290,7 +290,7 @@ export function BottomNav() {
                 className="flex w-full items-center gap-3 rounded-sm font-serif uppercase transition-colors hover:bg-[rgba(184,149,106,0.08)]"
                 style={{
                   padding: "13px 14px",
-                  fontSize: "12.5px",
+                  fontSize: "14px",
                   letterSpacing: "0.2em",
                   color: "var(--pq-bronze)",
                   borderLeft: "3px solid transparent",
@@ -356,7 +356,7 @@ function DrawerGroupSection({
                 className="flex items-center gap-3 rounded-sm font-serif uppercase transition-colors"
                 style={{
                   padding: "13px 14px",
-                  fontSize: "12.5px",
+                  fontSize: "14px",
                   letterSpacing: "0.2em",
                   color: active
                     ? "var(--pq-ivory)"
@@ -384,7 +384,7 @@ function DrawerGroupSection({
                     aria-label="Premium Plus · Closed Beta"
                     className="font-mono uppercase"
                     style={{
-                      fontSize: 8.5,
+                      fontSize: 12,
                       letterSpacing: "0.2em",
                       padding: "2px 6px",
                       borderRadius: 1,

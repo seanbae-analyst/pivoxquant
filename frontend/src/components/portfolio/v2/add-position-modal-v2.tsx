@@ -165,7 +165,7 @@ export function AddPositionModalV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 14,
@@ -274,7 +274,7 @@ export function AddPositionModalV2({
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.40)",
               }}
@@ -290,7 +290,7 @@ export function AddPositionModalV2({
                   background: "transparent",
                   border: "none",
                   color: "rgba(245,240,232,0.55)",
-                  fontSize: 10.5,
+                  fontSize: 12,
                   letterSpacing: "0.2em",
                   cursor: "pointer",
                   padding: 4,
@@ -359,7 +359,7 @@ function FormField({
       <span
         className="font-mono uppercase"
         style={{
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
         }}

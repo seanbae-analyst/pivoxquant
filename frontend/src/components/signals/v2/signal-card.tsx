@@ -176,7 +176,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.2em",
                 padding: "3px 8px",
                 border: `1px solid ${tone.fg}`,
@@ -248,7 +248,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.06em",
               color: "rgba(245,240,232,0.40)",
               marginTop: 4,

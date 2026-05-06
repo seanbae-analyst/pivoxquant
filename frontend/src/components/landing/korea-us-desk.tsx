@@ -176,7 +176,7 @@ export function KoreaUsDesk() {
                   <h3
                     className="font-serif mb-2"
                     style={{
-                      fontSize: 16.5,
+                      fontSize: 18,
                       lineHeight: 1.2,
                       color: "var(--pq-ivory)",
                       fontWeight: 500,
@@ -187,7 +187,7 @@ export function KoreaUsDesk() {
                   <p
                     className="font-serif italic mb-2"
                     style={{
-                      fontSize: 12.5,
+                      fontSize: 14,
                       color: "rgba(139,111,71,0.8)",
                     }}
                   >

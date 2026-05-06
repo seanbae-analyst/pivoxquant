@@ -338,7 +338,7 @@ export function CandlestickChart({
           <span
             className="font-mono"
             style={{
-              fontSize: 11.5,
+              fontSize: 12,
               letterSpacing: "0.12em",
               color: "rgba(245,240,232,0.98)",
               fontWeight: 500,
@@ -349,7 +349,7 @@ export function CandlestickChart({
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "#B8956A",
               borderLeft: "1px solid #1A1F2E",
