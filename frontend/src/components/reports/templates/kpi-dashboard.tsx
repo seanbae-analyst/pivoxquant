@@ -80,7 +80,7 @@ export interface KpiDashboardData {
 }
 
 const DEFAULT: KpiDashboardData = {
-  doc: "Apr 2026 · KPI-2026-04 · 01/03",
+  doc: "Apr 2026 · KPI-2026-04 · 01/04",
   navEom: "$1,242k",
   navEomDelta: "+$50.7k MTD",
   ytdReturn: "+14.2%",

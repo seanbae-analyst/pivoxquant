@@ -15,6 +15,7 @@
 import {
   PdfPage,
   PdfHeader,
+  PdfGoldRule,
   PdfEyebrow,
   PdfCoverTitle,
   PdfKpiRow,
@@ -25,6 +26,7 @@ import {
   PdfPullquote,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
   PdfTicker,
 } from "../pdf-primitives";
 
@@ -114,8 +116,9 @@ function renderPullquote(text: string) {
 
 export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
   return (
+    <>
     <PdfPage>
-      <PdfHeader tier="free" title="BRAG CARD" meta={`${data.monthLabel} · ${data.reportTag}`} />
+      <PdfHeader tier="free" title="BRAG CARD" meta={`${data.monthLabel} · ${data.reportTag} · 01/02`} />
 
       {/* SAMPLE banner — never let the static PLTR mockup be mistaken
           for the user's own holdings. Mirrors the DD Checklist pattern
@@ -314,7 +317,14 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
         right={`Brag Card · ${data.reportTag}`}
       />
 
+      <PdfDisclaimerMini />
+    </PdfPage>
+
+    <PdfPage>
+      <PdfHeader tier="free" title="BRAG CARD" meta={`${data.monthLabel} · ${data.reportTag} · 02/02`} />
+      <PdfGoldRule />
       <PdfDisclaimer cadence="monthly" />
     </PdfPage>
+    </>
   );
 }
