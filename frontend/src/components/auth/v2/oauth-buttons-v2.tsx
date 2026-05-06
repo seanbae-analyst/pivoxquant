@@ -82,8 +82,6 @@ const buttonShellBase: React.CSSProperties = {
   gap: 14,
   padding: "14px 20px",
   borderRadius: 2,
-  fontFamily:
-    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
   fontSize: 11,
   letterSpacing: "0.22em",
   textTransform: "uppercase",
@@ -123,6 +121,7 @@ export function OAuthButtonsV2({
           type="button"
           aria-disabled="true"
           onClick={onDisabledClick}
+          className="font-mono"
           style={disabledShell}
         >
           <GoogleIcon />
@@ -132,7 +131,7 @@ export function OAuthButtonsV2({
         <a
           href={API.auth.google}
           onClick={onGoogleClick}
-          className="pq-auth-oauth-btn pq-auth-oauth-btn--google"
+          className="pq-auth-oauth-btn pq-auth-oauth-btn--google font-mono"
           style={enabledShell}
         >
           <GoogleIcon />
@@ -145,6 +144,7 @@ export function OAuthButtonsV2({
           type="button"
           aria-disabled="true"
           onClick={onDisabledClick}
+          className="font-mono"
           style={disabledShell}
         >
           <KakaoIcon />
@@ -154,7 +154,7 @@ export function OAuthButtonsV2({
         <a
           href={API.auth.kakao}
           onClick={onKakaoClick}
-          className="pq-auth-oauth-btn pq-auth-oauth-btn--kakao"
+          className="pq-auth-oauth-btn pq-auth-oauth-btn--kakao font-mono"
           style={enabledShell}
         >
           <KakaoIcon />

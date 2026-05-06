@@ -56,7 +56,6 @@ function chipBaseStyle(active: boolean): React.CSSProperties {
       : "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
     borderRadius: "var(--pq-radius-cta, 2px)",
     padding: "8px 12px",
-    fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
     fontSize: 10.5,
     letterSpacing: "0.18em",
     textTransform: "uppercase",
@@ -132,6 +131,7 @@ export function SignalsFilterBar({
                 type="button"
                 onClick={() => toggleLabel(l.key)}
                 aria-pressed={active}
+                className="font-mono"
                 style={chipBaseStyle(active)}
               >
                 <span
@@ -262,6 +262,7 @@ export function SignalsFilterBar({
                 type="button"
                 onClick={() => setWindow(w.key)}
                 aria-pressed={active}
+                className="font-mono"
                 style={chipBaseStyle(active)}
               >
                 {w.display}

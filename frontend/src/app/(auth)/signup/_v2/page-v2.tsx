@@ -191,8 +191,6 @@ export default function SignupPageV2() {
     };
 
   const consentLabelStyle: React.CSSProperties = {
-    fontFamily:
-      '"Source Serif 4","Iowan Old Style",Georgia,serif',
     fontSize: 13,
     lineHeight: 1.55,
     color: "rgba(245,240,232,0.72)",
@@ -220,8 +218,6 @@ export default function SignupPageV2() {
       : {};
 
   const requiredTagStyle: React.CSSProperties = {
-    fontFamily:
-      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
     fontSize: 10,
     letterSpacing: "0.18em",
     textTransform: "uppercase",
@@ -344,8 +340,8 @@ export default function SignupPageV2() {
                 checked={consents.terms}
                 onChange={setConsent("terms")}
               />
-              <span style={consentLabelStyle}>
-                <span style={requiredTagStyle}>[필수]</span>
+              <span className="font-serif" style={consentLabelStyle}>
+                <span className="font-mono" style={requiredTagStyle}>[필수]</span>
                 <Link
                   href="/terms"
                   target="_blank"
@@ -389,8 +385,8 @@ export default function SignupPageV2() {
                 checked={consents.non_advisory}
                 onChange={setConsent("non_advisory")}
               />
-              <span style={consentLabelStyle}>
-                <span style={requiredTagStyle}>[필수]</span>
+              <span className="font-serif" style={consentLabelStyle}>
+                <span className="font-mono" style={requiredTagStyle}>[필수]</span>
                 PivoxQuant는 자본시장법상 투자자문업이 아니며, 본 서비스의 모든
                 분석·리포트·시그널은 정보 제공 목적임을 이해합니다. 투자 판단과
                 그 결과는 이용자 본인의 책임입니다.
@@ -409,8 +405,8 @@ export default function SignupPageV2() {
                 checked={consents.age}
                 onChange={setConsent("age")}
               />
-              <span style={consentLabelStyle}>
-                <span style={requiredTagStyle}>[필수]</span>
+              <span className="font-serif" style={consentLabelStyle}>
+                <span className="font-mono" style={requiredTagStyle}>[필수]</span>
                 만 14세 이상입니다. (개인정보보호법 §22)
               </span>
             </label>
@@ -427,8 +423,8 @@ export default function SignupPageV2() {
                 checked={consents.cross_border}
                 onChange={setConsent("cross_border")}
               />
-              <span style={consentLabelStyle}>
-                <span style={requiredTagStyle}>[필수]</span>
+              <span className="font-serif" style={consentLabelStyle}>
+                <span className="font-mono" style={requiredTagStyle}>[필수]</span>
                 개인정보의 국외 이전에 동의합니다. (PIPA §28-8 — Anthropic / Stripe / Vercel / Railway / Google, 미국 소재 위탁처)
                 {" "}
                 <a
@@ -448,8 +444,8 @@ export default function SignupPageV2() {
                 checked={consents.marketing}
                 onChange={setConsent("marketing")}
               />
-              <span style={consentLabelStyle}>
-                <span style={optionalTagStyle}>[선택]</span>
+              <span className="font-serif" style={consentLabelStyle}>
+                <span className="font-mono" style={optionalTagStyle}>[선택]</span>
                 마케팅 정보(이벤트, 신기능 안내) 수신에 동의합니다.
               </span>
             </label>
