@@ -175,7 +175,7 @@
   --pq-font-display: var(--font-display);
 
   /* Type scale (8 steps + 3 fluid) */
-  --pq-text-eyebrow: 10.5px;
+  --pq-text-eyebrow: 12px;
   --pq-text-mono-sm: 11px;
   --pq-text-caption: 12px;
   --pq-text-body-sm: 13px;
