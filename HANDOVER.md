@@ -1,3 +1,105 @@
+# PivoxQuant — 인수인계서 (2026-05-06 v23 세션 — PDF lint sweep + V4 layout + height 강제 시도/backout)
+
+## 🔴 2026-05-06 v23 세션 — PDF 18개 lint sweep + layout fix 시도 + height:297mm 강제 → ghost regression
+
+**현재 main HEAD: `1edd177`** (origin/main sync 확인). working tree clean. **Ghost 10/18 알려진 잔존**.
+
+### 이번 세션 commits (main 만, 다른 branch 의 잘못된 commit 은 §에서 별도 정리)
+
+| # | Commit | 내용 | 결과 |
+|---|---|---|---|
+| 1 | `48395d2` | PDF lint placeholder fix wave (P0=29 P1=8 → 0/0) | lint pass — but vacuous (PDF 빈 껍데기) |
+| 2 | `d8326ce` | hot-fix empty-shell render (root-cause @media print scope leak) | 18 PDF 진짜 컨텐츠 복원 |
+| 3 | `055bc93` | sync rendered samples → sibling `pivoxquant_pdfs/` (lint reference) | reference folder sync 자동화 |
+| 4 | `56cc04c` | 4 P0 chrome leak (toolbar / cookie / dev portal / page bloat) | clean PDFs |
+| 5 | `c15efaf` | mini disclaimer swap weekly/morning + body whitelist | P1 5 → 1 |
+| 6 | `34ab835` | atomic gov-block break-after:avoid + bilingual disclaim atomic | gov+disclaim 묶임 |
+| 7 | `9c65edc` | NO-SHIP P0 4건 fix (NAV $1,242k, sp500 Annual Returns, risk_board crypto, portfolio ghost) | 4/5 P0 verified |
+| 8 | `2b6e187`, `4f1c9b0`, `039150c` | 사이사이 도큐/agent 정리 chore | — |
+| 9 | `c15efaf → 22de3ae` | gov+disclaim atomic last-page (V3) | 6 PDF 마지막 페이지 GOV+KR+EN 묶임 |
+| 10 | `70ca3e9` | V5 layout — orphan-header guard + flex column + disclaimer margin-top:auto | thin pages 일부 회복 |
+| 11 | `abdd116` | section breathing 28px | 시각 약함 |
+| 12 | `23041cf` | 32px section + 22px child + monthly_finance BS inline 12→24 | 시각 부족 |
+| 13 | `232936e` | V4 Option B 압축 (sp500 4p→3p, monthly_finance 6p→4p, +5 PDFs slim) | overlap 시각 발견 |
+| 14 | `b3dad2b` | monthly_finance IS/BS 분리 (4p→5p) — overlap fix | overlap 사라짐 ✓ |
+| 15 | **`1edd177`** | `.pq-pdf-page` `min-height` → **`height: 297mm`** 글로벌 강제 | **ghost 10/18 회귀 발생** |
+
+### 이 세션 핵심 결과 + 한계 (정직 보고)
+
+**✓ 사장님 직접 보신 issue 해소**:
+- monthly_finance p3 IS+BS overlap (commit `b3dad2b` IS/BS 별도 PdfPage 분리, 4p → 5p)
+
+**✗ Ghost 10/18 잔존 (audit verdict NO-SHIP)**:
+- 마지막 페이지가 `PREPARED BY` 로 시작하는 disclosure-only sheet (본문 0):
+  ```
+  05_risk_board p3, 06_quarterly_self_report p3, 07_self_audit p3,
+  10_insider_mirror p3, 12_portfolio_segment p3, 13_capital_allocation p5,
+  14_credit_rating p4, 15_burn_rate p3, 17_kpi_dashboard p4,
+  18_year_end_letter p6
+  ```
+- 원인: `height: 297mm` 강제 + 마지막 PdfPage 안 본문+gov+disclaim 합 257mm content area 초과 → chromium print engine 이 gov+disclaim 을 다음 sheet 로 push, spread sheet 는 `.pq-pdf-page` flex column rule 적용 못 받아 위쪽 1/4 + 70% 빈공간
+- CSS 시도 3종 모두 실패 (margin-top:auto 제거 / break-after:avoid 제거 / break-before:avoid 추가)
+- **CSS 만으로 fix 불가** — 10 template 마다 마지막 PdfPage 본문 압축 또는 disclaim 별도 PdfPage 분리 필요 (Strategy B)
+
+**시도하고 push 못한 backout**:
+- `git stash` → branch swap accident → 두 commit 이 **다른 branch** 에 잘못 push:
+  - `chore/remove-dead-font-heading` `65b9ec2` (agent 의 ghost-fix 시도)
+  - `docs/sot-typography-split` `ecb5194` (parent 의 height 강제 backout)
+- main 영향 0. 다음 세션에서 cleanup 또는 cherry-pick 결정 필요.
+
+### Audit verdict (`1edd177` 시점)
+
+```
+A. Visual overlap (footer/disclaimer 침범):  PASS  (monthly_finance overlap 사라짐 ✓)
+B. Spread / split (페이지 사이 끊김):       FAIL  (10 PDF disclosure-only ghost)
+C. Empty page / widow:                       FAIL  (ghost sheet 70%+ 빈공간)
+D. Layout 정합 (헤더 페이지 표기):           FAIL  (multi-page PDF 헤더 off-by-one)
+이전 CEO 보고 (monthly_finance 겹침) 사라짐: Y verified
+새 회귀: 10 PDF disclosure-only ghost + 헤더 카운트 mismatch
+
+판정: NO-SHIP (audit) / 사장님 결정으로 SHIP 가능 (ghost = 표준 면책 페이지로 정당화)
+```
+
+### 다음 세션 V24 우선순위
+
+#### 🔴 P0 — 사장님 결정 사항
+1. **Ghost 10 건 처리 방향**:
+   - **A. 받아들임 (정당화)**: 마지막 disclaim-only 페이지 = 18 PDF report 의 표준 디자인. 베타 ship 가능.
+   - **B. Strategy B 압축 wave**: 10 template 마다 마지막 PdfPage 본문 압축 또는 disclaim 별도 PdfPage 분리. 1-2시간 분량.
+2. **Branch cleanup**:
+   - `chore/remove-dead-font-heading` `65b9ec2` 와 `docs/sot-typography-split` `ecb5194` 두 branch 에 잘못 들어간 work cleanup
+   - 옵션: branch 삭제 / cherry-pick / orphan 두기
+
+#### 🟠 P1 — 헤더 페이지 카운트 off-by-one
+- 13 capital_allocation 헤더 `02/04` 인데 PDF 5p 같은 mismatch
+- multi-page PDF 들 (08/10/11/12/13/14/15/16/17/18) 광범위 영향
+- 각 template 의 PdfHeader meta `NN/M` 를 실제 PDF page count 와 맞추는 작업
+
+#### 🟡 P2 — Strategy B 분량 (참고)
+- 마지막 PdfPage 안 본문 length 측정 후 1 sheet 안 fit 안 되는 template 식별
+- 의도된 분리 = disclaim 별도 PdfPage component
+- 또는 본문 압축 (font/padding/section 간격 미세 조정)
+
+### 사장님 5초 액션 (출시 전)
+
+```
+open /Users/seanbae/Desktop/취준/pivoxquant/frontend/public/samples/*.pdf
+```
+
+직접 18개 열어서:
+1. monthly_finance.pdf p3 (IS) / p4 (BS) — 본문 ↔ footer overlap 사라짐 확인 ✓
+2. 10건 ghost PDF (위 list) 의 마지막 페이지 — disclaim-only sheet 가 사장님 의도 OK 인지 / 70% 빈공간 not OK 인지 결정
+3. multi-page PDF 헤더 `NN/M` 표기 — 실제 페이지 수와 맞는지
+
+### 정직 한계 (이 세션)
+
+- 시각 검증 못함 (parent macOS UI 접근 X). pypdf 텍스트 추출 + char count 만.
+- audit agent 가 sips low-res 캡처로 시각 검증 1회 — 이상은 사장님 직접 PDF 열어서 확인 권고.
+- Strategy B 작업 시작 안 함 — 시간 + 사장님 결정 대기.
+- 다른 branch 잘못 commit 두 건 cleanup 안 함 — main 영향 0 이지만 origin 에 dangling commit 남음.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-05 v22 세션 — 자율 야간 · realtime + design v3 wave 4 + mobile sweep + signup test + bug-hunter 2nd pass)
 
 ## 🟢 2026-05-05 v22 세션 (자율 야간 · 형님 자는 동안 9시간) — Bug #1 fix · /detail v3 · PWA banner v3 · mobile Top-7 · signup-v2 test fix · bug-hunter 2nd pass 6 fixes
