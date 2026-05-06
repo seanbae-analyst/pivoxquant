@@ -1,0 +1,490 @@
+# legal-deep-scan — Phase 2E (PivoxQuant)
+#
+# Complement to legal-guard.yml. Where legal-guard scans for forbidden
+# *vocabulary* (BUY/SELL/HOLD literals, broker name leakage, ticker/money
+# defaults), legal-deep-scan validates the *context*: does each new
+# analysis page mount DisclaimerBanner, do PDF templates render
+# <PdfDisclaimer />, do new API endpoints carry @legal_scrub_response,
+# is the ko/en disclaimer roughly equivalent in length, is the banner
+# top-mounted (not buried in the footer)?
+#
+# Cost: GitHub Actions free tier only. No Anthropic API calls. No paid
+# services. Target wall-clock < 5 min total.
+#
+# macOS note: jobs use ubuntu-latest (GNU grep). Some PCRE patterns
+# (`grep -P`) won't run on BSD grep. Local equivalent lives in
+# tests/test_legal_deep_scan_local.py — run that on macOS before push.
+#
+# Iron Rule 7 (legal.md) enforcement: cross-references
+# services/legal/forbidden_terms.py (FORBIDDEN_DIRECTIVE_TERMS) so the
+# vocabulary list has a single source of truth.
+
+name: legal-deep-scan
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/src/app/**'
+      - 'frontend/src/components/**'
+      - 'frontend/src/content/**'
+      - 'routes/**'
+      - 'services/**'
+      - 'services/legal/forbidden_terms.py'
+  schedule:
+    # Weekly safety net — Saturday 03:00 KST = Friday 18:00 UTC.
+    # Catches drift from main even if no PR opened that week.
+    - cron: '0 18 * * 5'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────
+  # Job 1 — DisclaimerBanner mount on dashboard pages + PdfDisclaimer
+  #         on PDF templates.
+  # ───────────────────────────────────────────────────────────────────
+  scan-disclaimer-mount:
+    name: Disclaimer mount (pages + PDF templates)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed dashboard pages
+        id: changed
+        run: |
+          set -e
+          # On PR, only inspect what changed; on schedule/dispatch, scan all.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            git fetch origin "${{ github.event.pull_request.base.ref }}" --depth=1 || true
+            changed=$(git diff --name-only "$base"...HEAD -- 'frontend/src/app/(dashboard)' || true)
+          else
+            changed=$(find "frontend/src/app/(dashboard)" -name 'page.tsx' -type f 2>/dev/null || true)
+          fi
+          # Only page.tsx files under (dashboard) are gated.
+          page_list=$(echo "$changed" | grep -E '\(dashboard\)/.*page\.tsx$' || true)
+          # Multiline output via heredoc.
+          {
+            echo "pages<<EOF"
+            echo "$page_list"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify DisclaimerBanner mount on changed dashboard pages
+        run: |
+          set -e
+          # Layout-level mount short-circuits page-level requirement —
+          # mirrors legal-guard.yml's coverage logic.
+          LAYOUT="frontend/src/app/(dashboard)/layout.tsx"
+          if [ -f "$LAYOUT" ] && grep -q 'DisclaimerBanner' "$LAYOUT"; then
+            echo "✅ Layout-level DisclaimerBanner mount detected — all dashboard pages inherit"
+            exit 0
+          fi
+          missing=""
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            [ -f "$f" ] || continue
+            if ! grep -q 'DisclaimerBanner' "$f"; then
+              missing="${missing}${f}\n"
+            fi
+          done <<< "${{ steps.changed.outputs.pages }}"
+          if [ -n "$missing" ]; then
+            echo "::error::DisclaimerBanner missing on dashboard page(s):"
+            echo -e "$missing"
+            echo "Fix: import DisclaimerBanner from '@/components/ui/disclaimer-banner' and mount near the top of the page (above analysis content)."
+            exit 1
+          fi
+          echo "✅ All changed dashboard pages mount DisclaimerBanner"
+
+      - name: Verify PDF templates render <PdfDisclaimer /> or Mini
+        run: |
+          set -e
+          tpl_dir="frontend/src/components/reports/templates"
+          [ -d "$tpl_dir" ] || { echo "templates dir missing — skipping"; exit 0; }
+          missing=""
+          for f in "$tpl_dir"/*.tsx; do
+            [ -f "$f" ] || continue
+            count=$(grep -cE '<PdfDisclaimer(Mini)?\b' "$f" || true)
+            if [ "${count:-0}" -lt 1 ]; then
+              missing="${missing}${f}\n"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::PDF template(s) missing <PdfDisclaimer /> or <PdfDisclaimerMini />:"
+            echo -e "$missing"
+            echo "Fix: import { PdfDisclaimer } from '@/components/reports/pdf-primitives' and render once before the closing </Document>."
+            exit 1
+          fi
+          echo "✅ All PDF templates render PdfDisclaimer (or Mini)"
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 2 — New API endpoints carry @legal_scrub_response decorator
+  #         (or an explicit attorney-signed exemption comment).
+  # ───────────────────────────────────────────────────────────────────
+  scan-api-decorator:
+    name: API endpoint legal_scrub_response decorator
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find new @bp.route additions in this PR
+        id: routes
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Not a PR — skipping new-route diff check"
+            echo "missing=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="${{ github.event.pull_request.base.sha }}"
+          # Only look at routes/*.py — that's where Flask blueprints live.
+          # `git diff` with -U0 shows only added lines; we then filter to
+          # @bp.route / @<something>_bp.route additions.
+          added=$(git diff -U0 "$base"...HEAD -- 'routes/*.py' 2>/dev/null \
+            | awk '/^\+\+\+ /{file=substr($0,7)} /^@@/{next} /^\+/{print file":"$0}' \
+            | grep -E '^routes/.*\+@.*\.route\(' || true)
+          missing=""
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            file=$(echo "$line" | cut -d: -f1)
+            # For each new route, inspect the surrounding 8 lines in the
+            # head-side file — decorators stack vertically, so the scrub
+            # decorator must appear within that window.
+            # We can't get exact line number from diff alone; instead,
+            # require the file to contain `legal_scrub_response` somewhere
+            # *and* every @bp.route in it to have the decorator within
+            # 5 lines below. Cheaper heuristic: block any routes/*.py
+            # added/modified that lacks `legal_scrub_response` import
+            # AND lacks `# legal-exempt:` marker.
+            if [ -f "$file" ]; then
+              has_dec=$(grep -c 'legal_scrub_response' "$file" || true)
+              has_exempt=$(grep -c '# legal-exempt:' "$file" || true)
+              if [ "${has_dec:-0}" -eq 0 ] && [ "${has_exempt:-0}" -eq 0 ]; then
+                missing="${missing}${file}\n"
+              fi
+            fi
+          done <<< "$added"
+          # Dedup.
+          missing=$(echo -e "$missing" | sort -u | grep -v '^$' || true)
+          {
+            echo "missing<<EOF"
+            echo "$missing"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Block PR if legal_scrub_response missing
+        run: |
+          set -e
+          missing="${{ steps.routes.outputs.missing }}"
+          if [ -n "$missing" ]; then
+            echo "::error::New @bp.route added in routes/*.py without @legal_scrub_response:"
+            echo "$missing"
+            echo ""
+            echo "Fix one of:"
+            echo "  (a) from .decorators import legal_scrub_response — apply to every route returning user-facing JSON."
+            echo "  (b) Add a top-of-file comment: # legal-exempt: <reason>  (requires attorney sign-off, not just self-approval)."
+            exit 1
+          fi
+          echo "✅ All new routes carry @legal_scrub_response (or explicit exemption)"
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 3 — Korean / English disclaimer length equivalence.
+  # ───────────────────────────────────────────────────────────────────
+  scan-disclaimer-equivalence:
+    name: Disclaimer ko/en equivalence
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare ko/en disclaimer lengths
+        run: |
+          set -e
+          ko_md="frontend/src/content/disclaimer-ko.md"
+          en_md="frontend/src/content/disclaimer-en.md"
+          if [ -f "$ko_md" ] && [ -f "$en_md" ]; then
+            ko_lines=$(wc -l < "$ko_md")
+            en_lines=$(wc -l < "$en_md")
+          else
+            # Fallback: parse the inline ko/en strings from disclaimer-banner.tsx.
+            # Each `ko: "..."` line and `en: "..."` line is a paired entry.
+            banner="frontend/src/components/ui/disclaimer-banner.tsx"
+            if [ ! -f "$banner" ]; then
+              echo "::error::Neither disclaimer-{ko,en}.md nor disclaimer-banner.tsx found."
+              exit 1
+            fi
+            ko_lines=$(grep -cE '^[[:space:]]*ko:[[:space:]]*"' "$banner" || true)
+            en_lines=$(grep -cE '^[[:space:]]*en:[[:space:]]*"' "$banner" || true)
+            # Length-of-string equivalence is the better signal here than
+            # line count. Sum total ko/en string char counts using python.
+            python3 - <<'PY'
+          import re, sys, pathlib
+          p = pathlib.Path("frontend/src/components/ui/disclaimer-banner.tsx")
+          src = p.read_text(encoding="utf-8")
+          ko = sum(len(m.group(1)) for m in re.finditer(r'ko:\s*"((?:[^"\\]|\\.)*)"', src))
+          en = sum(len(m.group(1)) for m in re.finditer(r'en:\s*"((?:[^"\\]|\\.)*)"', src))
+          if ko == 0:
+              print("::error::No ko strings found — disclaimer-banner.tsx structure changed?")
+              sys.exit(1)
+          ratio = en / ko
+          print(f"ko_chars={ko} en_chars={en} ratio={ratio:.2f}")
+          if ratio < 0.30:
+              print(f"::error::English disclaimer is only {ratio:.0%} of Korean length (<30%). Likely incomplete translation.")
+              sys.exit(1)
+          if ratio < 0.50:
+              print(f"::warning::English disclaimer is {ratio:.0%} of Korean length (<50%). Review for missing clauses.")
+          print("✅ ko/en disclaimer length within tolerance")
+          PY
+            exit 0
+          fi
+          # .md path: line-based check.
+          ratio_pct=$(awk -v e="$en_lines" -v k="$ko_lines" 'BEGIN{ if(k==0){print 0} else {printf "%d", (e/k)*100} }')
+          echo "ko_lines=$ko_lines en_lines=$en_lines ratio=${ratio_pct}%"
+          if [ "$ratio_pct" -lt 30 ]; then
+            echo "::error::English disclaimer is only ${ratio_pct}% of Korean line count (<30%)."
+            exit 1
+          fi
+          if [ "$ratio_pct" -lt 50 ]; then
+            echo "::warning::English disclaimer is ${ratio_pct}% of Korean line count (<50%)."
+          fi
+          echo "✅ ko/en disclaimer length within tolerance"
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 4 — DisclaimerBanner is mounted near the top of the page,
+  #         not buried in a footer / sidebar / hidden element.
+  # ───────────────────────────────────────────────────────────────────
+  scan-disclaimer-position:
+    name: Disclaimer position (top-of-page, not buried)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify DisclaimerBanner appears in top half of each page
+        run: |
+          set -e
+          # Heuristic: the banner JSX must appear in the upper half of the
+          # JSX-return body. Buried-in-footer / hidden-className patterns
+          # fail. We use python for reliable line arithmetic.
+          python3 - <<'PY'
+          import pathlib, re, sys
+          fails: list[str] = []
+          warnings: list[str] = []
+          # If layout mounts it, every page inherits — short-circuit OK.
+          layout = pathlib.Path("frontend/src/app/(dashboard)/layout.tsx")
+          layout_mounts = layout.exists() and "DisclaimerBanner" in layout.read_text(encoding="utf-8")
+          for page in pathlib.Path("frontend/src/app/(dashboard)").glob("*/page.tsx"):
+              text = page.read_text(encoding="utf-8")
+              if "DisclaimerBanner" not in text:
+                  if not layout_mounts:
+                      fails.append(f"{page}: no DisclaimerBanner reference")
+                  continue
+              lines = text.splitlines()
+              total = len(lines)
+              # Find first DisclaimerBanner JSX usage line (not the import line).
+              first_jsx = None
+              for i, ln in enumerate(lines):
+                  s = ln.strip()
+                  if s.startswith("import ") or s.startswith("//"):
+                      continue
+                  if "<DisclaimerBanner" in ln:
+                      first_jsx = i + 1
+                      break
+              if first_jsx is None:
+                  # Imported but not rendered — block.
+                  if not layout_mounts:
+                      fails.append(f"{page}: DisclaimerBanner imported but never rendered as JSX")
+                  continue
+              # Hidden / footer / sr-only patterns block immediately.
+              window = "\n".join(lines[max(0, first_jsx-3): first_jsx+2])
+              suspicious = re.search(r'(sr-only|hidden|opacity-0|footer|aria-hidden=\{?true)', window, re.IGNORECASE)
+              if suspicious:
+                  fails.append(f"{page}:{first_jsx} — DisclaimerBanner near suspicious modifier '{suspicious.group(1)}' (banner must be visible & top-mounted)")
+                  continue
+              # Position check: must be in upper 60% of file.
+              if first_jsx > total * 0.60:
+                  warnings.append(f"{page}:{first_jsx}/{total} — DisclaimerBanner is below top 60% of file (may be footer-buried)")
+          for w in warnings:
+              print(f"::warning::{w}")
+          if fails:
+              for f in fails:
+                  print(f"::error::{f}")
+              sys.exit(1)
+          print("✅ DisclaimerBanner is top-mounted on every dashboard page")
+          PY
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 5 — Forbidden vocabulary cross-reference. legal-guard.yml
+  #         already scans backend Python; this scans frontend code
+  #         using the same canonical list from
+  #         services/legal/forbidden_terms.py.
+  # ───────────────────────────────────────────────────────────────────
+  scan-vocabulary-context:
+    name: Forbidden vocab cross-ref (frontend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cross-reference FORBIDDEN_DIRECTIVE_TERMS against frontend
+        run: |
+          set -e
+          # Strategy: scan only user-facing prose contexts in TS source —
+          # JSX text nodes and quoted prose-like literals (12+ chars with
+          # whitespace). Identifier scans (buy_threshold, sellDate, /api/buy)
+          # cause too many false positives; backend Python is already the
+          # authoritative scan via scripts/legal/scan_advisory_vocab.py.
+          python3 - <<'PY'
+          import pathlib, re, sys
+          sys.path.insert(0, ".")
+          try:
+              from services.legal.forbidden_terms import FORBIDDEN_DIRECTIVE_TERMS
+          except Exception as e:
+              print(f"::error::Could not import FORBIDDEN_DIRECTIVE_TERMS: {e}")
+              sys.exit(1)
+          skip = {pathlib.Path("frontend/src/components/ui/disclaimer-banner.tsx")}
+          # Attorney-signed (2026-05-06): these dirs hold copy describing
+          # the user's *own* behavior (onboarding answers, persona quotes),
+          # not directives from the platform. Re-evaluate if scope expands.
+          SKIP_DIRS = (
+              "frontend/src/data",
+              "frontend/src/i18n",
+              "frontend/src/__tests__",
+          )
+          jsx_text_re = re.compile(r">([^<>{}\n]{8,})<")
+          prose_literal_re = re.compile(r'"((?=[^"]*\s)[^"\\]{12,}(?:\\.[^"\\]*)*)"')
+          negation_re = re.compile(r'(아니|아닙|않|not\s|does\s+not|do\s+not|never\b|disclaimer|면책)', re.IGNORECASE)
+          violations = []
+          for p in pathlib.Path("frontend/src").rglob("*.ts*"):
+              if p in skip: continue
+              s = str(p)
+              if "/node_modules/" in s or "/.next/" in s or "/__tests__/" in s:
+                  continue
+              if any(s.startswith(d) or f"/{d}/" in s for d in SKIP_DIRS):
+                  continue
+              try:
+                  raw = p.read_text(encoding="utf-8")
+              except Exception:
+                  continue
+              # Strip /* ... */ and // ... comments. JSDoc that mentions
+              # "no buy/sell/hold language" is a comment about what's
+              # forbidden, not a directive — must not match.
+              def _strip(src):
+                  def b(m):
+                      n = m.group(0).count("\n")
+                      return "\n" * n + " " * (len(m.group(0)) - n)
+                  src = re.sub(r"/\*.*?\*/", b, src, flags=re.DOTALL)
+                  src = re.sub(r"//[^\n]*", lambda m: " " * len(m.group(0)), src)
+                  return src
+              text = _strip(raw)
+              cands = []
+              for m in jsx_text_re.finditer(text):
+                  cands.append((text.count("\n", 0, m.start()) + 1, m.group(1)))
+              for m in prose_literal_re.finditer(text):
+                  cands.append((text.count("\n", 0, m.start()) + 1, m.group(1)))
+              for line_no, prose in cands:
+                  if negation_re.search(prose): continue
+                  low = prose.lower()
+                  for term in FORBIDDEN_DIRECTIVE_TERMS:
+                      t = term.lower()
+                      if t.isascii():
+                          if not re.search(rf"\b{re.escape(t)}\b", low): continue
+                      else:
+                          if t not in low: continue
+                      violations.append(f"{p}:{line_no}: forbidden '{term}' in prose: {prose[:60]!r}")
+                      break
+          # Two modes:
+          #  - STRICT (env LEGAL_VOCAB_STRICT=1): every finding fails the job.
+          #  - default: emit findings as ::warning::, exit 0. Use this until
+          #    the existing baseline is cleaned up. Set STRICT=1 once the
+          #    list is empty to lock in zero regressions.
+          import os
+          strict = os.environ.get("LEGAL_VOCAB_STRICT") == "1"
+          severity = "error" if strict else "warning"
+          if violations:
+              for v in violations[:30]:
+                  print(f"::{severity}::{v}")
+              if len(violations) > 30:
+                  print(f"::{severity}::... and {len(violations) - 30} more")
+              print("")
+              print(f"Total: {len(violations)} finding(s) [{ 'STRICT' if strict else 'advisory' }].")
+              print("Source of truth: services/legal/forbidden_terms.py FORBIDDEN_DIRECTIVE_TERMS.")
+              print("If legitimate (educational copy / negation / disclaimer), rewrite to remove the directive verb.")
+              if strict:
+                  sys.exit(1)
+          else:
+              print("✅ No forbidden directive terms in frontend user-facing prose")
+          PY
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 6 — PR comment aggregator. Posts a single summary comment on
+  #         the PR with all violations from the jobs above. Skipped on
+  #         scheduled runs.
+  # ───────────────────────────────────────────────────────────────────
+  pr-comment:
+    name: Post violation summary on PR
+    if: github.event_name == 'pull_request' && always()
+    needs:
+      - scan-disclaimer-mount
+      - scan-api-decorator
+      - scan-disclaimer-equivalence
+      - scan-disclaimer-position
+      - scan-vocabulary-context
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Compose summary
+        id: summary
+        run: |
+          {
+            echo "body<<EOF"
+            echo "## 🛡️ legal-deep-scan results"
+            echo ""
+            echo "| Check | Status |"
+            echo "|---|---|"
+            echo "| Disclaimer mount (pages + PDF) | ${{ needs.scan-disclaimer-mount.result }} |"
+            echo "| API legal_scrub_response | ${{ needs.scan-api-decorator.result }} |"
+            echo "| ko/en equivalence | ${{ needs.scan-disclaimer-equivalence.result }} |"
+            echo "| Banner position (top-mount) | ${{ needs.scan-disclaimer-position.result }} |"
+            echo "| Forbidden vocab cross-ref | ${{ needs.scan-vocabulary-context.result }} |"
+            echo ""
+            echo "_Failures: open the workflow run logs for the offending file:line._"
+            echo "_Companion: legal-guard.yml (backend vocab/templates) + tests/test_legal_deep_scan_local.py (local macOS)._"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post / update comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `${{ steps.summary.outputs.body }}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const marker = "🛡️ legal-deep-scan results";
+            const prior = comments.find(c => c.body && c.body.includes(marker));
+            if (prior) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: prior.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

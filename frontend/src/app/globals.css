@@ -3677,6 +3677,12 @@ html {
   background: var(--r-paper, #ffffff);
   margin: 24px auto;
   padding: 18mm 16mm 22mm;
+  /* 2026-05-06: ensure padding stays INSIDE the 297mm page height so the
+     overall box matches an A4 sheet exactly. Without border-box, the page
+     becomes 297mm + padding = 337mm tall, which overflows by ~40mm and
+     manifests as a phantom 2nd PDF page carrying the absolutely-positioned
+     footer + mini-disclaimer (e.g. portfolio_segment p2 ghost). */
+  box-sizing: border-box;
   position: relative;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
   page-break-after: always;
