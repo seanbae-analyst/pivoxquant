@@ -78,7 +78,7 @@ export interface MonthlyFinanceData {
 }
 
 const DEFAULT: MonthlyFinanceData = {
-  doc: "Apr 2026 · MF-2026-04 · 01/04",
+  doc: "Apr 2026 · MF-2026-04 · 01/05",
   asOf: "Apr 30, 2026",
   navEom: "$1,242,150",
   monthReturn: "+4.0%",
@@ -168,7 +168,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
 
       {/* PAGE 2 — EXECUTIVE SUMMARY + NAV TREND */}
       <PdfPage>
-        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 02/04" />
+        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 02/05" />
 
         <PdfExecSum
           stamp={`As of ${data.asOf}`}
@@ -246,9 +246,12 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 3 — INCOME + BALANCE SHEET */}
+      {/* PAGE 3 — INCOME STATEMENT
+          2026-05-06 CEO 보고: V4 압축 (IS + BS 한 페이지) 시 297mm 초과로
+          본문이 페이지 footer/disclaimer 와 visual overlap. "겹칠 것 같으면
+          넘기라고." 지시대로 IS 와 BS 분리. */}
       <PdfPage>
-        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 03/04" />
+        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 03/05" />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="dry">Income Statement · 손익계산서 (MTD &amp; YTD)</PdfSectionTitle>
@@ -279,10 +282,16 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
           </tbody>
         </PdfTable>
 
-        {/* 2026-05-05 V5 layout: wrap Balance Sheet header + donut +
-            2-col Assets/Liabilities tables together so the donut never
-            gets visually orphaned from the breakdown that explains it.
-            CEO V5 brief reported p3 donut / p4 table widow split. */}
+        <PdfPageFooter left="Monthly Finance · Premium" right="Page 03" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 4 — BALANCE SHEET (donut + 2-col Assets/Liab) — separated
+          from IS so neither overlaps the page footer. */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 04/05" />
+        <PdfGoldRule />
+
         <div className="pq-pdf-section">
           <PdfSectionTitle variant="dry">Balance Sheet · 재무상태표 (as of Apr 30)</PdfSectionTitle>
           <PdfCard>
@@ -337,17 +346,16 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
           </div>
         </div>
 
-        <PdfPageFooter left="Monthly Finance · Premium" right="Page 03" />
+        <PdfPageFooter left="Monthly Finance · Premium" right="Page 05" />
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 4 — CASH FLOW + RATIOS + GOVERNANCE
-          2026-05-06: `compact` shrinks padding 18/16/22mm → 14/14/18mm
-          to fit Cash Flow + Key Ratios + Liquidity Tiers + Gov + bilingual
-          Disclaimer onto a single A4 sheet. Without compact, the disclaim
-          spilled to a 5th sheet (16_monthly_finance.pdf 5p regression). */}
+      {/* PAGE 5 — CASH FLOW + RATIOS + GOVERNANCE
+          `compact` shrinks padding 18/16/22mm → 14/14/18mm to fit Cash
+          Flow + Key Ratios + Liquidity Tiers + Gov + bilingual Disclaimer
+          on a single sheet. */}
       <PdfPage compact>
-        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 04/04" />
+        <PdfHeader tier="premium" title="MONTHLY FINANCE" meta="Apr 2026 · 05/05" />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="dry">Cash Flow · 현금흐름표</PdfSectionTitle>
@@ -410,7 +418,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
         </PdfTable>
 
         <PdfGovBlock />
-        <PdfPageFooter left="Monthly Finance · Premium · Internal" right="Page 04" />
+        <PdfPageFooter left="Monthly Finance · Premium · Internal" right="Page 05" />
         <PdfDisclaimer cadence="monthly" />
       </PdfPage>
     </>
