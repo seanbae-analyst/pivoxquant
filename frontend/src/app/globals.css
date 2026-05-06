@@ -3708,19 +3708,26 @@ html {
 
 .pq-pdf-page {
   width: 210mm;
-  min-height: 297mm;
+  /* 2026-05-06 CEO: height 강제 적용. min-height (자동 늘어남) 가 한
+     PdfPage 에 콘텐츠 많이 우겨넣을 때 297mm 초과 → absolute footer/
+     disclaimer 와 visual overlap 또는 자동 sheet spread 로 ghost 페이지
+     발생. height 강제하면 1 sheet = 1 PdfPage 정확히. content 가
+     초과하면 다음 sheet 로 자동 break (CSS standard), flex column +
+     disclaimer margin-top:auto 가 잉여 공간 흡수. */
+  height: 297mm;
   background: var(--r-paper, #ffffff);
   margin: 24px auto;
   padding: 18mm 16mm 22mm;
-  /* 2026-05-06: ensure padding stays INSIDE the 297mm page height so the
-     overall box matches an A4 sheet exactly. Without border-box, the page
-     becomes 297mm + padding = 337mm tall, which overflows by ~40mm and
-     manifests as a phantom 2nd PDF page carrying the absolutely-positioned
-     footer + mini-disclaimer (e.g. portfolio_segment p2 ghost). */
+  /* border-box 로 padding 이 297mm 안에 포함. content area = 257mm vertical. */
   box-sizing: border-box;
   position: relative;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
   page-break-after: always;
+  /* 한 sheet 에 정확히 1 PdfPage 만 들어가도록 — content 가 257mm 초과
+     하면 다음 sheet 로 spread (이게 사장님 의도된 "넘기라고"). */
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
   color: var(--r-ink, #0e0e0e);
 }
 .pq-pdf-page:last-of-type { page-break-after: auto; }
