@@ -90,10 +90,8 @@ export function TodayMemoHeroV2({
       </div>
 
       <h1
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily:
-            '"Playfair Display","Source Serif 4",Georgia,serif',
           fontWeight: 500,
           fontSize: "clamp(32px, 4.2vw, 48px)",
           lineHeight: 1.05,
@@ -113,8 +111,6 @@ export function TodayMemoHeroV2({
         <p
           className="font-serif"
           style={{
-            fontFamily:
-              '"Source Serif 4","Iowan Old Style",Georgia,serif',
             fontSize: 17,
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.82)",
@@ -134,7 +130,7 @@ export function TodayMemoHeroV2({
       >
         <Link
           href="/reports"
-          className="pq-cta-bronze"
+          className="pq-cta-bronze font-mono"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -142,8 +138,6 @@ export function TodayMemoHeroV2({
             padding: "12px 22px",
             background: "var(--pq-bronze)",
             color: "var(--pq-ink, #050505)",
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 11,
             letterSpacing: "0.2em",
             textTransform: "uppercase",
@@ -160,8 +154,6 @@ export function TodayMemoHeroV2({
             href="/reports"
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 11,
               letterSpacing: "0.18em",
               textTransform: "uppercase",

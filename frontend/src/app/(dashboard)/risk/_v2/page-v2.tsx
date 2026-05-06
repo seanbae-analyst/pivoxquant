@@ -155,7 +155,6 @@ export default function RiskPageV2() {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -223,8 +222,6 @@ export default function RiskPageV2() {
                 <span
                   className="font-mono"
                   style={{
-                    fontFamily:
-                      'var(--pq-font-mono,"JetBrains Mono",monospace)',
                     fontSize: 12,
                     color: "var(--pq-bronze)",
                     letterSpacing: "0.04em",
@@ -234,10 +231,8 @@ export default function RiskPageV2() {
                 </span>
                 <div>
                   <div
-                    className="font-serif"
+                    className="font-display"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                       fontSize: 16,
                       color: "var(--pq-ivory)",
                       letterSpacing: "-0.005em",
@@ -249,8 +244,6 @@ export default function RiskPageV2() {
                   <div
                     className="font-serif"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
                       fontSize: 13,
                       color: "rgba(245,240,232,0.70)",
                       lineHeight: 1.55,

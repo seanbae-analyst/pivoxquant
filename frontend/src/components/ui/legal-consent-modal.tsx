@@ -140,9 +140,8 @@ export function LegalConsentModal({
         }}
       >
         <h2
-          className="text-lg font-bold"
+          className="text-lg font-bold font-display"
           style={{
-            fontFamily: "var(--font-display)",
             color: "var(--pq-ivory)",
             letterSpacing: "var(--pq-track-tight)",
           }}

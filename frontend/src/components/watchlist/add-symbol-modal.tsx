@@ -128,8 +128,8 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               Watchlist
             </div>
             <div
-              className="mt-0.5 text-xl"
-              style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ink)" }}
+              className="mt-0.5 text-xl font-serif"
+              style={{ color: "var(--pq-ink)" }}
             >
               Add a symbol
             </div>
@@ -251,16 +251,15 @@ export function AddSymbolModal({ onClose, onAdded }: Props) {
               rows={3}
               placeholder="Why this symbol? What to observe?"
               maxLength={500}
-              className="mt-2 w-full resize-none rounded-md bg-transparent px-3 py-2 text-sm outline-none"
+              className="mt-2 w-full resize-none rounded-md bg-transparent px-3 py-2 text-sm outline-none font-serif"
               style={{
                 border: "0.5px solid var(--pq-hairline)",
                 color: "var(--pq-ink)",
-                fontFamily: "var(--font-serif), serif",
               }}
             />
             <p
-              className="mt-1 text-[11px]"
-              style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-muted)" }}
+              className="mt-1 text-[11px] font-serif"
+              style={{ color: "var(--pq-muted)" }}
             >
               Observations only — no targets, no recommendations.
             </p>

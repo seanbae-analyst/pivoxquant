@@ -122,8 +122,6 @@ export default function LoginPageV2() {
             <span
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10.5,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze, #B8956A)",
@@ -133,10 +131,8 @@ export default function LoginPageV2() {
               Sign in
             </span>
             <h2
-              className="font-serif"
+              className="font-display"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontWeight: 500,
                 fontSize: 24,
                 lineHeight: 1.2,
@@ -187,8 +183,6 @@ export default function LoginPageV2() {
             className="font-serif"
             style={{
               marginTop: 12,
-              fontFamily:
-                '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontSize: 12,
               lineHeight: 1.55,
               color: "rgba(245,240,232,0.40)",

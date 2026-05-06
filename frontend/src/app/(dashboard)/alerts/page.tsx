@@ -164,10 +164,8 @@ export default function AlertsPage() {
           <div>
             <RuledKicker>Signals desk &middot; Alerts history</RuledKicker>
             <h1
-              className="mt-3 font-serif"
+              className="mt-3 font-display"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontWeight: 500,
                 fontSize: "clamp(34px, 4.6vw, 52px)",
                 lineHeight: 1.06,
@@ -281,10 +279,8 @@ export default function AlertsPage() {
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <Fleuron size={16} />
             <p
-              className="mt-2 font-serif"
+              className="mt-2 font-display"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontSize: 22,
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",

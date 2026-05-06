@@ -107,9 +107,8 @@ export function ProfileDropdown() {
               style={{ borderBottom: "0.5px solid var(--pq-hairline)" }}
             >
               <div
-                className="text-[15px]"
+                className="text-[15px] font-serif"
                 style={{
-                  fontFamily: "var(--font-serif), serif",
                   color: "var(--pq-ivory)",
                 }}
               >
@@ -123,13 +122,12 @@ export function ProfileDropdown() {
               </div>
               <div className="mt-3">
                 <span
-                  className="inline-flex items-center rounded px-2 py-0.5 text-[10px]"
+                  className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-mono"
                   style={{
                     border: "0.5px solid var(--pq-bronze)",
                     color: "var(--pq-bronze)",
                     letterSpacing: "0.2em",
                     textTransform: "uppercase",
-                    fontFamily: "var(--font-mono), monospace",
                   }}
                 >
                   {tier}
@@ -266,8 +264,8 @@ function ShortcutsModal({ onClose }: { onClose: () => void }) {
             Reference
           </div>
           <div
-            className="mt-0.5 text-xl"
-            style={{ fontFamily: "var(--font-serif), serif", color: "var(--pq-ivory)" }}
+            className="mt-0.5 text-xl font-serif"
+            style={{ color: "var(--pq-ivory)" }}
           >
             Keyboard shortcuts
           </div>

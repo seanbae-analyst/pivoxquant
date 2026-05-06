@@ -168,8 +168,6 @@ export function OAuthButtonsV2({
           role={hintEmphasized ? "alert" : undefined}
           style={{
             marginTop: 6,
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10,
             letterSpacing: "0.18em",
             color: hintEmphasized

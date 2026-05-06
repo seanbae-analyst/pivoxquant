@@ -44,7 +44,6 @@ function ProxyPillSmall({ proxy }: { proxy: string }) {
         display: "inline-flex",
         alignItems: "center",
         gap: 3,
-        fontFamily: "var(--font-mono), ui-monospace, monospace",
         fontSize: 9,
         letterSpacing: "0.18em",
         textTransform: "uppercase",
@@ -56,7 +55,7 @@ function ProxyPillSmall({ proxy }: { proxy: string }) {
         lineHeight: 1,
         whiteSpace: "nowrap",
       }}
-    >
+    className="font-mono" >
       <span style={{ opacity: 0.75 }}>via</span>
       <span style={{ fontWeight: 600 }}>{proxy}</span>
     </span>
@@ -152,19 +151,17 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontFamily: "var(--font-serif), Georgia, serif",
             fontSize: 14,
             color: "#141414",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
           }}
-        >
+        className="font-serif" >
           {quote.name}
         </div>
         <div
           style={{
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
             fontSize: 9.5,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
@@ -174,7 +171,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
             alignItems: "center",
             gap: 6,
           }}
-        >
+        className="font-mono" >
           <span>{quote.symbol}</span>
           {quote.observed_at ? (
             <>
@@ -226,7 +223,6 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
         ) : null}
         <div
           style={{
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
             fontVariantNumeric: "tabular-nums",
             fontSize: 17,
             color: "#141414",
@@ -237,7 +233,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
               ? `Level sourced from ${quote.proxy_ticker} ETF (FMP Starter tier does not serve ${quote.symbol}). No ratio conversion applied.`
               : undefined
           }
-        >
+        className="font-mono" >
           {fmtLevel(quote.level, quote.format)}
           {quote.unit ? (
             <span
@@ -265,14 +261,13 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
         {quote.proxy_ticker ? (
           <div
             style={{
-              fontFamily: "var(--font-mono), ui-monospace, monospace",
               fontSize: 9,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.5)",
               marginTop: 2,
             }}
-          >
+          className="font-mono" >
             {proxyLabel(quote.proxy_ticker)}
           </div>
         ) : null}
@@ -308,12 +303,11 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
             display: "flex",
             justifyContent: "space-between",
             marginTop: 3,
-            fontFamily: "var(--font-mono), ui-monospace, monospace",
             fontVariantNumeric: "tabular-nums",
             fontSize: 9.5,
             color: "rgba(20,20,20,0.55)",
           }}
-        >
+        className="font-mono" >
           <span>{fmtLevel(quote.weekLow52, quote.format)}</span>
           <span style={{ letterSpacing: "0.12em" }}>52W</span>
           <span>{fmtLevel(quote.weekHigh52, quote.format)}</span>
@@ -343,23 +337,21 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
         <div className="pq-paper-kicker">The Board</div>
         <h2
           style={{
-            fontFamily: "var(--font-serif), Georgia, serif",
             fontWeight: 400,
             fontSize: "clamp(1.4rem, 2.4vw, 1.9rem)",
             letterSpacing: "-0.01em",
             color: "#141414",
             margin: "4px 0 2px",
           }}
-        >
+        className="font-serif" >
           {region === "US" ? "United States · Indices" : "Korea · Indices"}
         </h2>
         <div
           style={{
-            fontFamily: "var(--font-serif), Georgia, serif",
             fontSize: 12,
             color: "rgba(20,20,20,0.55)",
           }}
-        >
+        className="font-serif" >
           Live observation &middot; refreshing as the tape prints.
         </div>
       </div>
@@ -398,14 +390,13 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
         ) : (
           <p
             style={{
-              fontFamily: "var(--font-serif), Georgia, serif",
               fontSize: 13,
               fontStyle: "italic",
               color: "rgba(20,20,20,0.55)",
               padding: "20px 0",
               margin: 0,
             }}
-          >
+          className="font-serif" >
             Index data temporarily unavailable.
           </p>
         )}
@@ -431,30 +422,27 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
               >
                 <span
                   style={{
-                    fontFamily: "var(--font-serif), Georgia, serif",
                     fontSize: 13,
                     color: "#1a1a1a",
                   }}
-                >
+                className="font-serif" >
                   {row.label}
                 </span>
                 <span
                   style={{
-                    fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontVariantNumeric: "tabular-nums",
                     fontSize: 14,
                     color: "#141414",
                   }}
-                >
+                className="font-mono" >
                   {row.value}
                 </span>
                 <span
                   style={{
-                    fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontSize: 10.5,
                     color: "rgba(20,20,20,0.55)",
                   }}
-                >
+                className="font-mono" >
                   {row.note}
                 </span>
               </div>

@@ -121,8 +121,6 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
       <span
         className="font-mono uppercase"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontVariantNumeric: "tabular-nums",
           fontSize: 11,
           letterSpacing: "0.16em",
@@ -134,8 +132,6 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
       <span
         className="font-serif"
         style={{
-          fontFamily:
-            '"Source Serif 4","Iowan Old Style",Georgia,serif',
           fontSize: 14,
           color: "rgba(245,240,232,0.82)",
         }}
@@ -145,8 +141,6 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
       <span
         className="font-mono uppercase"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: dim ? "rgba(245,240,232,0.40)" : "var(--pq-bronze)",
@@ -463,8 +457,6 @@ export default function ProfilePageV2() {
               position: "absolute",
               top: 14,
               right: 14,
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 9.5,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
@@ -475,8 +467,6 @@ export default function ProfilePageV2() {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -534,8 +524,6 @@ export default function ProfilePageV2() {
                 position: "absolute",
                 top: 14,
                 right: 14,
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 9.5,
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.40)",
@@ -546,8 +534,6 @@ export default function ProfilePageV2() {
             <div
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10.5,
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
@@ -565,8 +551,6 @@ export default function ProfilePageV2() {
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  '"Source Serif 4","Iowan Old Style",Georgia,serif',
                 fontSize: 14,
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.82)",
@@ -617,21 +601,17 @@ export default function ProfilePageV2() {
             marginTop: 64,
             padding: "18px 24px",
             border: "1px dashed rgba(245,240,232,0.14)",
-            fontFamily:
-              '"Source Serif 4","Iowan Old Style",Georgia,serif',
             fontSize: 12.5,
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.40)",
           }}
-        >
+        className="font-serif" >
           <strong
             style={{
               color: "rgba(245,240,232,0.82)",
-              fontFamily:
-                '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontStyle: "italic",
             }}
-          >
+          className="font-serif" >
             Notice / 면책 고지.
           </strong>{" "}
           PivoxQuant produces editorial memos and analytical artifacts for the

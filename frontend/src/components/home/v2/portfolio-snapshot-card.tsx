@@ -93,8 +93,6 @@ export function PortfolioSnapshotCard() {
       <div
         className="font-mono"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontVariantNumeric: "tabular-nums",
           fontSize: 28,
           letterSpacing: "-0.02em",
@@ -110,8 +108,6 @@ export function PortfolioSnapshotCard() {
       <div
         className="font-mono"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontVariantNumeric: "tabular-nums",
           fontSize: 12.5,
           color: deltaColor,
@@ -155,8 +151,6 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 9.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -168,8 +162,6 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontVariantNumeric: "tabular-nums",
               fontSize: 14,
               color: deltaColor,
@@ -183,8 +175,6 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 9.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -196,8 +186,6 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontVariantNumeric: "tabular-nums",
               fontSize: 14,
               color: "var(--pq-ivory)",
@@ -211,8 +199,6 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 9.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -224,8 +210,6 @@ export function PortfolioSnapshotCard() {
           <div
             className="font-mono"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontVariantNumeric: "tabular-nums",
               fontSize: 14,
               color:

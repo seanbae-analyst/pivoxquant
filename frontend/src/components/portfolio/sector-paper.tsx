@@ -53,7 +53,6 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
 
       <h2
         style={{
-          fontFamily: "var(--font-serif), Georgia, serif",
           fontSize: "clamp(1.5rem, 2.4vw, 1.9rem)",
           lineHeight: 1.05,
           color: "#1a1a1a",
@@ -61,7 +60,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
           marginTop: -4,
           maxWidth: "16ch",
         }}
-      >
+      className="font-serif" >
         How the book leans.
       </h2>
 
@@ -92,7 +91,6 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                 >
                   <span
                     style={{
-                      fontFamily: "var(--font-serif), Georgia, serif",
                       fontSize: 13.5,
                       color: "#1a1a1a",
                       letterSpacing: "-0.005em",
@@ -100,18 +98,17 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}
-                  >
+                  className="font-serif" >
                     {r.sector || "—"}
                   </span>
                   <span
                     style={{
-                      fontFamily: "var(--font-mono), ui-monospace, monospace",
                       fontSize: 11.5,
                       fontVariantNumeric: "tabular-nums",
                       color: "#B8956A",
                       fontWeight: 600,
                     }}
-                  >
+                  className="font-mono" >
                     {r.pct.toFixed(1)}%
                   </span>
                 </div>
@@ -137,13 +134,12 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                 <div
                   style={{
                     marginTop: 4,
-                    fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fontSize: 10,
                     color: "rgba(20,20,20,0.45)",
                     letterSpacing: "0.02em",
                     fontVariantNumeric: "tabular-nums",
                   }}
-                >
+                className="font-mono" >
                   {fmtMv(r.mv, bookCurrency)}
                 </div>
               </div>
@@ -158,13 +154,12 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
           position: "absolute",
           bottom: 18,
           right: 22,
-          fontFamily: "var(--font-serif), Georgia, serif",
           fontSize: 10,
           color: "rgba(139,111,71,0.55)",
           letterSpacing: "0.06em",
         }}
         aria-hidden
-      >
+      className="font-serif" >
         · weighting ·
       </div>
     </div>

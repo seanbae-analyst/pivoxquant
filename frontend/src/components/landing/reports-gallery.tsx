@@ -71,8 +71,6 @@ function TierBadge({ tier }: { tier: Tier }) {
       aria-label={`Tier ${tier}`}
       className="font-mono uppercase"
       style={{
-        fontFamily:
-          '"JetBrains Mono","SF Mono",ui-monospace,monospace',
         fontSize: "9.5px",
         letterSpacing: "0.22em",
         color: "var(--pq-bronze)",
@@ -111,8 +109,6 @@ function ReportCard({ entry }: { entry: ReportEntry }) {
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: "10.5px",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
@@ -142,7 +138,6 @@ function ReportCard({ entry }: { entry: ReportEntry }) {
       <p
         className="font-serif"
         style={{
-          fontFamily: '"Source Serif 4","Source Serif Pro",Georgia,serif',
           color: "rgba(245,240,232,0.6)",
           fontSize: "13px",
           lineHeight: 1.55,
@@ -212,8 +207,6 @@ export default function ReportsGallery() {
           <p
             className="font-serif"
             style={{
-              fontFamily:
-                '"Source Serif 4","Source Serif Pro",Georgia,serif',
               fontSize: "clamp(15px, 1.3vw, 17px)",
               lineHeight: 1.65,
               color: "rgba(245,240,232,0.65)",
@@ -266,8 +259,6 @@ export default function ReportsGallery() {
           <span
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: "10px",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.4)",

@@ -242,9 +242,8 @@ export default function PreTradePage() {
         <header className="space-y-3">
           <RuledKicker>Signature &middot; Pre-Trade Checklist</RuledKicker>
           <h1
-            className="mt-3 font-serif text-[var(--pq-ivory)]"
+            className="mt-3 font-display text-[var(--pq-ivory)]"
             style={{
-              fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: "clamp(34px, 4.6vw, 52px)",
               lineHeight: 1.06,
@@ -682,9 +681,8 @@ function SectionLabel({ n, title }: { n: number; title: string }) {
         {String(n).padStart(2, "0")}
       </span>
       <h2
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
           fontWeight: 500,
           fontSize: "clamp(20px, 2.4vw, 26px)",
           lineHeight: 1.15,
