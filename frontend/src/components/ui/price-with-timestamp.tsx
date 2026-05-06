@@ -108,7 +108,7 @@ export function PriceWithTimestamp({
         {priceStr}
       </span>
       {showTimestamp && (
-        <span className="inline-flex items-center gap-1 font-mono text-[9.5px] uppercase tracking-[0.16em]">
+        <span className="inline-flex items-center gap-1 font-mono text-[12px] uppercase tracking-[0.16em]">
           {isStale ? (
             <span
               className="h-1.5 w-1.5 animate-pulse rounded-full bg-yellow-500/70"

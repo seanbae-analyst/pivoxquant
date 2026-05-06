@@ -287,7 +287,7 @@ export default function RiskPage() {
       {/* Terminal header */}
       <header className="mb-8 flex items-center justify-between gap-4">
         <span className="pq-ink-kicker">PIVOXQUANT · RISK</span>
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+        <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           {weekTag()}
         </span>
       </header>
@@ -310,7 +310,7 @@ export default function RiskPage() {
                 ? "Sample preview · log in to see yours"
                 : "Sample preview · add positions to populate"}
             </div>
-            <p className="text-[12.5px] leading-relaxed text-[rgba(245,240,232,0.75)]">
+            <p className="text-[14px] leading-relaxed text-[rgba(245,240,232,0.75)]">
               {isAuthError
                 ? "You are viewing an illustrative risk board with representative observations. Sign in with Google or Kakao to observe your own holdings."
                 : "You are viewing an illustrative risk board. Once you add positions in Portfolio, this page will show observations specific to your book."}

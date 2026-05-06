@@ -675,7 +675,7 @@ export default function PricingPage() {
                 >
                   {p.recommended && (
                     <span
-                      className="absolute -top-2.5 left-8 px-2.5 py-[3px] font-serif text-[9.5px] uppercase"
+                      className="absolute -top-2.5 left-8 px-2.5 py-[3px] font-serif text-[12px] uppercase"
                       style={{
                         backgroundColor: "#050505",
                         color: "var(--pq-bronze)",
@@ -775,7 +775,7 @@ export default function PricingPage() {
                           }}
                         />
                         <span
-                          className="font-serif text-[13.5px] leading-snug"
+                          className="font-serif text-[14px] leading-snug"
                           style={{
                             color: isDark
                               ? "rgba(245,240,232,0.78)"
@@ -791,7 +791,7 @@ export default function PricingPage() {
                   {p.href ? (
                     <Link
                       href={p.href}
-                      className="block text-center w-full py-3 px-4 font-serif text-[13.5px] transition-colors"
+                      className="block text-center w-full py-3 px-4 font-serif text-[14px] transition-colors"
                       style={{
                         backgroundColor: p.recommended
                           ? "var(--pq-bronze)"
@@ -813,7 +813,7 @@ export default function PricingPage() {
                     <button
                       type="button"
                       onClick={() => handleCheckout(p.key)}
-                      className="block text-center w-full py-3 px-4 font-serif text-[13.5px] transition-colors"
+                      className="block text-center w-full py-3 px-4 font-serif text-[14px] transition-colors"
                       style={{
                         backgroundColor: p.recommended
                           ? "var(--pq-bronze)"

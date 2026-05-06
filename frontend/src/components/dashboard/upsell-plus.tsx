@@ -90,7 +90,7 @@ export function UpsellPlus() {
 
         <div className="flex-1 min-w-0">
           <div
-            className="font-mono uppercase text-[9.5px] tracking-[0.26em]"
+            className="font-mono uppercase text-[12px] tracking-[0.26em]"
             style={{ color: "var(--pq-bronze)" }}
           >
             Living CFO · Layer 4 · Closed Beta

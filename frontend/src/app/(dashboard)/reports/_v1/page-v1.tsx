@@ -142,7 +142,7 @@ function ArtifactCard({
           Optimised for {PERSONA_LABELS[declaredPersona]}
         </p>
       )}
-      <p className="mt-2 font-serif text-[11.5px] text-[rgba(245,240,232,0.55)]">
+      <p className="mt-2 font-serif text-[12px] text-[rgba(245,240,232,0.55)]">
         Last generated &mdash; <span className="tabular-nums font-mono">{lastGenerated}</span>
       </p>
 
@@ -296,7 +296,7 @@ function ReportsPageInner() {
               type="button"
               onClick={() => setPersonaFilter(p)}
               aria-pressed={active}
-              className="text-[10.5px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-[2px] border transition-colors"
+              className="text-[12px] uppercase tracking-[0.18em] px-2.5 py-1 rounded-[2px] border transition-colors"
               style={{
                 borderColor: active
                   ? "var(--pq-bronze)"

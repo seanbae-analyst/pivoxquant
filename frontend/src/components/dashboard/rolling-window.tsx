@@ -69,7 +69,7 @@ export function RollingWindowWidget({ className = "", paper = true }: Props) {
       <header className="flex items-start justify-between gap-3">
         <div>
           <div
-            className="text-[9.5px] uppercase tracking-[0.26em]"
+            className="text-[12px] uppercase tracking-[0.26em]"
             style={{ color: paper ? "#B8956A" : "var(--pq-bronze)" }}
           >
             Layer 2 · Learning · Rolling window
@@ -221,7 +221,7 @@ function MiniChart({
   return (
     <div>
       <div
-        className="text-[9.5px] uppercase tracking-[0.22em]"
+        className="text-[12px] uppercase tracking-[0.22em]"
         style={{ color: labelColor }}
       >
         {label}

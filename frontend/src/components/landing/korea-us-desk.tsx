@@ -194,7 +194,7 @@ export function KoreaUsDesk() {
                     {t.title_ko}
                   </p>
                   <p
-                    className="font-mono text-[10.5px] tabular-nums"
+                    className="font-mono text-[12px] tabular-nums"
                     style={{
                       color: "rgba(245,240,232,0.45)",
                       letterSpacing: "0.02em",

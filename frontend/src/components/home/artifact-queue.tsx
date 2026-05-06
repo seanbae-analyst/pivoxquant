@@ -198,7 +198,7 @@ export function ArtifactQueue() {
       <header className="flex items-baseline justify-between gap-3 mb-2">
         <div>
           <div
-            className="font-mono uppercase text-[9.5px] tracking-[0.26em]"
+            className="font-mono uppercase text-[12px] tracking-[0.26em]"
             style={{ color: "var(--pq-bronze)" }}
           >
             Today · Artifact Queue
@@ -258,7 +258,7 @@ function ArtifactRow({ row }: { row: QueueRow }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span
-              className="font-mono uppercase text-[9.5px] tracking-[0.24em]"
+              className="font-mono uppercase text-[12px] tracking-[0.24em]"
               style={{ color: "var(--pq-bronze)" }}
             >
               {label}
@@ -290,7 +290,7 @@ function ArtifactRow({ row }: { row: QueueRow }) {
             {title}
           </div>
           <div
-            className="mt-0.5 text-[11.5px]"
+            className="mt-0.5 text-[12px]"
             style={{ color: "rgba(245,240,232,0.55)" }}
           >
             {meta}

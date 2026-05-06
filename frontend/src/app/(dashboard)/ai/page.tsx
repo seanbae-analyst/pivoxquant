@@ -158,7 +158,7 @@ function AnalysisSectionCard({
           <p className="font-serif text-[15px] text-[var(--pq-ivory)]">
             {config.label}
           </p>
-          <p className="text-[11.5px] text-[rgba(245,240,232,0.55)] truncate">
+          <p className="text-[12px] text-[rgba(245,240,232,0.55)] truncate">
             {config.description}
           </p>
         </div>
@@ -186,7 +186,7 @@ function AnalysisSectionCard({
           )}
           {state.error && (
             <div className="rounded-[2px] border border-red-500/30 bg-red-500/5 px-4 py-3">
-              <p className="text-[12.5px] text-red-400">{state.error}</p>
+              <p className="text-[14px] text-red-400">{state.error}</p>
             </div>
           )}
           {content && (
@@ -196,7 +196,7 @@ function AnalysisSectionCard({
               </div>
               {contentKr && (
                 <details className="group">
-                  <summary className="cursor-pointer text-[10.5px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
+                  <summary className="cursor-pointer text-[12px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
                     Korean translation
                   </summary>
                   <div className="mt-3 whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.6)]">
@@ -411,7 +411,7 @@ export default function AiPage() {
                 {coaching.loading && (
                   <div className="mt-4 flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-[var(--pq-bronze)]" />
-                    <span className="text-[11.5px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)]">
+                    <span className="text-[12px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.55)]">
                       Generating insight…
                     </span>
                   </div>
@@ -419,7 +419,7 @@ export default function AiPage() {
 
                 {coaching.error && (
                   <div className="mt-4 rounded-[2px] border border-red-500/30 bg-red-500/5 px-4 py-3">
-                    <p className="text-[12.5px] text-red-400">{coaching.error}</p>
+                    <p className="text-[14px] text-red-400">{coaching.error}</p>
                   </div>
                 )}
 
@@ -432,7 +432,7 @@ export default function AiPage() {
                     </div>
                     {coaching.data.insight_kr && (
                       <details className="group">
-                        <summary className="cursor-pointer text-[10.5px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
+                        <summary className="cursor-pointer text-[12px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
                           Korean translation
                         </summary>
                         <div className="mt-3 rounded-[2px] border border-[rgba(245,240,232,0.06)] bg-[rgba(255,255,255,0.015)] p-4">
@@ -460,7 +460,7 @@ export default function AiPage() {
                   <button
                     type="button"
                     onClick={fetchCoaching}
-                    className="mt-3 text-[10.5px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors"
+                    className="mt-3 text-[12px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors"
                   >
                     Refresh insight
                   </button>
@@ -513,7 +513,7 @@ export default function AiPage() {
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[rgba(245,240,232,0.5)]" />
                   </div>
-                  <span className="text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.65)]">
+                  <span className="text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.65)]">
                     {userTickers.length} symbol{userTickers.length === 1 ? "" : "s"} eligible
                   </span>
                 </div>
@@ -537,7 +537,7 @@ export default function AiPage() {
               )}
 
               {activeTicker && (
-                <p className="mt-3 text-[10.5px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)]">
+                <p className="mt-3 text-[12px] uppercase tracking-[0.22em] font-medium text-[var(--pq-bronze)]">
                   Showing analysis for{" "}
                   <span className="font-mono tabular-nums">{activeTicker}</span>
                 </p>

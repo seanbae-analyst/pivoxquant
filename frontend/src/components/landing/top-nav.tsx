@@ -426,7 +426,7 @@ export default function TopNav() {
                       aria-expanded={isOpen}
                       onClick={() => setActiveKey(isOpen ? null : group.key)}
                       onFocus={() => openGroup(group.key)}
-                      className="group relative inline-flex h-9 items-center gap-1.5 px-3 font-serif text-[12.5px] transition-colors duration-300"
+                      className="group relative inline-flex h-9 items-center gap-1.5 px-3 font-serif text-[14px] transition-colors duration-300"
                       style={{
                         color: isOpen
                           ? "var(--pq-ivory)"
@@ -469,7 +469,7 @@ export default function TopNav() {
             <div className="flex items-center gap-2">
               <Link
                 href={user ? "/home" : "/login"}
-                className="hidden font-serif text-[12.5px] transition-colors lg:inline-block"
+                className="hidden font-serif text-[14px] transition-colors lg:inline-block"
                 style={{
                   color: "rgba(245,240,232,0.68)",
                   letterSpacing: "0.02em",
@@ -480,7 +480,7 @@ export default function TopNav() {
               </Link>
               <Link
                 href={user ? "/home" : "/signup"}
-                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-4 font-serif text-[12.5px] transition-transform duration-200 active:scale-[0.98]"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-4 font-serif text-[14px] transition-transform duration-200 active:scale-[0.98]"
                 style={{
                   // WCAG 2.5.5 AA — 44x44 minimum tap target. Was 36 (failed
                   // mobile guideline + Apple HIG). Padding/letter-spacing

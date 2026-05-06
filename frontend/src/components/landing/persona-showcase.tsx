@@ -199,7 +199,7 @@ export function PersonaShowcase() {
               <div>
                 <div className="mb-3 flex items-baseline gap-2.5">
                   <span
-                    className="font-mono text-[9.5px] uppercase tabular-nums"
+                    className="font-mono text-[12px] uppercase tabular-nums"
                     style={{
                       letterSpacing: "0.22em",
                       color: "var(--pq-bronze)",
@@ -208,7 +208,7 @@ export function PersonaShowcase() {
                     {p.key.slice(0, 2).toUpperCase()}
                   </span>
                   <span
-                    className="font-serif text-[10.5px] italic"
+                    className="font-serif text-[12px] italic"
                     style={{ color: "rgba(245,240,232,0.45)" }}
                   >
                     {p.kr}
@@ -250,7 +250,7 @@ export function PersonaShowcase() {
 
               <Link
                 href={`/sample-reports/weekly-memo`}
-                className="mt-6 inline-flex items-center gap-1.5 self-start font-serif text-[11.5px] italic"
+                className="mt-6 inline-flex items-center gap-1.5 self-start font-serif text-[12px] italic"
                 style={{
                   letterSpacing: "0.02em",
                   color: "var(--pq-bronze-light, #B8956A)",

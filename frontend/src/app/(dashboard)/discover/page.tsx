@@ -272,7 +272,7 @@ export default function DiscoverPage() {
           Replaces the bare `pq-ink-kicker` span the old card-grid layout used. */}
       <header className="mb-8 flex items-center justify-between gap-4">
         <RuledKicker>PivoxQuant &middot; Discover &middot; {weekTag()}</RuledKicker>
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
+        <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.45)]">
           {hasLoadError ? "Stale tape" : "Live observation"}
         </span>
       </header>
@@ -314,7 +314,7 @@ export default function DiscoverPage() {
       <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div
-            className="font-mono text-[10.5px] uppercase"
+            className="font-mono text-[12px] uppercase"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             Discovery &middot; US + KR
@@ -403,7 +403,7 @@ export default function DiscoverPage() {
                           </span>
                           <span
                             className={
-                              "text-right font-mono tabular-nums text-[11.5px] " +
+                              "text-right font-mono tabular-nums text-[12px] " +
                               deltaCls(o.changePct)
                             }
                           >
@@ -416,7 +416,7 @@ export default function DiscoverPage() {
                         the strip, not on every row, to keep the rhythm clean. */}
                     {rows.some((r) => r.observed_at) && (
                       <p
-                        className="mt-2 font-serif italic text-[10.5px]"
+                        className="mt-2 font-serif italic text-[12px]"
                         style={{ color: "rgba(245,240,232,0.4)" }}
                       >
                         Last observed{" "}
@@ -632,7 +632,7 @@ export default function DiscoverPage() {
             </div>
           )}
           {data?.cached && data.cached_at && (
-            <p className="mt-3 font-serif italic text-[10.5px] text-[rgba(245,240,232,0.4)]">
+            <p className="mt-3 font-serif italic text-[12px] text-[rgba(245,240,232,0.4)]">
               Cached at{" "}
               <span className="font-mono not-italic tabular-nums">
                 {new Date(data.cached_at).toLocaleString("en-US")}
