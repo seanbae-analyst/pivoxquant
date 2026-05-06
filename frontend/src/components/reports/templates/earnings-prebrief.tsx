@@ -163,13 +163,12 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             background: "rgba(184, 149, 106, 0.08)",
             border: "1px solid rgba(184, 149, 106, 0.4)",
             borderRadius: 2,
-            fontFamily: "var(--pq-font-mono), 'JetBrains Mono', monospace",
             fontSize: 11,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--r-gold-deep, #8b6f47)",
           }}
-        >
+        className="font-mono" >
           ▍ Sample · 양식 — 실제 보유 데이터 아님
         </div>
 
@@ -199,10 +198,9 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             <div className="pq-pdf-kpi-lbl">Reporting</div>
             <div
               style={{
-                fontFamily: "var(--font-serif)",
                 fontSize: 22,
               }}
-            >
+            className="font-serif" >
               {data.reportingDate}
             </div>
           </div>
@@ -211,10 +209,9 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             <div className="pq-pdf-kpi-lbl">Position</div>
             <div
               style={{
-                fontFamily: "var(--font-serif)",
                 fontSize: 22,
               }}
-            >
+            className="font-serif" >
               {data.position}
             </div>
           </div>
@@ -261,10 +258,9 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                 <div className="pq-pdf-kpi-lbl">Straddle Implied</div>
                 <div
                   style={{
-                    fontFamily: "var(--font-serif)",
                     fontSize: 36,
                   }}
-                >
+                className="font-serif" >
                   {data.impliedMovePct}
                 </div>
                 <div
@@ -295,12 +291,11 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                     Original mock said "BUY · 0.82"; reclassified for legal safety. */}
                 <div
                   style={{
-                    fontFamily: "var(--font-serif)",
                     fontSize: 36,
                     color: SIGNAL_TONE[data.quantLabel],
                   }}
                   data-pq-signal-label={data.quantLabel}
-                >
+                className="font-serif" >
                   {data.quantLabel} · {data.quantScore.toFixed(2)}
                 </div>
                 <div

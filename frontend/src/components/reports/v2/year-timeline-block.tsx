@@ -48,9 +48,8 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
     >
       <h2
         id="year-heading"
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
           fontWeight: 500,
           fontSize: "clamp(26px, 3.4vw, 40px)",
           lineHeight: 1.1,
@@ -118,10 +117,8 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                 >
                   {/* 종목명 main pattern: month name + year */}
                   <div
-                    className="font-serif"
+                    className="font-display"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                       fontWeight: 500,
                       fontSize: 22,
                       color: "var(--pq-ivory, #F5F0E8)",
@@ -144,8 +141,6 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                   <div
                     className="font-serif"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
                       fontSize: 13.5,
                       color: "rgba(245,240,232,0.78)",
                       whiteSpace: "nowrap",

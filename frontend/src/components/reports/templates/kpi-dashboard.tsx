@@ -232,7 +232,7 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
         <PdfThreeCol>
           {data.decisionCards.map((c) => (
             <PdfCard key={c.title}>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                 {c.priority}
               </div>
               <h3 style={{ fontSize: 14, margin: "6px 0", fontWeight: 600 }}>{c.title}</h3>
@@ -254,7 +254,7 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
             <path d="M0,100 L50,96 L100,90 L150,98 L200,86 L250,80 L300,84 L350,72 L400,66 L450,60 L500,58 L550,54 L600,48" stroke="#c0c0c0" strokeWidth="1.4" fill="none" strokeDasharray="3 3" />
             <path d="M0,90 L50,88 L100,86 L150,82 L200,80 L250,78 L300,76 L350,72 L400,68 L450,66 L500,62 L550,58 L600,52" stroke="#c9963f" strokeWidth="1.6" fill="none" strokeDasharray="2 3" />
           </svg>
-          <PdfFlexBetween style={{ marginTop: 8, fontSize: 10, fontFamily: "var(--font-mono)" }}>
+          <PdfFlexBetween style={{ marginTop: 8, fontSize: 10, }} className="font-mono" >
             <div style={{ display: "flex", gap: 18 }}>
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Portfolio NAV</span>
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500</span>

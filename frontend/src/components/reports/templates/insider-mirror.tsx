@@ -209,10 +209,10 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
         <PdfCard>
           <PdfFlexBetween>
             <div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                 {data.featured.badge}
               </div>
-              <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 24, margin: "6px 0", fontWeight: 500 }}>
+              <h3 style={{ fontSize: 24, margin: "6px 0", fontWeight: 500 }} className="font-serif" >
                 {data.featured.headline}
               </h3>
             </div>
@@ -224,16 +224,16 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           <div style={{ marginTop: 12 }}>
             <PdfThreeCol>
               <div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }}>Avg Price</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{data.featured.avgPrice}</div>
+                <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }} className="font-mono" >Avg Price</div>
+                <div style={{ fontSize: 11 }} className="font-mono" >{data.featured.avgPrice}</div>
               </div>
               <div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }}>Last Insider Acquisition</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{data.featured.lastBuy}</div>
+                <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }} className="font-mono" >Last Insider Acquisition</div>
+                <div style={{ fontSize: 11 }} className="font-mono" >{data.featured.lastBuy}</div>
               </div>
               <div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }}>12m Hit Rate</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--r-pos)" }}>{data.featured.hitRate}</div>
+                <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }} className="font-mono" >12m Hit Rate</div>
+                <div style={{ fontSize: 11, color: "var(--r-pos)" }} className="font-mono" >{data.featured.hitRate}</div>
               </div>
             </PdfThreeCol>
           </div>
@@ -242,10 +242,10 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
         <PdfSectionTitle variant="sm">Mirror Backtest · 과거 시그널 추적</PdfSectionTitle>
         <PdfCard>
           <PdfFlexBetween>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               Mirror vs S&amp;P 500 · Last 24m
             </div>
-            <div style={{ display: "flex", gap: 14, fontSize: 10, color: "var(--r-ink-3)", fontFamily: "var(--font-mono)" }}>
+            <div style={{ display: "flex", gap: 14, fontSize: 10, color: "var(--r-ink-3)", }} className="font-mono" >
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Mirror Portfolio</span>
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500</span>
             </div>

@@ -127,13 +127,12 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
           background: "rgba(184, 149, 106, 0.08)",
           border: "1px solid rgba(184, 149, 106, 0.4)",
           borderRadius: 2,
-          fontFamily: "var(--pq-font-mono), 'JetBrains Mono', monospace",
           fontSize: 11,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
           color: "var(--r-gold-deep, #8b6f47)",
         }}
-      >
+      className="font-mono" >
         ▍ Sample · 양식 — 실제 보유 데이터 아님
       </div>
 
@@ -148,9 +147,8 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
           marginTop: 12,
           fontSize: 13,
           lineHeight: 1.55,
-          fontFamily: "var(--font-serif)",
         }}
-      >
+      className="font-serif" >
         One decision that wasn&apos;t luck — proven on paper, kept for next month&apos;s self.
       </p>
 
@@ -196,33 +194,30 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
                 letterSpacing: "1.5px",
                 textTransform: "uppercase",
                 color: "var(--r-ink-4)",
-                fontFamily: "var(--font-mono)",
               }}
-            >
+            className="font-mono" >
               ★ The One · 이 달의 결정
             </div>
             <PdfTicker>{data.hero.ticker}</PdfTicker>
           </div>
           <div
             style={{
-              fontFamily: "var(--font-serif)",
               fontSize: 26,
               fontWeight: 500,
               letterSpacing: "-0.012em",
               marginBottom: 8,
             }}
-          >
+          className="font-serif" >
             {data.hero.title}
           </div>
           <p
             style={{
-              fontFamily: "var(--font-serif)",
               fontSize: 13,
               lineHeight: 1.6,
               color: "var(--r-ink-2)",
               marginBottom: 14,
             }}
-          >
+          className="font-serif" >
             {data.hero.body}
           </p>
           <div
@@ -242,10 +237,9 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
               </div>
               <div
                 style={{
-                  fontFamily: "var(--font-mono)",
                   fontVariantNumeric: "tabular-nums",
                 }}
-              >
+              className="font-mono" >
                 {data.hero.entry}
               </div>
             </div>
@@ -258,10 +252,9 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
               </div>
               <div
                 style={{
-                  fontFamily: "var(--font-mono)",
                   fontVariantNumeric: "tabular-nums",
                 }}
-              >
+              className="font-mono" >
                 {data.hero.mark}
               </div>
             </div>
@@ -274,11 +267,10 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
               </div>
               <div
                 style={{
-                  fontFamily: "var(--font-mono)",
                   fontVariantNumeric: "tabular-nums",
                   color: "var(--r-pos)",
                 }}
-              >
+              className="font-mono" >
                 {data.hero.pnl}
               </div>
             </div>

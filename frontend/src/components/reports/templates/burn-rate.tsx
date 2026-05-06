@@ -210,17 +210,17 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
             <PdfCard key={c.ticker}>
               <PdfFlexBetween style={{ marginBottom: 8 }}>
                 <div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+                  <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                     {c.ticker} · {c.name}
                   </div>
-                  <h3 style={{ fontFamily: "var(--font-serif)", fontSize: 24, margin: 0, fontWeight: 500 }}>
+                  <h3 style={{ fontSize: 24, margin: 0, fontWeight: 500 }} className="font-serif" >
                     Runway:{" "}
                     <span style={{ color: c.runwayLabelTone === "warn" ? "var(--r-gold)" : "var(--r-neg)" }}>
                       {c.runwayLabel}
                     </span>
                   </h3>
                 </div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>{c.cashBurnLine}</div>
+                <div style={{ fontSize: 10 }} className="font-mono" >{c.cashBurnLine}</div>
               </PdfFlexBetween>
               <div
                 style={{
@@ -231,7 +231,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
                   padding: "9px 0",
                 }}
               >
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>Runway gauge</div>
+                <div style={{ fontSize: 10 }} className="font-mono" >Runway gauge</div>
                 <div style={{ height: 8, background: "var(--r-bg-soft)", borderRadius: 2, overflow: "hidden" }}>
                   <div
                     style={{
@@ -244,7 +244,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
                     }}
                   />
                 </div>
-                <div style={{ textAlign: "right", fontFamily: "var(--font-mono)", fontSize: 10 }}>
+                <div style={{ textAlign: "right", fontSize: 10 }} className="font-mono" >
                   {c.runwayMonths} / 24 mo
                 </div>
               </div>
@@ -260,12 +260,12 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
         <div style={{ background: "var(--r-bg-soft)", borderRadius: 6, padding: 16, marginBottom: 14 }}>
           <PdfFlexBetween>
             <div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                 {data.watch.ticker} · {data.watch.name}
               </div>
               <strong>{data.watch.runway}</strong>
             </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--r-ink-3)" }}>{data.watch.cashBurnLine}</div>
+            <div style={{ fontSize: 10, color: "var(--r-ink-3)" }} className="font-mono" >{data.watch.cashBurnLine}</div>
           </PdfFlexBetween>
           <p style={{ color: "var(--r-ink-3)", marginTop: 8, fontSize: 11, lineHeight: 1.55 }}>{data.watch.note}</p>
         </div>

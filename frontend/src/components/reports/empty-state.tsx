@@ -184,10 +184,8 @@ export function EmptyState({
 
       {/* Headline — Playfair (pq-detail-h2 token) */}
       <h2
-        className="pq-detail-h2"
+        className="pq-detail-h2 font-display"
         style={{
-          fontFamily:
-            'var(--pq-font-display,"Playfair Display",Georgia,serif)',
           fontWeight: 500,
           fontSize: 30,
           lineHeight: 1.18,
@@ -203,7 +201,6 @@ export function EmptyState({
       <p
         className="font-serif"
         style={{
-          fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
           fontSize: 14.5,
           lineHeight: 1.7,
           color: "rgba(245,240,232,0.72)",
@@ -218,13 +215,11 @@ export function EmptyState({
       {/* CTA — bronze inline link */}
       <Link
         href={href}
-        className="pq-ink-btn-bronze"
+        className="pq-ink-btn-bronze font-mono"
         style={{
           display: "inline-flex",
           alignItems: "center",
           gap: 8,
-          fontFamily:
-            'var(--pq-font-mono,"IBM Plex Mono",ui-monospace,monospace)',
           fontSize: 11,
           letterSpacing: "0.18em",
           textTransform: "uppercase",

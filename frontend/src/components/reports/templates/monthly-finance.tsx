@@ -193,10 +193,10 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
         <PdfSectionTitle variant="dry">NAV &amp; Benchmark · 12M trend (indexed to 100)</PdfSectionTitle>
         <PdfCard>
           <PdfFlexBetween>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               NAV vs S&amp;P 500 · last 12 months
             </div>
-            <div style={{ display: "flex", gap: 14, fontSize: 10, color: "var(--r-ink-3)", fontFamily: "var(--font-mono)" }}>
+            <div style={{ display: "flex", gap: 14, fontSize: 10, color: "var(--r-ink-3)", }} className="font-mono" >
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Portfolio NAV</span>
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500</span>
             </div>
@@ -315,12 +315,12 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
                     {data.bsAssets.map((a) => (
                       <tr key={a.name}>
                         <td>{a.name}</td>
-                        <td className="right" style={{ fontFamily: "var(--font-mono)" }}>{a.pctDisplay.split(" · ")[0]}</td>
+                        <td className="right font-mono">{a.pctDisplay.split(" · ")[0]}</td>
                       </tr>
                     ))}
                     <tr className="total">
                       <td><strong>Total</strong></td>
-                      <td className="right" style={{ fontFamily: "var(--font-mono)" }}><strong>$1,242k</strong></td>
+                      <td className="right font-mono"><strong>$1,242k</strong></td>
                     </tr>
                   </tbody>
                 </PdfTable>
@@ -332,12 +332,12 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
                     {data.liabilities.map((l) => (
                       <tr key={l.label}>
                         <td>{l.bold ? <strong>{l.label}</strong> : l.label}</td>
-                        <td className="right" style={{ fontFamily: "var(--font-mono)" }}>{l.bold ? <strong>{l.value}</strong> : l.value}</td>
+                        <td className="right font-mono">{l.bold ? <strong>{l.value}</strong> : l.value}</td>
                       </tr>
                     ))}
                     <tr className="total">
                       <td><strong>Total</strong></td>
-                      <td className="right" style={{ fontFamily: "var(--font-mono)" }}><strong>{data.totalLiab}</strong></td>
+                      <td className="right font-mono"><strong>{data.totalLiab}</strong></td>
                     </tr>
                   </tbody>
                 </PdfTable>

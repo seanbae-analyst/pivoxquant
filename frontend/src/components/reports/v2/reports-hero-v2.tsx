@@ -41,7 +41,6 @@ export function ReportsHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
@@ -52,9 +51,8 @@ export function ReportsHeroV2({
       </div>
 
       <h1
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
           fontWeight: 500,
           fontSize: "clamp(34px, 5vw, 48px)",
           lineHeight: 1.05,
@@ -90,7 +88,6 @@ export function ReportsHeroV2({
       <p
         className="font-serif"
         style={{
-          fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
           fontSize: 15,
           lineHeight: 1.6,
           color: "rgba(245,240,232,0.82)",
@@ -106,7 +103,6 @@ export function ReportsHeroV2({
             <span
               className="font-mono"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontVariantNumeric: "tabular-nums",
                 color: "var(--pq-ivory, #F5F0E8)",
               }}
@@ -117,7 +113,6 @@ export function ReportsHeroV2({
             <span
               className="font-mono"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontVariantNumeric: "tabular-nums",
                 color: "var(--pq-ivory, #F5F0E8)",
               }}
@@ -128,7 +123,6 @@ export function ReportsHeroV2({
             <span
               className="font-mono"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontVariantNumeric: "tabular-nums",
                 color: "var(--pq-ivory, #F5F0E8)",
               }}
@@ -144,7 +138,6 @@ export function ReportsHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontSize: 10,
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.45)",
