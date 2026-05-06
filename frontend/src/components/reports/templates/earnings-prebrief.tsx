@@ -33,6 +33,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
   PdfTicker,
 } from "../pdf-primitives";
 import { DEFAULT_GOVERNANCE } from "@/lib/reports/disclaimer";
@@ -320,7 +321,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
           left="PivoxQuant · Confidential · Pro Tier"
           right={`Earnings Pre-Brief · 01 / 02`}
         />
-        <PdfDisclaimer cadence="event" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* ───── PAGE 2 — PLAYBOOK ───── */}

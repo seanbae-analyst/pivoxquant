@@ -37,6 +37,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 interface IncomeRow {
@@ -242,7 +243,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
         </PdfCard>
 
         <PdfPageFooter left="Monthly Finance · Premium" right="Page 02" />
-        <PdfDisclaimer cadence="monthly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 3 — INCOME + BALANCE SHEET */}
@@ -331,7 +332,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
         </div>
 
         <PdfPageFooter left="Monthly Finance · Premium" right="Page 03" />
-        <PdfDisclaimer cadence="monthly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 4 — CASH FLOW + RATIOS + GOVERNANCE */}

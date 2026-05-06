@@ -32,6 +32,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 type BurnStatus = "PROFITABLE" | "SAFE" | "WATCH" | "CRITICAL";
@@ -192,7 +193,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
         </PdfTable>
 
         <PdfPageFooter left="Burn Rate · Premium" right="Page 01" />
-        <PdfDisclaimer cadence="monthly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 2 */}

@@ -36,6 +36,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 interface ScoreRow {
@@ -193,7 +194,7 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
         </PdfTable>
 
         <PdfPageFooter left="KPI Dashboard · Premium · IC Pack" right="Page 02" />
-        <PdfDisclaimer cadence="monthly" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 3 — DECISIONS + GOVERNANCE */}

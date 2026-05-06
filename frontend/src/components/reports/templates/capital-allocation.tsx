@@ -40,6 +40,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 export interface CapitalAllocationData {
@@ -218,7 +219,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
         </div>
 
         <PdfPageFooter left="Capital Allocation · Premium" right="Page 02" />
-        <PdfDisclaimer cadence="quarterly" withBacktest />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 3 — DEPLOYMENT QUALITY */}
@@ -287,7 +288,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
         </div>
 
         <PdfPageFooter left="Capital Allocation · Premium" right="Page 03" />
-        <PdfDisclaimer cadence="quarterly" withBacktest />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 4 — NEXT QUARTER PLAN */}

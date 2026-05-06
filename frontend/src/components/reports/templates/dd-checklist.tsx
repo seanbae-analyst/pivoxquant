@@ -31,6 +31,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 type Tone = "pos" | "neg" | "warn";
@@ -221,7 +222,7 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
           );
         })}
       </div>
-      <PdfDisclaimer cadence="daily" />
+      <PdfDisclaimerMini />
     </PdfPage>
   );
 }
@@ -309,7 +310,7 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
         <PdfCheckList items={toCheckItems(data.sectionC)} />
 
         <PdfPageFooter left="DD Checklist · Pro" right="Page 01" />
-        <PdfDisclaimer cadence="ondemand" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* ═══════ PAGE 2 ═══════ */}

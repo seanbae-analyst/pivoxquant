@@ -40,6 +40,7 @@ import {
   PdfGovBlock,
   PdfPageFooter,
   PdfDisclaimer,
+  PdfDisclaimerMini,
 } from "../pdf-primitives";
 
 interface DecisionRow {
@@ -201,7 +202,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
         </div>
 
         <PdfPageFooter left="Year-End Letter · Premium" right="Page 02" />
-        <PdfDisclaimer cadence="annual" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 3 — DECISIONS REVIEW */}
@@ -256,7 +257,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
         </div>
 
         <PdfPageFooter left="Year-End Letter · Premium" right="Page 03" />
-        <PdfDisclaimer cadence="annual" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 4 — LESSONS */}
@@ -283,7 +284,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
         </div>
 
         <PdfPageFooter left="Year-End Letter · Premium" right="Page 04" />
-        <PdfDisclaimer cadence="annual" />
+        <PdfDisclaimerMini />
       </PdfPage>
 
       {/* PAGE 5 — NEXT YEAR + SIGN */}
