@@ -7,8 +7,9 @@ import {
   CheckCircle2,
   Sparkles,
 } from "lucide-react";
-import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { Eyebrow } from "@/components/landing/eyebrow";
 import { SectionCurtain } from "@/components/landing/section-curtain";
+import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 
 export const metadata: Metadata = {
   title: "당신의 전속 리서치 데스크 — PivoxQuant",
@@ -137,9 +138,9 @@ export default function AiAssistantPage() {
         <section className="mb-16">
           <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <div className="mb-6">
-              <div className="text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mb-2">
+              <Eyebrow withDashLeft={false} className="mb-2 flex">
                 Research Desk · Method
-              </div>
+              </Eyebrow>
               <h2 className="font-[var(--font-serif)] text-lg font-medium text-[var(--pq-ivory)]">챗봇이 아닌 리서치 데스크</h2>
               <p className="text-sm text-[rgba(245,240,232,0.62)] mt-1">당신의 장부를 읽고, 당신의 리포트를 씁니다.</p>
             </div>

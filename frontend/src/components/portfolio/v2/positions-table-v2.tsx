@@ -15,6 +15,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { EditorialHead } from "@/components/ui/editorial";
 import type { Position, TradeAction } from "@/components/portfolio/types";
 
 type SortKey =
@@ -210,20 +211,9 @@ export function PositionsTableV2({
           >
             Holdings · Ledger
           </div>
-          <h2
-            className="font-serif"
-            style={{
-              fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
-              fontWeight: 500,
-              fontSize: 30,
-              lineHeight: 1.1,
-              letterSpacing: "var(--pq-track-tight, -0.02em)",
-              color: "var(--pq-ivory)",
-              margin: 0,
-            }}
-          >
+          <EditorialHead size={30} as="h2" style={{ lineHeight: 1.1 }}>
             Every line, every weight.
-          </h2>
+          </EditorialHead>
         </div>
         <span
           className="font-mono uppercase"
@@ -433,19 +423,13 @@ function PositionRow({
     >
       {/* 1 · Name (종목명 main pattern) */}
       <td style={{ ...cellStyle, textAlign: "left", minWidth: 200 }}>
-        <div
-          className="font-serif"
-          style={{
-            fontFamily: '"Playfair Display","Source Serif 4",Georgia,serif',
-            fontSize: 18,
-            fontWeight: 500,
-            lineHeight: 1.2,
-            color: "var(--pq-ivory)",
-            letterSpacing: "-0.005em",
-          }}
+        <EditorialHead
+          size={18}
+          as="div"
+          style={{ lineHeight: 1.2, letterSpacing: "-0.005em" }}
         >
           {p.name}
-        </div>
+        </EditorialHead>
         <div
           className="font-mono uppercase"
           style={{

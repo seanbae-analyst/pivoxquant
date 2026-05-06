@@ -19,6 +19,7 @@ import type { WatchlistItem } from "@/lib/types";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import {
   Caption,
+  EditorialHead,
   Fleuron,
   FootSignature,
   RuledKicker,
@@ -171,21 +172,17 @@ export default function WatchlistPage() {
         ) : watchlist.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <Fleuron size={16} />
-            <p
-              className="mt-2 font-serif"
-              style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
-                fontSize: 22,
-                lineHeight: 1.2,
-                color: "var(--pq-ivory)",
-              }}
+            <EditorialHead
+              size={22}
+              as="p"
+              className="mt-2"
+              style={{ lineHeight: 1.2 }}
             >
               No symbols on{" "}
               <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
                 watch.
               </span>
-            </p>
+            </EditorialHead>
             <Caption className="max-w-md">
               Add one to begin observing — the ledger fills as you do.
             </Caption>

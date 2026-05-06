@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Shield,
 } from "lucide-react";
+import { Eyebrow } from "@/components/landing/eyebrow";
 import { SectionCurtain } from "@/components/landing/section-curtain";
 
 export const metadata: Metadata = {
@@ -108,9 +109,9 @@ export default function RiskDefensePage() {
         <SectionCurtain divider={false}>
         <section className="mb-16">
           <div className="border-y border-[rgba(245,240,232,0.12)] py-6 sm:py-8">
-            <div className="text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)] mb-3">
+            <Eyebrow withDashLeft={false} className="mb-3 flex">
               Observation
-            </div>
+            </Eyebrow>
             <h2 className="font-[var(--font-serif)] text-lg font-medium text-[var(--pq-ivory)] mb-2">The Problem</h2>
             <p className="text-[rgba(245,240,232,0.82)] leading-relaxed">
               The average investor sells at the worst possible time, surrendering
