@@ -75,31 +75,48 @@ skill §2-A 의 regex 는 `import[^;]*\bX\b[^a-zA-Z0-9_]` — `grep -h` 가 line
 
 ---
 
-## 3. NumDisplay 마이그레이션 후보 (P0)
+## 3. NumDisplay 마이그레이션 — 🚨 CANCELLED (2026-05-06)
 
-dashboard 페이지에서 `fontSize: 28~40` 인라인 큰 숫자가 잡힘 — 이들이 `<NumDisplay>` 의 1차 후보.
+**상태: 본 plan 작성 시 grep 오인 → 마이그 후보 전부 false positive**
 
-| 파일 | 라인 | 현재 패턴 | 권장 swap |
-|---|---|---|---|
-| `app/(dashboard)/home/_v2/page-v2.tsx` | 140 | `fontSize: 40` 인라인 | `<NumDisplay size={40}>` |
-| `app/(dashboard)/ai-chat/page.tsx` | 148 | `fontSize: 32` | `<NumDisplay size={32}>` |
-| `app/(dashboard)/risk/_v2/page-v2.tsx` | 172 | `fontSize: 32` | `<NumDisplay size={32}>` |
-| `app/(dashboard)/settings/_v2/page-v2.tsx` | 488, 626 | `fontSize: 30` | `<NumDisplay size={30}>` |
-| `app/(dashboard)/profile/_v2/page-v2.tsx` | 494, 577 | `fontSize: 30` | `<NumDisplay size={30}>` |
-| `app/(dashboard)/alerts/page.tsx` | 288 | `fontSize: 22` (이미 NumDisplay 일부 사용) | size=22 추가 swap |
-| `app/(dashboard)/watchlist/page.tsx` | 179 | `fontSize: 22` | `<NumDisplay size={22}>` |
-| `app/(dashboard)/home/_v1/page-v1.tsx` | 887 | `fontSize: 20` | `_v1` 정리 시 한꺼번에 (별도) |
+### 발견 (2026-05-06 frontend-dev BLOCK 보고)
 
-**우선순위:**
-- **P0 (이번 주)**: home / risk / settings / profile / watchlist (활성 v2 페이지 5건)
-- **P1 (다음 주)**: ai-chat
-- **P2 (`_v1` 정리 시 묶음)**: home/_v1, signals/_v1, portfolio/_v1, reports/_v1
+원래 plan은 `fontSize: 22~40` 인라인을 NumDisplay 1차 후보로 박았으나, 실측 결과 **7 sites 전부 serif heading text** (Playfair Display). 숫자 0건.
 
-**리스크/feature_preservation 가드:**
-- swap 전 각 site 의 `tone="pos|neg|neu"` 결정 (가격/수익률 → tone). 임의 색 사용 금지 — KR convention helper 사용.
-- 1 site 당 1 commit + before/after screenshot 권고
-- 기존 `fontSize` 가 KR 컨벤션 색을 인라인으로 적용하고 있으면 `tone` prop 으로 보존
-- text 위치/크기/줄높이 시각적 동등성 spot check
+| # | file:line | size | 실제 content | 실제 type |
+|---|---|---|---|---|
+| 1 | home/_v2:140 | 40 | "Six rooms." | serif h2 (Playfair) |
+| 2 | risk/_v2:172 | 32 | "Notes." | serif h2 |
+| 3 | settings/_v2:488 | 30 | "Who is signed in." | serif heading |
+| 4 | settings/_v2:626 | 30 | "When the CFO should reach you." | serif heading |
+| 5 | profile/_v2:494 | 30 | "How your persona drifted." | serif heading |
+| 6 | profile/_v2:577 | 30 | "Tell the CFO how you read." | serif heading |
+| 7 | watchlist:179 | 22 | "No symbols on watch." | serif empty-state |
+
+### NumDisplay swap이 잘못인 이유
+
+`editorial.tsx:136-171` NumDisplay 시그니처:
+- `fontFamily: var(--font-mono)` — mono 폰트 강제
+- `fontVariantNumeric: tabular-nums` + `fontFeatureSettings: "tnum"` — 숫자 전용
+- `tone: "pos" | "neg" | "neu"` — 수익/손실 의미
+
+위 7 sites swap 시:
+1. **typeface 깨짐**: Playfair Display (serif) → mono. v3 락-인 (2026-04-27) 위반
+2. **content 미스매치**: 숫자 0건 → tabular-nums 의미 없음
+3. **tone prose 부적합**: 헤딩에 pos/neg 의미 없음
+4. **참조 예시 misattributed**: plan이 "alerts/page.tsx:288 이미 NumDisplay 사용"이라 했으나 실제는 동일 serif 패턴, NumDisplay 아님
+
+### 결정 (caller 옵션)
+
+- **A. EditorialHead 신규 컴포넌트** — `<EditorialHead size>` (Playfair serif heading) 추가. 위 7 sites는 그쪽으로 마이그. 별도 task.
+- **B. cancel 그대로** — 본 §3 폐기. NumDisplay는 실제 숫자 sites (`alerts/page.tsx:288` 등 alerts 1 site)에만 사용 중인 그대로 유지.
+- **C. re-grep** — 활성 v2 페이지에서 진짜 numeric `<span style={{fontSize: 큰값}}>{포맷된숫자}</span>` 패턴 별도 탐색 후 그 sites만 마이그.
+
+### Iron Rules 준수
+
+- 본 §3은 grep 오해 기반의 false plan으로 판정.
+- frontend-dev이 file edit 0건 (BLOCKED). regression 없음.
+- feature_preservation 룰 강제 적용 — Playfair → mono 강제 swap 회피.
 
 ---
 
