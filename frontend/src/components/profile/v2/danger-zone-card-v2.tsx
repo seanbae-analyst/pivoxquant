@@ -61,8 +61,6 @@ export function DangerZoneCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
@@ -73,10 +71,8 @@ export function DangerZoneCardV2({
         </div>
 
         <div
-          className="font-serif"
+          className="font-display"
           style={{
-            fontFamily:
-              '"Playfair Display","Source Serif 4",Georgia,serif',
             fontWeight: 500,
             fontSize: 22,
             lineHeight: 1.2,
@@ -94,8 +90,6 @@ export function DangerZoneCardV2({
         <p
           className="font-serif"
           style={{
-            fontFamily:
-              '"Source Serif 4","Iowan Old Style",Georgia,serif',
             fontSize: 13.5,
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.82)",
@@ -120,8 +114,6 @@ export function DangerZoneCardV2({
               padding: "12px 22px",
               background: "var(--pq-bronze)",
               color: "var(--pq-ink, #050505)",
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 11,
               letterSpacing: "0.2em",
               borderRadius: 2,
@@ -139,8 +131,6 @@ export function DangerZoneCardV2({
             disabled={deleting}
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 11,
               letterSpacing: "0.18em",
               color: ERROR_COLOR,
@@ -172,8 +162,6 @@ export function DangerZoneCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: ERROR_COLOR,
@@ -186,8 +174,6 @@ export function DangerZoneCardV2({
         <p
           className="font-serif"
           style={{
-            fontFamily:
-              '"Source Serif 4","Iowan Old Style",Georgia,serif',
             fontSize: 13,
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.82)",
@@ -202,8 +188,6 @@ export function DangerZoneCardV2({
           href={deleteAccountMailto}
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 11,
             letterSpacing: "0.18em",
             color: ERROR_COLOR,

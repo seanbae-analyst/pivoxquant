@@ -127,10 +127,8 @@ export default function WatchlistPage() {
       <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: "clamp(34px, 4.6vw, 52px)",
               lineHeight: 1.06,

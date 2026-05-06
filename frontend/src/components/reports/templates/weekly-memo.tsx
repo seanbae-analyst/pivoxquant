@@ -123,9 +123,8 @@ export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
           marginTop: 12,
           fontSize: 13,
           lineHeight: 1.55,
-          fontFamily: "var(--font-serif)",
         }}
-      >
+      className="font-serif" >
         Three signals that mattered, one decision for next week. The rest is noise.
       </p>
 

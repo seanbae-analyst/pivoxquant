@@ -156,9 +156,8 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
             marginTop: 12,
             fontSize: 13,
             lineHeight: 1.55,
-            fontFamily: "var(--font-serif)",
           }}
-        >
+        className="font-serif" >
           {data.intro}
         </p>
 
@@ -240,23 +239,21 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
             <PdfCard soft>
               <div
                 style={{
-                  fontFamily: "var(--font-mono)",
                   fontSize: 10,
                   color: "var(--r-ink-3)",
                   letterSpacing: "1.5px",
                   textTransform: "uppercase",
                 }}
-              >
+              className="font-mono" >
                 {data.topFlag.tag}
               </div>
               <h3
                 style={{
-                  fontFamily: "var(--font-serif)",
                   fontSize: 22,
                   margin: "8px 0",
                   fontWeight: 500,
                 }}
-              >
+              className="font-serif" >
                 {data.topFlag.title}
               </h3>
               <p
@@ -286,7 +283,6 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
               </div>
               <div
                 style={{
-                  fontFamily: "var(--font-mono)",
                   fontSize: 10,
                   color:
                     f.dueTone === "neg"
@@ -295,18 +291,17 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
                         ? "var(--r-ink-4)"
                         : undefined,
                 }}
-              >
+              className="font-mono" >
                 {f.due}
               </div>
             </PdfFlexBetween>
             <h3
               style={{
-                fontFamily: "var(--font-serif)",
                 fontSize: 18,
                 margin: "8px 0 6px",
                 fontWeight: 500,
               }}
-            >
+            className="font-serif" >
               {f.title}
             </h3>
             <p

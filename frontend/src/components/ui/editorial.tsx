@@ -26,12 +26,11 @@ export function Fleuron({
   return (
     <span
       aria-hidden="true"
-      className={`pq-fleuron ${className}`}
+      className={`pq-fleuron font-serif ${className}`}
       style={{
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "var(--font-serif), Georgia, serif",
         fontSize: `${size}px`,
         lineHeight: 1,
         letterSpacing: "0.4em",
@@ -54,12 +53,11 @@ export function RuledKicker({
 }) {
   return (
     <div
-      className={`pq-ink-kicker pq-ink-kicker--ruled ${className}`}
+      className={`pq-ink-kicker pq-ink-kicker--ruled font-sans ${className}`}
       style={{
         display: "inline-flex",
         alignItems: "center",
         gap: 10,
-        fontFamily: "var(--font-sans), system-ui, sans-serif",
         fontSize: "9.5px",
         letterSpacing: "0.24em",
         textTransform: "uppercase",
@@ -96,7 +94,6 @@ export function DeckLine({
     <p
       className={`font-serif ${className}`}
       style={{
-        fontFamily: "var(--font-serif), Georgia, serif",
         fontSize: "clamp(1.1rem, 1.6vw, 1.35rem)",
         lineHeight: 1.25,
         color: "var(--pq-ivory)",
@@ -119,9 +116,8 @@ export function Caption({
 }) {
   return (
     <p
-      className={`pq-caption ${className}`}
+      className={`pq-caption font-serif ${className}`}
       style={{
-        fontFamily: "var(--font-serif), Georgia, serif",
         fontSize: "11.5px",
         lineHeight: 1.4,
         color: "rgba(245,240,232,0.55)",
@@ -169,10 +165,8 @@ export function EditorialHead({
       : "var(--pq-ivory)";
   return (
     <Tag
-      className={`pq-editorial-head font-serif ${className}`}
+      className={`pq-editorial-head font-display${className}`}
       style={{
-        fontFamily:
-          '"Playfair Display","Source Serif 4",Georgia,serif',
         fontWeight: 500,
         fontSize: size,
         lineHeight: 1.15,
@@ -208,10 +202,8 @@ export function NumDisplay({
       : "var(--pq-ivory)";
   return (
     <span
-      className={`pq-num-display ${className}`}
+      className={`pq-num-display font-mono ${className}`}
       style={{
-        fontFamily:
-          "var(--font-mono), 'JetBrains Mono', ui-monospace, monospace",
         fontVariantNumeric: "tabular-nums",
         fontFeatureSettings: "\"tnum\"",
         fontSize: `${size}px`,
@@ -259,10 +251,9 @@ export function FieldLabel({
     tone === "muted" ? "rgba(245,240,232,0.55)" : "var(--pq-bronze)";
   return (
     <span
-      className={`pq-field-label ${className}`}
+      className={`pq-field-label font-sans ${className}`}
       style={{
         display: "inline-block",
-        fontFamily: "var(--font-sans), system-ui, sans-serif",
         fontSize: "10.5px",
         letterSpacing: "0.12em",
         textTransform: "uppercase",
@@ -329,9 +320,8 @@ export function FootSignature({
         <Fleuron size={13} />
       </div>
       <p
-        className="pq-caption"
+        className="pq-caption font-serif"
         style={{
-          fontFamily: "var(--font-serif), Georgia, serif",
           fontStyle: "italic",
           fontSize: "11px",
           lineHeight: 1.45,

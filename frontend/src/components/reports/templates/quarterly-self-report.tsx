@@ -157,9 +157,8 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
             marginTop: 12,
             fontSize: 13,
             lineHeight: 1.55,
-            fontFamily: "var(--font-serif)",
           }}
-        >
+        className="font-serif" >
           {data.intro}
         </p>
 

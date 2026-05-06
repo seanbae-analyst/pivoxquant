@@ -104,8 +104,6 @@ export function PeerBenchmarkBlockV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
@@ -128,8 +126,6 @@ export function PeerBenchmarkBlockV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -139,10 +135,8 @@ export function PeerBenchmarkBlockV2({
             05 · Peer benchmark · {cohortName} cohort
           </div>
           <div
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: 30,
               lineHeight: 1.15,
@@ -159,8 +153,6 @@ export function PeerBenchmarkBlockV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontVariantNumeric: "tabular-nums",
             fontSize: 11,
             color: "rgba(245,240,232,0.40)",
@@ -195,8 +187,6 @@ export function PeerBenchmarkBlockV2({
                 <span
                   className="font-mono uppercase"
                   style={{
-                    fontFamily:
-                      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                     fontSize: 10.5,
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
@@ -207,8 +197,6 @@ export function PeerBenchmarkBlockV2({
                 <span
                   className="font-mono"
                   style={{
-                    fontFamily:
-                      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                     fontVariantNumeric: "tabular-nums",
                     fontSize: 12.5,
                     color: "rgba(245,240,232,0.82)",
@@ -271,8 +259,6 @@ export function PeerBenchmarkBlockV2({
         className="font-mono uppercase"
         style={{
           marginTop: 16,
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.16em",
           color: "rgba(245,240,232,0.40)",

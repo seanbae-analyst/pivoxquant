@@ -86,8 +86,6 @@ export function PositionsTopCard() {
         <div
           className="font-serif"
           style={{
-            fontFamily:
-              '"Source Serif 4","Iowan Old Style",Georgia,serif',
             fontSize: 14,
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
@@ -113,8 +111,6 @@ export function PositionsTopCard() {
               <span
                 className="font-serif"
                 style={{
-                  fontFamily:
-                    '"Source Serif 4","Iowan Old Style",Georgia,serif',
                   fontSize: 14,
                   color: "var(--pq-ivory)",
                   overflow: "hidden",
@@ -126,8 +122,6 @@ export function PositionsTopCard() {
                 <small
                   className="font-mono"
                   style={{
-                    fontFamily:
-                      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                     fontSize: 10,
                     color: "rgba(245,240,232,0.40)",
                     marginLeft: 8,
@@ -140,8 +134,6 @@ export function PositionsTopCard() {
               <span
                 className="font-mono"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontVariantNumeric: "tabular-nums",
                   fontSize: 13,
                   color: "rgba(245,240,232,0.82)",
@@ -152,8 +144,6 @@ export function PositionsTopCard() {
               <span
                 className="font-mono"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontVariantNumeric: "tabular-nums",
                   fontSize: 13,
                   color: pctColor(r.pnlPct),
@@ -177,8 +167,6 @@ export function PositionsTopCard() {
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",

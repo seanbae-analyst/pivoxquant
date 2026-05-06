@@ -759,12 +759,11 @@ export function PdfDonut({
             textAnchor="middle"
             dominantBaseline="central"
             style={{
-              fontFamily: "var(--font-serif)",
               fontSize: 6,
               fontWeight: 600,
               fill: "var(--r-ink)",
             }}
-          >
+          className="font-serif" >
             {centerLabel}
           </text>
         )}

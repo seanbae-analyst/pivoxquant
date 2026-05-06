@@ -111,9 +111,8 @@ export function MorningBriefPlus({ data = DEFAULT_DATA }: { data?: MorningBriefP
           marginTop: 12,
           fontSize: 13,
           lineHeight: 1.55,
-          fontFamily: "var(--font-serif)",
         }}
-      >
+      className="font-serif" >
         Pre-market macro snapshot, three moves that matter, one observation
         for the open. Read it with coffee.
       </p>
@@ -166,11 +165,10 @@ export function MorningBriefPlus({ data = DEFAULT_DATA }: { data?: MorningBriefP
             <div className="pq-pdf-kpi-lbl">Tape Tone</div>
             <div
               style={{
-                fontFamily: "var(--font-serif)",
                 fontSize: 28,
                 marginTop: 4,
               }}
-            >
+            className="font-serif" >
               POSITIVE
             </div>
             <div

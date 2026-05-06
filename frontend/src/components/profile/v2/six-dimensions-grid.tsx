@@ -113,8 +113,6 @@ export function SixDimensionsGrid({
             <div
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10.5,
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
@@ -124,10 +122,8 @@ export function SixDimensionsGrid({
               04 · The six dimensions
             </div>
             <div
-              className="font-serif"
+              className="font-display"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontWeight: 500,
                 fontSize: 30,
                 lineHeight: 1.15,
@@ -142,8 +138,6 @@ export function SixDimensionsGrid({
             href={methodologyHref}
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 11,
               letterSpacing: "0.18em",
               color: "var(--pq-bronze)",
@@ -178,8 +172,6 @@ export function SixDimensionsGrid({
                 position: "absolute",
                 top: 14,
                 right: 14,
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 9.5,
                 letterSpacing: "0.2em",
                 color: "rgba(245,240,232,0.40)",
@@ -198,10 +190,8 @@ export function SixDimensionsGrid({
             >
               <div>
                 <div
-                  className="font-serif"
+                  className="font-display"
                   style={{
-                    fontFamily:
-                      '"Playfair Display","Source Serif 4",Georgia,serif',
                     fontWeight: 500,
                     fontSize: 17,
                     color: "var(--pq-ivory)",
@@ -212,8 +202,6 @@ export function SixDimensionsGrid({
                 <p
                   className="font-serif"
                   style={{
-                    fontFamily:
-                      '"Source Serif 4","Iowan Old Style",Georgia,serif',
                     fontSize: 12.5,
                     lineHeight: 1.5,
                     color: "rgba(245,240,232,0.55)",
@@ -226,8 +214,6 @@ export function SixDimensionsGrid({
               <div
                 className="font-mono"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontVariantNumeric: "tabular-nums",
                   fontSize: 13.5,
                   color: "var(--pq-bronze)",

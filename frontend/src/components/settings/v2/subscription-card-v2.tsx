@@ -115,8 +115,6 @@ export function SubscriptionCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -126,10 +124,8 @@ export function SubscriptionCardV2({
             D · Subscription · Stripe
           </div>
           <div
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: 30,
               lineHeight: 1.15,
@@ -148,8 +144,6 @@ export function SubscriptionCardV2({
           onClick={onManageBilling}
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 11,
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
@@ -203,8 +197,6 @@ export function SubscriptionCardV2({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 10,
                   letterSpacing: "0.22em",
                   color: isCurrent
@@ -216,10 +208,8 @@ export function SubscriptionCardV2({
                 {t.eyebrow}
               </div>
               <div
-                className="font-serif"
+                className="font-display"
                 style={{
-                  fontFamily:
-                    '"Playfair Display","Source Serif 4",Georgia,serif',
                   fontWeight: 500,
                   fontSize: 28,
                   color: "var(--pq-ivory)",
@@ -233,8 +223,6 @@ export function SubscriptionCardV2({
               <div
                 className="font-mono"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontVariantNumeric: "tabular-nums",
                   fontSize: 13,
                   color: "rgba(245,240,232,0.82)",
@@ -248,8 +236,6 @@ export function SubscriptionCardV2({
               <ul
                 style={{
                   marginTop: 14,
-                  fontFamily:
-                    '"Source Serif 4","Iowan Old Style",Georgia,serif',
                   fontSize: 13,
                   color: "rgba(245,240,232,0.82)",
                   lineHeight: 1.7,
@@ -257,7 +243,7 @@ export function SubscriptionCardV2({
                   padding: 0,
                   flex: 1,
                 }}
-              >
+              className="font-serif" >
                 {t.bullets.map((b) => (
                   <li
                     key={b}
@@ -300,8 +286,6 @@ export function SubscriptionCardV2({
                       background: "transparent",
                       color: "var(--pq-bronze)",
                       border: "1px solid var(--pq-bronze)",
-                      fontFamily:
-                        '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                       fontSize: 11,
                       letterSpacing: "0.2em",
                       borderRadius: 2,
@@ -316,8 +300,6 @@ export function SubscriptionCardV2({
                       onClick={onCancel}
                       className="font-mono uppercase"
                       style={{
-                        fontFamily:
-                          '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                         fontSize: 10,
                         letterSpacing: "0.18em",
                         color: "var(--pq-error, #d18888)",
@@ -345,8 +327,6 @@ export function SubscriptionCardV2({
                       padding: "12px 22px",
                       background: "var(--pq-bronze)",
                       color: "var(--pq-ink, #050505)",
-                      fontFamily:
-                        '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                       fontSize: 11,
                       letterSpacing: "0.2em",
                       borderRadius: 2,
@@ -378,8 +358,6 @@ export function SubscriptionCardV2({
             position: "absolute",
             top: 14,
             right: 14,
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 9.5,
             letterSpacing: "0.2em",
             color: "rgba(245,240,232,0.40)",
@@ -404,8 +382,6 @@ export function SubscriptionCardV2({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 10,
                   letterSpacing: "0.18em",
                   color: "rgba(245,240,232,0.55)",
@@ -416,8 +392,6 @@ export function SubscriptionCardV2({
               <div
                 className="font-mono"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontVariantNumeric: "tabular-nums",
                   fontSize: 13,
                   color: "rgba(245,240,232,0.82)",
@@ -432,8 +406,6 @@ export function SubscriptionCardV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10,
                 letterSpacing: "0.18em",
                 color: "rgba(245,240,232,0.55)",
@@ -447,8 +419,6 @@ export function SubscriptionCardV2({
               className="font-mono uppercase"
               style={{
                 marginTop: 6,
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10,
                 letterSpacing: "0.18em",
                 color: "var(--pq-bronze)",

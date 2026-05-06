@@ -66,7 +66,6 @@ export function AnchorRail() {
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -86,7 +85,6 @@ export function AnchorRail() {
               display: "block",
               padding: "10px 0 10px 14px",
               borderLeft: `1px solid ${isActive ? "var(--pq-bronze)" : "var(--pq-hairline, rgba(245,240,232,0.08))"}`,
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.16em",
               color: isActive

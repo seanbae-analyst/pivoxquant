@@ -107,11 +107,10 @@ export default function BetaGateForm() {
 
   return (
     <div
-      className="w-full animate-fade-up rounded-2xl border px-6 py-8 sm:px-8 sm:py-10"
+      className="w-full animate-fade-up rounded-2xl border px-6 py-8 sm:px-8 sm:py-10 font-serif"
       style={{
         backgroundColor: "rgba(255, 255, 255, 0.02)",
         borderColor: "rgba(184, 149, 106, 0.18)",
-        fontFamily: '"Source Serif 4", Georgia, serif',
       }}
     >
       {/* Lock badge + brand */}

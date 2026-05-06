@@ -30,21 +30,15 @@ interface Props {
 }
 
 const ROW_LABEL_STYLE: React.CSSProperties = {
-  fontFamily:
-    '"Source Serif 4","Iowan Old Style",Georgia,serif',
   fontSize: 14,
   color: "var(--pq-ivory)",
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
-  fontFamily:
-    '"Source Serif 4","Iowan Old Style",Georgia,serif',
   fontSize: 12.5,
   color: "rgba(245,240,232,0.40)",
   marginTop: 2,
 };
 const ROW_VALUE_STYLE: React.CSSProperties = {
-  fontFamily:
-    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
   fontVariantNumeric: "tabular-nums",
   fontSize: 13,
   color: "rgba(245,240,232,0.82)",
@@ -73,8 +67,6 @@ export function SettingsIdentityCardV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
@@ -86,8 +78,6 @@ export function SettingsIdentityCardV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -108,8 +98,8 @@ export function SettingsIdentityCardV2({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div style={ROW_LABEL_STYLE}>Display name</div>
-          <div style={ROW_HELP_STYLE}>
+          <div className="font-serif" style={ROW_LABEL_STYLE}>Display name</div>
+          <div className="font-serif" style={ROW_HELP_STYLE}>
             Used on memos, brag cards, and exports.
           </div>
         </div>
@@ -120,13 +110,11 @@ export function SettingsIdentityCardV2({
             gap: 12,
           }}
         >
-          <span style={ROW_VALUE_STYLE}>{displayName || "—"}</span>
+          <span className="font-mono" style={ROW_VALUE_STYLE}>{displayName || "—"}</span>
           <Link
             href={editHref}
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10,
               letterSpacing: "0.18em",
               color: "var(--pq-bronze)",
@@ -152,10 +140,11 @@ export function SettingsIdentityCardV2({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div style={ROW_LABEL_STYLE}>Email</div>
-          <div style={ROW_HELP_STYLE}>Verified · primary contact.</div>
+          <div className="font-serif" style={ROW_LABEL_STYLE}>Email</div>
+          <div className="font-serif" style={ROW_HELP_STYLE}>Verified · primary contact.</div>
         </div>
         <span
+          className="font-mono"
           style={{
             ...ROW_VALUE_STYLE,
             fontSize: 12.5,
@@ -183,8 +172,8 @@ export function SettingsIdentityCardV2({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div style={ROW_LABEL_STYLE}>Locale</div>
-          <div style={ROW_HELP_STYLE}>
+          <div className="font-serif" style={ROW_LABEL_STYLE}>Locale</div>
+          <div className="font-serif" style={ROW_HELP_STYLE}>
             한국어 / English. Number convention follows locale.
           </div>
         </div>
@@ -204,8 +193,6 @@ export function SettingsIdentityCardV2({
                 onClick={() => onLocaleChange(code)}
                 className="font-mono uppercase"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 10,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",

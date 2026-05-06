@@ -68,8 +68,6 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 9.5,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
@@ -81,8 +79,6 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
         <span
           className="font-mono"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontVariantNumeric: "tabular-nums",
             fontSize: 11.5,
             color: "rgba(245,240,232,0.82)",
@@ -161,10 +157,8 @@ export function RiskBoardCard() {
   return (
     <HomeCard href="/risk" eyebrow="Risk · 7-Layer Defense" cornerCta="Risk Board ›">
       <div
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily:
-            '"Playfair Display","Source Serif 4",Georgia,serif',
           fontWeight: 500,
           fontSize: 30,
           lineHeight: 1.1,
@@ -178,8 +172,6 @@ export function RiskBoardCard() {
       <p
         className="font-serif"
         style={{
-          fontFamily:
-            '"Source Serif 4","Iowan Old Style",Georgia,serif',
           fontSize: 14,
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",

@@ -67,13 +67,11 @@ export function ReportPreviewShell<TData>({
             padding: "96px 56px",
             textAlign: "center",
             color: "rgba(245,240,232,0.55)",
-            fontFamily:
-              'var(--pq-font-mono,"IBM Plex Mono",ui-monospace,monospace)',
             fontSize: 11,
             letterSpacing: "0.22em",
             textTransform: "uppercase",
           }}
-        >
+        className="font-mono" >
           Loading…
         </div>
       );

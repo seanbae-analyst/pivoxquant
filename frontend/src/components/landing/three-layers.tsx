@@ -133,8 +133,7 @@ function IsoLayer({
     >
       {/* Label corner */}
       <div
-        className="absolute left-3 top-3 flex items-center gap-1.5"
-        style={{ fontFamily: "var(--font-jetbrains, monospace)" }}
+        className="absolute left-3 top-3 flex items-center gap-1.5 font-mono"
       >
         <span
           className="text-[9px] uppercase tracking-widest font-mono"

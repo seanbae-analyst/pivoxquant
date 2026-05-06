@@ -365,12 +365,11 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
               >
                 <div
                   style={{
-                    fontFamily: "var(--font-serif)",
                     fontSize: 36,
                     fontWeight: 500,
                     lineHeight: 1,
                   }}
-                >
+                className="font-serif" >
                   {data.pairwiseCorr.value}
                 </div>
                 <PdfBadge tone="moderate">CONCENTRATED</PdfBadge>

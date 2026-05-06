@@ -35,14 +35,10 @@ interface Props {
 }
 
 const ROW_LABEL_STYLE: React.CSSProperties = {
-  fontFamily:
-    '"Source Serif 4","Iowan Old Style",Georgia,serif',
   fontSize: 14,
   color: "var(--pq-ivory)",
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
-  fontFamily:
-    '"Source Serif 4","Iowan Old Style",Georgia,serif',
   fontSize: 12.5,
   color: "rgba(245,240,232,0.40)",
   marginTop: 2,
@@ -51,8 +47,6 @@ const ROW_HELP_STYLE: React.CSSProperties = {
 const PILL_LINKED: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 8px",
-  fontFamily:
-    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
   fontSize: 9.5,
   letterSpacing: "0.18em",
   textTransform: "uppercase",
@@ -96,16 +90,17 @@ function ProviderRow({
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <div style={ROW_LABEL_STYLE}>
+        <div className="font-serif" style={ROW_LABEL_STYLE}>
           {name}{" "}
           <span
+            className="font-mono"
             style={linked ? PILL_LINKED : PILL_DIM}
             aria-label={linked ? "Linked" : "Not linked"}
           >
             {linked ? "Linked" : "Not linked"}
           </span>
         </div>
-        <div style={ROW_HELP_STYLE}>
+        <div className="font-serif" style={ROW_HELP_STYLE}>
           {linked
             ? `${emailHint ?? "Connected"} · primary login.`
             : helpUnlinked}
@@ -118,8 +113,6 @@ function ProviderRow({
           onClick={onDisconnect}
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10,
             letterSpacing: "0.18em",
             color: "var(--pq-error, #d18888)",
@@ -139,8 +132,6 @@ function ProviderRow({
           onClick={onConnect}
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10,
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
@@ -184,8 +175,6 @@ export function SignInProvidersCard({
           position: "absolute",
           top: 14,
           right: 14,
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
@@ -197,8 +186,6 @@ export function SignInProvidersCard({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -239,16 +226,14 @@ export function SignInProvidersCard({
         }}
       >
         <div style={{ minWidth: 0 }}>
-          <div style={ROW_LABEL_STYLE}>Password</div>
-          <div style={ROW_HELP_STYLE}>
+          <div className="font-serif" style={ROW_LABEL_STYLE}>Password</div>
+          <div className="font-serif" style={ROW_HELP_STYLE}>
             OAuth-only — no password set on this account.
           </div>
         </div>
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
@@ -261,8 +246,6 @@ export function SignInProvidersCard({
       <p
         className="font-serif"
         style={{
-          fontFamily:
-            '"Source Serif 4","Iowan Old Style",Georgia,serif',
           fontSize: 12.5,
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.40)",

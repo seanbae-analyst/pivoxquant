@@ -106,9 +106,8 @@ export function ArtifactKindCard({ entry, locked }: Props) {
 
       {/* 종목명 main pattern — Playfair name on top, mono dim sub-line beneath */}
       <h3
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
           fontWeight: 500,
           fontSize: 22,
           lineHeight: 1.2,
@@ -132,7 +131,6 @@ export function ArtifactKindCard({ entry, locked }: Props) {
       <p
         className="font-serif"
         style={{
-          fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
           fontSize: 13.5,
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.7)",
