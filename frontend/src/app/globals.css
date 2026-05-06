@@ -50,6 +50,7 @@
   --font-mono: var(--font-mono);
   --font-heading: var(--font-heading);
   --font-serif: var(--font-serif);
+  --font-display: var(--font-display);
 
   /* Report tokens — Artifact / Memo / PDF surfaces */
   --color-report-paper: var(--report-paper);
