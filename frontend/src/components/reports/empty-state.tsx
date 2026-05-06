@@ -151,7 +151,7 @@ export function EmptyState({
         <span
           className="font-mono uppercase tabular-nums"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
           }}
@@ -201,7 +201,7 @@ export function EmptyState({
       <p
         className="font-serif"
         style={{
-          fontSize: 14.5,
+          fontSize: 15,
           lineHeight: 1.7,
           color: "rgba(245,240,232,0.72)",
           marginTop: 16,

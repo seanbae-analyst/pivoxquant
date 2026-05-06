@@ -131,7 +131,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
       <p
         className="font-serif"
         style={{
-          fontSize: 13.5,
+          fontSize: 14,
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.7)",
           margin: "16px 0 0",
