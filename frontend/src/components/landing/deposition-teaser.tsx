@@ -180,7 +180,7 @@ export function DepositionTeaser() {
               </div>
               <div
                 className="text-right font-mono tabular-nums"
-                style={{ fontSize: 9.5, color: "rgba(10,10,10,0.55)" }}
+                style={{ fontSize: 12, color: "rgba(10,10,10,0.55)" }}
               >
                 <div>DOCKET · PQ-0074</div>
                 <div>SESSION · 09:42 KST</div>
@@ -211,7 +211,7 @@ export function DepositionTeaser() {
                   <div>
                     <p
                       className="font-serif"
-                      style={{ fontSize: 12.5, lineHeight: 1.45 }}
+                      style={{ fontSize: 14, lineHeight: 1.45 }}
                     >
                       {q.q_en}
                     </p>
@@ -273,7 +273,7 @@ export function DepositionTeaser() {
                   <p
                     className="font-serif italic"
                     style={{
-                      fontSize: "12.5px",
+                      fontSize: "14px",
                       lineHeight: 1.5,
                       color: "rgba(139,111,71,0.75)",
                     }}

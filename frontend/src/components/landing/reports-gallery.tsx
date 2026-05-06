@@ -71,7 +71,7 @@ function TierBadge({ tier }: { tier: Tier }) {
       aria-label={`Tier ${tier}`}
       className="font-mono uppercase"
       style={{
-        fontSize: "9.5px",
+        fontSize: "12px",
         letterSpacing: "0.22em",
         color: "var(--pq-bronze)",
         border: "0.5px solid rgba(var(--pq-bronze-rgb), 0.45)",
@@ -109,7 +109,7 @@ function ReportCard({ entry }: { entry: ReportEntry }) {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: "10.5px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
           }}
@@ -151,7 +151,7 @@ function ReportCard({ entry }: { entry: ReportEntry }) {
         className="pq-reports-gallery-card__cta mt-auto inline-flex items-center gap-1.5 font-serif"
         style={{
           color: "var(--pq-bronze)",
-          fontSize: "12.5px",
+          fontSize: "14px",
           letterSpacing: "0.04em",
           transition: "color 240ms",
         }}
@@ -246,7 +246,7 @@ export default function ReportsGallery() {
             className="group inline-flex items-center gap-2 font-serif transition-colors"
             style={{
               color: "var(--pq-bronze)",
-              fontSize: "13.5px",
+              fontSize: "14px",
               letterSpacing: "0.04em",
             }}
           >

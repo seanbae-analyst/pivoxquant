@@ -73,7 +73,7 @@ function LoadingShell() {
       <div
         className="font-serif uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "rgba(184, 149, 106, 0.7)",
         }}
@@ -102,7 +102,7 @@ function UpgradePrompt() {
           <span
             className="font-serif uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze, #B8956A)",
             }}
@@ -126,7 +126,7 @@ function UpgradePrompt() {
         <p
           className="mt-4 font-serif"
           style={{
-            fontSize: 15.5,
+            fontSize: 15,
             lineHeight: 1.65,
             color: "rgba(245, 240, 232, 0.72)",
           }}
@@ -153,7 +153,7 @@ function UpgradePrompt() {
             style={{
               background: "var(--pq-bronze, #B8956A)",
               color: "var(--pq-ink, #050505)",
-              fontSize: 11.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
             }}
           >
@@ -167,7 +167,7 @@ function UpgradePrompt() {
             style={{
               border: "0.5px solid rgba(245, 240, 232, 0.14)",
               color: "rgba(245, 240, 232, 0.72)",
-              fontSize: 11.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
             }}
           >
@@ -229,7 +229,7 @@ function ComingSoon({ phase }: { phase: string }) {
           <span
             className="font-serif uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze, #B8956A)",
             }}
@@ -253,7 +253,7 @@ function ComingSoon({ phase }: { phase: string }) {
         <p
           className="mt-4 font-serif"
           style={{
-            fontSize: 15.5,
+            fontSize: 15,
             lineHeight: 1.65,
             color: "rgba(245, 240, 232, 0.72)",
           }}
@@ -326,7 +326,7 @@ function ComingSoon({ phase }: { phase: string }) {
               style={{
                 background: "var(--pq-bronze, #B8956A)",
                 color: "var(--pq-ink, #050505)",
-                fontSize: 11.5,
+                fontSize: 12,
                 letterSpacing: "0.22em",
               }}
             >

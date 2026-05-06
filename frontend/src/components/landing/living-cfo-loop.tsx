@@ -203,7 +203,7 @@ export function LivingCfoLoop() {
                 <p
                   className="font-serif mb-2"
                   style={{
-                    fontSize: 13.5,
+                    fontSize: 14,
                     lineHeight: 1.55,
                     color: "rgba(245,240,232,0.72)",
                   }}
@@ -213,7 +213,7 @@ export function LivingCfoLoop() {
                 <p
                   className="font-serif italic"
                   style={{
-                    fontSize: 11.5,
+                    fontSize: 12,
                     color: "rgba(139,111,71,0.75)",
                   }}
                 >

@@ -148,7 +148,7 @@ export function DataTable<R extends { id: string | number }>({
         style={{
           width: "100%",
           borderCollapse: "collapse",
-          fontSize: 11.5,
+          fontSize: 12,
           color: "rgba(245,240,232,0.92)",
         }}
       >
@@ -181,7 +181,7 @@ export function DataTable<R extends { id: string | number }>({
                     textAlign: c.align ?? "left",
                     padding: "8px 12px",
                     fontWeight: 500,
-                    fontSize: 9.5,
+                    fontSize: 12,
                     letterSpacing: "0.2em",
                     textTransform: "uppercase",
                     color: active
@@ -226,7 +226,7 @@ export function DataTable<R extends { id: string | number }>({
                   padding: 24,
                   textAlign: "center",
                   color: "rgba(245,240,232,0.45)",
-                  fontSize: 11.5,
+                  fontSize: 12,
                 }}
               >
                 {emptyState ?? "No rows."}
@@ -309,7 +309,7 @@ export function DataTable<R extends { id: string | number }>({
                               border: "1px solid var(--pq-bronze, #B8956A)",
                               color: "rgba(245,240,232,0.98)",
                               fontFamily: "inherit",
-                              fontSize: 11.5,
+                              fontSize: 12,
                               padding: "3px 6px",
                               outline: "none",
                             }}

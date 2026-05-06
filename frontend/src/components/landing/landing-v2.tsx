@@ -219,7 +219,7 @@ function PricingPreview() {
                   className="absolute right-5 top-5 font-mono uppercase"
                   style={{
                     color: "var(--pq-bronze)",
-                    fontSize: "9.5px",
+                    fontSize: "12px",
                     letterSpacing: "0.24em",
                     padding: "3px 8px",
                     border: "0.5px solid rgba(184,149,106,0.5)",
@@ -416,7 +416,7 @@ function Faq() {
               <div
                 className="font-serif"
                 style={{
-                  fontSize: "14.5px",
+                  fontSize: "15px",
                   lineHeight: 1.7,
                   color: "rgba(245,240,232,0.75)",
                   paddingTop: 10,
@@ -704,7 +704,7 @@ function SiteFooter() {
             <p
               className="font-serif italic"
               style={{
-                fontSize: "11.5px",
+                fontSize: "12px",
                 letterSpacing: "0.01em",
                 color: "rgba(245,240,232,0.5)",
               }}
@@ -731,7 +731,7 @@ function SiteFooter() {
                 rel="noopener noreferrer"
                 className="font-serif transition-colors"
                 style={{
-                  fontSize: "11.5px",
+                  fontSize: "12px",
                   letterSpacing: "0.12em",
                   color: "rgba(245,240,232,0.4)",
                 }}
@@ -752,7 +752,7 @@ function SiteFooter() {
                 href="mailto:hello@pivoxquant.com"
                 className="font-serif transition-colors"
                 style={{
-                  fontSize: "11.5px",
+                  fontSize: "12px",
                   letterSpacing: "0.12em",
                   color: "rgba(245,240,232,0.4)",
                 }}

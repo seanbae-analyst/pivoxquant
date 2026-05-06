@@ -378,7 +378,7 @@ function ConsentModal({
             />
             <span
               className="font-serif leading-relaxed"
-              style={{ fontSize: "12.5px", color: "rgba(245,240,232,0.80)" }}
+              style={{ fontSize: "14px", color: "rgba(245,240,232,0.80)" }}
             >
               <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
               I have reviewed the key terms — price, billing period, features,
@@ -393,7 +393,7 @@ function ConsentModal({
             />
             <span
               className="font-serif leading-relaxed"
-              style={{ fontSize: "12.5px", color: "rgba(245,240,232,0.80)" }}
+              style={{ fontSize: "14px", color: "rgba(245,240,232,0.80)" }}
             >
               <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
               I agree to automatic monthly billing of {price} until I cancel in
@@ -408,7 +408,7 @@ function ConsentModal({
             />
             <span
               className="font-serif leading-relaxed"
-              style={{ fontSize: "12.5px", color: "rgba(245,240,232,0.80)" }}
+              style={{ fontSize: "14px", color: "rgba(245,240,232,0.80)" }}
             >
               <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
               I understand that payment is processed by Stripe, Inc. (United
@@ -427,7 +427,7 @@ function ConsentModal({
             <p
               className="font-serif leading-relaxed"
               style={{
-                fontSize: "11.5px",
+                fontSize: "12px",
                 color: "rgba(245,240,232,0.70)",
               }}
             >
@@ -453,7 +453,7 @@ function ConsentModal({
             onClick={onConfirm}
             className="w-full py-3 font-serif transition-all"
             style={{
-              fontSize: "13.5px",
+              fontSize: "14px",
               letterSpacing: "0.02em",
               borderRadius: "2px",
               backgroundColor: allAgreed && !submitting
@@ -621,7 +621,7 @@ export default function PricingPage() {
               <p
                 className="font-mono uppercase mb-1"
                 style={{
-                  fontSize: "10.5px",
+                  fontSize: "12px",
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
                 }}
@@ -905,7 +905,7 @@ export default function PricingPage() {
             <p
               className="font-serif leading-relaxed"
               style={{
-                fontSize: "11.5px",
+                fontSize: "12px",
                 color: "rgba(245,240,232,0.60)",
                 lineHeight: 1.7,
               }}

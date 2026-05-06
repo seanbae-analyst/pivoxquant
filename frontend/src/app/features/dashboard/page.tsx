@@ -73,7 +73,7 @@ export default function DashboardPreviewPage() {
                 </h3>
                 <p
                   className="font-serif"
-                  style={{ color: "rgba(245,240,232,0.68)", fontSize: "13.5px", lineHeight: 1.6 }}
+                  style={{ color: "rgba(245,240,232,0.68)", fontSize: "14px", lineHeight: 1.6 }}
                 >
                   {p.blurb}
                 </p>

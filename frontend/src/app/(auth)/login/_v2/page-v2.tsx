@@ -122,7 +122,7 @@ export default function LoginPageV2() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze, #B8956A)",
                 textTransform: "uppercase",

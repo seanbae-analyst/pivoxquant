@@ -57,7 +57,7 @@ export function MarqueeLogos() {
             className="font-serif uppercase"
             style={{
               color: "var(--pq-bronze)",
-              fontSize: "10.5px",
+              fontSize: "12px",
               letterSpacing: "0.24em",
             }}
           >
@@ -92,7 +92,7 @@ export function MarqueeLogos() {
                 className="inline-flex items-center gap-14 font-serif"
                 style={{
                   color: "rgba(245,240,232,0.36)",
-                  fontSize: "13.5px",
+                  fontSize: "14px",
                   letterSpacing: "0.24em",
                   textTransform: "uppercase",
                   whiteSpace: "nowrap",

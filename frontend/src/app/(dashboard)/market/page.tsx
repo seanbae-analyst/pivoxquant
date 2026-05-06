@@ -251,7 +251,7 @@ export default function MarketPage() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
               }}
@@ -429,7 +429,7 @@ export default function MarketPage() {
           <p
             style={{
               textAlign: "center",
-              fontSize: 11.5,
+              fontSize: 12,
               color: "rgba(245,240,232,0.4)",
               letterSpacing: "0.02em",
               marginTop: 32,
