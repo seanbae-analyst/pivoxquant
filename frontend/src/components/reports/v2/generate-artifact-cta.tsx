@@ -156,9 +156,8 @@ export function GenerateArtifactCta({ tier }: Props) {
     <section aria-labelledby="ask-heading" style={{ marginTop: 80 }}>
       <h2
         id="ask-heading"
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
           fontWeight: 500,
           fontSize: "clamp(26px, 3.4vw, 40px)",
           lineHeight: 1.1,
@@ -171,7 +170,6 @@ export function GenerateArtifactCta({ tier }: Props) {
       <p
         className="font-serif"
         style={{
-          fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
           fontSize: 14,
           lineHeight: 1.6,
           color: "rgba(245,240,232,0.7)",
@@ -221,10 +219,8 @@ export function GenerateArtifactCta({ tier }: Props) {
 
               {/* 종목명 main pattern */}
               <h3
-                className="font-serif"
+                className="font-display"
                 style={{
-                  fontFamily:
-                    'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                   fontWeight: 500,
                   fontSize: 20,
                   color: "var(--pq-ivory, #F5F0E8)",
@@ -249,8 +245,6 @@ export function GenerateArtifactCta({ tier }: Props) {
               <p
                 className="font-serif"
                 style={{
-                  fontFamily:
-                    'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
                   fontSize: 13,
                   lineHeight: 1.55,
                   color: "rgba(245,240,232,0.7)",

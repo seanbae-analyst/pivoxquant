@@ -178,8 +178,8 @@ export function PortfolioSegment({ data = DEFAULT }: { data?: PortfolioSegmentDa
             <PdfCard>
               {data.fx.map((f, i) => (
                 <PdfFlexBetween key={f.ccy} style={i < data.fx.length - 1 ? { marginBottom: 12 } : undefined}>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--r-ink-3)" }}>{f.ccy}</div>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: 24, fontWeight: 500 }}>{f.pct}</div>
+                  <div style={{ fontSize: 10, color: "var(--r-ink-3)" }} className="font-mono" >{f.ccy}</div>
+                  <div style={{ fontSize: 24, fontWeight: 500 }} className="font-serif" >{f.pct}</div>
                 </PdfFlexBetween>
               ))}
               <PdfDivider />
