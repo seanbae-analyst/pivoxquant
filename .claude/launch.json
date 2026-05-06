@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "PivoxQuant",
-      "runtimeExecutable": "/usr/bin/python3",
+      "runtimeExecutable": "venv/bin/python",
       "runtimeArgs": ["run.py"],
       "port": 5050
     },
