@@ -104,7 +104,7 @@ export function PeerBenchmarkBlockV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
         }}
@@ -126,7 +126,7 @@ export function PeerBenchmarkBlockV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -187,7 +187,7 @@ export function PeerBenchmarkBlockV2({
                 <span
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: 12,
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                   }}
@@ -198,7 +198,7 @@ export function PeerBenchmarkBlockV2({
                   className="font-mono"
                   style={{
                     fontVariantNumeric: "tabular-nums",
-                    fontSize: 12.5,
+                    fontSize: 14,
                     color: "rgba(245,240,232,0.82)",
                   }}
                 >
@@ -259,7 +259,7 @@ export function PeerBenchmarkBlockV2({
         className="font-mono uppercase"
         style={{
           marginTop: 16,
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.16em",
           color: "rgba(245,240,232,0.40)",
         }}

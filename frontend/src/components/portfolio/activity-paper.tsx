@@ -93,7 +93,7 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
           className="pq-paper-body"
           style={{
             color: "rgba(20,20,20,0.55)",
-            fontSize: 13.5,
+            fontSize: 14,
           }}
         >
           No transactions recorded yet. Activity surfaces once buys and sales
@@ -112,7 +112,7 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
             <div key={dk}>
               <div
                 style={{
-                  fontSize: 9.5,
+                  fontSize: 12,
                   letterSpacing: "0.26em",
                   textTransform: "uppercase",
                   color: "#B8956A",

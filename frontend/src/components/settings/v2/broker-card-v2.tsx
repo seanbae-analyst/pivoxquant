@@ -54,7 +54,7 @@ export function BrokerCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -81,7 +81,7 @@ export function BrokerCardV2({
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
           }}
@@ -131,7 +131,7 @@ export function BrokerCardV2({
               position: "absolute",
               top: 14,
               right: 14,
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
             }}
@@ -153,7 +153,7 @@ export function BrokerCardV2({
           <p
             className="font-serif"
             style={{
-              fontSize: 12.5,
+              fontSize: 14,
               color: "rgba(245,240,232,0.40)",
               marginTop: 16,
             }}
@@ -188,7 +188,7 @@ export function BrokerCardV2({
               position: "absolute",
               top: 14,
               right: 14,
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
             }}
@@ -210,7 +210,7 @@ export function BrokerCardV2({
           <p
             className="font-serif"
             style={{
-              fontSize: 12.5,
+              fontSize: 14,
               color: "rgba(245,240,232,0.40)",
               marginTop: 16,
             }}

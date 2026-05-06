@@ -238,7 +238,7 @@ export default function PortfolioPageV2() {
             borderBottom: "1px solid var(--pq-bronze)",
             color: "var(--pq-bronze)",
             letterSpacing: "0.005em",
-            fontSize: 12.5,
+            fontSize: 14,
           }}
         >
           <span>
@@ -255,7 +255,7 @@ export default function PortfolioPageV2() {
               textDecoration: "underline",
               textUnderlineOffset: 4,
               cursor: "pointer",
-              fontSize: 12.5,
+              fontSize: 14,
             }}
           >
             Refresh

@@ -303,7 +303,7 @@ export function PrivacyCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -369,7 +369,7 @@ export function PrivacyCardV2({
               position: "absolute",
               top: 14,
               right: 14,
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
             }}
@@ -379,7 +379,7 @@ export function PrivacyCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 16,
@@ -418,7 +418,7 @@ export function PrivacyCardV2({
                 <div
                   className="font-serif"
                   style={{
-                    fontSize: 12.5,
+                    fontSize: 14,
                     color: "rgba(245,240,232,0.40)",
                     marginTop: 2,
                   }}
@@ -432,7 +432,7 @@ export function PrivacyCardV2({
                   style={{
                     display: "inline-block",
                     padding: "2px 8px",
-                    fontSize: 9.5,
+                    fontSize: 12,
                     letterSpacing: "0.18em",
                     border: "1px solid rgba(184,149,106,0.15)",
                     color: "var(--pq-bronze)",
@@ -468,7 +468,7 @@ export function PrivacyCardV2({
               position: "absolute",
               top: 14,
               right: 14,
-              fontSize: 9.5,
+              fontSize: 12,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
             }}
@@ -478,7 +478,7 @@ export function PrivacyCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 16,
@@ -525,7 +525,7 @@ export function PrivacyCardV2({
                   className="font-mono"
                   style={{
                     fontVariantNumeric: "tabular-nums",
-                    fontSize: 12.5,
+                    fontSize: 14,
                     color: "rgba(245,240,232,0.40)",
                     marginTop: 2,
                   }}
@@ -561,7 +561,7 @@ export function PrivacyCardV2({
           <p
             className="font-serif"
             style={{
-              fontSize: 11.5,
+              fontSize: 12,
               color: "rgba(245,240,232,0.40)",
               marginTop: 12,
             }}
@@ -596,7 +596,7 @@ export function PrivacyCardV2({
             position: "absolute",
             top: 14,
             right: 14,
-            fontSize: 9.5,
+            fontSize: 12,
             letterSpacing: "0.2em",
             color: ERROR_COLOR,
           }}
@@ -606,7 +606,7 @@ export function PrivacyCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: ERROR_COLOR,
             marginBottom: 16,
