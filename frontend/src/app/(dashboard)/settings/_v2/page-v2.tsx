@@ -408,7 +408,7 @@ export default function SettingsPageV2() {
       <div
         className="sticky z-40 -mx-4 md:-ml-8 md:-mr-10 mb-2"
         style={{
-          top: 0,
+          top: 56,
           background: "rgba(5,5,5,0.78)",
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",
