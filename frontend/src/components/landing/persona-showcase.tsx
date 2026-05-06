@@ -229,7 +229,7 @@ export function PersonaShowcase() {
                 <p
                   className="font-serif mb-2"
                   style={{
-                    fontSize: "13.5px",
+                    fontSize: "14px",
                     lineHeight: 1.55,
                     color: "rgba(245,240,232,0.72)",
                   }}

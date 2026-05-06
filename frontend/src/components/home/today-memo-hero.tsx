@@ -82,7 +82,7 @@ export function TodayMemoHero({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 9.5,
+            fontSize: 12,
             letterSpacing: "0.28em",
             color: "var(--pq-bronze)",
           }}

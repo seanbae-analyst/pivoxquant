@@ -80,7 +80,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         <p
           className="font-serif italic"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.01em",
             lineHeight: 1.5,
             margin: 0,
@@ -112,7 +112,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
           <span
             className="font-serif uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
             }}
@@ -123,7 +123,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         <p
           className="font-serif"
           style={{
-            fontSize: 12.5,
+            fontSize: 14,
             lineHeight: 1.65,
             color: "rgba(245,240,232,0.78)",
           }}
@@ -162,7 +162,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         <span
           className="font-serif uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
           }}
@@ -196,7 +196,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
       <p
         className="mt-5 font-serif"
         style={{
-          fontSize: 13.5,
+          fontSize: 14,
           lineHeight: 1.7,
           color: "rgba(245,240,232,0.75)",
         }}
@@ -206,7 +206,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
       <p
         className="mt-2 font-serif"
         style={{
-          fontSize: 12.5,
+          fontSize: 14,
           lineHeight: 1.7,
           color: "rgba(245,240,232,0.55)",
         }}
@@ -221,7 +221,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
           style={{
             background: "var(--pq-bronze)",
             color: "var(--pq-ink)",
-            fontSize: 11.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
           }}
         >

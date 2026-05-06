@@ -185,7 +185,7 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
         className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
         style={{
           fontVariantNumeric: "tabular-nums",
-          fontSize: 11.5,
+          fontSize: 12,
           textAlign: "right",
           minWidth: 54,
         }}

@@ -339,7 +339,7 @@ export function Hero() {
           <span
             className="font-serif italic"
             style={{
-              fontSize: "10.5px",
+              fontSize: "12px",
               letterSpacing: "0.05em",
               color: "rgba(139, 111, 71, 0.65)",
             }}

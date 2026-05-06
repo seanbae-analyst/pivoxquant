@@ -61,7 +61,7 @@ export function DangerZoneCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
             marginBottom: 12,
@@ -90,7 +90,7 @@ export function DangerZoneCardV2({
         <p
           className="font-serif"
           style={{
-            fontSize: 13.5,
+            fontSize: 14,
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.82)",
             marginBottom: 20,
@@ -162,7 +162,7 @@ export function DangerZoneCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: ERROR_COLOR,
             marginBottom: 12,

@@ -108,7 +108,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
             marginBottom: 12,
@@ -119,7 +119,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         <p
           className="font-serif"
           style={{
-            fontSize: 14.5,
+            fontSize: 15,
             lineHeight: 1.65,
             color: "rgba(245,240,232,0.7)",
             margin: 0,
@@ -197,7 +197,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             <p
               className="font-serif"
               style={{
-                fontSize: 14.5,
+                fontSize: 15,
                 lineHeight: 1.65,
                 color: "rgba(245,240,232,0.78)",
                 marginTop: 18,
@@ -236,7 +236,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
               download
               className="font-mono uppercase"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: "0.18em",
                 color: "var(--pq-bronze, #B8956A)",
                 borderBottom: "1px solid var(--pq-bronze-15, rgba(184,149,106,0.15))",

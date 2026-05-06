@@ -110,7 +110,7 @@ function DonutTooltip({ active, payload, currency }: DonutTooltipProps) {
       </div>
       <div className="font-mono tabular-nums">
         {row.pct.toFixed(1)}%{" "}
-        <span className="font-serif" style={{ fontSize: 10.5, color: "rgba(245,240,232,0.55)" }}>
+        <span className="font-serif" style={{ fontSize: 12, color: "rgba(245,240,232,0.55)" }}>
           of book
         </span>
       </div>
@@ -121,7 +121,7 @@ function DonutTooltip({ active, payload, currency }: DonutTooltipProps) {
         {fmtMoney(row.value, currency)}
         <span
           className="font-serif"
-          style={{ fontSize: 10.5, color: "rgba(245,240,232,0.55)", marginLeft: 6 }}
+          style={{ fontSize: 12, color: "rgba(245,240,232,0.55)", marginLeft: 6 }}
         >
           · {row.count} {row.count === 1 ? "position" : "positions"}
         </span>

@@ -184,7 +184,7 @@ export function LedgerBookPaper({
 
       <p
         className="pq-paper-body"
-        style={{ maxWidth: "58ch", marginTop: -8, fontSize: 14.5 }}
+        style={{ maxWidth: "58ch", marginTop: -8, fontSize: 15 }}
       >
         Positions, cost basis, and observed performance across your two
         markets. User-entered record only — not investment advice.
@@ -208,7 +208,7 @@ export function LedgerBookPaper({
           <div key={s.label} style={{ padding: "16px 0" }}>
             <div
               style={{
-                fontSize: 9.5,
+                fontSize: 12,
                 letterSpacing: "0.26em",
                 textTransform: "uppercase",
                 color: "#B8956A",
@@ -273,7 +273,7 @@ export function LedgerBookPaper({
             className="pq-paper-body"
             style={{
               color: "rgba(20,20,20,0.55)",
-              fontSize: 13.5,
+              fontSize: 14,
               padding: "32px 0",
               textAlign: "center",
             }}
@@ -360,7 +360,7 @@ export function LedgerBookPaper({
                       <td style={{ padding: "14px 6px 14px 0" }}>
                         <div
                           style={{
-                            fontSize: 14.5,
+                            fontSize: 15,
                             color: "#1a1a1a",
                             fontWeight: 500,
                             letterSpacing: "-0.005em",
@@ -398,7 +398,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 12.5,
+                          fontSize: 14,
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.78)",
                         }}
@@ -409,7 +409,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 12.5,
+                          fontSize: 14,
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.6)",
                         }}
@@ -437,7 +437,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 12.5,
+                          fontSize: 14,
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.78)",
                         }}
@@ -449,7 +449,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 12.5,
+                          fontSize: 14,
                           fontVariantNumeric: "tabular-nums",
                           fontWeight: 600,
                         }}

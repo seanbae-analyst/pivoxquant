@@ -89,7 +89,7 @@ export function IdentityCardV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 9.5,
+          fontSize: 12,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
           textTransform: "uppercase",
@@ -101,7 +101,7 @@ export function IdentityCardV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
@@ -155,7 +155,7 @@ export function IdentityCardV2({
             className="font-mono"
             style={{
               fontVariantNumeric: "tabular-nums",
-              fontSize: 11.5,
+              fontSize: 12,
               color: "rgba(245,240,232,0.55)",
               marginTop: 4,
               overflow: "hidden",
@@ -177,7 +177,7 @@ export function IdentityCardV2({
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
                 border: "1px solid var(--pq-bronze)",
@@ -191,7 +191,7 @@ export function IdentityCardV2({
               <span
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 10.5,
+                  fontSize: 12,
                   letterSpacing: "0.22em",
                   color: "rgba(245,240,232,0.40)",
                   textTransform: "uppercase",
@@ -213,7 +213,7 @@ export function IdentityCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
             marginBottom: 8,

@@ -81,7 +81,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -106,7 +106,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 10.5,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.40)",
             }}
@@ -170,7 +170,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
                 <div
                   className="font-serif"
                   style={{
-                    fontSize: 12.5,
+                    fontSize: 14,
                     color: "rgba(245,240,232,0.55)",
                     marginTop: 4,
                   }}
@@ -185,7 +185,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
               aria-label={`status: ${l.status}`}
               className="font-mono uppercase"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 letterSpacing: "0.22em",
                 color: statusColor(l.status),
               }}
@@ -207,7 +207,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-mono"
               style={{
-                fontSize: 11.5,
+                fontSize: 12,
                 color: "rgba(245,240,232,0.55)",
               }}
             >
@@ -217,7 +217,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-mono"
               style={{
-                fontSize: 10.5,
+                fontSize: 12,
                 color: "rgba(245,240,232,0.40)",
                 textAlign: "right",
                 letterSpacing: "0.04em",

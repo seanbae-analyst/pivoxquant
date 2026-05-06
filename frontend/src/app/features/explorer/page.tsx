@@ -78,7 +78,7 @@ export default function ExplorerPage() {
                     className="font-mono uppercase"
                     style={{
                       color: a.tier === "PREMIUM" ? "var(--pq-bronze)" : "rgba(245,240,232,0.5)",
-                      fontSize: "9.5px",
+                      fontSize: "12px",
                       letterSpacing: "0.24em",
                       padding: "3px 8px",
                       border: "0.5px solid rgba(184,149,106,0.38)",

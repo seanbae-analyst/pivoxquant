@@ -296,7 +296,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                   disabled={state.status === "queueing"}
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 10.5,
+                    fontSize: 12,
                     letterSpacing: "0.18em",
                     color: "var(--pq-bronze, #B8956A)",
                     background: "transparent",

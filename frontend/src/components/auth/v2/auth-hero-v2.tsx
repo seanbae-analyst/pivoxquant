@@ -55,7 +55,7 @@ export function AuthHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: "0.24em",
           color: "var(--pq-bronze, #B8956A)",
           marginBottom: 28,
@@ -99,7 +99,7 @@ export function AuthHeroV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
             paddingTop: 24,
