@@ -59,7 +59,6 @@ function BigGaugeCard({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -70,14 +69,13 @@ function BigGaugeCard({
 
       <div
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontVariantNumeric: "tabular-nums",
           fontSize: 44,
           color: "var(--pq-ivory)",
           lineHeight: 1,
           letterSpacing: "-0.01em",
         }}
-      >
+      className="font-mono" >
         {value}
         {unit ? (
           <span
@@ -95,7 +93,6 @@ function BigGaugeCard({
       <div
         className="font-mono"
         style={{
-          fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
           fontSize: 11,
           letterSpacing: "0.04em",
           color: "rgba(245,240,232,0.55)",
@@ -131,13 +128,12 @@ function BigGaugeCard({
             display: "flex",
             justifyContent: "space-between",
             marginTop: 6,
-            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
             fontSize: 9.5,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "rgba(245,240,232,0.40)",
           }}
-        >
+        className="font-mono" >
           {marks.map((m, i) => (
             <span key={i}>{m}</span>
           ))}
@@ -146,7 +142,6 @@ function BigGaugeCard({
           className="font-mono uppercase"
           style={{
             marginTop: 10,
-            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: postureColor(posture),
@@ -228,7 +223,6 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -238,9 +232,8 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
             Gauges · Four primary
           </div>
           <h2
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontWeight: 500,
               fontSize: 32,
               letterSpacing: "-0.02em",
@@ -254,7 +247,6 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",

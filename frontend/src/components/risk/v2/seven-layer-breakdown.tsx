@@ -81,7 +81,6 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -91,9 +90,8 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             Defense · Seven layers
           </div>
           <h2
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontWeight: 500,
               fontSize: 32,
               letterSpacing: "-0.02em",
@@ -108,7 +106,6 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
           <span
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.40)",
@@ -148,9 +145,8 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             }}
           >
             <span
-              className="font-serif"
+              className="font-display"
               style={{
-                fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                 fontSize: 22,
                 color: "var(--pq-bronze)",
                 letterSpacing: "-0.01em",
@@ -161,9 +157,8 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
 
             <div style={{ minWidth: 0 }}>
               <div
-                className="font-serif"
+                className="font-display"
                 style={{
-                  fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                   fontSize: 18,
                   color: "var(--pq-ivory)",
                   letterSpacing: "-0.005em",
@@ -175,8 +170,6 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
                 <div
                   className="font-serif"
                   style={{
-                    fontFamily:
-                      'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
                     fontSize: 12.5,
                     color: "rgba(245,240,232,0.55)",
                     marginTop: 4,
@@ -192,7 +185,6 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
               aria-label={`status: ${l.status}`}
               className="font-mono uppercase"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 10.5,
                 letterSpacing: "0.22em",
                 color: statusColor(l.status),
@@ -204,7 +196,6 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-mono"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontVariantNumeric: "tabular-nums",
                 fontSize: 16,
                 color: "var(--pq-ivory)",
@@ -216,7 +207,6 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-mono"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 11.5,
                 color: "rgba(245,240,232,0.55)",
               }}
@@ -227,7 +217,6 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-mono"
               style={{
-                fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                 fontSize: 10.5,
                 color: "rgba(245,240,232,0.40)",
                 textAlign: "right",

@@ -34,7 +34,6 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -44,9 +43,8 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
             Concentration · Top 5 positions
           </div>
           <h2
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily: 'var(--pq-font-display,"Playfair Display",Georgia,serif)',
               fontWeight: 500,
               fontSize: 32,
               letterSpacing: "-0.02em",
@@ -60,7 +58,6 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
@@ -83,7 +80,6 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
           <div
             className="font-serif"
             style={{
-              fontFamily: 'var(--pq-font-serif,"Source Serif 4",Georgia,serif)',
               fontSize: 14,
               color: "rgba(245,240,232,0.55)",
               padding: "32px 0",
@@ -112,10 +108,8 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                 }}
               >
                 <span
-                  className="font-serif"
+                  className="font-display"
                   style={{
-                    fontFamily:
-                      'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                     fontSize: 22,
                     color: "var(--pq-bronze)",
                     letterSpacing: "-0.01em",
@@ -128,10 +122,8 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                     below as mono 10.5px ivory-mute. Never lead with ticker. */}
                 <div style={{ minWidth: 0 }}>
                   <div
-                    className="font-serif name"
+                    className="font-display name"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-display,"Playfair Display",Georgia,serif)',
                       fontSize: 18,
                       color: "var(--pq-ivory)",
                       letterSpacing: "-0.005em",
@@ -142,8 +134,6 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                   <div
                     className="font-mono"
                     style={{
-                      fontFamily:
-                        'var(--pq-font-mono,"JetBrains Mono",monospace)',
                       fontSize: 10.5,
                       color: "rgba(245,240,232,0.40)",
                       letterSpacing: "0.14em",
@@ -157,7 +147,6 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                 <span
                   className="font-mono"
                   style={{
-                    fontFamily: 'var(--pq-font-mono,"JetBrains Mono",monospace)',
                     fontVariantNumeric: "tabular-nums",
                     fontSize: 18,
                     color: "var(--pq-ivory)",
