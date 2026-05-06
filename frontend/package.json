@@ -17,7 +17,8 @@
     "e2e:ui": "playwright test --ui",
     "render:samples": "node scripts/render-sample-pdfs.mjs --all",
     "render:sample": "node scripts/render-sample-pdfs.mjs",
-    "lint:samples": "../venv/bin/python ../scripts/lint_pdfs.py public/samples"
+    "lint:samples": "../venv/bin/python ../scripts/lint_pdfs.py public/samples",
+    "lint:reference-samples": "../venv/bin/python ../../pivoxquant_pdfs/lint_pdfs.py ../../pivoxquant_pdfs/"
   },
   "dependencies": {
     "clsx": "^2.1.1",
