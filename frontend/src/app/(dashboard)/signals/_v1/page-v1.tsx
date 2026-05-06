@@ -157,7 +157,7 @@ export default function SignalsPageV1() {
             SIGNALS · {weekTag()}
           </div>
           <h1 className="pq-ink-h1 mt-2">The Clip Board</h1>
-          <p className="mt-1 text-[10.5px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          <p className="mt-1 text-[12px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
             내 포지션 시그널 — {signals.length} covered
           </p>
           <p className="mt-2 max-w-xl font-serif text-sm text-[rgba(245,240,232,0.55)]">

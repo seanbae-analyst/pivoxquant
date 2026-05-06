@@ -126,7 +126,7 @@ export default function DocsPage() {
                 <dl className="space-y-5">
                   {section.items.map((item) => (
                     <div key={item.q}>
-                      <dt className="text-[13.5px] text-[var(--pq-ivory)] mb-1.5">
+                      <dt className="text-[14px] text-[var(--pq-ivory)] mb-1.5">
                         {item.q}
                       </dt>
                       <dd className="text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">

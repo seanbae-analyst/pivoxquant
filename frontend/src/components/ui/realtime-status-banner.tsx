@@ -70,7 +70,7 @@ export function RealtimeStatusBanner() {
           />
           <div className="flex-1 min-w-0">
             <p
-              className="font-mono text-[10.5px] uppercase tracking-[0.22em]"
+              className="font-mono text-[12px] uppercase tracking-[0.22em]"
               style={{ color: "var(--pq-error)" }}
             >
               실시간 데이터 연결 실패
@@ -119,7 +119,7 @@ export function RealtimeStatusBanner() {
         />
         <div className="flex-1 min-w-0">
           <p
-            className="font-mono text-[10.5px] uppercase tracking-[0.22em]"
+            className="font-mono text-[12px] uppercase tracking-[0.22em]"
             style={{ color: "rgba(234, 179, 8, 0.85)" }}
           >
             재연결 중

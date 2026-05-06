@@ -176,7 +176,7 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
           </h3>
           {quote.proxy_ticker && (
             <p
-              className="mt-0.5 font-mono text-[9.5px] uppercase tracking-[0.18em] text-slate-500"
+              className="mt-0.5 font-mono text-[12px] uppercase tracking-[0.18em] text-slate-500"
               title="Level sourced from a liquid ETF proxy (FMP Starter tier does not serve the caret-prefixed index symbol). No ratio conversion is applied."
             >
               {proxyLabel(quote.proxy_ticker)}
@@ -184,7 +184,7 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
           )}
           {quote.observed_at && (
             <div className="mt-1 flex items-center gap-2">
-              <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-slate-400 tabular-nums">
+              <span className="font-mono text-[12px] uppercase tracking-[0.16em] text-slate-400 tabular-nums">
                 {rel}
               </span>
               {stale ? (

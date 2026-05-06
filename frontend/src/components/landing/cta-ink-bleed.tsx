@@ -176,7 +176,7 @@ export const CtaInkBleed = forwardRef<HTMLAnchorElement, Props>(
     );
 
     const base =
-      "pq-ink-btn group relative inline-flex h-12 items-center gap-2 overflow-hidden rounded-sm px-6 text-[13.5px] font-medium tracking-wide";
+      "pq-ink-btn group relative inline-flex h-12 items-center gap-2 overflow-hidden rounded-sm px-6 text-[14px] font-medium tracking-wide";
     const transition =
       "transition-transform duration-200 hover:-translate-y-px active:translate-y-0";
     const style = variantStyle(variant);

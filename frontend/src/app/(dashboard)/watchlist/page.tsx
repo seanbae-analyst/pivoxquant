@@ -321,7 +321,7 @@ export default function WatchlistPage() {
 
                     {/* Row 3 — Note + Remove */}
                     <div className="mt-1.5 flex items-center justify-between gap-3">
-                      <span className="text-[11.5px] text-[rgba(245,240,232,0.55)] truncate flex-1 min-w-0">
+                      <span className="text-[12px] text-[rgba(245,240,232,0.55)] truncate flex-1 min-w-0">
                         {noteText}
                       </span>
                       <button

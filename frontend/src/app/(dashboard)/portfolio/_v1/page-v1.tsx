@@ -293,7 +293,7 @@ export default function PortfolioPage() {
       {hasLoadError && (
         <div
           role="alert"
-          className="mb-4 flex items-center justify-between gap-3 px-4 py-3 font-serif text-[12.5px]"
+          className="mb-4 flex items-center justify-between gap-3 px-4 py-3 font-serif text-[14px]"
           style={{
             background: "rgba(226, 185, 111, 0.06)",
             borderTop: "1px solid var(--pq-bronze)",

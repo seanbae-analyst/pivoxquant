@@ -199,7 +199,7 @@ function FeatureBars({
                   {row.label}
                 </div>
                 {sparse && (
-                  <div className="text-[9.5px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.3)]">
+                  <div className="text-[12px] uppercase tracking-[0.18em] text-[rgba(245,240,232,0.3)]">
                     no evidence · default
                   </div>
                 )}

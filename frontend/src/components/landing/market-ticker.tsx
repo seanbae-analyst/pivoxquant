@@ -70,7 +70,7 @@ function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boole
           className="inline-flex items-center whitespace-nowrap px-6"
         >
           <span
-            className="font-serif text-[10.5px] uppercase"
+            className="font-serif text-[12px] uppercase"
             style={{
               letterSpacing: "0.22em",
               color: "rgba(245, 240, 232, 0.82)",
@@ -79,7 +79,7 @@ function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boole
             {t.symbol}
           </span>
           <span
-            className="ml-2 font-mono tabular-nums text-[11.5px]"
+            className="ml-2 font-mono tabular-nums text-[12px]"
             style={{
               color: "var(--pq-bronze-light)",
               fontFeatureSettings: '"tnum", "lnum"',
@@ -89,7 +89,7 @@ function Row({ ticks, ariaHidden }: { ticks: readonly Tick[]; ariaHidden?: boole
             {t.level}
           </span>
           <span
-            className="ml-2 font-mono tabular-nums text-[10.5px]"
+            className="ml-2 font-mono tabular-nums text-[12px]"
             style={{
               color: DIR_COLOR[t.dir],
               fontFeatureSettings: '"tnum", "lnum"',

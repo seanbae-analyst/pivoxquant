@@ -501,7 +501,7 @@ function AccessDeniedScreen({
       {errMsg ? (
         <p className="mt-4 text-[11px] text-[rgba(209,136,136,0.8)]">{errMsg}</p>
       ) : null}
-      <p className="mt-6 text-[10.5px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.4)]">
+      <p className="mt-6 text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.4)]">
         Observational research only · Not investment advice
       </p>
     </div>
@@ -1282,7 +1282,7 @@ export default function StockDetailPage() {
                         className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-[rgba(139,111,71,0.03)] transition-colors"
                       >
                         <div className="min-w-0 flex-1">
-                          <span className="text-[13.5px] text-[var(--pq-ivory)] font-serif">
+                          <span className="text-[14px] text-[var(--pq-ivory)] font-serif">
                             {f.insider || "—"}
                           </span>
                           {f.relationship && (

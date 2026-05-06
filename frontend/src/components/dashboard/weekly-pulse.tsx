@@ -392,7 +392,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
         {path(moodValues, "#B8956A")}
         {path(confValues, "#7db487")}
       </svg>
-      <div className="mt-2 flex gap-4 text-[10.5px]">
+      <div className="mt-2 flex gap-4 text-[12px]">
         <span className="flex items-center gap-1.5" style={{ color: "rgba(245,240,232,0.7)" }}>
           <span
             aria-hidden

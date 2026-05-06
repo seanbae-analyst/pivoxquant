@@ -134,7 +134,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
     <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center">
       <div className="max-w-md mb-12">
         <div
-          className="font-mono text-[10.5px] uppercase mb-4"
+          className="font-mono text-[12px] uppercase mb-4"
           style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
         >
           Observation Assistant
@@ -425,7 +425,7 @@ function ChatInner() {
       >
         <div>
           <div
-            className="font-mono text-[10.5px] uppercase mb-3"
+            className="font-mono text-[12px] uppercase mb-3"
             style={{ letterSpacing: "0.22em", color: "var(--pq-bronze)" }}
           >
             AI &middot; Observation Assistant
