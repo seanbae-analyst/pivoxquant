@@ -221,8 +221,6 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                 padding: "14px 12px 14px 24px",
                 textAlign: "left",
                 borderBottom: "1px solid rgba(245,240,232,0.08)",
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 9.5,
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
@@ -239,8 +237,6 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                   padding: "14px 12px",
                   textAlign: "center",
                   borderBottom: "1px solid rgba(245,240,232,0.08)",
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 9.5,
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
@@ -269,8 +265,6 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                   <div
                     className="font-serif"
                     style={{
-                      fontFamily:
-                        '"Source Serif 4","Iowan Old Style",Georgia,serif',
                       fontSize: 14,
                       color: "var(--pq-ivory)",
                     }}
@@ -280,8 +274,6 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                   <div
                     className="font-serif"
                     style={{
-                      fontFamily:
-                        '"Source Serif 4","Iowan Old Style",Georgia,serif',
                       fontSize: 12,
                       color: "rgba(245,240,232,0.40)",
                       marginTop: 2,

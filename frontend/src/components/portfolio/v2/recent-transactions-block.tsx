@@ -86,7 +86,6 @@ export function RecentTransactionsBlock({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -104,10 +103,9 @@ export function RecentTransactionsBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontFamily: '"Source Serif 4",Georgia,serif',
             fontSize: 13,
           }}
-        >
+        className="font-serif" >
           Loading entries…
         </div>
       ) : error || trades.length === 0 ? (
@@ -118,10 +116,9 @@ export function RecentTransactionsBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontFamily: '"Source Serif 4",Georgia,serif',
             fontSize: 13,
           }}
-        >
+        className="font-serif" >
           No recent entries.
         </div>
       ) : (
@@ -159,10 +156,8 @@ export function RecentTransactionsBlock({
               >
                 <div>
                   <div
-                    className="font-serif"
+                    className="font-display"
                     style={{
-                      fontFamily:
-                        '"Playfair Display","Source Serif 4",Georgia,serif',
                       fontSize: 14,
                       fontWeight: 500,
                       color: "var(--pq-ivory)",
@@ -174,7 +169,6 @@ export function RecentTransactionsBlock({
                   <div
                     className="font-serif"
                     style={{
-                      fontFamily: '"Source Serif 4",Georgia,serif',
                       fontSize: 12,
                       color: "rgba(245,240,232,0.55)",
                       marginTop: 2,
@@ -186,8 +180,6 @@ export function RecentTransactionsBlock({
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontFamily:
-                      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                     fontSize: 12.5,
                     color: amountColor(signed),
                     whiteSpace: "nowrap",
@@ -215,7 +207,6 @@ export function RecentTransactionsBlock({
           href="/portfolio"
           className="font-mono uppercase"
           style={{
-            fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10,
             letterSpacing: "0.2em",
             color: "var(--pq-bronze)",

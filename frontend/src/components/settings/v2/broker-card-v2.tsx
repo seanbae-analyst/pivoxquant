@@ -54,8 +54,6 @@ export function BrokerCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -65,10 +63,8 @@ export function BrokerCardV2({
             B · Brokers · Read-only stream
           </div>
           <div
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: 30,
               lineHeight: 1.15,
@@ -85,8 +81,6 @@ export function BrokerCardV2({
         <span
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.40)",
@@ -99,8 +93,6 @@ export function BrokerCardV2({
       <p
         className="font-serif"
         style={{
-          fontFamily:
-            '"Source Serif 4","Iowan Old Style",Georgia,serif',
           fontSize: 14,
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
@@ -139,8 +131,6 @@ export function BrokerCardV2({
               position: "absolute",
               top: 14,
               right: 14,
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 9.5,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
@@ -152,8 +142,6 @@ export function BrokerCardV2({
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  '"Source Serif 4","Iowan Old Style",Georgia,serif',
                 fontSize: 13,
                 color: "rgba(245,240,232,0.55)",
               }}
@@ -165,8 +153,6 @@ export function BrokerCardV2({
           <p
             className="font-serif"
             style={{
-              fontFamily:
-                '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontSize: 12.5,
               color: "rgba(245,240,232,0.40)",
               marginTop: 16,
@@ -177,8 +163,6 @@ export function BrokerCardV2({
             <span
               className="font-mono"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -204,8 +188,6 @@ export function BrokerCardV2({
               position: "absolute",
               top: 14,
               right: 14,
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 9.5,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
@@ -217,8 +199,6 @@ export function BrokerCardV2({
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  '"Source Serif 4","Iowan Old Style",Georgia,serif',
                 fontSize: 13,
                 color: "rgba(245,240,232,0.55)",
               }}
@@ -230,8 +210,6 @@ export function BrokerCardV2({
           <p
             className="font-serif"
             style={{
-              fontFamily:
-                '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontSize: 12.5,
               color: "rgba(245,240,232,0.40)",
               marginTop: 16,
@@ -242,8 +220,6 @@ export function BrokerCardV2({
             <span
               className="font-mono"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -253,8 +229,6 @@ export function BrokerCardV2({
             <span
               className="font-mono"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -264,8 +238,6 @@ export function BrokerCardV2({
             <span
               className="font-mono"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontVariantNumeric: "tabular-nums",
               }}
             >

@@ -222,8 +222,6 @@ export function TradeModalV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -234,10 +232,8 @@ export function TradeModalV2({
           </div>
           <h2
             id={headlineId}
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: 30,
               lineHeight: 1.15,
@@ -254,7 +250,6 @@ export function TradeModalV2({
           <p
             className="font-serif"
             style={{
-              fontFamily: '"Source Serif 4",Georgia,serif',
               fontSize: 14,
               lineHeight: 1.5,
               color: "rgba(245,240,232,0.65)",
@@ -267,8 +262,6 @@ export function TradeModalV2({
             <span
               className="font-mono"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 12,
                 color: "rgba(245,240,232,0.40)",
                 letterSpacing: "0.16em",
@@ -387,8 +380,6 @@ export function TradeModalV2({
             <span
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 9.5,
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.40)",
@@ -405,8 +396,6 @@ export function TradeModalV2({
                   background: "transparent",
                   border: "none",
                   color: "rgba(245,240,232,0.55)",
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 10.5,
                   letterSpacing: "0.2em",
                   cursor: "pointer",
@@ -430,8 +419,6 @@ export function TradeModalV2({
                   color: "var(--pq-ink, #050505)",
                   border: "none",
                   borderRadius: "var(--pq-radius-cta, 2px)",
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 11,
                   letterSpacing: "0.2em",
                   cursor: submitting ? "not-allowed" : "pointer",
@@ -455,7 +442,6 @@ const fieldInputStyle: React.CSSProperties = {
   borderBottom: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.16))",
   outline: "none",
   color: "var(--pq-ivory)",
-  fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
   fontSize: 14,
   letterSpacing: "0.01em",
 };
@@ -478,7 +464,6 @@ function FormField({
       <span
         className="font-mono uppercase"
         style={{
-          fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",

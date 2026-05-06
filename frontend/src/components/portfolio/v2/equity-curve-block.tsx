@@ -151,8 +151,6 @@ export function EquityCurveBlock({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -179,8 +177,6 @@ export function EquityCurveBlock({
                 onClick={() => setRange(r.key)}
                 className="font-mono uppercase"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 10.5,
                   letterSpacing: "0.2em",
                   padding: "6px 12px",
@@ -260,10 +256,9 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontFamily: '"Source Serif 4",Georgia,serif',
                 fontSize: 13,
               }}
-            >
+            className="font-serif" >
               Loading equity history…
             </div>
           ) : error ? (
@@ -275,10 +270,9 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontFamily: '"Source Serif 4",Georgia,serif',
                 fontSize: 13,
               }}
-            >
+            className="font-serif" >
               Unable to load equity history.
             </div>
           ) : !geom ? (
@@ -289,10 +283,9 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontFamily: '"Source Serif 4",Georgia,serif',
                 fontSize: 13,
               }}
-            >
+            className="font-serif" >
               Not enough history yet.
             </div>
           ) : (
@@ -397,7 +390,6 @@ function KpiCell({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.40)",
@@ -409,7 +401,6 @@ function KpiCell({
       <div
         className="font-mono tabular-nums"
         style={{
-          fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 22,
           letterSpacing: "-0.01em",
           color: valueColor,
@@ -446,7 +437,6 @@ function LegendSwatch({
       <span
         className="font-mono uppercase"
         style={{
-          fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.55)",
