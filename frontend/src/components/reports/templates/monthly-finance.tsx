@@ -279,56 +279,62 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
           </tbody>
         </PdfTable>
 
-        <PdfSectionTitle variant="dry">Balance Sheet · 재무상태표 (as of Apr 30)</PdfSectionTitle>
-        <PdfCard>
-          <PdfDonut
-            segments={data.bsAssets.map((a) => ({
-              label: a.name,
-              pct: a.pct,
-              color: a.color,
-              pctDisplay: a.pctDisplay,
-            }))}
-            centerLabel="$1.24M"
-          />
-        </PdfCard>
+        {/* 2026-05-05 V5 layout: wrap Balance Sheet header + donut +
+            2-col Assets/Liabilities tables together so the donut never
+            gets visually orphaned from the breakdown that explains it.
+            CEO V5 brief reported p3 donut / p4 table widow split. */}
+        <div className="pq-pdf-section">
+          <PdfSectionTitle variant="dry">Balance Sheet · 재무상태표 (as of Apr 30)</PdfSectionTitle>
+          <PdfCard>
+            <PdfDonut
+              segments={data.bsAssets.map((a) => ({
+                label: a.name,
+                pct: a.pct,
+                color: a.color,
+                pctDisplay: a.pctDisplay,
+              }))}
+              centerLabel="$1.24M"
+            />
+          </PdfCard>
 
-        <div style={{ marginTop: 12 }}>
-          <PdfTwoCol>
-            <div>
-              <PdfColTitle>Total Assets</PdfColTitle>
-              <PdfTable>
-                <tbody>
-                  {data.bsAssets.map((a) => (
-                    <tr key={a.name}>
-                      <td>{a.name}</td>
-                      <td className="right" style={{ fontFamily: "var(--font-mono)" }}>{a.pctDisplay.split(" · ")[0]}</td>
+          <div style={{ marginTop: 12 }}>
+            <PdfTwoCol>
+              <div>
+                <PdfColTitle>Total Assets</PdfColTitle>
+                <PdfTable>
+                  <tbody>
+                    {data.bsAssets.map((a) => (
+                      <tr key={a.name}>
+                        <td>{a.name}</td>
+                        <td className="right" style={{ fontFamily: "var(--font-mono)" }}>{a.pctDisplay.split(" · ")[0]}</td>
+                      </tr>
+                    ))}
+                    <tr className="total">
+                      <td><strong>Total</strong></td>
+                      <td className="right" style={{ fontFamily: "var(--font-mono)" }}><strong>$1,242k</strong></td>
                     </tr>
-                  ))}
-                  <tr className="total">
-                    <td><strong>Total</strong></td>
-                    <td className="right" style={{ fontFamily: "var(--font-mono)" }}><strong>$1,242k</strong></td>
-                  </tr>
-                </tbody>
-              </PdfTable>
-            </div>
-            <div>
-              <PdfColTitle>Liabilities &amp; Equity</PdfColTitle>
-              <PdfTable>
-                <tbody>
-                  {data.liabilities.map((l) => (
-                    <tr key={l.label}>
-                      <td>{l.bold ? <strong>{l.label}</strong> : l.label}</td>
-                      <td className="right" style={{ fontFamily: "var(--font-mono)" }}>{l.bold ? <strong>{l.value}</strong> : l.value}</td>
+                  </tbody>
+                </PdfTable>
+              </div>
+              <div>
+                <PdfColTitle>Liabilities &amp; Equity</PdfColTitle>
+                <PdfTable>
+                  <tbody>
+                    {data.liabilities.map((l) => (
+                      <tr key={l.label}>
+                        <td>{l.bold ? <strong>{l.label}</strong> : l.label}</td>
+                        <td className="right" style={{ fontFamily: "var(--font-mono)" }}>{l.bold ? <strong>{l.value}</strong> : l.value}</td>
+                      </tr>
+                    ))}
+                    <tr className="total">
+                      <td><strong>Total</strong></td>
+                      <td className="right" style={{ fontFamily: "var(--font-mono)" }}><strong>{data.totalLiab}</strong></td>
                     </tr>
-                  ))}
-                  <tr className="total">
-                    <td><strong>Total</strong></td>
-                    <td className="right" style={{ fontFamily: "var(--font-mono)" }}><strong>{data.totalLiab}</strong></td>
-                  </tr>
-                </tbody>
-              </PdfTable>
-            </div>
-          </PdfTwoCol>
+                  </tbody>
+                </PdfTable>
+              </div>
+            </PdfTwoCol>
+          </div>
         </div>
 
         <PdfPageFooter left="Monthly Finance · Premium" right="Page 03" />

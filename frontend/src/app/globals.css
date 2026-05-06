@@ -4617,7 +4617,55 @@ html {
     box-shadow: none !important;
     width: 210mm !important;
     min-height: 297mm !important;
+    /* 2026-05-05 V5 layout: column flex so the final-page disclaimer
+       (with margin-top: auto on .pq-pdf-disclaimer below) gets pushed
+       to the very bottom of its page. Earlier siblings (header, body,
+       sections) flow normally from the top; absolutely-positioned
+       children (PdfPageFooter, PdfDisclaimerMini) ignore flex. */
+    display: flex;
+    flex-direction: column;
   }
+
+  /* 2026-05-05 V5 layout: section units stay together. Cards, tables,
+     callouts, stats, KPI rows, charts, and any explicit `.pq-pdf-section`
+     should never break across page boundaries — that's how widow boxes
+     (e.g. monthly_finance Balance Sheet 도넛 split from its 2-col table)
+     get created. The wrapper-based approach (PdfSection) is preferred for
+     header+body atomic units, but these blanket rules catch the rest. */
+  .pq-pdf-card,
+  .pq-pdf-table-wrapper,
+  .pq-pdf-callout,
+  .pq-pdf-stat,
+  .pq-pdf-kpi-row,
+  .pq-pdf-section,
+  .pq-pdf-allow-list,
+  .pq-pdf-two-col,
+  section { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Section header → never separate from the body that follows
+     (orphan header guard). Without break-after: avoid, sp500 p1 ends
+     with `Annual Returns` header alone and the table moves to p2. */
+  .pq-pdf-section-title,
+  .pq-pdf-eyebrow,
+  .pq-pdf-col-title,
+  h2, h3 { break-after: avoid; page-break-after: avoid; }
+
+  /* Table protection — header repeats on each page; rows never split. */
+  thead { display: table-header-group; }
+  .pq-pdf-table tr,
+  .pq-pdf-table tbody tr { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Charts/SVG/img stay whole — they have no natural break points. */
+  .pq-pdf-chart,
+  svg, img { break-inside: avoid; page-break-inside: avoid; }
+
+  /* 2026-05-05 V5 layout: pin the final-page disclaimer to the very
+     bottom of the A4 sheet. Combined with the .pq-pdf-page flex column
+     above, margin-top: auto absorbs all leftover vertical space and
+     pushes the disclosure block (which is the last in-flow child on the
+     last page) flush against the page footer. break-inside: avoid still
+     applies from the existing .pq-pdf-disclaimer rule. */
+  .pq-pdf-disclaimer { margin-top: auto; }
   /* 2026-05-06 P0 fix: hide preview-only chrome that was leaking into
      PDFs — the toolbar's "PDF로 저장 / 인쇄" button, the cookie consent
      banner, and the Next.js dev toolbar (which shows up as a "N" circle
