@@ -174,14 +174,14 @@
   --pq-font-mono: var(--font-mono);
   --pq-font-display: var(--font-display);
 
-  /* Type scale (8 steps + 3 fluid) */
+  /* Type scale (8 steps + 3 fluid) — §3.3 grid: 12/14/15/18/24/32/48 */
   --pq-text-eyebrow: 12px;
-  --pq-text-mono-sm: 11px;
+  --pq-text-mono-sm: 12px;
   --pq-text-caption: 12px;
-  --pq-text-body-sm: 13px;
+  --pq-text-body-sm: 14px;
   --pq-text-body: 14px;
-  --pq-text-quote: 22px;
-  --pq-text-h3: 30px;
+  --pq-text-quote: 24px;
+  --pq-text-h3: 32px;
   --pq-text-h2: clamp(1.875rem, 3.6vw, 2.75rem);
   --pq-text-h1: clamp(2.4rem, 5.6vw, 4.5rem);
   --pq-text-display: clamp(3rem, 7vw, 6rem);

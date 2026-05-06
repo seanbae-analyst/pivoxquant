@@ -93,13 +93,13 @@ You are the Design Director combining Apple's obsessive attention to detail with
 | `--pq-text-display` | clamp(3rem, 7vw, 6rem) | Hero wordmark (Playfair) |
 | `--pq-text-h1` | clamp(2.4rem, 5.6vw, 4.5rem) | 페이지 H1 (Playfair) |
 | `--pq-text-h2` | clamp(1.875rem, 3.6vw, 2.75rem) | 섹션 H2 (Playfair / Source Serif) |
-| `--pq-text-h3` | 30px | 카드 헤더 (Source Serif) |
-| `--pq-text-quote` | 22px | 큰 인용 / lead-in |
+| `--pq-text-h3` | 32px | 카드 헤더 (Source Serif) |
+| `--pq-text-quote` | 24px | 큰 인용 / lead-in |
 | `--pq-text-body` | 14px | 본문 (Geist) |
-| `--pq-text-body-sm` | 13px | small body |
+| `--pq-text-body-sm` | 14px | small body |
 | `--pq-text-caption` | 12px | 캡션 |
-| `--pq-text-mono-sm` | 11px | 모노 보조 (JetBrains) |
-| `--pq-text-eyebrow` | 10.5px | Eyebrow 라벨 (uppercase + tracking) |
+| `--pq-text-mono-sm` | 12px | 모노 보조 (JetBrains) |
+| `--pq-text-eyebrow` | 12px | Eyebrow 라벨 (uppercase + tracking) |
 
 **Tracking 토큰:** `--pq-track-eyebrow: 0.22em`, `--pq-track-wordmark: 0.16em`, `--pq-track-tight: -0.02em`.
 **Detail spacing:** `.pq-field-label` (letter-spacing: 0.12em).
