@@ -4643,11 +4643,13 @@ html {
   section { break-inside: avoid; page-break-inside: avoid; }
 
   /* 2026-05-06: section 간 vertical breathing room. CEO 시각 검증
-     "Balance Sheet 너무 위에 딱 붙어 있음 / 여유 없음" 후속 — wrapper
-     자체엔 spacing 정의가 없어서 컨텐츠가 페이지 상단에 몰리고 도넛 +
-     2-col 표가 빽빽하게 붙어 보임. 28px 섹션 간격 + child 사이 14px gap. */
-  .pq-pdf-section { margin: 28px 0; }
-  .pq-pdf-section > * + * { margin-top: 14px; }
+     "Balance Sheet 너무 위에 딱 붙어 있음 / 여유 없음" 후속.
+     1차 28px → 시각 약함. 2차 48px + page-child 18px → 4 PDF spread
+     regression (monthly_finance 6p→7p p3=150ch ghost 등). 3차 trade-off:
+     wrapper 안 child gap 만 22px (.pq-pdf-section 의 직계자식 사이),
+     wrapper 외부는 보존. spread 회귀 없이 wrapper 내부만 호흡. */
+  .pq-pdf-section { margin: 32px 0; }
+  .pq-pdf-section > * + * { margin-top: 22px; }
   .pq-pdf-section:first-child { margin-top: 8px; }
   .pq-pdf-section:last-child { margin-bottom: 8px; }
 
