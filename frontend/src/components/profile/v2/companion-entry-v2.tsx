@@ -66,8 +66,6 @@ export function CompanionEntryV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
@@ -79,8 +77,6 @@ export function CompanionEntryV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -91,10 +87,8 @@ export function CompanionEntryV2({
       </div>
 
       <div
-        className="font-serif"
+        className="font-display"
         style={{
-          fontFamily:
-            '"Playfair Display","Source Serif 4",Georgia,serif',
           fontWeight: 500,
           fontSize: 24,
           lineHeight: 1.15,
@@ -112,8 +106,6 @@ export function CompanionEntryV2({
       <p
         className="font-serif"
         style={{
-          fontFamily:
-            '"Source Serif 4","Iowan Old Style",Georgia,serif',
           fontSize: 14,
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
@@ -137,8 +129,6 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10.5,
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.40)",
@@ -150,8 +140,6 @@ export function CompanionEntryV2({
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  '"Source Serif 4","Iowan Old Style",Georgia,serif',
                 fontSize: 13,
                 color: "rgba(245,240,232,0.65)",
               }}
@@ -172,8 +160,6 @@ export function CompanionEntryV2({
                 padding: "12px 22px",
                 background: "var(--pq-bronze)",
                 color: "var(--pq-ink, #050505)",
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 11,
                 letterSpacing: "0.2em",
                 borderRadius: 2,
@@ -195,8 +181,6 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10.5,
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.40)",
@@ -208,8 +192,6 @@ export function CompanionEntryV2({
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  '"Source Serif 4","Iowan Old Style",Georgia,serif',
                 fontSize: 13,
                 color: "rgba(245,240,232,0.65)",
               }}
@@ -219,8 +201,6 @@ export function CompanionEntryV2({
                 <span
                   className="font-mono"
                   style={{
-                    fontFamily:
-                      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                     fontVariantNumeric: "tabular-nums",
                     color: "rgba(245,240,232,0.82)",
                   }}
@@ -246,8 +226,6 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 10.5,
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.40)",
@@ -278,12 +256,10 @@ export function CompanionEntryV2({
                   borderRadius: 2,
                   padding: "10px 12px",
                   color: "var(--pq-ivory)",
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 13,
                   letterSpacing: "-0.01em",
                 }}
-              />
+              className="font-mono" />
               <button
                 type="submit"
                 disabled={submitting}
@@ -295,8 +271,6 @@ export function CompanionEntryV2({
                   padding: "12px 22px",
                   background: "var(--pq-bronze)",
                   color: "var(--pq-ink, #050505)",
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 11,
                   letterSpacing: "0.2em",
                   borderRadius: 2,
@@ -316,8 +290,6 @@ export function CompanionEntryV2({
               href="/pricing?plan=plus"
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 11,
                 letterSpacing: "0.18em",
                 color: "var(--pq-bronze)",
@@ -332,8 +304,6 @@ export function CompanionEntryV2({
               href="/companion#sample"
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 11,
                 letterSpacing: "0.18em",
                 color: "rgba(245,240,232,0.55)",

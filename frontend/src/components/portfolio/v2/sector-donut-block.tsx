@@ -124,7 +124,6 @@ export function SectorDonutBlock({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -142,10 +141,9 @@ export function SectorDonutBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontFamily: '"Source Serif 4",Georgia,serif',
             fontSize: 13,
           }}
-        >
+        className="font-serif" >
           No allocation yet.
         </div>
       ) : (
@@ -202,8 +200,6 @@ export function SectorDonutBlock({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 9.5,
                   letterSpacing: "0.22em",
                   color: "rgba(245,240,232,0.40)",
@@ -213,10 +209,8 @@ export function SectorDonutBlock({
                 Sectors
               </div>
               <div
-                className="font-serif"
+                className="font-display"
                 style={{
-                  fontFamily:
-                    '"Playfair Display","Source Serif 4",Georgia,serif',
                   fontSize: 22,
                   color: "var(--pq-ivory)",
                   fontWeight: 500,
@@ -264,8 +258,6 @@ export function SectorDonutBlock({
                   className="font-serif"
                   style={{
                     flex: 1,
-                    fontFamily:
-                      '"Source Serif 4",Georgia,serif',
                     fontSize: 13,
                     color: "var(--pq-ivory)",
                   }}
@@ -275,8 +267,6 @@ export function SectorDonutBlock({
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontFamily:
-                      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                     fontSize: 12,
                     color: "rgba(245,240,232,0.82)",
                   }}

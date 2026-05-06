@@ -130,7 +130,6 @@ export function MarketingConsentCardV2() {
           position: "absolute",
           top: 14,
           right: 14,
-          fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
@@ -141,7 +140,6 @@ export function MarketingConsentCardV2() {
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily: '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -162,8 +160,6 @@ export function MarketingConsentCardV2() {
           <div
             className="font-serif"
             style={{
-              fontFamily:
-                '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontSize: 14,
               color: "var(--pq-ivory)",
             }}
@@ -173,8 +169,6 @@ export function MarketingConsentCardV2() {
           <div
             className="font-serif"
             style={{
-              fontFamily:
-                '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontSize: 12.5,
               color: "rgba(245,240,232,0.40)",
               marginTop: 2,
@@ -186,8 +180,6 @@ export function MarketingConsentCardV2() {
             <div
               className="font-mono"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontVariantNumeric: "tabular-nums",
                 fontSize: 11,
                 letterSpacing: "0.04em",
@@ -202,8 +194,6 @@ export function MarketingConsentCardV2() {
             <div
               className="font-mono"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontVariantNumeric: "tabular-nums",
                 fontSize: 11,
                 letterSpacing: "0.04em",

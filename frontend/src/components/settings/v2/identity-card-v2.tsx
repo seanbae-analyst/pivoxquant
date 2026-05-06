@@ -73,8 +73,6 @@ export function SettingsIdentityCardV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 9.5,
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.40)",
@@ -86,8 +84,6 @@ export function SettingsIdentityCardV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontFamily:
-            '"JetBrains Mono","SF Mono",ui-monospace,monospace',
           fontSize: 10.5,
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
@@ -125,8 +121,6 @@ export function SettingsIdentityCardV2({
             href={editHref}
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10,
               letterSpacing: "0.18em",
               color: "var(--pq-bronze)",
@@ -204,8 +198,6 @@ export function SettingsIdentityCardV2({
                 onClick={() => onLocaleChange(code)}
                 className="font-mono uppercase"
                 style={{
-                  fontFamily:
-                    '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                   fontSize: 10,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",

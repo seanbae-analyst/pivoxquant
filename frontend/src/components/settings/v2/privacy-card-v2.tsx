@@ -173,10 +173,8 @@ function DeleteAccountModal({
               style={{ color: ERROR_COLOR }}
             />
             <h3
-              className="font-serif"
+              className="font-display"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontWeight: 500,
                 fontSize: 20,
                 color: "var(--pq-ivory)",
@@ -202,8 +200,6 @@ function DeleteAccountModal({
         <p
           className="font-serif"
           style={{
-            fontFamily:
-              '"Source Serif 4","Iowan Old Style",Georgia,serif',
             fontSize: 14,
             color: "rgba(245,240,232,0.65)",
             marginBottom: 24,
@@ -223,8 +219,6 @@ function DeleteAccountModal({
               padding: "11px 20px",
               background: "var(--pq-bronze)",
               color: "var(--pq-ink, #050505)",
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 11,
               letterSpacing: "0.2em",
               borderRadius: 2,
@@ -243,8 +237,6 @@ function DeleteAccountModal({
               background: "transparent",
               color: "var(--pq-bronze)",
               border: "1px solid var(--pq-bronze)",
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 11,
               letterSpacing: "0.2em",
               borderRadius: 2,
@@ -311,8 +303,6 @@ export function PrivacyCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -322,10 +312,8 @@ export function PrivacyCardV2({
             E · Privacy · PIPA · GDPR
           </div>
           <div
-            className="font-serif"
+            className="font-display"
             style={{
-              fontFamily:
-                '"Playfair Display","Source Serif 4",Georgia,serif',
               fontWeight: 500,
               fontSize: 30,
               lineHeight: 1.15,
@@ -343,8 +331,6 @@ export function PrivacyCardV2({
           href="/privacy"
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 11,
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
@@ -383,8 +369,6 @@ export function PrivacyCardV2({
               position: "absolute",
               top: 14,
               right: 14,
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 9.5,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
@@ -395,8 +379,6 @@ export function PrivacyCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -427,8 +409,6 @@ export function PrivacyCardV2({
                 <div
                   className="font-serif"
                   style={{
-                    fontFamily:
-                      '"Source Serif 4","Iowan Old Style",Georgia,serif',
                     fontSize: 14,
                     color: "var(--pq-ivory)",
                   }}
@@ -438,8 +418,6 @@ export function PrivacyCardV2({
                 <div
                   className="font-serif"
                   style={{
-                    fontFamily:
-                      '"Source Serif 4","Iowan Old Style",Georgia,serif',
                     fontSize: 12.5,
                     color: "rgba(245,240,232,0.40)",
                     marginTop: 2,
@@ -454,8 +432,6 @@ export function PrivacyCardV2({
                   style={{
                     display: "inline-block",
                     padding: "2px 8px",
-                    fontFamily:
-                      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                     fontSize: 9.5,
                     letterSpacing: "0.18em",
                     border: "1px solid rgba(184,149,106,0.15)",
@@ -492,8 +468,6 @@ export function PrivacyCardV2({
               position: "absolute",
               top: 14,
               right: 14,
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 9.5,
               letterSpacing: "0.2em",
               color: "rgba(245,240,232,0.40)",
@@ -504,8 +478,6 @@ export function PrivacyCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 10.5,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
@@ -518,8 +490,6 @@ export function PrivacyCardV2({
           <p
             className="font-serif"
             style={{
-              fontFamily:
-                '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontSize: 13,
               lineHeight: 1.55,
               color: "rgba(245,240,232,0.82)",
@@ -545,8 +515,6 @@ export function PrivacyCardV2({
                 <div
                   className="font-serif"
                   style={{
-                    fontFamily:
-                      '"Source Serif 4","Iowan Old Style",Georgia,serif',
                     fontSize: 14,
                     color: "var(--pq-ivory)",
                   }}
@@ -556,8 +524,6 @@ export function PrivacyCardV2({
                 <div
                   className="font-mono"
                   style={{
-                    fontFamily:
-                      '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                     fontVariantNumeric: "tabular-nums",
                     fontSize: 12.5,
                     color: "rgba(245,240,232,0.40)",
@@ -582,8 +548,6 @@ export function PrivacyCardV2({
               padding: "12px 22px",
               background: "var(--pq-bronze)",
               color: "var(--pq-ink, #050505)",
-              fontFamily:
-                '"JetBrains Mono","SF Mono",ui-monospace,monospace',
               fontSize: 11,
               letterSpacing: "0.2em",
               borderRadius: 2,
@@ -597,8 +561,6 @@ export function PrivacyCardV2({
           <p
             className="font-serif"
             style={{
-              fontFamily:
-                '"Source Serif 4","Iowan Old Style",Georgia,serif',
               fontSize: 11.5,
               color: "rgba(245,240,232,0.40)",
               marginTop: 12,
@@ -608,8 +570,6 @@ export function PrivacyCardV2({
             <span
               className="font-mono"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -636,8 +596,6 @@ export function PrivacyCardV2({
             position: "absolute",
             top: 14,
             right: 14,
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 9.5,
             letterSpacing: "0.2em",
             color: ERROR_COLOR,
@@ -648,8 +606,6 @@ export function PrivacyCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontFamily:
-              '"JetBrains Mono","SF Mono",ui-monospace,monospace',
             fontSize: 10.5,
             letterSpacing: "0.22em",
             color: ERROR_COLOR,
@@ -669,10 +625,8 @@ export function PrivacyCardV2({
         >
           <div>
             <div
-              className="font-serif"
+              className="font-display"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontWeight: 500,
                 fontSize: 22,
                 lineHeight: 1.2,
@@ -686,8 +640,6 @@ export function PrivacyCardV2({
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  '"Source Serif 4","Iowan Old Style",Georgia,serif',
                 fontSize: 13,
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.82)",
@@ -709,8 +661,6 @@ export function PrivacyCardV2({
                 background: "transparent",
                 color: "var(--pq-bronze)",
                 border: "1px solid var(--pq-bronze)",
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 11,
                 letterSpacing: "0.2em",
                 borderRadius: 2,
@@ -724,10 +674,8 @@ export function PrivacyCardV2({
 
           <div>
             <div
-              className="font-serif"
+              className="font-display"
               style={{
-                fontFamily:
-                  '"Playfair Display","Source Serif 4",Georgia,serif',
                 fontWeight: 500,
                 fontSize: 22,
                 lineHeight: 1.2,
@@ -741,8 +689,6 @@ export function PrivacyCardV2({
             <p
               className="font-serif"
               style={{
-                fontFamily:
-                  '"Source Serif 4","Iowan Old Style",Georgia,serif',
                 fontSize: 13,
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.82)",
@@ -757,8 +703,6 @@ export function PrivacyCardV2({
               onClick={() => setShowDelete(true)}
               className="font-mono uppercase"
               style={{
-                fontFamily:
-                  '"JetBrains Mono","SF Mono",ui-monospace,monospace',
                 fontSize: 11,
                 letterSpacing: "0.18em",
                 color: ERROR_COLOR,
