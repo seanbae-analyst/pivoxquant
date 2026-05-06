@@ -143,8 +143,9 @@ export default function WatchlistPage() {
             </span>
           </h1>
           <Caption className="mt-3 max-w-[560px]">
-            Nothing here is a recommendation. A quiet ledger of what you have
-            chosen to keep an eye on — informational only.
+            Disclaimer: nothing here is a recommendation, and we do not
+            recommend any action. A quiet ledger of what you have chosen to
+            keep an eye on — informational only.
           </Caption>
         </div>
         <button

@@ -335,7 +335,7 @@ function StatusModal({
 
         <p className="font-serif text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed">
           Two years in, this dashboard knows your style better than you do.
-          It learns from every position you hold and every pulse you submit.
+          It learns from every position you own and every pulse you submit.
         </p>
 
         <ul className="mt-5 space-y-3">

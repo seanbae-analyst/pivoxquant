@@ -155,7 +155,7 @@ export function WhatIfChart({
   const netPct =
     firstPt.value > 0 ? (netDelta / firstPt.value) * 100 : 0;
   const directionLabel = netDelta >= 0 ? "상승 ▲ up" : "하락 ▼ down";
-  const ariaLabel = `What-if simulator growth chart, ${prepared.length} data points from ${firstPt.label} to ${lastPt.label}, ${fmtFull(firstPt.value, currency)} to ${fmtFull(lastPt.value, currency)} (${netPct >= 0 ? "+" : ""}${netPct.toFixed(1)}% ${directionLabel})${showInvestedLine ? `, with cumulative invested principal overlay${buyPoints.length > 0 ? ` and ${buyPoints.length} buy markers` : ""}` : ""}.`;
+  const ariaLabel = `What-if simulator growth chart, ${prepared.length} data points from ${firstPt.label} to ${lastPt.label}, ${fmtFull(firstPt.value, currency)} to ${fmtFull(lastPt.value, currency)} (${netPct >= 0 ? "+" : ""}${netPct.toFixed(1)}% ${directionLabel})${showInvestedLine ? `, with cumulative invested principal overlay${buyPoints.length > 0 ? ` and ${buyPoints.length} entry markers` : ""}` : ""}.`;
 
   return (
     <div

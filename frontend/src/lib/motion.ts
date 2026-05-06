@@ -9,7 +9,11 @@
 
 import type { Variants } from "motion/react";
 
-/** Apple HIG / Bloomberg cadence — symmetric ease-out cubic. */
+/**
+ * Apple HIG / Bloomberg cadence — symmetric ease-out cubic.
+ * SoT: .claude/skills/motion-spec/SKILL.md §2-B
+ * PQ_EASE === --motion-easing-emphasized (CSS) === cubic-bezier(0.16, 1, 0.3, 1)
+ */
 export const PQ_EASE = [0.16, 1, 0.3, 1] as const;
 
 export const fadeUp: Variants = {

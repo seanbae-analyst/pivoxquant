@@ -370,9 +370,10 @@ export default function RiskPage() {
             <h2 className="pq-ink-h2">Seven-Layer Risk Defense</h2>
           </div>
           <div className="max-w-md text-[11px] leading-relaxed text-[rgba(245,240,232,0.6)]">
-            Seven independent observations of portfolio risk. Any single line
-            turning <span className="text-[var(--pq-bronze)]">elevated</span> is
-            noted — none recommend action.
+            Disclaimer: seven independent observations of portfolio risk. Any
+            single line turning{" "}
+            <span className="text-[var(--pq-bronze)]">elevated</span> is noted —
+            this is not a recommendation to take any action.
           </div>
         </div>
         <div className="border-t border-[rgba(245,240,232,0.12)]">
