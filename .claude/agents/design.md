@@ -95,7 +95,6 @@ You are the Design Director combining Apple's obsessive attention to detail with
 | `--pq-text-h2` | clamp(1.875rem, 3.6vw, 2.75rem) | 섹션 H2 (Playfair / Source Serif) |
 | `--pq-text-h3` | 30px | 카드 헤더 (Source Serif) |
 | `--pq-text-quote` | 22px | 큰 인용 / lead-in |
-| `--pq-text-deck` | 17px | 부제 / sub-headline |
 | `--pq-text-body` | 14px | 본문 (Geist) |
 | `--pq-text-body-sm` | 13px | small body |
 | `--pq-text-caption` | 12px | 캡션 |
