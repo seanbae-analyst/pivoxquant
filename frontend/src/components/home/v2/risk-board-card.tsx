@@ -70,7 +70,7 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "var(--pq-bronze)",
+            color: "rgba(245, 240, 232, 0.6)",
             textTransform: "uppercase",
           }}
         >
@@ -101,8 +101,7 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
             display: "block",
             height: "100%",
             width: `${pct}%`,
-            background:
-              "linear-gradient(90deg, var(--pq-bronze-deep, #6F5636), var(--pq-bronze))",
+            background: "rgba(245, 240, 232, 0.6)",
           }}
         />
       </div>

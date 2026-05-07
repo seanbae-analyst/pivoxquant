@@ -48,7 +48,7 @@ export function CompanionArchiveCard() {
           fontSize: 32,
           lineHeight: 1.1,
           letterSpacing: "-0.02em",
-          color: "var(--pq-bronze)",
+          color: "rgba(245, 240, 232, 0.6)",
           marginBottom: 8,
         }}
       >
@@ -142,7 +142,7 @@ export function CompanionArchiveCard() {
             fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            color: "var(--pq-bronze)",
+            color: "rgba(245, 240, 232, 0.6)",
           }}
         >
           Brag Card ›
@@ -153,7 +153,7 @@ export function CompanionArchiveCard() {
             fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            color: "var(--pq-bronze)",
+            color: "rgba(245, 240, 232, 0.6)",
           }}
         >
           Voice memos ›
