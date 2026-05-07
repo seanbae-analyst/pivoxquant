@@ -26,7 +26,7 @@ AI + Quant 기반 개인 투자 어드바이저 플랫폼.
 8. **Connect Alpaca 안 눌림** — Settings 연결 버튼 동작 안 함
 9. **코스피/코스닥 없음** — Market 페이지에 한국 시장 데이터 없음
 10. **Contact 이메일 가짜** — 4곳에 각각 다른 가짜 도메인 (.app/.io/.me)
-11. **Google/Kakao OAuth 미설정** — redirect URI 등록 안 됨 → CEO가 직접 콘솔에서 추가해야 함
+11. ~~**Google/Kakao OAuth 미설정**~~ — **RESOLVED 2026-04-19** (commit `d153340` stateless HMAC state) + 콘솔 redirect URI 등록 완료 (CEO 2026-05-08 confirm). 라이브 동작 정상.
 
 ### 상세 버그 목록: `~/.claude/projects/-Users-seanbae-Desktop---/memory/qa_bug_log.md` 참조
 
@@ -110,7 +110,7 @@ cd /Users/seanbae/Desktop/취준/stockpilot/frontend && npm run dev
 ```
 
 ## 테스트 계정
-- Google: seanbae1521@gmail.com (OAuth redirect URI 등록 필요)
+- Google: seanbae1521@gmail.com (OAuth redirect URI 등록 완료 + commit `d153340` 이후 동작)
 - KIS: 계좌번호 XXXXXXXX-01 (read-only)
 - Alpaca: paper trading 계정 (.env에 키 있음)
 
@@ -164,8 +164,7 @@ CI legal-guard job (`Legal Guard / No hardcoded sample tickers or money in templ
 ## 다음 세션 TODO (우선순위 순)
 
 ### 🔴 P0 — CEO가 직접 해야 하는 것
-1. Google Cloud Console → OAuth redirect URI 추가: `http://localhost:3000/api/auth/google/callback`
-2. Kakao Developers → Redirect URI 추가: `http://localhost:3000/api/auth/kakao/callback`
+1. ~~Google Cloud Console / Kakao Developers OAuth redirect URI~~ — **RESOLVED 2026-04-19 + 콘솔 등록 완료 2026-05-08**
 
 ### 🔴 P0 — 서비스 자체가 안 되는 것
 3. Portfolio 페이지 + Add Position + 매수/매도/수정 모달 구현
