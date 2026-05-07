@@ -202,8 +202,8 @@ def get_portfolio():
 
 
 @portfolio_bp.route("/position", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 @_deprecated_singular("/api/portfolio/positions")
 def add_position():
     # Tier check: Free users limited to 3 positions
@@ -283,8 +283,8 @@ def add_position():
 
 
 @portfolio_bp.route("/position/<int:pid>", methods=["PUT"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 @_deprecated_singular("/api/portfolio/positions/<id>")
 def edit_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
@@ -311,8 +311,8 @@ def edit_position(pid):
 
 
 @portfolio_bp.route("/position/<int:pid>", methods=["DELETE"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 @_deprecated_singular("/api/portfolio/positions/<id>")
 def del_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
@@ -329,8 +329,8 @@ def del_position(pid):
 
 
 @portfolio_bp.route("/position/<int:pid>/buy", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 @_deprecated_singular("/api/portfolio/trades")
 def buy_more(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
@@ -386,8 +386,8 @@ def buy_more(pid):
 
 
 @portfolio_bp.route("/position/buy-new", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 @_deprecated_singular("/api/portfolio/trades")
 def buy_new_position():
     # Free-tier cap: same 3-position guard as add_position. Without this,
@@ -458,8 +458,8 @@ def buy_new_position():
 
 
 @portfolio_bp.route("/position/<int:pid>/sell", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 @_deprecated_singular("/api/portfolio/trades")
 def sell_position(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
@@ -749,7 +749,7 @@ def portfolio_summary_alias():
 
         # Realized YTD from TradeHistory (SELL rows only).
         from datetime import datetime
-        ytd_start = datetime(datetime.utcnow().year, 1, 1)
+        ytd_start = datetime(datetime.now(timezone.utc).year, 1, 1)
         sells = (TradeHistory.query
                  .filter(TradeHistory.user_id == current_user.id,
                          TradeHistory.action == "SELL",
@@ -821,8 +821,8 @@ def list_trades_alias():
 
 
 @portfolio_bp.route("/positions", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def create_position_alias():
     """Accepts the new frontend shape {symbol, side, quantity, price,
     purchase_date, note} and funnels into the existing add_position flow.
@@ -900,8 +900,8 @@ def create_position_alias():
 
 
 @portfolio_bp.route("/positions/<int:pid>", methods=["PATCH"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def patch_position_alias(pid):
     """Partial update: note and/or avg_cost only. Shares untouched."""
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
@@ -936,8 +936,8 @@ def patch_position_alias(pid):
 
 
 @portfolio_bp.route("/positions/<int:pid>", methods=["DELETE"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def delete_position_alias(pid):
     p = Position.query.filter_by(id=pid, user_id=current_user.id).first()
     if not p:
@@ -953,8 +953,8 @@ def delete_position_alias(pid):
 
 
 @portfolio_bp.route("/trades", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def create_trade_alias():
     """Unified buy/sell endpoint accepting {position_id, action, quantity,
     price, date, note}. Delegates to the existing buy_more / sell_position
