@@ -82,7 +82,10 @@ export interface TransactionsResponse {
 export function useTransactions(limit?: number) {
   const url = limit ? `${PORTFOLIO_TRADES}?limit=${limit}` : PORTFOLIO_TRADES;
   return useSWR<TransactionsResponse>(url, fetcher, {
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): trades are append-only and not push-mutated
+    // by SSE. 30s dedupe + reconnect revalidate is enough; focus
+    // revalidate would refetch on every tab-switch with no fresh data.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     revalidateIfStale: false,
     dedupingInterval: 30_000,

@@ -65,7 +65,12 @@ export function useWatchlist() {
   return useSWR<WatchlistResponse>(API.watchlist.list, fetcher, {
     // Market-aware: 5s when any market is open, 60s when all closed.
     refreshInterval: () => liveRefresh(5_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): focus revalidation is redundant when an
+    // aggressive `refreshInterval` already keeps data fresh. Tab-switch
+    // focus events were the documented trigger for the 5-6× duplicate
+    // fetch flood on page navigation. `revalidateOnReconnect` still
+    // covers long-idle network resume.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     dedupingInterval: 2_000,
     errorRetryCount: 2,
@@ -81,7 +86,11 @@ export function useWatchlist() {
 export function useAlerts() {
   return useSWR<AlertsResponse>(API.alerts.list, fetcher, {
     refreshInterval: () => liveRefresh(10_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): the alerts bell was one of the three explicit
+    // duplicate-fetch culprits flagged on page nav. `refreshInterval`
+    // already keeps the badge fresh; focus revalidate just compounds the
+    // load when the user tabs back in mid-poll.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     dedupingInterval: 2_000,
     errorRetryCount: 2,
@@ -228,7 +237,13 @@ export const PORTFOLIO_FOCUS_THROTTLE_MS = 5_000;
 export function usePortfolioSummary() {
   return useSWR<PortfolioSummary>(PORTFOLIO_SUMMARY, fetcher, {
     refreshInterval: () => liveRefresh(5_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): SSE pushes price ticks into this cache via
+    // globalMutate(..., { revalidate: false }) (see realtime.tsx L337).
+    // Combined with the 5-60s refreshInterval, focus revalidate adds no
+    // freshness — only duplicate fetches on page nav. `focusThrottleInterval`
+    // is retained as defense-in-depth in case a future override re-enables
+    // focus revalidate.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     revalidateIfStale: false,
     dedupingInterval: PORTFOLIO_DEDUPE_MS,
@@ -269,7 +284,10 @@ export function useFxRate(): { rate: number | null; isStale: boolean } {
 export function usePortfolioPositions<T = any>() {
   return useSWR<T>(PORTFOLIO_POSITIONS, fetcher, {
     refreshInterval: () => liveRefresh(5_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): same rationale as usePortfolioSummary — SSE
+    // mutates this cache key directly (realtime.tsx L304), so focus
+    // revalidate produces redundant network round-trips during nav.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     revalidateIfStale: false,
     dedupingInterval: PORTFOLIO_DEDUPE_MS,
@@ -317,7 +335,10 @@ export interface RiskSummaryV2 {
 export function useRiskSummary() {
   return useSWR<RiskSummaryV2>(RISK_SUMMARY, fetcher, {
     refreshInterval: () => liveRefresh(15_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): risk metrics already poll every 15-60s. Focus
+    // revalidate would compound the load when the user navigates from
+    // /home → /risk and back. Network reconnect still triggers refresh.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     dedupingInterval: 15_000,
     errorRetryCount: 2,
@@ -370,7 +391,8 @@ export function useRiskLayers() {
     fetcher,
     {
       refreshInterval: () => liveRefresh(15_000, 60_000),
-      revalidateOnFocus: true,
+      // Bug #3 (HANDOVER v22): same rationale as useRiskSummary.
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 15_000,
       errorRetryCount: 2,
@@ -719,7 +741,10 @@ export function useSignals(filters: Partial<SignalFilters> = {}) {
   return useSWR<SignalsResponse>(key, fetcher, {
     // Match v1 cadence: 10s open / 60s closed.
     refreshInterval: () => liveRefresh(10_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): the signals feed already polls every 10-60s.
+    // Focus revalidate compounds load when the user navigates between the
+    // signals list and detail pages. Reconnect revalidation is retained.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     dedupingInterval: 4_000,
     errorRetryCount: 2,

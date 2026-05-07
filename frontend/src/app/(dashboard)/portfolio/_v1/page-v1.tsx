@@ -88,7 +88,10 @@ export default function PortfolioPage() {
   // RealtimeProvider + SSE handlers + sibling components race mount.
   const swrOpts = {
     refreshInterval: () => liveRefresh(5_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): aligned with hooks.ts usePortfolioSummary —
+    // SSE pushes mutate this cache directly; focus revalidate is redundant
+    // and the documented duplicate-fetch trigger.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     revalidateIfStale: false,
     dedupingInterval: 10_000,
@@ -98,7 +101,9 @@ export default function PortfolioPage() {
   // Trades are append-only and don't need sub-minute refresh.
   const tradesOpts = {
     refreshInterval: () => liveRefresh(15_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): trades are append-only — focus revalidate has
+    // no fresh data to fetch most of the time.
+    revalidateOnFocus: false,
     dedupingInterval: 5_000,
     errorRetryCount: 2,
   } as const;

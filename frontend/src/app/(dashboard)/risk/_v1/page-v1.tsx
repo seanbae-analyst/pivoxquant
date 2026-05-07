@@ -110,7 +110,9 @@ const fetcher = async <T,>(url: string): Promise<T> => apiFetch<T>(url);
 // retrying just burns requests.
 const SWR_OPTS = {
   refreshInterval: 60_000,
-  revalidateOnFocus: true,
+  // Bug #3 (HANDOVER v22): aligned with useRiskSummary — 60s polling is
+  // sufficient; focus revalidate just adds duplicate fetches on nav.
+  revalidateOnFocus: false,
   dedupingInterval: 15_000,
   shouldRetryOnError: false,
 } as const;
