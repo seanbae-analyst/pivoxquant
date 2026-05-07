@@ -196,6 +196,59 @@ def test_alert_serializer_backend_shape():
 
 
 # ===========================================================================
+# T4b: Alert serializer strips legacy [POSITIVE]/[NEGATIVE]/[NEUTRAL] prefix
+# ===========================================================================
+
+
+def test_alert_serializer_strips_signal_bracket_prefix():
+    """Bug-hunter 2026-05-04 #2: legacy alert_service rows persisted
+    ``[POSITIVE] Taihan Fiber Optics ...`` into ``Alert.message``. The
+    structured ``signal`` field is what the UI badges off, so the in-string
+    enum was always redundant — and reads like a directive to a non-tech
+    user (자본시장법 §17 boundary risk). serialize_alert now strips the
+    prefix at read time so DB rows from before the alert_service fix
+    don't bleed through into the API response.
+
+    Checks the read-time strip on a row whose message already carries
+    the legacy prefix. Stops a regression where a future refactor drops
+    the strip and old rows resurface bracketed.
+    """
+    try:
+        from services.serializers import serialize_alert
+    except ImportError as exc:
+        pytest.skip(f"services.serializers not importable: {exc}")
+
+    from datetime import datetime as _dt
+
+    class _LegacyAlert:
+        id = 99
+        user_id = 1
+        kind = "signal"
+        title = "[POSITIVE] AAPL — Score 80/100. Sized: 10 shares · $500."
+        body = None
+        is_read = False
+        ticker = "AAPL"
+        message = "[POSITIVE] AAPL — Score 80/100. Sized: 10 shares · $500."
+        signal = "POSITIVE"
+        score = 80
+        rec_shares = 10
+        rec_investment = 500
+        link = None
+        read_at = None
+        created_at = _dt(2026, 5, 4, 9, 0, 0)
+
+    out = serialize_alert(_LegacyAlert())
+    assert not out["title"].startswith("[POSITIVE]"), (
+        f"title still leaks bracket prefix: {out['title']!r}"
+    )
+    assert not out["message"].startswith("[POSITIVE]"), (
+        f"message still leaks bracket prefix: {out['message']!r}"
+    )
+    # Structured signal must still be exposed for the UI badge.
+    assert out["signal"] == "POSITIVE"
+
+
+# ===========================================================================
 # T5: CSRF exempt — /api/email/unsubscribe
 # ===========================================================================
 

@@ -42,6 +42,13 @@ def maybe_generate(user_id: int, r: dict):
         return
 
     cur = "₩" if r.get("is_korean") else "$"
+    # 2026-05-04: dropped raw "[POSITIVE]" / "[NEGATIVE]" bracket prefix
+    # from the message body. The Alert row already persists the structured
+    # ``signal`` field (line ~66 below), and the frontend renders it as a
+    # separate badge — duplicating the enum into the user-visible string
+    # both clutters the alert and risks reading like a directive. Bug-
+    # hunter run 2026-05-04 surfaced "[POSITIVE] Taihan Fiber Optics ..."
+    # bleeding through into the Alerts page list.
     if sig == "POSITIVE":
         sh = r.get("rec_shares", 0)
         inv = r.get("rec_investment", 0)
@@ -50,12 +57,12 @@ def maybe_generate(user_id: int, r: dict):
         # 2026-04-24: "Rec:" abbreviation for "Recommendation" triggered a
         # 자본시장법 §17 (투자자문업 미등록) 경계 flag in compliance sweep.
         # Replaced with "Sized:" (neutral sizing observation, not advice).
-        msg = (f"[POSITIVE] {name} ({ticker}) — Score {score:.0f}/100. "
+        msg = (f"{name} ({ticker}) — Score {score:.0f}/100. "
                f"Sized: {sh} shares · {inv_str}. {tim}.")
     else:
         sell_pct = r.get("sell_pct", 50)
         # "Consider reducing" also directive — rephrased as observational.
-        msg = (f"[NEGATIVE] {name} ({ticker}) — Score {score:.0f}/100. "
+        msg = (f"{name} ({ticker}) — Score {score:.0f}/100. "
                f"Quant flags weakness. Observation: {sell_pct}% position weight elevated.")
 
     # Legal scrub — rewrite advisory verbs (Consider reducing, Scale in, etc.)
