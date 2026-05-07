@@ -501,10 +501,10 @@ def google_callback():
         except Exception:
             logger.debug("silent-fallback: google_callback", exc_info=True)
             pass
-        from urllib.parse import quote
-        return redirect(
-            f"{origin}/login?error=google_user_error&etype={quote(exc_type)}&emsg={quote(exc_msg)}"
-        )
+        # Generic error code only — exc_type/exc_msg already logged above.
+        # Including them in the redirect URL leaks DB schema / ORM internals
+        # to the client (browser URL bar, history, Referer header).
+        return redirect(f"{origin}/login?error=provisioning_failed")
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
@@ -618,10 +618,10 @@ def kakao_callback():
         except Exception:
             logger.debug("silent-fallback: kakao_callback", exc_info=True)
             pass
-        from urllib.parse import quote
-        return redirect(
-            f"{origin}/login?error=kakao_user_error&etype={quote(exc_type)}&emsg={quote(exc_msg)}"
-        )
+        # Generic error code only — exc_type/exc_msg already logged above.
+        # Including them in the redirect URL leaks DB schema / ORM internals
+        # to the client (browser URL bar, history, Referer header).
+        return redirect(f"{origin}/login?error=provisioning_failed")
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
