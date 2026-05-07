@@ -27,6 +27,7 @@ Security
 from __future__ import annotations
 
 import base64
+import hmac
 import os
 import re
 from datetime import date, datetime, timedelta, timezone
@@ -71,7 +72,11 @@ def _check_cron_admin_secret() -> tuple[Response, int] | None:
         return jsonify({"error": "Not found"}), 404
 
     provided = request.headers.get("X-Admin-Secret", "")
-    if provided != expected:
+    # 2026-05-08 (Vuln SEC-B): use hmac.compare_digest for constant-time
+    # comparison to prevent timing-attack secret recovery. Vanilla `!=`
+    # short-circuits on first byte mismatch which leaks secret prefix
+    # length over many requests.
+    if not hmac.compare_digest(provided, expected):
         return jsonify({"error": "Admin only"}), 403
 
     return None
