@@ -476,8 +476,15 @@ class Backtester:
                         sortino = round((mean_annual - 0.045) / down_std_annual, 2)
 
                     # Calmar: annualized return / |max drawdown|
-                    if max_dd > 0:
-                        annualized_return = total_return_net  # already in %
+                    # Bug NEW-B fix: annualize total_return_net before dividing
+                    # by max_dd. Previously raw cumulative return was used,
+                    # which made Calmar period-dependent (10y backtest looked
+                    # 10x better than 1y backtest for the same strategy).
+                    trading_days = len(values)  # bars after warmup
+                    if max_dd > 0 and trading_days > 0:
+                        annualized_return = (
+                            ((1 + total_return_net / 100) ** (252 / trading_days)) - 1
+                        ) * 100
                         calmar = round(annualized_return / max_dd, 2)
 
             # Current regime snapshot
