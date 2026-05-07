@@ -31,6 +31,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from models.investment_profile import InvestmentProfile
+from routes.decorators import api_auth
 from security import ai_rate_limit, limiter
 from services.agents.data_bridge import (
     load_ips_statements as _db_load_ips,
@@ -188,6 +189,10 @@ def _load_trade_history_proxy(user: Any) -> list[dict[str, Any]]:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @agent_bp.route("/query", methods=["POST"])
+@api_auth                # 2026-05-08 (PR #148 follow-up): authenticate FIRST so
+                         # unauthenticated requests cannot drain the per-IP
+                         # ai_rate_limit bucket. Also removes the redundant
+                         # inline `current_user.is_authenticated` check below.
 @ai_rate_limit
 def query() -> Any:
     """POST /api/agent/query
@@ -202,10 +207,11 @@ def query() -> Any:
       }
 
     Failure responses:
-      401 — not authenticated
+      401 — not authenticated (emitted by @api_auth before reaching this body)
       403 — not entitled (requires Premium Plus or Founding Lifetime)
       429 — rate-limited
-      503 — AGENT_ENABLED flag is off (Closed Beta gate)
+      503 — AGENT_ENABLED flag is off (Closed Beta gate) /
+            kill switch engaged
     """
     companion = _get_companion()
 
@@ -228,8 +234,9 @@ def query() -> Any:
         logger.debug("silent-fallback: closed on DB outage so refusal > leaky response. | query", exc_info=True)
         pass
 
-    if not current_user.is_authenticated:
-        return jsonify({"error": "Login required", "error_kr": "로그인이 필요합니다.", "code": "SESSION_EXPIRED"}), 401
+    # NOTE: inline `if not current_user.is_authenticated` removed —
+    # @api_auth above already short-circuits with the standard
+    # SESSION_EXPIRED 401 envelope before this body ever runs.
 
     if not _entitled(current_user):
         return jsonify({
