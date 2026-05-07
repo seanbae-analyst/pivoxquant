@@ -82,7 +82,7 @@ export function TodayMemoHeroV2({
         style={{
           fontSize: "var(--pq-text-eyebrow, 10.5px)",
           letterSpacing: "0.22em",
-          color: "var(--pq-bronze)",
+          color: "rgba(245, 240, 232, 0.6)",
           marginBottom: 28,
         }}
       >
@@ -136,7 +136,7 @@ export function TodayMemoHeroV2({
             alignItems: "center",
             gap: 10,
             padding: "12px 22px",
-            background: "var(--pq-bronze)",
+            background: "var(--pq-bronze)" /* SOLE Accent Gold per design-principles-cfo.md §2 — do not duplicate */,
             color: "var(--pq-ink, #050505)",
             fontSize: 12,
             letterSpacing: "0.2em",
@@ -157,7 +157,7 @@ export function TodayMemoHeroV2({
               fontSize: 12,
               letterSpacing: "0.18em",
               textTransform: "uppercase",
-              color: "var(--pq-bronze)",
+              color: "rgba(245, 240, 232, 0.6)",
               borderBottom: "1px solid rgba(184,149,106,0.35)",
               paddingBottom: 2,
               textDecoration: "none",

@@ -803,17 +803,11 @@
 /* Silver-matte gradient clipped to text — editorial, reflective.
    No drop-shadow on mobile (perf + legibility on low-contrast backdrops). */
 .pivox-silver-matte {
-  background: linear-gradient(
-    180deg,
-    #F5F0E8 0%,
-    #F5F0E8 28%,
-    rgba(245, 240, 232, 0.72) 62%,
-    rgba(245, 240, 232, 0.42) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  background: var(--pq-ivory);
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: currentColor;
+  color: var(--pq-ivory);
   transform: translateZ(0); /* WebKit text-clip repaint fix */
 }
 
@@ -872,15 +866,11 @@
 
 /* Silver-matte text — spec-exact (v2, for new Hero). */
 .pq-silver-matte {
-  background: linear-gradient(
-    180deg,
-    var(--pq-ivory) 0%,
-    rgba(245, 240, 232, 0.45) 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  background: var(--pq-ivory);
+  -webkit-background-clip: unset;
+  background-clip: unset;
+  -webkit-text-fill-color: currentColor;
+  color: var(--pq-ivory);
   transform: translateZ(0);
 }
 @media (min-width: 640px) {
@@ -2293,8 +2283,7 @@ i.italic,
   position: relative;
   display: block;
   /* Ivory sheet — warm off-white that reads as printed paper */
-  background:
-    linear-gradient(180deg, #F5F0E8 0%, #EDE7DB 100%);
+  background: var(--pq-ivory);
   color: #1a1a1a;
   border-radius: 4px;
   padding: 0; /* children supply their own padding */
@@ -2448,8 +2437,7 @@ i.italic,
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 35% 30%, #a3845c 0%, #6f5636 55%, #4a3820 100%);
+  background: var(--pq-bronze-deep);
   color: #2a1f10;
   font-family: var(--font-serif), Georgia, serif;
   font-style: italic;
@@ -2874,10 +2862,7 @@ html {
   position: relative;
   border-radius: 2px;
   padding: 14px 14px 12px;
-  background:
-    linear-gradient(180deg,
-      rgba(245, 240, 232, 0.96) 0%,
-      rgba(245, 240, 232, 0.90) 100%);
+  background: rgba(245, 240, 232, 0.93);
   color: rgba(10, 10, 10, 0.72);
   box-shadow:
     0 1px 0 0 rgba(255, 255, 255, 0.5) inset,
@@ -2946,11 +2931,7 @@ html {
   height: 3px;
   border-radius: 1px;
   width: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(10, 10, 10, 0.32) 0%,
-    rgba(10, 10, 10, 0.12) 100%
-  );
+  background: rgba(10, 10, 10, 0.22);
 }
 .pq-paper-ticker {
   font-family: var(--font-mono), "JetBrains Mono", monospace;
@@ -3027,7 +3008,7 @@ html {
       rgba(184, 149, 106, 0.05) 0%,
       transparent 70%
     ),
-    linear-gradient(180deg, #0a0907 0%, #050505 100%);
+    var(--pq-ink);
   border: 1px solid rgba(184, 149, 106, 0.28);
   border-radius: 2px;
   box-shadow:
@@ -3212,7 +3193,7 @@ html {
       rgba(184, 149, 106, 0.08) 0%,
       transparent 70%
     ),
-    linear-gradient(180deg, #0c0a08 0%, #050505 100%);
+    var(--pq-ink);
   border: 1px solid rgba(184, 149, 106, 0.28);
   border-radius: 2px;
   /* Subtle inner edge highlight for the bezel feel. */
@@ -3228,9 +3209,7 @@ html {
   width: 56px;
   height: 56px;
   border-radius: 9999px;
-  background:
-    radial-gradient(circle at 30% 25%, rgba(245, 240, 232, 0.18) 0%, transparent 35%),
-    radial-gradient(circle at 50% 50%, #b8956a 0%, #8c6f4f 70%, #5d4a36 100%);
+  background: var(--pq-bronze-deep);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3386,12 +3365,7 @@ html {
 .pq-scroll-cue-line {
   width: 1px;
   height: 40px;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--pq-bronze) 50%,
-    transparent 100%
-  );
+  background: var(--pq-bronze);
   transform-origin: top center;
   animation: pq-scroll-cue 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
@@ -3964,7 +3938,7 @@ html {
 .pq-pdf-alloc-bar > i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #1a1a1a, #c9963f);
+  background: var(--pq-bronze);
   border-radius: 2px;
 }
 .pq-pdf-alloc-pct {
@@ -4248,7 +4222,7 @@ html {
 
 .pq-pdf-gold-rule {
   height: 2px;
-  background: linear-gradient(90deg, #c9963f, #e8c87a, #c9963f);
+  background: var(--pq-bronze);
   margin: 0 0 20px;
 }
 .pq-pdf-hairline { height: 1px; background: var(--r-rule); margin: 14px 0; }

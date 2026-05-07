@@ -127,7 +127,7 @@ export function PortfolioSnapshotCard() {
       >
         <polyline
           fill="none"
-          stroke="var(--pq-bronze)"
+          stroke="rgba(245, 240, 232, 0.6)"
           strokeWidth="1.4"
           points="0,28 14,26 28,29 42,22 56,24 70,18 84,20 98,15 112,17 126,11 140,14 154,9 168,12 182,7 196,10"
         />
@@ -153,7 +153,7 @@ export function PortfolioSnapshotCard() {
             style={{
               fontSize: 12,
               letterSpacing: "0.22em",
-              color: "var(--pq-bronze)",
+              color: "rgba(245, 240, 232, 0.6)",
               textTransform: "uppercase",
             }}
           >
@@ -177,7 +177,7 @@ export function PortfolioSnapshotCard() {
             style={{
               fontSize: 12,
               letterSpacing: "0.22em",
-              color: "var(--pq-bronze)",
+              color: "rgba(245, 240, 232, 0.6)",
               textTransform: "uppercase",
             }}
           >
@@ -201,7 +201,7 @@ export function PortfolioSnapshotCard() {
             style={{
               fontSize: 12,
               letterSpacing: "0.22em",
-              color: "var(--pq-bronze)",
+              color: "rgba(245, 240, 232, 0.6)",
               textTransform: "uppercase",
             }}
           >
