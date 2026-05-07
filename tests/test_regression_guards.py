@@ -22,7 +22,6 @@ All FAIL tests will pass after the corresponding fix PRs are merged:
   - fix/security-hardening-wave1      → CSRF exempt + CSP Stripe/Sentry
 """
 
-import importlib
 import json
 import os
 import re
@@ -72,39 +71,78 @@ def test_register_login_no_500_email_opt_out_column():
 # T2 & T3: config.py fail-fast guards
 # ===========================================================================
 
-def test_secret_key_fail_fast_in_production(monkeypatch):
+def _run_config_import_in_subprocess(env: dict) -> tuple[int, str]:
+    """Re-import ``config`` in a fresh interpreter with the supplied env
+    so that nothing leaked from pytest's parent process (other modules
+    importing config, conftest's os.environ side-effects, monkeypatch
+    timing) can mask the import-time guard.
+
+    Returns (exit_code, combined_stderr_stdout).
+
+    The child writes a sentinel string to stdout if the expected
+    RuntimeError fires. Caller asserts on that sentinel.
+    """
+    import subprocess
+
+    code = (
+        "import os, sys\n"
+        "try:\n"
+        "    import config\n"
+        "    print('IMPORT_SUCCEEDED_UNEXPECTEDLY')\n"
+        "    sys.exit(0)\n"
+        "except RuntimeError as e:\n"
+        "    print('RUNTIME_ERROR:' + str(e))\n"
+        "    sys.exit(0)\n"
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=str(_ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+
+
+def test_secret_key_fail_fast_in_production():
     """backend-wave1 #3 regression guard: production must raise RuntimeError
     when SECRET_KEY is unset.
 
-    STATUS: FAIL on main — config.py currently uses warnings.warn().
-    This test passes after fix/backend-wave1-critical is merged.
+    Run in a fresh subprocess so monkeypatch + sys.modules.pop ordering
+    cannot drift between local and CI environments — config.py reads its
+    env at module-load time, so isolation is the only reliable test.
     """
-    monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://dummy/x")  # avoid DATABASE_URL guard
-    monkeypatch.delenv("SECRET_KEY", raising=False)
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "FLASK_ENV": "production",
+        "DATABASE_URL": "postgresql://dummy/x",  # avoid the DATABASE_URL guard
+        # SECRET_KEY deliberately omitted
+    }
+    rc, out = _run_config_import_in_subprocess(env)
+    assert rc == 0, f"subprocess exited with rc={rc}: {out}"
+    assert "RUNTIME_ERROR:" in out, f"expected RuntimeError, got: {out}"
+    assert "SECRET_KEY" in out, (
+        f"expected SECRET_KEY in error message, got: {out}"
+    )
 
-    # Remove cached module so re-import triggers the import-time guard
-    sys.modules.pop("config", None)
 
-    with pytest.raises(RuntimeError, match="SECRET_KEY"):
-        import config  # noqa: F401  # raises during import when SECRET_KEY missing
-
-
-def test_database_url_fail_fast_in_production(monkeypatch):
+def test_database_url_fail_fast_in_production():
     """backend-wave1 #3 regression guard: production must raise RuntimeError
     when DATABASE_URL is unset (SQLite not allowed in production).
-
-    STATUS: FAIL on main — config.py falls back to SQLite silently.
-    This test passes after fix/backend-wave1-critical is merged.
     """
-    monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("SECRET_KEY", "test-secret-not-real-x0x0")
-    monkeypatch.delenv("DATABASE_URL", raising=False)
-
-    sys.modules.pop("config", None)
-
-    with pytest.raises(RuntimeError, match="DATABASE_URL"):
-        import config  # noqa: F401  # raises during import when DATABASE_URL missing
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "FLASK_ENV": "production",
+        "SECRET_KEY": "test-secret-not-real-x0x0",
+        # DATABASE_URL deliberately omitted
+    }
+    rc, out = _run_config_import_in_subprocess(env)
+    assert rc == 0, f"subprocess exited with rc={rc}: {out}"
+    assert "RUNTIME_ERROR:" in out, f"expected RuntimeError, got: {out}"
+    assert "DATABASE_URL" in out, (
+        f"expected DATABASE_URL in error message, got: {out}"
+    )
 
 
 # ===========================================================================

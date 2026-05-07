@@ -101,8 +101,16 @@ class TestDedupSameTickerMultipleLots:
 
     def test_three_lots_same_ticker_yields_one_row(self):
         svc = EarningsPreBriefService()
-        tomorrow = (datetime.now(timezone.utc) + timedelta(hours=12)).date()
-        cal = [_fake_calendar_row(tomorrow, "amc")]
+        # Pick a target dt always inside the 24h horizon. Using "amc"
+        # (=20:30 UTC) with a relative date is flaky: when "now" sits
+        # between 12:00 and 20:30 UTC, the synthetic event lands beyond
+        # now+24h and the row is correctly filtered out — masking the
+        # dedup behaviour we want to test. Use HH:MM that mirrors now+6h.
+        target_dt = (
+            datetime.now(timezone.utc).replace(tzinfo=None)
+            + timedelta(hours=6)
+        )
+        cal = [_fake_calendar_row(target_dt.date(), target_dt.strftime("%H:%M"))]
 
         positions = [
             _FakePosition(user_id=42, ticker="AAPL", shares=10, avg_cost=100),
