@@ -124,7 +124,9 @@ export default function MarketPage() {
       keepPreviousData: true,
       // Market open → 5s aggressive refresh; closed → 60s relaxed.
       refreshInterval: () => liveRefresh(5_000, 60_000),
-      revalidateOnFocus: true,
+      // Bug #3 (HANDOVER v22): aggressive polling already keeps indices
+      // fresh. Focus revalidate caused duplicate fetches on tab return.
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 2_000,
       errorRetryCount: 2,
@@ -145,7 +147,9 @@ export default function MarketPage() {
 
   const { data: fxData } = useSWR<FxResponse>(API.market.fx, fetcher, {
     refreshInterval: () => liveRefresh(5_000, 60_000),
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): backend FX scheduler refreshes ~60s; our 5-60s
+    // poll is plenty. Mirror useFxRate (hooks.ts L256) for consistency.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     dedupingInterval: 2_000,
     errorRetryCount: 2,

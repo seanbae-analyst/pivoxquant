@@ -188,7 +188,9 @@ export default function HomePageV1() {
   } as const;
   const signalsOpts = {
     refreshInterval: 30_000,
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): aligned with useSignals — focus revalidate
+    // would compound load on home → signals nav.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     dedupingInterval: 10_000,
     errorRetryCount: 2,

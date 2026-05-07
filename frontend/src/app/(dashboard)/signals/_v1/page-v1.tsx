@@ -87,7 +87,9 @@ export default function SignalsPageV1() {
     {
       // Market-aware: 10s open / 60s closed.
       refreshInterval: () => liveRefresh(10_000, 60_000),
-      revalidateOnFocus: true,
+      // Bug #3 (HANDOVER v22): aligned with useSignals — refreshInterval
+      // already keeps the list fresh.
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 3_000,
       errorRetryCount: 2,

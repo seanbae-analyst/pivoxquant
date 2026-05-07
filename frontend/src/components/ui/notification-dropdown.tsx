@@ -79,7 +79,9 @@ export function NotificationDropdown() {
   const { data, error, isLoading, mutate } = useSWR<AlertsListResponse>(
     API.alerts.list,
     fetcher,
-    { refreshInterval: 60_000, revalidateOnFocus: true },
+    // Bug #3 (HANDOVER v22): focus revalidate compounded duplicate fetches
+    // on page nav. The 60s polling already keeps the unread badge fresh.
+    { refreshInterval: 60_000, revalidateOnFocus: false },
   );
 
   const items = (data?.alerts ?? []).slice(0, 10);
