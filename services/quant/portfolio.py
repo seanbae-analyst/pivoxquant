@@ -704,6 +704,17 @@ class EqualRiskContribution:
             w_sum = np.sum(w)
             if w_sum > 1e-12:
                 w /= w_sum
+            else:
+                # Bug NEW-C fix: near-singular covariance can collapse all
+                # weights to zero, silently returning a degenerate (un-
+                # investable) allocation. Fall back to equal weights and
+                # warn so callers + log readers can spot the condition.
+                logger.warning(
+                    "ERC near-singular covariance; falling back to equal "
+                    "weights (n=%d)",
+                    n,
+                )
+                w = np.ones(n) / n
 
         return {
             "weights": {tickers[i]: round(float(w[i]), 6) for i in range(n_assets)},
