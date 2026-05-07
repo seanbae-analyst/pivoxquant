@@ -522,7 +522,10 @@ export default function StockDetailPage() {
     fetcher,
     {
       refreshInterval: () => liveRefresh(5_000, 30_000),
-      revalidateOnFocus: true,
+      // Bug #3 (HANDOVER v22): `refreshInterval` already keeps detail-page
+      // signals fresh; focus revalidate triggered duplicate fetches when
+      // users switched between detail and list views.
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 2_000,
       errorRetryCount: 2,
@@ -534,7 +537,9 @@ export default function StockDetailPage() {
     fetcher,
     {
       refreshInterval: () => liveRefresh(15_000, 120_000),
-      revalidateOnFocus: true,
+      // Bug #3 (HANDOVER v22): same rationale — chart polls every 15-120s
+      // already. No SSE push for OHLC frames.
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 5_000,
       shouldRetryOnError: false,

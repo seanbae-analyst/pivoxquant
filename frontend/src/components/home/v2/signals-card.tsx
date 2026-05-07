@@ -51,7 +51,10 @@ function colorForLabel(label: string): string {
 export function SignalsCard() {
   const { data } = useSWR<SignalsResponse>(API.signals.all, fetcher, {
     refreshInterval: 30_000,
-    revalidateOnFocus: true,
+    // Bug #3 (HANDOVER v22): the home signals card already polls every
+    // 30s. Keep behaviour consistent with `useSignals` in hooks.ts — focus
+    // revalidate disabled to avoid duplicate fetches during nav.
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     dedupingInterval: 10_000,
     errorRetryCount: 2,
