@@ -27,7 +27,7 @@ import os
 import re
 import stat
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
@@ -134,7 +134,9 @@ class KISTokenManager:
             # Rate-limit guard: KIS allows only 1 token/minute. If we just
             # attempted and there's still no fresh token, back off.
             if self._last_issue_attempt is not None:
-                since = (datetime.now() - self._last_issue_attempt).total_seconds()
+                # Bug NEW-F fix: use timezone-aware UTC throughout to avoid
+                # naive/aware subtraction TypeError + DST/server-tz drift.
+                since = (datetime.now(timezone.utc) - self._last_issue_attempt).total_seconds()
                 if since < 60:
                     logger.warning(
                         "KIS token rate-limit cooldown (%.1fs since last attempt); "
@@ -163,7 +165,11 @@ class KISTokenManager:
         """Return True when the token is set and has >1h life remaining."""
         if not token or not expires_at:
             return False
-        threshold = datetime.now() + timedelta(hours=REFRESH_BEFORE_HOURS)
+        threshold = datetime.now(timezone.utc) + timedelta(hours=REFRESH_BEFORE_HOURS)
+        # Bug NEW-F fix: cached tokens loaded from older runs may be naive;
+        # treat them as UTC so the comparison below doesn't TypeError.
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
         return expires_at > threshold
 
     def _load_from_file(self) -> None:
@@ -178,6 +184,10 @@ class KISTokenManager:
             if not token or not expires_raw:
                 return
             expires = datetime.fromisoformat(expires_raw)
+            # Bug NEW-F fix: legacy cache files were written with naive
+            # datetimes; promote them to UTC for safe comparison.
+            if expires.tzinfo is None:
+                expires = expires.replace(tzinfo=timezone.utc)
             if self._is_fresh(token, expires):
                 self._token = token
                 self._expires_at = expires
@@ -202,7 +212,7 @@ class KISTokenManager:
 
     def _issue_new_token_unsafe(self) -> Optional[str]:
         """Actually call /oauth2/tokenP. Caller must hold `self._lock`."""
-        self._last_issue_attempt = datetime.now()
+        self._last_issue_attempt = datetime.now(timezone.utc)
         try:
             r = requests.post(
                 f"{self.base_url}/oauth2/tokenP",
@@ -224,7 +234,7 @@ class KISTokenManager:
                 expires_in = int(data.get("expires_in", TOKEN_TTL_HOURS * 3600))
                 expires_in = min(expires_in, TOKEN_TTL_HOURS * 3600)
                 self._token = token
-                self._expires_at = datetime.now() + timedelta(seconds=expires_in - 60)
+                self._expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in - 60)
                 self._save_to_file()
                 logger.info(
                     "KIS token issued (url=%s, expires=%s)",
