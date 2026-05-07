@@ -135,7 +135,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
     <>
       {/* PAGE 1 */}
       <PdfPage>
-        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 01/02`} />
+        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 01/03`} />
         <PdfGoldRule />
 
         <PdfEyebrow>Burn Rate · For Growth Holdings</PdfEyebrow>
@@ -196,9 +196,10 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* PAGE 2 — 2026-05-06: compact so gov+disclaim atomic fits one A4 */}
-      <PdfPage compact>
-        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 02/02`} />
+      {/* PAGE 2 — 2026-05-06 Strategy B Option 2: explicit disclaim-only PdfPage so
+          chromium print engine never pushes the disclaimer onto a ghost sheet. */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 02/03`} />
         <PdfGoldRule />
 
         <PdfEyebrow>02 — Critical Watch</PdfEyebrow>
@@ -276,6 +277,13 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
 
         <PdfGovBlock />
         <PdfPageFooter left="Burn Rate · Premium · Not investment advice" right="Page 02" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="BURN RATE" meta={`${data.asOf} · BR-2026-04 · 03/03`} />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="monthly" />
       </PdfPage>
     </>

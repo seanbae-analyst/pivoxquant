@@ -130,7 +130,7 @@ export function PortfolioSegment({ data = DEFAULT }: { data?: PortfolioSegmentDa
     <>
       {/* PAGE 1 */}
       <PdfPage>
-        <PdfHeader tier="pro" title="PORTFOLIO SEGMENT" meta={`${data.asOf} · 01/02`} />
+        <PdfHeader tier="pro" title="PORTFOLIO SEGMENT" meta={`${data.asOf} · 01/03`} />
         <PdfGoldRule />
 
         <PdfEyebrow>Portfolio Segment · Monthly</PdfEyebrow>
@@ -194,7 +194,7 @@ export function PortfolioSegment({ data = DEFAULT }: { data?: PortfolioSegmentDa
 
       {/* PAGE 2 */}
       <PdfPage>
-        <PdfHeader tier="pro" title="PORTFOLIO SEGMENT" meta={`${data.asOf} · 02/02`} />
+        <PdfHeader tier="pro" title="PORTFOLIO SEGMENT" meta={`${data.asOf} · 02/03`} />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="sm">Factor · 팩터 노출</PdfSectionTitle>
@@ -256,6 +256,13 @@ export function PortfolioSegment({ data = DEFAULT }: { data?: PortfolioSegmentDa
 
         <PdfGovBlock />
         <PdfPageFooter left="Portfolio Segment · Pro · Not investment advice" right="Page 02" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="PORTFOLIO SEGMENT" meta={`${data.asOf} · 03/03`} />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="monthly" />
       </PdfPage>
     </>

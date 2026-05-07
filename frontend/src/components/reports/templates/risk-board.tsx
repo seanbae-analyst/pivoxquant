@@ -70,7 +70,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 01/02`}
+          meta={`${data.weekTag} · 01/03`}
         />
 
         <PdfExecSum
@@ -229,7 +229,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 02/02`}
+          meta={`${data.weekTag} · 02/03`}
         />
         <PdfGoldRule />
 
@@ -425,6 +425,17 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
           left="Risk Board · Pro · Internal"
           right="Page 02"
         />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* ═══════ PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) ═══════ */}
+      <PdfPage>
+        <PdfHeader
+          tier="pro"
+          title="RISK BOARD · WEEKLY"
+          meta={`${data.weekTag} · 03/03`}
+        />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="weekly" />
       </PdfPage>
     </>

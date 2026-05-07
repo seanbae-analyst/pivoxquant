@@ -212,7 +212,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
 
       {/* ═══════ PAGE 2 ═══════ */}
       <PdfPage>
-        <PdfHeader tier="pro" title="SELF AUDIT" meta={`${data.asOf} · 02/02`} />
+        <PdfHeader tier="pro" title="SELF AUDIT" meta={`${data.asOf} · 02/03`} />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="sm">Bias Heatmap · 편향 분포</PdfSectionTitle>
@@ -333,6 +333,13 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
           left="Self Audit · Pro · Not investment advice"
           right="Page 02"
         />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* ═══════ PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) ═══════ */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="SELF AUDIT" meta={`${data.asOf} · 03/03`} />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="ondemand" />
       </PdfPage>
     </>

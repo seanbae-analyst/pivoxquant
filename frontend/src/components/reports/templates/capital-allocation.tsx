@@ -144,7 +144,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
 
       {/* PAGE 2 — SOURCES & USES */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 02/04" />
+        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 02/05" />
         <PdfGoldRule />
 
         <PdfEyebrow>01 — Sources &amp; Uses</PdfEyebrow>
@@ -224,7 +224,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
 
       {/* PAGE 3 — DEPLOYMENT QUALITY */}
       <PdfPage>
-        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 03/04" />
+        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 03/05" />
         <PdfGoldRule />
 
         <PdfEyebrow>02 — Deployment Quality</PdfEyebrow>
@@ -292,9 +292,10 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
       </PdfPage>
 
       {/* PAGE 4 — NEXT QUARTER PLAN
-          2026-05-06: compact so gov+disclaim atomic fits one A4 sheet */}
-      <PdfPage compact>
-        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 04/04" />
+          2026-05-06 Strategy B Option 2: explicit disclaim-only PdfPage so
+          chromium print engine never pushes the disclaimer onto a ghost sheet. */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 04/05" />
         <PdfGoldRule />
 
         <PdfPullquote>{data.pullquote}</PdfPullquote>
@@ -317,6 +318,13 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
 
         <PdfGovBlock />
         <PdfPageFooter left="Capital Allocation · Premium · Personal" right="Page 04" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 5 — DISCLAIMER (atomic disclaim-only sheet) */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="CAPITAL ALLOCATION" meta="FY26 Q2 · 05/05" />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="quarterly" withBacktest />
       </PdfPage>
     </>

@@ -142,7 +142,7 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
         <PdfHeader
           tier="pro"
           title="QUARTERLY SELF REPORT"
-          meta={`${data.quarter} · 01/02`}
+          meta={`${data.quarter} · 01/03`}
         />
         <PdfGoldRule />
 
@@ -240,7 +240,7 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
         <PdfHeader
           tier="pro"
           title="QUARTERLY SELF REPORT"
-          meta={`${data.quarter} · 02/02`}
+          meta={`${data.quarter} · 02/03`}
         />
         <PdfGoldRule />
 
@@ -317,6 +317,17 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
           left="Quarterly Self Report · Pro · Not investment advice"
           right="Page 02"
         />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* ═══════ PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) ═══════ */}
+      <PdfPage>
+        <PdfHeader
+          tier="pro"
+          title="QUARTERLY SELF REPORT"
+          meta={`${data.quarter} · 03/03`}
+        />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="quarterly" />
       </PdfPage>
     </>

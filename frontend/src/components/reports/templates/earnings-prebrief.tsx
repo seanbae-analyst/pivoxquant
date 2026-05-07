@@ -149,7 +149,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         <PdfHeader
           tier="pro"
           title="EARNINGS PRE-BRIEF"
-          meta={`${data.ticker} · EP-2026-04 · 01 / 02`}
+          meta={`${data.ticker} · EP-2026-04 · 01/02`}
         />
         <PdfGoldRule />
 
@@ -324,7 +324,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         <PdfHeader
           tier="pro"
           title="EARNINGS PRE-BRIEF"
-          meta={`${data.ticker} · EP-2026-04 · 02 / 02`}
+          meta={`${data.ticker} · EP-2026-04 · 02/02`}
         />
 
         <PdfEyebrow>02 — Scenario Playbook</PdfEyebrow>
