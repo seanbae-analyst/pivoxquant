@@ -153,6 +153,30 @@ _REPLACEMENTS: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bHold\s+current\s+position\b", re.IGNORECASE), "stable indicator observed"),
     (re.compile(r"\bAwait\s+stronger\s+signal(s)?\s+before\s+adding\b", re.IGNORECASE), "awaiting indicator change"),
     (re.compile(r"\bAwait\s+stronger\s+signal(s)?\b", re.IGNORECASE), "awaiting indicator change"),
+    # Bare imperative buy/sell phrasing observed in engine.py msg fields (NEW-A).
+    (re.compile(r"\bbuy\s+(the\s+)?dip(s)?\b", re.IGNORECASE), "indicator-low region"),
+    (re.compile(r"\bbuying\s+pressure\b", re.IGNORECASE), "inflow intensity"),
+    (re.compile(r"\bselling\s+pressure\b", re.IGNORECASE), "outflow intensity"),
+    (re.compile(r"\bcontrarian\s+buy\b", re.IGNORECASE), "contrarian indicator"),
+
+    # ── Group 10: Wave 3 — KR advisory phrases from engine.py msg_kr (NEW-A) ──
+    # services/quant/engine.py 의 9 advisory string 잔존 케이스 cover.
+    # 순서 주의: 복합 구문 → 단순 단어 순.
+    (re.compile(r"매수\s*기준\s*강화"), "변동성 격화 국면"),
+    (re.compile(r"낙폭\s*확대\s*가능,?\s*매수\s*신호\s*아님"), "낙폭 확대 가능, 역추세 신호 부재"),
+    (re.compile(r"저가\s*매수\s*기회"), "지표 저점 영역"),
+    (re.compile(r"역발상\s*매수\s*신호"), "역추세 패턴 관찰"),
+    (re.compile(r"개인\s*매도\s*압력"), "개인 유출 강도"),
+    (re.compile(r"강한\s*매수세"), "강한 유입 강도"),
+    (re.compile(r"강한\s*매도세"), "강한 유출 강도"),
+    (re.compile(r"매수\s*신호"), "POSITIVE 지표"),
+    (re.compile(r"매도\s*신호"), "NEGATIVE 지표"),
+    (re.compile(r"매수\s*기회"), "지표 저점 영역"),
+    (re.compile(r"매수\s*유리"), "지표 유리 영역"),
+    (re.compile(r"매도\s*유리"), "지표 유리 영역"),
+    (re.compile(r"분할\s*진입\s*권장"), "분할 패턴 영역"),
+    (re.compile(r"분할\s*진입\s*권고"), "분할 패턴 영역"),
+    (re.compile(r"매수\s*압력"), "유입 강도"),
 ]
 
 # ── Prohibited patterns (log only, 설계 오류 조기 발견용) ─────────────────

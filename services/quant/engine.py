@@ -232,7 +232,7 @@ class QuantEngine:
                 composite -= 5
                 tech_sigs.append({"type": "bearish",
                     "msg": f"VIX {vix:.0f} — extreme fear, raising buy bar",
-                    "msg_kr": f"VIX {vix:.0f} — 극도 공포, 매수 기준 강화"})
+                    "msg_kr": f"VIX {vix:.0f} — 극도 공포, 변동성 격화 국면"})
             elif vix > 25:
                 buy_thresh += 3
                 composite -= 2
@@ -530,7 +530,7 @@ class QuantEngine:
                     # Below both MAs — falling knife, no bonus
                     sigs.append({"type": "bearish",
                                   "msg":    f"RSI oversold ({r:.0f}) in downtrend — falling knife, not a positive signal",
-                                  "msg_kr": f"RSI 과매도 ({r:.0f}) 하락추세 — 낙폭 확대 가능, 매수 신호 아님"})
+                                  "msg_kr": f"RSI 과매도 ({r:.0f}) 하락추세 — 낙폭 확대 가능, 역추세 신호 부재"})
             elif r < 45:
                 adj = 10 if above_200ma else 3
                 score += adj
@@ -675,8 +675,8 @@ class QuantEngine:
                     if k < 20 and above_200ma:
                         score += 8
                         sigs.append({"type": "bullish",
-                                      "msg": f"Stochastic oversold ({k:.0f}) in uptrend — buy dip",
-                                      "msg_kr": f"스토캐스틱 과매도 ({k:.0f}) 상승추세 — 저가 매수 기회"})
+                                      "msg": f"Stochastic oversold ({k:.0f}) in uptrend — indicator-low region",
+                                      "msg_kr": f"스토캐스틱 과매도 ({k:.0f}) 상승추세 — 지표 저점 영역"})
                     elif k > 80:
                         score -= 5
                         sigs.append({"type": "bearish",
@@ -751,7 +751,7 @@ class QuantEngine:
                         score += 8
                         sigs.append({"type": "bullish",
                                       "msg": f"MFI oversold ({mfi_val:.0f}) — heavy buying pressure",
-                                      "msg_kr": f"MFI 과매도 ({mfi_val:.0f}) — 강한 매수세"})
+                                      "msg_kr": f"MFI 과매도 ({mfi_val:.0f}) — 강한 유입 강도"})
                     elif mfi_val > 80:
                         score -= 5
                         sigs.append({"type": "bearish",
@@ -982,11 +982,11 @@ class QuantEngine:
         if not weights:
             weights = "Adaptive"
         en = (f"Composite score {score:.0f}/100 ({weights}). Primary driver: {dom[0]} ({dom[1]:.0f} pts). "
-              + {"POSITIVE":  "Multi-factor quant model detects favorable conditions. Scale in with defined risk.",
+              + {"POSITIVE":  "Multi-factor quant model detects favorable pattern conditions (informational only).",
                  "NEUTRAL": "Hold current position. Await stronger signal before adding.",
                  "NEGATIVE": "Quant model flags deteriorating conditions. Consider reducing or exiting position."}.get(sig, ""))
         kr = (f"종합 점수 {score:.0f}/100 ({weights}). 주요 동인: {dom_kr} ({dom[1]:.0f}점). "
-              + {"POSITIVE":  "멀티팩터 퀀트 모델이 유리한 조건 감지. 분할 진입 권장.",
+              + {"POSITIVE":  "멀티팩터 퀀트 모델이 유리한 조건 관찰. 분할 패턴 영역.",
                  "NEUTRAL": "현 포지션 유지. 추가 진입 시그널 대기.",
                  "NEGATIVE": "퀀트 모델이 약세 신호 감지. 포지션 축소 또는 청산 고려."}.get(sig, ""))
         return en, kr
@@ -1205,7 +1205,7 @@ class QuantEngine:
                     score += 15
                     sigs.append({"type": "bullish",
                                  "msg": f"Regime: {rs['label']} (Sharpe {rs['sharpe_20d']:.1f}) — momentum favors longs",
-                                 "msg_kr": f"시장체제: {rs['label_kr']} (샤프 {rs['sharpe_20d']:.1f}) — 매수 유리"})
+                                 "msg_kr": f"시장체제: {rs['label_kr']} (샤프 {rs['sharpe_20d']:.1f}) — 지표 유리 영역"})
                 elif regime == "MILD_BULL":
                     score += 8
                     sigs.append({"type": "bullish",
@@ -1316,7 +1316,7 @@ class QuantEngine:
                         score += 8
                         sigs.append({"type": "bullish",
                                      "msg": f"Disposition Effect: High CGO ({cgo:.3f}) — retail selling pressure, contrarian buy",
-                                     "msg_kr": f"처분효과: 높은 CGO ({cgo:.3f}) — 개인 매도 압력, 역발상 매수 신호"})
+                                     "msg_kr": f"처분효과: 높은 CGO ({cgo:.3f}) — 개인 유출 강도, 역추세 패턴 관찰"})
                     elif cgo < -0.15:
                         score -= 5
                         sigs.append({"type": "bearish",

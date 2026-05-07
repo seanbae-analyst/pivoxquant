@@ -32,7 +32,7 @@ from flask_login import current_user
 
 from models.investment_profile import InvestmentProfile
 from routes.decorators import api_auth
-from security import ai_rate_limit, limiter
+from security import ai_rate_limit, general_rate_limit, limiter, trade_rate_limit
 from services.agents.data_bridge import (
     load_ips_statements as _db_load_ips,
     load_journal_entries as _db_load_journal,
@@ -508,6 +508,11 @@ def status() -> Any:
 #     memory"; they have their own retention policy.
 
 @agent_bp.route("/export", methods=["GET"])
+@api_auth                # 2026-05-08 (PR #149 sibling fix — Vuln SEC-A): authenticate
+                         # FIRST so unauthenticated requests cannot drain the per-IP
+                         # general_rate_limit bucket. Also removes the redundant
+                         # inline `current_user.is_authenticated` check below.
+@general_rate_limit
 def export_agent_data() -> Any:
     """GET /api/agent/export
 
@@ -524,12 +529,9 @@ def export_agent_data() -> Any:
         }
 
     Errors:
-        401 — not authenticated.
+        401 — not authenticated (emitted by @api_auth before reaching this body).
         500 — DB read failed (rolled back; payload describes the error).
     """
-    if not current_user.is_authenticated:
-        return jsonify({"error": "Login required", "error_kr": "로그인이 필요합니다.", "code": "SESSION_EXPIRED"}), 401
-
     request_id = uuid.uuid4().hex[:12]
 
     try:
@@ -615,6 +617,11 @@ def export_agent_data() -> Any:
 
 @agent_bp.route("/delete", methods=["DELETE"])
 @agent_bp.route("", methods=["DELETE"])
+@api_auth                # 2026-05-08 (PR #149 sibling fix — Vuln SEC-A): authenticate
+                         # FIRST so unauthenticated requests cannot drain the per-IP
+                         # trade_rate_limit bucket. Also removes the redundant
+                         # inline `current_user.is_authenticated` check below.
+@trade_rate_limit        # destructive endpoint — tighter (30/min) than general
 def delete_agent_data() -> Any:
     """DELETE /api/agent/delete  (alias: DELETE /api/agent)
 
@@ -630,15 +637,12 @@ def delete_agent_data() -> Any:
         }
 
     Errors:
-        401 — not authenticated.
+        401 — not authenticated (emitted by @api_auth before reaching this body).
         500 — DB write failed; transaction rolled back.
 
     The frontend then wipes local `pq_*` keys; a successful 200 here
     means the server-side trace is gone.
     """
-    if not current_user.is_authenticated:
-        return jsonify({"error": "Login required", "error_kr": "로그인이 필요합니다.", "code": "SESSION_EXPIRED"}), 401
-
     request_id = uuid.uuid4().hex[:12]
     user_id = int(current_user.id)
 
