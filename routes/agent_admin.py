@@ -59,7 +59,7 @@ def _deny_non_admin():
     Fails closed: no ``ADMIN_EMAILS`` env var → everyone is denied.
     """
     if not getattr(current_user, "is_authenticated", False):
-        return jsonify({"error": "Login required"}), 401
+        return jsonify({"error": "Login required", "error_kr": "로그인이 필요합니다.", "code": "SESSION_EXPIRED"}), 401
     admins = _admin_emails()
     if not admins:
         logger.warning(

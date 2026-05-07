@@ -670,7 +670,13 @@ def _build_positions_list():
             "purchaseDate": opened_at[:10] if opened_at else "",
             "notes": p.thesis or "",
             "currency": currency,
-            "isKorean": is_kr,
+            # 2026-05-08 (isKorean sweep): emit BOTH camelCase (v2 page-v2)
+            # AND snake_case (lib/hooks.ts RawPosition, signal-card,
+            # detail/[ticker], search-command, …). The frontend snake_case
+            # is_korean is used in 10+ places — emitting both keeps every
+            # consumer working without coordinated frontend rewrites.
+            "isKorean":  is_kr,
+            "is_korean": is_kr,
         })
     return out
 
@@ -756,6 +762,12 @@ def portfolio_summary_alias():
                 pnl = pnl / rate
             realized_ytd_usd += pnl
 
+        # 2026-05-08 (observed_at sweep): the v2 portfolio page
+        # (frontend/src/app/(dashboard)/portfolio/_v2/page-v2.tsx:158)
+        # consumes `sumData?.observed_at ?? null` to render the "last
+        # reconciled" timestamp chip. Emit it explicitly so the chip
+        # stops showing "—" forever. The response IS what we observed.
+        observed_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         return jsonify({
             "totalNav": round(total_nav_usd, 2),
             "todayPnl": round(today_pnl_usd, 2),
@@ -765,6 +777,7 @@ def portfolio_summary_alias():
             "currency": "USD",
             "fxRate": rate,
             "positionCount": len(positions),
+            "observed_at": observed_iso,
         })
     except Exception:
         logger.exception("portfolio_summary_alias failed")
@@ -879,7 +892,10 @@ def create_position_alias():
         "id": str(new_pos.id),
         "symbol": symbol,
         "name": resolved_name or symbol,
-        "isKorean": is_kr,
+        # 2026-05-08 (isKorean sweep): dual-emit camelCase + snake_case;
+        # see _build_positions_list comment for rationale.
+        "isKorean":  is_kr,
+        "is_korean": is_kr,
     })
 
 

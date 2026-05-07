@@ -45,7 +45,12 @@ def _seed_alert(app, user_id: int, *, is_read: bool = False, title: str = "Obser
 def test_list_unauth_returns_401(client):
     resp = client.get("/api/notifications")
     assert resp.status_code == 401
-    assert resp.get_json() == {"error": "Login required"}
+    body = resp.get_json()
+    # 2026-05-08 (NEW-D): api_auth now ships SESSION_EXPIRED code so the
+    # frontend's apiFetch can redirect to /login?expired=1.
+    assert body["error"] == "Login required"
+    assert body["code"] == "SESSION_EXPIRED"
+    assert body["error_kr"] == "로그인이 필요합니다."
 
 
 def test_unread_count_unauth_returns_401(client):
