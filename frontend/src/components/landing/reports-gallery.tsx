@@ -1,14 +1,17 @@
 "use client";
 
 /**
- * ReportsGallery — 18 artifacts gallery section for LandingV2.
+ * ReportsGallery — 17 artifacts gallery section for LandingV2.
  * ---------------------------------------------------------------------------
  * Supanova tone: large whitespace + Pretendard-anchored mono eyebrows + card
  * gallery + cool minimalism. Mirrors the v2 home-card hover pattern (bronze
  * border + bronze-08 background fade).
  *
  * Source of truth: frontend/src/app/(dashboard)/reports/_v1/page-v1.tsx CATALOG
- * (lines 51-70). All 18 artifacts mapped 1:1 — slug, title, cadence, minTier.
+ * (lines 51-70). 17 artifacts mapped 1:1 — slug, title, cadence, minTier.
+ * (sp500-backtest removed 2026-05-07 — services/artifacts/sp500_backtest_service.py
+ *  documents itself as "Admin preview only … not a per-user artifact". User-facing
+ *  marketing surfaces should not advertise admin-only debug tooling as a Pro feature.)
  *
  * Legal: observation-only labels. POSITIVE / NEGATIVE / NEUTRAL only. No
  * BUY/SELL/HOLD/recommend/advice copy permitted in card text.
@@ -26,7 +29,7 @@ import { ArrowUpRight } from "lucide-react";
 import { Eyebrow } from "./eyebrow";
 import { fadeUp, stagger } from "@/lib/motion";
 
-/* ── 18 artifacts mirrored from /reports v1 CATALOG ── */
+/* ── 17 artifacts mirrored from /reports v1 CATALOG ── */
 
 type Tier = "Free" | "Pro" | "Premium";
 
@@ -43,12 +46,11 @@ const REPORTS: readonly ReportEntry[] = [
   // — Free (2) —
   { slug: "weekly-memo",           type: "Memo",           title: "Weekly Memo",            cadence: "Every Sunday",          tier: "Free" },
   { slug: "brag-card",             type: "Brag Card",      title: "Brag Card",              cadence: "Monthly",               tier: "Free" },
-  // — Pro (10) —
+  // — Pro (9) —
   { slug: "morning-brief-plus",    type: "Brief",          title: "Morning Brief Plus",     cadence: "Daily · Pre-market",    tier: "Pro" },
   { slug: "earnings-prebrief",     type: "Pre-Brief",      title: "Earnings Pre-Brief",     cadence: "On earnings ±24h",      tier: "Pro" },
   { slug: "dd-checklist",          type: "Checklist",      title: "DD Checklist",           cadence: "On demand",             tier: "Pro" },
   { slug: "risk-board",            type: "Risk",           title: "Risk Board",             cadence: "Weekly",                tier: "Pro" },
-  { slug: "sp500-backtest",        type: "Backtest",       title: "S&P 500 Backtest",       cadence: "On demand",             tier: "Pro" },
   { slug: "portfolio-segment",     type: "Segment",        title: "Portfolio Segment",      cadence: "Monthly",               tier: "Pro" },
   { slug: "dividend-income",       type: "Income",         title: "Dividend Income",        cadence: "Monthly",               tier: "Pro" },
   { slug: "insider-mirror",        type: "Mirror",         title: "Insider Mirror",         cadence: "Weekly",                tier: "Pro" },
@@ -186,7 +188,7 @@ export default function ReportsGallery() {
           variants={fadeUp}
           className="mb-16 max-w-2xl md:mb-24"
         >
-          <Eyebrow className="mb-6">Eighteen Artifacts</Eyebrow>
+          <Eyebrow className="mb-6">Seventeen Artifacts</Eyebrow>
           <p className="pq-deck mb-4">
             Weekly memos. Quarterly self-reports. Year-end letters.
           </p>
@@ -200,7 +202,7 @@ export default function ReportsGallery() {
               marginBottom: 24,
             }}
           >
-            18 artifacts
+            17 artifacts
             <br />
             your CFO publishes.
           </h2>
