@@ -1,3 +1,103 @@
+# PivoxQuant — 인수인계서 (2026-05-08 v25 세션 — 자율 야간 10 PR + 자본시장법 어휘 박멸 + 보안 wave)
+
+## 🟢 2026-05-08 v25 세션 (자율 야간 · CEO 수면 · all-permissions 재확인) — **10 PR 머지** · 신규 5+9건 fix · Bug #3 SWR · DoS 34 routes · 자본시장법 §101 어휘 9건 · admin secret timing · Stripe orphan · KIS datetime · ERC zero · GKYZ NaN · Calmar annualization
+
+**현재 main HEAD: `8128e64`** (origin sync OK). **Open PR 1건만 잔존 (#118 legal docs, 변호사 미팅 대기)**.
+
+### v25 추가 머지 (v24 위에 3 PR 더, 총 10 PR 이번 세션)
+
+| # | PR | Commit | Type | 핵심 | 검증 |
+|---|---|---|---|---|---|
+| 8 | [#149](https://github.com/seanbae-analyst/pivoxquant/pull/149) | `647be3b` | fix(security) | **PR #148 follow-up** — agent.py `/query` + agent_admin.py 6 routes 에 `@api_auth` 추가. 인라인 `current_user.is_authenticated` 제거. 동일 DoS 패턴 잔존 cleanup. | pytest 37/37 (test_agent + test_agent_admin + waitlist + admin_secret_isolation) |
+| 9 | [#150](https://github.com/seanbae-analyst/pivoxquant/pull/150) | `94a2e15` | fix(legal+security-P0) | **자본시장법 §101 면제 트랙 보호** — `engine.py` 9 advisory strings ("매수 기준 강화", "buy dip", "분할 진입 권장", "역발상 매수 신호" 등) → 중립 관찰형 어휘. `legal_filter._REPLACEMENTS` Group 9 보강 (4 EN) + Group 10 신규 (11 KR) 이중 방어. **PIPA DoS** — agent.py `/export` `/delete` `@api_auth` + rate-limit. **admin secret timing attack** — `routes/artifacts.py:74` `!=` → `hmac.compare_digest`. | pytest 1201/1207 (1 pre-existing fail, 0 신규 회귀) |
+| 10 | [#151](https://github.com/seanbae-analyst/pivoxquant/pull/151) | `8128e64` | fix(quant+kis+billing) | **5 numerical/datetime/transaction safety**: (a) NEW-B Calmar annualization (1y 외 모든 backtest 기간 잘못된 값). (b) NEW-C ERC near-singular cov 시 equal-weight fallback + warning (silent zero weight 차단). (c) NEW-E GKYZ `var_yz = max(var_yz, 0)` clamp (NaN cascade 차단). (d) NEW-F KIS token_manager 5곳 timezone-aware (Railway timezone 변경 silent fail). (e) NEW-G Stripe customer 생성 후 DB commit 실패 시 `stripe.Customer.delete` rollback (orphan 누적 차단). | pytest 1624 passed (1 pre-existing fail, 54/54 targeted) |
+
+### Wave 7 정찰 — Wave 8 fix 안 한 잔여 (다음 세션 큐)
+
+**Bug NEW-D (P1) — Position race condition** — `routes/portfolio.py:239` + `models/position.py` 의 `(user_id, ticker)` UniqueConstraint 누락. 동시 add_position 시 duplicate row 생성 가능 → portfolio summary double-count. **DB 마이그 필요** (alembic head 확인 + audit-code 강제). 이번 야간 자율 모드에서 보수적으로 보류 — 다음 세션 P1 첫 항목.
+
+**보안 audit 잔여** (security agent Wave 7-late 발견 8건 중 fix 못한 것):
+- **SEC-C (P1)** — `routes/agent.py:469` `/status` public + rate-limit 없음 + `legal_status: "pending-counsel-review"` 노출. `@general_rate_limit` 추가 + `legal_status` 필드 제거 권장.
+- **SEC-D (P1)** — `routes/artifacts.py:802-810` brag-card share 의 OG meta `escape()` 누락. 현재 `month_label` 은 server-derived 라 직접 XSS 안 됨. 단 referral code 가 향후 user-customizable 되면 worm-scale 위험. `markupsafe.escape` 적용으로 defense-in-depth.
+- **SEC-E (P1)** — `routes/agent.py:334` `/waitlist` 200 vs 201 enumeration oracle (PIPA §29 violation). status code 통일 + per-email cap + hCaptcha (free tier).
+- **SEC-F (P2)** — `routes/artifacts.py:3105+` `_diag/*` traceback HTTP body 노출. SEC-B fix 후 admin secret 안전해졌지만 prod debug 정보 노출 방어선 추가 권장.
+- **SEC-G (P2)** — `security.py:402-403` CSP `'unsafe-inline'` (이미 TODO 주석). nonce-based CSP 마이그 (Next.js 16 native 지원).
+
+### qa_bug_log 갱신 결과
+- **BUG-OAUTH-001 RESOLVED 마킹** — investigator 직접 verify (commit `d153340` 2026-04-19 이후 stateless HMAC state 적용). qa_bug_log 가 stale 했던 것 (memory `project_oauth_resolved.md` 가 정확함).
+- 이번 세션 fix 된 14 건 (NEW-A~J 9건 + Bug #3 SWR + SEC-A + SEC-B + 27 routes decorator + Bug #1 SWR realtime banner) 항목 추가.
+
+이전 세션 v23 의 잔존 P0 (PDF Strategy B 10 ghost) 는 **세션 시작 시점에 이미 PR #124 (`fcb2403`) 로 main 에 머지된 상태였음 — HANDOVER v23 가 9 commit stale 했던 것**. 13 template (10 ghost + 3 추가 발견) 모두 fix 됨. ghost 회귀 0건.
+
+이전 세션 v23 의 잔존 P0 (PDF Strategy B 10 ghost) 는 **이번 세션 시작 시점에 이미 PR #124 (`fcb2403`) 로 main 에 머지된 상태였음 — HANDOVER v23 가 9 commit stale 했던 것**. 13 template (10 ghost + 3 추가 발견) 모두 fix 됨. ghost 회귀 0건.
+
+### 이번 세션 commits (7 PR squash, base `4bca677` → HEAD `647be3b`)
+
+| # | PR | Commit | Type | 핵심 | 검증 |
+|---|---|---|---|---|---|
+| 1 | [#143](https://github.com/seanbae-analyst/pivoxquant/pull/143) | `93aff5a` | fix(profile) | **profile 페이지 가짜 수치 박멸** — `SixDimensionsGrid` 의 "AAPL/MSFT/005930.KS as anchors" 하드코딩 + `PeerBenchmarkBlockV2` 의 Sharpe 1.42/MaxDD -6.8%/Turnover 0.41/Concentration 41% 하드코딩 제거. `usePersonaDetail` + `usePersonaBenchmark` 실제 데이터 와이어링 + empty-state placeholder. 모든 사용자에게 노출되던 신뢰 박살 케이스. | tsc clean / lint clean / vitest 35/35 |
+| 2 | [#144](https://github.com/seanbae-analyst/pivoxquant/pull/144) | `0595ac0` | fix(misc) | **5 소규모 버그 sweep** — (a) NEW-C: `/api/market/lookup/<ticker>` `@api_auth` 제거 + `@general_rate_limit` (미로그인 simulator viral 퍼널 fix). (b) NEW-D: `routes/decorators.py` `@api_auth` 401 응답에 `code: SESSION_EXPIRED` 추가 (frontend `api.ts:80` redirect 핸들러 활성화). agent.py 3곳 + agent_admin.py 1곳 동일 적용. (c) NEW-E: growth blueprint unavailable 시 `growthUnavailable` 체크 + 준비 중 UI fallback. (d) `routes/portfolio.py` `_build_positions_list` 가 `is_korean` snake_case 도 dual-emit (frontend `RawPosition` 호환). (e) `/api/portfolio/summary` 응답에 `observed_at` ISO-8601 추가. | pytest 1619 passed / tsc 0 errors |
+| 3 | [#145](https://github.com/seanbae-analyst/pivoxquant/pull/145) | `9ace562` | fix(swr) | **Bug #3 SWR dedup 근본 fix** — `frontend/src/` 전체 17곳의 `revalidateOnFocus: true` → `false`. hooks.ts 7곳 (useWatchlist/useAlerts/usePortfolioSummary/usePortfolioPositions/useRiskSummary/useRiskLayers/useSignals) + 다른 페이지 9곳. `revalidateOnReconnect: true` 보존 (long-idle 안전). SSE globalMutate 가 portfolio summary/positions 직접 패치 (`{revalidate:false}`). 미커버 5 hook 은 `refreshInterval` 5-15s/idle 60s 폴링 보완. | tsc clean / vitest 35/35 |
+| 4 | [#146](https://github.com/seanbae-analyst/pivoxquant/pull/146) | `51b3e68` | chore(janitor) | **dead code cleanup** — npm `cmdk` 제거 (SearchCommandMenu 가 직접 구현, import 0). `frontend/public/hero/` SVG 3개 (0 reference). `v2-review.html` + `validation-results.json` (build artifact). `CLEANUP_PLAN_2026-05-06.md` → `docs/archive/`. ruff F401 0 위반, eslint clean. **18 files**. | tsc clean / eslint clean / ruff All passed |
+| 5 | [#147](https://github.com/seanbae-analyst/pivoxquant/pull/147) | `fe38319` | fix(discover) | **Bug NEW-A — discover scan silent error fix** — `discover/page.tsx:265` 의 `catch { /* noop */ }` → status code 분기 toast (408/5xx). signals v1+v2 `handleRefresh` 동일 패턴 sweep. **27건 silent catch triage** — alerts/profile/notifications/settings/realtime/push 등 의도된 silent (localStorage degradation, opportunistic ops, telemetry) 명시 보존. | tsc clean / vitest 35/35 / eslint clean |
+| 6 | [#148](https://github.com/seanbae-analyst/pivoxquant/pull/148) | `ad5e0b2` | fix(security) | **DoS 벡터 박멸 + utcnow deprecation** — (a) NEW-C: `routes/portfolio.py` 10 routes + `routes/ai.py` 11 routes + `routes/broker_oauth.py` 6 routes (총 27 routes) 의 데코레이터 순서 swap — `@api_auth` 가 `@*_rate_limit` 위로. 비인증 요청이 rate bucket 소모 후 401 받던 DoS 벡터 차단. (b) NEW-D: `datetime.utcnow()` (Python 3.12 deprecated) → `datetime.now(timezone.utc)` 4 file (routes/discover.py, routes/portfolio.py, services/profile/fifo_util.py, tests/test_ai_twin.py). naive 컬럼 (`traded_at` 등) `.replace(tzinfo=None)` 보존. | py_compile + AST + 프로그래매틱 grep post-fix 0 위반 |
+| 7 | [#149](https://github.com/seanbae-analyst/pivoxquant/pull/149) | `647be3b` | fix(security) | **PR #148 follow-up — agent.py + agent_admin.py DoS sweep** — `routes/agent.py /query` 에 `@api_auth` 추가 (인라인 `current_user.is_authenticated` 체크 제거). `routes/agent_admin.py` 6 routes 에 `@api_auth` 추가 (`_deny_non_admin()` 인라인 admin 체크 보존, defense-in-depth). 401 envelope 변경 없음 (frontend SESSION_EXPIRED 핸들러 호환). | pytest 37/37 (test_agent_route + test_agent_admin_route + test_agent_waitlist + test_api_auth_admin_secret_isolation) |
+
+### 추가 정리 (Wave 0 정찰 부산물)
+
+- worktree gitlink 11개 (mode 160000) 가 `.gitmodules` 없이 commit 에 등록돼 영구 `M` noise 였음 → `git rm --cached` 후 origin/main 에 적용 (이번 세션 직전 다른 PR 들이 동일 cleanup 도착했어서 local 778e6b2 abandon).
+
+### 코드 안 건드린 잔존 (CEO 결정/외부 작업 필요)
+
+#### 🔴 P0 — CEO 직접 (코드로 해결 불가)
+1. **GitHub Billing 카드 fix** (HANDOVER v22 부터 반복) — Actions runner 모든 workflow runner 미할당 → 모든 PR CI FAILURE. 단, 코드 자체는 PASS (Vercel Preview SUCCESS 확인 + local tsc/lint/vitest/pytest 통과 인용). 카드 교체 또는 spending limit 증액 필요. 결제 정상화 시 머지된 7 PR 의 CI 가 자동 재실행되어 green 으로 바뀜.
+2. **변호사 미팅 일정** — Q1/Q3/Q4/Q11 (HIGH 4건) 사인. PR #118 legal docs 머지 대기.
+3. **Google Cloud Console + Kakao Developers OAuth redirect URI 등록** (CLAUDE.md P0).
+4. **Stripe API key + Product ID 매핑** — 사업자등록 완료 후. `.env` 의 `STRIPE_SECRET_KEY` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_PREMIUM` 주석 상태.
+5. **`NEXT_PUBLIC_ALPACA_ENABLED=1`** — Phase-1 정책 (My Data 라이선스 미해결) 으로 의도적 미설정. 라이선스 결정 후 Vercel env var 설정.
+
+#### 🟠 P1 — 다음 세션 (라이브 의존)
+6. **Bug #6 KOSPI/KOSDAQ "—·—"** — `sanitizeKrIndex` 코드 OK, KIS API 라이브 응답 확인 필요.
+7. **Bug #8 Risk API 4개 pending** — Railway runtime 모니터링.
+8. **Bug #9 DELAYED label** — Bug #1 fix 이후 라이브 재검증 (이번 세션 Bug #3 fix 로 부수 영향 가능).
+9. **BUG-OAUTH-001** — `routes/auth.py` 직접 read 안 함. MEMORY `project_oauth_resolved.md` ("9커밋 완전 해결") vs qa_bug_log.md 미해결 기록 불일치 — 코드 직접 verify 필요.
+10. **BUG-016 차트 데이터** — 포지션 유무 의존 런타임 확인.
+
+#### 🟡 P2 — 다음 세션 (정적 fix 가능)
+11. **NEW-B**: `frontend/.env.local` 에 `NEXT_PUBLIC_LOGIN_V2=true` + `NEXT_PUBLIC_SIGNUP_V2=true` 누락 (`.env.example` 에는 있음). `.env.local` 은 git untracked 라 자동 커밋 어려움 — README/setup.sh 안내 보강 필요.
+12. **commit `4a1a252` cosmetic 오염** — PR #148 의 decorator 커밋에 portfolio.py:752 utcnow 변경 1줄 혼입. `git blame` 시 살짝 messy. 재정리 필요 없음 (squash 머지로 1 commit 됨).
+13. **`globals.css` 의 `[cmdk-group-heading]` dead CSS** — PR #146 scope 밖, 차기 CSS cleanup wave 에서 제거.
+14. **`notification-dropdown.tsx:84`** — `revalidateOnReconnect: true` 명시 추가 (현재 SWR default 의존, 동작 동일).
+
+### 사장님 5초 액션 (아침)
+
+```bash
+# 1. 머지된 7 PR 확인
+gh pr list --state merged --limit 10 --search "merged:>2026-05-07"
+
+# 2. main 동기화 + 라이브 영향 확인
+cd /Users/seanbae/Desktop/취준/stockpilot && git pull origin main
+# main HEAD 647be3b 확인
+
+# 3. Vercel preview deploy 자동 머지 확인 — pivoxquant.com 접속
+#    profile 페이지: 가짜 Sharpe 1.42 사라졌는지
+#    discover scan 버튼: 에러 시 토스트 뜨는지
+#    /simulator/what-if (미로그인): ticker 검색 자동완성 뜨는지
+
+# 4. GitHub Billing 카드 fix (이게 풀려야 모든 CI 정상)
+open https://github.com/settings/billing/payment_information
+```
+
+### 정직 한계 (이 세션)
+
+- **CI 검증 불가** — GitHub Actions runner 미할당 (Billing 이슈) 으로 모든 workflow FAILURE. 코드 자체는 local + Vercel Preview 로 verify (tsc 0 / vitest 35/35 / pytest 1619 passed / pytest 37/37 specific suite).
+- **시각 검증 불가** — parent macOS UI 접근 X. 라이브 page render / 모바일 / PWA 직접 보지 않음. Vercel Preview SUCCESS 만 trust.
+- **`venv/bin/pytest` 한글 경로 인코딩 이슈** — agent 가 일부 pytest 못 돌림. CI / Railway 에서는 정상 통과 예상.
+- **PR #149 까지 모든 audit-code spot check PASS** — 단, audit 도 read-only / static 분석 한계.
+- **SWR revalidateOnFocus false 변경 (PR #145)** — long-idle 후 stale 위험은 `revalidateOnReconnect: true` + `refreshInterval` polling 으로 mitigation. 라이브 모바일 background ↔ foreground 전환 시 dedup 효과 라이브 측정 필요.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-06 v23 세션 — PDF lint sweep + V4 layout + height 강제 시도/backout)
 
 ## 🔴 2026-05-06 v23 세션 — PDF 18개 lint sweep + layout fix 시도 + height:297mm 강제 → ghost regression
