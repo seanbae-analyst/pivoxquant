@@ -26,8 +26,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
+import { toast } from "sonner";
 import { API } from "@/lib/endpoints";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { PRICE_COLOR_HEX } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -120,8 +121,22 @@ export default function SignalsPageV1() {
     try {
       await apiFetch(API.signals.refresh, { method: "POST" });
       await mutate();
-    } catch {
-      // silent — SWR keeps stale view
+    } catch (err) {
+      // Bug NEW-A companion fix (2026-05-08): the previous silent catch
+      // hid 408/500 from the user — they pressed Refresh, the spinner
+      // stopped, and nothing visibly changed. apiFetch handles 401
+      // (redirect) and 429 (its own toast); only surface the rest here.
+      if (err instanceof ApiError) {
+        if (err.status === 408) {
+          toast.error("새로고침이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.");
+        } else if (err.status >= 500) {
+          toast.error("새로고침 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        } else if (err.status !== 401 && err.status !== 429) {
+          toast.error(err.message || "새로고침 실패");
+        }
+      } else {
+        toast.error(err instanceof Error ? err.message : "새로고침 실패");
+      }
     } finally {
       setRefreshing(false);
     }

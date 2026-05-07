@@ -18,6 +18,7 @@ import { useMemo, useState, useCallback } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import {
   API,
   DISCOVER_OVERVIEW,
@@ -25,7 +26,7 @@ import {
   DISCOVER_SECTORS,
   DISCOVER_SCREENERS,
 } from "@/lib/endpoints";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, ApiError } from "@/lib/api";
 import { cn, isKoreanTicker } from "@/lib/utils";
 import { fmtPct, pctColorClass } from "@/lib/format";
 import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
@@ -262,8 +263,28 @@ export default function DiscoverPage() {
     try {
       await apiFetch(`${API.discover}?force=1`);
       await mutate();
-    } catch { /* noop */ }
-    finally { setScanning(false); }
+    } catch (err) {
+      // Bug NEW-A fix (2026-05-08): the previous `catch { /* noop */ }`
+      // silently swallowed 401/429/500 — users saw the spinner stop with
+      // no feedback. apiFetch already routes 401 → /login and 429 → its
+      // own toast, so re-throws on 408/500/network land here and need
+      // their own surface. Use sonner (same canonical pattern as
+      // alerts/page.tsx, watchlist/page.tsx, settings/_v2/page-v2.tsx).
+      if (err instanceof ApiError) {
+        if (err.status === 408) {
+          toast.error("스캔 요청이 시간 초과되었습니다. 잠시 후 다시 시도해주세요.");
+        } else if (err.status >= 500) {
+          toast.error("스캔 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        } else if (err.status !== 401 && err.status !== 429) {
+          // 401 redirects in apiFetch; 429 toasts in apiFetch.
+          toast.error(err.message || "스캔 실패");
+        }
+      } else {
+        toast.error(err instanceof Error ? err.message : "스캔 실패");
+      }
+    } finally {
+      setScanning(false);
+    }
   }, [mutate]);
 
   return (
