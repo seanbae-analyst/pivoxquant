@@ -156,7 +156,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 2 — PULLQUOTE + YEAR AT A GLANCE */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 02/05" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 02/06" />
         <PdfGoldRule />
 
         <PdfEyebrow>Opening</PdfEyebrow>
@@ -207,7 +207,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 3 — DECISIONS REVIEW */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 03/05" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 03/06" />
 
         <PdfEyebrow>01 — Decisions, Reviewed</PdfEyebrow>
         <PdfSectionTitle>Decisions · 올해 내린 결정들</PdfSectionTitle>
@@ -262,7 +262,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 4 — LESSONS */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 04/05" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 04/06" />
 
         <PdfEyebrow>02 — Lessons Learned</PdfEyebrow>
         <PdfSectionTitle>3 Lessons · 값비싼 교훈 세 가지</PdfSectionTitle>
@@ -289,7 +289,7 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
       {/* PAGE 5 — NEXT YEAR + SIGN */}
       <PdfPage>
-        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 05/05" />
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 05/06" />
 
         <PdfEyebrow>03 — Promises for Next Year</PdfEyebrow>
         <PdfSectionTitle>To Next Year&apos;s Me · 내년의 나에게</PdfSectionTitle>
@@ -319,6 +319,13 @@ export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) 
 
         <PdfGovBlock />
         <PdfPageFooter left="Year-End Letter · Premium · Personal" right="Page 05" />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* PAGE 6 — DISCLAIMER (atomic disclaim-only sheet) */}
+      <PdfPage>
+        <PdfHeader tier="premium" title="YEAR-END LETTER" meta="FY2026 · 06/06" />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="annual" withBacktest />
       </PdfPage>
     </>

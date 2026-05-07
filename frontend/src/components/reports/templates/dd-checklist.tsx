@@ -239,7 +239,7 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
     <>
       {/* ═══════ PAGE 1 ═══════ */}
       <PdfPage>
-        <PdfHeader tier="pro" title="DD CHECKLIST" meta={`${data.asOf} · 01/02`} />
+        <PdfHeader tier="pro" title="DD CHECKLIST" meta={`${data.asOf} · 01/03`} />
         <PdfGoldRule />
 
         {/* SAMPLE banner — never let the static PLTR mockup be mistaken
@@ -313,7 +313,7 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
 
       {/* ═══════ PAGE 2 ═══════ */}
       <PdfPage>
-        <PdfHeader tier="pro" title="DD CHECKLIST" meta={`${data.asOf} · 02/02`} />
+        <PdfHeader tier="pro" title="DD CHECKLIST" meta={`${data.asOf} · 02/03`} />
         <PdfGoldRule />
 
         <PdfSectionTitle variant="sm">Section D · Risk (5)</PdfSectionTitle>
@@ -410,6 +410,13 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
           left="DD Checklist · Pro · Process audit · Not investment advice"
           right="Page 02"
         />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* ═══════ PAGE 3 — DISCLAIMER ═══════ */}
+      <PdfPage>
+        <PdfHeader tier="pro" title="DD CHECKLIST" meta={`${data.asOf} · 03/03`} />
+        <PdfGoldRule />
         <PdfDisclaimer cadence="ondemand" />
       </PdfPage>
     </>
