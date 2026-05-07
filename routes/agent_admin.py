@@ -35,6 +35,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
 from extensions import db
+from routes.decorators import api_auth
 from security import general_rate_limit
 
 logger = logging.getLogger(__name__)
@@ -142,6 +143,9 @@ def _invalidate_kill_cache() -> None:
 
 
 @agent_admin_bp.route("/kill", methods=["POST"])
+@api_auth                # 2026-05-08 (PR #148 follow-up): block unauth before
+                         # the rate_limit bucket spends. _deny_non_admin() still
+                         # runs inside for the non-admin authenticated case.
 @general_rate_limit
 def kill() -> Any:
     """POST /api/admin/agent/kill
@@ -186,6 +190,7 @@ def kill() -> Any:
 
 
 @agent_admin_bp.route("/revive", methods=["POST"])
+@api_auth                # PR #148 follow-up — see /kill above.
 @general_rate_limit
 def revive() -> Any:
     """POST /api/admin/agent/revive
@@ -247,6 +252,9 @@ def revive() -> Any:
 
 
 @agent_admin_bp.route("/audit/recent", methods=["GET"])
+@api_auth                # PR #148 follow-up — uniform auth gate across
+                         # agent_admin_bp; _deny_non_admin() still gates
+                         # the admin-vs-non-admin distinction below.
 def audit_recent() -> Any:
     """GET /api/admin/agent/audit/recent?limit=50&verdict=deny_*
 
@@ -309,6 +317,7 @@ def audit_recent() -> Any:
 
 
 @agent_admin_bp.route("/stats", methods=["GET"])
+@api_auth                # PR #148 follow-up — see /audit/recent.
 def stats() -> Any:
     """GET /api/admin/agent/stats
 
@@ -367,6 +376,7 @@ def stats() -> Any:
 
 
 @agent_admin_bp.route("/waitlist", methods=["GET"])
+@api_auth                # PR #148 follow-up — see /audit/recent.
 def waitlist_list() -> Any:
     """GET /api/admin/agent/waitlist
 
@@ -461,6 +471,7 @@ def waitlist_list() -> Any:
 
 
 @agent_admin_bp.route("/purge-expired", methods=["POST"])
+@api_auth                # PR #148 follow-up — see /kill.
 @general_rate_limit
 def purge_expired_route() -> Any:
     """POST /api/admin/agent/purge-expired
