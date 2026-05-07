@@ -57,9 +57,9 @@ def status():
 
 
 @ai_bp.route("/swot", methods=["POST"])
-@ai_rate_limit
 @api_auth
 @require_tier("pro")
+@ai_rate_limit
 def swot():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -78,9 +78,9 @@ def swot():
 
 
 @ai_bp.route("/competitor", methods=["POST"])
-@ai_rate_limit
 @api_auth
 @require_tier("pro")
+@ai_rate_limit
 def competitor():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -114,9 +114,9 @@ def competitor():
 
 
 @ai_bp.route("/sector-trend", methods=["POST"])
-@ai_rate_limit
 @api_auth
 @require_tier("pro")
+@ai_rate_limit
 def sector_trend():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -148,8 +148,8 @@ def sector_trend():
 
 
 @ai_bp.route("/chat", methods=["POST"])
-@ai_rate_limit
 @api_auth
+@ai_rate_limit
 def chat():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -197,9 +197,9 @@ def chat():
 
 
 @ai_bp.route("/commentary", methods=["POST"])
-@ai_rate_limit
 @api_auth
 @require_tier("pro")
+@ai_rate_limit
 def commentary():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -216,9 +216,9 @@ def commentary():
 
 
 @ai_bp.route("/morning-summary", methods=["POST"])
-@ai_rate_limit
 @api_auth
 @require_tier("pro")
+@ai_rate_limit
 def morning_summary():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -230,9 +230,9 @@ def morning_summary():
 
 
 @ai_bp.route("/coaching", methods=["POST"])
-@ai_rate_limit
 @api_auth
 @require_tier("pro")
+@ai_rate_limit
 def coaching():
     if not ai.available:
         return jsonify({"error": "AI not configured"}), 503
@@ -277,8 +277,8 @@ def _earnings_tone_tier_ok(user) -> bool:
 
 
 @ai_bp.route("/earnings-tone", methods=["POST"])
-@ai_rate_limit
 @api_auth
+@ai_rate_limit
 def earnings_tone():
     """Analyze earnings call transcript sentiment for a ticker (Pro/Premium).
     Body: {"ticker": "AAPL"} or {"ticker": "AAPL", "transcript": "..."}
@@ -334,8 +334,8 @@ def earnings_tone():
 
 
 @ai_bp.route("/earnings-tone/<ticker>", methods=["GET"])
-@ai_rate_limit
 @api_auth
+@ai_rate_limit
 def earnings_tone_get(ticker):
     """Lazy-load earnings tone for a single ticker (Pro/Premium).
     Cache-first: returns cached result when fresh (<=90d), otherwise triggers
@@ -384,9 +384,9 @@ def earnings_tone_get(ticker):
 # ── AI Sector Regime Classification (YELLOW — informational only) ────────────
 
 @ai_bp.route("/sector-regime", methods=["GET"])
-@ai_rate_limit
 @api_auth
 @require_tier("pro")
+@ai_rate_limit
 def sector_regime():
     """Classify current macro regime and return historical sector performance.
     No parameters needed — uses current macro data automatically.
@@ -401,9 +401,9 @@ def sector_regime():
 # ── AI Risk Summary (GREEN — pure analysis, no advisory) ──────────────────────
 
 @ai_bp.route("/risk-summary", methods=["POST"])
-@ai_rate_limit
 @api_auth
 @require_tier("pro")
+@ai_rate_limit
 def risk_summary():
     """Generate a plain-language risk summary for the user's portfolio.
 

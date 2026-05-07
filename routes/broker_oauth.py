@@ -94,8 +94,8 @@ def _validate_connect_payload(body: dict) -> tuple[dict | None, dict | None]:
 
 # ── POST /api/broker/kis/connect ─────────────────────────────────────────
 @broker_oauth_bp.route("/kis/connect", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def kis_connect():
     """Register/update the user's KIS credentials and verify immediately."""
     body = request.get_json(silent=True) or {}
@@ -151,8 +151,8 @@ def kis_connect():
 
 # ── POST /api/broker/kis/sync ────────────────────────────────────────────
 @broker_oauth_bp.route("/kis/sync", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def kis_sync():
     """Trigger a manual sync of the user's KIS positions + balance."""
     try:
@@ -179,8 +179,8 @@ def kis_sync():
 
 # ── DELETE /api/broker/kis/disconnect ────────────────────────────────────
 @broker_oauth_bp.route("/kis/disconnect", methods=["DELETE"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def kis_disconnect():
     """Remove the user's KIS connection and encrypted credentials."""
     removed = delete_kis_connection(current_user.id)
@@ -358,8 +358,8 @@ def _validate_alpaca_payload(body: dict) -> tuple[dict | None, dict | None]:
 
 
 @broker_oauth_bp.route("/alpaca/connect", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def alpaca_connect():
     """Register the user's Alpaca paper credentials and verify immediately."""
     killed = _alpaca_kill_switch_response()
@@ -407,8 +407,8 @@ def alpaca_connect():
 
 
 @broker_oauth_bp.route("/alpaca/sync", methods=["POST"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def alpaca_sync():
     """Trigger a light-touch Alpaca account refresh (paper only)."""
     killed = _alpaca_kill_switch_response()
@@ -429,8 +429,8 @@ def alpaca_sync():
 
 
 @broker_oauth_bp.route("/alpaca/disconnect", methods=["DELETE"])
-@trade_rate_limit
 @api_auth
+@trade_rate_limit
 def alpaca_disconnect():
     killed = _alpaca_kill_switch_response()
     if killed is not None:
