@@ -8,6 +8,7 @@ from flask_login import current_user
 
 from extensions import db
 from models import Position, SignalCache
+from security import general_rate_limit
 from services import fx_service
 from services.container import fetcher, realtime
 from services.market_status import get_market_status
@@ -167,10 +168,17 @@ def search_stocks():
 
 
 @market_bp.route("/lookup/<ticker>")
-@api_auth
+@general_rate_limit
 def lookup_ticker(ticker):
-    # SEC-009: require an authenticated session before exposing the upstream
-    # quick-lookup (which can fan out to FMP/Alpaca and burn quota).
+    # 2026-05-08 (NEW-C): Removed @api_auth so the /simulator/what-if viral
+    # acquisition funnel can resolve tickers (symbol/name/price/currency —
+    # all public market data) without forcing a login. Upstream quota is
+    # protected by:
+    #   - @general_rate_limit (per-IP request budget; see security.py)
+    #   - DataFetcher cache layers in fmp_service / Alpaca
+    # Earlier SEC-009 hardening required auth here, but the quick_lookup
+    # response carries no PII / portfolio data — only what every public
+    # quote page exposes — so the trade-off favors UX.
     result = fetcher.quick_lookup(ticker.strip().upper())
     if result:
         return jsonify(result)
