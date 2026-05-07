@@ -318,7 +318,7 @@ class QuantEngine:
             if disqualified and current_pnl_pct < -5:
                 # Disqualified stock already losing → get out
                 sell_override = True
-                sell_reason = "Investment thesis broken + losing position — exit recommended"
+                sell_reason = "Investment thesis broken + losing position observed"
             elif current_pnl_pct < -30 and composite < 55:
                 # Deep loss + weak score = thesis is dead
                 sell_override = True
