@@ -86,18 +86,31 @@ def _get_or_create_customer(user):
         name=user.name,
         metadata={"user_id": str(user.id)},
     )
-    user.stripe_customer_id = customer.id
     try:
+        user.stripe_customer_id = customer.id
         db.session.commit()
-    except Exception:
+    except Exception as e:
+        # Bug NEW-G fix: previous code logged + swallowed and returned the
+        # customer id, leaving an orphan Stripe customer that we'd never
+        # persist (next call creates a *second* duplicate). Roll back the
+        # DB session and delete the Stripe customer so retries are clean,
+        # then re-raise so the caller's `except stripe.StripeError` (or a
+        # 500) surfaces the failure to the user.
         db.session.rollback()
-        logger.exception(
-            "Failed to persist stripe_customer_id=%s for user_id=%s",
-            customer.id, user.id,
+        logger.error(
+            "Failed to persist stripe_customer_id=%s for user_id=%s: %s",
+            customer.id, user.id, e,
         )
-        # Stripe customer was created successfully — surface the id even
-        # though we couldn't persist it. Next checkout attempt will create
-        # a duplicate customer; orphan cleanup is handled out-of-band.
+        try:
+            stripe.Customer.delete(customer.id)
+            logger.info("Rolled back orphan Stripe customer %s", customer.id)
+        except stripe.StripeError as del_err:
+            # Best-effort: log + leave for out-of-band cleanup.
+            logger.error(
+                "Failed to rollback Stripe customer %s: %s",
+                customer.id, del_err,
+            )
+        raise
     return customer.id
 
 
