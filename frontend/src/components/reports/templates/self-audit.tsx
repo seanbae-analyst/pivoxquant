@@ -154,7 +154,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
           style={{
             color: "var(--r-ink-3)",
             marginTop: 12,
-            fontSize: 13,
+            fontSize: 14,
             lineHeight: 1.55,
           }}
         className="font-serif" >
@@ -239,7 +239,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
             <PdfCard soft>
               <div
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   color: "var(--r-ink-3)",
                   letterSpacing: "1.5px",
                   textTransform: "uppercase",
@@ -249,7 +249,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
               </div>
               <h3
                 style={{
-                  fontSize: 22,
+                  fontSize: 24,
                   margin: "8px 0",
                   fontWeight: 500,
                 }}
@@ -266,7 +266,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
                 {data.topFlag.body}
               </p>
               <PdfDivider />
-              <div style={{ fontSize: 10, color: "var(--r-ink-3)" }}>
+              <div style={{ fontSize: 12, color: "var(--r-ink-3)" }}>
                 <strong>{data.topFlag.counterRule}</strong>
               </div>
             </PdfCard>
@@ -283,7 +283,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
               </div>
               <div
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   color:
                     f.dueTone === "neg"
                       ? "var(--r-neg)"

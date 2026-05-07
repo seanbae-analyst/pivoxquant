@@ -163,7 +163,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             background: "rgba(184, 149, 106, 0.08)",
             border: "1px solid rgba(184, 149, 106, 0.4)",
             borderRadius: 2,
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--r-gold-deep, #8b6f47)",
@@ -198,7 +198,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             <div className="pq-pdf-kpi-lbl">Reporting</div>
             <div
               style={{
-                fontSize: 22,
+                fontSize: 24,
               }}
             className="font-serif" >
               {data.reportingDate}
@@ -209,7 +209,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             <div className="pq-pdf-kpi-lbl">Position</div>
             <div
               style={{
-                fontSize: 22,
+                fontSize: 24,
               }}
             className="font-serif" >
               {data.position}
@@ -265,7 +265,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                 </div>
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     color: "var(--r-ink-3)",
                     marginTop: 8,
                   }}
@@ -300,7 +300,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                 </div>
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     color: "var(--r-ink-3)",
                     marginTop: 8,
                   }}
@@ -346,7 +346,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                 <td>
                   <strong>{s.case}</strong>
                   <div
-                    style={{ fontSize: 10, color: "var(--r-ink-3)" }}
+                    style={{ fontSize: 12, color: "var(--r-ink-3)" }}
                   >
                     {s.caseDetail}
                   </div>

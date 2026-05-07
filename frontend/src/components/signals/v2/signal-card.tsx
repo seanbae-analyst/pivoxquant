@@ -134,7 +134,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-display"
             style={{
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: 500,
               letterSpacing: "-0.01em",
               color: "var(--pq-ivory, #F5F0E8)",
@@ -146,7 +146,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono"
             style={{
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: "0.14em",
               color: "rgba(245,240,232,0.45)",
               marginTop: 4,
@@ -190,7 +190,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             <span
               className="font-mono"
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: "0.04em",
                 color: "rgba(245,240,232,0.55)",
                 fontVariantNumeric: "tabular-nums",
@@ -238,7 +238,7 @@ export function SignalCard({ entry, resolveName }: Props) {
           <div
             className="font-mono"
             style={{
-              fontSize: 11,
+              fontSize: 12,
               fontVariantNumeric: "tabular-nums",
               color: "rgba(245,240,232,0.55)",
             }}

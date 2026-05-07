@@ -202,7 +202,7 @@ export function BottomNav() {
               <span
                 className="font-serif uppercase"
                 style={{
-                  fontSize: "11px",
+                  fontSize: "12px",
                   letterSpacing: "0.14em",
                   color:
                     moreActive || drawerOpen
@@ -329,7 +329,7 @@ function DrawerGroupSection({
         <span
           className="font-serif uppercase"
           style={{
-            fontSize: "10px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
             color: "rgba(184, 149, 106, 0.55)",
             display: "block",
@@ -425,7 +425,7 @@ function BottomTab({ tab, active }: { tab: Tab; active: boolean }) {
         <span
           className="font-serif uppercase"
           style={{
-            fontSize: "11px",
+            fontSize: "12px",
             letterSpacing: "0.14em",
             color: active ? "var(--pq-ivory)" : "rgba(245, 240, 232, 0.55)",
           }}

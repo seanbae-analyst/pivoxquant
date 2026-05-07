@@ -138,7 +138,7 @@ function UpgradePrompt() {
         <p
           className="mt-2 font-serif italic"
           style={{
-            fontSize: 13,
+            fontSize: 14,
             lineHeight: 1.65,
             color: "rgba(184, 149, 106, 0.85)",
           }}
@@ -265,7 +265,7 @@ function ComingSoon({ phase }: { phase: string }) {
         <p
           className="mt-2 font-serif italic"
           style={{
-            fontSize: 13,
+            fontSize: 14,
             lineHeight: 1.65,
             color: "rgba(184, 149, 106, 0.85)",
           }}
@@ -291,7 +291,7 @@ function ComingSoon({ phase }: { phase: string }) {
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 color: "var(--pq-ivory, #F5F0E8)",
                 margin: 0,
               }}

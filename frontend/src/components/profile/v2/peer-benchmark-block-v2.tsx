@@ -138,7 +138,7 @@ export function PeerBenchmarkBlockV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 30,
+              fontSize: 32,
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
@@ -154,7 +154,7 @@ export function PeerBenchmarkBlockV2({
           className="font-mono uppercase"
           style={{
             fontVariantNumeric: "tabular-nums",
-            fontSize: 11,
+            fontSize: 12,
             color: "rgba(245,240,232,0.40)",
             letterSpacing: "0.18em",
           }}

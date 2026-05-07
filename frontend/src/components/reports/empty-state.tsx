@@ -187,7 +187,7 @@ export function EmptyState({
         className="pq-detail-h2 font-display"
         style={{
           fontWeight: 500,
-          fontSize: 30,
+          fontSize: 32,
           lineHeight: 1.18,
           letterSpacing: "-0.01em",
           color: "var(--pq-ivory, #F5F0E8)",
@@ -220,7 +220,7 @@ export function EmptyState({
           display: "inline-flex",
           alignItems: "center",
           gap: 8,
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
           color: "var(--pq-ink, #050505)",

@@ -160,7 +160,7 @@ export function RiskBoardCard() {
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 30,
+          fontSize: 32,
           lineHeight: 1.1,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",

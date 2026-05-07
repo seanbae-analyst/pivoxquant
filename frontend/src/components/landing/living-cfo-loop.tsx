@@ -192,7 +192,7 @@ export function LivingCfoLoop() {
                 <h3
                   className="font-serif mb-2"
                   style={{
-                    fontSize: 17,
+                    fontSize: 18,
                     lineHeight: 1.2,
                     color: "var(--pq-ivory)",
                     fontWeight: 500,
@@ -231,7 +231,7 @@ export function LivingCfoLoop() {
           variants={fadeUp}
           className="mt-16 font-serif italic text-center"
           style={{
-            fontSize: 13,
+            fontSize: 14,
             color: "rgba(139,111,71,0.85)",
             letterSpacing: "0.01em",
           }}

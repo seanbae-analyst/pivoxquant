@@ -138,7 +138,7 @@ export function ReportsHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 10,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.45)",
           marginTop: 18,

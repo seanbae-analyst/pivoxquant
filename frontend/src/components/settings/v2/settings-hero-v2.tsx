@@ -63,7 +63,7 @@ export function SettingsHeroV2({
       <p
         className="font-serif"
         style={{
-          fontSize: 17,
+          fontSize: 18,
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
           maxWidth: 720,
@@ -111,7 +111,7 @@ export function SettingsHeroV2({
             padding: "12px 22px",
             background: "var(--pq-bronze)",
             color: "var(--pq-ink, #050505)",
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.2em",
             borderRadius: 2,
             textDecoration: "none",
@@ -123,7 +123,7 @@ export function SettingsHeroV2({
           href="#section-b"
           className="font-mono uppercase"
           style={{
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",

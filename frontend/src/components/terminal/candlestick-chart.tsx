@@ -157,7 +157,7 @@ export function CandlestickChart({
           textColor: "rgba(245,240,232,0.65)",
           fontFamily:
             "var(--font-serif), Georgia, 'Source Serif 4', serif",
-          fontSize: 10,
+          fontSize: 12,
         },
         grid: {
           vertLines: { color: "rgba(26,31,46,0.55)" },

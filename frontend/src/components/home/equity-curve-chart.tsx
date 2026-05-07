@@ -142,7 +142,7 @@ function ChartTooltip({ active, payload, currency }: CustomTooltipProps) {
         background: "rgba(10, 10, 10, 0.92)",
         border: "1px solid rgba(184, 149, 106, 0.32)",
         padding: "8px 12px",
-        fontSize: 11,
+        fontSize: 12,
         lineHeight: 1.5,
         color: "var(--pq-ivory)",
       }}
@@ -295,7 +295,7 @@ export function EquityCurveChart({
             tickFormatter={fmtAxisDate}
             stroke="rgba(245, 240, 232, 0.18)"
             tick={{
-              fontSize: 10,
+              fontSize: 12,
               fill: "rgba(245, 240, 232, 0.55)",
               fontFamily:
                 "var(--font-serif), Georgia, 'Source Serif 4', serif",
@@ -312,7 +312,7 @@ export function EquityCurveChart({
             tickFormatter={(v: number) => fmtAxisMoney(v, currency)}
             stroke="rgba(245, 240, 232, 0.18)"
             tick={{
-              fontSize: 10,
+              fontSize: 12,
               fill: "rgba(245, 240, 232, 0.55)",
               fontFamily:
                 "var(--font-serif), Georgia, 'Source Serif 4', serif",

@@ -84,7 +84,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-serif"
           style={{
-            fontSize: 13,
+            fontSize: 14,
             color: "rgba(245,240,232,0.40)",
             padding: "48px 0",
             textAlign: "center",
@@ -121,7 +121,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           <div
             className="font-display"
             style={{
-              fontSize: 22,
+              fontSize: 24,
               color: "var(--pq-ivory, #F5F0E8)",
               marginBottom: 8,
             }}
@@ -131,7 +131,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           <div
             className="font-serif"
             style={{
-              fontSize: 13,
+              fontSize: 14,
               color: "rgba(245,240,232,0.55)",
             }}
           >
@@ -186,7 +186,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
               className="font-display"
               style={{
                 fontWeight: 500,
-                fontSize: 22,
+                fontSize: 24,
                 letterSpacing: "-0.01em",
                 color: "var(--pq-ivory, #F5F0E8)",
                 margin: 0,

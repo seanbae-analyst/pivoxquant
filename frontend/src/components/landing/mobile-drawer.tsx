@@ -150,7 +150,7 @@ export default function MobileDrawer({
                         className="font-serif"
                         style={{
                           color: isOpen ? "var(--pq-ivory)" : "rgba(245,240,232,0.85)",
-                          fontSize: "22px",
+                          fontSize: "24px",
                           letterSpacing: "-0.01em",
                           fontWeight: 500,
                         }}

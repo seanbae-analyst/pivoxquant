@@ -66,7 +66,7 @@ export function BrokerCardV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 30,
+              fontSize: 32,
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
@@ -142,7 +142,7 @@ export function BrokerCardV2({
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 color: "rgba(245,240,232,0.55)",
               }}
             >
@@ -199,7 +199,7 @@ export function BrokerCardV2({
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 color: "rgba(245,240,232,0.55)",
               }}
             >

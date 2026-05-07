@@ -381,7 +381,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
               />
               <p
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   color: "var(--r-ink-3)",
                   lineHeight: 1.5,
                   marginTop: 10,

@@ -268,7 +268,7 @@ export function PositionsTableV2({
                   padding: "10px 20px",
                   background: "var(--pq-bronze)",
                   color: "var(--pq-ink, #050505)",
-                  fontSize: 11,
+                  fontSize: 12,
                   letterSpacing: "0.2em",
                   border: "none",
                   borderRadius: "var(--pq-radius-cta, 2px)",
@@ -529,7 +529,7 @@ function PositionRow({
           className="sector-tag font-mono uppercase"
           style={{
             display: "inline-block",
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: "0.2em",
             padding: "4px 8px",
             border: "1px solid var(--pq-bronze)",

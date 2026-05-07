@@ -91,7 +91,7 @@ function DonutTooltip({ active, payload, currency }: DonutTooltipProps) {
         background: "rgba(10, 10, 10, 0.92)",
         border: "1px solid rgba(184, 149, 106, 0.32)",
         padding: "8px 12px",
-        fontSize: 11,
+        fontSize: 12,
         lineHeight: 1.55,
         color: "var(--pq-ivory)",
       }}
@@ -217,7 +217,7 @@ export function SectorAllocationDonut({
         <Link
           href="/portfolio"
           className="pq-ink-btn-ghost"
-          style={{ height: 30, padding: "0 12px", fontSize: 10, marginTop: 4 }}
+          style={{ height: 30, padding: "0 12px", fontSize: 12, marginTop: 4 }}
         >
           Open Portfolio
         </Link>
@@ -336,7 +336,7 @@ export function SectorAllocationDonut({
           gap: 4,
           minWidth: 0,
           overflowY: "auto",
-          fontSize: 11,
+          fontSize: 12,
         }}
       >
         {rows.map((r) => (
@@ -380,7 +380,7 @@ export function SectorAllocationDonut({
               style={{
                 color: "var(--pq-bronze)",
                 fontVariantNumeric: "tabular-nums",
-                fontSize: 11,
+                fontSize: 12,
               }}
             >
               {r.pct.toFixed(1)}%

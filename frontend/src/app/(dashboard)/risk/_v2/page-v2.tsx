@@ -244,7 +244,7 @@ export default function RiskPageV2() {
                   <div
                     className="font-serif"
                     style={{
-                      fontSize: 13,
+                      fontSize: 14,
                       color: "rgba(245,240,232,0.70)",
                       lineHeight: 1.55,
                     }}

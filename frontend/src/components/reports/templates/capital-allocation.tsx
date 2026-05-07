@@ -173,7 +173,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
             >
               <strong>Total Sources</strong>
               <div />
-              <div style={{ textAlign: "right", fontSize: 11, color: "var(--r-pos)" }} className="font-mono" >
+              <div style={{ textAlign: "right", fontSize: 12, color: "var(--r-pos)" }} className="font-mono" >
                 <strong>{data.totalSources}</strong>
               </div>
             </div>
@@ -200,7 +200,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
             >
               <strong>Total Uses</strong>
               <div />
-              <div style={{ textAlign: "right", fontSize: 11 }} className="font-mono" >
+              <div style={{ textAlign: "right", fontSize: 12 }} className="font-mono" >
                 <strong>{data.totalUses}</strong>
               </div>
             </div>

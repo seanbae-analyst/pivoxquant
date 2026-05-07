@@ -201,7 +201,7 @@ export function ActivityPaper({ trades, bookCurrency = "USD", limit = 10 }: Prop
           position: "absolute",
           bottom: 18,
           right: 22,
-          fontSize: 10,
+          fontSize: 12,
           color: "rgba(139,111,71,0.55)",
           letterSpacing: "0.06em",
         }}

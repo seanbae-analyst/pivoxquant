@@ -135,7 +135,7 @@ export function CalendarNewsPaper({
         ) : (
           <p
             className="pq-paper-body"
-            style={{ fontSize: 13 }}
+            style={{ fontSize: 14 }}
           >
             No FX observation available.
           </p>

@@ -140,7 +140,7 @@ export function CompanionEntryV2({
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 color: "rgba(245,240,232,0.65)",
               }}
             >
@@ -160,7 +160,7 @@ export function CompanionEntryV2({
                 padding: "12px 22px",
                 background: "var(--pq-bronze)",
                 color: "var(--pq-ink, #050505)",
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: "0.2em",
                 borderRadius: 2,
                 textDecoration: "none",
@@ -192,7 +192,7 @@ export function CompanionEntryV2({
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 color: "rgba(245,240,232,0.65)",
               }}
             >
@@ -256,7 +256,7 @@ export function CompanionEntryV2({
                   borderRadius: 2,
                   padding: "10px 12px",
                   color: "var(--pq-ivory)",
-                  fontSize: 13,
+                  fontSize: 14,
                   letterSpacing: "-0.01em",
                 }}
               className="font-mono" />
@@ -271,7 +271,7 @@ export function CompanionEntryV2({
                   padding: "12px 22px",
                   background: "var(--pq-bronze)",
                   color: "var(--pq-ink, #050505)",
-                  fontSize: 11,
+                  fontSize: 12,
                   letterSpacing: "0.2em",
                   borderRadius: 2,
                   border: "none",
@@ -290,7 +290,7 @@ export function CompanionEntryV2({
               href="/pricing?plan=plus"
               className="font-mono uppercase"
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: "0.18em",
                 color: "var(--pq-bronze)",
                 borderBottom: "1px solid rgba(184,149,106,0.35)",
@@ -304,7 +304,7 @@ export function CompanionEntryV2({
               href="/companion#sample"
               className="font-mono uppercase"
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: "0.18em",
                 color: "rgba(245,240,232,0.55)",
                 borderBottom: "1px solid rgba(245,240,232,0.14)",

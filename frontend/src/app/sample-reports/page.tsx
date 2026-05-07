@@ -45,7 +45,7 @@ export default function SampleReportsIndexPage() {
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "2px",
             textTransform: "uppercase",
             color: "#6b6b6b",
@@ -103,7 +103,7 @@ export default function SampleReportsIndexPage() {
               </div>
               <div
                 style={{
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: 500,
                   letterSpacing: "-0.012em",
                   marginTop: 8,
@@ -114,7 +114,7 @@ export default function SampleReportsIndexPage() {
               <div
                 style={{
                   marginTop: 14,
-                  fontSize: 10,
+                  fontSize: 12,
                   color: "#8a8a8a",
                   letterSpacing: "0.5px",
                 }}

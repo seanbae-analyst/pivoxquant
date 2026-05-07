@@ -178,7 +178,7 @@ export function AddPositionModalV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 30,
+              fontSize: 32,
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
@@ -313,7 +313,7 @@ export function AddPositionModalV2({
                   color: "var(--pq-ink, #050505)",
                   border: "none",
                   borderRadius: "var(--pq-radius-cta, 2px)",
-                  fontSize: 11,
+                  fontSize: 12,
                   letterSpacing: "0.2em",
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}

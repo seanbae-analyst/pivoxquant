@@ -110,7 +110,7 @@ export function SignalsCard() {
                     className="font-display"
                     style={{
                       fontWeight: 500,
-                      fontSize: 22,
+                      fontSize: 24,
                       letterSpacing: "-0.01em",
                       color: "var(--pq-ivory)",
                     }}
@@ -132,7 +132,7 @@ export function SignalsCard() {
                 <p
                   className="font-serif"
                   style={{
-                    fontSize: 13,
+                    fontSize: 14,
                     lineHeight: 1.5,
                     color: "rgba(245,240,232,0.82)",
                     margin: 0,

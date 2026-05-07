@@ -131,7 +131,7 @@ export function Caption({
 /**
  * Editorial heading — Playfair Display serif, used for v3 section/card
  * headings sized 18~40px. Replaces inline `style={{ fontFamily: '"Playfair
- * Display"...', fontSize: 22~40 }}` patterns scattered across dashboard
+ * Display"...', fontSize: 24~40 }}` patterns scattered across dashboard
  * pages. Anchors design.md §3 typography tokens (h3 = 30px, quote = 22px).
  *
  * - `size`: discrete px value (18 | 22 | 26 | 30 | 32 | 36 | 40)
@@ -323,7 +323,7 @@ export function FootSignature({
         className="pq-caption font-serif"
         style={{
           fontStyle: "italic",
-          fontSize: "11px",
+          fontSize: "12px",
           lineHeight: 1.45,
           color: "rgba(245,240,232,0.45)",
           letterSpacing: "0.02em",

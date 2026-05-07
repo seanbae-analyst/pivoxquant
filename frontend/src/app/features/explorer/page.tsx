@@ -75,7 +75,7 @@ export default function ExplorerPage() {
                 <div className="flex items-center justify-between">
                   <span
                     className="font-mono uppercase"
-                    style={{ color: "rgba(184,149,106,0.6)", fontSize: "10px", letterSpacing: "0.22em" }}
+                    style={{ color: "rgba(184,149,106,0.6)", fontSize: "12px", letterSpacing: "0.22em" }}
                   >
                     {String(i + 1).padStart(2, "0")} / {String(ARTIFACTS.length).padStart(2, "0")}
                   </span>
@@ -99,7 +99,7 @@ export default function ExplorerPage() {
                 >
                   {a.name}
                 </h3>
-                <p className="font-serif italic" style={{ color: "rgba(184,149,106,0.8)", fontSize: "13px" }}>
+                <p className="font-serif italic" style={{ color: "rgba(184,149,106,0.8)", fontSize: "14px" }}>
                   {a.tagline}
                 </p>
                 <p
@@ -117,7 +117,7 @@ export default function ExplorerPage() {
                       className="inline-flex items-center gap-1.5 font-serif italic"
                       style={{
                         color: "var(--pq-bronze)",
-                        fontSize: "13px",
+                        fontSize: "14px",
                         borderBottom: "0.5px solid rgba(184,149,106,0.4)",
                       }}
                     >
@@ -128,7 +128,7 @@ export default function ExplorerPage() {
                   ) : (
                     <span
                       className="inline-flex items-center gap-1.5 font-serif italic"
-                      style={{ color: "rgba(245,240,232,0.4)", fontSize: "13px" }}
+                      style={{ color: "rgba(245,240,232,0.4)", fontSize: "14px" }}
                     >
                       <Lock className="h-3 w-3" aria-hidden />
                       In-app only

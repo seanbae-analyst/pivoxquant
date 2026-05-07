@@ -217,7 +217,7 @@ export function PersonaShowcase() {
                 <h3
                   className="font-serif mb-3"
                   style={{
-                    fontSize: "22px",
+                    fontSize: "24px",
                     lineHeight: 1.12,
                     color: "var(--pq-ivory)",
                     fontWeight: 500,

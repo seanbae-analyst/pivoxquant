@@ -147,7 +147,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-display"
               style={{
-                fontSize: 22,
+                fontSize: 24,
                 color: "var(--pq-bronze)",
                 letterSpacing: "-0.01em",
               }}

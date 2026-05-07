@@ -405,7 +405,7 @@ function SectionHead({
           className="inline-flex items-center gap-2.5 font-mono uppercase"
           style={{
             color: "var(--pq-bronze)",
-            fontSize: "10px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
             fontWeight: 500,
           }}

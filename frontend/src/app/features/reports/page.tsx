@@ -167,7 +167,7 @@ export default function ReportsPage() {
                 className="font-serif uppercase"
                 style={{
                   color: "var(--pq-bronze)",
-                  fontSize: "11px",
+                  fontSize: "12px",
                   letterSpacing: "0.22em",
                 }}
               >

@@ -399,7 +399,7 @@ export default function TopNav() {
                 className="hidden font-serif italic md:inline"
                 style={{
                   color: "rgba(184,149,106,0.75)",
-                  fontSize: "11px",
+                  fontSize: "12px",
                   letterSpacing: "0.08em",
                 }}
               >

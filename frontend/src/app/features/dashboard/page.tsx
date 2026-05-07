@@ -61,7 +61,7 @@ export default function DashboardPreviewPage() {
               >
                 <span
                   className="font-mono uppercase"
-                  style={{ color: "var(--pq-bronze)", fontSize: "10px", letterSpacing: "0.24em" }}
+                  style={{ color: "var(--pq-bronze)", fontSize: "12px", letterSpacing: "0.24em" }}
                 >
                   Pane {p.code}
                 </span>
@@ -108,7 +108,7 @@ export default function DashboardPreviewPage() {
           </motion.div>
 
           <div className="mt-12 flex flex-wrap items-center justify-between gap-4">
-            <p className="font-serif italic" style={{ color: "rgba(245,240,232,0.55)", fontSize: "13px" }}>
+            <p className="font-serif italic" style={{ color: "rgba(245,240,232,0.55)", fontSize: "14px" }}>
               Live dashboard opens after account creation. Every pane respects your persona.
             </p>
             <Link
@@ -117,7 +117,7 @@ export default function DashboardPreviewPage() {
               style={{
                 border: "0.5pt solid rgba(184,149,106,0.5)",
                 color: "var(--pq-ivory)",
-                fontSize: "13px",
+                fontSize: "14px",
                 letterSpacing: "0.02em",
               }}
             >

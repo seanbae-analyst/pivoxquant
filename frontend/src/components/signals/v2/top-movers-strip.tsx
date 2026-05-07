@@ -139,7 +139,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                 <div
                   className="font-display"
                   style={{
-                    fontSize: 17,
+                    fontSize: 18,
                     fontWeight: 500,
                     color: "var(--pq-ivory, #F5F0E8)",
                     lineHeight: 1.2,
@@ -153,7 +153,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                 <div
                   className="font-mono"
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     letterSpacing: "0.14em",
                     color: "rgba(245,240,232,0.45)",
                   }}
@@ -233,7 +233,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   <span
                     className="font-mono"
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       fontVariantNumeric: "tabular-nums",
                       color: pctTone,
                     }}
@@ -243,7 +243,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   <span
                     className="font-mono"
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       fontVariantNumeric: "tabular-nums",
                       color: "rgba(245,240,232,0.40)",
                     }}

@@ -256,7 +256,7 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontSize: 13,
+                fontSize: 14,
               }}
             className="font-serif" >
               Loading equity history…
@@ -270,7 +270,7 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontSize: 13,
+                fontSize: 14,
               }}
             className="font-serif" >
               Unable to load equity history.
@@ -283,7 +283,7 @@ export function EquityCurveBlock({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "rgba(245,240,232,0.55)",
-                fontSize: 13,
+                fontSize: 14,
               }}
             className="font-serif" >
               Not enough history yet.
@@ -401,7 +401,7 @@ function KpiCell({
       <div
         className="font-mono tabular-nums"
         style={{
-          fontSize: 22,
+          fontSize: 24,
           letterSpacing: "-0.01em",
           color: valueColor,
         }}

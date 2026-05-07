@@ -172,7 +172,7 @@ export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }
                 <text x="464" y="156" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">APR</text>
                 <text x="566" y="156" fontFamily="var(--font-mono)" fontSize="8" fill="#8a8a8a">JUN</text>
               </svg>
-              <div style={{ fontSize: 10, color: "var(--r-ink-3)", marginTop: 8 }}>
+              <div style={{ fontSize: 12, color: "var(--r-ink-3)", marginTop: 8 }}>
                 12개월 평균 $1,535 / 이번 달 $1,842 ▲
               </div>
             </PdfCard>

@@ -39,7 +39,7 @@ export function AuthLinkV2({ prompt, action, href }: AuthLinkV2Props) {
         href={href}
         className="pq-auth-link-v2 font-mono"
         style={{
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: "0.20em",
           textTransform: "uppercase",
           color: "var(--pq-bronze, #B8956A)",

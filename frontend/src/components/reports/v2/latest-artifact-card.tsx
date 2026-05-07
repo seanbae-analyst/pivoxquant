@@ -167,7 +167,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
           <span
             className="font-mono uppercase inline-block"
             style={{
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "var(--pq-bronze, #B8956A)",
               border: "1px solid var(--pq-hairline-2, rgba(245,240,232,0.12))",
@@ -183,7 +183,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 30,
+              fontSize: 32,
               lineHeight: 1.15,
               letterSpacing: "-0.01em",
               color: "var(--pq-ivory, #F5F0E8)",
@@ -227,7 +227,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               className="pq-ink-btn-bronze"
-              style={{ fontSize: 11, letterSpacing: "0.18em" }}
+              style={{ fontSize: 12, letterSpacing: "0.18em" }}
             >
               Open full memo ›
             </a>
@@ -260,7 +260,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.45)",
               marginBottom: 16,
@@ -273,7 +273,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 color: "rgba(245,240,232,0.55)",
                 margin: 0,
               }}
@@ -332,7 +332,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
                       <div
                         className="font-mono uppercase"
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           letterSpacing: "0.14em",
                           color: "rgba(245,240,232,0.45)",
                           marginTop: 2,
@@ -347,7 +347,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
                         className="font-mono"
                         style={{
                           fontVariantNumeric: "tabular-nums",
-                          fontSize: 13,
+                          fontSize: 14,
                           color: pctColor,
                         }}
                       >

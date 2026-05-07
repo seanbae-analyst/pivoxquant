@@ -439,7 +439,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 lineHeight: 1.55,
                 color: "rgba(245, 240, 232, 0.78)",
                 margin: 0,
@@ -624,7 +624,7 @@ function Composer({
                 style={{
                   background: canSend ? "var(--pq-bronze, #B8956A)" : "rgba(184, 149, 106, 0.3)",
                   color: canSend ? "var(--pq-ink, #050505)" : "rgba(245, 240, 232, 0.55)",
-                  fontSize: 11,
+                  fontSize: 12,
                   letterSpacing: "0.2em",
                   cursor: canSend ? "pointer" : "not-allowed",
                 }}
@@ -645,7 +645,7 @@ function Composer({
             role="alert"
             className="mt-2 font-serif"
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: "rgba(239, 184, 143, 0.9)",
               margin: 0,
             }}

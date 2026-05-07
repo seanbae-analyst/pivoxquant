@@ -709,7 +709,7 @@ function DrawerContent({
           <p
             className="font-serif italic"
             style={{
-              fontSize: "13px",
+              fontSize: "14px",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.58)",
             }}
@@ -726,7 +726,7 @@ function DrawerContent({
         <p
           className="font-serif italic"
           style={{
-            fontSize: "11px",
+            fontSize: "12px",
             color: "rgba(245,240,232,0.58)",
             letterSpacing: "0.02em",
           }}
@@ -816,7 +816,7 @@ export default function EngineModelsDrawer() {
             <span
               className="font-serif uppercase"
               style={{
-                fontSize: "11px",
+                fontSize: "12px",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -870,7 +870,7 @@ export default function EngineModelsDrawer() {
                   <p
                     className="font-serif uppercase flex items-center gap-3"
                     style={{
-                      fontSize: "11px",
+                      fontSize: "12px",
                       letterSpacing: "0.22em",
                       color: "var(--pq-bronze)",
                     }}
@@ -883,7 +883,7 @@ export default function EngineModelsDrawer() {
                   <span
                     className="font-mono tabular-nums"
                     style={{
-                      fontSize: "11px",
+                      fontSize: "12px",
                       color: "rgba(245,240,232,0.45)",
                       letterSpacing: "0.04em",
                     }}
@@ -895,7 +895,7 @@ export default function EngineModelsDrawer() {
                 <p
                   className="font-serif mb-6"
                   style={{
-                    fontSize: "13px",
+                    fontSize: "14px",
                     color: "rgba(245,240,232,0.55)",
                     letterSpacing: "0.01em",
                   }}
@@ -906,7 +906,7 @@ export default function EngineModelsDrawer() {
                 <ul
                   className="font-mono space-y-1.5"
                   style={{
-                    fontSize: "13px",
+                    fontSize: "14px",
                     lineHeight: 1.75,
                     fontVariantNumeric: "tabular-nums",
                     color: "var(--pq-ivory)",
@@ -930,7 +930,7 @@ export default function EngineModelsDrawer() {
                 <p
                   className="mt-auto pt-8 font-serif italic"
                   style={{
-                    fontSize: "11px",
+                    fontSize: "12px",
                     lineHeight: 1.6,
                     color: "rgba(245,240,232,0.48)",
                   }}

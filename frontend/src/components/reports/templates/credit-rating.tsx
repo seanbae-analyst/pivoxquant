@@ -214,13 +214,13 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
               <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                 {data.watchPrimary.lbl}
               </div>
-              <h3 style={{ fontSize: 22, margin: "6px 0", fontWeight: 500 }} className="font-serif" >
+              <h3 style={{ fontSize: 24, margin: "6px 0", fontWeight: 500 }} className="font-serif" >
                 {data.watchPrimary.title}
               </h3>
             </div>
             <PdfTicker>{data.watchPrimary.ticker}</PdfTicker>
           </PdfFlexBetween>
-          <p style={{ fontSize: 13, lineHeight: 1.65, color: "var(--r-ink-2)", marginTop: 12 }}>
+          <p style={{ fontSize: 14, lineHeight: 1.65, color: "var(--r-ink-2)", marginTop: 12 }}>
             {data.watchPrimary.body}
           </p>
         </div>

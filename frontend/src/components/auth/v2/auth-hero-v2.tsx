@@ -84,7 +84,7 @@ export function AuthHeroV2({
         <p
           className="font-serif"
           style={{
-            fontSize: 17,
+            fontSize: 18,
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.72)",
             maxWidth: 480,
