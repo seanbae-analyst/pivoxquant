@@ -74,6 +74,12 @@ class GKYZVolatility:
         k = 0.34 / (1.34 + (window + 1) / (window - 1))
         var_yz = var_overnight + k * var_close + (1 - k) * var_rs
 
+        # Bug NEW-E fix: var_yz can drift slightly negative on quiet/illiquid
+        # windows where the Rogers-Satchell mean dominates and noise pushes
+        # the combined estimator below zero. np.sqrt(negative) -> NaN, which
+        # then poisons every downstream metric. Clamp to 0.
+        var_yz = max(var_yz, 0.0)
+
         vol_gkyz = float(np.sqrt(var_yz * 252)) * 100  # annualised %
 
         # Standard close-to-close volatility for comparison
