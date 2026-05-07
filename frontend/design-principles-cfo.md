@@ -17,6 +17,7 @@
 ### 1.2 반(反)디자인 원칙 — 하지 않는 것
 - **이모지/일러스트 금지**: 9.9만 원짜리 SaaS는 그림책이 아니다.
 - **그라디언트 금지**: violet/blue/pink 트리오는 2019년 B2C 감성. 삭제.
+  - 예외 (skeleton/vignette/texture-pattern 한정): (1) 로딩 shimmer pulse, (2) 다크 표면 위 radial vignette/glow, (3) `repeating-linear-gradient`/`radial-gradient`를 패턴 프리미티브로 쓰는 paper-grain·dot-pattern·dashed-line. 위 3종은 단색으로 재현 불가능 → 허용. 그 외 모든 색-블렌드 그라디언트(silver-matte text, 메탈릭 sphere, 2-stop 진행바, ink→bronze fill 등)는 단색 토큰으로 교체. 분류표: `.agent-handoff/gradient-classification.md`.
 - **네온 글로우 금지**: 토스는 B2C, PivoxQuant는 B2Self(오너).
 - **"AI가 드립니다" 톤 금지**: "분석팀이 정리했습니다" 톤으로 전환.
 - **둥근 모서리 최소화**: `--radius: 0.5rem` 이하. 리포트는 각진다.
@@ -269,7 +270,7 @@ Spotify Wrapped 아카이브처럼 **시간이 쌓이는 것 자체가 자산**�
 - [ ] 한 화면에 Accent Gold 1회 이하
 - [ ] 모든 숫자가 Mono + tabular-nums
 - [ ] H1/H2는 Serif
-- [ ] 그라디언트 0개 (현재 4개 잔존, 제거 대상)
+- [ ] 그라디언트: skeleton/vignette/texture-pattern 예외 19개 외 0개 (분류표 `.agent-handoff/gradient-classification.md` — 2026-05-07 기준 제거 대상 11 selectors)
 - [ ] 이모지 0개 (금지)
 - [ ] Artifact 문서 하단에 면책 고지
 - [ ] 좌측 여백이 숨쉬는지 (컨테이너 `max-w-[72ch]` 본문)

@@ -76,7 +76,7 @@ export function HomeCard({
           fontSize: 12,
           letterSpacing: "0.22em",
           textTransform: "uppercase",
-          color: "var(--pq-bronze)",
+          color: "rgba(245, 240, 232, 0.6)",
           marginBottom: 20,
         }}
       >
@@ -93,11 +93,11 @@ export function HomeCardStyles() {
   return (
     <style jsx global>{`
       .pq-home-card-v2:hover {
-        border-color: var(--pq-bronze) !important;
+        border-color: var(--muted-foreground) !important;
         background: rgba(184, 149, 106, 0.025) !important;
       }
       .pq-home-card-v2:hover .pq-home-card-v2__corner {
-        color: var(--pq-bronze) !important;
+        color: var(--muted-foreground) !important;
       }
       @media (prefers-reduced-motion: reduce) {
         .pq-home-card-v2 {
