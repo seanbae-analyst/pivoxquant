@@ -74,7 +74,18 @@ def api_auth(f):
     @wraps(f)
     def wrapped(*a, **kw):
         if not current_user.is_authenticated:
-            return jsonify({"error": "Login required"}), 401
+            # 2026-05-08 (NEW-D): emit `code: "SESSION_EXPIRED"` so the
+            # frontend's apiFetch can redirect to /login?expired=1
+            # (frontend/src/lib/api.ts:78). Without the code, 401s thrown
+            # by api_auth surfaced as silent ApiError and stale views.
+            # We use the same SESSION_EXPIRED code that security.py emits
+            # for inactivity timeout — both end-states require re-login,
+            # so a single frontend handler covers them.
+            return jsonify({
+                "error":    "Login required",
+                "error_kr": "로그인이 필요합니다.",
+                "code":     "SESSION_EXPIRED",
+            }), 401
         return f(*a, **kw)
     return wrapped
 
