@@ -40,7 +40,7 @@
 
 | 파일 | 최종 업데이트 | 요약 |
 |------|--------------|------|
-| [USER_GUIDE.md](USER_GUIDE.md) | 2026-04-24 (pw 갱신) | 베타 유저 매뉴얼. 베타 비밀번호: `***REDACTED***`. |
+| [USER_GUIDE.md](USER_GUIDE.md) | 2026-04-24 (pw 갱신) | 베타 유저 매뉴얼. 베타 비밀번호: Railway env `BETA_PASSWORD` 참조. |
 
 ---
 
@@ -73,7 +73,7 @@
 | [launch/LAWYER_CONSULTATION_PACKAGE.md](launch/LAWYER_CONSULTATION_PACKAGE.md) | 2026-04-17 | 변호사 대면 상담 60분 대비 패키지. |
 | [launch/MONETIZATION_STRATEGY.md](launch/MONETIZATION_STRATEGY.md) | 2026-04-17 | 수익화 전략 설계도. 유료 전환 드라이버 분석. |
 | [launch/PAID_MODELS_ROADMAP.md](launch/PAID_MODELS_ROADMAP.md) | 2026-04-18 | Pro/Premium/Elite 티어 차별화 모델 로드맵. |
-| [launch/SECRETS_ROTATION_GUIDE.md](launch/SECRETS_ROTATION_GUIDE.md) | 2026-04-18 | 시크릿 교체 매뉴얼. `***REDACTED***` 노출 사후 대응 포함. |
+| [launch/SECRETS_ROTATION_GUIDE.md](launch/SECRETS_ROTATION_GUIDE.md) | 2026-04-18 | 시크릿 교체 매뉴얼. 구버전 베타 비밀번호 노출 사후 대응 포함. |
 | [LANDING_PAGE_CONTENT.md](LANDING_PAGE_CONTENT.md) | 2026-04-20 | 랜딩 페이지 콘텐츠 명세 (12섹션). |
 
 ---

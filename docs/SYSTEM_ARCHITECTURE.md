@@ -43,7 +43,7 @@
                               │
 ┌─────────────────────────────┼──────────────────────────────────────────┐
 │           Flask Backend (Railway)                                       │
-│   RAILWAY_BACKEND_HOST.up.railway.app  :  PORT                        │
+│   <RAILWAY_BACKEND_URL>  :  PORT                        │
 │                                                                         │
 │  ┌──────────────┐  ┌──────────────────────────────────────────────┐   │
 │  │  security.py  │  │  routes/ (23개 Blueprint + agent_worker)     │   │
@@ -316,7 +316,8 @@ Next.js App Router에서 기본 모든 컴포넌트는 Server Component이다. P
 ```typescript
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  (process.env.VERCEL ? "https://RAILWAY_BACKEND_HOST.up.railway.app" : "http://localhost:5050");
+  (process.env.VERCEL ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:5050");
+// 주의: Vercel env에 NEXT_PUBLIC_API_URL=<RAILWAY_BACKEND_URL> 설정 필요
 
 rewrites: [{ source: "/api/:path*", destination: `${BACKEND_URL}/api/:path*` }]
 ```
@@ -549,7 +550,7 @@ USD/KRW 환율:
 │                  ▼                                    │
 │  ┌──────────────────────────────────────────────┐    │
 │  │  Railway (백엔드 + DB)          ⏸ 재시도 필요  │    │
-│  │  RAILWAY_BACKEND_HOST.up.railway.app          │    │
+│  │  <RAILWAY_BACKEND_URL>          │    │
 │  │                                                │    │
 │  │  [web dyno]                                   │    │
 │  │  gunicorn app:app                             │    │
@@ -606,7 +607,7 @@ CMD ["sh", "-c", "gunicorn app:app --worker-class gevent --workers 1 --bind 0.0.
 | 변수명 | 설명 |
 |--------|------|
 | `NEXT_PUBLIC_API_URL` | Railway 백엔드 URL |
-| `BETA_PASSWORD` | 비공개 베타 비밀번호 (`***REDACTED***`) |
+| `BETA_PASSWORD` | 비공개 베타 비밀번호 (Vercel env에서만 보유) |
 | `BETA_SIGNING_SECRET` | 베타 토큰 서명 키 |
 
 ### 마이그레이션 전략

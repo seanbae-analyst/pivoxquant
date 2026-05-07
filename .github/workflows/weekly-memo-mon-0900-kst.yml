@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      RAILWAY_API_BASE: https://RAILWAY_BACKEND_HOST.up.railway.app
+      RAILWAY_API_BASE: ${{ secrets.RAILWAY_BACKEND_URL }}
       ADMIN_SECRET: ${{ secrets.WEEKLY_MEMO_TRIGGER_SECRET }}
     steps:
       - uses: actions/checkout@v4

@@ -59,7 +59,7 @@ def kis_user(app, make_user):
             user_id=user["id"],
             app_key="PS-APP-KEY-FAKE-1234567890",
             app_secret="SECRET-FAKE-ABCDEFGH-0987654321",
-            account_no="XXXXXXXX",
+            account_no="12345678",
             account_prod="01",
             display_name="테스트 계좌",
         )

@@ -23,7 +23,7 @@
 **B. 보안 시크릿 — 즉시 (50자+ 랜덤)**
 - [ ] `CSRF_SECRET` — `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`
 - [ ] `PIVOX_BROKER_ENCRYPTION_KEY` — Fernet 키. `python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`
-- [ ] `BETA_PASSWORD` — 베타 게이트 비밀번호 (현재 메모리: `***REDACTED***`. 출시 전 rotate)
+- [ ] `BETA_PASSWORD` — 베타 게이트 비밀번호 (Railway env에서만 보유. 출시 전 rotate)
 
 **C. 인프라 URL**
 - [ ] `DATABASE_URL` — Railway PostgreSQL connection string (prod). 로컬은 SQLite 자동

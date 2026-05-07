@@ -35,7 +35,7 @@ permissions:
   contents: read
 
 env:
-  BASE_URL: https://RAILWAY_BACKEND_HOST.up.railway.app
+  BASE_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
   ARTIFACTS_DIR: nightly_artifacts
   PYTHONUNBUFFERED: '1'
 

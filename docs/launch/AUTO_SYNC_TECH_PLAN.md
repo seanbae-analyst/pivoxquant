@@ -751,7 +751,7 @@ Auth: session cookie
 Body: {
   "app_key": "PS...",
   "app_secret": "abc...",
-  "account_no": "XXXXXXXX",
+  "account_no": "12345678",
   "account_prod": "01",
   "display_name": "내 한투 주식계좌"
 }

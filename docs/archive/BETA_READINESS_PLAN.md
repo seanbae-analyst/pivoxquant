@@ -17,7 +17,7 @@
 | DB | ✅ Railway PostgreSQL 연결 |
 | API 프록시 | ✅ Vercel → Railway (next.config 하드코딩) |
 | CORS | ✅ pivoxquant.com, vercel.app 허용 |
-| 베타 게이트 | ✅ `***REDACTED***` 비번 작동 |
+| 베타 게이트 | ✅ `${BETA_PASSWORD}` 비번 작동 |
 | OAuth redirect URI | ✅ Google + Kakao 4개씩 등록 |
 | 환경변수 19개 | ✅ Railway 주입 |
 
@@ -81,7 +81,7 @@
 
 ### 🚨 C2. 베타 비밀번호 쿠키 평문 저장
 - **파일**: `frontend/src/app/api/beta-auth/route.ts:42`
-- **증거**: `response.cookies.set(COOKIE_NAME, correct, …)` — 쿠키 값 자체가 `***REDACTED***`
+- **증거**: `response.cookies.set(COOKIE_NAME, correct, …)` — 쿠키 값 자체가 평문 비밀번호 (구버전)
 - **공격 시나리오**: 지인 PC 쿠키 1건 유출 → 비번 전체 노출, 30일 보존 → 로테이션 불가
 - **수정**:
   - HMAC 서명 토큰 (`sign(BETA_SECRET, userAgent+timestamp)`)
@@ -187,7 +187,7 @@
 
 ### 수동 테스트 체크리스트 (CEO 기준)
 - [ ] `https://pivoxquant.com` 접속 → 베타 게이트
-- [ ] `***REDACTED***` 입력 → 홈 진입
+- [ ] `${BETA_PASSWORD}` 입력 → 홈 진입
 - [ ] Google 로그인 버튼 → Google OAuth 이동
 - [ ] Kakao 로그인 버튼 → Kakao OAuth 이동
 - [ ] 홈 대시보드 (Market, Signals, Portfolio) 데이터 로딩

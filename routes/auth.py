@@ -299,18 +299,30 @@ def login():
 
 # Origin allowlist for logout POSTs. Same set as OAuth redirect whitelist —
 # if you're not one of these origins you have no business calling our logout.
-_LOGOUT_ALLOWED_ORIGINS = frozenset({
-    "https://pivoxquant.vercel.app",
-    "https://pivoxquant.com",
-    "https://www.pivoxquant.com",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    # Same-origin (Railway direct) — used by curl/tests and the production
-    # backend when served without the Vercel edge.
-    "http://localhost:5050",
-    "http://127.0.0.1:5050",
-    "https://RAILWAY_BACKEND_HOST.up.railway.app",
-})
+# Railway hostname is read from RAILWAY_BACKEND_URL env (set in Railway env);
+# falls back to RAILWAY_PUBLIC_DOMAIN (Railway-injected) when present.
+_RAILWAY_ORIGIN = (
+    os.environ.get("RAILWAY_BACKEND_URL", "").rstrip("/")
+    or (
+        f"https://{os.environ['RAILWAY_PUBLIC_DOMAIN']}"
+        if os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+        else ""
+    )
+)
+_LOGOUT_ALLOWED_ORIGINS = frozenset(
+    {
+        "https://pivoxquant.vercel.app",
+        "https://pivoxquant.com",
+        "https://www.pivoxquant.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        # Same-origin (Railway direct) — used by curl/tests and the production
+        # backend when served without the Vercel edge.
+        "http://localhost:5050",
+        "http://127.0.0.1:5050",
+    }
+    | ({_RAILWAY_ORIGIN} if _RAILWAY_ORIGIN else set())
+)
 
 
 def _logout_origin_ok() -> bool:

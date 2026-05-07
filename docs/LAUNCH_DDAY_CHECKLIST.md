@@ -20,6 +20,44 @@
 | ruff lint | All checks passed | 변경된 14개 파일 |
 | Beta gate | pivoxquant.com → /beta-gate | 정상 |
 
+### V2 토글 출시 매트릭스 (D-1 결정 항목)
+
+> **결정 룰**: 시각 회귀 캡처가 없으면 OFF로 권장 (CEO가 D-1 직접
+> 클릭 검증 후 ON 승급). E2E는 현재 `frontend/e2e/smoke.spec.ts`만
+> 존재하며 V2 페이지 dedicated coverage 없음.
+>
+> **Evidence 기준 (2026-05-07 시점)**:
+> - 시각 회귀 SS: `test-results/e2e-2026-04-15-v2/` 디렉터리 — 1개
+>   파일(`01-hero-after-gate.jpg`, 랜딩 hero) 외 V2 페이지 캡처 0개
+> - E2E: `smoke.spec.ts`는 `/`, `/login` reachability만 테스트, V2
+>   페이지별 검증 없음
+> - 코드 default: `frontend/src/app/.../page.tsx` 첫 20줄 주석 + 3-way
+>   `_v1`/`_v2` 라우팅 분기
+
+| Flag | V2 LOC | 코드 default | 시각 회귀 SS | E2E | **출시 권장값** | 사유 |
+|---|---:|:---:|:---:|:---:|:---:|---|
+| `NEXT_PUBLIC_HOME_V2`      | 185 | **active** | ❌ | ❌ | **OFF** | 캡처 없음. CEO 검증 후 ON 승급 |
+| `NEXT_PUBLIC_REPORTS_V2`   | 193 | **active** | ❌ | ❌ | **OFF** | 캡처 없음 |
+| `NEXT_PUBLIC_PORTFOLIO_V2` | 366 | **active** | ❌ | ❌ | **OFF** | 캡처 없음 |
+| `NEXT_PUBLIC_RISK_V2`      | 267 | **active** | ❌ | ❌ | **OFF** | 캡처 없음 |
+| `NEXT_PUBLIC_SIGNALS_V2`   | 249 | **active** | ❌ | ❌ | **OFF** | 캡처 없음 |
+| `NEXT_PUBLIC_SETTINGS_V2`  | 952 | V1 default | ❌ | ❌ | **OFF** | 코드 default와 일치 |
+| `NEXT_PUBLIC_PROFILE_V2`   | 649 | V1 default | ❌ | ❌ | **OFF** | 코드 default와 일치 |
+| `NEXT_PUBLIC_SIGNUP_V2`    | 531 | V1 default | ❌ | ❌ | **OFF** | 코드 default와 일치 |
+| `NEXT_PUBLIC_LOGIN_V2`     | 239 | V1 default | ❌ | ❌ | **OFF** | 코드 default와 일치 |
+
+> **⚠️ 코드 default vs 권장값 충돌 (5개)**: HOME / REPORTS / PORTFOLIO /
+> RISK / SIGNALS는 코드상 V2 active default지만 캡처 없음 → 권장 OFF.
+> 충돌 해소 옵션 2가지:
+>
+> 1. **Vercel env에서 명시적 OFF** (`NEXT_PUBLIC_*_V2=false` 5건 설정):
+>    코드 변경 없이 즉시 적용. D-day 후 CEO 검증 + 캡처 추가 시 ON
+>    승급. **권장 (출시 안전성 우선)**
+> 2. **D-day 전 시각 회귀 캡처 5장 + smoke E2E 추가**: 1~2시간 작업.
+>    시간 여유 있으면 이쪽 — 코드 default 유지 가능
+>
+> CEO 결정 항목.
+
 ---
 
 ## 🔴 즉시 (D-7 이전)
@@ -71,7 +109,7 @@
 
 | # | 항목 | 비고 |
 |---|---|---|
-| 25 | 베타 비밀번호 rotation 정책 | 현재 `***REDACTED***`. 노출 시 즉시 폐기 |
+| 25 | 베타 비밀번호 rotation 정책 | Railway env `BETA_PASSWORD`에서만 보유. 노출 시 즉시 폐기 |
 | 26 | Sentry 알림 채널 (Slack/이메일) | sentry.io 프로젝트 설정 |
 | 27 | Anthropic 잔액 자동 알림 | 임계치 이하 시 메일 |
 | 28 | 도메인 SSL 자동 갱신 확인 | Vercel + Railway 둘 다 자동이지만 90일 만료 한 번 체크 |

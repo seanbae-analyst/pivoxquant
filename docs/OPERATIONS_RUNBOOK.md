@@ -116,7 +116,7 @@ git push origin main
 
 | 변수 | 발급처 | 형식 | 주의사항 |
 |------|--------|------|----------|
-| `GOOGLE_CLIENT_ID` | https://console.cloud.google.com/apis/credentials | `xxxx.apps.googleusercontent.com` | Authorized redirect URI: `https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/google/callback` 등록 필수 |
+| `GOOGLE_CLIENT_ID` | https://console.cloud.google.com/apis/credentials | `xxxx.apps.googleusercontent.com` | Authorized redirect URI: `${RAILWAY_BACKEND_URL}/api/auth/google/callback` 등록 필수 |
 | `GOOGLE_CLIENT_SECRET` | 위와 동일 | `GOCSPX-...` | 유출 시 즉시 로테이션 |
 | `KAKAO_CLIENT_ID` | https://developers.kakao.com | 10자리 숫자 | REST API 키 사용 (Native가 아님) |
 | `KAKAO_CLIENT_SECRET` | 위와 동일 | 32자 hex | 카카오 콘솔에서 "보안 → Client Secret 사용" 활성화 필요 |
@@ -149,8 +149,8 @@ git push origin main
 |------|-----|------|
 | `RUN_SCHEDULER` | `1` | APScheduler 백그라운드 작업 활성화 (production에서만 `1`) |
 | `KIS_USE_REAL` | `0` or `1` | 한국 실전 계좌 사용 여부 (**현재 0 고정**) |
-| `BETA_PASSWORD` | `***REDACTED***` | 베타 게이트 비밀번호. 오픈 런칭 시 제거 |
-| `DEV_LOGIN_SECRET` | `***REDACTED***` | QA 전용 바이패스. **QA 종료 후 즉시 삭제** |
+| `BETA_PASSWORD` | `***REDACTED — Railway env에서만 보유***` | 베타 게이트 비밀번호. 오픈 런칭 시 제거 |
+| `DEV_LOGIN_SECRET` | `***REDACTED — Railway env에서만 보유***` | QA 전용 바이패스. **QA 종료 후 즉시 삭제** |
 | `CORS_ORIGINS` | `https://pivoxquant.com,https://www.pivoxquant.com,https://pivoxquant.vercel.app` | 쉼표 구분. 후행 슬래시 없이 |
 | `FRONTEND_URL` | `https://pivoxquant.com` | OAuth 콜백 후 리다이렉트 대상 |
 
@@ -158,8 +158,8 @@ git push origin main
 
 | 변수 | 값 | 주의사항 |
 |------|-----|----------|
-| `NEXT_PUBLIC_API_URL` | `https://RAILWAY_BACKEND_HOST.up.railway.app` | **`NEXT_PUBLIC_` 접두사** 때문에 브라우저 노출됨. 비밀값 금지 |
-| `BETA_PASSWORD` | `***REDACTED***` | middleware.ts 베타 게이트용 |
+| `NEXT_PUBLIC_API_URL` | `<RAILWAY_BACKEND_URL>` (Vercel env로 등록) | **`NEXT_PUBLIC_` 접두사** 때문에 브라우저 노출됨. 비밀값 금지 |
+| `BETA_PASSWORD` | `***REDACTED — Vercel env에서만 보유***` | middleware.ts 베타 게이트용 |
 | `BETA_SIGNING_SECRET` | `4c492c93...(64자 hex)` | 베타 쿠키 서명. 변경 시 모든 베타 유저 재로그인 |
 
 ### 2-7. 변경 시 공통 주의사항
@@ -204,7 +204,7 @@ git push origin main
 **Railway Logs**:
 ```bash
 # Railway CLI 설치 후
-railway logs --service RAILWAY_BACKEND_HOST
+railway logs --service <RAILWAY_SERVICE_NAME>
 # 또는 대시보드에서 Service → Logs 탭 (실시간 스트림)
 ```
 
@@ -243,7 +243,7 @@ curl "https://financialmodelingprep.com/stable/quote?symbol=AAPL&apikey=$FMP_API
 # Alpaca
 curl -H "APCA-API-KEY-ID: $ALPACA_API_KEY" -H "APCA-API-SECRET-KEY: $ALPACA_SECRET_KEY" https://paper-api.alpaca.markets/v2/account
 # KIS (토큰 유효성)
-curl "https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/fx"
+curl "${RAILWAY_BACKEND_URL}/api/market/fx"
 ```
 
 ---
@@ -257,7 +257,7 @@ curl "https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/fx"
 **진단 순서**:
 1. Vercel Dashboard → 최신 배포 상태 green인지
 2. Railway Dashboard → 서비스 상태 "Active"인지
-3. `curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/me` — 200/401 응답인지
+3. `curl ${RAILWAY_BACKEND_URL}/api/auth/me` — 200/401 응답인지
 4. Railway Logs에서 `Exception` / `Traceback` 검색
 
 **해결 순서**:
@@ -277,7 +277,7 @@ curl "https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/fx"
 **진단 순서**:
 1. 브라우저 DevTools → Network → OAuth 요청 response 확인
 2. Railway 환경변수 `GOOGLE_CLIENT_ID` / `KAKAO_CLIENT_ID` 존재?
-3. Google Cloud Console → Credentials → Authorized redirect URIs에 `https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/google/callback` 있는지
+3. Google Cloud Console → Credentials → Authorized redirect URIs에 `${RAILWAY_BACKEND_URL}/api/auth/google/callback` 있는지
 4. Kakao Developers → 내 애플리케이션 → 카카오 로그인 → Redirect URI 확인
 
 **해결 순서**:
@@ -712,7 +712,7 @@ cd /Users/seanbae/Desktop/취준/pivoxquant/frontend && npm run dev  # frontend
 # Railway CLI
 railway login
 railway link
-railway logs --service RAILWAY_BACKEND_HOST
+railway logs --service <RAILWAY_SERVICE_NAME>
 railway run python3 -c "from app import create_app; app=create_app(); print(app.config['SQLALCHEMY_DATABASE_URI'])"
 
 # Vercel CLI
@@ -729,7 +729,7 @@ psql $DATABASE_URL
 git revert HEAD && git push origin main
 
 # 헬스체크
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/me
+curl ${RAILWAY_BACKEND_URL}/api/auth/me
 curl https://pivoxquant.com/api/market/fx
 ```
 

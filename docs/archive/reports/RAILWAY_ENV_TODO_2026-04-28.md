@@ -5,7 +5,7 @@
 
 ## 1. 필수: FRED_API_KEY 추가
 
-Railway 대시보드 → 백엔드 서비스 (`RAILWAY_BACKEND_HOST`) → **Settings → Variables → Add Variable**
+Railway 대시보드 → 백엔드 서비스 (`<RAILWAY_SERVICE_NAME>`) → **Settings → Variables → Add Variable**
 
 | Name | Value |
 |---|---|
@@ -15,7 +15,7 @@ Railway 대시보드 → 백엔드 서비스 (`RAILWAY_BACKEND_HOST`) → **Sett
 
 검증:
 ```bash
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/alt-data/macro/snapshot
+curl <RAILWAY_BACKEND_URL>/api/alt-data/macro/snapshot
 ```
 - 추가 전: `503 FRED_NOT_CONFIGURED`
 - 추가 후: `200 OK` + JSON body (FEDFUNDS / DGS10 / T10Y2Y 등 시리즈 값)
@@ -40,7 +40,7 @@ Premium $29 사용 중이므로 **default 가 Premium 에 맞게 설정됨** (`F
 검증:
 ```bash
 # admin 로그인 후
-curl -b "$ADMIN_COOKIE" https://RAILWAY_BACKEND_HOST.up.railway.app/api/admin/fmp-usage
+curl -b "$ADMIN_COOKIE" <RAILWAY_BACKEND_URL>/api/admin/fmp-usage
 ```
 - `daily_limit: 10000` → Premium default 정상
 - `daily_limit: 250` → Starter override 적용됨
@@ -53,22 +53,22 @@ Railway 자동 배포 완료 후 (CI 통과 확인 후):
 
 ```bash
 # 1. discover (이전: is_mock:true → 이제 503 또는 실데이터)
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/discover/market-overview
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/discover/movers
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/discover/sectors
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/discover/screeners
+curl <RAILWAY_BACKEND_URL>/api/discover/market-overview
+curl <RAILWAY_BACKEND_URL>/api/discover/movers
+curl <RAILWAY_BACKEND_URL>/api/discover/sectors
+curl <RAILWAY_BACKEND_URL>/api/discover/screeners
 
 # 2. FMP-dependent (이전: 빈 배열 → 이제 실데이터 or 503)
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/indices
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/sectors
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/news/AAPL
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/earnings
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/chart/AAPL
-curl "https://RAILWAY_BACKEND_HOST.up.railway.app/api/prices?tickers=AAPL,NVDA"
+curl <RAILWAY_BACKEND_URL>/api/market/indices
+curl <RAILWAY_BACKEND_URL>/api/sectors
+curl <RAILWAY_BACKEND_URL>/api/news/AAPL
+curl <RAILWAY_BACKEND_URL>/api/earnings
+curl <RAILWAY_BACKEND_URL>/api/chart/AAPL
+curl "<RAILWAY_BACKEND_URL>/api/prices?tickers=AAPL,NVDA"
 
 # 3. FRED macro (FRED_API_KEY 추가 후만)
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/alt-data/macro/snapshot
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/alt-data/macro/regime
+curl <RAILWAY_BACKEND_URL>/api/alt-data/macro/snapshot
+curl <RAILWAY_BACKEND_URL>/api/alt-data/macro/regime
 ```
 
 각 endpoint:
@@ -101,7 +101,7 @@ curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/alt-data/macro/regime
 
 옵션:
 - A. 본인이 직접 https://pivoxquant.com 로그인 + 6종 클릭 테스트
-- B. dev-login 쿠키 활용 (`.env DEV_LOGIN_SECRET=***REDACTED***`) — user-tester agent 재실행
+- B. dev-login 쿠키 활용 (`.env DEV_LOGIN_SECRET=<set-via-Railway-env>`) — user-tester agent 재실행
 
 ---
 

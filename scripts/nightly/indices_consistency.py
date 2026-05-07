@@ -37,10 +37,9 @@ if os.environ.get("INSECURE_SSL") == "1":
 else:
     _SSL_CTX = None
 
-BASE_URL = os.environ.get(
-    "BASE_URL",
-    "https://RAILWAY_BACKEND_HOST.up.railway.app",
-).rstrip("/")
+BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
+if not BASE_URL:
+    raise SystemExit("BASE_URL env var is required (set to Railway backend URL)")
 RESULTS_PATH = Path(os.environ.get("RESULTS_PATH", "nightly_artifacts/indices_consistency.jsonl"))
 TIMEOUT_S = float(os.environ.get("HTTP_TIMEOUT_S", "15"))
 

@@ -81,7 +81,7 @@
 ### 2-C. Stale 후보 (StockPilot 잔재)
 
 docs/ 내 StockPilot 언급 파일 7건 확인:
-- `docs/launch/SECRETS_ROTATION_GUIDE.md` — 의도적: `***REDACTED***` 구버전 노출 사고 기록 문서. 맥락상 정확한 역사 기록이므로 **유지**.
+- `docs/launch/SECRETS_ROTATION_GUIDE.md` — 의도적: 구버전 베타 비밀번호 노출 사고 기록 문서. 맥락상 정확한 역사 기록이므로 **유지**.
 - `docs/archive/SESSION_2026-04-16.md` — 이미 archive. **유지**.
 - `docs/archive/BETA_READINESS_PLAN.md` — 이미 archive. **유지**.
 - `docs/archive/env-setup.md` — 이미 archive. **유지**.
@@ -117,17 +117,17 @@ reports/ 내 StockPilot 언급: FIELD_MAPPING_AUDIT + vercel-redirect-fix 2건.
 
 ## 5. Stale 데이터 수정 (5건)
 
-구버전 베타 비밀번호 `***REDACTED***` (2026-04-15 공개 노출로 폐기됨) → `***REDACTED***` (2026-04-19 rotate) 갱신.
+구버전 베타 비밀번호 (2026-04-15 공개 노출로 폐기됨) → 신규 비밀번호 (2026-04-19 rotate) 갱신.
 
 | 파일 | 수정 위치 | 변경 내용 |
 |------|-----------|-----------|
-| `docs/USER_GUIDE.md` | 헤더 + 베타 접속 방법 + FAQ (3곳) | `***REDACTED***` → `***REDACTED***` |
-| `docs/SYSTEM_ARCHITECTURE.md` | Section 7 Vercel 환경변수 표 | `***REDACTED***` → `***REDACTED***` |
-| `docs/OPERATIONS_RUNBOOK.md` | Section 2-5 기능 플래그 표 + 2-6 프론트엔드 표 (2곳) | `***REDACTED***` → `***REDACTED***` |
-| `docs/launch/LAWYER_CONSULTATION_PACKAGE.md` | Section 6 미팅 준비물 + URL 갱신 | `***REDACTED***` → `***REDACTED***`, URL을 `pivoxquant.vercel.app` → `pivoxquant.com`으로 갱신 |
+| `docs/USER_GUIDE.md` | 헤더 + 베타 접속 방법 + FAQ (3곳) | 구→신 비밀번호 갱신 (평문은 본 문서에 미기재) |
+| `docs/SYSTEM_ARCHITECTURE.md` | Section 7 Vercel 환경변수 표 | 구→신 비밀번호 갱신 |
+| `docs/OPERATIONS_RUNBOOK.md` | Section 2-5 기능 플래그 표 + 2-6 프론트엔드 표 (2곳) | 구→신 비밀번호 갱신 |
+| `docs/launch/LAWYER_CONSULTATION_PACKAGE.md` | Section 6 미팅 준비물 + URL 갱신 | 비밀번호 갱신, URL을 `pivoxquant.vercel.app` → `pivoxquant.com`으로 갱신 |
 
-> archive/ 내 파일의 `***REDACTED***` 언급은 역사적 기록이므로 수정하지 않음.  
-> SECRETS_ROTATION_GUIDE.md 의 `***REDACTED***` 언급은 보안 사고 기록 문서이므로 수정하지 않음 (기록 보존이 목적).
+> archive/ 내 파일의 구버전 비밀번호 언급은 역사적 기록이므로 수정하지 않음.  
+> SECRETS_ROTATION_GUIDE.md 의 구버전 비밀번호 언급은 보안 사고 기록 문서이므로 수정하지 않음 (기록 보존이 목적).
 
 ---
 
