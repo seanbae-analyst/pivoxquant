@@ -42,27 +42,33 @@ interface ReportEntry {
 }
 
 // Group ordering matches the dashboard catalog: Free → Pro → Premium.
+// Tier truth: backend `@require_tier` decorators in `routes/artifacts.py` +
+// per-service `_PAID_TIERS` constants. These tiers gate actual access control.
 const REPORTS: readonly ReportEntry[] = [
-  // — Free (2) —
-  { slug: "weekly-memo",           type: "Memo",           title: "Weekly Memo",            cadence: "Every Sunday",          tier: "Free" },
+  // — Free (1) — backend: brag_card_service `_PAID_TIERS` excludes free explicitly
+  // ("Everyone, Free included"). monthly_brag is the PNG variant of brag_card,
+  // collapsed into the single "Brag Card" landing card.
   { slug: "brag-card",             type: "Brag Card",      title: "Brag Card",              cadence: "Monthly",               tier: "Free" },
-  // — Pro (9) —
+  // — Pro (7) — backend `@require_tier("pro")` for these artifact types.
+  // morning-brief-plus has frontend template only (no backend route yet);
+  // labelled per its template comment "Pro · 1 page · Daily · Pre-market".
+  { slug: "weekly-memo",           type: "Memo",           title: "Weekly Memo",            cadence: "Every Sunday",          tier: "Pro" },
   { slug: "morning-brief-plus",    type: "Brief",          title: "Morning Brief Plus",     cadence: "Daily · Pre-market",    tier: "Pro" },
   { slug: "earnings-prebrief",     type: "Pre-Brief",      title: "Earnings Pre-Brief",     cadence: "On earnings ±24h",      tier: "Pro" },
   { slug: "dd-checklist",          type: "Checklist",      title: "DD Checklist",           cadence: "On demand",             tier: "Pro" },
-  { slug: "risk-board",            type: "Risk",           title: "Risk Board",             cadence: "Weekly",                tier: "Pro" },
-  { slug: "portfolio-segment",     type: "Segment",        title: "Portfolio Segment",      cadence: "Monthly",               tier: "Pro" },
-  { slug: "dividend-income",       type: "Income",         title: "Dividend Income",        cadence: "Monthly",               tier: "Pro" },
-  { slug: "insider-mirror",        type: "Mirror",         title: "Insider Mirror",         cadence: "Weekly",                tier: "Pro" },
-  { slug: "quarterly-self-report", type: "Self-Report",    title: "Quarterly Self Report",  cadence: "Quarterly",             tier: "Pro" },
-  { slug: "self-audit",            type: "Audit",          title: "Self Audit",             cadence: "On demand",             tier: "Pro" },
-  // — Premium (6) —
+  { slug: "kpi-dashboard",         type: "KPI",            title: "KPI Dashboard",          cadence: "Monthly",               tier: "Pro" },
+  { slug: "credit-rating",         type: "Rating",         title: "Credit Rating",          cadence: "Quarterly",             tier: "Pro" },
+  { slug: "burn-rate",             type: "Burn",           title: "Burn Rate",              cadence: "Monthly",               tier: "Pro" },
+  // — Premium (9) — backend `@require_tier("premium")` for these artifact types.
+  { slug: "risk-board",            type: "Risk",           title: "Risk Board",             cadence: "Weekly",                tier: "Premium" },
+  { slug: "portfolio-segment",     type: "Segment",        title: "Portfolio Segment",      cadence: "Monthly",               tier: "Premium" },
+  { slug: "dividend-income",       type: "Income",         title: "Dividend Income",        cadence: "Monthly",               tier: "Premium" },
+  { slug: "insider-mirror",        type: "Mirror",         title: "Insider Mirror",         cadence: "Weekly",                tier: "Premium" },
+  { slug: "quarterly-self-report", type: "Self-Report",    title: "Quarterly Self Report",  cadence: "Quarterly",             tier: "Premium" },
+  { slug: "self-audit",            type: "Audit",          title: "Self Audit",             cadence: "On demand",             tier: "Premium" },
   { slug: "monthly-finance",       type: "Finance",        title: "Monthly Finance",        cadence: "Monthly",               tier: "Premium" },
-  { slug: "kpi-dashboard",         type: "KPI",            title: "KPI Dashboard",          cadence: "Monthly",               tier: "Premium" },
   { slug: "capital-allocation",    type: "Allocation",     title: "Capital Allocation",     cadence: "Quarterly",             tier: "Premium" },
-  { slug: "credit-rating",         type: "Rating",         title: "Credit Rating",          cadence: "Quarterly",             tier: "Premium" },
   { slug: "year-end-letter",       type: "Letter",         title: "Year-End Letter",        cadence: "Annual",                tier: "Premium" },
-  { slug: "burn-rate",             type: "Burn",           title: "Burn Rate",              cadence: "Monthly",               tier: "Premium" },
 ] as const;
 
 /* ── Tier badge ── */

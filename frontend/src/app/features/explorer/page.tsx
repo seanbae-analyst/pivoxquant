@@ -14,11 +14,16 @@ const fadeUp: Variants = {
 };
 const stagger: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.04 } } };
 
+// Tier truth: backend `@require_tier` decorators in `routes/artifacts.py` +
+// per-service `_PAID_TIERS` constants. AI Suite removed 2026-05-07 — no
+// backend service, was a phantom marketing entry. KPI Dashboard added —
+// backend has @require_tier("pro") on kpi_dashboard_preview.
 const ARTIFACTS = [
   { name: "Weekly Memo", tier: "PRO", tagline: "Monday briefing", format: "5-page PDF · Monday 07:00 KST", sampleUrl: "/sample-reports/weekly-memo" },
   { name: "Earnings Pre-Brief", tier: "PRO", tagline: "Day-before setup", format: "6-page PDF · day before earnings", sampleUrl: "/sample-reports/earnings-prebrief" },
-  { name: "AI Suite", tier: "PRO", tagline: "Eight-model pattern board", format: "In-app · nightly", sampleUrl: null },
+  { name: "Morning Brief Plus", tier: "PRO", tagline: "Pre-market priorities", format: "1-page PDF · daily 07:00 KST", sampleUrl: "/sample-reports/morning-brief-plus" },
   { name: "DD Checklist", tier: "PRO", tagline: "10-K / 10-Q reading aid", format: "Interactive · PDF export", sampleUrl: null },
+  { name: "KPI Dashboard", tier: "PRO", tagline: "YTD / Sharpe / MDD snapshot", format: "Monthly · in-app + PDF", sampleUrl: null },
   { name: "Burn Rate", tier: "PRO", tagline: "Cash runway worksheet", format: "In-app · PDF on demand", sampleUrl: null },
   { name: "Credit Rating", tier: "PRO", tagline: "Altman Z + coverage", format: "1-page PDF", sampleUrl: null },
   { name: "Monthly Finance", tier: "PREMIUM", tagline: "Month-in-review ledger", format: "8-page PDF · first of month", sampleUrl: null },
