@@ -8,13 +8,14 @@
 
 ## 1. Why this document exists
 
-During the Wave 1 beta launch, the beta-gate password **`***REDACTED***`** was committed
-to the public GitHub repository (`seanbae-analyst/pivoxquant`) across multiple
-commits. Git history is effectively permanent; even if the file is removed from
-the working tree, the value remains retrievable via:
+During the Wave 1 beta launch, the beta-gate password (the original pre-rotate
+value, redacted here) was committed to the public GitHub repository
+(`seanbae-analyst/pivoxquant`) across multiple commits. Git history is effectively
+permanent; even if the file is removed from the working tree, the value remains
+retrievable via:
 
 ```
-git log --all -p -S '***REDACTED***'
+git log --all -p -S '<leaked-beta-password-value>'
 ```
 
 Anyone who cloned the repo (including archive/mirror bots, fork tooling, and
@@ -31,7 +32,7 @@ becomes necessary (breach, former contractor, etc.).
 
 | Secret | Scope of exposure | Severity |
 |---|---|---|
-| `BETA_PASSWORD=***REDACTED***` | Public GitHub commits (5+) | **MEDIUM** (gate only — no money, no PII behind it) |
+| `BETA_PASSWORD=<original pre-rotate value>` | Public GitHub commits (5+) | **MEDIUM** (gate only — no money, no PII behind it) |
 
 ### 2.1 Why it is only MEDIUM, not HIGH
 
@@ -138,8 +139,9 @@ Guidelines:
 
 ### 5.5 Update `CLAUDE.md` and memory
 
-The memory file lists the current beta password as `***REDACTED***`. Update the
-`# Brand` section to reflect the rotated value.
+The memory file used to list the original (pre-rotate) beta password value.
+Update the `# Brand` section to reflect each rotated value (do not commit the
+literal string — keep it in Railway env only).
 
 ---
 
@@ -160,7 +162,7 @@ cd pivoxquant.git
 
 # Create a replacements file
 cat > /tmp/bfg-replacements.txt <<'EOF'
-***REDACTED***==>***REMOVED***
+<leaked-beta-password-value>==>***REMOVED***
 EOF
 
 # Rewrite history
@@ -197,5 +199,5 @@ Recommended action: **rotate the secret, skip the rewrite.**
 
 | Date | Event | Action taken |
 |---|---|---|
-| 2026-04-15 | `BETA_PASSWORD=***REDACTED***` committed publicly | PENDING — see Section 5 |
+| 2026-04-15 | `BETA_PASSWORD` (pre-rotate value) committed publicly | PENDING — see Section 5 |
 | | | |

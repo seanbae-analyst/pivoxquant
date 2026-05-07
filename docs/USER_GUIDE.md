@@ -1,7 +1,7 @@
 # PivoxQuant 유저 매뉴얼
 
 > 버전: 베타 | 최종 업데이트: 2026-04-24
-> 베타 비밀번호: `***REDACTED***`
+> 베타 비밀번호: `***REDACTED — Railway env BETA_PASSWORD 참조***`
 
 ---
 
@@ -33,7 +33,7 @@ PivoxQuant는 AI + 퀀트(Quantitative Analysis, 통계·수학적 분석) 기�
 ### 베타 접속 방법
 
 1. **pivoxquant.vercel.app** 접속
-2. 베타 비밀번호 입력: `***REDACTED***`
+2. 베타 비밀번호 입력: `***REDACTED — Railway env BETA_PASSWORD 참조***`
 3. 로그인 화면으로 이동
 
 ### 로그인
@@ -640,7 +640,7 @@ Pro 플랜 이상에서 Morning Brief 이메일 수신 여부를 토글로 제�
 ## FAQ
 
 **Q1. 베타 비밀번호는 무엇인가요?**
-A. `***REDACTED***` 입니다.
+A. 베타 운영자에게 별도 안내 (Railway env `BETA_PASSWORD` 참조 — 이 문서에는 평문으로 기록하지 않음).
 
 **Q2. 이메일/비밀번호로 가입할 수 있나요?**
 A. 현재 Google 및 카카오 소셜 로그인만 지원합니다. 이메일 가입은 향후 추가될 예정입니다.

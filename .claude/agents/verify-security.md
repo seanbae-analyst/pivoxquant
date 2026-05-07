@@ -66,7 +66,7 @@ curl -s -X POST https://www.pivoxquant.com/api/beta-auth \
 # 맞는 비번
 curl -s -X POST https://www.pivoxquant.com/api/beta-auth \
   -H "Content-Type: application/json" \
-  -d '{"password":"***REDACTED***"}' -w "\n%{http_code}\n"
+  -d "{\"password\":\"$BETA_PASSWORD\"}" -w "\n%{http_code}\n"
 # 기대: 200 {"ok":true}
 ```
 
@@ -79,7 +79,8 @@ grep -E "authorize_redirect.*state|session\[.oauth_state" /Users/seanbae/Desktop
 ### 4. 시크릿 노출
 ```bash
 cd /Users/seanbae/Desktop/취준/stockpilot
-grep -rE "ghp_[A-Za-z0-9]{36,}|sk_live_|***REDACTED***|ANTHROPIC_API_KEY=[^=]" --include="*.ts" --include="*.tsx" --include="*.py" --include="*.json" --exclude-dir=node_modules
+grep -rE "ghp_[A-Za-z0-9]{36,}|sk_live_|ANTHROPIC_API_KEY=[^=]" --include="*.ts" --include="*.tsx" --include="*.py" --include="*.json" --exclude-dir=node_modules
+# (BETA_PASSWORD/DEV_LOGIN_SECRET 평문 잔존 검사: 별도 grep — 값은 Railway env에서만 보유)
 # 기대: 결과 없음 (시크릿은 env만)
 
 # Git 히스토리에 .env
@@ -89,7 +90,7 @@ git log --all -p -- .env 2>&1 | head -5
 
 ### 5. 세션/쿠키
 ```bash
-curl -sI https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/me | grep -iE "set-cookie"
+curl -sI ${RAILWAY_BACKEND_URL}/api/auth/me | grep -iE "set-cookie"
 ```
 - ✅ `Secure`, `HttpOnly`, `SameSite=Lax`
 - ❌ `Secure` 없으면 HTTP 쿠키 → FAIL
@@ -97,7 +98,7 @@ curl -sI https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/me | grep -iE "set
 ### 6. dev-login 프로덕션 비활성화 확인
 **주의**: QA 끝나면 Railway에서 `DEV_LOGIN_SECRET` 삭제 필요. 배포 전 최종 체크.
 ```bash
-curl -s -X POST https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/dev-login \
+curl -s -X POST ${RAILWAY_BACKEND_URL}/api/auth/dev-login \
   -H "Content-Type: application/json" -d '{"secret":"wrong"}' -w "\n%{http_code}\n"
 # QA 중: 401 (정상)
 # 베타 오픈 전: 404 이어야 함 (env 삭제 후)

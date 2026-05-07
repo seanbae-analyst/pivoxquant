@@ -274,7 +274,7 @@ grep -ri "from services.legal" <new_route_file>
 
 ## 🚀 PivoxQuant Context (2026-04-25 v9 기준)
 
-**프로덕션 상태**: Railway + Vercel ACTIVE / 1509 tests pass (HANDOVER.md 최신값 참조) / 베타 `***REDACTED***`
+**프로덕션 상태**: Railway + Vercel ACTIVE / 1509 tests pass (HANDOVER.md 최신값 참조) / 베타 `${BETA_PASSWORD}`
 **최신 인수인계**: `HANDOVER.md` v9 (2026-04-27 갱신)
 **Launch bundle 24 feature**: `docs/LAUNCH_BUNDLE_SPEC.md` (Tier 1-4)
 **자율 운영 인프라**: 8개 cron 워크플로우 (`docs/AUTONOMOUS_OPS.md`)

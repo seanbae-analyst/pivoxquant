@@ -21,6 +21,7 @@
     "lint:reference-samples": "../venv/bin/python ../../pivoxquant_pdfs/lint_pdfs.py ../../pivoxquant_pdfs/"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.51.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "lightweight-charts": "^5.1.0",

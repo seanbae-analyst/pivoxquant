@@ -5,16 +5,12 @@
 
 ---
 
-## Bug / 정합성 (2)
+## Bug / 정합성 (1)
 
 - [ ] `routes/counterfactual.py:486` — **TODO(fx-historical)**: counterfactual
       시뮬레이션이 ingress/egress 양쪽에 현재 USD/KRW 환율을 사용. 과거 시점
       환율로 보정해야 과거 원화 손익이 정확.
       (동일 이슈 참조: 같은 파일 line 736 주석)
-
-- [ ] `routes/autotrade.py:22` — **TODO(multi-user)**: autotrader 싱글턴을
-      직접 변이하는 구조가 멀티유저 환경에서 안전하지 않음. 유저별 분리
-      필요.
 
 ## Enhancement (3)
 
@@ -42,3 +38,9 @@
 ## 이미 처리된 항목
 
 _(이 섹션은 처리할 때마다 옮겨서 append)_
+
+- [x] `routes/autotrade.py:22` — **TODO(multi-user)**: autotrader 싱글턴
+      멀티유저 unsafe 이슈. **2026-05-05 물리 삭제로 해소** (자본시장법
+      §101 면제 트랙 — 투자일임업 회피). `routes/autotrade.py` 자체가
+      더 이상 존재하지 않으며 `config.py:57` 주석이 제거 사실을 기록.
+      Rollback tag: `legal-pre-autotrader-removal`.

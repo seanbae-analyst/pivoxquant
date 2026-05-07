@@ -46,21 +46,21 @@ tools:
 
 ## 접속 기본 정보
 - URL: https://www.pivoxquant.com
-- 베타 비번: `***REDACTED***`
-- dev-login: `POST /api/auth/dev-login` body `{"secret":"***REDACTED***"}`
+- 베타 비번: `${BETA_PASSWORD}` (Railway env에서 읽기)
+- dev-login: `POST /api/auth/dev-login` body `{"secret":"${DEV_LOGIN_SECRET}"}`
 
 ## 필수 프로토콜
 
 ### 시작 단계
 1. Chrome 탭 생성 후 사이트 접속
-2. 베타 게이트 통과 (비번 `***REDACTED***`)
+2. 베타 게이트 통과 (비번 `${BETA_PASSWORD}` — Railway env에서 읽기)
 3. dev-login으로 Premium 세션 획득:
 ```javascript
 fetch('/api/auth/dev-login', {
   method: 'POST',
   headers: {'Content-Type': 'application/json'},
   credentials: 'include',
-  body: JSON.stringify({secret: '***REDACTED***'})
+  body: JSON.stringify({secret: process.env.DEV_LOGIN_SECRET})
 }).then(r=>r.json())
 ```
 4. 페이지 새로고침 → `/api/auth/me` 호출해서 `authenticated: true` 확인

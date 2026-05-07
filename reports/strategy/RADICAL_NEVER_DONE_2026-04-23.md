@@ -340,7 +340,7 @@
 - 매도 클릭 → Intercept → Deposition Screen (토글 off 가능, 단 Settings 깊이)
 
 **Day 22–30 (Beta Launch)**
-- 기존 베타 유저 (***REDACTED***) 20명에게 선공개
+- 기존 베타 유저 (Railway env `BETA_PASSWORD` 보유자) 20명에게 선공개
 - 온보딩 영상 30초 ("법정이 열립니다")
 - 리크루팅: 반응 구체적 로그 + 취소율 데이터
 

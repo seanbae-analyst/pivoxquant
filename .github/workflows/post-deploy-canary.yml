@@ -27,6 +27,8 @@ jobs:
 
       - name: Backend health + data sanity
         id: probe
+        env:
+          RAILWAY_BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
         run: |
           set +e
           ok=1
@@ -36,7 +38,7 @@ jobs:
           # post-deploy boot window doesn't false-fail the canary.
           hbody=""
           for i in 1 2 3 4 5; do
-            hbody=$(curl -sS -m 20 https://RAILWAY_BACKEND_HOST.up.railway.app/api/health)
+            hbody=$(curl -sS -m 20 "${RAILWAY_BACKEND_URL}/api/health")
             if echo "$hbody" | grep -q '"status":"ok"'; then
               break
             fi
@@ -50,7 +52,7 @@ jobs:
 
           # Market indices auth-required returns 401 with JSON error — that's healthy.
           # 500/404 indicates route crash or blueprint registration failure.
-          icode=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" "https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/indices?region=us")
+          icode=$(curl -sS -m 20 -o /dev/null -w "%{http_code}" "${RAILWAY_BACKEND_URL}/api/market/indices?region=us")
           if [ "$icode" != "401" ] && [ "$icode" != "200" ]; then
             ok=0
             reasons+="- /api/market/indices returned unexpected HTTP $icode (expected 200 or 401)\n"

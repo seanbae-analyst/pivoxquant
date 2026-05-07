@@ -685,7 +685,7 @@ Note: /risk/page.tsx는 seven-layer-panel에서 `type RiskLayer`, `type LayerSta
 | **Auth — Kakao OAuth** | /login → /api/auth/kakao | 동작 (HANDOVER: OAuth 정상화 완료) | No | v1 그대로 유지 |
 | **Auth — 로그아웃** | /settings → /api/auth/logout | 동작 | No | v1 그대로 유지 |
 | **Detail page — 종목 상세 (7섹션)** | /detail/[ticker] | 동작 (일부 섹션 데이터 미완 — HANDOVER §3 참조) | No | v1 그대로 유지 |
-| **Beta gate** | /beta-gate (BetaGateForm) | 동작 (비밀번호 ***REDACTED***) | No | v1 그대로 유지 |
+| **Beta gate** | /beta-gate (BetaGateForm) | 동작 (Railway env `BETA_PASSWORD`) | No | v1 그대로 유지 |
 | **Pricing 3-tier** | /pricing | 동작 (Free/Pro/Premium 카드 + Stripe 연결) | No | v1 그대로 유지 |
 | **Sample Reports** | /sample-reports, /sample-reports/[slug] | 동작 (공개 페이지) | No | v1 그대로 유지 |
 | **Profile — Identity (이름/이메일/OAuth)** | /profile | 동작 | No | v1 그대로 유지 |

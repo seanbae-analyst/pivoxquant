@@ -119,7 +119,7 @@
 
 - [ ] **Stripe Product 등록** (Stripe Dashboard 수동, 30분)
   - Pro 14,900 / Premium 29,900 / Premium Plus 49,900 / Founding Lifetime 99,000 (선착순 200석)
-  - Webhook endpoint: `https://RAILWAY_BACKEND_HOST.up.railway.app/api/billing/webhook`
+  - Webhook endpoint: `<RAILWAY_BACKEND_URL>/api/billing/webhook`
   - 후속 Railway env:
     ```
     STRIPE_PUBLISHABLE_KEY, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
@@ -201,8 +201,8 @@
 - **최신 commit**: `7f411b3`
 - **Tests**: 267/267 pass
 - **Build**: 50/50 static routes, 0 TS errors
-- **Production**: https://pivoxquant.com (베타 `***REDACTED***`)
-- **Backend**: https://RAILWAY_BACKEND_HOST.up.railway.app
+- **Production**: https://pivoxquant.com (베타 비밀번호는 Railway env `BETA_PASSWORD`)
+- **Backend**: <RAILWAY_BACKEND_URL>
 - **GitHub**: https://github.com/seanbae-analyst/pivoxquant
 - **AGENT_ENABLED**: `0` (Closed Beta 안전)
 

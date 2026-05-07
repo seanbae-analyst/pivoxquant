@@ -20,10 +20,12 @@ jobs:
 
       - name: GET /api/health — expect 200 + status ok
         id: health
+        env:
+          RAILWAY_BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
         run: |
           set +e
           body=$(curl -sS -m 20 -w "\nHTTP:%{http_code}" \
-            https://RAILWAY_BACKEND_HOST.up.railway.app/api/health)
+            "${RAILWAY_BACKEND_URL}/api/health")
           code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
           payload=$(echo "$body" | head -n -1)
           echo "code=$code" >> $GITHUB_OUTPUT
@@ -41,10 +43,12 @@ jobs:
 
       - name: GET /api/agent/status — expect 200 + enabled=false + legal_status=pending-counsel-review
         id: agent_status
+        env:
+          RAILWAY_BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
         run: |
           set +e
           body=$(curl -sS -m 20 -w "\nHTTP:%{http_code}" \
-            https://RAILWAY_BACKEND_HOST.up.railway.app/api/agent/status)
+            "${RAILWAY_BACKEND_URL}/api/agent/status")
           code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
           payload=$(echo "$body" | head -n -1)
           echo "code=$code" >> $GITHUB_OUTPUT
@@ -73,13 +77,15 @@ jobs:
 
       - name: POST /api/broker/alpaca/connect — expect 401 or 503 alpaca-disabled
         id: alpaca_connect
+        env:
+          RAILWAY_BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
         run: |
           set +e
           body=$(curl -sS -m 20 -w "\nHTTP:%{http_code}" \
             -X POST \
             -H 'Content-Type: application/json' \
             -d '{}' \
-            https://RAILWAY_BACKEND_HOST.up.railway.app/api/broker/alpaca/connect)
+            "${RAILWAY_BACKEND_URL}/api/broker/alpaca/connect")
           code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
           payload=$(echo "$body" | head -n -1)
           echo "code=$code" >> $GITHUB_OUTPUT
@@ -101,10 +107,12 @@ jobs:
 
       - name: GET /api/market/indices?region=kr — expect 200 or 401 (auth-gated endpoint)
         id: market_kr
+        env:
+          RAILWAY_BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
         run: |
           set +e
           body=$(curl -sS -m 20 -w "\nHTTP:%{http_code}" \
-            "https://RAILWAY_BACKEND_HOST.up.railway.app/api/market/indices?region=kr")
+            "${RAILWAY_BACKEND_URL}/api/market/indices?region=kr")
           code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
           payload=$(echo "$body" | head -n -1)
           echo "code=$code" >> $GITHUB_OUTPUT

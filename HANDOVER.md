@@ -345,7 +345,7 @@ HANDOVER.md 2026-05-05 v22 섹션 읽고 시작. 우선순위:
 - Account: seanbae1521@gmail.com (FREE tier)
 - Positions: 3 (Samsung 005930.KS, IT Sengle 124500.KQ, Taihan 010170.KQ)
 - Watchlist: empty (next session에서 add/remove 실증)
-- Backend: Railway `RAILWAY_BACKEND_HOST.up.railway.app` ACTIVE
+- Backend: Railway `${RAILWAY_BACKEND_URL}` ACTIVE
 - DEV_LOGIN_SECRET: production 미등록 (legitimate, dev/staging only)
 - 로컬 backend는 시스템 부하로 import 단계에서 hung — Railway production만 사용 가능
 
@@ -1392,7 +1392,7 @@ tests/test_bugsweep_2026_04_24.py         # discover sectors 503 어서션
 | Railway env: FMP plan tuning (선택) | 동일 | (미설정 시 Premium 10k default. Starter 다운그레이드 시 `FMP_DAILY_SOFT_LIMIT=250`) |
 | 9개 파일 git diff 검토 | 로컬 | `cd /Users/seanbae/Desktop/취준/stockpilot && git diff` |
 | commit 결정 | 로컬 | (자율 세션은 미 commit. CLAUDE.md 룰: 사용자가 명시 요청 시만 commit) |
-| Railway 배포 확인 | 배포 후 | `curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/admin/fmp-usage` (admin 로그인 필요). `daily_limit: 10000` 확인 |
+| Railway 배포 확인 | 배포 후 | `curl ${RAILWAY_BACKEND_URL}/api/admin/fmp-usage` (admin 로그인 필요). `daily_limit: 10000` 확인 |
 | Wave 1B 신규 P0 8건 검토 | 별도 | user-tester agent 보고 (아래 §6.2). 진위 직접 브라우저 확인 권장 |
 
 ### Wave 1B 검증 (제3자 user-tester agent 보고 — forward 주의)
@@ -1898,7 +1898,7 @@ CEO 외부:
 
 **작성**: 2026-04-25 (v9 세션 종료)
 **최신 commit**: `e3b3f54`
-**프로덕션**: https://pivoxquant.com (베타 `***REDACTED***`)
+**프로덕션**: https://pivoxquant.com (베타 `${BETA_PASSWORD}` — Railway env 참조)
 **GitHub**: https://github.com/seanbae-analyst/pivoxquant
 **테스트**: 1288/1288 pass · 0 failed
 **자율 운영**: 6개 cron 워크플로우 daily fire 중

@@ -21,9 +21,11 @@ jobs:
 
       - name: Ping backend /api/health
         id: backend
+        env:
+          RAILWAY_BACKEND_URL: ${{ secrets.RAILWAY_BACKEND_URL }}
         run: |
           set +e
-          body=$(curl -sS -m 15 -w "\nHTTP:%{http_code}" https://RAILWAY_BACKEND_HOST.up.railway.app/api/health)
+          body=$(curl -sS -m 15 -w "\nHTTP:%{http_code}" "${RAILWAY_BACKEND_URL}/api/health")
           code=$(echo "$body" | tail -n 1 | sed 's/HTTP://')
           echo "body<<EOF" >> $GITHUB_OUTPUT
           echo "$body" >> $GITHUB_OUTPUT

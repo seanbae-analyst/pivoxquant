@@ -37,8 +37,8 @@ tools:
 프론트엔드 말고 **순수 API 레벨** 검증. curl로 엔드포인트 호출해서 status code + body 실제 확인.
 
 ## 기본 정보
-- Railway 백엔드: https://RAILWAY_BACKEND_HOST.up.railway.app
-- dev-login 시크릿: `***REDACTED***`
+- Railway 백엔드: ${RAILWAY_BACKEND_URL}
+- dev-login 시크릿: `${DEV_LOGIN_SECRET}` (Railway env에서 읽기)
 - 로컬: http://localhost:5050 (필요 시 `python3 run.py` 기동)
 
 ## 필수 프로토콜
@@ -46,13 +46,13 @@ tools:
 ### 1. 세션 획득
 ```bash
 COOKIE_JAR=$(mktemp)
-curl -s -c "$COOKIE_JAR" -X POST https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/dev-login \
+curl -s -c "$COOKIE_JAR" -X POST ${RAILWAY_BACKEND_URL}/api/auth/dev-login \
   -H "Content-Type: application/json" \
-  -d '{"secret":"***REDACTED***"}'
+  -d "{\"secret\":\"$DEV_LOGIN_SECRET\"}"
 # 응답 확인: {"ok":true,"user":{...}}
 
 # 인증 확인
-curl -s -b "$COOKIE_JAR" https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/me
+curl -s -b "$COOKIE_JAR" ${RAILWAY_BACKEND_URL}/api/auth/me
 # 응답 확인: {"authenticated":true,...}
 ```
 

@@ -76,11 +76,11 @@ tools:
 ```bash
 # dev-login 세션
 COOKIE_JAR=$(mktemp)
-curl -s -c "$COOKIE_JAR" -X POST https://RAILWAY_BACKEND_HOST.up.railway.app/api/auth/dev-login \
-  -H "Content-Type: application/json" -d '{"secret":"***REDACTED***"}' >/dev/null
+curl -s -c "$COOKIE_JAR" -X POST ${RAILWAY_BACKEND_URL}/api/auth/dev-login \
+  -H "Content-Type: application/json" -d "{\"secret\":\"$DEV_LOGIN_SECRET\"}" >/dev/null
 
 # 문제 API 호출
-curl -s -b "$COOKIE_JAR" "https://RAILWAY_BACKEND_HOST.up.railway.app/api/{endpoint}"
+curl -s -b "$COOKIE_JAR" "${RAILWAY_BACKEND_URL}/api/{endpoint}"
 ```
 - Status code, response body 확인
 - 에러면 full body 출력

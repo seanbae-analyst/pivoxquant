@@ -162,7 +162,7 @@
 | /privacy 링크 | line 136: `href="/privacy"` | line 210: `href="/privacy"` | ✅ |
 | 회원가입 링크 | href="/signup" (line 121-128) | AuthLinkV2 href="/signup" (line 180-184) | ✅ |
 | consent gating | 없음 (login은 gating 없음) | 없음 (`OAuthButtonsV2` props에 disabled 미전달, line 152: `<OAuthButtonsV2 />`) | ✅ |
-| 베타 비밀번호 처리 | 없음 (***REDACTED*** UI 노출 없음) | 없음 | ✅ |
+| 베타 비밀번호 처리 | 없음 (UI 노출 없음) | 없음 | ✅ |
 | DisclaimerBanner | 없음 (login 페이지는 면책 배너 미대상) | 없음 | ✅ |
 
 ---

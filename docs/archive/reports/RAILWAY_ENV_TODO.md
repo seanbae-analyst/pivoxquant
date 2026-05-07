@@ -21,7 +21,7 @@
 | 7 | `STRIPE_PREMIUM_PRICE_ID` | Premium 티어 ($19.9) 가격 매핑. 미설정 시 결제 진입 불가 | Stripe → Products → Premium tier price → ID |
 
 추가 절차:
-- Railway 대시보드 → 백엔드 서비스 (`RAILWAY_BACKEND_HOST`) → **Settings → Variables → Add Variable**
+- Railway 대시보드 → 백엔드 서비스 (`<RAILWAY_SERVICE_NAME>`) → **Settings → Variables → Add Variable**
 - 추가 후 자동 redeploy 트리거됨
 - 검증: Railway 로그에서 `[startup]` 라인 + 위 §1 검증 curl 실행
 
@@ -31,15 +31,15 @@
 
 ```bash
 # Morning Brief 제거 검증 — 모두 404 또는 500 (의도)
-curl -i https://RAILWAY_BACKEND_HOST.up.railway.app/api/morning-brief
-curl -i https://RAILWAY_BACKEND_HOST.up.railway.app/api/brief/today
-curl -i https://RAILWAY_BACKEND_HOST.up.railway.app/api/brief/archive
-curl -i https://RAILWAY_BACKEND_HOST.up.railway.app/api/brief/generate-now
+curl -i <RAILWAY_BACKEND_URL>/api/morning-brief
+curl -i <RAILWAY_BACKEND_URL>/api/brief/today
+curl -i <RAILWAY_BACKEND_URL>/api/brief/archive
+curl -i <RAILWAY_BACKEND_URL>/api/brief/generate-now
 
 # 기대: 4건 모두 404 (Flask blueprint 등록 해제됨)
 
 # FRED env 추가 후
-curl https://RAILWAY_BACKEND_HOST.up.railway.app/api/alt-data/macro/snapshot
+curl <RAILWAY_BACKEND_URL>/api/alt-data/macro/snapshot
 # 기대: 200 OK + JSON
 
 # 스케줄러 잔재 확인 (Railway 로그)

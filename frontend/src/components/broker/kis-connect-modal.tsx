@@ -170,7 +170,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
                 onChange={(e) =>
                   setAccountNo(e.target.value.replace(/[^0-9]/g, "").slice(0, 12))
                 }
-                placeholder="XXXXXXXX"
+                placeholder="12345678"
                 autoComplete="off"
                 aria-invalid={accountNo.length > 0 && !accountNoValid}
                 aria-describedby={
