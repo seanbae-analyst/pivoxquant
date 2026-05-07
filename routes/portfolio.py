@@ -291,8 +291,11 @@ def edit_position(pid):
     if not p:
         return jsonify({"error": "Position not found"}), 404
     d = request.get_json() or {}
-    shares = float(d.get("shares") or 0)
-    cost = float(d.get("avg_cost") or 0)
+    try:
+        shares = float(d.get("shares") or 0)
+        cost = float(d.get("avg_cost") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Shares and average cost must be numbers"}), 400
     if shares <= 0 or cost <= 0:
         return jsonify({"error": "Shares and average cost must be positive"}), 400
     p.shares = shares
@@ -334,8 +337,11 @@ def buy_more(pid):
     if not p:
         return jsonify({"error": "Position not found"}), 404
     d = request.get_json() or {}
-    buy_shares = float(d.get("shares") or 0)
-    buy_price = float(d.get("price") or 0)
+    try:
+        buy_shares = float(d.get("shares") or 0)
+        buy_price = float(d.get("price") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Shares and price must be numbers"}), 400
     if buy_shares <= 0 or buy_price <= 0:
         return jsonify({"error": "Shares and price required"}), 400
 
@@ -384,10 +390,26 @@ def buy_more(pid):
 @api_auth
 @_deprecated_singular("/api/portfolio/trades")
 def buy_new_position():
+    # Free-tier cap: same 3-position guard as add_position. Without this,
+    # POST /position/buy-new bypasses the tier limit and lets free users
+    # accumulate unlimited positions (revenue/tier-enforcement bypass).
+    if getattr(current_user, "effective_tier", None) in (None, "free"):
+        position_count = Position.query.filter_by(user_id=current_user.id).count()
+        if position_count >= 3:
+            return jsonify({
+                "error": "Free plan limited to 3 positions. Upgrade to Pro for unlimited.",
+                "code": "TIER_LIMIT",
+                "current_count": position_count,
+                "limit": 3,
+            }), 403
+
     d = request.get_json() or {}
     ticker = (d.get("ticker") or "").strip().upper()
-    shares = float(d.get("shares") or 0)
-    price = float(d.get("price") or 0)
+    try:
+        shares = float(d.get("shares") or 0)
+        price = float(d.get("price") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Shares and price must be numbers"}), 400
     # SEC-004: Position.ticker is db.String(20); validate before persisting.
     if not ticker or len(ticker) > 20:
         return jsonify({"error": "Invalid ticker"}), 400
@@ -444,8 +466,11 @@ def sell_position(pid):
     if not p:
         return jsonify({"error": "Position not found"}), 404
     d = request.get_json() or {}
-    sell_shares = float(d.get("shares") or p.shares)
-    sell_price = float(d.get("price") or 0)
+    try:
+        sell_shares = float(d.get("shares") or p.shares)
+        sell_price = float(d.get("price") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Shares and price must be numbers"}), 400
 
     # SEC-001: reject non-positive share counts. `float(d.get("shares") or p.shares)`
     # passes negative numbers through (negative is truthy), which would invert the
@@ -518,13 +543,21 @@ def sell_position(pid):
 @trade_rate_limit
 def set_capital():
     d = request.get_json() or {}
-    cap_usd = float(d.get("capital_usd") or d.get("capital") or 0)
-    cap_krw = float(d.get("capital_krw") or 0)
+    try:
+        cap_usd = float(d.get("capital_usd") or d.get("capital") or 0)
+        cap_krw = float(d.get("capital_krw") or 0)
+    except (TypeError, ValueError):
+        return jsonify({"error": "Capital must be numbers"}), 400
     if cap_usd < 0 or cap_krw < 0:
         return jsonify({"error": "Capital must be ≥ 0"}), 400
     current_user.available_capital = cap_usd
     current_user.available_capital_krw = cap_krw
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("set_capital commit failed")
+        return jsonify({"error": "Failed to update capital"}), 500
     return jsonify({"ok": True, "capital_usd": cap_usd, "capital_krw": cap_krw})
 
 
