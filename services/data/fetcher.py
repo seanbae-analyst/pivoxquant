@@ -941,7 +941,7 @@ Reply ONLY in this exact JSON format, nothing else:
             if bias == "NEUTRAL":
                 bias = "MODERATELY BULLISH"
         elif sp_chg < -1.5:
-            themes.append(f"🐻 S&P SELLING: Index {sp_chg:.1f}% — defensive rotation recommended.")
+            themes.append(f"🐻 S&P SELLING: Index {sp_chg:.1f}% — defensive rotation pattern observed.")
             if bias == "NEUTRAL":
                 bias = "MODERATELY BEARISH"
 
