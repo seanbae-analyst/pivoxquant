@@ -33,58 +33,43 @@ export interface PeerMetric {
   ariaLabel?: string;
 }
 
-const DEFAULT_METRICS: PeerMetric[] = [
-  {
-    label: "Sharpe (90d)",
-    value: "1.42",
-    percentile: "top 18%",
-    youPct: 82,
-    medianPct: 50,
-    ariaLabel: "Sharpe ratio: 1.42, top 18% of cohort",
-  },
-  {
-    label: "Max drawdown",
-    value: "-6.8%",
-    percentile: "top 24%",
-    youPct: 76,
-    medianPct: 50,
-    ariaLabel: "Max drawdown: -6.8%, top 24% of cohort",
-  },
-  {
-    label: "Turnover",
-    value: "0.41",
-    percentile: "bottom 30%",
-    youPct: 30,
-    medianPct: 50,
-    ariaLabel: "Turnover: 0.41, bottom 30% of cohort",
-  },
-  {
-    label: "Concentration",
-    value: "41%",
-    percentile: "in cohort",
-    youPct: 47,
-    medianPct: 50,
-    ariaLabel: "Concentration: 41%, near cohort median",
-  },
-];
-
 interface Props {
-  metrics?: PeerMetric[];
-  /** Cohort label, e.g. "Defensive Allocator". */
-  cohortName?: string;
-  /** Sample size, e.g. 412. */
-  cohortSize?: number;
+  /**
+   * Cohort metric set sourced from `/api/profile/persona-benchmark`.
+   * When omitted, null, or empty, renders an empty-state placeholder
+   * instead of fabricated peer figures.
+   * Bug-hunter 2026-05-07: removed editorial DEFAULT_METRICS fallback —
+   * was leaking invented Sharpe 1.42 / MaxDD -6.8% / Turnover 0.41 /
+   * Concentration 41% to every signed-in user (CEO escalation NEW-B).
+   */
+  metrics?: PeerMetric[] | null;
+  /** Cohort label, e.g. "Defensive Allocator". Null when not yet classified. */
+  cohortName?: string | null;
+  /** Sample size. Null when cohort unavailable / suppressed (N < 20). */
+  cohortSize?: number | null;
   /** Window in days. */
   windowDays?: number;
+  /** True while upstream hook is loading. */
+  loading?: boolean;
+  /**
+   * Reason for empty state — surfaces a tailored message:
+   *   - "insufficient_group_size": N < 20, suppressed for privacy
+   *   - "not_computed": pending compute
+   *   - "no_data": new user / no trade history
+   */
+  emptyReason?: "insufficient_group_size" | "not_computed" | "no_data";
 }
 
 export function PeerBenchmarkBlockV2({
   metrics,
-  cohortName = "Defensive Allocator",
-  cohortSize = 412,
+  cohortName,
+  cohortSize,
   windowDays = 90,
+  loading = false,
+  emptyReason = "no_data",
 }: Props) {
-  const list = metrics && metrics.length > 0 ? metrics : DEFAULT_METRICS;
+  const list = metrics && metrics.length > 0 ? metrics : null;
+  const hasCohort = Boolean(cohortName);
 
   return (
     <section
@@ -96,7 +81,11 @@ export function PeerBenchmarkBlockV2({
         position: "relative",
         marginBottom: 48,
       }}
-      aria-label={`Peer benchmark · ${cohortName} cohort`}
+      aria-label={
+        hasCohort
+          ? `Peer benchmark · ${cohortName} cohort`
+          : "Peer benchmark"
+      }
     >
       <span
         className="font-mono uppercase"
@@ -132,7 +121,7 @@ export function PeerBenchmarkBlockV2({
               marginBottom: 8,
             }}
           >
-            05 · Peer benchmark · {cohortName} cohort
+            05 · Peer benchmark{hasCohort ? ` · ${cohortName} cohort` : ""}
           </div>
           <div
             className="font-display"
@@ -159,19 +148,65 @@ export function PeerBenchmarkBlockV2({
             letterSpacing: "0.18em",
           }}
         >
-          n = {cohortSize.toLocaleString()} · {windowDays}D
+          {typeof cohortSize === "number"
+            ? `n = ${cohortSize.toLocaleString()} · ${windowDays}D`
+            : `${windowDays}D · cohort pending`}
         </div>
       </div>
 
+      {!list ? (
+        <div
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px dashed rgba(245,240,232,0.14)",
+            borderRadius: 4,
+            padding: 28,
+            textAlign: "center",
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.22em",
+              color: "var(--pq-bronze)",
+              marginBottom: 10,
+            }}
+          >
+            {loading ? "Loading…" : "Awaiting data"}
+          </div>
+          <p
+            className="font-serif"
+            style={{
+              fontSize: 14,
+              lineHeight: 1.55,
+              color: "rgba(245,240,232,0.55)",
+              maxWidth: 560,
+              margin: "0 auto",
+            }}
+          >
+            {loading
+              ? "Computing your peer benchmark…"
+              : emptyReason === "insufficient_group_size"
+                ? "동일 페르소나 그룹 인원이 20명 미만이라 통계가 보호됩니다 (PIPA). Cohort suppressed for privacy until N ≥ 20."
+                : emptyReason === "not_computed"
+                  ? "동료 통계가 아직 계산되지 않았습니다. Peer statistics are still being computed."
+                  : "거래 기록이 누적되면 동일 페르소나 그룹 대비 통계가 표시됩니다. Peer benchmark surfaces here once your trade history accumulates."}
+          </p>
+        </div>
+      ) : null}
+
       <div
         style={{
-          display: "grid",
+          display: list ? "grid" : "none",
           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           columnGap: 48,
           rowGap: 28,
         }}
       >
-        {list.map((m) => {
+        {list?.map((m) => {
           const youPct = Math.min(100, Math.max(0, m.youPct));
           const medianPct = Math.min(100, Math.max(0, m.medianPct ?? 50));
           return (
@@ -255,17 +290,19 @@ export function PeerBenchmarkBlockV2({
         })}
       </div>
 
-      <div
-        className="font-mono uppercase"
-        style={{
-          marginTop: 16,
-          fontSize: 12,
-          letterSpacing: "0.16em",
-          color: "rgba(245,240,232,0.40)",
-        }}
-      >
-        YOU · BRONZE BAR &nbsp; · &nbsp; MEDIAN · IVORY TICK
-      </div>
+      {list ? (
+        <div
+          className="font-mono uppercase"
+          style={{
+            marginTop: 16,
+            fontSize: 12,
+            letterSpacing: "0.16em",
+            color: "rgba(245,240,232,0.40)",
+          }}
+        >
+          YOU · BRONZE BAR &nbsp; · &nbsp; MEDIAN · IVORY TICK
+        </div>
+      ) : null}
     </section>
   );
 }
