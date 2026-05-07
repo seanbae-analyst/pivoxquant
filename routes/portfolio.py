@@ -670,7 +670,13 @@ def _build_positions_list():
             "purchaseDate": opened_at[:10] if opened_at else "",
             "notes": p.thesis or "",
             "currency": currency,
-            "isKorean": is_kr,
+            # 2026-05-08 (isKorean sweep): emit BOTH camelCase (v2 page-v2)
+            # AND snake_case (lib/hooks.ts RawPosition, signal-card,
+            # detail/[ticker], search-command, …). The frontend snake_case
+            # is_korean is used in 10+ places — emitting both keeps every
+            # consumer working without coordinated frontend rewrites.
+            "isKorean":  is_kr,
+            "is_korean": is_kr,
         })
     return out
 
@@ -879,7 +885,10 @@ def create_position_alias():
         "id": str(new_pos.id),
         "symbol": symbol,
         "name": resolved_name or symbol,
-        "isKorean": is_kr,
+        # 2026-05-08 (isKorean sweep): dual-emit camelCase + snake_case;
+        # see _build_positions_list comment for rationale.
+        "isKorean":  is_kr,
+        "is_korean": is_kr,
     })
 
 
