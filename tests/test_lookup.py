@@ -49,7 +49,18 @@ class TestLookup:
         assert r.status_code == 404
         assert r.get_json()["ok"] is False
 
-    def test_unauthenticated_returns_401(self, client):
-        """SEC-009: /api/lookup/<ticker> now requires authentication."""
-        r = client.get("/api/lookup/AAPL")
-        assert r.status_code == 401
+    def test_unauthenticated_allowed(self, client):
+        """2026-05-08 (NEW-C): /api/lookup/<ticker> is public so the
+        /simulator/what-if viral acquisition funnel can resolve tickers
+        without a login. Quota protection moves to @general_rate_limit.
+        Earlier SEC-009 auth gate was reverted because the response only
+        carries public market data (symbol / name / price / currency)."""
+        with patch("routes.market.fetcher") as m:
+            m.quick_lookup.return_value = {
+                "ok": True, "ticker": "AAPL", "name": "Apple Inc.",
+                "price": 175.23, "price_display": "$175.23",
+                "currency": "USD", "is_korean": False,
+            }
+            r = client.get("/api/lookup/AAPL")
+        assert r.status_code == 200
+        assert r.get_json()["ticker"] == "AAPL"

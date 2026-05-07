@@ -149,13 +149,25 @@ function DayDetail({ date, onClose }: DayDetailProps) {
 /* ── Main Page ── */
 
 export default function GrowthPage() {
-  const { data: graphData, isLoading: graphLoading } = useGrowthData("365d");
+  const {
+    data: graphData,
+    isLoading: graphLoading,
+    error: graphError,
+  } = useGrowthData("365d");
   const {
     data: todayData,
     isLoading: todayLoading,
+    error: todayError,
     mutate: refreshToday,
   } = useGrowthToday();
-  const { data: weeklyData } = useGrowthWeekly();
+  const { data: weeklyData, error: weeklyError } = useGrowthWeekly();
+
+  // 2026-05-08 (NEW-E): agent_worker.growth_routes is registered as an
+  // optional blueprint in routes/__init__.py. When the agent_worker package
+  // is unavailable on a deploy, every /api/growth/* request 404s. Detect
+  // that signal once at the top of the page so we render a graceful
+  // "service preparing" panel instead of a stuck-on-Loading skeleton.
+  const growthUnavailable = Boolean(graphError && todayError && weeklyError);
 
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -172,6 +184,69 @@ export default function GrowthPage() {
   }, [refreshToday]);
 
   const currentStreak = todayData?.score?.streak ?? 0;
+
+  // 2026-05-08 (NEW-E): when the optional agent_worker blueprint is missing,
+  // render a single "준비 중" panel instead of half-broken sections.
+  if (growthUnavailable) {
+    return (
+      <ErrorBoundary>
+        <div className="space-y-6 pb-8">
+          <section
+            className="pq-hero-v2"
+            style={{
+              padding: "80px 0 64px",
+              borderBottom: "1px solid var(--pq-hairline-ink)",
+              marginBottom: 8,
+            }}
+          >
+            <div
+              className="font-mono uppercase"
+              style={{
+                fontSize: "var(--pq-text-eyebrow, 10.5px)",
+                letterSpacing: "0.22em",
+                color: "var(--pq-bronze)",
+                marginBottom: 28,
+              }}
+            >
+              Growth OS · Solo Founder
+            </div>
+            <h1
+              className="font-display"
+              style={{
+                fontWeight: 500,
+                fontSize: "clamp(32px, 4.2vw, 48px)",
+                lineHeight: 1.05,
+                letterSpacing: "-0.02em",
+                color: "var(--pq-ivory)",
+                maxWidth: 940,
+                margin: "0 0 24px 0",
+              }}
+            >
+              <span style={{ fontStyle: "italic", color: "var(--pq-bronze)" }}>
+                준비 중
+              </span>
+            </h1>
+            <p
+              className="font-serif"
+              style={{
+                fontSize: 18,
+                lineHeight: 1.55,
+                color: "rgba(245,240,232,0.82)",
+                maxWidth: 720,
+                margin: 0,
+              }}
+            >
+              Growth OS 서비스는 현재 준비 중입니다. 곧 다시 만나요.
+              <br />
+              <span style={{ color: "rgba(245,240,232,0.55)" }}>
+                Growth OS is being prepared. We&apos;ll be back shortly.
+              </span>
+            </p>
+          </section>
+        </div>
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary>

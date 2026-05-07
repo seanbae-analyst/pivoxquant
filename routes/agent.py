@@ -229,7 +229,7 @@ def query() -> Any:
         pass
 
     if not current_user.is_authenticated:
-        return jsonify({"error": "Login required"}), 401
+        return jsonify({"error": "Login required", "error_kr": "로그인이 필요합니다.", "code": "SESSION_EXPIRED"}), 401
 
     if not _entitled(current_user):
         return jsonify({
@@ -521,7 +521,7 @@ def export_agent_data() -> Any:
         500 — DB read failed (rolled back; payload describes the error).
     """
     if not current_user.is_authenticated:
-        return jsonify({"error": "Login required"}), 401
+        return jsonify({"error": "Login required", "error_kr": "로그인이 필요합니다.", "code": "SESSION_EXPIRED"}), 401
 
     request_id = uuid.uuid4().hex[:12]
 
@@ -630,7 +630,7 @@ def delete_agent_data() -> Any:
     means the server-side trace is gone.
     """
     if not current_user.is_authenticated:
-        return jsonify({"error": "Login required"}), 401
+        return jsonify({"error": "Login required", "error_kr": "로그인이 필요합니다.", "code": "SESSION_EXPIRED"}), 401
 
     request_id = uuid.uuid4().hex[:12]
     user_id = int(current_user.id)

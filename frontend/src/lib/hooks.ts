@@ -100,12 +100,24 @@ export function useAlerts() {
 
 /* ── Growth OS ── */
 
+// 2026-05-08 (NEW-E): agent_worker.growth_routes is registered as an
+// optional blueprint (routes/__init__.py:48-58). When the agent_worker
+// package is missing from a deploy, the entire /api/growth/* surface
+// returns 404. Without `shouldRetryOnError: false`, SWR retried in a
+// tight loop and the page got stuck on "Loading..." forever. Now the
+// hook fails fast and the page renders the unavailable-fallback UI.
+const GROWTH_SWR_OPTS = {
+  revalidateOnFocus: false,
+  shouldRetryOnError: false,
+  errorRetryCount: 0,
+} as const;
+
 export function useGrowthData(range = "365d") {
   return useSWR<GrowthScoreEntry[]>(
     API.growth.data(range),
     fetcher,
     {
-      revalidateOnFocus: false,
+      ...GROWTH_SWR_OPTS,
       dedupingInterval: 60_000,
       // P1 (wave1-critical): empty-array default so chart renderers
       // (Recharts) don't NPE during initial render.
@@ -118,7 +130,7 @@ export function useGrowthToday() {
   return useSWR<GrowthTodayResponse>(
     API.growth.today,
     fetcher,
-    { revalidateOnFocus: false, dedupingInterval: 30_000 },
+    { ...GROWTH_SWR_OPTS, dedupingInterval: 30_000 },
   );
 }
 
@@ -127,7 +139,7 @@ export function useGrowthWeekly() {
     API.growth.weekly,
     fetcher,
     {
-      revalidateOnFocus: false,
+      ...GROWTH_SWR_OPTS,
       dedupingInterval: 300_000,
       // P1 (wave1-critical): empty-array default for consumers that map.
       fallbackData: [],
