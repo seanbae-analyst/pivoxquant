@@ -10,7 +10,7 @@ Covers:
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 from unittest.mock import patch
@@ -282,7 +282,7 @@ def test_weekly_report_compares_user_vs_twin(app, make_user):
         # Create twin manually to bypass classifier.
         twin = AITwinPortfolio(
             user_id=user["id"],
-            initialized_at=datetime.utcnow() - timedelta(days=14),
+            initialized_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=14),
             starting_cash=Decimal("10000"),
             current_cash=Decimal("10000"),
             persona_at_init="balanced",
@@ -291,7 +291,7 @@ def test_weekly_report_compares_user_vs_twin(app, make_user):
         db.session.add(twin)
         db.session.commit()
         # Add a paper SELL with realized +5% (cost basis 1000, pnl 50).
-        sell_time = datetime.utcnow() - timedelta(days=1)
+        sell_time = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
         db.session.add(AITwinTrade(
             twin_id=twin.id,
             ticker="AAA",
@@ -331,7 +331,7 @@ def test_weekly_report_idempotent_on_same_week(app, make_user):
     with app.app_context():
         db.session.add(AITwinPortfolio(
             user_id=user["id"],
-            initialized_at=datetime.utcnow() - timedelta(days=14),
+            initialized_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=14),
             starting_cash=Decimal("10000"),
             current_cash=Decimal("10000"),
             persona_at_init="balanced",
@@ -387,14 +387,14 @@ def test_endpoint_trades_only_past_no_prospective(client, auth_user, app):
         past = AITwinTrade(
             twin_id=twin.id, ticker="AAA", side="BUY",
             shares=Decimal("1"), price=Decimal("100"),
-            executed_at=datetime.utcnow() - timedelta(hours=1),
+            executed_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1),
             is_paper=True,
         )
         # Future trade — must NEVER appear.
         future = AITwinTrade(
             twin_id=twin.id, ticker="ZZZ", side="BUY",
             shares=Decimal("1"), price=Decimal("100"),
-            executed_at=datetime.utcnow() + timedelta(days=2),
+            executed_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=2),
             is_paper=True,
         )
         db.session.add_all([past, future])

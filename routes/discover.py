@@ -11,7 +11,7 @@ Language stays observational — no BUY/SELL/recommend/advice/bullish/bearish.
 """
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
@@ -230,7 +230,7 @@ def movers():
         )
         return _data_unavailable(f"movers:{region}")
 
-    observed_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    observed_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     payload = {
         "region": region,
         "gainers": gainers,

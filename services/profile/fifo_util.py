@@ -33,7 +33,7 @@ Public API
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Iterable, NamedTuple
 
 from models import TradeHistory
@@ -195,7 +195,11 @@ def fifo_open_position_ages(
         if materialised:
             reference_time = max(t.traded_at for t in materialised)
         else:
-            reference_time = datetime.utcnow()
+            # 2026-05-08 (NEW-D): datetime.utcnow() is deprecated in Python
+            # 3.12+. Use timezone-aware now() then strip tzinfo so we keep
+            # the naive-UTC contract that traded_at values follow (see
+            # User.created_at convention referenced above).
+            reference_time = datetime.now(timezone.utc).replace(tzinfo=None)
 
     pairs = fifo_match_closed_trades(materialised)
     # We need the queue *after* matching — easiest is to re-walk and
