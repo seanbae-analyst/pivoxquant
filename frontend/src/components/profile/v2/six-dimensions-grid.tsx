@@ -125,7 +125,7 @@ export function SixDimensionsGrid({
               className="font-display"
               style={{
                 fontWeight: 500,
-                fontSize: 30,
+                fontSize: 32,
                 lineHeight: 1.15,
                 letterSpacing: "-0.02em",
                 color: "var(--pq-ivory)",
@@ -138,7 +138,7 @@ export function SixDimensionsGrid({
             href={methodologyHref}
             className="font-mono uppercase"
             style={{
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: "0.18em",
               color: "var(--pq-bronze)",
               borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -193,7 +193,7 @@ export function SixDimensionsGrid({
                   className="font-display"
                   style={{
                     fontWeight: 500,
-                    fontSize: 17,
+                    fontSize: 18,
                     color: "var(--pq-ivory)",
                   }}
                 >

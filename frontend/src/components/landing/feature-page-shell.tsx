@@ -142,7 +142,7 @@ export default function FeaturePageShell({
                   className="font-serif uppercase"
                   style={{
                     color: "var(--pq-bronze)",
-                    fontSize: "10px",
+                    fontSize: "12px",
                     letterSpacing: "0.22em",
                   }}
                 >
@@ -270,7 +270,7 @@ export default function FeaturePageShell({
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
           <p
             className="font-serif italic"
-            style={{ fontSize: "11px", color: "rgba(245,240,232,0.4)" }}
+            style={{ fontSize: "12px", color: "rgba(245,240,232,0.4)" }}
           >
             © {new Date().getFullYear()} PivoxQuant · Research tool only.
           </p>
@@ -297,7 +297,7 @@ export default function FeaturePageShell({
           <p
             className="mx-auto mt-8 max-w-3xl text-center font-serif italic"
             style={{
-              fontSize: "11px",
+              fontSize: "12px",
               lineHeight: 1.7,
               color: "rgba(245,240,232,0.45)",
               letterSpacing: "0.01em",

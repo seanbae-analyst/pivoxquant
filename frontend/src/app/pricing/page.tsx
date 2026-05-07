@@ -351,7 +351,7 @@ function ConsentModal({
             <p
               className="font-mono tabular-nums mt-1"
               style={{
-                fontSize: "11px",
+                fontSize: "12px",
                 color: "var(--pq-bronze)",
                 letterSpacing: "0.08em",
               }}
@@ -470,7 +470,7 @@ function ConsentModal({
           <p
             className="mt-3 text-center font-mono tabular-nums"
             style={{
-              fontSize: "10px",
+              fontSize: "12px",
               letterSpacing: "0.16em",
               color: "rgba(245,240,232,0.40)",
             }}
@@ -631,7 +631,7 @@ export default function PricingPage() {
               <p
                 className="font-serif leading-relaxed"
                 style={{
-                  fontSize: "13px",
+                  fontSize: "14px",
                   color: "rgba(245,240,232,0.72)",
                   lineHeight: 1.65,
                   maxWidth: "62ch",
@@ -921,7 +921,7 @@ export default function PricingPage() {
           <p
             className="mt-4 text-center font-mono tabular-nums"
             style={{
-              fontSize: "10px",
+              fontSize: "12px",
               letterSpacing: "0.18em",
               color: "rgba(245,240,232,0.35)",
             }}

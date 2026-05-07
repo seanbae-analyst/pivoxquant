@@ -189,7 +189,7 @@ export function WhatIfChart({
             dataKey="label"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#94a3b8", fontSize: 11 }}
+            tick={{ fill: "#94a3b8", fontSize: 12 }}
             interval="preserveStartEnd"
             minTickGap={40}
           />
@@ -197,7 +197,7 @@ export function WhatIfChart({
             domain={yDomain}
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#94a3b8", fontSize: 11 }}
+            tick={{ fill: "#94a3b8", fontSize: 12 }}
             tickFormatter={(v: number) => fmtShort(v, currency)}
             width={64}
           />

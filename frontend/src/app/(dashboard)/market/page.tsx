@@ -271,7 +271,7 @@ export default function MarketPage() {
               <span
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
                 }}
@@ -291,7 +291,7 @@ export default function MarketPage() {
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     color: "rgba(245,240,232,0.55)",
                   }}
                 >
@@ -316,7 +316,7 @@ export default function MarketPage() {
                 <span
                   aria-hidden="true"
                   className="mx-1 text-[var(--pq-bronze)]"
-                  style={{ opacity: 0.45, fontSize: "11px" }}
+                  style={{ opacity: 0.45, fontSize: "12px" }}
                 >
                   &#10086;
                 </span>

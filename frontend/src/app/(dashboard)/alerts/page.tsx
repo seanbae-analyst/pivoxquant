@@ -281,7 +281,7 @@ export default function AlertsPage() {
             <p
               className="mt-2 font-display"
               style={{
-                fontSize: 22,
+                fontSize: 24,
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
               }}

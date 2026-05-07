@@ -147,7 +147,7 @@ function ReportCard({ entry }: { entry: ReportEntry }) {
         className="font-serif"
         style={{
           color: "rgba(245,240,232,0.6)",
-          fontSize: "13px",
+          fontSize: "14px",
           lineHeight: 1.55,
           marginBottom: 22,
         }}
@@ -267,7 +267,7 @@ export default function ReportsGallery() {
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: "10px",
+              fontSize: "12px",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.4)",
             }}

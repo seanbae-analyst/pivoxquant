@@ -205,16 +205,16 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
                 alignItems: "baseline",
               }}
             className="font-mono" >
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--r-gold-deep, #8b6f47)", letterSpacing: "0.04em" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--r-gold-deep, #8b6f47)", letterSpacing: "0.04em" }}>
                 {p.ticker}
               </span>
-              <span style={{ fontSize: 13, color: "var(--r-ink-2)" }}>
+              <span style={{ fontSize: 14, color: "var(--r-ink-2)" }}>
                 {p.shares} shares
               </span>
-              <span style={{ fontSize: 13, color: "var(--r-ink-3)" }}>
+              <span style={{ fontSize: 14, color: "var(--r-ink-3)" }}>
                 avg {fmtMoney(p.avg_cost, krw)}
               </span>
-              <span style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+              <span style={{ fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--r-ink-4)" }}>
                 +{p.days_since ?? "—"}d
               </span>
             </div>
@@ -252,7 +252,7 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
             background: "rgba(184, 149, 106, 0.08)",
             border: "1px solid rgba(184, 149, 106, 0.4)",
             borderRadius: 2,
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--r-gold-deep, #8b6f47)",
@@ -326,7 +326,7 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
         <PdfCard>
           <p
             style={{
-              fontSize: 13,
+              fontSize: 14,
               lineHeight: 1.7,
               color: "var(--r-ink-2)",
             }}
@@ -349,14 +349,14 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">PROCEED</div>
               <div
                 style={{
-                  fontSize: 34,
+                  fontSize: 32,
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
               className="font-serif" >
                 {data.decisionScore}
               </div>
-              <div style={{ fontSize: 10, color: "var(--r-ink-3)" }}>
+              <div style={{ fontSize: 12, color: "var(--r-ink-3)" }}>
                 진입 조건 충족
               </div>
             </div>
@@ -366,14 +366,14 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">WAIT</div>
               <div
                 style={{
-                  fontSize: 34,
+                  fontSize: 32,
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
               className="font-serif" >
                 15–20
               </div>
-              <div style={{ fontSize: 10, color: "var(--r-ink-3)" }}>
+              <div style={{ fontSize: 12, color: "var(--r-ink-3)" }}>
                 추가 정보 필요
               </div>
             </div>
@@ -383,14 +383,14 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">REJECT</div>
               <div
                 style={{
-                  fontSize: 34,
+                  fontSize: 32,
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
               className="font-serif" >
                 &lt;15
               </div>
-              <div style={{ fontSize: 10, color: "var(--r-ink-3)" }}>기각</div>
+              <div style={{ fontSize: 12, color: "var(--r-ink-3)" }}>기각</div>
             </div>
           </PdfCard>
         </PdfThreeCol>

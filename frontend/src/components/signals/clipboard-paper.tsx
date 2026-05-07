@@ -133,7 +133,7 @@ export function ClipboardPaper({
           </div>
           <div
             style={{
-              fontSize: 22,
+              fontSize: 24,
               fontVariantNumeric: "tabular-nums",
               color: "#141414",
               lineHeight: 1.1,
@@ -164,7 +164,7 @@ export function ClipboardPaper({
             marginTop: 20,
             padding: "40px 0",
             textAlign: "center",
-            fontSize: 13,
+            fontSize: 14,
             color: "rgba(20,20,20,0.42)",
             borderTop: "0.5px solid rgba(184,149,106,0.22)",
           }}

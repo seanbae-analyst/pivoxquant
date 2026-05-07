@@ -133,7 +133,7 @@ export function DisclaimerBand({ variant, onAcknowledge, className }: Disclaimer
         <p
           className="mt-3 font-serif italic"
           style={{
-            fontSize: 11,
+            fontSize: 12,
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
           }}

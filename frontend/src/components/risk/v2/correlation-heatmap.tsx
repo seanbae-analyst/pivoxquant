@@ -55,7 +55,7 @@ export function CorrelationHeatmap() {
       <p
         className="font-serif"
         style={{
-          fontSize: 13,
+          fontSize: 14,
           color: "rgba(245,240,232,0.70)",
           lineHeight: 1.55,
           maxWidth: 640,
@@ -80,7 +80,7 @@ export function CorrelationHeatmap() {
           alignItems: "center",
           gap: 12,
           marginBottom: 18,
-          fontSize: 10,
+          fontSize: 12,
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.55)",
         }}
@@ -114,7 +114,7 @@ export function CorrelationHeatmap() {
           style={{
             padding: "32px 0",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 13,
+            fontSize: 14,
           }}
         >
           Observing pairwise correlations…
@@ -125,7 +125,7 @@ export function CorrelationHeatmap() {
           style={{
             padding: "32px 0",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 13,
+            fontSize: 14,
           }}
         >
           Not enough holdings to compute a correlation matrix yet. Add at
@@ -195,7 +195,7 @@ export function CorrelationHeatmap() {
                           height: 40,
                           width: 48,
                           textAlign: "center",
-                          fontSize: 10,
+                          fontSize: 12,
                           color: "var(--pq-ivory)",
                           backgroundColor: bg,
                           border: "0.5px solid rgba(245,240,232,0.06)",

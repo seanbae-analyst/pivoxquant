@@ -150,7 +150,7 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
         </div>
         <div
           style={{
-            fontSize: 13,
+            fontSize: 14,
             color: "#1a1a1a",
             marginTop: 2,
             overflow: "hidden",
@@ -248,7 +248,7 @@ export function OverviewPaper({
           </div>
           <div
             style={{
-              fontSize: 13,
+              fontSize: 14,
               color: "rgba(20,20,20,0.55)",
               marginTop: 3,
             }}
@@ -258,7 +258,7 @@ export function OverviewPaper({
         </div>
         <div
           style={{
-            fontSize: 10,
+            fontSize: 12,
             textTransform: "uppercase",
             letterSpacing: "0.22em",
             color: "rgba(20,20,20,0.55)",
@@ -308,7 +308,7 @@ export function OverviewPaper({
           </h2>
           <div
             style={{
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.55)",
@@ -377,7 +377,7 @@ export function OverviewPaper({
           {hero.proxy_ticker ? (
             <div
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: "0.16em",
                 textTransform: "uppercase",
                 color: "rgba(20,20,20,0.55)",
@@ -404,7 +404,7 @@ export function OverviewPaper({
           style={{
             display: "flex",
             justifyContent: "space-between",
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: "0.16em",
             textTransform: "uppercase",
             color: "rgba(20,20,20,0.55)",

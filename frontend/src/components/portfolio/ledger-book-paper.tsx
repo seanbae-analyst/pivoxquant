@@ -154,7 +154,7 @@ export function LedgerBookPaper({
           aria-label="Add a new position to the book"
           className="pq-paper-kicker"
           style={{
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: "0.24em",
             color: "#B8956A",
             background: "transparent",
@@ -235,7 +235,7 @@ export function LedgerBookPaper({
                 className={`font-mono ${s.tone ?? ""}`}
                 style={{
                   marginTop: 4,
-                  fontSize: 11,
+                  fontSize: 12,
                   letterSpacing: "0.02em",
                   color: s.tone ? undefined : "rgba(20,20,20,0.48)",
                   fontVariantNumeric: "tabular-nums",
@@ -374,7 +374,7 @@ export function LedgerBookPaper({
                         </div>
                         <div
                           style={{
-                            fontSize: 10,
+                            fontSize: 12,
                             color: "rgba(20,20,20,0.48)",
                             letterSpacing: "0.04em",
                             marginTop: 2,
@@ -386,7 +386,7 @@ export function LedgerBookPaper({
                       <td
                         style={{
                           padding: "14px 6px",
-                          fontSize: 10,
+                          fontSize: 12,
                           letterSpacing: "0.08em",
                           textTransform: "uppercase",
                           color: "rgba(20,20,20,0.6)",
@@ -420,7 +420,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 13,
+                          fontSize: 14,
                           fontVariantNumeric: "tabular-nums",
                           color: "#1a1a1a",
                           fontWeight: 600,
@@ -455,7 +455,7 @@ export function LedgerBookPaper({
                         }}
                       >
                         <div>{fmtMoneyCell(unreal, cur)}</div>
-                        <div style={{ fontSize: 10, opacity: 0.75, marginTop: 2 }}>
+                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
                           {fmtPctSigned(unrealPct)}
                         </div>
                       </td>

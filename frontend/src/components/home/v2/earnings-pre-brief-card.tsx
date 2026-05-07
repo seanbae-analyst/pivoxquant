@@ -32,7 +32,7 @@ export function EarningsPreBriefCard() {
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 30,
+          fontSize: 32,
           lineHeight: 1.1,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",
@@ -71,7 +71,7 @@ export function EarningsPreBriefCard() {
       <div
         className="font-serif"
         style={{
-          fontSize: 13,
+          fontSize: 14,
           lineHeight: 1.6,
           color: "rgba(245,240,232,0.55)",
           margin: "8px 0 0 0",

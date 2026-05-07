@@ -233,7 +233,7 @@ export function GenerateArtifactCta({ tier }: Props) {
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   letterSpacing: "0.18em",
                   color: "rgba(245,240,232,0.45)",
                   marginTop: 4,
@@ -245,7 +245,7 @@ export function GenerateArtifactCta({ tier }: Props) {
               <p
                 className="font-serif"
                 style={{
-                  fontSize: 13,
+                  fontSize: 14,
                   lineHeight: 1.55,
                   color: "rgba(245,240,232,0.7)",
                   margin: "14px 0 16px",
@@ -285,7 +285,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                 <Link
                   href="/pricing"
                   className="pq-ink-btn-bronze inline-flex"
-                  style={{ fontSize: 10, letterSpacing: "0.18em" }}
+                  style={{ fontSize: 12, letterSpacing: "0.18em" }}
                 >
                   Upgrade to {tile.minTier}
                 </Link>
@@ -317,7 +317,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                   aria-live="polite"
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     letterSpacing: "0.18em",
                     color:
                       state.status === "error"

@@ -150,7 +150,7 @@ export function TodayMemoHero({
         ) : body && body !== headline ? (
           <p
             style={{
-              fontSize: 13,
+              fontSize: 14,
               lineHeight: 1.65,
               color: "rgba(245, 240, 232, 0.72)",
               margin: 0,
@@ -174,28 +174,28 @@ export function TodayMemoHero({
           <Link
             href="/reports"
             className="pq-ink-btn-bronze"
-            style={{ height: 32, padding: "0 14px", fontSize: 10 }}
+            style={{ height: 32, padding: "0 14px", fontSize: 12 }}
           >
             Open the desk
           </Link>
           <Link
             href="/reports?type=weekly_memo"
             className="pq-ink-btn-ghost"
-            style={{ height: 32, padding: "0 12px", fontSize: 10 }}
+            style={{ height: 32, padding: "0 12px", fontSize: 12 }}
           >
             Weekly Memo (Sun)
           </Link>
           <Link
             href="/reports?type=brag_card"
             className="pq-ink-btn-ghost"
-            style={{ height: 32, padding: "0 12px", fontSize: 10 }}
+            style={{ height: 32, padding: "0 12px", fontSize: 12 }}
           >
             Last Brag Card
           </Link>
           <Link
             href="/reports?type=earnings_prebrief"
             className="pq-ink-btn-ghost"
-            style={{ height: 32, padding: "0 12px", fontSize: 10 }}
+            style={{ height: 32, padding: "0 12px", fontSize: 12 }}
           >
             Earnings Pre-Brief
           </Link>
@@ -230,7 +230,7 @@ export function TodayMemoHero({
           <div
             className="font-serif"
             style={{
-              fontSize: 13,
+              fontSize: 14,
               lineHeight: 1.5,
               color: "rgba(245, 240, 232, 0.78)",
             }}
@@ -256,7 +256,7 @@ export function TodayMemoHero({
           <div
             className="font-serif"
             style={{
-              fontSize: 13,
+              fontSize: 14,
               lineHeight: 1.5,
               color: "rgba(245, 240, 232, 0.78)",
             }}

@@ -82,7 +82,7 @@ const buttonShellBase: React.CSSProperties = {
   gap: 14,
   padding: "14px 20px",
   borderRadius: 2,
-  fontSize: 11,
+  fontSize: 12,
   letterSpacing: "0.22em",
   textTransform: "uppercase",
   textDecoration: "none",
@@ -168,7 +168,7 @@ export function OAuthButtonsV2({
           role={hintEmphasized ? "alert" : undefined}
           style={{
             marginTop: 6,
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: "0.18em",
             color: hintEmphasized
               ? "rgba(244,108,108,0.95)"

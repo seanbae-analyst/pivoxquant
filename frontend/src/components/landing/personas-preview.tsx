@@ -102,7 +102,7 @@ export default function PersonasPreview() {
             className="font-serif uppercase"
             style={{
               color: "var(--pq-bronze)",
-              fontSize: "11px",
+              fontSize: "12px",
               letterSpacing: "0.22em",
             }}
           >
@@ -181,7 +181,7 @@ export default function PersonasPreview() {
                   className="font-mono tabular-nums"
                   style={{
                     color: "rgba(184,149,106,0.5)",
-                    fontSize: "10px",
+                    fontSize: "12px",
                     letterSpacing: "0.22em",
                   }}
                 >
@@ -191,7 +191,7 @@ export default function PersonasPreview() {
                   className="font-serif italic"
                   style={{
                     color: "rgba(245,240,232,0.4)",
-                    fontSize: "11px",
+                    fontSize: "12px",
                   }}
                 >
                   {p.kr}
@@ -202,7 +202,7 @@ export default function PersonasPreview() {
                 className="mb-2 font-mono uppercase"
                 style={{
                   color: "var(--pq-bronze)",
-                  fontSize: "10px",
+                  fontSize: "12px",
                   letterSpacing: "0.24em",
                 }}
               >
@@ -213,7 +213,7 @@ export default function PersonasPreview() {
                 className="font-serif"
                 style={{
                   color: "var(--pq-ivory)",
-                  fontSize: "22px",
+                  fontSize: "24px",
                   fontWeight: 500,
                   letterSpacing: "-0.01em",
                   marginBottom: 10,
@@ -290,7 +290,7 @@ export default function PersonasPreview() {
               backgroundColor: "transparent",
               border: "0.5pt solid rgba(184,149,106,0.5)",
               color: "var(--pq-ivory)",
-              fontSize: "13px",
+              fontSize: "14px",
               letterSpacing: "0.02em",
             }}
           >

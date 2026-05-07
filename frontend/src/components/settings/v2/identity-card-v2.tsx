@@ -40,7 +40,7 @@ const ROW_HELP_STYLE: React.CSSProperties = {
 };
 const ROW_VALUE_STYLE: React.CSSProperties = {
   fontVariantNumeric: "tabular-nums",
-  fontSize: 13,
+  fontSize: 14,
   color: "rgba(245,240,232,0.82)",
 };
 
@@ -115,7 +115,7 @@ export function SettingsIdentityCardV2({
             href={editHref}
             className="font-mono uppercase"
             style={{
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: "0.18em",
               color: "var(--pq-bronze)",
               borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -193,7 +193,7 @@ export function SettingsIdentityCardV2({
                 onClick={() => onLocaleChange(code)}
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
                   border: `1px solid ${

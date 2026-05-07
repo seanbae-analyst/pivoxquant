@@ -45,7 +45,7 @@ export function CompanionArchiveCard() {
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 30,
+          fontSize: 32,
           lineHeight: 1.1,
           letterSpacing: "-0.02em",
           color: "var(--pq-bronze)",
@@ -85,7 +85,7 @@ export function CompanionArchiveCard() {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "baseline",
-                  fontSize: 13,
+                  fontSize: 14,
                   gap: 12,
                 }}
               >
@@ -103,7 +103,7 @@ export function CompanionArchiveCard() {
                 <span
                   className="font-mono"
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     color: "rgba(245,240,232,0.40)",
                     flexShrink: 0,
                   }}
@@ -118,7 +118,7 @@ export function CompanionArchiveCard() {
         <p
           className="font-serif"
           style={{
-            fontSize: 13,
+            fontSize: 14,
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
             margin: "0 0 24px 0",
@@ -139,7 +139,7 @@ export function CompanionArchiveCard() {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--pq-bronze)",
@@ -150,7 +150,7 @@ export function CompanionArchiveCard() {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--pq-bronze)",

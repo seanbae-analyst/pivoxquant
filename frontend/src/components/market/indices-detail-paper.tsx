@@ -224,7 +224,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
         <div
           style={{
             fontVariantNumeric: "tabular-nums",
-            fontSize: 17,
+            fontSize: 18,
             color: "#141414",
             letterSpacing: "-0.01em",
           }}
@@ -238,7 +238,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
           {quote.unit ? (
             <span
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 marginLeft: 4,
                 color: "rgba(20,20,20,0.5)",
               }}
@@ -251,7 +251,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
           className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
           style={{
             fontVariantNumeric: "tabular-nums",
-            fontSize: 11,
+            fontSize: 12,
             marginTop: 2,
           }}
         >
@@ -389,7 +389,7 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
         ) : (
           <p
             style={{
-              fontSize: 13,
+              fontSize: 14,
               fontStyle: "italic",
               color: "rgba(20,20,20,0.55)",
               padding: "20px 0",
@@ -421,7 +421,7 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
               >
                 <span
                   style={{
-                    fontSize: 13,
+                    fontSize: 14,
                     color: "#1a1a1a",
                   }}
                 className="font-serif" >

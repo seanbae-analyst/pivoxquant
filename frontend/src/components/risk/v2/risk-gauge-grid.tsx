@@ -93,7 +93,7 @@ function BigGaugeCard({
       <div
         className="font-mono"
         style={{
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: "0.04em",
           color: "rgba(245,240,232,0.55)",
         }}

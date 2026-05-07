@@ -120,7 +120,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                     className="font-display"
                     style={{
                       fontWeight: 500,
-                      fontSize: 22,
+                      fontSize: 24,
                       color: "var(--pq-ivory, #F5F0E8)",
                       lineHeight: 1.1,
                     }}
@@ -159,7 +159,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                       className="font-mono"
                       style={{
                         fontVariantNumeric: "tabular-nums",
-                        fontSize: 13,
+                        fontSize: 14,
                         color:
                           m.count > 0
                             ? "var(--pq-ivory, #F5F0E8)"

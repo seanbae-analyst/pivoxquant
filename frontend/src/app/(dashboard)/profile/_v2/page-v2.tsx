@@ -122,7 +122,7 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
         className="font-mono uppercase"
         style={{
           fontVariantNumeric: "tabular-nums",
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: "0.16em",
           color: "var(--pq-bronze)",
         }}

@@ -218,7 +218,7 @@ export default function GrowthPage() {
           <p
             className="font-serif"
             style={{
-              fontSize: 17,
+              fontSize: 18,
               lineHeight: 1.55,
               color: "rgba(245,240,232,0.82)",
               maxWidth: 720,

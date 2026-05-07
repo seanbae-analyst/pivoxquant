@@ -280,7 +280,7 @@ export function InteractiveLineChart({
           {yLabel && (
             <div
               style={{
-                fontSize: "10px",
+                fontSize: "12px",
                 color: "rgba(245,240,232,0.5)",
                 marginTop: "2px",
               }}

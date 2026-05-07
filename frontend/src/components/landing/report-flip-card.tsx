@@ -210,7 +210,7 @@ function FrontFace({
           className="inline-flex items-center gap-1.5 font-serif uppercase transition-opacity hover:opacity-100"
           style={{
             color: "rgba(184,149,106,0.7)",
-            fontSize: "10px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
             opacity: 0.85,
           }}
@@ -269,7 +269,7 @@ function BackFace({
           className="font-serif italic"
           style={{
             color: "rgba(111, 86, 54, 0.7)",
-            fontSize: "10px",
+            fontSize: "12px",
           }}
         >
           {s.cadence}
@@ -280,7 +280,7 @@ function BackFace({
         className="relative z-10 mt-4 font-serif italic"
         style={{
           color: "#2A1F13",
-          fontSize: "17px",
+          fontSize: "18px",
           fontWeight: 400,
           lineHeight: 1.15,
           letterSpacing: "-0.01em",
@@ -334,7 +334,7 @@ function BackFace({
           className="font-serif italic"
           style={{
             color: "rgba(42,31,19,0.6)",
-            fontSize: "11px",
+            fontSize: "12px",
             lineHeight: 1.45,
             maxWidth: "20ch",
           }}
@@ -353,7 +353,7 @@ function BackFace({
           className="inline-flex items-center gap-1.5 font-serif uppercase"
           style={{
             color: "rgba(111, 86, 54, 0.85)",
-            fontSize: "10px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
           }}
         >
@@ -608,7 +608,7 @@ function FrontFaceContent({
           className="inline-flex items-center gap-1.5 font-serif uppercase"
           style={{
             color: "rgba(184,149,106,0.7)",
-            fontSize: "10px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
           }}
         >
@@ -646,7 +646,7 @@ function BackFaceContent({
         </span>
         <span
           className="font-serif italic"
-          style={{ color: "rgba(111,86,54,0.7)", fontSize: "10px" }}
+          style={{ color: "rgba(111,86,54,0.7)", fontSize: "12px" }}
         >
           {s.cadence}
         </span>
@@ -655,7 +655,7 @@ function BackFaceContent({
         className="relative z-10 mt-4 font-serif italic"
         style={{
           color: "#2A1F13",
-          fontSize: "17px",
+          fontSize: "18px",
           fontWeight: 400,
           lineHeight: 1.15,
           letterSpacing: "-0.01em",
@@ -706,7 +706,7 @@ function BackFaceContent({
           className="font-serif italic"
           style={{
             color: "rgba(42,31,19,0.6)",
-            fontSize: "11px",
+            fontSize: "12px",
             lineHeight: 1.45,
             maxWidth: "20ch",
           }}
@@ -724,7 +724,7 @@ function BackFaceContent({
           className="inline-flex items-center gap-1.5 font-serif uppercase"
           style={{
             color: "rgba(111,86,54,0.85)",
-            fontSize: "10px",
+            fontSize: "12px",
             letterSpacing: "0.22em",
           }}
         >

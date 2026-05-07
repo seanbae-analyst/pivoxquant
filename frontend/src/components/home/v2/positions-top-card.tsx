@@ -122,7 +122,7 @@ export function PositionsTopCard() {
                 <small
                   className="font-mono"
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     color: "rgba(245,240,232,0.40)",
                     marginLeft: 8,
                     letterSpacing: "0.12em",
@@ -135,7 +135,7 @@ export function PositionsTopCard() {
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 13,
+                  fontSize: 14,
                   color: "rgba(245,240,232,0.82)",
                 }}
               >
@@ -145,7 +145,7 @@ export function PositionsTopCard() {
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 13,
+                  fontSize: 14,
                   color: pctColor(r.pnlPct),
                 }}
               >

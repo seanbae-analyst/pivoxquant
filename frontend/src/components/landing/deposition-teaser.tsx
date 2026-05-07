@@ -163,7 +163,7 @@ export function DepositionTeaser() {
                 <h3
                   className="font-serif"
                   style={{
-                    fontSize: 22,
+                    fontSize: 24,
                     lineHeight: 1.15,
                     letterSpacing: "-0.01em",
                     fontWeight: 500,
@@ -173,7 +173,7 @@ export function DepositionTeaser() {
                 </h3>
                 <p
                   className="mt-1 font-serif italic"
-                  style={{ fontSize: 11, color: "rgba(10,10,10,0.55)" }}
+                  style={{ fontSize: 12, color: "rgba(10,10,10,0.55)" }}
                 >
                   Counterparty · Yourself
                 </p>
@@ -229,7 +229,7 @@ export function DepositionTeaser() {
 
             <p
               className="mt-8 font-serif italic"
-              style={{ fontSize: 10, color: "rgba(10,10,10,0.45)" }}
+              style={{ fontSize: 12, color: "rgba(10,10,10,0.45)" }}
             >
               Not investment advice. A reflection tool, logged to your
               compounding memory.
@@ -293,7 +293,7 @@ export function DepositionTeaser() {
           variants={fadeUp}
           className="mt-12 font-serif italic"
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "var(--pq-muted)",
             borderTop: "0.5px solid var(--pq-border)",
             paddingTop: 16,

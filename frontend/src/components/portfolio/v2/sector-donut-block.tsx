@@ -141,7 +141,7 @@ export function SectorDonutBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 13,
+            fontSize: 14,
           }}
         className="font-serif" >
           No allocation yet.
@@ -211,7 +211,7 @@ export function SectorDonutBlock({
               <div
                 className="font-display"
                 style={{
-                  fontSize: 22,
+                  fontSize: 24,
                   color: "var(--pq-ivory)",
                   fontWeight: 500,
                 }}
@@ -258,7 +258,7 @@ export function SectorDonutBlock({
                   className="font-serif"
                   style={{
                     flex: 1,
-                    fontSize: 13,
+                    fontSize: 14,
                     color: "var(--pq-ivory)",
                   }}
                 >

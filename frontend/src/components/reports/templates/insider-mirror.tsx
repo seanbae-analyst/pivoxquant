@@ -125,7 +125,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           <br />
           the signals worth following this week.
         </PdfCoverTitle>
-        <p style={{ color: "var(--r-ink-3)", fontSize: 13, lineHeight: 1.55, marginTop: 12 }}>
+        <p style={{ color: "var(--r-ink-3)", fontSize: 14, lineHeight: 1.55, marginTop: 12 }}>
           Form 4 only. Cluster buys, CEO+CFO pairs, first-time buyers — extracted after the noise is filtered out.
         </p>
 
@@ -218,22 +218,22 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
             </div>
             <PdfTicker>{data.featured.ticker}</PdfTicker>
           </PdfFlexBetween>
-          <p style={{ fontSize: 13, lineHeight: 1.65, color: "var(--r-ink-2)", marginTop: 8 }}>
+          <p style={{ fontSize: 14, lineHeight: 1.65, color: "var(--r-ink-2)", marginTop: 8 }}>
             {data.featured.body}
           </p>
           <div style={{ marginTop: 12 }}>
             <PdfThreeCol>
               <div>
                 <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }} className="font-mono" >Avg Price</div>
-                <div style={{ fontSize: 11 }} className="font-mono" >{data.featured.avgPrice}</div>
+                <div style={{ fontSize: 12 }} className="font-mono" >{data.featured.avgPrice}</div>
               </div>
               <div>
                 <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }} className="font-mono" >Last Insider Acquisition</div>
-                <div style={{ fontSize: 11 }} className="font-mono" >{data.featured.lastBuy}</div>
+                <div style={{ fontSize: 12 }} className="font-mono" >{data.featured.lastBuy}</div>
               </div>
               <div>
                 <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }} className="font-mono" >12m Hit Rate</div>
-                <div style={{ fontSize: 11, color: "var(--r-pos)" }} className="font-mono" >{data.featured.hitRate}</div>
+                <div style={{ fontSize: 12, color: "var(--r-pos)" }} className="font-mono" >{data.featured.hitRate}</div>
               </div>
             </PdfThreeCol>
           </div>
@@ -245,7 +245,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
             <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               Mirror vs S&amp;P 500 · Last 24m
             </div>
-            <div style={{ display: "flex", gap: 14, fontSize: 10, color: "var(--r-ink-3)", }} className="font-mono" >
+            <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--r-ink-3)", }} className="font-mono" >
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#0e0e0e" }} />Mirror Portfolio</span>
               <span><span style={{ display: "inline-block", width: 8, height: 8, marginRight: 5, background: "#c0c0c0" }} />S&amp;P 500</span>
             </div>

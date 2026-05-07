@@ -113,7 +113,7 @@ function ProviderRow({
           onClick={onDisconnect}
           className="font-mono uppercase"
           style={{
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: "0.18em",
             color: "var(--pq-error, #d18888)",
             borderBottom: "1px solid rgba(209,136,136,0.30)",
@@ -132,7 +132,7 @@ function ProviderRow({
           onClick={onConnect}
           className="font-mono uppercase"
           style={{
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",

@@ -334,7 +334,7 @@ export function SignalMemoStrip({
           >
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: "rgba(20,20,20,0.5)",
               }}
             className="font-serif" >
@@ -347,7 +347,7 @@ export function SignalMemoStrip({
                 onOpenDetail();
               }}
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
                 color: "#B8956A",

@@ -78,7 +78,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 13,
+            fontSize: 14,
           }}
         className="font-serif" >
           No tickers on watch.
@@ -134,7 +134,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                   <div
                     className="font-mono uppercase"
                     style={{
-                      fontSize: 10,
+                      fontSize: 12,
                       letterSpacing: "0.18em",
                       color: "rgba(245,240,232,0.40)",
                       marginTop: 2,
@@ -191,7 +191,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
           href="/watchlist"
           className="font-mono uppercase"
           style={{
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: "0.2em",
             color: "var(--pq-bronze)",
             textDecoration: "none",

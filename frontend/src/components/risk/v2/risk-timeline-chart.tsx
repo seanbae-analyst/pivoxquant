@@ -198,7 +198,7 @@ export function RiskTimelineChart({
               y={strainY - 4}
               textAnchor="end"
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 fill: "rgba(245,240,232,0.40)",
                 letterSpacing: "0.18em",
               }}
@@ -240,7 +240,7 @@ export function RiskTimelineChart({
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 22,
+                  fontSize: 24,
                   color: "var(--pq-ivory)",
                 }}
               >

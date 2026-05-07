@@ -667,7 +667,7 @@ function SiteFooter() {
           <p
             className="font-serif"
             style={{
-              fontSize: "11px",
+              fontSize: "12px",
               lineHeight: 1.7,
               letterSpacing: "0.02em",
               color: "rgba(245,240,232,0.45)",

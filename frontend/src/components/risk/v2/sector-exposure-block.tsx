@@ -187,7 +187,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
               y="104"
               textAnchor="middle"
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fill: "rgba(245,240,232,0.40)",
                 letterSpacing: "0.18em",
               }}
@@ -303,7 +303,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     colSpan={3}
                     className="font-serif"
                     style={{
-                      fontSize: 13,
+                      fontSize: 14,
                       color: "rgba(245,240,232,0.55)",
                       padding: "32px 0",
                       textAlign: "center",
@@ -364,7 +364,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       <div
                         className="font-mono"
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           color: "rgba(245,240,232,0.40)",
                           letterSpacing: "0.14em",
                           marginTop: 3,
@@ -377,7 +377,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       className="font-mono"
                       style={{
                         fontVariantNumeric: "tabular-nums",
-                        fontSize: 13,
+                        fontSize: 14,
                         color: "rgba(245,240,232,0.82)",
                         textAlign: "right",
                         padding: "14px 0",
@@ -431,7 +431,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     <div
                       className="font-mono"
                       style={{
-                        fontSize: 10,
+                        fontSize: 12,
                         color: "rgba(245,240,232,0.40)",
                         letterSpacing: "0.14em",
                         marginTop: 3,
@@ -444,7 +444,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     className="font-mono"
                     style={{
                       fontVariantNumeric: "tabular-nums",
-                      fontSize: 13,
+                      fontSize: 14,
                       color: "rgba(245,240,232,0.82)",
                       textAlign: "right",
                       padding: "14px 0",

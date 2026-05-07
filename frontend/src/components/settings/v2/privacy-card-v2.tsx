@@ -219,7 +219,7 @@ function DeleteAccountModal({
               padding: "11px 20px",
               background: "var(--pq-bronze)",
               color: "var(--pq-ink, #050505)",
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: "0.2em",
               borderRadius: 2,
               textDecoration: "none",
@@ -237,7 +237,7 @@ function DeleteAccountModal({
               background: "transparent",
               color: "var(--pq-bronze)",
               border: "1px solid var(--pq-bronze)",
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: "0.2em",
               borderRadius: 2,
               cursor: "pointer",
@@ -315,7 +315,7 @@ export function PrivacyCardV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 30,
+              fontSize: 32,
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
@@ -331,7 +331,7 @@ export function PrivacyCardV2({
           href="/privacy"
           className="font-mono uppercase"
           style={{
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -490,7 +490,7 @@ export function PrivacyCardV2({
           <p
             className="font-serif"
             style={{
-              fontSize: 13,
+              fontSize: 14,
               lineHeight: 1.55,
               color: "rgba(245,240,232,0.82)",
               marginBottom: 20,
@@ -548,7 +548,7 @@ export function PrivacyCardV2({
               padding: "12px 22px",
               background: "var(--pq-bronze)",
               color: "var(--pq-ink, #050505)",
-              fontSize: 11,
+              fontSize: 12,
               letterSpacing: "0.2em",
               borderRadius: 2,
               border: "none",
@@ -628,7 +628,7 @@ export function PrivacyCardV2({
               className="font-display"
               style={{
                 fontWeight: 500,
-                fontSize: 22,
+                fontSize: 24,
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
                 marginBottom: 12,
@@ -640,7 +640,7 @@ export function PrivacyCardV2({
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.82)",
                 marginBottom: 16,
@@ -661,7 +661,7 @@ export function PrivacyCardV2({
                 background: "transparent",
                 color: "var(--pq-bronze)",
                 border: "1px solid var(--pq-bronze)",
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: "0.2em",
                 borderRadius: 2,
                 cursor: signingOut ? "not-allowed" : "pointer",
@@ -677,7 +677,7 @@ export function PrivacyCardV2({
               className="font-display"
               style={{
                 fontWeight: 500,
-                fontSize: 22,
+                fontSize: 24,
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
                 marginBottom: 12,
@@ -689,7 +689,7 @@ export function PrivacyCardV2({
             <p
               className="font-serif"
               style={{
-                fontSize: 13,
+                fontSize: 14,
                 lineHeight: 1.55,
                 color: "rgba(245,240,232,0.82)",
                 marginBottom: 16,
@@ -703,7 +703,7 @@ export function PrivacyCardV2({
               onClick={() => setShowDelete(true)}
               className="font-mono uppercase"
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: "0.18em",
                 color: ERROR_COLOR,
                 borderBottom: `1px solid ${ERROR_LINK_BORDER}`,

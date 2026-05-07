@@ -157,7 +157,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
         <p
           className="font-serif italic"
           style={{
-            fontSize: 13,
+            fontSize: 14,
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.6)",
           }}
@@ -194,7 +194,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
             <span
               className="font-mono shrink-0"
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: "var(--pq-bronze)",
                 letterSpacing: "0.05em",
               }}

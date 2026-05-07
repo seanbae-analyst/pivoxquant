@@ -134,7 +134,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                 <div
                   style={{
                     marginTop: 4,
-                    fontSize: 10,
+                    fontSize: 12,
                     color: "rgba(20,20,20,0.45)",
                     letterSpacing: "0.02em",
                     fontVariantNumeric: "tabular-nums",
@@ -154,7 +154,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
           position: "absolute",
           bottom: 18,
           right: 22,
-          fontSize: 10,
+          fontSize: 12,
           color: "rgba(139,111,71,0.55)",
           letterSpacing: "0.06em",
         }}

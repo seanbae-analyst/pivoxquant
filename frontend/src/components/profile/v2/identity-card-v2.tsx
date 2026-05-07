@@ -141,7 +141,7 @@ export function IdentityCardV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 22,
+              fontSize: 24,
               lineHeight: 1.15,
               color: "var(--pq-ivory)",
               overflow: "hidden",
@@ -235,7 +235,7 @@ export function IdentityCardV2({
         <p
           className="font-serif"
           style={{
-            fontSize: 13,
+            fontSize: 14,
             lineHeight: 1.5,
             color: "rgba(245,240,232,0.65)",
             marginTop: 8,

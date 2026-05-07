@@ -383,7 +383,7 @@ export default function SettingsPageV2() {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
           }}
@@ -485,7 +485,7 @@ export default function SettingsPageV2() {
                 href="/profile"
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   letterSpacing: "0.18em",
                   color: "var(--pq-bronze)",
                   borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -548,7 +548,7 @@ export default function SettingsPageV2() {
                   <p
                     className="font-serif"
                     style={{
-                      fontSize: 13,
+                      fontSize: 14,
                       color: "rgba(245,240,232,0.55)",
                     }}
                   >

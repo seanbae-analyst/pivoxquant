@@ -299,7 +299,7 @@ export default function HomePageV1() {
             <div
               className="font-mono"
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 marginTop: 2,
                 color: "rgba(245,240,232,0.45)",
                 letterSpacing: "0.06em",
@@ -391,7 +391,7 @@ export default function HomePageV1() {
             <div
               className="font-mono"
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 marginTop: 2,
                 color: "rgba(245,240,232,0.45)",
                 letterSpacing: "0.06em",
@@ -496,7 +496,7 @@ export default function HomePageV1() {
               className="font-mono uppercase"
               style={{
                 color,
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: "0.2em",
               }}
             >
@@ -613,7 +613,7 @@ export default function HomePageV1() {
           <p
             className="font-serif"
             style={{
-              fontSize: 13,
+              fontSize: 14,
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.82)",
               margin: 0,
@@ -897,7 +897,7 @@ export default function HomePageV1() {
                   className="font-mono"
                   style={{
                     marginLeft: 10,
-                    fontSize: 11,
+                    fontSize: 12,
                     letterSpacing: "0.06em",
                     color: "rgba(245,240,232,0.45)",
                     fontWeight: 400,
@@ -946,7 +946,7 @@ export default function HomePageV1() {
             <Fleuron size={13} />
             <p
               className="font-serif"
-              style={{ marginTop: 12, fontStyle: "italic", fontSize: 13 }}
+              style={{ marginTop: 12, fontStyle: "italic", fontSize: 14 }}
             >
               Add your first position to see your top holding chart.
             </p>
@@ -1069,7 +1069,7 @@ export default function HomePageV1() {
           <p
             className="font-serif"
             style={{
-              fontSize: 13,
+              fontSize: 14,
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.75)",
               margin: 0,

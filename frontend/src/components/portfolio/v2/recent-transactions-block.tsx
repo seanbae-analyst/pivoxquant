@@ -103,7 +103,7 @@ export function RecentTransactionsBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 13,
+            fontSize: 14,
           }}
         className="font-serif" >
           Loading entries…
@@ -116,7 +116,7 @@ export function RecentTransactionsBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 13,
+            fontSize: 14,
           }}
         className="font-serif" >
           No recent entries.
@@ -207,7 +207,7 @@ export function RecentTransactionsBlock({
           href="/portfolio"
           className="font-mono uppercase"
           style={{
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: "0.2em",
             color: "var(--pq-bronze)",
             textDecoration: "none",
