@@ -762,6 +762,12 @@ def portfolio_summary_alias():
                 pnl = pnl / rate
             realized_ytd_usd += pnl
 
+        # 2026-05-08 (observed_at sweep): the v2 portfolio page
+        # (frontend/src/app/(dashboard)/portfolio/_v2/page-v2.tsx:158)
+        # consumes `sumData?.observed_at ?? null` to render the "last
+        # reconciled" timestamp chip. Emit it explicitly so the chip
+        # stops showing "—" forever. The response IS what we observed.
+        observed_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         return jsonify({
             "totalNav": round(total_nav_usd, 2),
             "todayPnl": round(today_pnl_usd, 2),
@@ -771,6 +777,7 @@ def portfolio_summary_alias():
             "currency": "USD",
             "fxRate": rate,
             "positionCount": len(positions),
+            "observed_at": observed_iso,
         })
     except Exception:
         logger.exception("portfolio_summary_alias failed")
