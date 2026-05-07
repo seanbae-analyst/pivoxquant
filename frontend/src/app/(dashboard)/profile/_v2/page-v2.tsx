@@ -34,9 +34,13 @@ import { useInvestmentProfile } from "@/lib/hooks";
 import { apiFetch } from "@/lib/api";
 import {
   usePersona,
+  usePersonaBenchmark,
   usePersonaDetail,
   usePulse,
 } from "@/lib/cfo/hooks";
+import type { PersonaBreakdownRow } from "@/lib/cfo/hooks";
+import type { DimensionEntry } from "@/components/profile/v2/six-dimensions-grid";
+import type { PeerMetric } from "@/components/profile/v2/peer-benchmark-block-v2";
 import {
   hasCompanionEntitlement,
   useCompanionStatus,
@@ -162,7 +166,10 @@ export default function ProfilePageV2() {
   const investorType = profileData?.profile?.profile_type ?? null;
 
   const { data: persona } = usePersona();
-  const { data: personaDetail } = usePersonaDetail(90);
+  const { data: personaDetail, isLoading: personaDetailLoading } =
+    usePersonaDetail(90);
+  const { data: benchmark, isLoading: benchmarkLoading } =
+    usePersonaBenchmark(90);
   const { data: pulse } = usePulse();
   const { data: companionStatus } = useCompanionStatus();
 
@@ -298,6 +305,80 @@ export default function ProfilePageV2() {
     }
   }, []);
 
+  /* ── Six-dimension grid wiring ──
+   * Backend exposes a 9-feature `breakdown` (FEATURE_KEYS in
+   * services/profile/persona_classifier_v2.py). The editorial mockup
+   * surfaces "the six dimensions" — we render the top-6 by closeness
+   * (those most aligned with the winning persona centroid). When the
+   * persona detail isn't ready (sparse data, < 10 trades), we render
+   * an empty-state placeholder via the component instead of fake
+   * sample numbers. NEW-A fix (2026-05-07).
+   *
+   * NB: useMemo declarations live BEFORE the `authLoading || !user`
+   * early-return so hook order is stable across renders.
+   */
+  const dimensions: DimensionEntry[] | null = React.useMemo(() => {
+    if (!personaDetail || personaDetail.data_sparse) return null;
+    if (!personaDetail.breakdown || personaDetail.breakdown.length === 0)
+      return null;
+    const rows: PersonaBreakdownRow[] = [...personaDetail.breakdown]
+      .sort((a, b) => b.closeness - a.closeness)
+      .slice(0, 6);
+    return rows.map((r) => {
+      const score = Math.max(0, Math.min(10, r.value * 10));
+      const closenessPct = Math.round(r.closeness * 100);
+      const quote = `Observed ${(r.value * 100).toFixed(0)} / 100 against the persona centroid ${(r.centroid * 100).toFixed(0)} — ${closenessPct}% alignment.`;
+      return { name: r.label, quote, score };
+    });
+  }, [personaDetail]);
+
+  /* ── Peer benchmark wiring ──
+   * Backend returns BenchmarkAvailable | BenchmarkUnavailable
+   * (with `available: false` when N < 20 — legal floor enforced
+   * server-side). When available, we surface CAGR / Sharpe / Holding
+   * days / MaxDD vs cohort medians as observational metrics.
+   * Empty state otherwise. NEW-B fix (2026-05-07).
+   */
+  const peerMetrics: PeerMetric[] | null = React.useMemo(() => {
+    if (!benchmark || !benchmark.available) return null;
+    const s = benchmark.stats;
+    return [
+      {
+        label: "CAGR (median)",
+        value: `${s.avg_cagr.toFixed(1)}%`,
+        youPct: 50,
+        medianPct: 50,
+        ariaLabel: `CAGR median ${s.avg_cagr.toFixed(1)}% in cohort`,
+      },
+      {
+        label: "Sharpe (median)",
+        value: s.avg_sharpe.toFixed(2),
+        youPct: 50,
+        medianPct: 50,
+        ariaLabel: `Sharpe median ${s.avg_sharpe.toFixed(2)} in cohort`,
+      },
+      {
+        label: "Holding days (median)",
+        value: `${s.median_holding_days.toFixed(0)}d`,
+        youPct: 50,
+        medianPct: 50,
+        ariaLabel: `Median holding days ${s.median_holding_days.toFixed(0)} in cohort`,
+      },
+      {
+        label: "Max drawdown (avg)",
+        value: `${s.max_drawdown_avg.toFixed(1)}%`,
+        youPct: 50,
+        medianPct: 50,
+        ariaLabel: `Average max drawdown ${s.max_drawdown_avg.toFixed(1)}% in cohort`,
+      },
+    ];
+  }, [benchmark]);
+
+  const peerCohortName: string | null =
+    benchmark && benchmark.available ? benchmark.persona_label : null;
+  const peerEmptyReason: "insufficient_group_size" | "not_computed" | "no_data" =
+    benchmark && !benchmark.available ? benchmark.reason : "no_data";
+
   if (authLoading || !user) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -359,6 +440,7 @@ export default function ProfilePageV2() {
       : FALLBACK_PULSE_HISTORY;
 
   const personaIsMock = persona?._isMock === true;
+
 
   return (
     <ErrorBoundary>
@@ -486,14 +568,27 @@ export default function ProfilePageV2() {
 
         {/* BLOCK 4 — Six dimensions
             methodologyHref points at /docs (was /methodology which 404'd —
-            bug-hunter 2026-05-05 HIGH finding). */}
-        <SixDimensionsGrid showHeader methodologyHref="/docs" />
+            bug-hunter 2026-05-05 HIGH finding).
+            Dimensions sourced from `personaDetail.breakdown` (top-6 by
+            closeness). Empty state when sparse — never fake samples. */}
+        <SixDimensionsGrid
+          showHeader
+          methodologyHref="/docs"
+          dimensions={dimensions}
+          loading={personaDetailLoading}
+        />
 
-        {/* BLOCK 5 — Peer benchmark */}
+        {/* BLOCK 5 — Peer benchmark
+            Wired to `/api/profile/persona-benchmark` — surfaces CAGR /
+            Sharpe / Holding / MaxDD vs cohort. Empty state when N < 20
+            (legal floor) or no trade history. Never fake. */}
         <PeerBenchmarkBlockV2
-          cohortName="Defensive Allocator"
-          cohortSize={412}
+          metrics={peerMetrics}
+          cohortName={peerCohortName}
+          cohortSize={null}
           windowDays={90}
+          loading={benchmarkLoading}
+          emptyReason={peerEmptyReason}
         />
 
         {/* BLOCK 6 + 7 — Pulse (7) + Companion (5) */}

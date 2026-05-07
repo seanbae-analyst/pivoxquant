@@ -29,52 +29,22 @@ export interface DimensionEntry {
   score: number;
 }
 
-const DEFAULT_DIMS: DimensionEntry[] = [
-  {
-    name: "Risk tolerance",
-    quote:
-      "You sized down twice in February before VIX spiked. Tail-aware, not tail-chasing.",
-    score: 7.2,
-  },
-  {
-    name: "Time horizon",
-    quote:
-      "Median holding period 47 days. Top decile of your peer cohort by patience.",
-    score: 8.1,
-  },
-  {
-    name: "Diversification",
-    quote:
-      "Twelve open names across six sectors. Concentration ratio 41% in Tech — flagged.",
-    score: 6.4,
-  },
-  {
-    name: "Sector lean",
-    quote:
-      "Tech-heavy with a defensive tilt: AAPL, MSFT, 005930.KS as anchors.",
-    score: 7.0,
-  },
-  {
-    name: "Behavioral pattern",
-    quote:
-      "No disposition effect detected. You let winners run; you cut losers within 2σ moves.",
-    score: 8.6,
-  },
-  {
-    name: "Reaction style",
-    quote:
-      "Slower than median peer to chase post-earnings moves. Reads the second day.",
-    score: 7.4,
-  },
-];
-
 interface Props {
-  /** 6 dimensions. Falls back to editorial defaults when omitted. */
-  dimensions?: DimensionEntry[];
+  /**
+   * Up to 6 dimensions sourced from the backend persona breakdown.
+   * When omitted, null, or empty, the grid renders an empty-state
+   * placeholder instead of fabricated sample numbers.
+   * Bug-hunter 2026-05-07: removed editorial DEFAULT_DIMS fallback —
+   * was leaking fake AAPL/MSFT/005930.KS anchors + invented scores
+   * to every signed-in user (CEO escalation NEW-A).
+   */
+  dimensions?: DimensionEntry[] | null;
   /** Section eyebrow + title visible above the grid. */
   showHeader?: boolean;
   /** Methodology link href; rendered in the section header when shown. */
   methodologyHref?: string;
+  /** True while the upstream hook is loading — show skeleton copy. */
+  loading?: boolean;
 }
 
 export function SixDimensionsGrid({
@@ -84,8 +54,9 @@ export function SixDimensionsGrid({
      Signals & Risk methodology section) until a dedicated methodology
      page is shipped. Bug-hunter 2026-05-05 HIGH finding. */
   methodologyHref = "/docs",
+  loading = false,
 }: Props) {
-  const list = dimensions && dimensions.length === 6 ? dimensions : DEFAULT_DIMS;
+  const list = dimensions && dimensions.length > 0 ? dimensions.slice(0, 6) : null;
 
   return (
     <section
@@ -151,7 +122,48 @@ export function SixDimensionsGrid({
         </div>
       ) : null}
 
-      {list.map((dim, idx) => {
+      {!list ? (
+        <div
+          style={{
+            gridColumn: "span 12",
+            background: "rgba(255,255,255,0.02)",
+            border: "1px dashed rgba(245,240,232,0.14)",
+            borderRadius: 4,
+            padding: 32,
+            textAlign: "center",
+          }}
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            className="font-mono uppercase"
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.22em",
+              color: "var(--pq-bronze)",
+              marginBottom: 10,
+            }}
+          >
+            {loading ? "Loading…" : "Awaiting data"}
+          </div>
+          <p
+            className="font-serif"
+            style={{
+              fontSize: 14,
+              lineHeight: 1.55,
+              color: "rgba(245,240,232,0.55)",
+              maxWidth: 520,
+              margin: "0 auto",
+            }}
+          >
+            {loading
+              ? "Computing your six-dimension persona breakdown…"
+              : "거래 기록이 누적되면 6개 차원으로 본인의 페르소나가 표시됩니다. Six-dimension persona surfaces here once your trade history accumulates."}
+          </p>
+        </div>
+      ) : null}
+
+      {list?.map((dim, idx) => {
         const widthPct = Math.min(100, Math.max(0, dim.score * 10));
         const corner = String(idx + 1).padStart(2, "0");
         return (
