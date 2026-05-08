@@ -59,9 +59,9 @@ Strict rules:
   needed.
 - Do NOT recommend buying, selling, or holding any security. This is an
   infrastructure context, not advisory.
-- Respect the kill switch: `enabled=false` and
-  `legal_status=pending-counsel-review` on /api/agent/status are
-  intentional and MUST NOT be "fixed" to `true`.
+- Respect the kill switch: `enabled=false` on /api/agent/status is
+  intentional and MUST NOT be "fixed" to `true`. (As of 2026-05-09 the
+  legal-status field is no longer exposed publicly — see SEC-C.)
 - Output format (markdown):
 
   ## Root Cause (most likely)
@@ -319,8 +319,8 @@ def main() -> int:
             f"{claude_out}\n\n"
             "---\n"
             "_This is advisory only. Always verify against the evidence. "
-            "Kill switches (`enabled=false`, `legal_status=pending-counsel-review`) "
-            "must not be disabled as a 'fix'._"
+            "Kill switches (`enabled=false` on /api/agent/status) must not be "
+            "disabled as a 'fix'._"
         )
         post_comment(repo, num, comment)
         analyzed += 1
