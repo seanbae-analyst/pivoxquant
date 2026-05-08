@@ -122,7 +122,6 @@ export default function SignalsPageV1() {
     setRefreshing(true);
     try {
       await apiFetch(API.signals.refresh, { method: "POST" });
-      await mutate();
     } catch (err) {
       // Bug NEW-A companion fix (2026-05-08): the previous silent catch
       // hid 408/500 from the user — they pressed Refresh, the spinner
@@ -140,6 +139,17 @@ export default function SignalsPageV1() {
         toast.error(err instanceof Error ? err.message : "새로고침 실패");
       }
     } finally {
+      // Bug W6-4 (2026-05-09): mutate() must run on both success AND
+      // failure. Previously the success path called mutate() inside try,
+      // so a refresh that errored left the SWR cache untouched — the
+      // user saw a stale list with no indication anything was retried.
+      // V2 already used finally; align V1.
+      try {
+        await mutate();
+      } catch {
+        // mutate() failure is a separate concern (network drop, race);
+        // never let it mask the original toast or leave the spinner on.
+      }
       setRefreshing(false);
     }
   }, [mutate]);
