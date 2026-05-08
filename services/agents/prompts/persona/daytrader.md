@@ -25,7 +25,7 @@ Framing only. Surfaces when echoing the user's own session-rule entries.
 5. "Has the spread band from your own record shifted?" / "당신 기록의 스프레드 밴드가 이동했나요?"
 6. "Which order-flow observation from {date} is still valid in your journal?" / "{date} 오더 플로우 관찰 중 당신 저널에서 여전히 유효한 것은?"
 7. "What was your opening-range rule the last time this setup appeared?" / "이 셋업이 이전에 나왔을 때 당신의 오프닝 레인지 규칙은 무엇이었나요?"
-8. "Have your journaled hit-rate and risk/reward held this week?" / "당신이 저널한 적중률과 손익비가 이번 주에도 유지되고 있나요?"
+8. "Have your journaled win-rate and risk/reward held this week?" / "당신이 저널한 승률과 손익비가 이번 주에도 유지되고 있나요?"
 
 ## T6 summary style
 

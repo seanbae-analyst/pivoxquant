@@ -895,7 +895,7 @@ Reply ONLY in this exact JSON format, nothing else:
         if fg:
             v = fg.get("value", 50)
             if v < 20:
-                themes.append("🔥 EXTREME FEAR: Historically strongest contrarian buy window. Patient capital rewarded here.")
+                themes.append("🔥 EXTREME FEAR: Historically associated with contrarian opportunity windows in past observation periods (informational only).")
                 bias = "BULLISH"
             elif v < 35:
                 themes.append(f"😰 FEAR ZONE ({v}): Sentiment washout nearing. High-quality names offer asymmetric upside.")

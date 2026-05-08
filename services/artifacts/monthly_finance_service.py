@@ -12,8 +12,8 @@ The report is strictly **descriptive** of the user's own numbers:
   * Watch Items  — "다음 달 ex-dividend/실적 발표 캘린더" (calendar only)
 
 The report NEVER:
-  * suggests reallocations ("~에 배분하세요")
-  * recommends positions ("~를 추가 매수")
+  * suggests reallocations (directive prose is forbidden)
+  * recommends positions (directive prose is forbidden)
   * predicts price movement
 
 All prose passes through `legal_filter.safe_scrub` and the shared

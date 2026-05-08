@@ -251,13 +251,13 @@
 {# ── Brag Card — highlight metric ────────────────────────────────────── #}
 {#
    Brag Card leads with *one* headline stat. Choice reflects the
-   persona's value system — Value CFO cares about valuation hit rate,
-   Income CFO about dividend yield vs peer, etc.
+   persona's value system — Value CFO observes valuation reversion,
+   Income CFO observes dividend yield vs peer, etc.
 #}
 {% macro brag_card_highlight_metric(persona) -%}
   {%- if persona == 'growth' -%}
     <span class="pq-highlight-metric" data-metric="earnings_surprise_hit_rate">
-      실적 서프라이즈 적중률 관찰 구간
+      실적 서프라이즈 일치 비율 관찰 구간
     </span>
   {%- elif persona == 'value' -%}
     <span class="pq-highlight-metric" data-metric="valuation_call_hit_rate">
