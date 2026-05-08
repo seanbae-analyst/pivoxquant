@@ -4,6 +4,7 @@ Uses Claude Haiku for cost-efficient, beginner-friendly financial insights.
 """
 
 import os
+import re
 import logging
 from datetime import datetime, timezone
 
@@ -29,17 +30,67 @@ _DISCLAIMER_KR = (
 )
 
 
+# ── Required-disclaimer fragments ──────────────────────────────────────
+# SYSTEM_PROMPT mandates every AI response end with the bilingual disclaimer
+# sentence above. Those sentences contain "advice" and "recommendations",
+# which match the forbidden-vocab regex on services/legal_filter.py
+# (\b(?:buy|sell|recommend|advice|advise)\b plus the KR list). Without this
+# stripping step every well-formed response gets replaced by the fallback
+# one-liner. Fragments mirror the exact wording in the constants above plus
+# the SYSTEM_PROMPT (services/ai/service.py:84-85) and the looser
+# `services.legal_filter._DISCLAIMER_*` shorter variants.
+_DISCLAIMER_FRAGMENTS = [
+    re.compile(
+        r"this\s+content\s+is\s+informational\s+only\s+and\s+not\s+investment\s+advice\.?",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"this\s+is\s+informational\s+only\s+and\s+not\s+investment\s+advice\.?",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"pivoxquant\s+does\s+not\s+provide\s+individualized\s+recommendations\.?",
+        re.IGNORECASE,
+    ),
+    re.compile(r"본\s*내용은\s*정보\s*제공\s*목적이며\s*투자\s*권유가\s*아닙니다\.?"),
+    re.compile(r"PivoxQuant는\s*개별\s*투자\s*자문을\s*제공하지\s*않습니다\.?"),
+]
+
+
+def _strip_disclaimers(text):
+    """Remove required-disclaimer sentences before compliance vocab check.
+
+    Returns the body with all known disclaimer fragments excised. The
+    fragments themselves contain "advice" / "recommendations" / "권유" /
+    "자문" — those are mandated by SYSTEM_PROMPT and must NOT be treated
+    as advisory vocabulary by ``_is_compliant``.
+    """
+    if not text:
+        return text
+    body = text
+    for pattern in _DISCLAIMER_FRAGMENTS:
+        body = pattern.sub("", body)
+    return body.strip()
+
+
 def _compliance_filter(text, lang="en"):
     """Return `text` if compliant; otherwise a neutral disclaimer fallback.
 
     Any AI-generated string that contains forbidden advisory vocabulary is
     dropped and replaced with a safe disclaimer so we never surface raw
     "buy"/"sell"/"추천"/"매수" to end users.
+
+    The required closing disclaimer sentences (SYSTEM_PROMPT) themselves
+    contain "advice" / "recommendations" / "권유" / "자문" — those legitimate
+    fragments are stripped before the vocab check so they don't trigger a
+    false-positive replacement of the entire response. The disclaimer is
+    preserved verbatim in the returned string when the body is compliant.
     """
     if text is None:
         return text
     try:
-        if _is_compliant(text):
+        body = _strip_disclaimers(text)
+        if _is_compliant(body):
             return text
     except Exception as e:  # pragma: no cover
         logger.warning("Compliance check failed, returning disclaimer: %s", e)
@@ -263,7 +314,9 @@ class AIService:
                     yield text
 
             full = "".join(accumulated)
-            if full and not _is_compliant(full):
+            # Strip required disclaimer fragments before vocab check —
+            # SYSTEM_PROMPT mandates them and they match the forbidden list.
+            if full and not _is_compliant(_strip_disclaimers(full)):
                 logger.warning("chat_stream: non-compliant output detected; appending disclaimer.")
                 yield (
                     "\n\n---\n"
