@@ -446,6 +446,11 @@ export interface SignalEntry {
   currency?: "USD" | "KRW";
   is_korean?: boolean;
   sector?: string | null;
+  // Backend `routes/signals.py:45` flags entries served from the
+  // SignalCache when the underlying data crossed the freshness TTL.
+  // Frontend uses this to badge a "STALE" indicator so users can
+  // distinguish a fresh observation from a cached one.
+  is_stale?: boolean;
 }
 
 export interface SignalsResponse {
