@@ -49,6 +49,51 @@ class TestAiSwotSmoke:
             r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
         assert r.status_code == 503
 
+    def test_swot_500_surfaces_last_error_detail(self, app, client, make_user):
+        """Bug #14: a transient Anthropic failure caused an opaque 500.
+        Route must now include ``detail`` (from ``ai.last_error``) so the
+        operator sees the failing op + exception type without guessing.
+        """
+        u = make_user(email="pro2@test.com", tier="pro")
+        # Allowlist AAPL so access_guard doesn't 403 us before generate_swot.
+        from models import Watchlist
+        from extensions import db
+        with app.app_context():
+            db.session.add(Watchlist(user_id=u["id"], ticker="AAPL"))
+            db.session.commit()
+        client.post("/api/auth/login",
+                    json={"email": u["email"], "password": u["password"]})
+        with patch("routes.ai.ai") as mock_ai:
+            mock_ai.available = True
+            mock_ai.generate_swot.return_value = None
+            mock_ai.last_error = "swot: APIStatusError: rate limited"
+            r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
+        assert r.status_code == 500
+        body = r.get_json()
+        assert body.get("error") == "Failed to generate SWOT"
+        assert body.get("detail") == "swot: APIStatusError: rate limited"
+
+    def test_swot_500_no_detail_when_last_error_unset(self, app, client, make_user):
+        """Backwards-compat: if `last_error` isn't set, the route must NOT
+        include `detail` (avoid leaking ``None`` into the JSON body)."""
+        u = make_user(email="pro3@test.com", tier="pro")
+        from models import Watchlist
+        from extensions import db
+        with app.app_context():
+            db.session.add(Watchlist(user_id=u["id"], ticker="AAPL"))
+            db.session.commit()
+        client.post("/api/auth/login",
+                    json={"email": u["email"], "password": u["password"]})
+        with patch("routes.ai.ai") as mock_ai:
+            mock_ai.available = True
+            mock_ai.generate_swot.return_value = None
+            mock_ai.last_error = None
+            r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
+        assert r.status_code == 500
+        body = r.get_json()
+        assert body.get("error") == "Failed to generate SWOT"
+        assert "detail" not in body
+
 
 class TestAiChatSmoke:
     def test_unauthenticated_chat_returns_401(self, client):
