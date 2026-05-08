@@ -757,17 +757,24 @@ def get_info(ticker):
         # revenuePerShareTTM moved to ratios-ttm
         eps = (ratios or {}).get("netIncomePerShareTTM") or metrics.get("epsTTM") or 0
         rev_per_share = (ratios or {}).get("revenuePerShareTTM") or metrics.get("revenuePerShareTTM") or 0
-        # NOTE: revenueGrowth must be a YoY growth RATE (e.g. 0.12 = +12%), not an
-        # absolute revenue-per-share figure. /key-metrics-ttm + /ratios-ttm do not
-        # publish a TTM growth rate — populating revenueGrowth with revenuePerShare
-        # was an upstream mismapping that surfaced as nonsense % values in the UI
-        # (frontend renders `(value * 100).toFixed(1) + "%"`). Until we wire up
-        # /income-statement-growth, leave revenueGrowth null so the UI renders "—"
-        # honestly. revenuePerShare keeps the absolute figure for any callers that
-        # actually want it.
+        # Bug #16 (2026-05-08): revenueGrowth wired through /income-statement-growth.
+        # Contract: must be a YoY growth RATE (0.12 = +12%), not an absolute
+        # revenue-per-share figure (the previous mismapping surfaced as nonsense %
+        # in the UI which renders `(value * 100).toFixed(1) + "%"`). FMP's
+        # `growthRevenue` field already obeys that contract. None when FMP returns
+        # nothing (UI then renders "—" honestly). revenuePerShare keeps the
+        # absolute figure for any callers that actually want it.
+        rev_growth_yoy = None
+        try:
+            ig = get_income_statement_growth(ticker) or {}
+            v = ig.get("growthRevenue")
+            if v is not None:
+                rev_growth_yoy = float(v)
+        except Exception as e:
+            logger.debug("income-statement-growth fetch failed for %s: %s", ticker, e)
         info.update({
             "trailingEps": eps,
-            "revenueGrowth": None,
+            "revenueGrowth": rev_growth_yoy,
             "revenuePerShare": rev_per_share,
         })
 
@@ -911,6 +918,56 @@ def get_key_metrics_ttm(ticker):
             logger.info("FMP key-metrics-ttm resolved %s via class-share alt %s", ticker, alt)
             _set_cache(cache_key, result)
             return result
+    return {}
+
+
+def get_income_statement_growth(ticker):
+    """Latest annual income-statement-growth row.
+
+    Stable API endpoint: ``/income-statement-growth`` returns one row per
+    fiscal year, newest-first. We pick row[0] for the most recent YoY growth
+    figures. Cached 24h (fundamental data; updates at most quarterly).
+
+    Returns ``{}`` on miss so callers can use ``.get(...)`` safely.
+
+    Schema (relevant fields, FMP stable):
+        - ``growthRevenue``       : decimal YoY growth rate (0.12 = +12%)
+        - ``growthNetIncome``     : decimal YoY net income growth
+        - ``growthEPS``           : decimal YoY EPS growth
+        - ``growthGrossProfit``   : decimal YoY gross profit growth
+        - ``date`` / ``fiscalYear`` / ``period`` (FY/Q1…)
+
+    Bug #16: until this helper landed, ``get_info()`` set ``revenueGrowth``
+    to ``None`` (mismapping fallback) and the AAPL Detail page rendered
+    "Revenue growth (YoY): —". Now wired through the existing
+    info → snapshot ``revenue_growth`` chain in fetcher.py.
+    """
+    cache_key = f"income_growth:{ticker}"
+    cached = _get_cache(cache_key, TTL_FUNDAMENTAL)
+    if cached is not None:
+        return cached
+    if _is_budget_stale():
+        stale = _get_cache_stale(cache_key)
+        if stale is not None:
+            return stale
+    data = _fmp_get("/income-statement-growth", {"symbol": ticker, "limit": 1})
+    if data and isinstance(data, list) and len(data) > 0:
+        result = data[0]
+        _set_cache(cache_key, result)
+        return result
+    alt = _class_share_alt(ticker)
+    if alt:
+        data = _fmp_get("/income-statement-growth", {"symbol": alt, "limit": 1})
+        if data and isinstance(data, list) and len(data) > 0:
+            result = data[0]
+            logger.info(
+                "FMP income-statement-growth resolved %s via class-share alt %s",
+                ticker, alt,
+            )
+            _set_cache(cache_key, result)
+            return result
+    # Empty dict (not None) so cache positive-miss avoidance still allows
+    # callers to retry the next TTL cycle if ticker coverage improves.
     return {}
 
 
@@ -1376,9 +1433,11 @@ def prefetch_fundamentals(tickers):
             if metrics:
                 eps = (ratios or {}).get("netIncomePerShareTTM") or metrics.get("epsTTM") or 0
                 rev_per_share = (ratios or {}).get("revenuePerShareTTM") or metrics.get("revenuePerShareTTM") or 0
-                # See get_info() above: revenueGrowth must be a YoY rate, not an
-                # absolute revenue-per-share figure. Mirror the same null fix here
-                # so the prefetch path doesn't pre-seed a wrong value into cache.
+                # Bug #16 (2026-05-08): the prefetch path deliberately leaves
+                # revenueGrowth=None to preserve the daily FMP budget — on-demand
+                # ``get_info()`` (line ~768) makes a single /income-statement-growth
+                # call and fills the field. The cache key is ``info:<t>``, so the
+                # on-demand path overwrites this entry within the same TTL window.
                 info.update({
                     "trailingEps": eps,
                     "revenueGrowth": None,

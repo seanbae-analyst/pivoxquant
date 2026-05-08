@@ -93,6 +93,13 @@ class AIService:
     def __init__(self):
         self.client = None
         self.available = False
+        # Last-error surface (Bug #14): generators (`generate_swot`, `generate_commentary`,
+        # …) intentionally swallow Anthropic SDK exceptions to keep the route's contract
+        # of returning ``None`` (vs raising). Routes that surface a 500 want to inform
+        # the operator *why* — `last_error` exposes the exception type + message of the
+        # most recent failure (per AIService instance, set inside the except blocks).
+        # Kept short (≤200 chars) so we never leak SDK secrets / large stack traces.
+        self.last_error: str | None = None
         api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
         if api_key:
             try:
@@ -102,6 +109,20 @@ class AIService:
                 logger.info("AI Service initialized (Claude Haiku)")
             except Exception as e:
                 logger.warning("AI Service init failed: %s", e)
+
+    def _record_error(self, op: str, exc: Exception) -> None:
+        """Persist a short, redacted last-error string for route diagnostics.
+
+        Stores ``"<op>: <ExceptionType>: <message[:160]>"`` — never the raw
+        exception object, never a traceback. Bug #14 surface: routes that
+        observe a ``None`` return from a generator can include ``last_error``
+        in their 500 body so the user/operator sees *why* SWOT failed instead
+        of the prior opaque "Failed to generate SWOT".
+        """
+        msg = str(exc)
+        if len(msg) > 160:
+            msg = msg[:157] + "..."
+        self.last_error = f"{op}: {type(exc).__name__}: {msg}"
 
     # ── Context Builders ──────────────────────────────────────────
 
@@ -317,6 +338,7 @@ Use these EXACT markers:
             })
         except Exception as e:
             logger.error("Commentary error: %s", e)
+            self._record_error("commentary", e)
             return None
 
     def generate_morning_summary(self, brief_data):
@@ -360,6 +382,7 @@ Top Headlines:
             })
         except Exception as e:
             logger.error("Morning summary error: %s", e)
+            self._record_error("morning_summary", e)
             return None
 
     def generate_coaching(self, portfolio_context):
@@ -394,6 +417,7 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean. Do NOT cu
             })
         except Exception as e:
             logger.error("Coaching error: %s", e)
+            self._record_error("coaching", e)
             return None
 
     def generate_swot(self, analysis_data):
@@ -435,6 +459,7 @@ IMPORTANT: You MUST write BOTH English AND Korean. Do NOT skip Korean.
             })
         except Exception as e:
             logger.error("SWOT error: %s", e)
+            self._record_error("swot", e)
             return None
 
     def generate_competitor_analysis(self, analysis_data, peers_data):
@@ -484,6 +509,7 @@ Peers in same sector:
             })
         except Exception as e:
             logger.error("Competitor analysis error: %s", e)
+            self._record_error("competitor", e)
             return None
 
     # NOTE: generate_brief_insight() removed 2026-04-29 along with the
@@ -534,4 +560,5 @@ Stocks in {sector}:
             })
         except Exception as e:
             logger.error("Sector trend error: %s", e)
+            self._record_error("sector_trend", e)
             return None

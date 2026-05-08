@@ -74,7 +74,16 @@ def swot():
     result = ai.generate_swot(d)
     if result:
         return _scrub_and_jsonify(result)
-    return jsonify({"error": "Failed to generate SWOT"}), 500
+    # Bug #14: was an opaque 500 ("Failed to generate SWOT"); the AAPL detail
+    # page surfaced it as "Failed to generate SWOT" with no clue why. The
+    # generator swallows the upstream Anthropic exception per its public
+    # contract (returns None on transient errors — see test_ai_failure_paths)
+    # but stashes the type+message in ``ai.last_error`` for diagnostics.
+    detail = getattr(ai, "last_error", None)
+    body = {"error": "Failed to generate SWOT"}
+    if detail:
+        body["detail"] = detail
+    return jsonify(body), 500
 
 
 @ai_bp.route("/competitor", methods=["POST"])
@@ -110,7 +119,11 @@ def competitor():
     result = ai.generate_competitor_analysis(d, peers[:8])
     if result:
         return _scrub_and_jsonify(result)
-    return jsonify({"error": "Failed to generate competitor analysis"}), 500
+    detail = getattr(ai, "last_error", None)
+    body = {"error": "Failed to generate competitor analysis"}
+    if detail:
+        body["detail"] = detail
+    return jsonify(body), 500
 
 
 @ai_bp.route("/sector-trend", methods=["POST"])
@@ -144,7 +157,11 @@ def sector_trend():
     result = ai.generate_sector_trend(sector, stocks[:10])
     if result:
         return _scrub_and_jsonify(result)
-    return jsonify({"error": "Failed to generate sector trend"}), 500
+    detail = getattr(ai, "last_error", None)
+    body = {"error": "Failed to generate sector trend"}
+    if detail:
+        body["detail"] = detail
+    return jsonify(body), 500
 
 
 @ai_bp.route("/chat", methods=["POST"])
@@ -212,7 +229,11 @@ def commentary():
     result = ai.generate_commentary(d)
     if result:
         return _scrub_and_jsonify(result)
-    return jsonify({"error": "Failed to generate commentary"}), 500
+    detail = getattr(ai, "last_error", None)
+    body = {"error": "Failed to generate commentary"}
+    if detail:
+        body["detail"] = detail
+    return jsonify(body), 500
 
 
 @ai_bp.route("/morning-summary", methods=["POST"])
@@ -226,7 +247,11 @@ def morning_summary():
     result = ai.generate_morning_summary(d)
     if result:
         return _scrub_and_jsonify(result)
-    return jsonify({"error": "Failed to generate summary"}), 500
+    detail = getattr(ai, "last_error", None)
+    body = {"error": "Failed to generate summary"}
+    if detail:
+        body["detail"] = detail
+    return jsonify(body), 500
 
 
 @ai_bp.route("/coaching", methods=["POST"])
@@ -255,7 +280,11 @@ def coaching():
     result = ai.generate_coaching(context)
     if result:
         return _scrub_and_jsonify(result)
-    return jsonify({"error": "Failed to generate coaching"}), 500
+    detail = getattr(ai, "last_error", None)
+    body = {"error": "Failed to generate coaching"}
+    if detail:
+        body["detail"] = detail
+    return jsonify(body), 500
 
 
 # ── Earnings Call Tone Analyzer (GREEN) ──────────────────────────────────────
