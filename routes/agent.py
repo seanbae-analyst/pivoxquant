@@ -343,19 +343,26 @@ def waitlist() -> Any:
         referrer (str, optional)  — alias for source (frontend-compat).
 
     Responses:
-        201 {"status": "queued",           "position": <int>}  — new enrolment
-        200 {"status": "already-registered","position": <int>} — idempotent repeat
+        200 {"ok": true, "message": "<generic>", "request_id": "<hex>"}  — accepted (new OR existing)
         400 — missing or malformed email
         429 — IP rate limit exceeded (5 per hour)
         500 — storage failure (structured JSON log emitted)
 
     Notes
     -----
-    - Always 200/201 on success. ``status`` discriminates new vs repeat so
-      the frontend can log the distinction without exposing row ids.
-    - ``position`` is a 1-indexed ordinal among all existing rows (created_at
-      ASC). It is advisory — admins control actual invitation order — and is
-      recomputed on each request rather than stored.
+    - 2026-05-09 (SEC-E / PIPA §29): both new and duplicate submissions now
+      return the **same** status code (200) and the **same** generic body so
+      an external attacker cannot use the response as an enumeration oracle
+      to learn which emails are on the waitlist. The legacy
+      201/``status=queued`` vs 200/``status=already-registered`` divergence
+      was a textbook account-existence side channel — banned outright by the
+      personal-information protection act §29 (technical safeguards).
+    - The internal ``created`` flag is still surfaced in the structured
+      audit log (``agent.waitlist.enrolled.already_registered``) so admins
+      can monitor abuse, but it never leaves the server.
+    - The ``position`` field was also dropped from the response — under the
+      old semantics it monotonically increased across submissions and could
+      be diffed across requests to reveal which emails were already enrolled.
     - The endpoint is intentionally independent of ``AGENT_ENABLED`` and the
       ops kill switch. Disabling the waitlist would defeat the Closed Beta
       funnel (task P0-2).
@@ -398,7 +405,6 @@ def waitlist() -> Any:
         user_id = int(getattr(current_user, "id", 0)) or None
 
     try:
-        from extensions import db
         from models.companion_waitlist import CompanionWaitlist
 
         # ``enroll()`` is now race-safe: it catches the IntegrityError raised
@@ -414,14 +420,9 @@ def waitlist() -> Any:
             persona_interest=persona,
         )
         existed = not created
-
-        # 1-indexed FIFO position. Cheap for Closed Beta volume (< 10k).
-        # ``created_at ASC`` matches the admin invite cursor.
-        position = (
-            db.session.query(CompanionWaitlist.id)
-            .filter(CompanionWaitlist.created_at <= row.created_at)
-            .count()
-        )
+        # ``row`` is intentionally unused after this point — see SEC-E note in
+        # the docstring for why we no longer derive a public ``position``.
+        del row
 
     except Exception as exc:  # noqa: BLE001
         # Structured JSON log — never emit the raw email (PII).
@@ -451,33 +452,48 @@ def waitlist() -> Any:
         json.dumps({
             "event": "agent.waitlist.enrolled",
             "request_id": request_id,
+            # ``already_registered`` stays in the audit log for admin
+            # monitoring — it's never echoed to the public response.
             "already_registered": existed,
             "source": source,
             "persona": persona,
-            "position": position,
         })
     )
 
+    # 2026-05-09 (SEC-E / PIPA §29): identical 200 + generic body whether the
+    # email is new OR already on the list. ``existed`` deliberately does NOT
+    # influence the response — see docstring.
     body = {
-        "status": "already-registered" if existed else "queued",
-        "position": int(position),
+        "ok": True,
+        "message": (
+            "If your email is on the waitlist, you'll receive an update."
+        ),
         "request_id": request_id,
     }
-    return jsonify(body), (200 if existed else 201)
+    return jsonify(body), 200
 
 
 @agent_bp.route("/status", methods=["GET"])
+@general_rate_limit  # 2026-05-09 (SEC-C): rate-limit even unauthenticated callers
 def status() -> Any:
     """GET /api/agent/status — lightweight health + flag status.
 
     Public (no auth). Used by frontend to decide whether to render the
     Journal Companion entry point at all.
+
+    Hardening (2026-05-09 SEC-C follow-up):
+      * ``@general_rate_limit`` — bring the public endpoint into line with the
+        rest of the agent surface; without this an unauthenticated visitor can
+        scrape it without bound.
+      * ``legal_status`` field removed — it leaked an internal posture
+        (``pending-counsel-review``) that gave outsiders a discoverable hook
+        for legal pressure and PR amplification. The frontend never read the
+        field (only declared it in TypeScript) so removing it is safe.
     """
     companion = _get_companion()
     return jsonify({
         "enabled": companion.is_enabled(),
         "phase": "closed-beta" if companion.is_enabled() else "off",
-        "legal_status": "pending-counsel-review",
         "entitlement_plans": sorted(_ENTITLED_PLANS),
     })
 

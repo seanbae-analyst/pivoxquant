@@ -35,6 +35,7 @@ from pathlib import Path
 
 from flask import Blueprint, Response, current_app, jsonify, request, send_file
 from flask_login import current_user
+from markupsafe import escape  # 2026-05-09 (SEC-D): defense-in-depth OG meta escape
 
 from extensions import db
 from models import Artifact
@@ -804,13 +805,21 @@ def brag_card_share(share_token: str):
     ret = data.get("return_pct")
     ret_str = "—" if ret is None else (f"+{ret:.1f}%" if ret >= 0
                                        else f"{ret:.1f}%")
+    # 2026-05-09 (SEC-D): every interpolated value is run through
+    # ``markupsafe.escape`` before being injected into the HTML. Today the
+    # values are server-derived (``month_label`` from the artefact row,
+    # ``ret_str`` from a ``%.1f`` format, the URLs from ``request.host_url``
+    # / our share helper) so direct XSS is not currently possible. This is
+    # defense-in-depth — if a future change ever wires a user-customizable
+    # field (e.g. a referral nickname) into one of these slots the worm-scale
+    # risk is already neutralised.
     og_block = (
-        f'<meta property="og:title" content="{data.get("month_label","")} '
-        f'{ret_str} — PivoxQuant">'
+        f'<meta property="og:title" content="{escape(data.get("month_label",""))} '
+        f'{escape(ret_str)} — PivoxQuant">'
         f'<meta property="og:description" content="월간 브래그 카드 — '
         f'AI + Quant 리서치 툴">'
-        f'<meta property="og:image" content="{png_endpoint}">'
-        f'<meta property="og:url" content="{share_url}">'
+        f'<meta property="og:image" content="{escape(png_endpoint)}">'
+        f'<meta property="og:url" content="{escape(share_url)}">'
         f'<meta name="twitter:card" content="summary_large_image">'
     )
     if "</head>" in html:
