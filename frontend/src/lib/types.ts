@@ -391,7 +391,13 @@ export interface Artifact {
   type: ArtifactType;
   title: string;
   subtitle?: string | null;
-  sent_at: string;
+  sent_at: string | null;
+  /**
+   * Created timestamp. Used as date fallback when `sent_at` is null
+   * (e.g., draft artifact not yet emailed). Bug #11 wave 3b — without
+   * this, /reports brag card would render "—" instead of a real date.
+   */
+  created_at?: string | null;
   opened_at: string | null;
   pdf_url?: string | null;
   thumbnail_url?: string | null;

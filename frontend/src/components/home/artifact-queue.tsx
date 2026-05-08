@@ -61,7 +61,8 @@ function relativeFuture(to: Date, from: Date): string {
   return `${h}h ${m}m`;
 }
 
-function relativePast(iso: string, from: Date): string {
+function relativePast(iso: string | null | undefined, from: Date): string {
+  if (!iso) return "—";
   const ms = from.getTime() - new Date(iso).getTime();
   if (ms < 60_000) return "just now";
   const m = Math.floor(ms / 60_000);
@@ -129,7 +130,7 @@ export function ArtifactQueue() {
     label: "Portfolio Journal",
     title: lastArtifact?.title || "No entry yet",
     meta: lastArtifact
-      ? `Last entry ${relativePast(lastArtifact.sent_at, now)}`
+      ? `Last entry ${relativePast(lastArtifact.sent_at ?? lastArtifact.created_at ?? null, now)}`
       : "Your first journal will appear after Monday's memo.",
     href: "/reports",
     Icon: FileText,

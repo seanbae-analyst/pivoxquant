@@ -134,8 +134,12 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
 
   const mentions = asMentionRows(artifact.data_preview);
   const typeLabel = TYPE_LABEL[artifact.type] ?? "Artifact";
-  const sentDate = artifact.sent_at
-    ? new Date(artifact.sent_at).toLocaleDateString("en-US", {
+  // Bug #11 (wave 3b): when sent_at is null but the artifact exists
+  // (draft / not yet emailed), fall back to created_at so the card
+  // shows a real date instead of "—".
+  const dateRaw = artifact.sent_at ?? artifact.created_at ?? null;
+  const sentDate = dateRaw
+    ? new Date(dateRaw).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
