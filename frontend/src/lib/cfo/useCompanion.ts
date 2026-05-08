@@ -56,7 +56,12 @@ export interface AgentResponse {
 export interface AgentStatusResponse {
   enabled: boolean;
   phase: "closed_beta" | "internal" | "rolling_ga" | "ga";
-  legal_status: "experimental" | "licensed" | "unlicensed";
+  // `legal_status` was removed from the server response in PR #159 (SEC-C
+  // audit follow-up, 2026-05-08): exposing the literal string
+  // "pending-counsel-review" was an internal-state leak that observers
+  // could screenshot. The field intentionally stays absent here so any
+  // resurrected reader fails type-check loudly instead of silently
+  // resolving to undefined.
   entitlement_plans: string[]; // e.g. ["premium_plus", "founding_lifetime"]
   rate_limit?: {
     per_minute: number;
@@ -215,7 +220,6 @@ export function useCompanionStatus() {
           return {
             enabled: false,
             phase: "closed_beta",
-            legal_status: "experimental",
             entitlement_plans: ["premium_plus", "founding_lifetime"],
             rate_limit: null,
           } as AgentStatusResponse;
