@@ -83,7 +83,7 @@ export function BrokerCardV2({
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           {supportedLabel}
@@ -133,7 +133,7 @@ export function BrokerCardV2({
               right: 14,
               fontSize: 12,
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             B1 · Alpaca · BYOK
@@ -154,7 +154,7 @@ export function BrokerCardV2({
             className="font-serif"
             style={{
               fontSize: 14,
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               marginTop: 16,
             }}
           >
@@ -190,7 +190,7 @@ export function BrokerCardV2({
               right: 14,
               fontSize: 12,
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             B2 · KIS · BYOK
@@ -211,7 +211,7 @@ export function BrokerCardV2({
             className="font-serif"
             style={{
               fontSize: 14,
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               marginTop: 16,
             }}
           >

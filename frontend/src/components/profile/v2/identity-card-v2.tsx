@@ -91,7 +91,7 @@ export function IdentityCardV2({
           right: 14,
           fontSize: 12,
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.40)",
+          color: "rgba(245,240,232,0.55)",
           textTransform: "uppercase",
         }}
       >
@@ -193,7 +193,7 @@ export function IdentityCardV2({
                 style={{
                   fontSize: 12,
                   letterSpacing: "0.22em",
-                  color: "rgba(245,240,232,0.40)",
+                  color: "rgba(245,240,232,0.55)",
                   textTransform: "uppercase",
                 }}
               >
@@ -215,7 +215,7 @@ export function IdentityCardV2({
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
             marginBottom: 8,
           }}
         >

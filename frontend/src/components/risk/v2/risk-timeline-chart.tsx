@@ -100,7 +100,7 @@ export function RiskTimelineChart({
             style={{
               fontSize: 12,
               letterSpacing: "0.22em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             Composite score · 0–100
@@ -199,7 +199,7 @@ export function RiskTimelineChart({
               textAnchor="end"
               style={{
                 fontSize: 12,
-                fill: "rgba(245,240,232,0.40)",
+                fill: "rgba(245,240,232,0.55)",
                 letterSpacing: "0.18em",
               }}
             className="font-mono" >

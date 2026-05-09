@@ -307,7 +307,7 @@ export default function FeaturePageShell({
             본 페이지의 모든 정보는 교육·연구 목적의 관찰이며 특정 종목의 매수·매도·보유를
             권유하지 않습니다. 모든 투자 결정과 그 결과에 대한 책임은 이용자 본인에게 있습니다.
             <br />
-            <span style={{ color: "rgba(245,240,232,0.38)" }}>
+            <span style={{ color: "rgba(245,240,232,0.55)" }}>
               PivoxQuant is not a licensed investment adviser. All information on this page is
               observational and educational only; it does not constitute a recommendation to buy,
               sell, or hold any security. Investment decisions and their consequences are your own.

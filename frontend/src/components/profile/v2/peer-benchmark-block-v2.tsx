@@ -95,7 +95,7 @@ export function PeerBenchmarkBlockV2({
           right: 14,
           fontSize: 12,
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.40)",
+          color: "rgba(245,240,232,0.55)",
         }}
       >
         All cohorts ›
@@ -144,7 +144,7 @@ export function PeerBenchmarkBlockV2({
           style={{
             fontVariantNumeric: "tabular-nums",
             fontSize: 12,
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
             letterSpacing: "0.18em",
           }}
         >
@@ -270,7 +270,7 @@ export function PeerBenchmarkBlockV2({
                     left: `${medianPct}%`,
                     width: 1,
                     height: 6,
-                    background: "rgba(245,240,232,0.40)",
+                    background: "rgba(245,240,232,0.55)",
                   }}
                 />
                 <span
@@ -297,7 +297,7 @@ export function PeerBenchmarkBlockV2({
             marginTop: 16,
             fontSize: 12,
             letterSpacing: "0.16em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           YOU · BRONZE BAR &nbsp; · &nbsp; MEDIAN · IVORY TICK

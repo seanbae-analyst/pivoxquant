@@ -185,7 +185,7 @@ export default function LoginPageV2() {
               marginTop: 12,
               fontSize: 12,
               lineHeight: 1.55,
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               textAlign: "center",
             }}
           >

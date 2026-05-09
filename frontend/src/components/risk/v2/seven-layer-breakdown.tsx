@@ -108,7 +108,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             style={{
               fontSize: 12,
               letterSpacing: "0.22em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             Last observed · {observedAtKst}
@@ -218,7 +218,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
               className="font-mono"
               style={{
                 fontSize: 12,
-                color: "rgba(245,240,232,0.40)",
+                color: "rgba(245,240,232,0.55)",
                 textAlign: "right",
                 letterSpacing: "0.04em",
               }}

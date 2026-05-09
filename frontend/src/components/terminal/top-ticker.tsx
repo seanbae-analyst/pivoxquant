@@ -429,7 +429,7 @@ export function TopTicker() {
           letterSpacing: "0.22em",
           color: rt.connected
             ? "rgba(125,180,135,0.85)"
-            : "rgba(245,240,232,0.35)",
+            : "rgba(245,240,232,0.55)",
           textTransform: "uppercase",
         }}
       >

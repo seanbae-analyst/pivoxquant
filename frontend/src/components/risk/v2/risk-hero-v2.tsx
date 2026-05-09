@@ -170,7 +170,7 @@ export function RiskHeroV2({
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           Drafted by AI · Reviewed by you

@@ -101,7 +101,7 @@ export function AuthHeroV2({
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
             paddingTop: 24,
             borderTop: "0.5px solid rgba(245,240,232,0.08)",
             textTransform: "uppercase",

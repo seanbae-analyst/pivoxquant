@@ -81,7 +81,7 @@ function BigGaugeCard({
           <span
             style={{
               fontSize: 26,
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               marginLeft: 2,
             }}
           >
@@ -131,7 +131,7 @@ function BigGaugeCard({
             fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         className="font-mono" >
           {marks.map((m, i) => (
@@ -249,7 +249,7 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           Window · 90 days

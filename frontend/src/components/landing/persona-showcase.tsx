@@ -192,7 +192,7 @@ export function PersonaShowcase() {
                   backgroundColor:
                     p.hue === "bronze"
                       ? "rgba(184,149,106,0.7)"
-                      : "rgba(245,240,232,0.35)",
+                      : "rgba(245,240,232,0.55)",
                 }}
               />
 
