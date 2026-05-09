@@ -443,11 +443,13 @@ class CreditRatingService:
             factor_details=factor_details,
             position_count=len(positions),
             disclaimer=(
-                "본 등급은 사용자 본인 보유 포트폴리오에 대한 자기 점검 도구로, "
-                "FMP 정량 재무 데이터를 PivoxQuant 내부 스코어링 공식에 그대로 "
-                "투입해 산출한 결과입니다. PivoxQuant 의 평가/추천이 아니며, "
-                "S&P·Moody's 등 공인 신용평가기관 등급도 아닙니다. "
-                "본인 외 종목에 대한 평가/조언이 아닙니다."
+                "본 스냅샷은 사용자 본인 보유 포트폴리오에 대한 자기 점검 "
+                "참고 자료이며, **신용평가가 아닙니다**. PivoxQuant 는 "
+                "자본시장법상 신용평가회사가 아니며, 본 자료는 S&P · Moody's · "
+                "Fitch 등 공인 신용평가기관의 등급과 무관합니다. FMP 정량 "
+                "재무 데이터를 PivoxQuant 내부 점검 공식에 투입해 산출한 "
+                "사용자 본인 데이터 기반 자가 점검 결과로, 본인 외 종목에 "
+                "대한 평가 / 추천 / 조언이 아닙니다."
             ),
         )
         return ctx.to_dict()
@@ -455,11 +457,17 @@ class CreditRatingService:
     # ── v3 design shape (CEO redesign 2026-04-30) ──────────────────────────
 
     def _to_v3_shape(self, data: dict[str, Any]) -> dict[str, Any]:
-        """Map self-rating composite onto v3 3-page Premium shape.
+        """Map portfolio credit *snapshot* onto v3 3-page Premium shape.
 
         Mirrors frontend/src/components/reports/templates/credit-rating.tsx.
-        Backend produces portfolio self-rating (composite/grade); per-ticker
-        agency ratings + CDS spreads not yet sourced → empty-state placeholder.
+
+        §335 회피 (2026-05-08): 본 service 는 **공인 신용평가기관이 아니다**.
+        외부 agency rating(S&P / Moody's / Fitch) 공급 전까지는 자체 산정
+        등급(letter grade) 을 PDF 노출 페이로드에 절대 포함하지 않는다.
+        v3 shape 은 quarter label / counts / empty-state placeholder 만
+        반환하며, agency rating 공급 후 별도 sprint 에서 외부 등급 노출을
+        구현한다. 이전 self-rating 계산 결과는 사용자 본인 자가 점검
+        용도로만 internal payload 에 남기고, PDF/HTML 노출은 차단한다.
         """
         as_of = data.get("as_of")
         as_of_label = str(as_of) if as_of else "—"

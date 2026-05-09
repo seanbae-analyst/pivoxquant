@@ -1050,6 +1050,10 @@ class EarningsPreBriefService:
         """Bull / Base / Bear scenario rows. Position Δ is derived from
         the live ±3% sensitivity numbers when available, otherwise a
         neutral "—" placeholder.
+
+        §101 회피 (2026-05-08): action 필드는 사용자 본인 룰 재확인을
+        촉구하는 관찰 시나리오 문구로만 작성한다. 본 함수 출력은 사용자
+        본인 룰 재확인을 위한 관찰 시나리오이며, 매수·매도 권유가 아니다.
         """
         beat = data.get("sensitivity_beat")
         miss = data.get("sensitivity_miss")
@@ -1068,7 +1072,7 @@ class EarningsPreBriefService:
                 "case":           "Bull Case",
                 "case_detail":    "Beat consensus EPS",
                 "trigger":        "EPS > 컨센서스 · 가이던스 상향",
-                "action":         "포지션 유지 · 스파이크 시 일부 차익실현 검토",
+                "action":         "본인 룰 기준 시점 — 사전 정의된 한도와 시나리오 재확인 권장",
                 "pos_delta":      beat_str,
                 "pos_delta_tone": "pos" if beat is not None else "",
                 "stop":           "—",
@@ -1077,7 +1081,7 @@ class EarningsPreBriefService:
                 "case":           "Base Case",
                 "case_detail":    "In-line",
                 "trigger":        "EPS ≈ 컨센서스 · 가이던스 ≥ 컨센서스",
-                "action":         "포지션 유지 · 컨퍼런스콜 후 재평가",
+                "action":         "본인 룰 기준 시점 — 컨퍼런스콜 후 가정 재검토 권장",
                 "pos_delta":      "$0",
                 "pos_delta_tone": "",
                 "stop":           "—",
@@ -1086,7 +1090,7 @@ class EarningsPreBriefService:
                 "case":           "Bear Case",
                 "case_detail":    "Miss or weak guide",
                 "trigger":        "EPS < 컨센서스 OR 가이던스 < 컨센서스",
-                "action":         "리스크 재평가 · 포지션 사이징 점검",
+                "action":         "본인 룰 기준 시점 — 리스크 한도 재확인 권장",
                 "pos_delta":      miss_str,
                 "pos_delta_tone": "neg" if miss is not None else "",
                 "stop":           "—",

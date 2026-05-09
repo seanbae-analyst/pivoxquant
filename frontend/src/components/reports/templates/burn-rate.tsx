@@ -105,8 +105,8 @@ const DEFAULT: BurnRateData = {
       runwayLabel: "7 months",
       runwayLabelTone: "warn",
       cashBurnLine: "cash $7.9B · burn $1.2B/q",
-      note: "다음 분기 추가 자금 조달 (전환사채 or 증자) 가능성 높음. 희석 위험. 보유는 0.4%로 작지만 추가 매수 금지. 다음 실적 발표(Q3) 가이던스 핵심.",
-      action: "자금 조달 발표 시 즉시 청산 검토",
+      note: "다음 분기 추가 자금 조달 (전환사채 or 증자) 가능성 높음. 희석 위험 관찰. 본인 보유 0.4% 기준 사이징 한도 재확인 권장. 다음 실적 발표(Q3) 가이던스 관찰 포인트.",
+      action: "자금 조달 발표 시 본인 룰 기준 재평가 권장",
     },
     {
       ticker: "LCID",

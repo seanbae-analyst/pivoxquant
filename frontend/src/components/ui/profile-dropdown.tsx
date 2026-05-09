@@ -37,8 +37,13 @@ export function ProfileDropdown() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
-  // Mock: Observer until billing resolved
-  const tier: Tier = "Free";
+  // Bug #12 (wave 3b): use the real subscription_tier from /api/auth/me
+  // instead of the placeholder "Free". The DB value can already be
+  // "Free" | "Pro" | "Premium" via dev-premium gating; Stripe billing
+  // wiring is unrelated to surfacing the current value.
+  const tierRaw = user?.subscription_tier;
+  const tier: Tier =
+    tierRaw === "Pro" || tierRaw === "Premium" ? tierRaw : "Free";
 
   const displayName = user?.name || "Guest";
   const displayEmail = user?.email || "—";
