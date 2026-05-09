@@ -23,7 +23,7 @@ interface FilterValue {
   strengthMin: number;
   strengthMax: number;
   symbol: string | null;
-  window: "today" | "7d" | "30d";
+  window: "today" | "7d" | "30d" | "all";
 }
 
 interface Props {
@@ -42,6 +42,7 @@ const LABELS: Array<{ key: SignalLabel; display: string; tone: string }> = [
 ];
 
 const WINDOWS: Array<{ key: FilterValue["window"]; display: string }> = [
+  { key: "all", display: "All" },
   { key: "today", display: "Today" },
   { key: "7d", display: "7d" },
   { key: "30d", display: "30d" },
