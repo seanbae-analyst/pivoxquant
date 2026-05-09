@@ -13,7 +13,8 @@ class BrokerConnection(db.Model):
     __tablename__ = "broker_connections"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
+                         nullable=False, index=True)
     broker = db.Column(db.String(20), nullable=False)       # alpaca / kis / kiwoom
     access_token = db.Column(db.Text)                       # legacy (Alpaca)
     refresh_token = db.Column(db.Text)                      # legacy (Alpaca)

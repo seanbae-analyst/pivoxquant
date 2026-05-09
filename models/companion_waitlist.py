@@ -48,7 +48,10 @@ class CompanionWaitlist(db.Model):
 
     # Optional linkage to logged-in user (if signed up while authenticated).
     user_id = db.Column(
-        db.Integer, db.ForeignKey("users.id"), nullable=True, index=True
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
 
     # Source attribution for funnel analysis (not personally identifying).
