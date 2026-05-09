@@ -88,7 +88,12 @@ export function useWatchlist() {
 /* ── Alerts ── */
 
 export function useAlerts() {
-  return useSWR<AlertsResponse>(API.alerts.list, fetcher, {
+  // Bug #2 fix (2026-05-09 deep bug hunt): backend defaults to limit=20
+  // (max 50). The /alerts page Total/Unread/Today/Week stats are computed
+  // from `data.alerts.length` — a user with >20 alerts saw "Total: 20"
+  // and was misled. Request the max (50) so the strip is accurate for the
+  // typical user. Pagination/load-more is a separate enhancement.
+  return useSWR<AlertsResponse>(`${API.alerts.list}?limit=50`, fetcher, {
     refreshInterval: () => liveRefresh(10_000, 60_000),
     // Bug #3 (HANDOVER v22): the alerts bell was one of the three explicit
     // duplicate-fetch culprits flagged on page nav. `refreshInterval`

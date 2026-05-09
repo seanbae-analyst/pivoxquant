@@ -359,10 +359,16 @@ function SetupStep(props: {
           </div>
         </Field>
         <Field label="Shares (optional)" htmlFor="pre-trade-shares">
+          {/* Bug #7 fix (2026-05-09 deep bug hunt): no min attr meant
+              users could submit -5 shares; backend rejected with a toast
+              error (services/pre_trade/friction.py:81), no inline hint.
+              `min="0"` + `step` give native browser validation. */}
           <input
             id="pre-trade-shares"
             type="number"
             inputMode="decimal"
+            min="0"
+            step="any"
             value={sharesText}
             onChange={(e) => setSharesText(e.target.value)}
             placeholder="0"
