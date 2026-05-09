@@ -73,11 +73,31 @@ def stream():
             _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
         raise
 
+    # SSE-1 fix (2026-05-09): refresh ticker list every 60s so newly-added
+    # positions stream prices without manual reconnect.
+    _TICKER_REFRESH_EVERY = 60
+
     def generate():
+        local_tickers = list(tickers)
+        last_refresh = time.monotonic()
         try:
             while True:
                 try:
-                    prices = realtime.get_prices_batch(tickers)
+                    if time.monotonic() - last_refresh >= _TICKER_REFRESH_EVERY:
+                        try:
+                            fresh = Position.query.filter_by(user_id=user_id).all()
+                            new_tickers = [p.ticker for p in fresh]
+                            if new_tickers != local_tickers:
+                                logger.info(
+                                    "SSE price stream ticker delta user=%s old=%d new=%d",
+                                    user_id, len(local_tickers), len(new_tickers),
+                                )
+                                local_tickers = new_tickers
+                        except Exception:
+                            logger.exception("SSE ticker refresh failed user=%s", user_id)
+                        last_refresh = time.monotonic()
+
+                    prices = realtime.get_prices_batch(local_tickers) if local_tickers else {}
                     yield f"data: {json.dumps(prices, ensure_ascii=False)}\n\n"
                 except Exception:
                     logger.exception("SSE price stream error user=%s", user_id)
@@ -124,11 +144,30 @@ def portfolio_stream():
             _sse_connections[user_id] = max(0, _sse_connections[user_id] - 1)
         raise
 
+    # SSE-1: same as /stream above.
+    _TICKER_REFRESH_EVERY_PORTFOLIO = 60
+
     def generate():
+        local_tickers = list(tickers)
+        last_refresh = time.monotonic()
         try:
             while True:
                 try:
-                    batch = realtime.get_prices_batch(tickers)
+                    if time.monotonic() - last_refresh >= _TICKER_REFRESH_EVERY_PORTFOLIO:
+                        try:
+                            fresh = Position.query.filter_by(user_id=user_id).all()
+                            new_tickers = [p.ticker for p in fresh]
+                            if new_tickers != local_tickers:
+                                logger.info(
+                                    "SSE portfolio stream ticker delta user=%s old=%d new=%d",
+                                    user_id, len(local_tickers), len(new_tickers),
+                                )
+                                local_tickers = new_tickers
+                        except Exception:
+                            logger.exception("SSE portfolio ticker refresh failed user=%s", user_id)
+                        last_refresh = time.monotonic()
+
+                    batch = realtime.get_prices_batch(local_tickers) if local_tickers else {}
                     prices = {}
                     full = {}
                     positions_arr = []
