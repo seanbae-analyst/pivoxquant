@@ -259,17 +259,28 @@ class TestKrIndicesKisGate:
         from routes.market import _indices_cache
         _indices_cache.clear()
 
-        # Mock KISService with fresh KIS data.
+        # Mock KISService with fresh KIS data — per-code values within
+        # PR #188 per-ticker sanity bounds:
+        #   ^KS11 [1500,4500] / ^KQ11 [500,1500] /
+        #   ^KS200 [300,700]  / ^KQ150 [800,2000]
+        _LIVE = {
+            "0001": (2540.0, [2510.0 + i * 0.5 for i in range(60)]),  # KOSPI
+            "1001": (750.0,  [720.0 + i * 0.5 for i in range(60)]),   # KOSDAQ
+            "2001": (337.0,  [325.0 + i * 0.2 for i in range(60)]),   # KOSPI 200
+            "2203": (1240.0, [1210.0 + i * 0.5 for i in range(60)]),  # KOSDAQ 150
+        }
+
         class _MockKIS:
             def get_index_price(self_inner, code):
+                price, _ = _LIVE.get(code, (2540.0, []))
                 return {
-                    "index_code": code, "price": 6475.0,
+                    "index_code": code, "price": price,
                     "change": 10.0, "change_pct": 0.15, "volume": 0,
                 }
 
             def get_index_history(self_inner, code, period="1y"):
-                return [{"date": "", "close": 6400.0 + i * 1.0}
-                        for i in range(60)]
+                _, hist = _LIVE.get(code, (2540.0, []))
+                return [{"date": "", "close": c} for c in hist]
 
         with patch("routes.market.fetcher") as m_f, \
              patch("services.container.realtime") as m_rt, \
@@ -290,7 +301,7 @@ class TestKrIndicesKisGate:
             f"Got: {list(names)}"
         )
         kospi = names["KOSPI"]
-        assert kospi["level"] == pytest.approx(6475.0), (
+        assert kospi["level"] == pytest.approx(2540.0), (
             f"KIS level should surface: {kospi}"
         )
 

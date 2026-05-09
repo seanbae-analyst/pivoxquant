@@ -148,8 +148,12 @@ class TestMarketIndicesKR:
         })
 
     def test_kospi_level_sanity_bounded(self, client, auth_user):
-        """BUG-3: KIS live KOSPI value 6465 must NOT appear — history anchor
-        (~2522) must override when divergence exceeds 20%."""
+        """KIS live KOSPI value within per-ticker sanity bound [1500, 4500]
+        must surface in payload. PR #188 (`ab3b55e`, 2026-05-09) introduced
+        per-ticker bounds in `_kis_index_snapshot` to defend against KIS
+        unit/code mismatch where ^KS11 was returning KOSPI200-scaled values
+        like 7,498. Bound: ^KS11 [1500, 4500]. This test now verifies the
+        happy path — live KIS within bounds → entry surfaces."""
         from services import fx_service
         # Seed fx_service with a realistic rate so USD/KRW tile appears.
         fx_service.set_rate(1380.0)
@@ -162,10 +166,10 @@ class TestMarketIndicesKR:
 
         MockKIS = self._kis_service_mock(
             price_map={
-                "0001": 6465.79,   # inflated — regression reproduction
-                "1001": 736.5,     # normal
-                "2001": 337.8,     # KOSPI 200 live
-                "2203": 1240.0,    # KOSDAQ 150 live
+                "0001": 2540.0,    # KOSPI [1500, 4500] — within bound
+                "1001": 736.5,     # KOSDAQ [500, 1500]
+                "2001": 337.8,     # KOSPI 200 [300, 700]
+                "2203": 1240.0,    # KOSDAQ 150 [800, 2000]
             },
             hist_map={
                 "0001": hist_closes_kospi,
@@ -193,18 +197,12 @@ class TestMarketIndicesKR:
         names = {e["name"]: e for e in data}
         assert "KOSPI" in names, f"KOSPI missing from payload: {list(names)}"
         kospi = names["KOSPI"]
-        # Sanity: KOSPI level must fall in the service's absolute bound.
-        # The original assertion [500, 5000] was written against a stale
-        # 2023 baseline; by 2026 KOSPI re-rated (~6500 per Yahoo live),
-        # so we use the service-side bound [100, 10000] as the test bound.
-        # The earlier "divergence guard" that tried to clamp live KIS
-        # against stale FMP history was reverted 2026-04-24 because it
-        # substituted correct live values with stale historical ones.
-        assert 100 <= kospi["level"] <= 10000, (
-            f"KOSPI level {kospi['level']} outside service sanity band"
+        # KOSPI level must fall within per-ticker sanity bound [1500, 4500]
+        # introduced by PR #188. Out-of-band values (e.g. 6465 from KIS
+        # unit/code mismatch quirk) are dropped at `_kis_index_snapshot`.
+        assert 1500 <= kospi["level"] <= 4500, (
+            f"KOSPI level {kospi['level']} outside per-ticker sanity band [1500,4500]"
         )
-        # The test fixture now feeds KIS live as the authoritative source;
-        # we no longer anchor level to history close.
 
     def test_kospi_200_present(self, client, auth_user):
         """BUG-4a: KOSPI 200 must appear in the payload when KIS supplies a
@@ -291,26 +289,34 @@ class TestMarketIndicesKR:
     def test_kr_index_prefers_kis_history_over_fmp(self, client, auth_user):
         """KIS `inquire-index-daily-price` must be consulted FIRST for
         KR indices. FMP `^KS11` is known to lag on the Starter tier; a
-        fresh KIS series must win even when FMP returns data."""
+        fresh KIS series must win even when FMP returns data.
+
+        Each index uses level + history within its per-ticker sanity bound
+        (PR #188): KOSPI [1500,4500], KOSDAQ [500,1500], KOSPI200 [300,700],
+        KOSDAQ150 [800,2000]. FMP returns a stale 2023 baseline (~1500)
+        which must be rejected in favor of fresh KIS history."""
         from services import fx_service
         fx_service.set_rate(1380.0)
         from routes.market import _indices_cache
         _indices_cache.clear()
 
-        # KIS history is fresh (bracketing the live level).
-        kis_hist = [6400.0 + i * 1.0 for i in range(60)]  # 6400 → 6459
-        # FMP history is stale (2023 baseline).
-        fmp_hist = [2500.0 + i * 0.1 for i in range(60)]
+        # KIS history is fresh (bracketing each live level within bound).
+        kis_hist_kospi = [2510.0 + i * 0.5 for i in range(60)]    # 2510 → 2540
+        kis_hist_kosdaq = [720.0 + i * 0.5 for i in range(60)]    # 720 → 750
+        kis_hist_ks200 = [325.0 + i * 0.2 for i in range(60)]     # 325 → 337
+        kis_hist_kq150 = [1210.0 + i * 0.5 for i in range(60)]    # 1210 → 1240
+        # FMP history is stale (2023 baseline) — well outside KOSPI bound.
+        fmp_hist = [1500.0 + i * 0.1 for i in range(60)]
 
         MockKIS = self._kis_service_mock(
-            price_map={"0001": 6475.0, "1001": 750.0,
-                       "2001": 980.0, "2203": 2040.0},
-            hist_map={"0001": kis_hist, "1001": kis_hist,
-                      "2001": kis_hist, "2203": kis_hist},
+            price_map={"0001": 2540.0, "1001": 750.0,
+                       "2001": 337.0, "2203": 1240.0},
+            hist_map={"0001": kis_hist_kospi, "1001": kis_hist_kosdaq,
+                      "2001": kis_hist_ks200, "2203": kis_hist_kq150},
         )
 
         def _fetcher_hist(ticker, period="1y"):
-            # FMP would return stale 2500 series — new code should ignore.
+            # FMP would return stale 1500 series — new code should ignore.
             return self._fmp_history(fmp_hist)
 
         with patch("routes.market.fetcher") as m_f, \
@@ -325,13 +331,13 @@ class TestMarketIndicesKR:
         data = r.get_json()
         kospi = next((e for e in data if e["name"] == "KOSPI"), None)
         assert kospi is not None
-        # With KIS history in play, sparkline must reflect KIS (~6400s),
-        # NOT the stale FMP ~2500 tail.
+        # With KIS history in play, sparkline must reflect KIS (~2510-2540),
+        # NOT the stale FMP ~1500 tail.
         assert kospi["sparkline_30d"], "sparkline should be populated"
         spark_max = max(kospi["sparkline_30d"])
-        assert spark_max > 6000, (
+        assert spark_max > 2500, (
             f"sparkline max={spark_max} looks like FMP stale data — "
-            "KIS history should have won. Level={kospi['level']}"
+            f"KIS history should have won. Level={kospi['level']}"
         )
         # Level must be within range_52w.
         lo, hi = kospi["range_52w"]
@@ -343,19 +349,22 @@ class TestMarketIndicesKR:
         """When the only history we can obtain (FMP) diverges from the
         live KIS level by >30%, discard the series and flag `is_stale`.
         range_52w must become None (not [0,0]) so the frontend renders
-        N/A rather than a misleading bar chart."""
+        N/A rather than a misleading bar chart.
+
+        Live KIS level within sanity bound [1500,4500] (PR #188). FMP
+        deeply stale (~800) → divergence >60% → series discarded with flag."""
         from services import fx_service
         fx_service.set_rate(1380.0)
         from routes.market import _indices_cache
         _indices_cache.clear()
 
         # KIS gives us the live level but NO history (returns None).
-        # FMP returns a deeply stale series 2023-era.
-        fmp_stale = [2500.0 + i * 0.1 for i in range(60)]
+        # FMP returns a deeply stale series — divergence vs level >30%.
+        fmp_stale = [800.0 + i * 0.1 for i in range(60)]   # 800 vs level 2540 → 68% gap
 
         MockKIS = self._kis_service_mock(
-            price_map={"0001": 6475.0, "1001": 750.0,
-                       "2001": 980.0, "2203": 2040.0},
+            price_map={"0001": 2540.0, "1001": 750.0,
+                       "2001": 337.0, "2203": 1240.0},
             hist_map={},  # KIS history unavailable
         )
 
@@ -374,7 +383,7 @@ class TestMarketIndicesKR:
         data = r.get_json()
         kospi = next((e for e in data if e["name"] == "KOSPI"), None)
         assert kospi is not None
-        assert kospi["level"] == 6475.0
+        assert kospi["level"] == 2540.0
         assert kospi["is_stale"] is True, (
             "is_stale must be True when history is rejected as stale"
         )
