@@ -488,7 +488,7 @@ function CtaFooter() {
             marginBottom: 36,
           }}
         >
-          Seven days free. Cancel anytime. Visa · Master · Naver Pay · Kakao Pay.
+          Cancel anytime. Visa · Master · Naver Pay · Kakao Pay.
         </motion.p>
 
         <motion.div

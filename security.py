@@ -397,6 +397,13 @@ def init_security(app):
         # X-XSS-Protection 헤더 제거됨 — Chrome 78+ 미지원, 레거시 공격 벡터 존재.
         # CSP로 대체 방어.
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Permissions-Policy — 금융 앱 기본 권고. Frontend (next.config.ts) 헤더와 정합.
+        # camera/microphone/geolocation/usb/magnetometer/gyroscope/accelerometer 차단,
+        # payment=(self) 만 허용 (Stripe checkout 향후 호환).
+        response.headers["Permissions-Policy"] = (
+            "camera=(), microphone=(), geolocation=(), payment=(self), "
+            "usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+        )
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
