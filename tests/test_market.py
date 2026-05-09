@@ -434,3 +434,236 @@ class TestMarketIndicesKR:
                 f"{entry['name']}: level {entry['level']} outside "
                 f"range_52w [{lo}, {hi}] — source mismatch regression"
             )
+
+    # ────────────────────────────────────────────────────────────────────
+    # 2026-05-09 — P0 graceful-degradation: KIS unit/code quirk fallback.
+    # KIS `inquire-index-price` for `0001`/`2001`/`2203` was observed
+    # returning levels ~2-3x the true value (e.g. KOSPI 7498 vs real
+    # ~3,180). PR #188 added per-ticker sanity bounds that *correctly*
+    # rejected the bogus value, but the side effect was the KOSPI tile
+    # disappearing from the payload entirely. Fix: when KIS sanity fails,
+    # try FMP `get_quote(ticker)` as a fallback live-level source. Sanity
+    # bound is re-applied to the FMP value — only realistic readings
+    # surface, so PR #188's defense is preserved verbatim.
+    # ────────────────────────────────────────────────────────────────────
+
+    def test_kospi_kis_sanity_fail_fmp_fallback_succeeds(self, client, auth_user):
+        """KIS returns 7498 (out-of-band per KIS API quirk) → FMP returns
+        2540 (realistic) → KOSPI tile must surface with the FMP value."""
+        from services import fx_service
+        fx_service.set_rate(1380.0)
+        from routes.market import _indices_cache
+        _indices_cache.clear()
+
+        MockKIS = self._kis_service_mock(
+            price_map={
+                "0001": 7498.0,    # KIS quirk — outside [1500, 4500]
+                "1001": 1207.0,    # KOSDAQ in-band
+                "2001": 337.0,
+                "2203": 1240.0,
+            },
+            hist_map={},  # No KIS history — drives FMP into the fallback path
+        )
+
+        def _fmp_get_quote(t):
+            if t == "^KS11":
+                return {"price": 2540.0, "changesPercentage": 0.42}
+            return None
+
+        with patch("routes.market.fetcher") as m_f, \
+                patch("services.container.realtime") as m_rt, \
+                patch("services.kis.service.KISService", MockKIS), \
+                patch("services.data.fmp.get_history", return_value=None), \
+                patch("services.data.fmp.get_quote", side_effect=_fmp_get_quote):
+            m_rt.kis_available = True
+            m_f.get_price_history.return_value = None
+            r = client.get("/api/market/indices?region=kr")
+
+        assert r.status_code == 200
+        data = r.get_json()
+        names = {e["name"]: e for e in data}
+        assert "KOSPI" in names, (
+            f"KOSPI missing despite FMP fallback being available: {list(names)}"
+        )
+        kospi = names["KOSPI"]
+        # Must reflect the FMP value, NOT the bogus KIS 7498.
+        assert kospi["level"] == 2540.0, (
+            f"Expected FMP-fallback level 2540.0, got {kospi['level']}"
+        )
+        # And the FMP-derived d/d% should propagate.
+        assert kospi["change_1d_pct"] == 0.42
+
+    def test_kospi_kis_sanity_fail_fmp_none_drops_entry(self, client, auth_user):
+        """KIS 7498 (sanity-fail) + FMP returns None → KOSPI must remain
+        absent from the payload (current PR #188 behaviour preserved)."""
+        from services import fx_service
+        fx_service.set_rate(1380.0)
+        from routes.market import _indices_cache
+        _indices_cache.clear()
+
+        MockKIS = self._kis_service_mock(
+            price_map={
+                "0001": 7498.0,    # KIS quirk
+                "1001": 1207.0,
+                "2001": 337.0,
+                "2203": 1240.0,
+            },
+        )
+
+        with patch("routes.market.fetcher") as m_f, \
+                patch("services.container.realtime") as m_rt, \
+                patch("services.kis.service.KISService", MockKIS), \
+                patch("services.data.fmp.get_history", return_value=None), \
+                patch("services.data.fmp.get_quote", return_value=None):
+            m_rt.kis_available = True
+            m_f.get_price_history.return_value = None
+            r = client.get("/api/market/indices?region=kr")
+
+        assert r.status_code == 200
+        data = r.get_json()
+        names = [e["name"] for e in data]
+        assert "KOSPI" not in names, (
+            "KOSPI should be absent when both KIS sanity-fails AND FMP "
+            "returns None — got: " + str(names)
+        )
+        # KOSDAQ (in-band) must still surface — fallback path must not
+        # poison sibling tickers.
+        assert "KOSDAQ" in names
+
+    def test_kospi_kis_in_band_no_fmp_call(self, client, auth_user):
+        """KIS returns 2540 (in-band) → FMP MUST NOT be called. Guards
+        against unnecessary upstream traffic + protects against FMP
+        accidentally overriding a known-good KIS value."""
+        from services import fx_service
+        fx_service.set_rate(1380.0)
+        from routes.market import _indices_cache
+        _indices_cache.clear()
+
+        MockKIS = self._kis_service_mock(
+            price_map={
+                "0001": 2540.0,    # in-band
+                "1001": 1207.0,
+                "2001": 337.0,
+                "2203": 1240.0,
+            },
+        )
+
+        from unittest.mock import MagicMock
+        fmp_quote = MagicMock(return_value={"price": 9999.0})
+
+        with patch("routes.market.fetcher") as m_f, \
+                patch("services.container.realtime") as m_rt, \
+                patch("services.kis.service.KISService", MockKIS), \
+                patch("services.data.fmp.get_history", return_value=None), \
+                patch("services.data.fmp.get_quote", fmp_quote):
+            m_rt.kis_available = True
+            m_f.get_price_history.return_value = None
+            r = client.get("/api/market/indices?region=kr")
+
+        assert r.status_code == 200
+        data = r.get_json()
+        kospi = next((e for e in data if e["name"] == "KOSPI"), None)
+        assert kospi is not None and kospi["level"] == 2540.0
+        # FMP fallback must have been bypassed entirely for ^KS11.
+        called_tickers = [c.args[0] for c in fmp_quote.call_args_list]
+        assert "^KS11" not in called_tickers, (
+            f"FMP get_quote was called for ^KS11 despite KIS being "
+            f"in-band — calls: {called_tickers}"
+        )
+
+    def test_kospi_kis_none_fmp_out_of_band_drops_entry(self, client, auth_user):
+        """Both sources unreliable: KIS returns None AND FMP also returns
+        an out-of-band value (e.g. plan-gated wrong asset). Sanity bound
+        re-application must reject FMP — KOSPI absent from payload."""
+        from services import fx_service
+        fx_service.set_rate(1380.0)
+        from routes.market import _indices_cache
+        _indices_cache.clear()
+
+        MockKIS = self._kis_service_mock(
+            price_map={
+                "0001": None,      # KIS missing
+                "1001": 1207.0,
+                "2001": 337.0,
+                "2203": 1240.0,
+            },
+        )
+
+        def _fmp_get_quote(t):
+            if t == "^KS11":
+                return {"price": 7498.0}   # FMP also out-of-band
+            return None
+
+        with patch("routes.market.fetcher") as m_f, \
+                patch("services.container.realtime") as m_rt, \
+                patch("services.kis.service.KISService", MockKIS), \
+                patch("services.data.fmp.get_history", return_value=None), \
+                patch("services.data.fmp.get_quote", side_effect=_fmp_get_quote):
+            m_rt.kis_available = True
+            m_f.get_price_history.return_value = None
+            r = client.get("/api/market/indices?region=kr")
+
+        assert r.status_code == 200
+        data = r.get_json()
+        names = [e["name"] for e in data]
+        assert "KOSPI" not in names, (
+            "KOSPI must remain dropped when FMP fallback also fails sanity"
+        )
+        # Sibling KOSDAQ unaffected.
+        assert "KOSDAQ" in names
+
+    def test_kospi_fmp_fallback_discards_pre_fallback_sparkline(self, client, auth_user):
+        """Pre-fallback path may have populated `sparkline`/`range_52w`
+        from a series that was unit-consistent with the bogus KIS level
+        (e.g. KIS history tail ~5778, divergent <30% from KIS 7498 so it
+        survived the staleness guard). After FMP fallback overrides the
+        level to a realistic 2540, the leftover series would render a
+        self-contradictory tile (level=2540 but sparkline shows 5778+).
+        The implementation must discard the artifact series."""
+        from services import fx_service
+        fx_service.set_rate(1380.0)
+        from routes.market import _indices_cache
+        _indices_cache.clear()
+
+        # KIS history ~5778 — survives 30% staleness vs live 7498 (~22%
+        # divergence) but is wildly outside the [1500, 4500] sanity bound.
+        kis_hist_kospi = [5750.0 + i * 0.5 for i in range(60)]
+
+        MockKIS = self._kis_service_mock(
+            price_map={
+                "0001": 7498.0,    # KIS quirk
+                "1001": 1207.0,
+                "2001": 337.0,
+                "2203": 1240.0,
+            },
+            hist_map={"0001": kis_hist_kospi},
+        )
+
+        def _fmp_get_quote(t):
+            if t == "^KS11":
+                return {"price": 2540.0}
+            return None
+
+        with patch("routes.market.fetcher") as m_f, \
+                patch("services.container.realtime") as m_rt, \
+                patch("services.kis.service.KISService", MockKIS), \
+                patch("services.data.fmp.get_history", return_value=None), \
+                patch("services.data.fmp.get_quote", side_effect=_fmp_get_quote):
+            m_rt.kis_available = True
+            m_f.get_price_history.return_value = None
+            r = client.get("/api/market/indices?region=kr")
+
+        assert r.status_code == 200
+        data = r.get_json()
+        kospi = next((e for e in data if e["name"] == "KOSPI"), None)
+        assert kospi is not None
+        assert kospi["level"] == 2540.0
+        # The pre-fallback sparkline (~5778) is incompatible with the
+        # FMP-derived level 2540 → must be discarded, range_52w → None,
+        # is_stale → True so the frontend renders "N/A".
+        assert kospi["sparkline_30d"] == [], (
+            f"sparkline must be discarded after FMP fallback: "
+            f"{kospi['sparkline_30d'][:5]}..."
+        )
+        assert kospi["range_52w"] is None
+        assert kospi["is_stale"] is True

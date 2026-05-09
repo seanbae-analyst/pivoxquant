@@ -701,6 +701,8 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     # kis_service.py) so we always *attempt* KIS here and let the service
     # short-circuit internally. Keeps the KR-indices tiles alive when
     # realtime init is briefly degraded.
+    kis_level_raw: float | None = None      # raw KIS level for diagnostic
+    kis_passed_sanity: bool = False         # did KIS level pass per-ticker bounds?
     try:
         from services.kis.service import KISService
         _svc = KISService()
@@ -708,6 +710,7 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
             idx = _svc.get_index_price(_code)
             if idx and idx.get("price"):
                 level = float(idx["price"])
+                kis_level_raw = level
                 change_pct = float(idx.get("change_pct") or 0)
                 if _code != kis_code:
                     logger.info(
@@ -807,9 +810,6 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         sparkline = []
         range_52w = None
 
-    if level is None:
-        return None
-
     # 2026-05-09 fix: per-ticker sanity bound replaces the wide [100,10000]
     # bracket. The wide bracket let through a KIS API quirk where the
     # KOSPI ("0001") code occasionally returns the KOSPI-200 mark-to-mid
@@ -824,10 +824,96 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         "^KQ150": (800.0,   2_000.0),   # KOSDAQ 150
     }
     lo, hi = _PER_TICKER_BOUNDS.get(ticker, (100.0, 10_000.0))
-    if not (lo <= level <= hi):
+
+    def _in_bound(v: float | None) -> bool:
+        return v is not None and lo <= v <= hi
+
+    kis_passed_sanity = _in_bound(level)
+
+    # 2026-05-09 P0 graceful-degradation: when the KIS-derived level either
+    # is missing or fails the per-ticker sanity bound (the dominant failure
+    # mode is the KIS `0001`/`2001`/`2203` unit/code quirk that returns
+    # values like 7498 for KOSPI — see PR #188), attempt FMP as a fallback
+    # source for the live level. Sanity bound is then *re-applied* to the
+    # FMP value — only realistic values surface, so the defensive guard
+    # introduced by PR #188 is fully preserved.
+    #
+    # KNOWN LIMITATION (recorded for parent agent on 2026-05-09): on the
+    # current FMP Premium ($29) plan, caret-prefixed KR index symbols
+    # (`^KS11`, `^KQ11`, `^KS200`, `^KQ150`) all return HTTP 402 from both
+    # `/quote` and `/historical-price-eod/full`. This fallback path is
+    # therefore architectural — it engages cleanly the moment FMP's plan
+    # permits index symbols (or an alternate symbol mapping is added).
+    # On today's plan the entry remains dropped when KIS sanity fails;
+    # behavior matches PR #188 for the failing tickers.
+    if not kis_passed_sanity:
+        try:
+            from services.data import fmp as _fmp
+            q = _fmp.get_quote(ticker)
+            if q and q.get("price"):
+                fmp_price = float(q["price"])
+                if _in_bound(fmp_price):
+                    logger.info(
+                        "market.indices %s: KIS level %s sanity-failed "
+                        "(bound [%.0f,%.0f]); FMP fallback succeeded with "
+                        "%.2f",
+                        ticker,
+                        f"{kis_level_raw:.2f}" if kis_level_raw is not None
+                        else "missing",
+                        lo, hi, fmp_price,
+                    )
+                    level = fmp_price
+                    # Prefer FMP-derived d/d% when present, otherwise keep
+                    # whatever change_pct we already had (KIS or 0).
+                    fmp_change = q.get("changesPercentage") or q.get("change_pct")
+                    if fmp_change is not None:
+                        try:
+                            change_pct = float(fmp_change)
+                        except (TypeError, ValueError):
+                            pass
+                    # Re-validate any sparkline/range derived from the
+                    # earlier (sanity-failed) level. The 30% staleness
+                    # check at line ~781 ran against the bogus KIS level —
+                    # a series that "passed" relative to KIS 7498 may now
+                    # diverge wildly from the trustworthy FMP 2540. Drop
+                    # those artifacts so we don't render
+                    # level=2540 / range_52w=[5700,6800] together.
+                    if sparkline:
+                        spark_max = max(sparkline) if sparkline else 0.0
+                        spark_min = min(sparkline) if sparkline else 0.0
+                        # If either end of the series is outside the
+                        # per-ticker sanity bound, the series came from the
+                        # KIS-quirk path and must not co-exist with the
+                        # FMP-derived level. Discard.
+                        if not (_in_bound(spark_max) and _in_bound(spark_min)):
+                            logger.warning(
+                                "market.indices %s: sparkline/range from "
+                                "pre-fallback path (min=%.2f max=%.2f) "
+                                "incompatible with FMP level %.2f — "
+                                "discarding history series",
+                                ticker, spark_min, spark_max, fmp_price,
+                            )
+                            sparkline = []
+                            range_52w = None
+                            is_stale = True
+                else:
+                    logger.warning(
+                        "market.indices %s: FMP fallback level %.2f also "
+                        "outside sanity bound [%.0f,%.0f] — dropping",
+                        ticker, fmp_price, lo, hi,
+                    )
+        except Exception as e:
+            logger.debug(
+                "market.indices %s FMP fallback failed: %s", ticker, e,
+            )
+
+    if level is None:
+        return None
+
+    if not _in_bound(level):
         logger.warning(
             "market.indices %s level %.2f outside sanity bound [%.0f,%.0f]; "
-            "dropping entry (likely KIS unit/code mismatch)",
+            "dropping entry (KIS quirk + no FMP fallback available)",
             ticker, level, lo, hi,
         )
         return None
