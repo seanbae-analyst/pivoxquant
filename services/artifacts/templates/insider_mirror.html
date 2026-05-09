@@ -49,16 +49,16 @@
 
     <div class="pq-pdf-eyebrow">Insider Mirror &middot; Weekly &middot; {{ pm.persona_label(persona) }}</div>
     <h1 style="font-family:var(--font-serif);font-size:30px;font-weight:500;line-height:1.15;margin:8px 0 6px;letter-spacing:-0.01em;">
-      이번 주 내부자 매수
+      이번 주 SEC Form 4 인사이더 매수
       {%- if v3.cluster_buys and v3.cluster_buys.value %}
-        <strong style="color:var(--r-pos);">{{ v3.cluster_buys.value }}</strong>건.
+        <strong style="color:var(--r-pos);">{{ v3.cluster_buys.value }}</strong>건 (관찰됨).
       {%- else %}
-        시그널.
+        공시 관찰.
       {%- endif %}
     </h1>
     <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-      Form 4 정제 — Cluster · CEO+CFO 동반 · 10b5-1 제외.
-      {% if v3.hit_rate and v3.hit_rate.value %} 12개월 적중률 <strong>{{ v3.hit_rate.value }}</strong>{% endif %}
+      Form 4 공시 정제 — Cluster · CEO+CFO 동반 · 10b5-1 제외.
+      {% if v3.hit_rate and v3.hit_rate.value %} 12개월 과거 시그널 추적 결과 <strong>{{ v3.hit_rate.value }}</strong> (참고용 backtest, 미래 수익 보장 아님){% endif %}
     </p>
 
     <div style="margin-top: 24px;">
@@ -79,14 +79,14 @@
           {% if v3.non_plan_sells.detail %}<div class="pq-pdf-kpi-delta neg">{{ v3.non_plan_sells.detail }}</div>{% endif %}
         </div>
         <div class="pq-pdf-kpi">
-          <div class="pq-pdf-kpi-lbl">Mirror Hit Rate · 12m</div>
+          <div class="pq-pdf-kpi-lbl">Mirror Backtest · 12m</div>
           <div class="pq-pdf-kpi-val">{{ v3.hit_rate.value | default('—') }}</div>
           {% if v3.hit_rate.detail %}<div class="pq-pdf-kpi-delta">{{ v3.hit_rate.detail }}</div>{% endif %}
         </div>
       </div>
     </div>
 
-    <h2 class="pq-pdf-section-title sm">Top Buys &middot; 따라갈 만한 매수</h2>
+    <h2 class="pq-pdf-section-title sm">Top Acquisitions &middot; 최근 인사이더 매수 공시 (Form 4)</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
@@ -114,7 +114,7 @@
       </tbody>
     </table>
 
-    <h2 class="pq-pdf-section-title sm">Sells &middot; 주의가 필요한 매도</h2>
+    <h2 class="pq-pdf-section-title sm">Dispositions &middot; 최근 인사이더 매도 공시 (10b5-1 제외)</h2>
     <table class="pq-pdf-table">
       <thead>
         <tr>
@@ -189,7 +189,7 @@
             <div style="font-family:var(--font-mono);font-size:11px">{{ v3.featured.last_buy | default('—') }}</div>
           </div>
           <div>
-            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4);margin-bottom:6px">12m Hit Rate</div>
+            <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4);margin-bottom:6px">12m Backtest</div>
             <div style="font-family:var(--font-mono);font-size:11px;color:var(--r-pos)">{{ v3.featured.hit_rate | default('—') }}</div>
           </div>
         </div>
@@ -261,7 +261,7 @@
     <div style="margin-top:18px">
       <div class="pq-pdf-callout">
         <div class="pq-pdf-callout-label">How to Use</div>
-        <p>{{ v3.how_to_use | default('시그널은 시그널일 뿐. 90일 후 자동 점검, 가설 깨지면 청산. 미러는 출발점.') }}</p>
+        <p>{{ v3.how_to_use | default('관찰은 관찰일 뿐. 90일 후 본인 가설을 자가 점검하고, 본인 룰에 따라 재평가. 미러는 정보 관찰의 출발점이며 매수·매도 권유가 아닙니다.') }}</p>
       </div>
     </div>
 

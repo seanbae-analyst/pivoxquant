@@ -445,7 +445,119 @@ jobs:
           PY
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 6 — PR comment aggregator. Posts a single summary comment on
+  # Job 6 — Backend Jinja templates + artifact services scan. Mirror of
+  #         job 5 (scan-vocabulary-context) but for backend prose. Uses
+  #         the same SoT (services/legal/forbidden_terms.py) so a single
+  #         token addition gates both ends. Added 2026-05-08 after the
+  #         §101 sweep that found `포지션 유지` / `차익실현` /
+  #         `따라갈 만한` in services/artifacts/templates/*.html and
+  #         services/artifacts/*_service.py — locations not covered by
+  #         scan-vocabulary-context (which only walks frontend/src/) or
+  #         scripts/legal/scan_advisory_vocab.py (which uses a separate
+  #         verb-form pattern list, not FORBIDDEN_DIRECTIVE_TERMS).
+  # ───────────────────────────────────────────────────────────────────
+  scan-backend-templates:
+    name: Forbidden vocab in backend templates + services
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cross-reference FORBIDDEN_DIRECTIVE_TERMS against backend templates
+        run: |
+          set -e
+          python3 - <<'PY'
+          import pathlib, re, sys
+          sys.path.insert(0, ".")
+          from services.legal.forbidden_terms import FORBIDDEN_DIRECTIVE_TERMS
+
+          # Hangul-aware negation enumeration (mirrors job 5).
+          NEGATION_RE = re.compile(
+              r"(아니|아닌|아닙|아니다|아니라|아니며|아니지|않|"
+              r"not\s|\bno\s+advice|\bno\s+investment|"
+              r"does\s+not|do\s+not|never\b|forbidden|disclaimer|면책|금지)",
+              re.IGNORECASE,
+          )
+
+          # Where to scan. Templates first; then service .py prose.
+          TARGETS: list[tuple[pathlib.Path, str]] = [
+              (pathlib.Path("services/artifacts/templates"), "*.html"),
+              (pathlib.Path("services/artifacts"),           "*_service.py"),
+          ]
+          # Files that *describe* the forbidden vocabulary (negation/SoT)
+          # — exempt from substring matching.
+          SKIP_FILES = {
+              pathlib.Path("services/legal/forbidden_terms.py"),
+              pathlib.Path("services/artifacts/insider_mirror_service.py"),
+          }
+
+          violations = []
+          for root, glob in TARGETS:
+              if not root.exists():
+                  continue
+              for p in root.rglob(glob):
+                  if p in SKIP_FILES:
+                      continue
+                  try:
+                      raw = p.read_text(encoding="utf-8")
+                  except Exception:
+                      continue
+
+                  for line_no, line in enumerate(raw.splitlines(), start=1):
+                      stripped = line.strip()
+                      # Skip Python comments and Jinja comments — they
+                      # are not user-visible prose.
+                      if stripped.startswith("#"):
+                          continue
+                      if stripped.startswith("{#") or stripped.startswith("//"):
+                          continue
+                      # Skip negation context (descriptive guard text).
+                      if NEGATION_RE.search(line):
+                          continue
+                      low = line.lower()
+                      for term in FORBIDDEN_DIRECTIVE_TERMS:
+                          t = term.lower()
+                          # Single-token English (buy/sell/hold) is too
+                          # noisy in backend code (BUY/SELL action
+                          # constants, schema fields). Only flag the
+                          # multi-word / Korean tokens here. Backend
+                          # English BUY/SELL literals are gated by
+                          # legal-guard.yml's signal=BUY/SELL regex.
+                          if t.isascii() and " " not in t:
+                              continue
+                          if t in low:
+                              violations.append(
+                                  f"{p}:{line_no}: '{term}' in backend prose: "
+                                  f"{stripped[:80]!r}"
+                              )
+                              break
+
+          import os
+          strict = os.environ.get("LEGAL_VOCAB_STRICT") == "1"
+          severity = "error" if strict else "warning"
+          if violations:
+              for v in violations[:30]:
+                  print(f"::{severity}::{v}")
+              if len(violations) > 30:
+                  print(f"::{severity}::... and {len(violations) - 30} more")
+              print("")
+              print(f"Total: {len(violations)} backend finding(s) "
+                    f"[{ 'STRICT' if strict else 'advisory' }].")
+              print("Source of truth: services/legal/forbidden_terms.py "
+                    "FORBIDDEN_DIRECTIVE_TERMS.")
+              if strict:
+                  sys.exit(1)
+          else:
+              print("✅ No forbidden directive terms in backend templates / services")
+          PY
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 7 — PR comment aggregator. Posts a single summary comment on
   #         the PR with all violations from the jobs above. Skipped on
   #         scheduled runs.
   # ───────────────────────────────────────────────────────────────────
@@ -458,6 +570,7 @@ jobs:
       - scan-disclaimer-equivalence
       - scan-disclaimer-position
       - scan-vocabulary-context
+      - scan-backend-templates
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -474,7 +587,8 @@ jobs:
             echo "| API legal_scrub_response | ${{ needs.scan-api-decorator.result }} |"
             echo "| ko/en equivalence | ${{ needs.scan-disclaimer-equivalence.result }} |"
             echo "| Banner position (top-mount) | ${{ needs.scan-disclaimer-position.result }} |"
-            echo "| Forbidden vocab cross-ref | ${{ needs.scan-vocabulary-context.result }} |"
+            echo "| Forbidden vocab cross-ref (frontend) | ${{ needs.scan-vocabulary-context.result }} |"
+            echo "| Forbidden vocab (backend templates) | ${{ needs.scan-backend-templates.result }} |"
             echo ""
             echo "_Failures: open the workflow run logs for the offending file:line._"
             echo "_Companion: legal-guard.yml (backend vocab/templates) + tests/test_legal_deep_scan_local.py (local macOS)._"

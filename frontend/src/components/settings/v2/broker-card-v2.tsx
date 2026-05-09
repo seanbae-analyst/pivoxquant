@@ -36,7 +36,6 @@ export function BrokerCardV2({
 }: Props) {
   return (
     <section
-      id="section-b"
       style={{ scrollMarginTop: 96 }}
       aria-label="Brokers"
     >

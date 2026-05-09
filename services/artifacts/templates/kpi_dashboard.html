@@ -17,8 +17,9 @@
      v3.decisions (list of {date, decision, thesis, size, result, result_tone, verdict_tone, verdict_label}),
      v3.decision_cards (list of {priority, title, body, badge_tone, badge_label})
 
-   Compliance — IC pack tone. BUY/SELL labels are HISTORICAL decision log
-   entries (not current advice). Outcomes are factual.
+   Compliance — IC pack tone. ACQUIRED/CLOSED labels are HISTORICAL position
+   log entries (사용자 본인 거래 기록 표시. 시스템 권유 아님). Outcomes are
+   factual records of past user-recorded trades, not current advice.
    ══════════════════════════════════════════════════════════════════════════ #}
 {%- set v3 = v3 | default({}) -%}
 {%- import 'partials/_persona_macros.html' as pm -%}

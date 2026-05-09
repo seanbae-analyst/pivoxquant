@@ -982,13 +982,13 @@ class QuantEngine:
         if not weights:
             weights = "Adaptive"
         en = (f"Composite score {score:.0f}/100 ({weights}). Primary driver: {dom[0]} ({dom[1]:.0f} pts). "
-              + {"POSITIVE":  "Multi-factor quant model detects favorable pattern conditions (informational only).",
-                 "NEUTRAL": "Hold current position. Await stronger signal before adding.",
-                 "NEGATIVE": "Quant model flags deteriorating conditions. Consider reducing or exiting position."}.get(sig, ""))
+              + {"POSITIVE":  "Multi-factor quant model observes favorable pattern conditions (informational only).",
+                 "NEUTRAL":   "No directional signal observed. Awaiting stronger pattern (informational only).",
+                 "NEGATIVE":  "Quant model observes deteriorating conditions (informational only)."}.get(sig, ""))
         kr = (f"종합 점수 {score:.0f}/100 ({weights}). 주요 동인: {dom_kr} ({dom[1]:.0f}점). "
-              + {"POSITIVE":  "멀티팩터 퀀트 모델이 유리한 조건 관찰. 분할 패턴 영역.",
-                 "NEUTRAL": "현 포지션 유지. 추가 진입 시그널 대기.",
-                 "NEGATIVE": "퀀트 모델이 약세 신호 감지. 포지션 축소 또는 청산 고려."}.get(sig, ""))
+              + {"POSITIVE":  "멀티팩터 퀀트 모델이 유리한 조건 관찰 (정보 제공 목적).",
+                 "NEUTRAL":   "방향성 시그널 미관찰. 추가 패턴 관찰 대기 (정보 제공 목적).",
+                 "NEGATIVE":  "퀀트 모델이 약세 조건 관찰 (정보 제공 목적)."}.get(sig, ""))
         return en, kr
 
     # ── Portfolio-Level Analytics ─────────────────────────────────────────────

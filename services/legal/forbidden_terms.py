@@ -76,6 +76,25 @@ FORBIDDEN_DIRECTIVE_TERMS: Final[frozenset[str]] = frozenset({
     "매도 추천",
     # Directive form of 보유 — the standalone noun is permitted.
     "보유하세요",
+    # ── 2026-05-08 expansion (§101 회피 후속) ──────────────────────────
+    # Korean directive verb-phrases that previously slipped through
+    # by being assembled from neutral nouns + 검토/유지 hedges.
+    "포지션 유지",
+    "차익실현",
+    "즉시 매도",
+    "즉시 청산",
+    "추가 매수",
+    "청산 검토",
+    "매수 검토",
+    "매도 검토",
+    "포지션 사이징 점검",
+    # Performance-suggestion / future-projection vocabulary that drifts
+    # toward implicit recommendation framing.
+    "적중률",
+    "유망",
+    "목표가",
+    "따라갈 만한",
+    "주의가 필요한",
 })
 
 

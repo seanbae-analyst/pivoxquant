@@ -3,14 +3,16 @@
  *
  * Source: /design_handoff_pdf_reports/reports/10_insider_mirror.html
  *
- * Page 1: 4-up KPI (clusters / CEO+CFO / non-10b5-1 sells / mirror hit rate)
- *         + Top Buys table + Sells table.
- * Page 2: Featured signal card + 24m mirror vs S&P 500 chart + 3-up KPI
+ * Page 1: 4-up KPI (clusters / CEO+CFO / non-10b5-1 dispositions / mirror
+ *         backtest hit rate) + Acquisitions table + Dispositions table.
+ * Page 2: Featured observation card + 24m mirror vs S&P 500 chart + 3-up KPI
  *         + how-to-use callout + governance + disclaimer.
  *
- * Compliance: Form 4 mirror only. NEVER buy/sell/hold language — insider
- * activity classification is descriptive ("CLUSTER", "FIRST IN", "SOLO"), not
- * advice. POSITIVE / NEGATIVE / NEUTRAL signals only.
+ * §101 회피 (2026-05-08): Form 4 공시 정보 관찰만 표시. NEVER buy / sell /
+ * hold / 추천 / 따라갈 만한 / 주의가 필요한 / 청산 / 적중률 wording. 모든
+ * label 은 SEC 공시 사실의 descriptive classification ("CLUSTER", "FIRST IN",
+ * "SOLO") 이며, 신호 톤은 POSITIVE / NEGATIVE / NEUTRAL 만 사용한다.
+ * "12m hit rate" 는 과거 backtest 결과의 사실 기록 (미래 수익 보장 아님).
  */
 
 "use client";
@@ -80,9 +82,9 @@ export interface InsiderMirrorData {
 const DEFAULT: InsiderMirrorData = {
   asOf: "Week of Apr 26 · IM-2026-04",
   clusterBuys: { value: "7", detail: "5+ insiders, 30d" },
-  ceoCfoPair: { value: "3", detail: "strongest signal" },
-  nonPlanSells: { value: "12", detail: "flag list" },
-  hitRate: { value: "63%", detail: "+8.2% avg" },
+  ceoCfoPair: { value: "3", detail: "co-occurrence observed" },
+  nonPlanSells: { value: "12", detail: "non-10b5-1 list" },
+  hitRate: { value: "63%", detail: "12m backtest, n=84" },
   buys: [
     { ticker: "CRWD", insider: "George Kurtz", role: "CEO", amount: "$4.2M", date: "10/22", signal: "★★★ FIRST IN 18m", signalTone: "pos" },
     { ticker: "ANET", insider: "Jayshree Ullal", role: "CEO", amount: "$3.8M", date: "10/18", signal: "★★★ CLUSTER 6×", signalTone: "pos" },
@@ -108,7 +110,7 @@ const DEFAULT: InsiderMirrorData = {
   winRate: { value: "63%", detail: "n = 84 signals" },
   avgHold: { value: "94 days", detail: "median 76d" },
   howToUse:
-    "시그널은 시그널일 뿐. ★★★만 1.5%, ★★는 1%, ★는 무시. 90일 후 자동 점검, 가설 깨지면 청산. 미러는 출발점이지 끝이 아니다.",
+    "관찰은 관찰일 뿐. 시그널 등급(★★★ / ★★ / ★)은 SEC Form 4 공시 정제 결과의 분류이며 매수·매도 권유가 아닙니다. 90일 후 본인 가설을 자가 점검하고, 본인 룰에 따라 재평가하십시오.",
 };
 
 export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) {
@@ -121,12 +123,12 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
 
         <PdfEyebrow>Insider Mirror · Weekly</PdfEyebrow>
         <PdfCoverTitle size={42}>
-          Insiders are <em>buying</em>—
+          SEC Form 4 — insider <em>acquisitions</em>
           <br />
-          the signals worth following this week.
+          observed this week.
         </PdfCoverTitle>
         <p style={{ color: "var(--r-ink-3)", fontSize: 14, lineHeight: 1.55, marginTop: 12 }}>
-          Form 4 only. Cluster buys, CEO+CFO pairs, first-time buyers — extracted after the noise is filtered out.
+          Form 4 공시 정제 — Cluster acquisitions, CEO+CFO co-occurrences, first-time filers. 정보 관찰 자료이며 매수·매도 권유가 아닙니다.
         </p>
 
         <div style={{ marginTop: 24 }}>
@@ -135,12 +137,12 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
               { label: "Cluster Buys", value: data.clusterBuys.value, delta: data.clusterBuys.detail, deltaTone: "pos" },
               { label: "CEO+CFO 동반", value: data.ceoCfoPair.value, delta: data.ceoCfoPair.detail, deltaTone: "pos" },
               { label: "10b5-1 제외 매각", value: data.nonPlanSells.value, delta: data.nonPlanSells.detail, deltaTone: "neg" },
-              { label: "Mirror Hit Rate · 12m", value: data.hitRate.value, delta: data.hitRate.detail },
+              { label: "Mirror Backtest · 12m", value: data.hitRate.value, delta: data.hitRate.detail },
             ]}
           />
         </div>
 
-        <PdfSectionTitle variant="sm">Top Acquisitions · 따라갈 만한 매입</PdfSectionTitle>
+        <PdfSectionTitle variant="sm">Top Acquisitions · 최근 인사이더 매수 공시 (Form 4)</PdfSectionTitle>
         <PdfTable>
           <thead>
             <tr>
@@ -168,7 +170,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           </tbody>
         </PdfTable>
 
-        <PdfSectionTitle variant="sm">Dispositions · 주의가 필요한 매각</PdfSectionTitle>
+        <PdfSectionTitle variant="sm">Dispositions · 최근 인사이더 매도 공시 (10b5-1 제외)</PdfSectionTitle>
         <PdfTable>
           <thead>
             <tr>
@@ -233,7 +235,7 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
                 <div style={{ fontSize: 12 }} className="font-mono" >{data.featured.lastBuy}</div>
               </div>
               <div>
-                <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }} className="font-mono" >12m Hit Rate</div>
+                <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)", marginBottom: 6 }} className="font-mono" >12m Backtest</div>
                 <div style={{ fontSize: 12, color: "var(--r-pos)" }} className="font-mono" >{data.featured.hitRate}</div>
               </div>
             </PdfThreeCol>
