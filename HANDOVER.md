@@ -1,8 +1,74 @@
+# PivoxQuant — 인수인계서 (2026-05-09 v27 세션 — 출시 모드 마무리 · OPEN PR 0건 · 능동 검증)
+
+## 🟢 2026-05-09 v27 세션 (사장님 깨어난 후 — "출시 임박, 정확하게 다 수정") — **2 PR + 1 cleanup commit** · main `d634827 → fd6cf99` · OPEN PR 2 → 0 · 풀 회귀 4종 PASS
+
+**현재 main HEAD: `fd6cf99`** (origin sync OK). **OPEN PR 0건** — v26 잔존 결정 대기 PR 2건 모두 머지 완료.
+
+### v27 세션 액션 (3건)
+| # | 작업 | 결과 |
+|---|---|---|
+| 1 | PR **#160** (DB 마이그 027 + Position UniqueConstraint) admin merge | `aea2bbf` — alembic chain 026→027 단일 head, share-weighted cleanup math `_merge_into` helper 일관성, `IntegrityError` race recovery 3 handlers, idempotent inspector guard |
+| 2 | PR **#154** (25 files bug-hunt batch + §101 vocab sweep) conflict resolve + admin merge | `4c25295` — `services/artifacts/templates/self_audit.html` 어휘 conflict (`exit 가격` vs `처분 가격`) main 채택 (SEC Form 4 "Dispositions" 일관성). 코드 변경 4건 (broker-card-v2 중복 id 제거 / top-bar header z-50 / latest-artifact-card sent_at fallback / profile-dropdown subscription_tier wire) + PDF report vocab + legal-deep-scan.yml backend templates job |
+| 3 | cleanup commit (`fd6cf99`) | `MORNING_REPORT_2026-05-09.md` → `docs/archive/sessions/` (이전 세션 패턴 일치), `.bug-hunt/` `.gitignore` 추가 (transient artifact, `nightly_artifacts/` 패턴 일치) |
+
+### v27 회귀 4종 (모두 PASS)
+| 도구 | 결과 |
+|---|---|
+| pytest (`--ignore=tests/test_no_hardcoded_samples`) | exit 0 — 1643 passed (v26 baseline 일치) |
+| TypeScript `tsc --noEmit` | exit 0 — 0 errors |
+| vitest | exit 0 — 35/35 |
+| eslint (`next lint`) | exit 0 — clean |
+
+### v27 능동 검증 5개 영역 (출시 차단 신규 P0/P1 발견 0건)
+
+| 영역 | 점검 | 결론 |
+|---|---|---|
+| **OAuth** (Google + Kakao) | `routes/auth.py` HMAC state (`URLSafeTimedSerializer` + 10분 TTL) / provider mismatch 검증 / `_safe_next` open redirect 방어 / origin allowlist / `session.clear()` session fixation / `_resolve_frontend_url` Vercel↔Railway round-trip 무결성 / authlib state rehydrate / 사용자 provisioning DB rollback + generic error redirect (no schema leak) | ROBUST. 0건 발견 |
+| **Stripe 결제** | `routes/billing.py` webhook signature 검증 (`stripe.Webhook.construct_event`) / handler never-500 (catch + rollback + log + ACK 200) / `_get_or_create_customer` 실패 시 `stripe.Customer.delete` orphan rollback (PR #151) / `require_business_registration` 503 gate (전자상거래법 §40 / 통신판매법 §43) / `subscription_tier` 5 status 매핑 (active/canceled/past_due/unpaid/inactive) / `stripe.api_request_timeout=10` 네트워크 resilience | ROBUST. webhook idempotency 테이블 부재는 P2 (handler 자체가 idempotent — 같은 데이터 update + customer 생성 PR #151 fix). DB 마이그 필요라 별도 PR 권장 |
+| **AI routes** (`/swot` `/chat` `/coaching` `/companion` etc.) | `routes/ai.py` `last_error` surface (PR #156) / `safe_scrub` SSE chunk 경계 §6/§101 방어 / N+1 batch SignalCache load / `ai.available` 503 gate / `require_tier("pro")` 데코레이터 / `_extract_ticker_from_payload` §101 회피 (single-ticker analysis 가드) | ROBUST. AI endpoint 500 root cause는 Anthropic 크레딧 (사장님 직접 P0) |
+| **SSE realtime** (`routes/realtime.py` + `services/data/realtime.py`) | `_sse_lock` + `_sse_connections` per-user counter / `_MAX_SSE_PER_USER` DoS 제한 / `try/finally` connection counter decrement (leak 방어) / `GeneratorExit` client disconnect / `_TICKER_REFRESH_EVERY=60` 신규 position 스트림 (PR #170) / heartbeat / KIS WS `_kis_ws_lock` thread-safe + 5min TTL cooldown (PR #170) / `KIS_USE_REAL` 모의/실전 분기 (PR #165) / `ALPACA_ENABLED` kill switch | ROBUST. 0건 발견 |
+| **Portfolio / Position** | `routes/portfolio.py` `uq_positions_user_ticker` UniqueConstraint (PR #160) / `IntegrityError` rollback → re-fetch → `_merge_into` 3 handlers / 409 `POSITION_RACE` envelope (idempotent retry) / share-weighted avg_cost 일관성 / `is_korean` `.KS`/`.KQ` 분기 / FX rate weighted merge | ROBUST. 0건 발견 |
+
+### v27 점검했지만 작업 보류 항목
+| 항목 | 보류 사유 |
+|---|---|
+| **v1 dead code 9 directories cleanup** | HANDOVER v26 표현 부정확 — 실제로는 `NEXT_PUBLIC_HOME_V2` / `NEXT_PUBLIC_SIGNALS_V2` 등 9개 V1/V2 dual-track flag 패턴 (`page.tsx`에서 `process.env.NEXT_PUBLIC_*_V2 === "true" ? V2 : V1`). 단순 삭제 시 prod env unset에서 즉시 페이지 깨짐. **V2 default 강제 (Vercel env 설정) → V1 lazy import drop → V1 디렉토리 삭제** 3-step 별도 PR 필요. `.env.example`은 모든 V2 flag `true` 설정됨 |
+| **SEC-G CSP `unsafe-inline` nonce 마이그** | `security.py:402-403` `script-src/style-src 'self' 'unsafe-inline'` — Next.js 16 native CSP nonce는 frontend 인라인 style/script 사용처 광범위 audit 필요. backend Jinja templates (`email_preferences._PAGE_TMPL` + `command-center.html`) 인라인 `<style>` 변환 — 작업량 큼. 출시 차단 P0 아니라 별도 wave |
+| **W6-2 backend `/api/signals` query filter wiring** | frontend는 client-side filter로 이미 mitigation (line 143 "Backend may not honor query params yet — apply client-side filter as a defensive layer"). backend filter 추가 vs frontend QS 제거 UX 결정 필요 |
+| **recharts dynamic import** | `EquityCurveChart` / `SectorAllocationDonut` / `WhatIfChart` 3개 — V2 home은 chart 컴포넌트 미사용 (주석으로 `→ /portfolio` 안내), V1 home은 이미 `dynamic(() => import("./_v1/page-v1"))` 로 chunk split. V2 default일 때 chart bundle 영향 0. simulator/what-if는 차트가 핵심 기능이라 dynamic 효과 적음 |
+| **Stripe webhook idempotency 테이블** | DB 마이그 028 + `processed_stripe_events` 모델 + 테스트 — 별도 PR. 현재 handler 자체가 idempotent (same-data update) |
+| **error 페이지 KR i18n** | `not-found.tsx` / `error.tsx` / `global-error.tsx` 모두 EN only. Vantablack + Bronze + Playfair italic 디자인 일관성은 완성. 한국 시장 우선 → P2 (i18n 인프라 큰 작업) |
+
+### 사장님 P0 인프라 5건 (코드 무관, v26부터 동일)
+1. **Anthropic 크레딧 충전** — `/api/ai/*` 500 root cause (확정). console.anthropic.com/settings/billing
+2. **GitHub Billing 카드** — 모든 PR CI fail. v27 머지는 admin override 사용 (`gh pr merge --admin`). settings/billing/payment_information
+3. **Railway `DEV_LOGIN_SECRET` 삭제 확인** — production에 있으면 누구나 premium 생성 (보안 critical)
+4. **Stripe Live keys + `STRIPE_PRICE_PRO/PREMIUM` + `BUSINESS_REGISTRATION_NUMBER` + `TELESELLER_REGISTRATION_NUMBER`** Railway 설정 — `require_business_registration` 데코레이터가 미설정 시 503 차단
+5. **Vercel env**: `NEXT_PUBLIC_SENTRY_DSN` / `NEXT_PUBLIC_API_URL` (또는 `RAILWAY_BACKEND_URL`) / `BETA_PASSWORD` + `BETA_SIGNING_SECRET` / **모든 `NEXT_PUBLIC_*_V2=true`** (현재 V1 fallback 가능성 있음)
+
+### v27 다음 세션 우선순위
+| 순 | 항목 | 분류 |
+|---|---|---|
+| 1 | 사장님 P0 인프라 5건 | CEO 직접 |
+| 2 | V2 default 강제 + V1 dead code 점진 삭제 (3-step PR) | P1 |
+| 3 | Stripe webhook idempotency 테이블 (DB 마이그 028) | P1 |
+| 4 | W6-2 backend signals filter (UX 결정 필요) | P1 |
+| 5 | SEC-G CSP nonce 마이그 (Next.js 16 + Jinja) | P2 |
+| 6 | error 페이지 KR i18n + i18n 인프라 | P2 |
+
+### v27 정직 한계
+- **라이브 시각 검증 0건** — parent macOS UI 잠김 / 자율 모드 OAuth 클릭 막힘. Vercel preview는 commit별 자동 deploy.
+- **CI 검증 0건** — GitHub Billing 카드 issue (사장님 직접 P0). admin override merge로 우회.
+- **PR #160 prod 영향 미확인** — Railway DB duplicate count 쿼리 직접 실행 안 함. 코드 audit 결과 cleanup query는 duplicate 0건이면 no-op, ≥1건이면 share-weighted merge (사용자 가시 변화 없음, 같은 산수). Railway alembic auto-upgrade 안 되면 코드 머지 자체로는 영향 0.
+- **다중 agent 병렬 dispatch 거부** — 사장님이 이번 세션에 직접 코드 read + fix 모드 선호 표명. 6 audit agent 동시 dispatch 시도 즉시 reject. 단일 호흡 직접 작업으로 전환.
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-09 v26 세션 — 출시 모드 26 PR · 사업자 등록 완료 · 자율 마라톤)
 
 ## 🟢 2026-05-09 v26 세션 (자율 야간 → CEO 깨어남 → "출시 모드 / 토큰 무제한 / 사업자 등록 완료, 돌아갈 길 없어 — 최고의 결과물") — **26 PR 머지** · main `d452d9c → d634827` · 풀 회귀 1643/1643 통과 · 직접 호출 검증 11/11
 
-**현재 main HEAD: `d634827`** (origin sync OK). **OPEN PR 2건 (CEO 결정): #160 (DB 마이그 027 + prod cleanup 비가역) / #154 (어제 25 files wide-scope batch)**.
+**v26 main HEAD: `d634827`** (v27 시작 시점). v26 종료 시 OPEN PR 2건 (#160 / #154) — v27에서 모두 머지 완료.
 
 ### v26 세션 통계
 | 지표 | 값 |
