@@ -1,5 +1,6 @@
 """Signal analysis routes."""
 import json
+from datetime import datetime, timezone, timedelta
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
 
@@ -21,6 +22,102 @@ def _get_profile_params():
     profile = InvestmentProfile.query.filter_by(user_id=current_user.id).first()
     return profile.to_engine_params() if profile else None
 
+
+_VALID_LABELS = {"POSITIVE", "NEGATIVE", "NEUTRAL"}
+_VALID_WINDOWS = {"today", "7d", "30d", "all"}
+
+
+def _parse_signals_filters() -> dict:
+    """W6-2 (2026-05-09): parse the frontend filter contract from query params.
+
+    Hook source of truth: ``frontend/src/lib/hooks.ts::useSignals``.
+    Wire format must stay 1:1 — every key the hook may emit is read here.
+    Invalid values are dropped silently (defensive; frontend validates first).
+    """
+    raw_labels = (request.args.get("labels") or "").strip()
+    labels: set[str] = set()
+    if raw_labels:
+        for part in raw_labels.split(","):
+            tok = part.strip().upper()
+            if tok in _VALID_LABELS:
+                labels.add(tok)
+
+    def _bounded_float(name: str, default: float, lo: float, hi: float) -> float:
+        try:
+            v = float(request.args.get(name, default))
+        except (TypeError, ValueError):
+            return default
+        if v != v:  # NaN
+            return default
+        return max(lo, min(hi, v))
+
+    strength_min = _bounded_float("strength_min", 0.0, 0.0, 1.0)
+    strength_max = _bounded_float("strength_max", 1.0, 0.0, 1.0)
+    if strength_min > strength_max:
+        strength_min, strength_max = 0.0, 1.0
+
+    symbol = (request.args.get("symbol") or "").strip().upper() or None
+
+    window = (request.args.get("window") or "all").lower()
+    if window not in _VALID_WINDOWS:
+        window = "all"
+
+    return {
+        "labels": labels,
+        "strength_min": strength_min,
+        "strength_max": strength_max,
+        "symbol": symbol,
+        "window": window,
+    }
+
+
+def _strength_of(d: dict) -> float:
+    """Mirror of frontend ``strengthOf`` (lib/hooks helpers)."""
+    s = d.get("strength")
+    if isinstance(s, (int, float)):
+        return max(0.0, min(1.0, float(s)))
+    score = d.get("score")
+    if isinstance(score, (int, float)):
+        return max(0.0, min(1.0, float(score) / 100.0))
+    return 0.0
+
+
+def _label_of(d: dict) -> str:
+    """Mirror of frontend ``labelOf``."""
+    raw = (d.get("label") or d.get("signal") or "").upper()
+    if raw == "POSITIVE":
+        return "POSITIVE"
+    if raw == "NEGATIVE":
+        return "NEGATIVE"
+    return "NEUTRAL"
+
+
+def _within_window(d: dict, window: str) -> bool:
+    """Mirror of frontend ``isWithinWindow``."""
+    if window == "all":
+        return True
+    obs = d.get("observed_at")
+    if not obs:
+        return True
+    try:
+        ts = datetime.fromisoformat(obs.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        return True
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    delta = datetime.now(timezone.utc) - ts
+    if delta < timedelta(0):
+        # Future timestamp from clock skew — treat as fresh, do not filter out.
+        return True
+    if window == "today":
+        return delta <= timedelta(days=1)
+    if window == "7d":
+        return delta <= timedelta(days=7)
+    if window == "30d":
+        return delta <= timedelta(days=30)
+    return True
+
+
 signals_bp = Blueprint("signals", __name__, url_prefix="/api")
 
 
@@ -28,7 +125,24 @@ signals_bp = Blueprint("signals", __name__, url_prefix="/api")
 @api_auth
 @legal_scrub_response
 def get_signals():
-    tickers = {p.ticker for p in Position.query.filter_by(user_id=current_user.id).all()}
+    # W6-2 (2026-05-09): honor frontend filter contract so SWR cache keys
+    # carrying the same effective query collapse to a single backend hit.
+    # Without this, every filter toggle minted a new SWR key against the
+    # same response payload — cache fragmentation + extra network traffic.
+    # Frontend keeps its own client-side filter pass as a defensive layer.
+    flt = _parse_signals_filters()
+    user_positions = {p.ticker for p in Position.query.filter_by(user_id=current_user.id).all()}
+
+    # Symbol filter narrows the source set so we don't load + filter signals
+    # we'd discard anyway. ``access_guard`` semantics still apply (we never
+    # surface a ticker outside the user's allowed set).
+    if flt["symbol"]:
+        if flt["symbol"] not in user_positions:
+            return jsonify({"signals": []})
+        tickers = {flt["symbol"]}
+    else:
+        tickers = user_positions
+
     # Batch-load SignalCache for all user positions in a single query (avoid N+1).
     cache_map = {
         c.ticker: c
@@ -52,6 +166,16 @@ def get_signals():
             if not d.get("name") or d.get("name") == t:
                 d["name"] = resolve_stock_name(t) or t
             d.setdefault("ticker", t)
+
+            # Apply server-side filter — drops signals outside the contract.
+            if flt["labels"] and _label_of(d) not in flt["labels"]:
+                continue
+            s = _strength_of(d)
+            if s < flt["strength_min"] or s > flt["strength_max"]:
+                continue
+            if not _within_window(d, flt["window"]):
+                continue
+
             out.append(d)
 
             # Best-effort background refresh when stale so subsequent reads
@@ -83,12 +207,21 @@ def get_signals():
                     )
         else:
             # No row at all — surface as stale so the client can show "—" / skeleton.
-            out.append({
+            placeholder = {
                 "ticker": t,
                 "name": resolve_stock_name(t) or t,
                 "observed_at": None,
                 "is_stale": True,
-            })
+                "label": "NEUTRAL",  # placeholder rows are NEUTRAL by design
+            }
+            # Honor label filter — placeholder is NEUTRAL.
+            if flt["labels"] and "NEUTRAL" not in flt["labels"]:
+                continue
+            # Strength filter — placeholders score 0, drop if min > 0.
+            if flt["strength_min"] > 0.0:
+                continue
+            # Window: observed_at None → treated as visible (matches frontend).
+            out.append(placeholder)
     return jsonify({"signals": out})
 
 
