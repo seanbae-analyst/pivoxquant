@@ -4,6 +4,36 @@
 
 **현재 main HEAD: `8fbcee2`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
 
+### 🟢 v27 디자인 풀 audit (사장님 자율 모드 위임 후 — 데스크톱 + 모바일)
+PR #185 silver-matte fix 후 사장님 "이참에 디자인 싹다 검수해서 제대로 해라 / 자러 간다 자율모드로 알아서 다해라" 지시. Browser MCP로 16개 라이브 페이지 풀 visual audit:
+
+**데스크톱 (1568x762)** — 16/16 정상
+- `/` 랜딩 (hero / personas / 17 artifacts / pricing / FAQ / CTA / footer 7 섹션 모두 정상)
+- `/pricing` (membership eyebrow + italic H2 + 3-tier + COMING SOON 안내)
+- `/login` (left-right split + Google/Kakao OAuth + KR copy)
+- `/signup` (5개 동의 체크박스 + LegalConsentModal cross_border)
+- `/sample-reports/weekly-memo` (white paper PDF preview, 의도된 디자인)
+- `/terms` `/privacy` (KR italic 헤딩 + 시행일 2026년 5월 9일)
+- `/features/engine` `/personas` `/explorer` `/dashboard` `/pre-trade` `/global-desk` `/reports` (7개 모두 정상)
+
+**모바일 (390x844 iPhone)** — 9/9 정상
+- 햄버거 menu (☰) 우측 상단 ✓
+- splash → hero → 3-layers → personas (stacked 카드) 일관 layout
+- pricing mobile italic 헤딩 정상
+- login/signup mobile loading 화면 정상 (hydration 진행)
+
+**디자인 v3 일관성 확인**:
+- ✅ Vantablack base + Bronze accent (subtle, 1회 룰)
+- ✅ Playfair Display italic 헤딩 모든 페이지
+- ✅ KR 컨벤션 (시행일 / 약관 표현)
+- ✅ violet/purple/pink/blue 그라디언트 0건
+- ✅ AI slop 0건 (장식 blob / gradient mesh / 추상 박스 없음)
+- ✅ rounded-[2px] 일관성
+
+**v27 디자인 audit 결론**: **PR #185가 last critical regression이었음**. 이후 검수에서 추가 회귀 0건. 출시 모드 디자인 v3 락 고정. 사장님 라이브 검증 시 이상 없으면 디자인 영역 closed.
+
+---
+
 ### 🚨 v27 P0 critical 발견 + 라이브 fix (Browser MCP 직접 검증)
 사장님이 "랜딩페이지 이상한데 수정해봐" 보고 — Browser MCP `read_page` + screenshot으로 production 직접 확인 결과 **personas section H2 "A CFO that speaks your investor language."가 거대한 아이보리 박스로 깨져서 invisible** 상태. Hero 자체는 정상이지만 그 아래 섹션부터 H2가 모두 깨짐.
 
