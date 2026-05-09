@@ -526,7 +526,12 @@ export default function StockDetailPage() {
       // users switched between detail and list views.
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 2_000,
+      // Performance audit (2026-05-09): bumped from 2_000 to 5_000 — the
+      // 2s window was the outlier among SWR hooks (others use 30s/60s)
+      // and allowed a narrow band of concurrent fetches when two tabs of
+      // the same ticker were open. 5s matches the matching live-tick
+      // refreshInterval below for consistent behaviour during market hours.
+      dedupingInterval: 5_000,
       errorRetryCount: 2,
       errorRetryInterval: 5_000,
     },
