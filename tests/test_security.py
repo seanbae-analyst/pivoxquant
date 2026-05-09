@@ -135,3 +135,36 @@ class TestInjectionGuards:
         # Value should be stored verbatim (not HTML-stripped),
         # and of course not executed. Flask's jsonify escapes it for JSON.
         assert data["user"]["name"] == payload
+
+
+# ── Security response headers ───────────────────────────────────────────────
+
+class TestSecurityHeaders:
+    def test_permissions_policy_header_blocks_sensors_and_payment_self(self, client):
+        """Permissions-Policy must lock down camera/mic/geo/usb/sensors;
+        payment is allowed only for self (Stripe checkout 향후 호환).
+        Frontend (next.config.ts) 헤더와 정합."""
+        r = client.get("/api/health")
+        assert r.status_code == 200
+        pp = r.headers.get("Permissions-Policy", "")
+        for directive in (
+            "camera=()",
+            "microphone=()",
+            "geolocation=()",
+            "payment=(self)",
+            "usb=()",
+            "magnetometer=()",
+            "gyroscope=()",
+            "accelerometer=()",
+        ):
+            assert directive in pp, (
+                f"Permissions-Policy missing {directive!r}; got: {pp!r}"
+            )
+
+    def test_baseline_security_headers_present(self, client):
+        """Defense in depth — 기존 보안 헤더 회귀 방지."""
+        r = client.get("/api/health")
+        assert r.headers.get("X-Content-Type-Options") == "nosniff"
+        assert r.headers.get("X-Frame-Options") == "DENY"
+        assert r.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+        assert "default-src 'self'" in r.headers.get("Content-Security-Policy", "")
