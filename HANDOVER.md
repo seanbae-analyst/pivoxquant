@@ -4,7 +4,20 @@
 
 **현재 main HEAD: `14e4720`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
 
-### 🆕 v27 P0 마지막 fix — Hero static rebuild (PR #186)
+### 🆕 v27 Hero round-2 — single-column editorial (PR #187)
+사장님이 PR #186 deploy 후 **"디자인은 뭐 변경 안한거야? 그냥 지우기만 한 마우스 따라다니는 거?"** 보고. 사장님 의도는 layout/structure도 다른 features 페이지처럼 재설계인데 round 1은 ambient 효과만 제거했음. 미흡 인정.
+
+**Round 2 (PR #187, `36c317e`)**: hero를 `/features/engine` `/features/personas` `/features/dashboard` `/features/pre-trade` 등과 **1:1 동일 layout**으로 재설계.
+- Right column Today's Gate panel **제거** (canonical home인 `/features/pre-trade`에 정착)
+- Single-column editorial: eyebrow → big italic Playfair H1 (한 줄) → KR description 4-line → 2 CTAs → disclaimer
+- KR description으로 변경 (단일 line marketing copy → editorial paragraph): "매일 아침 두 번. 진입 전 일곱 관문. 일요일마다 한 페이지. 온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류하면, 모든 artifact가 그 페르소나의 어휘로 다시 쓰입니다."
+- 117 → 117 lines, layout 절반으로 단순화
+
+**Browser MCP 라이브 검증 (post-deploy)**: hero 단일 컬럼 + 우측 panel 없음 확인. 다른 features 페이지와 톤 일치.
+
+---
+
+### v27 P0 round-1 — Hero static rebuild (PR #186)
 사장님 라이브 검증 후 보고: *"your cfo learns you 이 페이지 왤케 별로냐 너무 달라혼자 / 마우스 옮겨다니면 금색 따라오는 그거 지우고 아예 삭다 새로 만들어"*
 
 **root cause**: Hero v4가 ambient effects를 너무 많이 stack — HeroAurora (cursor-tracked bronze sunrise) / HeroSpotlight (cursor radial gradient = "마우스 따라오는 금색") / HeroParticles (Canvas 2D 드리프트) / FilmGrain / dot-pattern mask / inner glow / HeroTypography (glyph-by-glyph cross-fade) / CtaInkBleed (SVG ink-bleed) / pq-cfo-glow keyframe / scroll cue pulse / cinematic entrance animations. 각 효과는 tasteful 했지만 stack은 over-produced. 다른 페이지(`/features/*` `/pricing` `/login` `/signup` `/sample-reports` `/terms` `/privacy`)는 모두 calm static editorial → Hero만 다른 톤.
