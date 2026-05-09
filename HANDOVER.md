@@ -1,10 +1,10 @@
-# PivoxQuant — 인수인계서 (2026-05-09 v28 세션 — 출시 전 자율 점검 + 8 PR · OPEN PR 0건)
+# PivoxQuant — 인수인계서 (2026-05-09 v28 세션 — 출시 전 자율 점검 + 10 PR · OPEN PR 0건)
 
-## 🔴 2026-05-09 v28 세션 — **8 PR squash-merged · 5시간 자율 세션** · main `8b9a818 → fa38059` · OPEN PR 0건 · backend 1697 → 1713 PASS / 0 회귀
+## 🔴 2026-05-09 v28 세션 — **10 PR squash-merged · 5시간 자율 세션** · main `8b9a818 → 4771d8c` · OPEN PR 0건 · backend 1697 → 1723 PASS / 0 회귀
 
-**현재 main HEAD: `fa38059`** (origin sync OK). **OPEN PR 0건**.
+**현재 main HEAD: `4771d8c`** (origin sync OK). **OPEN PR 0건**.
 
-### v28 세션 8 PR 요약 (2026-05-09 자율 진행)
+### v28 세션 10 PR 요약 (2026-05-09 자율 진행)
 | PR | 머지 commit | 핵심 |
 |---|---|---|
 | [#190](https://github.com/seanbae-analyst/pivoxquant/pull/190) | `46722b1` | FMP `/quote` sanity guards — yearHigh/yearLow + batch path coverage. AAPL +877% root cause fix. |
@@ -15,6 +15,8 @@
 | [#195](https://github.com/seanbae-analyst/pivoxquant/pull/195) | `102438b` | fmp.py dead code cleanup — get_price + get_history_batch 제거 |
 | [#196](https://github.com/seanbae-analyst/pivoxquant/pull/196) | `efb9c8b` | bug-hunter P1 batch (founding_lifetime tier + cashPct + alert 종목명 + skeletons + STALE chip + tier 매핑) |
 | [#197](https://github.com/seanbae-analyst/pivoxquant/pull/197) | `fa38059` | KIS sanity fail → FMP fallback chain (graceful degradation, future-proof) |
+| [#198](https://github.com/seanbae-analyst/pivoxquant/pull/198) | `d620724` | HANDOVER v28 docs |
+| [#199](https://github.com/seanbae-analyst/pivoxquant/pull/199) | `4771d8c` | RISK board hhi + 7-layer threshold/observed_at_kst (Bug #6, #7) — risk_defense.py SoT read-only |
 
 ### v28 점검 매트릭스 (5개 부서 병렬)
 | 부서 | 판정 | 핵심 발견 |
