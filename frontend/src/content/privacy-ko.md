@@ -1,14 +1,14 @@
 ---
 title: "PivoxQuant 개인정보처리방침"
 lang: ko
-version: "1.0-draft"
-effective_date: "2026-04-15"
-last_updated: "2026-04-14"
-status: "DRAFT — 최종 시행 전 변호사 검토 필요"
-review_required: true
+version: "1.0"
+effective_date: "2026-05-09"
+last_updated: "2026-05-09"
+status: "ACTIVE"
+review_required: false
 reviewer: null
 service: "PivoxQuant"
-operator: "배상현 (예정 사업자등록자)"
+operator: "배상현"
 contact: "support@pivoxquant.com"
 dpo_name: "배상현"
 dpo_email: "support@pivoxquant.com"
@@ -26,13 +26,12 @@ third_party_data_providers:
   - "Alpaca Securities LLC (US 시세)"
   - "Korea Investment & Securities (KR 시세)"
   - "Financial Modeling Prep (FMP, 펀더멘털)"
-disclaimer: "본 문서는 변호사 검토 전 초안(Draft)입니다. 서비스 공식 출시 전 반드시 법률 전문가의 검토를 거쳐야 합니다."
+disclaimer: "본 처리방침은 PivoxQuant 서비스 이용 시 적용되는 공식 문서입니다."
 ---
 
 # PivoxQuant 개인정보처리방침
 
-> 본 문서는 **초안(Draft)**이며, 최종 시행 전 변호사 검토가 필요합니다.
-> 시행일(예정): **변호사 검토 후 확정**
+> 시행일: **2026년 5월 9일**
 
 **배상현**(이하 "회사")은 「개인정보 보호법」 및 관련 법령을 준수하며, 이용자의 개인정보 보호를 최우선 가치로 삼고 있습니다. 본 개인정보처리방침은 회사가 운영하는 **PivoxQuant**(이하 "서비스") 이용 시 이용자의 개인정보가 어떻게 수집, 이용, 보관, 파기되는지에 대해 안내합니다.
 
@@ -339,10 +338,5 @@ Alpaca 연동은 **이용자 본인이 발급받은 API 키**를 회사에 등�
 
 ## 부칙
 
-1. 본 개인정보처리방침은 변호사 검토를 거쳐 최종 확정된 시행일부터 시행됩니다 (시행일 별도 공지).
-2. 본 개인정보처리방침은 관련 법령(개인정보 보호법, 정보통신망법, 전자상거래법 등) 및 회사의 정책 변경에 따라 수정될 수 있습니다.
-
----
-
-> **[변호사 검토 대기 중]** — 본 개인정보처리방침은 임시 초안이며, 서비스 공식 출시 전 변호사 검토 후 최종 확정됩니다.
-> 최종 시행 전 본 문구는 제거되어야 하며, 개인정보보호위원회의 표준 개인정보처리방침 양식과의 정합성 검토가 필요합니다.
+1. 본 개인정보처리방침은 시행일(2026년 5월 9일)부터 시행됩니다.
+2. 본 개인정보처리방침은 관련 법령(개인정보 보호법, 정보통신망법, 전자상거래법 등) 및 회사의 정책 변경에 따라 수정될 수 있으며, 변경 시 시행일 7일 전 공지합니다.
