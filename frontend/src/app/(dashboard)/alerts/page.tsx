@@ -13,7 +13,7 @@
  * Legal: POSITIVE / NEGATIVE / NEUTRAL only. DisclaimerBanner at top.
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -82,8 +82,27 @@ export default function AlertsPage() {
 
   const alerts = useMemo<AlertItem[]>(() => data?.alerts ?? [], [data?.alerts]);
 
+  // 2026-05-09 fix: force a fresh fetch on mount so the desk-vs-bell
+  // counter mismatch that caused "bell shows 13 / page shows 0" can't
+  // persist across SWR cache states. The bell polls every 60s; the
+  // /alerts page is a deeper view, so paying for one extra fetch on
+  // entry is the right trade for guaranteed source-of-truth parity.
+  useEffect(() => {
+    void mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const stats = useMemo(() => {
-    const unread = alerts.filter((a) => !a.is_read).length;
+    // 2026-05-09 fix: bell-vs-page count parity.
+    // The bell reads `data.unread` (now an authoritative DB count after the
+    // routes/alerts.py fix). Use the same value here so the two surfaces
+    // can never disagree — the previous `alerts.filter(...).length` only
+    // counted the limit-20 slice, and recomputing locally races the
+    // backend's truth source. `data?.unread ?? alerts.filter(...).length`
+    // keeps a graceful fallback for first-render before the response lands.
+    const unread =
+      (data as { unread?: number } | undefined)?.unread ??
+      alerts.filter((a) => !a.is_read).length;
     const now = Date.now();
     const DAY = 86_400_000;
     const today = alerts.filter(
@@ -93,7 +112,7 @@ export default function AlertsPage() {
       (a) => now - new Date(a.created_at).getTime() < 7 * DAY,
     ).length;
     return { total: alerts.length, unread, today, week };
-  }, [alerts]);
+  }, [alerts, data]);
 
   const filtered = useMemo(() => {
     if (filter === "unread") return alerts.filter((a) => !a.is_read);
