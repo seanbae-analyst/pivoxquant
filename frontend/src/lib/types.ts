@@ -465,5 +465,10 @@ export interface SignalFilters {
   strengthMin: number;   // 0..1
   strengthMax: number;   // 0..1
   symbol: string | null; // exact ticker or null
-  window: "today" | "7d" | "30d";
+  // W6-1 (Wave 6 follow-up, 2026-05-09): "all" added so the V2 signals
+  // page can opt out of the freshness cutoff. Backend `observed_at` is
+  // a cache-write timestamp, so a 24h "today" default silently emptied
+  // the list when SignalCache lagged. See signals/_v2/page-v2.tsx
+  // DEFAULT_FILTERS comment.
+  window: "today" | "7d" | "30d" | "all";
 }
