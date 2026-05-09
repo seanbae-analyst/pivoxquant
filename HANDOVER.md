@@ -1,21 +1,29 @@
-# PivoxQuant — 인수인계서 (2026-05-09 v27 세션 — 출시 모드 마무리 · OPEN PR 0건 · 능동 검증)
+# PivoxQuant — 인수인계서 (2026-05-09 v27 세션 — 출시 모드 마무리 · 5 PR + 인프라 fix · OPEN PR 0건)
 
-## 🟢 2026-05-09 v27 세션 (사장님 깨어난 후 — "출시 임박, 정확하게 다 수정") — **2 PR + 1 cleanup commit** · main `d634827 → fd6cf99` · OPEN PR 2 → 0 · 풀 회귀 4종 PASS
+## 🟢 2026-05-09 v27 세션 — **5 PR squash-merged + Vercel V2 flag 9개 fix + 1 cleanup** · main `d634827 → 6f1e6cf` · OPEN PR 0건 · 풀 회귀 1662 passed
 
-**현재 main HEAD: `fd6cf99`** (origin sync OK). **OPEN PR 0건** — v26 잔존 결정 대기 PR 2건 모두 머지 완료.
+**현재 main HEAD: `6f1e6cf`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
 
-### v27 세션 액션 (4건 — main `d634827 → 5886fe0`)
+### v27 critical 발견 → fix
+**Vercel production env에서 9개 `NEXT_PUBLIC_*_V2` flag가 모두 빈 문자열로 설정돼 있었음** (11일 전 환경 변수 추가 시 value 누락). 이 때문에 v26 26 PR fix 들 (PR #157 TIER_LEVEL / PR #143 profile real metrics / PR #167 LegalConsentModal cross_border / PR #168 a11y combobox / PR #169 WCAG AA contrast / PR #170 SSE refresh) 이 모두 V2 코드에 들어갔지만 **production은 V1 fallback 사용 중**이었음. 사장님이 "v26 26 PR fix 다 들어갔다"고 알았지만 실제로는 production 효과 0였던 critical 회귀.
+
+`vercel env rm` + `vercel env add --value="true"` 패턴으로 9개 모두 fix → empty commit `63457dc` 로 redeploy trigger. 다음 deploy부터 V2 활성화.
+
+### v27 세션 액션 (5 PR + 1 cleanup + 인프라 fix — main `d634827 → 6f1e6cf`)
 | # | 작업 | 결과 |
 |---|---|---|
-| 1 | PR **#160** (DB 마이그 027 + Position UniqueConstraint) admin merge | `aea2bbf` — alembic chain 026→027 단일 head, share-weighted cleanup math `_merge_into` helper 일관성, `IntegrityError` race recovery 3 handlers, idempotent inspector guard |
-| 2 | PR **#154** (25 files bug-hunt batch + §101 vocab sweep) conflict resolve + admin merge | `4c25295` — `services/artifacts/templates/self_audit.html` 어휘 conflict (`exit 가격` vs `처분 가격`) main 채택 (SEC Form 4 "Dispositions" 일관성). 코드 변경 4건 (broker-card-v2 중복 id 제거 / top-bar header z-50 / latest-artifact-card sent_at fallback / profile-dropdown subscription_tier wire) + PDF report vocab + legal-deep-scan.yml backend templates job |
-| 3 | cleanup commit (`fd6cf99`) | `MORNING_REPORT_2026-05-09.md` → `docs/archive/sessions/` (이전 세션 패턴 일치), `.bug-hunt/` `.gitignore` 추가 (transient artifact, `nightly_artifacts/` 패턴 일치) |
-| 4 | PR **#182** (Stripe webhook idempotency — `processed_stripe_events` 테이블) admin merge | `5886fe0` — alembic 028 단일 head, `UNIQUE(event_id)` 락 + status enum (success/error) + 200-char error_message clamp. handler fast-path `already_processed()` → ACK `{"deduped": true}` / 처리 후 `record()` (success/error 모두) / `IntegrityError` race recovery (peer recorded first → ACK clean) / 5xx 절대 안 던짐 (Stripe retry contract 준수). 6 신규 회귀 테스트: first delivery → row 생성 / duplicate → deduped envelope / handler no double-fire (spy) / 예외 시 status=error 기록 / poison event 재시도 dedupe / 빈 event_id skip. **Stripe contract**: https://docs.stripe.com/webhooks#handle-duplicate-events |
+| 1 | PR **#160** (DB 마이그 027 + Position UniqueConstraint) admin merge | `aea2bbf` — alembic 026→027 단일 head, share-weighted cleanup `_merge_into` helper, `IntegrityError` race recovery 3 handlers, idempotent inspector guard |
+| 2 | PR **#154** (25 files bug-hunt batch + §101 vocab sweep) conflict resolve + admin merge | `4c25295` — `services/artifacts/templates/self_audit.html` 어휘 conflict main 채택 (SEC Form 4 "Dispositions" 일관성). 코드 4건 (broker-card-v2 중복 id / top-bar z-50 / latest-artifact sent_at fallback / profile-dropdown subscription_tier) + PDF vocab + legal-deep-scan.yml backend job |
+| 3 | cleanup commit (`fd6cf99`) | `MORNING_REPORT_2026-05-09.md` → `docs/archive/sessions/`, `.bug-hunt/` `.gitignore` (transient artifact) |
+| 4 | PR **#182** (Stripe webhook idempotency — `processed_stripe_events` 테이블) admin merge | `5886fe0` — alembic 028, `UNIQUE(event_id)` + status enum + 200-char error clamp. handler fast-path `already_processed()` → ACK `{"deduped": true}` / 처리 후 record (success/error 모두) / `IntegrityError` race recovery / 5xx never. 6 신규 회귀 테스트 |
+| 5 | **Vercel V2 flag 9개 production env fix** (`63457dc` empty commit redeploy trigger) | NEXT_PUBLIC_HOME_V2 / PORTFOLIO_V2 / RISK_V2 / SIGNALS_V2 / REPORTS_V2 / LOGIN_V2 / SIGNUP_V2 / PROFILE_V2 / SETTINGS_V2 모두 `""` → `"true"`. v26 26 PR V2 fix 들이 production에 활성화됨 |
+| 6 | PR **#183** (W6-2 — backend `/api/signals` filter contract) admin merge | `15098dd` — frontend `useSignals(filters)` 와 1:1 wire contract (labels / strength_min / strength_max / symbol / window). `_label_of` / `_strength_of` / `_within_window` 헬퍼가 JS 헬퍼 동작 mirror. SWR cache key 분산 해소 — 같은 effective query는 단일 backend hit으로 collapse. 11 신규 회귀 테스트 (label / strength / symbol / window / 잘못된 값 / placeholder 핸들링) |
+| 7 | PR **#184** (profile export PIPA §35 ④ — live consent state) admin merge | `6f1e6cf` — `current_user` LocalProxy + SQLAlchemy identity map stale snapshot 문제. 1-click unsubscribe (email_preferences) 후 export 호출 시 stale 값 반환 → PIPA §35 ④ 위반. `db.session.refresh(current_user._get_current_object())` + `expire()` 폴백 추가. 6/6 test_profile_export PASS (이전 main pre-existing fail 1건 RESOLVED) |
 
-### v27 회귀 4종 (모두 PASS)
+### v27 회귀 4종 (모두 PASS, pre-existing fail RESOLVED)
 | 도구 | 결과 |
 |---|---|
-| pytest (`--ignore=tests/test_no_hardcoded_samples`) | exit 0 — **1651 passed** (v26 1643 + 6 idempotency + 2 deltas), 1 pre-existing fail (`test_export_reflects_email_opt_out_state`, main에서도 동일하게 fail — PR #182 무관, 별도 작업) |
+| pytest (`--ignore=tests/test_no_hardcoded_samples`) | exit 0 — **1662 passed** (v26 1643 + 6 Stripe idempotency + 11 W6-2 + 2 deltas). PR #184로 v25 잔존 pre-existing fail 1건 RESOLVED |
 | TypeScript `tsc --noEmit` | exit 0 — 0 errors |
 | vitest | exit 0 — 35/35 |
 | eslint (`next lint`) | exit 0 — clean |
@@ -37,34 +45,45 @@
 | **SEC-G CSP `unsafe-inline` nonce 마이그** | `security.py:402-403` `script-src/style-src 'self' 'unsafe-inline'` — Next.js 16 native CSP nonce는 frontend 인라인 style/script 사용처 광범위 audit 필요. backend Jinja templates (`email_preferences._PAGE_TMPL` + `command-center.html`) 인라인 `<style>` 변환 — 작업량 큼. 출시 차단 P0 아니라 별도 wave |
 | **W6-2 backend `/api/signals` query filter wiring** | frontend는 client-side filter로 이미 mitigation (line 143 "Backend may not honor query params yet — apply client-side filter as a defensive layer"). backend filter 추가 vs frontend QS 제거 UX 결정 필요 |
 | **recharts dynamic import** | `EquityCurveChart` / `SectorAllocationDonut` / `WhatIfChart` 3개 — V2 home은 chart 컴포넌트 미사용 (주석으로 `→ /portfolio` 안내), V1 home은 이미 `dynamic(() => import("./_v1/page-v1"))` 로 chunk split. V2 default일 때 chart bundle 영향 0. simulator/what-if는 차트가 핵심 기능이라 dynamic 효과 적음 |
-| ~~Stripe webhook idempotency 테이블~~ | **RESOLVED** — PR #182 (`5886fe0`) 머지. `processed_stripe_events` 테이블 + 028 마이그 + handler dedupe + 6 회귀 테스트 |
+| ~~Stripe webhook idempotency 테이블~~ | **RESOLVED** — PR #182 (`5886fe0`). `processed_stripe_events` 테이블 + 028 마이그 + handler dedupe + 6 회귀 테스트 |
+| ~~W6-2 backend signals filter wiring~~ | **RESOLVED** — PR #183 (`15098dd`). frontend hook 1:1 wire contract + 11 회귀 테스트 |
+| ~~`test_export_reflects_email_opt_out_state` pre-existing fail~~ | **RESOLVED** — PR #184 (`6f1e6cf`). PIPA §35 ④ live consent state 보장 |
+| ~~Vercel V2 flag 빈 문자열 (production V1 fallback)~~ | **RESOLVED** — `vercel env add --value="true"` 9개. `63457dc` empty commit으로 redeploy trigger. **핵심 — v26 26 PR fix들이 production에 처음 활성화됨** |
 | **error 페이지 KR i18n** | `not-found.tsx` / `error.tsx` / `global-error.tsx` 모두 EN only. Vantablack + Bronze + Playfair italic 디자인 일관성은 완성. 한국 시장 우선 → P2 (i18n 인프라 큰 작업) |
 
-### 사장님 P0 인프라 5건 (코드 무관, v26부터 동일)
-1. **Anthropic 크레딧 충전** — `/api/ai/*` 500 root cause (확정). console.anthropic.com/settings/billing
-2. **GitHub Billing 카드** — 모든 PR CI fail. v27 머지는 admin override 사용 (`gh pr merge --admin`). settings/billing/payment_information
-3. **Railway `DEV_LOGIN_SECRET` 삭제 확인** — production에 있으면 누구나 premium 생성 (보안 critical)
-4. **Stripe Live keys + `STRIPE_PRICE_PRO/PREMIUM` + `BUSINESS_REGISTRATION_NUMBER` + `TELESELLER_REGISTRATION_NUMBER`** Railway 설정 — `require_business_registration` 데코레이터가 미설정 시 503 차단
-5. **Vercel env**: `NEXT_PUBLIC_SENTRY_DSN` / `NEXT_PUBLIC_API_URL` (또는 `RAILWAY_BACKEND_URL`) / `BETA_PASSWORD` + `BETA_SIGNING_SECRET` / **모든 `NEXT_PUBLIC_*_V2=true`** (현재 V1 fallback 가능성 있음)
+### 사장님 P0 인프라 (코드 무관, v27 점검 결과 갱신)
+| # | 항목 | 상태 (2026-05-09 v27) |
+|---|---|---|
+| 1 | **Anthropic 크레딧 충전** | 미해결 — `/api/ai/*` 500 root cause. console.anthropic.com/settings/billing |
+| 2 | **GitHub Billing 카드** | 미해결 — 모든 PR CI fail. settings/billing/payment_information. v27도 admin override 머지 |
+| 3 | ~~Railway `DEV_LOGIN_SECRET` 삭제~~ | **RESOLVED** — `railway variables --service web` 직접 확인 (env에 없음, 이미 삭제됨) |
+| 4 | **Stripe Live keys + 사업자등록번호 + 통신판매업번호** Railway env | 미해결 — `STRIPE_*` / `BUSINESS_REGISTRATION_NUMBER` / `TELESELLER_REGISTRATION_NUMBER` 모두 Railway env에 부재. `require_business_registration` 데코레이터가 503 차단 중 (의도된 동작) |
+| 5a | ~~Vercel `NEXT_PUBLIC_*_V2=true` 9개~~ | **RESOLVED** — v27 자율 fix 완료 (위 액션 #5) |
+| 5b | Vercel `NEXT_PUBLIC_SENTRY_DSN` | 미해결 — 모니터링 미설정. `vercel env ls production` 결과 부재 |
+| 5c | ~~Vercel `NEXT_PUBLIC_API_URL`~~ | **확인됨** — `""` 빈 값이지만 Railway에 `RAILWAY_BACKEND_URL` 설정 + `next.config.ts`의 fallback 체인이 작동. `pivoxquant.com/api/health` → 307 (beta-gate, healthy redirect) 검증 |
+| 5d | ~~Vercel `BETA_PASSWORD` + `BETA_SIGNING_SECRET`~~ | **확인됨** — 둘 다 Production+Preview+Development 모두 설정됨 |
 
 ### v27 다음 세션 우선순위
 | 순 | 항목 | 분류 |
 |---|---|---|
-| 1 | 사장님 P0 인프라 5건 (Anthropic / GitHub Billing / Railway env / Stripe Live / Vercel env) | CEO 직접 |
-| 2 | V2 default 강제 + V1 dead code 점진 삭제 (3-step PR) — **사장님 라이브 검증 의존**. profile V2는 PR #143에서 production-ready로 fix됐지만 default V1이라 라이브 sanity 안 됨. Vercel `NEXT_PUBLIC_PROFILE_V2=true` 설정 후 라이브 5분 → V2 default flip 안전 | P1 |
-| 3 | W6-2 backend signals filter (UX 결정 필요) | P1 |
+| 1 | 사장님 P0 인프라 잔존 (Anthropic 크레딧 / GitHub Billing / Stripe Live keys + 사업자번호 / Vercel Sentry DSN) | CEO 직접 |
+| 2 | **라이브 sanity check** (사장님 5분) — Vercel V2 flag fix 후 첫 deploy 검증. `https://pivoxquant.com` (베타 비번 `pivoxaudit2`) 에서 home/portfolio/risk/signals/reports/login/signup/profile/settings 9개 페이지 V2 layout 정상 표시 확인. 회귀 발견 시 사장님 알림 → 즉시 수정 | P0 (라이브 차단) |
+| 3 | V1 dead code 9 directories 점진 삭제 (V2 라이브 검증 후 별도 PR) | P1 |
 | 4 | SEC-G CSP nonce 마이그 (Next.js 16 + Jinja) | P2 |
 | 5 | error 페이지 KR i18n + i18n 인프라 | P2 |
-| 6 | `motion` npm 패키지 정리 — 0 usage 확인됐지만 `npm uninstall`이 lockfile format 자체를 reorganize (3261줄 변동) + frontend/.git nested repo 충돌 위험 → 별도 wave에서 lockfile freeze + manual edit 권장 | P3 |
-| 7 | `test_export_reflects_email_opt_out_state` 1 pre-existing fail (main에서도 fail — v25 잔존) | P2 |
+| 6 | `motion` npm 패키지 정리 — 0 usage 확인됐지만 `npm uninstall` lockfile reorganize + frontend/.git nested repo 충돌 위험. 별도 wave에서 lockfile freeze + manual edit 권장 | P3 |
 
 ### v27 정직 한계
-- **라이브 시각 검증 0건** — parent macOS UI 잠김 / 자율 모드 OAuth 클릭 막힘. Vercel preview는 commit별 자동 deploy.
-- **CI 검증 0건** — GitHub Billing 카드 issue (사장님 직접 P0). admin override merge로 우회.
-- **PR #160 prod 영향 미확인** — Railway DB duplicate count 쿼리 직접 실행 안 함. 코드 audit 결과 cleanup query는 duplicate 0건이면 no-op, ≥1건이면 share-weighted merge (사용자 가시 변화 없음, 같은 산수). Railway alembic auto-upgrade 안 되면 코드 머지 자체로는 영향 0.
-- **PR #182 (Stripe idempotency) prod 적용** — DDL-only `CREATE TABLE` (데이터 mutation 0). Railway alembic upgrade 필요. 마이그 안 돌려도 코드 자체는 `ProcessedStripeEvent.already_processed()` 가 False만 반환 (테이블 없으니 query → exception → False) 하므로 회귀 0. 단 prod에서 dedupe 효과 보려면 `flask db upgrade` 실행 필요.
-- **`motion` 패키지 dead code** — 0 usage 확인했지만 `npm uninstall` 이 lockfile 3261줄 reorganize (npm 버전 차이 + nested .git 영향). frontend/.git nested repo 발견 (branch `fix/frontend-wave1-critical`) — main repo와 별도 추적이라 npm 작업이 두 repo에 동시 영향. 자율 모드 보수적으로 revert.
-- **다중 agent 병렬 dispatch 거부** — 사장님이 이번 세션에 직접 코드 read + fix 모드 선호 표명. 6 audit agent 동시 dispatch 시도 즉시 reject. 단일 호흡 직접 작업으로 전환.
+- **라이브 시각 검증 0건** — parent macOS UI 잠김 / 자율 모드 OAuth 클릭 막힘. **Vercel V2 flag fix는 직접 검증 못 했음** (코드 변경 없이 env만 변경, 다음 deploy 적용). 사장님 5분 sanity check 필수.
+- **CI 검증 0건** — GitHub Billing 카드 issue. admin override merge로 우회 (PR #182, #183, #184).
+- **PR #160 prod 영향 미확인** — Railway DB duplicate count 쿼리 직접 실행 안 함. 코드 audit cleanup query는 duplicate 0건이면 no-op, ≥1건이면 share-weighted merge (가시 변화 없음).
+- **PR #182 prod 적용** — DDL-only `CREATE TABLE` (데이터 mutation 0). Railway `flask db upgrade` 실행 필요. 마이그 안 돌려도 코드 회귀 0 (테이블 없으면 `already_processed()` False).
+- **PR #184 stale consent fix** — production에서도 동일 패턴 (one-click unsubscribe → export). 추가 SELECT 1건 비용 (export endpoint는 5 RPS rate-limit 적용 중이라 acceptable).
+- **PR #183 W6-2 prod 영향** — frontend가 항상 보내던 query params를 backend가 처음으로 honor. **client-side filter는 그대로 유지**되므로 사용자 가시 변화 0 (server-side가 더 좁게 필터하면 client-side는 no-op). SWR cache key 분산만 해소.
+- **Vercel V2 flag fix 부수 영향** — production이 처음으로 V2 layout 노출. PR #143/#157/#167/#168/#169 모두 V2에 있음. **사장님 라이브 검증 매우 중요** — V2 코드의 라이브 회귀 가능성 존재.
+- **`motion` npm dead code** — 0 usage 확인. `npm uninstall` 이 lockfile 3261줄 reorganize + frontend/.git nested repo (branch `fix/frontend-wave1-critical`) 충돌 위험. 자율 모드 보수적으로 revert.
+- **Stripe Live + 사업자번호** — 사장님만 가능한 정보 (BUSINESS_REGISTRATION_NUMBER / TELESELLER_REGISTRATION_NUMBER / Stripe API key). Railway env에 부재 확인.
+- **다중 agent 병렬 dispatch 거부** — 사장님이 직접 코드 read + fix 모드 선호. 6 audit agent 동시 dispatch 시도 즉시 reject. 단일 호흡 직접 작업으로 전환.
 
 ---
 
