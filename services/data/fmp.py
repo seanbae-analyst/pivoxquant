@@ -543,14 +543,6 @@ def get_quotes_batch(tickers):
     return result
 
 
-def get_price(ticker):
-    """Get last price for a ticker. Returns float or None."""
-    q = get_quote(ticker)
-    if q:
-        return q.get("price")
-    return None
-
-
 # ── Historical OHLCV ────────────────────────────────────────────
 
 def _get_history_kr(ticker, period="3mo"):
@@ -691,14 +683,6 @@ def get_history(ticker, period="3mo"):
 
     _set_cache(cache_key, df)
     return df
-
-
-def get_history_batch(tickers, period="5d"):
-    """Get history for multiple tickers. Returns dict of DataFrames."""
-    result = {}
-    for ticker in tickers:
-        result[ticker] = get_history(ticker, period)
-    return result
 
 
 # ── Company Profile ─────────────────────────────────────────────
