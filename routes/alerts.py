@@ -275,6 +275,10 @@ def admin_check_alerts():
             result["concentration"] = check_concentration_alerts()
     except Exception as exc:
         logger.exception("alerts.admin_check_alerts failed mode=%s", mode)
-        return jsonify({"error": str(exc)}), 500
+        # Hardening (2026-05-09 audit): clamp raw exception strings to 200
+        # chars to match the convention in routes/auth.py:511 + agent.py:457
+        # — prevents stack-trace fragments / SQL details / file paths from
+        # leaking through unbounded exception messages.
+        return jsonify({"error": str(exc)[:200]}), 500
 
     return jsonify({"ok": True, **result})
