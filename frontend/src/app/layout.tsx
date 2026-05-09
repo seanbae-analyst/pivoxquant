@@ -222,9 +222,20 @@ export default async function RootLayout({
             __html: `if(window.matchMedia('(display-mode: standalone)').matches){document.documentElement.classList.add('pwa-standalone');}`,
           }}
         />
+        {/* SEO/Performance audit (2026-05-09): the previous link was just a
+            stylesheet (`as="style"` without `rel="preload"` does nothing).
+            Hint the browser to preload the CSS in parallel with the rest
+            of the head, then load it as a regular stylesheet. The KR woff2
+            payload then starts its handshake earlier — measurably shorter
+            FOIT on the first paint of any page above the fold. */}
+        <link
+          rel="preload"
+          as="style"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+          crossOrigin="anonymous"
+        />
         <link
           rel="stylesheet"
-          as="style"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
