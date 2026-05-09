@@ -813,15 +813,18 @@
    Scoped, non-invasive. Only used by landing Hero.
    ══════════════════════════════════════════════════════════ */
 
-/* Silver-matte gradient clipped to text — editorial, reflective.
-   No drop-shadow on mobile (perf + legibility on low-contrast backdrops). */
+/* Silver-matte text — solid ivory, with optional drop-shadow at ≥640px.
+ *
+ * 2026-05-09 (P0 release fix): same regression as `.pq-silver-matte`
+ * below. PR #140 tokenized the gradient version away but kept
+ * `background: var(--pq-ivory)` as a solid color — with
+ * `background-clip: unset`, this paints a giant ivory rectangle behind
+ * ivory text, making the headline invisible. Fix is to drop the
+ * background property entirely; only the text color stays. */
 .pivox-silver-matte {
-  background: var(--pq-ivory);
-  -webkit-background-clip: unset;
-  background-clip: unset;
-  -webkit-text-fill-color: currentColor;
   color: var(--pq-ivory);
-  transform: translateZ(0); /* WebKit text-clip repaint fix */
+  -webkit-text-fill-color: currentColor;
+  transform: translateZ(0); /* WebKit text-clip repaint fix (legacy) */
 }
 
 @media (min-width: 640px) {
@@ -877,13 +880,29 @@
   color: var(--pq-ivory) !important;
 }
 
-/* Silver-matte text — spec-exact (v2, for new Hero). */
+/* Silver-matte text — solid ivory with optional drop-shadow.
+ *
+ * 2026-05-09 (P0 release fix): the v2 reshape (PR #140, commit 4bca677)
+ * tokenized the previous gradient-text version per §1.2 gradient ban,
+ * but kept `background: var(--pq-ivory)` as a *solid color background*
+ * instead of removing the background property altogether. With
+ * `background-clip: unset`, this paints the entire element box as a
+ * giant ivory rectangle — and because `color` is also ivory, the
+ * actual text disappears into the box. The full landing-page heading
+ * stack (personas-preview, persona-showcase, three-layers, korea-us-desk,
+ * reports-gallery, landing-v2 ×2, living-cfo-loop, deposition-teaser,
+ * feature-page-shell, splash-page) all rendered as blank ivory bars
+ * over the black Vantablack background. PR #140 noted "visual QA
+ * pending" but the bug only surfaced once V2 layout activated in
+ * production this session (Vercel V2 flag fix).
+ *
+ * Fix: drop the background property entirely; the class now only sets
+ * the text color. The 640px+ drop-shadow on the rendered glyphs is
+ * preserved — it still hangs off the *text*, not a phantom box.
+ */
 .pq-silver-matte {
-  background: var(--pq-ivory);
-  -webkit-background-clip: unset;
-  background-clip: unset;
-  -webkit-text-fill-color: currentColor;
   color: var(--pq-ivory);
+  -webkit-text-fill-color: currentColor;
   transform: translateZ(0);
 }
 @media (min-width: 640px) {
