@@ -337,13 +337,32 @@ def _quote_price_sane(quote: dict) -> bool:
     implying ~$902/share. This is FMP's split-adjusted price-mismatch bug
     (cause unknown — possibly a stale or mis-keyed split factor).
 
-    Heuristic: if price * sharesOutstanding diverges from marketCap by more
-    than 50%, treat the price as untrustworthy and let the caller fall
-    through to Alpaca. Returns True for any payload missing the cross-check
-    fields (no false negatives — this only fires on definitive mismatches).
+    Heuristic — three independent invariants (any one failing → reject):
+
+      1. ``market_cap_drift``: price * sharesOutstanding diverges from
+         marketCap by more than ±50%. Catches mismatches when only one of
+         price / shares / cap is stale.
+
+      2. ``year_high_breach``: price > yearHigh * 2.0. Catches the
+         co-drifted-trio case observed 2026-05-09 (PR #189: ``AAPL +877%``)
+         where price/shares/marketCap were all stale-bumped together so
+         invariant (1) passed but the price was still 2-10× the 52-week
+         high. Threshold is intentionally loose (2.0×) to avoid false
+         positives on split / reverse-split days.
+
+      3. ``year_low_breach``: price < yearLow * 0.2. Symmetric guard for
+         the inverse stale-drift direction.
+
+    All three guards skip silently when their cross-check fields are missing
+    or non-numeric — no false negatives. ``True`` means "no detected
+    inconsistency"; the caller may still fall through to Alpaca on other
+    grounds.
     """
     if not isinstance(quote, dict):
         return True
+    sym = quote.get("symbol", "?")
+
+    # ── Invariant 1: marketCap × sharesOutstanding drift ────────────────
     price = quote.get("price")
     market_cap = quote.get("marketCap") or quote.get("mktCap")
     shares = (
@@ -351,27 +370,60 @@ def _quote_price_sane(quote: dict) -> bool:
         or quote.get("shares_outstanding")
         or quote.get("sharesOutstandingMln")
     )
-    if not price or not market_cap or not shares:
-        return True  # Can't cross-check — trust upstream.
-    try:
-        price = float(price)
-        market_cap = float(market_cap)
-        shares = float(shares)
-    except (TypeError, ValueError):
-        return True
-    if price <= 0 or market_cap <= 0 or shares <= 0:
-        return True
-    implied_cap = price * shares
-    # Allow ±50% drift (handles intraday cap drift, share-count staleness).
-    if implied_cap < market_cap * 0.5 or implied_cap > market_cap * 1.5:
-        derived_price = market_cap / shares
-        logger.warning(
-            "FMP quote sanity fail for %s: price=%.2f market_cap=%.0f shares=%.0f "
-            "implied_cap=%.0f derived_price=%.2f — rejecting payload",
-            quote.get("symbol", "?"), price, market_cap, shares,
-            implied_cap, derived_price,
-        )
-        return False
+    if price and market_cap and shares:
+        try:
+            p = float(price)
+            mc = float(market_cap)
+            sh = float(shares)
+            if p > 0 and mc > 0 and sh > 0:
+                implied_cap = p * sh
+                if implied_cap < mc * 0.5 or implied_cap > mc * 1.5:
+                    derived_price = mc / sh
+                    logger.warning(
+                        "FMP quote sanity fail for %s (reason=market_cap_drift): "
+                        "price=%.2f market_cap=%.0f shares=%.0f implied_cap=%.0f "
+                        "derived_price=%.2f — rejecting payload",
+                        sym, p, mc, sh, implied_cap, derived_price,
+                    )
+                    return False
+        except (TypeError, ValueError):
+            pass  # Non-numeric — skip this invariant.
+
+    # ── Invariant 2 & 3: 52-week range breach ───────────────────────────
+    # FMP /quote standard fields: yearHigh, yearLow.
+    year_high = quote.get("yearHigh")
+    year_low = quote.get("yearLow")
+    if price:
+        try:
+            p2 = float(price)
+            if p2 > 0:
+                if year_high:
+                    try:
+                        yh = float(year_high)
+                        if yh > 0 and p2 > yh * 2.0:
+                            logger.warning(
+                                "FMP quote sanity fail for %s (reason=year_high_breach): "
+                                "price=%.2f year_high=%.2f (>%.2f×) — rejecting payload",
+                                sym, p2, yh, 2.0,
+                            )
+                            return False
+                    except (TypeError, ValueError):
+                        pass
+                if year_low:
+                    try:
+                        yl = float(year_low)
+                        if yl > 0 and p2 < yl * 0.2:
+                            logger.warning(
+                                "FMP quote sanity fail for %s (reason=year_low_breach): "
+                                "price=%.2f year_low=%.2f (<%.2f×) — rejecting payload",
+                                sym, p2, yl, 0.2,
+                            )
+                            return False
+                    except (TypeError, ValueError):
+                        pass
+        except (TypeError, ValueError):
+            pass
+
     return True
 
 
@@ -450,13 +502,35 @@ def get_quotes_batch(tickers):
     # Try batch first (works on paid plans with comma-separated symbols)
     data = _fmp_get("/quote", {"symbol": symbols})
     if data and isinstance(data, list) and len(data) > 0:
-        result = {item["symbol"]: item for item in data}
-        _set_cache(cache_key, result)
-        for item in data:
-            sym = item.get("symbol", "")
-            if sym:
-                _set_cache(f"quote:{sym}", item)
-        return result
+        # 2026-05-09 P0 fix (PR #189 follow-up): apply per-item sanity check
+        # before populating either the batch_quote cache OR the per-ticker
+        # quote cache. Without this, an insane payload (e.g. AAPL price=293
+        # vs yearHigh=210 with co-drifted marketCap×shares) poisons both
+        # caches for the full TTL and bypasses the per-ticker Alpaca
+        # fallback entirely.
+        sane_items = [item for item in data if _quote_price_sane(item)]
+        if sane_items:
+            result = {item["symbol"]: item for item in sane_items if item.get("symbol")}
+            if result:
+                _set_cache(cache_key, result)
+                for item in sane_items:
+                    sym = item.get("symbol", "")
+                    if sym:
+                        _set_cache(f"quote:{sym}", item)
+                # If the batch returned a partial sane subset, callers see
+                # the insane tickers as missing and can re-request them
+                # individually (which routes through get_quote → Alpaca).
+                # Only return early when we got a sane set; otherwise fall
+                # through to the per-ticker fallback so insane tickers can
+                # be re-resolved.
+                if len(sane_items) == len(data):
+                    return result
+                # Partial sane: still return what we have — the batch path
+                # contract is "best-effort dict"; callers handle missing keys.
+                return result
+        # All-insane: do NOT cache (neither batch_quote nor per-ticker) and
+        # fall through to the per-ticker fallback loop below, which uses
+        # get_quote() → single-item sanity + class-share retry + Alpaca.
 
     # Fallback: per-ticker calls (free plan doesn't support comma-separated)
     result = {}
