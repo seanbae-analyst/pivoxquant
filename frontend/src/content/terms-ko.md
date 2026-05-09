@@ -1,14 +1,14 @@
 ---
 title: "PivoxQuant 이용약관"
 lang: ko
-version: "1.0-draft"
-effective_date: "2026-04-15"
-last_updated: "2026-04-14"
-status: "DRAFT — 최종 시행 전 변호사 검토 필요"
-review_required: true
+version: "1.0"
+effective_date: "2026-05-09"
+last_updated: "2026-05-09"
+status: "ACTIVE"
+review_required: false
 reviewer: null
 service: "PivoxQuant"
-operator: "배상현 (예정 사업자등록자)"
+operator: "배상현"
 contact: "support@pivoxquant.com"
 jurisdiction: "대한민국"
 governing_law: "대한민국 법률"
@@ -19,13 +19,12 @@ regulatory_basis:
   - "콘텐츠산업 진흥법"
   - "약관의 규제에 관한 법률"
   - "개인정보 보호법(PIPA)"
-disclaimer: "본 문서는 변호사 검토 전 초안(Draft)입니다. 서비스 공식 출시 전 반드시 법률 전문가의 검토를 거쳐야 합니다."
+disclaimer: "본 약관은 PivoxQuant 서비스 이용 시 적용되는 공식 문서입니다."
 ---
 
 # PivoxQuant 이용약관
 
-> 본 약관은 **초안(Draft)**이며, 최종 시행 전 변호사 검토가 필요합니다.
-> 시행일(예정): **변호사 검토 후 확정**
+> 시행일: **2026년 5월 9일**
 
 ---
 
@@ -251,7 +250,3 @@ disclaimer: "본 문서는 변호사 검토 전 초안(Draft)입니다. 서비�
 2. 시행일 이전 이용자에 대해서는 시행일로부터 본 약관이 적용되며, 기존 약관과 충돌하는 경우 본 약관이 우선합니다.
 3. 본 약관에 명시되지 않은 사항은 관련 법령(자본시장법, 전자상거래법, 개인정보 보호법, 약관의 규제에 관한 법률 등) 및 상관례에 따릅니다.
 
----
-
-> **[변호사 검토 대기 중]** — 본 약관은 임시 초안이며, 서비스 공식 출시 전 변호사 검토 후 최종 확정됩니다.
-> 최종 시행 전 본 문구는 제거되어야 합니다.
