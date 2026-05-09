@@ -74,3 +74,6 @@ legal_monitor_artifacts/
 nightly_artifacts/
 self_healing_artifacts/
 legal_monitor_artifacts/
+
+# Bug hunt session artifacts (transient — not meant for git)
+.bug-hunt/
