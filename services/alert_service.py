@@ -31,7 +31,24 @@ def maybe_generate(user_id: int, r: dict):
             return
 
     ticker = r["ticker"]
-    name = r.get("name", ticker)
+    # 2026-05-09 (bug-hunter Bug #11): KR tickers (e.g. "124500.KQ") were
+    # rendering as "124500.KQ (124500.KQ) — Score …" because
+    # ``snapshot.get("name", ticker)`` upstream (services/quant/engine.py
+    # L420) falls back to the ticker when FMP get_info doesn't carry the
+    # name (typical for KRX). Re-resolve via the unified name resolver
+    # (SignalCache → curated registry → KIS API → ticker) so the persisted
+    # alert message always carries the human-readable company name.
+    raw_name = r.get("name") or ""
+    if not raw_name or raw_name == ticker:
+        try:
+            from services.name_resolver import resolve_stock_name_with_db
+            resolved = resolve_stock_name_with_db(ticker)
+        except Exception:
+            logger.debug("silent-fallback: name_resolver in maybe_generate", exc_info=True)
+            resolved = None
+        name = resolved or ticker
+    else:
+        name = raw_name
     score = r.get("score", 0)
 
     # Dedup: skip if same ticker alerted within 4 hours

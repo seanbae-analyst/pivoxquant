@@ -25,6 +25,7 @@ import { apiFetch } from "@/lib/api";
 import { fmtUsd, fmtKrw, pctColorClass } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
+import { Skeleton } from "@/components/ui/loading-skeleton";
 import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
@@ -905,16 +906,30 @@ export default function StockDetailPage() {
                 </div>
               </div>
 
-              {/* Price column */}
+              {/* Price column
+                  bug-hunter Bug #9: SWR returns `signal=undefined` while
+                  the first request is in flight. PriceWithTimestamp falls
+                  back to "—" on undefined → users saw an em-dash for ~1s
+                  before the real price flashed in. Show a skeleton during
+                  the initial load and only render the price once SWR has
+                  resolved (cached or fresh). The em-dash is preserved for
+                  resolved-but-empty states (price genuinely null). */}
               <div className="lg:col-span-4 lg:border-l lg:border-[rgba(245,240,232,0.08)] lg:pl-8">
                 <FieldLabel>Current price</FieldLabel>
                 <div className="mt-2">
-                  <PriceWithTimestamp
-                    price={signal?.price}
-                    observedAt={signal?.observed_at}
-                    currency={krw ? "KRW" : "USD"}
-                    size="lg"
-                  />
+                  {loadingSignal && !signal ? (
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-7 w-32" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  ) : (
+                    <PriceWithTimestamp
+                      price={signal?.price}
+                      observedAt={signal?.observed_at}
+                      currency={krw ? "KRW" : "USD"}
+                      size="lg"
+                    />
+                  )}
                 </div>
                 <div
                   className={cn(
@@ -922,17 +937,23 @@ export default function StockDetailPage() {
                     pctColorClass(signal?.change_pct),
                   )}
                 >
-                  {signal?.change_pct == null ? (
-                    <Minus className="h-4 w-4" />
-                  ) : signal.change_pct >= 0 ? (
-                    <TrendingUp className="h-4 w-4" />
+                  {loadingSignal && !signal ? (
+                    <Skeleton className="h-4 w-20" />
                   ) : (
-                    <TrendingDown className="h-4 w-4" />
+                    <>
+                      {signal?.change_pct == null ? (
+                        <Minus className="h-4 w-4" />
+                      ) : signal.change_pct >= 0 ? (
+                        <TrendingUp className="h-4 w-4" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4" />
+                      )}
+                      {fmtSignedPct(signal?.change_pct)}
+                      <span className="ml-2 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)] font-sans">
+                        · 1D Δ
+                      </span>
+                    </>
                   )}
-                  {fmtSignedPct(signal?.change_pct)}
-                  <span className="ml-2 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)] font-sans">
-                    · 1D Δ
-                  </span>
                 </div>
 
                 {/* 52W range rail */}

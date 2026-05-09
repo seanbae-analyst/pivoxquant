@@ -860,6 +860,22 @@ def portfolio_summary_alias():
         # reconciled" timestamp chip. Emit it explicitly so the chip
         # stops showing "—" forever. The response IS what we observed.
         observed_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+        # 2026-05-09 (bug-hunter Bug #5): the PORTFOLIO header renders
+        # "Cash buffer at —." forever because this endpoint never emitted
+        # the cash percent. Compute it as the idle-cash share of total
+        # equity (cash + holdings), unified to USD via the same FX path as
+        # totalNav. Defensive: returns 0.0 when capital and NAV are both
+        # zero, never a negative or non-finite number.
+        cap_usd = float(getattr(current_user, "available_capital", 0.0) or 0.0)
+        cap_krw = float(getattr(current_user, "available_capital_krw", 0.0) or 0.0)
+        cash_usd_total = cap_usd + (cap_krw / rate if (cap_krw and rate) else 0.0)
+        equity_usd = total_nav_usd + cash_usd_total
+        if equity_usd > 0:
+            cash_pct = max(0.0, min(100.0, (cash_usd_total / equity_usd) * 100.0))
+        else:
+            cash_pct = 0.0
+
         return jsonify({
             "totalNav": round(total_nav_usd, 2),
             "todayPnl": round(today_pnl_usd, 2),
@@ -870,6 +886,12 @@ def portfolio_summary_alias():
             "fxRate": rate,
             "positionCount": len(positions),
             "observed_at": observed_iso,
+            # Cash buffer percent of total equity (cash + holdings).
+            # Frontend reads `sumData?.cashPct` in
+            # frontend/src/app/(dashboard)/portfolio/_v2/page-v2.tsx and
+            # renders "Cash buffer at {cashText}." in
+            # frontend/src/components/portfolio/v2/portfolio-hero-v2.tsx.
+            "cashPct": round(cash_pct, 2),
         })
     except Exception:
         logger.exception("portfolio_summary_alias failed")

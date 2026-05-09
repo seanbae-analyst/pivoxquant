@@ -82,7 +82,11 @@ export default function PortfolioPageV2() {
     isLoading: posLoading,
     error: posErr,
   } = usePortfolioPositions<PositionsResponse>();
-  const { data: sumData, error: sumErr } = usePortfolioSummary();
+  const {
+    data: sumData,
+    isLoading: sumLoading,
+    error: sumErr,
+  } = usePortfolioSummary();
 
   // Skeleton flicker guard — same 1.2s window as v1.
   const [showSkeleton, setShowSkeleton] = React.useState(true);
@@ -153,8 +157,10 @@ export default function PortfolioPageV2() {
     return nav;
   }, [sumData, positions, displayCurrency, fxRate]);
 
-  // Cash percent — backend doesn't currently emit; placeholder em-dash.
-  const cashPct: number | undefined = undefined;
+  // Cash percent — backend P1 batch emits `cashPct` from
+  // routes/portfolio.py::portfolio_summary_alias. Falls through to undefined
+  // (em-dash) when the backend deploy predates the P1 batch.
+  const cashPct: number | undefined = sumData?.cashPct;
   const lastReconciledAt = sumData?.observed_at ?? null;
 
   function openAction(action: TradeAction, position: Position) {
@@ -263,7 +269,13 @@ export default function PortfolioPageV2() {
         </div>
       )}
 
-      {/* ═══════════ HERO ═══════════ */}
+      {/* ═══════════ HERO ═══════════
+          bug-hunter Bug #3: first paint flashed every KPI as "—" because the
+          loading gate required positions.length === 0 — but once SWR hands
+          back any cached payload (even empty {}), `posLoading` flips false
+          before `sumData` arrives, dropping us out of the skeleton path.
+          Gate on either fetch being in-flight without data, while honoring
+          the existing 1.2s flicker guard. */}
       <PortfolioHeroV2
         nav={totalNav}
         navCurrency={displayCurrency}
@@ -272,7 +284,10 @@ export default function PortfolioPageV2() {
         lastReconciledAt={lastReconciledAt}
         reconcileAvailable={false}
         onAddPosition={() => setAddOpen(true)}
-        loading={(posLoading && showSkeleton) && positions.length === 0}
+        loading={
+          showSkeleton &&
+          ((posLoading && !posData) || (sumLoading && !sumData))
+        }
         todayPnl={kpis.todayPnl}
         todayPnlPct={kpis.todayPnlPct}
         unrealized={kpis.unrealized}
