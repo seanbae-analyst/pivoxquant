@@ -240,7 +240,7 @@ export default function FeaturePageShell({
                 letterSpacing: "0.02em",
               }}
             >
-              Start 7-day trial
+              Notify me at launch
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" aria-hidden />
             </Link>
             <Link

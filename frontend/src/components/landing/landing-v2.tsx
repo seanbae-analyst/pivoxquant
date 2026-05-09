@@ -124,8 +124,8 @@ const FAQ_ITEMS = [
     a: "Drift detection이 매주 동작합니다. 최근 90일의 거래·반응 패턴이 현재 페르소나와 유의미하게 달라지면 CFO가 “당신이 다르게 움직이기 시작했다”는 Pulse 리포트를 발행합니다. 재분류는 자동이 아니라 제안입니다 — 수락해야 다음 사이클부터 새 페르소나 기준으로 리포트가 나옵니다.",
   },
   {
-    q: "What happens during the 7-day trial?",
-    a: "Pro 티어 풀액세스. 첫 weekly memo · earnings pre-brief · Risk Board가 24시간 내 당신의 실제 보유에서 렌더됩니다. 7일 내 취소 시 과금 없음. 이후 월 ₩9,900.",
+    q: "What happens after I subscribe?",
+    a: "Pro 티어 풀액세스. 첫 weekly memo · earnings pre-brief · Risk Board가 24시간 내 당신의 실제 보유에서 렌더됩니다. 전자상거래법상 첫 결제 14일 이내 미사용 시 전액 환불 대상. 이후 월 ₩9,900.",
   },
   {
     q: "Do you have access to my brokerage account?",
@@ -213,23 +213,6 @@ function PricingPreview() {
                   "border-color 240ms cubic-bezier(0.16,1,0.3,1), background-color 240ms cubic-bezier(0.16,1,0.3,1)",
               }}
             >
-              {t.recommended && (
-                <span
-                  aria-hidden
-                  className="absolute right-5 top-5 font-mono uppercase"
-                  style={{
-                    color: "var(--pq-bronze)",
-                    fontSize: "12px",
-                    letterSpacing: "0.24em",
-                    padding: "3px 8px",
-                    border: "0.5px solid rgba(184,149,106,0.5)",
-                    borderRadius: 999,
-                  }}
-                >
-                  Most chosen
-                </span>
-              )}
-
               <div className="mb-6 flex items-baseline gap-2">
                 <span
                   className="font-serif"
@@ -525,7 +508,7 @@ function CtaFooter() {
               letterSpacing: "0.02em",
             }}
           >
-            Start 7-day trial
+            Notify me at launch
             <ArrowRight
               className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
               strokeWidth={1.75}

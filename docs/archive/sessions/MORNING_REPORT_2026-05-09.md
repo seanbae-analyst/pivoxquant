@@ -66,7 +66,7 @@ cd /Users/seanbae/Desktop/취준/stockpilot && git pull origin main
 # main HEAD = 646172f 확인
 
 # 2. 라이브 sanity check (Vercel preview는 모든 commit 자동 deploy됨)
-open https://pivoxquant.com  # 베타 비번: pivoxaudit2
+open https://pivoxquant.com  # 베타 비번: <beta-password — see Vercel env BETA_PASSWORD>
 #   - /signals 진입: founding_lifetime 계정으로 PRO/PREMIUM gate 안 막히는지 (PR #157)
 #   - /companion 진입 (DEV_FOUNDING_EMAILS=seanbae1521@gmail.com): 동일
 #   - /reports 탭 타이틀: "Reports" (이전엔 root 폴백) (PR #155)

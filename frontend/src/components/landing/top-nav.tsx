@@ -143,7 +143,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
       {
         label: "Korea × US Desk",
         href: "/features/global-desk",
-        description: "One pane. KRW and USD. KIS and FMP.",
+        description: "One pane. KRW and USD. Unified market feed.",
         icon: Globe2,
       },
       {
