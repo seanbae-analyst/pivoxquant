@@ -77,6 +77,7 @@ export function DisclaimerBanner({
           alwaysExpanded && "cursor-default",
         )}
         aria-expanded={isExpanded}
+        aria-controls="disclaimer-panel"
       >
         <ShieldAlert
           className={cn(
@@ -110,6 +111,8 @@ export function DisclaimerBanner({
 
       {isExpanded && (
         <div
+          id="disclaimer-panel"
+          role="region"
           className={cn(
             "px-3 pb-3 pt-2 border-t",
             isDark

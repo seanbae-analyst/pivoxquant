@@ -266,6 +266,16 @@ export function SearchCommandMenu() {
             onKeyDown={handleKeyDown}
             placeholder="Search ticker, page…"
             aria-label="Search ticker or page"
+            role="combobox"
+            aria-expanded={sections.flat.length > 0}
+            aria-haspopup="listbox"
+            aria-autocomplete="list"
+            aria-controls="cmd-listbox"
+            aria-activedescendant={
+              sections.flat.length > 0 && activeIdx >= 0
+                ? `cmd-opt-${activeIdx}`
+                : undefined
+            }
             className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[color:var(--pq-muted)]"
             style={{ color: "var(--pq-ivory)" }}
           />
@@ -280,7 +290,7 @@ export function SearchCommandMenu() {
             onClick={close}
             type="button"
             aria-label="Close"
-            className="flex h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-[rgba(139,111,71,0.08)]"
+            className="flex h-11 w-11 items-center justify-center rounded-md transition-colors hover:bg-[rgba(139,111,71,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--pq-bronze)]"
             style={{ color: "var(--pq-muted)" }}
           >
             <X className="h-4 w-4" />
@@ -288,7 +298,7 @@ export function SearchCommandMenu() {
         </div>
 
         {/* Body */}
-        <div className="max-h-[360px] overflow-y-auto">
+        <div id="cmd-listbox" role="listbox" className="max-h-[360px] overflow-y-auto">
           {errored && (
             <div className="px-5 py-10 text-center text-sm" style={{ color: "var(--pq-muted)" }}>
               Search temporarily unavailable
@@ -314,6 +324,7 @@ export function SearchCommandMenu() {
                 return (
                   <CommandRow
                     key={`stock-${s.ticker}`}
+                    idx={idx}
                     active={idx === activeIdx}
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => runItem(s)}
@@ -343,6 +354,7 @@ export function SearchCommandMenu() {
                 return (
                   <CommandRow
                     key={`page-${p.path}`}
+                    idx={idx}
                     active={idx === activeIdx}
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => runItem(p)}
@@ -372,6 +384,7 @@ export function SearchCommandMenu() {
                 return (
                   <CommandRow
                     key={`recent-${r.path}`}
+                    idx={idx}
                     active={idx === activeIdx}
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => runItem(r)}
@@ -425,11 +438,13 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
 }
 
 function CommandRow({
+  idx,
   active,
   onMouseEnter,
   onClick,
   children,
 }: {
+  idx: number;
   active: boolean;
   onMouseEnter: () => void;
   onClick: () => void;
@@ -438,10 +453,13 @@ function CommandRow({
   return (
     <button
       type="button"
+      role="option"
+      id={`cmd-opt-${idx}`}
+      aria-selected={active}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors",
+        "flex w-full items-center gap-3 px-5 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--pq-bronze)]",
       )}
       style={{
         background: active ? "rgba(139, 111, 71, 0.08)" : "transparent",
