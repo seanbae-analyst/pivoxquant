@@ -238,6 +238,10 @@ export interface PortfolioSummary {
   realizedYtd?: number;
   fxRate?: number;
   observed_at?: string;
+  // Backend P1 batch (routes/portfolio.py::portfolio_summary_alias) emits
+  // cashPct as cash / totalNav. Optional for backwards compatibility with
+  // pre-batch backend deploys that don't yet emit the field.
+  cashPct?: number;
 }
 
 export const PORTFOLIO_DEDUPE_MS = 10_000;

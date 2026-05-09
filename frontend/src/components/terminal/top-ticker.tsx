@@ -83,6 +83,11 @@ type Snapshot = {
   level: string;
   delta: string;
   dir: "up" | "down" | "flat";
+  // True when the upstream feed marked the block stale (KR EOD outside
+  // session hours, FMP intraday lag, etc.). Cells dim to ~60% opacity and
+  // tag a "STALE" mini-label so users can tell live ribbon values from
+  // last-observed values without ambiguity.
+  isStale?: boolean;
 };
 
 // Macro symbols the strip tracks. Levels are NEVER hard-coded — every cell
@@ -126,6 +131,13 @@ function fmtKST(d: Date): string {
 }
 
 function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | null }) {
+  // bug-hunter Bug #13: KR indices can return is_stale=true (KOSDAQ outside
+  // 09:00-15:30 KST or when the proxy ETF feed is paused). The ribbon used
+  // to render the same level/delta as a live cell — visually indistinguishable.
+  // Dim to 60% + add a STALE chip so users know the value is last-observed,
+  // not live. Resolves the capital-markets-law misrepresentation guard noted
+  // in the file header.
+  const stale = snap.isStale === true;
   // Direct DOM-mutation flash: avoids setState-in-effect by writing the
   // tinted background straight to the element via ref, then clearing it
   // after 300ms. Behaves identically to the previous setState/setTimeout.
@@ -168,7 +180,9 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
         lineHeight: 1,
         background: "transparent",
         transition: reducedMotion ? "none" : "background-color 0.3s ease",
+        opacity: stale ? 0.6 : 1,
       }}
+      title={stale ? `${snap.label} — last observed (delayed)` : undefined}
     >
       <span
         className="uppercase"
@@ -184,13 +198,29 @@ function Cell({ snap, flashDir }: { snap: Snapshot; flashDir: "up" | "down" | nu
         <span style={{ marginRight: 2 }}>{DIR_GLYPH[snap.dir]}</span>
         {snap.delta}
       </span>
+      {stale && (
+        <span
+          className="uppercase"
+          aria-label="Stale market data"
+          style={{
+            fontSize: 9,
+            letterSpacing: "0.18em",
+            padding: "1px 4px",
+            border: "0.5px solid rgba(245,240,232,0.25)",
+            color: "rgba(245,240,232,0.55)",
+            borderRadius: 2,
+          }}
+        >
+          STALE
+        </span>
+      )}
     </span>
   );
 }
 
 /** Map a /market/indices block onto our ribbon symbol. */
 function _macroFromIndex(block: IndexBlock | undefined, symbol: string):
-  | { level: string; pct: number }
+  | { level: string; pct: number; isStale: boolean }
   | null {
   if (!block || typeof block.level !== "number") return null;
   // KR sanity boundary at the consumer too — protects from cached
@@ -216,7 +246,7 @@ function _macroFromIndex(block: IndexBlock | undefined, symbol: string):
       maximumFractionDigits: 2,
     });
   }
-  return { level: levelStr, pct };
+  return { level: levelStr, pct, isStale: block.is_stale === true };
 }
 
 const RIBBON_SWR_OPTS = {
@@ -275,6 +305,9 @@ export function TopTicker() {
         name: "USD/KRW",
         level: fxData.usd_krw,
         change_1d_pct: krUsdKrw?.change_1d_pct ?? 0,
+        // Forward `is_stale` so the ribbon dims when /api/market/fx is stale
+        // (offline FX feed) — Bug #13 follow-through.
+        is_stale: fxData.is_stale === true,
       });
     }
     return m;
@@ -340,6 +373,7 @@ export function TopTicker() {
               ? PLACEHOLDER_DELTA
               : `${macro.pct >= 0 ? "+" : ""}${macro.pct.toFixed(2)}%`,
           dir,
+          isStale: macro.isStale,
         };
       }
       return {
