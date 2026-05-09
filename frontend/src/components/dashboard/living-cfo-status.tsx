@@ -226,7 +226,7 @@ function LayerDot({
         ? "var(--pq-bronze)"
         : layer.state === "locked"
           ? "var(--pq-bronze-deep, #6F5636)"
-          : "rgba(245,240,232,0.35)";
+          : "rgba(245,240,232,0.55)";
 
   return (
     <button

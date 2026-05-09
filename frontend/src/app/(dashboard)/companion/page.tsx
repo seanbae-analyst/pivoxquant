@@ -16,6 +16,7 @@
 
 import Link from "next/link";
 import { useCallback, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, Lock, MailCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { apiFetch, ApiError } from "@/lib/api";
@@ -29,6 +30,12 @@ import { ChatPanel } from "@/components/companion/chat-panel";
 export default function CompanionPage() {
   const { user, loading: authLoading } = useAuth();
   const { data: status, isLoading } = useCompanionStatus();
+  // Bug #3 fix (2026-05-09 deep bug hunt): /detail/[ticker] handoff link
+  // is `/companion?ticker=AAPL` but the ticker query param was silently
+  // dropped — user landed on a blank chat with no stock context. Read the
+  // param here and pass it to ChatPanel as an initialContextTicker prop.
+  const searchParams = useSearchParams();
+  const initialTicker = searchParams?.get("ticker") ?? null;
 
   const entitled = hasCompanionEntitlement(
     user?.subscription_tier,
@@ -55,9 +62,12 @@ export default function CompanionPage() {
 
   // Escape the dashboard layout's main padding so the chat composer
   // can sit flush against the viewport edges (desktop + mobile).
+  // Bug #4 fix (2026-05-09): dashboard <main> sets `pb-24` (96px) on
+  // mobile but the previous `-my-6` only negated 24px, leaving a 72px
+  // void below the composer. Use `-mt-6 -mb-24` to compensate exactly.
   return (
-    <div className="-mx-4 -my-6 md:-mx-10 md:-my-8 md:pb-0 pb-0 md:min-h-[calc(100vh-64px)]">
-      <ChatPanel />
+    <div className="-mx-4 -mt-6 -mb-24 md:-mx-10 md:-my-8 md:pb-0 pb-0 md:min-h-[calc(100vh-64px)]">
+      <ChatPanel initialContextTicker={initialTicker} />
     </div>
   );
 }

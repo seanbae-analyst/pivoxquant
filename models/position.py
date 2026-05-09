@@ -4,6 +4,18 @@ from extensions import db
 
 class Position(db.Model):
     __tablename__ = "positions"
+    # NEW-D (2026-05-09): UniqueConstraint(user_id, ticker) closes a race
+    # window in routes/portfolio.py add_position / create_position_alias /
+    # buy_new_position where two concurrent POSTs both pass the
+    # ``Position.query.filter_by(user_id, ticker).first()`` lookup and
+    # then both insert — producing duplicate rows that double-count in
+    # /api/portfolio summary aggregations. The Python-level check stays
+    # (so the merge path runs on legitimate retries) but the DB-level
+    # constraint guarantees correctness even under concurrency.
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "ticker", name="uq_positions_user_ticker"),
+    )
+
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     ticker     = db.Column(db.String(20),  nullable=False)

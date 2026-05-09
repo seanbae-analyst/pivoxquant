@@ -35,6 +35,7 @@ from pathlib import Path
 
 from flask import Blueprint, Response, current_app, jsonify, request, send_file
 from flask_login import current_user
+from markupsafe import escape  # 2026-05-09 (SEC-D): defense-in-depth OG meta escape
 
 from extensions import db
 from models import Artifact
@@ -804,13 +805,21 @@ def brag_card_share(share_token: str):
     ret = data.get("return_pct")
     ret_str = "—" if ret is None else (f"+{ret:.1f}%" if ret >= 0
                                        else f"{ret:.1f}%")
+    # 2026-05-09 (SEC-D): every interpolated value is run through
+    # ``markupsafe.escape`` before being injected into the HTML. Today the
+    # values are server-derived (``month_label`` from the artefact row,
+    # ``ret_str`` from a ``%.1f`` format, the URLs from ``request.host_url``
+    # / our share helper) so direct XSS is not currently possible. This is
+    # defense-in-depth — if a future change ever wires a user-customizable
+    # field (e.g. a referral nickname) into one of these slots the worm-scale
+    # risk is already neutralised.
     og_block = (
-        f'<meta property="og:title" content="{data.get("month_label","")} '
-        f'{ret_str} — PivoxQuant">'
+        f'<meta property="og:title" content="{escape(data.get("month_label",""))} '
+        f'{escape(ret_str)} — PivoxQuant">'
         f'<meta property="og:description" content="월간 브래그 카드 — '
         f'AI + Quant 리서치 툴">'
-        f'<meta property="og:image" content="{png_endpoint}">'
-        f'<meta property="og:url" content="{share_url}">'
+        f'<meta property="og:image" content="{escape(png_endpoint)}">'
+        f'<meta property="og:url" content="{escape(share_url)}">'
         f'<meta name="twitter:card" content="summary_large_image">'
     )
     if "</head>" in html:
@@ -3048,6 +3057,22 @@ def diag_weekly_memo_pipeline():
         WeeklyMemoService, _PAID_TIERS,
     )
 
+    # SEC-F fix (2026-05-09 release-prep audit): the admin-secret gate above
+    # is intact (PR #150 hmac.compare_digest), but unconditionally returning
+    # full backend tracebacks in HTTP bodies is a defense-in-depth violation.
+    # If the secret ever leaks (Sentry capture of an admin curl, Railway env
+    # screenshot, log forwarding misconfig), every stack trace exposes file
+    # paths, function names, and SQLAlchemy schema hints in one round-trip.
+    # Mirror the /_diag/weasyprint endpoint pattern: gate traceback behind
+    # ?traceback=1, default to {cls, msg-clamped} only.
+    include_tb = request.args.get("traceback") in ("1", "true", "yes")
+
+    def _err_dict(exc):
+        d = {"cls": type(exc).__name__, "msg": str(exc)[:200]}
+        if include_tb:
+            d["traceback"] = tb_mod.format_exc()
+        return d
+
     body = request.get_json(silent=True) or {}
     user_id_arg = body.get("user_id") or request.args.get("user_id")
     try:
@@ -3113,11 +3138,7 @@ def diag_weekly_memo_pipeline():
             "stage":  "generate_for_user",
             "user":   user_info,
             "stages": stages,
-            "error":  {
-                "cls":       type(exc).__name__,
-                "msg":       str(exc),
-                "traceback": tb_mod.format_exc(),
-            },
+            "error":  _err_dict(exc),
         })
 
     # ── 4. render_pdf (the actual production path) ──────────────────────
@@ -3126,11 +3147,7 @@ def diag_weekly_memo_pipeline():
     try:
         pdf_bytes = svc.render_pdf(data)
     except Exception as exc:
-        render_error = {
-            "cls":       type(exc).__name__,
-            "msg":       str(exc),
-            "traceback": tb_mod.format_exc(),
-        }
+        render_error = _err_dict(exc)
 
     if pdf_bytes is None:
         # render_pdf swallows exceptions and returns None on failure (see
@@ -3155,17 +3172,9 @@ def diag_weekly_memo_pipeline():
                         pdf2 = HTML(string=html_str).write_pdf()
                         deeper["direct_write_pdf_bytes"] = len(pdf2 or b"")
                     except Exception as exc:
-                        deeper["direct_write_pdf_error"] = {
-                            "cls": type(exc).__name__,
-                            "msg": str(exc),
-                            "traceback": tb_mod.format_exc(),
-                        }
+                        deeper["direct_write_pdf_error"] = _err_dict(exc)
                 except Exception as exc:
-                    deeper["render_pdf_html_error"] = {
-                        "cls": type(exc).__name__,
-                        "msg": str(exc),
-                        "traceback": tb_mod.format_exc(),
-                    }
+                    deeper["render_pdf_html_error"] = _err_dict(exc)
         except Exception as exc:
             deeper["bootstrap_error"] = str(exc)
 

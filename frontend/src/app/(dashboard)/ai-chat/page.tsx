@@ -118,7 +118,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </p>
         )}
         {message.timestamp && !isEmpty && (
-          <div className="text-[9px] tracking-[0.2em] uppercase text-[rgba(245,240,232,0.35)] mt-2 font-mono">
+          <div className="text-[9px] tracking-[0.2em] uppercase text-[rgba(245,240,232,0.55)] mt-2 font-mono">
             {formatTime(message.timestamp)}
           </div>
         )}

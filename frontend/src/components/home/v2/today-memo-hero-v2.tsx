@@ -173,7 +173,7 @@ export function TodayMemoHeroV2({
             marginLeft: 16,
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
             textTransform: "uppercase",
           }}
         >

@@ -71,6 +71,9 @@ export default function HomePageV2() {
     <ErrorBoundary>
       <HomeCardStyles />
 
+      {/* Visually hidden page heading for AT / heading-order. */}
+      <h1 className="sr-only">홈 — 포트폴리오 대시보드</h1>
+
       {/* ═══════════ TOP TICKER — live strip (full bleed) ═══════════ */}
       <div
         className="-mx-4 md:-ml-10 md:-mr-10 mb-4"

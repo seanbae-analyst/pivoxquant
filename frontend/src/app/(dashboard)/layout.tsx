@@ -9,6 +9,7 @@ import { PushPermission } from "@/components/pwa/push-permission";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { RealtimeStatusBanner } from "@/components/ui/realtime-status-banner";
 import { flushPendingCrossBorderConsent, flushPendingMarketingConsent } from "@/lib/consents";
+import { useKeyboardNav } from "@/lib/use-keyboard-nav";
 
 /* ──────────────────────────────────────────────────────────────────
    Path → DisclaimerBanner type resolver
@@ -70,6 +71,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Bug #17 (Wave 3c, fix 2026-05-09): Wires the "G then H/P/W" goto
+  // sequences advertised by `ShortcutsModal` (profile-dropdown.tsx).
+  // Single mount point — listener guards against editable targets and
+  // modifier chords so palette ⌘K and normal typing are unaffected.
+  useKeyboardNav();
 
   useEffect(() => {
     if (!loading && !user) {

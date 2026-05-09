@@ -245,7 +245,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                     style={{
                       fontSize: 12,
                       fontVariantNumeric: "tabular-nums",
-                      color: "rgba(245,240,232,0.40)",
+                      color: "rgba(245,240,232,0.55)",
                     }}
                   >
                     {fmtPrice(s)}

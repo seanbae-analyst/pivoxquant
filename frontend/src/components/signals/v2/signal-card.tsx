@@ -198,6 +198,23 @@ export function SignalCard({ entry, resolveName }: Props) {
             >
               strength {strength.toFixed(2)}
             </span>
+            {entry.is_stale && (
+              <span
+                className="font-mono uppercase"
+                title="Cached observation past freshness TTL"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                  padding: "2px 6px",
+                  border: "1px solid rgba(245,240,232,0.20)",
+                  borderRadius: "var(--pq-radius-cta, 2px)",
+                  color: "rgba(245,240,232,0.45)",
+                  background: "rgba(245,240,232,0.04)",
+                }}
+              >
+                stale
+              </span>
+            )}
           </div>
           <div
             aria-hidden
@@ -250,7 +267,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             style={{
               fontSize: 12,
               letterSpacing: "0.06em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               marginTop: 4,
             }}
           >

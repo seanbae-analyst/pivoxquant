@@ -641,7 +641,7 @@ export default function SettingsPageV2() {
                     right: 14,
                     fontSize: 12,
                     letterSpacing: "0.2em",
-                    color: "rgba(245,240,232,0.40)",
+                    color: "rgba(245,240,232,0.55)",
                   }}
                 >
                   C1 · Push
@@ -679,7 +679,7 @@ export default function SettingsPageV2() {
                       className="font-serif"
                       style={{
                         fontSize: 14,
-                        color: "rgba(245,240,232,0.40)",
+                        color: "rgba(245,240,232,0.55)",
                         marginTop: 2,
                       }}
                     >
@@ -753,7 +753,7 @@ export default function SettingsPageV2() {
                     right: 14,
                     fontSize: 12,
                     letterSpacing: "0.2em",
-                    color: "rgba(245,240,232,0.40)",
+                    color: "rgba(245,240,232,0.55)",
                   }}
                 >
                   C2 · Email
@@ -791,7 +791,7 @@ export default function SettingsPageV2() {
                       className="font-serif"
                       style={{
                         fontSize: 14,
-                        color: "rgba(245,240,232,0.40)",
+                        color: "rgba(245,240,232,0.55)",
                         marginTop: 2,
                       }}
                     >
@@ -887,7 +887,7 @@ export default function SettingsPageV2() {
               border: "1px dashed rgba(245,240,232,0.14)",
               fontSize: 14,
               lineHeight: 1.6,
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           className="font-serif" >
             <strong

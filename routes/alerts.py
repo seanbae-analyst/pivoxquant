@@ -215,8 +215,17 @@ def price_check():
                       .first())
             if not recent:
                 sig = "NEGATIVE" if a["type"] == "STOP_LOSS" else "POSITIVE"
-                db.session.add(Alert(user_id=current_user.id, ticker=a["ticker"],
-                                     message=a["message"], signal=sig, score=0))
+                # Bug #1 fix (2026-05-09): kind was missing → frontend
+                # rendered "INFO" instead of "PRICE". Set canonical kind so
+                # the alerts page shows the right pill colour + label.
+                kind = (
+                    "price_stop_loss" if a["type"] == "STOP_LOSS"
+                    else "price_take_profit"
+                )
+                db.session.add(Alert(
+                    user_id=current_user.id, ticker=a["ticker"],
+                    message=a["message"], signal=sig, score=0, kind=kind,
+                ))
         if alerts:
             db.session.commit()
     except Exception:
@@ -266,6 +275,10 @@ def admin_check_alerts():
             result["concentration"] = check_concentration_alerts()
     except Exception as exc:
         logger.exception("alerts.admin_check_alerts failed mode=%s", mode)
-        return jsonify({"error": str(exc)}), 500
+        # Hardening (2026-05-09 audit): clamp raw exception strings to 200
+        # chars to match the convention in routes/auth.py:511 + agent.py:457
+        # — prevents stack-trace fragments / SQL details / file paths from
+        # leaking through unbounded exception messages.
+        return jsonify({"error": str(exc)[:200]}), 500
 
     return jsonify({"ok": True, **result})

@@ -65,15 +65,25 @@ interface FilterState {
   strengthMin: number;
   strengthMax: number;
   symbol: string | null;
-  window: "today" | "7d" | "30d";
+  window: "today" | "7d" | "30d" | "all";
 }
 
+// W6-1 (Wave 6 follow-up, 2026-05-09): default window changed from
+// "today" → "all". Backend `routes/signals.py:46` writes
+// `observed_at = SignalCache.updated_at` (cache-write timestamp). Any
+// ticker not refreshed in the past 24h was filtered out client-side
+// even though the backend returned real data, producing a deceptive
+// empty state. The new "all" window keeps every entry visible; users
+// who want a freshness-scoped view can still pick today/7d/30d. Stale
+// entries are now clearly badged via `is_stale` in `signal-card.tsx`
+// (W6-3 ships in same PR family) so the user signal-vs-noise call is
+// surfaced rather than silently filtered.
 const DEFAULT_FILTERS: FilterState = {
   labels: new Set<SignalLabel>(),
   strengthMin: 0,
   strengthMax: 1,
   symbol: null,
-  window: "today",
+  window: "all",
 };
 
 function strengthOf(s: SignalEntry): number {
@@ -90,6 +100,7 @@ function labelOf(s: SignalEntry): SignalLabel {
 }
 
 function isWithinWindow(s: SignalEntry, window: FilterState["window"]): boolean {
+  if (window === "all") return true; // W6-1: no time filter
   if (!s.observed_at) return true; // no timestamp — keep visible
   try {
     const ts = new Date(s.observed_at).getTime();

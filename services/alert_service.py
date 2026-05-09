@@ -69,8 +69,16 @@ def maybe_generate(user_id: int, r: dict):
     # before the message is persisted or pushed to the user.
     msg = safe_scrub(msg, context="alert.message") or msg
 
-    db.session.add(Alert(user_id=user_id, ticker=ticker, message=msg,
-                         signal=sig, score=score))
+    # Bug #1 fix (2026-05-09 deep bug hunt): kind=None made every signal
+    # alert render as "INFO" in the /alerts page (kindLabel(null) → "INFO").
+    # Set the canonical kind so the frontend pill shows "SIGNAL" with proper
+    # POSITIVE/NEGATIVE tone. Bypasses ALLOWED_KINDS (raw constructor) so no
+    # whitelist edit is needed; the column accepts any string.
+    db.session.add(Alert(
+        user_id=user_id, ticker=ticker, message=msg,
+        signal=sig, score=score,
+        kind=("signal_negative" if sig == "NEGATIVE" else "signal_positive"),
+    ))
     db.session.commit()
 
     # Send push notification (no-ops if not configured)

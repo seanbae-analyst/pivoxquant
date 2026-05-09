@@ -86,7 +86,7 @@ export default function RiskDefensePage() {
             <ArrowLeft className="w-4 h-4" />
             Back
           </Link>
-          <span className="text-[rgba(245,240,232,0.32)]">/</span>
+          <span className="text-[rgba(245,240,232,0.55)]">/</span>
           <span className="text-sm font-medium text-[var(--pq-ivory)]">Risk Defense</span>
         </div>
       </header>

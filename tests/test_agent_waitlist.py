@@ -2,11 +2,16 @@
 """tests/test_agent_waitlist.py — /api/agent/waitlist (P0-2).
 
 Covers the five cases called out in HANDOVER.md v6 §3-D #2:
-  1. POST with a valid new email              → 201 queued
-  2. POST with a duplicate email              → 200 already-registered
+  1. POST with a valid new email              → 200 generic ack
+  2. POST with a duplicate email              → 200 generic ack (identical)
   3. POST with a malformed / missing email    → 400
   4. POST beyond 5 per hour per IP            → 429
   5. POST without an ``email`` field at all   → 400
+
+2026-05-09 (SEC-E / PIPA §29): the public response is now status-code- and
+body-identical for new vs duplicate submissions to close an account-existence
+enumeration oracle. Tests were updated accordingly — the audit log still
+records ``already_registered`` for admin monitoring.
 
 Also smoke-tests the admin list endpoint so the ops runbook in
 ``docs/JOURNAL_COMPANION_BETA.md`` can trust the round-trip.
@@ -53,50 +58,66 @@ def _login(client, email: str, password: str):
 
 
 class TestWaitlistPost:
-    def test_new_email_returns_201_queued(self, raw_client):
-        """A fresh email yields 201 + status=queued + position >= 1."""
+    # ``GENERIC_ACK`` is the privacy-preserving copy returned for BOTH new and
+    # duplicate submissions — see SEC-E note in the route docstring.
+    GENERIC_ACK = "If your email is on the waitlist, you'll receive an update."
+
+    def test_new_email_returns_200_generic_ack(self, raw_client):
+        """A fresh email yields 200 + the generic ack (SEC-E)."""
         r = raw_client.post(
             "/api/agent/waitlist",
             json={"email": "alice@example.com", "source": "landing-teaser"},
         )
-        assert r.status_code == 201, r.data
+        assert r.status_code == 200, r.data
         data = r.get_json()
-        assert data["status"] == "queued"
-        assert data["position"] >= 1
+        assert data["ok"] is True
+        assert data["message"] == self.GENERIC_ACK
         assert "request_id" in data
+        # Enumeration-oracle fields MUST NOT leak.
+        assert "status" not in data
+        assert "position" not in data
 
-    def test_duplicate_email_returns_200_already_registered(self, raw_client):
-        """Second POST of the same email is idempotent — 200 + already-registered."""
+    def test_duplicate_email_returns_identical_200_response(self, raw_client):
+        """Second POST of the same email is byte-identical to the first
+        (modulo ``request_id``) — the public response cannot be used as an
+        account-existence oracle (SEC-E / PIPA §29).
+        """
         first = raw_client.post(
             "/api/agent/waitlist",
             json={"email": "bob@example.com"},
         )
-        assert first.status_code == 201
+        assert first.status_code == 200, first.data
+        first_body = first.get_json()
 
         second = raw_client.post(
             "/api/agent/waitlist",
             json={"email": "bob@example.com", "persona": "value"},
         )
         assert second.status_code == 200, second.data
-        data = second.get_json()
-        assert data["status"] == "already-registered"
-        # Position is a count — duplicate shouldn't grow it.
-        assert data["position"] == first.get_json()["position"]
+        second_body = second.get_json()
+
+        # Same shape, same message — only request_id varies.
+        assert second_body["ok"] is first_body["ok"] is True
+        assert second_body["message"] == first_body["message"] == self.GENERIC_ACK
+        assert "status" not in second_body
+        assert "position" not in second_body
 
     def test_email_is_case_insensitive_for_dedup(self, raw_client):
-        """Dedup uses the hash of the lowercased email — mixed-case repeats dedupe."""
+        """Dedup uses the hash of the lowercased email — mixed-case repeats
+        still produce the identical generic 200 response (SEC-E).
+        """
         r1 = raw_client.post(
             "/api/agent/waitlist",
             json={"email": "Carol@Example.COM"},
         )
-        assert r1.status_code == 201
+        assert r1.status_code == 200
 
         r2 = raw_client.post(
             "/api/agent/waitlist",
             json={"email": "carol@example.com"},
         )
         assert r2.status_code == 200
-        assert r2.get_json()["status"] == "already-registered"
+        assert r2.get_json()["message"] == self.GENERIC_ACK
 
     def test_invalid_email_returns_400(self, raw_client):
         """Clearly malformed input never reaches the DB."""
@@ -128,7 +149,7 @@ class TestWaitlistPost:
             "/api/agent/waitlist",
             json={"email": "dan@example.com", "persona": "<script>alert(1)</script>"},
         )
-        assert r.status_code == 201
+        assert r.status_code == 200
         row = CompanionWaitlist.query.filter_by(
             email_hash=CompanionWaitlist.hash_email("dan@example.com")
         ).first()
@@ -143,7 +164,7 @@ class TestWaitlistPost:
             "/api/agent/waitlist",
             json={"email": "eve@example.com", "persona": "quant"},
         )
-        assert r.status_code == 201
+        assert r.status_code == 200
         row = CompanionWaitlist.query.filter_by(
             email_hash=CompanionWaitlist.hash_email("eve@example.com")
         ).first()
@@ -162,7 +183,7 @@ class TestWaitlistPost:
             "/api/agent/waitlist",
             json={"email": "frank@example.com", "referrer": "pricing-page"},
         )
-        assert r.status_code == 201
+        assert r.status_code == 200
         row = CompanionWaitlist.query.filter_by(
             email_hash=CompanionWaitlist.hash_email("frank@example.com")
         ).first()
@@ -177,7 +198,7 @@ class TestWaitlistPost:
             "/api/agent/waitlist",
             json={"email": "gwen@example.com"},
         )
-        assert r.status_code == 201
+        assert r.status_code == 200
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -314,7 +335,8 @@ class TestWaitlistRaceCondition:
         self, raw_client, monkeypatch
     ):
         """End-to-end: if enroll() recovers from an IntegrityError internally,
-        the HTTP response is 200 already-registered — never 500.
+        the HTTP response is the same generic 200 ack — never 500 (and never
+        leaks the duplicate signal, SEC-E).
 
         We stub ``enroll()`` to return the race-recovery tuple
         ``(existing_row, False)`` to prove the route treats that shape as a
@@ -322,12 +344,12 @@ class TestWaitlistRaceCondition:
         """
         from models.companion_waitlist import CompanionWaitlist
 
-        # Step 1 — create a real row so the route can read back a position.
+        # Step 1 — create a real row to anchor the race scenario.
         seed = raw_client.post(
             "/api/agent/waitlist",
             json={"email": "race-c@example.com"},
         )
-        assert seed.status_code == 201
+        assert seed.status_code == 200
 
         # Step 2 — patch enroll() so the second POST goes through the
         # "race-recovered" return shape.
@@ -350,7 +372,11 @@ class TestWaitlistRaceCondition:
             json={"email": "race-c@example.com"},
         )
         assert r.status_code == 200, (r.status_code, r.data)
-        assert r.get_json()["status"] == "already-registered"
+        body = r.get_json()
+        assert body["ok"] is True
+        # SEC-E: response must NOT differentiate duplicate from new.
+        assert "status" not in body
+        assert "position" not in body
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -368,7 +394,8 @@ class TestWaitlistRateLimit:
                 "/api/agent/waitlist",
                 json={"email": f"heidi{idx}@example.com"},
             )
-            assert r.status_code in (200, 201), (idx, r.data)
+            # SEC-E: always 200, never 201, regardless of new vs duplicate.
+            assert r.status_code == 200, (idx, r.data)
 
         r6 = raw_client.post(
             "/api/agent/waitlist",

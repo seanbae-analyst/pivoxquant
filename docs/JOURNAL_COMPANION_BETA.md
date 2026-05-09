@@ -268,7 +268,7 @@ Journal Companion 을 production에 올리기 전 전부 ✅:
 - **AGENT_ENABLED / kill switch 무관** — 웨이팅 리스트는 Closed Beta 진입 funnel 자체이므로 killed 상태에서도 접수 받는다.
 - **이메일 저장 정책**: `DRAFT_PRIVACY_POLICY_COMPANION_2026-04-23.md §9.1` 준수. `email_hash` (sha256) 를 기본 식별자로, `email_plaintext` 는 폼 제출(=직접 통지 동의)이 있을 때만 저장.
 - **Free-form 텍스트 금지**: `persona` 는 8 개 canonical persona 외 값은 drop, `source`/`referrer` 는 allowlist 외 값은 `"other"` 로 축소 — legal_gate bypass 방지.
-- **Idempotent**: 같은 이메일을 두 번 POST 하면 201(queued) → 200(already-registered), DB 상 동일 행 유지.
+- **Idempotent**: 같은 이메일을 두 번 POST 해도 DB 상 동일 행 유지. **2026-05-09 (SEC-E / PIPA §29)**: 공개 응답은 신규/중복 모두 동일한 200 + 동일 generic body — 외부 공격자가 status code 로 가입 여부를 enumerate 할 수 없도록 통일했다. `created` 플래그는 audit 로그(`agent.waitlist.enrolled.already_registered`)에서만 확인 가능.
 
 ### 8.5-3. 운영 절차
 

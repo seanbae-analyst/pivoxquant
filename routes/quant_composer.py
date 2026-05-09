@@ -219,7 +219,9 @@ def put_composition():
             body.get("enabled"), body.get("weights")
         )
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        # Hardening (2026-05-09 audit): clamp to 200 chars (matches
+        # routes/auth.py:511 + agent.py:457 conventions).
+        return jsonify({"error": str(exc)[:200]}), 400
 
     profile = _get_or_create_profile(current_user.id)
     if profile is None:
@@ -317,7 +319,9 @@ def post_backtest():
             body.get("enabled"), body.get("weights")
         )
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        # Hardening (2026-05-09 audit): clamp to 200 chars (matches
+        # routes/auth.py:511 + agent.py:457 conventions).
+        return jsonify({"error": str(exc)[:200]}), 400
 
     result = _paper_backtest(enabled, weights, ticker.strip(), days)
     payload = {"ok": True, "result": result}
@@ -362,7 +366,9 @@ def post_preset():
     try:
         summary = apply_persona_preset(int(current_user.id), persona_code)
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        # Hardening (2026-05-09 audit): clamp to 200 chars (matches
+        # routes/auth.py:511 + agent.py:457 conventions).
+        return jsonify({"error": str(exc)[:200]}), 400
 
     payload = {
         "ok": True,

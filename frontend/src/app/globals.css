@@ -166,6 +166,19 @@
   --pq-ivory-rgb: 245, 240, 232;
   --pq-ink-rgb: 5, 5, 5;
 
+  /* WCAG AA contrast ladder for ivory-on-Vantablack (#050505).
+     Computed contrast ratios (text on #050505):
+       0.78 ≈ 13.05:1 — strong body / primary muted
+       0.65 ≈  9.56:1 — secondary captions
+       0.55 ≈  5.64:1 — hints / placeholders / dim labels (AA pass for normal text)
+       0.45 ≈  3.99:1 — large-text-only (AA large 18pt+ regular OR 14pt+ bold)
+     All values < 0.45 fail AA for any text. Use these tokens instead of
+     hard-coded rgba(245,240,232,X) where X < 0.45. */
+  --pq-ivory-soft: rgba(245, 240, 232, 0.78);
+  --pq-ivory-mid: rgba(245, 240, 232, 0.65);
+  --pq-ivory-dim: rgba(245, 240, 232, 0.55);
+  --pq-ivory-faint: rgba(245, 240, 232, 0.45);
+
   /* Font family aliases → next/font CSS vars from app/layout.tsx.
      Without these, var(--pq-font-mono|serif) falls back to Georgia/Times
      instead of JetBrains Mono / Source Serif 4 / Playfair Display. */
@@ -1461,7 +1474,8 @@ button:hover > .pq-ink-pill,
   transition: border-color 180ms;
 }
 .pq-ink-input::placeholder {
-  color: rgba(245, 240, 232, 0.35);
+  /* a11y: WCAG AA — 0.35 (2.84:1) → 0.55 (5.64:1) on Vantablack */
+  color: rgba(245, 240, 232, 0.55);
 }
 .pq-ink-input:focus {
   outline: none;
@@ -3616,7 +3630,8 @@ html {
   font-size: 9px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: rgba(245, 240, 232, 0.35);
+  /* a11y: 9px uppercase mono → strict normal-text bracket. 0.35 (2.84:1) → 0.55 (5.64:1) */
+  color: rgba(245, 240, 232, 0.55);
 }
 
 /* Ticker link in dashboard tables — bronze accent + bronze-light on hover */

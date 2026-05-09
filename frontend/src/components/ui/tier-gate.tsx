@@ -15,10 +15,24 @@ interface TierGateProps {
   theme?: "dark" | "light";
 }
 
+// Hierarchy mirrors `services/serializers.py::serialize_user` which feeds the
+// `subscription_tier` field from `User.effective_tier`. The DB column itself
+// only stores free/pro/premium (managed via Stripe webhooks), but the
+// property layer can return higher tiers from env-var overrides:
+//   DEV_PREMIUM_EMAILS  → "premium"
+//   DEV_FOUNDING_EMAILS → "founding_lifetime" (CEO + invited beta testers)
+// Without these mappings, founding_lifetime users hit `undefined ?? 0` and
+// get blocked from PRO/PREMIUM gates they should pass — actively breaking
+// the owner account on every page wrapped by TierGate.
+// premium_plus is reserved for the Companion entitlement_plans array (see
+// frontend/src/lib/cfo/useCompanion.ts) — kept here defensively in case a
+// future server change starts emitting it on the subscription_tier field.
 const TIER_LEVEL: Record<string, number> = {
   free: 0,
   pro: 1,
   premium: 2,
+  premium_plus: 3,
+  founding_lifetime: 4,
 };
 
 export function TierGate({ tier, children, fallback, theme = "dark" }: TierGateProps) {
@@ -80,7 +94,7 @@ export function TierGate({ tier, children, fallback, theme = "dark" }: TierGateP
           "inline-block px-6 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.97]",
           isDark
             ? "rounded-[2px] bg-[var(--pq-bronze)] text-[var(--pq-ink)] hover:bg-[var(--pq-bronze-light)]"
-            : "rounded-full bg-slate-900 text-white hover:bg-slate-800",
+            : "rounded-[2px] bg-slate-900 text-white hover:bg-slate-800",
         )}
       >
         {t("tierGate.viewPlans")}

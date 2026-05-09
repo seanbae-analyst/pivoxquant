@@ -148,7 +148,7 @@ export function KoreaUsDesk() {
                         : "rgba(184,149,106,0.95)",
                     boxShadow:
                       t.flag === "KR"
-                        ? "0 0 12px rgba(245,240,232,0.35)"
+                        ? "0 0 12px rgba(245,240,232,0.55)"
                         : "0 0 12px rgba(184,149,106,0.45)",
                   }}
                 />

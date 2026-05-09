@@ -157,10 +157,16 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  // P0 fix (2026-05-09 release-prep audit): icon URLs previously pointed at
+  // /icons/icon-32.png and /icons/icon-192.png — neither file existed in
+  // public/icons/ so every browser tab fetched a 404 for the favicon. The
+  // actual files on disk are favicon-48x48.png + icon-192x192.png; aligned
+  // the metadata to the real filenames.
   icons: {
     icon: [
-      { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180" },
   },
@@ -216,10 +222,43 @@ export default async function RootLayout({
             __html: `if(window.matchMedia('(display-mode: standalone)').matches){document.documentElement.classList.add('pwa-standalone');}`,
           }}
         />
+        {/* SEO/Performance audit (2026-05-09): the previous link was just a
+            stylesheet (`as="style"` without `rel="preload"` does nothing).
+            Hint the browser to preload the CSS in parallel with the rest
+            of the head, then load it as a regular stylesheet. The KR woff2
+            payload then starts its handshake earlier — measurably shorter
+            FOIT on the first paint of any page above the fold. */}
         <link
-          rel="stylesheet"
+          rel="preload"
           as="style"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+        {/* SEO audit (2026-05-09): JSON-LD Organization structured data so
+            Google Knowledge Graph can resolve the brand entity. The site
+            isn't yet listed; declaring this gives the crawler the canonical
+            wordmark + sameAs hooks (Twitter / GitHub) when it's indexed. */}
+        <script
+          type="application/ld+json"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "PivoxQuant",
+              url: "https://pivoxquant.com",
+              logo: "https://pivoxquant.com/icons/icon-512x512.png",
+              description:
+                "Observational quant research tool. Informational only — not investment advice.",
+              sameAs: [
+                "https://github.com/seanbae-analyst/pivoxquant",
+              ],
+            }),
+          }}
         />
       </head>
       <body className="min-h-full bg-background text-foreground antialiased">

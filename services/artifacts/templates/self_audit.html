@@ -56,7 +56,7 @@
       {%- endif %}
     </h1>
     <p style="font-size:13px;line-height:1.55;color:var(--r-ink-3);margin:0 0 4px;">
-      본인 거래 회고 — 3개월 forward 가격 또는 exit 가격 기준 관찰.
+      본인 거래 회고 — 3개월 forward 가격 또는 처분 가격 기준 관찰.
       {% if v3.kpi_trades and v3.kpi_trades != '—' %} 거래 <strong>{{ v3.kpi_trades }}</strong>건{% endif %}
       {% if v3.kpi_avgret and v3.kpi_avgret != '—' %} · 평균 <strong>{{ v3.kpi_avgret }}</strong>{% endif %}
       {% if not v3.kpi_winrate and not v3.kpi_trades %} 권유 없음 — 본인 결정 기록 한정.{% endif %}
@@ -101,7 +101,7 @@
     <h2 class="pq-pdf-section-title sm">Best 3 Decisions</h2>
     <table class="pq-pdf-table">
       <thead>
-        <tr><th>Ticker</th><th>Acquisition Date</th><th class="right">Outcome</th><th class="right">Return</th></tr>
+        <tr><th>Ticker</th><th>Buy Date</th><th class="right">Outcome</th><th class="right">Return</th></tr>
       </thead>
       <tbody>
         {% for d in v3.best_decisions | default([]) %}
@@ -142,7 +142,7 @@
     <h2 class="pq-pdf-section-title sm">Worst 3 Decisions</h2>
     <table class="pq-pdf-table">
       <thead>
-        <tr><th>Ticker</th><th>Acquisition Date</th><th class="right">Outcome</th><th class="right">Return</th></tr>
+        <tr><th>Ticker</th><th>Buy Date</th><th class="right">Outcome</th><th class="right">Return</th></tr>
       </thead>
       <tbody>
         {% for d in v3.worst_decisions | default([]) %}
@@ -190,7 +190,7 @@
       <div class="pq-pdf-gov-cell"><div class="lbl">Cadence</div><div class="val">Quarterly (absorbed)</div></div>
       <div class="pq-pdf-gov-cell">
         <div class="lbl">Methodology</div>
-        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}3-month forward 또는 exit 가격 기준 &middot; 본인 거래 한정{% endif %}</div>
+        <div class="val">{% if _gov and _gov.methodology %}{{ _gov.methodology }}{% else %}3-month forward 또는 처분 가격 기준 &middot; 본인 거래 한정{% endif %}</div>
       </div>
       <div class="pq-pdf-gov-cell">
         <div class="lbl">Sources</div>

@@ -188,7 +188,7 @@ export function InteractiveLineChart({
               x={padding.left - 8}
               y={padding.top + (1 - t) * innerH + 3}
               fontSize="10"
-              fill="rgba(245,240,232,0.35)"
+              fill="rgba(245,240,232,0.55)"
               textAnchor="end"
               fontFamily="var(--pq-font-mono), ui-monospace, monospace"
             >

@@ -98,7 +98,7 @@ function BenchmarkCompareRow({
                   ? "rgba(184,149,106,0.85)"
                   : delta < 0
                     ? "rgba(245,240,232,0.45)"
-                    : "rgba(245,240,232,0.35)",
+                    : "rgba(245,240,232,0.55)",
             }}
             aria-label={`Your ${label} vs group median: delta ${fmt(delta, digits, suffix)}`}
           >

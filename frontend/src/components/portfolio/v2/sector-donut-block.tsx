@@ -27,7 +27,7 @@ const COLOR_RAMP: string[] = [
   "var(--pq-bronze, #B8956A)",
   "var(--pq-bronze-light, #A3845C)",
   "var(--pq-bronze-deep, #6F5636)",
-  "rgba(245,240,232,0.32)",
+  "rgba(245,240,232,0.55)",
   "rgba(245,240,232,0.22)",
   "rgba(245,240,232,0.14)",
   "rgba(245,240,232,0.08)",
@@ -202,7 +202,7 @@ export function SectorDonutBlock({
                 style={{
                   fontSize: 12,
                   letterSpacing: "0.22em",
-                  color: "rgba(245,240,232,0.40)",
+                  color: "rgba(245,240,232,0.55)",
                   marginBottom: 2,
                 }}
               >

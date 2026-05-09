@@ -132,7 +132,7 @@ export function MarketingConsentCardV2() {
           right: 14,
           fontSize: 12,
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.40)",
+          color: "rgba(245,240,232,0.55)",
         }}
       >
         C3 · Marketing
@@ -170,7 +170,7 @@ export function MarketingConsentCardV2() {
             className="font-serif"
             style={{
               fontSize: 14,
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               marginTop: 2,
             }}
           >

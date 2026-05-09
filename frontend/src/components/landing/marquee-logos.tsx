@@ -91,7 +91,7 @@ export function MarqueeLogos() {
                 key={`${name}-${i}`}
                 className="inline-flex items-center gap-14 font-serif"
                 style={{
-                  color: "rgba(245,240,232,0.36)",
+                  color: "rgba(245,240,232,0.55)",
                   fontSize: "14px",
                   letterSpacing: "0.24em",
                   textTransform: "uppercase",

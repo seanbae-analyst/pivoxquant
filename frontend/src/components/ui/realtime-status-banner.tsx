@@ -87,6 +87,8 @@ export function RealtimeStatusBanner() {
             onClick={() => {
               if (typeof window !== "undefined") window.location.reload();
             }}
+            lang="ko"
+            aria-label="새로고침"
             className="shrink-0 rounded-sm border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.18em] transition-colors hover:bg-white/5"
             style={{
               borderColor: "rgba(209, 136, 136, 0.45)",

@@ -80,7 +80,7 @@ export function Field({
       </span>
       {children}
       {hint ? (
-        <span className="text-[11px] text-[rgba(245,240,232,0.35)]">{hint}</span>
+        <span className="text-[11px] text-[rgba(245,240,232,0.55)]">{hint}</span>
       ) : null}
     </label>
   );

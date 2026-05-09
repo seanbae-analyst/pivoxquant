@@ -46,7 +46,6 @@ import {
   Eye,
   Sparkles,
   CalendarDays,
-  Building2,
   MessageSquare,
 } from "lucide-react";
 
@@ -527,7 +526,12 @@ export default function StockDetailPage() {
       // users switched between detail and list views.
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      dedupingInterval: 2_000,
+      // Performance audit (2026-05-09): bumped from 2_000 to 5_000 — the
+      // 2s window was the outlier among SWR hooks (others use 30s/60s)
+      // and allowed a narrow band of concurrent fetches when two tabs of
+      // the same ticker were open. 5s matches the matching live-tick
+      // refreshInterval below for consistent behaviour during market hours.
+      dedupingInterval: 5_000,
       errorRetryCount: 2,
       errorRetryInterval: 5_000,
     },
@@ -836,7 +840,7 @@ export default function StockDetailPage() {
                 className="inline-block w-6 h-[0.5px] bg-[var(--pq-bronze)] opacity-70"
               />
               <span>Pivoxquant · Equity Dossier</span>
-              <span className="text-[rgba(245,240,232,0.35)]">·</span>
+              <span className="text-[rgba(245,240,232,0.55)]">·</span>
               <span className="text-[rgba(245,240,232,0.55)]">
                 {new Date().toLocaleDateString("en-US", {
                   year: "numeric",
@@ -1459,23 +1463,14 @@ export default function StockDetailPage() {
         </section>
 
         {/* ══════════════════════════════════════════════════
-            Institutional ownership — placeholder (backend endpoint pending)
+            Institutional ownership — section hidden until backend endpoint
+            lands in /api/alt-data (release-prep audit 2026-05-09: surfacing
+            "13F holder breakdown is not yet wired" to every visitor on every
+            stock detail page erodes trust right before launch). Restore the
+            <section> block once the SEC EDGAR holdings feed is wired and the
+            data model is finalised; in the meantime the section simply does
+            not render — design intentionally omits the empty-state.
            ══════════════════════════════════════════════════ */}
-        <section>
-          <div className="mb-5">
-            <SectionHead
-              icon={<Building2 className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
-              eyebrow="Institutional · 13F"
-              title="Institutional ownership"
-            />
-          </div>
-          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
-            <p className="pq-detail-caption">
-              13F holder breakdown is not yet wired. Surface scheduled once the
-              SEC EDGAR holdings feed lands in /api/alt-data.
-            </p>
-          </div>
-        </section>
 
         {/* ══════════════════════════════════════════════════
             Companion CTA — context handoff

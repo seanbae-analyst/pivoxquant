@@ -79,21 +79,28 @@ export function ReflectionForm({ reflection, onSubmitted }: ReflectionFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {reflection.questions.map((question, i) => (
-        <div key={i} className="space-y-2">
-          <label className="block text-sm font-medium text-slate-700">
-            Q{i + 1}. {question}
-          </label>
-          <textarea
-            value={answers[i] ?? ""}
-            onChange={(e) => handleAnswerChange(i, e.target.value)}
-            disabled={alreadyAnswered}
-            rows={2}
-            placeholder="답변을 입력하세요..."
-            className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
-          />
-        </div>
-      ))}
+      {reflection.questions.map((question, i) => {
+        const fieldId = `reflection-q-${i}`;
+        return (
+          <div key={i} className="space-y-2">
+            <label
+              htmlFor={fieldId}
+              className="block text-sm font-medium text-slate-700"
+            >
+              Q{i + 1}. {question}
+            </label>
+            <textarea
+              id={fieldId}
+              value={answers[i] ?? ""}
+              onChange={(e) => handleAnswerChange(i, e.target.value)}
+              disabled={alreadyAnswered}
+              rows={2}
+              placeholder="답변을 입력하세요..."
+              className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+            />
+          </div>
+        );
+      })}
 
       {/* Mood selector */}
       <div className="space-y-2">

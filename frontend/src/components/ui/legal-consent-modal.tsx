@@ -5,13 +5,20 @@
  *
  * Gates first-time access for OAuth users who skipped the signup page's
  * consent checkboxes (e.g. Kakao/Google login directly). Renders a blocking
- * modal until the three required agreements are accepted:
+ * modal until the four required agreements are accepted:
  *
  *   1. Terms of service + privacy policy (generic)
  *   2. Non-advisory disclosure (자본시장법)
  *   3. Age confirmation — 14+ (PIPA §22)
+ *   4. Cross-border data transfer consent (PIPA §28-8, 2024-09 시행) —
+ *      Anthropic/Stripe/Vercel/Railway US 이전 동의
  *
  * Optional marketing consent is offered but not required.
+ *
+ * H3 fix (2026-05-09 release-prep audit): cross_border was missing from
+ * the OAuth-direct-entry path even though the /signup page collected it.
+ * Users entering via Kakao/Google directly bypassed the §28-8 obligation
+ * — added here so every entry path captures all four required consents.
  *
  * Persists the consent snapshot to localStorage under `pivox_signup_consents`.
  * The caller component reads that key on mount; if present, this modal
@@ -28,6 +35,7 @@ interface Consents {
   terms: boolean;
   non_advisory: boolean;
   age: boolean;
+  cross_border: boolean;
   marketing: boolean;
 }
 
@@ -37,7 +45,9 @@ export function hasLocalConsent(): boolean {
     const raw = window.localStorage.getItem(CONSENT_STORAGE_KEY);
     if (!raw) return false;
     const parsed = JSON.parse(raw) as Partial<Consents>;
-    return Boolean(parsed.terms && parsed.non_advisory && parsed.age);
+    return Boolean(
+      parsed.terms && parsed.non_advisory && parsed.age && parsed.cross_border,
+    );
   } catch {
     return false;
   }
@@ -92,10 +102,15 @@ export function LegalConsentModal({
     terms: false,
     non_advisory: false,
     age: false,
+    cross_border: false,
     marketing: false,
   });
 
-  const allRequired = consents.terms && consents.non_advisory && consents.age;
+  const allRequired =
+    consents.terms &&
+    consents.non_advisory &&
+    consents.age &&
+    consents.cross_border;
 
   useEffect(() => {
     // Prevent backdrop close — this modal is legally blocking.
@@ -242,7 +257,27 @@ export function LegalConsentModal({
             </span>
           </label>
 
-          {/* 4. 마케팅 (선택) */}
+          {/* 4. 국외 이전 동의 (PIPA §28-8) */}
+          <label
+            htmlFor="consent_cross_border"
+            className="flex cursor-pointer items-start gap-2"
+          >
+            <Checkbox
+              id="consent_cross_border"
+              checked={consents.cross_border}
+              onChange={setConsent("cross_border")}
+            />
+            <span
+              className="text-xs leading-relaxed"
+              style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
+            >
+              <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> 개인정보의
+              국외 이전(미국 — Anthropic, Stripe, Vercel, Railway)에
+              동의합니다. (개인정보보호법 §28-8)
+            </span>
+          </label>
+
+          {/* 5. 마케팅 (선택) */}
           <label
             htmlFor="consent_marketing"
             className="flex cursor-pointer items-start gap-2"

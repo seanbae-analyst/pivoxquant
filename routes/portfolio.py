@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from flask import Blueprint, current_app, request, jsonify, make_response
 from flask_login import current_user
+from sqlalchemy.exc import IntegrityError
 
 from extensions import db
 from models import Position, SignalCache, TradeHistory
@@ -235,18 +236,31 @@ def add_position():
         return jsonify({"error": "Shares and average cost required"}), 400
     is_kr = ticker.endswith(".KS") or ticker.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
+    # NEW-D (2026-05-09): two-phase race-safe upsert.
+    # Phase 1 (cheap path): SELECT + merge if row exists, else INSERT new.
+    # Phase 2 (race recovery): if a concurrent request inserted between our
+    # SELECT and INSERT, the new uq_positions_user_ticker constraint will
+    # raise IntegrityError on commit. We rollback, re-fetch, and retry the
+    # merge path — making concurrent add_position calls idempotent (the
+    # second one folds into the first).
+    def _merge_into(ex_row):
+        total = ex_row.shares * ex_row.avg_cost + shares * cost
+        if not is_kr and ex_row.buy_fx_rate and fx_rate:
+            ex_row.buy_fx_rate = (
+                ex_row.buy_fx_rate * ex_row.shares * ex_row.avg_cost
+                + fx_rate * shares * cost
+            ) / total
+        ex_row.shares += shares
+        ex_row.avg_cost = total / ex_row.shares
+        if thesis and not ex_row.thesis:
+            ex_row.thesis = thesis
+            ex_row.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            ex_row.thesis_status = "pending"
+
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=ticker).first()
         if ex:
-            total = ex.shares * ex.avg_cost + shares * cost
-            if not is_kr and ex.buy_fx_rate and fx_rate:
-                ex.buy_fx_rate = (ex.buy_fx_rate * ex.shares * ex.avg_cost + fx_rate * shares * cost) / total
-            ex.shares += shares
-            ex.avg_cost = total / ex.shares
-            if thesis and not ex.thesis:
-                ex.thesis = thesis
-                ex.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
-                ex.thesis_status = "pending"
+            _merge_into(ex)
         else:
             db.session.add(Position(
                 user_id=current_user.id, ticker=ticker,
@@ -256,6 +270,29 @@ def add_position():
                 thesis_status="pending" if thesis else "pending",
             ))
         db.session.commit()
+    except IntegrityError:
+        # Concurrent insert collided on uq_positions_user_ticker — recover
+        # by re-fetching the now-committed row and merging into it.
+        db.session.rollback()
+        logger.info("add_position race recovery for user=%s ticker=%s",
+                    current_user.id, ticker)
+        try:
+            ex = Position.query.filter_by(
+                user_id=current_user.id, ticker=ticker,
+            ).first()
+            if ex is None:
+                # Extremely unlikely: constraint hit but row vanished. Surface
+                # a 409 so the client can retry rather than masking as 500.
+                return jsonify({
+                    "error": "Position add raced; please retry.",
+                    "code": "POSITION_RACE",
+                }), 409
+            _merge_into(ex)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            logger.exception("add_position race recovery failed")
+            return jsonify({"error": "Failed to save position"}), 500
     except Exception:
         db.session.rollback()
         logger.exception("add_position DB commit failed")
@@ -425,11 +462,15 @@ def buy_new_position():
         sym = "₩" if is_kr else "$"
         return jsonify({"error": f"Insufficient capital (need {sym}{cost:,.0f}, have {sym}{cap:,.0f})"}), 400
 
+    # NEW-D (2026-05-09): race-safe upsert against uq_positions_user_ticker.
+    def _merge_buy_new(ex_row):
+        total = ex_row.shares * ex_row.avg_cost + shares * price
+        ex_row.shares += shares
+        ex_row.avg_cost = total / ex_row.shares
+
     p = Position.query.filter_by(ticker=ticker, user_id=current_user.id).first()
     if p:
-        total = p.shares * p.avg_cost + shares * price
-        p.shares += shares
-        p.avg_cost = total / p.shares
+        _merge_buy_new(p)
     else:
         p = Position(user_id=current_user.id, ticker=ticker, shares=shares, avg_cost=price)
         db.session.add(p)
@@ -447,7 +488,40 @@ def buy_new_position():
         action="BUY", shares=shares, price_per_share=round(price, 2),
         total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
     ))
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Concurrent add_position / create_position_alias / buy_new_position
+        # raced ahead. Roll back, re-fetch, and merge into the surviving row
+        # so capital + trade history still apply correctly.
+        db.session.rollback()
+        logger.info("buy_new_position race recovery user=%s ticker=%s",
+                    current_user.id, ticker)
+        try:
+            ex = Position.query.filter_by(
+                user_id=current_user.id, ticker=ticker,
+            ).first()
+            if ex is None:
+                return jsonify({
+                    "error": "Buy raced; please retry.",
+                    "code": "POSITION_RACE",
+                }), 409
+            _merge_buy_new(ex)
+            if is_kr:
+                current_user.available_capital_krw = (cap - cost)
+            else:
+                current_user.available_capital = (cap - cost)
+            db.session.add(TradeHistory(
+                user_id=current_user.id, ticker=ticker, name=name,
+                action="BUY", shares=shares, price_per_share=round(price, 2),
+                total_value=round(cost, 2), pnl=0, pnl_pct=0, currency=currency,
+            ))
+            db.session.commit()
+            p = ex
+        except Exception:
+            db.session.rollback()
+            logger.exception("buy_new_position race recovery failed")
+            return jsonify({"error": "Failed to record trade"}), 500
     return jsonify({
         "ok": True,
         "new_shares": round(p.shares, 4),
@@ -850,21 +924,27 @@ def create_position_alias():
     note = (d.get("note") or d.get("notes") or d.get("thesis") or "").strip()[:500] or None
     is_kr = symbol.endswith(".KS") or symbol.endswith(".KQ")
     fx_rate = fx_service.get_rate() if not is_kr else 0.0
+
+    # NEW-D (2026-05-09): mirror add_position race-safe upsert. See the
+    # uq_positions_user_ticker rationale on Position.__table_args__.
+    def _merge_into_alias(ex_row):
+        total = ex_row.shares * ex_row.avg_cost + quantity * price
+        if not is_kr and ex_row.buy_fx_rate and fx_rate:
+            ex_row.buy_fx_rate = (
+                ex_row.buy_fx_rate * ex_row.shares * ex_row.avg_cost
+                + fx_rate * quantity * price
+            ) / total
+        ex_row.shares += quantity
+        ex_row.avg_cost = total / ex_row.shares
+        if note and not ex_row.thesis:
+            ex_row.thesis = note
+            ex_row.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
+            ex_row.thesis_status = "pending"
+
     try:
         ex = Position.query.filter_by(user_id=current_user.id, ticker=symbol).first()
         if ex:
-            total = ex.shares * ex.avg_cost + quantity * price
-            if not is_kr and ex.buy_fx_rate and fx_rate:
-                ex.buy_fx_rate = (
-                    ex.buy_fx_rate * ex.shares * ex.avg_cost
-                    + fx_rate * quantity * price
-                ) / total
-            ex.shares += quantity
-            ex.avg_cost = total / ex.shares
-            if note and not ex.thesis:
-                ex.thesis = note
-                ex.thesis_created_at = datetime.now(timezone.utc).replace(tzinfo=None)
-                ex.thesis_status = "pending"
+            _merge_into_alias(ex)
             new_pos = ex
         else:
             new_pos = Position(
@@ -876,6 +956,26 @@ def create_position_alias():
             )
             db.session.add(new_pos)
         db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        logger.info("create_position_alias race recovery user=%s ticker=%s",
+                    current_user.id, symbol)
+        try:
+            ex = Position.query.filter_by(
+                user_id=current_user.id, ticker=symbol,
+            ).first()
+            if ex is None:
+                return jsonify({
+                    "error": "Position add raced; please retry.",
+                    "code": "POSITION_RACE",
+                }), 409
+            _merge_into_alias(ex)
+            db.session.commit()
+            new_pos = ex
+        except Exception:
+            db.session.rollback()
+            logger.exception("create_position_alias race recovery failed")
+            return jsonify({"error": "Failed to save position"}), 500
     except Exception:
         db.session.rollback()
         logger.exception("create_position_alias commit failed")

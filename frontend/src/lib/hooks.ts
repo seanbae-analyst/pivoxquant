@@ -75,16 +75,25 @@ export function useWatchlist() {
     dedupingInterval: 2_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
-    // P1 (wave1-critical): empty-list default so iterating consumers
-    // don't NPE on `.map` during the first paint.
-    fallbackData: { watchlist: [] },
+    // Bug #6 (Wave 1, fix 2026-05-09): `fallbackData: { watchlist: [] }`
+    // forced SWR's `isLoading` to false on first paint because `data` was
+    // already defined. Consumers had `isLoading` branches that never
+    // fired — every page hit the empty-list UI for one frame, then
+    // swapped in the real data. NPE protection is preserved at every
+    // call site via `data?.watchlist ?? []` (verified across 5 consumers:
+    // signals/_v2, watchlist, discover, detail/[ticker], ai, home/_v1).
   });
 }
 
 /* ── Alerts ── */
 
 export function useAlerts() {
-  return useSWR<AlertsResponse>(API.alerts.list, fetcher, {
+  // Bug #2 fix (2026-05-09 deep bug hunt): backend defaults to limit=20
+  // (max 50). The /alerts page Total/Unread/Today/Week stats are computed
+  // from `data.alerts.length` — a user with >20 alerts saw "Total: 20"
+  // and was misled. Request the max (50) so the strip is accurate for the
+  // typical user. Pagination/load-more is a separate enhancement.
+  return useSWR<AlertsResponse>(`${API.alerts.list}?limit=50`, fetcher, {
     refreshInterval: () => liveRefresh(10_000, 60_000),
     // Bug #3 (HANDOVER v22): the alerts bell was one of the three explicit
     // duplicate-fetch culprits flagged on page nav. `refreshInterval`
