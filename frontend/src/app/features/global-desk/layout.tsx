@@ -11,12 +11,12 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Global Desk — PivoxQuant",
   description:
-    "한국과 미국 시장을 한 데스크에서. KIS + Alpaca + FMP 통합 시세, 환율, 매크로 관찰. 정보 제공 목적.",
+    "한국과 미국 시장을 한 데스크에서. 글로벌 시세 통합 피드, 환율, 매크로 관찰. 정보 제공 목적.",
   alternates: { canonical: "/features/global-desk" },
   openGraph: {
     title: "Global Desk — PivoxQuant",
     description:
-      "한국과 미국 시장을 한 데스크에서. KIS + Alpaca + FMP 통합 시세, 환율, 매크로 관찰. 정보 제공 목적.",
+      "한국과 미국 시장을 한 데스크에서. 글로벌 시세 통합 피드, 환율, 매크로 관찰. 정보 제공 목적.",
     url: "/features/global-desk",
     type: "website",
   },
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Global Desk — PivoxQuant",
     description:
-      "한국과 미국 시장을 한 데스크에서. KIS + Alpaca + FMP 통합 시세, 환율, 매크로 관찰. 정보 제공 목적.",
+      "한국과 미국 시장을 한 데스크에서. 글로벌 시세 통합 피드, 환율, 매크로 관찰. 정보 제공 목적.",
   },
 };
 

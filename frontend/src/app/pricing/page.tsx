@@ -163,7 +163,7 @@ const TIERS: Tier[] = [
       "2 broker connections",
       "Risk Board — 7-layer observation",
     ],
-    cta: "Start 7-day trial",
+    cta: "Notify me at launch",
     dark: true,
     recommended: true,
   },
@@ -180,7 +180,7 @@ const TIERS: Tier[] = [
       "Priority render queue",
       "Unlimited broker connections",
     ],
-    cta: "Start 7-day trial",
+    cta: "Notify me at launch",
     dark: false,
     recommended: false,
   },
@@ -673,21 +673,6 @@ export default function PricingPage() {
                       : "none",
                   }}
                 >
-                  {p.recommended && (
-                    <span
-                      className="absolute -top-2.5 left-8 px-2.5 py-[3px] font-serif text-[12px] uppercase"
-                      style={{
-                        backgroundColor: "#050505",
-                        color: "var(--pq-bronze)",
-                        letterSpacing: "0.3em",
-                        border: "1px solid var(--pq-bronze)",
-                        borderRadius: "2px",
-                      }}
-                    >
-                      Most chosen
-                    </span>
-                  )}
-
                   {/* Tier name + bronze hairline */}
                   <div className="mb-6 flex items-center gap-3">
                     <span
