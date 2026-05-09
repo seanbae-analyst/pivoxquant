@@ -18,6 +18,31 @@ def _resolve_display_name(ticker: str) -> str | None:
 
 
 def serialize_user(u) -> dict:
+    # Resolve tier once. ``effective_tier`` is the property that applies the
+    # DEV_FOUNDING_EMAILS / DEV_PREMIUM_EMAILS env-var overrides (see
+    # models/user.py) and otherwise returns the stored ``subscription_tier``
+    # column. The DB ``subscription_status`` column only flips to "active"
+    # via Stripe webhooks (routes/billing.py), so an env-override user shows
+    # up here with tier="founding_lifetime" / "premium" but status="inactive"
+    # — which the frontend (ui/profile-dropdown.tsx) treats as a downgrade
+    # back to FREE. Surface the env-derived entitlement explicitly:
+    #   * ``effective_tier``    — same value as ``subscription_tier`` for
+    #                             back-compat with existing consumers.
+    #   * ``effective_status``  — "active" when the env override grants a
+    #                             paid tier, else the raw DB status. The
+    #                             frontend can read whichever it prefers;
+    #                             ``subscription_status`` keeps its raw
+    #                             column meaning.
+    raw_tier = getattr(u, "subscription_tier", "free") or "free"
+    eff_tier = getattr(u, "effective_tier", None) or raw_tier
+    raw_status = getattr(u, "subscription_status", "inactive") or "inactive"
+    # An env-override grant promoted ``raw_tier`` to ``eff_tier``. Treat the
+    # entitlement as active so downstream gates don't fall back to FREE.
+    promoted_by_env = (eff_tier != raw_tier) and eff_tier in (
+        "pro", "premium", "premium_plus", "founding_lifetime",
+    )
+    eff_status = "active" if promoted_by_env else raw_status
+
     return {
         "id": u.id,
         "email": u.email,
@@ -26,10 +51,19 @@ def serialize_user(u) -> dict:
         "available_capital_krw": getattr(u, "available_capital_krw", 0.0) or 0.0,
         "risk_profile": getattr(u, "risk_profile", "balanced"),
         "profile_changes_left": getattr(u, "profile_changes_left", 3),
-        # effective_tier applies the DEV_PREMIUM_EMAILS override; falls back
-        # to the stored column for users not in the allowlist.
-        "subscription_tier": getattr(u, "effective_tier", None) or getattr(u, "subscription_tier", "free"),
-        "subscription_status": getattr(u, "subscription_status", "inactive") or "inactive",
+        # ``subscription_tier`` continues to expose ``effective_tier`` so
+        # existing tier-gate logic (frontend/src/components/ui/tier-gate.tsx)
+        # keeps working with no client change.
+        "subscription_tier": eff_tier,
+        # New, additive field — explicit alias of the same value. Lets the
+        # frontend pick whichever name it prefers without ambiguity.
+        "effective_tier": eff_tier,
+        # ``subscription_status`` here is the *effective* status: env-override
+        # users now report "active" instead of the stored "inactive". Raw DB
+        # value remains accessible via ``raw_subscription_status`` below for
+        # callers that need it (e.g. billing reconciliation).
+        "subscription_status": eff_status,
+        "raw_subscription_status": raw_status,
         "onboarding_completed": getattr(u, "onboarding_completed", False),
         "avatar_url": getattr(u, "avatar_url", None),
         "oauth_provider": getattr(u, "oauth_provider", None),

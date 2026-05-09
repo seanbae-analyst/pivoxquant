@@ -15,7 +15,21 @@ import { useAuth } from "@/lib/auth";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/utils";
 
-type Tier = "Free" | "Pro" | "Premium";
+type Tier = "Free" | "Pro" | "Premium" | "Founding";
+
+// Mirror tier-gate.tsx::TIER_LEVEL — surface raw subscription_tier values
+// from /api/auth/me (founding_lifetime / premium_plus) as their canonical
+// chip label rather than collapsing everything unknown to "Free".
+const TIER_LABELS: Record<string, Tier> = {
+  free: "Free",
+  Free: "Free",
+  pro: "Pro",
+  Pro: "Pro",
+  premium: "Premium",
+  Premium: "Premium",
+  premium_plus: "Premium",
+  founding_lifetime: "Founding",
+};
 
 function initials(name?: string, email?: string): string {
   if (name) {
@@ -38,12 +52,13 @@ export function ProfileDropdown() {
   const ref = useRef<HTMLDivElement | null>(null);
 
   // Bug #12 (wave 3b): use the real subscription_tier from /api/auth/me
-  // instead of the placeholder "Free". The DB value can already be
-  // "Free" | "Pro" | "Premium" via dev-premium gating; Stripe billing
-  // wiring is unrelated to surfacing the current value.
+  // instead of the placeholder "Free". The DB value can be free/pro/premium
+  // (Stripe webhooks) or founding_lifetime/premium_plus (DEV_FOUNDING_EMAILS
+  // / DEV_PREMIUM_EMAILS env-var overrides via services/serializers.py).
+  // P1 fix: founding_lifetime users used to fall through the strict equality
+  // check and render as "Free" — surface the canonical label instead.
   const tierRaw = user?.subscription_tier;
-  const tier: Tier =
-    tierRaw === "Pro" || tierRaw === "Premium" ? tierRaw : "Free";
+  const tier: Tier = (tierRaw && TIER_LABELS[tierRaw]) || "Free";
 
   const displayName = user?.name || "Guest";
   const displayEmail = user?.email || "—";
