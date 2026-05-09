@@ -30,8 +30,11 @@ class RealtimeService:
         self._cache_ttl = 5     # seconds
 
         # KIS WebSocket (lazy init on first KR request)
+        # SSE-2 fix (2026-05-09): TTL'd cooldown so a transient KIS gateway
+        # outage does not permanently demote to REST polling.
         self._kis_ws = None
-        self._kis_ws_attempted = False
+        self._kis_ws_attempted_at = None  # monotonic timestamp; Optional[float]
+        self._KIS_WS_RETRY_AFTER = 300.0  # 5 min cooldown
         self._kis_ws_lock = threading.Lock()
 
         # Init Alpaca (gated by ALPACA_ENABLED kill switch — default OFF).
@@ -286,13 +289,18 @@ class RealtimeService:
         """
         if not self.kis_available:
             return None
+        import time as _time
         with self._kis_ws_lock:
             if self._kis_ws is not None:
                 return self._kis_ws
-            if self._kis_ws_attempted:
-                # already tried and failed; don't spam re-attempts
-                return None
-            self._kis_ws_attempted = True
+            if self._kis_ws_attempted_at is not None:
+                elapsed = _time.monotonic() - self._kis_ws_attempted_at
+                if elapsed < self._KIS_WS_RETRY_AFTER:
+                    return None
+                logger.info(
+                    "KIS WS cooldown elapsed (%.0fs) - retrying init", elapsed
+                )
+            self._kis_ws_attempted_at = _time.monotonic()
             try:
                 from services.kis.websocket_service import KISWebSocketService
                 svc = KISWebSocketService(on_price=self._on_ws_tick)
