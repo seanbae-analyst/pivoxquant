@@ -153,13 +153,34 @@ def _resolve_persona(user: Any) -> str:
     """Map the user's InvestmentProfile into one of 8 persona codes.
 
     Falls back to "balanced" when no profile exists (new users, pre-onboarding).
-    """
-    profile = InvestmentProfile.query.filter_by(user_id=user.id).first()
-    if profile is None:
-        return "balanced"
 
-    # `profile_type` is the canonical persona code in models/investment_profile.py
-    code = (profile.profile_type or "balanced").lower().strip()
+    BUG-2 fix (2026-05-09 release-prep audit): the V2 onboarding
+    questionnaire writes profile.profile_type values like
+    ``"passive_index_hugger"``, ``"steady_accumulator"``,
+    ``"momentum_rider"``, ``"risk_managed_growth"`` — codes that are NOT
+    in VALID_PERSONAS (the canonical 8: growth/value/balanced/income/
+    quant/speculator/daytrader/beginner). The previous direct lookup
+    silently fell every V2-onboarded user back to "balanced", which is
+    effectively the entire active user base post-V2 launch. Companion
+    received a "balanced" persona overlay regardless of the user's
+    declared identity, neutering persona-aware coaching.
+
+    Fix: delegate to ``services.profile.persona_analytics._resolve_declared``
+    which already implements the V2 → canonical mapping via
+    ``DECLARED_TO_PERSONA`` (e.g. ``passive_index_hugger`` → ``income``,
+    ``aggressive_scalper`` → ``daytrader``, etc.) and validates against
+    ``PERSONA_CODES`` (== VALID_PERSONAS by construction).
+
+    The ``user.id`` lookup is preserved here so callers continue to
+    receive the canonical 8-persona vocabulary that VALID_PERSONAS pins.
+    """
+    from services.profile.persona_analytics import _resolve_declared
+
+    profile = InvestmentProfile.query.filter_by(user_id=user.id).first()
+    code = _resolve_declared(profile)
+    # Defense-in-depth: even if persona_analytics emits a code outside
+    # VALID_PERSONAS in a future change, we collapse to "balanced" here
+    # so downstream persona overlays never see an unknown code.
     return code if code in VALID_PERSONAS else "balanced"
 
 
