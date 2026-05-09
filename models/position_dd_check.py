@@ -20,9 +20,9 @@ class PositionDDCheck(db.Model):
     __tablename__ = "position_dd_checks"
 
     id           = db.Column(db.Integer, primary_key=True)
-    user_id      = db.Column(db.Integer, db.ForeignKey("users.id"),
+    user_id      = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"),
                              nullable=False, index=True)
-    position_id  = db.Column(db.Integer, db.ForeignKey("positions.id"),
+    position_id  = db.Column(db.Integer, db.ForeignKey("positions.id", ondelete="CASCADE"),
                              nullable=False, unique=True, index=True)
 
     # Five Y/N answers. Default False — unchecked until the user confirms.
