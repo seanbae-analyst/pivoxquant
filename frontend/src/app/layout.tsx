@@ -157,10 +157,16 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  // P0 fix (2026-05-09 release-prep audit): icon URLs previously pointed at
+  // /icons/icon-32.png and /icons/icon-192.png — neither file existed in
+  // public/icons/ so every browser tab fetched a 404 for the favicon. The
+  // actual files on disk are favicon-48x48.png + icon-192x192.png; aligned
+  // the metadata to the real filenames.
   icons: {
     icon: [
-      { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180" },
   },
