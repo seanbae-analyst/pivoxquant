@@ -229,7 +229,7 @@ function ArtifactRow({ row }: { row: QueueRow }) {
       : state?.kind === "ready"
         ? "var(--pq-bronze)"
         : state?.kind === "locked"
-          ? "rgba(245,240,232,0.35)"
+          ? "rgba(245,240,232,0.55)"
           : "rgba(245,240,232,0.45)";
 
   return (

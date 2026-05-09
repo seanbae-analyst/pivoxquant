@@ -218,7 +218,7 @@ export function PositionsTableV2({
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           {rows.length} {rows.length === 1 ? "row" : "rows"}
@@ -308,7 +308,7 @@ export function PositionsTableV2({
                       color:
                         sortKey === h.key
                           ? "var(--pq-bronze)"
-                          : "rgba(245,240,232,0.40)",
+                          : "rgba(245,240,232,0.55)",
                       padding: "14px 12px",
                       textAlign: h.align,
                       borderBottom:
@@ -424,7 +424,7 @@ function PositionRow({
           style={{
             fontSize: 12,
             letterSpacing: "0.18em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
             marginTop: 3,
           }}
         >

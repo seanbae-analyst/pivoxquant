@@ -149,7 +149,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                     }}
                   >
                     {titlesPreview || (
-                      <span style={{ color: "rgba(245,240,232,0.35)" }}>
+                      <span style={{ color: "rgba(245,240,232,0.55)" }}>
                         — no artifacts —
                       </span>
                     )}

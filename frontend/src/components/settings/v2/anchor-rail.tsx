@@ -98,7 +98,7 @@ export function AnchorRail() {
               style={{
                 color: isActive
                   ? "var(--pq-bronze)"
-                  : "rgba(245,240,232,0.40)",
+                  : "rgba(245,240,232,0.55)",
                 marginRight: 8,
               }}
             >

@@ -85,7 +85,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           className="font-serif"
           style={{
             fontSize: 14,
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
             padding: "48px 0",
             textAlign: "center",
           }}

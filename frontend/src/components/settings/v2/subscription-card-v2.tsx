@@ -201,7 +201,7 @@ export function SubscriptionCardV2({
                   letterSpacing: "0.22em",
                   color: isCurrent
                     ? "var(--pq-bronze)"
-                    : "rgba(245,240,232,0.40)",
+                    : "rgba(245,240,232,0.55)",
                 }}
               >
                 {isCurrent ? "Current · " : ""}
@@ -360,7 +360,7 @@ export function SubscriptionCardV2({
             right: 14,
             fontSize: 12,
             letterSpacing: "0.2em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           D1 · Receipt

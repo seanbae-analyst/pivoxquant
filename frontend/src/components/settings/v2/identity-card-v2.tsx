@@ -35,7 +35,7 @@ const ROW_LABEL_STYLE: React.CSSProperties = {
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
   fontSize: 14,
-  color: "rgba(245,240,232,0.40)",
+  color: "rgba(245,240,232,0.55)",
   marginTop: 2,
 };
 const ROW_VALUE_STYLE: React.CSSProperties = {
@@ -69,7 +69,7 @@ export function SettingsIdentityCardV2({
           right: 14,
           fontSize: 12,
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.40)",
+          color: "rgba(245,240,232,0.55)",
         }}
       >
         A1 · Identity

@@ -136,7 +136,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                     style={{
                       fontSize: 12,
                       letterSpacing: "0.18em",
-                      color: "rgba(245,240,232,0.40)",
+                      color: "rgba(245,240,232,0.55)",
                       marginTop: 2,
                     }}
                   >
@@ -182,7 +182,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           {more > 0 ? `${more} more · ${total} total` : `${total} total`}

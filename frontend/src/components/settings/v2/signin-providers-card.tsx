@@ -40,7 +40,7 @@ const ROW_LABEL_STYLE: React.CSSProperties = {
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
   fontSize: 14,
-  color: "rgba(245,240,232,0.40)",
+  color: "rgba(245,240,232,0.55)",
   marginTop: 2,
 };
 
@@ -58,7 +58,7 @@ const PILL_LINKED: React.CSSProperties = {
 const PILL_DIM: React.CSSProperties = {
   ...PILL_LINKED,
   border: "1px solid rgba(245,240,232,0.14)",
-  color: "rgba(245,240,232,0.40)",
+  color: "rgba(245,240,232,0.55)",
 };
 
 function ProviderRow({
@@ -177,7 +177,7 @@ export function SignInProvidersCard({
           right: 14,
           fontSize: 12,
           letterSpacing: "0.2em",
-          color: "rgba(245,240,232,0.40)",
+          color: "rgba(245,240,232,0.55)",
         }}
       >
         A2 · Sign-in
@@ -236,7 +236,7 @@ export function SignInProvidersCard({
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           N/A
@@ -248,7 +248,7 @@ export function SignInProvidersCard({
         style={{
           fontSize: 14,
           lineHeight: 1.55,
-          color: "rgba(245,240,232,0.40)",
+          color: "rgba(245,240,232,0.55)",
           marginTop: 12,
         }}
       >

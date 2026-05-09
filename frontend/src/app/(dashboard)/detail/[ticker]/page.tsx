@@ -835,7 +835,7 @@ export default function StockDetailPage() {
                 className="inline-block w-6 h-[0.5px] bg-[var(--pq-bronze)] opacity-70"
               />
               <span>Pivoxquant · Equity Dossier</span>
-              <span className="text-[rgba(245,240,232,0.35)]">·</span>
+              <span className="text-[rgba(245,240,232,0.55)]">·</span>
               <span className="text-[rgba(245,240,232,0.55)]">
                 {new Date().toLocaleDateString("en-US", {
                   year: "numeric",

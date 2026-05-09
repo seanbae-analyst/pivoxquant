@@ -227,7 +227,7 @@ export default function SignupPageV2() {
 
   const optionalTagStyle: React.CSSProperties = {
     ...requiredTagStyle,
-    color: "rgba(245,240,232,0.40)",
+    color: "rgba(245,240,232,0.55)",
   };
 
   return (
@@ -499,7 +499,7 @@ export default function SignupPageV2() {
               marginTop: 6,
               fontSize: 12,
               letterSpacing: "0.20em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               textAlign: "center",
               textTransform: "uppercase",
             }}
