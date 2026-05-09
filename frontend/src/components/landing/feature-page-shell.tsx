@@ -227,7 +227,7 @@ export default function FeaturePageShell({
               marginBottom: 32,
             }}
           >
-            Seven days free. Cancel anytime. Visa · Master · Naver Pay · Kakao Pay.
+            Cancel anytime. Visa · Master · Naver Pay · Kakao Pay.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4">
             <Link
