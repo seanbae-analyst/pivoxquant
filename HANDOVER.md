@@ -1,8 +1,17 @@
-# PivoxQuant — 인수인계서 (2026-05-09 v27 세션 — 출시 모드 마무리 · 5 PR + 인프라 fix · OPEN PR 0건)
+# PivoxQuant — 인수인계서 (2026-05-09 v27 세션 — 출시 모드 마무리 · 6 PR + 인프라 fix · OPEN PR 0건)
 
-## 🟢 2026-05-09 v27 세션 — **5 PR squash-merged + Vercel V2 flag 9개 fix + 1 cleanup** · main `d634827 → 6f1e6cf` · OPEN PR 0건 · 풀 회귀 1662 passed
+## 🟢 2026-05-09 v27 세션 — **6 PR squash-merged + Vercel V2 flag 9개 fix + 1 cleanup** · main `d634827 → 8fbcee2` · OPEN PR 0건 · 풀 회귀 1662 passed · 라이브 검증 1차 완료
 
-**현재 main HEAD: `6f1e6cf`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
+**현재 main HEAD: `8fbcee2`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
+
+### 🚨 v27 P0 critical 발견 + 라이브 fix (Browser MCP 직접 검증)
+사장님이 "랜딩페이지 이상한데 수정해봐" 보고 — Browser MCP `read_page` + screenshot으로 production 직접 확인 결과 **personas section H2 "A CFO that speaks your investor language."가 거대한 아이보리 박스로 깨져서 invisible** 상태. Hero 자체는 정상이지만 그 아래 섹션부터 H2가 모두 깨짐.
+
+**Root cause**: PR #140 (commit `4bca677`, 2026-05-07) 이 `.pq-silver-matte` / `.pivox-silver-matte` 클래스를 §1.2 gradient ban에 맞춰 tokenize했는데, `background: linear-gradient(...)` + `background-clip: text` + `color: transparent` 패턴을 `background: var(--pq-ivory)` 솔리드 + `background-clip: unset` + `color: var(--pq-ivory)` 로 바꿈. 결과: element 박스 전체에 ivory 배경 + 텍스트도 ivory = **ivory 박스 위에 ivory 텍스트 = 텍스트 invisible**. PR #140 본문 자체에 *"W3 landing pages using .pq-silver-matte will render solid ivory text now; visual QA pending"* 명시 — visual QA 누락.
+
+**왜 v27에서 처음 가시화**: v26까지 production이 V1 fallback이었음 (Vercel env V2 flag 9개 모두 빈 문자열). v27에서 V2 flag fix → V2 layout 처음 production 노출 → silver-matte 사용 12+ 페이지 컴포넌트 (`personas-preview` / `persona-showcase` / `three-layers` / `korea-us-desk` / `reports-gallery` / `landing-v2` ×2 / `living-cfo-loop` / `deposition-teaser` / `feature-page-shell` / `splash-page`) 모두 broken으로 노출.
+
+**Fix**: PR #185 (`8fbcee2`) — 두 클래스 모두 `background` property 자체 제거. text color만 ivory 유지. drop-shadow 보존. Vercel auto-deploy 후 Browser MCP 재검증 — personas / 17 artifacts / pricing / FAQ / CTA 5개 H2 섹션 모두 정상 표시 확인.
 
 ### v27 critical 발견 → fix
 **Vercel production env에서 9개 `NEXT_PUBLIC_*_V2` flag가 모두 빈 문자열로 설정돼 있었음** (11일 전 환경 변수 추가 시 value 누락). 이 때문에 v26 26 PR fix 들 (PR #157 TIER_LEVEL / PR #143 profile real metrics / PR #167 LegalConsentModal cross_border / PR #168 a11y combobox / PR #169 WCAG AA contrast / PR #170 SSE refresh) 이 모두 V2 코드에 들어갔지만 **production은 V1 fallback 사용 중**이었음. 사장님이 "v26 26 PR fix 다 들어갔다"고 알았지만 실제로는 production 효과 0였던 critical 회귀.
@@ -17,8 +26,9 @@
 | 3 | cleanup commit (`fd6cf99`) | `MORNING_REPORT_2026-05-09.md` → `docs/archive/sessions/`, `.bug-hunt/` `.gitignore` (transient artifact) |
 | 4 | PR **#182** (Stripe webhook idempotency — `processed_stripe_events` 테이블) admin merge | `5886fe0` — alembic 028, `UNIQUE(event_id)` + status enum + 200-char error clamp. handler fast-path `already_processed()` → ACK `{"deduped": true}` / 처리 후 record (success/error 모두) / `IntegrityError` race recovery / 5xx never. 6 신규 회귀 테스트 |
 | 5 | **Vercel V2 flag 9개 production env fix** (`63457dc` empty commit redeploy trigger) | NEXT_PUBLIC_HOME_V2 / PORTFOLIO_V2 / RISK_V2 / SIGNALS_V2 / REPORTS_V2 / LOGIN_V2 / SIGNUP_V2 / PROFILE_V2 / SETTINGS_V2 모두 `""` → `"true"`. v26 26 PR V2 fix 들이 production에 활성화됨 |
-| 6 | PR **#183** (W6-2 — backend `/api/signals` filter contract) admin merge | `15098dd` — frontend `useSignals(filters)` 와 1:1 wire contract (labels / strength_min / strength_max / symbol / window). `_label_of` / `_strength_of` / `_within_window` 헬퍼가 JS 헬퍼 동작 mirror. SWR cache key 분산 해소 — 같은 effective query는 단일 backend hit으로 collapse. 11 신규 회귀 테스트 (label / strength / symbol / window / 잘못된 값 / placeholder 핸들링) |
-| 7 | PR **#184** (profile export PIPA §35 ④ — live consent state) admin merge | `6f1e6cf` — `current_user` LocalProxy + SQLAlchemy identity map stale snapshot 문제. 1-click unsubscribe (email_preferences) 후 export 호출 시 stale 값 반환 → PIPA §35 ④ 위반. `db.session.refresh(current_user._get_current_object())` + `expire()` 폴백 추가. 6/6 test_profile_export PASS (이전 main pre-existing fail 1건 RESOLVED) |
+| 6 | PR **#183** (W6-2 — backend `/api/signals` filter contract) admin merge | `15098dd` — frontend `useSignals(filters)` 와 1:1 wire contract (labels / strength_min / strength_max / symbol / window). `_label_of` / `_strength_of` / `_within_window` 헬퍼가 JS 헬퍼 동작 mirror. SWR cache key 분산 해소. 11 신규 회귀 테스트 |
+| 7 | PR **#184** (profile export PIPA §35 ④ — live consent state) admin merge | `6f1e6cf` — `current_user` LocalProxy + SQLAlchemy identity map stale snapshot 문제. `db.session.refresh()` + `expire()` 폴백. 6/6 test_profile_export PASS (이전 main pre-existing fail 1건 RESOLVED) |
+| 8 | PR **#185 P0 라이브 회귀** (`.pq-silver-matte` / `.pivox-silver-matte` invisible headings) admin merge | `8fbcee2` — Browser MCP로 production 직접 확인 후 발견. PR #140 (4bca677) 잘못 tokenize한 silver-matte 클래스의 `background: var(--pq-ivory)` 솔리드 컬러를 `background-clip: unset`과 함께 사용 → element 박스 전체가 ivory + 텍스트도 ivory = invisible. 두 클래스 `background` property 자체 제거. 12+ 랜딩 컴포넌트 자동 fix. Vercel deploy 후 재검증 — personas / 17 artifacts / pricing / FAQ / CTA 5개 섹션 정상 표시 확인 |
 
 ### v27 회귀 4종 (모두 PASS, pre-existing fail RESOLVED)
 | 도구 | 결과 |
