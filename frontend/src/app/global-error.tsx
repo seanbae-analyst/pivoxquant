@@ -19,7 +19,7 @@ export default function GlobalError({
   const isProduction = process.env.NODE_ENV === "production";
 
   return (
-    <html lang="en">
+    <html lang="ko">
       <body
         style={{
           margin: 0,

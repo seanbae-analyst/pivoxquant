@@ -252,7 +252,7 @@ export function BottomNav() {
                 type="button"
                 onClick={() => setDrawerOpen(false)}
                 aria-label="Close menu"
-                className="flex h-9 w-9 items-center justify-center rounded-sm transition-colors hover:bg-[rgba(247,245,239,0.06)]"
+                className="flex h-11 w-11 items-center justify-center rounded-sm transition-colors hover:bg-[rgba(247,245,239,0.06)]"
               >
                 <X
                   className="h-4 w-4"
