@@ -15,6 +15,11 @@ from .user_agent_audit import AgentKillSwitch, UserAgentAudit
 from .artifact_feedback import ArtifactFeedback, VOTE_CHOICES
 from .weekly_pulse import WeeklyPulse, VALID_CADENCES
 from .companion_waitlist import CompanionWaitlist
+from .processed_stripe_event import (
+    ProcessedStripeEvent,
+    STATUS_SUCCESS as STRIPE_EVENT_STATUS_SUCCESS,
+    STATUS_ERROR as STRIPE_EVENT_STATUS_ERROR,
+)
 from .persona_group_stats import (
     PersonaGroupStats,
     MIN_GROUP_SIZE,
@@ -53,4 +58,6 @@ __all__ = ["User", "Position", "Alert", "SignalCache", "TradeHistory", "Watchlis
            "AITwinPortfolio", "DEFAULT_STARTING_CASH",
            "AITwinPosition",
            "AITwinTrade", "AI_TWIN_VALID_SIDES",
-           "AITwinWeeklyReport"]
+           "AITwinWeeklyReport",
+           "ProcessedStripeEvent",
+           "STRIPE_EVENT_STATUS_SUCCESS", "STRIPE_EVENT_STATUS_ERROR"]

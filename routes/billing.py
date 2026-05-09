@@ -5,9 +5,15 @@ from functools import wraps
 
 import stripe
 from flask import Blueprint, request, jsonify
+from sqlalchemy.exc import IntegrityError
 
 from extensions import db
-from models import User
+from models import (
+    User,
+    ProcessedStripeEvent,
+    STRIPE_EVENT_STATUS_SUCCESS,
+    STRIPE_EVENT_STATUS_ERROR,
+)
 from flask_login import current_user
 from .decorators import api_auth
 from security import general_rate_limit
@@ -169,13 +175,30 @@ def stripe_webhook():
         return jsonify({"error": "Invalid signature"}), 400
 
     event_type = event["type"]
+    event_id = event.get("id") or ""
     data = event["data"]["object"]
+
+    # Idempotency fast-path (migration 028). Stripe retries deliveries for up
+    # to 3 days; without this check, duplicate `checkout.session.completed`
+    # events emit duplicate revenue audit lines and re-fire side-effects that
+    # are technically idempotent at the DB level but pollute ops dashboards.
+    # Race window between this check and the INSERT below is closed by the
+    # `uq_processed_stripe_events_event_id` UNIQUE constraint — the second
+    # concurrent delivery hits IntegrityError and we treat it as deduped.
+    if event_id and ProcessedStripeEvent.already_processed(event_id):
+        logger.info(
+            "Stripe webhook deduped (event_id=%s, event_type=%s)",
+            event_id, event_type,
+        )
+        return jsonify({"ok": True, "deduped": True})
 
     # Webhook handlers must never 500 — Stripe retries failed webhooks for
     # up to 3 days (exponential backoff), which would spam our error logs
     # and potentially duplicate side-effects. Catch + rollback + log, then
     # ACK so Stripe moves on. The event is still recorded upstream so we
     # can replay manually if the handler truly needed to succeed.
+    handler_status = STRIPE_EVENT_STATUS_SUCCESS
+    handler_error: str | None = None
     try:
         if event_type == "checkout.session.completed":
             _handle_checkout_completed(data)
@@ -187,7 +210,7 @@ def stripe_webhook():
             _handle_invoice_payment_failed(data)
         elif event_type == "invoice.paid":
             _handle_invoice_paid(data)
-    except Exception:
+    except Exception as exc:
         try:
             db.session.rollback()
         except Exception:
@@ -195,9 +218,47 @@ def stripe_webhook():
             pass
         logger.exception(
             "Stripe webhook handler failed (event_type=%s, event_id=%s)",
-            event_type, event.get("id"),
+            event_type, event_id,
         )
-        # Still ACK so Stripe doesn't retry forever.
+        handler_status = STRIPE_EVENT_STATUS_ERROR
+        # Short fingerprint only — full traceback is in the log stream above.
+        handler_error = f"{type(exc).__name__}: {str(exc)[:160]}"
+
+    # Record the processed event (success or error) so future retries
+    # short-circuit. The error case is recorded too — Stripe will keep
+    # retrying for 3 days otherwise, and a poison event would amplify
+    # the failure log volume each retry.
+    if event_id:
+        try:
+            ProcessedStripeEvent.record(
+                event_id=event_id,
+                event_type=event_type,
+                status=handler_status,
+                error_message=handler_error,
+            )
+            db.session.commit()
+        except IntegrityError:
+            # Concurrent delivery raced past our `already_processed` check
+            # and inserted first. Roll back our duplicate insert and ACK —
+            # the other delivery's record is the canonical one.
+            db.session.rollback()
+            logger.info(
+                "Stripe webhook idempotency race (event_id=%s) — peer recorded first",
+                event_id,
+            )
+        except Exception:
+            # Idempotency record failure must never block ACK — Stripe will
+            # retry, and the next retry will re-execute the handler. Roll
+            # back so the ORM session is clean for the next request.
+            db.session.rollback()
+            logger.exception(
+                "Failed to record ProcessedStripeEvent (event_id=%s, event_type=%s)",
+                event_id, event_type,
+            )
+
+    if handler_status == STRIPE_EVENT_STATUS_ERROR:
+        # Still ACK so Stripe doesn't retry forever (handler error is logged
+        # above and the idempotency row records the failure for ops triage).
         return jsonify({"ok": True, "warning": "handler_failed"}), 200
 
     return jsonify({"ok": True})
