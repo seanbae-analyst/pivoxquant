@@ -4,17 +4,18 @@
 
 **현재 main HEAD: `fd6cf99`** (origin sync OK). **OPEN PR 0건** — v26 잔존 결정 대기 PR 2건 모두 머지 완료.
 
-### v27 세션 액션 (3건)
+### v27 세션 액션 (4건 — main `d634827 → 5886fe0`)
 | # | 작업 | 결과 |
 |---|---|---|
 | 1 | PR **#160** (DB 마이그 027 + Position UniqueConstraint) admin merge | `aea2bbf` — alembic chain 026→027 단일 head, share-weighted cleanup math `_merge_into` helper 일관성, `IntegrityError` race recovery 3 handlers, idempotent inspector guard |
 | 2 | PR **#154** (25 files bug-hunt batch + §101 vocab sweep) conflict resolve + admin merge | `4c25295` — `services/artifacts/templates/self_audit.html` 어휘 conflict (`exit 가격` vs `처분 가격`) main 채택 (SEC Form 4 "Dispositions" 일관성). 코드 변경 4건 (broker-card-v2 중복 id 제거 / top-bar header z-50 / latest-artifact-card sent_at fallback / profile-dropdown subscription_tier wire) + PDF report vocab + legal-deep-scan.yml backend templates job |
 | 3 | cleanup commit (`fd6cf99`) | `MORNING_REPORT_2026-05-09.md` → `docs/archive/sessions/` (이전 세션 패턴 일치), `.bug-hunt/` `.gitignore` 추가 (transient artifact, `nightly_artifacts/` 패턴 일치) |
+| 4 | PR **#182** (Stripe webhook idempotency — `processed_stripe_events` 테이블) admin merge | `5886fe0` — alembic 028 단일 head, `UNIQUE(event_id)` 락 + status enum (success/error) + 200-char error_message clamp. handler fast-path `already_processed()` → ACK `{"deduped": true}` / 처리 후 `record()` (success/error 모두) / `IntegrityError` race recovery (peer recorded first → ACK clean) / 5xx 절대 안 던짐 (Stripe retry contract 준수). 6 신규 회귀 테스트: first delivery → row 생성 / duplicate → deduped envelope / handler no double-fire (spy) / 예외 시 status=error 기록 / poison event 재시도 dedupe / 빈 event_id skip. **Stripe contract**: https://docs.stripe.com/webhooks#handle-duplicate-events |
 
 ### v27 회귀 4종 (모두 PASS)
 | 도구 | 결과 |
 |---|---|
-| pytest (`--ignore=tests/test_no_hardcoded_samples`) | exit 0 — 1643 passed (v26 baseline 일치) |
+| pytest (`--ignore=tests/test_no_hardcoded_samples`) | exit 0 — **1651 passed** (v26 1643 + 6 idempotency + 2 deltas), 1 pre-existing fail (`test_export_reflects_email_opt_out_state`, main에서도 동일하게 fail — PR #182 무관, 별도 작업) |
 | TypeScript `tsc --noEmit` | exit 0 — 0 errors |
 | vitest | exit 0 — 35/35 |
 | eslint (`next lint`) | exit 0 — clean |
@@ -36,7 +37,7 @@
 | **SEC-G CSP `unsafe-inline` nonce 마이그** | `security.py:402-403` `script-src/style-src 'self' 'unsafe-inline'` — Next.js 16 native CSP nonce는 frontend 인라인 style/script 사용처 광범위 audit 필요. backend Jinja templates (`email_preferences._PAGE_TMPL` + `command-center.html`) 인라인 `<style>` 변환 — 작업량 큼. 출시 차단 P0 아니라 별도 wave |
 | **W6-2 backend `/api/signals` query filter wiring** | frontend는 client-side filter로 이미 mitigation (line 143 "Backend may not honor query params yet — apply client-side filter as a defensive layer"). backend filter 추가 vs frontend QS 제거 UX 결정 필요 |
 | **recharts dynamic import** | `EquityCurveChart` / `SectorAllocationDonut` / `WhatIfChart` 3개 — V2 home은 chart 컴포넌트 미사용 (주석으로 `→ /portfolio` 안내), V1 home은 이미 `dynamic(() => import("./_v1/page-v1"))` 로 chunk split. V2 default일 때 chart bundle 영향 0. simulator/what-if는 차트가 핵심 기능이라 dynamic 효과 적음 |
-| **Stripe webhook idempotency 테이블** | DB 마이그 028 + `processed_stripe_events` 모델 + 테스트 — 별도 PR. 현재 handler 자체가 idempotent (same-data update) |
+| ~~Stripe webhook idempotency 테이블~~ | **RESOLVED** — PR #182 (`5886fe0`) 머지. `processed_stripe_events` 테이블 + 028 마이그 + handler dedupe + 6 회귀 테스트 |
 | **error 페이지 KR i18n** | `not-found.tsx` / `error.tsx` / `global-error.tsx` 모두 EN only. Vantablack + Bronze + Playfair italic 디자인 일관성은 완성. 한국 시장 우선 → P2 (i18n 인프라 큰 작업) |
 
 ### 사장님 P0 인프라 5건 (코드 무관, v26부터 동일)
@@ -49,17 +50,20 @@
 ### v27 다음 세션 우선순위
 | 순 | 항목 | 분류 |
 |---|---|---|
-| 1 | 사장님 P0 인프라 5건 | CEO 직접 |
-| 2 | V2 default 강제 + V1 dead code 점진 삭제 (3-step PR) | P1 |
-| 3 | Stripe webhook idempotency 테이블 (DB 마이그 028) | P1 |
-| 4 | W6-2 backend signals filter (UX 결정 필요) | P1 |
-| 5 | SEC-G CSP nonce 마이그 (Next.js 16 + Jinja) | P2 |
-| 6 | error 페이지 KR i18n + i18n 인프라 | P2 |
+| 1 | 사장님 P0 인프라 5건 (Anthropic / GitHub Billing / Railway env / Stripe Live / Vercel env) | CEO 직접 |
+| 2 | V2 default 강제 + V1 dead code 점진 삭제 (3-step PR) — **사장님 라이브 검증 의존**. profile V2는 PR #143에서 production-ready로 fix됐지만 default V1이라 라이브 sanity 안 됨. Vercel `NEXT_PUBLIC_PROFILE_V2=true` 설정 후 라이브 5분 → V2 default flip 안전 | P1 |
+| 3 | W6-2 backend signals filter (UX 결정 필요) | P1 |
+| 4 | SEC-G CSP nonce 마이그 (Next.js 16 + Jinja) | P2 |
+| 5 | error 페이지 KR i18n + i18n 인프라 | P2 |
+| 6 | `motion` npm 패키지 정리 — 0 usage 확인됐지만 `npm uninstall`이 lockfile format 자체를 reorganize (3261줄 변동) + frontend/.git nested repo 충돌 위험 → 별도 wave에서 lockfile freeze + manual edit 권장 | P3 |
+| 7 | `test_export_reflects_email_opt_out_state` 1 pre-existing fail (main에서도 fail — v25 잔존) | P2 |
 
 ### v27 정직 한계
 - **라이브 시각 검증 0건** — parent macOS UI 잠김 / 자율 모드 OAuth 클릭 막힘. Vercel preview는 commit별 자동 deploy.
 - **CI 검증 0건** — GitHub Billing 카드 issue (사장님 직접 P0). admin override merge로 우회.
 - **PR #160 prod 영향 미확인** — Railway DB duplicate count 쿼리 직접 실행 안 함. 코드 audit 결과 cleanup query는 duplicate 0건이면 no-op, ≥1건이면 share-weighted merge (사용자 가시 변화 없음, 같은 산수). Railway alembic auto-upgrade 안 되면 코드 머지 자체로는 영향 0.
+- **PR #182 (Stripe idempotency) prod 적용** — DDL-only `CREATE TABLE` (데이터 mutation 0). Railway alembic upgrade 필요. 마이그 안 돌려도 코드 자체는 `ProcessedStripeEvent.already_processed()` 가 False만 반환 (테이블 없으니 query → exception → False) 하므로 회귀 0. 단 prod에서 dedupe 효과 보려면 `flask db upgrade` 실행 필요.
+- **`motion` 패키지 dead code** — 0 usage 확인했지만 `npm uninstall` 이 lockfile 3261줄 reorganize (npm 버전 차이 + nested .git 영향). frontend/.git nested repo 발견 (branch `fix/frontend-wave1-critical`) — main repo와 별도 추적이라 npm 작업이 두 repo에 동시 영향. 자율 모드 보수적으로 revert.
 - **다중 agent 병렬 dispatch 거부** — 사장님이 이번 세션에 직접 코드 read + fix 모드 선호 표명. 6 audit agent 동시 dispatch 시도 즉시 reject. 단일 호흡 직접 작업으로 전환.
 
 ---
