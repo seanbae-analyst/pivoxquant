@@ -266,7 +266,7 @@ export default function MobileDrawer({
               <Link
                 href="/signup"
                 onClick={onClose}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-full font-serif transition-transform active:scale-[0.98]"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-[2px] font-serif transition-transform active:scale-[0.98]"
                 style={{
                   backgroundColor: "var(--pq-bronze)",
                   color: "var(--pq-ink)",

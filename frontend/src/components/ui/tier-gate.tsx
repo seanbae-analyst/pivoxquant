@@ -94,7 +94,7 @@ export function TierGate({ tier, children, fallback, theme = "dark" }: TierGateP
           "inline-block px-6 py-2.5 text-sm font-semibold transition-all duration-200 active:scale-[0.97]",
           isDark
             ? "rounded-[2px] bg-[var(--pq-bronze)] text-[var(--pq-ink)] hover:bg-[var(--pq-bronze-light)]"
-            : "rounded-full bg-slate-900 text-white hover:bg-slate-800",
+            : "rounded-[2px] bg-slate-900 text-white hover:bg-slate-800",
         )}
       >
         {t("tierGate.viewPlans")}
