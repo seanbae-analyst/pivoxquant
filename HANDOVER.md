@@ -1,3 +1,141 @@
+# PivoxQuant — 인수인계서 (2026-05-09 v26 세션 — 출시 모드 26 PR · 사업자 등록 완료 · 자율 마라톤)
+
+## 🟢 2026-05-09 v26 세션 (자율 야간 → CEO 깨어남 → "출시 모드 / 토큰 무제한 / 사업자 등록 완료, 돌아갈 길 없어 — 최고의 결과물") — **26 PR 머지** · main `d452d9c → d634827` · 풀 회귀 1643/1643 통과 · 직접 호출 검증 11/11
+
+**현재 main HEAD: `d634827`** (origin sync OK). **OPEN PR 2건 (CEO 결정): #160 (DB 마이그 027 + prod cleanup 비가역) / #154 (어제 25 files wide-scope batch)**.
+
+### v26 세션 통계
+| 지표 | 값 |
+|---|---|
+| Phase 1 (자율 야간 CEO 수면) | 9 PR |
+| Phase 2 (출시 모드 "최고의 결과물") | 7 PR |
+| Phase 3 (Wave 3 audit + Wave 4 fix) | 5 PR |
+| Phase 4 (P2 polish) | 4 PR + test follow-up 1 |
+| **이번 세션 누적 머지** | **26 PR squash-merged** |
+| 풀 pytest | 1643 passed / 6 skipped / 0 failed (5m30s) |
+| 풀 vitest | 9 files / 35 tests / 0 failed |
+| TypeScript | 0 errors |
+| eslint | clean |
+| npm audit | HIGH 0건 (3 moderate Sentry chain — 별도 결정) |
+| 직접 호출 검증 | 11/11 PASS |
+| 회귀 발견 | 1건 (test_agent_route phase enum) → PR #180 즉시 fix |
+| OPEN PR | 2 (CEO 결정) |
+
+### v26 머지 PR 26개
+
+#### Phase 1 — 자율 야간 (CEO 수면) — 9 PR
+| # | 영역 | 핵심 |
+|---|---|---|
+| #157 | frontend | TIER_LEVEL `founding_lifetime`/`premium_plus` 매핑 — CEO 본인 차단되던 회귀 |
+| #155 | frontend | `/reports`+3 sister pages metadata 분리 (Bug #10) |
+| #156 | backend | SWOT 500 surface error + FMP `revenueGrowth` 매핑 (Bug #14 #16) |
+| #158 | backend | `_compliance_filter` disclaimer strip — **사일런트 회귀** (LLM 응답 본문 통째 잘림) |
+| #159 | backend | SEC-C/D/E follow-up (`/status` legal_status 노출 / OG escape / waitlist enumeration) |
+| #161 | frontend | Wave 6 W6-3 W6-4 (signals stale badge + V1 refresh finally) |
+| #162 | frontend | `legal_status` interface cleanup (PR #159 follow-up) |
+| #163 | frontend | Wave 6 deferred (W6-1 signals window / Bug #6 watchlist / Bug #17 G+key) |
+
+#### Phase 2 — 출시 모드 (CEO 깬 후) — 7 PR
+| # | 영역 | 핵심 |
+|---|---|---|
+| #164 | mixed | self_audit §101 sweep + design v3 rounded-[2px] alignment |
+| **#165 P0** | backend | **persona V2 매핑** (V2 온보딩 사용자 전원 Companion persona 무력화 fix) + **KIS scan_momentum 자본시장법 §6 어휘 sweep** + **KIS tr_id 모의/실전 분기** |
+| #166 | frontend | detail/[ticker] "13F not yet wired" 섹션 hide (사용자 신뢰 박살 케이스) |
+| #167 | frontend | terms/privacy DRAFT 문구 제거 + LegalConsentModal cross_border 동의 (PIPA §28-8) |
+| #168 | frontend | a11y combobox ARIA + table scope + lang + touch targets + heading order |
+| #169 | frontend | a11y WCAG AA color contrast 60+ files (rgba 0.30-0.40 → 0.55) |
+| #170 | backend | SSE ticker refresh + KIS WS TTL + auth email regex + password ≥8 |
+
+#### Phase 3 — Wave 3 audit + Wave 4 fix — 5 PR
+| # | 영역 | 핵심 |
+|---|---|---|
+| #171 | frontend | M1 OAuth 에러 + 세션 만료 banner (login v1+v2) |
+| #172 | test | useSearchParams mock (PR #171 follow-up) |
+| #173 P0/P1 | mixed | favicon 404 fix + sitemap 9 페이지 누락 + **npm audit HIGH 2 CVE clear** (next 16.2.6) |
+| #174 / #175 | mixed | deep bug hunt 7 fix (alerts kind/limit / companion ticker / mobile pb / phase enum / cursor / pre-trade min) |
+
+#### Phase 4 — P2 polish — 5 PR
+| # | 영역 | 핵심 |
+|---|---|---|
+| #176 | perf | 미사용 1.8MB `logo.png` 삭제 + Pretendard preload hint |
+| #177 | security | SEC-F traceback gate (`?traceback=1`) + 200-char exception clamp 일관성 |
+| #178 | seo | features 7 페이지 metadata + JSON-LD Organization (Knowledge Graph) |
+| #179 | perf | detail/[ticker] SWR dedupingInterval 2s → 5s |
+| #180 | test | test_agent_route phase enum 회귀 fix (PR #175 follow-up) |
+
+### v26 7 deep agent audit 결과 (모두 회수)
+- **performance**: 1.8MB logo / 중복 400KB chunk / Pretendard CDN render-blocking / `"use client"` 83% / V1 dead code 9 dirs
+- **SEO + PWA**: P0 favicon 404 + sitemap 9 누락 + Pretendard preload + JSON-LD 없음
+- **Security**: P1 BLOCKING — npm audit HIGH 2 CVE (next + fast-uri) + SEC-F + SEC-G
+- **i18n**: HIGH 3 (legal-modal 한국어 / 영문 약관 미존재 / useT 4%) — 한국 시장 우선 P2
+- **SSE realtime**: HIGH 2 (신규 ticker / KIS WS attempted) — PR #170 fix
+- **deep bug hunt /alerts /pre-trade /companion**: HIGH 2 + MEDIUM 3 + LOW 3
+- **persona tracking integrity**: P0 critical (V2 매핑 무력화) — PR #165 fix
+
+### 직접 호출 검증 11/11 (정직)
+| Fix | 검증 명령 | 결과 |
+|---|---|---|
+| persona V2 매핑 | `_resolve_declared` 5 V2 코드 호출 | 5/5 (passive_index_hugger→income 등) |
+| KIS legal vocab | 18 새 strings `is_compliant()` | 18/18 compliant |
+| compliance disclaimer strip | EN/KR body+disclaimer + advisory | 본문 보존 ✓ / fallback ✓ |
+| TIER_LEVEL | grep | 5 tier 매핑 ✓ |
+| SSE ticker refresh | grep | `_TICKER_REFRESH_EVERY=60` + `local_tickers` ✓ |
+| alerts kind | grep | signal_positive/negative + price_take_profit/stop_loss ✓ |
+| companion ticker handoff | grep | useSearchParams + initialContextTicker ✓ |
+| favicon paths | `ls public/icons/` | 6 파일 모두 존재 ✓ |
+| logo.png deletion | `ls` | absent ✓ |
+| SEC-F traceback gate | grep | `include_tb` + `_err_dict` 4 callsite ✓ |
+| npm HIGH CVE | `npm audit` | HIGH 0건 ✓ |
+
+### 사장님 P0 인프라 액션 (코드로 못 함)
+1. **Anthropic 크레딧 충전** — 모든 `/api/ai/*` 현재 500 (SWOT/Coaching/Companion 무동작) — console.anthropic.com/settings/billing
+2. **GitHub Billing 카드** — 모든 PR CI fail (코드 자체는 local pytest/tsc/vitest 통과) — settings/billing/payment_information
+3. **Railway `DEV_LOGIN_SECRET` 삭제 확인** — 보안 critical (production에 있으면 누구나 premium 생성)
+4. **Stripe Live keys + 사업자등록번호 + 통신판매업 신고번호** Railway 설정
+5. **Vercel env**: `NEXT_PUBLIC_SENTRY_DSN` / `NEXT_PUBLIC_API_URL` 또는 `RAILWAY_BACKEND_URL` / `BETA_PASSWORD` + `BETA_SIGNING_SECRET`
+
+### OPEN PR (CEO 결정 그대로 2건)
+- **#160** Position UniqueConstraint + DB 마이그 027 — Railway prod DB duplicate count 확인 후 머지 결정 (cleanup 비가역, audit-code 강제 룰)
+- **#154** 어제 batch 1 — 25 files wide-scope (audit-code 강제 룰)
+
+### v26 P2 보류 (별도 wave / UX 결정 필요)
+- **recharts dynamic import** — 차트 첫 렌더 latency trade-off
+- **v1 dead code 9 directories cleanup** — mechanical 작업이지만 별도 PR
+- **i18n 영문화** — HIGH 3 (legal-consent-modal 한국어 / 영문 약관 미존재) — 한국 시장 우선
+- **`subscription_tier` String(10)→String(30)** — DB 마이그 + audit-code 강제, 현재 stored 안 됨이라 실제 영향 미상
+- **persona BUG-4** — 거래 0건 신규 사용자 PersonaEvolution 영구 빈 화면 (UX 결정)
+- **error_kr toast 연동** — i18n 인프라 큰 작업
+- **SEC-G backend CSP nonce** — `email_preferences._PAGE_TMPL` + `command-center.html` Jinja 컨텍스트화 큼
+
+### v26 다음 세션 첫 액션 (사장님 깨어난 후)
+```bash
+# 1. 새 main 동기화
+cd /Users/seanbae/Desktop/취준/stockpilot && git pull origin main
+# main HEAD = d634827 확인
+
+# 2. 라이브 5분 sanity (Vercel preview는 commit별 자동 deploy됨)
+open https://pivoxquant.com  # 베타 비번: pivoxaudit2
+#   - founding_lifetime 계정 → /signals /companion 진입 → PRO/PREMIUM gate 안 막히는지 (PR #157)
+#   - /detail/AAPL → "AI Assistant" CTA 클릭 → /companion?ticker=AAPL — 채팅 입력 "AAPL 에 대해 " prefill 확인 (PR #175)
+#   - /alerts 알림 kind 라벨이 "INFO" 아닌 "SIGNAL"/"PRICE" (PR #175)
+#   - 모든 페이지 탭 favicon 404 안 뜨는지 (PR #173)
+#   - /reports /companion /growth /pre-trade 탭 타이틀 per-route (PR #155)
+#   - /features/{dashboard,engine,explorer,global-desk,personas,pre-trade,reports} 탭 타이틀 (PR #178)
+
+# 3. 결정 필요 OPEN PR 2건
+gh pr view 154   # 어제 batch
+gh pr view 160   # DB 마이그 — Railway DB duplicate count 확인 후
+```
+
+### v26 정직 한계
+- **라이브 시각 검증 0건** — 자율 모드 OAuth 클릭 막힘 / parent macOS UI 잠김. Vercel preview 자동 deploy됨, 사장님 5분 sanity 권장
+- **CI 검증 0건** — GitHub Billing 카드 issue (모든 PR CI fail). 코드 자체는 local 검증 통과
+- **a11y agent 1개 stalled** — color-contrast 작업 600s timeout, 결과는 PR #169로 들어옴
+- **branch ref 충돌 1회** — Phase 3에서 PR #170 commit이 a11y branch ref와 혼선, 재 push로 해결
+- **회귀 1건** — PR #175 phase enum fix 가 test 갱신 누락 → PR #180 follow-up
+
+---
+
 # PivoxQuant — 인수인계서 (2026-05-08 v25 세션 — 자율 야간 10 PR + 자본시장법 어휘 박멸 + 보안 wave)
 
 ## 🟢 2026-05-08 v25 세션 (자율 야간 · CEO 수면 · all-permissions 재확인) — **10 PR 머지** · 신규 5+9건 fix · Bug #3 SWR · DoS 34 routes · 자본시장법 §101 어휘 9건 · admin secret timing · Stripe orphan · KIS datetime · ERC zero · GKYZ NaN · Calmar annualization
