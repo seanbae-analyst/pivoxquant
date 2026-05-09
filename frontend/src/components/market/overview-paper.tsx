@@ -335,7 +335,7 @@ export function OverviewPaper({
               <ProxyPill
                 proxy={hero.proxy_ticker}
                 size="md"
-                title={`Level sourced from ${hero.proxy_ticker} ETF (FMP Starter tier does not serve ${hero.symbol}). No ratio conversion applied.`}
+                title={`Level sourced from ${hero.proxy_ticker} ETF (data provider does not serve ${hero.symbol}). No ratio conversion applied.`}
               />
             </div>
           ) : null}
@@ -346,7 +346,7 @@ export function OverviewPaper({
               }}
             title={
               hero.proxy_ticker
-                ? `Level sourced from ${hero.proxy_ticker} ETF (FMP Starter tier does not serve ${hero.symbol}). No ratio conversion applied.`
+                ? `Level sourced from ${hero.proxy_ticker} ETF (data provider does not serve ${hero.symbol}). No ratio conversion applied.`
                 : undefined
             }
           >

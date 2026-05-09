@@ -178,7 +178,7 @@ PR #185 silver-matte fix 후 사장님 "이참에 디자인 싹다 검수해서 
 | 순 | 항목 | 분류 |
 |---|---|---|
 | 1 | 사장님 P0 인프라 잔존 (Anthropic 크레딧 / GitHub Billing / Stripe Live keys + 사업자번호 / Vercel Sentry DSN) | CEO 직접 |
-| 2 | **라이브 sanity check** (사장님 5분) — Vercel V2 flag fix 후 첫 deploy 검증. `https://pivoxquant.com` (베타 비번 `pivoxaudit2`) 에서 home/portfolio/risk/signals/reports/login/signup/profile/settings 9개 페이지 V2 layout 정상 표시 확인. 회귀 발견 시 사장님 알림 → 즉시 수정 | P0 (라이브 차단) |
+| 2 | **라이브 sanity check** (사장님 5분) — Vercel V2 flag fix 후 첫 deploy 검증. `https://pivoxquant.com` (베타 비번 `<beta-password — see Vercel env BETA_PASSWORD>`) 에서 home/portfolio/risk/signals/reports/login/signup/profile/settings 9개 페이지 V2 layout 정상 표시 확인. 회귀 발견 시 사장님 알림 → 즉시 수정 | P0 (라이브 차단) |
 | 3 | V1 dead code 9 directories 점진 삭제 (V2 라이브 검증 후 별도 PR) | P1 |
 | 4 | SEC-G CSP nonce 마이그 (Next.js 16 + Jinja) | P2 |
 | 5 | error 페이지 KR i18n + i18n 인프라 | P2 |
@@ -314,7 +314,7 @@ cd /Users/seanbae/Desktop/취준/stockpilot && git pull origin main
 # main HEAD = d634827 확인
 
 # 2. 라이브 5분 sanity (Vercel preview는 commit별 자동 deploy됨)
-open https://pivoxquant.com  # 베타 비번: pivoxaudit2
+open https://pivoxquant.com  # 베타 비번: <beta-password — see Vercel env BETA_PASSWORD>
 #   - founding_lifetime 계정 → /signals /companion 진입 → PRO/PREMIUM gate 안 막히는지 (PR #157)
 #   - /detail/AAPL → "AI Assistant" CTA 클릭 → /companion?ticker=AAPL — 채팅 입력 "AAPL 에 대해 " prefill 확인 (PR #175)
 #   - /alerts 알림 kind 라벨이 "INFO" 아닌 "SIGNAL"/"PRICE" (PR #175)

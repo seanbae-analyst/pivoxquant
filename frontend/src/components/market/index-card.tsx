@@ -177,7 +177,7 @@ export function IndexCard({ quote }: { quote: IndexQuote }) {
           {quote.proxy_ticker && (
             <p
               className="mt-0.5 font-mono text-[12px] uppercase tracking-[0.18em] text-slate-500"
-              title="Level sourced from a liquid ETF proxy (FMP Starter tier does not serve the caret-prefixed index symbol). No ratio conversion is applied."
+              title="Level sourced from a liquid ETF proxy (data provider does not serve the caret-prefixed index symbol). No ratio conversion is applied."
             >
               {proxyLabel(quote.proxy_ticker)}
             </p>

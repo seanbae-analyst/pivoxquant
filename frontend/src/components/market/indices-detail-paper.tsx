@@ -230,7 +230,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
           }}
           title={
             quote.proxy_ticker
-              ? `Level sourced from ${quote.proxy_ticker} ETF (FMP Starter tier does not serve ${quote.symbol}). No ratio conversion applied.`
+              ? `Level sourced from ${quote.proxy_ticker} ETF (data provider does not serve ${quote.symbol}). No ratio conversion applied.`
               : undefined
           }
         className="font-mono" >

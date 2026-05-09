@@ -14,7 +14,7 @@ export default function PreTradePage() {
         {
           eyebrow: "Signature",
           title: "Korea × US Desk",
-          description: "One pane. KRW and USD. KIS and FMP.",
+          description: "One pane. KRW and USD. Unified market feed.",
           href: "/features/global-desk",
         },
         {
