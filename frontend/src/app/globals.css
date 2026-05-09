@@ -1080,15 +1080,16 @@
     letter-spacing: -0.01em;
   }
 }
+/* 2026-05-09: keyframe glow removed per CEO Hero rebuild ("싹다 새로
+   만들어 / 마우스 따라오는 그거 지우고"). The Hero is now static
+   editorial to match every other page on the site — no entrance
+   animation. The `learns` word stays italic + bronze, but paints
+   once at first render and never moves. */
 .pq-cfo-word {
   display: inline-block;
-  color: var(--pq-ivory);
-  /* Defensive: parents that set -webkit-text-fill-color: transparent
-     (e.g. legacy .pq-silver-matte usage) would otherwise hide this word
-     even though `color` is set. Re-asserting -webkit-text-fill-color
-     ensures the bronze glow always paints. */
-  -webkit-text-fill-color: var(--pq-ivory);
-  animation: pq-cfo-glow 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.9s forwards;
+  font-style: italic;
+  color: var(--pq-bronze-light);
+  -webkit-text-fill-color: var(--pq-bronze-light);
 }
 
 /* Scroll hint bob. */
@@ -1122,12 +1123,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pq-marquee-track,
-  .pq-cfo-word,
   .pq-scroll-hint {
     animation: none !important;
-  }
-  .pq-cfo-word {
-    color: var(--pq-bronze-light);
   }
 }
 
