@@ -1194,8 +1194,21 @@ def export_profile():
 
     Frontend hook: settings page "내 데이터 다운로드" button (TBD, separate PR).
     """
+    # PIPA §35 ④ requires the export to reflect the *live* consent state,
+    # not whatever Flask-Login cached for this request. Marketing opt-out
+    # state can change via the one-click unsubscribe email link mid-session
+    # (`routes/email_preferences.py`), and `current_user` is a LocalProxy
+    # backed by SQLAlchemy's identity map which keeps a snapshot from the
+    # session-load. Force a fresh column read so the export never lies
+    # about a consent that was just flipped.
+    user_id = current_user.id
+    try:
+        db.session.refresh(current_user._get_current_object())
+    except Exception:
+        # If refresh fails (detached / deleted between hops), fall back to
+        # an explicit fresh fetch — same effect, slightly slower path.
+        db.session.expire(current_user._get_current_object())
     user = current_user
-    user_id = user.id
     now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     try:
