@@ -75,9 +75,13 @@ export function useWatchlist() {
     dedupingInterval: 2_000,
     errorRetryCount: 2,
     errorRetryInterval: 5_000,
-    // P1 (wave1-critical): empty-list default so iterating consumers
-    // don't NPE on `.map` during the first paint.
-    fallbackData: { watchlist: [] },
+    // Bug #6 (Wave 1, fix 2026-05-09): `fallbackData: { watchlist: [] }`
+    // forced SWR's `isLoading` to false on first paint because `data` was
+    // already defined. Consumers had `isLoading` branches that never
+    // fired — every page hit the empty-list UI for one frame, then
+    // swapped in the real data. NPE protection is preserved at every
+    // call site via `data?.watchlist ?? []` (verified across 5 consumers:
+    // signals/_v2, watchlist, discover, detail/[ticker], ai, home/_v1).
   });
 }
 
