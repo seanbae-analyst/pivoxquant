@@ -20,7 +20,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
 
-    // ── Feature pages ──────────────────────────────────────
+    // ── Public funnel pages (release-prep audit 2026-05-09: previously
+    // missing — viral acquisition surfaces and unauthenticated demos) ──
+    {
+      url: `${BASE_URL}/contact`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${BASE_URL}/simulator/what-if`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.6,
+    },
+    {
+      url: `${BASE_URL}/sample-reports`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.6,
+    },
+
+    // ── Feature pages (all 10 directories under /features/) ───────────
     {
       url: `${BASE_URL}/features/paper-trading`,
       lastModified: now,
@@ -53,6 +74,42 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${BASE_URL}/features/risk-defense`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/features/dashboard`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/features/engine`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/features/explorer`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/features/global-desk`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/features/personas`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/features/pre-trade`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7,
