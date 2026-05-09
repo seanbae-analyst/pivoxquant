@@ -1,27 +1,35 @@
 "use client";
 
 /**
- * Hero — landing entry section, static editorial.
+ * Hero — landing entry section.
  * -----------------------------------------------------------------------
- * Rebuilt 2026-05-09 per CEO direction:
- *   "이상한 마우스 옮겨다니면 금색 따라오는 그거 지우고 아예 삭다 새로 만들어"
+ * Rebuilt 2026-05-09 (round 2) per CEO follow-up:
+ *   "디자인은 뭐 변경 안한거야? 그냥 지우기만 한 마우스 따라다니는 거?"
  *
- * The previous v4 layered HeroAurora (cursor-tracked bronze sunrise),
- * HeroSpotlight (cursor radial gradient), HeroParticles (drifting motes),
- * FilmGrain, a dot mask, an inner glow, a glyph-by-glyph H1 reveal, and
- * an SVG ink-bleed CTA. Each was independently tasteful but the stack
- * read as overproduced — the hero felt different from every other
- * editorial page on the site (/features/* / /pricing / /login / /signup
- * / /terms / /privacy), all of which are static, calm, and Vantablack.
+ * Round 1 only stripped ambient effects (cursor spotlight / aurora /
+ * particles / film grain / glyph reveal / ink-bleed). The grid layout
+ * with the right-side Today's Gate panel stayed identical to v4 — so
+ * structurally the Hero still didn't read like /features/engine,
+ * /features/personas, /features/dashboard, etc., which are all
+ * single-column editorial pages: eyebrow + big italic Playfair H1 +
+ * description paragraph + (downstream visuals appear in subsequent
+ * sections, not docked beside the H1).
  *
- * This rebuild matches the rest of the site exactly:
- *   - eyebrow + italic Playfair H1 + sub copy + CTAs + disclaimer (left)
- *   - 7-Layer Today's Gate panel (right, lg+, kept — the one element
- *     that makes the hero feel like a research desk, not just text)
- *   - MarketTicker strip at the very top (informational, retained)
- *   - Pure Vantablack background, zero ambient effects
- *   - Static everything: no entrance animations, no cursor tracking,
- *     no ink-bleed, no glyph cross-fade. The H1 paints once and stays.
+ * Round 2 mirrors that exact structure. The Hero now:
+ *
+ *   [MarketTicker]                  ← thin info strip, retained
+ *   [eyebrow rule + label]
+ *   [BIG italic H1 "Your CFO learns you."]
+ *   [description paragraph]
+ *   [primary + secondary CTAs]
+ *   [disclaimer]
+ *
+ * No right column. No Today's Gate panel here — that surface lives in
+ * the Pre-Trade feature page (/features/pre-trade) which is its
+ * canonical home. The Hero now reads as the desk's masthead, exactly
+ * like the masthead on every other editorial page on the site.
+ *
+ * Pure Vantablack background. Zero animation. Zero cursor tracking.
  *
  * Compliance: no BUY/SELL/HOLD/recommend/advice/추천/조언 vocabulary.
  */
@@ -47,187 +55,120 @@ const MarketTicker = dynamic(
   },
 );
 
-/* 7-Layer Pre-Trade Gate — static editorial preview of risk_defense.py.
-   Not interactive, no API. Source-of-truth labels mirror the live engine. */
-const GATE_ROWS: { label: string; state: "ok" | "watch" }[] = [
-  { label: "VaR (95%)", state: "ok" },
-  { label: "Correlation drift", state: "ok" },
-  { label: "VIX regime", state: "watch" },
-  { label: "Tail risk", state: "ok" },
-  { label: "Daily P & L", state: "ok" },
-  { label: "Sector cap", state: "ok" },
-  { label: "Cash buffer", state: "ok" },
-];
-
 export function Hero() {
   return (
     <section
       aria-labelledby="pq-hero-heading"
-      className="relative isolate overflow-hidden"
+      className="relative isolate"
       style={{
         backgroundColor: "#050505",
         color: "var(--pq-ivory)",
       }}
     >
-      {/* ─── Ticker — thin strip at very top ─── */}
       <MarketTicker />
 
-      <div className="relative mx-auto max-w-7xl px-5 pb-24 pt-24 sm:px-8 sm:pb-32 sm:pt-28 lg:px-10 lg:pb-36 lg:pt-32">
-        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
-          {/* ─── Editorial copy column ─── */}
-          <div className="max-w-3xl">
-            {/* Eyebrow */}
-            <div className="mb-8 inline-flex items-center gap-2.5">
-              <span
-                aria-hidden
-                className="h-px"
-                style={{
-                  backgroundColor: "rgba(139, 111, 71, 0.7)",
-                  width: 28,
-                }}
-              />
-              <span
-                className="font-serif text-[11px] uppercase"
-                style={{
-                  letterSpacing: "0.22em",
-                  color: "var(--pq-bronze)",
-                }}
-              >
-                PivoxQuant · Living CFO
-              </span>
-            </div>
-
-            {/* H1 — static italic Playfair, bronze italic on "learns".
-                No glyph reveal, no cross-fade, no animation. */}
-            <h1
-              id="pq-hero-heading"
-              className="pq-hero-h1 mb-7 font-serif font-normal"
-            >
-              Your CFO{" "}
-              <em
-                className="pq-cfo-word"
-                style={{ fontStyle: "italic" }}
-              >
-                learns
-              </em>
-              <br />
-              you.
-            </h1>
-
-            {/* Sub copy */}
-            <p
-              className="mb-9 max-w-xl font-serif"
+      {/* Same column geometry the /features pages use:
+          mx-auto max-w-7xl + asymmetric vertical padding so the Hero
+          reads as the page's masthead, not a centered marketing splash. */}
+      <div className="mx-auto max-w-7xl px-5 pb-32 pt-24 sm:px-8 sm:pb-40 sm:pt-32 lg:px-10 lg:pb-48 lg:pt-40">
+        <div className="max-w-4xl">
+          {/* Eyebrow — bronze rule + uppercase Playfair italic.
+              Identical pattern across all /features pages. */}
+          <div className="mb-10 inline-flex items-center gap-2.5">
+            <span
+              aria-hidden
+              className="h-px"
               style={{
-                fontSize: "clamp(15px, 1.35vw, 18px)",
-                lineHeight: 1.55,
-                letterSpacing: "0.005em",
-                color: "rgba(245, 240, 232, 0.72)",
+                backgroundColor: "rgba(139, 111, 71, 0.7)",
+                width: 28,
+              }}
+            />
+            <span
+              className="font-serif text-[11px] uppercase"
+              style={{
+                letterSpacing: "0.22em",
+                color: "var(--pq-bronze)",
               }}
             >
-              Morning memos. Pre-trade gates. A letter every Friday.
-            </p>
-
-            {/* CTAs — plain bronze pill + ghost outline.
-                No SVG ink-bleed; rounded-[2px] matches /features pages. */}
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                href="/signup"
-                className="group inline-flex items-center gap-2 rounded-[2px] px-5 py-3 text-sm font-medium tracking-wide transition-colors"
-                style={{
-                  backgroundColor: "var(--pq-bronze)",
-                  color: "var(--pq-ink)",
-                }}
-              >
-                Meet your CFO
-                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </Link>
-              <Link
-                href="/sample-reports/weekly-memo"
-                target="_blank"
-                rel="noopener"
-                className="inline-flex items-center gap-2 rounded-[2px] border px-5 py-3 text-sm font-medium tracking-wide transition-colors hover:bg-[rgba(245,240,232,0.04)]"
-                style={{
-                  borderColor: "rgba(139, 111, 71, 0.5)",
-                  color: "var(--pq-bronze-light)",
-                }}
-              >
-                <FileText className="h-4 w-4" />
-                See a sample
-              </Link>
-            </div>
-
-            {/* Disclaimer */}
-            <p
-              className="mt-10 border-t pt-6 font-serif text-[11px] italic leading-relaxed tracking-wide"
-              style={{
-                borderColor: "var(--pq-border)",
-                color: "var(--pq-muted)",
-              }}
-            >
-              <span style={{ color: "rgba(139, 111, 71, 0.9)" }}>— </span>
-              Not investment advice. Informational research only. Past
-              performance does not guarantee future results.
-            </p>
+              PivoxQuant · Living CFO
+            </span>
           </div>
 
-          {/* ─── Right column: 7-Layer Today's Gate (lg+ only) ───
-              Kept from the previous Hero — the one element that makes
-              the section read as a research-desk surface rather than a
-              plain marketing hero. Pure CSS panel, static, no API, no
-              live ticking. */}
-          <aside
-            aria-hidden
-            className="pq-gate-card hidden lg:block"
+          {/* H1 — big italic Playfair, identical sizing to /features/engine,
+              /features/personas, /features/explorer.
+              Bronze italic on "learns" stays as the only typographic accent. */}
+          <h1
+            id="pq-hero-heading"
+            className="pq-hero-h1 mb-9 font-serif font-normal"
           >
-            <div className="pq-gate-card-frame">
-              <div className="pq-gate-card-head">
-                <span className="pq-gate-card-eyebrow">
-                  <span aria-hidden className="pq-gate-card-rule" />
-                  PivoxQuant · Today&rsquo;s Gate
-                </span>
-                <span aria-hidden className="pq-gate-card-ping">
-                  <span className="pq-gate-card-ping-dot" />
-                  <span className="pq-gate-card-ping-ring" />
-                </span>
-              </div>
+            Your CFO{" "}
+            <em
+              className="pq-cfo-word"
+              style={{ fontStyle: "italic" }}
+            >
+              learns
+            </em>{" "}
+            you.
+          </h1>
 
-              <div className="pq-gate-card-time">
-                <span className="pq-gate-card-time-mono">09:14:22</span>
-                <span className="pq-gate-card-time-tz">KST</span>
-              </div>
+          {/* Description — same width cap + tone as /features pages. */}
+          <p
+            className="mb-10 max-w-2xl font-serif"
+            style={{
+              fontSize: "clamp(15px, 1.35vw, 18px)",
+              lineHeight: 1.6,
+              letterSpacing: "0.005em",
+              color: "rgba(245, 240, 232, 0.72)",
+            }}
+          >
+            매일 아침 두 번. 진입 전 일곱 관문. 일요일마다 한 페이지.
+            온보딩 20문항이 당신을 8가지 투자자 유형 중 하나로 분류하면, 모든
+            artifact가 그 페르소나의 어휘로 다시 쓰입니다. 관측 자료이며 매수·
+            매도 권유가 아닙니다.
+          </p>
 
-              <ul className="pq-gate-card-list">
-                {GATE_ROWS.map((row) => (
-                  <li
-                    key={row.label}
-                    className={`pq-gate-row pq-gate-row--${row.state}`}
-                  >
-                    <span aria-hidden className="pq-gate-row-dot" />
-                    <span className="pq-gate-row-label">{row.label}</span>
-                    <span
-                      aria-hidden
-                      className="pq-gate-row-status"
-                      data-state={row.state}
-                    >
-                      {row.state === "ok" ? "✓" : "⚠"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+          {/* CTAs — plain bronze pill + ghost outline.
+              rounded-[2px] matches the /features pages exactly. */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/signup"
+              className="group inline-flex items-center gap-2 rounded-[2px] px-6 py-3.5 text-sm font-medium tracking-wide transition-colors"
+              style={{
+                backgroundColor: "var(--pq-bronze)",
+                color: "var(--pq-ink)",
+              }}
+            >
+              Meet your CFO
+              <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="/sample-reports/weekly-memo"
+              target="_blank"
+              rel="noopener"
+              className="inline-flex items-center gap-2 rounded-[2px] border px-6 py-3.5 text-sm font-medium tracking-wide transition-colors hover:bg-[rgba(245,240,232,0.04)]"
+              style={{
+                borderColor: "rgba(139, 111, 71, 0.5)",
+                color: "var(--pq-bronze-light)",
+              }}
+            >
+              <FileText className="h-4 w-4" />
+              See a sample
+            </Link>
+          </div>
 
-              <div className="pq-gate-card-foot">
-                <span className="pq-gate-card-foot-count">
-                  <strong>6</strong> of 7 cleared
-                </span>
-                <span aria-hidden className="pq-gate-card-foot-dot">
-                  &middot;
-                </span>
-                <span className="pq-gate-card-foot-recheck">
-                  re-check 17:30
-                </span>
-              </div>
-            </div>
-          </aside>
+          {/* Disclaimer — same italic Playfair micro-copy seen on every
+              /features page footer + the disclaimer-banner. */}
+          <p
+            className="mt-12 max-w-2xl border-t pt-6 font-serif text-[11px] italic leading-relaxed tracking-wide"
+            style={{
+              borderColor: "var(--pq-border)",
+              color: "var(--pq-muted)",
+            }}
+          >
+            <span style={{ color: "rgba(139, 111, 71, 0.9)" }}>— </span>
+            Not investment advice. Informational research only. Past
+            performance does not guarantee future results.
+          </p>
         </div>
       </div>
 
