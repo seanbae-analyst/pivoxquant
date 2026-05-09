@@ -12,6 +12,11 @@ vi.mock("next/navigation", () => ({
     forward: vi.fn(),
     refresh: vi.fn(),
   }),
+  // M1 fix (2026-05-09 PR #171): page now reads ?error=&?expired= via
+  // useSearchParams to surface OAuth/session-expired banners. Default mock
+  // returns no params (clean state — no banner rendered).
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/login",
 }));
 
 // useAuth mock — controllable per-test via the holder object.
