@@ -114,6 +114,12 @@ class KISService:
             if not self.account_no:
                 logger.warning("KIS_ACCOUNT_NO not set — balance/order APIs will not work")
 
+    # NOTE: legacy attribute — DO NOT USE. The path it computes is wrong
+    # (services/kis/.kis_token_cache.json, which never exists). Token caching
+    # is delegated to services.kis.token_manager.KISTokenManager which writes
+    # to the project-root .kis_token_cache.json. Kept here only to avoid an
+    # AttributeError if any out-of-tree caller still references it; remove on
+    # the next sweep that confirms zero references.
     _TOKEN_CACHE_FILE = os.path.join(os.path.dirname(__file__), ".kis_token_cache.json")
 
     def _get_token(self):
@@ -415,7 +421,11 @@ class KISService:
             headers = self._headers()
             if not headers:
                 return {"error": "KIS token unavailable"}
-            headers["tr_id"] = "VTTC8434R"  # 모의투자 잔고조회
+            # P0-2 fix (2026-05-09): tr_id was hardcoded to the VTS (mock)
+            # value, so any deployment with KIS_USE_REAL=1 silently failed
+            # against the real account API. UserKISService already branches
+            # on _USE_REAL; align this legacy path with the same convention.
+            headers["tr_id"] = "TTTC8434R" if _USE_REAL else "VTTC8434R"  # 잔고조회 (실전/모의)
 
             params = {
                 "CANO": self.account_no,
@@ -557,7 +567,8 @@ class KISService:
             headers = self._headers()
             if not headers:
                 return {"ok": False, "orders": [], "error": "KIS token unavailable"}
-            headers["tr_id"] = "VTTC8001R"  # 모의투자 일별체결조회
+            # P0-2 fix (2026-05-09): see get_balance() — same _USE_REAL branch.
+            headers["tr_id"] = "TTTC8001R" if _USE_REAL else "VTTC8001R"  # 일별체결조회 (실전/모의)
 
             params = {
                 "CANO": self.account_no,
@@ -750,41 +761,55 @@ class KISService:
                 score = max(0, min(100, score))
 
                 # ── Signal: held vs new ────────────────────────
+                # P0-1 + HIGH-1 fix (2026-05-09 release-prep audit):
+                # Original copy used directive vocabulary ("buy now",
+                # "Take profit", "Cut losses", "Sell half", "청산 — 익절",
+                # "청산 — 손절", "일부 청산") and non-canonical signal
+                # labels (ENTRY/WATCH/AVOID/WAIT) that bypass legal_filter
+                # patterns. CLAUDE.md mandates POSITIVE/NEGATIVE/NEUTRAL
+                # only and bans buy/sell/recommend/매수/매도 directives —
+                # 자본시장법 §6 (미등록 투자자문업) defense.
+                #
+                # Replacements: signal label ∈ {POSITIVE, NEGATIVE, NEUTRAL}.
+                # Display text framed as observational indicator readouts
+                # (e.g. "momentum threshold" instead of "buy now"). The
+                # numeric thresholds and held/unheld branching are
+                # preserved verbatim — only the surface vocabulary changed.
                 if is_held:
                     if score < 30 or (rsi and rsi > 80):
                         signal = "NEGATIVE"
-                        en = "EXIT — Take profit now" if chg > 0 else "EXIT — Cut losses"
-                        kr = "청산 — 익절 타이밍" if chg > 0 else "청산 — 손절 필요"
+                        en = "Indicator threshold breached on the downside" if chg > 0 else "Indicator below downside band"
+                        kr = "지표가 하단 임계치를 이탈했습니다" if chg > 0 else "지표가 하단 밴드 아래로 관찰됩니다"
                     elif score < 45:
                         signal = "NEGATIVE"
-                        en = "PARTIAL EXIT — Sell half, hold rest"
-                        kr = "일부 청산 — 절반 정리 후 관망"
+                        en = "Indicator weakening relative to entry band"
+                        kr = "지표가 진입 밴드 대비 약화 구간으로 관찰됩니다"
                     elif score >= 65:
-                        signal = "NEUTRAL"
-                        en = "NEUTRAL — Trend intact, let it ride"
-                        kr = "홀딩 — 추세 유지, 더 갈 수 있음"
+                        signal = "POSITIVE"
+                        en = "Indicator within trend continuation band"
+                        kr = "지표가 추세 지속 구간 안에서 관찰됩니다"
                     else:
                         signal = "NEUTRAL"
-                        en = "WATCH — Momentum fading, stay alert"
-                        kr = "관망 — 추세 약화, 주시 필요"
+                        en = "Momentum reading softening — observation window"
+                        kr = "모멘텀 지표가 약화 구간에 들어섰습니다"
                     signals.insert(0, S("neutral", en, kr))
                 else:
                     if score >= 72:
-                        signal = "ENTRY"
-                        en = "ENTRY — Strong momentum, buy now"
-                        kr = "진입 — 강한 모멘텀, 매수 타이밍"
+                        signal = "POSITIVE"
+                        en = "Momentum reading above upper threshold"
+                        kr = "모멘텀 지표가 상단 임계치를 상회했습니다"
                     elif score >= 62:
-                        signal = "WATCH"
-                        en = "WATCH — Setting up, confirm volume before entry"
-                        kr = "주시 — 조건 충족 중, 거래량 확인 후 진입"
+                        signal = "NEUTRAL"
+                        en = "Setup forming — volume confirmation pending"
+                        kr = "조건 충족 중 — 거래량 확인 구간"
                     elif score < 30:
-                        signal = "AVOID"
-                        en = "AVOID — Bearish momentum, stay out"
-                        kr = "회피 — 하락 모멘텀, 진입 ��지"
+                        signal = "NEGATIVE"
+                        en = "Momentum reading below lower threshold"
+                        kr = "모멘텀 지표가 하단 임계치를 하회했습니다"
                     else:
-                        signal = "WAIT"
-                        en = "WAIT — No clear setup yet"
-                        kr = "대기 — 진입 조건 미달"
+                        signal = "NEUTRAL"
+                        en = "No threshold crossing observed"
+                        kr = "임계치 이탈 신호 미관찰"
                     signals.insert(0, S("neutral", en, kr))
 
                 results.append({
