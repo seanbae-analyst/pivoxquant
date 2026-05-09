@@ -255,10 +255,16 @@ def register():
     email = (d.get("email") or "").strip().lower()
     pw = d.get("password") or ""
     name = (d.get("name") or "").strip()
+    # H1 fix (2026-05-09 release-prep): RFC 5322 simplified email regex.
+    import re as _re
+    _EMAIL_RE = _re.compile(r"^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$")
     if not email or not pw:
         return jsonify({"error": "Email and password required"}), 400
-    if len(pw) < 6:
-        return jsonify({"error": "Password must be ≥ 6 characters"}), 400
+    if len(email) > 254 or not _EMAIL_RE.match(email):
+        return jsonify({"error": "Invalid email format"}), 400
+    # H2 fix (2026-05-09 release-prep): bumped from ≥6 to ≥8 (NIST 800-63B).
+    if len(pw) < 8:
+        return jsonify({"error": "Password must be ≥ 8 characters"}), 400
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 409
     u = User(email=email, name=name or email.split("@")[0])
