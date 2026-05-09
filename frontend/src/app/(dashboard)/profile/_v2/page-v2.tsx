@@ -147,7 +147,7 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
         style={{
           fontSize: 12,
           letterSpacing: "0.22em",
-          color: dim ? "rgba(245,240,232,0.40)" : "var(--pq-bronze)",
+          color: dim ? "rgba(245,240,232,0.55)" : "var(--pq-bronze)",
         }}
       >
         {label}
@@ -541,7 +541,7 @@ export default function ProfilePageV2() {
               right: 14,
               fontSize: 12,
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             Full timeline ›
@@ -621,7 +621,7 @@ export default function ProfilePageV2() {
                 right: 14,
                 fontSize: 12,
                 letterSpacing: "0.2em",
-                color: "rgba(245,240,232,0.40)",
+                color: "rgba(245,240,232,0.55)",
               }}
             >
               All pulses ›
@@ -698,7 +698,7 @@ export default function ProfilePageV2() {
             border: "1px dashed rgba(245,240,232,0.14)",
             fontSize: 14,
             lineHeight: 1.6,
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         className="font-serif" >
           <strong

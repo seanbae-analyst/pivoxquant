@@ -275,7 +275,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                     className="font-serif"
                     style={{
                       fontSize: 12,
-                      color: "rgba(245,240,232,0.40)",
+                      color: "rgba(245,240,232,0.55)",
                       marginTop: 2,
                     }}
                   >

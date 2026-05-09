@@ -60,7 +60,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           Sum of top 5 · {sumPct > 0 ? `${sumPct.toFixed(1)}%` : "—"}
@@ -135,7 +135,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                     className="font-mono"
                     style={{
                       fontSize: 12,
-                      color: "rgba(245,240,232,0.40)",
+                      color: "rgba(245,240,232,0.55)",
                       letterSpacing: "0.14em",
                       marginTop: 4,
                     }}

@@ -284,7 +284,7 @@ function CheckboxBtn({
       onClick={onChange}
       className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-all duration-200"
       style={{
-        borderColor: checked ? "var(--pq-bronze)" : "rgba(245,240,232,0.30)",
+        borderColor: checked ? "var(--pq-bronze)" : "rgba(245,240,232,0.55)",
         backgroundColor: checked ? "var(--pq-bronze)" : "transparent",
       }}
     >
@@ -461,7 +461,7 @@ function ConsentModal({
                 : "rgba(245,240,232,0.10)",
               color: allAgreed && !submitting
                 ? "var(--pq-ink)"
-                : "rgba(245,240,232,0.40)",
+                : "rgba(245,240,232,0.55)",
               cursor: allAgreed && !submitting ? "pointer" : "not-allowed",
             }}
           >
@@ -472,7 +472,7 @@ function ConsentModal({
             style={{
               fontSize: "12px",
               letterSpacing: "0.16em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             PROCESSED BY STRIPE, INC. (UNITED STATES)
@@ -923,7 +923,7 @@ export default function PricingPage() {
             style={{
               fontSize: "12px",
               letterSpacing: "0.18em",
-              color: "rgba(245,240,232,0.35)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             PAYMENT PROCESSED BY STRIPE, INC. (UNITED STATES)

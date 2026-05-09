@@ -110,7 +110,7 @@ export function OAuthButtonsV2({
     ...buttonShellBase,
     border: "1px solid rgba(245,240,232,0.06)",
     background: "transparent",
-    color: "rgba(245,240,232,0.30)",
+    color: "rgba(245,240,232,0.55)",
     cursor: "not-allowed",
   };
 
@@ -172,7 +172,7 @@ export function OAuthButtonsV2({
             letterSpacing: "0.18em",
             color: hintEmphasized
               ? "rgba(244,108,108,0.95)"
-              : "rgba(245,240,232,0.40)",
+              : "rgba(245,240,232,0.55)",
             textAlign: "center",
             textTransform: "uppercase",
           }}

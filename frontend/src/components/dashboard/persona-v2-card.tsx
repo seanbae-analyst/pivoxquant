@@ -192,7 +192,7 @@ function FeatureBars({
                   className={
                     "font-serif text-[13px] truncate " +
                     (sparse
-                      ? "text-[rgba(245,240,232,0.35)]"
+                      ? "text-[rgba(245,240,232,0.55)]"
                       : "text-[var(--pq-ivory)]")
                   }
                 >

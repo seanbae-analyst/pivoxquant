@@ -210,7 +210,7 @@ export function TerminalSidebar({
           style={{
             fontSize: "9px",
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.35)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           v1.0 · Paper

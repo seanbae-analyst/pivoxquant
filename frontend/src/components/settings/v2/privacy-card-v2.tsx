@@ -371,7 +371,7 @@ export function PrivacyCardV2({
               right: 14,
               fontSize: 12,
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             E1 · Consent
@@ -419,7 +419,7 @@ export function PrivacyCardV2({
                   className="font-serif"
                   style={{
                     fontSize: 14,
-                    color: "rgba(245,240,232,0.40)",
+                    color: "rgba(245,240,232,0.55)",
                     marginTop: 2,
                   }}
                 >
@@ -470,7 +470,7 @@ export function PrivacyCardV2({
               right: 14,
               fontSize: 12,
               letterSpacing: "0.2em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             E2 · Export
@@ -526,7 +526,7 @@ export function PrivacyCardV2({
                   style={{
                     fontVariantNumeric: "tabular-nums",
                     fontSize: 14,
-                    color: "rgba(245,240,232,0.40)",
+                    color: "rgba(245,240,232,0.55)",
                     marginTop: 2,
                   }}
                 >
@@ -562,7 +562,7 @@ export function PrivacyCardV2({
             className="font-serif"
             style={{
               fontSize: 12,
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               marginTop: 12,
             }}
           >

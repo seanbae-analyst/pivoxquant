@@ -104,7 +104,7 @@ export function CompanionArchiveCard() {
                   className="font-mono"
                   style={{
                     fontSize: 12,
-                    color: "rgba(245,240,232,0.40)",
+                    color: "rgba(245,240,232,0.55)",
                     flexShrink: 0,
                   }}
                 >

@@ -267,7 +267,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             style={{
               fontSize: 12,
               letterSpacing: "0.06em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
               marginTop: 4,
             }}
           >

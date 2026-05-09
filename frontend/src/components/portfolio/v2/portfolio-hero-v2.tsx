@@ -302,7 +302,7 @@ export function PortfolioHeroV2({
             background: "transparent",
             color: reconcileAvailable
               ? "var(--pq-bronze)"
-              : "rgba(245,240,232,0.40)",
+              : "rgba(245,240,232,0.55)",
             fontSize: 12,
             letterSpacing: "0.2em",
             textTransform: "uppercase",

@@ -22,7 +22,7 @@ const RING_COLORS = [
   "var(--pq-bronze, #B8956A)",
   "var(--pq-bronze-light, #A3845C)",
   "var(--pq-bronze-deep, #6F5636)",
-  "rgba(245,240,232,0.32)",
+  "rgba(245,240,232,0.55)",
   "rgba(245,240,232,0.22)",
   "rgba(245,240,232,0.14)",
   "rgba(245,240,232,0.10)",
@@ -108,7 +108,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           style={{
             fontSize: 12,
             letterSpacing: "0.22em",
-            color: "rgba(245,240,232,0.40)",
+            color: "rgba(245,240,232,0.55)",
           }}
         >
           {sectorCount} sector{sectorCount === 1 ? "" : "s"} · cash {cashPct.toFixed(1)}%
@@ -188,7 +188,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
               textAnchor="middle"
               style={{
                 fontSize: 12,
-                fill: "rgba(245,240,232,0.40)",
+                fill: "rgba(245,240,232,0.55)",
                 letterSpacing: "0.18em",
               }}
             className="font-mono" >
@@ -212,7 +212,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
             style={{
               fontSize: 12,
               letterSpacing: "0.22em",
-              color: "rgba(245,240,232,0.40)",
+              color: "rgba(245,240,232,0.55)",
             }}
           >
             Cash buffer {cashPct.toFixed(1)}%
@@ -254,7 +254,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                   style={{
                     fontSize: 12,
                     letterSpacing: "0.22em",
-                    color: "rgba(245,240,232,0.40)",
+                    color: "rgba(245,240,232,0.55)",
                     textAlign: "left",
                     padding: "12px 0",
                     fontWeight: 400,
@@ -269,7 +269,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                   style={{
                     fontSize: 12,
                     letterSpacing: "0.22em",
-                    color: "rgba(245,240,232,0.40)",
+                    color: "rgba(245,240,232,0.55)",
                     textAlign: "left",
                     padding: "12px 0",
                     fontWeight: 400,
@@ -284,7 +284,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                   style={{
                     fontSize: 12,
                     letterSpacing: "0.22em",
-                    color: "rgba(245,240,232,0.40)",
+                    color: "rgba(245,240,232,0.55)",
                     textAlign: "right",
                     padding: "12px 0",
                     fontWeight: 400,
@@ -333,7 +333,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                           color:
                             i < EYEBROW_COLORS.length
                               ? EYEBROW_COLORS[i]
-                              : "rgba(245,240,232,0.40)",
+                              : "rgba(245,240,232,0.55)",
                         }}
                       >
                         {s.name}
@@ -365,7 +365,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                         className="font-mono"
                         style={{
                           fontSize: 12,
-                          color: "rgba(245,240,232,0.40)",
+                          color: "rgba(245,240,232,0.55)",
                           letterSpacing: "0.14em",
                           marginTop: 3,
                         }}
@@ -406,7 +406,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       style={{
                         fontSize: 12,
                         letterSpacing: "0.22em",
-                        color: "rgba(245,240,232,0.40)",
+                        color: "rgba(245,240,232,0.55)",
                       }}
                     >
                       CASH
@@ -432,7 +432,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       className="font-mono"
                       style={{
                         fontSize: 12,
-                        color: "rgba(245,240,232,0.40)",
+                        color: "rgba(245,240,232,0.55)",
                         letterSpacing: "0.14em",
                         marginTop: 3,
                       }}

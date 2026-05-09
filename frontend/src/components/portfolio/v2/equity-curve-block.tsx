@@ -329,7 +329,7 @@ export function EquityCurveBlock({
                 <polyline
                   points={geom.ptsBench}
                   fill="none"
-                  stroke="rgba(245,240,232,0.32)"
+                  stroke="rgba(245,240,232,0.55)"
                   strokeWidth={1.2}
                   strokeDasharray="3 4"
                 />
@@ -366,7 +366,7 @@ export function EquityCurveBlock({
             dashed={false}
           />
           <LegendSwatch
-            color="rgba(245,240,232,0.32)"
+            color="rgba(245,240,232,0.55)"
             label="Benchmark · KOSPI200"
             dashed
           />
@@ -392,7 +392,7 @@ function KpiCell({
         style={{
           fontSize: 12,
           letterSpacing: "0.22em",
-          color: "rgba(245,240,232,0.40)",
+          color: "rgba(245,240,232,0.55)",
           marginBottom: 6,
         }}
       >
