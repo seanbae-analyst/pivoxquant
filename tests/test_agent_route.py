@@ -119,7 +119,7 @@ class TestStatus:
         assert r.status_code == 200
         data = r.get_json()
         assert data["enabled"] is False
-        assert data["phase"] == "off"
+        assert data["phase"] == "closed_beta"
         assert "entitlement_plans" in data
 
     def test_status_reflects_flag_on(self, client, _flag_on):
@@ -127,7 +127,7 @@ class TestStatus:
         assert r.status_code == 200
         data = r.get_json()
         assert data["enabled"] is True
-        assert data["phase"] == "closed-beta"
+        assert data["phase"] == "closed_beta"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
