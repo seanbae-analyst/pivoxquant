@@ -130,6 +130,24 @@ def get_portfolio():
         else:
             price_source = "avg_cost"
         pnl = (cur_px - p.avg_cost) / p.avg_cost * 100 if p.avg_cost else 0
+
+        # 2026-05-09 abnormal-return guard (CEO live sanity flagged AAPL +877%):
+        # An absolute pnl beyond ±500% is almost certainly stale FMP data
+        # or a split-mismatched price (the same FMP /quote bug guarded by
+        # `_quote_price_sane` upstream — but a self-consistent stale snapshot
+        # can still slip the marketCap cross-check). Demote price_source to
+        # "abnormal_pnl_guard" and clamp pnl to None so the UI shows "—"
+        # instead of a garbage number. The avg_cost stays untouched — only
+        # the display effect of cur_px is suppressed.
+        if p.avg_cost and abs(pnl) > 500:
+            logger.warning(
+                "portfolio.get %s pnl=%.2f%% (cur=%.4f vs avg=%.4f) exceeds "
+                "±500%% — likely stale price; demoting to avg_cost fallback",
+                p.ticker, pnl, cur_px, p.avg_cost,
+            )
+            cur_px = float(p.avg_cost)
+            pnl = 0
+            price_source = "abnormal_pnl_guard"
         cur = sd.get("currency", "KRW" if is_kr else "USD")
 
         buy_fx = getattr(p, 'buy_fx_rate', 0) or 0
