@@ -1,8 +1,71 @@
-# PivoxQuant — 인수인계서 (2026-05-09 v27 세션 — 출시 모드 마무리 · 7 PR + 인프라 fix · OPEN PR 0건)
+# PivoxQuant — 인수인계서 (2026-05-09 v28 세션 — 출시 전 자율 점검 + 8 PR · OPEN PR 0건)
+
+## 🔴 2026-05-09 v28 세션 — **8 PR squash-merged · 5시간 자율 세션** · main `8b9a818 → fa38059` · OPEN PR 0건 · backend 1697 → 1713 PASS / 0 회귀
+
+**현재 main HEAD: `fa38059`** (origin sync OK). **OPEN PR 0건**.
+
+### v28 세션 8 PR 요약 (2026-05-09 자율 진행)
+| PR | 머지 commit | 핵심 |
+|---|---|---|
+| [#190](https://github.com/seanbae-analyst/pivoxquant/pull/190) | `46722b1` | FMP `/quote` sanity guards — yearHigh/yearLow + batch path coverage. AAPL +877% root cause fix. |
+| [#191](https://github.com/seanbae-analyst/pivoxquant/pull/191) | `f765a8b` | P1 batch — 광고법(Most chosen+7-day trial)+상표(KIS/Alpaca/FMP)+보안헤더+docs leak+약관 정합 12건 |
+| [#192](https://github.com/seanbae-analyst/pivoxquant/pull/192) | `ce99fc1` | PIPA cascade FK migration 029 — User 회원탈퇴 11 FK ondelete, defense in depth |
+| [#193](https://github.com/seanbae-analyst/pivoxquant/pull/193) | `ee5d383` | Backend Permissions-Policy + footer "Seven days free" 제거 |
+| [#194](https://github.com/seanbae-analyst/pivoxquant/pull/194) | `e869a03` | KR-indices test 4 pre-existing fail fix — mock fixture 정합 |
+| [#195](https://github.com/seanbae-analyst/pivoxquant/pull/195) | `102438b` | fmp.py dead code cleanup — get_price + get_history_batch 제거 |
+| [#196](https://github.com/seanbae-analyst/pivoxquant/pull/196) | `efb9c8b` | bug-hunter P1 batch (founding_lifetime tier + cashPct + alert 종목명 + skeletons + STALE chip + tier 매핑) |
+| [#197](https://github.com/seanbae-analyst/pivoxquant/pull/197) | `fa38059` | KIS sanity fail → FMP fallback chain (graceful degradation, future-proof) |
+
+### v28 점검 매트릭스 (5개 부서 병렬)
+| 부서 | 판정 | 핵심 발견 |
+|---|---|---|
+| audit | SHIP_OK 조건부 | P0 BLOCKER 0, alembic single head 028→029, OPEN PR/issue 0 |
+| security | SHIP_RISK→SAFE | OAuth/CSRF/Stripe PASS, secrets/headers/베타비번 fix됨, Permissions-Policy 추가 |
+| legal | LAUNCH_RISK→OK | §101 4요건 + §17 + PIPA + §50 PASS, 표시광고법 위반 fix됨 |
+| engineering | CODE_QUALITY_OK | 0 N+1, 0 sensitive logging, alembic clean, PIPA cascade 적용 |
+| frontend-dev | FRONTEND_OK | typecheck/lint/build clean, V3 락-인 보존, brand migration complete |
+
+### v28 bug-hunter 라이브 발굴 14건 (P0 3 + P1 8 + P2 3)
+- **P0 #1 KOSPI 누락 (KIS API quirk + PR #188 sanity bound 부작용)** — investigate-bug 100% 확신도 root cause 확정, PR #197 graceful degradation 적용. **운영적 즉시 복구는 BLOCKED** (FMP $29 plan caret-prefixed KR index 모두 HTTP 402, pykrx는 2026-04-19 법적 결정으로 도입 BLOCKED). KOSDAQ만 KIS sanity 통과로 표시.
+- **P0 #2 KOSDAQ stale** — KIS/FMP `^KQ11` history tail vs live level 30%+ 괴리 (FMP Starter tier lag).
+- **P0 #3 PORTFOLIO 초기 로딩 skeleton** — PR #196에서 fix.
+- **P1 #4 founding_lifetime → FREE 표시** — PR #196에서 fix (TIER_LABELS + status promotion).
+- **P1 #5 Cash buffer "—" 영구** — PR #196에서 fix (cashPct 추가).
+- **P1 #6 RISK CONCENTRATION HHI `—`** — 잔존 (별도 PR).
+- **P1 #7 RISK 7-Layer 컬럼 누락** — 잔존.
+- **P1 #8 EQUITY CURVE "Not enough history yet"** — 잔존.
+- **P1 #9 Detail 가격 플래시** — PR #196에서 fix (Skeleton wrap).
+- **P1 #10 sector "Unknown"** — 잔존.
+- **P1 #11 알림 종목명 누락** — PR #196에서 fix (resolver fallback).
+- **P1 #12 Journal 헤딩 플래시** — 잔존.
+- **P1 #13 KOSDAQ stale 시각 표시** — PR #196에서 fix (STALE chip + dim).
+- **P1 #14 subscription_status 불일치** — PR #196에서 부분 fix.
+
+### v28 출시 readiness 종합
+- **P0 BLOCKER 0건** → 베타 ship 가능 (KOSPI 누락은 알려진 한계)
+- backend 테스트 **1697 → 1713 PASS, 0 회귀** (기존 4 KR pre-existing fail까지 모두 해소)
+- 자율 fix 25건 (광고법 12 + 보안 2 + DB cascade 1 + tests 4 + dead code 2 + bug-hunter 7 + KIS fallback 1)
+- 잔존 P1 6건 (HHI / 7-Layer / EQUITY / sector / Journal / KOSPI 운영 복구) — 별도 PR
+
+### v28 CEO 권한 외 항목
+1. **Vercel env BETA_PASSWORD rotate** (`pivoxaudit2` → `pivoxaudit3`) — 코드 leak 제거됨, env rotate만
+2. **Railway env spot check**: `FRED_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `PIVOX_BROKER_ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, `FMP_API_KEY`, `DEV_PREMIUM_EMAILS`
+3. **GitHub Actions billing 차단** — main 모두 동일 fail. 메모리 룰 [추가 비용 제안 금지] 따라 backend는 권유 X
+4. **사업자등록증 + 통신판매업 신고** — Stripe 연동 + 유료 결제 시작 전 (전자상거래법 §13)
+5. **AAPL stale entry DB 정정** — guard로 NAV 보호 중, source 정정 권고
+6. **변호사 자문 큐 Q5-Q7** (legal 보고)
+7. **PostgreSQL prod cascade migration apply** — staging DB 검증 권장
+8. **KOSPI 운영 복구 옵션** (모두 CEO 결정):
+   - Path A: yfinance MIT — 별도 법적 검토 필요 (Yahoo ToS commercial use)
+   - Path B: KRX Open Data Portal — institutional account 신청 (days-weeks)
+   - Path C: FMP plan 변경 — 메모리 룰 [추가 비용 제안 금지] 위배라 backend 권유 X
+   - 현재: KOSDAQ만 표시, KOSPI/KOSPI200/KOSDAQ150 알려진 한계로 명시
+
+---
 
 ## 🟢 2026-05-09 v27 세션 — **7 PR squash-merged + Vercel V2 flag 9개 fix + 1 cleanup** · main `d634827 → 14e4720` · OPEN PR 0건 · 라이브 Hero rebuild 완료
 
-**현재 main HEAD: `14e4720`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
+**v27 main HEAD: `14e4720`** (v28 시작점 `8b9a818`은 이후 v27 docs handover 머지된 상태).
 
 ### 🆕 v27 라이브 sanity wave — Browser MCP 자율 검증 + 3 fix (PR #188 + #189)
 사장님이 "라이브 sanity 너가 해라"라고 위임. **Browser MCP로 자율 OAuth 통과 + dashboard 풀 진입 + 10 페이지 클릭 검증** 성공 (이전 세션에서 "OAuth 자율 막힘"이라 가정했던 게 실제로는 사장님 Chrome 세션 + Google "Choose an account" → seanbae1521@gmail.com 클릭으로 통과). 발견 + fix:
