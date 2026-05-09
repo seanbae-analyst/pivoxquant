@@ -4,7 +4,50 @@
 
 **현재 main HEAD: `14e4720`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
 
-### 🆕 v27 Hero round-2 — single-column editorial (PR #187)
+### 🆕 v27 라이브 sanity wave — Browser MCP 자율 검증 + 3 fix (PR #188 + #189)
+사장님이 "라이브 sanity 너가 해라"라고 위임. **Browser MCP로 자율 OAuth 통과 + dashboard 풀 진입 + 10 페이지 클릭 검증** 성공 (이전 세션에서 "OAuth 자율 막힘"이라 가정했던 게 실제로는 사장님 Chrome 세션 + Google "Choose an account" → seanbae1521@gmail.com 클릭으로 통과). 발견 + fix:
+
+**Browser MCP 라이브 검증 결과 (10 dashboard 페이지)**:
+| 페이지 | H1 | 상태 |
+|---|---|---|
+| HOME | "You held through noise. Cash buffer is doing the work — don't tax it." | ✅ Today's Memo editorial |
+| PORTFOLIO | "Your *book*." | ✅ 4 positions + UNREALIZED +$1,272 |
+| RISK BOARD | "Risk *board*." | ✅ 7-Layer attentive |
+| SIGNALS | "The stream is *observed*, not advised — *filtered* to what you own." | ✅ 1 positive 0 negative 3 neutral |
+| REPORTS | "Everything we've *published*, kept as quiet *artifacts*." | ✅ 1 brag card |
+| ALERTS | "When the desk *spoke*." | ✅ (PR #188 sync 후) UNREAD 13 |
+| PRE-TRADE | "Seven questions *before every trade*." | ✅ 7-gate form |
+| COMPANION | "Your journal, *remembered*." | ✅ Closed Beta + chat input |
+| PROFILE | "Who you are, when the *tape moves*. Beginner CFO · v3." | ✅ retake / export agent memory |
+| SETTINGS | "The dials that run *your CFO room*. Adjusted by you, *remembered by us*." | ✅ Operations/Brokers/Subscription/Privacy |
+
+**🚨 P0 발견 + 자율 fix 3건**:
+
+1. **PR #188 알림 카운터 모순 sync (`ab3b55e`)** — top bar bell `13` ↔ /alerts TOTAL `0` 모순. `routes/alerts.py:73` 가 limit-20 sliced list에서 `unread`를 카운트해서 14일 TTL cleanup race condition 시 모순 발생. Fix: 별도 fresh DB query (`/api/alerts/unread-count` 와 동일 source). frontend `alerts/page.tsx` `stats.unread` → `data.unread` 직접 사용 + mount 시 `mutate()` 강제. **라이브 검증**: bell 13 = /alerts UNREAD 13 일치 ✅
+
+2. **PR #188 KOSPI 가짜 7,498 sanity bound (`ab3b55e`)** — 한국 ticker `KOSPI 7,498.00` 표시 (실제는 2,755 수준 — KIS API code "0001"이 가끔 KOSPI 200 mark scaled ~3x 응답). `routes/market.py:_kis_index_snapshot` sanity bound가 `[100, 10000]` 으로 너무 넓어서 통과. Fix — per-ticker bounds:
+   - ^KS11 KOSPI: `[1500, 4500]`
+   - ^KQ11 KOSDAQ: `[500, 1500]`
+   - ^KS200 KOSPI 200: `[300, 700]`
+   - ^KQ150 KOSDAQ 150: `[800, 2000]`
+   - **라이브 검증**: KOSPI `— —` DELAYED (잘못된 7,498 거부됨) ✅
+
+3. **PR #189 Apple +877% abnormal PnL guard (`dadd7d4`)** — home Top Weight에 `AAPL +877.73%` 표시. 사장님 "FMP 데이터 때문이냐" 의심. **라이브 진단** (`/api/portfolio/positions` Browser MCP javascript 호출):
+   ```json
+   {"ticker":"AAPL","avgCost":30,"current":293.32,"shares":2,"price_source":"realtime","purchaseDate":"2026-05-01"}
+   ```
+   - `avgCost $30`: 사장님 직접 입력값 (실제 AAPL은 $190~$210, 데이터 entry 슬립 가능성 또는 split-adjusted seed)
+   - `current $293.32`: FMP realtime 응답 (실제 2026 trading range 벗어남 — `_quote_price_sane` upstream 가드는 marketCap × shares × price 셋이 같이 stale-drift하면 통과)
+   - **둘 다 의심** → 코드로 100% 확정 불가
+   - Fix: `routes/portfolio.py:get_portfolio`에 abnormal-pnl guard. `|pnl| > 500%` 이면 `cur_px = avg_cost` 폴백 + `pnl = 0` + `price_source = "abnormal_pnl_guard"` flag + logger warning. NAV 무결성 보존, 거짓 수치 노출 차단.
+   - **사장님 후속 액션**: AAPL 2주 매수단가가 진짜 $30이었는지 확인 후 정확한 값으로 update (또는 position 재추가). Railway redeploy 후 guard 적용 (코드 측 fix는 main에 반영됨).
+
+**🛑 자율 손 안 댄 것 (product decision — 사장님 결정)**:
+- **Top ticker S&P 500 / NASDAQ 라벨 vs SPY/QQQ 단위 미스매치**: `routes/market.py:_US_INDEX_PROXY` 가 SPY/QQQ ETF 가격을 의도적으로 사용 (Bug #11 fix 2026-04-29). 라벨 "S&P 500"인데 가격 ETF 단위라 사용자 혼란 가능. 자율 fix는 회귀 위험 — 사장님이 라벨에 "· SPY proxy" 명시 vs ETF→INDEX 단위 환산 결정 필요.
+
+---
+
+### v27 Hero round-2 — single-column editorial (PR #187)
 사장님이 PR #186 deploy 후 **"디자인은 뭐 변경 안한거야? 그냥 지우기만 한 마우스 따라다니는 거?"** 보고. 사장님 의도는 layout/structure도 다른 features 페이지처럼 재설계인데 round 1은 ambient 효과만 제거했음. 미흡 인정.
 
 **Round 2 (PR #187, `36c317e`)**: hero를 `/features/engine` `/features/personas` `/features/dashboard` `/features/pre-trade` 등과 **1:1 동일 layout**으로 재설계.
