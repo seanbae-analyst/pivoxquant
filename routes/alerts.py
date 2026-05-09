@@ -215,8 +215,17 @@ def price_check():
                       .first())
             if not recent:
                 sig = "NEGATIVE" if a["type"] == "STOP_LOSS" else "POSITIVE"
-                db.session.add(Alert(user_id=current_user.id, ticker=a["ticker"],
-                                     message=a["message"], signal=sig, score=0))
+                # Bug #1 fix (2026-05-09): kind was missing → frontend
+                # rendered "INFO" instead of "PRICE". Set canonical kind so
+                # the alerts page shows the right pill colour + label.
+                kind = (
+                    "price_stop_loss" if a["type"] == "STOP_LOSS"
+                    else "price_take_profit"
+                )
+                db.session.add(Alert(
+                    user_id=current_user.id, ticker=a["ticker"],
+                    message=a["message"], signal=sig, score=0, kind=kind,
+                ))
         if alerts:
             db.session.commit()
     except Exception:

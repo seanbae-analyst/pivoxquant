@@ -66,11 +66,24 @@ function reframeHint(verdict: GateVerdict | undefined): string | null {
   }
 }
 
-export function ChatPanel() {
+interface ChatPanelProps {
+  /**
+   * Optional ticker to seed the composer with on first render. Bug #3 fix
+   * (2026-05-09): /detail/[ticker] links to /companion?ticker=AAPL but the
+   * param was silently dropped. Page reads the query param and passes it
+   * here; we prefill the draft so the user's first message has stock
+   * context without retyping.
+   */
+  initialContextTicker?: string | null;
+}
+
+export function ChatPanel({ initialContextTicker }: ChatPanelProps = {}) {
   const { messages, append, update } = useCompanionHistory();
   const { acknowledged, acknowledge } = useDisclaimerAck();
 
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(() =>
+    initialContextTicker ? `${initialContextTicker} 에 대해 ` : "",
+  );
   const [sending, setSending] = useState(false);
   const [rateLimitAt, setRateLimitAt] = useState<number | null>(null);
   const [rateRemaining, setRateRemaining] = useState<number>(0);

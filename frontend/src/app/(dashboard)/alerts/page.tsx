@@ -328,10 +328,15 @@ export default function AlertsPage() {
                 </thead>
                 <tbody>
                   {filtered.map((a) => (
+                    // Bug #6 fix (2026-05-09 deep bug hunt): cursor-pointer
+                    // implied interactivity but rows without a ticker
+                    // (account_sync / macro_event / watchlist_event) just
+                    // marked-as-read and stayed put — no navigation, no
+                    // feedback. Conditional cursor matches actual behaviour.
                     <tr
                       key={a.id}
                       onClick={() => handleAlertClick(a)}
-                      className="cursor-pointer"
+                      className={a.ticker ? "cursor-pointer" : "cursor-default"}
                     >
                       <td className="px-5 py-3 text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
                         {relativeTime(a.created_at)}

@@ -512,9 +512,17 @@ def status() -> Any:
         field (only declared it in TypeScript) so removing it is safe.
     """
     companion = _get_companion()
+    # Bug #5 fix (2026-05-09 deep bug hunt): emitted phase values
+    # ("closed-beta" with hyphen, "off") did not match the frontend's
+    # AgentStatusResponse.phase TypeScript union ("closed_beta" |
+    # "internal" | "rolling_ga" | "ga"). The hyphen variant was a typo and
+    # "off" was outside the union entirely. Aligned to the canonical
+    # underscore form; the disabled case maps to "closed_beta" because
+    # ComingSoon UI already renders that label correctly (see
+    # frontend/src/app/(dashboard)/companion/page.tsx:182).
     return jsonify({
         "enabled": companion.is_enabled(),
-        "phase": "closed-beta" if companion.is_enabled() else "off",
+        "phase": "closed_beta",
         "entitlement_plans": sorted(_ENTITLED_PLANS),
     })
 
