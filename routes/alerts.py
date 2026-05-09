@@ -68,9 +68,23 @@ def get_alerts():
 
     alerts = (Alert.query.filter_by(user_id=current_user.id)
               .order_by(Alert.created_at.desc()).limit(limit).all())
+    # 2026-05-09 fix: previously this counted unread off the limit-sliced
+    # `alerts` list, which produced a desk-vs-bell mismatch — the bell
+    # dropdown reads `unread` here, but the /alerts page recomputes total
+    # from the same response's `alerts.length`. If 13 unread rows exist
+    # but only the latest 20 fit the limit, the slice may also miss any
+    # that were unread but pushed below the limit, AND a 14-day TTL
+    # cleanup running in this same request can wipe rows mid-flight,
+    # leaving the bell holding a stale "13" while the page reads 0.
+    # Counting unread off a fresh query (independent of limit + ordering)
+    # is the only honest source — and it matches /api/alerts/unread-count
+    # exactly so both endpoints can never disagree.
+    unread_count = Alert.query.filter_by(
+        user_id=current_user.id, is_read=False,
+    ).count()
     return jsonify({
         "alerts": [serialize_alert(a) for a in alerts],
-        "unread": sum(1 for a in alerts if not a.is_read),
+        "unread": int(unread_count),
     })
 
 

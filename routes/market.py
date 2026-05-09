@@ -810,14 +810,25 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     if level is None:
         return None
 
-    # Final absolute sanity bound: KOSPI-family indices trade in the
-    # 500–7000 range (KOSPI re-rated to ~6500 by 2026); KOSDAQ-150 in the
-    # 1000–2500 range. A value outside [100, 10000] is almost certainly a
-    # unit bug. Drop the entry rather than render a misleading number.
-    if not (100.0 <= level <= 10000.0):
+    # 2026-05-09 fix: per-ticker sanity bound replaces the wide [100,10000]
+    # bracket. The wide bracket let through a KIS API quirk where the
+    # KOSPI ("0001") code occasionally returns the KOSPI-200 mark-to-mid
+    # value scaled by ~3x, producing levels around 7,400 that the frontend
+    # then rendered as the headline KOSPI level. CEO live sanity flagged
+    # "KOSPI 7,498" — the real index has been trading 2,500–3,200.
+    # Tighten the bound per-ticker so only realistic values pass.
+    _PER_TICKER_BOUNDS = {
+        "^KS11":  (1_500.0, 4_500.0),   # KOSPI composite (2026: ~2,500–3,200)
+        "^KQ11":  (500.0,   1_500.0),   # KOSDAQ composite
+        "^KS200": (300.0,   700.0),     # KOSPI 200
+        "^KQ150": (800.0,   2_000.0),   # KOSDAQ 150
+    }
+    lo, hi = _PER_TICKER_BOUNDS.get(ticker, (100.0, 10_000.0))
+    if not (lo <= level <= hi):
         logger.warning(
-            "market.indices %s level %.2f outside sanity bound [100,10000]; "
-            "dropping entry", ticker, level,
+            "market.indices %s level %.2f outside sanity bound [%.0f,%.0f]; "
+            "dropping entry (likely KIS unit/code mismatch)",
+            ticker, level, lo, hi,
         )
         return None
 
