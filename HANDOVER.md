@@ -1,8 +1,23 @@
-# PivoxQuant — 인수인계서 (2026-05-09 v27 세션 — 출시 모드 마무리 · 6 PR + 인프라 fix · OPEN PR 0건)
+# PivoxQuant — 인수인계서 (2026-05-09 v27 세션 — 출시 모드 마무리 · 7 PR + 인프라 fix · OPEN PR 0건)
 
-## 🟢 2026-05-09 v27 세션 — **6 PR squash-merged + Vercel V2 flag 9개 fix + 1 cleanup** · main `d634827 → 8fbcee2` · OPEN PR 0건 · 풀 회귀 1662 passed · 라이브 검증 1차 완료
+## 🟢 2026-05-09 v27 세션 — **7 PR squash-merged + Vercel V2 flag 9개 fix + 1 cleanup** · main `d634827 → 14e4720` · OPEN PR 0건 · 라이브 Hero rebuild 완료
 
-**현재 main HEAD: `8fbcee2`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
+**현재 main HEAD: `14e4720`** (origin sync OK). **OPEN PR 0건** — 모두 머지 완료.
+
+### 🆕 v27 P0 마지막 fix — Hero static rebuild (PR #186)
+사장님 라이브 검증 후 보고: *"your cfo learns you 이 페이지 왤케 별로냐 너무 달라혼자 / 마우스 옮겨다니면 금색 따라오는 그거 지우고 아예 삭다 새로 만들어"*
+
+**root cause**: Hero v4가 ambient effects를 너무 많이 stack — HeroAurora (cursor-tracked bronze sunrise) / HeroSpotlight (cursor radial gradient = "마우스 따라오는 금색") / HeroParticles (Canvas 2D 드리프트) / FilmGrain / dot-pattern mask / inner glow / HeroTypography (glyph-by-glyph cross-fade) / CtaInkBleed (SVG ink-bleed) / pq-cfo-glow keyframe / scroll cue pulse / cinematic entrance animations. 각 효과는 tasteful 했지만 stack은 over-produced. 다른 페이지(`/features/*` `/pricing` `/login` `/signup` `/sample-reports` `/terms` `/privacy`)는 모두 calm static editorial → Hero만 다른 톤.
+
+**fix (PR #186, `14e4720`)**:
+- `hero.tsx` 재작성 (372 → 240 lines): static editorial — eyebrow + italic Playfair H1 + bronze italic "learns" + sub copy + 2 plain CTAs (bronze pill + ghost outline) + disclaimer + 7-Layer Today's Gate panel (보존 — 유일한 research-desk surface visual). 모든 ambient 효과 제거.
+- `pq-cfo-word` keyframe glow 제거 → 정적 italic + bronze color
+- Dead 5 컴포넌트 삭제: `hero-spotlight.tsx` (66) + `hero-aurora.tsx` (140) + `hero-particles.tsx` (264) + `hero-typography.tsx` (207) + `cta-ink-bleed.tsx` — `grep` 검증으로 다른 importer 0건 확인
+- Pure Vantablack background, zero cursor tracking
+
+**Browser MCP 라이브 검증 (post-deploy)**: 데스크톱 (1568x762)에서 마우스를 hero 위 (400, 400)에 hover했을 때 cursor-tracked bronze gradient **0건** 확인. H1 "Your CFO learns you." 정적 italic + bronze "learns" 정상 표시. MarketTicker + Today's Gate 보존. 다른 features 페이지 톤과 일치.
+
+---
 
 ### 🟢 v27 디자인 풀 audit (사장님 자율 모드 위임 후 — 데스크톱 + 모바일)
 PR #185 silver-matte fix 후 사장님 "이참에 디자인 싹다 검수해서 제대로 해라 / 자러 간다 자율모드로 알아서 다해라" 지시. Browser MCP로 16개 라이브 페이지 풀 visual audit:
