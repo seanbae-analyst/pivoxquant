@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 import numpy as np
 from flask import Blueprint, jsonify
@@ -23,6 +24,17 @@ from models import Position
 from services.container import fetcher
 from services.quant.risk_defense import RiskDefenseSystem
 from .decorators import api_auth, legal_scrub_response
+
+_KST = ZoneInfo("Asia/Seoul")
+
+
+def _kst_now_str() -> str:
+    """Current Korea-Standard time as 'YYYY-MM-DD HH:MM KST'.
+
+    Risk Board v2 surfaces an 'observed_at_kst' badge per layer; KST is the
+    project's default display timezone (memory: design_v3 / KR convention).
+    """
+    return datetime.now(_KST).strftime("%Y-%m-%d %H:%M KST")
 
 logger = logging.getLogger(__name__)
 
@@ -168,34 +180,57 @@ def _demo_summary_response() -> dict:
         "es_1d_pct":        0.0,
         "max_dd_90d_pct":   0.0,
         "corr_risk_index":  0.0,
+        "hhi":              0.0,
         "is_demo":          True,
         "message":          "Risk data temporarily unavailable",
     }
 
 
 def _demo_layers_response() -> dict:
-    """Neutral fallback for /layers — 7 GREEN placeholder entries."""
+    """Neutral fallback for /layers — 7 GREEN placeholder entries.
+
+    Threshold strings are derived from the default RiskDefenseSystem config
+    (the SoT for layer parameters), so this fallback stays in lockstep with
+    the live response shape: every layer always emits  +
+    .
+    """
+    cfg = RiskDefenseSystem.default_config()
+    observed = _kst_now_str()
     layers = [
         {"no": 1, "name": "VaR Layer",          "metric_label": "Daily 1-day 95% VaR",
          "metric_value": "—", "status": "GREEN",
+         "threshold": f"< {cfg['var_threshold_pct']:.1f}%",
+         "observed_at_kst": observed,
          "observation": "Risk data temporarily unavailable."},
         {"no": 2, "name": "Correlation Layer",  "metric_label": "Avg pairwise correlation",
          "metric_value": "—", "status": "GREEN",
+         "threshold": f"< {cfg['correlation_alert_threshold']:.2f}",
+         "observed_at_kst": observed,
          "observation": "Risk data temporarily unavailable."},
         {"no": 3, "name": "VIX Regime",         "metric_label": "VIX",
          "metric_value": "—", "status": "GREEN",
+         "threshold": f"< {cfg['vix_caution']:.0f} / {cfg['vix_panic']:.0f}",
+         "observed_at_kst": observed,
          "observation": "Risk data temporarily unavailable."},
         {"no": 4, "name": "Tail Risk",          "metric_label": "Tail imbalance",
          "metric_value": "—", "status": "GREEN",
+         "threshold": f"< {cfg['tail_imbalance_threshold']:.1f}x avg",
+         "observed_at_kst": observed,
          "observation": "Risk data temporarily unavailable."},
         {"no": 5, "name": "Daily Loss Guard",   "metric_label": "Today's P&L",
          "metric_value": "0.00%", "status": "GREEN",
+         "threshold": f"> -{cfg['daily_loss_limit_pct']:.1f}%",
+         "observed_at_kst": observed,
          "observation": "Risk data temporarily unavailable."},
         {"no": 6, "name": "Sector Exposure",    "metric_label": "Max sector weight",
          "metric_value": "—", "status": "GREEN",
+         "threshold": f"< {cfg['max_sector_pct']:.0f}%",
+         "observed_at_kst": observed,
          "observation": "Risk data temporarily unavailable."},
         {"no": 7, "name": "Cash Buffer",        "metric_label": "Cash weight",
          "metric_value": "—", "status": "GREEN",
+         "threshold": f"≥ {cfg['bull_cash_pct']:.0f}%",
+         "observed_at_kst": observed,
          "observation": "Risk data temporarily unavailable."},
     ]
     return {
@@ -231,6 +266,7 @@ def risk_summary():
             "es_1d_pct":        0.0,
             "max_dd_90d_pct":   0.0,
             "corr_risk_index":  0.0,
+            "hhi":              0.0,
         }
 
         n_pos = 0 if state is None else len(state.get("positions") or [])
@@ -243,6 +279,19 @@ def risk_summary():
         if state is None:
             # Truly empty portfolio — honest zeros, not demo.
             return jsonify(payload)
+
+        # HHI (Herfindahl-Hirschman index) — concentration metric on the
+        # portfolio weight vector itself; independent of returns history,
+        # so we surface it before any returns-based gating below. Single
+        # asset → 1.0 (max concentration), perfectly diversified → 1/N.
+        # Same calc as /api/risk/concentration so both gauges agree.
+        try:
+            hhi_weights = [float(p.get("weight") or 0.0) for p in state["positions"]]
+            hhi = float(sum(w * w for w in hhi_weights))
+            payload["hhi"] = round(hhi, 4)
+        except Exception as e:
+            logger.warning("risk.summary HHI compute failed: %s", e)
+            payload["hhi"] = 0.0
 
         if matrix is None or matrix.shape[0] < 20 or matrix.shape[1] == 0:
             # History too short or missing for risk math. Return zeros with a
@@ -319,38 +368,59 @@ def _risk_layers_impl():
         n_pos_dbg, len(valid_tickers or []), mshape_dbg,
     )
 
+    # Resolve the user's profile-aware risk config up front. This is the SoT
+    # for threshold strings; we read from rds.config rather than hard-coding
+    # numbers, so updates to RiskDefenseSystem.PROFILE_DEFENSE_CONFIGS / the
+    # default_config() automatically propagate to the API surface.
+    rds = RiskDefenseSystem.from_profile(
+        getattr(current_user, "investor_profile", "steady_accumulator")
+        or "steady_accumulator"
+    )
+    cfg = rds.config
+    observed = _kst_now_str()
+    th_var      = f"< {cfg['var_threshold_pct']:.1f}%"
+    th_corr     = f"< {cfg['correlation_alert_threshold']:.2f}"
+    th_vix      = f"< {cfg['vix_caution']:.0f} / {cfg['vix_panic']:.0f}"
+    th_tail     = f"< {cfg['tail_imbalance_threshold']:.1f}x avg"
+    th_daily    = f"> -{cfg['daily_loss_limit_pct']:.1f}%"
+    th_sector   = f"< {cfg['max_sector_pct']:.0f}%"
+    th_cash     = f"≥ {cfg['bull_cash_pct']:.0f}%"
+
     # Default layers when portfolio is empty
     default_layers = [
         {"no": 1, "name": "VaR Layer",          "metric_label": "Daily 1-day 95% VaR",
          "metric_value": "—", "status": "GREEN",
+         "threshold": th_var, "observed_at_kst": observed,
          "observation": "No positions under observation."},
         {"no": 2, "name": "Correlation Layer",  "metric_label": "Avg pairwise correlation",
          "metric_value": "—", "status": "GREEN",
+         "threshold": th_corr, "observed_at_kst": observed,
          "observation": "No positions under observation."},
         {"no": 3, "name": "VIX Regime",         "metric_label": "VIX",
          "metric_value": "—", "status": "GREEN",
+         "threshold": th_vix, "observed_at_kst": observed,
          "observation": "No VIX signal attached."},
         {"no": 4, "name": "Tail Risk",          "metric_label": "Tail imbalance",
          "metric_value": "—", "status": "GREEN",
+         "threshold": th_tail, "observed_at_kst": observed,
          "observation": "No positions under observation."},
         {"no": 5, "name": "Daily Loss Guard",   "metric_label": "Today's P&L",
          "metric_value": "0.00%", "status": "GREEN",
+         "threshold": th_daily, "observed_at_kst": observed,
          "observation": "Within band."},
         {"no": 6, "name": "Sector Exposure",    "metric_label": "Max sector weight",
          "metric_value": "—", "status": "GREEN",
+         "threshold": th_sector, "observed_at_kst": observed,
          "observation": "No positions under observation."},
         {"no": 7, "name": "Cash Buffer",        "metric_label": "Cash weight",
          "metric_value": "—", "status": "GREEN",
+         "threshold": th_cash, "observed_at_kst": observed,
          "observation": "No positions under observation."},
     ]
 
     if state is None:
         return jsonify(default_layers)
 
-    rds = RiskDefenseSystem.from_profile(
-        getattr(current_user, "investor_profile", "steady_accumulator")
-        or "steady_accumulator"
-    )
     # Run full check_all() for layers_triggered / defense_score. Any exception
     # here must NOT kill the whole ladder — we compute metric strings below
     # independently per-layer so even a partial failure shows real numbers
@@ -427,6 +497,8 @@ def _risk_layers_impl():
             "no": 1, "name": "VaR Layer",
             "metric_label": "Daily 1-day 95% VaR",
             "metric_value": var_pct_str,
+            "threshold": th_var,
+            "observed_at_kst": observed,
             "status": "RED" if "L1_VAR" in triggered else "GREEN",
             "observation": "VaR observed above soft limit." if "L1_VAR" in triggered
                             else "Within historical band.",
@@ -435,6 +507,8 @@ def _risk_layers_impl():
             "no": 2, "name": "Correlation Layer",
             "metric_label": "Avg pairwise correlation",
             "metric_value": corr_str,
+            "threshold": th_corr,
+            "observed_at_kst": observed,
             "status": "YELLOW" if "L2_CORRELATION" in triggered else "GREEN",
             "observation": "Observed elevated pairwise correlation."
                            if "L2_CORRELATION" in triggered
@@ -444,6 +518,8 @@ def _risk_layers_impl():
             "no": 3, "name": "VIX Regime",
             "metric_label": "VIX",
             "metric_value": vix_str,
+            "threshold": th_vix,
+            "observed_at_kst": observed,
             "status": "RED" if "L3_VIX_PANIC" in triggered
                       else ("YELLOW" if "L3_VIX_CAUTION" in triggered else "GREEN"),
             "observation": ("Panic-level volatility observed."
@@ -456,6 +532,8 @@ def _risk_layers_impl():
             "no": 4, "name": "Tail Risk",
             "metric_label": "Tail imbalance",
             "metric_value": "balanced" if "L4_TAIL_RISK" not in triggered else "imbalanced",
+            "threshold": th_tail,
+            "observed_at_kst": observed,
             "status": "YELLOW" if "L4_TAIL_RISK" in triggered else "GREEN",
             "observation": "Left-tail concentration observed."
                            if "L4_TAIL_RISK" in triggered
@@ -465,6 +543,8 @@ def _risk_layers_impl():
             "no": 5, "name": "Daily Loss Guard",
             "metric_label": "Today's P&L",
             "metric_value": f"{daily_ret:.2f}%",
+            "threshold": th_daily,
+            "observed_at_kst": observed,
             "status": "RED" if "L5_DAILY_LOSS" in triggered else "GREEN",
             "observation": "Today's loss above soft limit."
                            if "L5_DAILY_LOSS" in triggered
@@ -474,6 +554,8 @@ def _risk_layers_impl():
             "no": 6, "name": "Sector Exposure",
             "metric_label": "Max position weight",
             "metric_value": sector_str,
+            "threshold": th_sector,
+            "observed_at_kst": observed,
             "status": "YELLOW" if "L6_SECTOR_CONCENTRATION" in triggered else "GREEN",
             "observation": "Position concentration above soft-limit band."
                            if "L6_SECTOR_CONCENTRATION" in triggered
@@ -483,6 +565,8 @@ def _risk_layers_impl():
             "no": 7, "name": "Cash Buffer",
             "metric_label": "Cash weight",
             "metric_value": f"{cash_w_pct:.0f}%",
+            "threshold": th_cash,
+            "observed_at_kst": observed,
             "status": "GREEN",
             "observation": "Cash buffer observed.",
         },
