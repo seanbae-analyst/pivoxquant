@@ -238,6 +238,28 @@ export default async function RootLayout({
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
+        {/* SEO audit (2026-05-09): JSON-LD Organization structured data so
+            Google Knowledge Graph can resolve the brand entity. The site
+            isn't yet listed; declaring this gives the crawler the canonical
+            wordmark + sameAs hooks (Twitter / GitHub) when it's indexed. */}
+        <script
+          type="application/ld+json"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "PivoxQuant",
+              url: "https://pivoxquant.com",
+              logo: "https://pivoxquant.com/icons/icon-512x512.png",
+              description:
+                "Observational quant research tool. Informational only — not investment advice.",
+              sameAs: [
+                "https://github.com/seanbae-analyst/pivoxquant",
+              ],
+            }),
+          }}
+        />
       </head>
       <body className="min-h-full bg-background text-foreground antialiased">
         {/*
