@@ -213,9 +213,11 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
           borderCollapse: "collapse",
         }}
       >
+        <caption className="sr-only">알림 설정</caption>
         <thead>
           <tr>
             <th
+              scope="col"
               className="font-mono uppercase"
               style={{
                 padding: "14px 12px 14px 24px",
@@ -232,6 +234,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
             {(["Email", "Push", "In-app"] as const).map((c) => (
               <th
                 key={c}
+                scope="col"
                 className="font-mono uppercase"
                 style={{
                   padding: "14px 12px",
