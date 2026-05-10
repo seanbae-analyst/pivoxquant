@@ -151,6 +151,11 @@ class AIService:
         # most recent failure (per AIService instance, set inside the except blocks).
         # Kept short (≤200 chars) so we never leak SDK secrets / large stack traces.
         self.last_error: str | None = None
+        # B-08 graceful degradation: classified error code from the most recent
+        # failure (one of services.ai.errors.AI_*). Routes use this to decide
+        # 503 vs 500 + which user-facing fallback to surface. Stays None on
+        # success or when no failure has been recorded yet.
+        self.last_error_code: str | None = None
         api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
         if api_key:
             try:
@@ -162,18 +167,32 @@ class AIService:
                 logger.warning("AI Service init failed: %s", e)
 
     def _record_error(self, op: str, exc: Exception) -> None:
-        """Persist a short, redacted last-error string for route diagnostics.
+        """Persist a short, redacted last-error string + classified code for
+        route diagnostics.
 
         Stores ``"<op>: <ExceptionType>: <message[:160]>"`` — never the raw
         exception object, never a traceback. Bug #14 surface: routes that
         observe a ``None`` return from a generator can include ``last_error``
         in their 500 body so the user/operator sees *why* SWOT failed instead
         of the prior opaque "Failed to generate SWOT".
+
+        B-08: also classifies the exception via ``services.ai.errors`` and
+        stores the code on ``self.last_error_code``. Routes use this to map
+        Anthropic transient failures to HTTP 503 + frontend-readable
+        ``error_code`` instead of a bare 500.
         """
         msg = str(exc)
         if len(msg) > 160:
             msg = msg[:157] + "..."
         self.last_error = f"{op}: {type(exc).__name__}: {msg}"
+        # Classify for the route. Defensive — never let the classifier itself
+        # crash the generator path (which already swallows SDK exceptions).
+        try:
+            from services.ai.errors import classify_anthropic_error
+            self.last_error_code = classify_anthropic_error(exc)
+        except Exception:  # pragma: no cover
+            from services.ai.errors import AI_UNKNOWN
+            self.last_error_code = AI_UNKNOWN
 
     # ── Context Builders ──────────────────────────────────────────
 
