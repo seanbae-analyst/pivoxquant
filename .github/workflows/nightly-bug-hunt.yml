@@ -114,7 +114,7 @@ jobs:
 
       # ── Upload raw artifacts (30-day retention) ──
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: nightly-bug-hunt-${{ github.run_id }}
