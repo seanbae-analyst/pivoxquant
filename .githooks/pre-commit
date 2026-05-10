@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# PivoxQuant — pre-commit secret guard
+# ----------------------------------------------------------------------
+# 2026-05-10 — Protects against the recurring beta-password leak pattern
+# (pivoxaudit / pivoxaudit2) and other obvious secret regressions.
+#
+# Activation (one-time, per clone):
+#     git config core.hooksPath .githooks
+#
+# Bypass (use sparingly, requires explicit ack):
+#     git commit --no-verify
+#
+# CI legal-guard.yml mirrors the beta-password check on the server side
+# so a bypass here still gets caught before merge.
+# ----------------------------------------------------------------------
+# macOS ships bash 3.2 — avoid bash-4-only features (mapfile, etc).
+
+# Only inspect the staged diff (added/changed/copied/renamed files).
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null)
+[ -z "$STAGED" ] && exit 0
+
+fail=0
+report() {
+  echo "✗ pre-commit: $1"
+  fail=1
+}
+
+# 1) Block forbidden file extensions outright.
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  case "$f" in
+    .env|.env.*|*.env)              report "secret file staged: $f (move to Vercel/Railway env)";;
+    *.db|*.sqlite|*.sqlite3)        report "binary DB staged: $f (add to .gitignore)";;
+    *.pem|*.key|*.p12|*.pfx)        report "key material staged: $f";;
+  esac
+done <<EOF
+$STAGED
+EOF
+
+# 2) Pattern scans on staged content (catches partial stages — only +added lines).
+SCAN=$(git diff --cached -U0 --diff-filter=ACMR 2>/dev/null || true)
+[ -z "$SCAN" ] && { [ "$fail" -eq 0 ] && exit 0 || exit 1; }
+
+# Beta password (the recurring incident).
+if echo "$SCAN" | grep -E '^\+.*pivoxaudit[0-9]*' >/dev/null 2>&1; then
+  report "beta password literal in staged diff (regex pivoxaudit[0-9]*) — use Vercel env reference instead"
+fi
+
+# Sentry DSN.
+if echo "$SCAN" | grep -E '^\+.*https://[a-f0-9]{32}@[a-z0-9.-]+\.ingest\.[a-z.]+sentry\.io' >/dev/null 2>&1; then
+  report "Sentry DSN in staged diff — rotate via Sentry console + use NEXT_PUBLIC_SENTRY_DSN env"
+fi
+
+# Anthropic API key.
+if echo "$SCAN" | grep -E '^\+.*sk-ant-[A-Za-z0-9_-]{20,}' >/dev/null 2>&1; then
+  report "Anthropic API key in staged diff — rotate immediately"
+fi
+
+# Generic AWS access key.
+if echo "$SCAN" | grep -E '^\+.*AKIA[0-9A-Z]{16}' >/dev/null 2>&1; then
+  report "AWS access key id in staged diff"
+fi
+
+# Stripe secret key.
+if echo "$SCAN" | grep -E '^\+.*sk_(live|test)_[A-Za-z0-9]{20,}' >/dev/null 2>&1; then
+  report "Stripe secret key in staged diff"
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo ""
+  echo "Commit blocked. To override (only if you are certain):"
+  echo "    git commit --no-verify"
+  echo "Server-side legal-guard.yml will re-check on push."
+  exit 1
+fi
+exit 0
