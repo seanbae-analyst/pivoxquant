@@ -138,7 +138,8 @@ def _resolve_frontend_url() -> str:
 # This keeps the authlib code path untouched while removing the
 # cross-request session-cookie dependency that was causing state_mismatch.
 
-_OAUTH_STATE_MAX_AGE = 600  # seconds (10 minutes)
+_OAUTH_STATE_MAX_AGE = 300  # seconds (5 minutes; was 600 — security M5 2026-05-10
+                            # narrows replay window for leaked state tokens)
 _OAUTH_STATE_SALT = "pivoxquant.oauth.state.v1"
 
 
