@@ -63,13 +63,14 @@ export function NotificationDropdown() {
   const ref = useRef<HTMLDivElement | null>(null);
 
   // BUG-8 FIX 2: unify the SWR cache key with `useAlerts()` in hooks.ts
-  // so both subscriptions dedupe to a single request. The old key
-  // `/api/alerts?limit=10` produced a separate cache entry from
-  // `/api/alerts` and doubled the request count on /home. We now fetch
-  // the full list and slice client-side — the backend already paginates
-  // by `limit` query param at the service layer, so total payload is
-  // unchanged when the caller is `useAlerts` (both issue `/api/alerts`
-  // with no qs).
+  // so both subscriptions dedupe to a single request.
+  //
+  // 2026-05-10 (B-09): hooks.ts:96 was changed to `?limit=50` for the
+  // /alerts page Total/Unread/Today/Week stats accuracy (Bug #2 deep
+  // bug hunt). The dropdown was still on `API.alerts.list` (no qs),
+  // re-introducing the duplicate cache entry the original BUG-8 fix
+  // closed. Re-unifying on `?limit=50` here so SWR dedupes both
+  // subscriptions onto a single in-flight fetch + cache row.
   //
   // P1 FIX (2026-05-03): unread count is derived from the same list
   // response (backend includes `unread` aggregate at routes/alerts.py:73).
@@ -77,7 +78,7 @@ export function NotificationDropdown() {
   // the alerts polling rate (~3-4 req/min). Now: one SWR subscription,
   // unread derived from `data.unread`. No backend change required.
   const { data, error, isLoading, mutate } = useSWR<AlertsListResponse>(
-    API.alerts.list,
+    `${API.alerts.list}?limit=50`,
     fetcher,
     // Bug #3 (HANDOVER v22): focus revalidate compounded duplicate fetches
     // on page nav. The 60s polling already keeps the unread badge fresh.

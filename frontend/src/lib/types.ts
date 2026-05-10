@@ -85,7 +85,10 @@ export interface InvestmentProfile {
   time_horizon: string;
   preferred_markets: string;
   preferred_sectors: string;
-  auto_trade_preference: string;
+  // `auto_trade_preference` removed 2026-05-10 — autotrade feature was
+  // physically deleted 2026-05-05 (legal: 투자일임업 회피, see memory
+  // session_2026-05-03). The backend `InvestmentProfile` may still
+  // serialize the column, but no frontend surface reads it.
   daily_time: string;
   tech_weight: number;
   fund_weight: number;

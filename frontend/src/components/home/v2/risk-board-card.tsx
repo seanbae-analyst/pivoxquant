@@ -22,13 +22,20 @@ import { apiFetch } from "@/lib/api";
 
 interface RiskSummaryShape {
   // Backend (/api/risk/summary) returns snake_case PERCENT values:
-  //   var_1d_pct, es_1d_pct, max_dd_90d_pct, corr_risk_index
+  //   var_1d_pct, es_1d_pct, max_dd_90d_pct, corr_risk_index, hhi
+  // (routes/risk.py:264-294 — HHI = sum of weight^2, 0..1 fraction).
   // Older optional fractional names (var_95, tail_ces, …) kept for
   // forward-compat with risk-gauge-grid contract.
   var_1d_pct?: number;
   es_1d_pct?: number;
   max_dd_90d_pct?: number;
   corr_risk_index?: number;
+  /**
+   * Herfindahl-Hirschman index — concentration metric on portfolio weight
+   * vector. Single asset → 1.0 (max concentration), perfectly diversified
+   * → 1/N. Backend canonical key (routes/risk.py:291).
+   */
+  hhi?: number;
   // Legacy / forward-compat
   var_95?: number;
   var_99?: number;
@@ -135,10 +142,15 @@ export function RiskBoardCard() {
     toFraction(risk?.var_1d_pct) ?? toFraction(risk?.var_95);
   const tail =
     toFraction(risk?.es_1d_pct) ?? toFraction(risk?.tail_ces);
+  // Concentration: backend canonical key is `hhi` (routes/risk.py:291).
+  // `sector_concentration` / `gauge.concentration` are legacy fallbacks
+  // kept so existing snapshots don't suddenly em-dash on a stale fetch.
   const sectorConc =
-    risk?.sector_concentration != null
-      ? risk.sector_concentration
-      : risk?.gauge?.concentration;
+    risk?.hhi != null
+      ? risk.hhi
+      : risk?.sector_concentration != null
+        ? risk.sector_concentration
+        : risk?.gauge?.concentration;
   const correl =
     risk?.corr_risk_index != null
       ? risk.corr_risk_index
