@@ -24,7 +24,7 @@
     "@sentry/nextjs": "^10.51.0",
     "clsx": "^2.1.1",
     "lightweight-charts": "^5.2.0",
-    "lucide-react": "^1.7.0",
+    "lucide-react": "^1.14.0",
     "marked": "^18.0.2",
     "motion": "^12.38.0",
     "next": "^16.2.6",
