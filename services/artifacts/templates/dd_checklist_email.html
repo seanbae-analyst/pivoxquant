@@ -75,8 +75,9 @@
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid rgba(245,240,232,0.08);">
                 {% for p in pending[:8] %}
                 <tr>
-                  <td style="padding:12px 0 12px;border-bottom:1px solid rgba(245,240,232,0.06);font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12px;color:#B8956A;letter-spacing:0.04em;width:120px;">
-                    {{ p.ticker }}
+                  <td style="padding:12px 0 12px;border-bottom:1px solid rgba(245,240,232,0.06);width:120px;">
+                    <div style="font-family:'Source Serif 4',Georgia,serif;font-size:13px;color:rgba(245,240,232,0.95);font-weight:500;">{{ p.name | default(p.ticker, true) }}</div>
+                    <div style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:11px;color:#B8956A;letter-spacing:0.04em;margin-top:2px;">{{ p.ticker }}</div>
                   </td>
                   <td style="padding:12px 0 12px;border-bottom:1px solid rgba(245,240,232,0.06);font-size:13px;color:rgba(245,240,232,0.78);">
                     {{ p.shares }} shares
