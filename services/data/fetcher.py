@@ -819,10 +819,13 @@ Reply ONLY in this exact JSON format, nothing else:
         # Default ranges per CEO directive 2026-04-29: ceiling pushed to
         # 50,000 to absorb future re-rates without code change. The guard
         # still catches 100x unit-confusion glitches (e.g. KOSPI 660,000).
-        # KOSPI valid floor: 1500 (legacy low) · ceiling: 50000 (extreme head-room)
-        # KOSDAQ valid floor: 500 · ceiling: 50000 (same)
-        _KOSPI_RANGE = _parse_range("PIVOX_KOSPI_RANGE", (1500.0, 50000.0))
-        _KOSDAQ_RANGE = _parse_range("PIVOX_KOSDAQ_RANGE", (500.0, 50000.0))
+        # KOSPI valid floor: 1500 (legacy low) · ceiling: 4500 (current ~2600 + headroom)
+        # KOSDAQ valid floor: 500 · ceiling: 2000 (current ~700-1300 + headroom)
+        # 2026-05-10: ceiling narrowed from 50000 to catch KIS 0001 ~7498 leak
+        # (3x scaling glitch). PIVOX_KOSPI_RANGE/PIVOX_KOSDAQ_RANGE env overrides
+        # preserved for emergency widening if KIS API behavior changes.
+        _KOSPI_RANGE = _parse_range("PIVOX_KOSPI_RANGE", (1500.0, 4500.0))
+        _KOSDAQ_RANGE = _parse_range("PIVOX_KOSDAQ_RANGE", (500.0, 2000.0))
 
         if kis_ready:
             try:
