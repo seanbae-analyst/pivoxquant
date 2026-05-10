@@ -49,10 +49,11 @@ class TestAiSwotSmoke:
             r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
         assert r.status_code == 503
 
-    def test_swot_500_surfaces_last_error_detail(self, app, client, make_user):
-        """Bug #14: a transient Anthropic failure caused an opaque 500.
-        Route must now include ``detail`` (from ``ai.last_error``) so the
-        operator sees the failing op + exception type without guessing.
+    def test_swot_500_surfaces_last_error_detail_for_unknown(self, app, client, make_user):
+        """Bug #14 + B-08: a *true server bug* (AI_UNKNOWN classification)
+        keeps the legacy 500 + ``detail`` contract. Transient SDK failures
+        (quota / rate-limit / network / auth) now route through 503 — see
+        ``test_ai_service_graceful.py`` for those.
         """
         u = make_user(email="pro2@test.com", tier="pro")
         # Allowlist AAPL so access_guard doesn't 403 us before generate_swot.
@@ -63,15 +64,17 @@ class TestAiSwotSmoke:
             db.session.commit()
         client.post("/api/auth/login",
                     json={"email": u["email"], "password": u["password"]})
+        from services.ai.errors import AI_UNKNOWN
         with patch("routes.ai.ai") as mock_ai:
             mock_ai.available = True
             mock_ai.generate_swot.return_value = None
-            mock_ai.last_error = "swot: APIStatusError: rate limited"
+            mock_ai.last_error = "swot: ValueError: bug in our prompt builder"
+            mock_ai.last_error_code = AI_UNKNOWN
             r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
         assert r.status_code == 500
         body = r.get_json()
         assert body.get("error") == "Failed to generate SWOT"
-        assert body.get("detail") == "swot: APIStatusError: rate limited"
+        assert body.get("detail") == "swot: ValueError: bug in our prompt builder"
 
     def test_swot_500_no_detail_when_last_error_unset(self, app, client, make_user):
         """Backwards-compat: if `last_error` isn't set, the route must NOT
@@ -84,10 +87,12 @@ class TestAiSwotSmoke:
             db.session.commit()
         client.post("/api/auth/login",
                     json={"email": u["email"], "password": u["password"]})
+        from services.ai.errors import AI_UNKNOWN
         with patch("routes.ai.ai") as mock_ai:
             mock_ai.available = True
             mock_ai.generate_swot.return_value = None
             mock_ai.last_error = None
+            mock_ai.last_error_code = AI_UNKNOWN
             r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
         assert r.status_code == 500
         body = r.get_json()

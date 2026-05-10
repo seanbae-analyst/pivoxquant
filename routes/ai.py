@@ -19,6 +19,10 @@ from services import cache_service
 from services.access_guard import is_user_allowed_ticker, access_denied_response
 from services.legal_filter import scrub_response
 from services.ai.models import EarningsCallToneAnalyzer, AISectorRotation, AIRiskSummary
+from services.ai.errors import (
+    AI_UNKNOWN,
+    build_error_response,
+)
 from .decorators import api_auth, require_tier
 
 logger = logging.getLogger(__name__)
@@ -35,6 +39,44 @@ def _scrub_and_jsonify(payload, status: int = 200):
     go through this path (idempotent on dicts with no risky text).
     """
     return jsonify(scrub_response(payload)), status
+
+
+def _ai_failure_response(op: str, fallback_label: str):
+    """Build the (response, status) tuple for an AI generator that returned None.
+
+    B-08 graceful degradation: classify the most recent SDK failure via
+    ``ai.last_error_code`` and map to either:
+
+      * HTTP 503 + ``error_code`` (transient external failure — quota / rate
+        limit / network / auth). Frontend renders an actionable banner and
+        retries on its own schedule. ``Retry-After`` header is set when
+        advisory.
+      * HTTP 500 + ``detail`` (true server bug — AI_UNKNOWN). Backwards
+        compatible with Bug #14: the operator-facing ``detail`` string from
+        ``ai.last_error`` is included so the dashboard isn't opaque.
+
+    ``op`` is the generator name ("swot" / "coaching" / ...) for breadcrumbs.
+    ``fallback_label`` is the legacy 500 ``error`` text ("Failed to generate
+    coaching") preserved verbatim for AI_UNKNOWN so existing log-greps and
+    Sentry filters don't break.
+    """
+    code = getattr(ai, "last_error_code", None) or AI_UNKNOWN
+    detail = getattr(ai, "last_error", None)
+
+    if code == AI_UNKNOWN:
+        # True server bug -- preserve the legacy error string + last_error
+        # detail surface (Bug #14 contract). Status 500.
+        body = {"error": fallback_label}
+        if detail:
+            body["detail"] = detail
+        return jsonify(body), 500
+
+    # Transient external failure -- 503 + structured error_code.
+    body, status, headers = build_error_response(code, op=op, detail=detail)
+    resp = jsonify(body)
+    for k, v in headers.items():
+        resp.headers[k] = v
+    return resp, status
 
 
 def _extract_ticker_from_payload(d: dict) -> str:
@@ -74,17 +116,11 @@ def swot():
     result = ai.generate_swot(d)
     if result:
         return _scrub_and_jsonify(result)
-    # Bug #14: was an opaque 500 ("Failed to generate SWOT"); the AAPL detail
-    # page surfaced it as "Failed to generate SWOT" with no clue why. The
-    # generator swallows the upstream Anthropic exception per its public
-    # contract (returns None on transient errors — see test_ai_failure_paths)
-    # but stashes the type+message in ``ai.last_error`` for diagnostics.
-    detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate SWOT"}
-    if detail:
-        body["detail"] = detail
-    body["retry_after"] = 60  # B-08 graceful
-    return jsonify(body), 503
+    # B-08 graceful degradation: classify the SDK failure and surface either
+    # a 503 + ``error_code`` (transient — quota / rate-limit / network / auth)
+    # or a 500 + ``detail`` (true server bug — Bug #14 backwards-compat).
+    # This supersedes PR #229's flat-503 approach with classified codes.
+    return _ai_failure_response("swot", "Failed to generate SWOT")
 
 
 @ai_bp.route("/competitor", methods=["POST"])
@@ -120,12 +156,7 @@ def competitor():
     result = ai.generate_competitor_analysis(d, peers[:8])
     if result:
         return _scrub_and_jsonify(result)
-    detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate competitor analysis"}
-    if detail:
-        body["detail"] = detail
-    body["retry_after"] = 60  # B-08 graceful
-    return jsonify(body), 503
+    return _ai_failure_response("competitor", "Failed to generate competitor analysis")
 
 
 @ai_bp.route("/sector-trend", methods=["POST"])
@@ -159,12 +190,7 @@ def sector_trend():
     result = ai.generate_sector_trend(sector, stocks[:10])
     if result:
         return _scrub_and_jsonify(result)
-    detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate sector trend"}
-    if detail:
-        body["detail"] = detail
-    body["retry_after"] = 60  # B-08 graceful
-    return jsonify(body), 503
+    return _ai_failure_response("sector_trend", "Failed to generate sector trend")
 
 
 @ai_bp.route("/chat", methods=["POST"])
@@ -232,12 +258,7 @@ def commentary():
     result = ai.generate_commentary(d)
     if result:
         return _scrub_and_jsonify(result)
-    detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate commentary"}
-    if detail:
-        body["detail"] = detail
-    body["retry_after"] = 60  # B-08 graceful
-    return jsonify(body), 503
+    return _ai_failure_response("commentary", "Failed to generate commentary")
 
 
 @ai_bp.route("/morning-summary", methods=["POST"])
@@ -251,12 +272,7 @@ def morning_summary():
     result = ai.generate_morning_summary(d)
     if result:
         return _scrub_and_jsonify(result)
-    detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate summary"}
-    if detail:
-        body["detail"] = detail
-    body["retry_after"] = 60  # B-08 graceful
-    return jsonify(body), 503
+    return _ai_failure_response("morning_summary", "Failed to generate summary")
 
 
 @ai_bp.route("/coaching", methods=["POST"])
@@ -285,12 +301,11 @@ def coaching():
     result = ai.generate_coaching(context)
     if result:
         return _scrub_and_jsonify(result)
-    detail = getattr(ai, "last_error", None)
-    body = {"error": "Failed to generate coaching"}
-    if detail:
-        body["detail"] = detail
-    body["retry_after"] = 60  # B-08 graceful
-    return jsonify(body), 503
+    # B-08 root cause: this was the failing endpoint surfacing
+    # "Failed to generate coaching" as a bare 500 when Anthropic credits
+    # were exhausted. Classify and degrade gracefully. Supersedes PR #229's
+    # flat-503 approach with classified error_code + per-cause retry_after.
+    return _ai_failure_response("coaching", "Failed to generate coaching")
 
 
 # ── Earnings Call Tone Analyzer (GREEN) ──────────────────────────────────────
