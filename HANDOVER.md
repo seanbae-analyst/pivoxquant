@@ -130,7 +130,7 @@ KIS API code "0001" KOSPI ~7,498 quirk:
 #### P0 — 보안 (즉시)
 1. **C1 git history scrub** — main 전체 커밋에서 DB credentials 스캔 + 제거
 2. **C2 Sentry DSN rotate** — Railway secret.SENTRY_DSN 재발급 + env 갱신
-3. **C3 베타PW rotate** — pivoxaudit2 → 신규 PW (Vercel `NEXT_PUBLIC_BETA_PASSWORD` + README)
+3. **C3 베타PW rotate** — 현 베타PW(Vercel env `BETA_PASSWORD`) → 신규 PW (`secrets.token_urlsafe(16)`) 재발급 + Vercel `BETA_PASSWORD` + `BETA_SIGNING_SECRET` 갱신 + 베타테스터 안내
 
 #### P1 — 운영 (2-3일)
 4. **변호사 미팅** — Q1-Q15 자료 패키지 + 일괄 의견서 (예상 300-500만원)
