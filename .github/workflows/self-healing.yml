@@ -55,7 +55,7 @@ jobs:
       AUTOFIX_ON: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.auto_pr == 'true') || (github.event_name == 'schedule' && vars.AUTOFIX_ENABLED == '1') || (github.event_name == 'repository_dispatch' && vars.AUTOFIX_ENABLED == '1') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 100
 

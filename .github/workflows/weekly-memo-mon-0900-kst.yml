@@ -38,7 +38,7 @@ jobs:
       RAILWAY_API_BASE: ${{ secrets.RAILWAY_BACKEND_URL }}
       ADMIN_SECRET: ${{ secrets.WEEKLY_MEMO_TRIGGER_SECRET }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Sanity — admin secret present
         run: |
