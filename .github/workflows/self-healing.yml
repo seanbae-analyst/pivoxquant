@@ -211,7 +211,7 @@ jobs:
             --body "Automated fix proposal. See self_healing_artifacts/ for patterns + patch. Human review required before merging."
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: self-healing-${{ github.run_id }}
