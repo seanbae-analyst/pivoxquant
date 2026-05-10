@@ -27,7 +27,7 @@ import {
   DISCOVER_SCREENERS,
 } from "@/lib/endpoints";
 import { apiFetch, ApiError } from "@/lib/api";
-import { cn, isKoreanTicker } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { fmtPct, pctColorClass } from "@/lib/format";
 import { useDiscover, usePortfolioPositions, useWatchlist } from "@/lib/hooks";
 import type { DiscoverResult, Position } from "@/lib/types";
@@ -601,8 +601,7 @@ export default function DiscoverPage() {
               <table className="pq-ink-table min-w-[560px]">
                 <thead>
                   <tr>
-                    <th>Symbol</th>
-                    <th>Name</th>
+                    <th>Stock</th>
                     <th className="num">Last</th>
                     <th className="num">1D Δ</th>
                     <th>Signal</th>
@@ -624,17 +623,25 @@ export default function DiscoverPage() {
                         : item.signal === "NEGATIVE"
                           ? "pq-ink-pill--neg"
                           : "pq-ink-pill--neu";
+                    // Column-1 dead code removed (PR #212 follow-up):
+                    //   `isKoreanTicker(...) ? item.ticker : item.ticker`
+                    // Restructure: name as hero, ticker as subline.
+                    // Memory feedback_ticker_display — name first across all surfaces.
                     return (
                       <tr
                         key={item.ticker}
                         className="cursor-pointer"
                         onClick={() => router.push(`/detail/${item.ticker}`)}
                       >
-                        <td className="font-mono text-[var(--pq-bronze)]">
-                          {isKoreanTicker(item.ticker, item.is_korean) ? item.ticker : item.ticker}
-                        </td>
-                        <td className="text-[rgba(245,240,232,0.75)] truncate max-w-[220px]">
-                          {item.name || item.ticker}
+                        <td className="max-w-[260px]">
+                          <div className="truncate text-[var(--pq-ivory)]">
+                            {item.name || item.ticker}
+                          </div>
+                          {item.name && (
+                            <div className="font-mono text-[10px] tracking-[0.06em] text-[rgba(245,240,232,0.45)] truncate">
+                              {item.ticker}
+                            </div>
+                          )}
                         </td>
                         <td className="num">{priceDisplay}</td>
                         <td className={"num " + pctColorClass(item.change_pct)}>
