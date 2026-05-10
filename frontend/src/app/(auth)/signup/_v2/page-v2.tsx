@@ -25,12 +25,21 @@
  * Source Serif body, JetBrains Mono uppercase OAuth labels.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
+import {
+  isValidBirthdate,
+  isAtLeastMinAge,
+  computeAgeYears,
+  UNDER_AGE_KO,
+  UNDER_AGE_EN,
+  BIRTHDATE_LABEL_KO,
+  BIRTHDATE_LABEL_EN,
+} from "@/lib/age-verification";
 
 import { AuthHeroV2 } from "@/components/auth/v2/auth-hero-v2";
 import { OAuthButtonsV2 } from "@/components/auth/v2/oauth-buttons-v2";
@@ -118,8 +127,19 @@ export default function SignupPageV2() {
     cross_border: false,
     marketing: false,
   });
+  const [birthdate, setBirthdate] = useState("");
   const [allRequired, setAllRequired] = useState(false);
   const [pulseUnchecked, setPulseUnchecked] = useState(false);
+
+  // PIPA §22 ⑥ — 만 14세 미만 fail-fast (자가선언 + 생년월일 이중 방어).
+  const ageCheck = useMemo(() => {
+    const valid = isValidBirthdate(birthdate);
+    return {
+      valid,
+      eligible: valid && isAtLeastMinAge(birthdate),
+      years: valid ? computeAgeYears(birthdate) : -1,
+    };
+  }, [birthdate]);
 
   useEffect(() => {
     // Preserved verbatim from v1 behavior — derived-value refactor is out of
@@ -129,9 +149,10 @@ export default function SignupPageV2() {
       consents.terms
       && consents.non_advisory
       && consents.age
+      && ageCheck.eligible
       && consents.cross_border,
     );
-  }, [consents]);
+  }, [consents, ageCheck.eligible]);
 
   useEffect(() => {
     if (!pulseUnchecked) return;
@@ -181,6 +202,9 @@ export default function SignupPageV2() {
           CONSENT_STORAGE_KEY,
           JSON.stringify({
             ...consents,
+            // PIPA §22 ⑥ — 만나이 검증 흔적.
+            birthdate,
+            age_years: ageCheck.years,
             consented_at: new Date().toISOString(),
           }),
         );
@@ -393,23 +417,78 @@ export default function SignupPageV2() {
               </span>
             </label>
 
-            <label
-              htmlFor="agree_age"
-              style={{
-                ...consentRowStyle,
-                ...pulseRowStyle(pulseUnchecked && !consents.age),
-              }}
-            >
-              <CheckboxV2
-                id="agree_age"
-                checked={consents.age}
-                onChange={setConsent("age")}
-              />
-              <span className="font-serif" style={consentLabelStyle}>
-                <span className="font-mono" style={requiredTagStyle}>[필수]</span>
-                만 14세 이상입니다. (개인정보보호법 §22)
-              </span>
-            </label>
+            {/* PIPA §22 ⑥ — 생년월일 + 자가선언 이중 방어선. */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <label
+                htmlFor="agree_birthdate"
+                style={{ display: "flex", flexDirection: "column", gap: 6 }}
+              >
+                <span className="font-mono" style={requiredTagStyle}>
+                  {BIRTHDATE_LABEL_KO} · {BIRTHDATE_LABEL_EN}
+                </span>
+                <input
+                  id="agree_birthdate"
+                  type="date"
+                  value={birthdate}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setBirthdate(e.target.value)}
+                  aria-invalid={birthdate !== "" && !ageCheck.eligible}
+                  aria-describedby="agree_birthdate_msg"
+                  style={{
+                    background: "transparent",
+                    color: "rgba(245,240,232,0.85)",
+                    border: `1px solid ${
+                      ageCheck.eligible
+                        ? "rgba(245,240,232,0.20)"
+                        : birthdate
+                          ? "rgba(244,108,108,0.6)"
+                          : "rgba(245,240,232,0.20)"
+                    }`,
+                    borderRadius: 2,
+                    padding: "8px 10px",
+                    fontSize: 13,
+                  }}
+                />
+                {birthdate && !ageCheck.eligible && (
+                  <span
+                    id="agree_birthdate_msg"
+                    role="alert"
+                    style={{
+                      fontSize: 11,
+                      lineHeight: 1.5,
+                      color: "rgba(244,108,108,0.92)",
+                    }}
+                  >
+                    {UNDER_AGE_KO}
+                    <br />
+                    <span style={{ opacity: 0.75 }}>{UNDER_AGE_EN}</span>
+                  </span>
+                )}
+              </label>
+
+              <label
+                htmlFor="agree_age"
+                style={{
+                  ...consentRowStyle,
+                  ...pulseRowStyle(pulseUnchecked && !consents.age),
+                  opacity: ageCheck.eligible ? 1 : 0.5,
+                  pointerEvents: ageCheck.eligible ? "auto" : "none",
+                }}
+              >
+                <CheckboxV2
+                  id="agree_age"
+                  checked={consents.age && ageCheck.eligible}
+                  onChange={(next) => {
+                    if (!ageCheck.eligible) return;
+                    setConsent("age")(next);
+                  }}
+                />
+                <span className="font-serif" style={consentLabelStyle}>
+                  <span className="font-mono" style={requiredTagStyle}>[필수]</span>
+                  만 14세 이상임을 확인합니다. (개인정보보호법 §22 ⑥)
+                </span>
+              </label>
+            </div>
 
             <label
               htmlFor="agree_cross_border"

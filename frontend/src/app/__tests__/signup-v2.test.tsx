@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // next/navigation mock.
@@ -80,10 +80,16 @@ describe("SignupPageV2", () => {
     // Click the four required checkboxes.
     // 2026-05-04 (commit 7084f60 / c9c6827): cross_border added per
     // PIPA §28-8 (Anthropic / Stripe / Vercel / Railway / Google in US).
+    // 2026-05-10 (Wave 1 Task 4): birthdate ≥14 required before age
+    // checkbox is enabled per PIPA §22 ⑥ (만 14세 미만 fail-fast).
     await user.click(screen.getByRole("checkbox", { name: /이용약관/ }));
     await user.click(
       screen.getByRole("checkbox", { name: /자본시장법상 투자자문업/ }),
     );
+    // Fill birthdate (>= 14 years ago) so the age checkbox unlocks.
+    // jsdom: type="date" doesn't accept user.type — use fireEvent.change.
+    const birthdateInput = screen.getByLabelText(/생년월일/) as HTMLInputElement;
+    fireEvent.change(birthdateInput, { target: { value: "2000-01-01" } });
     await user.click(screen.getByRole("checkbox", { name: /만 14세/ }));
     await user.click(
       screen.getByRole("checkbox", { name: /국외 이전에 동의/ }),
