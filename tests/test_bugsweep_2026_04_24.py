@@ -377,13 +377,15 @@ class TestAlertsMigrationSizedRename:
 
 class TestDiscoverSectorsAllZero:
     """Bug G v2 (2026-04-28): all-zero rows used to fall through to mock
-    fallback (legal risk: fake data shown as live). New contract is
-    fail-fast 503 DATA_PROVIDER_DOWN — frontend must show "data unavailable" UI.
+    fallback (legal risk: fake data shown as live). Contract:
+    - if no SWR cache: 503 DISCOVER_FMP_UNAVAILABLE
+    - if SWR cache (≤ 24h) is present: serve stale (B-07, 2026-05-10)
+    Frontend must show "data unavailable" or "stale" banner accordingly.
     """
 
     def test_all_zero_rows_return_503(self, client, auth_user):
-        import routes.discover as disc
-        disc._section_cache.clear()
+        from services import cache_service
+        cache_service.discover_section_cache_clear()
 
         flat = [
             {"sector": "Technology", "changesPercentage": "0%"},
@@ -404,13 +406,13 @@ class TestDiscoverSectorsAllZero:
 
         assert r.status_code == 503
         data = r.get_json()
-        assert data["code"] == "DATA_PROVIDER_DOWN"
+        assert data["code"] == "DISCOVER_FMP_UNAVAILABLE"
         assert data["endpoint"] == "sectors"
 
     def test_realistic_rows_pass_through_unchanged(self, client, auth_user):
         """Sanity: when FMP returns real data, we don't spuriously fall back."""
-        import routes.discover as disc
-        disc._section_cache.clear()
+        from services import cache_service
+        cache_service.discover_section_cache_clear()
 
         live = [
             {"sector": "Technology", "changesPercentage": "1.23%"},

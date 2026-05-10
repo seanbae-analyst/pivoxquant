@@ -91,44 +91,68 @@ def discover():
 
 
 # ── Section endpoints ─────────────────────────────────────────────
-
-# Market-aware cache: intraday we tighten to 10min so movers/sectors
-# visibly refresh while users watch; off-hours we hold 2h so we don't
-# churn FMP for data that isn't moving.
-_section_cache: dict = {}          # key -> {"ts": float, "data": ...}
-_SECTION_TTL = 7200                # off-hours fallback — see _section_ttl()
-
-
-def _section_ttl() -> int:
-    try:
-        from services.cache_ttl import discover_ttl
-        return discover_ttl()
-    except Exception:
-        return _SECTION_TTL
+#
+# Stale-while-revalidate (B-07, 2026-05-10): the previous cache fail-fast
+# 503'd entire Discover page on any FMP burst. We now keep last-known-good
+# payloads up to 24h and serve them flagged stale=true, falling back to
+# 503 only when no usable cache exists. Cache lives in
+# services/cache_service.py (in-process, no Redis — CEO directive).
+# Memory pattern [feedback_bug_fix_patterns] "stale fallback".
 
 
-def _section_get(key: str):
-    e = _section_cache.get(key)
-    if e and time.time() - e["ts"] < _section_ttl():
-        return e["data"]
-    return None
+def _section_get_classified(key: str):
+    """Returns (entry, classification) where classification ∈ fresh/stale/miss."""
+    entry = cache_service.discover_section_get(key)
+    return entry, cache_service.discover_section_classify(entry)
 
 
-def _section_set(key: str, data) -> None:
-    _section_cache[key] = {"ts": time.time(), "data": data}
+def _stale_envelope(payload, ts: float, *, list_key: str = "items"):
+    """Wrap a stale payload with stale=true + last_updated metadata.
+
+    Endpoints that historically return a *list* at the top level (sectors,
+    market-overview) get wrapped in a dict on the stale path so we can
+    attach the staleness flag — frontend detects dict-vs-list at render.
+    """
+    last_updated = datetime.fromtimestamp(ts, tz=timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+    if isinstance(payload, list):
+        return {
+            list_key:       payload,
+            "stale":        True,
+            "last_updated": last_updated,
+            "code":         "DISCOVER_STALE_DATA_ONLY",
+        }
+    out = dict(payload)
+    out["stale"] = True
+    out["last_updated"] = last_updated
+    out["code"] = "DISCOVER_STALE_DATA_ONLY"
+    return out
+
+
+def _fresh_envelope(payload):
+    """Annotate a fresh payload with stale=false. List payloads pass through
+    unchanged for backward compat with existing frontend renderers."""
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        out = dict(payload)
+        out.setdefault("stale", False)
+        return out
+    return payload
 
 
 def _data_unavailable(endpoint: str, *, retry_after: int = 60):
-    """Standard 503 response when the upstream data provider is down.
+    """Standard 503 response when upstream is down AND no usable cache.
 
     We deliberately do NOT degrade to mock/hardcoded sample data — serving
     fake market levels as if real would mislead users on financial data
-    (legal/ethical violation). The frontend should render a "데이터 일시
-    불가" banner on this 503.
+    (legal/ethical violation, 자본시장법 거짓 정보 제공). Stale-but-real cache
+    (≤ 24h old) is served at the call site BEFORE this fallback fires.
     """
     body = {
         "error":       "Data temporarily unavailable",
-        "code":        "DATA_PROVIDER_DOWN",
+        "code":        "DISCOVER_FMP_UNAVAILABLE",
         "endpoint":    endpoint,
         "retry_after": retry_after,
     }
@@ -142,10 +166,11 @@ def _data_unavailable(endpoint: str, *, retry_after: int = 60):
 @api_auth
 @legal_scrub_response
 def market_overview():
-    """Five-index headline cards. 503 fail-fast on upstream failure."""
-    cached = _section_get("overview")
-    if cached:
-        return jsonify(cached)
+    """Five-index headline cards. SWR cache: serves stale (≤ 24h) on
+    upstream failure; 503 only when no usable cache exists."""
+    entry, klass = _section_get_classified("overview")
+    if klass == "fresh":
+        return jsonify(_fresh_envelope(entry["data"]))
 
     result = []
     try:
@@ -156,7 +181,7 @@ def market_overview():
             price = data.get("price")
             if price is None:
                 continue
-            entry = {
+            item = {
                 "name":       display,
                 "symbol":     key,
                 "level":      round(float(price), 2),
@@ -166,35 +191,43 @@ def market_overview():
             # frontend can label "S&P 500 · SPY proxy" — same convention as
             # /api/market/indices (Wave 2 Bug #11 fix 2026-04-29).
             if data.get("proxy_ticker"):
-                entry["proxy_ticker"] = data["proxy_ticker"]
-            result.append(entry)
+                item["proxy_ticker"] = data["proxy_ticker"]
+            result.append(item)
     except Exception as e:
         logger.warning("discover.market-overview upstream failed: %s", e)
 
-    if len(result) < 3:
-        logger.warning(
-            "discover.market-overview: only %d/5 indices available — "
-            "failing fast (no mock fallback)", len(result),
-        )
-        return _data_unavailable("market-overview")
+    if len(result) >= 3:
+        cache_service.discover_section_set("overview", result)
+        return jsonify(_fresh_envelope(result))
 
-    _section_set("overview", result)
-    return jsonify(result)
+    if klass == "stale":
+        logger.warning(
+            "discover.market-overview: upstream gave %d/5 — serving stale "
+            "(age=%.0fs)", len(result), time.time() - entry["ts"],
+        )
+        return jsonify(_stale_envelope(entry["data"], entry["ts"], list_key="indices"))
+
+    logger.warning(
+        "discover.market-overview: only %d/5 indices and no cache — "
+        "failing fast (no mock fallback)", len(result),
+    )
+    return _data_unavailable("market-overview")
 
 
 @discover_bp.route("/discover/movers")
 @api_auth
 @legal_scrub_response
 def movers():
-    """Top gainers/losers (10 each) for US or KR. 503 fail-fast on failure."""
+    """Top gainers/losers (10 each) for US or KR. SWR cache (stale ≤ 24h)
+    on upstream failure; 503 only when no usable cache."""
     region = (request.args.get("region") or "us").lower()
     if region not in ("us", "kr"):
         region = "us"
 
     cache_key = f"movers:{region}"
-    cached = _section_get(cache_key)
-    if cached:
-        return jsonify(cached)
+    entry, klass = _section_get_classified(cache_key)
+    if klass == "fresh":
+        return jsonify(_fresh_envelope(entry["data"]))
 
     # Primary path: the quant engine already scans a universe — reuse its
     # per-ticker %change snapshot when available (no extra FMP calls).
@@ -222,33 +255,42 @@ def movers():
     except Exception as e:
         logger.debug("discover.movers live path skip: %s", e)
 
-    if len(gainers) < 3 or len(losers) < 3:
-        logger.warning(
-            "discover.movers (%s): only %d gainers / %d losers — "
-            "failing fast (no mock fallback)",
-            region, len(gainers), len(losers),
-        )
-        return _data_unavailable(f"movers:{region}")
+    if len(gainers) >= 3 and len(losers) >= 3:
+        observed_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        payload = {
+            "region": region,
+            "gainers": gainers,
+            "losers": losers,
+            "observed_at": observed_at,
+        }
+        cache_service.discover_section_set(cache_key, payload)
+        return jsonify(_fresh_envelope(payload))
 
-    observed_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    payload = {
-        "region": region,
-        "gainers": gainers,
-        "losers": losers,
-        "observed_at": observed_at,
-    }
-    _section_set(cache_key, payload)
-    return jsonify(payload)
+    if klass == "stale":
+        logger.warning(
+            "discover.movers (%s): upstream %d gainers / %d losers — "
+            "serving stale (age=%.0fs)", region, len(gainers), len(losers),
+            time.time() - entry["ts"],
+        )
+        return jsonify(_stale_envelope(entry["data"], entry["ts"]))
+
+    logger.warning(
+        "discover.movers (%s): only %d gainers / %d losers and no cache — "
+        "failing fast (no mock fallback)",
+        region, len(gainers), len(losers),
+    )
+    return _data_unavailable(f"movers:{region}")
 
 
 @discover_bp.route("/discover/sectors")
 @api_auth
 @legal_scrub_response
 def sectors():
-    """11 GICS sectors with 1D/5D/1M observation. 503 fail-fast on failure."""
-    cached = _section_get("sectors")
-    if cached:
-        return jsonify(cached)
+    """11 GICS sectors with 1D/5D/1M observation. SWR cache (stale ≤ 24h)
+    on upstream failure; 503 only when no usable cache."""
+    entry, klass = _section_get_classified("sectors")
+    if klass == "fresh":
+        return jsonify(_fresh_envelope(entry["data"]))
 
     rows: list[dict] = []
     try:
@@ -279,30 +321,31 @@ def sectors():
     # (numerical noise threshold) — that's indistinguishable from a stale
     # tape and we will not paint mock numbers as real data.
     has_signal = any(abs(r.get("d1") or 0) > 0.001 for r in rows)
-    if len(rows) < 5 or not has_signal:
-        logger.warning(
-            "discover.sectors: upstream returned %d rows, has_signal=%s — "
-            "failing fast (no mock fallback)", len(rows), has_signal,
-        )
-        return _data_unavailable("sectors")
+    if len(rows) >= 5 and has_signal:
+        cache_service.discover_section_set("sectors", rows)
+        return jsonify(_fresh_envelope(rows))
 
-    _section_set("sectors", rows)
-    return jsonify(rows)
+    if klass == "stale":
+        logger.warning(
+            "discover.sectors: upstream %d rows has_signal=%s — serving stale "
+            "(age=%.0fs)", len(rows), has_signal, time.time() - entry["ts"],
+        )
+        return jsonify(_stale_envelope(entry["data"], entry["ts"], list_key="sectors"))
+
+    logger.warning(
+        "discover.sectors: upstream returned %d rows, has_signal=%s and no "
+        "cache — failing fast (no mock fallback)", len(rows), has_signal,
+    )
+    return _data_unavailable("sectors")
 
 
 @discover_bp.route("/discover/screeners")
 @api_auth
 @legal_scrub_response
 def screeners():
-    """Thematic observation lists. Pre-compute pipeline pending — until then,
-    fail-fast 503 (was mock-only, which violated the no-fake-data rule)."""
-    cached = _section_get("screeners")
-    if cached:
-        return jsonify(cached)
-
-    # No live source wired yet. Refuse to serve stale mock screeners as
-    # if they were today's market state. Tracked: pre-compute thematic
-    # screeners off the engine universe (RSI/52w-high/earnings-beat).
+    """Thematic observation lists. No live source wired yet — there's
+    nothing real to cache, so SWR doesn't help here. Stays fail-fast 503.
+    Pre-compute pipeline tracked for follow-up."""
     logger.warning(
         "discover.screeners: no live source implemented — failing fast "
         "(refuses to serve mock as real data)",
