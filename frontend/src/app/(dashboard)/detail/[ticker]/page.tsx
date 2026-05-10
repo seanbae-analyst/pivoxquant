@@ -15,14 +15,14 @@
  * DisclaimerBanner(signal) retained inside the hero block.
  */
 
-import { useMemo, useState, useCallback, type ReactNode } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import Link from "next/link";
 import { toast } from "sonner";
 import { API, WATCHLIST, WATCHLIST_ITEM } from "@/lib/endpoints";
 import { apiFetch } from "@/lib/api";
-import { fmtUsd, fmtKrw, pctColorClass } from "@/lib/format";
+import { fmtUsd, fmtKrw, fmtPct, pctColorClass } from "@/lib/format";
 import { liveRefresh } from "@/lib/market-hours";
 import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
 import { Skeleton } from "@/components/ui/loading-skeleton";
@@ -30,7 +30,13 @@ import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
-import { FieldLabel, StatRow, FootSignature } from "@/components/ui/editorial";
+import {
+  FieldLabel,
+  StatRow,
+  FootSignature,
+  RuledKicker,
+  EditorialHead,
+} from "@/components/ui/editorial";
 import { useWatchlist, usePortfolioPositions, useArtifacts } from "@/lib/hooks";
 import { getArtifactViewerUrl } from "@/lib/artifact-viewer";
 import type { Position } from "@/lib/types";
@@ -194,16 +200,6 @@ function fmtMcap(value: number | null | undefined, krw: boolean): string {
   return `$${value.toLocaleString()}`;
 }
 
-function fmtSignedPct(pct: number | string | null | undefined): string {
-  if (pct == null) return "—";
-  // Signals cache sometimes returns numeric strings — coerce defensively
-  // so a valid value doesn't fall through to the em-dash branch.
-  const n = typeof pct === "number" ? pct : Number(pct);
-  if (!Number.isFinite(n)) return "—";
-  const sign = n >= 0 ? "+" : "";
-  return `${sign}${n.toFixed(2)}%`;
-}
-
 function pillarToken(label: string): "POSITIVE" | "NEGATIVE" | "NEUTRAL" {
   return label === "POSITIVE" ? "POSITIVE" : label === "NEGATIVE" ? "NEGATIVE" : "NEUTRAL";
 }
@@ -352,7 +348,7 @@ function PillarCard({
       ? "text-[#D18888]"
       : token === "NEGATIVE"
         ? "text-[#7AA0C8]"
-        : "text-[rgba(245,240,232,0.7)]";
+        : "text-[var(--pq-ivory-mid)]";
   return (
     <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] pq-ink-card-interactive">
       <div className="flex items-center justify-between">
@@ -368,7 +364,7 @@ function PillarCard({
       </div>
       <div className={cn("pq-ink-num mt-3 leading-none", textColor)}>
         {safe.toFixed(0)}
-        <span className="text-xs text-[rgba(245,240,232,0.4)] ml-1.5">/ 100</span>
+        <span className="text-xs text-[var(--pq-ivory-faint)] ml-1.5">/ 100</span>
       </div>
       <div className="mt-3 h-[2px] bg-[rgba(245,240,232,0.08)] overflow-hidden">
         <div
@@ -379,57 +375,6 @@ function PillarCard({
       <p className="mt-3 pq-detail-body text-[13px]">
         {observation}
       </p>
-    </div>
-  );
-}
-
-/* ── SectionHead ──
- * v3 editorial section header: bronze hairline + font-mono eyebrow +
- * Playfair italic H2. Consolidates the previous `pq-section-kicker` + `pq-detail-h2`
- * pair so every section in this page reads with the same Discover/Risk cadence.
- */
-function SectionHead({
-  eyebrow,
-  title,
-  icon,
-}: {
-  eyebrow: string;
-  title: string;
-  icon?: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      {icon ? <span className="shrink-0">{icon}</span> : null}
-      <div>
-        <div
-          className="inline-flex items-center gap-2.5 font-mono uppercase"
-          style={{
-            color: "var(--pq-bronze)",
-            fontSize: "12px",
-            letterSpacing: "0.22em",
-            fontWeight: 500,
-          }}
-        >
-          <span
-            aria-hidden="true"
-            className="inline-block h-px w-6"
-            style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-          />
-          <span>{eyebrow}</span>
-        </div>
-        <h2
-          className="mt-1.5 font-display italic"
-          style={{
-            fontWeight: 500,
-            fontSize: "clamp(1.25rem, 1.9vw, 1.6rem)",
-            lineHeight: 1.18,
-            letterSpacing: "-0.018em",
-            color: "var(--pq-ivory)",
-          }}
-        >
-          {title}
-        </h2>
-      </div>
     </div>
   );
 }
@@ -474,7 +419,7 @@ function AccessDeniedScreen({
       <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
         분석은 보유/관심 종목 한정입니다.
       </p>
-      <p className="mt-3 text-[13px] leading-relaxed text-[rgba(245,240,232,0.65)]">
+      <p className="mt-3 text-[13px] leading-relaxed text-[var(--pq-ivory-mid)]">
         <span className="font-mono tabular-nums text-[var(--pq-bronze)]">{ticker}</span>
         {" "}분석은 관심종목 또는 보유 포지션으로 등록한 후 이용 가능합니다.
         한 번 추가하면 즉시 분석을 볼 수 있습니다.
@@ -501,7 +446,7 @@ function AccessDeniedScreen({
       {errMsg ? (
         <p className="mt-4 text-[11px] text-[rgba(209,136,136,0.8)]">{errMsg}</p>
       ) : null}
-      <p className="mt-6 text-[12px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.4)]">
+      <p className="mt-6 text-[12px] uppercase tracking-[0.22em] text-[var(--pq-ivory-faint)]">
         Observational research only · Not investment advice
       </p>
     </div>
@@ -731,7 +676,7 @@ export default function StockDetailPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.14em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] transition-colors"
+            className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.14em] uppercase text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)] transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
@@ -753,7 +698,7 @@ export default function StockDetailPage() {
           <p className="mt-4 font-serif text-xl text-[var(--pq-ivory)]">
             No data for &ldquo;{ticker}&rdquo;
           </p>
-          <p className="mt-2 text-sm text-[rgba(245,240,232,0.5)]">
+          <p className="mt-2 text-sm text-[var(--pq-ivory-dim)]">
             Ticker may be unsupported or temporarily unavailable.
           </p>
           <button
@@ -823,7 +768,7 @@ export default function StockDetailPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="inline-flex min-h-[44px] items-center gap-1.5 -mx-2 px-2 py-2 text-[11px] tracking-[0.14em] uppercase text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-bronze)] transition-colors"
+          className="inline-flex min-h-[44px] items-center gap-1.5 -mx-2 px-2 py-2 text-[11px] tracking-[0.14em] uppercase text-[var(--pq-ivory-dim)] hover:text-[var(--pq-bronze)] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back
@@ -841,8 +786,8 @@ export default function StockDetailPage() {
                 className="inline-block w-6 h-[0.5px] bg-[var(--pq-bronze)] opacity-70"
               />
               <span>Pivoxquant · Equity Dossier</span>
-              <span className="text-[rgba(245,240,232,0.55)]">·</span>
-              <span className="text-[rgba(245,240,232,0.55)]">
+              <span className="text-[var(--pq-ivory-dim)]">·</span>
+              <span className="text-[var(--pq-ivory-dim)]">
                 {new Date().toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "short",
@@ -882,7 +827,7 @@ export default function StockDetailPage() {
                 <h1 className="pq-detail-ticker-display mt-2">
                   {displayName}
                 </h1>
-                <p className="mt-2 font-mono tabular-nums text-[15px] text-[rgba(245,240,232,0.7)] leading-snug">
+                <p className="mt-2 font-mono tabular-nums text-[15px] text-[var(--pq-ivory-mid)] leading-snug">
                   {ticker}
                 </p>
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
@@ -948,8 +893,8 @@ export default function StockDetailPage() {
                       ) : (
                         <TrendingDown className="h-4 w-4" />
                       )}
-                      {fmtSignedPct(signal?.change_pct)}
-                      <span className="ml-2 text-[10px] tracking-[0.18em] uppercase text-[rgba(245,240,232,0.4)] font-sans">
+                      {fmtPct(signal?.change_pct)}
+                      <span className="ml-2 text-[10px] tracking-[0.18em] uppercase text-[var(--pq-ivory-faint)] font-sans">
                         · 1D Δ
                       </span>
                     </>
@@ -959,7 +904,7 @@ export default function StockDetailPage() {
                 {/* 52W range rail */}
                 {hasRange && (
                   <div className="mt-6">
-                    <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-[rgba(245,240,232,0.55)]">
+                    <div className="flex items-center justify-between text-[11px] font-mono tabular-nums text-[var(--pq-ivory-dim)]">
                       <span>{fmtPrice(week52Low, krw)}</span>
                       <span className="text-[9px] tracking-[0.18em] uppercase text-[var(--pq-bronze)]">
                         52W Range
@@ -1000,7 +945,7 @@ export default function StockDetailPage() {
                   {signal?.score != null && Number.isFinite(signal.score)
                     ? signal.score
                     : "—"}
-                  <span className="text-[13px] text-[rgba(245,240,232,0.4)] ml-1.5 font-sans tracking-[0.08em]">
+                  <span className="text-[13px] text-[var(--pq-ivory-faint)] ml-1.5 font-sans tracking-[0.08em]">
                     / 100
                   </span>
                 </div>
@@ -1022,7 +967,12 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <SectionHead eyebrow="Price observation" title="Price history" />
+            <div>
+              <RuledKicker>Price observation</RuledKicker>
+              <EditorialHead size={22} as="h2" className="mt-1.5 italic">
+                Price history
+              </EditorialHead>
+            </div>
             <div
               role="tablist"
               aria-label="Chart period"
@@ -1039,7 +989,7 @@ export default function StockDetailPage() {
                     "px-3 py-1 text-[10px] tracking-[0.18em] uppercase transition-all",
                     period === p
                       ? "text-[var(--pq-ivory)] border-b border-[var(--pq-bronze)]"
-                      : "text-[rgba(245,240,232,0.4)] hover:text-[var(--pq-bronze)]",
+                      : "text-[var(--pq-ivory-faint)] hover:text-[var(--pq-bronze)]",
                   )}
                 >
                   {p}
@@ -1065,7 +1015,12 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <SectionHead eyebrow="Fundamentals" title="Key ratios & valuation" />
+            <div>
+              <RuledKicker>Fundamentals</RuledKicker>
+              <EditorialHead size={22} as="h2" className="mt-1.5 italic">
+                Key ratios &amp; valuation
+              </EditorialHead>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1177,7 +1132,12 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <SectionHead eyebrow="Quant breakdown" title="Four-pillar composite" />
+            <div>
+              <RuledKicker>Quant breakdown</RuledKicker>
+              <EditorialHead size={22} as="h2" className="mt-1.5 italic">
+                Four-pillar composite
+              </EditorialHead>
+            </div>
           </div>
           {hasPillars ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1216,7 +1176,12 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <SectionHead eyebrow="Recent coverage" title="News feed" />
+            <div>
+              <RuledKicker>Recent coverage</RuledKicker>
+              <EditorialHead size={22} as="h2" className="mt-1.5 italic">
+                News feed
+              </EditorialHead>
+            </div>
           </div>
           {loadingNews ? (
             <div className="space-y-2">
@@ -1264,16 +1229,16 @@ export default function StockDetailPage() {
                                 </p>
                                 <div className="mt-2 flex items-center gap-2 flex-wrap">
                                   <span className={chipClass}>{chipLabel}</span>
-                                  <span className="text-[11px] text-[rgba(245,240,232,0.45)] font-mono tracking-tight">
+                                  <span className="text-[11px] text-[var(--pq-ivory-faint)] font-mono tracking-tight">
                                     {n.source}
                                   </span>
-                                  <span className="text-[11px] text-[rgba(245,240,232,0.3)]">·</span>
-                                  <span className="text-[11px] text-[rgba(245,240,232,0.45)] font-mono tracking-tight">
+                                  <span className="text-[11px] text-[var(--pq-ivory-faint)]">·</span>
+                                  <span className="text-[11px] text-[var(--pq-ivory-faint)] font-mono tracking-tight">
                                     {n.published}
                                   </span>
                                 </div>
                               </div>
-                              <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1 text-[rgba(245,240,232,0.3)] group-hover:text-[var(--pq-bronze)]" />
+                              <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-1 text-[var(--pq-ivory-faint)] group-hover:text-[var(--pq-bronze)]" />
                             </div>
                           </a>
                         </li>
@@ -1292,11 +1257,17 @@ export default function StockDetailPage() {
         {insiderEligible && (
           <section>
             <div className="mb-5">
-              <SectionHead
-                icon={<Eye className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
-                eyebrow="Form 4 · 90 days"
-                title="Insider activity"
-              />
+              <div className="flex items-center gap-3">
+                <span className="shrink-0">
+                  <Eye className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+                </span>
+                <div>
+                  <RuledKicker>Form 4 · 90 days</RuledKicker>
+                  <EditorialHead size={22} as="h2" className="mt-1.5 italic">
+                    Insider activity
+                  </EditorialHead>
+                </div>
+              </div>
             </div>
             <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] overflow-hidden">
               {insiderData.length > 0 ? (
@@ -1333,7 +1304,7 @@ export default function StockDetailPage() {
                           <span className="font-mono tabular-nums text-[12px] text-[var(--pq-ivory)]">
                             {shares.toLocaleString()}
                           </span>
-                          <span className="text-[10px] tracking-[0.14em] uppercase text-[rgba(245,240,232,0.45)]">
+                          <span className="text-[10px] tracking-[0.14em] uppercase text-[var(--pq-ivory-faint)]">
                             {formatRelative(f.transaction_date)}
                           </span>
                         </div>
@@ -1357,11 +1328,17 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <SectionHead
-              icon={<Sparkles className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
-              eyebrow="AI assistant · observation"
-              title="AI analysis"
-            />
+            <div className="flex items-center gap-3">
+              <span className="shrink-0">
+                <Sparkles className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+              </span>
+              <div>
+                <RuledKicker>AI assistant · observation</RuledKicker>
+                <EditorialHead size={22} as="h2" className="mt-1.5 italic">
+                  AI analysis
+                </EditorialHead>
+              </div>
+            </div>
           </div>
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
             {swot && (swot.swot_kr || swot.swot) ? (
@@ -1402,7 +1379,7 @@ export default function StockDetailPage() {
                   {swotLoading ? "Generating…" : "Generate AI summary"}
                 </button>
                 {swotError ? (
-                  <p className="text-[11px] text-[rgba(245,240,232,0.5)]">
+                  <p className="text-[11px] text-[var(--pq-ivory-dim)]">
                     Unable to generate right now ({swotError}). Try again later.
                   </p>
                 ) : null}
@@ -1416,11 +1393,17 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <SectionHead
-              icon={<CalendarDays className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
-              eyebrow="Earnings · forward window"
-              title="Earnings calendar"
-            />
+            <div className="flex items-center gap-3">
+              <span className="shrink-0">
+                <CalendarDays className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+              </span>
+              <div>
+                <RuledKicker>Earnings · forward window</RuledKicker>
+                <EditorialHead size={22} as="h2" className="mt-1.5 italic">
+                  Earnings calendar
+                </EditorialHead>
+              </div>
+            </div>
           </div>
           <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5">
             {/* Bug-hunter 2026-05-05 CRITICAL: backend `routes/market.py::earnings_calendar`
@@ -1435,13 +1418,13 @@ export default function StockDetailPage() {
                 <table className="w-full text-[14px]">
                   <thead>
                     <tr className="text-left border-b border-[rgba(245,240,232,0.08)]">
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)]">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[var(--pq-ivory-faint)]">
                         Date
                       </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)]">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[var(--pq-ivory-faint)]">
                         Signal
                       </th>
-                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[rgba(245,240,232,0.45)] text-right">
+                      <th className="pb-2 font-mono uppercase tracking-[0.16em] text-[11px] text-[var(--pq-ivory-faint)] text-right">
                         Score
                       </th>
                     </tr>
@@ -1508,18 +1491,13 @@ export default function StockDetailPage() {
               />
               <div className="flex-1">
                 <FieldLabel>AI Assistant · context handoff</FieldLabel>
-                <div
-                  className="mt-1.5 font-display italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
-                  style={{
-                    fontWeight: 500,
-                    fontSize: "clamp(1.25rem, 1.9vw, 1.6rem)",
-                    lineHeight: 1.18,
-                    letterSpacing: "-0.018em",
-                    color: "var(--pq-ivory)",
-                  }}
+                <EditorialHead
+                  size={26}
+                  as="div"
+                  className="mt-1.5 italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
                 >
                   Ask Companion about {ticker ?? "this ticker"}
-                </div>
+                </EditorialHead>
                 <p className="mt-2 pq-detail-caption">
                   Open a Companion thread pre-seeded with the current snapshot —
                   fundamentals, signal label, and recent coverage.
@@ -1538,11 +1516,17 @@ export default function StockDetailPage() {
            ══════════════════════════════════════════════════ */}
         <section>
           <div className="mb-5">
-            <SectionHead
-              icon={<FileText className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />}
-              eyebrow="From your archive"
-              title="Recent artefacts"
-            />
+            <div className="flex items-center gap-3">
+              <span className="shrink-0">
+                <FileText className="h-4 w-4 text-[var(--pq-bronze)]" strokeWidth={1.4} />
+              </span>
+              <div>
+                <RuledKicker>From your archive</RuledKicker>
+                <EditorialHead size={22} as="h2" className="mt-1.5 italic">
+                  Recent artefacts
+                </EditorialHead>
+              </div>
+            </div>
           </div>
           {artifactsSwr.artifacts.length === 0 ? (
             <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-6 text-center">
@@ -1581,18 +1565,13 @@ export default function StockDetailPage() {
                     className="block bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 hover:border-[var(--pq-bronze)] hover:bg-[rgba(139,111,71,0.04)] transition-all group"
                   >
                     <FieldLabel>{dateLabel}</FieldLabel>
-                    <div
-                      className="mt-2 font-display italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
-                      style={{
-                        fontWeight: 500,
-                        fontSize: "1.05rem",
-                        lineHeight: 1.2,
-                        letterSpacing: "-0.012em",
-                        color: "var(--pq-ivory)",
-                      }}
+                    <EditorialHead
+                      size={18}
+                      as="div"
+                      className="mt-2 italic group-hover:text-[var(--pq-bronze-light)] transition-colors"
                     >
                       {label}
-                    </div>
+                    </EditorialHead>
                     <p className="mt-2 pq-detail-caption truncate">
                       {a.title || "Open the document for context."}
                     </p>
