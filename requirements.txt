@@ -2,7 +2,7 @@ flask==3.0.3
 flask-login==0.6.3
 flask-sqlalchemy==3.1.1
 flask-migrate>=4.0.0
-flask-cors==4.0.1
+flask-cors==6.0.2
 pandas==2.2.2
 numpy==1.26.4
 apscheduler==3.10.4
