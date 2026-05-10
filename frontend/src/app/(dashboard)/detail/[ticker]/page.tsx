@@ -28,6 +28,7 @@ import { PriceWithTimestamp } from "@/components/ui/price-with-timestamp";
 import { Skeleton } from "@/components/ui/loading-skeleton";
 import { cn } from "@/lib/utils";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { InteractiveLineChart } from "@/components/charts/interactive-line-chart";
 import {
@@ -1338,6 +1339,10 @@ export default function StockDetailPage() {
                   AI analysis
                 </EditorialHead>
               </div>
+            </div>
+            {/* AI content disclosure (regulatory ③ 2026-01) — SWOT output is AI-generated */}
+            <div className="mt-3">
+              <AiContentBadge variant="inline" />
             </div>
           </div>
           <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-[2px] p-5">
