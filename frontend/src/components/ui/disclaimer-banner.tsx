@@ -23,10 +23,7 @@ const DISCLAIMER_CONTENT = {
     ko: "백테스트 결과는 과거 데이터를 기반으로 시뮬레이션한 것으로, 과거의 성과가 미래의 수익을 보장하지 않습니다. 실제 거래에서는 슬리피지, 수수료, 시장 충격 등으로 인해 결과가 상이할 수 있습니다.",
     en: "Backtest results are simulations based on historical data. Past performance does not guarantee future returns. Actual trading results may differ due to slippage, commissions, and market impact.",
   },
-  "auto-trade": {
-    ko: "자동매매 기능은 이용자가 설정한 조건에 따라 주문을 실행하는 도구입니다. PivoxQuant은 자동매매로 인한 거래 결과, 시스템 오류, 네트워크 장애 등으로 발생한 손실에 대해 책임을 지지 않습니다. 자동매매 이용 전 반드시 모의투자(페이퍼 트레이딩)로 충분히 테스트하시기 바랍니다.",
-    en: "The automated trading feature executes orders based on conditions set by the user. PivoxQuant is not liable for trading results, system errors, or network failures that may occur during automated trading. Please thoroughly test with paper trading before using automated trading with real funds.",
-  },
+  // REMOVED 2026-05-10 per legal: "auto-trade" kind retired (autotrader.py 2026-05-05 물리 삭제, 표시광고법 §3 ① 4호 기만광고 회피)
 } as const;
 
 const COMMON_DISCLAIMER = {
@@ -39,7 +36,7 @@ type DisclaimerTheme = "dark" | "light";
 
 interface DisclaimerBannerProps {
   type: DisclaimerType;
-  /** Force the banner to always stay expanded (e.g. auto-trade) */
+  /** Force the banner to always stay expanded (used for high-risk variants) */
   alwaysExpanded?: boolean;
   /** Theme — defaults to dark (Vantablack dashboard). Use "light" on ivory feature pages. */
   theme?: DisclaimerTheme;
