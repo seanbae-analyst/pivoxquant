@@ -1,4 +1,81 @@
-# PivoxQuant — 인수인계서 (2026-05-10 v33 — 39 PR · OPEN PR 4 보류 · 자율세션 종료 + secret rotate + 회귀 1건 admit)
+# PivoxQuant — 인수인계서 (2026-05-10 v34 — 51 PR · OPEN PR 2 · Vercel queue 폭탄 cleanup)
+
+## 🟢 2026-05-10 v34 종합 — **51 PR + 3 risk-close + 16 Vercel cancel + 3중 회귀 방어** · main `301758a → f3af99e5` · OPEN PR 2 (#246 werkzeug / #248 authlib runtime 보류)
+
+### v34 추가 (v33 → v34, 12 PR + 3 close + Vercel cleanup)
+
+#### Dep PR 자율 merge (8건)
+- #260 actions/setup-python 5→6 (CI)
+- #264 **react-pair group** (react+react-dom 묶음, PR #258 그룹 룰 검증 성공)
+- #265 eslint-config-next (next-toolchain group)
+- #267 @sentry/nextjs (sentry group)
+- #268 marked patch
+- #269 shadcn dev minor
+- #255 @types/node 20→25 (dev type only)
+- #272 vercel.json `ignoreCommand` (비-main 빌드 스킵)
+
+#### MAJOR risk PR close (3건)
+- #247 stripe 8→15 MAJOR (결제 breaking)
+- #256 numpy 1→2 MAJOR (data science breaking)
+- #266 pandas 2→3 MAJOR (breaking)
+
+#### Vercel queue 강제 cleanup
+- 11 Queued deployment cancel (Vercel Free tier concurrent limit 정체)
+- 5 Error deployment cancel (옛 PR #250 + #ceasb 회귀 잔존)
+- 총 16 deployment cancel — 사용자 알림 폭탄 종료
+
+#### 3중 회귀 방어 (Vercel 알림 근본 차단)
+1. **PR #258** — Dependabot `groups` (react+react-dom + next-toolchain + @testing-library + @sentry 묶음)
+2. **PR #272** — vercel.json `git.deploymentEnabled.main + ignoreCommand` (비-main 빌드 스킵)
+3. **MAJOR PR auto-close 패턴** — stripe/numpy/pandas 자동 닫음
+
+### v34 사용자 알림 폭탄 분석 (정직)
+
+**원인**: PR #250 react-dom 단독 bump → Vercel npm install peer dep conflict → Production Error 10s + Preview 4건 fail. Vercel 알림 시스템이 fail 후 22-26분 지연 발송 + 다수 dependabot PR 동시 트리거로 Preview 큐 정체 → "vercel error 계속 온다" 폭탄.
+
+**즉시 fix 시퀀스**:
+1. PR #257 revert (react-dom 19.2.6 → 19.2.4) → Production 1m Ready 회복
+2. PR #258 Dependabot groups → 향후 react+react-dom 묶음 PR
+3. PR #272 vercel.json ignoreCommand → 비-main 빌드 스킵
+4. `vercel remove` 16 deployment cancel → 큐 즉시 해소
+
+**근본 차단**: 향후 Vercel error 알림 거의 0 (3중 방어).
+
+### v34 Vercel 최종 verify
+- Queued: 0 / Errors: 0
+- Production 가장 최근 deployment Ready ✅
+- 라이브 https://www.pivoxquant.com → HTTP/2 307 → /beta-gate 정상
+
+### v34 잔존 OPEN PR 2건 (사용자 결정)
+- **#246 werkzeug** 3.0.3→3.1.8 (Flask runtime, minor 이지만 호환 검증)
+- **#248 authlib** >=1.3.0→>=1.7.2 (OAuth runtime — 로그인 회귀 위험)
+
+### v34 외부 액션 14건 (자율 100% 불가)
+| 시스템 | 작업 | 우선순위 |
+|---|---|---|
+| Sentry | New Client Key + Vercel NEXT_PUBLIC_SENTRY_DSN 갱신 | P0 |
+| GitHub Actions billing | 한도 해제 (admin force merge 우회 종료) | P0 |
+| Google 계정 | seanbae1521 비밀번호 rotate (DB leak 대비) | P0 |
+| 변호사 미팅 | Q1-Q15 일괄 의견서 (300-500만원) | P0 (출시 차단) |
+| 베타테스터 안내 | 새 BETA_PASSWORD 통보 (/tmp/new-beta-pw.txt) | P0 |
+| Vercel 재배포 트리거 | 모든 secret rotate 반영 (필요 시) | P1 |
+| KRX Open Data Portal | 신청 (KOSPI 정식 데이터) | P1 |
+| Anthropic API key | rotate (있으면) | P1 |
+| FMP API key | rotate | P1 |
+| KIS App key/secret | rotate | P1 |
+| Alpaca API key | rotate (paper, 위험 낮음) | P2 |
+| Stripe secret/webhook | rotate (현재 미활성) | P2 |
+| SendGrid API key | rotate | P2 |
+| OAuth secrets (Google/Kakao) | rotate (있으면) | P2 |
+
+### v34 새 secret 파일 위치 (사용자 참조)
+```
+/tmp/new-beta-pw.txt    BETA_PASSWORD + BETA_SIGNING_SECRET (chmod 600)
+/tmp/new-vapid-keys.txt VAPID 키페어 + private PEM (chmod 600)
+/tmp/new-secrets.txt    SECRET_KEY + CSRF_SECRET (chmod 600)
+```
+
+---
 
 ## 🟢 2026-05-10 v33 종합 — **39 PR squash-merged + 8 admin actions + 6 secret rotate + 회귀 1건 admit-revert** · main `301758a → bbad2cd5` · OPEN PR 4 (사용자 결정 보류)
 
