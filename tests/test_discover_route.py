@@ -51,10 +51,15 @@ class TestDiscoverAuthenticated:
 
 class TestDiscoverResponseShape:
     def test_discover_response_shape(self, client, auth_user):
-        """market-overview must either fail-fast 503 or return shaped list."""
+        """market-overview must either serve cache or fail-fast 503."""
+        # Clear any cache pollution from prior tests so this assertion is
+        # deterministic — without a cache, upstream raise → 503.
+        from services import cache_service
+        cache_service.discover_section_cache_clear()
+
         # Force the upstream call to raise so we exercise the fail-fast
-        # 503 contract — this is the documented behaviour when FMP is
-        # unreachable. Either status confirms the route is responding.
+        # 503 contract — documented when FMP is unreachable AND no usable
+        # SWR cache exists (B-07 stale-while-revalidate).
         with patch("routes.discover.fetcher") as mock_fetcher:
             mock_fetcher.get_enhanced_macro.side_effect = RuntimeError("upstream down")
             r = client.get("/api/discover/market-overview")
@@ -62,8 +67,10 @@ class TestDiscoverResponseShape:
         assert r.status_code in (200, 503)
         body = r.get_json()
         if r.status_code == 503:
-            # Documented fail-fast envelope.
-            assert body.get("code") == "DATA_PROVIDER_DOWN"
+            # Documented fail-fast envelope (B-07: code renamed from
+            # DATA_PROVIDER_DOWN → DISCOVER_FMP_UNAVAILABLE so frontend
+            # can distinguish discover-specific failure modes).
+            assert body.get("code") == "DISCOVER_FMP_UNAVAILABLE"
             assert "endpoint" in body
             assert "retry_after" in body
         else:

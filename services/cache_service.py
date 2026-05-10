@@ -191,3 +191,96 @@ def risk_snapshot_cache_clear() -> None:
     """Test/admin helper — drop all cached snapshots."""
     with _risk_snapshot_lock:
         _risk_snapshot_cache.clear()
+
+
+# ── Discover section SWR cache (B-07, 2026-05-10) ─────────────────────────
+#
+# stale-while-revalidate layer for routes/discover.py 4 sections (us/kr
+# movers, sectors, screeners). FMP upstream sometimes 402/5xx-bursts; the
+# previous fail-fast 503 made entire Discover page unusable for an hour.
+#
+# Memory [feedback_bug_fix_patterns] "stale fallback" pattern:
+#   fresh   (< DISCOVER_FRESH_TTL)         → 200 + stale=false
+#   stale   (DISCOVER_FRESH_TTL ~ MAX_AGE) → 200 + stale=true + last_updated
+#   no data OR > DISCOVER_MAX_AGE          → 503 + retry_after
+#
+# We DO NOT serve mock/sample data — only previously-real upstream payloads
+# whose freshness we annotate. That respects "no fake market levels"
+# (자본시장법 거짓 정보 제공) while restoring graceful degradation.
+#
+# Storage: in-process dict (CEO directive: 추가 비용 0원, no Redis). Lock
+# protects concurrent /api/discover/* requests across gunicorn workers'
+# threads. Per-process: each gunicorn worker has its own copy — that's fine,
+# this is a soft cache, not a source-of-truth.
+
+_discover_section_cache: dict = {}    # key -> {"ts": float, "data": ...}
+_discover_section_lock = threading.Lock()
+
+DISCOVER_FRESH_TTL = 1800             # 30 min — under this is "fresh"
+DISCOVER_MAX_AGE = 86400              # 24 h — over this we refuse to serve
+
+# Override TTLs for ad-hoc test scenarios. Tests set these via
+# discover_section_cache_set_ttls(); production leaves the defaults.
+_discover_ttl_override: dict = {"fresh": None, "max": None}
+
+
+def _discover_ttls():
+    fresh = _discover_ttl_override["fresh"] or DISCOVER_FRESH_TTL
+    max_age = _discover_ttl_override["max"] or DISCOVER_MAX_AGE
+    return fresh, max_age
+
+
+def discover_section_cache_set_ttls(fresh, max_age) -> None:
+    """Test helper — override SWR thresholds. Pass None to reset."""
+    _discover_ttl_override["fresh"] = fresh
+    _discover_ttl_override["max"] = max_age
+
+
+def discover_section_cache_clear() -> None:
+    """Test/admin helper — drop all cached section payloads."""
+    with _discover_section_lock:
+        _discover_section_cache.clear()
+
+
+def discover_section_get(key: str):
+    """Fetch the raw entry for a section key. Returns {ts, data} or None.
+
+    Routes call this directly so they can decide fresh vs stale; we don't
+    bake the freshness check into the getter because the caller needs the
+    timestamp for the response envelope (last_updated).
+    """
+    if not key:
+        return None
+    with _discover_section_lock:
+        entry = _discover_section_cache.get(key)
+        if not entry:
+            return None
+        # Drop entries past the absolute max-age — never serve a 30-day-old
+        # snapshot as "stale data". Memory bounded.
+        _, max_age = _discover_ttls()
+        if time.time() - entry.get("ts", 0) >= max_age:
+            _discover_section_cache.pop(key, None)
+            return None
+        # Return a copy so callers can't mutate the cache by accident.
+        return {"ts": entry["ts"], "data": entry["data"]}
+
+
+def discover_section_set(key: str, data) -> None:
+    """Persist a fresh section payload. Stamps ts=now()."""
+    if not key or data is None:
+        return
+    with _discover_section_lock:
+        _discover_section_cache[key] = {"ts": time.time(), "data": data}
+
+
+def discover_section_classify(entry) -> str:
+    """Return 'fresh', 'stale', or 'miss' for a cache entry from get()."""
+    if not entry:
+        return "miss"
+    fresh, max_age = _discover_ttls()
+    age = time.time() - entry.get("ts", 0)
+    if age < fresh:
+        return "fresh"
+    if age < max_age:
+        return "stale"
+    return "miss"
