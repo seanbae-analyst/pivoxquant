@@ -308,15 +308,26 @@ class DataFetcher:
         try:
             curr = self.currency(ticker)
             price = None
-            name = KOREAN_NAMES.get(ticker)
-            # Extended registry fallback (top ~250 KR stocks)
-            if not name and self.is_korean(ticker):
+            name = None
+            # KR canonical name source (Korean preferred, BUG-01 2026-05-10):
+            # kr_stock_registry returns Korean (e.g. "삼성전자"), the curated
+            # KOREAN_NAMES dict above returns English ("Samsung Electronics")
+            # and used to populate snapshots — making /api/signals/<t> emit
+            # English while /api/market/profile/<t> emitted Korean. The user
+            # has repeatedly directed Korean preferred for KR tickers
+            # (memory feedback_ticker_display).
+            if self.is_korean(ticker):
                 try:
                     from services import kr_stock_registry as _kr_reg
                     name = _kr_reg.get_name(ticker)
                 except Exception:
                     logger.debug("silent-fallback: quick_lookup", exc_info=True)
                     pass
+            if not name:
+                # Backward-compat: KOREAN_NAMES (English) only used when the
+                # registry misses for a curated ticker (very rare — registry
+                # is the superset).
+                name = KOREAN_NAMES.get(ticker)
 
             if self.is_korean(ticker):
                 # Korean stocks: use KIS API (FMP free tier does not serve KR)
@@ -1077,8 +1088,18 @@ Reply ONLY in this exact JSON format, nothing else:
             prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else cur
             chg = (cur - prev) / prev * 100
             curr = self.currency(ticker)
-            name = KOREAN_NAMES.get(ticker.upper(),
-                   info.get("shortName", ticker))
+            # KR canonical name (BUG-01 2026-05-10): Korean preferred for
+            # .KS/.KQ tickers regardless of FMP shortName (which is English).
+            name = None
+            if is_kr:
+                try:
+                    from services import kr_stock_registry as _kr_reg
+                    name = _kr_reg.get_name(ticker.upper())
+                except Exception:
+                    logger.debug("silent-fallback: snapshot kr_name", exc_info=True)
+            if not name:
+                name = KOREAN_NAMES.get(ticker.upper(),
+                       info.get("shortName", ticker))
             dp = 0 if curr == "KRW" else 2
 
             return {
