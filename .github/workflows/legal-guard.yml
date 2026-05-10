@@ -193,6 +193,32 @@ jobs:
           fi
           echo "✅ All dashboard pages include DisclaimerBanner"
 
+      - name: Block beta password leak in repo
+        run: |
+          # 2026-05-10 — HANDOVER.md leaked the rotated value `pivoxaudit2`
+          # in plaintext. Same pattern as the original 2026-04-19 incident
+          # that forced rotate `pivoxaudit → pivoxaudit2`. Block any
+          # `pivoxaudit\d*` literal landing in repo files (md / ts / tsx /
+          # py / yml / yaml). Real value lives in Vercel env (prod) /
+          # `.env.local` (dev).
+          set +e
+          # Self-exclude this workflow (its comments / regex literal contain
+          # the token by design). `grep -E` against the path prefix works
+          # whether the leading `./` is present or not (GNU vs BSD grep).
+          beta_hits=$(grep -rEn 'pivoxaudit[0-9]*' \
+            --include='*.md' --include='*.ts' --include='*.tsx' \
+            --include='*.py' --include='*.yml' --include='*.yaml' \
+            --exclude-dir='.git' \
+            . 2>/dev/null \
+            | grep -vE '(^\./)?\.github/workflows/legal-guard\.yml:' \
+            || true)
+          if [ -n "$beta_hits" ]; then
+            echo "::error::Beta password literal leaked in repo (regex pivoxaudit[0-9]*):"
+            echo "$beta_hits"
+            exit 1
+          fi
+          echo "✅ No beta password literal in repo"
+
       - name: Broker safety guards
         run: |
           # KIS buy/sell must remain disabled

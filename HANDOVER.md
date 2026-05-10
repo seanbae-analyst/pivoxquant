@@ -114,7 +114,7 @@ KIS API code "0001" KOSPI ~7,498 quirk:
    - `NEXT_PUBLIC_BUSINESS_ADDRESS=서울특별시 성동구 독서당로 272, 107동 401호`
    - `NEXT_PUBLIC_BUSINESS_TYPE=정보통신업`
    - `NEXT_PUBLIC_BUSINESS_SUBTYPE=데이터베이스 및 온라인 정보 제공업`
-2. **Vercel env BETA_PASSWORD rotate** (`pivoxaudit2` → 새 값)
+2. **Vercel env BETA_PASSWORD rotate** (현 값 → 새 값) — 실제 값은 Vercel env (prod) / `.env.local` (dev) 참조. 평문 commit 금지.
 3. **통신판매업 신고** — 성동구청 (사업장 관할). 등록세 ~45,000원
 4. **Railway env spot check** — `FRED_API_KEY` / `STRIPE_WEBHOOK_SECRET` / `PIVOX_BROKER_ENCRYPTION_KEY` / `ANTHROPIC_API_KEY` / `FMP_API_KEY` / `DEV_PREMIUM_EMAILS`
 5. **Anthropic 크레딧 충전** — SWOT 500 root cause (메모리 인용)
@@ -177,7 +177,7 @@ KIS API code "0001" KOSPI ~7,498 quirk:
 - 잔존 P1 6건 (HHI / 7-Layer / EQUITY / sector / Journal / KOSPI 운영 복구) — 별도 PR
 
 ### v28 CEO 권한 외 항목
-1. **Vercel env BETA_PASSWORD rotate** (`pivoxaudit2` → `pivoxaudit3`) — 코드 leak 제거됨, env rotate만
+1. **Vercel env BETA_PASSWORD rotate** (현 값 → 신규) — 실제 값은 Vercel env (prod) / `.env.local` (dev) 참조. 평문 commit 금지. 코드 leak 제거됨, env rotate만 남음.
 2. **Railway env spot check**: `FRED_API_KEY`, `STRIPE_WEBHOOK_SECRET`, `PIVOX_BROKER_ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, `FMP_API_KEY`, `DEV_PREMIUM_EMAILS`
 3. **GitHub Actions billing 차단** — main 모두 동일 fail. 메모리 룰 [추가 비용 제안 금지] 따라 backend는 권유 X
 4. **사업자등록증 + 통신판매업 신고** — Stripe 연동 + 유료 결제 시작 전 (전자상거래법 §13)
