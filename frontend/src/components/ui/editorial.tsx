@@ -165,7 +165,7 @@ export function EditorialHead({
       : "var(--pq-ivory)";
   return (
     <Tag
-      className={`pq-editorial-head font-display${className}`}
+      className={`pq-editorial-head font-display ${className}`}
       style={{
         fontWeight: 500,
         fontSize: size,
