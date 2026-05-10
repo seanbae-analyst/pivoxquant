@@ -1,4 +1,59 @@
-# PivoxQuant — 인수인계서 (2026-05-09 v28 세션 — 출시 전 자율 점검 + 10 PR · OPEN PR 0건)
+# PivoxQuant — 인수인계서 (2026-05-10 v29 — 16 PR · OPEN PR 0건 · 사업자등록 발급 완료)
+
+## 🟢 2026-05-10 v29 — **16 PR squash-merged · 자율 세션 연속** · main `8b9a818 → 2b6d7ac` · OPEN PR 0건 · backend 1697 → 1745 PASS / 0 회귀
+
+**현재 main HEAD: `2b6d7ac`** (origin sync OK). **OPEN PR 0건**.
+
+### v29 추가 PR (v28 → v29 누적)
+| PR | 머지 commit | 핵심 |
+|---|---|---|
+| #201 | `a3e1d91` | KR sector "Unknown" — KIS bstp_kor_isnm 파싱 + chain (Bug #10) |
+| #202 | `6ef118c` | EQUITY CURVE field mapping + period 정합 (Bug #8) |
+| #203 | `d8e0cb2` | EQUITY CURVE benchmark — KR=KIS KOSPI200, US=SPY (Bug #8 후속) |
+| #204 | `6916bd2` | JOURNAL 헤딩 플래시 — todayLoading 가드 (Bug #12) |
+| #205 | `2b6d7ac` | 사업자등록 정보 footer ENV gate + terms/privacy §13/§12 |
+
+### 🆕 사업자등록 발급 완료 (2026-05-08)
+- 등록번호: **459-01-03808**
+- 상호: 피복스퀀트(PivoxQuant) / 대표: 배상현
+- 업태: 정보통신업 / 종목: 데이터베이스 및 온라인 정보 제공업
+- 주소: 서울특별시 성동구 독서당로 272, 107동 401호
+- 발급기관: 성동세무서장
+- 상세: [memory/business_registration.md](/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/business_registration.md)
+
+### 🚫 메모리 룰 신규 (2026-05-10)
+**[공식 라이선스 데이터만](feedback_official_data_only.md)** — yfinance/pykrx/네이버 finance/비공식 스크래핑 영구 금지. KOSPI 등 KR 데이터는 KIS API + KRX Open Data Portal + DART OpenAPI 만.
+
+### v29 KOSPI 추가 조사 결과 (investigate-bug 2회차)
+KIS API code "0001" KOSPI ~7,498 quirk:
+- KIS 공식 GitHub 샘플과 100% 파라미터 일치 (tr_id=`FHPUP02100000`, `FID_INPUT_ISCD=0001`, `FID_COND_MRKT_DIV_CODE=U`, 필드 `bstp_nmix_prpr`)
+- 즉시 fix path 없음 (A/B/C/D/E 모두 기각)
+- VTS/prod 토큰 혼용 가설 80% — CEO 직접 curl 검증 필요 (`KIS_USE_REAL=1` 후 production URL 호출)
+- PR #197 graceful degradation 유지가 안전
+
+### v29 잔존 P1 (별도 PR)
+- bug-hunter Bug #14 subscription_status 일부 잔여 (PR #196 부분 fix)
+
+### v29 출시 전 CEO 권한 외 (자율 X)
+1. **Vercel env 6개 입력** (사업자 정보 footer 자동 노출):
+   - `NEXT_PUBLIC_BUSINESS_NAME=피복스퀀트(PivoxQuant)`
+   - `NEXT_PUBLIC_BUSINESS_REPRESENTATIVE=배상현`
+   - `NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER=459-01-03808`
+   - `NEXT_PUBLIC_BUSINESS_ADDRESS=서울특별시 성동구 독서당로 272, 107동 401호`
+   - `NEXT_PUBLIC_BUSINESS_TYPE=정보통신업`
+   - `NEXT_PUBLIC_BUSINESS_SUBTYPE=데이터베이스 및 온라인 정보 제공업`
+2. **Vercel env BETA_PASSWORD rotate** (`pivoxaudit2` → 새 값)
+3. **통신판매업 신고** — 성동구청 (사업장 관할). 등록세 ~45,000원
+4. **Railway env spot check** — `FRED_API_KEY` / `STRIPE_WEBHOOK_SECRET` / `PIVOX_BROKER_ENCRYPTION_KEY` / `ANTHROPIC_API_KEY` / `FMP_API_KEY` / `DEV_PREMIUM_EMAILS`
+5. **Anthropic 크레딧 충전** — SWOT 500 root cause (메모리 인용)
+6. **GitHub Actions billing 결정**
+7. **Stripe verification** — 사업자등록 정보 제출
+8. **변호사 자문 Q5-Q8** (legal 보고 + 업태 적합성)
+9. **AAPL stale entry DB 정정**
+10. **PostgreSQL prod cascade migration 029 apply** (PR #192)
+11. **KOSPI 운영 복구**: KIS_USE_REAL=1 환경 curl 검증 → 결과에 따라 fix path 결정
+
+---
 
 ## 🔴 2026-05-09 v28 세션 — **10 PR squash-merged · 5시간 자율 세션** · main `8b9a818 → 4771d8c` · OPEN PR 0건 · backend 1697 → 1723 PASS / 0 회귀
 
