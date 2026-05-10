@@ -107,32 +107,69 @@ def _fetch_history_long(ticker: str, start: date):
 
     - For windows ≤ 5 years → delegate to data_fetcher (respects cache,
       multi-source fallback).
-    - For windows > 5 years → hit FMP directly with explicit from/to
-      since the shared get_price_history API tops out at '5y' string
-      key. FMP Starter tier supports back to IPO for US names.
+    - For windows > 5 years → hit FMP directly with explicit from/to,
+      SPLIT INTO ≤5-YEAR CHUNKS to stay within FMP Starter-plan window
+      limits. Single >5y requests against `/historical-price-eod/full`
+      have been observed to return empty payloads on Starter, which
+      previously surfaced as a misleading TICKER_NOT_FOUND 404 (B-01).
+
+    Chunking rationale:
+        FMP Starter tier supports back to IPO for US names BUT each
+        request must be ≤ 5 years. Splitting [start, today] into N
+        ≤5y windows and concatenating preserves full history without
+        a plan upgrade (cost: 0). If ALL chunks fail (FMP fully down
+        or 402 cooldown), we fall back to fetcher's 5y path so the
+        caller can still surface DATE_BEFORE_LISTING — a more accurate
+        signal than TICKER_NOT_FOUND for known tickers.
     """
     from services.container import fetcher
 
     years = (date.today() - start).days / 365.25
     if years <= 5.0:
+        # 5y-and-under path — IDENTICAL to prior behavior. No regression.
         return fetcher.get_price_history(ticker, period=_period_for_years(years))
 
-    # Long-window path — skip the period-string indirection.
-    # Prefer FMP (has deep history) for both US + KR.
+    # Long-window path — split into ≤5y chunks for FMP plan compatibility.
     try:
         from services.data import fmp as fmp
         import pandas as pd
-        from_date = start.strftime("%Y-%m-%d")
-        to_date = date.today().strftime("%Y-%m-%d")
-        data = fmp._fmp_get("/historical-price-eod/full", {
-            "symbol": ticker, "from": from_date, "to": to_date,
-        })
-        if not data:
+
+        # Build chunk boundaries: each chunk spans at most 5 years.
+        # Advance by 1 day past each chunk's end-date to avoid boundary
+        # duplicates; drop_duplicates afterward is belt-and-braces.
+        chunk_size = timedelta(days=365 * 5)  # 5 years
+        today = date.today()
+        chunks: list[tuple[date, date]] = []
+        cur = start
+        while cur < today:
+            nxt = min(cur + chunk_size, today)
+            chunks.append((cur, nxt))
+            cur = nxt + timedelta(days=1)
+
+        all_records: list[dict] = []
+        any_chunk_succeeded = False
+        for c_start, c_end in chunks:
+            data = fmp._fmp_get("/historical-price-eod/full", {
+                "symbol": ticker,
+                "from": c_start.strftime("%Y-%m-%d"),
+                "to": c_end.strftime("%Y-%m-%d"),
+            })
+            if not data:
+                continue
+            records = data.get("historical", data) if isinstance(data, dict) else data
+            if not isinstance(records, list) or not records:
+                continue
+            any_chunk_succeeded = True
+            all_records.extend(records)
+
+        if not any_chunk_succeeded or not all_records:
+            # Total FMP failure — fall back to fetcher's 5y path. The
+            # downstream route then surfaces DATE_BEFORE_LISTING for the
+            # older requested start (correct semantic), not the misleading
+            # TICKER_NOT_FOUND that a fully-empty fetch would trigger.
             return fetcher.get_price_history(ticker, period="5y")
-        records = data.get("historical", data) if isinstance(data, dict) else data
-        if not isinstance(records, list) or not records:
-            return fetcher.get_price_history(ticker, period="5y")
-        df = pd.DataFrame(records)
+
+        df = pd.DataFrame(all_records)
         col_map = {
             "date": "Date", "open": "Open", "high": "High",
             "low": "Low", "close": "Close", "adjClose": "Adj Close",
@@ -141,6 +178,9 @@ def _fetch_history_long(ticker: str, start: date):
         df = df.rename(columns=col_map)
         if "Date" in df.columns:
             df["Date"] = pd.to_datetime(df["Date"])
+            # Multi-chunk concat may produce duplicate Date rows on chunk
+            # boundaries — keep last occurrence (most recent fetch wins).
+            df = df.drop_duplicates(subset=["Date"], keep="last")
             df = df.set_index("Date").sort_index()
         for col in ["Open", "High", "Low", "Close", "Volume"]:
             if col not in df.columns:
