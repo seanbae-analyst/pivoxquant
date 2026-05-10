@@ -83,7 +83,8 @@ def swot():
     body = {"error": "Failed to generate SWOT"}
     if detail:
         body["detail"] = detail
-    return jsonify(body), 500
+    body["retry_after"] = 60  # B-08 graceful
+    return jsonify(body), 503
 
 
 @ai_bp.route("/competitor", methods=["POST"])
@@ -123,7 +124,8 @@ def competitor():
     body = {"error": "Failed to generate competitor analysis"}
     if detail:
         body["detail"] = detail
-    return jsonify(body), 500
+    body["retry_after"] = 60  # B-08 graceful
+    return jsonify(body), 503
 
 
 @ai_bp.route("/sector-trend", methods=["POST"])
@@ -161,7 +163,8 @@ def sector_trend():
     body = {"error": "Failed to generate sector trend"}
     if detail:
         body["detail"] = detail
-    return jsonify(body), 500
+    body["retry_after"] = 60  # B-08 graceful
+    return jsonify(body), 503
 
 
 @ai_bp.route("/chat", methods=["POST"])
@@ -233,7 +236,8 @@ def commentary():
     body = {"error": "Failed to generate commentary"}
     if detail:
         body["detail"] = detail
-    return jsonify(body), 500
+    body["retry_after"] = 60  # B-08 graceful
+    return jsonify(body), 503
 
 
 @ai_bp.route("/morning-summary", methods=["POST"])
@@ -251,7 +255,8 @@ def morning_summary():
     body = {"error": "Failed to generate summary"}
     if detail:
         body["detail"] = detail
-    return jsonify(body), 500
+    body["retry_after"] = 60  # B-08 graceful
+    return jsonify(body), 503
 
 
 @ai_bp.route("/coaching", methods=["POST"])
@@ -284,7 +289,8 @@ def coaching():
     body = {"error": "Failed to generate coaching"}
     if detail:
         body["detail"] = detail
-    return jsonify(body), 500
+    body["retry_after"] = 60  # B-08 graceful
+    return jsonify(body), 503
 
 
 # ── Earnings Call Tone Analyzer (GREEN) ──────────────────────────────────────
