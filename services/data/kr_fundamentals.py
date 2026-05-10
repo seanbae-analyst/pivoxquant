@@ -134,10 +134,14 @@ def get_kr_fundamentals(ticker: str) -> dict | None:
     tr_id:    ``FHKST01010100``
 
     KIS output fields used:
-        per     — trailing P/E (float as string)
-        eps     — trailing EPS in KRW (float as string)
-        pbr     — price-to-book ratio
-        hts_avls — 시가총액 (억원 단위; multiply by 1e8 for KRW)
+        per           — trailing P/E (float as string)
+        eps           — trailing EPS in KRW (float as string)
+        pbr           — price-to-book ratio
+        hts_avls      — 시가총액 (억원 단위; multiply by 1e8 for KRW)
+        bstp_kor_isnm — 업종 한글 종목명 (Korean industry/sector name,
+                        e.g. "전기·전자", "IT 서비스"). Optional —
+                        absent on some product types (ETF/SPAC); handled
+                        with truthy fallback. Output key: ``sector_kr``.
     """
     code = _to_code(ticker)
     if not code:
@@ -186,12 +190,24 @@ def get_kr_fundamentals(ticker: str) -> dict | None:
     mcap_uk = _safe_float(output.get("hts_avls"))
     market_cap = mcap_uk * 1e8 if mcap_uk else None
 
+    # bstp_kor_isnm = Korean industry/sector display name. KIS publishes
+    # this on equity inquire-price responses (e.g. "전기·전자",
+    # "IT 서비스"). Some product types (ETF/SPAC) may omit it — guard
+    # truthy so an empty string falls through to caller's next fallback.
+    sector_kr_raw = output.get("bstp_kor_isnm")
+    sector_kr: str | None = None
+    if isinstance(sector_kr_raw, str):
+        s = sector_kr_raw.strip()
+        if s:
+            sector_kr = s
+
     result = {
         "trailingPE": per,
         "forwardPE": per,      # KIS only publishes trailing — mirror.
         "trailingEps": eps,
         "priceToBook": pbr,
         "marketCap": market_cap,
+        "sector_kr": sector_kr,
     }
 
     # If every field came back null we'd rather return None so the
