@@ -179,6 +179,14 @@
   --pq-ivory-dim: rgba(245, 240, 232, 0.55);
   --pq-ivory-faint: rgba(245, 240, 232, 0.45);
 
+  /* Hairline / surface tokens — α < 0.10 range, NOT for text.
+     Use for borders, dividers, thin progress tracks, surface backgrounds.
+     Mirrors the ivory text tokens above (which cover α 0.45+) so all
+     rgba(245,240,232,X) sites swap to a token. */
+  --pq-ivory-line: rgba(245, 240, 232, 0.08);       /* hairline border / divider */
+  --pq-ivory-line-soft: rgba(245, 240, 232, 0.06);  /* softer divider */
+  --pq-ivory-line-faint: rgba(245, 240, 232, 0.04); /* faintest border / surface bg */
+
   /* Font family aliases → next/font CSS vars from app/layout.tsx.
      Without these, var(--pq-font-mono|serif) falls back to Georgia/Times
      instead of JetBrains Mono / Source Serif 4 / Playfair Display. */
