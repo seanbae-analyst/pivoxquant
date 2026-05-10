@@ -288,8 +288,28 @@ def search(query: str, limit: int = 15) -> list[dict]:
 
 
 def get_name(ticker: str) -> "str | None":
-    """Return preferred Korean name. Prefer curated, fallback to full master."""
+    """Return preferred Korean name. Prefer curated, fallback to full master.
+
+    Suffix-toggle fallback (2026-05-10, Bug B-02)
+    --------------------------------------------
+    KIS API has been observed returning some KOSDAQ tickers with the
+    ``.KS`` suffix (and vice-versa) — e.g. ``124500.KS`` is delivered for
+    아이티센글로벌 even though the row only exists as ``124500.KQ`` in our
+    registry. Without a fallback, every alert/serializer for those tickers
+    rendered with the bare ticker as the "name" ("124500.KS (124500.KS) —
+    Score …").
+
+    Safety: the curated + full registries contain **zero** 6-digit codes
+    that appear on both KOSPI and KOSDAQ at once (verified by audit
+    2026-05-10), so toggling the suffix on miss can never resolve to a
+    *different* company. We try the input as-given first, then the toggled
+    form, then return ``None`` so callers keep the same ticker fallback.
+    """
+    if not ticker:
+        return None
     t = ticker.upper()
+
+    # Primary lookup — input ticker exactly as provided.
     entry = KR_STOCKS.get(t)
     if entry:
         name_en, name_kr = entry
@@ -297,6 +317,24 @@ def get_name(ticker: str) -> "str | None":
     full = KR_STOCKS_FULL.get(t)
     if full:
         return full.get("name")
+
+    # Suffix-toggle fallback — only for canonical KRX tickers
+    # (XXXXXX.KS or XXXXXX.KQ). Anything else falls through to None.
+    if len(t) == 9 and t[6] == ".":
+        if t.endswith(".KS"):
+            alt = t[:-3] + ".KQ"
+        elif t.endswith(".KQ"):
+            alt = t[:-3] + ".KS"
+        else:
+            alt = None
+        if alt:
+            entry = KR_STOCKS.get(alt)
+            if entry:
+                name_en, name_kr = entry
+                return name_kr or name_en
+            full = KR_STOCKS_FULL.get(alt)
+            if full:
+                return full.get("name")
     return None
 
 
