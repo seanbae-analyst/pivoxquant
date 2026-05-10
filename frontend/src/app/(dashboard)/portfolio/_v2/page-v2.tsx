@@ -95,6 +95,19 @@ export default function PortfolioPageV2() {
     return () => clearTimeout(t);
   }, []);
 
+  // B-11 fix (2026-05-10): explicit empty-state flash guard.
+  // SWR may flip `isLoading` to false before the response resolves
+  // (stale cache / dedup), causing PortfolioHeroV2 to flash
+  // "0 positions · $0 · never reconciled" for one frame before data
+  // arrives. Treat the absence of either response object (i.e.
+  // `data === undefined`) as still loading, regardless of the SWR
+  // `isLoading` flag. The 1.2s `showSkeleton` window still bounds
+  // the skeleton on the happy path.
+  const dataPending = posData === undefined || sumData === undefined;
+  const isInitialLoad =
+    showSkeleton &&
+    (dataPending || (posLoading && !posData) || (sumLoading && !sumData));
+
   // Toast on error — surfaces transient API failures (v1 parity).
   React.useEffect(() => {
     if (posErr) {
@@ -284,10 +297,7 @@ export default function PortfolioPageV2() {
         lastReconciledAt={lastReconciledAt}
         reconcileAvailable={false}
         onAddPosition={() => setAddOpen(true)}
-        loading={
-          showSkeleton &&
-          ((posLoading && !posData) || (sumLoading && !sumData))
-        }
+        loading={isInitialLoad}
         todayPnl={kpis.todayPnl}
         todayPnlPct={kpis.todayPnlPct}
         unrealized={kpis.unrealized}

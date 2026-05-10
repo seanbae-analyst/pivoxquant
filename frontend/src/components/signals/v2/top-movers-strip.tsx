@@ -113,41 +113,42 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                 ? "var(--pq-positive, #dc2626)"
                 : "var(--pq-negative, #2563eb)";
 
+          // B-10 fix (2026-05-10): only the title is a <Link>. Carousel
+          // scroll gestures on the card body no longer trigger navigation.
           return (
-            <Link
+            <article
               key={`${s.ticker}-${s.id ?? ""}`}
-              href={`/detail/${s.ticker}`}
-              prefetch={false}
-              style={{ textDecoration: "none" }}
-              aria-label={`${name} · ${tone.display} · strength ${strength.toFixed(2)}`}
+              className="mover-card"
+              style={{
+                border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+                borderRadius: "var(--pq-radius-card, 4px)",
+                padding: 16,
+                background: "transparent",
+                transition: "border-color 200ms cubic-bezier(0.16, 1, 0.3, 1)",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+              }}
             >
-              <article
-                className="mover-card"
-                style={{
-                  border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
-                  borderRadius: "var(--pq-radius-card, 4px)",
-                  padding: 16,
-                  background: "transparent",
-                  transition: "border-color 200ms cubic-bezier(0.16, 1, 0.3, 1)",
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
                 {/* name-main (Playfair) — 종목명 main pattern */}
-                <div
-                  className="font-display"
+                <Link
+                  href={`/detail/${s.ticker}`}
+                  prefetch={false}
+                  aria-label={`${name} · ${tone.display} · strength ${strength.toFixed(2)}`}
+                  className="font-display mover-title-link"
                   style={{
                     fontSize: 18,
                     fontWeight: 500,
                     color: "var(--pq-ivory, #F5F0E8)",
                     lineHeight: 1.2,
                     letterSpacing: "-0.005em",
+                    textDecoration: "none",
+                    display: "inline-block",
                   }}
                 >
                   {name}
-                </div>
+                </Link>
 
                 {/* ticker-sub (mono, dim) */}
                 <div
@@ -251,8 +252,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                     {fmtPrice(s)}
                   </span>
                 </div>
-              </article>
-            </Link>
+            </article>
           );
         })}
       </div>
@@ -260,6 +260,9 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
       <style jsx>{`
         :global(.mover-card:hover) {
           border-color: var(--pq-bronze, #b8956a) !important;
+        }
+        :global(.mover-title-link:hover) {
+          color: var(--pq-bronze, #b8956a) !important;
         }
         @media (max-width: 1279px) {
           :global(.movers-rail) {
@@ -270,7 +273,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
             scroll-snap-type: x mandatory;
             padding-bottom: 6px;
           }
-          :global(.movers-rail > a) {
+          :global(.movers-rail > article) {
             scroll-snap-align: start;
           }
         }

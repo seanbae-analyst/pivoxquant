@@ -4,6 +4,32 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={cn("pq-skeleton-dark", className)} />;
 }
 
+/**
+ * ChartSkeleton — fixed-height placeholder for lazy-loaded recharts charts.
+ *
+ * Used by equity-curve-chart-dynamic.tsx and sector-allocation-donut-dynamic.tsx
+ * as the `loading` prop in next/dynamic. The explicit height matches the
+ * default `height` prop of each chart (240px) so CLS is 0 while the chunk
+ * is in-flight.
+ */
+export function ChartSkeleton({ height = 240 }: { height?: number }) {
+  return (
+    <div
+      style={{
+        height,
+        background: "rgba(255,255,255,0.02)",
+        border: "1px solid rgba(245,240,232,0.08)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      aria-hidden="true"
+    >
+      <Skeleton className="h-4 w-32" />
+    </div>
+  );
+}
+
 export function CardSkeleton() {
   return (
     <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 space-y-4">
