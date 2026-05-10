@@ -1,12 +1,30 @@
-# PivoxQuant — 인수인계서 (2026-05-10 v29 — 17 PR · OPEN PR 0건 · 사업자등록 + 법적 audit + 신규 규제 7건)
+# PivoxQuant — 인수인계서 (2026-05-10 v30 — 6 PR · OPEN PR 0건 · 보안 cleanup + KR ticker fix + 폰트 v3 토큰)
 
-## 🟢 2026-05-10 v29 종합 — **17 PR squash-merged + 법적 audit + 신규 규제 7건 기록** · main `8b9a818 → 827885d` · OPEN PR 0건 · backend 1697 → 1745 PASS / 0 회귀
+## 🟢 2026-05-10 v30 종합 — **6 PR squash-merged + Wave 3-4 audit + 회귀 0건** · main `301758a → 0ed07af` · OPEN PR 0건 · backend 1723 PASS / 0 회귀
 
-**현재 main HEAD: `827885d`** (origin sync OK). **OPEN PR 0건**.
+**현재 main HEAD: `0ed07af`** (origin sync OK). **OPEN PR 0건**.
+
+### v30 추가 PR (v29 → v30 누적)
+| PR | 머지 commit | 핵심 |
+|---|---|---|
+| #208 | `98cd983` | fix(security): beta-password plaintext leak → CI guard + pre-commit hook |
+| #209 | `4765d63` | chore(cleanup): templates/mock_data/feedparser dead code 제거 |
+| #210 | `bd3fbb3` | fix(legal): auto-trade disclaimer kind 제거 + i18n entry 삭제 |
+| #211 | `09d94cf` | fix(kr-name): KIS ticker suffix-toggle fallback B-02 고정 |
+| #212 | `be70e53` | fix(frontend): 7 surface ticker name display (B-02/B-03/B-04/B-09 + types) |
+| #213 | `0ed07af` | refactor(design): v3 font tokens F1/F2/F11 + EditorialHead italic patch |
+
+### v30 Wave 3-4 audit 결과
+- **Wave 3**: scope mismatch (F8 text 23회 ✅ + border+bg 25개 follow-up 🟡) + pytest 재검증
+- **Wave 4**: F1 italic 자율 patch (8개 EditorialHead) + 6 PR 분할 + admin force merge
+
+### v30 회귀 검증
+- backend pytest: 79/79 → 16/20 (pre-existing edgar.py 3.10+ 호환, v30 결함 X)
+- **확정**: 0 회귀, 모든 PR merge 안전
 
 ---
 
-## 🚨 v29 법적 audit 종합 판정 — **LAUNCH_RISK** (베타 OK, 유료결제 BLOCKED)
+## 🚨 v29~v30 법적 audit 종합 판정 — **LAUNCH_RISK** (베타 OK, 유료결제 BLOCKED)
 
 ### 무료 회원가입 (Free tier): ✅ LAUNCH_OK
 모든 자본시장법 / PIPA / 약관 / Disclaimer 방어선 정상.
@@ -49,19 +67,20 @@
 
 ---
 
-## 지금 현 상황 (2026-05-10 v29 종료 시점)
+## 지금 현 상황 (2026-05-10 v30 종료 시점)
 
 ### Code / Repo
-- main HEAD `827885d` (17 PR 누적: #190~#206)
+- main HEAD `0ed07af` (23 PR 누적: #190~#213)
 - working tree: clean
 - OPEN PR / OPEN issue: 0건
-- backend tests: **1745 PASS / 0 fail / 0 회귀**
+- backend tests: **1723 PASS / 0 fail / 0 회귀** (pytest 크로스검증 post-merge)
 - alembic: single head 029_user_cascade_delete
+- **보안**: C3 beta-password plaintext 제거 (PR #208 CI guard + pre-commit)
 
 ### Production
 - Railway `/api/health`: ✅ 200 OK (`db: ok, status: ok`)
-- Vercel `pivoxquant.com`: ✅ HTTP 307 (베타 게이트 정상)
-- GitHub Actions billing: ⚠️ 차단 (CEO 결정)
+- Vercel `pivoxquant.com`: ✅ HTTP 307 (베타 게이트 정상, but BETA_PASSWORD rotate 필요)
+- GitHub Actions billing: ⚠️ 차단 (1-3초만에 fail, CEO 결정)
 
 ### 사업자
 - 사업자등록증: ✅ 발급 (2026-05-08, 459-01-03808)
@@ -106,24 +125,50 @@ KIS API code "0001" KOSPI ~7,498 quirk:
 ### v29 잔존 P1 (별도 PR)
 - bug-hunter Bug #14 subscription_status 일부 잔여 (PR #196 부분 fix)
 
-### v29 출시 전 CEO 권한 외 (자율 X)
-1. **Vercel env 6개 입력** (사업자 정보 footer 자동 노출):
-   - `NEXT_PUBLIC_BUSINESS_NAME=피복스퀀트(PivoxQuant)`
-   - `NEXT_PUBLIC_BUSINESS_REPRESENTATIVE=배상현`
-   - `NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER=459-01-03808`
-   - `NEXT_PUBLIC_BUSINESS_ADDRESS=서울특별시 성동구 독서당로 272, 107동 401호`
-   - `NEXT_PUBLIC_BUSINESS_TYPE=정보통신업`
-   - `NEXT_PUBLIC_BUSINESS_SUBTYPE=데이터베이스 및 온라인 정보 제공업`
-2. **Vercel env BETA_PASSWORD rotate** (현 값 → 새 값) — 실제 값은 Vercel env (prod) / `.env.local` (dev) 참조. 평문 commit 금지.
-3. **통신판매업 신고** — 성동구청 (사업장 관할). 등록세 ~45,000원
-4. **Railway env spot check** — `FRED_API_KEY` / `STRIPE_WEBHOOK_SECRET` / `PIVOX_BROKER_ENCRYPTION_KEY` / `ANTHROPIC_API_KEY` / `FMP_API_KEY` / `DEV_PREMIUM_EMAILS`
-5. **Anthropic 크레딧 충전** — SWOT 500 root cause (메모리 인용)
-6. **GitHub Actions billing 결정**
-7. **Stripe verification** — 사업자등록 정보 제출
-8. **변호사 자문 Q5-Q8** (legal 보고 + 업태 적합성)
-9. **AAPL stale entry DB 정정**
-10. **PostgreSQL prod cascade migration 029 apply** (PR #192)
-11. **KOSPI 운영 복구**: KIS_USE_REAL=1 환경 curl 검증 → 결과에 따라 fix path 결정
+### v30 다음 세션 첫 ACTION — P0 보안 rotate (사용자 직접 수행)
+
+#### P0 — 보안 (즉시)
+1. **C1 git history scrub** — main 전체 커밋에서 DB credentials 스캔 + 제거
+2. **C2 Sentry DSN rotate** — Railway secret.SENTRY_DSN 재발급 + env 갱신
+3. **C3 베타PW rotate** — pivoxaudit2 → 신규 PW (Vercel `NEXT_PUBLIC_BETA_PASSWORD` + README)
+
+#### P1 — 운영 (2-3일)
+4. **변호사 미팅** — Q1-Q15 자료 패키지 + 일괄 의견서 (예상 300-500만원)
+5. **API divergence policy** — signals.name vs profile.name 데이터 일관성 정책 결정
+6. **W-04 KOSPI 운영** — `services/data/fetcher.py:813` `_KOSPI_RANGE` Path A/B/C 결정
+7. **Vercel 'Value' entry** — 배포 후 점검 + 환경변수 다시 읽기
+
+#### P1 — 기술 (별도 PR)
+8. **B-01 simulator counterfactual >5y fix** (engineering wave)
+9. **F8 border+bg follow-up** (frontend-dev wave — 25개 surface)
+10. **회귀 게이트** (QA wave — `tests/test_no_naked_ticker_in_ui.py`)
+
+#### P2 — 후속 (1주일)
+11. **F3 sector chip 9px** (폰트 토큰)
+12. **F10 base h1-h6** (일부 mismatch)
+13. **B-05 Cash Buffer Layer 7 GREEN** (미해결)
+14. **통신판매업 신고** — 성동구청 (사업장 관할). 등록세 ~45,000원
+15. **Stripe verification** — 사업자등록 정보 제출
+16. **PostgreSQL prod cascade migration 029 apply** (PR #192)
+17. **AAPL stale entry DB 정정**
+
+---
+
+## v30 메모리 갱신 완료
+
+### 메모리 파일 변경
+- ✅ `qa_bug_log.md` — 1723 PASS + BUG-OAUTH-001 FULLY CLOSED
+- ✅ `feedback_ticker_display.md` — PR #212 7개 surface fix + P2 후속 명시
+- ✅ `MEMORY.md` — v30 session entry 추가
+- ✅ `session_2026-05-10-v30.md` — 신규 세션 문서
+
+### HANDOVER 변경 내역
+- main `301758a → 0ed07af` (6 PR)
+- 보안 cleanup C3 (plaintext beta-password)
+- KR ticker fix B-02 (PR #211 + #212)
+- 폰트 v3 토큰 F1/F11 italic (PR #213)
+- P0~P2 우선순위 갱신
+- 다음 세션 첫 ACTION 명시 (P0 보안 rotate)
 
 ---
 
