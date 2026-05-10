@@ -219,6 +219,119 @@ def _score_to_status(score: int) -> str:
     return "RED"
 
 
+def _compute_cash_weight_pct(portfolio_value: float) -> tuple[float, str]:
+    """Best-effort computation of cash buffer % of (cash + positions).
+
+    Returns (cash_pct, source) where source is one of:
+      - "alpaca" — Alpaca BYOK account cash
+      - "kis"    — KIS BYOK account available_cash
+      - "none"   — no broker connected / fetch failed → cash = 0
+
+    Reuses existing BYOK broker infrastructure — adds zero new API calls if
+    the user has no broker linked. All failures are swallowed and reported
+    as cash=0 (the most conservative read for risk surfacing — RED status).
+
+    Memory rule: feedback_no_extra_cost (2026-05-06) — no new paid endpoints.
+    B-05 (2026-05-10): replaces hardcoded `cash_w_pct = 0.0` + status="GREEN".
+    """
+    cash_native = 0.0
+    source = "none"
+
+    # Try Alpaca first (US users). UserAlpacaService raises on no connection
+    # so wrap construction; verify() returns ok/error without raising.
+    try:
+        from services.broker.user_alpaca_service import (
+            UserAlpacaService,
+            UserAlpacaError,
+        )
+        try:
+            svc = UserAlpacaService(getattr(current_user, "id", None))
+        except UserAlpacaError:
+            svc = None
+        except Exception:
+            svc = None
+        if svc is not None:
+            res = svc.verify()
+            if res.get("ok"):
+                acct = res.get("account") or {}
+                cash_val = acct.get("cash")
+                if cash_val is not None:
+                    cash_native = float(cash_val)
+                    source = "alpaca"
+    except Exception as exc:
+        logger.debug("L7 cash: alpaca lookup skipped (%s)", exc)
+
+    # Try KIS if Alpaca didn't yield (KR users — KRW-denominated).
+    if source == "none":
+        try:
+            from services.broker.user_kis_service import (
+                UserKISService,
+                UserKISError,
+            )
+            try:
+                svc = UserKISService(getattr(current_user, "id", None))
+            except UserKISError:
+                svc = None
+            except Exception:
+                svc = None
+            if svc is not None:
+                bal = svc.get_balance()
+                if bal.get("ok"):
+                    cash_val = bal.get("available_cash")
+                    if cash_val is not None:
+                        cash_native = float(cash_val)
+                        source = "kis"
+        except Exception as exc:
+            logger.debug("L7 cash: kis lookup skipped (%s)", exc)
+
+    if source == "none" or cash_native <= 0:
+        return 0.0, source
+
+    # Compute cash / (cash + positions) ratio. portfolio_value here is the
+    # mark-to-market sum from _portfolio_snapshot in the user's native ticker
+    # currency. For a single-broker BYOK user the units match. For mixed
+    # books the ratio is a best-effort approximation that still surfaces a
+    # meaningful relative magnitude (vs. the previous hardcoded 0%).
+    pv = float(portfolio_value or 0.0)
+    denom = pv + cash_native
+    if denom <= 0:
+        return 0.0, source
+    pct = max(0.0, min(100.0, (cash_native / denom) * 100.0))
+    return pct, source
+
+
+def _cash_buffer_status(cash_w_pct: float, cfg: dict) -> str:
+    """Threshold-based Cash Buffer status (B-05).
+
+    GREEN  — cash >= bull_cash_pct (SoT from RiskDefenseSystem config)
+    YELLOW — cash >= max(2%, bull_cash_pct/2)
+    RED    — below YELLOW floor (insufficient buffer)
+
+    Floors are derived rather than hardcoded so profile-specific tuning of
+    bull_cash_pct (e.g., aggressive = 0%, defensive = 10%) cascades into the
+    YELLOW band.
+    """
+    green_th = float(cfg.get("bull_cash_pct", 5))
+    yellow_th = max(2.0, green_th / 2.0)
+    if cash_w_pct >= green_th:
+        return "GREEN"
+    if cash_w_pct >= yellow_th:
+        return "YELLOW"
+    return "RED"
+
+
+def _cash_buffer_observation(cash_w_pct: float, cfg: dict, source: str) -> str:
+    """Neutral observational text for Layer 7 (no advice language)."""
+    if source == "none":
+        return "No broker connection — cash buffer not observable."
+    status = _cash_buffer_status(cash_w_pct, cfg)
+    if status == "RED":
+        return "Cash buffer below soft-limit band."
+    if status == "YELLOW":
+        return "Cash buffer near soft-limit band."
+    return "Cash buffer within band."
+
+
 def _demo_summary_response() -> dict:
     """Neutral fallback for /summary when upstream data is unavailable."""
     return {
@@ -536,7 +649,12 @@ def _risk_layers_impl():
         logger.warning("risk_layers L6 Sector metric failed: %s", e)
         sector_str = "—"
 
-    cash_w_pct = 0.0  # portfolio model has no explicit cash sleeve yet
+    # ── Layer 7: Cash Buffer — real calculation (B-05, 2026-05-10) ──
+    # Source: bug-hunter wave found cash_w_pct hardcoded 0.0 + status="GREEN".
+    # Now: try BYOK broker cash balance (Alpaca → KIS), fall back to 0 only if
+    # both unavailable. Status uses bull_cash_pct config (SoT) as the GREEN
+    # threshold so risk_defense.py tuning auto-propagates here.
+    cash_w_pct, cash_source = _compute_cash_weight_pct(state.get("portfolio_value", 0.0))
 
     layers = [
         {
@@ -613,8 +731,8 @@ def _risk_layers_impl():
             "metric_value": f"{cash_w_pct:.0f}%",
             "threshold": th_cash,
             "observed_at_kst": observed,
-            "status": "GREEN",
-            "observation": "Cash buffer observed.",
+            "status": _cash_buffer_status(cash_w_pct, cfg),
+            "observation": _cash_buffer_observation(cash_w_pct, cfg, cash_source),
         },
     ]
 
