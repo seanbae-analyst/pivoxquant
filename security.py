@@ -400,13 +400,26 @@ def init_security(app):
         # Permissions-Policy — 금융 앱 기본 권고. Frontend (next.config.ts) 헤더와 정합.
         # camera/microphone/geolocation/usb/magnetometer/gyroscope/accelerometer 차단,
         # payment=(self) 만 허용 (Stripe checkout 향후 호환).
+        # interest-cohort=() — FLoC opt-out (2026-05-10 L4: privacy hardening
+        # for Chromium forks that still ship the cohort API).
         response.headers["Permissions-Policy"] = (
             "camera=(), microphone=(), geolocation=(), payment=(self), "
-            "usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+            "usb=(), magnetometer=(), gyroscope=(), accelerometer=(), "
+            "interest-cohort=()"
         )
+        # 2026-05-10 (H1): backend serves JSON to the SPA + a handful of
+        # server-rendered HTML pages (artifacts brag-card share, admin
+        # artifact preview, email preference confirmation). Every one of
+        # those templates is fully static — zero ``<script>`` tags, zero
+        # inline event handlers — verified by grep over
+        # ``services/artifacts/templates/*.html`` and ``routes/email_preferences.py``.
+        # Tightening ``script-src 'none'`` removes the entire XSS surface
+        # at the backend without breaking any legitimate path. Browser
+        # rendering for the SPA happens on Vercel and is governed by
+        # ``frontend/next.config.ts`` / ``frontend/vercel.json``, not here.
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+            "script-src 'none'; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             "img-src 'self' data: https:; "
             # connect-src — keep aligned with frontend CSP (vercel.json).
@@ -421,8 +434,14 @@ def init_security(app):
             "form-action 'self'"
         )
         if _IS_PRODUCTION:
+            # 2026-05-10 (M1): align with frontend (next.config.ts:73) —
+            # 2-year max-age + ``preload`` so we're eligible for the
+            # Chromium HSTS preload list once headers stay stable for
+            # 21+ days. ``includeSubDomains`` keeps the api subdomain
+            # locked too. Submission to https://hstspreload.org is a
+            # one-time CEO action after the next deploy.
             response.headers["Strict-Transport-Security"] = (
-                "max-age=31536000; includeSubDomains"
+                "max-age=63072000; includeSubDomains; preload"
             )
 
         # Set CSRF cookie on every response so the SPA can read it
