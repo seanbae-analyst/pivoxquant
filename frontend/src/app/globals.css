@@ -2176,6 +2176,9 @@ i.italic,
 }
 
 /* Sentiment chip — editorial variant for news rows */
+/* font-size 11px = Apple HIG minimum (11pt). Bloomberg sector ribbon also 10-11px.
+   Previous 9px was sub-Apple-HIG and degraded under KR Pretendard fallback.
+   line-height 1.4 preserved → cap-height ratio unchanged. */
 .pq-sent-chip {
   display: inline-flex;
   align-items: center;
@@ -2184,7 +2187,7 @@ i.italic,
   border: 0.5px solid;
   border-radius: 0;
   font-family: var(--font-sans), system-ui, sans-serif;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   font-weight: 500;
