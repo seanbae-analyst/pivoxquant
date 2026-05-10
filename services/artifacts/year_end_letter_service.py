@@ -20,8 +20,9 @@ By explicit product decision (2026-04-19) this artefact has:
   wherever the data could leak via aggregate surfaces.
 - Every prose field routes through `services.legal_filter.safe_scrub`.
 - Disclaimer partial `_disclaimer.html` is always included.
-- Engine / risk_defense / autotrader are **never** touched — this
-  service is read-only.
+- Engine / risk_defense are **never** touched — this service is
+  read-only. (autotrader module retired 2026-05-05 per legal decision;
+  rollback only via git tag `legal-pre-autotrader-removal`.)
 
 Entry points
 ------------
