@@ -1,4 +1,26 @@
-# PivoxQuant — 인수인계서 (2026-05-10 v31 — 24 PR · OPEN PR 0건 · 자율세션 마라톤 + filter-repo + Vercel rotate)
+# PivoxQuant — 인수인계서 (2026-05-10 v32 — 30 PR · OPEN PR 0건 · 자율 마라톤 종료 + worktree cleanup)
+
+## 🟢 2026-05-10 v32 종합 — **30 PR squash-merged + 4 admin actions + worktree cleanup** · main `301758a → cafb8f50` · OPEN PR 0건
+
+### v32 추가 PR (v31 → v32, 5 PR + worktree cleanup)
+- #234 KOSPI/KOSDAQ wide bounds 복원 (PR #228 W-04 reverts — KIS live probe로 7498 = 실제 정상값 확정)
+- #235 BUG-01 follow-up — services/data/fetcher.py + 7 routes에 `canonical_display_name` helper (legacy SignalCache 영문 row 강제 한국어)
+- #236 routes/market.py per-ticker wide bounds (B-06 sister fix)
+- #237 dd_checklist_email.html naked ticker — name primary + ticker subline
+- #238 보안 M3 (dev-login production fail-fast) + M5 (OAuth state 10min → 5min)
+
+### v32 worktree cleanup
+- /Users/seanbae/Desktop/취준/pivoxquant-risk-l7 (Wave 12 B-05) → 삭제 (PR #225 머지 후)
+- /Users/seanbae/Desktop/취준/pivoxquant-ai-graceful (Wave 13 B-08) → 삭제 (PR #229 머지 후)
+- 남은 locked worktree 11개 (.claude/worktrees/agent-*) 보존 (다른 wave 작업물, 사용자 결정)
+- stash 10개 보존 (사용자 결정)
+
+### v32 정직 보고
+- **W-04 회귀 admit + revert** (PR #234): PR #228이 KIS live probe 전 추측 기반으로 KOSPI 7498 차단. 실제로는 정상값 (한국 시장 2025-2026 상승). 즉시 revert + 코멘트로 evidence 박음.
+- **자체 회귀 게이트 self-heal 2회**: PR #224 (HANDOVER pivoxaudit2 평문 → 회귀 게이트 catch → cleanup), PR #237 (dd_checklist_email naked ticker → grep으로 발견 → fix).
+- **외부 액션 6건 그대로 보류** (사용자 직접): Sentry rotate / GitHub Actions billing / Google PW / 변호사 미팅 / KRX Open Data Portal / 베타테스터 안내.
+
+---
 
 ## 🟢 2026-05-10 v31 종합 — **24 PR squash-merged + admin actions + race 회복** · main `301758a → 8e30ad3b` · OPEN PR 0건
 
