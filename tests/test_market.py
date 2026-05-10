@@ -448,8 +448,15 @@ class TestMarketIndicesKR:
     # ────────────────────────────────────────────────────────────────────
 
     def test_kospi_kis_sanity_fail_fmp_fallback_succeeds(self, client, auth_user):
-        """KIS returns 7498 (out-of-band per KIS API quirk) → FMP returns
-        2540 (realistic) → KOSPI tile must surface with the FMP value."""
+        """KIS returns 749,800 (100x unit-glitch — outside [1500, 50000])
+        → FMP returns 2540 (realistic) → KOSPI tile must surface with
+        the FMP value.
+
+        2026-05-10 (B-06): originally used 7498 against the narrow
+        [1500, 4500] bound, but live KIS verification proved 7498 is
+        the real KOSPI level. Test value upgraded to 749,800 (a true
+        100x unit-confusion glitch) so the FMP-fallback contract still
+        triggers under the wide [1500, 50000] bound."""
         from services import fx_service
         fx_service.set_rate(1380.0)
         from routes.market import _indices_cache
@@ -457,8 +464,8 @@ class TestMarketIndicesKR:
 
         MockKIS = self._kis_service_mock(
             price_map={
-                "0001": 7498.0,    # KIS quirk — outside [1500, 4500]
-                "1001": 1207.0,    # KOSDAQ in-band
+                "0001": 749_800.0,  # 100x unit-glitch — outside [1500, 50000]
+                "1001": 1207.0,     # KOSDAQ in-band
                 "2001": 337.0,
                 "2203": 1240.0,
             },
@@ -486,7 +493,7 @@ class TestMarketIndicesKR:
             f"KOSPI missing despite FMP fallback being available: {list(names)}"
         )
         kospi = names["KOSPI"]
-        # Must reflect the FMP value, NOT the bogus KIS 7498.
+        # Must reflect the FMP value, NOT the bogus KIS 100x glitch.
         assert kospi["level"] == 2540.0, (
             f"Expected FMP-fallback level 2540.0, got {kospi['level']}"
         )
@@ -494,8 +501,9 @@ class TestMarketIndicesKR:
         assert kospi["change_1d_pct"] == 0.42
 
     def test_kospi_kis_sanity_fail_fmp_none_drops_entry(self, client, auth_user):
-        """KIS 7498 (sanity-fail) + FMP returns None → KOSPI must remain
-        absent from the payload (current PR #188 behaviour preserved)."""
+        """KIS 100x glitch (sanity-fail) + FMP returns None → KOSPI
+        must remain absent from the payload (PR #188 contract preserved
+        under the post-2026-05-10 wide bound)."""
         from services import fx_service
         fx_service.set_rate(1380.0)
         from routes.market import _indices_cache
@@ -503,7 +511,7 @@ class TestMarketIndicesKR:
 
         MockKIS = self._kis_service_mock(
             price_map={
-                "0001": 7498.0,    # KIS quirk
+                "0001": 749_800.0,  # 100x unit-glitch
                 "1001": 1207.0,
                 "2001": 337.0,
                 "2203": 1240.0,
@@ -591,7 +599,8 @@ class TestMarketIndicesKR:
 
         def _fmp_get_quote(t):
             if t == "^KS11":
-                return {"price": 7498.0}   # FMP also out-of-band
+                # 100x unit-glitch — outside the wide [1500, 50000] bound.
+                return {"price": 749_800.0}
             return None
 
         with patch("routes.market.fetcher") as m_f, \

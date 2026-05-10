@@ -817,13 +817,15 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
     # then rendered as the headline KOSPI level. CEO live sanity flagged
     # "KOSPI 7,498" — the real index has been trading 2,500–3,200.
     # Tighten the bound per-ticker so only realistic values pass.
+    # 2026-05-10 (B-06): wide bounds — KOSPI 7498 confirmed real via
+    # live KIS API; see services/data/fetcher.py:_KOSPI_RANGE comment.
     _PER_TICKER_BOUNDS = {
-        "^KS11":  (1_500.0, 4_500.0),   # KOSPI composite (2026: ~2,500–3,200)
-        "^KQ11":  (500.0,   1_500.0),   # KOSDAQ composite
-        "^KS200": (300.0,   700.0),     # KOSPI 200
-        "^KQ150": (800.0,   2_000.0),   # KOSDAQ 150
+        "^KS11":  (1_500.0, 50_000.0),  # KOSPI composite — head-room to 50k
+        "^KQ11":  (500.0,   50_000.0),  # KOSDAQ composite
+        "^KS200": (300.0,   10_000.0),  # KOSPI 200
+        "^KQ150": (500.0,   10_000.0),  # KOSDAQ 150
     }
-    lo, hi = _PER_TICKER_BOUNDS.get(ticker, (100.0, 10_000.0))
+    lo, hi = _PER_TICKER_BOUNDS.get(ticker, (100.0, 50_000.0))
 
     def _in_bound(v: float | None) -> bool:
         return v is not None and lo <= v <= hi
