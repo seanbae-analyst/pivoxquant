@@ -19,12 +19,13 @@ interface EquityCurveBlockProps {
   currentNav?: number;
 }
 
+// Backend whitelist: "5d" | "1mo" | "3mo" | "6mo" | "1y" — Bug #8 fix.
+// "1yr" / "all" silently fell back to 5-day window on the API; both removed.
 const RANGES: { key: EquityRange; label: string }[] = [
   { key: "1mo", label: "1M" },
   { key: "3mo", label: "3M" },
   { key: "6mo", label: "6M" },
-  { key: "1yr", label: "1Y" },
-  { key: "all", label: "All" },
+  { key: "1y", label: "1Y" },
 ];
 
 function fmtMoney(n: number | undefined, currency: "USD" | "KRW"): string {
@@ -104,7 +105,9 @@ export function EquityCurveBlock({
   const { data, isLoading, error } = useEquityCurve(range);
 
   const series: EquityPoint[] = React.useMemo(() => {
-    const raw = data?.series ?? data?.history ?? [];
+    // hooks-v2 normalizes backend `{ data: [{ date, value }] }` to
+    // `{ series: [{ t, nav }] }`. Bug #8 fix.
+    const raw = data?.series ?? [];
     return raw.filter(
       (p): p is EquityPoint =>
         p != null && typeof p.nav === "number" && Number.isFinite(p.nav),
