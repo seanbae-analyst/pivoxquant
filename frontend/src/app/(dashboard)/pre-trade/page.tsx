@@ -58,6 +58,13 @@ const QUESTIONS: readonly { n: number; en: string; ko: string }[] = [
 interface Reflection {
   id: number;
   intended_ticker: string;
+  /**
+   * 회사명 (선택). Backend `models/pre_trade_reflection.to_dict()` 는 현재
+   * intended_ticker 만 직렬화하므로 이 필드는 forward-compat 용. 백엔드가
+   * 추후 `intended_ticker_name` 을 추가하면 자동 노출되고, 그 전까지는
+   * `intended_ticker` 로 폴백한다 — 회귀 위험 0.
+   */
+  intended_ticker_name?: string | null;
   intended_side: string | null;
   intended_shares: number | null;
   rationale: string;
@@ -532,7 +539,7 @@ function CooldownStep({
             className="font-serif text-[28px] text-[var(--pq-ivory)]"
             style={{ letterSpacing: "-0.01em" }}
           >
-            {reflection.intended_ticker}
+            {reflection.intended_ticker_name || reflection.intended_ticker}
           </span>
           {reflection.intended_shares !== null && (
             <span className="font-mono text-[13px] text-[rgba(245,240,232,0.6)]">
@@ -641,7 +648,7 @@ function TerminalStep({
             : "취소되었습니다. 다음 진입 결정 때 다시 7개 질문을 거치세요."}
         </p>
         <div className="border-t border-[rgba(245,240,232,0.06)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-[12px] font-mono text-[rgba(245,240,232,0.55)]">
-          <span>{sideLabel(reflection.intended_side)} · {reflection.intended_ticker}</span>
+          <span>{sideLabel(reflection.intended_side)} · {reflection.intended_ticker_name || reflection.intended_ticker}</span>
           {reflection.intended_shares !== null && <span>{reflection.intended_shares} shares</span>}
           <span>
             {proceeded

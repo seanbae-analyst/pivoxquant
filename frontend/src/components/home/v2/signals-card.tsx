@@ -24,6 +24,12 @@ interface SignalItem {
   ticker?: string;
   symbol?: string;
   /**
+   * 회사명 — backfilled by routes/signals.py via resolve_stock_name().
+   * Always present; falls back to ticker when resolver lacks the listing.
+   * Surfaced in the home hero so users see "삼성전자" not "005930".
+   */
+  name?: string;
+  /**
    * Backend `engine.py` historically returns "signal" only; the home v2
    * card used to read `s.label` and always fell through to "NEUTRAL"
    * (root cause of the home/signals-page divergence reported 2026-04-28).
@@ -81,6 +87,10 @@ export function SignalsCard() {
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {items.map((s, i) => {
             const ticker = s.ticker || s.symbol || "—";
+            // 회사명 우선, ticker 폴백 — routes/signals.py 가 resolve_stock_name()
+            // 으로 backfill 하므로 KRX/US 모두 회사명이 들어온다. 미해석 종목은
+            // 안전하게 ticker 로 떨어진다.
+            const display = s.name || ticker;
             // Backend engine.py:420 returns "signal" key only; "label" is undefined.
             // Read both fields so home card matches signals page (v1 used `s.signal`,
             // v2 uses `s.label ?? s.signal`). Without this every ticker rendered NEUTRAL.
@@ -118,7 +128,7 @@ export function SignalsCard() {
                       color: "var(--pq-ivory)",
                     }}
                   >
-                    {ticker}
+                    {display}
                   </span>
                   <span
                     className="font-mono uppercase"
