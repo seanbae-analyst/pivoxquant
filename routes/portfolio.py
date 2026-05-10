@@ -1264,5 +1264,88 @@ def portfolio_history():
         logger.debug("silent-fallback: portfolio_history", exc_info=True)
         pass
 
-    data = [{"date": k, "value": round(v, 2)} for k, v in sorted(all_values.items())]
+    sorted_dates = sorted(all_values.keys())
+    data = [{"date": k, "value": round(all_values[k], 2)} for k in sorted_dates]
+
+    # ── Benchmark overlay (EQUITY CURVE 비교선) ──────────────────────────────
+    # Frontend (`EquityPoint.benchmark`) renders an optional comparison line
+    # whenever each point carries a `benchmark` field. We emit raw close
+    # prices — the frontend handles normalisation so backend changes stay
+    # backwards compatible (omit field == old behaviour, no benchmark line).
+    #
+    # Source policy (메모리 룰: 공식 라이선스만 — yfinance/pykrx 영구 금지):
+    #   • KR portfolio (any .KS/.KQ position) → KOSPI 200 via KIS
+    #     (`get_index_history("2001")`), with `0001` (KOSPI) as graceful
+    #     fallback. KIS already powers `routes/market.py` indices tile via
+    #     the same endpoint — same code path, same auth.
+    #   • US portfolio → S&P 500 via FMP `SPY` ETF (proven Starter-plan
+    #     coverage; `^GSPC` 402-gates on the same plan — see
+    #     services/data/fetcher.py:703 fallback table).
+    #
+    # Graceful degradation: any fetch failure / empty response → benchmark
+    # field omitted entirely. Existing equity-curve rendering preserved.
+    try:
+        is_kr_portfolio = any(
+            isinstance(p.ticker, str)
+            and (p.ticker.endswith(".KS") or p.ticker.endswith(".KQ"))
+            for p in positions
+        )
+        bench_map: dict[str, float] = {}
+
+        if is_kr_portfolio:
+            # KIS index daily history (FHPUP02120000). 2001 = KOSPI 200,
+            # 0001 = KOSPI (broad). Mirror the market.py fallback chain
+            # so a degraded 2001 plan still yields a comparison line.
+            try:
+                from services.kis.service import KISService
+                _svc = KISService()
+                for _idx_code in ("2001", "0001"):
+                    rows = _svc.get_index_history(_idx_code, period=period)
+                    if rows:
+                        for row in rows:
+                            ds = (row.get("date") or "").strip()
+                            close = row.get("close")
+                            if not ds or len(ds) != 8 or not ds.isdigit():
+                                continue
+                            try:
+                                iso = f"{ds[0:4]}-{ds[4:6]}-{ds[6:8]}"
+                                bench_map[iso] = float(close)
+                            except (TypeError, ValueError):
+                                continue
+                        if bench_map:
+                            break
+            except Exception:
+                logger.debug("silent-fallback: portfolio_history KIS bench",
+                             exc_info=True)
+        else:
+            # S&P 500 via SPY ETF (FMP Starter plan covers this; ^GSPC
+            # raw index 402-gates — see services/data/fetcher.py:703).
+            try:
+                bh = fmp.get_history("SPY", period=period)
+                if bh is not None and not bh.empty and "Close" in bh.columns:
+                    for date, row in bh.iterrows():
+                        ds = date.strftime("%Y-%m-%d")
+                        try:
+                            bench_map[ds] = float(row["Close"])
+                        except (TypeError, ValueError):
+                            continue
+            except Exception:
+                logger.debug("silent-fallback: portfolio_history SPY bench",
+                             exc_info=True)
+
+        if bench_map:
+            # Per-point match by ISO date. Trading-day misalignment
+            # (KIS holiday vs FMP holiday vs portfolio compute) means
+            # some points may legitimately lack benchmark — frontend
+            # tolerates omission per `EquityPoint.benchmark?`.
+            for point in data:
+                bv = bench_map.get(point["date"])
+                if bv is not None:
+                    point["benchmark"] = round(bv, 2)
+    except Exception:
+        # Belt-and-suspenders: never let benchmark logic break the
+        # primary equity-curve response. 메모리 룰 [기능 100% 보존].
+        logger.debug("silent-fallback: portfolio_history bench wrap",
+                     exc_info=True)
+
     return jsonify({"data": data})
