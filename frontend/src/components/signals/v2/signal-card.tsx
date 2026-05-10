@@ -111,38 +111,45 @@ export function SignalCard({ entry, resolveName }: Props) {
 
   const observed = entry.observed_at ?? null;
 
+  // B-10 fix (2026-05-10): wrap only the title in <Link> so vertical
+  // scroll gestures on the card body are not mis-interpreted as clicks.
+  // Previously the entire <article> was the link target, which made it
+  // hard to scroll on touch devices without accidentally navigating to
+  // /detail/{ticker}. The title link still carries the full aria-label
+  // and announces the row context to assistive tech.
+  const detailHref = `/detail/${entry.ticker}${entry.id != null ? `?signal=${entry.id}` : ""}`;
+
   return (
-    <Link
-      href={`/detail/${entry.ticker}${entry.id != null ? `?signal=${entry.id}` : ""}`}
-      prefetch={false}
-      aria-label={`${name} · ${entry.ticker} · ${tone.display} · strength ${strength.toFixed(2)} · ${fmtKstClock(observed)}`}
-      style={{ textDecoration: "none", color: "inherit" }}
+    <article
+      className="signal-row"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 280px 120px",
+        gap: 28,
+        padding: "20px 0",
+        borderBottom: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        transition: "background 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms",
+      }}
     >
-      <article
-        className="signal-row"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 280px 120px",
-          gap: 28,
-          padding: "20px 0",
-          borderBottom: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
-          transition: "background 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms",
-        }}
-      >
         {/* LEFT — name + ticker + rationale */}
         <div style={{ minWidth: 0 }}>
-          <div
-            className="font-display"
+          <Link
+            href={detailHref}
+            prefetch={false}
+            aria-label={`${name} · ${entry.ticker} · ${tone.display} · strength ${strength.toFixed(2)} · ${fmtKstClock(observed)}`}
+            className="font-display signal-title-link"
             style={{
               fontSize: 24,
               fontWeight: 500,
               letterSpacing: "-0.01em",
               color: "var(--pq-ivory, #F5F0E8)",
               lineHeight: 1.15,
+              textDecoration: "none",
+              display: "inline-block",
             }}
           >
             {name}
-          </div>
+          </Link>
           <div
             className="font-mono"
             style={{
@@ -274,11 +281,13 @@ export function SignalCard({ entry, resolveName }: Props) {
             {fmtAgo(observed)}
           </div>
         </div>
-      </article>
       <style jsx>{`
         :global(.signal-row:hover) {
           background: rgba(184, 149, 106, 0.025);
           border-bottom-color: var(--pq-bronze, #b8956a) !important;
+        }
+        :global(.signal-title-link:hover) {
+          color: var(--pq-bronze, #b8956a) !important;
         }
         @media (max-width: 767px) {
           :global(.signal-row) {
@@ -287,6 +296,6 @@ export function SignalCard({ entry, resolveName }: Props) {
           }
         }
       `}</style>
-    </Link>
+    </article>
   );
 }
