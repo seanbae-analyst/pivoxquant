@@ -12,6 +12,7 @@
  * URLs are NOT changed. Only frontend hooks added.
  */
 
+import * as React from "react";
 import useSWR from "swr";
 import { API, PORTFOLIO_TRADES } from "@/lib/endpoints";
 
@@ -24,7 +25,13 @@ const fetcher = async (url: string) => {
   return r.json();
 };
 
-export type EquityRange = "1mo" | "3mo" | "6mo" | "1yr" | "all";
+/**
+ * Period values accepted by GET /api/portfolio/history.
+ * Backend whitelist: "5d" | "1mo" | "3mo" | "6mo" | "1y" — anything else
+ * silently falls back to "5d" (Bug #8 — frontend "1yr"/"all" had been
+ * resolving to a 5-day window). UI exposes "1y" via the "1Y" tab.
+ */
+export type EquityRange = "1mo" | "3mo" | "6mo" | "1y";
 
 export interface EquityPoint {
   t: string; // ISO date
@@ -32,26 +39,85 @@ export interface EquityPoint {
   benchmark?: number;
 }
 
-export interface EquityCurveResponse {
+/**
+ * Raw shape returned by Flask /api/portfolio/history.
+ * Each row is `{ date, value }` — NOT `{ t, nav }`. Bug #8 root cause:
+ * the consuming component read `series` / `history` and got `[]`,
+ * yielding "Not enough history yet." despite 127 backend points.
+ */
+interface BackendEquityPoint {
+  date: string;
+  value: number;
+}
+
+interface BackendEquityResponse {
+  data?: BackendEquityPoint[];
+  /** legacy / alternate shapes — kept defensively */
   series?: EquityPoint[];
-  history?: EquityPoint[]; // legacy alias
+  history?: EquityPoint[];
+  benchmark?: { name?: string };
+}
+
+export interface EquityCurveResponse {
+  series: EquityPoint[];
   benchmark?: { name?: string };
 }
 
 /**
  * useEquityCurve — wraps GET /api/portfolio/history?period=<range>.
  *
- * Backend response shape may use `series` or `history`. Caller normalizes.
+ * Backend currently returns `{ data: [{ date, value }, ...] }`. We normalize
+ * to `{ series: [{ t, nav }, ...] }` here so downstream components keep a
+ * stable shape regardless of which response variant the backend serves.
  * 60s dedupe window — equity curve does not need sub-minute refresh.
  */
 export function useEquityCurve(range: EquityRange) {
-  return useSWR<EquityCurveResponse>(API.portfolio.history(range), fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: true,
-    revalidateIfStale: false,
-    dedupingInterval: 60_000,
-    errorRetryCount: 2,
-  });
+  const swr = useSWR<BackendEquityResponse>(
+    API.portfolio.history(range),
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      revalidateIfStale: false,
+      dedupingInterval: 60_000,
+      errorRetryCount: 2,
+    },
+  );
+
+  const normalized: EquityCurveResponse | undefined = React.useMemo(() => {
+    const raw = swr.data;
+    if (!raw) return undefined;
+
+    // Preferred legacy shapes win if present (defensive — no current backend
+    // path emits these, but a future backend change shouldn't break the UI).
+    if (Array.isArray(raw.series) && raw.series.length > 0) {
+      return { series: raw.series, benchmark: raw.benchmark };
+    }
+    if (Array.isArray(raw.history) && raw.history.length > 0) {
+      return { series: raw.history, benchmark: raw.benchmark };
+    }
+
+    // Current backend shape: { data: [{ date, value }] }
+    if (Array.isArray(raw.data)) {
+      const series: EquityPoint[] = raw.data
+        .filter(
+          (p): p is BackendEquityPoint =>
+            p != null &&
+            typeof p.date === "string" &&
+            typeof p.value === "number" &&
+            Number.isFinite(p.value),
+        )
+        .map((p) => ({ t: p.date, nav: p.value }));
+      return { series, benchmark: raw.benchmark };
+    }
+
+    return { series: [], benchmark: raw.benchmark };
+  }, [swr.data]);
+
+  return {
+    ...swr,
+    data: normalized,
+  };
 }
 
 export interface TransactionRow {
