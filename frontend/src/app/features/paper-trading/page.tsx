@@ -74,7 +74,7 @@ export default function PaperTradingPage() {
   return (
     <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[var(--pq-ivory-line)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
@@ -108,7 +108,7 @@ export default function PaperTradingPage() {
         {/* ── What is Paper Trading? ── */}
         <SectionCurtain divider={false}>
         <section className="mb-16">
-          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+          <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-4">What is Paper Trading?</h2>
             <p className="text-[rgba(245,240,232,0.82)] leading-relaxed mb-3">
               Think of it as a <span className="font-semibold text-[var(--pq-ivory)]">flight simulator for investing</span>.
@@ -129,7 +129,7 @@ export default function PaperTradingPage() {
           <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">Why Paper Trade?</h2>
           <div className="space-y-3">
             {reasons.map((reason) => (
-              <div key={reason.label} className="flex items-center gap-3 p-4 rounded-sm bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)]">
+              <div key={reason.label} className="flex items-center gap-3 p-4 rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)]">
                 <CheckCircle2 className="w-4 h-4 text-[var(--pq-bronze)] shrink-0" />
                 <span className="text-sm text-[rgba(245,240,232,0.82)]">{reason.label}</span>
               </div>
@@ -169,7 +169,7 @@ export default function PaperTradingPage() {
             {metrics.map((metric) => {
               const Icon = metric.icon;
               return (
-                <div key={metric.label} className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+                <div key={metric.label} className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-8 h-8 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] flex items-center justify-center">
                       <Icon className="w-4 h-4 text-[var(--pq-bronze)]" />

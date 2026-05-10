@@ -348,7 +348,7 @@ function StatusModal({
                 style={{
                   borderColor: focused
                     ? "rgba(184,149,106,0.42)"
-                    : "rgba(245,240,232,0.08)",
+                    : "var(--pq-ivory-line)",
                   background: focused
                     ? "rgba(184,149,106,0.06)"
                     : "transparent",

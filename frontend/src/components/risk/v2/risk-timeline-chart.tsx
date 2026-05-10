@@ -122,7 +122,7 @@ export function RiskTimelineChart({
         className="pq-card"
         style={{
           background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
-          border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+          border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
           borderRadius: 4,
           padding: 32,
           margin: 0,
@@ -177,7 +177,7 @@ export function RiskTimelineChart({
               x2={W}
               y1={strainY}
               y2={strainY}
-              stroke="rgba(245,240,232,0.08)"
+              stroke="var(--pq-ivory-line)"
               strokeDasharray="4 6"
             />
             <line x1="0" x2={W} y1={H * 0.6} y2={H * 0.6} stroke="rgba(245,240,232,0.05)" />
@@ -215,7 +215,7 @@ export function RiskTimelineChart({
             gap: 32,
             marginTop: 24,
             paddingTop: 20,
-            borderTop: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+            borderTop: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
           }}
         >
           {[

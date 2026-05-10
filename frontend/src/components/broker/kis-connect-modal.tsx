@@ -84,7 +84,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[2px] p-1.5 text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] hover:bg-[rgba(245,240,232,0.04)] transition-colors"
+            className="rounded-[2px] p-1.5 text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] hover:bg-[var(--pq-ivory-line-faint)] transition-colors"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -234,7 +234,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
         </form>
 
         {/* Issuance guide */}
-        <details className="group mt-6 pt-5 border-t border-[rgba(245,240,232,0.08)]">
+        <details className="group mt-6 pt-5 border-t border-[var(--pq-ivory-line)]">
           <summary className="cursor-pointer list-none text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
             <span>How to issue KIS API credentials</span>
             <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>
@@ -266,7 +266,7 @@ export function KisConnectModal({ onClose, onSuccess }: KisConnectModalProps) {
         </details>
 
         {/* Disclaimer */}
-        <p className="mt-5 pt-4 border-t border-[rgba(245,240,232,0.08)] text-[10px] leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
+        <p className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-[10px] leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
           KIS integration is read-only. Orders are disabled in this release.
         </p>
       </div>

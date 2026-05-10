@@ -277,7 +277,7 @@ function StickyHeader() {
         background: "rgba(5, 5, 5, 0.88)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
-        borderBottom: "0.5px solid rgba(245, 240, 232, 0.08)",
+        borderBottom: "0.5px solid var(--pq-ivory-line)",
       }}
     >
       <div className="mx-auto flex w-full max-w-2xl items-center justify-between">
@@ -321,7 +321,7 @@ function EmptyState() {
       className="rounded-sm p-6"
       style={{
         background: "rgba(247, 245, 239, 0.02)",
-        border: "0.5px solid rgba(245, 240, 232, 0.08)",
+        border: "0.5px solid var(--pq-ivory-line)",
       }}
       role="note"
     >
@@ -403,7 +403,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
         className="w-full max-w-[92%] rounded-sm"
         style={{
           background: "rgba(10, 10, 10, 0.72)",
-          border: "0.5px solid rgba(245, 240, 232, 0.08)",
+          border: "0.5px solid var(--pq-ivory-line)",
           borderLeft: "2px solid var(--pq-bronze, #B8956A)",
           padding: "14px 16px",
         }}
@@ -543,7 +543,7 @@ function Composer({
         background: "rgba(5, 5, 5, 0.92)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
-        borderTop: "0.5px solid rgba(245, 240, 232, 0.08)",
+        borderTop: "0.5px solid var(--pq-ivory-line)",
       }}
     >
       <div className="mx-auto w-full max-w-2xl">
@@ -602,7 +602,7 @@ function Composer({
           />
           <div
             className="flex items-center justify-between px-3 pb-2 pt-1"
-            style={{ borderTop: "0.5px solid rgba(245, 240, 232, 0.06)" }}
+            style={{ borderTop: "0.5px solid var(--pq-ivory-line-soft)" }}
           >
             <p
               id="companion-hint"

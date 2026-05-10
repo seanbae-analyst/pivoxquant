@@ -368,7 +368,7 @@ export default function TopNav() {
               : "blur(10px)",
             borderBottom: scrolled
               ? "0.5pt solid rgba(184,149,106,0.18)"
-              : "0.5pt solid rgba(245,240,232,0.06)",
+              : "0.5pt solid var(--pq-ivory-line-soft)",
             transition:
               "background-color 280ms cubic-bezier(0.16,1,0.3,1), border-color 280ms ease",
           }}

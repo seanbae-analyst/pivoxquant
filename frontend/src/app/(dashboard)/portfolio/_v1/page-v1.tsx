@@ -257,11 +257,11 @@ export default function PortfolioPage() {
   if (posLoading && showSkeleton) {
     return (
       <div className="animate-pulse">
-        <div className="h-4 w-40 bg-[rgba(245,240,232,0.08)] rounded-sm" />
-        <div className="mt-6 h-10 w-56 bg-[rgba(245,240,232,0.08)] rounded-sm" />
+        <div className="h-4 w-40 bg-[var(--pq-ivory-line)] rounded-sm" />
+        <div className="mt-6 h-10 w-56 bg-[var(--pq-ivory-line)] rounded-sm" />
         <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-[rgba(245,240,232,0.04)] rounded-sm" />
+            <div key={i} className="h-24 bg-[var(--pq-ivory-line-faint)] rounded-sm" />
           ))}
         </div>
       </div>

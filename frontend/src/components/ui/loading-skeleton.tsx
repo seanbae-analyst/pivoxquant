@@ -18,7 +18,7 @@ export function ChartSkeleton({ height = 240 }: { height?: number }) {
       style={{
         height,
         background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(245,240,232,0.08)",
+        border: "1px solid var(--pq-ivory-line)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -32,7 +32,7 @@ export function ChartSkeleton({ height = 240 }: { height?: number }) {
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 space-y-4">
+    <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 space-y-4">
       <Skeleton className="h-4 w-24" />
       <Skeleton className="h-8 w-32" />
       <Skeleton className="h-2 w-full" />
@@ -63,12 +63,12 @@ export function DashboardSkeleton() {
         ))}
       </div>
       {/* Chart area */}
-      <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6">
+      <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6">
         <Skeleton className="h-4 w-32 mb-4" />
         <Skeleton className="h-64 w-full" />
       </div>
       {/* Table */}
-      <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)]">
+      <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)]">
         {Array.from({ length: 5 }).map((_, i) => (
           <TableRowSkeleton key={i} />
         ))}

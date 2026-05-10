@@ -34,7 +34,7 @@ export function ReportsHeroV2({
     <header
       style={{
         padding: "80px 0 64px",
-        borderBottom: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
         marginBottom: 0,
       }}
     >

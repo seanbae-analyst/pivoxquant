@@ -82,7 +82,7 @@ export function AlpacaConnectModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-[2px] p-1.5 text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] hover:bg-[rgba(245,240,232,0.04)] transition-colors"
+            className="rounded-[2px] p-1.5 text-[rgba(245,240,232,0.5)] hover:text-[var(--pq-ivory)] hover:bg-[var(--pq-ivory-line-faint)] transition-colors"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -215,7 +215,7 @@ export function AlpacaConnectModal({
         </form>
 
         {/* Disclaimer */}
-        <p className="mt-5 pt-4 border-t border-[rgba(245,240,232,0.08)] text-[10px] leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
+        <p className="mt-5 pt-4 border-t border-[var(--pq-ivory-line)] text-[10px] leading-relaxed text-[rgba(245,240,232,0.4)] tracking-[0.05em]">
           Alpaca integration is paper-only. No live orders will be placed. This
           is not investment advice.
         </p>

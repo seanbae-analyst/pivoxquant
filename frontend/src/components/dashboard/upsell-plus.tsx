@@ -104,7 +104,7 @@ export function UpsellPlus() {
           <div className="mt-3 flex items-center gap-3">
             <div
               className="relative h-[3px] flex-1 max-w-[240px] overflow-hidden"
-              style={{ background: "rgba(245,240,232,0.08)" }}
+              style={{ background: "var(--pq-ivory-line)" }}
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={FOUNDING_TOTAL}

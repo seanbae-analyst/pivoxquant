@@ -42,7 +42,7 @@ export function HomeCard({
         display: "flex",
         flexDirection: "column",
         background: "var(--pq-card-bg-ink, rgba(255,255,255,0.02))",
-        border: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         borderRadius: 4,
         padding: 24,
         minHeight,

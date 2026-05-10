@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 function ScoreBar() {
   return (
     <div className="w-full">
-      <div className="relative h-3 rounded-sm overflow-hidden bg-[rgba(255,255,255,0.04)] border border-[rgba(245,240,232,0.08)]">
+      <div className="relative h-3 rounded-sm overflow-hidden bg-[rgba(255,255,255,0.04)] border border-[var(--pq-ivory-line)]">
         <div className="absolute inset-y-0 left-0 w-[30%] bg-[rgba(122,160,200,0.55)]" />
         <div className="absolute inset-y-0 left-[30%] w-[20%] bg-[rgba(184,149,106,0.32)]" />
         <div className="absolute inset-y-0 left-[50%] w-[20%] bg-[rgba(184,149,106,0.5)]" />
@@ -95,7 +95,7 @@ export default function QuantScoringPage() {
   return (
     <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[var(--pq-ivory-line)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
@@ -129,7 +129,7 @@ export default function QuantScoringPage() {
         {/* ── What is a Quant Score? ── */}
         <SectionCurtain divider={false}>
         <section className="mb-16">
-          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+          <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-4">What is a Quant Score?</h2>
             <p className="text-[rgba(245,240,232,0.82)] leading-relaxed mb-2">
               Think of it as a <span className="font-semibold text-[var(--pq-ivory)]">health check for stocks</span>.
@@ -148,18 +148,18 @@ export default function QuantScoringPage() {
         <SectionCurtain>
         <section className="mb-16">
           <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">Score Range</h2>
-          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+          <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <ScoreBar />
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-              <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] px-4 py-3">
+              <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] px-4 py-3">
                 <p className="font-mono text-2xl font-medium text-[#7AA0C8] mb-1 tabular-nums">0 &ndash; 30</p>
                 <p className="text-sm text-[rgba(245,240,232,0.62)]">Negative signals outweigh positive ones. Caution advised.</p>
               </div>
-              <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] px-4 py-3">
+              <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] px-4 py-3">
                 <p className="font-mono text-2xl font-medium text-[var(--pq-bronze)] mb-1 tabular-nums">31 &ndash; 69</p>
                 <p className="text-sm text-[rgba(245,240,232,0.62)]">Mixed signals. The stock could go either way.</p>
               </div>
-              <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] px-4 py-3">
+              <div className="rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] px-4 py-3">
                 <p className="font-mono text-2xl font-medium text-[#D18888] mb-1 tabular-nums">70 &ndash; 100</p>
                 <p className="text-sm text-[rgba(245,240,232,0.62)]">Strong positive signals across most indicators.</p>
               </div>
@@ -178,7 +178,7 @@ export default function QuantScoringPage() {
               return (
                 <div
                   key={pillar.title}
-                  className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5"
+                  className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5"
                 >
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 flex flex-col items-start gap-1">
@@ -212,7 +212,7 @@ export default function QuantScoringPage() {
           </p>
           <div className="space-y-3">
             {technicalIndicators.map((ind) => (
-              <div key={ind.name} className="flex items-start gap-3 p-4 rounded-sm bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)]">
+              <div key={ind.name} className="flex items-start gap-3 p-4 rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)]">
                 <div className="mt-0.5 shrink-0">
                   <CheckCircle2 className="w-4 h-4 text-[var(--pq-bronze)]" />
                 </div>
@@ -235,7 +235,7 @@ export default function QuantScoringPage() {
           </p>
           <div className="space-y-3">
             {fundamentalFactors.map((factor) => (
-              <div key={factor.name} className="flex items-start gap-3 p-4 rounded-sm bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)]">
+              <div key={factor.name} className="flex items-start gap-3 p-4 rounded-sm bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)]">
                 <div className="mt-0.5 shrink-0">
                   <CheckCircle2 className="w-4 h-4 text-[var(--pq-bronze)]" />
                 </div>

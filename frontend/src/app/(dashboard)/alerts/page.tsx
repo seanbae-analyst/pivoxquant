@@ -255,7 +255,7 @@ export default function AlertsPage() {
         {/* Legal disclaimer mounted by (dashboard)/layout.tsx — do not re-mount. */}
 
         {/* ── Filter tabs ── */}
-        <div className="pq-ink-tabs flex gap-6 border-b border-[rgba(245,240,232,0.08)]">
+        <div className="pq-ink-tabs flex gap-6 border-b border-[var(--pq-ivory-line)]">
           {FILTERS.map((f) => (
             <button
               key={f.key}
@@ -278,15 +278,15 @@ export default function AlertsPage() {
         {isLoading ? (
           // Editorial skeleton — hairline-divided rows match the actual
           // table rhythm, no rounded card boxes.
-          <div className="border-t" style={{ borderTopColor: "rgba(245,240,232,0.08)", borderTopWidth: 0.5 }}>
+          <div className="border-t" style={{ borderTopColor: "var(--pq-ivory-line)", borderTopWidth: 0.5 }}>
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
                 className="h-12 border-b animate-pulse"
                 style={{
-                  borderBottomColor: "rgba(245,240,232,0.06)",
+                  borderBottomColor: "var(--pq-ivory-line-soft)",
                   borderBottomWidth: 0.5,
-                  background: "rgba(245,240,232,0.02)",
+                  background: "var(--pq-ivory-line-ghost)",
                 }}
               />
             ))}
@@ -411,7 +411,7 @@ export default function AlertsPage() {
             <ul
               className="md:hidden border-t"
               style={{
-                borderTopColor: "rgba(245,240,232,0.08)",
+                borderTopColor: "var(--pq-ivory-line)",
                 borderTopWidth: 0.5,
               }}
             >
@@ -421,7 +421,7 @@ export default function AlertsPage() {
                   onClick={() => handleAlertClick(a)}
                   className="cursor-pointer px-1 py-3"
                   style={{
-                    borderBottom: "0.5px solid rgba(245,240,232,0.06)",
+                    borderBottom: "0.5px solid var(--pq-ivory-line-soft)",
                   }}
                 >
                   {/* Row 1 — Time · Kind
@@ -481,7 +481,7 @@ export default function AlertsPage() {
 
         {/* ── Clear all ── */}
         {alerts.length > 0 && (
-          <div className="flex justify-center pt-4 border-t border-[rgba(245,240,232,0.08)]">
+          <div className="flex justify-center pt-4 border-t border-[var(--pq-ivory-line)]">
             <button
               type="button"
               onClick={handleClearAll}

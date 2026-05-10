@@ -97,7 +97,7 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
       <div
         style={{
           height: 4,
-          background: "rgba(245,240,232,0.06)",
+          background: "var(--pq-ivory-line-soft)",
           position: "relative",
           overflow: "hidden",
         }}

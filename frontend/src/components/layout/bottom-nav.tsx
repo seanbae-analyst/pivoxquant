@@ -167,7 +167,7 @@ export function BottomNav() {
         data-pq-bottom-nav
         style={{
           background: "var(--pq-ink)",
-          borderTop: "0.5px solid rgba(245, 240, 232, 0.08)",
+          borderTop: "0.5px solid var(--pq-ivory-line)",
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
       >
@@ -235,7 +235,7 @@ export function BottomNav() {
             <div
               className="flex items-center justify-between px-5 py-4"
               style={{
-                borderBottom: "0.5px solid rgba(245, 240, 232, 0.08)",
+                borderBottom: "0.5px solid var(--pq-ivory-line)",
               }}
             >
               <span
@@ -281,7 +281,7 @@ export function BottomNav() {
             <div
               className="px-2 pt-2"
               style={{
-                borderTop: "0.5px solid rgba(245, 240, 232, 0.08)",
+                borderTop: "0.5px solid var(--pq-ivory-line)",
               }}
             >
               <button
@@ -339,7 +339,7 @@ function DrawerGroupSection({
         </span>
         <div
           className="mt-1 h-px"
-          style={{ backgroundColor: "rgba(245,240,232,0.08)" }}
+          style={{ backgroundColor: "var(--pq-ivory-line)" }}
         />
       </div>
 

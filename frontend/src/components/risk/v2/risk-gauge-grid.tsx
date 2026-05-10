@@ -45,7 +45,7 @@ function BigGaugeCard({
       className="pq-card"
       style={{
         background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
-        border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
         borderRadius: 4,
         padding: 28,
         minHeight: 240,
@@ -106,7 +106,7 @@ function BigGaugeCard({
           aria-hidden
           style={{
             height: 6,
-            background: "rgba(245,240,232,0.06)",
+            background: "var(--pq-ivory-line-soft)",
             position: "relative",
             overflow: "hidden",
             borderRadius: 1,

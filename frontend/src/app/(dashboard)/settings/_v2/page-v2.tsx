@@ -627,7 +627,7 @@ export default function SettingsPageV2() {
               <div
                 style={{
                   background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(245,240,232,0.08)",
+                  border: "1px solid var(--pq-ivory-line)",
                   borderRadius: 4,
                   padding: 24,
                   position: "relative",
@@ -739,7 +739,7 @@ export default function SettingsPageV2() {
               <div
                 style={{
                   background: "rgba(255,255,255,0.02)",
-                  border: "1px solid rgba(245,240,232,0.08)",
+                  border: "1px solid var(--pq-ivory-line)",
                   borderRadius: 4,
                   padding: 24,
                   position: "relative",

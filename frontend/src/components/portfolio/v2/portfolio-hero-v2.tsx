@@ -138,7 +138,7 @@ export function PortfolioHeroV2({
       className="pq-portfolio-hero-v2"
       style={{
         padding: "80px 0 64px",
-        borderBottom: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+        borderBottom: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         marginBottom: 40,
       }}
     >

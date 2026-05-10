@@ -52,7 +52,7 @@ export function RiskHeroV2({
     <section
       style={{
         padding: "80px 64px 64px",
-        borderBottom: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
       }}
     >
       <div

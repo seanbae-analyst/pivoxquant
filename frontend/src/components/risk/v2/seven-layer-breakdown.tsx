@@ -120,7 +120,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
         className="pq-card"
         style={{
           background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
-          border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+          border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
           borderRadius: 4,
           padding: "8px 28px",
         }}
@@ -140,7 +140,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
               padding: "20px 0",
               borderBottom:
                 i < merged.length - 1
-                  ? "1px solid var(--pq-hairline, rgba(245,240,232,0.08))"
+                  ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
                   : "none",
             }}
           >

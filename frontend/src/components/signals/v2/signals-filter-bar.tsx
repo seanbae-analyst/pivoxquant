@@ -54,7 +54,7 @@ function chipBaseStyle(active: boolean): React.CSSProperties {
     background: active ? "var(--pq-bronze-08, rgba(184,149,106,0.08))" : "transparent",
     border: active
       ? "1px solid var(--pq-bronze, #B8956A)"
-      : "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+      : "1px solid var(--pq-hairline, var(--pq-ivory-line))",
     borderRadius: "var(--pq-radius-cta, 2px)",
     padding: "8px 12px",
     fontSize: 12,
@@ -101,7 +101,7 @@ export function SignalsFilterBar({
         background: "rgba(5,5,5,0.92)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
-        borderBottom: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
         padding: "16px 0",
         marginBottom: 32,
       }}
@@ -234,7 +234,7 @@ export function SignalsFilterBar({
             style={{
               width: "100%",
               background: "transparent",
-              border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+              border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
               borderRadius: "var(--pq-radius-cta, 2px)",
               padding: "8px 10px",
               // 16px to prevent iOS Safari/Chrome auto-zoom on input focus
@@ -279,7 +279,7 @@ export function SignalsFilterBar({
               style={{
                 appearance: "none",
                 background: "transparent",
-                border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+                border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
                 borderRadius: "var(--pq-radius-cta, 2px)",
                 padding: "8px 10px",
                 color: "var(--pq-bronze, #B8956A)",

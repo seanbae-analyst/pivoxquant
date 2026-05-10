@@ -57,7 +57,7 @@ export default function AiAssistantPage() {
   return (
     <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[var(--pq-ivory-line)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
@@ -100,7 +100,7 @@ export default function AiAssistantPage() {
               return (
                 <div
                   key={conv.question}
-                  className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5"
+                  className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5"
                 >
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 flex flex-col items-start gap-1">
@@ -136,7 +136,7 @@ export default function AiAssistantPage() {
         {/* ── 챗봇이 아닌 리서치 데스크 ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+          <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <div className="mb-6">
               <Eyebrow withDashLeft={false} className="mb-2 flex">
                 Research Desk · Method
@@ -149,7 +149,7 @@ export default function AiAssistantPage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {knowledgeSources.map((source) => (
-                <div key={source.label} className="flex items-center gap-3 rounded-sm px-4 py-3 border border-[rgba(245,240,232,0.08)] bg-[rgba(0,0,0,0.18)]">
+                <div key={source.label} className="flex items-center gap-3 rounded-sm px-4 py-3 border border-[var(--pq-ivory-line)] bg-[rgba(0,0,0,0.18)]">
                   <CheckCircle2 className="w-4 h-4 text-[var(--pq-bronze)] shrink-0" />
                   <span className="text-sm text-[rgba(245,240,232,0.82)]">{source.label}</span>
                 </div>
@@ -169,7 +169,7 @@ export default function AiAssistantPage() {
               { step: "02", title: "데스크가 데이터 수집", desc: "당신 포지션·시장 데이터·40개 퀀트 모델·섹터 로테이션을 자동으로 읽습니다." },
               { step: "03", title: "리포트 발행", desc: "매일 6시 이메일, 일요일 PDF, 실적 30분 전 프리브리프가 자동 발송됩니다." },
             ].map((item) => (
-              <div key={item.step} className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 text-center">
+              <div key={item.step} className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 text-center">
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-sm bg-[rgba(184,149,106,0.08)] border border-[rgba(184,149,106,0.18)] text-[var(--pq-bronze)] font-mono text-sm font-medium tabular-nums mb-3">
                   {item.step}
                 </div>

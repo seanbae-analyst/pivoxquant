@@ -121,7 +121,7 @@ export default function CanslimPage() {
   return (
     <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[var(--pq-ivory-line)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
@@ -152,7 +152,7 @@ export default function CanslimPage() {
         {/* ── What is CAN SLIM? ── */}
         <SectionCurtain divider={false}>
         <section className="mb-16">
-          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+          <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-4">What is CAN SLIM?</h2>
             <p className="text-[rgba(245,240,232,0.82)] leading-relaxed mb-3">
               CAN SLIM is a stock selection method created by William O&apos;Neil, who famously
@@ -172,7 +172,7 @@ export default function CanslimPage() {
           <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-6">The 7 Factors</h2>
           <div className="space-y-4">
             {factors.map((factor) => (
-              <div key={factor.letter} className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+              <div key={factor.letter} className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
                 <div className="flex items-start gap-4">
                   <div className="shrink-0 w-12 h-12 rounded-sm bg-[rgba(184,149,106,0.06)] flex items-center justify-center border border-[rgba(184,149,106,0.18)]">
                     <span className="font-[var(--font-display)] italic text-xl font-medium text-[var(--pq-bronze)]">{factor.letter}</span>

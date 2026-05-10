@@ -540,7 +540,7 @@ function SiteFooter() {
       className="pt-24 pb-16 md:pt-32 md:pb-20"
       style={{
         backgroundColor: "#050505",
-        borderTop: "0.5pt solid rgba(245,240,232,0.08)",
+        borderTop: "0.5pt solid var(--pq-ivory-line)",
       }}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -647,7 +647,7 @@ function SiteFooter() {
             통신판매업 신고번호는 미신고 상태이므로 환경변수 미설정 → 미노출. */}
         <div
           className="pt-6 pb-4"
-          style={{ borderTop: "0.5pt solid rgba(245,240,232,0.08)" }}
+          style={{ borderTop: "0.5pt solid var(--pq-ivory-line)" }}
         >
           <p
             className="font-serif"
@@ -706,7 +706,7 @@ function SiteFooter() {
 
         <div
           className="pt-6"
-          style={{ borderTop: "0.5pt solid rgba(245,240,232,0.08)" }}
+          style={{ borderTop: "0.5pt solid var(--pq-ivory-line)" }}
         >
           <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-3">
             <p

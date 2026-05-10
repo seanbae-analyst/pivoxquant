@@ -47,7 +47,7 @@ export default function ContactPage() {
                 className="rounded-sm p-6"
                 style={{
                   backgroundColor: "rgba(245,240,232,0.03)",
-                  border: "0.5px solid rgba(245,240,232,0.08)",
+                  border: "0.5px solid var(--pq-ivory-line)",
                 }}
               >
                 <div className="flex items-center gap-3 mb-4">
@@ -68,7 +68,7 @@ export default function ContactPage() {
           })}
         </div>
 
-        <section className="mt-12 pt-10 border-t border-[rgba(245,240,232,0.08)]">
+        <section className="mt-12 pt-10 border-t border-[var(--pq-ivory-line)]">
           <h2 className="font-serif italic text-xl mb-4">Before you write</h2>
           <p className="text-[13px] text-[rgba(245,240,232,0.65)] leading-relaxed mb-3">
             Most product questions are answered in our docs.
@@ -82,7 +82,7 @@ export default function ContactPage() {
           </Link>
         </section>
 
-        <footer className="mt-16 pt-8 border-t border-[rgba(245,240,232,0.08)] text-center">
+        <footer className="mt-16 pt-8 border-t border-[var(--pq-ivory-line)] text-center">
           <div className="pq-fleuron inline-flex mb-3" aria-hidden="true">❦</div>
           <p className="pq-caption">
             PivoxQuant · operated from Seoul

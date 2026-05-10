@@ -186,7 +186,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
             onClick={() => onPick(q)}
             className="group flex w-full items-baseline gap-4 border-b py-4 px-1 text-left transition-colors"
             style={{
-              borderBottomColor: "rgba(245,240,232,0.06)",
+              borderBottomColor: "var(--pq-ivory-line-soft)",
               borderBottomWidth: 0.5,
               color: "rgba(245,240,232,0.75)",
             }}
@@ -419,7 +419,7 @@ function ChatInner() {
       <header
         className="pb-6 flex items-start justify-between border-b"
         style={{
-          borderBottomColor: "rgba(245,240,232,0.08)",
+          borderBottomColor: "var(--pq-ivory-line)",
           borderBottomWidth: 0.5,
         }}
       >
@@ -470,7 +470,7 @@ function ChatInner() {
       </section>
 
       {/* Input — above disclaimer with breathing room */}
-      <footer className="pt-6 mt-6 border-t border-[rgba(245,240,232,0.08)]">
+      <footer className="pt-6 mt-6 border-t border-[var(--pq-ivory-line)]">
         <form onSubmit={handleSubmit} className="relative">
           <label htmlFor="ai-chat-input" className="sr-only">
             AI 분석 질문 입력 · Ask the AI assistant about your portfolio
@@ -491,7 +491,7 @@ function ChatInner() {
             <button
               type="button"
               onClick={stopStreaming}
-              className="absolute right-3 bottom-3 w-11 h-11 flex items-center justify-center rounded-[2px] bg-[rgba(245,240,232,0.06)] hover:bg-[rgba(245,240,232,0.1)] border border-[rgba(245,240,232,0.15)] transition-colors"
+              className="absolute right-3 bottom-3 w-11 h-11 flex items-center justify-center rounded-[2px] bg-[var(--pq-ivory-line-soft)] hover:bg-[rgba(245,240,232,0.1)] border border-[rgba(245,240,232,0.15)] transition-colors"
               aria-label="Stop streaming"
             >
               <StopCircle className="w-4 h-4 text-[rgba(245,240,232,0.75)]" />
