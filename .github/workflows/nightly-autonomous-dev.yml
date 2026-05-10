@@ -98,7 +98,7 @@ jobs:
       issue_body_file: ${{ steps.pick.outputs.issue_body_file }}
       have_work: ${{ steps.pick.outputs.have_work }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Resolve issue number (dispatch payload > input > queue)
         id: pick
@@ -216,7 +216,7 @@ jobs:
       pr_url: ${{ steps.pr.outputs.url }}
       status: ${{ steps.gate.outputs.status }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -445,7 +445,7 @@ jobs:
       contents: write
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
