@@ -235,7 +235,16 @@ class AIService:
             lines.append(f"- [{s.get('type', '')}] {s.get('msg', '')}")
         lines.append(f"\nAnalyst Reason: {data.get('reason', '')}")
         if data.get("rec_shares"):
-            lines.append(f"Suggested position size: {data['rec_shares']} shares (~${data.get('rec_investment', 0):,.0f}) — informational only, not a recommendation")
+            # 자본시장법 §101 ④ — 미등록 투자자문업 회피 어휘 (Q10).
+            # KR primary + EN subline. "Suggested" / "recommendation" 어휘 금지,
+            # "참고용" / "예시" / "informational reference" 로 한정한다.
+            lines.append(
+                f"예시 포지션 크기 (참고): {data['rec_shares']}주 "
+                f"(~${data.get('rec_investment', 0):,.0f}) — "
+                f"투자권유·매매조언이 아닌 참고용 정보입니다. "
+                f"(Example position size for reference only — "
+                f"not investment advice or a solicitation.)"
+            )
         if data.get("take_profit"):
             lines.append(f"Take Profit: {data['take_profit']}, Stop Loss: {data.get('stop_loss', '?')}")
         return "\n".join(lines)
