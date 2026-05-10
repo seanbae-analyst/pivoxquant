@@ -1,0 +1,149 @@
+"""Regression guard: no `pivoxaudit\\d*` beta-password literal in repo
+files (md / ts / tsx / py / yml / yaml).
+
+Background
+----------
+2026-04-19 — original `pivoxaudit` beta password leaked to a public
+GitHub commit; CEO rotated to `pivoxaudit2`.
+2026-05-10 — HANDOVER.md leaked the rotated value `pivoxaudit2` in
+plaintext.  CEO direction (memory MEMORY.md): the literal value lives
+only in Vercel env (prod) + `.env.local` (dev).  Anywhere it appears
+in the tracked repo is an immediate rotate-and-leak event.
+
+CI defence already exists in `.github/workflows/legal-guard.yml` (the
+"Block beta password leak in repo" step).  This pytest mirrors that
+defence so:
+
+* Local devs catch the regression pre-push (CI-only is too late once
+  the leaked branch is on the remote).
+* The defence runs cross-platform — the CI step uses GNU `grep -rEn`
+  which works on ubuntu but produces silent failures on macOS BSD
+  grep when shell-quoted differently.
+
+Detection
+---------
+Walks the repo (rooted at this file's parent's parent) and flags any
+file matching:
+
+* extension in {md, ts, tsx, py, yml, yaml}, AND
+* file content contains the regex `pivoxaudit\\d*`,
+* EXCEPT the self-referencing CI workflow (which contains the regex
+  literal by design) and tests/ (this file plus any future tests).
+
+Exclusions (mirror the CI step)
+-------------------------------
+* `.git/`
+* `.claude/` (private session memory)
+* `node_modules/`
+* `venv/` (local Python env)
+* `.next/` (Next.js build)
+* `__pycache__/`
+* `.github/workflows/legal-guard.yml` — owns the self-referencing
+  regex literal.
+* `tests/test_pivoxaudit_secret_leak.py` — this file (the regex literal
+  must appear here as the test body).
+
+Aligned rule: 정통망법 §28 (개인정보 안전조치) + memory/feedback rotate
+discipline.
+"""
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+SCANNED_EXTENSIONS: frozenset[str] = frozenset(
+    {".md", ".ts", ".tsx", ".py", ".yml", ".yaml"}
+)
+
+EXCLUDED_DIRS: frozenset[str] = frozenset(
+    {
+        ".git",
+        ".claude",
+        "node_modules",
+        "venv",
+        ".next",
+        "__pycache__",
+        ".pytest_cache",
+        "test-results",
+        "self_healing_artifacts",
+        "legal_monitor_artifacts",
+        "agent_worker",  # archived agent runs
+    }
+)
+
+# Files allowed to contain the regex literal as part of their guard
+# implementation. Stored as repo-relative POSIX paths.
+ALLOWED_SELF_REFERENCES: frozenset[str] = frozenset(
+    {
+        ".github/workflows/legal-guard.yml",
+        "tests/test_pivoxaudit_secret_leak.py",
+    }
+)
+
+# Forbidden literal — `pivoxaudit` followed by zero or more digits.
+# Matches `pivoxaudit`, `pivoxaudit2`, `pivoxaudit42`, etc.
+LEAK_RE = re.compile(r"pivoxaudit\d*")
+
+
+def _iter_scanned_files() -> list[Path]:
+    """Walk the repo and yield every file whose extension is in
+    SCANNED_EXTENSIONS, skipping any path that traverses an excluded
+    directory."""
+    found: list[Path] = []
+    for path in REPO_ROOT.rglob("*"):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in SCANNED_EXTENSIONS:
+            continue
+        if any(part in EXCLUDED_DIRS for part in path.relative_to(REPO_ROOT).parts):
+            continue
+        found.append(path)
+    return found
+
+
+def _is_allowed(rel_posix: str) -> bool:
+    return rel_posix in ALLOWED_SELF_REFERENCES
+
+
+class TestNoPivoxauditSecretLeak:
+    """Block any `pivoxaudit\\d*` literal landing in tracked repo files
+    other than the two audited self-reference points."""
+
+    def test_no_beta_password_literal_in_repo(self) -> None:
+        offenders: list[str] = []
+        for path in _iter_scanned_files():
+            rel_posix = path.relative_to(REPO_ROOT).as_posix()
+            if _is_allowed(rel_posix):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for lineno, line in enumerate(text.splitlines(), start=1):
+                if LEAK_RE.search(line):
+                    offenders.append(
+                        f"{rel_posix}:{lineno}: {line.strip()[:120]}"
+                    )
+        assert not offenders, (
+            "Beta password literal `pivoxaudit\\d*` leaked in repo file. "
+            "The literal value must live only in Vercel env (prod) and "
+            ".env.local (dev). Rotate the value in Vercel + Railway, "
+            "purge the file, and force-push the cleaned history.\n\n"
+            + "\n".join(offenders)
+        )
+
+
+class TestScanCoverage:
+    """Defensive: ensure the scan walked something."""
+
+    def test_scan_covers_expected_files(self) -> None:
+        files = _iter_scanned_files()
+        # Repo has hundreds of .md / .py / .ts files; <50 means the
+        # walk broke (e.g. `EXCLUDED_DIRS` swallowed too much).
+        assert len(files) >= 50, (
+            f"file scan unexpectedly sparse: {len(files)} files. "
+            "Check EXCLUDED_DIRS and SCANNED_EXTENSIONS."
+        )
