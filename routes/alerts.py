@@ -222,12 +222,38 @@ def price_check():
                            "message": f"{name} 사전 설정 SL 레벨 도달 — 정보 고지 ({cur}{round(price):,} ≤ {cur}{round(sl):,}, 보유 {p.shares}주)"})
 
     try:
-        for a in alerts:
-            recent = (Alert.query.filter_by(user_id=current_user.id, ticker=a["ticker"])
-                      .filter(Alert.message.contains(a["type"]))
-                      .filter(Alert.created_at > datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=4))
-                      .first())
-            if not recent:
+        # Perf P1-1 (2026-05-10): batch the dedup lookup. Previous shape ran
+        # one Alert.query per generated alert (N positions = N DB roundtrips).
+        # For users with 20+ positions on a price-check pass this dominated
+        # request latency. Single IN-query + Python postfilter for the
+        # message-contains predicate keeps semantics identical.
+        if alerts:
+            tickers_in_alerts = {a["ticker"] for a in alerts}
+            cutoff = (
+                datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=4)
+            )
+            recent_rows = (
+                Alert.query
+                .filter_by(user_id=current_user.id)
+                .filter(Alert.ticker.in_(tickers_in_alerts))
+                .filter(Alert.created_at > cutoff)
+                .all()
+            )
+            # Build a (ticker, type) presence set. Original predicate was
+            # Alert.message.contains(a["type"]) where type ∈ {"TAKE_PROFIT",
+            # "STOP_LOSS"} — those tokens are emitted into message via the
+            # f-string above, so substring-in-message is equivalent to
+            # checking whether the type token appears in row.message.
+            recent_keys: set[tuple[str, str]] = set()
+            for row in recent_rows:
+                msg = row.message or ""
+                for t in ("TAKE_PROFIT", "STOP_LOSS"):
+                    if t in msg:
+                        recent_keys.add((row.ticker, t))
+
+            for a in alerts:
+                if (a["ticker"], a["type"]) in recent_keys:
+                    continue
                 sig = "NEGATIVE" if a["type"] == "STOP_LOSS" else "POSITIVE"
                 # Bug #1 fix (2026-05-09): kind was missing → frontend
                 # rendered "INFO" instead of "PRICE". Set canonical kind so
@@ -240,7 +266,6 @@ def price_check():
                     user_id=current_user.id, ticker=a["ticker"],
                     message=a["message"], signal=sig, score=0, kind=kind,
                 ))
-        if alerts:
             db.session.commit()
     except Exception:
         db.session.rollback()

@@ -126,3 +126,68 @@ def cache_ticker(ticker: str, capital: float, engine):
             save_signal(ticker, r)
     except Exception as e:
         logger.error("Cache update failed %s: %s", ticker, e)
+
+
+# ── Risk portfolio-snapshot cache (Perf P0-2, 2026-05-10) ─────────────────
+#
+# Each /api/risk/* endpoint calls _portfolio_snapshot() which fans out to
+# fetcher.get_price_history(ticker, "3mo") for every position (FMP/Alpaca
+# round-trip), realtime.get_prices_batch, and a pandas DataFrame build.
+# That's ~500ms-3s p99 per request; multiple risk endpoints on a single
+# page render compound the cost.
+#
+# Cache key: (user_id, positions_signature). positions_signature is a
+# stable hash of the user's (ticker, shares, avg_cost) tuples — so the
+# cache invalidates the moment a position is added/edited/closed (no
+# stale data after a trade).
+#
+# TTL: 5 minutes. The underlying inputs (price history, VIX) move on
+# minute scales but the risk metrics (HHI, VaR, correlation matrix) are
+# stable on 5-min windows. Well within project's existing observability
+# tolerance — engine.py / discover_cache use 2h TTL.
+#
+# Memory: small dict, capped via simple LRU prune at 256 entries (one
+# user typically has 1-2 active position-sets per 5-min window). Free,
+# in-process, no Redis dependency (CEO directive: 추가 비용 0원).
+
+_risk_snapshot_cache: dict = {}  # (user_id, sig) -> {ts, payload}
+_risk_snapshot_lock = threading.Lock()
+RISK_SNAPSHOT_TTL = 300            # 5 minutes
+RISK_SNAPSHOT_MAX_ENTRIES = 256
+
+
+def risk_snapshot_cache_get(user_id, signature: str):
+    """Thread-safe read. Returns the cached payload or None."""
+    if not user_id or not signature:
+        return None
+    key = (user_id, signature)
+    with _risk_snapshot_lock:
+        entry = _risk_snapshot_cache.get(key)
+        if not entry:
+            return None
+        if time.time() - entry.get("ts", 0) >= RISK_SNAPSHOT_TTL:
+            _risk_snapshot_cache.pop(key, None)
+            return None
+        return entry.get("payload")
+
+
+def risk_snapshot_cache_set(user_id, signature: str, payload) -> None:
+    """Thread-safe write. Best-effort LRU prune when over MAX_ENTRIES."""
+    if not user_id or not signature or payload is None:
+        return
+    key = (user_id, signature)
+    with _risk_snapshot_lock:
+        _risk_snapshot_cache[key] = {"payload": payload, "ts": time.time()}
+        if len(_risk_snapshot_cache) > RISK_SNAPSHOT_MAX_ENTRIES:
+            ordered = sorted(
+                _risk_snapshot_cache.items(),
+                key=lambda kv: kv[1].get("ts", 0),
+            )
+            for old_key, _ in ordered[: len(ordered) // 4]:
+                _risk_snapshot_cache.pop(old_key, None)
+
+
+def risk_snapshot_cache_clear() -> None:
+    """Test/admin helper — drop all cached snapshots."""
+    with _risk_snapshot_lock:
+        _risk_snapshot_cache.clear()
