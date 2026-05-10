@@ -67,6 +67,13 @@ def serialize_user(u) -> dict:
         "onboarding_completed": getattr(u, "onboarding_completed", False),
         "avatar_url": getattr(u, "avatar_url", None),
         "oauth_provider": getattr(u, "oauth_provider", None),
+        # PIPA §22 ⑥ — frontend uses this to gate authenticated routes
+        # behind ``/signup/oauth-finalize`` until the user supplies a
+        # valid birthdate. ``birthdate_required`` is True iff the column
+        # is NULL (new OAuth sign-up *or* legacy pre-migration-031 row).
+        # The raw birthdate value itself is intentionally **not** returned —
+        # the frontend never needs the value, only the boolean gate.
+        "birthdate_required": getattr(u, "birthdate", None) is None,
     }
 
 

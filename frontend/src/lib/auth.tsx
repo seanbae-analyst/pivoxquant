@@ -23,6 +23,14 @@ export interface User {
   profile_changes_left?: number;
   subscription_tier?: string;
   onboarding_completed?: boolean;
+  /**
+   * PIPA §22 ⑥ — true iff the User row has ``birthdate IS NULL``.
+   * Set by ``services/serializers.py serialize_user``. New OAuth sign-ups
+   * and legacy pre-migration-031 accounts both reach the dashboard with
+   * this flag true; the protected layout must redirect them through
+   * ``/signup/oauth-finalize`` before any other route renders.
+   */
+  birthdate_required?: boolean;
 }
 
 interface AuthCtx {

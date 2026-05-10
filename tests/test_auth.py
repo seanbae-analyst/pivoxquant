@@ -4,7 +4,17 @@ tests/test_auth.py — Auth routes
 Registration, login, logout, session, CSRF cookie.
 
 Covers /api/auth/register, /api/auth/login, /api/auth/logout, /api/auth/me.
+
+PIPA §22 ⑥ — every successful /register payload below carries a
+``birthdate`` of an adult. The dedicated under-14 / parse-failure
+gate tests live in ``tests/test_signup_min_age.py``.
 """
+
+
+# Adult birthdate used by every successful /register call below. Adults
+# are not subject to the §22 ⑥ legal-guardian rule. Pinned literal so
+# the tests don't drift if MIN_AGE_YEARS ever changes.
+_ADULT_BIRTHDATE = "1990-06-15"
 
 
 # ── Registration ────────────────────────────────────────────────────────────
@@ -15,6 +25,7 @@ class TestRegister:
             "email": "new@test.com",
             "password": "secretpass",
             "name": "New User",
+            "birthdate": _ADULT_BIRTHDATE,
         })
         assert r.status_code == 200
         data = r.get_json()
@@ -30,18 +41,23 @@ class TestRegister:
         r = client.post("/api/auth/register", json={
             "email": "dupe@test.com",
             "password": "anything",
+            "birthdate": _ADULT_BIRTHDATE,
         })
         assert r.status_code == 409
         assert "already" in r.get_json()["error"].lower()
 
     def test_register_missing_email_returns_400(self, client):
-        r = client.post("/api/auth/register", json={"password": "x" * 8})
+        r = client.post("/api/auth/register", json={
+            "password": "x" * 8,
+            "birthdate": _ADULT_BIRTHDATE,
+        })
         assert r.status_code == 400
 
     def test_register_short_password_returns_400(self, client):
         r = client.post("/api/auth/register", json={
             "email": "short@test.com",
             "password": "12345",  # < 6 chars
+            "birthdate": _ADULT_BIRTHDATE,
         })
         assert r.status_code == 400
 
@@ -49,6 +65,7 @@ class TestRegister:
         r = client.post("/api/auth/register", json={
             "email": "MIXED@Test.COM",
             "password": "goodpass",
+            "birthdate": _ADULT_BIRTHDATE,
         })
         assert r.status_code == 200
         assert r.get_json()["user"]["email"] == "mixed@test.com"
