@@ -31,6 +31,7 @@ import {
 } from "@/components/reports/pdf-primitives";
 import { EmptyState, type EmptyStateReason } from "./empty-state";
 import { TierGate } from "@/components/ui/tier-gate";
+import { AiContentBadge } from "@/components/ui/ai-content-badge";
 
 export interface ReportPreviewShellProps<TData> {
   /** Backend artifact type — must match `_ARTIFACT_DISPATCH` literal. */
@@ -103,6 +104,17 @@ export function ReportPreviewShell<TData>({
   return (
     <ReportSurface>
       <PdfToolbar />
+      {/* AI-generated content disclosure (regulatory ③ 2026-01).
+          Visible above the report; the in-template `_disclaimer.html`
+          partial carries the same notice on the printable PDF. */}
+      <div
+        style={{
+          padding: "0 56px 12px 56px",
+        }}
+        data-print-hidden="true"
+      >
+        <AiContentBadge variant="inline" />
+      </div>
       {tier === "free" ? (
         inner
       ) : (

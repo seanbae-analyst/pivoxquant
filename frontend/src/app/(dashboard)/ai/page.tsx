@@ -31,6 +31,7 @@ import { Eyebrow } from "@/components/landing/eyebrow";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
 import { DisclaimerBanner } from "@/components/ui/disclaimer-banner";
+import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import {
   Caption,
   Fleuron,
@@ -386,6 +387,7 @@ export default function AiPage() {
             </Caption>
           </header>
 
+          <AiContentBadge variant="framed" />
           <DisclaimerBanner type="coaching" />
 
           {/* ── Portfolio Insights ── */}
