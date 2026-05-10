@@ -165,7 +165,7 @@
 
 ### v32 정직 보고
 - **W-04 회귀 admit + revert** (PR #234): PR #228이 KIS live probe 전 추측 기반으로 KOSPI 7498 차단. 실제로는 정상값 (한국 시장 2025-2026 상승). 즉시 revert + 코멘트로 evidence 박음.
-- **자체 회귀 게이트 self-heal 2회**: PR #224 (HANDOVER pivoxaudit2 평문 → 회귀 게이트 catch → cleanup), PR #237 (dd_checklist_email naked ticker → grep으로 발견 → fix).
+- **자체 회귀 게이트 self-heal 2회**: PR #224 (HANDOVER `[REDACTED:ex-beta-pw-v2]` 평문 → 회귀 게이트 catch → cleanup), PR #237 (dd_checklist_email naked ticker → grep으로 발견 → fix).
 - **외부 액션 6건 그대로 보류** (사용자 직접): Sentry rotate / GitHub Actions billing / Google PW / 변호사 미팅 / KRX Open Data Portal / 베타테스터 안내.
 
 ---
@@ -178,7 +178,7 @@
 
 #### PR 통합 (총 24 PR)
 1차 라운드 (#208~#224, 17 PR + handover-v30 직접 merge):
-- #208 보안 cleanup (CI guard + pre-commit + HANDOVER pivoxaudit2 평문 제거)
+- #208 보안 cleanup (CI guard + pre-commit + HANDOVER `[REDACTED:ex-beta-pw-v2]` 평문 제거)
 - #209 dead code (feedparser + dead html partials + mock_data)
 - #210 legal copy (autotrader + 무료 체험 카피 정리)
 - #211 KR ticker `.KS↔.KQ` suffix toggle (B-02)
@@ -194,7 +194,7 @@
 - #221 ivory sweep 107 files / 307 sites
 - #222 detail 폰트 F4/F5/F6/F7/F9 22 sites
 - #223 alerts batch (N→1) + risk cache (5min TTL)
-- #224 HANDOVER pivoxaudit cleanup (self-heal — gate caught its own work)
+- #224 HANDOVER `[REDACTED:ex-beta-pw-v1]` cleanup (self-heal — gate caught its own work)
 
 2차 라운드 (#225~#231, 7 PR after race recovery):
 - #225 Risk Layer 7 cash buffer real calculation (B-05)
@@ -231,7 +231,7 @@
 #### 회귀 검증
 - TypeScript exit 0 모든 frontend wave
 - pytest 1780 PASS / 7 skip / 1 xfail (Wave 9 보고 시점) — 본 라운드 PR 후 추가 검증 권고
-- `test_pivoxaudit_secret_leak` 회귀 게이트 PASS (self-heal 작동)
+- beta-password leak 회귀 게이트 (`tests/test_*_secret_leak.py`) PASS (self-heal 작동)
 - 추가 비용 0원 일관 유지
 
 ---
