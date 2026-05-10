@@ -178,6 +178,39 @@ def name_or_ticker(ticker: str) -> str:
     return resolve_stock_name(ticker) or ticker
 
 
+def canonical_display_name(cached_name, ticker: str) -> str:
+    """Return the canonical display name for ``ticker``.
+
+    Defensive follow-up to BUG-01 (PR #227, 2026-05-10). PR #227 fixed
+    the *source* — ``services/data/fetcher.py`` now queries
+    ``kr_stock_registry`` first, so new SignalCache rows store
+    "삼성전자" instead of "Samsung Electronics". But rows persisted
+    **before** that PR still hold the English label. Until those rows
+    are re-cached, route handlers that read from SignalCache would
+    surface English on the detail H1.
+
+    Policy
+    ------
+    - KR tickers (``.KS`` / ``.KQ``): Korean from ``kr_stock_registry``
+      ALWAYS wins, regardless of any cached value.
+    - US tickers: cached/snapshot English wins; fall back to resolver,
+      then ticker.
+
+    User has repeatedly directed (memory ``feedback_ticker_display``)
+    that KR stocks must render in Korean throughout the product.
+    """
+    t = (ticker or "").strip()
+    if not t:
+        return ticker or ""
+    if _is_korean(t):
+        kr = resolve_stock_name(t)
+        if kr:
+            return kr
+    if cached_name and cached_name != t:
+        return cached_name
+    return resolve_stock_name(t) or t
+
+
 def lookup_name_from_signal_cache(ticker: str) -> Optional[str]:
     """Fetch name from the SignalCache blob if present.
 

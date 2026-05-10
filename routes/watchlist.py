@@ -9,7 +9,7 @@ from extensions import db
 from models import Watchlist, SignalCache
 from services import cache_service
 from services.container import engine
-from services.name_resolver import resolve_stock_name
+from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth
@@ -64,7 +64,7 @@ def _serialize(w: Watchlist, overlay_entry: dict | None = None) -> dict:
     return {
         "id": w.id,
         "ticker": w.ticker,
-        "name": sd.get("name") or resolve_stock_name(w.ticker) or w.ticker,
+        "name": canonical_display_name(sd.get("name"), w.ticker),
         "note": w.note or "",
         "added_at": w.added_at.isoformat() if w.added_at else None,
         "price": last_price or 0,

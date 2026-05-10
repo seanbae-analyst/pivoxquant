@@ -8,7 +8,7 @@ import numpy as np
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
-from services.name_resolver import resolve_stock_name
+from services.name_resolver import resolve_stock_name, canonical_display_name
 from .decorators import api_auth, legal_scrub_response
 from security import general_rate_limit
 
@@ -192,7 +192,7 @@ def regime_report():
             mv = price * p.shares
             pos_with_value.append({
                 "ticker": p.ticker,
-                "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
+                "name": canonical_display_name(sd.get("name"), p.ticker),
                 "market_value": mv,
             })
 
@@ -380,7 +380,7 @@ def _load_positions_with_prices():
         from services.name_resolver import resolve_stock_name
         items.append({
             "ticker": p.ticker,
-            "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
+            "name": canonical_display_name(sd.get("name"), p.ticker),
             "shares": p.shares,
             "avg_cost": p.avg_cost,
             "price": price,
@@ -3067,7 +3067,7 @@ def risk_defense_status():
         from services.name_resolver import resolve_stock_name
         pos_list.append({
             "ticker": p.ticker,
-            "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
+            "name": canonical_display_name(sd.get("name"), p.ticker),
             "value": mv,
             "sector": sector,
             "weight": 0,  # filled below

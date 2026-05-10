@@ -11,7 +11,7 @@ from extensions import db
 from models import Position, SignalCache, User
 from models.portfolio_share import PortfolioShare
 from services import fx_service
-from services.name_resolver import resolve_stock_name
+from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.price_overlay import parse_price_display
 from .decorators import api_auth
 from security import general_rate_limit
@@ -125,7 +125,7 @@ def get_shared_portfolio(token):
             "pnl_pct": round(pnl_pct, 2),
             "signal": sd.get("signal", "—"),
             "score": score,
-            "name": sd.get("name") or resolve_stock_name(p.ticker) or p.ticker,
+            "name": canonical_display_name(sd.get("name"), p.ticker),
             "sector": sd.get("sector", "Unknown"),
             "currency": currency,
             "is_korean": sd.get("is_korean", is_kr),
