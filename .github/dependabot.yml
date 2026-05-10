@@ -11,6 +11,25 @@ updates:
     labels:
       - "dependencies"
       - "frontend"
+    # 2026-05-10: peer-dep 묶음 그룹 — react/react-dom 단독 bump 시
+    # Vercel npm install peer conflict로 production fail (PR #250 회귀 사례).
+    # 같이 PR로 묶어 peer 동기화 보장.
+    groups:
+      react-pair:
+        patterns:
+          - "react"
+          - "react-dom"
+      next-toolchain:
+        patterns:
+          - "next"
+          - "@next/*"
+          - "eslint-config-next"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+      sentry:
+        patterns:
+          - "@sentry/*"
 
   - package-ecosystem: "pip"
     directory: "/"
