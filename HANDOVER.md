@@ -1,8 +1,80 @@
-# PivoxQuant — 인수인계서 (2026-05-10 v29 — 16 PR · OPEN PR 0건 · 사업자등록 발급 완료)
+# PivoxQuant — 인수인계서 (2026-05-10 v29 — 17 PR · OPEN PR 0건 · 사업자등록 + 법적 audit + 신규 규제 7건)
 
-## 🟢 2026-05-10 v29 — **16 PR squash-merged · 자율 세션 연속** · main `8b9a818 → 2b6d7ac` · OPEN PR 0건 · backend 1697 → 1745 PASS / 0 회귀
+## 🟢 2026-05-10 v29 종합 — **17 PR squash-merged + 법적 audit + 신규 규제 7건 기록** · main `8b9a818 → 827885d` · OPEN PR 0건 · backend 1697 → 1745 PASS / 0 회귀
 
-**현재 main HEAD: `2b6d7ac`** (origin sync OK). **OPEN PR 0건**.
+**현재 main HEAD: `827885d`** (origin sync OK). **OPEN PR 0건**.
+
+---
+
+## 🚨 v29 법적 audit 종합 판정 — **LAUNCH_RISK** (베타 OK, 유료결제 BLOCKED)
+
+### 무료 회원가입 (Free tier): ✅ LAUNCH_OK
+모든 자본시장법 / PIPA / 약관 / Disclaimer 방어선 정상.
+
+### 유료 결제 (Pro ₩9,900 / Premium ₩19,900): 🔴 LAUNCH_BLOCKED — 4건
+1. **통신판매업 미신고** (전자상거래법 §12 → §44 1천만원 이하 과태료) — 성동구청 신고 (등록세 ~45k원, 2-3 영업일)
+2. **Vercel ENV 6개 미입력** (사업자 정보 footer — 전자상거래법 §13)
+3. **변호사 자문 Q1-Q15 의견서 미수령** — 금융규제·자본시장법 전문 변호사 (예상 300-500만원)
+4. **사업자 업태 적합성 사인 미수령** (Q8 — 정보통신업 단일 vs 전자상거래업 추가 등재)
+
+### v29 신규 규제 변화 7건 (2026-04-01 ~ 2026-05-10 monitor)
+| # | 규제 | 시행 | 영향 | §101 영향 |
+|---|---|---|---|---|
+| ① | 정통망법 §50 매출 **6%** 과징금 | 2026-Q3 | Pro/Premium 마케팅 메일 직접 | NO |
+| ② | 유사투자자문업 **양방향 채널 금지** | 2024-08-14 | 챗봇/Q&A 도입 시 §101 깨짐 | **YES (CRITICAL)** |
+| ③ | **AI 생성물 표시제** 의무화 | 2026-01 | Artifact "AI 생성" 라벨 의무 | NO |
+| ④ | PIPA 매출 **10%** 과징금 | 2026-09-11 | privacy 시행령 후 갱신 | NO |
+| ⑤ | 금소법 6대 판매원칙 | 2026-01-02 | 광고규제 영역 점검 | NO |
+| ⑥ | 전자상거래법 **가분적 디지털콘텐츠** 청약철회 | 2026-07-21 | 월 구독 미사용분 환불 의무 가능성 | NO |
+| ⑦ | KRX 라이선스 변동 없음 | - | 메모리 룰 [공식 라이선스만] 유지 | - |
+
+상세: [memory/regulatory_changes_2026-05.md](/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/regulatory_changes_2026-05.md)
+변호사 자문 큐 통합: [memory/legal_question_queue.md](/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/legal_question_queue.md) (Q1-Q15)
+
+### 절대 금지 (변호사 사인 전 출시 X)
+- **챗봇 / Q&A / 실시간 응답** — 양방향 채널 = §101 면제 깨짐. 현재 `companion`, `ai-chat`, `pre-trade` 페이지 양방향 해석 위험. **Q13 변호사 사인 강제**
+
+---
+
+## v29 자율 fix 가능 항목 (변호사 검토 불필요, 다음 chunk 진행 가능)
+1. `services/ai/service.py:238` "Suggested position size: N shares (~$X)" → "예시 (참고)" 완화 (자본시장법 §101 ④ — Q10)
+2. **AI 생성물 라벨 배지** — 모든 Artifact 템플릿 상단 "AI 생성" 명시 (regulatory ③)
+3. dead `frontend/src/i18n/ko.ts:390,403` "Pro 무료 체험 시작" 제거 (표시광고법)
+4. 만 14세 자가선언 강화 — UI 추가 방어 (PIPA §22 ⑥)
+
+## v29 변호사 검토 권고 (자율 fix 보류)
+- terms-ko §11.5 Free 사용자 손해배상 한도 분리 (Q11)
+- terms-ko §17 가분적 디지털콘텐츠 환불 정책 갱신 (Q15, 2026-07-21 시행 전)
+- 마케팅 메일 opt-out 처리 시한 로깅 강화 (regulatory ① — 2026-Q3 시행 전)
+
+---
+
+## 지금 현 상황 (2026-05-10 v29 종료 시점)
+
+### Code / Repo
+- main HEAD `827885d` (17 PR 누적: #190~#206)
+- working tree: clean
+- OPEN PR / OPEN issue: 0건
+- backend tests: **1745 PASS / 0 fail / 0 회귀**
+- alembic: single head 029_user_cascade_delete
+
+### Production
+- Railway `/api/health`: ✅ 200 OK (`db: ok, status: ok`)
+- Vercel `pivoxquant.com`: ✅ HTTP 307 (베타 게이트 정상)
+- GitHub Actions billing: ⚠️ 차단 (CEO 결정)
+
+### 사업자
+- 사업자등록증: ✅ 발급 (2026-05-08, 459-01-03808)
+- 통신판매업: ❌ 미신고 (성동구청)
+- Stripe verification: ❌ 미완
+
+### 메모리 룰 신규 (v29)
+- **[공식 라이선스 데이터만](/Users/seanbae/.claude/projects/-Users-seanbae-Desktop---/memory/feedback_official_data_only.md)** (2026-05-10) — yfinance/pykrx/네이버 finance/비공식 영구 금지
+
+### 다음 재스캔
+- **2026-08-15** — PIPA 9월 시행 직전 + 정통망법 시행령 확정 시점
+
+---
 
 ### v29 추가 PR (v28 → v29 누적)
 | PR | 머지 commit | 핵심 |
