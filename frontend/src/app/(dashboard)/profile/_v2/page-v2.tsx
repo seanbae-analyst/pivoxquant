@@ -119,7 +119,7 @@ function PulseRow({ row }: { row: PulseHistoryRow }) {
         gap: 14,
         alignItems: "baseline",
         padding: "10px 0",
-        borderBottom: "1px solid rgba(245,240,232,0.08)",
+        borderBottom: "1px solid var(--pq-ivory-line)",
       }}
     >
       <span
@@ -525,7 +525,7 @@ export default function ProfilePageV2() {
         <section
           style={{
             background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(245,240,232,0.08)",
+            border: "1px solid var(--pq-ivory-line)",
             borderRadius: 4,
             padding: 32,
             marginBottom: 48,
@@ -606,7 +606,7 @@ export default function ProfilePageV2() {
             style={{
               gridColumn: "span 7",
               background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(245,240,232,0.08)",
+              border: "1px solid var(--pq-ivory-line)",
               borderRadius: 4,
               padding: 24,
               position: "relative",

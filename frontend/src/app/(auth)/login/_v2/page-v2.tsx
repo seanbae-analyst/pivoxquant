@@ -236,7 +236,7 @@ export default function LoginPageV2() {
               style={{
                 flex: 1,
                 height: 0,
-                borderTop: "0.5px solid rgba(245,240,232,0.08)",
+                borderTop: "0.5px solid var(--pq-ivory-line)",
               }}
             />
             <Fleuron size={12} />
@@ -244,7 +244,7 @@ export default function LoginPageV2() {
               style={{
                 flex: 1,
                 height: 0,
-                borderTop: "0.5px solid rgba(245,240,232,0.08)",
+                borderTop: "0.5px solid var(--pq-ivory-line)",
               }}
             />
           </div>

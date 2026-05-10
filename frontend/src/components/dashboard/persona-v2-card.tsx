@@ -35,7 +35,7 @@ import { PeerBenchmarkBlock } from "@/components/shared/peer-benchmark-block";
 /* ── Shared styling ── */
 
 const PAPER_BG = "rgba(255,255,255,0.02)";
-const PAPER_BORDER = "rgba(245,240,232,0.08)";
+const PAPER_BORDER = "var(--pq-ivory-line)";
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return (
@@ -110,7 +110,7 @@ function PersonaHeader({
       {/* Confidence meter — bronze hairline bar, ink ground */}
       <div
         className="mt-4 h-[3px] w-full overflow-hidden rounded-full"
-        style={{ background: "rgba(245,240,232,0.08)" }}
+        style={{ background: "var(--pq-ivory-line)" }}
         role="progressbar"
         aria-valuenow={confidence}
         aria-valuemin={0}
@@ -209,8 +209,8 @@ function FeatureBars({
               <div
                 className="relative h-[10px] rounded-sm"
                 style={{
-                  background: "rgba(245,240,232,0.06)",
-                  border: "0.5px solid rgba(245,240,232,0.08)",
+                  background: "var(--pq-ivory-line-soft)",
+                  border: "0.5px solid var(--pq-ivory-line)",
                 }}
                 aria-hidden
               >
@@ -282,7 +282,7 @@ function WhyThisPersona({
               paddingBottom: i < top.length - 1 ? 12 : 0,
               borderBottom:
                 i < top.length - 1
-                  ? "0.5px solid rgba(245,240,232,0.06)"
+                  ? "0.5px solid var(--pq-ivory-line-soft)"
                   : "none",
             }}
           >

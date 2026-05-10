@@ -145,7 +145,7 @@ export function Hero() {
               href="/sample-reports/weekly-memo"
               target="_blank"
               rel="noopener"
-              className="inline-flex items-center gap-2 rounded-[2px] border px-6 py-3.5 text-sm font-medium tracking-wide transition-colors hover:bg-[rgba(245,240,232,0.04)]"
+              className="inline-flex items-center gap-2 rounded-[2px] border px-6 py-3.5 text-sm font-medium tracking-wide transition-colors hover:bg-[var(--pq-ivory-line-faint)]"
               style={{
                 borderColor: "rgba(139, 111, 71, 0.5)",
                 color: "var(--pq-bronze-light)",

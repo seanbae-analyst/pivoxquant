@@ -237,7 +237,7 @@ function GroupHeader({ label }: { label: string }) {
       </span>
       <div
         className="mt-1 h-px"
-        style={{ backgroundColor: "rgba(245,240,232,0.08)" }}
+        style={{ backgroundColor: "var(--pq-ivory-line)" }}
       />
     </div>
   );

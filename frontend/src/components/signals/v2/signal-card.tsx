@@ -44,7 +44,7 @@ function labelTone(label: SignalLabel) {
     return { fg: "var(--pq-positive, #dc2626)", bg: "rgba(220,38,38,0.08)", display: "Positive" };
   if (label === "NEGATIVE")
     return { fg: "var(--pq-negative, #2563eb)", bg: "rgba(37,99,235,0.08)", display: "Negative" };
-  return { fg: "rgba(245,240,232,0.55)", bg: "rgba(245,240,232,0.04)", display: "Neutral" };
+  return { fg: "rgba(245,240,232,0.55)", bg: "var(--pq-ivory-line-faint)", display: "Neutral" };
 }
 
 function fmtPrice(s: SignalEntry): string {
@@ -127,7 +127,7 @@ export function SignalCard({ entry, resolveName }: Props) {
         gridTemplateColumns: "1fr 280px 120px",
         gap: 28,
         padding: "20px 0",
-        borderBottom: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
         transition: "background 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms",
       }}
     >
@@ -216,7 +216,7 @@ export function SignalCard({ entry, resolveName }: Props) {
                   border: "1px solid rgba(245,240,232,0.20)",
                   borderRadius: "var(--pq-radius-cta, 2px)",
                   color: "rgba(245,240,232,0.45)",
-                  background: "rgba(245,240,232,0.04)",
+                  background: "var(--pq-ivory-line-faint)",
                 }}
               >
                 stale
@@ -228,7 +228,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             style={{
               height: 3,
               width: "100%",
-              background: "rgba(245,240,232,0.06)",
+              background: "var(--pq-ivory-line-soft)",
               borderRadius: 2,
               overflow: "hidden",
             }}

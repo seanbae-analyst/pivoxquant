@@ -112,7 +112,7 @@ export default function OnboardingBrokerPage() {
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-[rgba(245,240,232,0.08)] bg-[rgba(10,10,10,0.9)] backdrop-blur-xl px-4 py-3 sm:px-6">
+      <header className="sticky top-0 z-20 border-b border-[var(--pq-ivory-line)] bg-[rgba(10,10,10,0.9)] backdrop-blur-xl px-4 py-3 sm:px-6">
         <div className="mx-auto max-w-3xl">
           <div className="mb-3 flex items-center justify-between">
             <span className="font-serif text-base text-[var(--pq-ivory)]">
@@ -135,7 +135,7 @@ export default function OnboardingBrokerPage() {
               0 · 21
             </span>
           </div>
-          <div className="relative h-[2px] w-full overflow-hidden bg-[rgba(245,240,232,0.08)]">
+          <div className="relative h-[2px] w-full overflow-hidden bg-[var(--pq-ivory-line)]">
             <div
               className="absolute inset-y-0 left-0"
               style={{
@@ -187,7 +187,7 @@ export default function OnboardingBrokerPage() {
       </main>
 
       {/* Footer */}
-      <footer className="sticky bottom-0 z-20 border-t border-[rgba(245,240,232,0.08)] bg-[rgba(10,10,10,0.9)] backdrop-blur-xl px-4 py-4 sm:px-6">
+      <footer className="sticky bottom-0 z-20 border-t border-[var(--pq-ivory-line)] bg-[rgba(10,10,10,0.9)] backdrop-blur-xl px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-end gap-3">
           <button
             type="button"

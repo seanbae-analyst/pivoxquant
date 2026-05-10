@@ -31,7 +31,7 @@ function LoadingScreen() {
       </div>
       <div
         className="w-32 h-1 rounded-full overflow-hidden"
-        style={{ backgroundColor: "rgba(245, 240, 232, 0.08)" }}
+        style={{ backgroundColor: "var(--pq-ivory-line)" }}
       >
         <div
           className="h-full w-1/2 rounded-full animate-shimmer-slide"

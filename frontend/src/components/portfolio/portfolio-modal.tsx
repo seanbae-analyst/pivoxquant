@@ -53,7 +53,7 @@ export function PortfolioModal({
         </div>
         <div className="px-8 pb-2">{children}</div>
         {footer ? (
-          <div className="flex items-center justify-end gap-3 border-t border-[rgba(245,240,232,0.08)] px-8 py-5">
+          <div className="flex items-center justify-end gap-3 border-t border-[var(--pq-ivory-line)] px-8 py-5">
             {footer}
           </div>
         ) : null}
@@ -94,7 +94,7 @@ export function CancelButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="h-10 rounded-[2px] px-4 text-[13px] font-medium text-[rgba(245,240,232,0.6)] transition-colors hover:bg-[rgba(245,240,232,0.06)]"
+      className="h-10 rounded-[2px] px-4 text-[13px] font-medium text-[rgba(245,240,232,0.6)] transition-colors hover:bg-[var(--pq-ivory-line-soft)]"
     >
       Cancel
     </button>

@@ -186,6 +186,7 @@
   --pq-ivory-line: rgba(245, 240, 232, 0.08);       /* hairline border / divider */
   --pq-ivory-line-soft: rgba(245, 240, 232, 0.06);  /* softer divider */
   --pq-ivory-line-faint: rgba(245, 240, 232, 0.04); /* faintest border / surface bg */
+  --pq-ivory-line-ghost: rgba(245, 240, 232, 0.02); /* ghost surface bg / inset shadow */
 
   /* Font family aliases → next/font CSS vars from app/layout.tsx.
      Without these, var(--pq-font-mono|serif) falls back to Georgia/Times

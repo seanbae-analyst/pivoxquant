@@ -31,7 +31,7 @@ export function SignalsHeroV2({ eyebrow = "Signals · live", counts, loading = f
     <header
       style={{
         padding: "80px 0 64px",
-        borderBottom: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        borderBottom: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
         marginBottom: 0,
       }}
     >

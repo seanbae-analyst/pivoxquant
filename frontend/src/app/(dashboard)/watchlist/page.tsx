@@ -163,7 +163,7 @@ export default function WatchlistPage() {
             {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-10 animate-pulse bg-[rgba(245,240,232,0.04)] rounded-sm"
+                className="h-10 animate-pulse bg-[var(--pq-ivory-line-faint)] rounded-sm"
               />
             ))}
           </div>
@@ -269,7 +269,7 @@ export default function WatchlistPage() {
             <ul
               className="md:hidden border-t"
               style={{
-                borderTopColor: "rgba(245,240,232,0.08)",
+                borderTopColor: "var(--pq-ivory-line)",
                 borderTopWidth: 0.5,
               }}
             >
@@ -288,7 +288,7 @@ export default function WatchlistPage() {
                     onClick={() => router.push(`/detail/${item.ticker}`)}
                     className="cursor-pointer px-1 py-3"
                     style={{
-                      borderBottom: "0.5px solid rgba(245,240,232,0.06)",
+                      borderBottom: "0.5px solid var(--pq-ivory-line-soft)",
                     }}
                   >
                     {/* Row 1 — Symbol + Name */}

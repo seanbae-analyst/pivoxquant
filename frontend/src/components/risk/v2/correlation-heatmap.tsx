@@ -198,7 +198,7 @@ export function CorrelationHeatmap() {
                           fontSize: 12,
                           color: "var(--pq-ivory)",
                           backgroundColor: bg,
-                          border: "0.5px solid rgba(245,240,232,0.06)",
+                          border: "0.5px solid var(--pq-ivory-line-soft)",
                           cursor: "default",
                           transition: "outline 120ms",
                         }}

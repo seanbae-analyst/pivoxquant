@@ -113,7 +113,7 @@ export function DisclaimerBanner({
           className={cn(
             "px-3 pb-3 pt-2 border-t",
             isDark
-              ? "border-[rgba(245,240,232,0.08)]"
+              ? "border-[var(--pq-ivory-line)]"
               : "border-slate-200",
           )}
         >

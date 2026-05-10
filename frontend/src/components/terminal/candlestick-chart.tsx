@@ -390,7 +390,7 @@ export function CandlestickChart({
               key={chip.label}
               style={{
                 padding: "5px 10px",
-                border: "1px solid rgba(245,240,232,0.08)",
+                border: "1px solid var(--pq-ivory-line)",
                 borderRadius: 2,
                 background: "rgba(10,10,10,0.4)",
                 minWidth: 76,

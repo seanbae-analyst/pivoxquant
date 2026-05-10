@@ -108,7 +108,7 @@ function Row({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-3 border-b border-[rgba(245,240,232,0.06)] last:border-b-0">
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-[var(--pq-ivory-line-soft)] last:border-b-0">
       <span className="text-sm text-[rgba(245,240,232,0.6)]">{label}</span>
       <span className="text-sm text-[var(--pq-ivory)]">
         {children ?? value ?? "—"}
@@ -124,7 +124,7 @@ function AccountSection() {
 
   return (
     <Section kicker="01 · Account" title="Signed-in identity">
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
         <Row label="Name" value={user?.name ?? "—"} />
         <Row label="Email" value={user?.email ?? "—"} />
         {user?.oauth_provider && (
@@ -141,7 +141,7 @@ function AccountSection() {
 
       <Link
         href="/profile"
-        className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] px-5 py-4 rounded-[2px] flex items-center justify-between hover:border-[var(--pq-bronze)] transition-colors group"
+        className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] px-5 py-4 rounded-[2px] flex items-center justify-between hover:border-[var(--pq-bronze)] transition-colors group"
       >
         <div className="flex items-center gap-3">
           <UserCircle2 className="h-4 w-4 text-[var(--pq-bronze)]" />
@@ -228,7 +228,7 @@ function SeedCapitalSection() {
   };
 
   return (
-    <div id="capital" className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] scroll-mt-24">
+    <div id="capital" className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px] scroll-mt-24">
       <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Seed capital · Analysis basis
       </div>
@@ -323,7 +323,7 @@ function SubscriptionSection() {
 
   return (
     <Section kicker="02 · Tier" title="Subscription">
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
         {isLoading ? (
           <div className="h-20 animate-pulse bg-[rgba(255,255,255,0.02)]" />
         ) : (
@@ -647,7 +647,7 @@ function PreferencesSection() {
 
   return (
     <Section kicker="04 · Preferences" title="Notifications & locale">
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] space-y-4">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px] space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <div className="font-serif text-base text-[var(--pq-ivory)]">
@@ -665,7 +665,7 @@ function PreferencesSection() {
           />
         </div>
 
-        <div className="flex items-center justify-between pt-3 border-t border-[rgba(245,240,232,0.06)]">
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--pq-ivory-line-soft)]">
           <div>
             <div className="font-serif text-base text-[var(--pq-ivory)]">
               Email delivery
@@ -682,7 +682,7 @@ function PreferencesSection() {
         </div>
 
         {/* 정통망법 §50 — global marketing email opt-out (server-backed). */}
-        <div className="flex items-center justify-between pt-3 border-t border-[rgba(245,240,232,0.06)]">
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--pq-ivory-line-soft)]">
           <div>
             <div className="font-serif text-base text-[var(--pq-ivory)]">
               모든 마케팅 이메일 받지 않기
@@ -700,7 +700,7 @@ function PreferencesSection() {
         </div>
 
         {/* Per-channel: earnings pre-brief opt-out. */}
-        <div className="flex items-center justify-between pt-3 border-t border-[rgba(245,240,232,0.06)]">
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--pq-ivory-line-soft)]">
           <div>
             <div className="font-serif text-base text-[var(--pq-ivory)]">
               실적 발표 알림만 받지 않기
@@ -721,7 +721,7 @@ function PreferencesSection() {
         </div>
       </div>
 
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
         <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-3">
           Language
         </div>
@@ -839,7 +839,7 @@ export default function SettingsPageV1() {
         <PreferencesSection />
 
         {/* ── Danger zone ── */}
-        <section className="pt-8 border-t border-[rgba(245,240,232,0.08)]">
+        <section className="pt-8 border-t border-[var(--pq-ivory-line)]">
           <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Danger zone
           </div>

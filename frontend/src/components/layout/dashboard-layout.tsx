@@ -47,7 +47,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <div className="hidden md:flex md:min-h-screen">
         {/* Sidebar rail — sticky full-height column */}
         <aside
-          className="sticky top-0 h-screen w-[240px] shrink-0 border-r border-[rgba(245,240,232,0.08)] bg-[var(--pq-ink)]"
+          className="sticky top-0 h-screen w-[240px] shrink-0 border-r border-[var(--pq-ivory-line)] bg-[var(--pq-ink)]"
         >
           <TerminalSidebar variant="rail" />
         </aside>

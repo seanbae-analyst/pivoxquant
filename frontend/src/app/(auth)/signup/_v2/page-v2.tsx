@@ -324,8 +324,8 @@ export default function SignupPageV2() {
               gap: 14,
               padding: 20,
               borderRadius: 2,
-              border: "0.5px solid rgba(245,240,232,0.08)",
-              background: "rgba(245,240,232,0.02)",
+              border: "0.5px solid var(--pq-ivory-line)",
+              background: "var(--pq-ivory-line-ghost)",
             }}
           >
             <label
@@ -474,7 +474,7 @@ export default function SignupPageV2() {
               style={{
                 flex: 1,
                 height: 0,
-                borderTop: "0.5px solid rgba(245,240,232,0.08)",
+                borderTop: "0.5px solid var(--pq-ivory-line)",
               }}
             />
             <Fleuron size={12} />
@@ -482,7 +482,7 @@ export default function SignupPageV2() {
               style={{
                 flex: 1,
                 height: 0,
-                borderTop: "0.5px solid rgba(245,240,232,0.08)",
+                borderTop: "0.5px solid var(--pq-ivory-line)",
               }}
             />
           </div>

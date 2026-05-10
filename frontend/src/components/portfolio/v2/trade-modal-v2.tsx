@@ -211,7 +211,7 @@ export function TradeModalV2({
           width: "100%",
           maxWidth: 560,
           background: "rgba(184,149,106,0.025)",
-          border: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           borderRadius: "var(--pq-radius-card, 4px)",
           padding: "40px 36px",
           color: "var(--pq-ivory)",
@@ -369,7 +369,7 @@ export function TradeModalV2({
               marginTop: 12,
               paddingTop: 20,
               borderTop:
-                "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+                "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",

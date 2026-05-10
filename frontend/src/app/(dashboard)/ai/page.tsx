@@ -175,7 +175,7 @@ function AnalysisSectionCard({
       </button>
 
       {state.expanded && (
-        <div className="border-t border-[rgba(245,240,232,0.08)] px-5 py-5">
+        <div className="border-t border-[var(--pq-ivory-line)] px-5 py-5">
           {state.loading && !content && (
             <div className="flex items-center justify-center gap-2 py-8">
               <Loader2 className="h-5 w-5 animate-spin text-[var(--pq-bronze)]" />
@@ -389,7 +389,7 @@ export default function AiPage() {
           <DisclaimerBanner type="coaching" />
 
           {/* ── Portfolio Insights ── */}
-          <section className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+          <section className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
             <div className="flex items-start gap-4">
               <div
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[2px] border border-[rgba(245,240,232,0.1)]"
@@ -425,7 +425,7 @@ export default function AiPage() {
 
                 {coaching.data && (
                   <div className="mt-4 space-y-3">
-                    <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.015)] p-4">
+                    <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.015)] p-4">
                       <p className="whitespace-pre-wrap font-serif text-[14px] leading-relaxed text-[var(--pq-ivory)]">
                         {coaching.data.insight}
                       </p>
@@ -435,7 +435,7 @@ export default function AiPage() {
                         <summary className="cursor-pointer text-[12px] font-medium uppercase tracking-[0.22em] text-[var(--pq-bronze)] hover:text-[var(--pq-ivory)] transition-colors">
                           Korean translation
                         </summary>
-                        <div className="mt-3 rounded-[2px] border border-[rgba(245,240,232,0.06)] bg-[rgba(255,255,255,0.015)] p-4">
+                        <div className="mt-3 rounded-[2px] border border-[var(--pq-ivory-line-soft)] bg-[rgba(255,255,255,0.015)] p-4">
                           <p className="whitespace-pre-wrap font-serif text-[13px] leading-relaxed text-[rgba(245,240,232,0.6)]">
                             {coaching.data.insight_kr}
                           </p>
@@ -470,7 +470,7 @@ export default function AiPage() {
           </section>
 
           {/* ── Stock Analysis ── */}
-          <section className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px]">
+          <section className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-[2px]">
             <div className="p-5">
               <Eyebrow withDashLeft={false} className="flex">
                 Station II &middot; Symbol
@@ -518,7 +518,7 @@ export default function AiPage() {
                   </span>
                 </div>
               ) : (
-                <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.015)] px-4 py-5">
+                <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.015)] px-4 py-5">
                   <p className="font-serif text-[14px] text-[var(--pq-ivory)]">
                     보유 종목이나 관심종목을 먼저 추가하세요.
                   </p>
@@ -546,14 +546,14 @@ export default function AiPage() {
 
             {/* Analysis sections */}
             {activeTicker && (
-              <div className="border-t border-[rgba(245,240,232,0.08)]">
+              <div className="border-t border-[var(--pq-ivory-line)]">
                 {(
                   Object.keys(SECTION_CONFIG) as AnalysisSection[]
                 ).map((section) => (
                   <div
                     key={section}
                     className={cn(
-                      section !== "swot" && "border-t border-[rgba(245,240,232,0.06)]",
+                      section !== "swot" && "border-t border-[var(--pq-ivory-line-soft)]",
                     )}
                   >
                     <AnalysisSectionCard
@@ -567,7 +567,7 @@ export default function AiPage() {
             )}
 
             {!activeTicker && hasUserTickers && (
-              <div className="border-t border-[rgba(245,240,232,0.08)] pq-ink-empty text-center py-12">
+              <div className="border-t border-[var(--pq-ivory-line)] pq-ink-empty text-center py-12">
                 <Fleuron size={14} />
                 <div className="font-serif text-[15px] text-[var(--pq-ivory)] mt-3">
                   No symbol selected.

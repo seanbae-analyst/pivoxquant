@@ -103,7 +103,7 @@ function ReportCard({ entry }: { entry: ReportEntry }) {
       className="pq-reports-gallery-card group relative flex flex-col rounded-sm"
       style={{
         backgroundColor: "rgba(255,255,255,0.02)",
-        border: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         padding: "26px 24px 22px",
         minHeight: 220,
         textDecoration: "none",

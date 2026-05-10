@@ -721,7 +721,7 @@ function DrawerContent({
 
       <footer
         className="mt-4 pt-5"
-        style={{ borderTop: "1px solid rgba(245,240,232,0.08)" }}
+        style={{ borderTop: "1px solid var(--pq-ivory-line)" }}
       >
         <p
           className="font-serif italic"

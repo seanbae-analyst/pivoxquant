@@ -171,7 +171,7 @@ export default function RiskPageV2() {
               listStyle: "none",
               padding: 0,
               margin: 0,
-              borderTop: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+              borderTop: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
             }}
           >
             {[
@@ -215,7 +215,7 @@ export default function RiskPageV2() {
                   padding: "16px 0",
                   borderBottom:
                     i < arr.length - 1
-                      ? "1px solid var(--pq-hairline, rgba(245,240,232,0.08))"
+                      ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
                       : "none",
                 }}
               >

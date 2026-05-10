@@ -357,7 +357,7 @@ export function PrivacyCardV2({
         <div
           style={{
             background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(245,240,232,0.08)",
+            border: "1px solid var(--pq-ivory-line)",
             borderRadius: 4,
             padding: 24,
             position: "relative",
@@ -400,7 +400,7 @@ export function PrivacyCardV2({
                 borderTop:
                   idx === 0
                     ? undefined
-                    : "1px solid rgba(245,240,232,0.08)",
+                    : "1px solid var(--pq-ivory-line)",
                 paddingTop: idx === 0 ? 0 : 14,
                 paddingBottom: idx === COOKIE_ROWS.length - 1 ? 0 : 14,
               }}
@@ -456,7 +456,7 @@ export function PrivacyCardV2({
         <div
           style={{
             background: "rgba(255,255,255,0.02)",
-            border: "1px solid rgba(245,240,232,0.08)",
+            border: "1px solid var(--pq-ivory-line)",
             borderRadius: 4,
             padding: 24,
             position: "relative",

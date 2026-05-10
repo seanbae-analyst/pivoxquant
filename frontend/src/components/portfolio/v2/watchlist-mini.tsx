@@ -50,7 +50,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
       className="pq-card"
       style={{
         background: "var(--pq-card-bg-ink, rgba(255,255,255,0.02))",
-        border: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         borderRadius: "var(--pq-radius-card, 4px)",
         padding: 24,
         minHeight: 380,
@@ -108,7 +108,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                   padding: "10px 0",
                   borderBottom:
                     i < items.length - 1
-                      ? "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.06))"
+                      ? "1px solid var(--pq-hairline-ink, var(--pq-ivory-line-soft))"
                       : "none",
                 }}
               >
@@ -171,7 +171,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
         style={{
           marginTop: 16,
           paddingTop: 12,
-          borderTop: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+          borderTop: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",

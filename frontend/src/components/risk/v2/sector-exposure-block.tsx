@@ -27,7 +27,7 @@ const RING_COLORS = [
   "rgba(245,240,232,0.14)",
   "rgba(245,240,232,0.10)",
 ];
-const CASH_COLOR = "rgba(245,240,232,0.08)";
+const CASH_COLOR = "var(--pq-ivory-line)";
 
 const EYEBROW_COLORS = [
   "var(--pq-bronze, #B8956A)",
@@ -128,7 +128,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           className="pq-card"
           style={{
             background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
-            border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+            border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
             borderRadius: 4,
             padding: 24,
             minHeight: 380,
@@ -152,7 +152,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
               cy="110"
               r={RADIUS}
               fill="none"
-              stroke="rgba(245,240,232,0.04)"
+              stroke="var(--pq-ivory-line-faint)"
               strokeWidth="32"
             />
             {segments.map((seg, i) => (
@@ -224,7 +224,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           className="pq-card"
           style={{
             background: "var(--pq-ink-card, rgba(255,255,255,0.02))",
-            border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+            border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
             borderRadius: 4,
             padding: 24,
             minHeight: 380,
@@ -259,7 +259,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     padding: "12px 0",
                     fontWeight: 400,
                     borderBottom:
-                      "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+                      "1px solid var(--pq-hairline, var(--pq-ivory-line))",
                   }}
                 >
                   Sector
@@ -274,7 +274,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     padding: "12px 0",
                     fontWeight: 400,
                     borderBottom:
-                      "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+                      "1px solid var(--pq-hairline, var(--pq-ivory-line))",
                   }}
                 >
                   Leader
@@ -289,7 +289,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     padding: "12px 0",
                     fontWeight: 400,
                     borderBottom:
-                      "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+                      "1px solid var(--pq-hairline, var(--pq-ivory-line))",
                   }}
                 >
                   Weight
@@ -321,7 +321,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                         verticalAlign: "baseline",
                         borderBottom:
                           i < sectors.length - 1
-                            ? "1px solid var(--pq-hairline, rgba(245,240,232,0.08))"
+                            ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
                             : "none",
                       }}
                     >
@@ -345,7 +345,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                         verticalAlign: "baseline",
                         borderBottom:
                           i < sectors.length - 1
-                            ? "1px solid var(--pq-hairline, rgba(245,240,232,0.08))"
+                            ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
                             : "none",
                       }}
                     >
@@ -384,7 +384,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                         verticalAlign: "baseline",
                         borderBottom:
                           i < sectors.length - 1
-                            ? "1px solid var(--pq-hairline, rgba(245,240,232,0.08))"
+                            ? "1px solid var(--pq-hairline, var(--pq-ivory-line))"
                             : "none",
                       }}
                     >

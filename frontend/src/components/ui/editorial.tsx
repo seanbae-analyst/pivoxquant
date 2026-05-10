@@ -224,7 +224,7 @@ export function HairlineSoft({ className = "" }: { className?: string }) {
       className={`pq-hairline-soft ${className}`}
       style={{
         height: 0,
-        borderTop: "0.5px solid rgba(245,240,232,0.08)",
+        borderTop: "0.5px solid var(--pq-ivory-line)",
       }}
     />
   );
@@ -312,7 +312,7 @@ export function FootSignature({
       style={{
         marginTop: "2.5rem",
         paddingTop: "1.25rem",
-        borderTop: "0.5px solid rgba(245,240,232,0.06)",
+        borderTop: "0.5px solid var(--pq-ivory-line-soft)",
         textAlign: "center",
       }}
     >

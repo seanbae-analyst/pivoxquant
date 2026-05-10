@@ -66,7 +66,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
           style={{
             height: 320,
             border:
-              "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+              "1px solid var(--pq-hairline, var(--pq-ivory-line))",
             borderRadius: 4,
             background: "rgba(255,255,255,0.02)",
           }}
@@ -78,7 +78,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
             listStyle: "none",
             padding: 0,
             margin: 0,
-            border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+            border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
             borderRadius: 4,
           }}
         >
@@ -98,7 +98,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                   borderBottom:
                     idx === months.length - 1
                       ? "none"
-                      : "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+                      : "1px solid var(--pq-hairline, var(--pq-ivory-line))",
                 }}
               >
                 <Link

@@ -404,11 +404,11 @@ export default function DiscoverPage() {
                     >
                       {region === "us" ? "United States" : "Korea"}
                     </div>
-                    <div className="border-t border-[rgba(245,240,232,0.08)]">
+                    <div className="border-t border-[var(--pq-ivory-line)]">
                       {rows.map((o) => (
                         <div
                           key={o.name}
-                          className="grid grid-cols-[1fr_auto_64px] items-baseline gap-3 border-b border-[rgba(245,240,232,0.06)] py-3"
+                          className="grid grid-cols-[1fr_auto_64px] items-baseline gap-3 border-b border-[var(--pq-ivory-line-soft)] py-3"
                         >
                           <span
                             className="font-serif text-[14px]"
@@ -554,7 +554,7 @@ export default function DiscoverPage() {
                 : <EmptyBlock title="Earnings Surprise" />}
             </div>
           ) : (
-            <div className="pq-ink-empty mt-5 flex flex-col items-center gap-3 rounded border border-[rgba(245,240,232,0.06)] py-10 text-center">
+            <div className="pq-ink-empty mt-5 flex flex-col items-center gap-3 rounded border border-[var(--pq-ivory-line-soft)] py-10 text-center">
               <Fleuron />
               <p className="text-[12px] text-[rgba(245,240,232,0.55)]">
                 보유 종목이나 관심종목을 추가하면 자동으로 분석합니다.
@@ -847,7 +847,7 @@ function ThematicBlockInk({
       <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
         {title}
       </div>
-      <ul className="divide-y divide-[rgba(245,240,232,0.06)]">
+      <ul className="divide-y divide-[var(--pq-ivory-line-soft)]">
         {items.slice(0, 6).map((x) => (
           <li key={x.ticker} className="grid grid-cols-[auto_1fr_auto] items-baseline gap-2 py-2.5">
             <span className="font-mono text-[12px] text-[var(--pq-bronze)]">{x.ticker}</span>

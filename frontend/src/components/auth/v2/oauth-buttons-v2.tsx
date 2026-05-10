@@ -101,14 +101,14 @@ export function OAuthButtonsV2({
   const enabledShell: React.CSSProperties = {
     ...buttonShellBase,
     border: "1px solid rgba(184,149,106,0.30)",
-    background: "rgba(245,240,232,0.02)",
+    background: "var(--pq-ivory-line-ghost)",
     color: "var(--pq-ivory, #F5F0E8)",
     cursor: "pointer",
   };
 
   const disabledShell: React.CSSProperties = {
     ...buttonShellBase,
-    border: "1px solid rgba(245,240,232,0.06)",
+    border: "1px solid var(--pq-ivory-line-soft)",
     background: "transparent",
     color: "rgba(245,240,232,0.55)",
     cursor: "not-allowed",

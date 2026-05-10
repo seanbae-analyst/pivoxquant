@@ -208,7 +208,7 @@ export function EquityCurveBlock({
         className="pq-card"
         style={{
           background: "var(--pq-card-bg-ink, rgba(255,255,255,0.02))",
-          border: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           borderRadius: "var(--pq-radius-card, 4px)",
           padding: 24,
         }}
@@ -222,7 +222,7 @@ export function EquityCurveBlock({
             paddingBottom: 20,
             marginBottom: 20,
             borderBottom:
-              "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+              "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           }}
         >
           <KpiCell
@@ -316,7 +316,7 @@ export function EquityCurveBlock({
                   x2={SVG_W}
                   y1={y}
                   y2={y}
-                  stroke="rgba(245,240,232,0.06)"
+                  stroke="var(--pq-ivory-line-soft)"
                   strokeWidth={1}
                 />
               ))}
@@ -359,7 +359,7 @@ export function EquityCurveBlock({
             gap: 24,
             marginTop: 16,
             paddingTop: 16,
-            borderTop: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+            borderTop: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
             flexWrap: "wrap",
           }}
         >

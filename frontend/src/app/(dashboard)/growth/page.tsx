@@ -74,7 +74,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
               ))}
             </ul>
             {today.briefing.motivation && (
-              <p className="mt-3 border-t border-[rgba(245,240,232,0.08)] pt-3 text-sm text-[rgba(245,240,232,0.65)]">
+              <p className="mt-3 border-t border-[var(--pq-ivory-line)] pt-3 text-sm text-[rgba(245,240,232,0.65)]">
                 {today.briefing.motivation}
               </p>
             )}
@@ -108,7 +108,7 @@ function DayDetail({ date, onClose }: DayDetailProps) {
         )}
 
         {isToday && today?.score && (
-          <div className="mt-5 flex gap-4 border-t border-[rgba(245,240,232,0.08)] pt-4 text-center">
+          <div className="mt-5 flex gap-4 border-t border-[var(--pq-ivory-line)] pt-4 text-center">
             <div className="flex-1">
               <p className="font-mono text-lg font-bold tabular-nums text-[var(--pq-ivory)]">
                 {today.score.total}
@@ -332,7 +332,7 @@ export default function GrowthPage() {
 
           {todayData?.score ? (
             <>
-              <div className="flex items-center gap-3 rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
+              <div className="flex items-center gap-3 rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(34,197,94,0.12)]">
                   <span className="text-lg font-bold text-[#7DD897]">
                     {todayData.score.activity}
@@ -343,7 +343,7 @@ export default function GrowthPage() {
                   <p className="text-xs text-[rgba(245,240,232,0.55)]">Today&apos;s activity score</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
+              <div className="flex items-center gap-3 rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(226,185,111,0.14)" }}>
                   <span className="text-lg font-bold" style={{ color: "#E2B96F" }}>
                     {todayData.score.reflection}
@@ -372,7 +372,7 @@ export default function GrowthPage() {
 
         {/* Morning Briefing */}
         {todayData?.briefing && (
-          <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+          <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
             <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
               Today&apos;s Priorities
             </h2>
@@ -390,7 +390,7 @@ export default function GrowthPage() {
               ))}
             </ul>
             {todayData.briefing.motivation && (
-              <p className="mt-3 border-t border-[rgba(245,240,232,0.08)] pt-3 text-sm text-[rgba(245,240,232,0.55)]">
+              <p className="mt-3 border-t border-[var(--pq-ivory-line)] pt-3 text-sm text-[rgba(245,240,232,0.55)]">
                 {todayData.briefing.motivation}
               </p>
             )}
@@ -399,7 +399,7 @@ export default function GrowthPage() {
 
         {/* Reflection Form */}
         {todayData?.reflection && (
-          <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+          <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
             <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
               Evening Reflection
             </h2>
@@ -413,7 +413,7 @@ export default function GrowthPage() {
         )}
 
         {/* Growth Graph */}
-        <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+        <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
           <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
             Growth Graph
           </h2>
@@ -435,7 +435,7 @@ export default function GrowthPage() {
         </section>
 
         {/* Weekly Trend */}
-        <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+        <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
           <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
             Weekly Trend
           </h2>
@@ -455,7 +455,7 @@ export default function GrowthPage() {
 
         {/* Weekly Reports */}
         {weeklyData && weeklyData.length > 0 && (
-          <section className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5">
+          <section className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5">
             <h2 className="text-base font-semibold text-[var(--pq-ivory)]">
               Weekly Reports
             </h2>
@@ -463,7 +463,7 @@ export default function GrowthPage() {
               {weeklyData.map((report) => (
                 <div
                   key={report.id}
-                  className="rounded-sm border border-[rgba(245,240,232,0.06)] bg-[rgba(255,255,255,0.02)] p-4"
+                  className="rounded-sm border border-[var(--pq-ivory-line-soft)] bg-[rgba(255,255,255,0.02)] p-4"
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-[rgba(245,240,232,0.82)]">
