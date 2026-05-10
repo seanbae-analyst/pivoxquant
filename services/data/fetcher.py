@@ -82,7 +82,52 @@ KOREAN_SECTORS = {
     "035900.KQ": "Communication Services", "041510.KQ": "Communication Services",
     "122870.KQ": "Communication Services", "352820.KS": "Communication Services",
     "377300.KS": "Financial Services", "403550.KS": "Financial Services",
+    # Bug #10 safety net — minimum scope (1 entry per spec). KIS
+    # bstp_kor_isnm path is the primary fix; this is a fallback when
+    # KIS rate-limits / token unavailable.
+    # 124500.KQ = IT Sengle (KOSDAQ IT services).
+    "124500.KQ": "Technology",
 }
+
+# ── Sector resolution ─────────────────────────────────────────────────────────
+def _resolve_sector(ticker: str, info: dict, is_kr: bool) -> str:
+    """Resolve display sector for a ticker via a 3-step chain.
+
+    US tickers: trust ``info["sector"]`` from FMP (no Starter coverage gap
+    on US equities). Empty/missing → "Unknown".
+
+    KR tickers (.KS / .KQ) — FMP Starter has no KRX sector coverage so
+    info["sector"] is typically empty. Chain:
+      1. ``info.get("sector")`` — only populated if FMP shipped one
+         (rare on KR; preserves backward-compat for any future coverage).
+      2. ``info.get("sector_kr")`` — KIS ``bstp_kor_isnm`` parsed by
+         ``services.data.kr_fundamentals.get_kr_fundamentals``. Korean
+         display string (e.g. "IT 서비스", "전기·전자"). Frontend renders
+         the field verbatim — KR users expect Korean labels on KR tickers.
+      3. ``KOREAN_SECTORS`` hardcoded mapping — backup for KIS rate-limit
+         / network-fail / pre-onboarded tickers. Covers the legacy
+         hardcoded set plus any explicit additions below.
+      4. "Unknown" — terminal fallback (preserved for parity with
+         pre-change behaviour; never raises).
+
+    Returns a string (never None) so downstream JSON serialisers don't
+    have to special-case missing sector.
+    """
+    fmp_sector = info.get("sector")
+    if isinstance(fmp_sector, str) and fmp_sector.strip():
+        return fmp_sector.strip()
+
+    if is_kr:
+        kis_sector = info.get("sector_kr")
+        if isinstance(kis_sector, str) and kis_sector.strip():
+            return kis_sector.strip()
+
+        mapped = KOREAN_SECTORS.get(ticker.upper())
+        if isinstance(mapped, str) and mapped.strip():
+            return mapped
+
+    return "Unknown"
+
 
 # ── Sentiment Word Lists ───────────────────────────────────────────────────────
 BULLISH_WORDS = {
@@ -1053,7 +1098,7 @@ Reply ONLY in this exact JSON format, nothing else:
                 "debt_equity":    info.get("debtToEquity"),
                 "week52_high":    round(float(hist["High"].max()), dp),
                 "week52_low":     round(float(hist["Low"].min()), dp),
-                "sector":         (info.get("sector") or KOREAN_SECTORS.get(ticker.upper(), "Unknown")) if is_kr else info.get("sector", "Unknown"),
+                "sector":         _resolve_sector(ticker, info, is_kr),
                 "industry":       info.get("industry", "Unknown"),
                 "beta":           info.get("beta"),
                 "currency":       curr,
