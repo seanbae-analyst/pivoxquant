@@ -169,6 +169,16 @@ export default function GrowthPage() {
   // "service preparing" panel instead of a stuck-on-Loading skeleton.
   const growthUnavailable = Boolean(graphError && todayError && weeklyError);
 
+  // Bug #12 fix (2026-05-10): the page used to render the full "Your steady
+  // streak." hero during initial SWR load, then re-render to the "준비 중"
+  // panel 1-2s later when all three endpoints errored. That heading flash
+  // confused users and leaked the unavailable-state pivot. Show the
+  // "준비 중" hero until we have positive confirmation Growth OS is live —
+  // i.e., todayData has resolved (graphData / weeklyData have fallbackData
+  // arrays, so they cannot serve as the availability signal). isLoading
+  // covers the first-paint window before the SWR error / data settles.
+  const growthPending = todayLoading && !todayData && !todayError;
+
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const handleDayClick = useCallback((date: string) => {
@@ -187,7 +197,10 @@ export default function GrowthPage() {
 
   // 2026-05-08 (NEW-E): when the optional agent_worker blueprint is missing,
   // render a single "준비 중" panel instead of half-broken sections.
-  if (growthUnavailable) {
+  // 2026-05-10 (Bug #12): also render this panel during the initial load
+  // window so the "Your steady streak." hero never flashes before the
+  // unavailable-fallback resolves.
+  if (growthUnavailable || growthPending) {
     return (
       <ErrorBoundary>
         <div className="space-y-6 pb-8">
