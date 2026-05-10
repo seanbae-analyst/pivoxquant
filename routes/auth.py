@@ -48,6 +48,10 @@ from models import (
     PreTradeReflection, PersonaSnapshot, WeeklyPulse,
 )
 from security import auth_rate_limit, general_rate_limit
+from services.age_verification import (
+    BirthdateValidationError,
+    check_birthdate_payload,
+)
 from services.serializers import serialize_user
 from .decorators import api_auth
 
@@ -266,9 +270,23 @@ def register():
     # H2 fix (2026-05-09 release-prep): bumped from ≥6 to ≥8 (NIST 800-63B).
     if len(pw) < 8:
         return jsonify({"error": "Password must be ≥ 8 characters"}), 400
+    # PIPA §22 ⑥ — server-side under-14 gate. The frontend (signup _v1/_v2)
+    # already fail-fasts client-side, but a direct curl POST bypasses that.
+    # Audit W1.4 P0 finding: the client check was the *only* gate. Every
+    # error here returns a stable i18n code matching
+    # ``frontend/src/lib/age-verification.ts``.
+    try:
+        age_result = check_birthdate_payload(d.get("birthdate"))
+    except BirthdateValidationError as exc:
+        # ``code`` is the stable machine-readable key; frontend matches on it.
+        return jsonify({"error": exc.code}), 400
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already registered"}), 409
-    u = User(email=email, name=name or email.split("@")[0])
+    u = User(
+        email=email,
+        name=name or email.split("@")[0],
+        birthdate=age_result.birthdate,
+    )
     u.set_pw(pw)
     db.session.add(u)
     db.session.commit()
@@ -494,7 +512,11 @@ def google_callback():
                 if avatar and not user.avatar_url:
                     user.avatar_url = avatar
             else:
-                # Create new Google user
+                # Create new Google user. ``birthdate`` is left NULL — the
+                # frontend interstitial (``/signup/oauth-finalize``) will
+                # POST to ``/api/auth/oauth-finalize`` to fill it before
+                # the user can reach any other authenticated route.
+                # PIPA §22 ⑥: under-14 still fail-fasts there.
                 user = User(
                     email=email,
                     name=name,
@@ -524,6 +546,23 @@ def google_callback():
         # Including them in the redirect URL leaks DB schema / ORM internals
         # to the client (browser URL bar, history, Referer header).
         return redirect(f"{origin}/login?error=provisioning_failed")
+
+    # PIPA §22 ⑥ — birthdate gate. New users *and* legacy users (created
+    # before migration 031) reach here with ``birthdate IS NULL`` and must
+    # complete the interstitial before any other authenticated route. The
+    # frontend ``/signup/oauth-finalize`` page POSTs back to
+    # ``/api/auth/oauth-finalize`` once the user enters a valid birthdate.
+    if user.birthdate is None:
+        next_param = request.args.get("next")
+        finalize = "/signup/oauth-finalize"
+        if next_param:
+            from urllib.parse import quote
+            finalize = f"{finalize}?next={quote(_safe_next(next_param), safe='/')}"
+        logger.info(
+            "Google OAuth: birthdate missing → interstitial (user_id=%s)",
+            user.id,
+        )
+        return redirect(f"{origin}{finalize}")
 
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
@@ -642,10 +681,68 @@ def kakao_callback():
         # to the client (browser URL bar, history, Referer header).
         return redirect(f"{origin}/login?error=provisioning_failed")
 
+    # PIPA §22 ⑥ — birthdate gate (mirrors google_callback).
+    if user.birthdate is None:
+        next_param = request.args.get("next")
+        finalize = "/signup/oauth-finalize"
+        if next_param:
+            from urllib.parse import quote
+            finalize = f"{finalize}?next={quote(_safe_next(next_param), safe='/')}"
+        logger.info(
+            "Kakao OAuth: birthdate missing → interstitial (user_id=%s)",
+            user.id,
+        )
+        return redirect(f"{origin}{finalize}")
+
     # Validate redirect destination — must be relative path, no open redirect
     redirect_url = _safe_next(request.args.get("next"))
     logger.info("Kakao OAuth success: origin=%s path=%s", origin, redirect_url)
     return redirect(f"{origin}{redirect_url}")
+
+
+# ── OAuth signup finalization (PIPA §22 ⑥ birthdate interstitial) ────────────
+
+@auth_bp.route("/oauth-finalize", methods=["POST"])
+@auth_rate_limit
+@api_auth
+def oauth_finalize():
+    """Capture birthdate for an OAuth user who hasn't supplied one yet.
+
+    Reached by the frontend ``/signup/oauth-finalize`` interstitial after
+    the OAuth callback redirected the user there because
+    ``user.birthdate IS NULL`` (new sign-up *or* legacy account from
+    before migration 031).
+
+    Idempotent — overwriting an already-set ``birthdate`` is rejected so
+    a user can't lower their stored age via repeated POSTs. Re-running
+    with the same value is a no-op success (200).
+    """
+    if not current_user.is_authenticated:
+        # ``@api_auth`` already gates this, but double-check explicitly so
+        # the contract is obvious to anyone reading the route.
+        return jsonify({"error": "unauthenticated"}), 401
+
+    d = request.get_json() or {}
+    try:
+        age_result = check_birthdate_payload(d.get("birthdate"))
+    except BirthdateValidationError as exc:
+        return jsonify({"error": exc.code}), 400
+
+    user = current_user
+    if user.birthdate is not None and user.birthdate != age_result.birthdate:
+        # Already set to a *different* value — refuse rather than silently
+        # overwrite. PIPA audit trail requirement.
+        return jsonify({"error": "birthdate_already_set"}), 409
+
+    if user.birthdate is None:
+        user.birthdate = age_result.birthdate
+        db.session.commit()
+        logger.info(
+            "OAuth finalize: birthdate set (user_id=%s provider=%s)",
+            user.id, user.oauth_provider,
+        )
+
+    return jsonify({"ok": True, "user": serialize_user(user)})
 
 
 # ── Account Deletion (PIPA compliance) ─────────────────────────────────────
