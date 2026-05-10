@@ -208,6 +208,14 @@
   --pq-text-h1: clamp(2.4rem, 5.6vw, 4.5rem);
   --pq-text-display: clamp(3rem, 7vw, 6rem);
 
+  /* Tokenized sub-12px sizes (PR #213/#214 follow-up F4).
+     Replaces 18+ inline text-[9px..11px] sites in detail page.
+     11px is Apple HIG minimum for body. 10.5/9.5 reserved for chip /
+     micro-label / kicker only — never body copy. */
+  --pq-text-mono-xs: 11px;       /* sub-eyebrow / chip / metadata */
+  --pq-text-eyebrow-sm: 10.5px;  /* tight kicker */
+  --pq-text-mono-tiny: 9.5px;    /* chip / micro-label only — HIG borderline */
+
   /* Tracking */
   --pq-track-eyebrow: 0.22em;
   --pq-track-wordmark: 0.16em;
