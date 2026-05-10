@@ -73,9 +73,12 @@ const nextConfig: NextConfig = {
             value: "max-age=63072000; includeSubDomains; preload",
           },
           {
+            // 2026-05-10 (L4): added `interest-cohort=()` to opt out of
+            // FLoC for any Chromium fork that still ships the cohort API.
+            // Kept aligned with backend Permissions-Policy in security.py.
             key: "Permissions-Policy",
             value:
-              "camera=(), microphone=(), geolocation=(), payment=(self), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+              "camera=(), microphone=(), geolocation=(), payment=(self), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), interest-cohort=()",
           },
         ],
       },
