@@ -8,7 +8,7 @@ from extensions import db
 from models import Position, SignalCache, InvestmentProfile
 from services import fx_service, cache_service, alert_service
 from services.container import engine
-from services.name_resolver import resolve_stock_name
+from services.name_resolver import resolve_stock_name, canonical_display_name
 from services.access_guard import is_user_allowed_ticker, access_denied_response
 from .decorators import api_auth, legal_scrub_response
 from security import general_rate_limit
@@ -25,6 +25,13 @@ def _get_profile_params():
 
 _VALID_LABELS = {"POSITIVE", "NEGATIVE", "NEUTRAL"}
 _VALID_WINDOWS = {"today", "7d", "30d", "all"}
+
+
+def _canonical_name(payload: dict, ticker: str) -> str:
+    """Wrapper around ``canonical_display_name`` (BUG-01 follow-up,
+    2026-05-10). Overrides legacy English KR names from SignalCache
+    rows that were written before PR #227 fixed the source."""
+    return canonical_display_name((payload or {}).get("name"), ticker)
 
 
 def _parse_signals_filters() -> dict:
@@ -160,11 +167,11 @@ def get_signals():
             d["cached_at"] = c.updated_at.isoformat()
             d["observed_at"] = c.updated_at.isoformat()
             d["is_stale"] = stale
-            # Backfill name: SignalCache blobs are populated by engine.analyze()
-            # which may emit bare ticker when the broker snapshot lacks a name.
-            # resolve_stock_name guarantees 회사명 for every KRX/US listing.
-            if not d.get("name") or d.get("name") == t:
-                d["name"] = resolve_stock_name(t) or t
+            # Canonical name (BUG-01 follow-up): KR tickers always
+            # Korean, US keeps cached/resolved English. Old SignalCache
+            # rows (pre-PR-#227) still carry English KR names — overwrite
+            # them so the detail H1 always renders the Korean name.
+            d["name"] = _canonical_name(d, t)
             d.setdefault("ticker", t)
 
             # Apply server-side filter — drops signals outside the contract.
@@ -209,7 +216,7 @@ def get_signals():
             # No row at all — surface as stale so the client can show "—" / skeleton.
             placeholder = {
                 "ticker": t,
-                "name": resolve_stock_name(t) or t,
+                "name": _canonical_name({}, t),
                 "observed_at": None,
                 "is_stale": True,
                 "label": "NEUTRAL",  # placeholder rows are NEUTRAL by design
@@ -242,13 +249,11 @@ def signal_detail(ticker):
         cached = db.session.get(SignalCache, t_up)
         if cached and cached.data_json:
             d = json.loads(cached.data_json)
-            if not d.get("name") or d.get("name") == t_up:
-                d["name"] = resolve_stock_name(t_up) or t_up
+            d["name"] = _canonical_name(d, t_up)
             return jsonify(d)
         return jsonify({"error": f"Analysis failed for '{ticker}'. Check the ticker symbol."}), 404
     cache_service.save_signal(t_up, r)
-    if not r.get("name") or r.get("name") == t_up:
-        r["name"] = resolve_stock_name(t_up) or t_up
+    r["name"] = _canonical_name(r, t_up)
     return jsonify(r)
 
 
@@ -300,10 +305,8 @@ def scan():
         cached = db.session.get(SignalCache, ticker)
         if cached and cached.data_json:
             d = json.loads(cached.data_json)
-            if not d.get("name") or d.get("name") == ticker:
-                d["name"] = resolve_stock_name(ticker) or ticker
+            d["name"] = _canonical_name(d, ticker)
             return jsonify(d)
         return jsonify({"error": f"Analysis failed for '{ticker}'"}), 404
-    if not r.get("name") or r.get("name") == ticker:
-        r["name"] = resolve_stock_name(ticker) or ticker
+    r["name"] = _canonical_name(r, ticker)
     return jsonify(r)
