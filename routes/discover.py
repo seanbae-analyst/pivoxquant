@@ -114,6 +114,19 @@ def _section_get(key: str):
     return None
 
 
+def _section_get_stale(key: str, max_age_sec: int = 86400):
+    """Stale-while-revalidate: return cached data even after TTL expiry up to
+    max_age_sec (default 24h). Used as graceful fallback when upstream is down.
+    Returns (data, age_sec) or (None, None). B-07 fix 2026-05-10."""
+    e = _section_cache.get(key)
+    if not e:
+        return None, None
+    age = time.time() - e["ts"]
+    if age < max_age_sec:
+        return e["data"], int(age)
+    return None, None
+
+
 def _section_set(key: str, data) -> None:
     _section_cache[key] = {"ts": time.time(), "data": data}
 
@@ -176,6 +189,9 @@ def market_overview():
             "discover.market-overview: only %d/5 indices available — "
             "failing fast (no mock fallback)", len(result),
         )
+        stale_data, age = _section_get_stale("overview")
+        if stale_data is not None:
+            return jsonify({**stale_data, "_stale": True, "_stale_age_sec": age})
         return _data_unavailable("market-overview")
 
     _section_set("overview", result)
@@ -228,6 +244,9 @@ def movers():
             "failing fast (no mock fallback)",
             region, len(gainers), len(losers),
         )
+        stale_data, age = _section_get_stale(cache_key)
+        if stale_data is not None:
+            return jsonify({**stale_data, "_stale": True, "_stale_age_sec": age})
         return _data_unavailable(f"movers:{region}")
 
     observed_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -284,6 +303,9 @@ def sectors():
             "discover.sectors: upstream returned %d rows, has_signal=%s — "
             "failing fast (no mock fallback)", len(rows), has_signal,
         )
+        stale_data, age = _section_get_stale("sectors")
+        if stale_data is not None:
+            return jsonify({**stale_data, "_stale": True, "_stale_age_sec": age})
         return _data_unavailable("sectors")
 
     _section_set("sectors", rows)
@@ -307,4 +329,7 @@ def screeners():
         "discover.screeners: no live source implemented — failing fast "
         "(refuses to serve mock as real data)",
     )
+    stale_data, age = _section_get_stale("screeners")
+    if stale_data is not None:
+        return jsonify({**stale_data, "_stale": True, "_stale_age_sec": age})
     return _data_unavailable("screeners", retry_after=3600)
