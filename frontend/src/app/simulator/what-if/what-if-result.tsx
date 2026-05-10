@@ -32,6 +32,13 @@ import { cn } from "@/lib/utils";
 interface WhatIfResultProps {
   data: WhatIfSuccessResponse;
   shareUrl: string;
+  /**
+   * Optional 회사명 — form.tickerName 에서 전달. 회사명이 있으면 헤드라인에
+   * "$1M into 삼성전자" 처럼 표시하고, 없으면 ticker (예: "005930") 로 폴백.
+   * Backend `WhatIfSuccessResponse` 는 ticker 만 반환하므로 form 단에서 가진
+   * 회사명을 prop 으로 흘려보낸다.
+   */
+  tickerName?: string;
 }
 
 /* ── Number formatters ── */
@@ -70,7 +77,7 @@ function pickHeadlineKey(returnPct: number): string {
 
 /* ── Component ── */
 
-export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
+export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) {
   const t = useT();
   const { locale } = useLocale();
   const cardRef = useRef<HTMLDivElement | null>(null);
@@ -94,6 +101,8 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
   const isPositive = return_pct >= 0;
   const headlineKey = pickHeadlineKey(return_pct);
   const annualizedValue = annualized_return_pct ?? 0;
+  // 회사명 우선, ticker 폴백. 헤드라인 / kakao share text 모두 동일 사용.
+  const tickerDisplay = tickerName || ticker;
 
   /* ── Share handlers ── */
 
@@ -115,7 +124,7 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
           title: "PivoxQuant What-If",
           text: t("whatIf.result.headline", {
             date: start_date,
-            ticker,
+            ticker: tickerDisplay,
             amount: fmtMoney(amount_initial, currency),
           }),
           url: shareUrl,
@@ -127,15 +136,15 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
     }
     // Desktop fallback: copy link + toast instructing user to paste into KakaoTalk.
     void onCopyLink();
-  }, [amount_initial, currency, onCopyLink, shareUrl, start_date, t, ticker]);
+  }, [amount_initial, currency, onCopyLink, shareUrl, start_date, t, tickerDisplay]);
 
   const onTwitterShare = useCallback(() => {
-    const text = `${t(headlineKey)} · ${ticker} ${fmtPctStrong(return_pct)}`;
+    const text = `${t(headlineKey)} · ${tickerDisplay} ${fmtPctStrong(return_pct)}`;
     const u = new URL("https://twitter.com/intent/tweet");
     u.searchParams.set("text", text);
     u.searchParams.set("url", shareUrl);
     window.open(u.toString(), "_blank", "noopener,noreferrer");
-  }, [headlineKey, return_pct, shareUrl, t, ticker]);
+  }, [headlineKey, return_pct, shareUrl, t, tickerDisplay]);
 
   const onSaveImage = useCallback(async () => {
     // No heavy DOM-to-canvas dep: we rely on the browser-native
@@ -192,7 +201,7 @@ export function WhatIfResult({ data, shareUrl }: WhatIfResultProps) {
           <h2 className="mt-2 text-base font-bold leading-snug text-slate-900 sm:text-lg">
             {t("whatIf.result.headline", {
               date: start_date,
-              ticker,
+              ticker: tickerDisplay,
               amount: fmtMoney(amount_initial, currency),
             })}
           </h2>

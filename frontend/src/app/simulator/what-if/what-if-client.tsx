@@ -349,7 +349,7 @@ export function WhatIfClient() {
         {/* Result — anchored for smooth-scroll on calculate. */}
         <div ref={resultAnchorRef} className="relative">
           {success ? (
-            <WhatIfResult data={success} shareUrl={shareUrl} />
+            <WhatIfResult data={success} shareUrl={shareUrl} tickerName={form.tickerName} />
           ) : busy ? (
             <div
               className="mt-6 h-96 animate-pulse rounded-sm border"

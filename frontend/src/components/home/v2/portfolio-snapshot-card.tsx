@@ -24,6 +24,14 @@ interface SummaryShape {
   todayPnl?: number;
   todayPnlPct?: number;
   positionCount?: number;
+  /**
+   * Cash percentage (0..100). Backend canonical key from
+   * routes/portfolio.py:894 — `"cashPct": round(cash_pct, 2)`. Honest 0
+   * on empty portfolio, real value on populated. The em-dash fallback
+   * stays for the rare case the field is omitted (older snapshot, error
+   * path).
+   */
+  cashPct?: number | null;
 }
 interface PositionsShape {
   positions?: Position[];
@@ -71,12 +79,14 @@ export function PortfolioSnapshotCard() {
       ? "KRW"
       : "USD";
 
-  // Cash % — graceful fallback: if backend doesn't ship it, leave em-dash.
-  // We don't compute from positions here to avoid divergence from the
-  // backend's cash bucket (which may include free margin, FX, etc.).
-  // TODO: surface cash bucket % once the backend snapshot exposes it.
-  // Until then, render em-dash; v1 also did not surface this.
-  const cashPct: number | null = null as number | null;
+  // Cash % — read from backend's `cashPct` field (routes/portfolio.py:894).
+  // Backend computes as `cash_usd_total / equity_usd * 100` so it includes
+  // free margin / FX, which we'd otherwise diverge from if we re-derived
+  // client-side. Em-dash on missing/non-finite for older snapshots.
+  const cashPct: number | null =
+    summary?.cashPct != null && Number.isFinite(summary.cashPct)
+      ? summary.cashPct
+      : null;
 
   const positionCount = summary?.positionCount ?? positions.length;
   const todayPnl = summary?.todayPnl;
