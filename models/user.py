@@ -81,6 +81,19 @@ class User(UserMixin, db.Model):
     # 차단한다. Managed via migration 024_cross_border_consent.
     cross_border_consent_at = db.Column(db.DateTime, nullable=True)
     cross_border_consent_revoked_at = db.Column(db.DateTime, nullable=True)
+    # PIPA §22 ⑥ — 만 14세 미만 아동은 법정대리인 동의가 필요하다.
+    # PivoxQuant 출시 시점에 법정대리인 동의 절차가 없으므로 만 14세
+    # 미만 가입을 fail-fast 한다. ``birthdate`` 는 가입 시점 검증뿐
+    # 아니라 향후 감사 / 동의 철회 / 미성년자 보호 강화 시점에 사용.
+    #
+    # ``nullable=True`` 정책:
+    #   - 기존 사용자 (마이그레이션 031 이전 가입) 의 birthdate 는 NULL.
+    #   - OAuth 신규 가입은 콜백에서 User row 생성 직후 ``/oauth-finalize``
+    #     interstitial 로 redirect 되어 birthdate 를 수집한다.
+    #   - legacy NULL 사용자는 다음 요청 시 동일 interstitial 로 강제.
+    # 후속 PR 권고: 모든 row backfill 후 ``nullable=False`` 전환.
+    # Managed via migration 031_user_birthdate.
+    birthdate = db.Column(db.Date, nullable=True)
     created_at       = db.Column(db.DateTime,     default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     positions = db.relationship("Position", backref="user", lazy=True,
                                 cascade="all, delete-orphan")
