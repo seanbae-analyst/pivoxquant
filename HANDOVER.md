@@ -1,8 +1,70 @@
-# PivoxQuant — 인수인계서 (2026-05-10 v30 — 6 PR · OPEN PR 0건 · 보안 cleanup + KR ticker fix + 폰트 v3 토큰)
+# PivoxQuant — 인수인계서 (2026-05-10 v31 — 24 PR · OPEN PR 0건 · 자율세션 마라톤 + filter-repo + Vercel rotate)
 
-## 🟢 2026-05-10 v30 종합 — **6 PR squash-merged + Wave 3-4 audit + 회귀 0건** · main `301758a → 0ed07af` · OPEN PR 0건 · backend 1723 PASS / 0 회귀
+## 🟢 2026-05-10 v31 종합 — **24 PR squash-merged + admin actions + race 회복** · main `301758a → 8e30ad3b` · OPEN PR 0건
 
-**현재 main HEAD: `0ed07af`** (origin sync OK). **OPEN PR 0건**.
+**현재 main HEAD: `8e30ad3b`** (origin sync OK). **OPEN PR 0건** (#230 #232 race duplicate close).
+
+### 본 세션 결과 (v30 → v31, 5시간+ 자율 마라톤)
+
+#### PR 통합 (총 24 PR)
+1차 라운드 (#208~#224, 17 PR + handover-v30 직접 merge):
+- #208 보안 cleanup (CI guard + pre-commit + HANDOVER pivoxaudit2 평문 제거)
+- #209 dead code (feedparser + dead html partials + mock_data)
+- #210 legal copy (autotrader + 무료 체험 카피 정리)
+- #211 KR ticker `.KS↔.KQ` suffix toggle (B-02)
+- #212 frontend 종목명 7 surfaces (B-03/B-04/B-09)
+- #213 폰트 v3 토큰 F1/F2/F11 + italic 자율 patch
+- #214 F8 ivory line/bg detail 25 sites
+- #215 recharts dynamic import (-390KB initial)
+- #216 simulator B-01 5y+ counterfactual
+- #217 보안 CSP `script-src 'none'` + HSTS preload + FLoC opt-out
+- #218 ticker name P1+P2 (discover/alerts/PDF templates)
+- #219 회귀 게이트 5종 신설
+- #220 sector chip 9px → 11px (Apple HIG / Bloomberg)
+- #221 ivory sweep 107 files / 307 sites
+- #222 detail 폰트 F4/F5/F6/F7/F9 22 sites
+- #223 alerts batch (N→1) + risk cache (5min TTL)
+- #224 HANDOVER pivoxaudit cleanup (self-heal — gate caught its own work)
+
+2차 라운드 (#225~#231, 7 PR after race recovery):
+- #225 Risk Layer 7 cash buffer real calculation (B-05)
+- #226 DB 인덱스 6건 alembic 030 (perf P1)
+- #227 KR ticker name 한국어 canonical (BUG-01 API divergence)
+- #228 KOSPI/KOSDAQ sanity bounds narrow 50000→4500/2000 (W-04)
+- #229 AI graceful 503 on transient failures (B-08)
+- #231 Discover stale-while-revalidate cache (B-07)
+- (#230 #232 race duplicate — closed)
+
+#### Admin actions
+- C1 git filter-repo (`stockpilot.db` + Sentry DSN regex history scrub) + force-push (`e9e74c9 → f5734e4d`, backup tag `backup/pre-filter-repo-2026-05-10` 보존)
+- C3 Vercel `BETA_PASSWORD` (22-char) + `BETA_SIGNING_SECRET` (64-char) rotate — 새 PW `/tmp/new-beta-pw.txt` (chmod 600)
+- Vercel `Value` 이상 entry production 삭제
+- Vercel 자동 재배포 (force-push 트리거)
+
+#### 외부 액션 보류 (사용자 직접)
+- Sentry 콘솔 New Client Key + 기존 revoke + Vercel `NEXT_PUBLIC_SENTRY_DSN` 갱신
+- GitHub Actions billing 한도 해제 (CI fail setup 1-3초 패턴 종료)
+- Google `seanbae1521@gmail.com` 비밀번호 rotate
+- 변호사 미팅 Q1-Q15 일괄 의견서 (300-500만원, 출시 차단 P0)
+- KRX Open Data Portal 신청 (KOSPI 정식 데이터)
+- 베타테스터 안내 (새 BETA_PASSWORD)
+
+#### Race condition 패턴 (정직 보고)
+2차 라운드 8 wave 동시 dispatch가 단일 main worktree race 유발:
+- Wave 10 W-04: 첫 시도 broken commit `5d67ac3b` (test only, impl lost) → reset → 재진행 PR #228
+- Wave 11 API divergence: 첫 시도 stash recovery → 재진행 PR #227
+- Wave 13 B-08, Wave 14 B-07: 별도 worktree wave 정상 진행 + 직접 처리 중복 (close)
+- 메모리 [feedback_pr_workflow] worktree freshness 룰 6번째 위반
+
+→ 다음 세션 권고: **wave 1개씩 직렬** 또는 **별도 git worktree 강제** (메모리 [feedback_parallel_ops] 강화).
+
+#### 회귀 검증
+- TypeScript exit 0 모든 frontend wave
+- pytest 1780 PASS / 7 skip / 1 xfail (Wave 9 보고 시점) — 본 라운드 PR 후 추가 검증 권고
+- `test_pivoxaudit_secret_leak` 회귀 게이트 PASS (self-heal 작동)
+- 추가 비용 0원 일관 유지
+
+---
 
 ### v30 추가 PR (v29 → v30 누적)
 | PR | 머지 commit | 핵심 |
