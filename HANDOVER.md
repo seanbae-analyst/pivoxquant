@@ -1,4 +1,75 @@
-# PivoxQuant — 인수인계서 (2026-05-10 v32 — 30 PR · OPEN PR 0건 · 자율 마라톤 종료 + worktree cleanup)
+# PivoxQuant — 인수인계서 (2026-05-10 v33 — 39 PR · OPEN PR 4 보류 · 자율세션 종료 + secret rotate + 회귀 1건 admit)
+
+## 🟢 2026-05-10 v33 종합 — **39 PR squash-merged + 8 admin actions + 6 secret rotate + 회귀 1건 admit-revert** · main `301758a → bbad2cd5` · OPEN PR 4 (사용자 결정 보류)
+
+### v33 추가 PR (v32 → v33, 9 PR + 회귀 1건 + 강화 1건)
+- #237 dd_checklist_email naked ticker → name primary + ticker subline (self-heal grep catch)
+- #238 보안 M3 (dev-login production fail-fast) + M5 (OAuth state 10min → 5min)
+- #239 HANDOVER v32
+- #240 Dependabot + Trufflehog secret-scan workflow (free tier)
+- #241 actions/download-artifact 4→8 (CI dep)
+- #242 actions/setup-node 4→6 (CI dep)
+- #243 actions/cache 4→5 (CI dep)
+- #244 jinja2 >=3.1.0→>=3.1.6 (backend dep, minor)
+- #245 sendgrid >=6.11.0→>=6.12.5 (backend dep, minor)
+- #249 lightweight-charts 5.1.0→5.2.0 (frontend dep, minor)
+- #250 react-dom 19.2.4→19.2.6 ⚠ **회귀** — react peer 미동기로 Vercel npm install fail
+- #251 step3 카피 옵션 C (자문업 §6 회피 어휘 보수화)
+- #252 lucide-react 1.7.0→1.14.0 (frontend dep, peer 영향 0)
+- #257 **revert PR #250** (Vercel Production 회복, 1m 빌드 Ready)
+- #258 dependabot.yml `groups` (react-pair / next-toolchain / @testing-library/* / @sentry/*) — PR #250 같은 회귀 차단
+
+### v33 추가 admin actions (4건)
+- **VAPID 키페어 자체 발급** (cryptography ECDSA P-256) + Vercel `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + Railway `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` 동기 — `/tmp/new-vapid-keys.txt` (chmod 600)
+- **SECRET_KEY 자체 발급** (`secrets.token_urlsafe(64)` = 86 chars) + Railway 갱신 — 모든 Flask 세션 invalidate
+- **CSRF_SECRET 자체 발급** (`secrets.token_hex(64)` = 128 chars) + Railway 갱신 — CSRF 토큰 invalidate
+- **Pre-commit hook 활성화** (`git config core.hooksPath .githooks`) — 로컬 staged secret 차단
+
+### v33 회귀 1건 (정직 admit)
+- **PR #250 (react-dom 19.2.4→19.2.6)** dependabot 단독 PR → react peer 미동기 → Vercel `npm error peer react@^19.2.6` → Production Error 10s
+- **즉시 fix**: PR #257 (revert) → main `61e38165` → Vercel 자동 재배포 1m 후 Ready
+- **재발 방지**: PR #258 dependabot.yml `groups` 추가 (react+react-dom 묶음 PR)
+- **외부 영향**: 약 5분 Production Error (베타 단계 사용자 영향 최소)
+- **학습**: peer-dep 묶음 단독 bump = 위험. 그룹 PR 또는 사용자 결정 강제.
+
+### v33 OPEN PR 4건 (사용자 결정 보류)
+- **#246 werkzeug** 3.0.3→3.1.8 (Flask runtime, minor — 호환 검증 권고)
+- **#247 stripe** >=8.0.0→>=15.1.0 (**MAJOR jump 8→15**, breaking 가능, 결제 코드 회귀 위험)
+- **#248 authlib** >=1.3.0→>=1.7.2 (OAuth runtime, 로그인 회귀 위험)
+- **#252는 v33에서 머지** — 잔존은 위 3건 + 향후 dependabot 추가 PR
+
+### v33 자체 발급 secret 종합 (총 6종 자율 갱신)
+| KEY | 위치 | 영향 | 새 값 파일 |
+|---|---|---|---|
+| BETA_PASSWORD | Vercel | 베타테스터 재로그인 | /tmp/new-beta-pw.txt |
+| BETA_SIGNING_SECRET | Vercel | 베타 토큰 invalidate | /tmp/new-beta-pw.txt |
+| NEXT_PUBLIC_VAPID_PUBLIC_KEY | Vercel | Web Push subscription invalidate | /tmp/new-vapid-keys.txt |
+| VAPID_PUBLIC_KEY (페어) | Railway | (동일) | /tmp/new-vapid-keys.txt |
+| VAPID_PRIVATE_KEY (페어) | Railway | (동일) | /tmp/new-vapid-keys.txt |
+| SECRET_KEY | Railway | 모든 Flask 세션 logout | /tmp/new-secrets.txt |
+| CSRF_SECRET | Railway | CSRF 토큰 무효화 | /tmp/new-secrets.txt |
+
+모두 `chmod 600`. 베타테스터 안내 시 새 BETA_PASSWORD 통보 권고.
+
+### v33 외부 콘솔 발급 필수 (자율 100% 불가 — 사용자 직접)
+| 시스템 | 작업 |
+|---|---|
+| Sentry | New Client Key + 기존 revoke + Vercel/Railway env 갱신 |
+| Anthropic | API key rotate (있으면) |
+| FMP | API key rotate |
+| KIS | App key/secret rotate |
+| Alpaca | API key rotate (현재 read-only paper) |
+| Stripe | secret + webhook rotate (현재 미활성) |
+| SendGrid | API key rotate |
+| Google OAuth | client secret rotate (있으면) |
+| Kakao OAuth | client secret rotate |
+| Google 계정 | seanbae1521@gmail.com 비밀번호 (DB leak 가능성 대비) |
+| GitHub | Actions billing 한도 해제 (admin force merge 우회 종료) |
+| KRX Open Data Portal | 신청 (KOSPI 정식 데이터) |
+| 변호사 미팅 | Q1-Q15 일괄 의견서 (300-500만원, 출시 차단 P0) |
+| 베타테스터 | 새 BETA_PASSWORD 안내 (이메일/Slack) |
+
+---
 
 ## 🟢 2026-05-10 v32 종합 — **30 PR squash-merged + 4 admin actions + worktree cleanup** · main `301758a → cafb8f50` · OPEN PR 0건
 
