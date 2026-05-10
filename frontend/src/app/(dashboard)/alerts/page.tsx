@@ -328,7 +328,7 @@ export default function AlertsPage() {
           <>
             {/* Desktop / tablet — hairline table */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="pq-ink-table w-full min-w-[520px]">
+              <table className="pq-ink-table w-full min-w-[460px]">
                 <thead>
                   <tr>
                     <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
@@ -339,9 +339,6 @@ export default function AlertsPage() {
                     </th>
                     <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
                       Title
-                    </th>
-                    <th className="text-left px-5 py-3 text-[10px] tracking-[0.22em] uppercase">
-                      Ticker
                     </th>
                   </tr>
                 </thead>
@@ -379,6 +376,16 @@ export default function AlertsPage() {
                             >
                               {a.name || a.ticker || kindLabel(a.kind)}
                             </div>
+                            {/* PR #212 follow-up: drop the redundant Ticker
+                                column (was duplicated next to a.name).
+                                Promote ticker to a small subline under the
+                                hero name so the symbol code is still visible
+                                without the extra column. */}
+                            {a.name && a.ticker && (
+                              <div className="mt-0.5 text-[10px] tracking-[0.06em] font-mono text-[rgba(245,240,232,0.45)] truncate">
+                                {a.ticker}
+                              </div>
+                            )}
                             <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] truncate">
                               {a.title || a.message}
                             </div>
@@ -393,9 +400,6 @@ export default function AlertsPage() {
                             )}
                           </div>
                         </div>
-                      </td>
-                      <td className="px-5 py-3 text-xs font-mono text-[rgba(245,240,232,0.5)]">
-                        {a.ticker ?? "—"}
                       </td>
                     </tr>
                   ))}
@@ -420,21 +424,19 @@ export default function AlertsPage() {
                     borderBottom: "0.5px solid rgba(245,240,232,0.06)",
                   }}
                 >
-                  {/* Row 1 — Time · Kind · Ticker */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {!a.is_read && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--pq-bronze)] shrink-0" />
-                      )}
-                      <span className="text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
-                        {relativeTime(a.created_at)}
-                      </span>
-                      <span className="text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] whitespace-nowrap">
-                        {kindLabel(a.kind)}
-                      </span>
-                    </div>
-                    <span className="text-xs font-mono text-[rgba(245,240,232,0.5)] whitespace-nowrap">
-                      {a.ticker ?? "—"}
+                  {/* Row 1 — Time · Kind
+                      PR #212 follow-up: drop the right-aligned ticker chip
+                      (duplicated `a.name` already on Row 2). Ticker is now
+                      a small subline under the hero name. */}
+                  <div className="flex items-center gap-2 min-w-0">
+                    {!a.is_read && (
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--pq-bronze)] shrink-0" />
+                    )}
+                    <span className="text-xs text-[rgba(245,240,232,0.6)] tabular-nums whitespace-nowrap">
+                      {relativeTime(a.created_at)}
+                    </span>
+                    <span className="text-[10px] tracking-[0.18em] uppercase text-[var(--pq-bronze)] whitespace-nowrap">
+                      {kindLabel(a.kind)}
                     </span>
                   </div>
 
@@ -448,6 +450,11 @@ export default function AlertsPage() {
                     >
                       {a.name || a.ticker || kindLabel(a.kind)}
                     </div>
+                    {a.name && a.ticker && (
+                      <div className="mt-0.5 text-[10px] tracking-[0.06em] font-mono text-[rgba(245,240,232,0.45)]">
+                        {a.ticker}
+                      </div>
+                    )}
                     {(a.title || a.message) && (
                       <div className="mt-0.5 text-xs text-[rgba(245,240,232,0.6)] leading-relaxed">
                         {a.title || a.message}

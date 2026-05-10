@@ -146,10 +146,12 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
     <>
       {/* ───── PAGE 1 — BRIEF ───── */}
       <PdfPage>
+        {/* PR #212 follow-up — company name first in the header caption,
+            ticker code retained as the secondary identifier. */}
         <PdfHeader
           tier="pro"
           title="EARNINGS PRE-BRIEF"
-          meta={`${data.ticker} · EP-2026-04 · 01/02`}
+          meta={`${data.companyName || data.ticker} · ${data.ticker} · EP-2026-04 · 01/02`}
         />
         <PdfGoldRule />
 
@@ -324,7 +326,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         <PdfHeader
           tier="pro"
           title="EARNINGS PRE-BRIEF"
-          meta={`${data.ticker} · EP-2026-04 · 02/02`}
+          meta={`${data.companyName || data.ticker} · ${data.ticker} · EP-2026-04 · 02/02`}
         />
 
         <PdfEyebrow>02 — Scenario Playbook</PdfEyebrow>

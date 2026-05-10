@@ -144,6 +144,12 @@ function toCheckItems(items: DdItem[]) {
  */
 interface BackendPendingRow {
   ticker: string;
+  /**
+   * PR #212 follow-up — when the backend enriches pending rows with the
+   * company display name we render it as the row hero (with ticker as a
+   * small subline). Optional today; safely falls back to ticker.
+   */
+  companyName?: string;
   shares: number;
   avg_cost: number;
   added_at?: string;
@@ -193,28 +199,58 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
         {pending.map((p, i) => {
           const krw = (p.ticker || "").toUpperCase().endsWith(".KS")
             || (p.ticker || "").toUpperCase().endsWith(".KQ");
+          // PR #212 follow-up — when companyName is present, use it as the
+          // row hero (serif). Ticker becomes a small mono subline. Falls
+          // back to ticker-only when name is missing.
+          const heroName = p.companyName && p.companyName.trim() ? p.companyName : p.ticker;
+          const showTickerSubline = !!(p.companyName && p.companyName.trim());
           return (
             <div
               key={`${p.ticker}-${i}`}
               style={{
                 display: "grid",
-                gridTemplateColumns: "120px 1fr 1fr auto",
+                gridTemplateColumns: "minmax(140px, 1.2fr) 1fr 1fr auto",
                 gap: 16,
                 padding: "16px 0",
                 borderBottom: "1px solid var(--r-rule, #efeae0)",
                 alignItems: "baseline",
               }}
-            className="font-mono" >
-              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--r-gold-deep, #8b6f47)", letterSpacing: "0.04em" }}>
-                {p.ticker}
-              </span>
-              <span style={{ fontSize: 14, color: "var(--r-ink-2)" }}>
+            >
+              <div style={{ minWidth: 0 }}>
+                <div
+                  className="font-serif"
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: "var(--r-ink-1, #1a1a1a)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {heroName}
+                </div>
+                {showTickerSubline && (
+                  <div
+                    className="font-mono"
+                    style={{
+                      fontSize: 11,
+                      color: "var(--r-gold-deep, #8b6f47)",
+                      letterSpacing: "0.04em",
+                      marginTop: 2,
+                    }}
+                  >
+                    {p.ticker}
+                  </div>
+                )}
+              </div>
+              <span className="font-mono" style={{ fontSize: 14, color: "var(--r-ink-2)" }}>
                 {p.shares} shares
               </span>
-              <span style={{ fontSize: 14, color: "var(--r-ink-3)" }}>
+              <span className="font-mono" style={{ fontSize: 14, color: "var(--r-ink-3)" }}>
                 avg {fmtMoney(p.avg_cost, krw)}
               </span>
-              <span style={{ fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+              <span className="font-mono" style={{ fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--r-ink-4)" }}>
                 +{p.days_since ?? "—"}d
               </span>
             </div>
@@ -262,8 +298,9 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
         </div>
 
         <PdfEyebrow>Due Diligence · Pre-Entry</PdfEyebrow>
+        {/* PR #212 follow-up — company name first, ticker only as fallback. */}
         <PdfCoverTitle size={42}>
-          {data.ticker}—<em>before you enter</em>
+          {data.company || data.ticker}—<em>before you enter</em>
           <br />
           25 questions. No answer, no entry.
         </PdfCoverTitle>

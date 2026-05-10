@@ -121,7 +121,8 @@
         <div class="bc-hero-head">
           <div class="bc-hero-eyebrow">★ The One · 이 달의 결정</div>
           {% if v3.hero and v3.hero.ticker %}
-          <span class="pq-pdf-ticker">{{ v3.hero.ticker }}</span>
+          {# PR #212 follow-up — name first, ticker as fallback. Pattern matches L104/132 in insider_mirror. #}
+          <span class="pq-pdf-ticker">{{ v3.hero.name | default(v3.hero.ticker, true) }}</span>
           {% endif %}
         </div>
         <h2 class="bc-hero-title">{{ v3.hero.title | default('이 달의 단일 의사결정 기록.') if v3.hero else '이 달의 단일 의사결정 기록.' }}</h2>

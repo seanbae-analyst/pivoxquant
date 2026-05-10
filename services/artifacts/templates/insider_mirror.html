@@ -173,7 +173,8 @@
           <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--r-ink-4)">{{ v3.featured.badge | default('') }}</div>
           <h3 style="font-family:var(--font-serif);font-size:24px;margin:6px 0;font-weight:500">{{ v3.featured.headline | default('—') }}</h3>
         </div>
-        <span class="pq-pdf-ticker">{{ v3.featured.ticker }}</span>
+        {# PR #212 follow-up — name first, ticker as fallback. Pattern matches L104/132 below. #}
+        <span class="pq-pdf-ticker">{{ v3.featured.name | default(v3.featured.ticker, true) }}</span>
       </div>
       <p style="font-size:13px;line-height:1.65;color:var(--r-ink-2);margin-top:8px">
         {{ v3.featured.body | default('—') }}
