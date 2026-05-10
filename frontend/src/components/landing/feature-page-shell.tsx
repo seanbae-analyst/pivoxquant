@@ -264,7 +264,7 @@ export default function FeaturePageShell({
         className="py-10"
         style={{
           backgroundColor: "#030303",
-          borderTop: "0.5pt solid rgba(245,240,232,0.06)",
+          borderTop: "0.5pt solid var(--pq-ivory-line-soft)",
         }}
       >
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">

@@ -213,7 +213,7 @@ export function ArtifactQueue() {
         </div>
       </header>
 
-      <ul className="divide-y divide-[rgba(245,240,232,0.06)]">
+      <ul className="divide-y divide-[var(--pq-ivory-line-soft)]">
         {rows.map((row) => (
           <ArtifactRow key={row.id} row={row} />
         ))}

@@ -184,7 +184,7 @@ export function TradeModal({
               <Field label="Shares">
                 <input
                   readOnly
-                  className={inputClass + " bg-[rgba(245,240,232,0.04)] text-[rgba(245,240,232,0.55)]"}
+                  className={inputClass + " bg-[var(--pq-ivory-line-faint)] text-[rgba(245,240,232,0.55)]"}
                   value={position.shares}
                 />
               </Field>

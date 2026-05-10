@@ -93,7 +93,7 @@ export default function ProfilesPage() {
   return (
     <div className="min-h-screen bg-[var(--pq-ink)] text-[var(--pq-ivory)]">
       {/* ── Header ── */}
-      <header className="border-b border-[rgba(245,240,232,0.08)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
+      <header className="border-b border-[var(--pq-ivory-line)] bg-[rgba(5,5,5,0.85)] backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <Link
             href="/#features"
@@ -127,7 +127,7 @@ export default function ProfilesPage() {
         {/* ── Assessment intro ── */}
         <SectionCurtain divider={false}>
         <section className="mb-12">
-          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+          <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <h2 className="font-[var(--font-serif)] text-xl font-medium text-[var(--pq-ivory)] mb-3">How it works</h2>
             <p className="text-[rgba(245,240,232,0.82)] leading-relaxed">
               Take our <span className="font-semibold text-[var(--pq-ivory)]">20-question assessment</span> to
@@ -149,7 +149,7 @@ export default function ProfilesPage() {
               return (
                 <div
                   key={profile.title}
-                  className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-5"
+                  className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-5"
                 >
                   <div className="flex items-start gap-4">
                     <div className="shrink-0 flex flex-col items-start gap-1">
@@ -185,14 +185,14 @@ export default function ProfilesPage() {
         {/* ── What each profile customizes ── */}
         <SectionCurtain>
         <section className="mb-16">
-          <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
+          <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 sm:p-8">
             <h2 className="font-[var(--font-serif)] text-lg font-medium text-[var(--pq-ivory)] mb-2">Each profile gets different...</h2>
             <p className="text-sm text-[rgba(245,240,232,0.62)] mb-6">
               Your profile does not just change labels. It changes how the entire system behaves for you.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {customizations.map((item) => (
-                <div key={item.label} className="flex items-center gap-3 rounded-sm px-4 py-3 border border-[rgba(245,240,232,0.08)] bg-[rgba(0,0,0,0.18)]">
+                <div key={item.label} className="flex items-center gap-3 rounded-sm px-4 py-3 border border-[var(--pq-ivory-line)] bg-[rgba(0,0,0,0.18)]">
                   <CheckCircle2 className="w-4 h-4 text-[var(--pq-bronze)] shrink-0" />
                   <span className="text-sm text-[rgba(245,240,232,0.82)]">{item.label}</span>
                 </div>

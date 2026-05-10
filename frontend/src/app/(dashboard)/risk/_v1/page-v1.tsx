@@ -382,7 +382,7 @@ export default function RiskPage() {
           {displayLayers.map((l) => (
             <div
               key={l.no}
-              className="grid grid-cols-[28px_1fr_120px] items-center gap-4 border-b border-[rgba(245,240,232,0.06)] py-4"
+              className="grid grid-cols-[28px_1fr_120px] items-center gap-4 border-b border-[var(--pq-ivory-line-soft)] py-4"
             >
               <span className="font-mono text-[11px] text-[rgba(245,240,232,0.45)]">
                 {String(l.no).padStart(2, "0")}
@@ -478,7 +478,7 @@ export default function RiskPage() {
                         className="h-10 w-12 cursor-default text-center font-mono text-[10px] tabular-nums text-[var(--pq-ivory)] transition-[outline] hover:outline hover:outline-1 hover:outline-[var(--pq-bronze)]"
                         style={{
                           backgroundColor: bg,
-                          border: "0.5px solid rgba(245,240,232,0.06)",
+                          border: "0.5px solid var(--pq-ivory-line-soft)",
                         }}
                       >
                         {v.toFixed(2)}
@@ -593,7 +593,7 @@ function RollingVarInk({
   const lo = Math.min(...series);
 
   return (
-    <div className="rounded-sm border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-4">
+    <div className="rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-4">
       <InteractiveLineChart
         points={points}
         height={180}

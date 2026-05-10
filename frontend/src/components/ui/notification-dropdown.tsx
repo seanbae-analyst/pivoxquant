@@ -205,11 +205,11 @@ export function NotificationDropdown() {
                     <div className="min-w-0 flex-1 space-y-1.5">
                       <div
                         className="h-3 w-4/5 rounded"
-                        style={{ background: "rgba(245,240,232,0.08)" }}
+                        style={{ background: "var(--pq-ivory-line)" }}
                       />
                       <div
                         className="h-2 w-2/5 rounded"
-                        style={{ background: "rgba(245,240,232,0.06)" }}
+                        style={{ background: "var(--pq-ivory-line-soft)" }}
                       />
                     </div>
                   </div>

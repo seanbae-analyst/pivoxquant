@@ -38,7 +38,7 @@ export function KisCard({
 }: KisCardProps) {
   const t = useT();
   return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 sm:p-6">
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-[2px] p-5 sm:p-6">
       {/* Header — kicker + name + status */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
@@ -116,7 +116,7 @@ export function KisCard({
       )}
 
       {/* Issuance guide — expandable */}
-      <details className="group mt-5 pt-4 border-t border-[rgba(245,240,232,0.08)]">
+      <details className="group mt-5 pt-4 border-t border-[var(--pq-ivory-line)]">
         <summary className="cursor-pointer list-none text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] hover:text-[var(--pq-bronze-light,var(--pq-bronze))] flex items-center justify-between">
           <span>How to issue KIS API credentials</span>
           <span className="transition-transform group-open:rotate-180" aria-hidden="true">↓</span>

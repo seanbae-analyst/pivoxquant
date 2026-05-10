@@ -39,7 +39,7 @@ export function TopBar() {
         className="relative z-50 flex h-14 items-center justify-between gap-4 px-4 md:px-6"
         style={{
           background: "var(--pq-ink)",
-          borderBottom: "0.5px solid rgba(245, 240, 232, 0.08)",
+          borderBottom: "0.5px solid var(--pq-ivory-line)",
         }}
       >
         {/* ── Search trigger (opens command palette) ── */}

@@ -132,7 +132,7 @@ function OptionCard({
         ${
           selected
             ? "border-[var(--pq-bronze-light)] bg-[rgba(184,149,106,0.08)] shadow-[0_0_0_1px_rgba(184,149,106,0.25)]"
-            : "border-[rgba(245,240,232,0.1)] bg-[rgba(245,240,232,0.02)] hover:border-[rgba(245,240,232,0.25)] hover:bg-[rgba(245,240,232,0.04)]"
+            : "border-[rgba(245,240,232,0.1)] bg-[var(--pq-ivory-line-ghost)] hover:border-[rgba(245,240,232,0.25)] hover:bg-[var(--pq-ivory-line-faint)]"
         }
       `}
       style={{
@@ -193,7 +193,7 @@ function MultiOptionCard({
         ${
           selected
             ? "border-[var(--pq-bronze-light)] bg-[rgba(184,149,106,0.08)]"
-            : "border-[rgba(245,240,232,0.1)] bg-[rgba(245,240,232,0.02)] hover:border-[rgba(245,240,232,0.25)] hover:bg-[rgba(245,240,232,0.04)]"
+            : "border-[rgba(245,240,232,0.1)] bg-[var(--pq-ivory-line-ghost)] hover:border-[rgba(245,240,232,0.25)] hover:bg-[var(--pq-ivory-line-faint)]"
         }
       `}
       style={{
@@ -305,7 +305,7 @@ function SliderInput({
               ${
                 Number(opt.value) === value
                   ? "bg-[var(--pq-bronze)] text-[var(--pq-ink)] shadow-lg shadow-[rgba(184,149,106,0.3)]"
-                  : "bg-[rgba(245,240,232,0.06)] text-[rgba(245,240,232,0.55)] hover:bg-[rgba(245,240,232,0.12)]"
+                  : "bg-[var(--pq-ivory-line-soft)] text-[rgba(245,240,232,0.55)] hover:bg-[rgba(245,240,232,0.12)]"
               }
             `}
           >
@@ -367,7 +367,7 @@ function LegalStep({
               ${
                 checked
                   ? "border-[var(--pq-bronze-light)] bg-[rgba(184,149,106,0.08)]"
-                  : "border-[rgba(245,240,232,0.1)] bg-[rgba(245,240,232,0.02)] hover:border-[rgba(245,240,232,0.25)]"
+                  : "border-[rgba(245,240,232,0.1)] bg-[var(--pq-ivory-line-ghost)] hover:border-[rgba(245,240,232,0.25)]"
               }
             `}
             style={{

@@ -376,7 +376,7 @@ function PulseHistory({ history }: { history: PulseEntry[] }) {
   const confValues = recent.map((r) => r.confidence);
 
   return (
-    <section className="mt-6 pt-5 border-t border-[rgba(245,240,232,0.08)]">
+    <section className="mt-6 pt-5 border-t border-[var(--pq-ivory-line)]">
       <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Pulse history · last {recent.length} weeks
       </div>

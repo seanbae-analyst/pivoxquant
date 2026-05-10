@@ -181,7 +181,7 @@ export function PersonaShowcase() {
                 minHeight: 230,
                 backgroundColor: "#0D0D0D",
                 border: "0.5px solid rgba(139,111,71,0.28)",
-                boxShadow: "0 1px 0 0 rgba(245,240,232,0.02) inset",
+                boxShadow: "0 1px 0 0 var(--pq-ivory-line-ghost) inset",
               }}
             >
               {/* Hue bar */}

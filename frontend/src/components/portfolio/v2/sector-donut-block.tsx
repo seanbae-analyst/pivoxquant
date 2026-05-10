@@ -30,7 +30,7 @@ const COLOR_RAMP: string[] = [
   "rgba(245,240,232,0.55)",
   "rgba(245,240,232,0.22)",
   "rgba(245,240,232,0.14)",
-  "rgba(245,240,232,0.08)",
+  "var(--pq-ivory-line)",
 ];
 
 function buildSectors(
@@ -113,7 +113,7 @@ export function SectorDonutBlock({
       className="pq-card"
       style={{
         background: "var(--pq-card-bg-ink, rgba(255,255,255,0.02))",
-        border: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+        border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
         borderRadius: "var(--pq-radius-card, 4px)",
         padding: 24,
         minHeight: 380,
@@ -169,7 +169,7 @@ export function SectorDonutBlock({
                 cy={SIZE / 2}
                 r={R}
                 fill="none"
-                stroke="rgba(245,240,232,0.04)"
+                stroke="var(--pq-ivory-line-faint)"
                 strokeWidth={STROKE}
               />
               {segments.map((s, i) => (
@@ -240,7 +240,7 @@ export function SectorDonutBlock({
                   padding: "8px 0",
                   borderBottom:
                     i < sectors.length - 1
-                      ? "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.06))"
+                      ? "1px solid var(--pq-hairline-ink, var(--pq-ivory-line-soft))"
                       : "none",
                 }}
               >

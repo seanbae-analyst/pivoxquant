@@ -354,7 +354,7 @@ export function WhatIfClient() {
             <div
               className="mt-6 h-96 animate-pulse rounded-sm border"
               style={{
-                borderColor: "rgba(245, 240, 232, 0.08)",
+                borderColor: "var(--pq-ivory-line)",
                 backgroundColor: "rgba(255, 255, 255, 0.02)",
               }}
             />

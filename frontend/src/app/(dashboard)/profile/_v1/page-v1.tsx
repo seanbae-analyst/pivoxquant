@@ -243,7 +243,7 @@ function LivingCFOControls() {
   return (
     <>
       {/* Persona overview */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
         <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           Declared persona
         </div>
@@ -279,7 +279,7 @@ function LivingCFOControls() {
       </div>
 
       {/* Drift + cadence */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] space-y-4">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px] space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <div className="font-serif text-base text-[var(--pq-ivory)]">
@@ -296,7 +296,7 @@ function LivingCFOControls() {
           />
         </div>
 
-        <div className="pt-3 border-t border-[rgba(245,240,232,0.06)]">
+        <div className="pt-3 border-t border-[var(--pq-ivory-line-soft)]">
           <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
             Pulse cadence
           </div>
@@ -326,7 +326,7 @@ function LivingCFOControls() {
       </div>
 
       {/* Feedback */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
         <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
           Section feedback
         </div>
@@ -340,7 +340,7 @@ function LivingCFOControls() {
       </div>
 
       {/* Inline pulse */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
         <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)] mb-2">
           Submit a pulse
         </div>
@@ -348,7 +348,7 @@ function LivingCFOControls() {
       </div>
 
       {/* Evolution timeline */}
-      <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+      <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
         <PersonaEvolution bare />
       </div>
     </>
@@ -395,7 +395,7 @@ function JournalCompanionSubsection({
   };
 
   return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
       <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Journal Companion · Layer 4
       </div>
@@ -554,7 +554,7 @@ function AgentDataSubsection() {
   };
 
   return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
       <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
         Agent data
       </div>
@@ -696,7 +696,7 @@ export default function ProfilePageV1() {
 
         {/* ── Identity card ── */}
         <Section kicker="01 · Identity" title="Who you are">
-          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-6 rounded-[2px]">
+          <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-6 rounded-[2px]">
             <div className="flex items-center gap-5">
               <span
                 className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full font-mono text-lg font-semibold"
@@ -743,7 +743,7 @@ export default function ProfilePageV1() {
         <Section kicker="02 · Display" title="Name">
           <form
             onSubmit={handleSaveName}
-            className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] space-y-3"
+            className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px] space-y-3"
           >
             <label
               htmlFor="profile-name"
@@ -778,7 +778,7 @@ export default function ProfilePageV1() {
 
         {/* ── Investor assessment ── */}
         <Section kicker="03 · Calibration" title="Investor assessment">
-          <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px]">
+          <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px]">
             <div className="flex items-center justify-between gap-4 mb-4">
               <span className="text-sm text-[rgba(245,240,232,0.6)]">
                 Investor type
@@ -795,7 +795,7 @@ export default function ProfilePageV1() {
             </div>
             <Link
               href="/onboarding"
-              className="flex items-center justify-between border border-[rgba(245,240,232,0.08)] px-4 py-3 rounded-[2px] hover:border-[var(--pq-bronze)] transition-colors group"
+              className="flex items-center justify-between border border-[var(--pq-ivory-line)] px-4 py-3 rounded-[2px] hover:border-[var(--pq-bronze)] transition-colors group"
             >
               <div>
                 <div className="font-serif text-base text-[var(--pq-ivory)]">
@@ -829,7 +829,7 @@ export default function ProfilePageV1() {
         </Section>
 
         {/* ── Danger zone ── */}
-        <section className="pt-8 border-t border-[rgba(245,240,232,0.08)]">
+        <section className="pt-8 border-t border-[var(--pq-ivory-line)]">
           <div className="text-[10px] tracking-[0.22em] uppercase text-[var(--pq-bronze)]">
             Danger zone
           </div>

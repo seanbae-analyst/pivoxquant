@@ -283,7 +283,7 @@ export function EquityCurveChart({
             </linearGradient>
           </defs>
           <CartesianGrid
-            stroke="rgba(245, 240, 232, 0.06)"
+            stroke="var(--pq-ivory-line-soft)"
             strokeDasharray="2 4"
             vertical={false}
           />

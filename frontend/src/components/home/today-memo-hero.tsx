@@ -141,7 +141,7 @@ export function TodayMemoHero({
             style={{
               height: 32,
               background:
-                "linear-gradient(90deg, rgba(245,240,232,0.04) 0%, rgba(245,240,232,0.08) 50%, rgba(245,240,232,0.04) 100%)",
+                "linear-gradient(90deg, var(--pq-ivory-line-faint) 0%, var(--pq-ivory-line) 50%, var(--pq-ivory-line-faint) 100%)",
               backgroundSize: "200% 100%",
               animation: "pq-skeleton-shimmer 1.4s ease-in-out infinite",
               borderRadius: 2,

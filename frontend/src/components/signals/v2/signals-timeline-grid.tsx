@@ -178,7 +178,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
               gap: 16,
               alignItems: "baseline",
               padding: "20px 0 8px",
-              borderTop: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+              borderTop: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
               marginTop: 8,
             }}
           >

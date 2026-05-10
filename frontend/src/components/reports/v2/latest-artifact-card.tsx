@@ -83,7 +83,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
     return (
       <div
         style={{
-          border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+          border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
           borderRadius: 4,
           padding: "52px 56px",
           background: "rgba(255,255,255,0.02)",
@@ -99,7 +99,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
     return (
       <div
         style={{
-          border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+          border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
           borderRadius: 4,
           padding: "52px 56px",
           background: "rgba(255,255,255,0.02)",
@@ -149,7 +149,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
   return (
     <article
       style={{
-        border: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+        border: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
         borderRadius: 4,
         padding: "52px 56px",
         background: "rgba(255,255,255,0.02)",
@@ -256,7 +256,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         {/* RIGHT — Mentioned */}
         <div
           style={{
-            borderLeft: "1px solid var(--pq-hairline, rgba(245,240,232,0.08))",
+            borderLeft: "1px solid var(--pq-hairline, var(--pq-ivory-line))",
             paddingLeft: 36,
           }}
           className="md:!border-l-0 md:!border-t md:!pl-0 md:!pt-8"

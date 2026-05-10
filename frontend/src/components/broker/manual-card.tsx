@@ -12,7 +12,7 @@ import { useT } from "@/lib/locale";
 export function ManualCard({ onSelect }: { onSelect: () => void }) {
   const t = useT();
   return (
-    <div className="bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] rounded-[2px] p-5 sm:p-6 flex flex-col gap-4">
+    <div className="bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] rounded-[2px] p-5 sm:p-6 flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

@@ -119,7 +119,7 @@ function ArtifactCard({
   return (
     <article
       className={cn(
-        "bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] p-5 rounded-[2px] relative overflow-hidden transition-colors hover:border-[var(--pq-bronze)]",
+        "bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] p-5 rounded-[2px] relative overflow-hidden transition-colors hover:border-[var(--pq-bronze)]",
         locked && "opacity-60",
       )}
     >
@@ -180,7 +180,7 @@ function ArtifactCard({
 
       {/* Section feedback — wiring Layer 2 learning */}
       {!locked && (
-        <div className="mt-4 pt-3 border-t border-[rgba(245,240,232,0.06)]">
+        <div className="mt-4 pt-3 border-t border-[var(--pq-ivory-line-soft)]">
           <SectionFeedbackBar
             artifactId={live?.id ? String(live.id) : entry.slug}
             section={entry.slug}
@@ -258,7 +258,7 @@ function ReportsPageInner() {
       )}
 
       {/* ── Tier filter ── */}
-      <div className="pq-ink-tabs flex gap-6 border-b border-[rgba(245,240,232,0.08)]">
+      <div className="pq-ink-tabs flex gap-6 border-b border-[var(--pq-ivory-line)]">
         {(["all", "free", "pro", "premium"] as const).map((k) => (
           <button
             key={k}
@@ -319,7 +319,7 @@ function ReportsPageInner() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="h-48 rounded-[2px] bg-[rgba(255,255,255,0.02)] border border-[rgba(245,240,232,0.08)] animate-pulse"
+              className="h-48 rounded-[2px] bg-[rgba(255,255,255,0.02)] border border-[var(--pq-ivory-line)] animate-pulse"
             />
           ))}
         </div>
@@ -338,7 +338,7 @@ function ReportsPageInner() {
       )}
 
       {/* ── Footer note ── */}
-      <div className="pt-6 border-t border-[rgba(245,240,232,0.08)] flex items-center gap-2 text-xs text-[rgba(245,240,232,0.4)]">
+      <div className="pt-6 border-t border-[var(--pq-ivory-line)] flex items-center gap-2 text-xs text-[rgba(245,240,232,0.4)]">
         <FileText className="h-3.5 w-3.5" />
         {visible.length} artifacts &middot; tier: <span className="text-[var(--pq-bronze)] uppercase tracking-wider">{tier}</span>
       </div>

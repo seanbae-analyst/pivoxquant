@@ -119,7 +119,7 @@ export default function DocsPage() {
             const Icon = section.icon;
             return (
               <section key={section.title}>
-                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-[rgba(245,240,232,0.08)]">
+                <div className="flex items-center gap-3 mb-6 pb-3 border-b border-[var(--pq-ivory-line)]">
                   <Icon className="h-4 w-4 text-[var(--pq-bronze)]" />
                   <h2 className="font-serif italic text-xl">{section.title}</h2>
                 </div>
@@ -140,7 +140,7 @@ export default function DocsPage() {
           })}
         </div>
 
-        <footer className="mt-16 pt-8 border-t border-[rgba(245,240,232,0.08)] text-center">
+        <footer className="mt-16 pt-8 border-t border-[var(--pq-ivory-line)] text-center">
           <div className="pq-fleuron inline-flex mb-3" aria-hidden="true">❦</div>
           <p className="pq-caption">
             More questions? Email us · hello@pivoxquant.com

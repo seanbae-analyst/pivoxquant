@@ -436,7 +436,7 @@ function QuestionsStep(props: {
         {QUESTIONS.map((q) => (
           <li
             key={q.n}
-            className="border-l-2 border-[rgba(245,240,232,0.08)] pl-5 hover:border-[var(--pq-bronze)] transition-colors"
+            className="border-l-2 border-[var(--pq-ivory-line)] pl-5 hover:border-[var(--pq-bronze)] transition-colors"
           >
             <div className="flex items-baseline gap-3">
               <span
@@ -475,7 +475,7 @@ function QuestionsStep(props: {
         ))}
       </ol>
 
-      <div className="flex flex-wrap gap-3 justify-between pt-3 border-t border-[rgba(245,240,232,0.06)]">
+      <div className="flex flex-wrap gap-3 justify-between pt-3 border-t border-[var(--pq-ivory-line-soft)]">
         <button
           type="button"
           onClick={onBack}
@@ -529,7 +529,7 @@ function CooldownStep({
     <section className="space-y-6">
       <SectionLabel n={3} title={isReady ? "Ready · 결정의 시간" : "Cooldown · 진입 시계"} />
 
-      <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-6">
+      <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-6">
         {/* Trade summary */}
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
@@ -562,7 +562,7 @@ function CooldownStep({
         </div>
 
         {/* Progress bar */}
-        <div className="h-[2px] bg-[rgba(245,240,232,0.08)] relative overflow-hidden">
+        <div className="h-[2px] bg-[var(--pq-ivory-line)] relative overflow-hidden">
           <div
             className="absolute left-0 top-0 h-full bg-[var(--pq-bronze)] transition-all"
             style={{ width: `${pct}%` }}
@@ -583,7 +583,7 @@ function CooldownStep({
         )}
 
         {/* Rationale recap */}
-        <div className="border-t border-[rgba(245,240,232,0.06)] pt-4">
+        <div className="border-t border-[var(--pq-ivory-line-soft)] pt-4">
           <Caption>Your thesis</Caption>
           <p className="mt-2 font-serif text-[14px] leading-relaxed italic text-[rgba(245,240,232,0.78)]">
             &ldquo;{reflection.rationale}&rdquo;
@@ -631,7 +631,7 @@ function TerminalStep({
         n={4}
         title={proceeded ? "Proceeded · 기록 완료" : "Cancelled · 취소"}
       />
-      <div className="rounded-[2px] border border-[rgba(245,240,232,0.08)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
+      <div className="rounded-[2px] border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] p-6 md:p-8 space-y-4">
         <div
           className="font-serif text-[28px] text-[var(--pq-ivory)]"
           style={{ letterSpacing: "-0.01em" }}
@@ -647,7 +647,7 @@ function TerminalStep({
             ? "We stamped your reflection. PivoxQuant does not place trades — open your broker (Alpaca, KIS, etc.) and submit the order yourself."
             : "취소되었습니다. 다음 진입 결정 때 다시 7개 질문을 거치세요."}
         </p>
-        <div className="border-t border-[rgba(245,240,232,0.06)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-[12px] font-mono text-[rgba(245,240,232,0.55)]">
+        <div className="border-t border-[var(--pq-ivory-line-soft)] pt-3 flex flex-wrap gap-x-6 gap-y-1 text-[12px] font-mono text-[rgba(245,240,232,0.55)]">
           <span>{sideLabel(reflection.intended_side)} · {reflection.intended_ticker_name || reflection.intended_ticker}</span>
           {reflection.intended_shares !== null && <span>{reflection.intended_shares} shares</span>}
           <span>

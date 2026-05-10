@@ -229,7 +229,7 @@ export function PositionsTableV2({
         className="pq-card"
         style={{
           background: "var(--pq-card-bg-ink, rgba(255,255,255,0.02))",
-          border: "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+          border: "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
           borderRadius: "var(--pq-radius-card, 4px)",
           overflow: "hidden",
         }}
@@ -312,7 +312,7 @@ export function PositionsTableV2({
                       padding: "14px 12px",
                       textAlign: h.align,
                       borderBottom:
-                        "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+                        "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
                       cursor: "pointer",
                       userSelect: "none",
                       whiteSpace: "nowrap",
@@ -392,7 +392,7 @@ function PositionRow({
     fontSize: 14,
     color: "rgba(245,240,232,0.82)",
     borderBottom:
-      "1px solid var(--pq-hairline-ink, rgba(245,240,232,0.08))",
+      "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
     whiteSpace: "nowrap",
     fontVariantNumeric: "tabular-nums",
   };
@@ -504,7 +504,7 @@ function PositionRow({
             style={{
               width: "100%",
               height: 2,
-              background: "rgba(245,240,232,0.06)",
+              background: "var(--pq-ivory-line-soft)",
               position: "relative",
             }}
           >

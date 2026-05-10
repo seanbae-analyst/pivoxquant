@@ -75,7 +75,7 @@ export function PeerBenchmarkBlockV2({
     <section
       style={{
         background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(245,240,232,0.08)",
+        border: "1px solid var(--pq-ivory-line)",
         borderRadius: 4,
         padding: 32,
         position: "relative",
@@ -258,7 +258,7 @@ export function PeerBenchmarkBlockV2({
                 style={{
                   position: "relative",
                   height: 6,
-                  background: "rgba(245,240,232,0.06)",
+                  background: "var(--pq-ivory-line-soft)",
                   borderRadius: 1,
                 }}
               >

@@ -42,7 +42,7 @@ const MISTAKE_LABELS_KR: Record<string, string> = {
 /* ── Shared styling tokens ── */
 
 const PAPER_BG = "rgba(255,255,255,0.02)";
-const PAPER_BORDER = "rgba(245,240,232,0.08)";
+const PAPER_BORDER = "var(--pq-ivory-line)";
 
 /* ── Utilities ── */
 
@@ -83,7 +83,7 @@ function BenchmarkCompareRow({
       ? own - group
       : null;
   return (
-    <div className="flex items-baseline justify-between gap-3 py-2 border-b border-[rgba(245,240,232,0.06)] last:border-0">
+    <div className="flex items-baseline justify-between gap-3 py-2 border-b border-[var(--pq-ivory-line-soft)] last:border-0">
       <span className="text-xs text-[rgba(245,240,232,0.6)]">{label}</span>
       <div className="flex items-baseline gap-2">
         <span className="font-mono tabular-nums text-sm text-[var(--pq-ivory)]">

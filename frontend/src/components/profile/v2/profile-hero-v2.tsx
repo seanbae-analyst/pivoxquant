@@ -47,7 +47,7 @@ export function ProfileHeroV2({
       className="pq-profile-hero"
       style={{
         padding: "80px 0 48px",
-        borderBottom: "1px solid rgba(245,240,232,0.08)",
+        borderBottom: "1px solid var(--pq-ivory-line)",
         marginBottom: 40,
       }}
     >
