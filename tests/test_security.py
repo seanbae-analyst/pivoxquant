@@ -143,6 +143,7 @@ class TestSecurityHeaders:
     def test_permissions_policy_header_blocks_sensors_and_payment_self(self, client):
         """Permissions-Policy must lock down camera/mic/geo/usb/sensors;
         payment is allowed only for self (Stripe checkout 향후 호환).
+        interest-cohort=() opts out of FLoC.
         Frontend (next.config.ts) 헤더와 정합."""
         r = client.get("/api/health")
         assert r.status_code == 200
@@ -156,6 +157,7 @@ class TestSecurityHeaders:
             "magnetometer=()",
             "gyroscope=()",
             "accelerometer=()",
+            "interest-cohort=()",
         ):
             assert directive in pp, (
                 f"Permissions-Policy missing {directive!r}; got: {pp!r}"
@@ -168,3 +170,24 @@ class TestSecurityHeaders:
         assert r.headers.get("X-Frame-Options") == "DENY"
         assert r.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
         assert "default-src 'self'" in r.headers.get("Content-Security-Policy", "")
+
+    def test_csp_script_src_is_none(self, client):
+        """2026-05-10 (H1): backend CSP must lock script-src to 'none'.
+        Backend serves only JSON + fully static HTML (artifacts share /
+        admin preview / email preferences). Any future template change
+        that introduces inline scripts would silently break in browsers
+        — caught here so the regression is loud, not silent."""
+        r = client.get("/api/health")
+        csp = r.headers.get("Content-Security-Policy", "")
+        assert "script-src 'none'" in csp, (
+            f"CSP must declare script-src 'none' (no 'unsafe-inline', "
+            f"no CDN allow-list); got: {csp!r}"
+        )
+        # Defense-in-depth: the legacy CDN allow-list and 'unsafe-inline'
+        # MUST NOT come back through a copy-paste merge.
+        assert "'unsafe-inline'" not in csp.split("script-src", 1)[1].split(";", 1)[0], (
+            f"script-src must not contain 'unsafe-inline'; got: {csp!r}"
+        )
+        assert "cdn.tailwindcss.com" not in csp, (
+            f"script-src must not whitelist cdn.tailwindcss.com; got: {csp!r}"
+        )
