@@ -639,10 +639,12 @@ function SiteFooter() {
           ))}
         </div>
 
-        {/* 전자상거래법 §13 사업자 정보 표시 (2026-04-27 추가, 2026-04-29 ENV gate).
-            사업자등록번호/통신판매업 신고번호/주소는 NEXT_PUBLIC_BUSINESS_*
+        {/* 전자상거래법 §13 사업자 정보 표시 (2026-04-27 추가, 2026-04-29 ENV gate,
+            2026-05-09 사업자등록 발급 후 BUSINESS_NAME/REPRESENTATIVE/TYPE/SUBTYPE
+            env 추가). 모든 값은 NEXT_PUBLIC_BUSINESS_* / NEXT_PUBLIC_TELESELLER_*
             ENV 가 설정되어 있을 때만 노출. 미설정이면 elide — placeholder
-            "(등록 후 표시)" 노출은 첫 인상 신뢰 깎고 표시광고법 위반 의심. */}
+            "(등록 후 표시)" 노출은 첫 인상 신뢰 깎고 표시광고법 위반 의심.
+            통신판매업 신고번호는 미신고 상태이므로 환경변수 미설정 → 미노출. */}
         <div
           className="pt-6 pb-4"
           style={{ borderTop: "0.5pt solid rgba(245,240,232,0.08)" }}
@@ -656,8 +658,14 @@ function SiteFooter() {
               color: "rgba(245,240,232,0.45)",
             }}
           >
-            <strong style={{ color: "rgba(245,240,232,0.65)" }}>PivoxQuant</strong>
-            &nbsp;·&nbsp; 대표 배상현
+            <strong style={{ color: "rgba(245,240,232,0.65)" }}>
+              {process.env.NEXT_PUBLIC_BUSINESS_NAME || "PivoxQuant"}
+            </strong>
+            {process.env.NEXT_PUBLIC_BUSINESS_REPRESENTATIVE && (
+              <>
+                &nbsp;·&nbsp; 대표 {process.env.NEXT_PUBLIC_BUSINESS_REPRESENTATIVE}
+              </>
+            )}
             {process.env.NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER && (
               <>
                 &nbsp;·&nbsp; 사업자등록번호 {process.env.NEXT_PUBLIC_BUSINESS_REGISTRATION_NUMBER}
@@ -668,13 +676,30 @@ function SiteFooter() {
                 &nbsp;·&nbsp; 통신판매업 신고번호 {process.env.NEXT_PUBLIC_TELESELLER_REGISTRATION_NUMBER}
               </>
             )}
+            {(process.env.NEXT_PUBLIC_BUSINESS_TYPE ||
+              process.env.NEXT_PUBLIC_BUSINESS_SUBTYPE) && (
+              <>
+                <br />
+                {process.env.NEXT_PUBLIC_BUSINESS_TYPE && (
+                  <>업태 {process.env.NEXT_PUBLIC_BUSINESS_TYPE}</>
+                )}
+                {process.env.NEXT_PUBLIC_BUSINESS_TYPE &&
+                  process.env.NEXT_PUBLIC_BUSINESS_SUBTYPE && (
+                    <>&nbsp;·&nbsp;</>
+                  )}
+                {process.env.NEXT_PUBLIC_BUSINESS_SUBTYPE && (
+                  <>종목 {process.env.NEXT_PUBLIC_BUSINESS_SUBTYPE}</>
+                )}
+              </>
+            )}
             {process.env.NEXT_PUBLIC_BUSINESS_ADDRESS && (
               <>
                 <br />
                 주소 {process.env.NEXT_PUBLIC_BUSINESS_ADDRESS}
               </>
             )}
-            &nbsp;·&nbsp; 이메일 <a href="mailto:support@pivoxquant.com" style={{ color: "inherit", textDecoration: "underline" }}>support@pivoxquant.com</a>
+            <br />
+            이메일 <a href="mailto:support@pivoxquant.com" style={{ color: "inherit", textDecoration: "underline" }}>support@pivoxquant.com</a>
             &nbsp;·&nbsp; 호스팅 Vercel · Railway
           </p>
         </div>
