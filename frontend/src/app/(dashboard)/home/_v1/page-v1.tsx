@@ -41,8 +41,10 @@ import { WeeklyPulseCard } from "@/components/dashboard/weekly-pulse";
 import { UpsellPlus } from "@/components/dashboard/upsell-plus";
 import { ArtifactQueue } from "@/components/home/artifact-queue";
 import { TodayMemoHero } from "@/components/home/today-memo-hero";
-import { EquityCurveChart } from "@/components/home/equity-curve-chart";
-import { SectorAllocationDonut } from "@/components/home/sector-allocation-donut";
+// P0-1 perf fix (2026-05-10): recharts lazy-loaded via next/dynamic wrappers.
+// Static imports pulled 391KB(raw)/112KB(gzip) into the home initial bundle.
+import { EquityCurveChart } from "@/components/home/equity-curve-chart-dynamic";
+import { SectorAllocationDonut } from "@/components/home/sector-allocation-donut-dynamic";
 
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
