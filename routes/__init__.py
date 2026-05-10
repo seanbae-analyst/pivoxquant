@@ -84,7 +84,14 @@ def register_blueprints(app):
 
     # Dev-login bypass for E2E testing — only when DEV_LOGIN_SECRET is set.
     # Production (Railway) must NOT set this variable.
+    # 2026-05-10 (security M3): fail-fast if both production AND
+    # DEV_LOGIN_SECRET are set. Operator-error defense.
     if os.environ.get("DEV_LOGIN_SECRET"):
+        if os.environ.get("FLASK_ENV") == "production":
+            raise RuntimeError(
+                "DEV_LOGIN_SECRET must NOT be set in production. "
+                "Refusing to mount dev_auth blueprint (security M3)."
+            )
         from .dev_auth import dev_auth_bp
         blueprints.append(dev_auth_bp)
 
