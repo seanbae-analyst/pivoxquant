@@ -109,13 +109,50 @@ def _build_returns_matrix(tickers: list[str], days: int = 90):
     return tail.values, list(tail.columns), df
 
 
+def _positions_signature(positions: list[Position]) -> str:
+    """Stable hash of (ticker, shares, avg_cost) tuples — invalidates the
+    risk snapshot cache the moment a user changes their book."""
+    import hashlib
+    parts = sorted(
+        f"{p.ticker}|{float(p.shares or 0)}|{float(p.avg_cost or 0)}"
+        for p in positions
+    )
+    return hashlib.sha1("\n".join(parts).encode("utf-8")).hexdigest()  # noqa: S324
+
+
 def _portfolio_snapshot():
     """Build a portfolio_state dict for RiskDefenseSystem.check_all(). Also
     returns auxiliary pieces (tickers, returns_matrix, value series) that
-    other endpoints can reuse without re-fetching."""
+    other endpoints can reuse without re-fetching.
+
+    Perf P0-2 (2026-05-10): in-process 5-min TTL cache keyed on
+    (user_id, positions_signature). Five risk endpoints fan in here — a
+    single dashboard render previously did 5 × N FMP fetches; now the first
+    call populates the cache and the next 4 within the TTL window are O(1).
+    """
     positions = _user_positions()
     if not positions:
         return None, [], None, None
+
+    # Cache lookup BEFORE the expensive fetch + numpy work.
+    sig = None
+    uid = None
+    try:
+        from services.cache_service import (
+            risk_snapshot_cache_get,
+            risk_snapshot_cache_set,
+        )
+        sig = _positions_signature(positions)
+        uid = getattr(current_user, "id", None)
+        cached = risk_snapshot_cache_get(uid, sig) if uid else None
+        if cached is not None:
+            return cached
+    except Exception:
+        # Cache layer must never break the request path. Fall through to
+        # the uncached path on any failure.
+        logger.debug("silent-fallback: risk_snapshot cache lookup", exc_info=True)
+        sig = None
+        uid = None
 
     tickers = [p.ticker for p in positions]
     matrix, valid, df_close = _build_returns_matrix(tickers)
@@ -162,7 +199,16 @@ def _portfolio_snapshot():
         "regime":          "TRANSITION",
         "returns_matrix":  matrix,
     }
-    return state, valid, matrix, df_close
+    payload = (state, valid, matrix, df_close)
+
+    # Populate cache on the way out. Best-effort — cache failures are silent.
+    if uid and sig:
+        try:
+            risk_snapshot_cache_set(uid, sig, payload)
+        except Exception:
+            logger.debug("silent-fallback: risk_snapshot cache write", exc_info=True)
+
+    return payload
 
 
 def _score_to_status(score: int) -> str:
