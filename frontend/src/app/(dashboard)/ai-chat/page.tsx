@@ -22,6 +22,7 @@ import {
 import { Send, StopCircle } from "lucide-react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { TierGate } from "@/components/ui/tier-gate";
+import { AiContentBadge } from "@/components/ui/ai-content-badge";
 import { API } from "@/lib/endpoints";
 
 /* ── Types ── */
@@ -454,6 +455,11 @@ function ChatInner() {
           {streaming ? "Streaming" : "Idle"}
         </div>
       </header>
+
+      {/* AI content disclosure (regulatory ③ 2026-01) — chat output is AI-generated */}
+      <div className="pt-4">
+        <AiContentBadge variant="inline" />
+      </div>
 
       {/* Main chat area — flex-1 grows */}
       <section className="flex-1 min-h-[480px] flex flex-col">
