@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { API } from "@/lib/endpoints";
+import {
+  isValidBirthdate,
+  isAtLeastMinAge,
+  computeAgeYears,
+  UNDER_AGE_KO,
+  UNDER_AGE_EN,
+  BIRTHDATE_LABEL_KO,
+  BIRTHDATE_LABEL_EN,
+} from "@/lib/age-verification";
 
 function GoogleIcon() {
   return (
@@ -112,8 +121,19 @@ export default function SignupPageV1() {
     cross_border: false,
     marketing: false,
   });
+  const [birthdate, setBirthdate] = useState("");
   const [allRequired, setAllRequired] = useState(false);
   const [pulseUnchecked, setPulseUnchecked] = useState(false);
+
+  // PIPA §22 ⑥ — 만 14세 미만 fail-fast.
+  const ageCheck = useMemo(() => {
+    const valid = isValidBirthdate(birthdate);
+    return {
+      valid,
+      eligible: valid && isAtLeastMinAge(birthdate),
+      years: valid ? computeAgeYears(birthdate) : -1,
+    };
+  }, [birthdate]);
 
   useEffect(() => {
     // Preserved verbatim from v1 behavior — derived-value refactor is out of
@@ -123,9 +143,10 @@ export default function SignupPageV1() {
       consents.terms
       && consents.non_advisory
       && consents.age
+      && ageCheck.eligible
       && consents.cross_border,
     );
-  }, [consents]);
+  }, [consents, ageCheck.eligible]);
 
   // Auto-clear the pulse highlight a moment after it fires.
   useEffect(() => {
@@ -170,6 +191,9 @@ export default function SignupPageV1() {
         CONSENT_STORAGE_KEY,
         JSON.stringify({
           ...consents,
+          // PIPA §22 ⑥ — 만나이 검증 흔적.
+          birthdate,
+          age_years: ageCheck.years,
           consented_at: new Date().toISOString(),
         }),
       );
@@ -265,21 +289,61 @@ export default function SignupPageV1() {
           </span>
         </label>
 
-        {/* 3. 만 14세 이상 (PIPA §22) */}
-        <label
-          htmlFor="agree_age"
-          className={`flex cursor-pointer items-start gap-2 rounded-md transition-all ${pulseUnchecked && !consents.age ? "ring-2 ring-rose-400/70 ring-offset-2 ring-offset-slate-50 motion-safe:animate-pulse" : ""}`}
-        >
-          <Checkbox
-            id="agree_age"
-            checked={consents.age}
-            onChange={setConsent("age")}
-          />
-          <span className="text-xs leading-relaxed text-slate-600">
-            <strong className="text-slate-900">[필수]</strong> 만 14세 이상입니다.
-            (개인정보보호법 §22)
-          </span>
-        </label>
+        {/* 3. 만 14세 이상 (PIPA §22 ⑥) — 생년월일 + 자가선언 이중 방어선 */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="agree_birthdate" className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold text-slate-700">
+              {BIRTHDATE_LABEL_KO} · {BIRTHDATE_LABEL_EN}
+            </span>
+            <input
+              id="agree_birthdate"
+              type="date"
+              value={birthdate}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setBirthdate(e.target.value)}
+              aria-invalid={birthdate !== "" && !ageCheck.eligible}
+              aria-describedby="agree_birthdate_msg"
+              className={`rounded-md border bg-white px-2.5 py-1.5 text-xs text-slate-900 ${
+                birthdate && !ageCheck.eligible
+                  ? "border-rose-400"
+                  : "border-slate-300"
+              }`}
+            />
+            {birthdate && !ageCheck.eligible && (
+              <span
+                id="agree_birthdate_msg"
+                role="alert"
+                className="text-[11px] leading-relaxed text-rose-600"
+              >
+                {UNDER_AGE_KO}
+                <br />
+                <span className="opacity-70">{UNDER_AGE_EN}</span>
+              </span>
+            )}
+          </label>
+
+          <label
+            htmlFor="agree_age"
+            className={`flex cursor-pointer items-start gap-2 rounded-md transition-all ${
+              pulseUnchecked && !consents.age
+                ? "ring-2 ring-rose-400/70 ring-offset-2 ring-offset-slate-50 motion-safe:animate-pulse"
+                : ""
+            } ${ageCheck.eligible ? "" : "opacity-50 pointer-events-none"}`}
+          >
+            <Checkbox
+              id="agree_age"
+              checked={consents.age && ageCheck.eligible}
+              onChange={(next) => {
+                if (!ageCheck.eligible) return;
+                setConsent("age")(next);
+              }}
+            />
+            <span className="text-xs leading-relaxed text-slate-600">
+              <strong className="text-slate-900">[필수]</strong> 만 14세
+              이상임을 확인합니다. (개인정보보호법 §22 ⑥)
+            </span>
+          </label>
+        </div>
 
         {/* 4. 개인정보 국외 이전 (PIPA §28-8) */}
         <label

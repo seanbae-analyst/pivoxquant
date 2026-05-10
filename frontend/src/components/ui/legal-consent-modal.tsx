@@ -25,9 +25,18 @@
  * does not render.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { ModalShell } from "@/components/ui/modal-shell";
+import {
+  isValidBirthdate,
+  isAtLeastMinAge,
+  computeAgeYears,
+  UNDER_AGE_KO,
+  UNDER_AGE_EN,
+  BIRTHDATE_LABEL_KO,
+  BIRTHDATE_LABEL_EN,
+} from "@/lib/age-verification";
 
 const CONSENT_STORAGE_KEY = "pivox_signup_consents";
 
@@ -105,11 +114,24 @@ export function LegalConsentModal({
     cross_border: false,
     marketing: false,
   });
+  const [birthdate, setBirthdate] = useState("");
+
+  const ageCheck = useMemo(() => {
+    const valid = isValidBirthdate(birthdate);
+    return {
+      valid,
+      eligible: valid && isAtLeastMinAge(birthdate),
+      years: valid ? computeAgeYears(birthdate) : -1,
+    };
+  }, [birthdate]);
+
+  // PIPA §22 ⑥ — 만 14세 미만은 fail-fast. 자가선언 + 생년월일 이중 검증.
+  const ageOk = consents.age && ageCheck.eligible;
 
   const allRequired =
     consents.terms &&
     consents.non_advisory &&
-    consents.age &&
+    ageOk &&
     consents.cross_border;
 
   useEffect(() => {
@@ -127,6 +149,9 @@ export function LegalConsentModal({
         CONSENT_STORAGE_KEY,
         JSON.stringify({
           ...consents,
+          // PIPA §22 ⑥ — 만나이 검증 흔적. 백엔드 promote 시 별도 저장 가능.
+          birthdate,
+          age_years: ageCheck.years,
           consented_at: new Date().toISOString(),
         }),
       );
@@ -238,24 +263,75 @@ export function LegalConsentModal({
             </span>
           </label>
 
-          {/* 3. 14세 이상 */}
-          <label
-            htmlFor="consent_age"
-            className="flex cursor-pointer items-start gap-2"
-          >
-            <Checkbox
-              id="consent_age"
-              checked={consents.age}
-              onChange={setConsent("age")}
-            />
-            <span
-              className="text-xs leading-relaxed"
-              style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
+          {/* 3. 14세 이상 (PIPA §22 ⑥) — 생년월일 + 자가선언 이중 방어선 */}
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="consent_birthdate"
+              className="flex flex-col gap-1"
             >
-              <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> 만 14세 이상입니다.
-              (개인정보보호법 §22)
-            </span>
-          </label>
+              <span
+                className="text-[11px] uppercase tracking-[0.18em]"
+                style={{ color: "var(--pq-bronze)" }}
+              >
+                {BIRTHDATE_LABEL_KO} · {BIRTHDATE_LABEL_EN}
+              </span>
+              <input
+                id="consent_birthdate"
+                type="date"
+                value={birthdate}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setBirthdate(e.target.value)}
+                aria-invalid={birthdate !== "" && !ageCheck.eligible}
+                aria-describedby="consent_birthdate_msg"
+                className="rounded-[2px] border bg-transparent px-2 py-1.5 text-xs"
+                style={{
+                  borderColor: ageCheck.eligible
+                    ? "var(--pq-ivory-line)"
+                    : birthdate
+                      ? "rgba(244,108,108,0.6)"
+                      : "var(--pq-ivory-line)",
+                  color: "rgba(var(--pq-ivory-rgb), 0.85)",
+                }}
+              />
+              {birthdate && !ageCheck.eligible && (
+                <span
+                  id="consent_birthdate_msg"
+                  role="alert"
+                  className="text-[11px] leading-relaxed"
+                  style={{ color: "rgba(244,108,108,0.92)" }}
+                >
+                  {UNDER_AGE_KO}
+                  <br />
+                  <span style={{ opacity: 0.75 }}>{UNDER_AGE_EN}</span>
+                </span>
+              )}
+            </label>
+
+            <label
+              htmlFor="consent_age"
+              className="flex cursor-pointer items-start gap-2"
+              style={{
+                opacity: ageCheck.eligible ? 1 : 0.5,
+                pointerEvents: ageCheck.eligible ? "auto" : "none",
+              }}
+            >
+              <Checkbox
+                id="consent_age"
+                checked={consents.age && ageCheck.eligible}
+                onChange={(next) => {
+                  if (!ageCheck.eligible) return;
+                  setConsent("age")(next);
+                }}
+              />
+              <span
+                className="text-xs leading-relaxed"
+                style={{ color: "rgba(var(--pq-ivory-rgb), 0.78)" }}
+              >
+                <strong style={{ color: "var(--pq-bronze)" }}>[필수]</strong> 만 14세 이상임을 확인합니다.
+                (개인정보보호법 §22 ⑥)
+              </span>
+            </label>
+          </div>
 
           {/* 4. 국외 이전 동의 (PIPA §28-8) */}
           <label
