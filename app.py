@@ -15,6 +15,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'), ov
 import sentry_sdk
 from flask import Flask, redirect, request, jsonify
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import text
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -102,6 +103,41 @@ if _sentry_dsn:
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # ── Trusted proxy chain (W5.2 — 2026-05-11) ───────────────────────────
+    # PivoxQuant runs behind a single trusted reverse proxy in production:
+    # Vercel Edge → Railway gunicorn (apex) and Railway → gunicorn (api
+    # subdomain). Without ProxyFix every request appears to originate from
+    # the proxy's internal IP (10.x.x.x / Railway egress), which:
+    #
+    #   1. Collapses every visitor onto the same flask-limiter bucket so
+    #      `get_remote_address` can no longer rate-limit per real client →
+    #      rate limits are silently bypassed AND legitimate users get
+    #      429-blocked because of someone else's traffic on the same proxy.
+    #   2. Reports every request as `request.scheme == "http"`, so any
+    #      `url_for(..., _external=True)` (used by OAuth callback, email
+    #      unsubscribe links, brag-card share links) emits an `http://`
+    #      URL that browsers / OAuth providers reject or downgrade.
+    #   3. Logs the proxy IP in audit trails (routes/agent.py waitlist
+    #      `remote_addr` JSON field) instead of the actual client.
+    #
+    # We trust exactly ONE hop: x_for=1, x_proto=1, x_host=1, x_prefix=1.
+    # Trusting more hops than the deployment actually has would let an
+    # attacker spoof headers in the trusted slot. Production = Vercel/Railway
+    # both terminate at one proxy in front of gunicorn, so 1 is correct.
+    #
+    # Gated on `FLASK_ENV=production` so local dev (no proxy) and pytest
+    # (which builds its own factory in tests/conftest.py) get untouched
+    # `request.remote_addr`.
+    if os.environ.get("FLASK_ENV", "development").lower() == "production":
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app,
+            x_for=1,
+            x_proto=1,
+            x_host=1,
+            x_prefix=1,
+        )
+        logger.info("SECURITY: ProxyFix enabled (1 trusted proxy hop)")
 
     # Security middleware (CORS, Rate Limiting, CSRF, Session, Headers)
     init_security(app)
