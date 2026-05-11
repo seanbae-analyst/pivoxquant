@@ -134,7 +134,7 @@ function FrontFace({
           className="font-serif uppercase"
           style={{
             color: "rgba(184,149,106,0.7)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
           }}
         >
@@ -159,7 +159,7 @@ function FrontFace({
           className="font-serif italic"
           style={{
             color: "rgba(184,149,106,0.85)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-caption)",
           }}
         >
           {s.subtitle}
@@ -170,7 +170,7 @@ function FrontFace({
         className="mt-4 font-serif"
         style={{
           color: "rgba(245,240,232,0.68)",
-          fontSize: "14px",
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.6,
         }}
       >
@@ -188,7 +188,7 @@ function FrontFace({
           className="inline-flex items-center gap-1.5 font-serif italic"
           style={{
             color: "var(--pq-bronze)",
-            fontSize: "14px",
+            fontSize: "var(--pq-text-body)",
             borderBottom: "0.5px solid rgba(184,149,106,0.4)",
             paddingBottom: 2,
           }}
@@ -210,7 +210,7 @@ function FrontFace({
           className="inline-flex items-center gap-1.5 font-serif uppercase transition-opacity hover:opacity-100"
           style={{
             color: "rgba(184,149,106,0.7)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             opacity: 0.85,
           }}
@@ -259,7 +259,7 @@ function BackFace({
           className="font-serif uppercase"
           style={{
             color: "rgba(111, 86, 54, 0.95)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
           }}
         >
@@ -269,7 +269,7 @@ function BackFace({
           className="font-serif italic"
           style={{
             color: "rgba(111, 86, 54, 0.7)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-caption)",
           }}
         >
           {s.cadence}
@@ -293,7 +293,7 @@ function BackFace({
         className="relative z-10 mt-3 font-serif"
         style={{
           color: "rgba(42,31,19,0.78)",
-          fontSize: "14px",
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
         }}
       >
@@ -307,7 +307,7 @@ function BackFace({
             className="font-serif"
             style={{
               color: "rgba(42,31,19,0.72)",
-              fontSize: "12px",
+              fontSize: "var(--pq-text-caption)",
               lineHeight: 1.5,
               paddingLeft: 10,
               position: "relative",
@@ -334,7 +334,7 @@ function BackFace({
           className="font-serif italic"
           style={{
             color: "rgba(42,31,19,0.6)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-caption)",
             lineHeight: 1.45,
             maxWidth: "20ch",
           }}
@@ -353,7 +353,7 @@ function BackFace({
           className="inline-flex items-center gap-1.5 font-serif uppercase"
           style={{
             color: "rgba(111, 86, 54, 0.85)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
           }}
         >
@@ -540,7 +540,7 @@ function FrontFaceContent({
           className="font-serif uppercase"
           style={{
             color: "rgba(184,149,106,0.7)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
           }}
         >
@@ -562,7 +562,7 @@ function FrontFaceContent({
         </h3>
         <p
           className="font-serif italic"
-          style={{ color: "rgba(184,149,106,0.85)", fontSize: "12px" }}
+          style={{ color: "rgba(184,149,106,0.85)", fontSize: "var(--pq-text-caption)" }}
         >
           {s.subtitle}
         </p>
@@ -571,7 +571,7 @@ function FrontFaceContent({
         className="mt-4 font-serif"
         style={{
           color: "rgba(245,240,232,0.68)",
-          fontSize: "14px",
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.6,
         }}
       >
@@ -588,7 +588,7 @@ function FrontFaceContent({
           className="inline-flex items-center gap-1.5 font-serif italic"
           style={{
             color: "var(--pq-bronze)",
-            fontSize: "14px",
+            fontSize: "var(--pq-text-body)",
             borderBottom: "0.5px solid rgba(184,149,106,0.4)",
             paddingBottom: 2,
           }}
@@ -608,7 +608,7 @@ function FrontFaceContent({
           className="inline-flex items-center gap-1.5 font-serif uppercase"
           style={{
             color: "rgba(184,149,106,0.7)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
           }}
         >
@@ -638,7 +638,7 @@ function BackFaceContent({
           className="font-serif uppercase"
           style={{
             color: "rgba(111,86,54,0.95)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
           }}
         >
@@ -646,7 +646,7 @@ function BackFaceContent({
         </span>
         <span
           className="font-serif italic"
-          style={{ color: "rgba(111,86,54,0.7)", fontSize: "12px" }}
+          style={{ color: "rgba(111,86,54,0.7)", fontSize: "var(--pq-text-caption)" }}
         >
           {s.cadence}
         </span>
@@ -667,7 +667,7 @@ function BackFaceContent({
         className="relative z-10 mt-3 font-serif"
         style={{
           color: "rgba(42,31,19,0.78)",
-          fontSize: "14px",
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
         }}
       >
@@ -680,7 +680,7 @@ function BackFaceContent({
             className="font-serif"
             style={{
               color: "rgba(42,31,19,0.72)",
-              fontSize: "12px",
+              fontSize: "var(--pq-text-caption)",
               lineHeight: 1.5,
               paddingLeft: 10,
               position: "relative",
@@ -706,7 +706,7 @@ function BackFaceContent({
           className="font-serif italic"
           style={{
             color: "rgba(42,31,19,0.6)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-caption)",
             lineHeight: 1.45,
             maxWidth: "20ch",
           }}
@@ -724,7 +724,7 @@ function BackFaceContent({
           className="inline-flex items-center gap-1.5 font-serif uppercase"
           style={{
             color: "rgba(111,86,54,0.85)",
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
           }}
         >

@@ -16,6 +16,8 @@
 #              (W6.4 sweep — design v3 locks Bronze to #B8956A / 184,149,106)
 #   DS9 FAIL — AI slop colored icon-box + animate-pulse loading pattern
 #              (W6.5 root LoadingScreen sweep — design v3 §9 ban)
+#   DS10 FAIL — inline fontSize literal count regression (count > baseline)
+#              (W8 typography sweep — design v3 §3 token lock-in)
 #
 # NOTE: DS3 is a diff-based guard (only new additions block). DS5/DS6 currently
 #       FAIL on main because the fix PRs (frontend-wave2, design-v3) are not
@@ -414,6 +416,28 @@ jobs:
           print('DS9 PASS — no AI slop colored icon-box loading frames found')
           PYEOF
 
+      # ── DS10: inline fontSize literal count freeze (W8 typography sweep) ─────
+      - name: DS10 — inline fontSize literal count freeze
+        run: |
+          set +e
+          count=$(grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
+            --include="*.tsx" --include="*.ts" \
+            | grep -v '__tests__' | wc -l | xargs)
+          # Baseline established after PR `fontsize-top5-migration-w8` migrated
+          # Top 5 offender files (privacy-card-v2, report-flip-card,
+          # sector-exposure-block, engine-models-drawer, ledger-book-paper) —
+          # 961 → 868 inline literals. Future migration waves should lower
+          # this number; new code must not increase it.
+          baseline=868
+          if [ "$count" -gt "$baseline" ]; then
+            echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
+            grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
+              --include="*.tsx" --include="*.ts" \
+              | grep -v '__tests__' | head -20
+            exit 1
+          fi
+          echo "DS10 PASS — inline fontSize count $count (baseline $baseline)"
+
       # ── Summary comment on PR ─────────────────────────────────────────────────
       - name: Summarize failures on PR
         if: failure() && github.event_name == 'pull_request'
@@ -437,6 +461,7 @@ jobs:
               '| DS7 | N+1 query pattern in routes/ |',
               '| DS8 | v2 bronze hex #E2B96F / rgb 226,185,111 (design v3 lock) |',
               '| DS9 | AI slop icon-box + animate-pulse loading frame |',
+              '| DS10 | inline fontSize literal count regression (v3 typography lock) |',
               '',
               'Guards DS5/DS6/DS7 are currently `continue-on-error: true`',
               '(pending fix PRs). Remove that flag after the fix PRs merge.',
