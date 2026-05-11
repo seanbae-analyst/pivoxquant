@@ -275,6 +275,7 @@ export function WhatIfForm({
             onChange={(e) =>
               onChange({ ...value, startDate: e.target.value })
             }
+            style={{ colorScheme: "light" }}
             className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
           />
         </div>

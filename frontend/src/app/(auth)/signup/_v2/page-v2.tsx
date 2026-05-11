@@ -447,6 +447,7 @@ export default function SignupPageV2() {
                     borderRadius: 2,
                     padding: "8px 10px",
                     fontSize: 13,
+                    colorScheme: "dark",
                   }}
                 />
                 {birthdate && !ageCheck.eligible && (

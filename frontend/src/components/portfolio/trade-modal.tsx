@@ -234,6 +234,7 @@ export function TradeModal({
                   required
                   type="date"
                   className={inputClass}
+                  style={{ colorScheme: "dark" }}
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />
