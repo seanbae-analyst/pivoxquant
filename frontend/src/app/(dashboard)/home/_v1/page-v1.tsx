@@ -289,7 +289,7 @@ export default function HomePageV1() {
             <div
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
                 maxWidth: 220,
@@ -303,7 +303,7 @@ export default function HomePageV1() {
             <div
               className="font-mono"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 marginTop: 2,
                 color: "rgba(245,240,232,0.45)",
                 letterSpacing: "0.06em",
@@ -381,7 +381,7 @@ export default function HomePageV1() {
             <div
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
                 maxWidth: 220,
@@ -395,7 +395,7 @@ export default function HomePageV1() {
             <div
               className="font-mono"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 marginTop: 2,
                 color: "rgba(245,240,232,0.45)",
                 letterSpacing: "0.06em",
@@ -433,7 +433,7 @@ export default function HomePageV1() {
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               color: "rgba(245,240,232,0.45)",
             }}
@@ -473,7 +473,7 @@ export default function HomePageV1() {
             <div
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
                 letterSpacing: "0.02em",
@@ -500,7 +500,7 @@ export default function HomePageV1() {
               className="font-mono uppercase"
               style={{
                 color,
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.2em",
               }}
             >
@@ -595,7 +595,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -617,7 +617,7 @@ export default function HomePageV1() {
           <p
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.82)",
               margin: 0,
@@ -728,7 +728,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -764,7 +764,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -804,7 +804,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -834,7 +834,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -873,7 +873,7 @@ export default function HomePageV1() {
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -901,7 +901,7 @@ export default function HomePageV1() {
                   className="font-mono"
                   style={{
                     marginLeft: 10,
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.06em",
                     color: "rgba(245,240,232,0.45)",
                     fontWeight: 400,
@@ -914,7 +914,7 @@ export default function HomePageV1() {
             <p
               className="font-serif"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 lineHeight: 1.5,
                 color: "rgba(245,240,232,0.55)",
                 margin: "4px 0 0 0",
@@ -950,7 +950,7 @@ export default function HomePageV1() {
             <Fleuron size={13} />
             <p
               className="font-serif"
-              style={{ marginTop: 12, fontStyle: "italic", fontSize: 14 }}
+              style={{ marginTop: 12, fontStyle: "italic", fontSize: "var(--pq-text-body)" }}
             >
               Add your first position to see your top holding chart.
             </p>
@@ -975,7 +975,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -1010,7 +1010,7 @@ export default function HomePageV1() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -1063,7 +1063,7 @@ export default function HomePageV1() {
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.24em",
               color: "var(--pq-bronze)",
             }}
@@ -1073,7 +1073,7 @@ export default function HomePageV1() {
           <p
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.75)",
               margin: 0,

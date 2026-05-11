@@ -249,7 +249,7 @@ function FaqAccordion({ item }: { item: FaqItem }) {
         <p
           className="font-serif pb-5 leading-relaxed"
           style={{
-            fontSize: "14px",
+            fontSize: "var(--pq-text-body)",
             color: "rgba(245,240,232,0.72)",
             lineHeight: 1.7,
           }}
@@ -351,7 +351,7 @@ function ConsentModal({
             <p
               className="font-mono tabular-nums mt-1"
               style={{
-                fontSize: "12px",
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "var(--pq-bronze)",
                 letterSpacing: "0.08em",
               }}
@@ -378,7 +378,7 @@ function ConsentModal({
             />
             <span
               className="font-serif leading-relaxed"
-              style={{ fontSize: "14px", color: "rgba(245,240,232,0.80)" }}
+              style={{ fontSize: "var(--pq-text-body)", color: "rgba(245,240,232,0.80)" }}
             >
               <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
               I have reviewed the key terms — price, billing period, features,
@@ -393,7 +393,7 @@ function ConsentModal({
             />
             <span
               className="font-serif leading-relaxed"
-              style={{ fontSize: "14px", color: "rgba(245,240,232,0.80)" }}
+              style={{ fontSize: "var(--pq-text-body)", color: "rgba(245,240,232,0.80)" }}
             >
               <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
               I agree to automatic monthly billing of {price} until I cancel in
@@ -408,7 +408,7 @@ function ConsentModal({
             />
             <span
               className="font-serif leading-relaxed"
-              style={{ fontSize: "14px", color: "rgba(245,240,232,0.80)" }}
+              style={{ fontSize: "var(--pq-text-body)", color: "rgba(245,240,232,0.80)" }}
             >
               <strong style={{ color: "var(--pq-ivory)" }}>[Required]</strong>{" "}
               I understand that payment is processed by Stripe, Inc. (United
@@ -427,7 +427,7 @@ function ConsentModal({
             <p
               className="font-serif leading-relaxed"
               style={{
-                fontSize: "12px",
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(245,240,232,0.70)",
               }}
             >
@@ -453,7 +453,7 @@ function ConsentModal({
             onClick={onConfirm}
             className="w-full py-3 font-serif transition-all"
             style={{
-              fontSize: "14px",
+              fontSize: "var(--pq-text-body)",
               letterSpacing: "0.02em",
               borderRadius: "2px",
               backgroundColor: allAgreed && !submitting
@@ -470,7 +470,7 @@ function ConsentModal({
           <p
             className="mt-3 text-center font-mono tabular-nums"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.16em",
               color: "rgba(245,240,232,0.55)",
             }}
@@ -536,7 +536,7 @@ export default function PricingPage() {
             href="/"
             className="inline-flex items-center gap-2 font-serif transition-opacity hover:opacity-70"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.08em",
               color: "rgba(245,240,232,0.55)",
             }}
@@ -621,7 +621,7 @@ export default function PricingPage() {
               <p
                 className="font-mono uppercase mb-1"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
                 }}
@@ -631,7 +631,7 @@ export default function PricingPage() {
               <p
                 className="font-serif leading-relaxed"
                 style={{
-                  fontSize: "14px",
+                  fontSize: "var(--pq-text-body)",
                   color: "rgba(245,240,232,0.72)",
                   lineHeight: 1.65,
                   maxWidth: "62ch",
@@ -890,7 +890,7 @@ export default function PricingPage() {
             <p
               className="font-serif leading-relaxed"
               style={{
-                fontSize: "12px",
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(245,240,232,0.60)",
                 lineHeight: 1.7,
               }}
@@ -906,7 +906,7 @@ export default function PricingPage() {
           <p
             className="mt-4 text-center font-mono tabular-nums"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               color: "rgba(245,240,232,0.55)",
             }}

@@ -423,12 +423,15 @@ jobs:
           count=$(grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
             --include="*.tsx" --include="*.ts" \
             | grep -v '__tests__' | wc -l | xargs)
-          # Baseline established after PR `fontsize-top5-migration-w8` migrated
-          # Top 5 offender files (privacy-card-v2, report-flip-card,
-          # sector-exposure-block, engine-models-drawer, ledger-book-paper) —
-          # 961 → 868 inline literals. Future migration waves should lower
-          # this number; new code must not increase it.
-          baseline=868
+          # Baseline ratcheted by PR `fontsize-phase2-w9` (Wave 9) migrating
+          # Top 6-10 offender files (home/_v1/page-v1, indices-detail-paper,
+          # chat-panel, subscription-card-v2, pricing/page, signal-memo-strip,
+          # dd-checklist, companion-entry-v2, settings/_v2/page-v2,
+          # companion/page) — 868 → 733 inline literals.
+          # Prior baseline (W8): 961 → 868 (Top 5 migration).
+          # Future migration waves should lower this number; new code must
+          # not increase it. Ratchet is one-way.
+          baseline=733
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
