@@ -102,7 +102,7 @@ export default function PersonasPreview() {
             className="font-serif uppercase"
             style={{
               color: "var(--pq-bronze)",
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
             }}
           >
@@ -181,7 +181,7 @@ export default function PersonasPreview() {
                   className="font-mono tabular-nums"
                   style={{
                     color: "rgba(184,149,106,0.5)",
-                    fontSize: "12px",
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                   }}
                 >
@@ -191,7 +191,7 @@ export default function PersonasPreview() {
                   className="font-serif italic"
                   style={{
                     color: "rgba(245,240,232,0.4)",
-                    fontSize: "12px",
+                    fontSize: "var(--pq-text-eyebrow)",
                   }}
                 >
                   {p.kr}
@@ -202,7 +202,7 @@ export default function PersonasPreview() {
                 className="mb-2 font-mono uppercase"
                 style={{
                   color: "var(--pq-bronze)",
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.24em",
                 }}
               >
@@ -213,7 +213,7 @@ export default function PersonasPreview() {
                 className="font-serif"
                 style={{
                   color: "var(--pq-ivory)",
-                  fontSize: "24px",
+                  fontSize: "var(--pq-text-quote)",
                   fontWeight: 500,
                   letterSpacing: "-0.01em",
                   marginBottom: 10,
@@ -225,7 +225,7 @@ export default function PersonasPreview() {
                 className="font-serif"
                 style={{
                   color: "rgba(245,240,232,0.72)",
-                  fontSize: "14px",
+                  fontSize: "var(--pq-text-body)",
                   lineHeight: 1.55,
                   marginBottom: 8,
                 }}
@@ -236,7 +236,7 @@ export default function PersonasPreview() {
                 className="font-serif italic"
                 style={{
                   color: "rgba(184,149,106,0.78)",
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   lineHeight: 1.5,
                   marginBottom: 24,
                 }}
@@ -250,7 +250,7 @@ export default function PersonasPreview() {
                   className="inline-flex items-center gap-1.5 font-serif italic"
                   style={{
                     color: "var(--pq-bronze-light, #B8956A)",
-                    fontSize: "12px",
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.02em",
                     borderBottom: "0.5px solid rgba(184,149,106,0.4)",
                     paddingBottom: 2,
@@ -276,7 +276,7 @@ export default function PersonasPreview() {
             className="font-serif italic"
             style={{
               color: "rgba(245,240,232,0.55)",
-              fontSize: "14px",
+              fontSize: "var(--pq-text-body)",
               maxWidth: 480,
             }}
           >
@@ -290,7 +290,7 @@ export default function PersonasPreview() {
               backgroundColor: "transparent",
               border: "0.5pt solid rgba(184,149,106,0.5)",
               color: "var(--pq-ivory)",
-              fontSize: "14px",
+              fontSize: "var(--pq-text-body)",
               letterSpacing: "0.02em",
             }}
           >

@@ -91,7 +91,7 @@ function DonutTooltip({ active, payload, currency }: DonutTooltipProps) {
         background: "rgba(10, 10, 10, 0.92)",
         border: "1px solid rgba(184, 149, 106, 0.32)",
         padding: "8px 12px",
-        fontSize: 12,
+        fontSize: "var(--pq-text-eyebrow)",
         lineHeight: 1.55,
         color: "var(--pq-ivory)",
       }}
@@ -103,14 +103,14 @@ function DonutTooltip({ active, payload, currency }: DonutTooltipProps) {
           color: "var(--pq-bronze)",
           letterSpacing: "0.04em",
           marginBottom: 4,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
         }}
       >
         {row.sector}
       </div>
       <div className="font-mono tabular-nums">
         {row.pct.toFixed(1)}%{" "}
-        <span className="font-serif" style={{ fontSize: 12, color: "rgba(245,240,232,0.55)" }}>
+        <span className="font-serif" style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(245,240,232,0.55)" }}>
           of book
         </span>
       </div>
@@ -121,7 +121,7 @@ function DonutTooltip({ active, payload, currency }: DonutTooltipProps) {
         {fmtMoney(row.value, currency)}
         <span
           className="font-serif"
-          style={{ fontSize: 12, color: "rgba(245,240,232,0.55)", marginLeft: 6 }}
+          style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(245,240,232,0.55)", marginLeft: 6 }}
         >
           · {row.count} {row.count === 1 ? "position" : "positions"}
         </span>
@@ -206,7 +206,7 @@ export function SectorAllocationDonut({
         <div
           className="font-serif"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             lineHeight: 1.6,
             color: "rgba(245, 240, 232, 0.6)",
             maxWidth: 240,
@@ -217,7 +217,7 @@ export function SectorAllocationDonut({
         <Link
           href="/portfolio"
           className="pq-ink-btn-ghost"
-          style={{ height: 30, padding: "0 12px", fontSize: 12, marginTop: 4 }}
+          style={{ height: 30, padding: "0 12px", fontSize: "var(--pq-text-eyebrow)", marginTop: 4 }}
         >
           Open Portfolio
         </Link>
@@ -315,7 +315,7 @@ export function SectorAllocationDonut({
           <div
             className="font-serif"
             style={{
-              fontSize: 16,
+              fontSize: "var(--pq-text-h6)",
               color: "var(--pq-ivory)",
               lineHeight: 1.1,
             }}
@@ -336,7 +336,7 @@ export function SectorAllocationDonut({
           gap: 4,
           minWidth: 0,
           overflowY: "auto",
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
         }}
       >
         {rows.map((r) => (
@@ -369,7 +369,7 @@ export function SectorAllocationDonut({
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
               }}
               title={`${r.sector} · ${r.count} ${r.count === 1 ? "position" : "positions"}`}
             >
@@ -380,7 +380,7 @@ export function SectorAllocationDonut({
               style={{
                 color: "var(--pq-bronze)",
                 fontVariantNumeric: "tabular-nums",
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
               }}
             >
               {r.pct.toFixed(1)}%

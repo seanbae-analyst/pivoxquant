@@ -150,7 +150,7 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
         </div>
         <div
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             color: "#1a1a1a",
             marginTop: 2,
             overflow: "hidden",
@@ -168,7 +168,7 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
           justifyContent: "flex-end",
           gap: 6,
           fontVariantNumeric: "tabular-nums",
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           color: "#141414",
           textAlign: "right",
         }}
@@ -185,7 +185,7 @@ function MiniRow({ quote }: { quote: IndexQuote }) {
         className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
         style={{
           fontVariantNumeric: "tabular-nums",
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           textAlign: "right",
           minWidth: 54,
         }}
@@ -248,7 +248,7 @@ export function OverviewPaper({
           </div>
           <div
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color: "rgba(20,20,20,0.55)",
               marginTop: 3,
             }}
@@ -258,7 +258,7 @@ export function OverviewPaper({
         </div>
         <div
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             textTransform: "uppercase",
             letterSpacing: "0.22em",
             color: "rgba(20,20,20,0.55)",
@@ -308,7 +308,7 @@ export function OverviewPaper({
           </h2>
           <div
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.55)",
@@ -368,7 +368,7 @@ export function OverviewPaper({
             className={`font-mono ${heroPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
             style={{
               fontVariantNumeric: "tabular-nums",
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               marginTop: 4,
             }}
           >
@@ -377,7 +377,7 @@ export function OverviewPaper({
           {hero.proxy_ticker ? (
             <div
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.16em",
                 textTransform: "uppercase",
                 color: "rgba(20,20,20,0.55)",
@@ -404,7 +404,7 @@ export function OverviewPaper({
           style={{
             display: "flex",
             justifyContent: "space-between",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.16em",
             textTransform: "uppercase",
             color: "rgba(20,20,20,0.55)",

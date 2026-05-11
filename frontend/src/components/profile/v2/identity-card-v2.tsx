@@ -89,7 +89,7 @@ export function IdentityCardV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.55)",
           textTransform: "uppercase",
@@ -101,7 +101,7 @@ export function IdentityCardV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
@@ -126,6 +126,7 @@ export function IdentityCardV2({
             border: "1px solid var(--pq-bronze)",
             color: "var(--pq-bronze)",
             fontSize: 28,
+            // 28px: no token equivalent (between h6 16 / h5 18 and h3 32) — inline retained
             letterSpacing: "0.04em",
             display: "flex",
             alignItems: "center",
@@ -141,7 +142,7 @@ export function IdentityCardV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 24,
+              fontSize: "var(--pq-text-quote)",
               lineHeight: 1.15,
               color: "var(--pq-ivory)",
               overflow: "hidden",
@@ -155,7 +156,7 @@ export function IdentityCardV2({
             className="font-mono"
             style={{
               fontVariantNumeric: "tabular-nums",
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               color: "rgba(245,240,232,0.55)",
               marginTop: 4,
               overflow: "hidden",
@@ -177,7 +178,7 @@ export function IdentityCardV2({
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
                 border: "1px solid var(--pq-bronze)",
@@ -191,7 +192,7 @@ export function IdentityCardV2({
               <span
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   color: "rgba(245,240,232,0.55)",
                   textTransform: "uppercase",
@@ -213,7 +214,7 @@ export function IdentityCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
             marginBottom: 8,
@@ -225,7 +226,7 @@ export function IdentityCardV2({
           className="font-display"
           style={{
             fontWeight: 500,
-            fontSize: 18,
+            fontSize: "var(--pq-text-h5)",
             lineHeight: 1.2,
             color: "var(--pq-ivory)",
           }}
@@ -235,7 +236,7 @@ export function IdentityCardV2({
         <p
           className="font-serif"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.5,
             color: "rgba(245,240,232,0.65)",
             marginTop: 8,

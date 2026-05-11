@@ -888,7 +888,7 @@ export default function HomePageV1() {
               <h2
                 className="font-serif"
                 style={{
-                  fontSize: 20,
+                  fontSize: "var(--pq-text-h4)",
                   lineHeight: 1.2,
                   color: "var(--pq-ivory)",
                   margin: "4px 0 0 0",
