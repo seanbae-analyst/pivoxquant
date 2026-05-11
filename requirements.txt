@@ -9,7 +9,7 @@ apscheduler==3.10.4
 werkzeug==3.1.8
 requests==2.33.1
 python-dotenv==1.0.1
-anthropic>=0.39.0
+anthropic>=0.93.0,<0.101.0
 psycopg2-binary>=2.9.9
 alpaca-py>=0.30.0
 sentry-sdk[flask]>=2.59.0
