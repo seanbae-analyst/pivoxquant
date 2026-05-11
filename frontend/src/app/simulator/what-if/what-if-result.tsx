@@ -186,19 +186,38 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       className="mt-6"
     >
-      {/* Share card — screenshot target */}
+      {/* Share card — screenshot target. v3 Vantablack: ink surface,
+          ivory hairlines, bronze eyebrow/CTA, KR convention pos=red/neg=blue
+          via the existing `up-color` / `down-color` utility classes (unchanged). */}
       <div
         ref={cardRef}
         id="what-if-share-card"
-        className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+        className="overflow-hidden rounded-sm border"
+        style={{
+          borderColor: "var(--pq-ivory-line)",
+          backgroundColor: "rgba(255, 255, 255, 0.015)",
+        }}
       >
-        {/* Hero band */}
-        <div className="px-5 py-5 sm:px-8 sm:py-6 bg-slate-50">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+        {/* Hero band — bronze eyebrow + Playfair italic headline. */}
+        <div
+          className="px-5 py-5 sm:px-8 sm:py-6"
+          style={{ backgroundColor: "rgba(184, 149, 106, 0.04)" }}
+        >
+          <div
+            className="pq-ink-label flex items-center gap-2"
+            style={{ color: "var(--pq-bronze)" }}
+          >
             <Sparkles className="h-3.5 w-3.5" />
             {t(headlineKey)}
           </div>
-          <h2 className="mt-2 text-base font-bold leading-snug text-slate-900 sm:text-lg">
+          <h2
+            className="mt-2 font-serif italic leading-snug"
+            style={{
+              color: "var(--pq-ivory)",
+              fontSize: "clamp(1rem, 2vw, 1.25rem)",
+              letterSpacing: "-0.01em",
+            }}
+          >
             {t("whatIf.result.headline", {
               date: start_date,
               ticker: tickerDisplay,
@@ -207,18 +226,33 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
           </h2>
         </div>
 
-        {/* Hero numbers */}
-        <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
-          <div className="px-5 py-5 sm:px-8 sm:py-6">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        {/* Hero numbers — hairline dividers on ivory-line tone. */}
+        <div
+          className="grid grid-cols-2"
+          style={{ borderBottom: "1px solid var(--pq-ivory-line-soft)" }}
+        >
+          <div
+            className="px-5 py-5 sm:px-8 sm:py-6"
+            style={{ borderRight: "1px solid var(--pq-ivory-line-soft)" }}
+          >
+            <div
+              className="pq-ink-label"
+              style={{ color: "rgba(245, 240, 232, 0.5)" }}
+            >
               {t("whatIf.result.currentValue")}
             </div>
-            <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-slate-900 sm:text-3xl">
+            <div
+              className="mt-1 font-mono text-2xl font-bold tabular-nums sm:text-3xl"
+              style={{ color: "var(--pq-ivory)" }}
+            >
               {fmtMoney(end_value, currency)}
             </div>
           </div>
           <div className="px-5 py-5 sm:px-8 sm:py-6">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <div
+              className="pq-ink-label"
+              style={{ color: "rgba(245, 240, 232, 0.5)" }}
+            >
               {t("whatIf.result.returnPct")}
             </div>
             <div
@@ -233,25 +267,41 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
         </div>
 
         {/* Sub-stats */}
-        <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100 text-center">
-          <div className="px-3 py-3 sm:px-5 sm:py-4">
-            <div className="text-[10px] font-semibold uppercase text-slate-400">
+        <div
+          className="grid grid-cols-3 text-center"
+          style={{ borderBottom: "1px solid var(--pq-ivory-line-soft)" }}
+        >
+          <div
+            className="px-3 py-3 sm:px-5 sm:py-4"
+            style={{ borderRight: "1px solid var(--pq-ivory-line-soft)" }}
+          >
+            <div
+              className="text-[10px] font-semibold uppercase tracking-wider"
+              style={{ color: "rgba(245, 240, 232, 0.4)" }}
+            >
               {t("whatIf.result.invested")}
             </div>
-            <div className="mt-0.5 font-mono text-xs font-semibold tabular-nums text-slate-700 sm:text-sm">
+            <div
+              className="mt-0.5 font-mono text-xs font-semibold tabular-nums sm:text-sm"
+              style={{ color: "rgba(245, 240, 232, 0.75)" }}
+            >
               {fmtMoney(total_invested, currency)}
             </div>
           </div>
-          <div className="px-3 py-3 sm:px-5 sm:py-4">
-            <div className="text-[10px] font-semibold uppercase text-slate-400">
+          <div
+            className="px-3 py-3 sm:px-5 sm:py-4"
+            style={{ borderRight: "1px solid var(--pq-ivory-line-soft)" }}
+          >
+            <div
+              className="text-[10px] font-semibold uppercase tracking-wider"
+              style={{ color: "rgba(245, 240, 232, 0.4)" }}
+            >
               {t("whatIf.result.annualized")}
             </div>
             <div
               className={cn(
                 "mt-0.5 font-mono text-xs font-semibold tabular-nums sm:text-sm",
-                annualizedValue >= 0
-                  ? "up-color"
-                  : "down-color",
+                annualizedValue >= 0 ? "up-color" : "down-color",
               )}
             >
               {annualized_return_pct === null
@@ -260,10 +310,16 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
             </div>
           </div>
           <div className="px-3 py-3 sm:px-5 sm:py-4">
-            <div className="text-[10px] font-semibold uppercase text-slate-400">
+            <div
+              className="text-[10px] font-semibold uppercase tracking-wider"
+              style={{ color: "rgba(245, 240, 232, 0.4)" }}
+            >
               {t("whatIf.result.duration")}
             </div>
-            <div className="mt-0.5 font-mono text-xs font-semibold tabular-nums text-slate-700 sm:text-sm">
+            <div
+              className="mt-0.5 font-mono text-xs font-semibold tabular-nums sm:text-sm"
+              style={{ color: "rgba(245, 240, 232, 0.75)" }}
+            >
               {Math.round((duration_days / 365.25) * 10) / 10}{" "}
               {t("whatIf.result.years")}
             </div>
@@ -272,7 +328,10 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
 
         {/* Chart */}
         <div className="px-3 pb-4 pt-5 sm:px-5">
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <div
+            className="pq-ink-label mb-2 px-2"
+            style={{ color: "rgba(245, 240, 232, 0.5)" }}
+          >
             {t("whatIf.result.chartTitle")}
           </div>
           <WhatIfChart
@@ -284,16 +343,31 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
 
         {/* Benchmark */}
         {benchmark ? (
-          <div className="mx-4 mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:mx-6">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+          <div
+            className="mx-4 mb-4 rounded-sm px-4 py-3 sm:mx-6"
+            style={{
+              border: "1px solid var(--pq-ivory-line)",
+              backgroundColor: "rgba(184, 149, 106, 0.04)",
+            }}
+          >
+            <div
+              className="pq-ink-label"
+              style={{ color: "var(--pq-bronze)" }}
+            >
               {t("whatIf.result.vsBenchmark")}
             </div>
             <div className="mt-1 flex items-baseline justify-between gap-3 text-sm">
               <div>
-                <span className="font-mono font-bold tabular-nums text-slate-900">
+                <span
+                  className="font-mono font-bold tabular-nums"
+                  style={{ color: "var(--pq-ivory)" }}
+                >
                   {fmtMoney(benchmark.end_value, currency)}
                 </span>
-                <span className="ml-2 font-mono text-xs tabular-nums text-slate-500">
+                <span
+                  className="ml-2 font-mono text-xs tabular-nums"
+                  style={{ color: "rgba(245, 240, 232, 0.5)" }}
+                >
                   ({fmtPctStrong(benchmark.return_pct)})
                 </span>
               </div>
@@ -323,8 +397,14 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
 
         {/* Milestones */}
         {milestones?.length ? (
-          <div className="border-t border-slate-100 px-5 py-4 sm:px-8">
-            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+          <div
+            className="px-5 py-4 sm:px-8"
+            style={{ borderTop: "1px solid var(--pq-ivory-line-soft)" }}
+          >
+            <div
+              className="pq-ink-label mb-2 flex items-center gap-1.5"
+              style={{ color: "rgba(245, 240, 232, 0.5)" }}
+            >
               <Trophy className="h-3.5 w-3.5" />
               {t("whatIf.result.milestones")}
             </div>
@@ -334,10 +414,16 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
                   key={`${m.date}-${i}`}
                   className="flex items-baseline justify-between gap-3 text-xs sm:text-sm"
                 >
-                  <span className="font-mono tabular-nums text-slate-500">
+                  <span
+                    className="font-mono tabular-nums"
+                    style={{ color: "rgba(245, 240, 232, 0.5)" }}
+                  >
                     {m.date}
                   </span>
-                  <span className="flex-1 text-right font-medium text-slate-700">
+                  <span
+                    className="flex-1 text-right font-medium"
+                    style={{ color: "rgba(245, 240, 232, 0.8)" }}
+                  >
                     {(locale === "ko" && m.label_kr) || m.label}
                   </span>
                 </li>
@@ -346,26 +432,43 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
           </div>
         ) : null}
 
-        {/* Watermark */}
-        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-5 py-3 sm:px-8">
+        {/* Watermark — bronze square + PivoxQuant on faint ink. */}
+        <div
+          className="flex items-center justify-between px-5 py-3 sm:px-8"
+          style={{
+            borderTop: "1px solid var(--pq-ivory-line-soft)",
+            backgroundColor: "rgba(184, 149, 106, 0.04)",
+          }}
+        >
           <div className="flex items-center gap-1.5">
-            <div className="h-5 w-5 rounded-md bg-slate-900" />
-            <span className="text-[11px] font-bold text-slate-700">
+            <div
+              className="h-5 w-5 rounded-sm"
+              style={{ backgroundColor: "var(--pq-bronze)" }}
+            />
+            <span
+              className="text-[11px] font-bold"
+              style={{ color: "var(--pq-ivory)" }}
+            >
               PivoxQuant
             </span>
           </div>
-          <span className="text-[10px] text-slate-500">
+          <span
+            className="text-[10px]"
+            style={{ color: "rgba(245, 240, 232, 0.45)" }}
+          >
             {t("whatIf.result.watermark")}
           </span>
         </div>
       </div>
 
-      {/* Share bar — outside the screenshot card */}
+      {/* Share bar — outside the screenshot card. Kakao retains its
+          mandated brand yellow (#FEE500) per Kakao share guidelines.
+          Twitter/Save/Copy switch to ink + bronze hairline buttons. */}
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <button
           type="button"
           onClick={onKakaoShare}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#FEE500] text-xs font-bold text-[#3C1E1E] transition hover:brightness-95 active:scale-[0.98]"
+          className="flex h-11 items-center justify-center gap-1.5 rounded-sm bg-[#FEE500] text-xs font-bold text-[#3C1E1E] transition hover:brightness-95 active:scale-[0.98]"
         >
           <MessageCircle className="h-4 w-4" />
           {t("whatIf.result.kakao")}
@@ -373,7 +476,8 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
         <button
           type="button"
           onClick={onTwitterShare}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]"
+          className="pq-ink-btn-bronze h-11 justify-center"
+          style={{ fontSize: "12px" }}
         >
           <Share2 className="h-4 w-4" />
           {t("whatIf.result.twitter")}
@@ -381,7 +485,8 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
         <button
           type="button"
           onClick={onSaveImage}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 active:scale-[0.98]"
+          className="pq-ink-btn-ghost h-11 justify-center"
+          style={{ fontSize: "12px" }}
         >
           <Download className="h-4 w-4" />
           {t("whatIf.result.saveImage")}
@@ -389,7 +494,8 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
         <button
           type="button"
           onClick={onCopyLink}
-          className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 active:scale-[0.98]"
+          className="pq-ink-btn-ghost h-11 justify-center"
+          style={{ fontSize: "12px" }}
         >
           <LinkIcon className="h-4 w-4" />
           {t("whatIf.result.copyLink")}

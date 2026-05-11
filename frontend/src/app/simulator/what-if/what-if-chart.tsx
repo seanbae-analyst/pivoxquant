@@ -82,21 +82,40 @@ function ChartTooltip({
   const valueItem = payload.find((p) => p.dataKey === "value");
   const investedItem = payload.find((p) => p.dataKey === "invested");
 
+  // v3 Vantablack tooltip: ink card on ivory hairline. No white shadow — uses
+  // a subtle inset border instead so the tooltip reads as part of the dark
+  // chart surface, not a Nexora-era light callout.
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-lg">
-      <p className="text-[11px] text-slate-500">
+    <div
+      className="rounded-sm border px-3 py-2"
+      style={{
+        borderColor: "var(--pq-ivory-line)",
+        backgroundColor: "rgba(5, 5, 5, 0.92)",
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      <p
+        className="text-[11px]"
+        style={{ color: "rgba(245, 240, 232, 0.55)" }}
+      >
         {new Date(point.date).toLocaleDateString(
           currency === "KRW" ? "ko-KR" : "en-US",
           { year: "numeric", month: "short", day: "numeric" },
         )}
       </p>
       {valueItem ? (
-        <p className="text-sm font-bold text-slate-900 tabular-nums">
+        <p
+          className="font-mono text-sm font-bold tabular-nums"
+          style={{ color: "var(--pq-ivory)" }}
+        >
           {fmtFull(valueItem.value, currency)}
         </p>
       ) : null}
       {investedItem && investedItem.value !== valueItem?.value ? (
-        <p className="text-[11px] text-slate-500 tabular-nums">
+        <p
+          className="font-mono text-[11px] tabular-nums"
+          style={{ color: "rgba(245, 240, 232, 0.55)" }}
+        >
           {t("whatIf.result.invested")}: {fmtFull(investedItem.value, currency)}
         </p>
       ) : null}
@@ -139,8 +158,16 @@ export function WhatIfChart({
   );
 
   if (!prepared.length) {
+    // v3 ink empty state — hairline border, ghost surface, muted ivory text.
     return (
-      <div className="flex h-60 w-full items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-500">
+      <div
+        className="flex h-60 w-full items-center justify-center rounded-sm border text-sm"
+        style={{
+          borderColor: "var(--pq-ivory-line)",
+          backgroundColor: "rgba(255, 255, 255, 0.015)",
+          color: "rgba(245, 240, 232, 0.55)",
+        }}
+      >
         No chart data
       </div>
     );
@@ -176,20 +203,21 @@ export function WhatIfChart({
         >
           <defs>
             <linearGradient id="whatIfFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0f172a" stopOpacity={0.28} />
-              <stop offset="100%" stopColor="#0f172a" stopOpacity={0} />
+              {/* v3: bronze area gradient over Vantablack ink. */}
+              <stop offset="0%" stopColor="#B8956A" stopOpacity={0.28} />
+              <stop offset="100%" stopColor="#B8956A" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="#f1f5f9"
+            stroke="rgba(245, 240, 232, 0.06)"
             vertical={false}
           />
           <XAxis
             dataKey="label"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#94a3b8", fontSize: 12 }}
+            tick={{ fill: "rgba(245, 240, 232, 0.45)", fontSize: 12 }}
             interval="preserveStartEnd"
             minTickGap={40}
           />
@@ -197,7 +225,7 @@ export function WhatIfChart({
             domain={yDomain}
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#94a3b8", fontSize: 12 }}
+            tick={{ fill: "rgba(245, 240, 232, 0.45)", fontSize: 12 }}
             tickFormatter={(v: number) => fmtShort(v, currency)}
             width={64}
           />
@@ -205,19 +233,19 @@ export function WhatIfChart({
           <Area
             type="monotone"
             dataKey="value"
-            stroke="#0f172a"
+            stroke="#B8956A"
             strokeWidth={2.5}
             fill="url(#whatIfFill)"
             animationDuration={900}
             animationEasing="ease-out"
             dot={false}
-            activeDot={{ r: 4, fill: "#0f172a" }}
+            activeDot={{ r: 4, fill: "#B8956A" }}
           />
           {showInvestedLine ? (
             <Line
               type="stepAfter"
               dataKey="invested"
-              stroke="#94a3b8"
+              stroke="rgba(245, 240, 232, 0.45)"
               strokeWidth={1.5}
               strokeDasharray="4 4"
               dot={false}
@@ -231,8 +259,8 @@ export function WhatIfChart({
                   x={pt.label}
                   y={pt.value}
                   r={3}
-                  fill="#64748b"
-                  stroke="#ffffff"
+                  fill="#B8956A"
+                  stroke="#050505"
                   strokeWidth={1.5}
                 />
               ))

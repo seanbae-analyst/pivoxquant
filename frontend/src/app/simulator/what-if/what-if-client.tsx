@@ -351,12 +351,11 @@ export function WhatIfClient() {
           {success ? (
             <WhatIfResult data={success} shareUrl={shareUrl} tickerName={form.tickerName} />
           ) : busy ? (
+            // pq-skeleton-dark — v3 ink shimmer, replaces the white-pulse
+            // `animate-pulse` that flashed against Vantablack on slow networks.
             <div
-              className="mt-6 h-96 animate-pulse rounded-sm border"
-              style={{
-                borderColor: "var(--pq-ivory-line)",
-                backgroundColor: "rgba(255, 255, 255, 0.02)",
-              }}
+              className="pq-skeleton-dark mt-6 h-96 rounded-sm border"
+              style={{ borderColor: "var(--pq-ivory-line)" }}
             />
           ) : null}
         </div>

@@ -13,7 +13,7 @@
  * which owns URL sync and SWR fetch.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { Search, Calendar, Coins, Repeat, Sparkles } from "lucide-react";
 import { useT } from "@/lib/locale";
 import { API } from "@/lib/endpoints";
@@ -199,12 +199,31 @@ export function WhatIfForm({
     value.startDate <= TODAY &&
     !isLoading;
 
+  // v3 Vantablack tokens — surfaces, hairlines, bronze focus rings, ivory text.
+  // Shared input class to keep ticker/date/amount visually consistent.
+  const INPUT_CLASS =
+    "h-11 w-full rounded-sm px-4 text-sm font-medium outline-none transition focus:ring-1";
+  const INPUT_STYLE: CSSProperties = {
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
+    border: "1px solid var(--pq-ivory-line)",
+    color: "var(--pq-ivory)",
+  };
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+    <div
+      className="rounded-sm border p-5 sm:p-6"
+      style={{
+        borderColor: "var(--pq-ivory-line)",
+        backgroundColor: "rgba(255, 255, 255, 0.015)",
+      }}
+    >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Ticker search */}
         <div className="relative sm:col-span-2" ref={wrapperRef}>
-          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+          <label
+            className="pq-ink-label mb-1.5 flex items-center gap-1.5"
+            style={{ color: "var(--pq-bronze)" }}
+          >
             <Search className="h-3.5 w-3.5" />
             {t("whatIf.form.ticker")}
           </label>
@@ -223,16 +242,33 @@ export function WhatIfForm({
               onChange({ ...value, ticker: v, tickerName: undefined });
             }}
             onFocus={() => setShowSuggestions(true)}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+            className={INPUT_CLASS}
+            style={{
+              ...INPUT_STYLE,
+              ["--tw-ring-color" as string]: "var(--pq-bronze)",
+            }}
           />
           {showSuggestions && tickerInput.length > 0 && (
-            <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+            <div
+              className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-sm border"
+              style={{
+                borderColor: "var(--pq-ivory-line)",
+                backgroundColor: "rgba(5, 5, 5, 0.96)",
+                backdropFilter: "blur(6px)",
+              }}
+            >
               {searching ? (
-                <div className="px-4 py-3 text-xs text-slate-500">
+                <div
+                  className="px-4 py-3 text-xs"
+                  style={{ color: "rgba(245, 240, 232, 0.55)" }}
+                >
                   {t("topbar.searching")}
                 </div>
               ) : suggestions.length === 0 ? (
-                <div className="px-4 py-3 text-xs text-slate-400">
+                <div
+                  className="px-4 py-3 text-xs"
+                  style={{ color: "rgba(245, 240, 232, 0.4)" }}
+                >
                   {t("topbar.noResults", { query: tickerInput })}
                 </div>
               ) : (
@@ -241,17 +277,29 @@ export function WhatIfForm({
                     key={r.ticker}
                     type="button"
                     onClick={() => pickSuggestion(r)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition hover:bg-[rgba(184,149,106,0.08)]"
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-bold text-slate-900 truncate">
+                      <div
+                        className="truncate text-sm font-bold"
+                        style={{ color: "var(--pq-ivory)" }}
+                      >
                         {r.name || r.ticker}
                       </div>
-                      <div className="truncate text-xs text-slate-500">
+                      <div
+                        className="truncate font-mono text-xs"
+                        style={{ color: "rgba(245, 240, 232, 0.55)" }}
+                      >
                         {r.ticker}
                       </div>
                     </div>
-                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+                    <span
+                      className="rounded-sm px-2 py-0.5 font-mono text-[10px] font-semibold"
+                      style={{
+                        backgroundColor: "rgba(184, 149, 106, 0.12)",
+                        color: "var(--pq-bronze)",
+                      }}
+                    >
                       {r.currency}
                     </span>
                   </button>
@@ -263,7 +311,10 @@ export function WhatIfForm({
 
         {/* Start date */}
         <div>
-          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+          <label
+            className="pq-ink-label mb-1.5 flex items-center gap-1.5"
+            style={{ color: "var(--pq-bronze)" }}
+          >
             <Calendar className="h-3.5 w-3.5" />
             {t("whatIf.form.startDate")}
           </label>
@@ -275,18 +326,34 @@ export function WhatIfForm({
             onChange={(e) =>
               onChange({ ...value, startDate: e.target.value })
             }
-            style={{ colorScheme: "light" }}
-            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+            // colorScheme: dark — matches Vantablack so native date picker
+            // glyph isn't bright white on the ink field.
+            className={INPUT_CLASS}
+            style={{
+              ...INPUT_STYLE,
+              colorScheme: "dark",
+              ["--tw-ring-color" as string]: "var(--pq-bronze)",
+            }}
           />
         </div>
 
         {/* Amount + currency */}
         <div>
-          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+          <label
+            className="pq-ink-label mb-1.5 flex items-center gap-1.5"
+            style={{ color: "var(--pq-bronze)" }}
+          >
             <Coins className="h-3.5 w-3.5" />
             {t("whatIf.form.amount")}
           </label>
-          <div className="flex h-11 overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
+          <div
+            className="flex h-11 overflow-hidden rounded-sm transition focus-within:ring-1"
+            style={{
+              border: "1px solid var(--pq-ivory-line)",
+              backgroundColor: "rgba(255, 255, 255, 0.02)",
+              ["--tw-ring-color" as string]: "var(--pq-bronze)",
+            }}
+          >
             <input
               type="number"
               inputMode="numeric"
@@ -300,31 +367,47 @@ export function WhatIfForm({
                   amount: isFinite(n) ? Math.max(0, Math.floor(n)) : 0,
                 });
               }}
-              className="min-w-0 flex-1 px-4 text-sm font-medium text-slate-900 outline-none"
+              className="min-w-0 flex-1 bg-transparent px-4 font-mono text-sm font-medium tabular-nums outline-none"
+              style={{ color: "var(--pq-ivory)" }}
             />
-            <div className="flex border-l border-slate-200 bg-slate-50 text-xs font-semibold">
-              {(["KRW", "USD"] as const).map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => onChange({ ...value, currency: c })}
-                  className={cn(
-                    "px-3 transition",
-                    value.currency === c
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-600 hover:bg-slate-100",
-                  )}
-                >
-                  {c === "KRW" ? t("whatIf.form.krw") : t("whatIf.form.usd")}
-                </button>
-              ))}
+            <div
+              className="flex text-xs font-semibold"
+              style={{
+                borderLeft: "1px solid var(--pq-ivory-line)",
+                backgroundColor: "rgba(255, 255, 255, 0.015)",
+              }}
+            >
+              {(["KRW", "USD"] as const).map((c) => {
+                const active = value.currency === c;
+                return (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => onChange({ ...value, currency: c })}
+                    className="px-3 transition"
+                    style={{
+                      backgroundColor: active
+                        ? "var(--pq-bronze)"
+                        : "transparent",
+                      color: active
+                        ? "var(--pq-ink)"
+                        : "rgba(245, 240, 232, 0.65)",
+                    }}
+                  >
+                    {c === "KRW" ? t("whatIf.form.krw") : t("whatIf.form.usd")}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
         {/* Recurring strategy */}
         <div className="sm:col-span-2">
-          <label className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+          <label
+            className="pq-ink-label mb-1.5 flex items-center gap-1.5"
+            style={{ color: "var(--pq-bronze)" }}
+          >
             <Repeat className="h-3.5 w-3.5" />
             {t("whatIf.form.recurring")}
           </label>
@@ -347,12 +430,20 @@ export function WhatIfForm({
                       recurring: opt.mode as RecurringMode,
                     })
                   }
-                  className={cn(
-                    "h-11 rounded-xl border text-xs font-semibold transition",
+                  className="h-11 rounded-sm text-xs font-semibold transition"
+                  style={
                     active
-                      ? "border-slate-900 bg-slate-50 text-slate-900"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-slate-300",
-                  )}
+                      ? {
+                          border: "1px solid var(--pq-bronze)",
+                          backgroundColor: "rgba(184, 149, 106, 0.12)",
+                          color: "var(--pq-ivory)",
+                        }
+                      : {
+                          border: "1px solid var(--pq-ivory-line)",
+                          backgroundColor: "rgba(255, 255, 255, 0.02)",
+                          color: "rgba(245, 240, 232, 0.65)",
+                        }
+                  }
                 >
                   {opt.label}
                 </button>
@@ -362,16 +453,16 @@ export function WhatIfForm({
         </div>
       </div>
 
-      {/* Submit */}
+      {/* Submit — bronze CTA pill, consistent with header sign-up CTA. */}
       <button
         type="button"
         onClick={onSubmit}
         disabled={!canSubmit}
         className={cn(
-          "mt-5 h-12 w-full rounded-xl text-sm font-bold text-white transition-all",
-          "bg-slate-900 hover:bg-slate-800 active:scale-[0.99]",
+          "pq-ink-btn-bronze mt-5 h-12 w-full justify-center",
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
+        style={{ fontSize: "13px" }}
       >
         {isLoading
           ? t("whatIf.form.calculating")
@@ -379,8 +470,14 @@ export function WhatIfForm({
       </button>
 
       {/* Presets */}
-      <div className="mt-5 border-t border-slate-100 pt-4">
-        <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+      <div
+        className="mt-5 pt-4"
+        style={{ borderTop: "1px solid var(--pq-ivory-line-soft)" }}
+      >
+        <div
+          className="pq-ink-label mb-2 flex items-center gap-1.5"
+          style={{ color: "rgba(245, 240, 232, 0.5)" }}
+        >
           <Sparkles className="h-3 w-3" />
           {t("whatIf.result.presets")}
         </div>
@@ -390,7 +487,12 @@ export function WhatIfForm({
               key={`${p.ticker}-${p.date}`}
               type="button"
               onClick={() => applyPreset(p)}
-              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900"
+              className="rounded-full px-3 py-1.5 text-[11px] font-semibold transition hover:bg-[rgba(184,149,106,0.08)]"
+              style={{
+                border: "1px solid var(--pq-ivory-line)",
+                backgroundColor: "rgba(255, 255, 255, 0.02)",
+                color: "rgba(245, 240, 232, 0.75)",
+              }}
             >
               {p.labelKo}
             </button>
