@@ -244,6 +244,24 @@ const panelVariants: Variants = {
   },
 };
 
+// Inner content variants — used when switching between dropdowns while the
+// outer panel stays mounted. Fast crossfade prevents the ghosting / faded
+// trail that occurs when re-keying the entire AnimatePresence wrapper on
+// rapid hover (E2E P1 #16-19).
+const contentVariants: Variants = {
+  hidden: { opacity: 0, y: 2 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.18, ease: EASE },
+  },
+  exit: {
+    opacity: 0,
+    y: -2,
+    transition: { duration: 0.08, ease: EASE },
+  },
+};
+
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 6 },
   visible: (i: number) => ({
@@ -524,13 +542,28 @@ export default function TopNav() {
             </div>
           </div>
 
-          {/* Mega dropdown panel */}
+          {/*
+            Mega dropdown panel.
+            ---------------------------------------------------------------
+            Singleton architecture (E2E P1 #16-19 fix):
+            The OUTER panel mounts once when any group becomes active and
+            stays mounted while the user hovers between groups. Only the
+            INNER content swaps (keyed by activeKey) via a fast crossfade.
+            This prevents the "ghost trail" where the previous dropdown's
+            faded content remained visible during rapid Living CFO →
+            Personas → Signature → Pricing → Docs hover sequences.
+
+            Background opacity bumped 0.94 → 0.985 + solid base layer so
+            hero text (e.g. "investor language") never bleeds through the
+            backdrop blur on Pricing dropdown hover.
+          */}
           <AnimatePresence mode="wait">
             {activeGroup && !reduce && (
               <motion.div
-                key={activeGroup.key}
+                key="nav-mega-panel"
                 role="menu"
                 aria-label={`${activeGroup.label} menu`}
+                data-active-key={activeGroup.key}
                 variants={panelVariants}
                 initial="hidden"
                 animate="visible"
@@ -539,12 +572,28 @@ export default function TopNav() {
                 onMouseLeave={scheduleClose}
                 className="pointer-events-auto overflow-hidden"
                 style={{
-                  backgroundColor: "rgba(6,6,6,0.94)",
-                  backdropFilter: "blur(24px) saturate(130%)",
-                  WebkitBackdropFilter: "blur(24px) saturate(130%)",
+                  // Solid base layer guarantees zero bleed-through behind
+                  // the translucent layer + backdrop blur.
+                  backgroundColor: "rgba(6,6,6,0.985)",
+                  backdropFilter: "blur(28px) saturate(140%)",
+                  WebkitBackdropFilter: "blur(28px) saturate(140%)",
                   borderBottom: "0.5pt solid rgba(184,149,106,0.22)",
+                  // Lift above hero content stacking context.
+                  position: "relative",
+                  zIndex: 1,
                 }}
               >
+                {/* Opaque solid backstop — sits behind blur so hero text
+                    cannot bleed through even at low device blur fidelity. */}
+                <div
+                  aria-hidden
+                  className="absolute inset-0"
+                  style={{
+                    backgroundColor: "var(--pq-ink, #060606)",
+                    opacity: 0.96,
+                    pointerEvents: "none",
+                  }}
+                />
                 <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
                   <FilmGrain opacity={0.025} blendMode="soft-light" />
                   {/* Bronze gradient hairline top */}
@@ -557,116 +606,130 @@ export default function TopNav() {
                     }}
                   />
 
-                  <div className="grid grid-cols-1 gap-10 md:grid-cols-[260px_1fr]">
-                    {/* Left: eyebrow + footnote */}
-                    <div>
-                      <div className="mb-3 inline-flex items-center gap-2.5">
-                        <span
-                          aria-hidden
-                          className="h-px w-6"
-                          style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
-                        />
-                        <span
-                          className="font-serif uppercase"
-                          style={{
-                            color: "var(--pq-bronze)",
-                            fontSize: "12px",
-                            letterSpacing: "0.22em",
-                          }}
-                        >
-                          {activeGroup.label}
-                        </span>
-                      </div>
-                      <p
-                        className="font-serif italic"
-                        style={{
-                          color: "rgba(245,240,232,0.78)",
-                          fontSize: "15px",
-                          lineHeight: 1.55,
-                          maxWidth: 240,
-                        }}
-                      >
-                        {activeGroup.footnote}
-                      </p>
-                    </div>
-
-                    {/* Right: items grid */}
-                    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                      {activeGroup.items.map((item, i) => (
-                        <motion.div
-                          key={item.href}
-                          custom={i}
-                          variants={itemVariants}
-                          initial="hidden"
-                          animate="visible"
-                        >
-                          <Link
-                            href={item.href}
-                            onClick={() => setActiveKey(null)}
-                            aria-current={
-                              pathname === item.href.split("#")[0]
-                                ? "page"
-                                : undefined
-                            }
-                            className="group relative flex items-start gap-3.5 rounded-sm p-4 transition-colors duration-300"
+                  {/*
+                    Inner content swap. mode="wait" + ultra-short crossfade
+                    (180ms in / 80ms out) keeps a single content tree on
+                    screen at any moment — no overlapping ghost layers.
+                  */}
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.div
+                      key={activeGroup.key}
+                      variants={contentVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="grid grid-cols-1 gap-10 md:grid-cols-[260px_1fr]"
+                    >
+                      {/* Left: eyebrow + footnote */}
+                      <div>
+                        <div className="mb-3 inline-flex items-center gap-2.5">
+                          <span
+                            aria-hidden
+                            className="h-px w-6"
+                            style={{ backgroundColor: "rgba(184,149,106,0.7)" }}
+                          />
+                          <span
+                            className="font-serif uppercase"
                             style={{
-                              border: "0.5px solid transparent",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                "rgba(184,149,106,0.06)";
-                              e.currentTarget.style.borderColor =
-                                "rgba(184,149,106,0.22)";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                "transparent";
-                              e.currentTarget.style.borderColor = "transparent";
+                              color: "var(--pq-bronze)",
+                              fontSize: "12px",
+                              letterSpacing: "0.22em",
                             }}
                           >
-                            <span
-                              className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-sm"
+                            {activeGroup.label}
+                          </span>
+                        </div>
+                        <p
+                          className="font-serif italic"
+                          style={{
+                            color: "rgba(245,240,232,0.78)",
+                            fontSize: "15px",
+                            lineHeight: 1.55,
+                            maxWidth: 240,
+                          }}
+                        >
+                          {activeGroup.footnote}
+                        </p>
+                      </div>
+
+                      {/* Right: items grid */}
+                      <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                        {activeGroup.items.map((item, i) => (
+                          <motion.div
+                            key={item.href}
+                            custom={i}
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                          >
+                            <Link
+                              href={item.href}
+                              onClick={() => setActiveKey(null)}
+                              aria-current={
+                                pathname === item.href.split("#")[0]
+                                  ? "page"
+                                  : undefined
+                              }
+                              className="group relative flex items-start gap-3.5 rounded-sm p-4 transition-colors duration-300"
                               style={{
-                                backgroundColor: "rgba(184,149,106,0.1)",
-                                border: "0.5px solid rgba(184,149,106,0.26)",
-                                color: "var(--pq-bronze)",
+                                border: "0.5px solid transparent",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  "rgba(184,149,106,0.06)";
+                                e.currentTarget.style.borderColor =
+                                  "rgba(184,149,106,0.22)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor =
+                                  "transparent";
+                                e.currentTarget.style.borderColor = "transparent";
                               }}
                             >
-                              <item.icon className="h-4 w-4" aria-hidden />
-                            </span>
-                            <div className="min-w-0">
-                              <div
-                                className="mb-1 flex items-center gap-1.5 font-serif"
+                              <span
+                                className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-sm"
                                 style={{
-                                  color: "var(--pq-ivory)",
-                                  fontSize: "14px",
-                                  letterSpacing: "0",
-                                  fontWeight: 500,
+                                  backgroundColor: "rgba(184,149,106,0.1)",
+                                  border: "0.5px solid rgba(184,149,106,0.26)",
+                                  color: "var(--pq-bronze)",
                                 }}
                               >
-                                {item.label}
-                                <ArrowRight
-                                  className="h-3 w-3 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
-                                  style={{ color: "var(--pq-bronze)" }}
-                                  aria-hidden
-                                />
+                                <item.icon className="h-4 w-4" aria-hidden />
+                              </span>
+                              <div className="min-w-0">
+                                <div
+                                  className="mb-1 flex items-center gap-1.5 font-serif"
+                                  style={{
+                                    color: "var(--pq-ivory)",
+                                    fontSize: "14px",
+                                    letterSpacing: "0",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {item.label}
+                                  <ArrowRight
+                                    className="h-3 w-3 -translate-x-1 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                                    style={{ color: "var(--pq-bronze)" }}
+                                    aria-hidden
+                                  />
+                                </div>
+                                <p
+                                  className="font-serif"
+                                  style={{
+                                    color: "rgba(245,240,232,0.58)",
+                                    fontSize: "14px",
+                                    lineHeight: 1.5,
+                                  }}
+                                >
+                                  {item.description}
+                                </p>
                               </div>
-                              <p
-                                className="font-serif"
-                                style={{
-                                  color: "rgba(245,240,232,0.58)",
-                                  fontSize: "14px",
-                                  lineHeight: 1.5,
-                                }}
-                              >
-                                {item.description}
-                              </p>
-                            </div>
-                          </Link>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
+                            </Link>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               </motion.div>
             )}
