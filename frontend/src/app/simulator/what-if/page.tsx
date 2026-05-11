@@ -31,13 +31,20 @@ export const metadata: Metadata = {
 };
 
 function LoadingFallback() {
+  // v3 Vantablack: full-bleed ink background + pq-skeleton-dark shimmer so
+  // the Suspense fallback matches the live client surface (not a white flash).
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-10">
-      <div className="h-6 w-32 animate-pulse rounded-md bg-slate-200" />
-      <div className="mt-4 h-12 w-64 animate-pulse rounded-md bg-slate-200" />
-      <div className="mt-2 h-5 w-80 animate-pulse rounded-md bg-slate-100" />
-      <div className="mt-8 h-72 animate-pulse rounded-2xl bg-slate-100" />
-    </div>
+    <main
+      className="min-h-[100dvh]"
+      style={{ backgroundColor: "var(--pq-ink)" }}
+    >
+      <div className="mx-auto w-full max-w-3xl px-4 py-10">
+        <div className="pq-skeleton-dark h-6 w-32" />
+        <div className="pq-skeleton-dark mt-4 h-12 w-64" />
+        <div className="pq-skeleton-dark mt-2 h-5 w-80" />
+        <div className="pq-skeleton-dark mt-8 h-72 rounded-sm" />
+      </div>
+    </main>
   );
 }
 
