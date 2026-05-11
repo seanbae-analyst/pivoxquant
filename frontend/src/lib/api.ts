@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { hadSession } from "./had-session";
 
 /** Default request timeout in milliseconds. */
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -74,11 +75,22 @@ export async function apiFetch<T = unknown>(
     if (callerSignal) callerSignal.removeEventListener("abort", onCallerAbort);
   }
 
-  // Handle session expiration — redirect to login
+  // Handle session expiration — redirect to login.
+  //
+  // The backend emits `code: "SESSION_EXPIRED"` for any unauthenticated
+  // request under @api_auth, including from devices that never logged in
+  // (e.g. a first-time guest poking a protected endpoint). For those guests
+  // the "세션이 만료" banner on /login?expired=1 is misleading — they were
+  // never authenticated to begin with. We disambiguate by consulting the
+  // `pq_had_session` localStorage flag set by AuthProvider on successful
+  // session restore: only redirect with `?expired=1` if the user previously
+  // held a session on this device. Otherwise drop the query string so the
+  // /login page renders without the expiry banner.
   if (res.status === 401) {
     const body = await res.json().catch(() => ({}));
     if (body.code === "SESSION_EXPIRED" && typeof window !== "undefined") {
-      window.location.href = "/login?expired=1";
+      const target = hadSession() ? "/login?expired=1" : "/login";
+      window.location.href = target;
       throw new ApiError(401, body.error ?? "Session expired");
     }
     throw new ApiError(401, body.error ?? res.statusText);

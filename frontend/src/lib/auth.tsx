@@ -4,12 +4,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 import useSWR from "swr";
 import { apiFetch } from "./api";
 import { API } from "./endpoints";
+import { clearHadSession, markHadSession } from "./had-session";
 
 export interface User {
   id: number;
@@ -102,6 +104,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Match prior semantics: loading is true only on the very first fetch.
   const loading = isLoading && !data;
 
+  // Track "this browser has held a session" so apiFetch can disambiguate
+  // a real expiry from a fresh-guest 401 when redirecting to /login.
+  // See lib/had-session.ts and the SESSION_EXPIRED branch in lib/api.ts.
+  useEffect(() => {
+    if (user) markHadSession();
+  }, [user]);
+
   const refresh = useCallback(async () => {
     await mutate();
   }, [mutate]);
@@ -150,6 +159,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } finally {
       setLogoutPending(true);
+      // Clear the "had session" marker so the next 401 on this device is
+      // treated as a fresh-guest 401 (no /login?expired=1 banner).
+      clearHadSession();
       // Force the SWR cache to drop the authenticated payload so any
       // subsequent revalidation reflects the logged-out state.
       await mutate({ authenticated: false }, { revalidate: false });
