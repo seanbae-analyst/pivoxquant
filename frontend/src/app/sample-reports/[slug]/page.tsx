@@ -13,6 +13,7 @@
 
 import { notFound } from "next/navigation";
 import { ReportSurface, PdfToolbar } from "@/components/reports/pdf-primitives";
+import { AiContentBadge } from "@/components/ui/ai-content-badge";
 
 import { WeeklyMemo } from "@/components/reports/templates/weekly-memo";
 import { BragCard } from "@/components/reports/templates/brag-card";
@@ -84,6 +85,23 @@ export default async function SampleReportPage({
   return (
     <ReportSurface>
       <PdfToolbar />
+      {/*
+        AI-generated content disclosure (regulatory ③ 2026-01 시행, 정통망법 §50).
+        Visible above each sample report; the in-template `_disclaimer.html`
+        partial carries the same notice on the printable PDF surface.
+        `data-print-hidden="true"` hides it from the print/PDF output so the
+        printable copy retains its design-handoff layout while the screen
+        preview stays compliant. Mirrors <ReportPreviewShell /> (auth-gated
+        copy at /reports/preview/[slug]).
+      */}
+      <div
+        style={{
+          padding: "0 56px 12px 56px",
+        }}
+        data-print-hidden="true"
+      >
+        <AiContentBadge variant="inline" />
+      </div>
       <Template />
     </ReportSurface>
   );
