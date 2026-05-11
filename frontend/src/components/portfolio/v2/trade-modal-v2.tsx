@@ -348,7 +348,7 @@ export function TradeModalV2({
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  style={fieldInputStyle}
+                  style={{ ...fieldInputStyle, colorScheme: "dark" }}
                 />
               </FormField>
               <FormField label="Memo (optional)">

@@ -241,6 +241,7 @@ export default function OAuthFinalizePage() {
               borderRadius: 2,
               padding: "10px 12px",
               fontSize: 14,
+              colorScheme: "dark",
             }}
           />
           {(errorMsg || (birthdate && !ageCheck.eligible)) && (

@@ -291,6 +291,7 @@ export function LegalConsentModal({
                       ? "rgba(244,108,108,0.6)"
                       : "var(--pq-ivory-line)",
                   color: "rgba(var(--pq-ivory-rgb), 0.85)",
+                  colorScheme: "dark",
                 }}
               />
               {birthdate && !ageCheck.eligible && (
