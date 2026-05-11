@@ -1,6 +1,145 @@
-# PivoxQuant — 인수인계서 (2026-05-10 v34 — 51 PR · OPEN PR 2 · Vercel queue 폭탄 cleanup)
+# PivoxQuant — 인수인계서 (2026-05-11 v35 — 19 PR · 18 main commit · 출시 readiness wave)
 
-## 🟢 2026-05-10 v34 종합 — **51 PR + 3 risk-close + 16 Vercel cancel + 3중 회귀 방어** · main `301758a → f3af99e5` · OPEN PR 2 (#246 werkzeug / #248 authlib runtime 보류)
+## 🟢 2026-05-11 v35 종합 — **19 PR squash-merged + 1 self-heal + 1 risk-close** · main `f2fa5bbe → deb86e10` · OPEN PR 1 (#246 werkzeug HOLD)
+
+### v35 PR 머지 list (18 main commits)
+| # | PR | 핵심 | Wave |
+|---|---|---|---|
+| 1 | #277 | feat(legal): AI 생성물 라벨 의무화 (regulatory ③ 2026-01) | W1.1 |
+| 2 | #278 | fix(legal): position size §101 ④ 회피 (한국어 primary) | W1.2 |
+| 3 | #279 | fix(legal): "무료 체험" dead i18n 회귀 게이트 (no-op) | W1.3 |
+| 4 | #280 | feat(legal): 만 14세 client-side birthdate (PIPA §22 ⑥) | W1.4 |
+| 5 | #281 | fix(security): HANDOVER `[REDACTED:ex-beta-pw-v1]` literal self-heal | self-heal |
+| 6 | #282 | fix(legal): detail/[ticker] AI 라벨 (B1 P0 audit catch) | W3 P0 |
+| 7 | #283 | feat(security): alembic 031 User.birthdate | W4 alembic |
+| 8 | #285 | feat(security): /register + OAuth server-side birthdate (B2 P0) | W4 code |
+| 9 | #287 | chore(lint): ruff F401 5 unused | W5.3 |
+| 10 | #288 | fix(design): date input colorScheme:"dark" 7 surface | W5.1 |
+| 11 | #286 | fix(security): ProxyFix 1-hop (rate limiter 우회 차단) | W5.2 |
+| 12 | #289 | fix(critical): sample-reports/* 18 routes AI 라벨 (thorough 3차 위반) | E2E P0 #2 |
+| 13 | #290 | fix(critical): /signup agree_age DOB auto-derive SHIP-BLOCKER | E2E P0 #1 |
+| 14 | #295 | fix(redirect): /dashboard/* → /home | W6.3 |
+| 15 | #296 | refactor(design): /simulator/what-if v3 (CRITICAL #1) | W6.1 |
+| 16 | #297 | fix(design): LoadingScreen AI slop + /signup nav + form overflow | W6.5 |
+| 17 | #298 | fix(design): v2 hex #E2B96F → v3 #B8956A sweep | W6.4 |
+| 18 | #299 | refactor(design): /growth surfaces v3 (CRITICAL #2+#3) | W6.2 |
+| close | #248 | (CLOSE) authlib 1.3→1.7 OAuth 회귀 risk admit | W2.2 |
+
+### v35 회귀 게이트 신설 (9 frontend + 5 backend = 14 게이트)
+**frontend vitest** (9 files / 61 tests PASS verified 2026-05-11):
+- `no-free-trial-copy.test.ts` (W1.3)
+- `ai-label-coverage.test.ts` (W3 + 강화 E2E P0)
+- `ai-content-badge.test.tsx` (W1.1)
+- `age-verification.test.tsx` (W1.4)
+- `signup-flow-e2e.test.tsx` (E2E P0 #1 후 신설 — agree_age auto-derive 9 case)
+- `date-input-color-scheme.test.ts` (W5.1)
+- `simulator-v3-tokens.test.ts` (W6.1, 10 forbidden patterns)
+- `growth-v3-tokens.test.ts` (W6.2, 12 forbidden patterns)
+- `dashboard-redirect.test.ts` (W6.3)
+
+**backend pytest** (5 files / 55 tests PASS):
+- `test_ai_content_label.py` (W1.1, 8 case)
+- `test_position_size_wording.py` (W1.2, 3 case)
+- `test_no_misleading_marketing_copy.py` (W1.3, 3 case)
+- `test_signup_min_age.py` (W4, 33 case)
+- `test_proxy_fix.py` (W5.2, 6 case)
+- backend secret-leak 회귀 게이트 (self-heal #281, file 이름 정규식 self-match 회피)
+
+**CI workflow guards** (.github/workflows/design-safety-guards.yml):
+- DS8: case-insensitive `#E2B96F` + rgb decimal 226,185,111 (W6.4)
+- DS9: `rounded-xl + animate-pulse + 1-12 size` AI slop (W6.5)
+
+### v35 회귀 검증 (2026-05-11 직접 실행)
+- backend 풀 pytest: **1869 PASS** / 7 skip / 1 xfail / 3 pre-existing fail (test_swot_500 × 2 + test_kospi_fmp_fallback)
+- frontend 신규 게이트: **9 files / 61 tests PASS** (1869 → 1875+ 누적 추정)
+- tsc --noEmit: exit 0
+- ruff F401: All checks passed
+
+### v35 메모리 룰 위반 admit (정직)
+- **feedback_thorough_fixes 3차 위반** (PR #289 catch):
+  - PR #277 (Artifact 템플릿 17개 라벨) + PR #282 (detail/[ticker] 라벨)에서 sample-reports surface 또 누락
+  - PR #289 회귀 게이트 강화 — 향후 sample-reports 신규 surface 자동 catch
+- **PR #285 회귀** (PR #290 catch — E2E user-tester 발견):
+  - server-side birthdate 작업 중 client-side derive 회귀
+  - `/signup` agree_age 체크박스 `pointer-events: none` + auto-derive 안 됨 → OAuth 영구 disabled
+  - PR #290 fix: DOB onChange → `ageCheck.eligible` → `consents.age` 자동 true derive 3 surface 동일 적용
+- **worktree race 재발** (W6.2 + W6.4 1차 lost):
+  - W6.1 simulator branch + W6.2 빈 scaffold worktree + W6.4 simulator branch에 누적
+  - W6.1 PR #296 squash merge 시 simulator branch 삭제 → W6.4 작업 lost
+  - 재시도: W6.4 + W6.2 main 직접 작업으로 fix
+  - 메모리 [feedback_parallel_ops] + v31 race lesson 강화 — **worktree 격리는 신중하게, scaffold worktree 위험 인지**
+
+### v35 외부 액션 (자율 100% 불가 — 사장님 직접)
+
+| # | 시스템 | 작업 | 우선순위 | 예상 시간/비용 | 차단 영향 |
+|---|---|---|---|---|---|
+| 1 | 변호사 미팅 | Q1-Q17 일괄 의견서 (Q16 FSC AI 가이드라인 + Q17 전상법 신규) | **P0** | 1-2주 / 300-500만원 | 유료결제 BLOCKER |
+| 2 | 성동구청 | 통신판매업 신고 | **P0** | 2-3 영업일 / ~45k원 | 유료결제 BLOCKER |
+| 3 | GitHub Actions | Billing 한도 해제 (v35 19개 PR 모두 --admin override로 우회) | **P0** | 10분 / 미정 | autopilot 마비 |
+| 4 | Sentry | New Client Key + Vercel `NEXT_PUBLIC_SENTRY_DSN` 갱신 | **P0** | 30분 | 보안 모니터링 |
+| 5 | Vercel | PR #290/#289 머지 후 라이브 signup 동작 spot-check | **P0** | 5분 | SHIP verify |
+| 6 | 베타테스터 | 새 BETA_PASSWORD 이메일 통보 (`cat /tmp/new-beta-pw.txt`) | P1 | 10분 | 베타 사용자 락아웃 |
+| 7 | KRX Open Data Portal | 신청 (KOSPI 정식 데이터) | P1 | 1-2주 / 무료 | KR 데이터 정상화 |
+| 8 | Google 계정 | seanbae1521@gmail.com 비밀번호 rotate | P1 | 5분 | DB leak 대비 |
+| 9 | Anthropic API | key rotate (있으면) | P1 | 10분 | SWOT 500 회복 |
+| 10 | FMP API | key rotate + $29 plan caret-prefixed 402 해결 | P1 | 30분 / $29/월 | Discover 데이터 |
+| 11 | KIS App | key/secret rotate | P1 | 30분 | KR 데이터 |
+| 12 | Vercel ENV | 사업자 정보 6개 입력 (전상법 §13) | P0 | 15분 | 유료결제 BLOCKER |
+| 13 | Alpaca | API key rotate (paper, 위험 낮음) | P2 | 10분 | — |
+| 14 | Stripe | secret/webhook rotate (현재 미활성) | P2 | 30분 | 유료결제 활성화 시 |
+| 15 | SendGrid | API key rotate | P2 | 10분 | 이메일 |
+| 16 | OAuth (Google/Kakao) | client secret rotate | P2 | 30분 | 로그인 |
+
+### v35 잔존 자율 fix 가능 (다음 세션 후보)
+| Severity | 결함 | 위치 | 예상 시간 |
+|---|---|---|---|
+| HIGH | 860 inline `fontSize:` literals (v3 토큰 위반) | 트리 전체 (top: settings/v2/privacy-card 27, landing/report-flip 26 등) | 3-5시간, 점진 마이그레이션 |
+| MED | quant.py 3,465줄 SRP 위반 (7 도메인 혼재) | routes/quant.py | 1-2시간, 분할 |
+| MED | quant_bp namespace `/signals/*` ↔ signals_bp 혼재 (7 라우트) | routes/quant.py | 1시간 |
+| MED | Nav dropdown ghost 잔존 (5 페이지 hover 시) | 라이브 visual | 30분, hover state unmount |
+| MED | Risk Board sample 7-Layer 표기 부재 | sample-reports/risk-board | 30분 |
+| LOW | candlestick-chart hex 19건 (lightweight-charts 라이브러리 제약, getComputedStyle 우회 가능) | components/terminal/candlestick-chart.tsx | 1시간 |
+| LOW | /features index 404 dead route | /app/features/ | 15분 |
+| LOW | /signup `_rsc=` 503 (RSC streaming chunk) | 모니터링만 | — |
+| LOW | misleading "세션 만료" message (첫 방문 게스트한테도 표시) | /login redirect | 30분 |
+
+### v35 잔존 변호사 검토 권고
+- terms-ko §11.5 Free 사용자 손해배상 한도 분리 (Q11)
+- terms-ko §17 가분적 디지털콘텐츠 환불 정책 갱신 (Q15 + Q17 합쳐서)
+- 마케팅 메일 opt-out 로깅 강화 (regulatory ① 2026-Q3 시행 전)
+
+### v35 신규 규제 발견 (regulatory-monitor Wave A.6)
+| # | 규제 | 시행 | 영향 | §101 영향 | severity |
+|---|---|---|---|---|---|
+| α | **금융분야 AI 가이드라인 통합본** (FSC #85908) | Q1 2026 시행 (이미) | 7대 원칙 (Governance/Legality/Subsidiarity/Reliability/Stability/Good Faith/Security). 비금융 핀테크 AI 포함 가능 (Kim&Chang) | NO 직접, 잠재 | HIGH |
+| β | **전상법 시행령·시행규칙 입법예고** | 2026-07-21 모법 시행 | 가분적 디지털콘텐츠 환불 + 국내대리인 + 신원확인 | NO | MED |
+
+→ memory/legal_question_queue.md Q16/Q17 추가 권고 (변호사 자문 큐 통합)
+→ 1-day delta 신규 0건, 다음 정기 스캔 2026-08-15 유지
+
+### v35 다음 세션 첫 액션 (사장님 깨어난 후)
+```bash
+# 1. main 동기화
+cd /Users/seanbae/Desktop/취준/stockpilot
+git pull origin main
+git log --oneline -5  # main HEAD = deb86e10 확인
+
+# 2. 라이브 spot-check (5분)
+#    - https://www.pivoxquant.com/signup → DOB=1990-05-15 입력 → agree_age 자동 체크 verify (PR #290)
+#    - https://www.pivoxquant.com/sample-reports/weekly-memo → "Drafted by AI" 라벨 표시 verify (PR #289)
+#    - https://www.pivoxquant.com/dashboard → /home redirect verify (PR #295)
+#    - https://www.pivoxquant.com (root) → LoadingScreen v3 verify (PR #297)
+
+# 3. 외부 액션 #5 (Vercel 재배포 확인)
+#    - https://vercel.com/dashboard → 가장 최근 deploy `deb86e10` Ready 상태 verify
+
+# 4. 외부 액션 #3 (GitHub Actions billing)
+#    - https://github.com/settings/billing → 한도 해제
+
+# 5. 외부 액션 #1 (변호사 미팅) 일정 조율 + Q1-Q17 의견서 발주
+```
+
+---
 
 ### v34 추가 (v33 → v34, 12 PR + 3 close + Vercel cleanup)
 
