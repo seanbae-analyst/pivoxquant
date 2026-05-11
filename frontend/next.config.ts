@@ -34,6 +34,22 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    // E2E P1 #3 (W6.3): `/dashboard` and `/dashboard/*` previously hit the
+    // 404 page ("Nothing to observe here"). The Next.js App Router uses a
+    // route group `(dashboard)/` whose URL segment is the empty string, so
+    // the real paths are `/home`, `/market`, etc. — there is no literal
+    // `/dashboard` route.
+    //
+    // External backlinks, ad campaigns, and SEO crawlers may still hit
+    // `/dashboard` (or `/dashboard/home`, mirroring how most SaaS apps
+    // structure their app shell). Issue a 308 permanent redirect at the
+    // edge so we never serve a 404 for these paths.
+    return [
+      { source: "/dashboard", destination: "/home", permanent: true },
+      { source: "/dashboard/:path*", destination: "/:path*", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {
