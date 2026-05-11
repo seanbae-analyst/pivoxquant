@@ -36,8 +36,8 @@ export default function OpengraphImage() {
               width: 28,
               height: 28,
               borderRadius: 9999,
-              background: "#E2B96F",
-              boxShadow: "0 0 24px rgba(226,185,111,0.55)",
+              background: "#B8956A",
+              boxShadow: "0 0 24px rgba(184,149,106,0.55)",
             }}
           />
           <span
@@ -66,7 +66,7 @@ export default function OpengraphImage() {
           >
             AI Quant Research Tool
             <br />
-            <span style={{ color: "#E2B96F" }}>for serious investors</span>
+            <span style={{ color: "#B8956A" }}>for serious investors</span>
           </span>
           <span
             style={{
