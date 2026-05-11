@@ -154,7 +154,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
           style={{
             color: "var(--r-ink-3)",
             marginTop: 12,
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
           }}
         className="font-serif" >
@@ -239,7 +239,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
             <PdfCard soft>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   color: "var(--r-ink-3)",
                   letterSpacing: "1.5px",
                   textTransform: "uppercase",
@@ -249,7 +249,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
               </div>
               <h3
                 style={{
-                  fontSize: 24,
+                  fontSize: "var(--pq-text-quote)",
                   margin: "8px 0",
                   fontWeight: 500,
                 }}
@@ -258,7 +258,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
               </h3>
               <p
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   lineHeight: 1.6,
                   color: "var(--r-ink-2)",
                 }}
@@ -266,7 +266,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
                 {data.topFlag.body}
               </p>
               <PdfDivider />
-              <div style={{ fontSize: 12, color: "var(--r-ink-3)" }}>
+              <div style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)" }}>
                 <strong>{data.topFlag.counterRule}</strong>
               </div>
             </PdfCard>
@@ -283,7 +283,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
               </div>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   color:
                     f.dueTone === "neg"
                       ? "var(--r-neg)"
@@ -297,7 +297,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
             </PdfFlexBetween>
             <h3
               style={{
-                fontSize: 18,
+                fontSize: "var(--pq-text-h5)",
                 margin: "8px 0 6px",
                 fontWeight: 500,
               }}
@@ -306,7 +306,7 @@ export function SelfAudit({ data = DEFAULT }: { data?: SelfAuditData }) {
             </h3>
             <p
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 lineHeight: 1.6,
                 color: "var(--r-ink-3)",
               }}

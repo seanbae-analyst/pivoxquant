@@ -73,7 +73,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
             marginBottom: 8,
@@ -84,7 +84,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-serif"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             color: "rgba(245,240,232,0.55)",
             padding: "48px 0",
             textAlign: "center",
@@ -102,7 +102,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
             marginBottom: 8,
@@ -121,7 +121,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           <div
             className="font-display"
             style={{
-              fontSize: 24,
+              fontSize: "var(--pq-text-quote)",
               color: "var(--pq-ivory, #F5F0E8)",
               marginBottom: 8,
             }}
@@ -131,7 +131,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
           <div
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color: "rgba(245,240,232,0.55)",
             }}
           >
@@ -147,7 +147,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
           marginBottom: 8,
@@ -186,7 +186,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
               className="font-display"
               style={{
                 fontWeight: 500,
-                fontSize: 24,
+                fontSize: "var(--pq-text-quote)",
                 letterSpacing: "-0.01em",
                 color: "var(--pq-ivory, #F5F0E8)",
                 margin: 0,
@@ -197,7 +197,7 @@ export function SignalsTimelineGrid({ entries, isLoading, resolveName }: Props) 
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.18em",
                 color: "rgba(245,240,232,0.55)",
               }}

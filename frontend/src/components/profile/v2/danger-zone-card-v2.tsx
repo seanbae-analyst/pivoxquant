@@ -61,7 +61,7 @@ export function DangerZoneCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
             marginBottom: 12,
@@ -74,7 +74,7 @@ export function DangerZoneCardV2({
           className="font-display"
           style={{
             fontWeight: 500,
-            fontSize: 24,
+            fontSize: "var(--pq-text-quote)",
             lineHeight: 1.2,
             letterSpacing: "-0.02em",
             color: "var(--pq-ivory)",
@@ -90,7 +90,7 @@ export function DangerZoneCardV2({
         <p
           className="font-serif"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.82)",
             marginBottom: 20,
@@ -114,7 +114,7 @@ export function DangerZoneCardV2({
               padding: "12px 22px",
               background: "var(--pq-bronze)",
               color: "var(--pq-ink, #050505)",
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.2em",
               borderRadius: 2,
               border: "none",
@@ -131,7 +131,7 @@ export function DangerZoneCardV2({
             disabled={deleting}
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               color: ERROR_COLOR,
               borderBottom: `1px solid ${ERROR_LINK_BORDER}`,
@@ -162,7 +162,7 @@ export function DangerZoneCardV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: ERROR_COLOR,
             marginBottom: 12,
@@ -174,7 +174,7 @@ export function DangerZoneCardV2({
         <p
           className="font-serif"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.82)",
             marginBottom: 20,
@@ -188,7 +188,7 @@ export function DangerZoneCardV2({
           href={deleteAccountMailto}
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             color: ERROR_COLOR,
             borderBottom: `1px solid ${ERROR_LINK_BORDER}`,

@@ -81,7 +81,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -93,7 +93,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
               margin: 0,
@@ -106,7 +106,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.55)",
             }}
@@ -147,7 +147,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-display"
               style={{
-                fontSize: 24,
+                fontSize: "var(--pq-text-quote)",
                 color: "var(--pq-bronze)",
                 letterSpacing: "-0.01em",
               }}
@@ -170,7 +170,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
                 <div
                   className="font-serif"
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     color: "rgba(245,240,232,0.55)",
                     marginTop: 4,
                   }}
@@ -185,7 +185,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
               aria-label={`status: ${l.status}`}
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: statusColor(l.status),
               }}
@@ -207,7 +207,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-mono"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(245,240,232,0.55)",
               }}
             >
@@ -217,7 +217,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
             <span
               className="font-mono"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(245,240,232,0.55)",
                 textAlign: "right",
                 letterSpacing: "0.04em",

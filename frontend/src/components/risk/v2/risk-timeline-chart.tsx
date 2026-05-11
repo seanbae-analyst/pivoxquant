@@ -73,7 +73,7 @@ export function RiskTimelineChart({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -85,7 +85,7 @@ export function RiskTimelineChart({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
               margin: 0,
@@ -98,7 +98,7 @@ export function RiskTimelineChart({
           <span
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.55)",
             }}
@@ -108,7 +108,7 @@ export function RiskTimelineChart({
           <span
             className="font-mono"
             style={{
-              fontSize: 16,
+              fontSize: "var(--pq-text-h6)",
               color: "var(--pq-ivory)",
               fontVariantNumeric: "tabular-nums",
             }}
@@ -139,7 +139,7 @@ export function RiskTimelineChart({
           <div
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color: "rgba(245,240,232,0.55)",
               padding: "60px 0",
               textAlign: "center",
@@ -198,7 +198,7 @@ export function RiskTimelineChart({
               y={strainY - 4}
               textAnchor="end"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 fill: "rgba(245,240,232,0.55)",
                 letterSpacing: "0.18em",
               }}
@@ -228,7 +228,7 @@ export function RiskTimelineChart({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
                   marginBottom: 8,
@@ -240,7 +240,7 @@ export function RiskTimelineChart({
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 24,
+                  fontSize: "var(--pq-text-quote)",
                   color: "var(--pq-ivory)",
                 }}
               >
