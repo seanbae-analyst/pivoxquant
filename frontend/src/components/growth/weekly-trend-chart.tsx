@@ -81,7 +81,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
 
   if (weeks.length === 0) {
     return (
-      <div className="flex h-40 items-center justify-center text-sm text-slate-400">
+      <div className="flex h-40 items-center justify-center text-sm text-[rgba(245,240,232,0.45)]">
         주간 트렌드 데이터가 아직 없습니다.
       </div>
     );
@@ -126,7 +126,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
                 y={y + 4}
                 textAnchor="end"
                 fontSize={10}
-                className="fill-slate-400"
+                fill="rgba(245,240,232,0.45)"
               >
                 {val}
               </text>
@@ -139,7 +139,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
           <path
             d={activityPath}
             fill="none"
-            stroke="#22c55e"
+            stroke="#7DD897"
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -164,7 +164,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
           const y =
             PADDING_Y + PLOT_HEIGHT - (w.activity / 100) * PLOT_HEIGHT;
           return (
-            <circle key={`a-${w.week}`} cx={x} cy={y} r={3} fill="#22c55e" />
+            <circle key={`a-${w.week}`} cx={x} cy={y} r={3} fill="#7DD897" />
           );
         })}
 
@@ -191,7 +191,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
               y={CHART_HEIGHT - 4}
               textAnchor="middle"
               fontSize={10}
-              className="fill-slate-400"
+              fill="rgba(245,240,232,0.45)"
             >
               {label}
             </text>
@@ -200,12 +200,15 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
       </svg>
 
       {/* Legend */}
-      <div className="mt-1 flex items-center justify-center gap-4 text-xs text-slate-500">
-        <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+      <div className="mt-1 flex items-center justify-center gap-4 font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
+        <span className="flex items-center gap-1.5">
+          <span
+            className="inline-block h-2 w-2 rounded-full"
+            style={{ backgroundColor: "#7DD897" }}
+          />
           Activity
         </span>
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-2 w-2 rounded-full"
             style={{ backgroundColor: "#B8956A" }}

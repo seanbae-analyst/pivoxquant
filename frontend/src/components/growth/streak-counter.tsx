@@ -10,14 +10,14 @@ interface StreakCounterProps {
 
 export function StreakCounter({ streak }: StreakCounterProps) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-50">
+    <div className="flex items-center gap-3 rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(184,149,106,0.14)]">
         <svg
           width={20}
           height={20}
           viewBox="0 0 20 20"
           fill="none"
-          className="text-green-600"
+          style={{ color: "var(--pq-bronze)" }}
         >
           <path
             d="M10 2C10 2 6 6 6 10C6 12.21 7.79 14 10 14C12.21 14 14 12.21 14 10C14 6 10 2 10 2Z"
@@ -38,11 +38,13 @@ export function StreakCounter({ streak }: StreakCounterProps) {
         </svg>
       </div>
       <div>
-        <p className="text-2xl font-bold tabular-nums text-slate-900">
+        <p className="font-mono text-2xl font-bold tabular-nums text-[var(--pq-ivory)]">
           {streak}
-          <span className="ml-1 text-sm font-normal text-slate-500">days</span>
+          <span className="ml-1 text-sm font-normal text-[rgba(245,240,232,0.55)]">days</span>
         </p>
-        <p className="text-xs text-slate-500">Current streak</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
+          Current streak
+        </p>
       </div>
     </div>
   );

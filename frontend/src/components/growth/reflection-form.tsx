@@ -85,9 +85,9 @@ export function ReflectionForm({ reflection, onSubmitted }: ReflectionFormProps)
           <div key={i} className="space-y-2">
             <label
               htmlFor={fieldId}
-              className="block text-sm font-medium text-slate-700"
+              className="block font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]"
             >
-              Q{i + 1}. {question}
+              Q{i + 1}. <span className="font-serif normal-case tracking-normal text-[rgba(245,240,232,0.82)]">{question}</span>
             </label>
             <textarea
               id={fieldId}
@@ -96,7 +96,7 @@ export function ReflectionForm({ reflection, onSubmitted }: ReflectionFormProps)
               disabled={alreadyAnswered}
               rows={2}
               placeholder="답변을 입력하세요..."
-              className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+              className="w-full resize-none rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] px-3 py-2 text-sm text-[var(--pq-ivory)] placeholder:text-[rgba(245,240,232,0.35)] focus:border-[var(--pq-bronze)] focus:outline-none focus:ring-1 focus:ring-[var(--pq-bronze)] disabled:cursor-not-allowed disabled:bg-[rgba(255,255,255,0.01)] disabled:text-[rgba(245,240,232,0.45)]"
             />
           </div>
         );
@@ -104,7 +104,7 @@ export function ReflectionForm({ reflection, onSubmitted }: ReflectionFormProps)
 
       {/* Mood selector */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-slate-700">
+        <label className="block font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           오늘 기분 (1-5)
         </label>
         <div className="flex gap-2">
@@ -114,37 +114,37 @@ export function ReflectionForm({ reflection, onSubmitted }: ReflectionFormProps)
               type="button"
               onClick={() => setMood(opt.value)}
               disabled={alreadyAnswered}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-medium transition-colors ${
+              className={`flex h-10 w-10 items-center justify-center rounded-full border font-mono text-sm font-medium tabular-nums transition-colors ${
                 mood === opt.value
-                  ? "border-green-500 bg-green-50 text-green-700"
-                  : "border-slate-200 text-slate-500 hover:border-slate-300"
+                  ? "border-[var(--pq-bronze)] bg-[rgba(184,149,106,0.18)] text-[var(--pq-bronze)]"
+                  : "border-[var(--pq-ivory-line)] text-[rgba(245,240,232,0.55)] hover:border-[var(--pq-bronze-light)] hover:text-[var(--pq-bronze-light)]"
               } disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {opt.label}
             </button>
           ))}
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-[rgba(245,240,232,0.45)]">
           {MOOD_OPTIONS.find((o) => o.value === mood)?.emoji}
         </p>
       </div>
 
       {error && (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-[#d97a7a]">{error}</p>
       )}
 
       {!alreadyAnswered && (
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="pq-ink-btn-bronze disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? "제출 중..." : "회고 제출"}
         </button>
       )}
 
       {alreadyAnswered && (
-        <p className="text-sm text-green-600 font-medium">
+        <p className="font-mono text-xs uppercase tracking-[0.22em] text-[var(--pq-bronze)]">
           오늘의 회고가 이미 제출되었습니다.
         </p>
       )}

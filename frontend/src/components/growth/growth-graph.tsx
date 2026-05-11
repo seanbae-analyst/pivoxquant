@@ -24,14 +24,16 @@ const TOP_LABEL_HEIGHT = 20;
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
 
-/** Map a score (0-100) to a fill color. Gray for 0, green spectrum otherwise. */
+/** Map a score (0-100) to a fill color.
+ *  v3 lock-in (W6.2): faint ivory hairline for empty, bronze ramp otherwise.
+ *  Replaces the GitHub-style green spectrum to honor the Vantablack palette. */
 function scoreToColor(score: number | undefined): string {
-  if (!score || score === 0) return "#e2e8f0"; // slate-200 (empty)
-  if (score < 20) return "#dcfce7"; // green-100
-  if (score < 40) return "#86efac"; // green-300
-  if (score < 60) return "#4ade80"; // green-400
-  if (score < 80) return "#22c55e"; // green-500
-  return "#16a34a"; // green-600
+  if (!score || score === 0) return "rgba(245,240,232,0.06)"; // empty cell — pq-ivory-line-soft
+  if (score < 20) return "rgba(184,149,106,0.18)"; // bronze 18%
+  if (score < 40) return "rgba(184,149,106,0.35)"; // bronze 35%
+  if (score < 60) return "rgba(184,149,106,0.55)"; // bronze 55%
+  if (score < 80) return "rgba(184,149,106,0.78)"; // bronze 78%
+  return "#B8956A"; // bronze 100%
 }
 
 interface GrowthGraphProps {
@@ -164,7 +166,7 @@ export function GrowthGraph({ data, onDayClick }: GrowthGraphProps) {
             key={`month-${col}`}
             x={LEFT_LABEL_WIDTH + col * (CELL_SIZE + CELL_GAP)}
             y={TOP_LABEL_HEIGHT - 6}
-            className="fill-slate-400"
+            fill="rgba(245,240,232,0.45)"
             fontSize={10}
             fontFamily="var(--font-sans)"
           >
@@ -179,7 +181,7 @@ export function GrowthGraph({ data, onDayClick }: GrowthGraphProps) {
               key={`day-${i}`}
               x={0}
               y={TOP_LABEL_HEIGHT + i * (CELL_SIZE + CELL_GAP) + CELL_SIZE - 2}
-              className="fill-slate-400"
+              fill="rgba(245,240,232,0.45)"
               fontSize={10}
               fontFamily="var(--font-sans)"
             >
@@ -213,22 +215,22 @@ export function GrowthGraph({ data, onDayClick }: GrowthGraphProps) {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-10 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs text-white shadow-lg"
+          className="pointer-events-none absolute z-10 rounded-sm border border-[var(--pq-ivory-line)] bg-[var(--pq-ink)] px-2.5 py-1.5 font-mono text-xs text-[var(--pq-ivory)]"
           style={{
             left: tooltip.x,
             top: tooltip.y,
             transform: "translate(-50%, -100%)",
           }}
         >
-          <span className="font-medium">{tooltip.date}</span>
-          <span className="ml-2 text-slate-300">
+          <span className="tabular-nums text-[var(--pq-bronze)]">{tooltip.date}</span>
+          <span className="ml-2 tabular-nums text-[rgba(245,240,232,0.82)]">
             {tooltip.score > 0 ? `${tooltip.score}점` : "기록 없음"}
           </span>
         </div>
       )}
 
       {/* Legend */}
-      <div className="mt-2 flex items-center justify-end gap-1 text-xs text-slate-500">
+      <div className="mt-2 flex items-center justify-end gap-1 font-mono text-[11px] uppercase tracking-[0.22em] text-[rgba(245,240,232,0.55)]">
         <span>Less</span>
         {[0, 20, 40, 60, 80].map((level) => (
           <div
