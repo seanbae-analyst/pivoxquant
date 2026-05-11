@@ -16,7 +16,13 @@ def register_blueprints(app):
     from .ai import ai_bp
     from .watchlist import watchlist_bp
     from .backtest import backtest_bp
-    from .quant import quant_bp
+    # Wave 11 SRP split: quant.py 3464-line god-file → 5 domain blueprints.
+    # All URL paths preserved (`/api/...`). Helpers in routes/quant_helpers.py.
+    from .signals_quant import signals_quant_bp
+    from .risk_quant import risk_quant_bp
+    from .performance_quant import performance_quant_bp
+    from .tools_quant import tools_quant_bp
+    from .strategy_quant import strategy_quant_bp
     from .quant_composer import quant_composer_bp  # Feature 1 — Quant Composer
     from .realtime import realtime_bp
     from .profile import profile_bp
@@ -62,7 +68,9 @@ def register_blueprints(app):
         auth_bp, auth_alias_bp, portfolio_bp, signals_bp, discover_bp,
         market_bp, daytrade_bp, alerts_bp, notifications_bp, trades_bp,
         ai_bp, watchlist_bp, backtest_bp,
-        quant_bp, quant_composer_bp, realtime_bp, profile_bp, broker_oauth_bp,
+        signals_quant_bp, risk_quant_bp, performance_quant_bp,
+        tools_quant_bp, strategy_quant_bp,
+        quant_composer_bp, realtime_bp, profile_bp, broker_oauth_bp,
         billing_bp, push_bp, share_bp, simulate_bp,
         counterfactual_bp, alt_data_bp,
         artifacts_bp, admin_fmp_bp, admin_preview_bp,

@@ -32,7 +32,7 @@ def legal_scrub_response(f):
     Layering: place AFTER ``@api_auth`` so auth still short-circuits 401s
     unscrubbed, but the happy-path body is always filtered::
 
-        @quant_bp.route("/risk/defense-status")
+        @risk_quant_bp.route("/risk/defense-status")
         @api_auth
         @legal_scrub_response
         def risk_defense_status():
