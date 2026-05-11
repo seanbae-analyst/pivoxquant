@@ -188,6 +188,16 @@
   --pq-ivory-line-faint: rgba(245, 240, 232, 0.04); /* faintest border / surface bg */
   --pq-ivory-line-ghost: rgba(245, 240, 232, 0.02); /* ghost surface bg / inset shadow */
 
+  /* Terminal chrome (Bloomberg-style dark panels).
+     Locked-in palette used by components/terminal/* — kpi-card, data-table,
+     candlestick-chart, top-ticker. Previously 28+ inline hex sites across
+     5 files; now a single source of truth. */
+  --pq-terminal-bg: #0B0E14;        /* terminal panel background */
+  --pq-terminal-bg-row: #0A0D13;    /* slightly deeper row/inset background */
+  --pq-terminal-line: #1A1F2E;      /* hairline rule between cells */
+  --pq-terminal-up: #D18888;        /* KR red — up tick */
+  --pq-terminal-down: #7AA0C8;      /* KR blue — down tick */
+
   /* Font family aliases → next/font CSS vars from app/layout.tsx.
      Without these, var(--pq-font-mono|serif) falls back to Georgia/Times
      instead of JetBrains Mono / Source Serif 4 / Playfair Display. */

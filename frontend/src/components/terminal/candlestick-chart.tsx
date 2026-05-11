@@ -17,8 +17,14 @@
  *   - timeframe: "1D" | "5D" | "1M" | "3M" | "6M" | "1Y" | "2Y"
  *   - indicators: subset of "ma20" | "ma50" | "rsi" | "volume"
  *
- * Visual: dark terminal theme; bronze (#B8956A) for MA20, bronze-deep
- * (#6F5636) dashed for MA50. Green/red volume bars.
+ * Visual: dark terminal theme; bronze for MA20, bronze-deep dashed for
+ * MA50. KR-convention red/blue volume bars (up=red, down=blue).
+ *
+ * Color sourcing: lightweight-charts v5 API expects concrete color strings
+ * (no CSS var support). To stay token-driven, we resolve `--pq-terminal-*`
+ * / `--pq-bronze*` from the documentElement computed style at chart init
+ * time and pass the resolved hex strings into the chart API. The JSX wrapper
+ * outside the canvas uses `var(--pq-terminal-*)` directly.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -77,6 +83,20 @@ export interface CandlestickChartProps {
 function toTs(s: string): UTCTimestamp {
   const iso = s.length <= 10 ? `${s}T00:00:00Z` : `${s.replace(" ", "T")}:00Z`;
   return Math.floor(new Date(iso).getTime() / 1000) as UTCTimestamp;
+}
+
+/**
+ * Resolve a CSS custom property from :root. Returns the trimmed string,
+ * or `fallback` if running outside a browser or if the var is unset.
+ * Used by the chart init effect to feed `var(--pq-*)` tokens into the
+ * lightweight-charts API, which expects concrete color strings.
+ */
+function readCssVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return v || fallback;
 }
 
 function sma(values: number[], window: number): (number | null)[] {
@@ -149,12 +169,22 @@ export function CandlestickChart({
       const lc = await import("lightweight-charts");
       if (cancelled || !container) return;
 
+      // Resolve tokens at init time (lightweight-charts API requires
+      // concrete strings — no CSS var support). Fallbacks match the
+      // globals.css `:root` values, so SSR and unset-var paths still
+      // render correctly.
+      const termBg = readCssVar("--pq-terminal-bg", "#0B0E14");
+      const termLine = readCssVar("--pq-terminal-line", "#1A1F2E");
+      const bronze = readCssVar("--pq-bronze", "#B8956A");
+      const bronzeDeep = readCssVar("--pq-bronze-deep", "#6F5636");
+      const ivoryMid = readCssVar("--pq-ivory-mid", "rgba(245,240,232,0.65)");
+
       chart = lc.createChart(container, {
         width: container.clientWidth,
         height: height + (wantVolume ? 80 : 0),
         layout: {
-          background: { type: lc.ColorType.Solid, color: "#0B0E14" },
-          textColor: "rgba(245,240,232,0.65)",
+          background: { type: lc.ColorType.Solid, color: termBg },
+          textColor: ivoryMid,
           fontFamily:
             "var(--font-serif), Georgia, 'Source Serif 4', serif",
           fontSize: 12,
@@ -164,21 +194,21 @@ export function CandlestickChart({
           horzLines: { color: "rgba(26,31,46,0.55)" },
         },
         rightPriceScale: {
-          borderColor: "#1A1F2E",
+          borderColor: termLine,
         },
         timeScale: {
-          borderColor: "#1A1F2E",
+          borderColor: termLine,
           timeVisible: timeframe === "1D" || timeframe === "5D",
           secondsVisible: false,
         },
         crosshair: {
           horzLine: {
-            color: "#B8956A",
-            labelBackgroundColor: "#1A1F2E",
+            color: bronze,
+            labelBackgroundColor: termLine,
           },
           vertLine: {
-            color: "#B8956A",
-            labelBackgroundColor: "#1A1F2E",
+            color: bronze,
+            labelBackgroundColor: termLine,
           },
         },
       });
@@ -187,7 +217,7 @@ export function CandlestickChart({
       const line = chart.addSeries(lc.LineSeries, {
         color: "rgba(245,240,232,0.92)",
         lineWidth: 2,
-        priceLineColor: "#B8956A",
+        priceLineColor: bronze,
         priceLineWidth: 1,
         lastValueVisible: true,
       });
@@ -195,7 +225,7 @@ export function CandlestickChart({
 
       if (wantMa20) {
         ma20Ref.current = chart.addSeries(lc.LineSeries, {
-          color: "#B8956A",
+          color: bronze,
           lineWidth: 1,
           priceLineVisible: false,
           lastValueVisible: false,
@@ -204,7 +234,7 @@ export function CandlestickChart({
       }
       if (wantMa50) {
         ma50Ref.current = chart.addSeries(lc.LineSeries, {
-          color: "#6F5636",
+          color: bronzeDeep,
           lineWidth: 1,
           lineStyle: lc.LineStyle.Dashed,
           priceLineVisible: false,
@@ -220,7 +250,7 @@ export function CandlestickChart({
         });
         chart.priceScale("volume").applyOptions({
           scaleMargins: { top: 0.78, bottom: 0 },
-          borderColor: "#1A1F2E",
+          borderColor: termLine,
         });
       }
 
@@ -325,14 +355,14 @@ export function CandlestickChart({
     <div
       className={`pq-terminal-chart ${className}`.trim()}
       style={{
-        background: "#0B0E14",
-        border: "1px solid #1A1F2E",
+        background: "var(--pq-terminal-bg)",
+        border: "1px solid var(--pq-terminal-line)",
         position: "relative",
       }}
     >
       <div
         className="flex items-center justify-between px-3 py-2"
-        style={{ borderBottom: "1px solid #1A1F2E" }}
+        style={{ borderBottom: "1px solid var(--pq-terminal-line)" }}
       >
         <div className="flex items-center gap-3">
           <span
@@ -351,8 +381,8 @@ export function CandlestickChart({
             style={{
               fontSize: 12,
               letterSpacing: "0.22em",
-              color: "#B8956A",
-              borderLeft: "1px solid #1A1F2E",
+              color: "var(--pq-bronze)",
+              borderLeft: "1px solid var(--pq-terminal-line)",
               paddingLeft: 12,
             }}
           >
@@ -381,7 +411,7 @@ export function CandlestickChart({
         <div
           className="flex gap-2 px-3 py-2"
           style={{
-            borderBottom: "1px solid #1A1F2E",
+            borderBottom: "1px solid var(--pq-terminal-line)",
             background: "rgba(184,149,106,0.02)",
           }}
         >
