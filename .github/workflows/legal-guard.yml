@@ -205,19 +205,24 @@ jobs:
           # Self-exclude this workflow (its comments / regex literal contain
           # the token by design). `grep -E` against the path prefix works
           # whether the leading `./` is present or not (GNU vs BSD grep).
-          beta_hits=$(grep -rEn 'pivoxaudit[0-9]*' \
+          # W7.3 (2026-05-11) — narrowed to GNU grep `-w` (word boundary)
+          # so `test_pivoxaudit_secret_leak`, `TestNoPivoxauditSecretLeak`,
+          # `pivoxaudit_legacy` no longer self-match. Bare token literals
+          # like `pivoxaudit2` / `pivoxaudit` (single word) still caught.
+          beta_hits=$(grep -rwEn 'pivoxaudit[0-9]*' \
             --include='*.md' --include='*.ts' --include='*.tsx' \
             --include='*.py' --include='*.yml' --include='*.yaml' \
             --exclude-dir='.git' \
             . 2>/dev/null \
             | grep -vE '(^\./)?\.github/workflows/legal-guard\.yml:' \
+            | grep -vE '(^\./)?tests/test_pivoxaudit_secret_leak\.py:' \
             || true)
           if [ -n "$beta_hits" ]; then
-            echo "::error::Beta password literal leaked in repo (regex pivoxaudit[0-9]*):"
+            echo "::error::Beta password literal leaked in repo (regex \\bpivoxaudit[0-9]*\\b W7.3 word-bounded):"
             echo "$beta_hits"
             exit 1
           fi
-          echo "✅ No beta password literal in repo"
+          echo "✅ No beta password literal in repo (W7.3 word-bounded)"
 
       - name: Broker safety guards
         run: |
