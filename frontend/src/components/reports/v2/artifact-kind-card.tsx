@@ -93,7 +93,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
       <span
         className="font-mono uppercase inline-block"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
           border: "1px solid var(--pq-hairline-2, rgba(245,240,232,0.12))",
@@ -109,7 +109,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 24,
+          fontSize: "var(--pq-text-quote)",
           lineHeight: 1.2,
           color: "var(--pq-ivory, #F5F0E8)",
           margin: "16px 0 4px",
@@ -120,7 +120,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.18em",
           color: "rgba(245,240,232,0.45)",
         }}
@@ -131,7 +131,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
       <p
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.7)",
           margin: "16px 0 0",
@@ -165,7 +165,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
             className="font-mono"
             style={{
               fontVariantNumeric: "tabular-nums",
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               color: "rgba(245,240,232,0.78)",
               marginTop: 4,
             }}
@@ -188,7 +188,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
             className="font-mono"
             style={{
               fontVariantNumeric: "tabular-nums",
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               color: "rgba(245,240,232,0.78)",
               marginTop: 4,
             }}
@@ -203,7 +203,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
           <Link
             href="/pricing"
             className="pq-ink-btn-bronze inline-flex items-center"
-            style={{ fontSize: 12, letterSpacing: "0.18em" }}
+            style={{ fontSize: "var(--pq-text-eyebrow)", letterSpacing: "0.18em" }}
           >
             Upgrade to {entry.minTier}
           </Link>
@@ -219,7 +219,7 @@ export function ArtifactKindCard({ entry, locked }: Props) {
             href={previewHref}
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               color: "rgba(245,240,232,0.55)",
               borderBottom:

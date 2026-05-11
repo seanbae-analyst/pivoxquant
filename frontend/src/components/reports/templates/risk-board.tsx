@@ -252,7 +252,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfCard>
           <p
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               color: "var(--r-ink-3)",
               lineHeight: 1.55,
               marginBottom: 14,
@@ -578,7 +578,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
               />
               <p
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   color: "var(--r-ink-3)",
                   lineHeight: 1.5,
                   marginTop: 10,

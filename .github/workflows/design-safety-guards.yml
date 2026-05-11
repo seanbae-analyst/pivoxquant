@@ -423,20 +423,23 @@ jobs:
           count=$(grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
             --include="*.tsx" --include="*.ts" \
             | grep -v '__tests__' | wc -l | xargs)
-          # Baseline ratcheted by PR `typography-tokens-extension-w10`
-          # (Wave 10) adding 5 new tokens (--pq-text-button/lead/h6/h5/h4
-          # for 13/15/16/18/20px) and migrating 41 inline literals across
-          # 20 Phase 3 high-impact files (landing/report-flip-card,
-          # reports/v2/latest-artifact-card, landing/engine-models-drawer,
-          # companion/chat-panel, risk/v2 ×3, portfolio/v2/portfolio-hero,
-          # portfolio/ledger-book-paper, landing ×2, pricing, growth,
-          # companion, auth ×2, signals ×4) — 733 → 692 inline literals.
-          # Prior baselines: W9 868 → 733, W8 961 → 868. Phase 4 sweep
-          # will target the remaining 32 sites (15/16/18/20/13) in low-
-          # impact files plus tree-wide 12/14/24/32 ratchet. Future
-          # migration waves should lower this number; new code must not
-          # increase it. Ratchet is one-way.
-          baseline=692
+          # Baseline ratcheted by PR `refactor/fontsize-phase4-w12`
+          # (Wave 12) migrating Top 11-20 offender files: reports
+          # /templates/insider-mirror, home/sector-allocation-donut,
+          # reports/templates/risk-board, market/overview-paper,
+          # settings/v2/broker-card-v2, risk/v2/correlation-heatmap,
+          # reports/v2/artifact-kind-card, reports/templates/burn-rate,
+          # profile/v2/identity-card-v2, portfolio/v2/positions-table-v2,
+          # landing/personas-preview, home/today-memo-hero, and a single
+          # h4 site in app/(dashboard)/home/_v1/page-v1 — 692 → 593
+          # inline literals (Δ -99). Prior baselines: W10 733 → 692,
+          # W9 868 → 733, W8 961 → 868. Remaining inline sites are
+          # dominated by size-9 mono kickers / 11px PDF caption / 28px
+          # avatar / 36px PDF hero which have no token equivalent and
+          # are intentionally retained. Future waves should target
+          # remaining 12/14 tree-wide sweep + Phase 5 PDF templates.
+          # Ratchet is one-way — new code must not increase this count.
+          baseline=593
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \

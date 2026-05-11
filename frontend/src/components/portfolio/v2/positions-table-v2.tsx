@@ -201,7 +201,7 @@ export function PositionsTableV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -216,7 +216,7 @@ export function PositionsTableV2({
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
           }}
@@ -242,7 +242,7 @@ export function PositionsTableV2({
               padding: 40,
               textAlign: "center",
               color: "rgba(245,240,232,0.55)",
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
             }}
           className="font-serif" >
             Loading positions…
@@ -255,7 +255,7 @@ export function PositionsTableV2({
               color: "rgba(245,240,232,0.55)",
             }}
           className="font-serif" >
-            <p style={{ fontSize: 16, lineHeight: 1.5, margin: "0 0 20px 0" }}>
+            <p style={{ fontSize: "var(--pq-text-h6)", lineHeight: 1.5, margin: "0 0 20px 0" }}>
               No positions observed yet.
             </p>
             {onAddPosition && (
@@ -268,7 +268,7 @@ export function PositionsTableV2({
                   padding: "10px 20px",
                   background: "var(--pq-bronze)",
                   color: "var(--pq-ink, #050505)",
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   border: "none",
                   borderRadius: "var(--pq-radius-cta, 2px)",
@@ -301,7 +301,7 @@ export function PositionsTableV2({
                     onClick={() => onSort(h.key)}
                     className="pq-pos-th font-mono"
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.22em",
                       textTransform: "uppercase",
                       fontWeight: 500,
@@ -389,7 +389,7 @@ function PositionRow({
 
   const cellStyle: React.CSSProperties = {
     padding: "16px 12px",
-    fontSize: 14,
+    fontSize: "var(--pq-text-body)",
     color: "rgba(245,240,232,0.82)",
     borderBottom:
       "1px solid var(--pq-hairline-ink, var(--pq-ivory-line))",
@@ -422,7 +422,7 @@ function PositionRow({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             color: "rgba(245,240,232,0.55)",
             marginTop: 3,
@@ -529,7 +529,7 @@ function PositionRow({
           className="sector-tag font-mono uppercase"
           style={{
             display: "inline-block",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             padding: "4px 8px",
             border: "1px solid var(--pq-bronze)",
@@ -558,7 +558,7 @@ function RowActionBtn({
       onClick={onClick}
       className="font-mono uppercase"
       style={{
-        fontSize: 12,
+        fontSize: "var(--pq-text-eyebrow)",
         letterSpacing: "0.2em",
         padding: "4px 10px",
         background: "transparent",

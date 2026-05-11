@@ -32,7 +32,7 @@ export function CorrelationHeatmap() {
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 8,
@@ -44,7 +44,7 @@ export function CorrelationHeatmap() {
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 32,
+          fontSize: "var(--pq-text-h3)",
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",
           margin: "0 0 12px 0",
@@ -55,7 +55,7 @@ export function CorrelationHeatmap() {
       <p
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           color: "rgba(245,240,232,0.70)",
           lineHeight: 1.55,
           maxWidth: 640,
@@ -80,7 +80,7 @@ export function CorrelationHeatmap() {
           alignItems: "center",
           gap: 12,
           marginBottom: 18,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.55)",
         }}
@@ -114,7 +114,7 @@ export function CorrelationHeatmap() {
           style={{
             padding: "32px 0",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
           }}
         >
           Observing pairwise correlations…
@@ -125,7 +125,7 @@ export function CorrelationHeatmap() {
           style={{
             padding: "32px 0",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
           }}
         >
           Not enough holdings to compute a correlation matrix yet. Add at
@@ -195,7 +195,7 @@ export function CorrelationHeatmap() {
                           height: 40,
                           width: 48,
                           textAlign: "center",
-                          fontSize: 12,
+                          fontSize: "var(--pq-text-eyebrow)",
                           color: "var(--pq-ivory)",
                           backgroundColor: bg,
                           border: "0.5px solid var(--pq-ivory-line-soft)",

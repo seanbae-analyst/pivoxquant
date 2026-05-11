@@ -275,3 +275,76 @@ makeCapAssertion(
   PHASE3_FILES,
   "typography token coverage — Phase 3 (15/16/18/20/13 sweep) inline fontSize offenders (W10)",
 );
+
+/** Files migrated in PR `refactor/fontsize-phase4-w12` — Phase 4 Top 11-20
+ *  offenders. Each file's pre-migration count was 10-12 inline literals; after
+ *  migration only sizes with no v3 token (9, 11, 28, 36) remain. The caps
+ *  below pin those remainders so a future contributor cannot re-introduce
+ *  previously tokenized sizes (12 / 14 / 24 / 32 / 16 / 18 / 20). */
+const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
+  {
+    path: "components/reports/templates/insider-mirror.tsx",
+    cap: 5,
+    reason: "5×9 mono kicker (PDF aesthetic, below HIG floor); migrated 14/24/12 → tokens",
+  },
+  {
+    path: "components/home/sector-allocation-donut.tsx",
+    cap: 2,
+    reason: "2×9 mono kicker (chart centre + empty state); migrated 12/16 → tokens",
+  },
+  {
+    path: "components/reports/templates/risk-board.tsx",
+    cap: 9,
+    reason: "7×11 PDF caption + 1×11 paragraph + 1×36 hero number — no v3 token",
+  },
+  {
+    path: "components/market/overview-paper.tsx",
+    cap: 2,
+    reason: "1×9 kicker + 1×0.45em em-relative unit suffix — no v3 token",
+  },
+  {
+    path: "components/settings/v2/broker-card-v2.tsx",
+    cap: 0,
+    reason: "all 10 literals (12/14/32) migrated → --pq-text-eyebrow/body/h3",
+  },
+  {
+    path: "components/risk/v2/correlation-heatmap.tsx",
+    cap: 3,
+    reason: "3×9 ticker label header (heatmap aesthetic, no v3 token)",
+  },
+  {
+    path: "components/reports/v2/artifact-kind-card.tsx",
+    cap: 2,
+    reason: "2×9 micro-label (Last published / Next due) — below HIG floor",
+  },
+  {
+    path: "components/reports/templates/burn-rate.tsx",
+    cap: 2,
+    reason: "2×9 PDF mono kicker — no v3 token",
+  },
+  {
+    path: "components/profile/v2/identity-card-v2.tsx",
+    cap: 1,
+    reason: "1×28 avatar initial — no v3 token between quote(24) and h3(32)",
+  },
+  {
+    path: "components/portfolio/v2/positions-table-v2.tsx",
+    cap: 0,
+    reason: "all 10 literals (12/14/16) migrated → --pq-text-eyebrow/body/h6",
+  },
+  {
+    path: "components/landing/personas-preview.tsx",
+    cap: 0,
+    reason: 'all 10 literals (string-form "12px"/"14px"/"24px") migrated → tokens',
+  },
+  {
+    path: "components/home/today-memo-hero.tsx",
+    cap: 2,
+    reason: "2×9 meta-strip kicker (Cadence / Agent) — no v3 token",
+  },
+];
+
+makeCapAssertion(
+  PHASE4_FILES,
+  "typography token coverage — Phase 4 (Top 11-20 sweep) inline fontSize offenders (W12)",
+);

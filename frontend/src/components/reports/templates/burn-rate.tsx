@@ -144,7 +144,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
           <br />
           <em>they run out</em>?
         </PdfCoverTitle>
-        <p style={{ color: "var(--r-ink-3)", fontSize: 14, lineHeight: 1.55, marginTop: 12, maxWidth: "140mm" }}>
+        <p style={{ color: "var(--r-ink-3)", fontSize: "var(--pq-text-body)", lineHeight: 1.55, marginTop: 12, maxWidth: "140mm" }}>
           Cash burn and runway across growth names. Who survives the next round, who doesn&rsquo;t.
         </p>
 
@@ -214,14 +214,14 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
                   <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                     {c.ticker} · {c.name}
                   </div>
-                  <h3 style={{ fontSize: 24, margin: 0, fontWeight: 500 }} className="font-serif" >
+                  <h3 style={{ fontSize: "var(--pq-text-quote)", margin: 0, fontWeight: 500 }} className="font-serif" >
                     Runway:{" "}
                     <span style={{ color: c.runwayLabelTone === "warn" ? "var(--r-gold)" : "var(--r-neg)" }}>
                       {c.runwayLabel}
                     </span>
                   </h3>
                 </div>
-                <div style={{ fontSize: 12 }} className="font-mono" >{c.cashBurnLine}</div>
+                <div style={{ fontSize: "var(--pq-text-eyebrow)" }} className="font-mono" >{c.cashBurnLine}</div>
               </PdfFlexBetween>
               <div
                 style={{
@@ -232,7 +232,7 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
                   padding: "9px 0",
                 }}
               >
-                <div style={{ fontSize: 12 }} className="font-mono" >Runway gauge</div>
+                <div style={{ fontSize: "var(--pq-text-eyebrow)" }} className="font-mono" >Runway gauge</div>
                 <div style={{ height: 8, background: "var(--r-bg-soft)", borderRadius: 2, overflow: "hidden" }}>
                   <div
                     style={{
@@ -245,11 +245,11 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
                     }}
                   />
                 </div>
-                <div style={{ textAlign: "right", fontSize: 12 }} className="font-mono" >
+                <div style={{ textAlign: "right", fontSize: "var(--pq-text-eyebrow)" }} className="font-mono" >
                   {c.runwayMonths} / 24 mo
                 </div>
               </div>
-              <p style={{ color: "var(--r-ink-3)", marginTop: 12, fontSize: 12, lineHeight: 1.6 }}>{c.note}</p>
+              <p style={{ color: "var(--r-ink-3)", marginTop: 12, fontSize: "var(--pq-text-eyebrow)", lineHeight: 1.6 }}>{c.note}</p>
               <div style={{ paddingTop: 8 }}>
                 <PdfCheckList items={[{ checked: false, body: <><strong>Action</strong> — {c.action}</>, meta: "P1" }]} />
               </div>
@@ -266,9 +266,9 @@ export function BurnRate({ data = DEFAULT }: { data?: BurnRateData }) {
               </div>
               <strong>{data.watch.runway}</strong>
             </div>
-            <div style={{ fontSize: 12, color: "var(--r-ink-3)" }} className="font-mono" >{data.watch.cashBurnLine}</div>
+            <div style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)" }} className="font-mono" >{data.watch.cashBurnLine}</div>
           </PdfFlexBetween>
-          <p style={{ color: "var(--r-ink-3)", marginTop: 8, fontSize: 12, lineHeight: 1.55 }}>{data.watch.note}</p>
+          <p style={{ color: "var(--r-ink-3)", marginTop: 8, fontSize: "var(--pq-text-eyebrow)", lineHeight: 1.55 }}>{data.watch.note}</p>
         </div>
 
         <div style={{ marginTop: 18 }}>
