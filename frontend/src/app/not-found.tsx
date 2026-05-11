@@ -10,7 +10,7 @@ export default function NotFound() {
       <div className="max-w-xl text-center">
         <div
           className="text-[11px] tracking-[0.22em] uppercase mb-4"
-          style={{ color: "#E2B96F" }}
+          style={{ color: "#B8956A" }}
         >
           Error 404 · Page not found
         </div>

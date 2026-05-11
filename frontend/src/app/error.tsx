@@ -41,12 +41,12 @@ export default function Error({
       <div className="w-full max-w-md text-center">
         <AlertTriangle
           className="mx-auto mb-6 h-8 w-8"
-          style={{ color: "#E2B96F" }}
+          style={{ color: "#B8956A" }}
         />
 
         <div
           className="text-[11px] tracking-[0.22em] uppercase mb-4"
-          style={{ color: "#E2B96F" }}
+          style={{ color: "#B8956A" }}
         >
           Something interrupted the observation
         </div>
@@ -93,7 +93,7 @@ export default function Error({
             type="button"
             onClick={() => reset()}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-sm border text-sm font-medium tracking-wide transition-colors"
-            style={{ borderColor: "#E2B96F", color: "#E2B96F" }}
+            style={{ borderColor: "#B8956A", color: "#B8956A" }}
           >
             <RotateCw className="h-3.5 w-3.5" />
             Try again

@@ -88,8 +88,8 @@
   --border: #e2e8f0;                /* slate-200 */
   --input: #e2e8f0;
 
-  /* Single accent — Warm Gold */
-  --accent: #E2B96F;
+  /* Single accent — v3 Bronze */
+  --accent: #B8956A;
   --accent-foreground: #0f172a;
   --accent-hover: #d4a558;
   --accent-muted: #f6eedd;          /* gold-tinted surface */
@@ -100,7 +100,7 @@
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
 
-  --ring: #E2B96F;
+  --ring: #B8956A;
   --destructive: #dc2626;
 
   /* Semantic — price direction (Korean convention default) */
@@ -144,7 +144,7 @@
 
   /* Chart palette — neutral-first with accent */
   --chart-1: #0f172a;               /* primary line */
-  --chart-2: #E2B96F;               /* accent */
+  --chart-2: #B8956A;               /* accent */
   --chart-3: #64748b;               /* slate-500 */
   --chart-4: #94a3b8;               /* slate-400 */
   --chart-5: #cbd5e1;               /* slate-300 */
@@ -157,7 +157,7 @@
   --sidebar-accent: #f1f5f9;
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: #E2B96F;
+  --sidebar-ring: #B8956A;
 
   /* ── PivoxQuant Vantablack tokens (Wave 1C) ── */
   /* RGB components for opacity composition */
@@ -278,7 +278,7 @@
 
   --accent: #d4a558;
   --accent-foreground: #0f172a;
-  --accent-hover: #e2b96f;
+  --accent-hover: #b8956a;
   --accent-muted: #2a2218;
 
   --primary: #e2e8f0;

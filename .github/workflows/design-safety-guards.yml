@@ -12,6 +12,8 @@
 #   DS5 FAIL — AlertItem interface in types.ts still has legacy type/data fields
 #   DS6 FAIL — BUY/SELL literals in user-facing tsx (자본시장법 위반)
 #   DS7 FAIL — N+1 query patterns in routes/ (for-loop + .get()/.first())
+#   DS8 FAIL — v2 hex #E2B96F (or rgb decimal 226,185,111) usage
+#              (W6.4 sweep — design v3 locks Bronze to #B8956A / 184,149,106)
 #   DS9 FAIL — AI slop colored icon-box + animate-pulse loading pattern
 #              (W6.5 root LoadingScreen sweep — design v3 §9 ban)
 #
@@ -313,6 +315,53 @@ jobs:
           print("DS7 PASS — no N+1 query patterns found")
           PYEOF
 
+      # ── DS8: v2 hex #E2B96F / rgb decimal 226,185,111 ban (design v3 lock) ───
+      # W6.4 (2026-05-11). Design v3 locks Bronze to #B8956A (rgb 184,149,106).
+      # The legacy v2 hex #E2B96F slipped back into several inline-styled error /
+      # OG-image / growth files during the v3 sweep. This guard catches future
+      # regressions by scanning frontend/src for the literal v2 hex (case
+      # insensitive) and its rgb decimal form, including rgba() variants.
+      - name: DS8 — No v2 bronze hex / rgb decimal in frontend
+        run: |
+          echo "=== DS8: Checking for legacy v2 bronze hex / rgb decimal ==="
+          python3 - <<'PYEOF'
+          import re, sys
+          from pathlib import Path
+
+          HEX_PATTERN = re.compile(r'#E2B96F', re.IGNORECASE)
+          # Match rgb decimal 226,185,111 with arbitrary spacing (rgb()/rgba()/raw)
+          RGB_PATTERN = re.compile(r'226[, ]+185[, ]+111')
+
+          EXTENSIONS = {'.tsx', '.ts', '.css', '.scss', '.json'}
+          violations = []
+
+          for f in Path('frontend/src').rglob('*'):
+              if f.suffix not in EXTENSIONS:
+                  continue
+              if 'node_modules' in f.parts:
+                  continue
+              try:
+                  text = f.read_text(encoding='utf-8', errors='replace')
+              except Exception:
+                  continue
+              for i, line in enumerate(text.splitlines(), 1):
+                  if HEX_PATTERN.search(line):
+                      violations.append(f'{f}:{i}: [hex] {line.strip()[:140]}')
+                  if RGB_PATTERN.search(line):
+                      violations.append(f'{f}:{i}: [rgb] {line.strip()[:140]}')
+
+          if violations:
+              print('::error::DS8 FAIL — legacy v2 bronze hex / rgb decimal found. '
+                    'Design v3 Bronze = #B8956A (rgb 184,149,106). '
+                    'Prefer var(--pq-bronze) in CSS, literal #B8956A in inline styles / SVG.')
+              for v in violations:
+                  print(v)
+              print(f'\nTotal: {len(violations)} v2 bronze occurrence(s)')
+              sys.exit(1)
+
+          print('DS8 PASS — no v2 bronze hex / rgb decimal found')
+          PYEOF
+
       # ── DS9: AI slop colored icon-box + pulse loading pattern ─────────────────
       # W6.5 (2026-05-11). Root LoadingScreen previously wrapped a 5x5 SVG
       # checkmark inside a 10x10 rounded-xl bronze box with animate-pulse —
@@ -386,6 +435,7 @@ jobs:
               '| DS5 | AlertItem legacy type/data fields |',
               '| DS6 | BUY/SELL literal in user-facing tsx |',
               '| DS7 | N+1 query pattern in routes/ |',
+              '| DS8 | v2 bronze hex #E2B96F / rgb 226,185,111 (design v3 lock) |',
               '| DS9 | AI slop icon-box + animate-pulse loading frame |',
               '',
               'Guards DS5/DS6/DS7 are currently `continue-on-error: true`',

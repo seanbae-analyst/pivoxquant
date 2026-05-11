@@ -344,8 +344,8 @@ export default function GrowthPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-sm border border-[var(--pq-ivory-line)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(226,185,111,0.14)" }}>
-                  <span className="text-lg font-bold" style={{ color: "#E2B96F" }}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(184,149,106,0.14)" }}>
+                  <span className="text-lg font-bold" style={{ color: "#B8956A" }}>
                     {todayData.score.reflection}
                   </span>
                 </div>

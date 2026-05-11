@@ -300,7 +300,7 @@ export default function PortfolioPage() {
           role="alert"
           className="mb-4 flex items-center justify-between gap-3 px-4 py-3 font-serif text-[14px]"
           style={{
-            background: "rgba(226, 185, 111, 0.06)",
+            background: "rgba(184, 149, 106, 0.06)",
             borderTop: "1px solid var(--pq-bronze)",
             borderBottom: "1px solid var(--pq-bronze)",
             color: "var(--pq-bronze)",

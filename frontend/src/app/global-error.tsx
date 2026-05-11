@@ -52,7 +52,7 @@ export default function GlobalError({
               width: "8px",
               height: "8px",
               borderRadius: "9999px",
-              background: "#E2B96F",
+              background: "#B8956A",
               margin: "0 auto 28px",
             }}
           />
@@ -62,7 +62,7 @@ export default function GlobalError({
               fontSize: "10px",
               letterSpacing: "0.22em",
               textTransform: "uppercase",
-              color: "#E2B96F",
+              color: "#B8956A",
               marginBottom: "16px",
             }}
           >
@@ -136,10 +136,10 @@ export default function GlobalError({
               display: "block",
               width: "100%",
               padding: "10px 20px",
-              border: "1px solid #E2B96F",
+              border: "1px solid #B8956A",
               borderRadius: "2px",
               background: "transparent",
-              color: "#E2B96F",
+              color: "#B8956A",
               fontSize: "11px",
               letterSpacing: "0.18em",
               textTransform: "uppercase",

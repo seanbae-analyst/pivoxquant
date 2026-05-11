@@ -151,7 +151,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
           <path
             d={reflectionPath}
             fill="none"
-            stroke="#E2B96F"
+            stroke="#B8956A"
             strokeWidth={2}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -174,7 +174,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
           const y =
             PADDING_Y + PLOT_HEIGHT - (w.reflection / 100) * PLOT_HEIGHT;
           return (
-            <circle key={`r-${w.week}`} cx={x} cy={y} r={3} fill="#E2B96F" />
+            <circle key={`r-${w.week}`} cx={x} cy={y} r={3} fill="#B8956A" />
           );
         })}
 
@@ -208,7 +208,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
         <span className="flex items-center gap-1">
           <span
             className="inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: "#E2B96F" }}
+            style={{ backgroundColor: "#B8956A" }}
           />
           Reflection
         </span>

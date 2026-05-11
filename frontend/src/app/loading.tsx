@@ -20,7 +20,7 @@ export default function Loading() {
         style={{
           width: "10px",
           height: "10px",
-          background: "#E2B96F",
+          background: "#B8956A",
         }}
       />
 

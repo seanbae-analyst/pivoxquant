@@ -252,7 +252,7 @@ export default function PortfolioPageV2() {
             alignItems: "center",
             justifyContent: "space-between",
             gap: 12,
-            background: "rgba(226, 185, 111, 0.06)",
+            background: "rgba(184, 149, 106, 0.06)",
             borderTop: "1px solid var(--pq-bronze)",
             borderBottom: "1px solid var(--pq-bronze)",
             color: "var(--pq-bronze)",
