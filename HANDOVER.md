@@ -1,4 +1,32 @@
-# PivoxQuant — 인수인계서 (2026-05-11 v36 — 28 PR · main commit · 출시 readiness wave 2)
+# PivoxQuant — 인수인계서 (2026-05-11 v37 — Wave 14 잔존 결함 sweep)
+
+## 🟢 2026-05-11 v37 Wave 14 — **3 PR squash-merged** · main `5c4de02c → 22645caa` · 회귀 0
+
+| Sub | PR | 결정 | 변경 | 검증 |
+|---|---|---|---|---|
+| 14.1 | #312 | anthropic SDK 버전 cap | `requirements.txt`: `anthropic>=0.39.0` → `>=0.93.0,<0.101.0` (floor only → 검증 prod 범위 + 0.101 미만 cap) | Railway 다음 배포 시 0.100.0 install 유지, 0.101+ 자동 차단 |
+| 14.2 | #313 | candlestick-chart hex 토큰화 | `globals.css` 5 신규 token (`--pq-terminal-bg/-bg-row/-line/-up/-down`) + `candlestick-chart.tsx` `readCssVar()` helper로 lightweight-charts API 우회. JSX wrapper 100% var() 화 | hex 19 → 4 (모두 SSR fallback). tsc exit 0, vitest 206/206 |
+| 14.3 | #314 | "세션 만료" 거짓말 가드 | `lib/had-session.ts` 신규. localStorage `pq_had_session` 단일 비트 marker. AuthProvider가 user observe 시 mark / logout 시 clear. apiFetch가 SESSION_EXPIRED 401 시 marker false 면 `/login` (배너 없음), true 면 `/login?expired=1` | tsc exit 0, vitest 206/206 |
+| 14.4 | — | RSC 503 monitoring strategy | 본 wave 코드 변경 없음 — 아래 모니터링 plan 참조 | — |
+
+### v37 Wave 14.4 — RSC streaming chunk 503 모니터링 plan
+관찰: `/signup?_rsc=...` 503 일회 발생 (E2E P2 #22). cold-start 가설.
+
+**모니터링 전략** (추가 비용 0원):
+1. **Sentry frontend hook** — 이미 운영 중. `_rsc` 쿼리 string 포함 5xx event 자동 캡처됨. 다음 주간 sweep에서 Sentry 대시보드 → "Issues" → text filter `_rsc` 검색 → 빈도 측정.
+2. **Vercel deployment logs** — `vercel logs --since 7d | grep "_rsc.*503"` (admin action 필요). 503 빈도 < 5건/7일이면 cold-start (정상). > 50건/7일이면 RSC config 조사.
+3. **자동 fix 보류 조건** — 빈도 임계 (50건/7일) 초과 시에만 root cause 조사 진행. 그 전엔 monitoring only.
+4. **다음 sweep**: v38 또는 신규 사용자 100명 도달 시점. 둘 중 빠른 쪽.
+
+**자율 fix 불가 사유**: Sentry/Vercel 대시보드 접근 = CEO admin action. 코드 측에서는 cold-start 자체를 제거할 수 없음 (Vercel/Railway 인프라 제약). 그 외 RSC streaming chunk 자체는 Next.js 16 정상 동작.
+
+### v37 회귀 검증 (직접 측정)
+- **frontend vitest**: 206/206 PASS (Wave 14.2 + 14.3 cumulative)
+- **tsc**: exit 0 (Wave 14.2 + 14.3 후)
+- **hex count drop**: candlestick-chart.tsx 19 → 4 (SSR fallback only)
+- **자율 fix 잔존**: HIGH inline fontSize 692건 Phase 4 (Wave 다음 후보)
+
+---
 
 ## 🟢 2026-05-11 v36 종합 — **28 PR squash-merged (v35의 19 PR + Wave 7-11의 9 PR) + 1 self-heal + 1 risk-close** · main `f2fa5bbe → 629bc4ef` · OPEN PR 1 (#246 werkzeug HOLD)
 
