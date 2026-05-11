@@ -314,7 +314,7 @@ export default function SignupPageV2() {
           aria-label="PivoxQuant home"
           className="font-mono uppercase"
           style={{
-            fontSize: 13,
+            fontSize: "var(--pq-text-button)",
             letterSpacing: "0.28em",
             color: "var(--pq-ivory, #F5F0E8)",
             textTransform: "uppercase",
@@ -519,7 +519,7 @@ export default function SignupPageV2() {
                     }`,
                     borderRadius: 2,
                     padding: "8px 10px",
-                    fontSize: 13,
+                    fontSize: "var(--pq-text-button)",
                     colorScheme: "dark",
                   }}
                 />

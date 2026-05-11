@@ -85,7 +85,7 @@ export function SignalsHeroV2({ eyebrow = "Signals · live", counts, loading = f
       <p
         className="font-serif"
         style={{
-          fontSize: 15,
+          fontSize: "var(--pq-text-lead)",
           lineHeight: 1.6,
           color: "rgba(245,240,232,0.82)",
           maxWidth: 720,

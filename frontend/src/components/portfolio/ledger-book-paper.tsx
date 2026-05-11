@@ -184,7 +184,7 @@ export function LedgerBookPaper({
 
       <p
         className="pq-paper-body"
-        style={{ maxWidth: "58ch", marginTop: -8, fontSize: 15 }}
+        style={{ maxWidth: "58ch", marginTop: -8, fontSize: "var(--pq-text-lead)" }}
       >
         Positions, cost basis, and observed performance across your two
         markets. User-entered record only — not investment advice.
@@ -360,7 +360,7 @@ export function LedgerBookPaper({
                       <td style={{ padding: "14px 6px 14px 0" }}>
                         <div
                           style={{
-                            fontSize: 15,
+                            fontSize: "var(--pq-text-lead)",
                             color: "#1a1a1a",
                             fontWeight: 500,
                             letterSpacing: "-0.005em",

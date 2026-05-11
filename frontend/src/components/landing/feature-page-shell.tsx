@@ -152,7 +152,7 @@ export default function FeaturePageShell({
                   className="font-serif"
                   style={{
                     color: "var(--pq-ivory)",
-                    fontSize: "20px",
+                    fontSize: "var(--pq-text-h4)",
                     fontWeight: 500,
                     letterSpacing: "-0.01em",
                   }}
@@ -220,7 +220,7 @@ export default function FeaturePageShell({
           <p
             className="font-serif mx-auto"
             style={{
-              fontSize: "15px",
+              fontSize: "var(--pq-text-lead)",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.58)",
               maxWidth: "32em",

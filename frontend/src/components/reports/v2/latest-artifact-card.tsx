@@ -119,7 +119,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
         <p
           className="font-serif"
           style={{
-            fontSize: 15,
+            fontSize: "var(--pq-text-lead)",
             lineHeight: 1.65,
             color: "rgba(245,240,232,0.7)",
             margin: 0,
@@ -201,7 +201,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
             <p
               className="font-serif"
               style={{
-                fontSize: 15,
+                fontSize: "var(--pq-text-lead)",
                 lineHeight: 1.65,
                 color: "rgba(245,240,232,0.78)",
                 marginTop: 18,
@@ -326,7 +326,7 @@ export function LatestArtifactCard({ artifact, loading, resolveName }: Props) {
                         className="font-display"
                         style={{
                           fontWeight: 500,
-                          fontSize: 18,
+                          fontSize: "var(--pq-text-h5)",
                           color: "var(--pq-ivory, #F5F0E8)",
                           lineHeight: 1.15,
                         }}

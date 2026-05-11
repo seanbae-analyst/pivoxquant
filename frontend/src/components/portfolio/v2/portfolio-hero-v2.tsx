@@ -180,7 +180,7 @@ export function PortfolioHeroV2({
       <p
         className="font-serif"
         style={{
-          fontSize: 18,
+          fontSize: "var(--pq-text-h5)",
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
           maxWidth: 720,
@@ -368,7 +368,7 @@ function HeroKpi({
       <div
         className="font-mono tabular-nums"
         style={{
-          fontSize: 18,
+          fontSize: "var(--pq-text-h5)",
           letterSpacing: "-0.005em",
           color: valueColor,
           lineHeight: 1.2,

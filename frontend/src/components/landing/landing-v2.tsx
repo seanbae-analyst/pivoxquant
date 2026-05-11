@@ -399,7 +399,7 @@ function Faq() {
               <div
                 className="font-serif"
                 style={{
-                  fontSize: "15px",
+                  fontSize: "var(--pq-text-lead)",
                   lineHeight: 1.7,
                   color: "rgba(245,240,232,0.75)",
                   paddingTop: 10,
@@ -550,7 +550,7 @@ function SiteFooter() {
               <span
                 className="font-serif"
                 style={{
-                  fontSize: "18px",
+                  fontSize: "var(--pq-text-h5)",
                   letterSpacing: "0.28em",
                   color: "var(--pq-ivory)",
                   fontWeight: 500,

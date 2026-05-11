@@ -423,15 +423,20 @@ jobs:
           count=$(grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
             --include="*.tsx" --include="*.ts" \
             | grep -v '__tests__' | wc -l | xargs)
-          # Baseline ratcheted by PR `fontsize-phase2-w9` (Wave 9) migrating
-          # Top 6-10 offender files (home/_v1/page-v1, indices-detail-paper,
-          # chat-panel, subscription-card-v2, pricing/page, signal-memo-strip,
-          # dd-checklist, companion-entry-v2, settings/_v2/page-v2,
-          # companion/page) — 868 → 733 inline literals.
-          # Prior baseline (W8): 961 → 868 (Top 5 migration).
-          # Future migration waves should lower this number; new code must
-          # not increase it. Ratchet is one-way.
-          baseline=733
+          # Baseline ratcheted by PR `typography-tokens-extension-w10`
+          # (Wave 10) adding 5 new tokens (--pq-text-button/lead/h6/h5/h4
+          # for 13/15/16/18/20px) and migrating 41 inline literals across
+          # 20 Phase 3 high-impact files (landing/report-flip-card,
+          # reports/v2/latest-artifact-card, landing/engine-models-drawer,
+          # companion/chat-panel, risk/v2 ×3, portfolio/v2/portfolio-hero,
+          # portfolio/ledger-book-paper, landing ×2, pricing, growth,
+          # companion, auth ×2, signals ×4) — 733 → 692 inline literals.
+          # Prior baselines: W9 868 → 733, W8 961 → 868. Phase 4 sweep
+          # will target the remaining 32 sites (15/16/18/20/13) in low-
+          # impact files plus tree-wide 12/14/24/32 ratchet. Future
+          # migration waves should lower this number; new code must not
+          # increase it. Ratchet is one-way.
+          baseline=692
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \

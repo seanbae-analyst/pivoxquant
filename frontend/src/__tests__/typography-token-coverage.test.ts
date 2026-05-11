@@ -159,3 +159,119 @@ makeCapAssertion(
   PHASE2_FILES,
   "typography token coverage — Phase 2 (Top 6-10) inline fontSize offenders (W9)",
 );
+
+/** Files migrated in PR `typography-tokens-extension-w10` — Phase 3
+ *  high-impact sweep using new tokens (--pq-text-button/lead/h6/h5/h4)
+ *  for 13/15/16/18/20px sizes. Caps below pin the count of *remaining*
+ *  raw literals (sizes outside the new token set — primarily 12/14/9/24
+ *  that still match earlier-step tokens or HIG-borderline micro-labels).
+ *  Any future 13/15/16/18/20 introduction in these files will exceed the
+ *  cap. Phase 4 will sweep the remaining 32 sites in low-impact files
+ *  plus tree-wide 12/14/24/32 ratchet. */
+const PHASE3_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
+  {
+    path: "components/landing/report-flip-card.tsx",
+    cap: 0,
+    reason: "4 literals (2×18, 2×20) migrated → --pq-text-h5/h4; no others remain",
+  },
+  {
+    path: "components/reports/v2/latest-artifact-card.tsx",
+    cap: 9,
+    reason: "2×15 + 1×18 migrated → --pq-text-lead/h5; 9 unrelated literals remain (12/14)",
+  },
+  {
+    path: "components/landing/engine-models-drawer.tsx",
+    cap: 0,
+    reason: "3×15 migrated → --pq-text-lead; no others remain",
+  },
+  {
+    path: "components/companion/chat-panel.tsx",
+    cap: 1,
+    reason: "3×15 migrated → --pq-text-lead; 1×9 micro-timestamp remains (HIG borderline)",
+  },
+  {
+    path: "components/risk/v2/seven-layer-breakdown.tsx",
+    cap: 8,
+    reason: "1×16 + 1×18 migrated → --pq-text-h6/h5; 8 unrelated literals remain (12/14)",
+  },
+  {
+    path: "components/risk/v2/sector-exposure-block.tsx",
+    cap: 0,
+    reason: "2×16 leader-name migrated → --pq-text-h6; no others remain",
+  },
+  {
+    path: "components/risk/v2/concentration-table.tsx",
+    cap: 6,
+    reason: "2×18 migrated → --pq-text-h5; 6 unrelated literals remain (12/14)",
+  },
+  {
+    path: "components/portfolio/v2/portfolio-hero-v2.tsx",
+    cap: 4,
+    reason: "2×18 migrated → --pq-text-h5; 4 unrelated literals remain (12/14)",
+  },
+  {
+    path: "components/portfolio/ledger-book-paper.tsx",
+    cap: 2,
+    reason: "2×15 migrated → --pq-text-lead; 2×9 micro-label remain (paper aesthetic)",
+  },
+  {
+    path: "components/landing/landing-v2.tsx",
+    cap: 4,
+    reason: "1×15 + 1×18 migrated → --pq-text-lead/h5; 4 unrelated literals remain (12/14)",
+  },
+  {
+    path: "components/landing/feature-page-shell.tsx",
+    cap: 8,
+    reason: "1×15 + 1×20 migrated → --pq-text-lead/h4; 8 unrelated literals remain (12/14)",
+  },
+  {
+    path: "app/pricing/page.tsx",
+    cap: 0,
+    reason: "1×15 + 1×16 migrated → --pq-text-lead/h6; no others remain (only PHASE2 caps)",
+  },
+  {
+    path: "app/(dashboard)/growth/page.tsx",
+    cap: 0,
+    reason: "2×18 migrated → --pq-text-h5; no others remain",
+  },
+  {
+    path: "app/(dashboard)/companion/page.tsx",
+    cap: 0,
+    reason: "2×15 migrated → --pq-text-lead; no others remain",
+  },
+  {
+    path: "app/(auth)/signup/_v2/page-v2.tsx",
+    cap: 8,
+    reason: "2×13 migrated → --pq-text-button; 8 unrelated literals remain (12/14)",
+  },
+  {
+    path: "app/(auth)/login/_v2/page-v2.tsx",
+    cap: 3,
+    reason: "1×13 + 1×16 migrated → --pq-text-button/h6; 3 unrelated literals remain (12/14)",
+  },
+  {
+    path: "components/signals/v2/top-movers-strip.tsx",
+    cap: 6,
+    reason: "1×18 migrated → --pq-text-h5; 6 unrelated literals remain (12/14)",
+  },
+  {
+    path: "components/signals/v2/signals-hero-v2.tsx",
+    cap: 1,
+    reason: "1×15 migrated → --pq-text-lead; 1×12 unrelated literal remains",
+  },
+  {
+    path: "components/signals/v2/signals-filter-bar.tsx",
+    cap: 4,
+    reason: "1×16 migrated → --pq-text-h6; 4 unrelated literals remain (12)",
+  },
+  {
+    path: "components/signals/signal-memo-strip.tsx",
+    cap: 0,
+    reason: "1×18 migrated → --pq-text-h5; no others remain (only PHASE2 cap)",
+  },
+];
+
+makeCapAssertion(
+  PHASE3_FILES,
+  "typography token coverage — Phase 3 (15/16/18/20/13 sweep) inline fontSize offenders (W10)",
+);

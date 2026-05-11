@@ -124,7 +124,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                   <div
                     className="font-display name"
                     style={{
-                      fontSize: 18,
+                      fontSize: "var(--pq-text-h5)",
                       color: "var(--pq-ivory)",
                       letterSpacing: "-0.005em",
                     }}
@@ -148,7 +148,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                   className="font-mono"
                   style={{
                     fontVariantNumeric: "tabular-nums",
-                    fontSize: 18,
+                    fontSize: "var(--pq-text-h5)",
                     color: "var(--pq-ivory)",
                   }}
                 >

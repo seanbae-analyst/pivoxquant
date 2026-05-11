@@ -354,7 +354,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                         className="font-display name"
                         style={{
                           fontWeight: 500,
-                          fontSize: 16,
+                          fontSize: "var(--pq-text-h6)",
                           color: "var(--pq-ivory)",
                           letterSpacing: "-0.005em",
                         }}
@@ -422,7 +422,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       className="font-display name"
                       style={{
                         fontWeight: 500,
-                        fontSize: 16,
+                        fontSize: "var(--pq-text-h6)",
                         color: "var(--pq-ivory)",
                       }}
                     >

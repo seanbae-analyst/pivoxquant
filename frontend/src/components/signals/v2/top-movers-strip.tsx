@@ -138,7 +138,7 @@ export function TopMoversStrip({ entries, resolveName }: Props) {
                   aria-label={`${name} · ${tone.display} · strength ${strength.toFixed(2)}`}
                   className="font-display mover-title-link"
                   style={{
-                    fontSize: 18,
+                    fontSize: "var(--pq-text-h5)",
                     fontWeight: 500,
                     color: "var(--pq-ivory, #F5F0E8)",
                     lineHeight: 1.2,
