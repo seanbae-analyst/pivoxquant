@@ -135,6 +135,19 @@ export default function SignupPageV1() {
     };
   }, [birthdate]);
 
+  // SHIP-BLOCKER fix 2026-05-11: DOB ≥14 자동으로 agree_age=true 도출.
+  // 사용자가 별도 클릭 안 해도 회원가입 funnel 진행 가능 (E2E user-tester
+  // P0 회귀). DOB invalid/<14 이면 agree_age=false 로 초기화하여 fail-fast
+  // 유지. 사용자는 여전히 수동 토글 가능 (eligible 일 때 label clickable).
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConsents((prev) =>
+      prev.age === ageCheck.eligible
+        ? prev
+        : { ...prev, age: ageCheck.eligible },
+    );
+  }, [ageCheck.eligible]);
+
   useEffect(() => {
     // Preserved verbatim from v1 behavior — derived-value refactor is out of
     // scope for the visual-only v2 task per CEO directive.
