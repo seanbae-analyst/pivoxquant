@@ -216,6 +216,17 @@
   --pq-text-eyebrow-sm: 10.5px;  /* tight kicker */
   --pq-text-mono-tiny: 9.5px;    /* chip / micro-label only — HIG borderline */
 
+  /* Scale extension W10 (PR `typography-tokens-extension-w10`).
+     Fills the gap between body(14) and quote(24) — replaces 70+ inline
+     fontSize: 13/15/16/18/20 literals across landing / portfolio / risk /
+     reports / signals / settings / profile / auth / growth surfaces.
+     Sizes are HIG-compliant and visually unchanged (same px values). */
+  --pq-text-button: 13px;        /* UI button text / dense action label */
+  --pq-text-lead: 15px;          /* lead paragraph / chat body / paper body */
+  --pq-text-h6: 16px;            /* sub-sub-section heading / leader-name */
+  --pq-text-h5: 18px;            /* sub-section heading / hero number */
+  --pq-text-h4: 20px;            /* secondary heading / modal heading */
+
   /* Tracking */
   --pq-track-eyebrow: 0.22em;
   --pq-track-wordmark: 0.16em;

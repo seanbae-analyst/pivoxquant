@@ -147,7 +147,7 @@ function FrontFace({
           className="font-serif"
           style={{
             color: "var(--pq-ivory)",
-            fontSize: "20px",
+            fontSize: "var(--pq-text-h4)",
             fontWeight: 500,
             letterSpacing: "-0.01em",
             marginBottom: 6,
@@ -280,7 +280,7 @@ function BackFace({
         className="relative z-10 mt-4 font-serif italic"
         style={{
           color: "#2A1F13",
-          fontSize: "18px",
+          fontSize: "var(--pq-text-h5)",
           fontWeight: 400,
           lineHeight: 1.15,
           letterSpacing: "-0.01em",
@@ -552,7 +552,7 @@ function FrontFaceContent({
           className="font-serif"
           style={{
             color: "var(--pq-ivory)",
-            fontSize: "20px",
+            fontSize: "var(--pq-text-h4)",
             fontWeight: 500,
             letterSpacing: "-0.01em",
             marginBottom: 6,
@@ -655,7 +655,7 @@ function BackFaceContent({
         className="relative z-10 mt-4 font-serif italic"
         style={{
           color: "#2A1F13",
-          fontSize: "18px",
+          fontSize: "var(--pq-text-h5)",
           fontWeight: 400,
           lineHeight: 1.15,
           letterSpacing: "-0.01em",

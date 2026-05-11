@@ -370,7 +370,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
           <p
             className="font-serif italic"
             style={{
-              fontSize: 15,
+              fontSize: "var(--pq-text-lead)",
               lineHeight: 1.55,
               margin: 0,
               whiteSpace: "pre-wrap",
@@ -466,7 +466,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
             <p
               className="font-serif"
               style={{
-                fontSize: 15,
+                fontSize: "var(--pq-text-lead)",
                 lineHeight: 1.7,
                 color: "var(--pq-ivory, #F5F0E8)",
                 margin: 0,
@@ -593,7 +593,7 @@ function Composer({
             className="w-full resize-none bg-transparent px-4 py-3 font-serif outline-none placeholder:italic"
             style={{
               color: "var(--pq-ivory, #F5F0E8)",
-              fontSize: 15,
+              fontSize: "var(--pq-text-lead)",
               lineHeight: 1.55,
               minHeight: 48,
               maxHeight: 180,

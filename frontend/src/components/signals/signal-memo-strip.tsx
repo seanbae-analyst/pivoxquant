@@ -189,7 +189,7 @@ export function SignalMemoStrip({
             </div>
             <div
               style={{
-                fontSize: 18,
+                fontSize: "var(--pq-text-h5)",
                 fontVariantNumeric: "tabular-nums",
                 color: "#141414",
                 lineHeight: 1.1,

@@ -662,7 +662,7 @@ function DrawerContent({
         <p
           className="font-serif"
           style={{
-            fontSize: "15px",
+            fontSize: "var(--pq-text-lead)",
             lineHeight: 1.65,
             color: "rgba(245,240,232,0.82)",
           }}
@@ -685,7 +685,7 @@ function DrawerContent({
         <p
           className="font-serif"
           style={{
-            fontSize: "15px",
+            fontSize: "var(--pq-text-lead)",
             lineHeight: 1.65,
             color: "rgba(245,240,232,0.82)",
           }}
@@ -841,7 +841,7 @@ export default function EngineModelsDrawer() {
           <p
             className="font-serif"
             style={{
-              fontSize: "15px",
+              fontSize: "var(--pq-text-lead)",
               lineHeight: 1.65,
               color: "rgba(245,240,232,0.68)",
               maxWidth: "58ch",

@@ -159,7 +159,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
               <div
                 className="font-display"
                 style={{
-                  fontSize: 18,
+                  fontSize: "var(--pq-text-h5)",
                   color: "var(--pq-ivory)",
                   letterSpacing: "-0.005em",
                 }}
@@ -197,7 +197,7 @@ export function SevenLayerBreakdown({ layers, observedAtKst }: Props) {
               className="font-mono"
               style={{
                 fontVariantNumeric: "tabular-nums",
-                fontSize: 16,
+                fontSize: "var(--pq-text-h6)",
                 color: "var(--pq-ivory)",
               }}
             >

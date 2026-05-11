@@ -185,7 +185,7 @@ export default function LoginPageV2() {
                 border: "1px solid rgba(220,38,38,0.45)",
                 background: "rgba(220,38,38,0.06)",
                 borderRadius: "var(--pq-radius-cta, 2px)",
-                fontSize: 13,
+                fontSize: "var(--pq-text-button)",
                 lineHeight: 1.5,
                 color: "var(--pq-ivory, #F5F0E8)",
               }}
@@ -211,7 +211,7 @@ export default function LoginPageV2() {
                   border: "none",
                   color: "rgba(245,240,232,0.55)",
                   cursor: "pointer",
-                  fontSize: 16,
+                  fontSize: "var(--pq-text-h6)",
                   lineHeight: 1,
                   padding: "0 4px",
                 }}

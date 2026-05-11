@@ -230,7 +230,7 @@ function FaqAccordion({ item }: { item: FaqItem }) {
         <span
           className="font-serif pr-4"
           style={{
-            fontSize: "15px",
+            fontSize: "var(--pq-text-lead)",
             color: "var(--pq-ivory)",
             letterSpacing: "-0.005em",
           }}
@@ -341,7 +341,7 @@ function ConsentModal({
             <h2
               className="font-serif"
               style={{
-                fontSize: "16px",
+                fontSize: "var(--pq-text-h6)",
                 color: "var(--pq-ivory)",
                 letterSpacing: "-0.01em",
               }}
