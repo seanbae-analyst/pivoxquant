@@ -1,4 +1,71 @@
-# PivoxQuant — 인수인계서 (2026-05-11 v35 — 19 PR · 18 main commit · 출시 readiness wave)
+# PivoxQuant — 인수인계서 (2026-05-11 v36 — 28 PR · main commit · 출시 readiness wave 2)
+
+## 🟢 2026-05-11 v36 종합 — **28 PR squash-merged (v35의 19 PR + Wave 7-11의 9 PR) + 1 self-heal + 1 risk-close** · main `f2fa5bbe → 629bc4ef` · OPEN PR 1 (#246 werkzeug HOLD)
+
+### v36 추가 (v35 → v36, 9 PR)
+
+#### Wave 7 — MED + LOW (E2E 발견 follow-up)
+| PR | 핵심 |
+|---|---|
+| #301 | feat(features): /features index page (E2E P2 #4) |
+| #302 | feat(risk): sample-reports/risk-board 7-Layer matrix (E2E P1 #14) |
+| #303 | fix(nav): singleton mega-dropdown ghost 제거 (E2E P1 #16-19) |
+| #304 | fix(security): secret-leak regex word-boundary narrow + 10 threat-model tests (self-heal 6차 종식) |
+
+#### Wave 8-10 — fontSize 점진 마이그레이션 (design audit HIGH #7)
+| PR | 핵심 | tree count |
+|---|---|---|
+| #306 | refactor(design): Top 5 file fontSize → v3 tokens (W8) | 961 → 868 |
+| #307 | refactor(design): Top 6-10 fontSize migration (W9) | 868 → 733 |
+| #308 | feat(design): typography token scale extension (15/16/18/20px) + Phase 3 sweep 20 files (W10) | 733 → 692 |
+
+#### Wave 11 — quant.py SRP 분할 (audit-code A-01/A-02)
+| PR | 핵심 | 변화 |
+|---|---|---|
+| #309 | refactor(routes): quant.py 3,465줄 → 5 blueprint 분할 (W11) | signals_quant + risk_quant + performance_quant + tools_quant + strategy_quant + quant_helpers / URL preservation 0 frontend impact |
+
+### v36 회귀 검증 (직접 측정 2026-05-11)
+- **backend pytest**: 1877 PASS / 12 skip / 14 deselected / 1 xfail / 1 pre-existing fail (test_swot_500 Anthropic credit)
+- **frontend vitest**: 182/182 PASS (Wave 10 cumulative)
+- **typography-token-coverage test**: 70 PASS (W8 + W9 + W10)
+- **inline fontSize tree count**: 961 → 692 (28% reduction)
+- **DS10 CI baseline**: 868 → 733 → 692 (one-way ratchet)
+- **CI guards**: DS1-DS10 (디자인) + legal-guard.yml + test_pivoxaudit_secret_leak.py 워드 바운드
+- **tsc**: exit 0 / ruff F401 clean
+
+### v36 신규 v3 typography 토큰 5종 (globals.css §3 lines 219-228)
+```
+--pq-text-button: 13px   /* UI button text / dense action label */
+--pq-text-lead:   15px   /* lead paragraph / chat body / paper body */
+--pq-text-h6:     16px   /* sub-sub-section heading */
+--pq-text-h5:     18px   /* sub-section heading / hero number */
+--pq-text-h4:     20px   /* secondary heading / modal heading */
+```
+기존 11-step → 14-step typography scale.
+
+### v36 라우트 구조 변경 (Wave 11)
+| Blueprint | Source | URL prefix |
+|---|---|---|
+| signals_quant_bp (7 routes) | routes/signals_quant.py | /api/signals/* |
+| risk_quant_bp (10 routes) | routes/risk_quant.py | /api/risk/* |
+| performance_quant_bp (4 routes) | routes/performance_quant.py | /api/analytics/* + /api/performance/* |
+| tools_quant_bp (4 routes) | routes/tools_quant.py | /api/tools/* + /api/indicators/* |
+| strategy_quant_bp (5 routes) | routes/strategy_quant.py | /api/{vix-strategy,cross-asset,stat-arb,screener,regime}/* |
+
+routes/quant.py 삭제 (no dead file / no shim). frontend endpoints.ts 변경 0.
+
+### v36 잔존 자율 fix (다음 wave 후보)
+| Severity | 결함 | 위치 | 예상 |
+|---|---|---|---|
+| HIGH | inline fontSize 692건 (Phase 4) | tree 전체, top: home/_v1 + signals_v2 + market | 점진 마이그레이션 |
+| MED | candlestick-chart hex 19건 (lightweight-charts 라이브러리 제약) | terminal/candlestick-chart.tsx | getComputedStyle 우회 1시간 |
+| LOW | misleading "세션 만료" message (첫 방문 게스트한테도 표시) | /login redirect | 30분 |
+| LOW | /signup `_rsc=` 503 (RSC streaming chunk 일회) | 모니터링만 | — |
+
+### v36 외부 액션 carry-over (자율 100% 불가)
+v35과 동일. 변호사 미팅 Q1-Q17 / 통신판매업 / GitHub billing / Sentry rotate / 베타테스터 통보 / KRX 신청.
+
+---
 
 ## 🟢 2026-05-11 v35 종합 — **19 PR squash-merged + 1 self-heal + 1 risk-close** · main `f2fa5bbe → deb86e10` · OPEN PR 1 (#246 werkzeug HOLD)
 
