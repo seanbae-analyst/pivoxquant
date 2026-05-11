@@ -41,7 +41,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     },
 
-    // ── Feature pages (all 10 directories under /features/) ───────────
+    // ── Feature pages (all 13 directories under /features/ + index) ───
+    // W7.4 (2026-05-10): /features index added — was 404 dead route.
+    {
+      url: `${BASE_URL}/features`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
     {
       url: `${BASE_URL}/features/paper-trading`,
       lastModified: now,
