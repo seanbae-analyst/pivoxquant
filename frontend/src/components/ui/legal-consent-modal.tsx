@@ -125,6 +125,18 @@ export function LegalConsentModal({
     };
   }, [birthdate]);
 
+  // SHIP-BLOCKER fix 2026-05-11: DOB ≥14 자동으로 agree_age=true 도출.
+  // 사용자가 별도 클릭 안 해도 진행 가능 (E2E user-tester P0 회귀). DOB
+  // invalid/<14 이면 agree_age=false 로 초기화하여 fail-fast 유지.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setConsents((prev) =>
+      prev.age === ageCheck.eligible
+        ? prev
+        : { ...prev, age: ageCheck.eligible },
+    );
+  }, [ageCheck.eligible]);
+
   // PIPA §22 ⑥ — 만 14세 미만은 fail-fast. 자가선언 + 생년월일 이중 검증.
   const ageOk = consents.age && ageCheck.eligible;
 
