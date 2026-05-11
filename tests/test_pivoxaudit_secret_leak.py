@@ -83,9 +83,17 @@ ALLOWED_SELF_REFERENCES: frozenset[str] = frozenset(
     }
 )
 
-# Forbidden literal — `pivoxaudit` followed by zero or more digits.
-# Matches `pivoxaudit`, `pivoxaudit2`, `pivoxaudit42`, etc.
-LEAK_RE = re.compile(r"pivoxaudit\d*")
+# Forbidden literal — `pivoxaudit` followed by zero or more digits, bounded
+# by word breaks at both ends.  The `\b...\b` boundaries are the W7.3
+# narrowing (2026-05-11): the unbounded version self-matched this file's
+# name and every HANDOVER/PR bullet describing the guard, forcing six
+# rounds of cosmetic sanitization.  With word boundaries the regex catches
+# `pivoxaudit` / `pivoxaudit2` / `pivoxaudit42` as bare tokens but leaves
+# `test_pivoxaudit_secret_leak`, `TestNoPivoxauditSecretLeak`, and
+# `pivoxaudit_legacy` alone (Python regex treats `_` as a word char, so no
+# boundary fires between `t` and `_`).  Case-sensitive — real beta password
+# was lowercase.
+LEAK_RE = re.compile(r"\bpivoxaudit\d*\b")
 
 
 def _iter_scanned_files() -> list[Path]:
@@ -147,3 +155,51 @@ class TestScanCoverage:
             f"file scan unexpectedly sparse: {len(files)} files. "
             "Check EXCLUDED_DIRS and SCANNED_EXTENSIONS."
         )
+
+
+class TestRegexThreatModel:
+    """W7.3 — verify narrowed regex against catch + skip threat model.
+
+    Build the bare-token prefix at runtime so this test file itself does
+    not embed greppable literals.
+    """
+
+    _PREFIX = "pivox" + "audit"
+
+    def test_catch_bare_token(self) -> None:
+        assert LEAK_RE.search(self._PREFIX) is not None
+
+    def test_catch_bare_token_with_suffix_digit(self) -> None:
+        assert LEAK_RE.search(self._PREFIX + "2") is not None
+
+    def test_catch_in_password_context(self) -> None:
+        line = f"BETA_PASSWORD={self._PREFIX}2"
+        assert LEAK_RE.search(line) is not None
+
+    def test_catch_in_markdown_quote(self) -> None:
+        line = f"v34 BETA_PASSWORD was `{self._PREFIX}2`"
+        assert LEAK_RE.search(line) is not None
+
+    def test_skip_underscored_identifier(self) -> None:
+        line = f"tests/test_{self._PREFIX}_secret_leak.py"
+        assert LEAK_RE.search(line) is None
+
+    def test_skip_camelcase_class_name(self) -> None:
+        line = "class TestNoPivoxauditSecretLeak:"
+        assert LEAK_RE.search(line) is None
+
+    def test_skip_legacy_underscore_suffix(self) -> None:
+        line = f"{self._PREFIX}_legacy"
+        assert LEAK_RE.search(line) is None
+
+    def test_skip_redacted_marker(self) -> None:
+        line = "history reference: [REDACTED:ex-beta-pw-v1]"
+        assert LEAK_RE.search(line) is None
+
+    def test_skip_capitalized(self) -> None:
+        line = "Pivoxaudit"
+        assert LEAK_RE.search(line) is None
+
+    def test_skip_substring_in_word(self) -> None:
+        line = self._PREFIX + "foo"
+        assert LEAK_RE.search(line) is None
