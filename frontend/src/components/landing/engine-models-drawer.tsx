@@ -594,7 +594,7 @@ function DrawerContent({
           <span
             className="font-serif uppercase"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
             }}
@@ -620,7 +620,7 @@ function DrawerContent({
           <span
             className="inline-flex items-center gap-2 font-mono uppercase"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               padding: "4px 10px",
               borderRadius: "999px",
               border: "1px solid rgba(184,149,106,0.5)",
@@ -638,7 +638,7 @@ function DrawerContent({
           <span
             className="font-mono"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               color: "rgba(245,240,232,0.45)",
               letterSpacing: "0.04em",
             }}
@@ -652,7 +652,7 @@ function DrawerContent({
         <h4
           className="font-serif uppercase mb-2.5"
           style={{
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
           }}
@@ -675,7 +675,7 @@ function DrawerContent({
         <h4
           className="font-serif uppercase mb-2.5"
           style={{
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
           }}
@@ -699,7 +699,7 @@ function DrawerContent({
           <h4
             className="font-serif uppercase mb-2.5"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
             }}
@@ -709,7 +709,7 @@ function DrawerContent({
           <p
             className="font-serif italic"
             style={{
-              fontSize: "14px",
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.58)",
             }}
@@ -726,7 +726,7 @@ function DrawerContent({
         <p
           className="font-serif italic"
           style={{
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             color: "rgba(245,240,232,0.58)",
             letterSpacing: "0.02em",
           }}
@@ -816,7 +816,7 @@ export default function EngineModelsDrawer() {
             <span
               className="font-serif uppercase"
               style={{
-                fontSize: "12px",
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze)",
               }}
@@ -870,7 +870,7 @@ export default function EngineModelsDrawer() {
                   <p
                     className="font-serif uppercase flex items-center gap-3"
                     style={{
-                      fontSize: "12px",
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.22em",
                       color: "var(--pq-bronze)",
                     }}
@@ -883,7 +883,7 @@ export default function EngineModelsDrawer() {
                   <span
                     className="font-mono tabular-nums"
                     style={{
-                      fontSize: "12px",
+                      fontSize: "var(--pq-text-eyebrow)",
                       color: "rgba(245,240,232,0.45)",
                       letterSpacing: "0.04em",
                     }}
@@ -895,7 +895,7 @@ export default function EngineModelsDrawer() {
                 <p
                   className="font-serif mb-6"
                   style={{
-                    fontSize: "14px",
+                    fontSize: "var(--pq-text-body)",
                     color: "rgba(245,240,232,0.55)",
                     letterSpacing: "0.01em",
                   }}
@@ -906,7 +906,7 @@ export default function EngineModelsDrawer() {
                 <ul
                   className="font-mono space-y-1.5"
                   style={{
-                    fontSize: "14px",
+                    fontSize: "var(--pq-text-body)",
                     lineHeight: 1.75,
                     fontVariantNumeric: "tabular-nums",
                     color: "var(--pq-ivory)",
@@ -930,7 +930,7 @@ export default function EngineModelsDrawer() {
                 <p
                   className="mt-auto pt-8 font-serif italic"
                   style={{
-                    fontSize: "12px",
+                    fontSize: "var(--pq-text-eyebrow)",
                     lineHeight: 1.6,
                     color: "rgba(245,240,232,0.48)",
                   }}
@@ -946,7 +946,7 @@ export default function EngineModelsDrawer() {
         <p
           className="mt-16 md:mt-24 max-w-3xl font-serif italic"
           style={{
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             lineHeight: 1.7,
             color: "rgba(245,240,232,0.48)",
           }}

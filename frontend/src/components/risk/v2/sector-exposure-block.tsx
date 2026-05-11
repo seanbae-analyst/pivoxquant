@@ -82,7 +82,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -94,7 +94,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
               margin: 0,
@@ -106,7 +106,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
           }}
@@ -187,7 +187,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
               y="104"
               textAnchor="middle"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 fill: "rgba(245,240,232,0.55)",
                 letterSpacing: "0.18em",
               }}
@@ -199,7 +199,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
               y="128"
               textAnchor="middle"
               style={{
-                fontSize: 32,
+                fontSize: "var(--pq-text-h3)",
                 fill: "var(--pq-ivory)",
                 fontWeight: 500,
               }}
@@ -210,7 +210,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.55)",
             }}
@@ -233,7 +233,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 16,
@@ -252,7 +252,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                 <th
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                     color: "rgba(245,240,232,0.55)",
                     textAlign: "left",
@@ -267,7 +267,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                 <th
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                     color: "rgba(245,240,232,0.55)",
                     textAlign: "left",
@@ -282,7 +282,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                 <th
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                     color: "rgba(245,240,232,0.55)",
                     textAlign: "right",
@@ -303,7 +303,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     colSpan={3}
                     className="font-serif"
                     style={{
-                      fontSize: 14,
+                      fontSize: "var(--pq-text-body)",
                       color: "rgba(245,240,232,0.55)",
                       padding: "32px 0",
                       textAlign: "center",
@@ -328,7 +328,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       <span
                         className="font-mono uppercase"
                         style={{
-                          fontSize: 12,
+                          fontSize: "var(--pq-text-eyebrow)",
                           letterSpacing: "0.22em",
                           color:
                             i < EYEBROW_COLORS.length
@@ -364,7 +364,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       <div
                         className="font-mono"
                         style={{
-                          fontSize: 12,
+                          fontSize: "var(--pq-text-eyebrow)",
                           color: "rgba(245,240,232,0.55)",
                           letterSpacing: "0.14em",
                           marginTop: 3,
@@ -377,7 +377,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                       className="font-mono"
                       style={{
                         fontVariantNumeric: "tabular-nums",
-                        fontSize: 14,
+                        fontSize: "var(--pq-text-body)",
                         color: "rgba(245,240,232,0.82)",
                         textAlign: "right",
                         padding: "14px 0",
@@ -404,7 +404,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     <span
                       className="font-mono uppercase"
                       style={{
-                        fontSize: 12,
+                        fontSize: "var(--pq-text-eyebrow)",
                         letterSpacing: "0.22em",
                         color: "rgba(245,240,232,0.55)",
                       }}
@@ -431,7 +431,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     <div
                       className="font-mono"
                       style={{
-                        fontSize: 12,
+                        fontSize: "var(--pq-text-eyebrow)",
                         color: "rgba(245,240,232,0.55)",
                         letterSpacing: "0.14em",
                         marginTop: 3,
@@ -444,7 +444,7 @@ export function SectorExposureBlock({ sectors, sectorCount, cashPct }: Props) {
                     className="font-mono"
                     style={{
                       fontVariantNumeric: "tabular-nums",
-                      fontSize: 14,
+                      fontSize: "var(--pq-text-body)",
                       color: "rgba(245,240,232,0.82)",
                       textAlign: "right",
                       padding: "14px 0",

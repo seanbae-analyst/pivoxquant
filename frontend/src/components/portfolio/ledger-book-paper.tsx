@@ -154,7 +154,7 @@ export function LedgerBookPaper({
           aria-label="Add a new position to the book"
           className="pq-paper-kicker"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.24em",
             color: "#B8956A",
             background: "transparent",
@@ -208,7 +208,7 @@ export function LedgerBookPaper({
           <div key={s.label} style={{ padding: "16px 0" }}>
             <div
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.26em",
                 textTransform: "uppercase",
                 color: "#B8956A",
@@ -235,7 +235,7 @@ export function LedgerBookPaper({
                 className={`font-mono ${s.tone ?? ""}`}
                 style={{
                   marginTop: 4,
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.02em",
                   color: s.tone ? undefined : "rgba(20,20,20,0.48)",
                   fontVariantNumeric: "tabular-nums",
@@ -273,7 +273,7 @@ export function LedgerBookPaper({
             className="pq-paper-body"
             style={{
               color: "rgba(20,20,20,0.55)",
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               padding: "32px 0",
               textAlign: "center",
             }}
@@ -374,7 +374,7 @@ export function LedgerBookPaper({
                         </div>
                         <div
                           style={{
-                            fontSize: 12,
+                            fontSize: "var(--pq-text-eyebrow)",
                             color: "rgba(20,20,20,0.48)",
                             letterSpacing: "0.04em",
                             marginTop: 2,
@@ -386,7 +386,7 @@ export function LedgerBookPaper({
                       <td
                         style={{
                           padding: "14px 6px",
-                          fontSize: 12,
+                          fontSize: "var(--pq-text-eyebrow)",
                           letterSpacing: "0.08em",
                           textTransform: "uppercase",
                           color: "rgba(20,20,20,0.6)",
@@ -398,7 +398,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 14,
+                          fontSize: "var(--pq-text-body)",
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.78)",
                         }}
@@ -409,7 +409,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 14,
+                          fontSize: "var(--pq-text-body)",
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.6)",
                         }}
@@ -420,7 +420,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 14,
+                          fontSize: "var(--pq-text-body)",
                           fontVariantNumeric: "tabular-nums",
                           color: "#1a1a1a",
                           fontWeight: 600,
@@ -437,7 +437,7 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 14,
+                          fontSize: "var(--pq-text-body)",
                           fontVariantNumeric: "tabular-nums",
                           color: "rgba(20,20,20,0.78)",
                         }}
@@ -449,13 +449,13 @@ export function LedgerBookPaper({
                         style={{
                           padding: "14px 6px",
                           textAlign: "right",
-                          fontSize: 14,
+                          fontSize: "var(--pq-text-body)",
                           fontVariantNumeric: "tabular-nums",
                           fontWeight: 600,
                         }}
                       >
                         <div>{fmtMoneyCell(unreal, cur)}</div>
-                        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
+                        <div style={{ fontSize: "var(--pq-text-eyebrow)", opacity: 0.75, marginTop: 2 }}>
                           {fmtPctSigned(unrealPct)}
                         </div>
                       </td>
@@ -563,7 +563,7 @@ const actionBtn: React.CSSProperties = {
   border: "0.5px solid rgba(184,149,106,0.45)",
   background: "transparent",
   color: "#B8956A",
-  fontSize: 12,
+  fontSize: "var(--pq-text-eyebrow)",
   lineHeight: 1,
   cursor: "pointer",
   borderRadius: 2,
