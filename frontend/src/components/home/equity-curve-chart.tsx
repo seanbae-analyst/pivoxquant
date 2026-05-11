@@ -108,7 +108,7 @@ function StateFrame({
         padding: 16,
         textAlign: "center",
         color: "rgba(245, 240, 232, 0.55)",
-        fontSize: 12,
+        fontSize: "var(--pq-text-eyebrow)",
         lineHeight: 1.6,
       }}
     >
@@ -142,7 +142,7 @@ function ChartTooltip({ active, payload, currency }: CustomTooltipProps) {
         background: "rgba(10, 10, 10, 0.92)",
         border: "1px solid rgba(184, 149, 106, 0.32)",
         padding: "8px 12px",
-        fontSize: 12,
+        fontSize: "var(--pq-text-eyebrow)",
         lineHeight: 1.5,
         color: "var(--pq-ivory)",
       }}
@@ -170,7 +170,7 @@ function ChartTooltip({ active, payload, currency }: CustomTooltipProps) {
       <div
         className="font-serif"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           color: "rgba(245,240,232,0.55)",
           marginTop: 2,
         }}

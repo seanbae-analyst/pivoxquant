@@ -130,7 +130,7 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
           background: "rgba(184, 149, 106, 0.08)",
           border: "1px solid rgba(184, 149, 106, 0.4)",
           borderRadius: 2,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.18em",
           textTransform: "uppercase",
           color: "var(--r-gold-deep, #8b6f47)",
@@ -148,7 +148,7 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
         style={{
           color: "var(--r-ink-3)",
           marginTop: 12,
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
         }}
       className="font-serif" >
@@ -215,7 +215,7 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
           </div>
           <p
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
               color: "var(--r-ink-2)",
               marginBottom: 14,
@@ -228,7 +228,7 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
               display: "grid",
               gridTemplateColumns: "repeat(3, 1fr)",
               gap: 14,
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
             }}
           >
             <div>
