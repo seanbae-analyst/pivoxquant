@@ -42,6 +42,9 @@ const BADGE_IMPORT_PATTERN = /AiContentBadge/;
 const ALLOWLIST = new Set<string>([
   "lib/types.ts", // 타입 정의만, 렌더 surface 아님
   "components/ui/ai-content-badge.tsx", // badge 자체
+  // /sample-reports/page.tsx — 18-tile navigator. Renders titles/tiers only,
+  // no AI content surface. Detail route ([slug]/page.tsx) is gated below.
+  "app/sample-reports/page.tsx",
 ]);
 
 function walk(dir: string, acc: string[] = []): string[] {
@@ -117,6 +120,41 @@ describe("AI 생성물 표시제 (regulatory ③ 2026-01) — AiContentBadge cov
       throw new Error(
         `${offenders.length} surface(s) call /api/ai/* without <AiContentBadge />.\n` +
           `regulatory ③ (AI 생성물 표시제, 2026-01 시행) 위반.\n${detail}`,
+      );
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("every /sample-reports/** surface imports AiContentBadge (regulatory ③ thorough-fixes gate)", () => {
+    // Why: PR #277 (Artifact 템플릿 라벨) + PR #282 (detail/[ticker] 라벨)
+    // 두 번 연속 sample-reports surface 를 누락. memory [feedback_thorough_fixes]
+    // 3차 위반 admit 후 추가된 게이트. 향후 신규 sample-report 라우트가
+    // 라벨 없이 머지되는 회귀를 차단한다.
+    //
+    // 룰: app/sample-reports/** 아래 모든 .ts/.tsx 파일에 AiContentBadge import 필수
+    //     단, 위 ALLOWLIST 항목 (index navigator) 만 예외.
+    const offenders: Offender[] = [];
+    for (const file of files) {
+      const rel = relative(FRONTEND_SRC, file);
+      const normalized = rel.split(/[\\/]/).join("/");
+      if (!normalized.startsWith("app/sample-reports/")) continue;
+      if (isAllowlisted(rel)) continue;
+      const text = readFileSync(file, "utf-8");
+      if (BADGE_IMPORT_PATTERN.test(text)) continue;
+      offenders.push({
+        rel,
+        reason: "sample-reports surface without AiContentBadge import",
+        matchedLine: "(file-level guard)",
+      });
+    }
+    if (offenders.length > 0) {
+      const detail = offenders
+        .map((o) => `  ${o.rel} — ${o.reason}\n    ${o.matchedLine}`)
+        .join("\n");
+      throw new Error(
+        `${offenders.length} /sample-reports/** surface(s) missing <AiContentBadge />.\n` +
+          `regulatory ③ (AI 생성물 표시제, 2026-01 시행 / 정통망법 §50 6% 과징금) 위반.\n` +
+          `feedback_thorough_fixes 3차 위반 (PR #277 / #282 누락) 후 추가된 게이트.\n${detail}`,
       );
     }
     expect(offenders).toEqual([]);
