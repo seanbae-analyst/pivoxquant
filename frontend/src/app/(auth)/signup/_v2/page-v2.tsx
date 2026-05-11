@@ -282,18 +282,76 @@ export default function SignupPageV2() {
         color: "var(--pq-ivory, #F5F0E8)",
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
+        // Bronze hairline + 64px nav band lives ABOVE the split grid via
+        // grid-template-rows so it sits flush with both panes and never
+        // overlaps the form header. Mobile collapses to single column —
+        // see <style jsx> below.
+        gridTemplateRows: "auto 1fr",
         overflowY: "auto",
       }}
     >
+      {/* ── Top: Minimal nav band ──────────────────────────────────────
+          E2E P1 #23 fix (2026-05-11): /signup previously had no nav
+          chrome — users lost orientation and had no escape hatch back to
+          the marketing site. Adds a 64px Bronze-hairlined band with the
+          PIVOXQUANT wordmark + "← Back to home" link. Spans both grid
+          columns so it never overlaps the form header. */}
+      <header
+        className="pq-auth-nav-v2"
+        style={{
+          gridColumn: "1 / -1",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "20px 32px",
+          borderBottom: "0.5px solid rgba(184,149,106,0.18)",
+          background: "var(--pq-ink, #050505)",
+          minHeight: 64,
+        }}
+      >
+        <Link
+          href="/"
+          aria-label="PivoxQuant home"
+          className="font-mono uppercase"
+          style={{
+            fontSize: 13,
+            letterSpacing: "0.28em",
+            color: "var(--pq-ivory, #F5F0E8)",
+            textTransform: "uppercase",
+            textDecoration: "none",
+          }}
+        >
+          PIVOXQUANT
+        </Link>
+        <Link
+          href="/"
+          className="font-mono uppercase"
+          style={{
+            fontSize: 12,
+            letterSpacing: "0.20em",
+            color: "rgba(245,240,232,0.65)",
+            textTransform: "uppercase",
+            textDecoration: "none",
+          }}
+        >
+          ← Back to home
+        </Link>
+      </header>
+
       {/* ── Left: Editorial Hero ──────────────────────────────────────── */}
       <div
         className="pq-auth-hero-pane"
         style={{
           display: "flex",
-          alignItems: "center",
+          // E2E P1 #23 fix (2026-05-11): use flex-start (not center) so
+          // the form header "Sign up · 가입 전 확인" stays visible when
+          // content exceeds viewport height. Flex centering with
+          // taller-than-container content cuts off the top in
+          // non-scrollable directions. With overflowY:auto on the shell
+          // grid, flex-start + padding-top yields the correct scroll.
+          alignItems: "flex-start",
           justifyContent: "flex-end",
           borderRight: "0.5px solid rgba(184,149,106,0.18)",
-          minHeight: "100dvh",
         }}
       >
         <AuthHeroV2
@@ -311,9 +369,11 @@ export default function SignupPageV2() {
         className="pq-auth-card-pane"
         style={{
           display: "flex",
-          alignItems: "center",
+          // E2E P1 #23 fix (2026-05-11): see hero-pane note — flex-start
+          // prevents form header "Sign up · 가입 전 확인" cutoff when
+          // content exceeds viewport (was top: -138px overflowing).
+          alignItems: "flex-start",
           justifyContent: "flex-start",
-          minHeight: "100dvh",
         }}
       >
         <div
@@ -608,14 +668,15 @@ export default function SignupPageV2() {
             grid-template-columns: 1fr !important;
           }
           :global(.pq-auth-hero-pane) {
-            min-height: auto !important;
             border-right: 0 !important;
             border-bottom: 0.5px solid rgba(184, 149, 106, 0.18) !important;
             justify-content: flex-start !important;
           }
           :global(.pq-auth-card-pane) {
-            min-height: auto !important;
             justify-content: center !important;
+          }
+          :global(.pq-auth-nav-v2) {
+            padding: 16px 20px !important;
           }
         }
       `}</style>

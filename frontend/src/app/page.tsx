@@ -5,39 +5,54 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import LandingV2 from "@/components/landing/landing-v2";
 
+/**
+ * Root LoadingScreen — Vantablack editorial treatment.
+ *
+ * Mirrors /loading.tsx (root Next.js suspense boundary) so the first paint
+ * stays consistent whether Next.js's loading.tsx or this auth-gated screen
+ * renders. No "icon-in-colored-box" AI slop frame — pure wordmark + bronze
+ * pulse dot + hairline shimmer per design system v3 §9 (AI slop ban).
+ */
 function LoadingScreen() {
   return (
     <div
       className="min-h-[100dvh] flex flex-col items-center justify-center"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading PivoxQuant"
       style={{ backgroundColor: "var(--pq-ink)" }}
     >
+      {/* Bronze pulse dot — brand mark, no surrounding frame */}
       <div
-        className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 animate-pulse"
-        style={{ backgroundColor: "var(--pq-bronze)" }}
-      >
-        <svg
-          className="w-5 h-5"
-          style={{ color: "var(--pq-ink)" }}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-          <polyline points="16 7 22 7 22 13" />
-        </svg>
-      </div>
+        className="rounded-full mb-6 animate-pulse"
+        style={{
+          width: "10px",
+          height: "10px",
+          background: "var(--pq-bronze)",
+        }}
+      />
+
+      {/* Wordmark — italic serif, mirrors /loading.tsx */}
       <div
-        className="w-32 h-1 rounded-full overflow-hidden"
-        style={{ backgroundColor: "var(--pq-ivory-line)" }}
+        className="font-serif italic text-lg tracking-tight mb-8"
+        style={{ color: "rgba(245,240,232,0.6)" }}
       >
-        <div
-          className="h-full w-1/2 rounded-full animate-shimmer-slide"
-          style={{ backgroundColor: "var(--pq-bronze-light)" }}
-        />
+        PivoxQuant
       </div>
+
+      {/* Shimmer skeleton bar — hairline only */}
+      <div
+        className="rounded-full overflow-hidden"
+        style={{
+          width: "120px",
+          height: "2px",
+          background: "var(--pq-ivory-line)",
+        }}
+      >
+        <div className="h-full pq-skeleton-dark" />
+      </div>
+
+      <span className="sr-only">Loading…</span>
     </div>
   );
 }
