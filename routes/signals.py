@@ -8,7 +8,7 @@ from extensions import db
 from models import Position, SignalCache, InvestmentProfile
 from services import fx_service, cache_service, alert_service
 from services.container import engine
-from services.name_resolver import resolve_stock_name, canonical_display_name
+from services.name_resolver import canonical_display_name
 from services.access_guard import is_user_allowed_ticker, access_denied_response
 from .decorators import api_auth, legal_scrub_response
 from security import general_rate_limit

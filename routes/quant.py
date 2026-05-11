@@ -377,7 +377,6 @@ def _load_positions_with_prices():
         mv_native = price * p.shares
         # Normalize to KRW for cross-market aggregation
         mv_krw = mv_native if is_kr else mv_native * fx_rate
-        from services.name_resolver import resolve_stock_name
         items.append({
             "ticker": p.ticker,
             "name": canonical_display_name(sd.get("name"), p.ticker),
