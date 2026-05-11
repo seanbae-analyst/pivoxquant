@@ -7,7 +7,7 @@ pandas==2.2.2
 numpy==1.26.4
 apscheduler==3.10.4
 werkzeug==3.0.3
-requests==2.32.3
+requests==2.33.1
 python-dotenv==1.0.1
 anthropic>=0.39.0
 psycopg2-binary>=2.9.9
