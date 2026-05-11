@@ -170,7 +170,7 @@ export function GenerateArtifactCta({ tier }: Props) {
       <p
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.6,
           color: "rgba(245,240,232,0.7)",
           margin: "0 0 24px",
@@ -222,7 +222,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                 className="font-display"
                 style={{
                   fontWeight: 500,
-                  fontSize: 20,
+                  fontSize: "var(--pq-text-h4)",
                   color: "var(--pq-ivory, #F5F0E8)",
                   margin: 0,
                   lineHeight: 1.2,
@@ -233,7 +233,7 @@ export function GenerateArtifactCta({ tier }: Props) {
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.18em",
                   color: "rgba(245,240,232,0.45)",
                   marginTop: 4,
@@ -245,7 +245,7 @@ export function GenerateArtifactCta({ tier }: Props) {
               <p
                 className="font-serif"
                 style={{
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   lineHeight: 1.55,
                   color: "rgba(245,240,232,0.7)",
                   margin: "14px 0 16px",
@@ -272,7 +272,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                       "1px solid var(--pq-hairline, var(--pq-ivory-line))",
                     borderRadius: 2,
                     color: "var(--pq-ivory, #F5F0E8)",
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     padding: "8px 10px",
                     marginBottom: 12,
                     letterSpacing: tile.needsTicker ? "0.14em" : "normal",
@@ -285,7 +285,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                 <Link
                   href="/pricing"
                   className="pq-ink-btn-bronze inline-flex"
-                  style={{ fontSize: 12, letterSpacing: "0.18em" }}
+                  style={{ fontSize: "var(--pq-text-eyebrow)", letterSpacing: "0.18em" }}
                 >
                   Upgrade to {tile.minTier}
                 </Link>
@@ -296,7 +296,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                   disabled={state.status === "queueing"}
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.18em",
                     color: "var(--pq-bronze, #B8956A)",
                     background: "transparent",
@@ -317,7 +317,7 @@ export function GenerateArtifactCta({ tier }: Props) {
                   aria-live="polite"
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.18em",
                     color:
                       state.status === "error"

@@ -75,7 +75,7 @@ export default function ExplorerPage() {
                 <div className="flex items-center justify-between">
                   <span
                     className="font-mono uppercase"
-                    style={{ color: "rgba(184,149,106,0.6)", fontSize: "12px", letterSpacing: "0.22em" }}
+                    style={{ color: "rgba(184,149,106,0.6)", fontSize: "var(--pq-text-eyebrow)", letterSpacing: "0.22em" }}
                   >
                     {String(i + 1).padStart(2, "0")} / {String(ARTIFACTS.length).padStart(2, "0")}
                   </span>
@@ -83,7 +83,7 @@ export default function ExplorerPage() {
                     className="font-mono uppercase"
                     style={{
                       color: a.tier === "PREMIUM" ? "var(--pq-bronze)" : "rgba(245,240,232,0.5)",
-                      fontSize: "12px",
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.24em",
                       padding: "3px 8px",
                       border: "0.5px solid rgba(184,149,106,0.38)",
@@ -95,16 +95,16 @@ export default function ExplorerPage() {
                 </div>
                 <h3
                   className="font-serif"
-                  style={{ color: "var(--pq-ivory)", fontSize: "18px", fontWeight: 500, letterSpacing: "-0.01em" }}
+                  style={{ color: "var(--pq-ivory)", fontSize: "var(--pq-text-h5)", fontWeight: 500, letterSpacing: "-0.01em" }}
                 >
                   {a.name}
                 </h3>
-                <p className="font-serif italic" style={{ color: "rgba(184,149,106,0.8)", fontSize: "14px" }}>
+                <p className="font-serif italic" style={{ color: "rgba(184,149,106,0.8)", fontSize: "var(--pq-text-body)" }}>
                   {a.tagline}
                 </p>
                 <p
                   className="font-serif"
-                  style={{ color: "rgba(245,240,232,0.55)", fontSize: "14px", lineHeight: 1.5 }}
+                  style={{ color: "rgba(245,240,232,0.55)", fontSize: "var(--pq-text-body)", lineHeight: 1.5 }}
                 >
                   {a.format}
                 </p>
@@ -117,7 +117,7 @@ export default function ExplorerPage() {
                       className="inline-flex items-center gap-1.5 font-serif italic"
                       style={{
                         color: "var(--pq-bronze)",
-                        fontSize: "14px",
+                        fontSize: "var(--pq-text-body)",
                         borderBottom: "0.5px solid rgba(184,149,106,0.4)",
                       }}
                     >
@@ -128,7 +128,7 @@ export default function ExplorerPage() {
                   ) : (
                     <span
                       className="inline-flex items-center gap-1.5 font-serif italic"
-                      style={{ color: "rgba(245,240,232,0.4)", fontSize: "14px" }}
+                      style={{ color: "rgba(245,240,232,0.4)", fontSize: "var(--pq-text-body)" }}
                     >
                       <Lock className="h-3 w-3" aria-hidden />
                       In-app only

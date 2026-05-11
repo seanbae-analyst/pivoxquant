@@ -192,7 +192,7 @@ export default function OAuthFinalizePage() {
           </h1>
           <p
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.68)",
               margin: 0,
@@ -240,7 +240,7 @@ export default function OAuthFinalizePage() {
               }`,
               borderRadius: 2,
               padding: "10px 12px",
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               colorScheme: "dark",
             }}
           />
@@ -249,7 +249,7 @@ export default function OAuthFinalizePage() {
               id="oauth_finalize_birthdate_msg"
               role="alert"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 lineHeight: 1.55,
                 color: "rgba(244,108,108,0.92)",
               }}
@@ -278,7 +278,7 @@ export default function OAuthFinalizePage() {
                 ? "var(--pq-ink, #050505)"
                 : "rgba(245,240,232,0.40)",
             fontFamily: "var(--pq-font-mono, 'JetBrains Mono', monospace)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             borderRadius: 2,

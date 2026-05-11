@@ -30,17 +30,17 @@ interface Props {
 }
 
 const ROW_LABEL_STYLE: React.CSSProperties = {
-  fontSize: 14,
+  fontSize: "var(--pq-text-body)",
   color: "var(--pq-ivory)",
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
-  fontSize: 14,
+  fontSize: "var(--pq-text-body)",
   color: "rgba(245,240,232,0.55)",
   marginTop: 2,
 };
 const ROW_VALUE_STYLE: React.CSSProperties = {
   fontVariantNumeric: "tabular-nums",
-  fontSize: 14,
+  fontSize: "var(--pq-text-body)",
   color: "rgba(245,240,232,0.82)",
 };
 
@@ -67,7 +67,7 @@ export function SettingsIdentityCardV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.55)",
         }}
@@ -78,7 +78,7 @@ export function SettingsIdentityCardV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 16,
@@ -115,7 +115,7 @@ export function SettingsIdentityCardV2({
             href={editHref}
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               color: "var(--pq-bronze)",
               borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -147,7 +147,7 @@ export function SettingsIdentityCardV2({
           className="font-mono"
           style={{
             ...ROW_VALUE_STYLE,
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
@@ -193,7 +193,7 @@ export function SettingsIdentityCardV2({
                 onClick={() => onLocaleChange(code)}
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
                   border: `1px solid ${

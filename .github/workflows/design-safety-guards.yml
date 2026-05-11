@@ -423,23 +423,22 @@ jobs:
           count=$(grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
             --include="*.tsx" --include="*.ts" \
             | grep -v '__tests__' | wc -l | xargs)
-          # Baseline ratcheted by PR `refactor/fontsize-phase4-w12`
-          # (Wave 12) migrating Top 11-20 offender files: reports
-          # /templates/insider-mirror, home/sector-allocation-donut,
-          # reports/templates/risk-board, market/overview-paper,
-          # settings/v2/broker-card-v2, risk/v2/correlation-heatmap,
-          # reports/v2/artifact-kind-card, reports/templates/burn-rate,
-          # profile/v2/identity-card-v2, portfolio/v2/positions-table-v2,
-          # landing/personas-preview, home/today-memo-hero, and a single
-          # h4 site in app/(dashboard)/home/_v1/page-v1 — 692 → 593
-          # inline literals (Δ -99). Prior baselines: W10 733 → 692,
+          # Baseline ratcheted by PR `refactor/wave15-fontsize-phase5`
+          # (Wave 15) migrating Top 21-30 offender files: profile/v2
+          # /danger-zone-card-v2, reports/templates/self-audit,
+          # reports/v2/generate-artifact-cta, risk/v2/risk-timeline-chart,
+          # risk/v2/seven-layer-breakdown, settings/v2/identity-card-v2,
+          # signals/v2/signals-timeline-grid, app/(auth)/signup
+          # /oauth-finalize, app/features/explorer, home/v2
+          # /companion-archive-card — 593 → 519 inline literals (Δ -74).
+          # Prior baselines: W12 692 → 593, W10 733 → 692,
           # W9 868 → 733, W8 961 → 868. Remaining inline sites are
           # dominated by size-9 mono kickers / 11px PDF caption / 28px
           # avatar / 36px PDF hero which have no token equivalent and
           # are intentionally retained. Future waves should target
-          # remaining 12/14 tree-wide sweep + Phase 5 PDF templates.
+          # remaining Top 31+ tree-wide sweep + Phase 6 token-less sites.
           # Ratchet is one-way — new code must not increase this count.
-          baseline=593
+          baseline=519
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
