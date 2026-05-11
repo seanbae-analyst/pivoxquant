@@ -1,15 +1,21 @@
 /**
- * Report 05 — Risk Board (Pro · 2 pages · Weekly)
+ * Report 05 — Risk Board (Pro · 4 pages · Weekly)
  *
  * Source: /design_handoff_pdf_reports/reports/05_risk_board.html
  *
  * Page 1: Executive Summary (dl/dt/dd) + 4-up KPI row + Risk Limits
  *         (gauge bars with cap markers + status badges).
- * Page 2: Stress test waterfall + scenario table + correlation gauge +
- *         observed actions checklist + governance + disclaimer.
+ * Page 2: 7-Layer Risk Defense matrix — PivoxQuant differentiator surface
+ *         (W7.2 / E2E P1 #14). Maps backend `risk_defense.py` layers L1-L7
+ *         (VaR / Correlation / VIX / Tail / Daily / Sector / Cash) with
+ *         threshold + observed + status columns. Mirrors live `/risk`
+ *         dashboard (PR #199 hhi + 7-layer schema) for consistency.
+ * Page 3: Stress test waterfall + scenario table + correlation gauge +
+ *         observed actions checklist + governance.
+ * Page 4: Atomic disclaimer sheet.
  *
  * Compliance: All risk metrics are observation labels (BREACH / OVER / OK).
- * No buy/sell/hold language. Pro tier requires GovBlock — included on page 2.
+ * No buy/sell/hold language. Pro tier requires GovBlock — included on page 3.
  */
 
 "use client";
@@ -70,7 +76,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 01/03`}
+          meta={`${data.weekTag} · 01/04`}
         />
 
         <PdfExecSum
@@ -224,12 +230,203 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* ═══════ PAGE 2 — STRESS TESTS + ACTIONS ═══════ */}
+      {/* ═══════ PAGE 2 — 7-LAYER RISK DEFENSE ═══════
+         W7.2 — PivoxQuant 차별점 surface (E2E P1 #14).
+         Maps backend `risk_defense.py` layers L1-L7 1:1.
+         Threshold / Observed / Status columns mirror the live
+         `/risk` dashboard PR #199 schema (hhi + 7-layer threshold
+         + observed_at_kst). */}
       <PdfPage>
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 02/03`}
+          meta={`${data.weekTag} · 02/04`}
+        />
+        <PdfGoldRule />
+
+        <PdfSectionTitle variant="dry">
+          7-Layer Risk Defense{" "}
+          <small>PivoxQuant 차별점 · backend risk_defense.py 1:1</small>
+        </PdfSectionTitle>
+
+        <PdfCard>
+          <p
+            style={{
+              fontSize: 12,
+              color: "var(--r-ink-3)",
+              lineHeight: 1.55,
+              marginBottom: 14,
+            }}
+          >
+            7-Layer Risk Defense는 매 bar마다 7개 독립 레이어를 평가, 한
+            개라도 한도를 초과하면 즉시 관측 신호를 발생시킵니다. 본
+            시스템은{" "}
+            <strong>관측·경보 시스템이며 자동 매매·자문이 아닙니다.</strong>{" "}
+            All seven layers run independently — any single breach surfaces
+            an observation badge (BREACH / OVER / OK).
+          </p>
+
+          <PdfTable>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Layer · 레이어</th>
+                <th>Threshold · 한도</th>
+                <th className="right">Observed · 관측</th>
+                <th className="right">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>L1</strong>
+                </td>
+                <td>
+                  <strong>VaR (95% 1d)</strong>
+                  <br />
+                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                    Value at Risk · 95% 일일 손실
+                  </span>
+                </td>
+                <td>−3.0% NAV</td>
+                <td className="right neg">−1.46%</td>
+                <td className="right">
+                  <PdfBadge tone="low">OK</PdfBadge>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>L2</strong>
+                </td>
+                <td>
+                  <strong>Correlation Spike</strong>
+                  <br />
+                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                    평균 페어와이즈 상관계수
+                  </span>
+                </td>
+                <td>0.70</td>
+                <td className="right">0.62</td>
+                <td className="right">
+                  <PdfBadge tone="moderate">OVER</PdfBadge>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>L3</strong>
+                </td>
+                <td>
+                  <strong>VIX Regime</strong>
+                  <br />
+                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                    공포 지수 caution / panic 트리거
+                  </span>
+                </td>
+                <td>25 caution / 35 panic</td>
+                <td className="right">18.5</td>
+                <td className="right">
+                  <PdfBadge tone="low">OK</PdfBadge>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>L4</strong>
+                </td>
+                <td>
+                  <strong>Tail Risk Parity</strong>
+                  <br />
+                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                    개별 종목 테일 기여도 불균형
+                  </span>
+                </td>
+                <td>2.0× 평균</td>
+                <td className="right">1.5×</td>
+                <td className="right">
+                  <PdfBadge tone="low">OK</PdfBadge>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>L5</strong>
+                </td>
+                <td>
+                  <strong>Daily Loss Limit</strong>
+                  <br />
+                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                    일일 손실 서킷 브레이커
+                  </span>
+                </td>
+                <td>−2.0%</td>
+                <td className="right neg">−0.4%</td>
+                <td className="right">
+                  <PdfBadge tone="low">OK</PdfBadge>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>L6</strong>
+                </td>
+                <td>
+                  <strong>Sector Concentration</strong>
+                  <br />
+                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                    단일 섹터 NAV 비중
+                  </span>
+                </td>
+                <td>35%</td>
+                <td className="right neg">42%</td>
+                <td className="right">
+                  <PdfBadge tone="severe">BREACH</PdfBadge>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>L7</strong>
+                </td>
+                <td>
+                  <strong>Cash Buffer</strong>
+                  <br />
+                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                    레짐 기반 동적 현금 (PR #225)
+                  </span>
+                </td>
+                <td>≥ 10%</td>
+                <td className="right">18%</td>
+                <td className="right">
+                  <PdfBadge tone="low">OK</PdfBadge>
+                </td>
+              </tr>
+            </tbody>
+          </PdfTable>
+
+          <p
+            style={{
+              fontSize: 11,
+              color: "var(--r-ink-3)",
+              lineHeight: 1.5,
+              marginTop: 14,
+            }}
+          >
+            <strong>Observed at · 관측 시각:</strong> {data.asOfStamp}.{" "}
+            <strong>Triggered this run:</strong> L6 Sector Concentration
+            (Tech 42% / 한도 35%). 즉시 조치 권고는 본 보고서 03 페이지
+            Rebalance Notes를 참조하십시오.
+          </p>
+        </PdfCard>
+
+        <PdfPageFooter
+          left="Risk Board · 7-Layer Defense · Pro · Internal use only"
+          right="Page 02"
+        />
+        <PdfDisclaimerMini />
+      </PdfPage>
+
+      {/* ═══════ PAGE 3 — STRESS TESTS + ACTIONS ═══════ */}
+      <PdfPage>
+        <PdfHeader
+          tier="pro"
+          title="RISK BOARD · WEEKLY"
+          meta={`${data.weekTag} · 03/04`}
         />
         <PdfGoldRule />
 
@@ -423,17 +620,17 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
 
         <PdfPageFooter
           left="Risk Board · Pro · Internal"
-          right="Page 02"
+          right="Page 03"
         />
         <PdfDisclaimerMini />
       </PdfPage>
 
-      {/* ═══════ PAGE 3 — DISCLAIMER (atomic disclaim-only sheet) ═══════ */}
+      {/* ═══════ PAGE 4 — DISCLAIMER (atomic disclaim-only sheet) ═══════ */}
       <PdfPage>
         <PdfHeader
           tier="pro"
           title="RISK BOARD · WEEKLY"
-          meta={`${data.weekTag} · 03/03`}
+          meta={`${data.weekTag} · 04/04`}
         />
         <PdfGoldRule />
         <PdfDisclaimer cadence="weekly" />
