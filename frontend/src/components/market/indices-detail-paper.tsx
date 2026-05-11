@@ -151,7 +151,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
       <div style={{ minWidth: 0 }}>
         <div
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             color: "#141414",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -162,7 +162,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
         </div>
         <div
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "rgba(20,20,20,0.55)",
@@ -238,7 +238,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
           {quote.unit ? (
             <span
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 marginLeft: 4,
                 color: "rgba(20,20,20,0.5)",
               }}
@@ -251,7 +251,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
           className={`font-mono ${isPositive ? "pq-paper-pos" : "pq-paper-neg"}`}
           style={{
             fontVariantNumeric: "tabular-nums",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             marginTop: 2,
           }}
         >
@@ -303,7 +303,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
             justifyContent: "space-between",
             marginTop: 3,
             fontVariantNumeric: "tabular-nums",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             color: "rgba(20,20,20,0.55)",
           }}
         className="font-mono" >
@@ -347,7 +347,7 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
         </h2>
         <div
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             color: "rgba(20,20,20,0.55)",
           }}
         className="font-serif" >
@@ -389,7 +389,7 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
         ) : (
           <p
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               fontStyle: "italic",
               color: "rgba(20,20,20,0.55)",
               padding: "20px 0",
@@ -421,7 +421,7 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
               >
                 <span
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     color: "#1a1a1a",
                   }}
                 className="font-serif" >
@@ -430,7 +430,7 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
                 <span
                   style={{
                     fontVariantNumeric: "tabular-nums",
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     color: "#141414",
                   }}
                 className="font-mono" >
@@ -438,7 +438,7 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
                 </span>
                 <span
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(20,20,20,0.55)",
                   }}
                 className="font-mono" >

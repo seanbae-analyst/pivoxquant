@@ -83,7 +83,7 @@ function LoadingShell() {
       <div
         className="font-serif uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "rgba(184, 149, 106, 0.7)",
         }}
@@ -112,7 +112,7 @@ function UpgradePrompt() {
           <span
             className="font-serif uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze, #B8956A)",
             }}
@@ -148,7 +148,7 @@ function UpgradePrompt() {
         <p
           className="mt-2 font-serif italic"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.65,
             color: "rgba(184, 149, 106, 0.85)",
           }}
@@ -163,7 +163,7 @@ function UpgradePrompt() {
             style={{
               background: "var(--pq-bronze, #B8956A)",
               color: "var(--pq-ink, #050505)",
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
             }}
           >
@@ -177,7 +177,7 @@ function UpgradePrompt() {
             style={{
               border: "0.5px solid rgba(245, 240, 232, 0.14)",
               color: "rgba(245, 240, 232, 0.72)",
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
             }}
           >
@@ -239,7 +239,7 @@ function ComingSoon({ phase }: { phase: string }) {
           <span
             className="font-serif uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze, #B8956A)",
             }}
@@ -275,7 +275,7 @@ function ComingSoon({ phase }: { phase: string }) {
         <p
           className="mt-2 font-serif italic"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.65,
             color: "rgba(184, 149, 106, 0.85)",
           }}
@@ -301,7 +301,7 @@ function ComingSoon({ phase }: { phase: string }) {
             <p
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 color: "var(--pq-ivory, #F5F0E8)",
                 margin: 0,
               }}
@@ -325,7 +325,7 @@ function ComingSoon({ phase }: { phase: string }) {
               style={{
                 border: "0.5px solid rgba(245, 240, 232, 0.14)",
                 color: "var(--pq-ivory, #F5F0E8)",
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 caretColor: "var(--pq-bronze, #B8956A)",
               }}
             />
@@ -336,7 +336,7 @@ function ComingSoon({ phase }: { phase: string }) {
               style={{
                 background: "var(--pq-bronze, #B8956A)",
                 color: "var(--pq-ink, #050505)",
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
               }}
             >
@@ -349,7 +349,7 @@ function ComingSoon({ phase }: { phase: string }) {
           <p
             role="alert"
             className="mt-3 font-serif"
-            style={{ fontSize: 12, color: "rgba(239, 184, 143, 0.9)" }}
+            style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(239, 184, 143, 0.9)" }}
           >
             {error}
           </p>

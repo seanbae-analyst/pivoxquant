@@ -110,7 +110,7 @@ export function SignalMemoStrip({
             <div className="flex items-center gap-2 flex-wrap">
               <span
                 style={{
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   color: "#1a1a1a",
                   letterSpacing: "-0.01em",
                   }}
@@ -123,7 +123,7 @@ export function SignalMemoStrip({
                   display: "inline-flex",
                   alignItems: "center",
                   padding: "2px 8px",
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   textTransform: "uppercase",
                   fontWeight: 600,
@@ -139,7 +139,7 @@ export function SignalMemoStrip({
             </div>
             <div
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.16em",
                 color: "rgba(20,20,20,0.48)",
                 textTransform: "uppercase",
@@ -155,7 +155,7 @@ export function SignalMemoStrip({
           <div style={{ textAlign: "right", minWidth: 72 }}>
             <div
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 fontVariantNumeric: "tabular-nums",
                 color: "#1a1a1a",
               }}
@@ -164,7 +164,7 @@ export function SignalMemoStrip({
             </div>
             <div
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 fontVariantNumeric: "tabular-nums",
                 color: isPositive ? "#4a7a52" : "#a54545",
                 marginTop: 1,
@@ -178,7 +178,7 @@ export function SignalMemoStrip({
           <div style={{ textAlign: "right", width: 52 }}>
             <div
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
                 color: "rgba(20,20,20,0.48)",
@@ -231,7 +231,7 @@ export function SignalMemoStrip({
         >
           <div
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.55)",
@@ -243,7 +243,7 @@ export function SignalMemoStrip({
           </div>
           <p
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.55,
               color: "rgba(20,20,20,0.78)",
               margin: 0,
@@ -257,7 +257,7 @@ export function SignalMemoStrip({
           <div style={{ marginTop: 14 }}>
             <div
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
                 color: "rgba(20,20,20,0.55)",
@@ -281,7 +281,7 @@ export function SignalMemoStrip({
                     <div className="flex items-baseline justify-between">
                       <span
                         style={{
-                          fontSize: 12,
+                          fontSize: "var(--pq-text-eyebrow)",
                           letterSpacing: "0.18em",
                           textTransform: "uppercase",
                           color: "rgba(20,20,20,0.55)",
@@ -291,7 +291,7 @@ export function SignalMemoStrip({
                       </span>
                       <span
                         style={{
-                          fontSize: 12,
+                          fontSize: "var(--pq-text-eyebrow)",
                           fontVariantNumeric: "tabular-nums",
                           color: "#1a1a1a",
                         }}
@@ -334,7 +334,7 @@ export function SignalMemoStrip({
           >
             <span
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(20,20,20,0.5)",
               }}
             className="font-serif" >
@@ -347,7 +347,7 @@ export function SignalMemoStrip({
                 onOpenDetail();
               }}
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 textTransform: "uppercase",
                 color: "#B8956A",

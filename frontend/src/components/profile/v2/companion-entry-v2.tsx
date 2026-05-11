@@ -66,7 +66,7 @@ export function CompanionEntryV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.55)",
         }}
@@ -77,7 +77,7 @@ export function CompanionEntryV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 12,
@@ -90,7 +90,7 @@ export function CompanionEntryV2({
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 24,
+          fontSize: "var(--pq-text-quote)",
           lineHeight: 1.15,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",
@@ -106,7 +106,7 @@ export function CompanionEntryV2({
       <p
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
           marginBottom: 20,
@@ -129,7 +129,7 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.55)",
                 marginBottom: 8,
@@ -140,7 +140,7 @@ export function CompanionEntryV2({
             <p
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 color: "rgba(245,240,232,0.65)",
               }}
             >
@@ -160,7 +160,7 @@ export function CompanionEntryV2({
                 padding: "12px 22px",
                 background: "var(--pq-bronze)",
                 color: "var(--pq-ink, #050505)",
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.2em",
                 borderRadius: 2,
                 textDecoration: "none",
@@ -181,7 +181,7 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.55)",
                 marginBottom: 8,
@@ -192,7 +192,7 @@ export function CompanionEntryV2({
             <p
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 color: "rgba(245,240,232,0.65)",
               }}
             >
@@ -226,7 +226,7 @@ export function CompanionEntryV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.55)",
                 marginBottom: 8,
@@ -256,7 +256,7 @@ export function CompanionEntryV2({
                   borderRadius: 2,
                   padding: "10px 12px",
                   color: "var(--pq-ivory)",
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   letterSpacing: "-0.01em",
                 }}
               className="font-mono" />
@@ -271,7 +271,7 @@ export function CompanionEntryV2({
                   padding: "12px 22px",
                   background: "var(--pq-bronze)",
                   color: "var(--pq-ink, #050505)",
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   borderRadius: 2,
                   border: "none",
@@ -290,7 +290,7 @@ export function CompanionEntryV2({
               href="/pricing?plan=plus"
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.18em",
                 color: "var(--pq-bronze)",
                 borderBottom: "1px solid rgba(184,149,106,0.35)",
@@ -304,7 +304,7 @@ export function CompanionEntryV2({
               href="/companion#sample"
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.18em",
                 color: "rgba(245,240,232,0.55)",
                 borderBottom: "1px solid rgba(245,240,232,0.14)",

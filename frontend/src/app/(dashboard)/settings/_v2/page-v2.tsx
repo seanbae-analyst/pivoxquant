@@ -383,7 +383,7 @@ export default function SettingsPageV2() {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze)",
           }}
@@ -469,7 +469,7 @@ export default function SettingsPageV2() {
                 <div
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 8,
@@ -485,7 +485,7 @@ export default function SettingsPageV2() {
                 href="/profile"
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.18em",
                   color: "var(--pq-bronze)",
                   borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -548,7 +548,7 @@ export default function SettingsPageV2() {
                   <p
                     className="font-serif"
                     style={{
-                      fontSize: 14,
+                      fontSize: "var(--pq-text-body)",
                       color: "rgba(245,240,232,0.55)",
                     }}
                   >
@@ -590,7 +590,7 @@ export default function SettingsPageV2() {
                 <div
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 8,
@@ -639,7 +639,7 @@ export default function SettingsPageV2() {
                     position: "absolute",
                     top: 14,
                     right: 14,
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.2em",
                     color: "rgba(245,240,232,0.55)",
                   }}
@@ -649,7 +649,7 @@ export default function SettingsPageV2() {
                 <div
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 12,
@@ -669,7 +669,7 @@ export default function SettingsPageV2() {
                     <div
                       className="font-serif"
                       style={{
-                        fontSize: 14,
+                        fontSize: "var(--pq-text-body)",
                         color: "var(--pq-ivory)",
                       }}
                     >
@@ -678,7 +678,7 @@ export default function SettingsPageV2() {
                     <div
                       className="font-serif"
                       style={{
-                        fontSize: 14,
+                        fontSize: "var(--pq-text-body)",
                         color: "rgba(245,240,232,0.55)",
                         marginTop: 2,
                       }}
@@ -751,7 +751,7 @@ export default function SettingsPageV2() {
                     position: "absolute",
                     top: 14,
                     right: 14,
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.2em",
                     color: "rgba(245,240,232,0.55)",
                   }}
@@ -761,7 +761,7 @@ export default function SettingsPageV2() {
                 <div
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                     marginBottom: 12,
@@ -781,7 +781,7 @@ export default function SettingsPageV2() {
                     <div
                       className="font-serif"
                       style={{
-                        fontSize: 14,
+                        fontSize: "var(--pq-text-body)",
                         color: "var(--pq-ivory)",
                       }}
                     >
@@ -790,7 +790,7 @@ export default function SettingsPageV2() {
                     <div
                       className="font-serif"
                       style={{
-                        fontSize: 14,
+                        fontSize: "var(--pq-text-body)",
                         color: "rgba(245,240,232,0.55)",
                         marginTop: 2,
                       }}
@@ -885,7 +885,7 @@ export default function SettingsPageV2() {
               marginTop: 32,
               padding: "18px 24px",
               border: "1px dashed rgba(245,240,232,0.14)",
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.6,
               color: "rgba(245,240,232,0.55)",
             }}

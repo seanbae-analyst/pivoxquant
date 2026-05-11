@@ -191,7 +191,7 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
         오늘 점검할 <em>{pending.length}개</em> 종목.
       </PdfCoverTitle>
       <div style={{ marginTop: 28, }} className="font-serif" >
-        <p style={{ fontSize: 14, color: "var(--r-ink-2, #555)", margin: 0, lineHeight: 1.65 }}>
+        <p style={{ fontSize: "var(--pq-text-body)", color: "var(--r-ink-2, #555)", margin: 0, lineHeight: 1.65 }}>
           3일 전에 추가하신 포지션. 메모를 다시 한 번 점검해 보세요.
         </p>
       </div>
@@ -220,7 +220,7 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
                 <div
                   className="font-serif"
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     fontWeight: 500,
                     color: "var(--r-ink-1, #1a1a1a)",
                     overflow: "hidden",
@@ -244,13 +244,13 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
                   </div>
                 )}
               </div>
-              <span className="font-mono" style={{ fontSize: 14, color: "var(--r-ink-2)" }}>
+              <span className="font-mono" style={{ fontSize: "var(--pq-text-body)", color: "var(--r-ink-2)" }}>
                 {p.shares} shares
               </span>
-              <span className="font-mono" style={{ fontSize: 14, color: "var(--r-ink-3)" }}>
+              <span className="font-mono" style={{ fontSize: "var(--pq-text-body)", color: "var(--r-ink-3)" }}>
                 avg {fmtMoney(p.avg_cost, krw)}
               </span>
-              <span className="font-mono" style={{ fontSize: 12, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--r-ink-4)" }}>
+              <span className="font-mono" style={{ fontSize: "var(--pq-text-eyebrow)", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--r-ink-4)" }}>
                 +{p.days_since ?? "—"}d
               </span>
             </div>
@@ -288,7 +288,7 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
             background: "rgba(184, 149, 106, 0.08)",
             border: "1px solid rgba(184, 149, 106, 0.4)",
             borderRadius: 2,
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--r-gold-deep, #8b6f47)",
@@ -363,7 +363,7 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
         <PdfCard>
           <p
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.7,
               color: "var(--r-ink-2)",
             }}
@@ -386,14 +386,14 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">PROCEED</div>
               <div
                 style={{
-                  fontSize: 32,
+                  fontSize: "var(--pq-text-h3)",
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
               className="font-serif" >
                 {data.decisionScore}
               </div>
-              <div style={{ fontSize: 12, color: "var(--r-ink-3)" }}>
+              <div style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)" }}>
                 진입 조건 충족
               </div>
             </div>
@@ -403,14 +403,14 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">WAIT</div>
               <div
                 style={{
-                  fontSize: 32,
+                  fontSize: "var(--pq-text-h3)",
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
               className="font-serif" >
                 15–20
               </div>
-              <div style={{ fontSize: 12, color: "var(--r-ink-3)" }}>
+              <div style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)" }}>
                 추가 정보 필요
               </div>
             </div>
@@ -420,14 +420,14 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
               <div className="pq-pdf-kpi-lbl">REJECT</div>
               <div
                 style={{
-                  fontSize: 32,
+                  fontSize: "var(--pq-text-h3)",
                   fontWeight: 500,
                   margin: "8px 0",
                 }}
               className="font-serif" >
                 &lt;15
               </div>
-              <div style={{ fontSize: 12, color: "var(--r-ink-3)" }}>기각</div>
+              <div style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)" }}>기각</div>
             </div>
           </PdfCard>
         </PdfThreeCol>

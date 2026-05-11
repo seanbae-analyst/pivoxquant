@@ -53,6 +53,66 @@ const TOP5_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> =
   },
 ];
 
+/** Files migrated in PR `fontsize-phase2-w9` — Top 6-10 offenders.
+ *  Caps below pin the count of *remaining* raw literals (sizes with no exact
+ *  v3 token — 9, 11, 15, 16, 18, 20, 28). Migrated sizes (12 / 14 / 24 / 32)
+ *  must stay tokenized; future contributors cannot re-introduce them. */
+const PHASE2_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
+  {
+    path: "app/(dashboard)/home/_v1/page-v1.tsx",
+    cap: 10,
+    reason:
+      "9× 9px chip/micro-label (below HIG floor) + 1× 20px sub-heading — no exact v3 token",
+  },
+  {
+    path: "components/market/indices-detail-paper.tsx",
+    cap: 7,
+    reason:
+      "6× 9px paper kicker (Vantablack paper aesthetic) + 1× 18px hero number — no exact v3 token",
+  },
+  {
+    path: "components/companion/chat-panel.tsx",
+    cap: 4,
+    reason:
+      "3× 15px chat body + 1× 9px micro-timestamp — no exact v3 token between body(14)/quote(24)",
+  },
+  {
+    path: "components/settings/v2/subscription-card-v2.tsx",
+    cap: 1,
+    reason: "1× 28px secondary heading — no exact v3 token between quote(24) and h3(32)",
+  },
+  {
+    path: "app/pricing/page.tsx",
+    cap: 2,
+    reason: "2× 15px/16px tier body copy — no exact v3 token between body(14) and quote(24)",
+  },
+  {
+    path: "components/signals/signal-memo-strip.tsx",
+    cap: 1,
+    reason: "1× 18px memo headline — no exact v3 token between body(14) and quote(24)",
+  },
+  {
+    path: "components/reports/templates/dd-checklist.tsx",
+    cap: 1,
+    reason: "1× 11px tab number (uppercase eyebrow micro-variant) — no exact v3 token",
+  },
+  {
+    path: "components/profile/v2/companion-entry-v2.tsx",
+    cap: 0,
+    reason: "all literals match an exact v3 token (12 / 14 / 24)",
+  },
+  {
+    path: "app/(dashboard)/settings/_v2/page-v2.tsx",
+    cap: 0,
+    reason: "all literals match an exact v3 token (12 / 14)",
+  },
+  {
+    path: "app/(dashboard)/companion/page.tsx",
+    cap: 2,
+    reason: "2× 15px hero-card body copy — no exact v3 token between body(14) and quote(24)",
+  },
+];
+
 /** Count inline `fontSize:` lines whose value starts with a raw digit
  *  (catches both bare-number `fontSize: 12` and string-px `fontSize: "12px"`). */
 const RAW_FONTSIZE = /fontSize:\s*"?[0-9]/;
@@ -60,31 +120,42 @@ const RAW_FONTSIZE = /fontSize:\s*"?[0-9]/;
 /** Count token usages of the form `fontSize: "var(--pq-text-...)"`. */
 const TOKEN_FONTSIZE = /fontSize:\s*"var\(--pq-text-/;
 
-describe("typography token coverage — Top 5 inline fontSize offenders", () => {
-  for (const { path, cap, reason } of TOP5_FILES) {
-    it(`${path}: raw fontSize literal count ≤ ${cap} (${reason})`, () => {
-      const text = readFileSync(join(FRONTEND_SRC, path), "utf-8");
-      const lines = text.split("\n");
-      const offenders: string[] = [];
-      for (let i = 0; i < lines.length; i++) {
-        if (RAW_FONTSIZE.test(lines[i])) {
-          offenders.push(`${path}:${i + 1} → ${lines[i].trim()}`);
+function makeCapAssertion(
+  files: ReadonlyArray<{ path: string; cap: number; reason: string }>,
+  label: string,
+) {
+  describe(label, () => {
+    for (const { path, cap, reason } of files) {
+      it(`${path}: raw fontSize literal count ≤ ${cap} (${reason})`, () => {
+        const text = readFileSync(join(FRONTEND_SRC, path), "utf-8");
+        const lines = text.split("\n");
+        const offenders: string[] = [];
+        for (let i = 0; i < lines.length; i++) {
+          if (RAW_FONTSIZE.test(lines[i])) {
+            offenders.push(`${path}:${i + 1} → ${lines[i].trim()}`);
+          }
         }
-      }
-      if (offenders.length > cap) {
-        const detail = offenders.slice(0, 12).join("\n  ");
-        throw new Error(
-          `Found ${offenders.length} raw fontSize literal(s) in ${path}, ` +
-            `cap is ${cap}. Use var(--pq-text-eyebrow|caption|body|quote|h3) ` +
-            `where the size matches an exact v3 token.\n  ${detail}`,
-        );
-      }
-      expect(offenders.length).toBeLessThanOrEqual(cap);
-    });
+        if (offenders.length > cap) {
+          const detail = offenders.slice(0, 12).join("\n  ");
+          throw new Error(
+            `Found ${offenders.length} raw fontSize literal(s) in ${path}, ` +
+              `cap is ${cap}. Use var(--pq-text-eyebrow|caption|body|quote|h3) ` +
+              `where the size matches an exact v3 token.\n  ${detail}`,
+          );
+        }
+        expect(offenders.length).toBeLessThanOrEqual(cap);
+      });
 
-    it(`${path}: at least one v3 token reference (sanity)`, () => {
-      const text = readFileSync(join(FRONTEND_SRC, path), "utf-8");
-      expect(TOKEN_FONTSIZE.test(text)).toBe(true);
-    });
-  }
-});
+      it(`${path}: at least one v3 token reference (sanity)`, () => {
+        const text = readFileSync(join(FRONTEND_SRC, path), "utf-8");
+        expect(TOKEN_FONTSIZE.test(text)).toBe(true);
+      });
+    }
+  });
+}
+
+makeCapAssertion(TOP5_FILES, "typography token coverage — Top 5 inline fontSize offenders (W8)");
+makeCapAssertion(
+  PHASE2_FILES,
+  "typography token coverage — Phase 2 (Top 6-10) inline fontSize offenders (W9)",
+);

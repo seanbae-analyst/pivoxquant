@@ -115,7 +115,7 @@ export function SubscriptionCardV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -127,7 +127,7 @@ export function SubscriptionCardV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
@@ -144,7 +144,7 @@ export function SubscriptionCardV2({
           onClick={onManageBilling}
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -197,7 +197,7 @@ export function SubscriptionCardV2({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   color: isCurrent
                     ? "var(--pq-bronze)"
@@ -224,7 +224,7 @@ export function SubscriptionCardV2({
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   color: "rgba(245,240,232,0.82)",
                   marginTop: 4,
                 }}
@@ -236,7 +236,7 @@ export function SubscriptionCardV2({
               <ul
                 style={{
                   marginTop: 14,
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   color: "rgba(245,240,232,0.82)",
                   lineHeight: 1.7,
                   listStyle: "none",
@@ -286,7 +286,7 @@ export function SubscriptionCardV2({
                       background: "transparent",
                       color: "var(--pq-bronze)",
                       border: "1px solid var(--pq-bronze)",
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.2em",
                       borderRadius: 2,
                       cursor: "pointer",
@@ -300,7 +300,7 @@ export function SubscriptionCardV2({
                       onClick={onCancel}
                       className="font-mono uppercase"
                       style={{
-                        fontSize: 12,
+                        fontSize: "var(--pq-text-eyebrow)",
                         letterSpacing: "0.18em",
                         color: "var(--pq-error, #d18888)",
                         borderBottom: "1px solid rgba(209,136,136,0.30)",
@@ -327,7 +327,7 @@ export function SubscriptionCardV2({
                       padding: "12px 22px",
                       background: "var(--pq-bronze)",
                       color: "var(--pq-ink, #050505)",
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.2em",
                       borderRadius: 2,
                       textDecoration: "none",
@@ -358,7 +358,7 @@ export function SubscriptionCardV2({
             position: "absolute",
             top: 14,
             right: 14,
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             color: "rgba(245,240,232,0.55)",
           }}
@@ -382,7 +382,7 @@ export function SubscriptionCardV2({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.18em",
                   color: "rgba(245,240,232,0.55)",
                 }}
@@ -393,7 +393,7 @@ export function SubscriptionCardV2({
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   color: "rgba(245,240,232,0.82)",
                   marginTop: 6,
                 }}
@@ -406,7 +406,7 @@ export function SubscriptionCardV2({
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.18em",
                 color: "rgba(245,240,232,0.55)",
               }}
@@ -419,7 +419,7 @@ export function SubscriptionCardV2({
               className="font-mono uppercase"
               style={{
                 marginTop: 6,
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.18em",
                 color: "var(--pq-bronze)",
                 borderBottom: "1px solid rgba(184,149,106,0.15)",
