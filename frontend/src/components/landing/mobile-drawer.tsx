@@ -113,7 +113,7 @@ export default function MobileDrawer({
                 style={{
                   color: "var(--pq-ivory)",
                   letterSpacing: "0.22em",
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   textTransform: "uppercase",
                   fontWeight: 500,
                 }}
@@ -150,7 +150,7 @@ export default function MobileDrawer({
                         className="font-serif"
                         style={{
                           color: isOpen ? "var(--pq-ivory)" : "rgba(245,240,232,0.85)",
-                          fontSize: "24px",
+                          fontSize: "var(--pq-text-quote)",
                           letterSpacing: "-0.01em",
                           fontWeight: 500,
                         }}
@@ -208,7 +208,7 @@ export default function MobileDrawer({
                                     className="font-serif"
                                     style={{
                                       color: "var(--pq-ivory)",
-                                      fontSize: "15px",
+                                      fontSize: "var(--pq-text-lead)",
                                       fontWeight: 500,
                                     }}
                                   >
@@ -218,7 +218,7 @@ export default function MobileDrawer({
                                     className="font-serif"
                                     style={{
                                       color: "rgba(245,240,232,0.55)",
-                                      fontSize: "12px",
+                                      fontSize: "var(--pq-text-eyebrow)",
                                       lineHeight: 1.45,
                                     }}
                                   >
@@ -247,7 +247,7 @@ export default function MobileDrawer({
                 className="mt-4 inline-block px-3 py-3 font-serif"
                 style={{
                   color: "rgba(245,240,232,0.72)",
-                  fontSize: "14px",
+                  fontSize: "var(--pq-text-body)",
                   letterSpacing: "0.02em",
                 }}
               >
@@ -270,7 +270,7 @@ export default function MobileDrawer({
                 style={{
                   backgroundColor: "var(--pq-bronze)",
                   color: "var(--pq-ink)",
-                  fontSize: "14px",
+                  fontSize: "var(--pq-text-body)",
                   letterSpacing: "0.02em",
                   fontWeight: 500,
                 }}

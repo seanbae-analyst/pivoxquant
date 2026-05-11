@@ -246,7 +246,7 @@ export default function MarketPage() {
             </h1>
             <p
               className="mt-1 font-serif"
-              style={{ fontSize: 14, color: "rgba(245,240,232,0.68)" }}
+              style={{ fontSize: "var(--pq-text-body)", color: "rgba(245,240,232,0.68)" }}
             >
               Levels across US and Korean markets, observed at last print.
             </p>
@@ -255,7 +255,7 @@ export default function MarketPage() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
               }}
@@ -275,7 +275,7 @@ export default function MarketPage() {
               <span
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
                 }}
@@ -295,7 +295,7 @@ export default function MarketPage() {
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(245,240,232,0.55)",
                   }}
                 >
@@ -320,7 +320,7 @@ export default function MarketPage() {
                 <span
                   aria-hidden="true"
                   className="mx-1 text-[var(--pq-bronze)]"
-                  style={{ opacity: 0.45, fontSize: "12px" }}
+                  style={{ opacity: 0.45, fontSize: "var(--pq-text-eyebrow)" }}
                 >
                   &#10086;
                 </span>
@@ -433,7 +433,7 @@ export default function MarketPage() {
           <p
             style={{
               textAlign: "center",
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               color: "rgba(245,240,232,0.4)",
               letterSpacing: "0.02em",
               marginTop: 32,

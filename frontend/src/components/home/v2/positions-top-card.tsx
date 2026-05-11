@@ -86,7 +86,7 @@ export function PositionsTopCard() {
         <div
           className="font-serif"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
             fontStyle: "italic",
@@ -111,7 +111,7 @@ export function PositionsTopCard() {
               <span
                 className="font-serif"
                 style={{
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   color: "var(--pq-ivory)",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -122,7 +122,7 @@ export function PositionsTopCard() {
                 <small
                   className="font-mono"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(245,240,232,0.55)",
                     marginLeft: 8,
                     letterSpacing: "0.12em",
@@ -135,7 +135,7 @@ export function PositionsTopCard() {
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   color: "rgba(245,240,232,0.82)",
                 }}
               >
@@ -145,7 +145,7 @@ export function PositionsTopCard() {
                 className="font-mono"
                 style={{
                   fontVariantNumeric: "tabular-nums",
-                  fontSize: 14,
+                  fontSize: "var(--pq-text-body)",
                   color: pctColor(r.pnlPct),
                 }}
               >
@@ -167,7 +167,7 @@ export function PositionsTopCard() {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
             textTransform: "uppercase",

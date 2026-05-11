@@ -417,7 +417,7 @@ export default function TopNav() {
                 className="hidden font-serif italic md:inline"
                 style={{
                   color: "rgba(184,149,106,0.75)",
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.08em",
                 }}
               >
@@ -632,7 +632,7 @@ export default function TopNav() {
                             className="font-serif uppercase"
                             style={{
                               color: "var(--pq-bronze)",
-                              fontSize: "12px",
+                              fontSize: "var(--pq-text-eyebrow)",
                               letterSpacing: "0.22em",
                             }}
                           >
@@ -643,7 +643,7 @@ export default function TopNav() {
                           className="font-serif italic"
                           style={{
                             color: "rgba(245,240,232,0.78)",
-                            fontSize: "15px",
+                            fontSize: "var(--pq-text-lead)",
                             lineHeight: 1.55,
                             maxWidth: 240,
                           }}
@@ -701,7 +701,7 @@ export default function TopNav() {
                                   className="mb-1 flex items-center gap-1.5 font-serif"
                                   style={{
                                     color: "var(--pq-ivory)",
-                                    fontSize: "14px",
+                                    fontSize: "var(--pq-text-body)",
                                     letterSpacing: "0",
                                     fontWeight: 500,
                                   }}
@@ -717,7 +717,7 @@ export default function TopNav() {
                                   className="font-serif"
                                   style={{
                                     color: "rgba(245,240,232,0.58)",
-                                    fontSize: "14px",
+                                    fontSize: "var(--pq-text-body)",
                                     lineHeight: 1.5,
                                   }}
                                 >

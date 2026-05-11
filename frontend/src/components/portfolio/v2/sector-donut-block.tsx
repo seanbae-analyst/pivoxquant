@@ -124,7 +124,7 @@ export function SectorDonutBlock({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 20,
@@ -141,7 +141,7 @@ export function SectorDonutBlock({
             alignItems: "center",
             justifyContent: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
           }}
         className="font-serif" >
           No allocation yet.
@@ -200,7 +200,7 @@ export function SectorDonutBlock({
               <div
                 className="font-mono uppercase"
                 style={{
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   color: "rgba(245,240,232,0.55)",
                   marginBottom: 2,
@@ -211,7 +211,7 @@ export function SectorDonutBlock({
               <div
                 className="font-display"
                 style={{
-                  fontSize: 24,
+                  fontSize: "var(--pq-text-quote)",
                   color: "var(--pq-ivory)",
                   fontWeight: 500,
                 }}
@@ -258,7 +258,7 @@ export function SectorDonutBlock({
                   className="font-serif"
                   style={{
                     flex: 1,
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     color: "var(--pq-ivory)",
                   }}
                 >
@@ -267,7 +267,7 @@ export function SectorDonutBlock({
                 <span
                   className="font-mono tabular-nums"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(245,240,232,0.82)",
                   }}
                 >
