@@ -12,7 +12,7 @@
  *
  * Generic over a Row type that must have an `id: string | number` field.
  *
- * Visual: #0B0E14 bg, #1A1F2E hairline rules, bronze active-row cue.
+ * Visual: `var(--pq-terminal-bg)` bg, `var(--pq-terminal-line)` hairline rules, bronze active-row cue.
  */
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
@@ -138,8 +138,8 @@ export function DataTable<R extends { id: string | number }>({
       onKeyDown={onKeyDown}
       className={`pq-data-table font-mono ${className}`.trim()}
       style={{
-        background: "#0B0E14",
-        border: "1px solid #1A1F2E",
+        background: "var(--pq-terminal-bg)",
+        border: "1px solid var(--pq-terminal-line)",
         overflow: "auto",
         outline: "none",
       }}
@@ -158,7 +158,7 @@ export function DataTable<R extends { id: string | number }>({
               ? {
                   position: "sticky",
                   top: 0,
-                  background: "#0B0E14",
+                  background: "var(--pq-terminal-bg)",
                   zIndex: 1,
                 }
               : undefined
@@ -166,7 +166,7 @@ export function DataTable<R extends { id: string | number }>({
         >
           <tr
             style={{
-              borderBottom: "1px solid #1A1F2E",
+              borderBottom: "1px solid var(--pq-terminal-line)",
             }}
           >
             {columns.map((c) => {
@@ -191,7 +191,7 @@ export function DataTable<R extends { id: string | number }>({
                     userSelect: "none",
                     width: c.width,
                     whiteSpace: "nowrap",
-                    borderRight: "1px solid #1A1F2E",
+                    borderRight: "1px solid var(--pq-terminal-line)",
                   }}
                   aria-sort={
                     active
@@ -305,7 +305,7 @@ export function DataTable<R extends { id: string | number }>({
                             }}
                             style={{
                               width: "100%",
-                              background: "#0A0D13",
+                              background: "var(--pq-terminal-bg-row)",
                               border: "1px solid var(--pq-bronze, #B8956A)",
                               color: "rgba(245,240,232,0.98)",
                               fontFamily: "inherit",

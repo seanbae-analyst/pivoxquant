@@ -16,7 +16,7 @@
  *   - sparkline: optional number[] to render a micro line inside the card.
  *   - size: "sm" | "md". "md" is the default dashboard density.
  *
- * Visual: #0B0E14 bg, #1A1F2E border, bronze (#B8956A) accent label rule.
+ * Visual: `var(--pq-terminal-bg)` bg, `var(--pq-terminal-line)` border, bronze (`var(--pq-bronze)`) accent label rule.
  * Flash: 300ms bg wash on value change (green/red by delta sign).
  */
 
@@ -158,8 +158,8 @@ export function KpiCard({
   const deltaColor = useMemo(() => {
     // KR convention (CEO directive 2026-04-26): ▲ rising = red, ▼ falling = blue.
     if (delta == null) return "rgba(245,240,232,0.55)";
-    if (delta > 0) return "#D18888";
-    if (delta < 0) return "#7AA0C8";
+    if (delta > 0) return "var(--pq-terminal-up)";
+    if (delta < 0) return "var(--pq-terminal-down)";
     return "rgba(245,240,232,0.55)";
   }, [delta]);
 
@@ -172,15 +172,15 @@ export function KpiCard({
       ref={cardRef}
       className={`pq-kpi-card ${className}`.trim()}
       style={{
-        background: "#0B0E14",
-        border: "1px solid #1A1F2E",
+        background: "var(--pq-terminal-bg)",
+        border: "1px solid var(--pq-terminal-line)",
         padding,
         display: "flex",
         flexDirection: "column",
         gap: 6,
         position: "relative",
         transition: "background-color 0.3s ease, border-color 0.2s ease",
-        backgroundColor: "#0B0E14",
+        backgroundColor: "var(--pq-terminal-bg)",
       }}
     >
       {/* Bronze label rule */}

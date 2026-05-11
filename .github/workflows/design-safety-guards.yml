@@ -18,6 +18,8 @@
 #              (W6.5 root LoadingScreen sweep — design v3 §9 ban)
 #   DS10 FAIL — inline fontSize literal count regression (count > baseline)
 #              (W8 typography sweep — design v3 §3 token lock-in)
+#   DS11 FAIL — terminal/ raw hex literal (use --pq-terminal-* tokens)
+#              (W14.2 + W15.2 sweep — globals.css §6 terminal palette)
 #
 # NOTE: DS3 is a diff-based guard (only new additions block). DS5/DS6 currently
 #       FAIL on main because the fix PRs (frontend-wave2, design-v3) are not
@@ -448,6 +450,29 @@ jobs:
           fi
           echo "DS10 PASS — inline fontSize count $count (baseline $baseline)"
 
+      # ── DS11: terminal/ raw hex token-lock (W14.2 + W15.2 sweep) ──────────────
+      # The terminal palette is defined by 5 CSS vars in globals.css §6:
+      #   --pq-terminal-bg / --pq-terminal-bg-row / --pq-terminal-line
+      #   --pq-terminal-up / --pq-terminal-down
+      # All new code under frontend/src/components/terminal/ must reference
+      # these tokens. Raw `#RRGGBB` literals are blocked, except for:
+      #   - Hex inside `var(--token, #fallback)` (CSS-var fallback pattern)
+      #   - candlestick-chart.tsx (lightweight-charts SSR readCssVar fallback)
+      - name: DS11 — terminal/ raw hex token-lock
+        run: |
+          set +e
+          hits=$(grep -rEn '#[0-9a-fA-F]{6}' frontend/src/components/terminal \
+            --include="*.tsx" --include="*.ts" 2>/dev/null \
+            | grep -v 'var(--' \
+            | grep -v 'candlestick-chart.tsx' \
+            | grep -v 'readCssVar(' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::DS11 FAIL — raw hex in terminal/ (use var(--pq-terminal-*) tokens, see globals.css §6)"
+            echo "$hits"
+            exit 1
+          fi
+          echo "DS11 PASS — no raw hex literals in terminal/ (candlestick-chart SSR fallback exempt)"
+
       # ── Summary comment on PR ─────────────────────────────────────────────────
       - name: Summarize failures on PR
         if: failure() && github.event_name == 'pull_request'
@@ -472,6 +497,7 @@ jobs:
               '| DS8 | v2 bronze hex #E2B96F / rgb 226,185,111 (design v3 lock) |',
               '| DS9 | AI slop icon-box + animate-pulse loading frame |',
               '| DS10 | inline fontSize literal count regression (v3 typography lock) |',
+              '| DS11 | terminal/ raw hex (use var(--pq-terminal-*) tokens) |',
               '',
               'Guards DS5/DS6/DS7 are currently `continue-on-error: true`',
               '(pending fix PRs). Remove that flag after the fix PRs merge.',

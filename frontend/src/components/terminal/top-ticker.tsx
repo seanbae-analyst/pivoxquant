@@ -11,9 +11,9 @@
  * unavailable or the ticker hasn't been observed yet.
  *
  * Visual language:
- *   - Dark terminal tone: #0B0E14 bg, #1A1F2E hairline rule.
- *   - Bronze (#B8956A) for the brand pip + delimiters.
- *   - KR convention tick flashes on price change, 0.3s: red (#D18888) up, blue (#7AA0C8) down.
+ *   - Dark terminal tone: `var(--pq-terminal-bg)` bg, `var(--pq-terminal-line)` hairline rule.
+ *   - Bronze (`var(--pq-bronze)`) for the brand pip + delimiters.
+ *   - KR convention tick flashes on price change, 0.3s: red (`var(--pq-terminal-up)`) up, blue (`var(--pq-terminal-down)`) down.
  *
  * Legal: observation-only. No BUY/SELL/HOLD. No recommend / advise copy.
  */
@@ -106,9 +106,11 @@ const TRACKED: readonly { symbol: string; label: string }[] = [
 ];
 
 // Korean market convention (CEO directive 2026-04-26): ▲ red, ▼ blue.
+// Resolves to `var(--pq-terminal-up)` / `var(--pq-terminal-down)` defined in
+// `globals.css` §6 (W14.2 terminal palette tokens).
 const DIR_COLOR = {
-  up: "#D18888",
-  down: "#7AA0C8",
+  up: "var(--pq-terminal-up)",
+  down: "var(--pq-terminal-down)",
   flat: "rgba(245,240,232,0.55)",
 } as const;
 
@@ -398,9 +400,9 @@ export function TopTicker() {
       style={{
         height: 32,
         width: "100%",
-        background: "#0B0E14",
-        borderTop: "1px solid #1A1F2E",
-        borderBottom: "1px solid #1A1F2E",
+        background: "var(--pq-terminal-bg)",
+        borderTop: "1px solid var(--pq-terminal-line)",
+        borderBottom: "1px solid var(--pq-terminal-line)",
         WebkitMaskImage:
           "linear-gradient(to right, black 0%, black 88%, transparent 100%)",
         maskImage:
@@ -415,7 +417,7 @@ export function TopTicker() {
           lineHeight: 1,
           color: "var(--pq-bronze, #B8956A)",
           letterSpacing: "0.2em",
-          borderRight: "1px solid #1A1F2E",
+          borderRight: "1px solid var(--pq-terminal-line)",
         }}
       >
         <span
@@ -443,7 +445,7 @@ export function TopTicker() {
             <span
               key={snap.symbol}
               style={{
-                borderRight: "1px solid #1A1F2E",
+                borderRight: "1px solid var(--pq-terminal-line)",
                 display: "inline-flex",
                 alignItems: "center",
                 height: 32,
