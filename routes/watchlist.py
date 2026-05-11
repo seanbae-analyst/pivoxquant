@@ -9,7 +9,7 @@ from extensions import db
 from models import Watchlist, SignalCache
 from services import cache_service
 from services.container import engine
-from services.name_resolver import resolve_stock_name, canonical_display_name
+from services.name_resolver import canonical_display_name
 from services.price_overlay import overlay_prices, parse_price_display
 from services.ticker_normalizer import normalize_ticker
 from .decorators import api_auth

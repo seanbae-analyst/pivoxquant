@@ -28,7 +28,7 @@ from flask_login import current_user
 from extensions import db
 from models import Position, Alert, SignalCache
 from services.serializers import serialize_alert
-from services.name_resolver import resolve_stock_name, canonical_display_name
+from services.name_resolver import canonical_display_name
 from .decorators import api_auth, legal_scrub_response
 from security import general_rate_limit
 

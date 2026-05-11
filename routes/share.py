@@ -11,7 +11,7 @@ from extensions import db
 from models import Position, SignalCache, User
 from models.portfolio_share import PortfolioShare
 from services import fx_service
-from services.name_resolver import resolve_stock_name, canonical_display_name
+from services.name_resolver import canonical_display_name
 from services.price_overlay import parse_price_display
 from .decorators import api_auth
 from security import general_rate_limit
