@@ -1,4 +1,39 @@
-# PivoxQuant — 인수인계서 (2026-05-11 v37 — Wave 14 잔존 결함 sweep)
+# PivoxQuant — 인수인계서 (2026-05-11 v37 — 38 PR · OPEN PR 0 · 출시 readiness wave 3)
+
+## 🟢 2026-05-11 v37 종합 — **38 PR squash-merged + 5 자율 close + 1 self-heal** · main `f2fa5bbe → 6b6b04e3` · **OPEN PR 0건**
+
+### v37 cycle 추가 (v36 → v37, 10 PR + 5 close)
+
+#### Wave 12 — fontSize Phase 4
+| PR | 핵심 | tree count |
+|---|---|---|
+| #311 | refactor(design): Top 11-20 fontSize migration (W12) | 692 → 593 |
+
+#### Wave 13 — OPEN dependabot PR 10건 자율 triage (사장님 사전 승인)
+| PR | 패키지 | 결정 | 근거 |
+|---|---|---|---|
+| #246 | werkzeug 3.0.3→3.1.8 | MERGE | minor + 보안 patch (GHSA-29vq + GHSA-87hc) |
+| #270 | sentry-sdk >=2.0→>=2.59 | MERGE | minor floor |
+| #274 | @tailwindcss/postcss 4.2→4.3 | MERGE | dev minor |
+| #291 | requests 2.32→2.33 | MERGE | patch |
+| #294 | tailwind-merge 3.5→3.6 | MERGE | dev minor |
+| #271 | flask-cors 4→6 | CLOSE | MAJOR jump (path specificity breaking) |
+| #273 | react alone | CLOSE | peer-dep alone (PR #250 패턴 admit) |
+| #275 | eslint 9→10 | CLOSE | MAJOR dev (Next.js config 호환 미검증) |
+| #292 | anthropic >=0.39→>=0.100 | CLOSE | MAJOR 61 ver jump + AI critical path |
+| #293 | typescript 5→6 | CLOSE | MAJOR dev (Next 16/Vitest 4/shadcn 호환 미검증) |
+
+#### v37 직접 verified facts (2026-05-11 grep/git)
+- **main HEAD**: `6b6b04e3`
+- **v34→v37 cumulative commits**: 38
+- **OPEN PR**: 0건
+- **inline fontSize tree count**: 593 (v34 시점 961 대비 **-38%**)
+- **candlestick hex**: 19 → 4 (SSR fallback만, lightweight-charts runtime resolver 우회)
+- **anthropic SDK**: `>=0.93.0,<0.101.0` (floor + cap)
+- **routes/quant.py**: 삭제 + 5 blueprint (W11)
+- **회귀 게이트 22+** 신규
+
+---
 
 ## 🟢 2026-05-11 v37 Wave 14 — **3 PR squash-merged** · main `5c4de02c → 22645caa` · 회귀 0
 
