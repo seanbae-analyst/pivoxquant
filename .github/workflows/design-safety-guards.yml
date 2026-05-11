@@ -440,7 +440,7 @@ jobs:
           # are intentionally retained. Future waves should target
           # remaining Top 31+ tree-wide sweep + Phase 6 token-less sites.
           # Ratchet is one-way — new code must not increase this count.
-          baseline=519
+          baseline=477
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \
