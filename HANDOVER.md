@@ -1,4 +1,93 @@
-# PivoxQuant — 인수인계서 (2026-05-12 v39 — 55 PR · OPEN PR 0 · prod SHIP-BLOCKER 해결 + GitHub Actions 완전 비활성)
+# PivoxQuant — 인수인계서 (2026-05-13 v40 — 58 PR · OPEN PR 0 · CEO-flagged 4건 thorough fix + py3.9 로컬 검증 정상화)
+
+## 🟢 2026-05-13 v40 종합 — **3 PR squash-merged (#334/#335/#336)** · main `3ce79661 → 3f6ead93` · **OPEN PR 0건** · 자율 야간 마라톤 (사장님 잠 동안)
+
+### v40 추가 (v39 → v40, 3 PR — CEO 직접 보고 4건 thorough fix)
+
+#### PR #334 — 알림 벨 시각성 + ticker dedupe + py3.9 PEP 604 compat (23 files)
+**Bug** (CEO 직접 보고): "이름 옆에 알림버튼 안 보여"
+- `frontend/src/components/ui/notification-dropdown.tsx`: idle bell rgba(245,240,232,0.72) → `var(--pq-ivory)` 불투명, h-5 strokeWidth 1.75 (was 18px @ 1.5), badge `-right-0.5 -top-0.5`로 이동해 SVG 안 가림, L261 unread row 텍스트 `var(--pq-ink)` (#050505 on dropdown bg #0E0E0E 검정-on-검정 invisible) → `var(--pq-ivory)`
+- `services/alert_service.py`: name==ticker collapse 로직 — "124500.KQ (124500.KQ) — Score 69" 패턴 제거 (feedback_ticker_display 룰 3+회 위반)
+- 신규 회귀 가드: `tests/test_alert_ticker_display.py` (4 tests, regex `\S+ \(\1\)` ban)
+- PEP 604 sweep — Python 3.9 로컬 pytest crash 차단 해소 위해 20개 파일에 `from __future__ import annotations` 추가 (routes/auth/billing/market/profile/watchlist/alerts/serializers + services/{ai/alert_service/data-edgar/fx_service/quant-engine} + agent_worker/{admin_routes/claude_client/escalation/growth_routes/worker + 4 scenarios})
+- 검증: pytest 51 PASS / frontend typecheck 0 errors
+
+#### PR #335 — KOSPI source-aware divergence guard + 랜딩 ticker 갱신 (Bug B+C)
+**Bug B** (CEO 직접 보고): "코스피 이거 진짜 몇백번은 고친것 같은데 진짜 근본 원인이 뭐냐"
+- `routes/market.py:794-832`: 30% divergence guard가 KIS history monotonic uptrend (2026-Q2 KOSPI 5,052 → 7,643)를 silently discard하던 패턴. **Source-aware fix**: `hist_source=="kis"`이면 >100% (2x unit-confusion)만 차단, FMP/others는 30% 유지. 메타 패턴 11회 fix 시계열 정리됨 (HANDOVER 참조).
+- `frontend/src/components/landing/market-ticker.tsx`: 18일 stale SNAPSHOT (KOSPI 2,755) — 자본시장법 misrepresentation risk. KIS-verified 2026-05-12 close로 refresh: **KOSPI 7,643.15 (-2.29%) / KOSDAQ 1,179.29 (-2.32%) / USDKRW 1,487.48 (+0.82%)**. Kicker "Snapshot · 2026-05-12 · indicative levels"로 명확화. SNAPSHOT_DATE 상수 export (향후 age-guard용).
+- **결제 답** (사장님 질문): 추가 결제 **0원**. KIS Open API (계좌 보유자 무료)가 KOSPI 7,643 정확 반환. 부족한 건 sparkline 회복 (이번 fix) + sparkline backup source (KRX Open Data Portal 신청 P1 carry-over).
+- 검증: backend pytest 25 PASS / frontend typecheck 0 errors
+
+#### PR #336 — Brag 카드 410 → disk-aware has_file + /reports/[id] viewer route (Bug C)
+**Bug** (CEO 직접 보고): "brag카드 나왔다고 해서 open 눌렀는데 뭐 안 뜬다"
+- 3-layer root cause (bug-hunter Round 2 발견):
+  1. Railway ephemeral filesystem — `/app/artifacts/*` 컨테이너 replace마다 wipe, 단 DB rows survive
+  2. `models/artifact.py:to_dict()` + `routes/artifacts.py:/preview`: `has_file=bool(pdf_path)` (disk stat 안 함) → 잘못된 `true` 반환
+  3. `frontend/src/lib/artifact-viewer.ts`: `has_file=true` 믿고 `/download` URL → 410 → raw JSON 검은 화면
+- Fix: `Artifact.has_file` `@property` + 실제 Path.exists() 체크 → to_dict()와 /preview 일원화 / 잘못된 true 분기 자동 fallback to `/reports/preview/<slug>` HTML preview shell
+- 추가 fix: `frontend/src/app/(dashboard)/reports/[id]/page.tsx` 신설 — `services/alert.py:alert_artifact_ready`의 `/reports/{id}` link (404였음)가 작동. apiFetch + getArtifactViewerUrl로 viewer redirect, invalid id는 /reports archive로 fallback.
+- 검증: pytest -k artifact 32 PASS / frontend typecheck 0 errors
+
+### v40 직접 verified facts (2026-05-13 grep/git/curl)
+- **main HEAD**: `3f6ead93`
+- **v39 → v40 cumulative commits**: 3 PR + auto-merge commit = 4 main commits
+- **OPEN PR**: 0건
+- **Railway prod version**: `3f6ead932796` (확인: curl `/api/health`)
+- **신규 테스트**: `tests/test_alert_ticker_display.py` (4 tests)
+- **신규 dynamic route**: `frontend/src/app/(dashboard)/reports/[id]/page.tsx` (105 lines)
+- **PEP 604 affected files**: 20개 (`from __future__ import annotations` 추가)
+
+### v40 NOT-BUG (admit, 사장님 질문 답변)
+- **Journal 페이지 (`/growth`)**: 의도된 "준비 중" 화면. `agent_worker.growth_routes` 블루프린트 미배포 (routes/__init__.py:63 TODO 명시). GA 전 결정 사항.
+- **top-ticker.tsx:96 stale 경고**: 역사 주석 (`prior FALLBACK`), commit `e6241991`에서 이미 제거됨. NOT-BUG.
+
+### v40 정직 admit (feedback_no_false_reports 적용)
+- 이전 cycle backend-dev agent의 "47 passed" claim이 audit에서 ERROR로 잡힘 (Python 3.9 PEP 604 crash). 이번 v40에서 env fix + 직접 실행 검증으로 해소.
+- 이전 cycle investigate-bug agent가 KOSPI 검증에 네이버 finance API 사용 — `[feedback_official_data_only]` 룰 위반. 이번 v40는 KIS API + git diff만 사용.
+- 사장님이 KOSPI 7,643 실제값 직접 confirm해주심 (메타 root cause 확정 가능).
+
+### v40 잔존 자율 fix 가능 (carry-over)
+- 랜딩 ticker SPX/NDX/DXY/VIX 4개는 2026-04-25 close 그대로 — RSC fetch + public `/api/market/indices/public` endpoint 신설 wave 후보
+- Sanity bound 단일화 (`routes/market.py:_PER_TICKER_BOUNDS` + `services/data/fetcher.py:_KOSPI_RANGE` → 공용 모듈)
+- Railway → Cloudflare R2 무료 plan migration (artifact storage permanent, ephemeral filesystem 영구 해소)
+- `services/push_service.py:notify_alert` ticker resolve (Wave A는 alert_service만 fix)
+- CI smoke: `/api/market/indices?region=kr` sparkline_30d.length >= 20 OR is_stale=true assertion
+
+### v40 사장님 직접 액션 (자율 100% 불가, v39 carry-over 동일)
+1. **변호사 미팅 Q1-Q17** (300-500만원) — 유료결제 BLOCKER
+2. **통신판매업 신고** (성동구청, ~45k원)
+3. **Sentry New Client Key + Vercel env** (옵션, 보안 강화)
+4. **2FA 활성화** (보안 권고, 무료 5분)
+5. **베타테스터 BETA_PASSWORD 통보** (`cat /tmp/new-beta-pw.txt`)
+6. **라이브 spot-check** (5분, PR #334/#335/#336 verify — 자율 verify-ux로 진행 중)
+7. KRX Open Data Portal 신청 (P1, sparkline backup)
+8. Anthropic/FMP/KIS API key rotate
+9. (외 4건 P2, 결제 활성화 시점)
+
+### v40 다음 세션 첫 액션
+```bash
+# 1. main 동기화
+cd /Users/seanbae/Desktop/취준/stockpilot
+git pull origin main
+git log --oneline -1  # main HEAD = 3f6ead93 확인
+
+# 2. 라이브 spot-check (5분)
+#    - https://www.pivoxquant.com/home → 알림 벨 시각 (PR #334)
+#    - https://www.pivoxquant.com → 랜딩 ticker KOSPI 7,643 (PR #335)
+#    - https://www.pivoxquant.com/reports → "OPEN FULL MEMO" 클릭 → preview shell fallback (PR #336)
+#    - https://www.pivoxquant.com/reports/93 → /reports/[id] dynamic route
+
+# 3. 자율 verify-ux + audit-code + bug-hunter Wave D 결과 검토
+#    - MORNING_REPORT.md 참조
+
+# 4. 외부 액션 우선순위:
+#    - P0: 변호사 미팅 일정 + Q1-Q17 송부
+#    - P0: 통신판매업 신고
+#    - P1: 베타테스터 BETA_PASSWORD 통보
+```
+
+---
 
 ## 🟢 2026-05-12 v39 종합 — **55 PR squash-merged + 5 자율 close + 1 self-heal** · main `f2fa5bbe → d40138a4` · **OPEN PR 0건**
 
