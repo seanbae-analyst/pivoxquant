@@ -246,7 +246,11 @@ def artifacts_preview(artifact_id: int):
         "type":     artefact.type,
         "title":    artefact.title,
         "data":     artefact.data_json or {},
-        "has_file": bool(artefact.pdf_path),
+        # 2026-05-13 (Bug C): use the disk-aware property so Railway
+        # ephemeral filesystem can't produce false has_file=True after
+        # a redeploy (which previously sent "Open full memo" to /download
+        # → 410 → raw JSON in a black tab for brag_card #93).
+        "has_file": artefact.has_file,
     })
 
 
