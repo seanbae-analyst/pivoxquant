@@ -93,6 +93,29 @@ class Artifact(db.Model):
                              name="uq_artifact_user_type_title"),
     )
 
+    @property
+    def has_file(self) -> bool:
+        """True iff pdf_path is set AND the file exists on disk.
+
+        Railway's filesystem is ephemeral: DB rows survive redeploys
+        but the rendered artefact bytes at /app/artifacts/* are wiped
+        on every container replacement. ``bool(self.pdf_path)`` alone
+        produced a false-positive ``has_file=True`` after a redeploy,
+        which sent the "Open full memo" CTA to /download → 410 Gone
+        → browser rendered raw ``{"error":"File missing on disk"}``
+        JSON on a black tab (Bug C, observed 2026-05-12 for brag_card
+        #93). Checking disk state is cheap (single stat) and runs at
+        serialization time, so the frontend routes 410-prone rows to
+        the preview shell instead.
+        """
+        if not self.pdf_path:
+            return False
+        try:
+            from pathlib import Path
+            return Path(self.pdf_path).exists()
+        except (OSError, ValueError):
+            return False
+
     def to_dict(self) -> dict:
         return {
             "id":         self.id,
@@ -104,7 +127,10 @@ class Artifact(db.Model):
             # "Open" CTAs to /download (PDF inline) vs the frontend
             # preview shell (HTML / unrendered) without a second
             # round-trip per artefact.
-            "has_file":   bool(self.pdf_path),
+            # 2026-05-13: backed by self.has_file (disk-existence check)
+            # so Railway ephemeral filesystem doesn't produce false
+            # has_file=True after a redeploy (Bug C fix).
+            "has_file":   self.has_file,
             "data":       self.data_json or {},
             "sent_at":    self.sent_at.isoformat() + "Z" if self.sent_at else None,
             "opened_at":  self.opened_at.isoformat() + "Z" if self.opened_at else None,
