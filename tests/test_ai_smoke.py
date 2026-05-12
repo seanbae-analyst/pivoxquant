@@ -68,10 +68,13 @@ class TestAiSwotSmoke:
             mock_ai.generate_swot.return_value = None
             mock_ai.last_error = "swot: APIStatusError: rate limited"
             r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
-        assert r.status_code == 500
+        # PR #229 (2026-05-10, B-08 graceful): transient AI failure returns
+        # 503 with retry_after instead of 500.
+        assert r.status_code == 503
         body = r.get_json()
         assert body.get("error") == "Failed to generate SWOT"
         assert body.get("detail") == "swot: APIStatusError: rate limited"
+        assert body.get("retry_after") == 60
 
     def test_swot_500_no_detail_when_last_error_unset(self, app, client, make_user):
         """Backwards-compat: if `last_error` isn't set, the route must NOT
@@ -89,10 +92,12 @@ class TestAiSwotSmoke:
             mock_ai.generate_swot.return_value = None
             mock_ai.last_error = None
             r = client.post("/api/ai/swot", json={"ticker": "AAPL"})
-        assert r.status_code == 500
+        # PR #229 (2026-05-10, B-08 graceful): transient AI failure returns 503.
+        assert r.status_code == 503
         body = r.get_json()
         assert body.get("error") == "Failed to generate SWOT"
         assert "detail" not in body
+        assert body.get("retry_after") == 60
 
 
 class TestAiChatSmoke:
