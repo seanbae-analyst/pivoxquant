@@ -528,7 +528,7 @@ export default function SignupPageV2() {
                     id="agree_birthdate_msg"
                     role="alert"
                     style={{
-                      fontSize: 11,
+                      fontSize: "var(--pq-text-micro)",
                       lineHeight: 1.5,
                       color: "rgba(244,108,108,0.92)",
                     }}

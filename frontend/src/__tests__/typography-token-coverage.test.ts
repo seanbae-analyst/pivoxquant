@@ -93,8 +93,8 @@ const PHASE2_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
   },
   {
     path: "components/reports/templates/dd-checklist.tsx",
-    cap: 1,
-    reason: "1× 11px tab number (uppercase eyebrow micro-variant) — no exact v3 token",
+    cap: 0,
+    reason: "W18: 1×11 ticker subline migrated → --pq-text-micro; no raw literals remain",
   },
   {
     path: "components/profile/v2/companion-entry-v2.tsx",
@@ -294,8 +294,8 @@ const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
   },
   {
     path: "components/reports/templates/risk-board.tsx",
-    cap: 8,
-    reason: "W17: 1×36 hero migrated → --pq-text-pdf-hero; 7×11 PDF caption + 1×11 paragraph remain (no 11px token)",
+    cap: 0,
+    reason: "W18: 7×11 PDF caption + 1×11 paragraph migrated → --pq-text-micro (W17 36px already tokenized); no raw literals remain",
   },
   {
     path: "components/market/overview-paper.tsx",
@@ -389,8 +389,8 @@ const PHASE7_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
   },
   {
     path: "app/(auth)/signup/oauth-finalize/page.tsx",
-    cap: 2,
-    reason: "1×28 Playfair hero migrated → --pq-text-avatar; 2 unrelated 11px PDF caption remain",
+    cap: 0,
+    reason: "W18: 2×11 PIPA eyebrow + birthdate label migrated → --pq-text-micro (W17 28px already tokenized); no raw literals remain",
   },
   {
     path: "components/reports/templates/earnings-prebrief.tsx",
@@ -412,4 +412,67 @@ const PHASE7_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
 makeCapAssertion(
   PHASE7_FILES,
   "typography token coverage — Phase 7 (9/28/36 grid extension + 26 snap) inline fontSize offenders (W17)",
+);
+
+/** Files migrated in PR `typography-tokens-w18-micro` — Phase 8 micro
+ *  grid extension. globals.css §3.3 gains three new tokens:
+ *    --pq-text-micro    11px  (PDF caption / mono row label / paper sub-label)
+ *    --pq-text-mono-md  17px  (mono row label / brand integer between h6/h5)
+ *    --pq-text-callout  22px  (sub-hero callout between h4/quote)
+ *  Active migrations also reuse already-defined tokens:
+ *    10 → --pq-text-eyebrow-sm (10.5px, 0.5px snap inside anti-alias band)
+ *    15 → --pq-text-lead       (exact)
+ *  Each surface below previously held raw 10/11/15 literals; after
+ *  migration cap is 0 unless an unrelated bucket remains. */
+const PHASE8_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
+  {
+    path: "components/profile/v2/six-dimensions-grid.tsx",
+    cap: 8,
+    reason: "W18: 1×11 sub-eyebrow loading-state migrated → --pq-text-micro; 8 unrelated 12/14 literals remain",
+  },
+  {
+    path: "components/profile/v2/peer-benchmark-block-v2.tsx",
+    cap: 8,
+    reason: "W18: 1×11 sub-eyebrow loading-state migrated → --pq-text-micro; 8 unrelated 12/14 literals remain",
+  },
+  {
+    path: "components/signals/v2/signal-card.tsx",
+    cap: 8,
+    reason: "W18: 1×10 stale-chip kicker migrated → --pq-text-eyebrow-sm (10.5px snap); 8 unrelated 12/14 literals remain",
+  },
+  {
+    path: "components/landing/three-layers.tsx",
+    cap: 0,
+    reason: "W18: 1×15 serif body migrated → --pq-text-lead; no raw literals remain",
+  },
+  {
+    path: "components/landing/deposition-teaser.tsx",
+    cap: 7,
+    reason: "W18: 1×15 question copy migrated → --pq-text-lead; 7 unrelated 12/14 literals remain",
+  },
+  {
+    path: "components/portfolio/v2/watchlist-mini.tsx",
+    cap: 7,
+    reason: "W18: 1×15 display name migrated → --pq-text-lead; 7 unrelated 12/14 literals remain",
+  },
+  {
+    path: "components/reports/empty-state.tsx",
+    cap: 3,
+    reason: "W18: 1×15 serif body migrated → --pq-text-lead; 3 unrelated 12/14 literals remain",
+  },
+  {
+    path: "components/reports/v2/reports-hero-v2.tsx",
+    cap: 2,
+    reason: "W18: 1×15 serif lead migrated → --pq-text-lead; 2 unrelated 12/14 literals remain",
+  },
+  {
+    path: "app/features/personas/page.tsx",
+    cap: 2,
+    reason: "W18: 1×15 serif body migrated → --pq-text-lead; 2 unrelated 12/14 literals remain",
+  },
+];
+
+makeCapAssertion(
+  PHASE8_FILES,
+  "typography token coverage — Phase 8 (10/11/15 micro grid extension) inline fontSize offenders (W18)",
 );

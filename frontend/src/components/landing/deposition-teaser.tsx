@@ -263,7 +263,7 @@ export function DepositionTeaser() {
                   <p
                     className="font-serif mb-1"
                     style={{
-                      fontSize: "15px",
+                      fontSize: "var(--pq-text-lead)",
                       lineHeight: 1.5,
                       color: "var(--pq-ivory)",
                     }}

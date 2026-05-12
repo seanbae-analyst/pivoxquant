@@ -325,7 +325,7 @@ export function ThreeLayers() {
                     <p
                       className="font-serif"
                       style={{
-                        fontSize: "15px",
+                        fontSize: "var(--pq-text-lead)",
                         lineHeight: 1.6,
                         color: "rgba(245,240,232,0.65)",
                       }}

@@ -201,7 +201,7 @@ export function EmptyState({
       <p
         className="font-serif"
         style={{
-          fontSize: 15,
+          fontSize: "var(--pq-text-lead)",
           lineHeight: 1.7,
           color: "rgba(245,240,232,0.72)",
           marginTop: 16,

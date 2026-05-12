@@ -123,7 +123,7 @@ export function WatchlistMini({ limit = 6 }: WatchlistMiniProps) {
                   <div
                     className="font-display"
                     style={{
-                      fontSize: 15,
+                      fontSize: "var(--pq-text-lead)",
                       fontWeight: 500,
                       color: "var(--pq-ivory)",
                       lineHeight: 1.2,
