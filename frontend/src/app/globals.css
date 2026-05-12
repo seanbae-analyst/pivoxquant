@@ -253,6 +253,32 @@
   --pq-text-avatar: 28px;        /* avatar initial / large numeric badge */
   --pq-text-pdf-hero: 36px;      /* PDF / report hero number */
 
+  /* Micro grid extension W18 (PR `typography-tokens-w18-micro`).
+     Closes the last KR-friendly micro buckets the Phase 7 sweep left
+     inline (10-11 / 15 / 17-19 / 22 px):
+       - 11px is the next active bucket after kicker(9). Used in
+         risk-board PDF captions, dd-checklist tab numbers, profile/
+         peer-benchmark sub-labels, signup oauth-finalize. Sister to
+         mono-xs (also 11px) but semantically reserved for paper /
+         PDF caption surfaces rather than chip / metadata.
+       - 17px sits between h6(16) and h5(18). Reserved for mono row
+         labels and brand numbers where the exact integer matters.
+         No active sites today — defined for forward-compat so the
+         grid is symmetric and the next surface that needs 17px
+         doesn't re-introduce a raw literal.
+       - 22px is the sub-hero callout — between h4(20) and quote(24).
+         Only opengraph-image.tsx uses 22px today and that file is
+         allowlisted (Next.js ImageResponse runtime does not resolve
+         CSS custom properties); token is defined so any future SPA
+         surface that needs 22px has a slot.
+     10px snaps to existing eyebrow-sm(10.5px) — 0.5px delta within
+     anti-alias rounding, semantically the right home for tight chip
+     kickers like the signal-card "stale" badge. 15px snaps to
+     existing lead(15px) — exact match, no new token needed. */
+  --pq-text-micro: 11px;         /* PDF caption / mono row label / paper sub-label */
+  --pq-text-mono-md: 17px;       /* mono row label / brand integer between h6 / h5 */
+  --pq-text-callout: 22px;       /* sub-hero callout between h4 / quote */
+
   /* Tracking */
   --pq-track-eyebrow: 0.22em;
   --pq-track-wordmark: 0.16em;

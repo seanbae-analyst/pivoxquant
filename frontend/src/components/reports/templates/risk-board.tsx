@@ -284,7 +284,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 <td>
                   <strong>VaR (95% 1d)</strong>
                   <br />
-                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
                     Value at Risk · 95% 일일 손실
                   </span>
                 </td>
@@ -301,7 +301,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 <td>
                   <strong>Correlation Spike</strong>
                   <br />
-                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
                     평균 페어와이즈 상관계수
                   </span>
                 </td>
@@ -318,7 +318,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 <td>
                   <strong>VIX Regime</strong>
                   <br />
-                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
                     공포 지수 caution / panic 트리거
                   </span>
                 </td>
@@ -335,7 +335,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 <td>
                   <strong>Tail Risk Parity</strong>
                   <br />
-                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
                     개별 종목 테일 기여도 불균형
                   </span>
                 </td>
@@ -352,7 +352,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 <td>
                   <strong>Daily Loss Limit</strong>
                   <br />
-                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
                     일일 손실 서킷 브레이커
                   </span>
                 </td>
@@ -369,7 +369,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 <td>
                   <strong>Sector Concentration</strong>
                   <br />
-                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
                     단일 섹터 NAV 비중
                   </span>
                 </td>
@@ -386,7 +386,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
                 <td>
                   <strong>Cash Buffer</strong>
                   <br />
-                  <span style={{ fontSize: 11, color: "var(--r-ink-3)" }}>
+                  <span style={{ fontSize: "var(--pq-text-micro)", color: "var(--r-ink-3)" }}>
                     레짐 기반 동적 현금 (PR #225)
                   </span>
                 </td>
@@ -401,7 +401,7 @@ export function RiskBoard({ data = DEFAULT }: { data?: RiskBoardData }) {
 
           <p
             style={{
-              fontSize: 11,
+              fontSize: "var(--pq-text-micro)",
               color: "var(--r-ink-3)",
               lineHeight: 1.5,
               marginTop: 14,

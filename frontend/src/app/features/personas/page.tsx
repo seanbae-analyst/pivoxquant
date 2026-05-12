@@ -76,7 +76,7 @@ export default function PersonasPage() {
             className="font-serif"
             style={{
               color: "rgba(245,240,232,0.7)",
-              fontSize: "15px",
+              fontSize: "var(--pq-text-lead)",
               lineHeight: 1.65,
               maxWidth: "60ch",
               marginBottom: 28,

@@ -234,7 +234,7 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
                   <div
                     className="font-mono"
                     style={{
-                      fontSize: 11,
+                      fontSize: "var(--pq-text-micro)",
                       color: "var(--r-gold-deep, #8b6f47)",
                       letterSpacing: "0.04em",
                       marginTop: 2,

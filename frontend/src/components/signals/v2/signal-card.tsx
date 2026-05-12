@@ -210,7 +210,7 @@ export function SignalCard({ entry, resolveName }: Props) {
                 className="font-mono uppercase"
                 title="Cached observation past freshness TTL"
                 style={{
-                  fontSize: 10,
+                  fontSize: "var(--pq-text-eyebrow-sm)",
                   letterSpacing: "0.18em",
                   padding: "2px 6px",
                   border: "1px solid rgba(245,240,232,0.20)",

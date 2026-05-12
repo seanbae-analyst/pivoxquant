@@ -444,7 +444,7 @@ jobs:
           # layout/terminal-sidebar, charts/interactive-line-chart,
           # companion/chat-panel, sample-reports, home/_v1/page-v1,
           # (auth)/signup/oauth-finalize — 477 → 415 inline literals (Δ -62).
-          # Prior baselines: W16 519 → 477, W15 593 → 519, W12 692 → 593,
+          # Prior baselines: W17 477 → 415, W16 519 → 477, W15 593 → 519, W12 692 → 593,
           # W10 733 → 692, W9 868 → 733, W8 961 → 868. The single
           # remaining 36px site (app/opengraph-image.tsx) is an
           # ImageResponse target — CSS custom properties do not resolve
@@ -453,7 +453,26 @@ jobs:
           # separate KR-friendly micro-token decisions and are deferred
           # to a future wave. Ratchet is one-way — new code must not
           # increase this count.
-          baseline=415
+          #
+          # W18 (`typography-tokens-w18-micro`): extends the grid with three
+          # micro tokens (--pq-text-micro 11px / --pq-text-mono-md 17px /
+          # --pq-text-callout 22px) and snaps 10→eyebrow-sm(10.5)/15→lead(15)
+          # using already-defined tokens. Migrated surfaces: risk-board (8×11
+          # PDF caption), dd-checklist (1×11 ticker subline), six-dimensions-
+          # grid + peer-benchmark-block-v2 + signup oauth-finalize + signup
+          # _v2/page-v2 (5×11 sub-eyebrow / alert), signal-card (1×10 stale
+          # chip → eyebrow-sm), three-layers + deposition-teaser + watchlist-
+          # mini + reports/empty-state + reports-hero-v2 + features/personas
+          # (6×15 paper / serif body → lead). 415 → 394 inline literals
+          # (Δ -21). Residual 10/11/22 sites are all allowlisted:
+          # global-error.tsx (5×10-11 — root-layout error boundary that
+          # must render even when globals.css fails to load) and
+          # opengraph-image.tsx (1×22 — ImageResponse runtime does not
+          # resolve CSS custom properties). Other residual buckets
+          # (13/17/19 px etc.) are 0-1 sites each and outside the W18
+          # scope — deferred to a future wave once additional surfaces
+          # need those tokens.
+          baseline=394
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \

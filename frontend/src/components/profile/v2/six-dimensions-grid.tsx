@@ -138,7 +138,7 @@ export function SixDimensionsGrid({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 11,
+              fontSize: "var(--pq-text-micro)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 10,

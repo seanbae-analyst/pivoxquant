@@ -171,7 +171,7 @@ export default function OAuthFinalizePage() {
           <span
             className="font-mono"
             style={{
-              fontSize: 11,
+              fontSize: "var(--pq-text-micro)",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: "var(--pq-bronze, #B8956A)",
@@ -210,7 +210,7 @@ export default function OAuthFinalizePage() {
           <span
             className="font-mono"
             style={{
-              fontSize: 11,
+              fontSize: "var(--pq-text-micro)",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: "rgba(245,240,232,0.55)",
