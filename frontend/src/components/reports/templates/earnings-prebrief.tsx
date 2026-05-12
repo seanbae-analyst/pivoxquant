@@ -78,9 +78,10 @@ interface ScenarioRow {
 
 const DEFAULT: EarningsPrebriefData = {
   // Sample-only fixture. Numbers (Revenue $32.5B, EPS $5.12, Data Center
-  // Rev $26.1B) match NVDA-class disclosures, so the ticker/company are
-  // aligned with NVDA — the prior PLTR labeling created a $32B revenue
-  // mismatch (PLTR sub-$3B). Treat as illustrative; not a forecast.
+  // Rev $26.1B) match NVDA (NVIDIA)-class disclosures, so the ticker /
+  // company are aligned with NVDA (NVIDIA) — the prior PLTR (Palantir)
+  // labeling created a $32B revenue mismatch (PLTR sub-$3B). Treat as
+  // illustrative; not a forecast.
   ticker: "NVDA",
   companyName: "NVIDIA Corporation",
   fiscalLabel: "Q1 FY 2026 Earnings",
@@ -155,9 +156,10 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
         />
         <PdfGoldRule />
 
-        {/* SAMPLE banner — never let the static NVDA mockup be mistaken
-            for the user's own holdings. Mirrors the DD Checklist pattern
-            so all sample-reports surfaces label themselves consistently. */}
+        {/* SAMPLE banner — never let the static NVDA (NVIDIA) mockup be
+            mistaken for the user's own holdings. Mirrors the DD Checklist
+            pattern so all sample-reports surfaces label themselves
+            consistently. */}
         <div
           style={{
             margin: "12px 0 4px",

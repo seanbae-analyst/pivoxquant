@@ -41,6 +41,7 @@ export interface BragCardData {
   benchmark: string;      // "vs S&P +1.6%"
   hero: {
     ticker: string;
+    name: string;
     title: string;
     body: string;
     entry: string;
@@ -63,6 +64,7 @@ const DEFAULT: BragCardData = {
   benchmark: "vs S&P +1.6%",
   hero: {
     ticker: "PLTR",
+    name: "Palantir Technologies",
     title: "낙폭 과대 구간에서 비중 +3.5%p 추가",
     body:
       "어닝 미스 직후 −22% 빠진 자리에서 비중을 추가했다. 가이던스가 무너졌다고 보지 않았다. " +
@@ -120,9 +122,10 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
     <PdfPage>
       <PdfHeader tier="free" title="BRAG CARD" meta={`${data.monthLabel} · ${data.reportTag} · 01/02`} />
 
-      {/* SAMPLE banner — never let the static PLTR mockup be mistaken
-          for the user's own holdings. Mirrors the DD Checklist pattern
-          so all sample-reports surfaces label themselves consistently. */}
+      {/* SAMPLE banner — never let the static PLTR (Palantir) mockup be
+          mistaken for the user's own holdings. Mirrors the DD Checklist
+          pattern so all sample-reports surfaces label themselves
+          consistently. */}
       <div
         style={{
           margin: "12px 0 4px",
@@ -201,7 +204,18 @@ export function BragCard({ data = DEFAULT }: { data?: BragCardData }) {
             className="font-mono" >
               ★ The One · 이 달의 결정
             </div>
-            <PdfTicker>{data.hero.ticker}</PdfTicker>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <PdfTicker>{data.hero.ticker}</PdfTicker>
+              <span
+                style={{
+                  fontSize: "var(--pq-text-eyebrow)",
+                  color: "var(--r-ink-3)",
+                }}
+                className="font-serif"
+              >
+                {data.hero.name}
+              </span>
+            </div>
           </div>
           <div
             style={{

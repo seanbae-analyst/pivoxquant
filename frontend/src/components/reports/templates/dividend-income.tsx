@@ -52,7 +52,7 @@ export interface DividendIncomeData {
   payments: Payment[];
   totalReceived: string;
   avgYield: string;
-  topContributors: { ticker: string; pct: number; amount: string; flat?: boolean }[];
+  topContributors: { ticker: string; name: string; pct: number; amount: string; flat?: boolean }[];
   reinvestmentNote: string;
 }
 
@@ -75,15 +75,15 @@ const DEFAULT: DividendIncomeData = {
   totalReceived: "$1,842.02",
   avgYield: "avg 4.1%",
   topContributors: [
-    { ticker: "VZ", pct: 100, amount: "$199" },
-    { ticker: "O", pct: 60, amount: "$118" },
-    { ticker: "KO", pct: 48, amount: "$97" },
-    { ticker: "JNJ", pct: 46, amount: "$93" },
-    { ticker: "SCHD", pct: 32, amount: "$62", flat: true },
-    { ticker: "PG", pct: 30, amount: "$60", flat: true },
+    { ticker: "VZ", name: "Verizon", pct: 100, amount: "$199" },
+    { ticker: "O", name: "Realty Income", pct: 60, amount: "$118" },
+    { ticker: "KO", name: "Coca-Cola", pct: 48, amount: "$97" },
+    { ticker: "JNJ", name: "Johnson & Johnson", pct: 46, amount: "$93" },
+    { ticker: "SCHD", name: "Schwab US Dividend ETF", pct: 32, amount: "$62", flat: true },
+    { ticker: "PG", name: "Procter & Gamble", pct: 30, amount: "$60", flat: true },
   ],
   reinvestmentNote:
-    "받은 $1,842, 어디에 다시 심을 것인가. SCHD 12주 추가 매입 검토. 또는 현금 보유 후 다음 달 합산.",
+    "받은 $1,842, 어디에 다시 심을 것인가. SCHD (Schwab US Dividend ETF) 12주 추가 매입 검토. 또는 현금 보유 후 다음 달 합산.",
 };
 
 // 2026-05-06 (v24): Strategy B Option 2 — disclaim split into own PdfPage.
@@ -184,7 +184,12 @@ export function DividendIncome({ data = DEFAULT }: { data?: DividendIncomeData }
             <PdfColTitle>Top Contributors · 누가 벌어다 줬나</PdfColTitle>
             <PdfAllocList
               items={data.topContributors.map((c) => ({
-                name: <PdfTicker>{c.ticker}</PdfTicker>,
+                name: (
+                  <>
+                    <PdfTicker>{c.ticker}</PdfTicker>{" "}
+                    <span style={{ color: "var(--r-ink-3)" }}>{c.name}</span>
+                  </>
+                ),
                 pct: c.pct,
                 pctDisplay: c.amount,
               }))}

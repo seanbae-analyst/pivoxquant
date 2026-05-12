@@ -39,6 +39,7 @@ import {
 
 interface BuyRow {
   ticker: string;
+  name: string;
   insider: string;
   role: string;
   amount: string;
@@ -48,6 +49,7 @@ interface BuyRow {
 }
 interface SellRow {
   ticker: string;
+  name: string;
   insider: string;
   role: string;
   amount: string;
@@ -68,6 +70,7 @@ export interface InsiderMirrorData {
     badge: string;
     headline: string;
     ticker: string;
+    name: string;
     body: string;
     avgPrice: string;
     lastBuy: string;
@@ -86,21 +89,22 @@ const DEFAULT: InsiderMirrorData = {
   nonPlanSells: { value: "12", detail: "non-10b5-1 list" },
   hitRate: { value: "63%", detail: "12m backtest, n=84" },
   buys: [
-    { ticker: "CRWD", insider: "George Kurtz", role: "CEO", amount: "$4.2M", date: "10/22", signal: "★★★ FIRST IN 18m", signalTone: "pos" },
-    { ticker: "ANET", insider: "Jayshree Ullal", role: "CEO", amount: "$3.8M", date: "10/18", signal: "★★★ CLUSTER 6×", signalTone: "pos" },
-    { ticker: "SHOP", insider: "Tobias Lütke + 4", role: "CEO + Dirs", amount: "$2.1M", date: "10/15", signal: "★★ CLUSTER 5×", signalTone: "pos" },
-    { ticker: "UBER", insider: "Prashanth Mahendra", role: "CFO", amount: "$1.4M", date: "10/12", signal: "★★ FIRST IN 24m", signalTone: "pos" },
-    { ticker: "DKNG", insider: "Jason Robins", role: "CEO", amount: "$890k", date: "10/09", signal: "★ SOLO", signalTone: "warn" },
+    { ticker: "CRWD", name: "CrowdStrike", insider: "George Kurtz", role: "CEO", amount: "$4.2M", date: "10/22", signal: "★★★ FIRST IN 18m", signalTone: "pos" },
+    { ticker: "ANET", name: "Arista Networks", insider: "Jayshree Ullal", role: "CEO", amount: "$3.8M", date: "10/18", signal: "★★★ CLUSTER 6×", signalTone: "pos" },
+    { ticker: "SHOP", name: "Shopify", insider: "Tobias Lütke + 4", role: "CEO + Dirs", amount: "$2.1M", date: "10/15", signal: "★★ CLUSTER 5×", signalTone: "pos" },
+    { ticker: "UBER", name: "Uber Technologies", insider: "Prashanth Mahendra", role: "CFO", amount: "$1.4M", date: "10/12", signal: "★★ FIRST IN 24m", signalTone: "pos" },
+    { ticker: "DKNG", name: "DraftKings", insider: "Jason Robins", role: "CEO", amount: "$890k", date: "10/09", signal: "★ SOLO", signalTone: "warn" },
   ],
   sells: [
-    { ticker: "PANW", insider: "Nikesh Arora", role: "CEO", amount: "−$48M", plan: "discretionary", flag: "⚠ NON-10b5-1", flagTone: "neg" },
-    { ticker: "SNOW", insider: "Frank Slootman", role: "Chair", amount: "−$22M", plan: "10b5-1", flag: "routine", flagTone: "neutral" },
-    { ticker: "META", insider: "Mark Zuckerberg", role: "CEO", amount: "−$185M", plan: "10b5-1", flag: "routine", flagTone: "neutral" },
+    { ticker: "PANW", name: "Palo Alto Networks", insider: "Nikesh Arora", role: "CEO", amount: "−$48M", plan: "discretionary", flag: "⚠ NON-10b5-1", flagTone: "neg" },
+    { ticker: "SNOW", name: "Snowflake", insider: "Frank Slootman", role: "Chair", amount: "−$22M", plan: "10b5-1", flag: "routine", flagTone: "neutral" },
+    { ticker: "META", name: "Meta Platforms", insider: "Mark Zuckerberg", role: "CEO", amount: "−$185M", plan: "10b5-1", flag: "routine", flagTone: "neutral" },
   ],
   featured: {
     badge: "★★★ FIRST IN · 18 MONTHS",
-    headline: "CRWD · George Kurtz · CEO · $4.2M",
+    headline: "CRWD · CrowdStrike · George Kurtz · CEO · $4.2M",
     ticker: "CRWD",
+    name: "CrowdStrike",
     body: "18개월 만의 첫 직접 매수. 평균 주가 대비 본인 평단보다 한참 아래에서 진입. 과거 첫 매수 시점 12m 후 평균 +28%. 7월 사건 이후 −34% 빠진 자리, 평균 주가 −41% 대비 본인 평단보다 한참 아래에서 진입. 단, 이번엔 평판 회복 비용 + 보안 리텐션이 변수.",
     avgPrice: "$268.40",
     lastBuy: "2024-04 · $1.8M",
@@ -157,7 +161,10 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           <tbody>
             {data.buys.map((b) => (
               <tr key={b.ticker}>
-                <td><PdfTicker>{b.ticker}</PdfTicker></td>
+                <td>
+                  <PdfTicker>{b.ticker}</PdfTicker>{" "}
+                  <span style={{ color: "var(--r-ink-3)" }}>{b.name}</span>
+                </td>
                 <td>{b.insider}</td>
                 <td>{b.role}</td>
                 <td className="right pos">{b.amount}</td>
@@ -185,7 +192,10 @@ export function InsiderMirror({ data = DEFAULT }: { data?: InsiderMirrorData }) 
           <tbody>
             {data.sells.map((s) => (
               <tr key={s.ticker}>
-                <td><PdfTicker>{s.ticker}</PdfTicker></td>
+                <td>
+                  <PdfTicker>{s.ticker}</PdfTicker>{" "}
+                  <span style={{ color: "var(--r-ink-3)" }}>{s.name}</span>
+                </td>
                 <td>{s.insider}</td>
                 <td>{s.role}</td>
                 <td className="right neg">{s.amount}</td>

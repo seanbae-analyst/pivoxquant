@@ -90,12 +90,12 @@ const DEFAULT: YearEndLetterData = {
   maxDd: { value: "−9.8%", delta: "Aug 12 – Sep 04" },
   aumGrowth: { value: "$1.24M", delta: "+$192k" },
   decisions: [
-    { when: "Feb '26", decision: "NVDA +5%", thesis: "DC capex 사이클 베팅", outcome: "+22.4%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
-    { when: "Apr '26", decision: "BND 비중 +8%", thesis: "금리 피크아웃 대비", outcome: "+1.0%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
-    { when: "Jun '26", decision: "META 신규", thesis: "광고 회복 + AI 모멘텀", outcome: "−4.2%", outcomeTone: "neg", verdict: "EARLY", verdictTone: "neg" },
-    { when: "Aug '26", decision: "PYPL 청산", thesis: "competitive moat 약화", outcome: "+6.8% (회피)", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
-    { when: "Oct '26", decision: "GLD +3%", thesis: "매크로 헤지", outcome: "+7.5%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
-    { when: "Nov '26", decision: "TSLA 보류", thesis: "밸류에이션 부담", outcome: "+18% (놓침)", outcomeTone: "neg", verdict: "WRONG", verdictTone: "warn" },
+    { when: "Feb '26", decision: "NVDA · NVIDIA +5%", thesis: "DC capex 사이클 베팅", outcome: "+22.4%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
+    { when: "Apr '26", decision: "BND · Vanguard Total Bond 비중 +8%", thesis: "금리 피크아웃 대비", outcome: "+1.0%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
+    { when: "Jun '26", decision: "META · Meta Platforms 신규", thesis: "광고 회복 + AI 모멘텀", outcome: "−4.2%", outcomeTone: "neg", verdict: "EARLY", verdictTone: "neg" },
+    { when: "Aug '26", decision: "PYPL · PayPal 청산", thesis: "competitive moat 약화", outcome: "+6.8% (회피)", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
+    { when: "Oct '26", decision: "GLD · SPDR Gold Trust +3%", thesis: "매크로 헤지", outcome: "+7.5%", outcomeTone: "pos", verdict: "RIGHT", verdictTone: "pos" },
+    { when: "Nov '26", decision: "TSLA · Tesla 보류", thesis: "밸류에이션 부담", outcome: "+18% (놓침)", outcomeTone: "neg", verdict: "WRONG", verdictTone: "warn" },
   ],
   hitRate: "68%",
   hitRateNote: "17 of 25 decisions ended up right.",
@@ -106,7 +106,7 @@ const DEFAULT: YearEndLetterData = {
     { num: "Lesson 02", title: "메모 없는 매입은 도박", body: "가설 없이 들어간 자리는 빠질 때 변호할 근거도 없다. 25건 중 7건이 무메모, 그 7건의 평균 결과 −3.2%." },
     { num: "Lesson 03", title: "현금은 포지션이다", body: "현금 0%로 가득 채운 분기에 −9.8% MaxDD 발생. 다음 해는 5% 이하로 떨어지지 않는 룰." },
   ],
-  costliestMistake: "TSLA 보류 — 가설은 옳았지만 사이즈가 제로였다. +18% 못 잡은 게 올해 가장 비싼 한 줄.",
+  costliestMistake: "TSLA (Tesla) 보류 — 가설은 옳았지만 사이즈가 제로였다. +18% 못 잡은 게 올해 가장 비싼 한 줄.",
   promises: [
     { title: "Promise 1", body: "신규 진입 전 가설 메모 100%. 메모 없으면 매입 자동 차단", tag: "Rule 01" },
     { title: "Promise 2", body: "현금 비중 5% 이하 진입 금지. dry powder 룰", tag: "Rule 02" },
@@ -118,7 +118,7 @@ const DEFAULT: YearEndLetterData = {
   ddLimit: { value: "−12%", delta: "hard stop" },
   decisionsCap: { value: "≤ 30", delta: "quality > quantity" },
   letterBody:
-    "내년의 나에게 — 올해 +18.4%는 운과 실력이 반반. NVDA가 상상을 넘어선 게 컸다. 그런데 진짜 배운 건 TSLA 보류 한 줄이다. 가설이 옳아도 사이즈가 0이면 결과는 0. 내년엔 thesis만으로 부족하다, 사이즈도 같이 결정하자.",
+    "내년의 나에게 — 올해 +18.4%는 운과 실력이 반반. NVDA (NVIDIA)가 상상을 넘어선 게 컸다. 그런데 진짜 배운 건 TSLA (Tesla) 보류 한 줄이다. 가설이 옳아도 사이즈가 0이면 결과는 0. 내년엔 thesis만으로 부족하다, 사이즈도 같이 결정하자.",
 };
 
 export function YearEndLetter({ data = DEFAULT }: { data?: YearEndLetterData }) {
