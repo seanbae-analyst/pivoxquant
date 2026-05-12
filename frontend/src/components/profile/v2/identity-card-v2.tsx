@@ -125,8 +125,7 @@ export function IdentityCardV2({
             height: 96,
             border: "1px solid var(--pq-bronze)",
             color: "var(--pq-bronze)",
-            fontSize: 28,
-            // 28px: no token equivalent (between h6 16 / h5 18 and h3 32) — inline retained
+            fontSize: "var(--pq-text-avatar)",
             letterSpacing: "0.04em",
             display: "flex",
             alignItems: "center",

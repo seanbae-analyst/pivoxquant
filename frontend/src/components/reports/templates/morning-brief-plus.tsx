@@ -165,7 +165,7 @@ export function MorningBriefPlus({ data = DEFAULT_DATA }: { data?: MorningBriefP
             <div className="pq-pdf-kpi-lbl">Tape Tone</div>
             <div
               style={{
-                fontSize: 28,
+                fontSize: "var(--pq-text-avatar)",
                 marginTop: 4,
               }}
             className="font-serif" >

@@ -413,7 +413,7 @@ function MessageBubble({ msg }: { msg: CompanionMessage }) {
             <span
               className="font-mono tabular-nums uppercase"
               style={{
-                fontSize: 9,
+                fontSize: "var(--pq-text-kicker)",
                 letterSpacing: "0.2em",
                 color: "rgba(184, 149, 106, 0.7)",
               }}

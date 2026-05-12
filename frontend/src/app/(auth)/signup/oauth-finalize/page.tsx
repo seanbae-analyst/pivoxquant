@@ -182,7 +182,7 @@ export default function OAuthFinalizePage() {
           <h1
             style={{
               fontFamily: "var(--pq-font-display, 'Playfair Display', serif)",
-              fontSize: 28,
+              fontSize: "var(--pq-text-avatar)",
               lineHeight: 1.2,
               color: "rgba(245,240,232,0.96)",
               margin: 0,

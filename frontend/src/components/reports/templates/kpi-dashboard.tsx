@@ -232,7 +232,7 @@ export function KpiDashboard({ data = DEFAULT }: { data?: KpiDashboardData }) {
         <PdfThreeCol>
           {data.decisionCards.map((c) => (
             <PdfCard key={c.title}>
-              <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
+              <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
                 {c.priority}
               </div>
               <h3 style={{ fontSize: 14, margin: "6px 0", fontWeight: 600 }}>{c.title}</h3>

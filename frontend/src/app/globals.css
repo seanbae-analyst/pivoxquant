@@ -237,6 +237,22 @@
   --pq-text-h5: 18px;            /* sub-section heading / hero number */
   --pq-text-h4: 20px;            /* secondary heading / modal heading */
 
+  /* Grid extension W17 (PR `typography-tokens-phase7-w17`).
+     Closes the last gaps in the inline-fontSize sweep:
+       - 9px is the largest unlocked bucket (52 sites): paper kicker / PDF
+         caption / chart-axis micro-label. Sister-token to mono-tiny 9.5px
+         but reserved for paper/chart contexts where 9.0 exact is required.
+       - 28px (5 sites): avatar initial / large numeric badge — sits between
+         h3 32 and h4 20, used for circular initials and balance badges.
+       - 36px (4 sites): PDF / report hero number — earnings-prebrief,
+         risk-board hero, opengraph-image. Below h2 fluid clamp but above
+         h3 32 for print/PDF surfaces where fluid clamps don't apply.
+     KR-friendly, HIG-compliant (none below the chip-only 9.0 threshold
+     used for body copy). Same px values — pure tokenization. */
+  --pq-text-kicker: 9px;         /* paper kicker / PDF caption / chart axis */
+  --pq-text-avatar: 28px;        /* avatar initial / large numeric badge */
+  --pq-text-pdf-hero: 36px;      /* PDF / report hero number */
+
   /* Tracking */
   --pq-track-eyebrow: 0.22em;
   --pq-track-wordmark: 0.16em;

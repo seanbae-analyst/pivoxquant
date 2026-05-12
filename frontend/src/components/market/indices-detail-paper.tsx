@@ -44,7 +44,7 @@ function ProxyPillSmall({ proxy }: { proxy: string }) {
         display: "inline-flex",
         alignItems: "center",
         gap: 3,
-        fontSize: 9,
+        fontSize: "var(--pq-text-kicker)",
         letterSpacing: "0.18em",
         textTransform: "uppercase",
         color: "#8b6f47",
@@ -260,7 +260,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
         {quote.proxy_ticker ? (
           <div
             style={{
-              fontSize: 9,
+              fontSize: "var(--pq-text-kicker)",
               letterSpacing: "0.14em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.5)",
@@ -366,19 +366,19 @@ export function IndicesDetailPaper({ region, quotes, derivatives }: Props) {
           borderBottom: "0.5px solid rgba(184,149,106,0.3)",
         }}
       >
-        <span className="pq-paper-kicker" style={{ fontSize: 9 }}>
+        <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
           Index
         </span>
         <span
           className="pq-paper-kicker"
-          style={{ fontSize: 9, textAlign: "right" }}
+          style={{ fontSize: "var(--pq-text-kicker)", textAlign: "right" }}
         >
           Level &middot; 1D
         </span>
-        <span className="pq-paper-kicker" style={{ fontSize: 9 }}>
+        <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
           30-day observation
         </span>
-        <span className="pq-paper-kicker" style={{ fontSize: 9 }}>
+        <span className="pq-paper-kicker" style={{ fontSize: "var(--pq-text-kicker)" }}>
           52-week range
         </span>
       </div>

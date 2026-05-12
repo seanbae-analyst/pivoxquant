@@ -193,7 +193,7 @@ export function MonthlyFinance({ data = DEFAULT }: { data?: MonthlyFinanceData }
         <PdfSectionTitle variant="dry">NAV &amp; Benchmark · 12M trend (indexed to 100)</PdfSectionTitle>
         <PdfCard>
           <PdfFlexBetween>
-            <div style={{ fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
+            <div style={{ fontSize: "var(--pq-text-kicker)", letterSpacing: 1.5, textTransform: "uppercase", color: "var(--r-ink-4)" }} className="font-mono" >
               NAV vs S&amp;P 500 · last 12 months
             </div>
             <div style={{ display: "flex", gap: 14, fontSize: 12, color: "var(--r-ink-3)", }} className="font-mono" >

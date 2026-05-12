@@ -117,7 +117,7 @@ function StateFrame({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 9,
+              fontSize: "var(--pq-text-kicker)",
               letterSpacing: "0.24em",
               color: "rgba(245, 240, 232, 0.4)",
               marginBottom: 6,

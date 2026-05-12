@@ -284,23 +284,23 @@ makeCapAssertion(
 const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
   {
     path: "components/reports/templates/insider-mirror.tsx",
-    cap: 5,
-    reason: "5×9 mono kicker (PDF aesthetic, below HIG floor); migrated 14/24/12 → tokens",
+    cap: 0,
+    reason: "W17: 5×9 mono kicker migrated → --pq-text-kicker; no raw literals remain",
   },
   {
     path: "components/home/sector-allocation-donut.tsx",
-    cap: 2,
-    reason: "2×9 mono kicker (chart centre + empty state); migrated 12/16 → tokens",
+    cap: 0,
+    reason: "W17: 2×9 mono kicker migrated → --pq-text-kicker; no raw literals remain",
   },
   {
     path: "components/reports/templates/risk-board.tsx",
-    cap: 9,
-    reason: "7×11 PDF caption + 1×11 paragraph + 1×36 hero number — no v3 token",
+    cap: 8,
+    reason: "W17: 1×36 hero migrated → --pq-text-pdf-hero; 7×11 PDF caption + 1×11 paragraph remain (no 11px token)",
   },
   {
     path: "components/market/overview-paper.tsx",
-    cap: 2,
-    reason: "1×9 kicker + 1×0.45em em-relative unit suffix — no v3 token",
+    cap: 1,
+    reason: "W17: 1×9 kicker migrated → --pq-text-kicker; 1×0.45em em-relative unit suffix remains",
   },
   {
     path: "components/settings/v2/broker-card-v2.tsx",
@@ -309,23 +309,23 @@ const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
   },
   {
     path: "components/risk/v2/correlation-heatmap.tsx",
-    cap: 3,
-    reason: "3×9 ticker label header (heatmap aesthetic, no v3 token)",
+    cap: 0,
+    reason: "W17: 3×9 ticker label header migrated → --pq-text-kicker; no raw literals remain",
   },
   {
     path: "components/reports/v2/artifact-kind-card.tsx",
-    cap: 2,
-    reason: "2×9 micro-label (Last published / Next due) — below HIG floor",
+    cap: 0,
+    reason: "W17: 2×9 micro-label migrated → --pq-text-kicker; no raw literals remain",
   },
   {
     path: "components/reports/templates/burn-rate.tsx",
-    cap: 2,
-    reason: "2×9 PDF mono kicker — no v3 token",
+    cap: 0,
+    reason: "W17: 2×9 PDF mono kicker migrated → --pq-text-kicker; no raw literals remain",
   },
   {
     path: "components/profile/v2/identity-card-v2.tsx",
-    cap: 1,
-    reason: "1×28 avatar initial — no v3 token between quote(24) and h3(32)",
+    cap: 0,
+    reason: "W17: 1×28 avatar initial migrated → --pq-text-avatar; no raw literals remain",
   },
   {
     path: "components/portfolio/v2/positions-table-v2.tsx",
@@ -339,12 +339,77 @@ const PHASE4_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }>
   },
   {
     path: "components/home/today-memo-hero.tsx",
-    cap: 2,
-    reason: "2×9 meta-strip kicker (Cadence / Agent) — no v3 token",
+    cap: 0,
+    reason: "W17: 2×9 meta-strip kicker migrated → --pq-text-kicker; no raw literals remain",
   },
 ];
 
 makeCapAssertion(
   PHASE4_FILES,
   "typography token coverage — Phase 4 (Top 11-20 sweep) inline fontSize offenders (W12)",
+);
+
+/** Files migrated in PR `feat/typography-tokens-phase7-w17` — Phase 7 grid
+ *  extension. The v3 token grid was extended in globals.css §3.3 with three
+ *  new tokens to close the last token-less buckets that prior waves left
+ *  inline:
+ *    --pq-text-kicker     9px   (paper kicker / PDF caption / chart axis)
+ *    --pq-text-avatar    28px   (avatar initial / large numeric badge)
+ *    --pq-text-pdf-hero  36px   (PDF / report hero number)
+ *
+ *  Every Phase 7 surface migrated 9 / 28 / 36 / 26 (snap → quote 24) raw
+ *  literals to tokens. Caps below pin remainders to sizes outside the
+ *  current token grid (mostly 11/15/18 — deferred to a future wave once
+ *  the design team locks the 11px PDF caption decision). */
+const PHASE7_FILES: ReadonlyArray<{ path: string; cap: number; reason: string }> = [
+  {
+    path: "components/layout/terminal-sidebar.tsx",
+    cap: 3,
+    reason: "1×9 footer kicker migrated → --pq-text-kicker; 3 unrelated 12/14 literals remain",
+  },
+  {
+    path: "components/charts/interactive-line-chart.tsx",
+    cap: 2,
+    reason: "1×9 chart tooltip kicker migrated → --pq-text-kicker; 2 unrelated literals remain",
+  },
+  {
+    path: "components/settings/v2/subscription-card-v2.tsx",
+    cap: 0,
+    reason: "W17: 1×28 secondary heading migrated → --pq-text-avatar (PHASE2 cap 1 → 0)",
+  },
+  {
+    path: "components/home/v2/portfolio-snapshot-card.tsx",
+    cap: 7,
+    reason: "1×28 NAV value migrated → --pq-text-avatar; 7 unrelated 12/14/15 literals remain",
+  },
+  {
+    path: "components/reports/templates/morning-brief-plus.tsx",
+    cap: 2,
+    reason: "1×28 tape-tone hero migrated → --pq-text-avatar; 2 unrelated literals remain",
+  },
+  {
+    path: "app/(auth)/signup/oauth-finalize/page.tsx",
+    cap: 2,
+    reason: "1×28 Playfair hero migrated → --pq-text-avatar; 2 unrelated 11px PDF caption remain",
+  },
+  {
+    path: "components/reports/templates/earnings-prebrief.tsx",
+    cap: 7,
+    reason: "2×36 implied-move + quant-signal migrated → --pq-text-pdf-hero; 7 unrelated 12/24 literals remain",
+  },
+  {
+    path: "components/risk/v2/risk-gauge-grid.tsx",
+    cap: 8,
+    reason: "1×26 unit suffix snap → --pq-text-quote(24); 8 unrelated 12/14/32/44 literals remain",
+  },
+  {
+    path: "components/reports/templates/brag-card.tsx",
+    cap: 0,
+    reason: "W17: 1×26 hero heading snap → --pq-text-quote(24); no raw literals remain",
+  },
+];
+
+makeCapAssertion(
+  PHASE7_FILES,
+  "typography token coverage — Phase 7 (9/28/36 grid extension + 26 snap) inline fontSize offenders (W17)",
 );
