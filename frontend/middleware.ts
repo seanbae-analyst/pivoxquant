@@ -198,11 +198,15 @@ export async function middleware(request: NextRequest) {
   response.headers.set("Content-Security-Policy", cspHeader);
 
   // Set locale cookie if it wasn't present (silently initialises first-time visitors)
+  // 2026-05-12 bug-hunter P1: Secure flag was missing — locale cookie could be
+  // sent over plain HTTP in MITM scenarios. lib/locale.tsx client-side setter
+  // already gates Secure on NODE_ENV; this server-side setter now matches.
   if (!hasCookie) {
     response.cookies.set(LOCALE_COOKIE, locale, {
       path: "/",
       maxAge: 60 * 60 * 24 * 365,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
     });
   }
 
