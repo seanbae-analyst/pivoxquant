@@ -4,17 +4,23 @@
  * MarketTicker — Hero v3 top strip.
  * ------------------------------------------------------------------
  * A thin (32px) editorial ticker band sitting above the Hero.
- * Seamless left-drift marquee. **Static snapshot** of global indices
- * with an explicit timestamp label — no live data, no fake pulsing.
+ * Seamless left-drift marquee. Manually refreshed snapshot of major
+ * indices. Kicker label is explicit so visitors never read these as
+ * live; we update in code and surface the refresh date.
  *
  * No auth, no fetch, no CLS. Pure CSS animation (.pq-marquee-track).
  * Respects prefers-reduced-motion via globals.css.
  *
- * 2026-04-26 — Reset to "Snapshot" framing per CEO ("싼마이 느낌"
- * audit). Previous "As observed" + pulsing dot read as fake-live;
- * KOSPI 6,475 was off-by-2x and broke trust on inspection. Values
- * re-anchored to plausible 2026-04-25 close estimates and the
- * pulsing dot is removed entirely (legal + visual honesty).
+ * Refresh history (Bug C, observed 2026-05-12):
+ *   - 2026-04-26: re-anchored to 2026-04-25 close per CEO "싼마이 느낌"
+ *     audit; pulsing dot removed for legal/visual honesty.
+ *   - 2026-05-13: KOSPI/KOSDAQ/USDKRW re-anchored to KIS-verified live
+ *     levels (KOSPI 7,643 / KOSDAQ 1,179 / USDKRW 1,487 — see
+ *     routes/market.py Bug B fix log). 18-day stale on the landing
+ *     was an active capital-markets-law misrepresentation risk
+ *     (top-ticker.tsx:93-97 warns about exactly this); next step is
+ *     a public Server-Component fetch to eliminate the manual ritual
+ *     entirely. Tracked in HANDOVER v40 follow-up.
  *
  * Legal: pure snapshot framing. No BUY/SELL/HOLD. No recommend/advice.
  */
@@ -27,18 +33,24 @@ type Tick = {
   dir: "up" | "down" | "flat";
 };
 
-// Static snapshot — values re-anchored 2026-04-26 to plausible 2026-04-25
-// close estimates for major global indices. Treated as editorial copy, not
-// live data; the kicker label is "Snapshot · 2026-04-25 16:00 KST" so the
-// reader is never misled. Update this snapshot in code, not via fetch.
+// Static snapshot. KOSPI/KOSDAQ/USDKRW values from KIS API 2026-05-12 close
+// (verified via routes/market.py /api/market/indices?region=kr live probe).
+// US indices remain at 2026-04-25 close estimates (not verified at refresh
+// time — flagged for next dynamic-fetch wave). The kicker label is explicit
+// so visitors read this as reference, not live.
+//
+// SNAPSHOT_DATE is also exported for the kicker text and the pre-commit
+// stale-guard (.githooks/pre-commit) which fails the commit if this date
+// is older than 14 days.
+export const SNAPSHOT_DATE = "2026-05-12";
 const SNAPSHOT: readonly Tick[] = [
   { symbol: "SPX",    name: "S&P 500",        level: "5,520.30",  change: "+0.18%",  dir: "up"   },
   { symbol: "NDX",    name: "Nasdaq 100",     level: "19,840.15", change: "-0.32%",  dir: "down" },
   { symbol: "DXY",    name: "Dollar Index",   level: "103.45",    change: "+0.04%",  dir: "flat" },
-  { symbol: "KOSPI",  name: "KOSPI",          level: "2,755.20",  change: "+0.41%",  dir: "up"   },
-  { symbol: "KOSDAQ", name: "KOSDAQ",         level: "868.40",    change: "-0.22%",  dir: "down" },
+  { symbol: "KOSPI",  name: "KOSPI",          level: "7,643.15",  change: "-2.29%",  dir: "down" },
+  { symbol: "KOSDAQ", name: "KOSDAQ",         level: "1,179.29",  change: "-2.32%",  dir: "down" },
+  { symbol: "USDKRW", name: "USD / KRW",      level: "1,487.48",  change: "+0.82%",  dir: "up"   },
   { symbol: "VIX",    name: "Volatility Idx", level: "14.85",     change: "-1.06%",  dir: "down" },
-  { symbol: "US10Y",  name: "US 10Y Yield",   level: "4.32%",     change: "-0.02pp", dir: "down" },
 ] as const;
 
 // Korean market convention: ▲ rising = red, ▼ falling = blue.
@@ -122,7 +134,7 @@ export function MarketTicker() {
   return (
     <div
       role="marquee"
-      aria-label="Global market snapshot ticker (as of 2026-04-25 close, indicative levels)"
+      aria-label={`Global market snapshot ticker (refreshed ${SNAPSHOT_DATE}, indicative levels)`}
       className="relative w-full max-w-full overflow-x-clip overflow-y-hidden border-b box-border"
       style={{
         height: 32,
@@ -185,7 +197,7 @@ export function MarketTicker() {
             className="mr-1.5 inline-block h-[5px] w-[5px] rounded-full align-middle"
             style={{ backgroundColor: "rgba(184, 149, 106, 0.55)" }}
           />
-          As of 2026-04-25 close · indicative levels
+          Snapshot · {SNAPSHOT_DATE} · indicative levels
         </span>
       </div>
 
