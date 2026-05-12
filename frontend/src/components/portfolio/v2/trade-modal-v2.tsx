@@ -235,7 +235,7 @@ export function TradeModalV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",

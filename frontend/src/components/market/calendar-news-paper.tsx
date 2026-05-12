@@ -135,7 +135,7 @@ export function CalendarNewsPaper({
         ) : (
           <p
             className="pq-paper-body"
-            style={{ fontSize: 14 }}
+            style={{ fontSize: "var(--pq-text-body)" }}
           >
             No FX observation available.
           </p>
@@ -155,7 +155,7 @@ export function CalendarNewsPaper({
         {upcomingEarnings.length === 0 ? (
           <p
             className="pq-paper-body"
-            style={{ fontSize: 14 }}
+            style={{ fontSize: "var(--pq-text-body)" }}
           >
             No scheduled events in the window.
           </p>

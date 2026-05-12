@@ -110,7 +110,7 @@ export default function SplashPage() {
         <span
           className="font-serif"
           style={{
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.24em",
             textTransform: "uppercase",
             color: "rgba(139, 111, 71, 0.40)",

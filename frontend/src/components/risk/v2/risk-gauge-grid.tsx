@@ -70,7 +70,7 @@ function BigGaugeCard({
       <div
         style={{
           fontVariantNumeric: "tabular-nums",
-          fontSize: 44,
+          fontSize: "var(--pq-text-gauge)",
           color: "var(--pq-ivory)",
           lineHeight: 1,
           letterSpacing: "-0.01em",
@@ -235,7 +235,7 @@ export function RiskGaugeGrid({ summary, layers }: Props) {
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
               margin: 0,

@@ -178,7 +178,7 @@ export function AddPositionModalV2({
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               lineHeight: 1.15,
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
@@ -337,7 +337,7 @@ const fieldInputStyle: React.CSSProperties = {
   outline: "none",
   color: "var(--pq-ivory)",
   // 16px to prevent iOS Safari/Chrome auto-zoom on input focus
-  fontSize: 16,
+  fontSize: "var(--pq-text-h6)",
   letterSpacing: "0.01em",
 };
 

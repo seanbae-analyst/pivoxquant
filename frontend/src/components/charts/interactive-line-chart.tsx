@@ -271,7 +271,7 @@ export function InteractiveLineChart({
           <div
             className="tabular-nums font-mono"
             style={{
-              fontSize: "14px",
+              fontSize: "var(--pq-text-body)",
               color: "var(--pq-ivory, #F5F0E8)",
             }}
           >
@@ -280,7 +280,7 @@ export function InteractiveLineChart({
           {yLabel && (
             <div
               style={{
-                fontSize: "12px",
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(245,240,232,0.5)",
                 marginTop: "2px",
               }}

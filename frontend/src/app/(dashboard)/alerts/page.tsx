@@ -300,7 +300,7 @@ export default function AlertsPage() {
             <p
               className="mt-2 font-display"
               style={{
-                fontSize: 24,
+                fontSize: "var(--pq-text-quote)",
                 lineHeight: 1.2,
                 color: "var(--pq-ivory)",
               }}

@@ -75,7 +75,7 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245, 240, 232, 0.6)",
             textTransform: "uppercase",
@@ -87,7 +87,7 @@ function GaugeRow({ label, value, fill }: GaugeRowProps) {
           className="font-mono"
           style={{
             fontVariantNumeric: "tabular-nums",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             color: "rgba(245,240,232,0.82)",
           }}
         >
@@ -171,7 +171,7 @@ export function RiskBoardCard() {
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 32,
+          fontSize: "var(--pq-text-h3)",
           lineHeight: 1.1,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",
@@ -183,7 +183,7 @@ export function RiskBoardCard() {
       <p
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
           margin: "0 0 24px 0",

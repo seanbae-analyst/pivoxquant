@@ -111,7 +111,7 @@ export function ClipboardPaper({
           </div>
           <div
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               color: "rgba(20,20,20,0.48)",
               marginTop: 2,
             }}
@@ -122,7 +122,7 @@ export function ClipboardPaper({
         <div style={{ textAlign: "right" }}>
           <div
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               textTransform: "uppercase",
               color: "rgba(20,20,20,0.48)",
@@ -133,7 +133,7 @@ export function ClipboardPaper({
           </div>
           <div
             style={{
-              fontSize: 24,
+              fontSize: "var(--pq-text-quote)",
               fontVariantNumeric: "tabular-nums",
               color: "#141414",
               lineHeight: 1.1,
@@ -164,7 +164,7 @@ export function ClipboardPaper({
             marginTop: 20,
             padding: "40px 0",
             textAlign: "center",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             color: "rgba(20,20,20,0.42)",
             borderTop: "0.5px solid rgba(184,149,106,0.22)",
           }}

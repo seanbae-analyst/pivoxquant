@@ -155,7 +155,7 @@ export default function RiskPageV2() {
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -222,7 +222,7 @@ export default function RiskPageV2() {
                 <span
                   className="font-mono"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "var(--pq-bronze)",
                     letterSpacing: "0.04em",
                   }}
@@ -233,7 +233,7 @@ export default function RiskPageV2() {
                   <div
                     className="font-display"
                     style={{
-                      fontSize: 16,
+                      fontSize: "var(--pq-text-h6)",
                       color: "var(--pq-ivory)",
                       letterSpacing: "-0.005em",
                       marginBottom: 4,
@@ -244,7 +244,7 @@ export default function RiskPageV2() {
                   <div
                     className="font-serif"
                     style={{
-                      fontSize: 14,
+                      fontSize: "var(--pq-text-body)",
                       color: "rgba(245,240,232,0.70)",
                       lineHeight: 1.55,
                     }}

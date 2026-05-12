@@ -224,7 +224,7 @@ function DetailRow({ quote }: { quote: IndexQuote }) {
         <div
           style={{
             fontVariantNumeric: "tabular-nums",
-            fontSize: 18,
+            fontSize: "var(--pq-text-h5)",
             color: "#141414",
             letterSpacing: "-0.01em",
           }}

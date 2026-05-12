@@ -111,7 +111,7 @@ export function TodayMemoHeroV2({
         <p
           className="font-serif"
           style={{
-            fontSize: 18,
+            fontSize: "var(--pq-text-h5)",
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.82)",
             maxWidth: 720,
@@ -138,7 +138,7 @@ export function TodayMemoHeroV2({
             padding: "12px 22px",
             background: "var(--pq-bronze)" /* SOLE Accent Gold per design-principles-cfo.md §2 — do not duplicate */,
             color: "var(--pq-ink, #050505)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
             borderRadius: 2,
@@ -154,7 +154,7 @@ export function TodayMemoHeroV2({
             href="/reports"
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: "rgba(245, 240, 232, 0.6)",
@@ -171,7 +171,7 @@ export function TodayMemoHeroV2({
           className="font-mono uppercase"
           style={{
             marginLeft: 16,
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
             textTransform: "uppercase",

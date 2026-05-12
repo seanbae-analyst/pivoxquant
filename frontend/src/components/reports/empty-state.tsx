@@ -151,7 +151,7 @@ export function EmptyState({
         <span
           className="font-mono uppercase tabular-nums"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-bronze, #B8956A)",
           }}
@@ -187,7 +187,7 @@ export function EmptyState({
         className="pq-detail-h2 font-display"
         style={{
           fontWeight: 500,
-          fontSize: 32,
+          fontSize: "var(--pq-text-h3)",
           lineHeight: 1.18,
           letterSpacing: "-0.01em",
           color: "var(--pq-ivory, #F5F0E8)",
@@ -220,7 +220,7 @@ export function EmptyState({
           display: "inline-flex",
           alignItems: "center",
           gap: 8,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.18em",
           textTransform: "uppercase",
           color: "var(--pq-ink, #050505)",

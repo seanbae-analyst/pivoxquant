@@ -68,7 +68,7 @@ export function ReportPreviewShell<TData>({
             padding: "96px 56px",
             textAlign: "center",
             color: "rgba(245,240,232,0.55)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             textTransform: "uppercase",
           }}

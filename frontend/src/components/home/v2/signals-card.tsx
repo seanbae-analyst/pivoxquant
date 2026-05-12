@@ -75,7 +75,7 @@ export function SignalsCard() {
         <div
           className="font-serif"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.6,
             color: "rgba(245,240,232,0.55)",
             fontStyle: "italic",
@@ -123,7 +123,7 @@ export function SignalsCard() {
                     className="font-display"
                     style={{
                       fontWeight: 500,
-                      fontSize: 24,
+                      fontSize: "var(--pq-text-quote)",
                       letterSpacing: "-0.01em",
                       color: "var(--pq-ivory)",
                     }}
@@ -133,7 +133,7 @@ export function SignalsCard() {
                   <span
                     className="font-mono uppercase"
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.22em",
                       textTransform: "uppercase",
                       color: colorForLabel(label),
@@ -145,7 +145,7 @@ export function SignalsCard() {
                 <p
                   className="font-serif"
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     lineHeight: 1.5,
                     color: "rgba(245,240,232,0.82)",
                     margin: 0,

@@ -652,7 +652,7 @@ function SiteFooter() {
           <p
             className="font-serif"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               lineHeight: 1.7,
               letterSpacing: "0.02em",
               color: "rgba(245,240,232,0.45)",
@@ -712,7 +712,7 @@ function SiteFooter() {
             <p
               className="font-serif italic"
               style={{
-                fontSize: "12px",
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.01em",
                 color: "rgba(245,240,232,0.5)",
               }}
@@ -739,7 +739,7 @@ function SiteFooter() {
                 rel="noopener noreferrer"
                 className="font-serif transition-colors"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.12em",
                   color: "rgba(245,240,232,0.4)",
                 }}
@@ -760,7 +760,7 @@ function SiteFooter() {
                 href="mailto:hello@pivoxquant.com"
                 className="font-serif transition-colors"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.12em",
                   color: "rgba(245,240,232,0.4)",
                 }}

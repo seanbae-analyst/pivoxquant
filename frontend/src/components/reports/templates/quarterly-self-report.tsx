@@ -155,7 +155,7 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
           style={{
             color: "var(--r-ink-3)",
             marginTop: 12,
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
           }}
         className="font-serif" >
@@ -289,7 +289,7 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
                   </div>
                   <p
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       lineHeight: 1.55,
                       marginTop: 6,
                     }}

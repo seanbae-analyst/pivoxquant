@@ -179,7 +179,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
           {data.companyName}
           <em
             style={{
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               display: "block",
               marginTop: 6,
             }}
@@ -200,7 +200,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             <div className="pq-pdf-kpi-lbl">Reporting</div>
             <div
               style={{
-                fontSize: 24,
+                fontSize: "var(--pq-text-quote)",
               }}
             className="font-serif" >
               {data.reportingDate}
@@ -211,7 +211,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             <div className="pq-pdf-kpi-lbl">Position</div>
             <div
               style={{
-                fontSize: 24,
+                fontSize: "var(--pq-text-quote)",
               }}
             className="font-serif" >
               {data.position}

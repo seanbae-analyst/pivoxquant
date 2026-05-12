@@ -295,7 +295,7 @@ export function EquityCurveChart({
             tickFormatter={fmtAxisDate}
             stroke="rgba(245, 240, 232, 0.18)"
             tick={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               fill: "rgba(245, 240, 232, 0.55)",
               fontFamily:
                 "var(--font-serif), Georgia, 'Source Serif 4', serif",
@@ -312,7 +312,7 @@ export function EquityCurveChart({
             tickFormatter={(v: number) => fmtAxisMoney(v, currency)}
             stroke="rgba(245, 240, 232, 0.18)"
             tick={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               fill: "rgba(245, 240, 232, 0.55)",
               fontFamily:
                 "var(--font-serif), Georgia, 'Source Serif 4', serif",

@@ -151,7 +151,7 @@ export function TerminalSidebar({
         <span
           className="font-serif uppercase"
           style={{
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "var(--pq-ivory)",
             fontWeight: 500,
@@ -226,7 +226,7 @@ function GroupHeader({ label }: { label: string }) {
       <span
         className="font-serif uppercase"
         style={{
-          fontSize: "12px",
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "rgba(184, 149, 106, 0.55)",
           display: "block",
@@ -253,7 +253,7 @@ function SidebarLink({ item, isActive }: { item: Item; isActive: boolean }) {
         className="flex items-center gap-2.5 rounded-sm font-serif uppercase transition-colors"
         style={{
           padding: "10px 14px",
-          fontSize: "14px",
+          fontSize: "var(--pq-text-body)",
           letterSpacing: "0.2em",
           color: isActive ? "var(--pq-ivory)" : "rgba(245,240,232,0.5)",
           backgroundColor: isActive

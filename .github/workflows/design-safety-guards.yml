@@ -498,7 +498,7 @@ jobs:
           # deferred to a future wave (PR size limit). Residual buckets
           # (8/10/11/13/16/17/18/19/20/22/24/32/36/44/48/88 px) are mostly
           # allowlisted or chart-internal and outside W19 scope.
-          baseline=216
+          baseline=15
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \

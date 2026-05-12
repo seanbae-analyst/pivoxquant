@@ -41,7 +41,7 @@ export function SettingsHeroV2({
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 48,
+          fontSize: "var(--pq-text-hero-num)",
           lineHeight: 1.05,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",
@@ -63,7 +63,7 @@ export function SettingsHeroV2({
       <p
         className="font-serif"
         style={{
-          fontSize: 18,
+          fontSize: "var(--pq-text-h5)",
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
           maxWidth: 720,

@@ -176,7 +176,7 @@ function DeleteAccountModal({
               className="font-display"
               style={{
                 fontWeight: 500,
-                fontSize: 20,  // 20px — no exact v3 token (between body 14 and quote 24)
+                fontSize: "var(--pq-text-h4)",  // 20px — no exact v3 token (between body 14 and quote 24)
                 color: "var(--pq-ivory)",
               }}
             >

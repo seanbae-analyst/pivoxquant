@@ -100,7 +100,7 @@ export function InstallPrompt() {
               className="mb-2 inline-flex items-center gap-2.5 font-mono uppercase"
               style={{
                 color: "var(--pq-bronze)",
-                fontSize: "12px",
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 fontWeight: 500,
               }}
@@ -117,7 +117,7 @@ export function InstallPrompt() {
               className="font-display italic"
               style={{
                 fontWeight: 500,
-                fontSize: "20px",
+                fontSize: "var(--pq-text-h4)",
                 lineHeight: 1.2,
                 letterSpacing: "-0.018em",
                 color: "var(--pq-ivory)",
@@ -140,7 +140,7 @@ export function InstallPrompt() {
           id="pq-install-body"
           className="mb-5 font-serif"
           style={{
-            fontSize: "14px",
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
             color: "rgba(245, 240, 232, 0.65)",
             letterSpacing: "-0.003em",

@@ -395,7 +395,7 @@ export default function SignalsPageV1() {
             <p
               style={{
                 textAlign: "center",
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "rgba(245,240,232,0.4)",
                 letterSpacing: "0.02em",
                 marginTop: 28,
