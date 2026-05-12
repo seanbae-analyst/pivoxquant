@@ -112,7 +112,7 @@ export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
     <PdfPage>
       <PdfHeader tier="free" title="WEEKLY MEMO" meta={`${data.asOf} · ${data.weekTag}`} />
 
-      <PdfEyebrow>Weekly Memo · Every Sunday</PdfEyebrow>
+      <PdfEyebrow>Weekly Memo · Every Monday (KST)</PdfEyebrow>
       <PdfCoverTitle size={42}>
         This week, <em>one page</em>—<br />
         be the <em>CFO</em> of your portfolio.
