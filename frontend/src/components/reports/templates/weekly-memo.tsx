@@ -57,12 +57,12 @@ const DEFAULT_DATA: WeeklyMemoData = {
   ytdDetail: "Sharpe 0.87",
   threeChecks: [
     {
-      body: "반도체 비중 조정 — NVDA 일부 익절, AVGO 비중 유지",
+      body: "반도체 비중 조정 — NVDA (NVIDIA) 일부 익절, AVGO (Broadcom) 비중 유지",
       meta: "+1.84%",
       checked: true,
     },
     {
-      body: "헬스케어 신규 진입 — UNH 신규 진입, 첫 비중 1.5%",
+      body: "헬스케어 신규 진입 — UNH (UnitedHealth) 신규 진입, 첫 비중 1.5%",
       meta: "+0.62%",
       checked: true,
     },
@@ -80,7 +80,7 @@ const DEFAULT_DATA: WeeklyMemoData = {
     "이번 주 단 하나의 결정: 반도체 비중 −0.95%p, 헬스케어 +1.5%p로 조정. " +
     "변동성 구간에서 단일 섹터 노출을 누그러뜨리는 의도.",
   memoToSelf:
-    "다음 주 점검: (1) UNH 진입 후 reaction 모니터, (2) FX 헤지 비중 결정, " +
+    "다음 주 점검: (1) UNH (UnitedHealth) 진입 후 reaction 모니터, (2) FX 헤지 비중 결정, " +
     "(3) 다음 분기 실적 시즌 진입 전 cash buffer 점검.",
 };
 

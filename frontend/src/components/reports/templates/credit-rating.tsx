@@ -39,6 +39,7 @@ import {
 
 interface RatingChange {
   ticker: string;
+  name: string;
   agency: string;
   prev: string;
   now: string;
@@ -50,6 +51,7 @@ interface RatingChange {
 }
 interface CdsRow {
   ticker: string;
+  name: string;
   cds: string;
   delta: string;
   deltaTone: "pos" | "neg";
@@ -68,7 +70,7 @@ export interface CreditRatingData {
   pullquote: string;
   distribution: { name: string; pct: number; pctDisplay: string; warn?: boolean; flat?: boolean }[];
   changes: RatingChange[];
-  watchPrimary: { lbl: string; title: string; ticker: string; body: string };
+  watchPrimary: { lbl: string; title: string; ticker: string; name: string; body: string };
   watchSecondary: { lbl: string; body: string }[];
   cds: CdsRow[];
   cfoNote: string;
@@ -89,32 +91,33 @@ const DEFAULT: CreditRatingData = {
     { name: "NR · Not Rated", pct: 8, pctDisplay: "4% NAV", flat: true },
   ],
   changes: [
-    { ticker: "NVDA", agency: "S&P", prev: "A+", now: "AA−", nowTone: "pos", outlook: "Stable", outlookTone: "pos", action: "▲ UPGRADE", actionTone: "pos" },
-    { ticker: "MSFT", agency: "Moody's", prev: "Aaa", now: "Aaa", nowTone: "neutral", outlook: "Stable", outlookTone: "pos", action: "UNCHANGED", actionTone: "neutral" },
-    { ticker: "META", agency: "S&P", prev: "AA−", now: "AA", nowTone: "pos", outlook: "Positive", outlookTone: "pos", action: "▲ UPGRADE", actionTone: "pos" },
-    { ticker: "DIS", agency: "Moody's", prev: "A2", now: "A3", nowTone: "neg", outlook: "Negative", outlookTone: "warn", action: "▼ DOWNGRADE", actionTone: "neg" },
-    { ticker: "UNH", agency: "Fitch", prev: "A+", now: "A+", nowTone: "neutral", outlook: "Negative", outlookTone: "neg", action: "⚠ ON WATCH", actionTone: "warn" },
-    { ticker: "DKNG", agency: "S&P", prev: "B+", now: "B", nowTone: "neg", outlook: "Negative", outlookTone: "neg", action: "▼ DOWNGRADE", actionTone: "neg" },
-    { ticker: "PLTR", agency: "S&P", prev: "BB+", now: "BBB−", nowTone: "pos", outlook: "Stable", outlookTone: "pos", action: "▲ UPGRADE · IG", actionTone: "pos" },
+    { ticker: "NVDA", name: "NVIDIA", agency: "S&P", prev: "A+", now: "AA−", nowTone: "pos", outlook: "Stable", outlookTone: "pos", action: "▲ UPGRADE", actionTone: "pos" },
+    { ticker: "MSFT", name: "Microsoft", agency: "Moody's", prev: "Aaa", now: "Aaa", nowTone: "neutral", outlook: "Stable", outlookTone: "pos", action: "UNCHANGED", actionTone: "neutral" },
+    { ticker: "META", name: "Meta Platforms", agency: "S&P", prev: "AA−", now: "AA", nowTone: "pos", outlook: "Positive", outlookTone: "pos", action: "▲ UPGRADE", actionTone: "pos" },
+    { ticker: "DIS", name: "Walt Disney", agency: "Moody's", prev: "A2", now: "A3", nowTone: "neg", outlook: "Negative", outlookTone: "warn", action: "▼ DOWNGRADE", actionTone: "neg" },
+    { ticker: "UNH", name: "UnitedHealth", agency: "Fitch", prev: "A+", now: "A+", nowTone: "neutral", outlook: "Negative", outlookTone: "neg", action: "⚠ ON WATCH", actionTone: "warn" },
+    { ticker: "DKNG", name: "DraftKings", agency: "S&P", prev: "B+", now: "B", nowTone: "neg", outlook: "Negative", outlookTone: "neg", action: "▼ DOWNGRADE", actionTone: "neg" },
+    { ticker: "PLTR", name: "Palantir Technologies", agency: "S&P", prev: "BB+", now: "BBB−", nowTone: "pos", outlook: "Stable", outlookTone: "pos", action: "▲ UPGRADE · IG", actionTone: "pos" },
   ],
   watchPrimary: {
     lbl: "⚠ NEGATIVE OUTLOOK",
     title: "UNH · UnitedHealth · A+ → ?",
     ticker: "UNH",
+    name: "UnitedHealth",
     body: "Fitch 12개월 내 한 단계 강등 가능성. MLR 상승, DOJ 조사, MA 가입자 이탈. CDS 스프레드 6m +35bp. 주가 −18%이지만 채권 시장은 한 분기 먼저 신호. 비중 2.4% → 1.2% 검토.",
   },
   watchSecondary: [
-    { lbl: "DKNG · Downgrade B+ → B", body: "High yield 영역 진입. 이자비용 +85bp, 차환 부담 가중. 주식 비중 1.8% 유지 가능하나 채권 노출 0%." },
-    { lbl: "DIS · A2 → A3", body: "Streaming 비용 + 콘텐츠 부진. 두 분기 연속 강등은 펀더멘털 신호. 주가 사이드는 회복 중이나 채권 사이드는 비관적." },
+    { lbl: "DKNG · DraftKings · Downgrade B+ → B", body: "High yield 영역 진입. 이자비용 +85bp, 차환 부담 가중. 주식 비중 1.8% 유지 가능하나 채권 노출 0%." },
+    { lbl: "DIS · Walt Disney · A2 → A3", body: "Streaming 비용 + 콘텐츠 부진. 두 분기 연속 강등은 펀더멘털 신호. 주가 사이드는 회복 중이나 채권 사이드는 비관적." },
   ],
   cds: [
-    { ticker: "UNH", cds: "82bp", delta: "+35bp", deltaTone: "neg", vsImplied: "+22bp wide", vsImpliedTone: "neg", signal: "⚠ DOWNGRADE BIAS", signalTone: "neg" },
-    { ticker: "DIS", cds: "68bp", delta: "+18bp", deltaTone: "neg", vsImplied: "+8bp", vsImpliedTone: "neutral", signal: "WATCH", signalTone: "warn" },
-    { ticker: "DKNG", cds: "282bp", delta: "+62bp", deltaTone: "neg", vsImplied: "+48bp", vsImpliedTone: "neg", signal: "⚠ STRESS", signalTone: "neg" },
-    { ticker: "META", cds: "28bp", delta: "−8bp", deltaTone: "pos", vsImplied: "−12bp tight", vsImpliedTone: "pos", signal: "▲ UPGRADE BIAS", signalTone: "pos" },
+    { ticker: "UNH", name: "UnitedHealth", cds: "82bp", delta: "+35bp", deltaTone: "neg", vsImplied: "+22bp wide", vsImpliedTone: "neg", signal: "⚠ DOWNGRADE BIAS", signalTone: "neg" },
+    { ticker: "DIS", name: "Walt Disney", cds: "68bp", delta: "+18bp", deltaTone: "neg", vsImplied: "+8bp", vsImpliedTone: "neutral", signal: "WATCH", signalTone: "warn" },
+    { ticker: "DKNG", name: "DraftKings", cds: "282bp", delta: "+62bp", deltaTone: "neg", vsImplied: "+48bp", vsImpliedTone: "neg", signal: "⚠ STRESS", signalTone: "neg" },
+    { ticker: "META", name: "Meta Platforms", cds: "28bp", delta: "−8bp", deltaTone: "pos", vsImplied: "−12bp tight", vsImpliedTone: "pos", signal: "▲ UPGRADE BIAS", signalTone: "pos" },
   ],
   cfoNote:
-    "채권 시장은 두 분기 먼저 본다. UNH·DKNG 두 종목 비중 합산 4.2% → 다음 리밸런스에 2% 이하 검토. PLTR IG 진입은 무빙오프, 비중 +1%p 검토.",
+    "채권 시장은 두 분기 먼저 본다. UNH (UnitedHealth) · DKNG (DraftKings) 두 종목 비중 합산 4.2% → 다음 리밸런스에 2% 이하 검토. PLTR (Palantir) IG 진입은 무빙오프, 비중 +1%p 검토.",
 };
 
 export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
@@ -182,7 +185,10 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
           <tbody>
             {data.changes.map((c) => (
               <tr key={c.ticker}>
-                <td><PdfTicker>{c.ticker}</PdfTicker></td>
+                <td>
+                  <PdfTicker>{c.ticker}</PdfTicker>{" "}
+                  <span style={{ color: "var(--r-ink-3)" }}>{c.name}</span>
+                </td>
                 <td>{c.agency}</td>
                 <td className="right">{c.prev}</td>
                 <td className={`right ${c.nowTone === "neutral" ? "" : c.nowTone}`}>{c.now}</td>
@@ -252,7 +258,10 @@ export function CreditRating({ data = DEFAULT }: { data?: CreditRatingData }) {
           <tbody>
             {data.cds.map((c) => (
               <tr key={c.ticker}>
-                <td><PdfTicker>{c.ticker}</PdfTicker></td>
+                <td>
+                  <PdfTicker>{c.ticker}</PdfTicker>{" "}
+                  <span style={{ color: "var(--r-ink-3)" }}>{c.name}</span>
+                </td>
                 <td className="right">{c.cds}</td>
                 <td className={`right ${c.deltaTone}`}>{c.delta}</td>
                 <td className="right" style={{ color: c.vsImpliedTone === "pos" ? "var(--r-pos)" : c.vsImpliedTone === "neg" ? "var(--r-neg)" : undefined }}>

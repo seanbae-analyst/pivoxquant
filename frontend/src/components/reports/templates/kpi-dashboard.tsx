@@ -105,14 +105,14 @@ const DEFAULT: KpiDashboardData = {
     { kpi: "Process Integrity", mtd: "96/100", ytd: "94/100", m12: "93/100", target: "≥ 90/100", status: { tone: "green", label: "OK" } },
   ],
   decisions: [
-    { date: "Feb 12", decision: "ENTRY · NVDA", thesis: "AI capex 가속 + 가격 결정력", size: "+2.5%p", result: "+22%", resultTone: "pos", verdict: { tone: "low", label: "WORKED" } },
-    { date: "Feb 28", decision: "TRIM · DIS (50%)", thesis: "스트리밍 비용 + 가이던스 하향", size: "−1.2%p", result: "avoided −8%", resultTone: "pos", verdict: { tone: "low", label: "WORKED" } },
-    { date: "Mar 18", decision: "ENTRY · UNH", thesis: "낙폭 과대 + 펀더 견고", size: "+1.5%p", result: "−6%", resultTone: "neg", verdict: { tone: "moderate", label: "WATCH" } },
+    { date: "Feb 12", decision: "ENTRY · NVDA · NVIDIA", thesis: "AI capex 가속 + 가격 결정력", size: "+2.5%p", result: "+22%", resultTone: "pos", verdict: { tone: "low", label: "WORKED" } },
+    { date: "Feb 28", decision: "TRIM · DIS · Walt Disney (50%)", thesis: "스트리밍 비용 + 가이던스 하향", size: "−1.2%p", result: "avoided −8%", resultTone: "pos", verdict: { tone: "low", label: "WORKED" } },
+    { date: "Mar 18", decision: "ENTRY · UNH · UnitedHealth", thesis: "낙폭 과대 + 펀더 견고", size: "+1.5%p", result: "−6%", resultTone: "neg", verdict: { tone: "moderate", label: "WATCH" } },
     { date: "Apr 4", decision: "HEDGE · USD 15%", thesis: "FX 단일 노출 92% 위험", size: "notional 15%", result: "+0.3%p net", verdict: { tone: "low", label: "WORKED" } },
     { date: "Apr 22", decision: "ENTRY · 미들캡 모멘텀", thesis: "메모 누락", size: "+0.8%p", result: "+4%", resultTone: "pos", verdict: { tone: "moderate", label: "RULE BREACH" } },
   ],
   decisionCards: [
-    { priority: "P1 · By May 5", title: "Tech 섹터 −7%p", body: "한도 35% 복귀. NVDA 12% → 8%, AVGO 9% → 7%. 자본은 헬스케어 + Cash 보강.", badge: { tone: "severe", label: "BREACH 해소" } },
+    { priority: "P1 · By May 5", title: "Tech 섹터 −7%p", body: "한도 35% 복귀. NVDA (NVIDIA) 12% → 8%, AVGO (Broadcom) 9% → 7%. 자본은 헬스케어 + Cash 보강.", badge: { tone: "severe", label: "BREACH 해소" } },
     { priority: "P2 · By May 10", title: "FX 헤지 USD 25%", body: "USD 단일 노출 88% → 65% 효과. 헤지 비용 연 ~0.4% 감수. 원달러 −5% 시 NAV 보호 +$28k.", badge: { tone: "moderate", label: "OVER 해소" } },
     { priority: "P3 · By May 31", title: "DD 메모 100% 룰화", body: "신규 진입 전 가설 메모 의무화. 4월 75%에서 100%로. 메모 없는 매입 자동 알림.", badge: { tone: "info", label: "PROCESS" } },
   ],

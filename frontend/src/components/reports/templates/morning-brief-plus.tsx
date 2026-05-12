@@ -67,12 +67,12 @@ const DEFAULT_DATA: MorningBriefPlusData = {
   vixDelta: "▼ 0.31",
   topMoves: [
     {
-      body: "AAPL — 프리마켓 +1.2%, 실적 컨센서스 상회 보도",
+      body: "AAPL (Apple) — 프리마켓 +1.2%, 실적 컨센서스 상회 보도",
       meta: "POSITIVE",
       checked: true,
     },
     {
-      body: "TSLA — 프리마켓 −2.4%, 중국 인도량 둔화 우려",
+      body: "TSLA (Tesla) — 프리마켓 −2.4%, 중국 인도량 둔화 우려",
       meta: "NEGATIVE",
       checked: false,
     },

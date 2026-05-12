@@ -140,7 +140,7 @@ function toCheckItems(items: DdItem[]) {
  * 2026-05-02: backend produces a T+3 multi-position review, NOT the
  * per-ticker IC pack the static template was originally drawn for.
  * When the live payload arrives we render its actual contents instead
- * of falling back to the PLTR sample.
+ * of falling back to the PLTR (Palantir) sample.
  */
 interface BackendPendingRow {
   ticker: string;
@@ -264,9 +264,9 @@ function BackendDdChecklistView({ data }: { data: BackendDdChecklistData }) {
 
 export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unknown }) {
   // 2026-05-02: render real data when the shell provided the backend
-  // payload; the static PLTR sample only renders when there is *no*
-  // user data, and even then it's labelled SAMPLE so users don't
-  // confuse it with their own holdings.
+  // payload; the static PLTR (Palantir) sample only renders when there
+  // is *no* user data, and even then it's labelled SAMPLE so users
+  // don't confuse it with their own holdings.
   if (isBackendShape(dataInput)) {
     return <BackendDdChecklistView data={dataInput} />;
   }
@@ -278,9 +278,9 @@ export function DdChecklist({ data: dataInput }: { data?: DdChecklistData | unkn
         <PdfHeader tier="pro" title="DD CHECKLIST" meta={`${data.asOf} · 01/03`} />
         <PdfGoldRule />
 
-        {/* SAMPLE banner — never let the static PLTR mockup be mistaken
-            for the user's own holdings. Only renders when no backend
-            payload is available. */}
+        {/* SAMPLE banner — never let the static PLTR (Palantir) mockup
+            be mistaken for the user's own holdings. Only renders when no
+            backend payload is available. */}
         <div
           style={{
             margin: "12px 0 4px",

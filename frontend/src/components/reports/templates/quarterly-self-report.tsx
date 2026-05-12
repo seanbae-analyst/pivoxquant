@@ -46,6 +46,7 @@ export interface QuarterlySelfReportData {
   };
   decisions: {
     ticker: string;
+    name: string;
     action: string;
     date: string;
     thesis: string;
@@ -79,11 +80,11 @@ const DEFAULT: QuarterlySelfReportData = {
     process: { value: "7.2 / 10", prev: "prev 6.8" },
   },
   decisions: [
-    { ticker: "PLTR", action: "비중 +3.5%p", date: "9/18", thesis: "✓ 9/12 메모", outcome: "+35.0%", outcomeTone: "pos", process: "A", verdict: "SKILL", verdictTone: "pos" },
-    { ticker: "NVDA", action: "일부 익절", date: "8/04", thesis: "✓ 한도 초과", outcome: "−8.4% (기회)", outcomeTone: "neg", process: "A", verdict: "DISCIPLINE", verdictTone: "warn" },
-    { ticker: "TSLA", action: "단기 모멘텀 매수", date: "7/22", thesis: "✗ 사전 기록 없음", outcome: "+9.2%", outcomeTone: "pos", process: "D", verdict: "LUCK", verdictTone: "neg" },
-    { ticker: "META", action: "비중 −2%p", date: "8/19", thesis: "△ 부분", outcome: "−4.1%", outcomeTone: "neg", process: "B", verdict: "PROCESS+", verdictTone: "warn" },
-    { ticker: "SMH", action: "신규 진입", date: "9/30", thesis: "✓ DD 체크리스트", outcome: "+6.8%", outcomeTone: "pos", process: "A", verdict: "SKILL", verdictTone: "pos" },
+    { ticker: "PLTR", name: "Palantir Technologies", action: "비중 +3.5%p", date: "9/18", thesis: "✓ 9/12 메모", outcome: "+35.0%", outcomeTone: "pos", process: "A", verdict: "SKILL", verdictTone: "pos" },
+    { ticker: "NVDA", name: "NVIDIA", action: "일부 익절", date: "8/04", thesis: "✓ 한도 초과", outcome: "−8.4% (기회)", outcomeTone: "neg", process: "A", verdict: "DISCIPLINE", verdictTone: "warn" },
+    { ticker: "TSLA", name: "Tesla", action: "단기 모멘텀 매수", date: "7/22", thesis: "✗ 사전 기록 없음", outcome: "+9.2%", outcomeTone: "pos", process: "D", verdict: "LUCK", verdictTone: "neg" },
+    { ticker: "META", name: "Meta Platforms", action: "비중 −2%p", date: "8/19", thesis: "△ 부분", outcome: "−4.1%", outcomeTone: "neg", process: "B", verdict: "PROCESS+", verdictTone: "warn" },
+    { ticker: "SMH", name: "VanEck Semiconductor ETF", action: "신규 진입", date: "9/30", thesis: "✓ DD 체크리스트", outcome: "+6.8%", outcomeTone: "pos", process: "A", verdict: "SKILL", verdictTone: "pos" },
   ],
   totalsRow: {
     decisionsCount: "Q3 총 18개 의사결정",
@@ -207,7 +208,8 @@ export function QuarterlySelfReport({ data = DEFAULT }: { data?: QuarterlySelfRe
             {data.decisions.map((d, i) => (
               <tr key={i}>
                 <td>
-                  <PdfTicker>{d.ticker}</PdfTicker>
+                  <PdfTicker>{d.ticker}</PdfTicker>{" "}
+                  <span style={{ color: "var(--r-ink-3)" }}>{d.name}</span>{" "}
                   <strong>{d.action}</strong>
                 </td>
                 <td>{d.date}</td>
