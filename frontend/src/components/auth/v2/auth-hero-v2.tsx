@@ -55,7 +55,7 @@ export function AuthHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.24em",
           color: "var(--pq-bronze, #B8956A)",
           marginBottom: 28,
@@ -84,7 +84,7 @@ export function AuthHeroV2({
         <p
           className="font-serif"
           style={{
-            fontSize: 18,
+            fontSize: "var(--pq-text-h5)",
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.72)",
             maxWidth: 480,
@@ -99,7 +99,7 @@ export function AuthHeroV2({
         <div
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
             paddingTop: 24,

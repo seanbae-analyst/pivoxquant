@@ -279,6 +279,20 @@
   --pq-text-mono-md: 17px;       /* mono row label / brand integer between h6 / h5 */
   --pq-text-callout: 22px;       /* sub-hero callout between h4 / quote */
 
+  /* W20 (2026-05-12) — long-tail grid closure. Three tokens added to absorb
+     the last common raw literals across hero stats and PDF micro-print:
+       --pq-text-gauge      44px  (risk-gauge-grid solo case, between h3 and hero-num)
+       --pq-text-hero-num   48px  (settings/risk/year-end-letter/sample-reports hero number)
+       --pq-text-pdf-micro   6px  (PDF micro footnote in pdf-primitives — print only)
+     Allowlisted (intentional non-token) remainders after W20:
+       opengraph-image.tsx (Next ImageResponse — no CSS var resolution)
+       global-error.tsx (root error boundary — no document tokens)
+       candlestick-chart.tsx line 190 (Lightweight Charts numeric API)
+       clamp() / em / responsive hero literals (intentional fluid sizing) */
+  --pq-text-gauge: 44px;         /* risk-gauge numeric solo (between h3/hero-num) */
+  --pq-text-hero-num: 48px;      /* hero stat numeric (settings/risk/year-end-letter) */
+  --pq-text-pdf-micro: 6px;      /* PDF micro footnote (pdf-primitives print only) */
+
   /* Tracking */
   --pq-track-eyebrow: 0.22em;
   --pq-track-wordmark: 0.16em;

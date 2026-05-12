@@ -59,7 +59,7 @@ export function HomeCard({
             position: "absolute",
             top: 14,
             right: 14,
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             color: "rgba(245,240,232,0.55)",
             textTransform: "uppercase",
@@ -73,7 +73,7 @@ export function HomeCard({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           textTransform: "uppercase",
           color: "rgba(245, 240, 232, 0.6)",

@@ -58,7 +58,7 @@ export function RuledKicker({
         display: "inline-flex",
         alignItems: "center",
         gap: 10,
-        fontSize: "12px",
+        fontSize: "var(--pq-text-eyebrow)",
         letterSpacing: "0.24em",
         textTransform: "uppercase",
         color: "var(--pq-bronze)",
@@ -118,7 +118,7 @@ export function Caption({
     <p
       className={`pq-caption font-serif ${className}`}
       style={{
-        fontSize: "12px",
+        fontSize: "var(--pq-text-eyebrow)",
         lineHeight: 1.4,
         color: "rgba(245,240,232,0.55)",
       }}
@@ -254,7 +254,7 @@ export function FieldLabel({
       className={`pq-field-label font-sans ${className}`}
       style={{
         display: "inline-block",
-        fontSize: "12px",
+        fontSize: "var(--pq-text-eyebrow)",
         letterSpacing: "0.12em",
         textTransform: "uppercase",
         color,
@@ -323,7 +323,7 @@ export function FootSignature({
         className="pq-caption font-serif"
         style={{
           fontStyle: "italic",
-          fontSize: "12px",
+          fontSize: "var(--pq-text-eyebrow)",
           lineHeight: 1.45,
           color: "rgba(245,240,232,0.45)",
           letterSpacing: "0.02em",

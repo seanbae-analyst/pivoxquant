@@ -720,7 +720,7 @@ function SectionKicker({
         <p
           className="mt-1.5 font-serif italic"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.5,
             color: "rgba(245,240,232,0.55)",
           }}
@@ -753,7 +753,7 @@ function EditorialEmpty({
       <p
         className="font-serif italic"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           color: "rgba(245,240,232,0.5)",
         }}
       >
@@ -825,7 +825,7 @@ function EmptyBlock({ title }: { title: string }) {
       <p
         className="py-4 font-serif italic"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           color: "rgba(245,240,232,0.45)",
         }}
       >

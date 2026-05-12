@@ -121,7 +121,7 @@ export function WeeklyMemo({ data = DEFAULT_DATA }: { data?: WeeklyMemoData }) {
         style={{
           color: "var(--r-ink-3)",
           marginTop: 12,
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
         }}
       className="font-serif" >

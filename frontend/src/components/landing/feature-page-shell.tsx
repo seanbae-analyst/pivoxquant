@@ -142,7 +142,7 @@ export default function FeaturePageShell({
                   className="font-serif uppercase"
                   style={{
                     color: "var(--pq-bronze)",
-                    fontSize: "12px",
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                   }}
                 >
@@ -163,7 +163,7 @@ export default function FeaturePageShell({
                   className="font-serif"
                   style={{
                     color: "rgba(245,240,232,0.6)",
-                    fontSize: "14px",
+                    fontSize: "var(--pq-text-body)",
                     lineHeight: 1.55,
                   }}
                 >
@@ -173,7 +173,7 @@ export default function FeaturePageShell({
                   className="mt-2 inline-flex items-center gap-1.5 font-serif italic"
                   style={{
                     color: "var(--pq-bronze)",
-                    fontSize: "14px",
+                    fontSize: "var(--pq-text-body)",
                   }}
                 >
                   Open
@@ -236,7 +236,7 @@ export default function FeaturePageShell({
               style={{
                 backgroundColor: "var(--pq-bronze)",
                 color: "var(--pq-ink)",
-                fontSize: "14px",
+                fontSize: "var(--pq-text-body)",
                 letterSpacing: "0.02em",
               }}
             >
@@ -249,7 +249,7 @@ export default function FeaturePageShell({
               style={{
                 border: "0.75pt solid var(--pq-bronze)",
                 color: "var(--pq-bronze)",
-                fontSize: "14px",
+                fontSize: "var(--pq-text-body)",
                 letterSpacing: "0.02em",
               }}
             >
@@ -270,14 +270,14 @@ export default function FeaturePageShell({
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
           <p
             className="font-serif italic"
-            style={{ fontSize: "12px", color: "rgba(245,240,232,0.4)" }}
+            style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(245,240,232,0.4)" }}
           >
             © {new Date().getFullYear()} PivoxQuant · Research tool only.
           </p>
           <div
             className="font-serif uppercase"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.4)",
             }}
@@ -297,7 +297,7 @@ export default function FeaturePageShell({
           <p
             className="mx-auto mt-8 max-w-3xl text-center font-serif italic"
             style={{
-              fontSize: "12px",
+              fontSize: "var(--pq-text-eyebrow)",
               lineHeight: 1.7,
               color: "rgba(245,240,232,0.45)",
               letterSpacing: "0.01em",

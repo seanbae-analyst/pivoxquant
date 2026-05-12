@@ -139,7 +139,7 @@ export function SignalCard({ entry, resolveName }: Props) {
             aria-label={`${name} · ${entry.ticker} · ${tone.display} · strength ${strength.toFixed(2)} · ${fmtKstClock(observed)}`}
             className="font-display signal-title-link"
             style={{
-              fontSize: 24,
+              fontSize: "var(--pq-text-quote)",
               fontWeight: 500,
               letterSpacing: "-0.01em",
               color: "var(--pq-ivory, #F5F0E8)",

@@ -41,7 +41,7 @@ export function ReportsHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze, #B8956A)",
           marginBottom: 14,
@@ -138,7 +138,7 @@ export function ReportsHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.45)",
           marginTop: 18,

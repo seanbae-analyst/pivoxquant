@@ -120,7 +120,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                     className="font-display"
                     style={{
                       fontWeight: 500,
-                      fontSize: 24,
+                      fontSize: "var(--pq-text-quote)",
                       color: "var(--pq-ivory, #F5F0E8)",
                       lineHeight: 1.1,
                     }}
@@ -131,7 +131,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                     className="font-mono"
                     style={{
                       fontVariantNumeric: "tabular-nums",
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.16em",
                       color: "rgba(245,240,232,0.45)",
                     }}
@@ -141,7 +141,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                   <div
                     className="font-serif"
                     style={{
-                      fontSize: 14,
+                      fontSize: "var(--pq-text-body)",
                       color: "rgba(245,240,232,0.78)",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
@@ -159,7 +159,7 @@ export function YearTimelineBlock({ artifacts, loading }: Props) {
                       className="font-mono"
                       style={{
                         fontVariantNumeric: "tabular-nums",
-                        fontSize: 14,
+                        fontSize: "var(--pq-text-body)",
                         color:
                           m.count > 0
                             ? "var(--pq-ivory, #F5F0E8)"

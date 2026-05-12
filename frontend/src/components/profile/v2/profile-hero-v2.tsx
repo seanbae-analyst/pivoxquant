@@ -99,7 +99,7 @@ export function ProfileHeroV2({
       <p
         className="font-serif"
         style={{
-          fontSize: 18,
+          fontSize: "var(--pq-text-h5)",
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
           maxWidth: 720,

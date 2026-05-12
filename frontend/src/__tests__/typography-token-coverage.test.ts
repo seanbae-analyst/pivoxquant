@@ -476,3 +476,70 @@ makeCapAssertion(
   PHASE8_FILES,
   "typography token coverage — Phase 8 (10/11/15 micro grid extension) inline fontSize offenders (W18)",
 );
+
+/** Treewide cap — Phase 9 (W20 long-tail closure, 2026-05-12).
+ *
+ * After W20 globals.css §3.3 gained three terminal tokens:
+ *   --pq-text-gauge     44px  (risk-gauge solo numeric)
+ *   --pq-text-hero-num  48px  (hero stat numeric — settings/risk/year-end-letter)
+ *   --pq-text-pdf-micro  6px  (PDF micro footnote — pdf-primitives print only)
+ *
+ * The W20 sweep migrated 201 raw fontSize literals across 80 files,
+ * collapsing the corpus from 216 → 15. The 15 remaining literals are all
+ * intentional non-token sites where a CSS custom property cannot resolve:
+ *   - app/opengraph-image.tsx (4)   Next ImageResponse — edge runtime, no var resolution
+ *   - app/global-error.tsx (6)      root error boundary — runs without document tokens
+ *   - components/terminal/candlestick-chart.tsx (1)  Lightweight Charts numeric API
+ *   - components/landing/top-nav.tsx (1)             8px chevron glyph (sub-kicker)
+ *   - components/market/overview-paper.tsx (1)       0.45em em-relative unit suffix
+ *   - app/(auth)/signup/_v2/page-v2.tsx (1)          0.85em em-relative inline note
+ *   - components/ui/editorial.tsx (1)                JSDoc comment example
+ *
+ * The treewide cap below pins these counts. Any new file that introduces
+ * a token-eligible raw literal (9/10/11/12/13/14/15/16/17/18/19/20/22/24/
+ * 28/32/36/44/48/6) will push the count above the cap and fail this gate.
+ * Adding a new intentional allowlist entry requires bumping TREEWIDE_CAP
+ * and documenting the reason in the list above.
+ */
+const TREEWIDE_CAP = 15;
+const TREEWIDE_GLOB_DIRS = ["components", "app"] as const;
+
+describe("typography token coverage — Phase 9 (W20 long-tail closure) treewide cap", () => {
+  it(`raw fontSize literal count across components/ + app/ ≤ ${TREEWIDE_CAP}`, async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const offenders: string[] = [];
+
+    function walk(dir: string): void {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        const st = statSync(full);
+        if (st.isDirectory()) {
+          walk(full);
+        } else if (st.isFile() && (full.endsWith(".tsx") || full.endsWith(".ts"))) {
+          const text = readFileSync(full, "utf-8");
+          const lines = text.split("\n");
+          for (let i = 0; i < lines.length; i++) {
+            if (RAW_FONTSIZE.test(lines[i])) {
+              offenders.push(`${full.replace(FRONTEND_SRC, "")}:${i + 1} → ${lines[i].trim()}`);
+            }
+          }
+        }
+      }
+    }
+
+    for (const sub of TREEWIDE_GLOB_DIRS) {
+      walk(join(FRONTEND_SRC, sub));
+    }
+
+    if (offenders.length > TREEWIDE_CAP) {
+      const detail = offenders.slice(0, 30).join("\n  ");
+      throw new Error(
+        `Found ${offenders.length} raw fontSize literal(s) across components/ + app/, ` +
+          `treewide cap is ${TREEWIDE_CAP}. New token-eligible literals must use ` +
+          `var(--pq-text-*) — see globals.css §3.3 for the full grid (9/10/11/12/13/` +
+          `14/15/16/17/18/19/20/22/24/28/32/36/44/48/6).\n  ${detail}`,
+      );
+    }
+    expect(offenders.length).toBeLessThanOrEqual(TREEWIDE_CAP);
+  });
+});

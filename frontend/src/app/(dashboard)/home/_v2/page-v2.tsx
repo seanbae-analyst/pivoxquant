@@ -123,7 +123,7 @@ export default function HomePageV2() {
             <div
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
                 textTransform: "uppercase",

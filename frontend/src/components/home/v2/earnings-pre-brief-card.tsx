@@ -32,7 +32,7 @@ export function EarningsPreBriefCard() {
         className="font-display"
         style={{
           fontWeight: 500,
-          fontSize: 32,
+          fontSize: "var(--pq-text-h3)",
           lineHeight: 1.1,
           letterSpacing: "-0.02em",
           color: "var(--pq-ivory)",
@@ -45,7 +45,7 @@ export function EarningsPreBriefCard() {
       <p
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.82)",
           margin: "0 0 24px 0",
@@ -59,7 +59,7 @@ export function EarningsPreBriefCard() {
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "rgba(245,240,232,0.55)",
           textTransform: "uppercase",
@@ -71,7 +71,7 @@ export function EarningsPreBriefCard() {
       <div
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.6,
           color: "rgba(245,240,232,0.55)",
           margin: "8px 0 0 0",

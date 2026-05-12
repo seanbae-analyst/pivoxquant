@@ -45,7 +45,7 @@ export default function SampleReportsIndexPage() {
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         <div
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "2px",
             textTransform: "uppercase",
             color: "#6b6b6b",
@@ -55,7 +55,7 @@ export default function SampleReportsIndexPage() {
         </div>
         <h1
           style={{
-            fontSize: 48,
+            fontSize: "var(--pq-text-hero-num)",
             fontWeight: 500,
             letterSpacing: "-0.02em",
             margin: "12px 0 6px",
@@ -103,7 +103,7 @@ export default function SampleReportsIndexPage() {
               </div>
               <div
                 style={{
-                  fontSize: 24,
+                  fontSize: "var(--pq-text-quote)",
                   fontWeight: 500,
                   letterSpacing: "-0.012em",
                   marginTop: 8,
@@ -114,7 +114,7 @@ export default function SampleReportsIndexPage() {
               <div
                 style={{
                   marginTop: 14,
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   color: "#8a8a8a",
                   letterSpacing: "0.5px",
                 }}

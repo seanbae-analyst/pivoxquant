@@ -202,7 +202,7 @@ export function BottomNav() {
               <span
                 className="font-serif uppercase"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.14em",
                   color:
                     moreActive || drawerOpen
@@ -241,7 +241,7 @@ export function BottomNav() {
               <span
                 className="font-serif uppercase"
                 style={{
-                  fontSize: "12px",
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.24em",
                   color: "var(--pq-ivory)",
                 }}
@@ -290,7 +290,7 @@ export function BottomNav() {
                 className="flex w-full items-center gap-3 rounded-sm font-serif uppercase transition-colors hover:bg-[rgba(184,149,106,0.08)]"
                 style={{
                   padding: "13px 14px",
-                  fontSize: "14px",
+                  fontSize: "var(--pq-text-body)",
                   letterSpacing: "0.2em",
                   color: "var(--pq-bronze)",
                   borderLeft: "3px solid transparent",
@@ -329,7 +329,7 @@ function DrawerGroupSection({
         <span
           className="font-serif uppercase"
           style={{
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(184, 149, 106, 0.55)",
             display: "block",
@@ -356,7 +356,7 @@ function DrawerGroupSection({
                 className="flex items-center gap-3 rounded-sm font-serif uppercase transition-colors"
                 style={{
                   padding: "13px 14px",
-                  fontSize: "14px",
+                  fontSize: "var(--pq-text-body)",
                   letterSpacing: "0.2em",
                   color: active
                     ? "var(--pq-ivory)"
@@ -384,7 +384,7 @@ function DrawerGroupSection({
                     aria-label="Premium Plus · Closed Beta"
                     className="font-mono uppercase"
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.2em",
                       padding: "2px 6px",
                       borderRadius: 1,
@@ -425,7 +425,7 @@ function BottomTab({ tab, active }: { tab: Tab; active: boolean }) {
         <span
           className="font-serif uppercase"
           style={{
-            fontSize: "12px",
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.14em",
             color: active ? "var(--pq-ivory)" : "rgba(245, 240, 232, 0.55)",
           }}

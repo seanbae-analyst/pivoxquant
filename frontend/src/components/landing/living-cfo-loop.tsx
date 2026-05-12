@@ -192,7 +192,7 @@ export function LivingCfoLoop() {
                 <h3
                   className="font-serif mb-2"
                   style={{
-                    fontSize: 18,
+                    fontSize: "var(--pq-text-h5)",
                     lineHeight: 1.2,
                     color: "var(--pq-ivory)",
                     fontWeight: 500,
@@ -203,7 +203,7 @@ export function LivingCfoLoop() {
                 <p
                   className="font-serif mb-2"
                   style={{
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     lineHeight: 1.55,
                     color: "rgba(245,240,232,0.72)",
                   }}
@@ -213,7 +213,7 @@ export function LivingCfoLoop() {
                 <p
                   className="font-serif italic"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(139,111,71,0.75)",
                   }}
                 >
@@ -231,7 +231,7 @@ export function LivingCfoLoop() {
           variants={fadeUp}
           className="mt-16 font-serif italic text-center"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             color: "rgba(139,111,71,0.85)",
             letterSpacing: "0.01em",
           }}

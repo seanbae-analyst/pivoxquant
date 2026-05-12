@@ -462,7 +462,7 @@ export function WhatIfForm({
           "pq-ink-btn-bronze mt-5 h-12 w-full justify-center",
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
-        style={{ fontSize: "13px" }}
+        style={{ fontSize: "var(--pq-text-button)" }}
       >
         {isLoading
           ? t("whatIf.form.calculating")

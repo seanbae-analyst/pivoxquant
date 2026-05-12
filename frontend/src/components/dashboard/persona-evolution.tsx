@@ -380,7 +380,7 @@ function HoverCard({
         border: `0.5px solid ${drifted ? "rgba(163,91,59,0.55)" : "rgba(184,149,106,0.35)"}`,
         padding: "10px 12px",
         borderRadius: 2,
-        fontSize: 12,
+        fontSize: "var(--pq-text-eyebrow)",
       }}
     >
       <div

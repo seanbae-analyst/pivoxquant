@@ -61,19 +61,19 @@ export default function DashboardPreviewPage() {
               >
                 <span
                   className="font-mono uppercase"
-                  style={{ color: "var(--pq-bronze)", fontSize: "12px", letterSpacing: "0.24em" }}
+                  style={{ color: "var(--pq-bronze)", fontSize: "var(--pq-text-eyebrow)", letterSpacing: "0.24em" }}
                 >
                   Pane {p.code}
                 </span>
                 <h3
                   className="font-serif"
-                  style={{ color: "var(--pq-ivory)", fontSize: "20px", fontWeight: 500, letterSpacing: "-0.01em" }}
+                  style={{ color: "var(--pq-ivory)", fontSize: "var(--pq-text-h4)", fontWeight: 500, letterSpacing: "-0.01em" }}
                 >
                   {p.title}
                 </h3>
                 <p
                   className="font-serif"
-                  style={{ color: "rgba(245,240,232,0.68)", fontSize: "14px", lineHeight: 1.6 }}
+                  style={{ color: "rgba(245,240,232,0.68)", fontSize: "var(--pq-text-body)", lineHeight: 1.6 }}
                 >
                   {p.blurb}
                 </p>
@@ -108,7 +108,7 @@ export default function DashboardPreviewPage() {
           </motion.div>
 
           <div className="mt-12 flex flex-wrap items-center justify-between gap-4">
-            <p className="font-serif italic" style={{ color: "rgba(245,240,232,0.55)", fontSize: "14px" }}>
+            <p className="font-serif italic" style={{ color: "rgba(245,240,232,0.55)", fontSize: "var(--pq-text-body)" }}>
               Live dashboard opens after account creation. Every pane respects your persona.
             </p>
             <Link
@@ -117,7 +117,7 @@ export default function DashboardPreviewPage() {
               style={{
                 border: "0.5pt solid rgba(184,149,106,0.5)",
                 color: "var(--pq-ivory)",
-                fontSize: "14px",
+                fontSize: "var(--pq-text-body)",
                 letterSpacing: "0.02em",
               }}
             >

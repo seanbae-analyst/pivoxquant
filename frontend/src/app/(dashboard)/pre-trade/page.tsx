@@ -686,7 +686,7 @@ function SectionLabel({ n, title }: { n: number; title: string }) {
       <span
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
         }}

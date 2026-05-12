@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from "react";
  * Replaces the inline pattern:
  *
  *   <span className="h-px w-7" style={{ backgroundColor: "rgba(184,149,106,0.7)" }} />
- *   <span style={{ color: "#B8956A", fontSize: 12, letterSpacing: "0.22em" }}>
+ *   <span style={{ color: "#B8956A", fontSize: "var(--pq-text-eyebrow)", letterSpacing: "0.22em" }}>
  *     LABEL
  *   </span>
  *

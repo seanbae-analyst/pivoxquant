@@ -404,7 +404,7 @@ function KpiCell({
       <div
         className="font-mono tabular-nums"
         style={{
-          fontSize: 24,
+          fontSize: "var(--pq-text-quote)",
           letterSpacing: "-0.01em",
           color: valueColor,
         }}

@@ -109,7 +109,7 @@ export function MorningBriefPlus({ data = DEFAULT_DATA }: { data?: MorningBriefP
         style={{
           color: "var(--r-ink-3)",
           marginTop: 12,
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
         }}
       className="font-serif" >
@@ -173,7 +173,7 @@ export function MorningBriefPlus({ data = DEFAULT_DATA }: { data?: MorningBriefP
             </div>
             <div
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "var(--r-ink-3)",
                 marginTop: 8,
                 lineHeight: 1.55,

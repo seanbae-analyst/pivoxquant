@@ -252,7 +252,7 @@ export default function FeaturesIndexPage() {
                     className="font-serif uppercase"
                     style={{
                       color: "var(--pq-bronze)",
-                      fontSize: "12px",
+                      fontSize: "var(--pq-text-eyebrow)",
                       letterSpacing: "0.22em",
                     }}
                   >
@@ -263,7 +263,7 @@ export default function FeaturesIndexPage() {
                     className="font-serif"
                     style={{
                       color: "var(--pq-ivory)",
-                      fontSize: "20px",
+                      fontSize: "var(--pq-text-h4)",
                       fontWeight: 500,
                       letterSpacing: "-0.01em",
                     }}
@@ -275,7 +275,7 @@ export default function FeaturesIndexPage() {
                     className="font-serif"
                     style={{
                       color: "rgba(245,240,232,0.6)",
-                      fontSize: "14px",
+                      fontSize: "var(--pq-text-body)",
                       lineHeight: 1.55,
                     }}
                   >
@@ -286,7 +286,7 @@ export default function FeaturesIndexPage() {
                     className="mt-auto inline-flex items-center gap-1.5 pt-3 font-serif italic"
                     style={{
                       color: "var(--pq-bronze)",
-                      fontSize: "14px",
+                      fontSize: "var(--pq-text-body)",
                     }}
                   >
                     Open

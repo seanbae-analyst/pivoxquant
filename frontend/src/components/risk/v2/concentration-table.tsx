@@ -46,7 +46,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
             className="font-display"
             style={{
               fontWeight: 500,
-              fontSize: 32,
+              fontSize: "var(--pq-text-h3)",
               letterSpacing: "-0.02em",
               color: "var(--pq-ivory)",
               margin: 0,
@@ -110,7 +110,7 @@ export function ConcentrationTable({ entries, sumPct }: Props) {
                 <span
                   className="font-display"
                   style={{
-                    fontSize: 24,
+                    fontSize: "var(--pq-text-quote)",
                     color: "var(--pq-bronze)",
                     letterSpacing: "-0.01em",
                   }}

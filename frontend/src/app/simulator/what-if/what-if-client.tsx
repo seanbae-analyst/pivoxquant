@@ -269,7 +269,7 @@ export function WhatIfClient() {
           <Link
             href="/signup"
             className="pq-ink-btn-bronze"
-            style={{ height: "32px", padding: "0 14px", fontSize: "12px" }}
+            style={{ height: "32px", padding: "0 14px", fontSize: "var(--pq-text-eyebrow)" }}
           >
             {t("common.signUp")}
             <ArrowUpRight className="h-3 w-3" />

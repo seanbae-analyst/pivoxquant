@@ -173,7 +173,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
             >
               <strong>Total Sources</strong>
               <div />
-              <div style={{ textAlign: "right", fontSize: 12, color: "var(--r-pos)" }} className="font-mono" >
+              <div style={{ textAlign: "right", fontSize: "var(--pq-text-eyebrow)", color: "var(--r-pos)" }} className="font-mono" >
                 <strong>{data.totalSources}</strong>
               </div>
             </div>
@@ -200,7 +200,7 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
             >
               <strong>Total Uses</strong>
               <div />
-              <div style={{ textAlign: "right", fontSize: 12 }} className="font-mono" >
+              <div style={{ textAlign: "right", fontSize: "var(--pq-text-eyebrow)" }} className="font-mono" >
                 <strong>{data.totalUses}</strong>
               </div>
             </div>
@@ -269,8 +269,8 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
             <div>
               <PdfColTitle>Best Dollar · 가장 잘 일한 돈</PdfColTitle>
               <PdfCard>
-                <h3 style={{ fontSize: 24, fontWeight: 500 }} className="font-serif" >{data.bestDollar.name}</h3>
-                <p style={{ color: "var(--r-ink-3)", marginTop: 8, fontSize: 12, lineHeight: 1.6 }}>
+                <h3 style={{ fontSize: "var(--pq-text-quote)", fontWeight: 500 }} className="font-serif" >{data.bestDollar.name}</h3>
+                <p style={{ color: "var(--r-ink-3)", marginTop: 8, fontSize: "var(--pq-text-eyebrow)", lineHeight: 1.6 }}>
                   {data.bestDollar.body}
                 </p>
               </PdfCard>
@@ -278,8 +278,8 @@ export function CapitalAllocation({ data = DEFAULT }: { data?: CapitalAllocation
             <div>
               <PdfColTitle>Worst Dollar · 가장 못 일한 돈</PdfColTitle>
               <PdfCard>
-                <h3 style={{ fontSize: 24, fontWeight: 500 }} className="font-serif" >{data.worstDollar.name}</h3>
-                <p style={{ color: "var(--r-ink-3)", marginTop: 8, fontSize: 12, lineHeight: 1.6 }}>
+                <h3 style={{ fontSize: "var(--pq-text-quote)", fontWeight: 500 }} className="font-serif" >{data.worstDollar.name}</h3>
+                <p style={{ color: "var(--r-ink-3)", marginTop: 8, fontSize: "var(--pq-text-eyebrow)", lineHeight: 1.6 }}>
                   {data.worstDollar.body}
                 </p>
               </PdfCard>

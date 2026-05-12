@@ -759,7 +759,7 @@ export function PdfDonut({
             textAnchor="middle"
             dominantBaseline="central"
             style={{
-              fontSize: 6,
+              fontSize: "var(--pq-text-pdf-micro)",
               fontWeight: 600,
               fill: "var(--r-ink)",
             }}

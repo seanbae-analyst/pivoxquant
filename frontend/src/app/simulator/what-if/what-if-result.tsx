@@ -477,7 +477,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
           type="button"
           onClick={onTwitterShare}
           className="pq-ink-btn-bronze h-11 justify-center"
-          style={{ fontSize: "12px" }}
+          style={{ fontSize: "var(--pq-text-eyebrow)" }}
         >
           <Share2 className="h-4 w-4" />
           {t("whatIf.result.twitter")}
@@ -486,7 +486,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
           type="button"
           onClick={onSaveImage}
           className="pq-ink-btn-ghost h-11 justify-center"
-          style={{ fontSize: "12px" }}
+          style={{ fontSize: "var(--pq-text-eyebrow)" }}
         >
           <Download className="h-4 w-4" />
           {t("whatIf.result.saveImage")}
@@ -495,7 +495,7 @@ export function WhatIfResult({ data, shareUrl, tickerName }: WhatIfResultProps) 
           type="button"
           onClick={onCopyLink}
           className="pq-ink-btn-ghost h-11 justify-center"
-          style={{ fontSize: "12px" }}
+          style={{ fontSize: "var(--pq-text-eyebrow)" }}
         >
           <LinkIcon className="h-4 w-4" />
           {t("whatIf.result.copyLink")}

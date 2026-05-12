@@ -144,7 +144,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
           className="mb-4 font-display"
           style={{
             fontWeight: 500,
-            fontSize: 32,
+            fontSize: "var(--pq-text-h3)",
             lineHeight: 1.15,
             letterSpacing: "-0.02em",
             color: "var(--pq-ivory)",
@@ -158,7 +158,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
         <p
           className="font-serif italic"
           style={{
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
             lineHeight: 1.55,
             color: "rgba(245,240,232,0.6)",
           }}
@@ -195,7 +195,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
             <span
               className="font-mono shrink-0"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 color: "var(--pq-bronze)",
                 letterSpacing: "0.05em",
               }}
@@ -205,7 +205,7 @@ function WelcomeBlock({ onPick }: { onPick: (text: string) => void }) {
             <span
               className="font-serif"
               style={{
-                fontSize: 14,
+                fontSize: "var(--pq-text-body)",
                 lineHeight: 1.45,
               }}
             >

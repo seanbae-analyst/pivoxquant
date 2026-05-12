@@ -217,7 +217,7 @@ export function PersonaShowcase() {
                 <h3
                   className="font-serif mb-3"
                   style={{
-                    fontSize: "24px",
+                    fontSize: "var(--pq-text-quote)",
                     lineHeight: 1.12,
                     color: "var(--pq-ivory)",
                     fontWeight: 500,
@@ -229,7 +229,7 @@ export function PersonaShowcase() {
                 <p
                   className="font-serif mb-2"
                   style={{
-                    fontSize: "14px",
+                    fontSize: "var(--pq-text-body)",
                     lineHeight: 1.55,
                     color: "rgba(245,240,232,0.72)",
                   }}
@@ -239,7 +239,7 @@ export function PersonaShowcase() {
                 <p
                   className="font-serif italic"
                   style={{
-                    fontSize: "12px",
+                    fontSize: "var(--pq-text-eyebrow)",
                     lineHeight: 1.5,
                     color: "rgba(139,111,71,0.75)",
                   }}

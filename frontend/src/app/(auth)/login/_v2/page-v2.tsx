@@ -150,7 +150,7 @@ export default function LoginPageV2() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze, #B8956A)",
                 textTransform: "uppercase",
@@ -162,7 +162,7 @@ export default function LoginPageV2() {
               className="font-display"
               style={{
                 fontWeight: 500,
-                fontSize: 24,
+                fontSize: "var(--pq-text-quote)",
                 lineHeight: 1.2,
                 letterSpacing: "-0.01em",
                 color: "var(--pq-ivory, #F5F0E8)",
@@ -259,7 +259,7 @@ export default function LoginPageV2() {
             className="font-serif"
             style={{
               marginTop: 12,
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               lineHeight: 1.55,
               color: "rgba(245,240,232,0.55)",
               textAlign: "center",

@@ -52,7 +52,7 @@ export default function PersonasPage() {
               className="font-serif uppercase"
               style={{
                 color: "var(--pq-bronze)",
-                fontSize: "12px",
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
               }}
             >
@@ -93,7 +93,7 @@ export default function PersonasPage() {
             style={{
               backgroundColor: "var(--pq-bronze)",
               color: "var(--pq-ink)",
-              fontSize: "14px",
+              fontSize: "var(--pq-text-body)",
               letterSpacing: "0.02em",
             }}
           >
