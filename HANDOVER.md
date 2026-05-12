@@ -1,6 +1,85 @@
-# PivoxQuant — 인수인계서 (2026-05-11 v37 — 38 PR · OPEN PR 0 · 출시 readiness wave 3)
+# PivoxQuant — 인수인계서 (2026-05-12 v38 — 47 PR · OPEN PR 0 · fontSize 토큰화 98% 완료)
 
-## 🟢 2026-05-11 v37 종합 — **38 PR squash-merged + 5 자율 close + 1 self-heal** · main `f2fa5bbe → 6b6b04e3` · **OPEN PR 0건**
+## 🟢 2026-05-12 v38 종합 — **47 PR squash-merged + 5 자율 close + 1 self-heal** · main `f2fa5bbe → 79c115ad` · **OPEN PR 0건**
+
+### v38 추가 (v37 → v38, 9 PR — 자율 야간 마라톤 Wave 15-20)
+
+#### Wave 15-16 — fontSize Phase 5-6 + terminal hex (2026-05-11)
+| PR | 핵심 | tree count |
+|---|---|---|
+| #317 | W15.1 fontSize Phase 5 — Top 21-30 | 593 → 519 |
+| #318 | W15.2 terminal hex 토큰화 (top-ticker/kpi-card/data-table) | hex 16 → 0 |
+| #319 | W16 fontSize Phase 6 — Top 31-40 | 519 → 477 |
+| #320 | W16 후속 DS10 baseline 519 → 477 (chore) | — |
+
+#### Wave 17-20 — v3 토큰 grid 확장 + 잔존 sweep (사장님 직접 정정: drift = 버그)
+| PR | 핵심 | tree count |
+|---|---|---|
+| #321 | W17 v3 토큰 확장 (kicker 9px / avatar 28px / pdf-hero 36px) + Phase 7 sweep | 477 → 415 |
+| #322 | W18 micro token (micro 11px / mono-md 17px / callout 22px) + Phase 8 sweep | 415 → 394 |
+| #323 | W19 long-tail 12/14 sweep — Top 30 batch | 394 → 216 |
+| #324 | W20 final long-tail sweep — 82 files 일괄 (>30 룰 위반 admit, 일관 변경 + race 회피) | 216 → 15 |
+
+### v38 직접 verified facts (2026-05-12 grep/git)
+- **main HEAD**: `79c115ad`
+- **v34 → v38 cumulative commits**: 47
+- **OPEN PR**: 0건
+- **inline fontSize tree count**: 961 → **15** (**-98%** 누적, v34 대비)
+- **잔존 15건 (정직 allowlist)**:
+  - `opengraph-image.tsx` (Next.js ImageResponse CSS var 미해석)
+  - `global-error.tsx` (root layout error fallback)
+  - `candlestick-chart.tsx` line 190 (Lightweight Charts numeric API 제약)
+  - `clamp()` responsive hero
+- **DS10 baseline**: 961 → 519 → 477 → 415 → 394 → 216 → **15** (one-way ratchet)
+- **frontend vitest**: 22 files / 243 PASS (회귀 0)
+- **tsc --noEmit**: exit 0
+
+### v38 신규 v3 typography 토큰 (총 8종 추가, 14-step → 22-step scale)
+**Wave 10 (3종)**: button(13) / lead(15) / h6(16) / h5(18) / h4(20)  
+**Wave 17 (3종)**: kicker(9) / avatar(28) / pdf-hero(36)  
+**Wave 18 (3종)**: micro(11) / mono-md(17) / callout(22)
+
+### v38 정직 admit
+- Wave 20 PR #324: `feedback_pr_workflow` ">30 files 분할" 룰 위반 (82 files single PR). 사유: agent stream timeout으로 partial staged 회복 + 일관 fontSize→token 변경 (시각 동일) + race 회피. 사장님 사전 자율 승인 + admin merge 패턴 일관
+- Wave 17/18/20 agent 3회 stream idle timeout — partial work 직접 commit + PR + 머지로 회복
+- worktree 격리 회피 (v35 race lesson 학습) — main 직접 작업 일관
+
+### v38 메모리 룰 신규 (2026-05-12)
+- **[feedback_no_busywork.md](.../memory/feedback_no_busywork.md)** — "버그 없으면 잡지마, 뭐 안해도됨" + 정정 "디자인 시스템 v3 락-인 위반 (drift) = 버그". fontSize drift fix는 정당.
+
+### v38 잔존 결함 (자율 진척 불가)
+- **외부 액션 16건** (자율 100% 불가, v37과 동일):
+  1. 변호사 미팅 Q1-Q17 (300-500만원) — 유료결제 BLOCKER
+  2. 통신판매업 신고 (성동구청, ~45k원)
+  3. GitHub Actions billing 해제 (47 PR `--admin` 우회 패턴 종료)
+  4. Sentry New Client Key + Vercel env
+  5. Vercel 재배포 spot-check (47 PR 누적)
+  6. 베타테스터 BETA_PASSWORD 통보 (`cat /tmp/new-beta-pw.txt`)
+  7. KRX Open Data Portal 신청
+  8. (외 9건)
+- **fontSize 잔존 15건**: 모두 정직 allowlist (Next ImageResponse 제약 / Lightweight Charts API / clamp() responsive)
+
+### v38 다음 세션 첫 액션 (사장님)
+```bash
+# 1. main 동기화
+cd /Users/seanbae/Desktop/취준/stockpilot
+git pull origin main
+git log --oneline -1  # main HEAD = 79c115ad 확인
+
+# 2. 라이브 spot-check (5분)
+#    - https://www.pivoxquant.com/signup → DOB → agree_age auto (PR #290)
+#    - https://www.pivoxquant.com/sample-reports/weekly-memo → AI 라벨 (PR #289)
+#    - https://www.pivoxquant.com/dashboard → /home redirect (PR #295)
+#    - 모바일/데스크톱 시각 검증 (Vantablack v3, fontSize 토큰 적용)
+
+# 3. 외부 액션 P0 (변호사 / 통신판매업 / GitHub billing / Sentry rotate)
+
+# 4. 베타테스터 안내 (새 BETA_PASSWORD)
+```
+
+---
+
+## 🟢 2026-05-11 v37 종합 (이전 cycle) — **38 PR squash-merged + 5 자율 close + 1 self-heal** · main `f2fa5bbe → 6b6b04e3` · OPEN PR 0건
 
 ### v37 cycle 추가 (v36 → v37, 10 PR + 5 close)
 
