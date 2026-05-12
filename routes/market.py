@@ -785,23 +785,51 @@ def _kis_index_snapshot(kis_code: str, ticker: str, display: str) -> dict | None
         except Exception as e:
             logger.debug("market.indices fmp history %s failed: %s", ticker, e)
 
-    # 2c) Staleness guard — only meaningful when BOTH level and history
-    # are available. If the tail of history diverges from the live level
-    # by >30%, the series is stale (typical for FMP caret-prefixed index
-    # tickers on the Starter tier). Discard the series and flag is_stale
-    # so the frontend can render "N/A" for range_52w/sparkline instead
-    # of drawing a misleading chart.
+    # 2c) Staleness guard — source-aware (Bug B fix, 2026-05-13).
+    #
+    # The 30% divergence guard was originally added (PR #196) to protect
+    # against FMP caret-prefixed KR index tickers on the Starter tier
+    # serving year-old snapshots. In 2026-Q2 the Korean market re-rated
+    # sharply (KOSPI 5,052 → 7,643, verified via PR #234 B-06 live KIS
+    # probe), which the 30% guard incorrectly flagged as stale because
+    # `tail(history) vs live` exceeded 30% for completely legitimate
+    # monotonic uptrends — silently discarding real KIS data and
+    # producing the empty-sparkline / null-range_52w symptom CEO saw
+    # on 2026-05-12.
+    #
+    # Fix: trust KIS daily-history (broker-issued, unit-consistent with
+    # the live KIS quote — confirmed via B-06). Keep the divergence
+    # guard only for non-KIS history sources (FMP today, future
+    # providers). For KIS we still flag is_stale when the live level
+    # disagrees with the tail in a way that *cannot* be explained by a
+    # monotonic uptrend (allows down-trend stale detection too).
     if closes is not None and len(closes) and level is not None:
         last_hist = float(closes.iloc[-1])
-        if level > 0 and abs(last_hist - level) / level > 0.30:
-            logger.warning(
-                "market.indices %s history (%s) stale: tail=%.2f vs "
-                "live level=%.2f (diff %.1f%%) — discarding series",
-                ticker, hist_source or "?", last_hist, level,
-                abs(last_hist - level) / level * 100.0,
-            )
-            closes = None
-            is_stale = True
+        divergence = abs(last_hist - level) / level if level > 0 else 0.0
+        if hist_source == "kis":
+            # KIS is trustworthy: only flag stale on extreme unit-confusion
+            # (100% = 2x apart, which is what a 0001-vs-0001-x-3 quirk
+            # would produce). Sanity bound below catches pure unit errors;
+            # this layer catches subtler stale-cache anomalies.
+            if divergence > 1.0:
+                logger.warning(
+                    "market.indices %s KIS history extreme divergence: "
+                    "tail=%.2f vs live=%.2f (%.1f%%) — discarding",
+                    ticker, last_hist, level, divergence * 100.0,
+                )
+                closes = None
+                is_stale = True
+        else:
+            # Non-KIS (FMP / future): keep 30% guard.
+            if divergence > 0.30:
+                logger.warning(
+                    "market.indices %s history (%s) stale: tail=%.2f vs "
+                    "live level=%.2f (diff %.1f%%) — discarding series",
+                    ticker, hist_source or "?", last_hist, level,
+                    divergence * 100.0,
+                )
+                closes = None
+                is_stale = True
 
     if closes is not None and len(closes):
         if level is None:
