@@ -165,7 +165,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
             background: "rgba(184, 149, 106, 0.08)",
             border: "1px solid rgba(184, 149, 106, 0.4)",
             borderRadius: 2,
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--r-gold-deep, #8b6f47)",
@@ -267,7 +267,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                 </div>
                 <div
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "var(--r-ink-3)",
                     marginTop: 8,
                   }}
@@ -302,7 +302,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                 </div>
                 <div
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "var(--r-ink-3)",
                     marginTop: 8,
                   }}
@@ -348,7 +348,7 @@ export function EarningsPrebrief({ data = DEFAULT }: { data?: EarningsPrebriefDa
                 <td>
                   <strong>{s.case}</strong>
                   <div
-                    style={{ fontSize: 12, color: "var(--r-ink-3)" }}
+                    style={{ fontSize: "var(--pq-text-eyebrow)", color: "var(--r-ink-3)" }}
                   >
                     {s.caseDetail}
                   </div>

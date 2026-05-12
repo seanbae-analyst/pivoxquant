@@ -173,14 +173,14 @@ export function DepositionTeaser() {
                 </h3>
                 <p
                   className="mt-1 font-serif italic"
-                  style={{ fontSize: 12, color: "rgba(10,10,10,0.55)" }}
+                  style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.55)" }}
                 >
                   Counterparty · Yourself
                 </p>
               </div>
               <div
                 className="text-right font-mono tabular-nums"
-                style={{ fontSize: 12, color: "rgba(10,10,10,0.55)" }}
+                style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.55)" }}
               >
                 <div>DOCKET · PQ-0074</div>
                 <div>SESSION · 09:42 KST</div>
@@ -211,7 +211,7 @@ export function DepositionTeaser() {
                   <div>
                     <p
                       className="font-serif"
-                      style={{ fontSize: 14, lineHeight: 1.45 }}
+                      style={{ fontSize: "var(--pq-text-body)", lineHeight: 1.45 }}
                     >
                       {q.q_en}
                     </p>
@@ -229,7 +229,7 @@ export function DepositionTeaser() {
 
             <p
               className="mt-8 font-serif italic"
-              style={{ fontSize: 12, color: "rgba(10,10,10,0.45)" }}
+              style={{ fontSize: "var(--pq-text-eyebrow)", color: "rgba(10,10,10,0.45)" }}
             >
               Not investment advice. A reflection tool, logged to your
               compounding memory.
@@ -293,7 +293,7 @@ export function DepositionTeaser() {
           variants={fadeUp}
           className="mt-12 font-serif italic"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             color: "var(--pq-muted)",
             borderTop: "0.5px solid var(--pq-border)",
             paddingTop: 16,

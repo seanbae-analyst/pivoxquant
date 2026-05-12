@@ -35,11 +35,11 @@ interface Props {
 }
 
 const ROW_LABEL_STYLE: React.CSSProperties = {
-  fontSize: 14,
+  fontSize: "var(--pq-text-body)",
   color: "var(--pq-ivory)",
 };
 const ROW_HELP_STYLE: React.CSSProperties = {
-  fontSize: 14,
+  fontSize: "var(--pq-text-body)",
   color: "rgba(245,240,232,0.55)",
   marginTop: 2,
 };
@@ -47,7 +47,7 @@ const ROW_HELP_STYLE: React.CSSProperties = {
 const PILL_LINKED: React.CSSProperties = {
   display: "inline-block",
   padding: "2px 8px",
-  fontSize: 12,
+  fontSize: "var(--pq-text-eyebrow)",
   letterSpacing: "0.18em",
   textTransform: "uppercase",
   border: "1px solid rgba(184,149,106,0.15)",
@@ -113,7 +113,7 @@ function ProviderRow({
           onClick={onDisconnect}
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             color: "var(--pq-error, #d18888)",
             borderBottom: "1px solid rgba(209,136,136,0.30)",
@@ -132,7 +132,7 @@ function ProviderRow({
           onClick={onConnect}
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -175,7 +175,7 @@ export function SignInProvidersCard({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.55)",
         }}
@@ -186,7 +186,7 @@ export function SignInProvidersCard({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 16,
@@ -234,7 +234,7 @@ export function SignInProvidersCard({
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
           }}
@@ -246,7 +246,7 @@ export function SignInProvidersCard({
       <p
         className="font-serif"
         style={{
-          fontSize: 14,
+          fontSize: "var(--pq-text-body)",
           lineHeight: 1.55,
           color: "rgba(245,240,232,0.55)",
           marginTop: 12,

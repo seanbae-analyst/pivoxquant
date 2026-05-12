@@ -57,7 +57,7 @@ function chipBaseStyle(active: boolean): React.CSSProperties {
       : "1px solid var(--pq-hairline, var(--pq-ivory-line))",
     borderRadius: "var(--pq-radius-cta, 2px)",
     padding: "8px 12px",
-    fontSize: 12,
+    fontSize: "var(--pq-text-eyebrow)",
     letterSpacing: "0.18em",
     textTransform: "uppercase",
     color: active ? "var(--pq-ivory, #F5F0E8)" : "rgba(245,240,232,0.55)",
@@ -169,7 +169,7 @@ export function SignalsFilterBar({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.55)",
               marginBottom: 6,
@@ -216,7 +216,7 @@ export function SignalsFilterBar({
             htmlFor={symbolInputId}
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "rgba(245,240,232,0.55)",
               display: "block",
@@ -288,7 +288,7 @@ export function SignalsFilterBar({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
               }}

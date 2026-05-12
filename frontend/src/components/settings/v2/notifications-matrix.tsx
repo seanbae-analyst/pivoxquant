@@ -223,7 +223,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                 padding: "14px 12px 14px 24px",
                 textAlign: "left",
                 borderBottom: "1px solid var(--pq-ivory-line)",
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "var(--pq-bronze)",
                 fontWeight: 500,
@@ -240,7 +240,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                   padding: "14px 12px",
                   textAlign: "center",
                   borderBottom: "1px solid var(--pq-ivory-line)",
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.22em",
                   color: "var(--pq-bronze)",
                   fontWeight: 500,
@@ -268,7 +268,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                   <div
                     className="font-serif"
                     style={{
-                      fontSize: 14,
+                      fontSize: "var(--pq-text-body)",
                       color: "var(--pq-ivory)",
                     }}
                   >
@@ -277,7 +277,7 @@ export function NotificationsMatrix({ initial, onChange }: Props) {
                   <div
                     className="font-serif"
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       color: "rgba(245,240,232,0.55)",
                       marginTop: 2,
                     }}

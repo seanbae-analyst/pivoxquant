@@ -28,7 +28,7 @@ export function SettingsHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 28,
@@ -75,7 +75,7 @@ export function SettingsHeroV2({
           href="/profile"
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -111,7 +111,7 @@ export function SettingsHeroV2({
             padding: "12px 22px",
             background: "var(--pq-bronze)",
             color: "var(--pq-ink, #050505)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             borderRadius: 2,
             textDecoration: "none",
@@ -123,7 +123,7 @@ export function SettingsHeroV2({
           href="#section-b"
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.18em",
             color: "var(--pq-bronze)",
             borderBottom: "1px solid rgba(184,149,106,0.15)",
@@ -136,7 +136,7 @@ export function SettingsHeroV2({
         <span
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
             marginLeft: 8,

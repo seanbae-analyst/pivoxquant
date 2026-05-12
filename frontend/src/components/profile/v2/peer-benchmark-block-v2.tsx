@@ -93,7 +93,7 @@ export function PeerBenchmarkBlockV2({
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.55)",
         }}
@@ -115,7 +115,7 @@ export function PeerBenchmarkBlockV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 8,
@@ -143,7 +143,7 @@ export function PeerBenchmarkBlockV2({
           className="font-mono uppercase"
           style={{
             fontVariantNumeric: "tabular-nums",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             color: "rgba(245,240,232,0.55)",
             letterSpacing: "0.18em",
           }}
@@ -180,7 +180,7 @@ export function PeerBenchmarkBlockV2({
           <p
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.55,
               color: "rgba(245,240,232,0.55)",
               maxWidth: 560,
@@ -222,7 +222,7 @@ export function PeerBenchmarkBlockV2({
                 <span
                   className="font-mono uppercase"
                   style={{
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     letterSpacing: "0.22em",
                     color: "var(--pq-bronze)",
                   }}
@@ -233,7 +233,7 @@ export function PeerBenchmarkBlockV2({
                   className="font-mono"
                   style={{
                     fontVariantNumeric: "tabular-nums",
-                    fontSize: 14,
+                    fontSize: "var(--pq-text-body)",
                     color: "rgba(245,240,232,0.82)",
                   }}
                 >
@@ -295,7 +295,7 @@ export function PeerBenchmarkBlockV2({
           className="font-mono uppercase"
           style={{
             marginTop: 16,
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.16em",
             color: "rgba(245,240,232,0.55)",
           }}

@@ -54,7 +54,7 @@ export function ProfileHeroV2({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 28,
@@ -127,7 +127,7 @@ export function ProfileHeroV2({
             padding: "12px 22px",
             background: "var(--pq-bronze)",
             color: "var(--pq-ink, #050505)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
             borderRadius: 2,
@@ -144,7 +144,7 @@ export function ProfileHeroV2({
             onClick={onExport}
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
               color: "var(--pq-bronze)",
@@ -162,7 +162,7 @@ export function ProfileHeroV2({
           className="font-mono uppercase"
           style={{
             marginLeft: 16,
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.22em",
             color: "rgba(245,240,232,0.55)",
             textTransform: "uppercase",

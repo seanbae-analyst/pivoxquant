@@ -130,7 +130,7 @@ export function MarketingConsentCardV2() {
           position: "absolute",
           top: 14,
           right: 14,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.2em",
           color: "rgba(245,240,232,0.55)",
         }}
@@ -140,7 +140,7 @@ export function MarketingConsentCardV2() {
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 12,
@@ -160,7 +160,7 @@ export function MarketingConsentCardV2() {
           <div
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color: "var(--pq-ivory)",
             }}
           >
@@ -169,7 +169,7 @@ export function MarketingConsentCardV2() {
           <div
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               color: "rgba(245,240,232,0.55)",
               marginTop: 2,
             }}
@@ -181,7 +181,7 @@ export function MarketingConsentCardV2() {
               className="font-mono"
               style={{
                 fontVariantNumeric: "tabular-nums",
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.04em",
                 color: "rgba(245,240,232,0.55)",
                 marginTop: 8,
@@ -195,7 +195,7 @@ export function MarketingConsentCardV2() {
               className="font-mono"
               style={{
                 fontVariantNumeric: "tabular-nums",
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.04em",
                 color: "rgba(245,240,232,0.55)",
                 marginTop: 8,

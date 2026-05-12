@@ -228,7 +228,7 @@ export default function SignupPageV2() {
     };
 
   const consentLabelStyle: React.CSSProperties = {
-    fontSize: 14,
+    fontSize: "var(--pq-text-body)",
     lineHeight: 1.55,
     color: "rgba(245,240,232,0.72)",
   };
@@ -255,7 +255,7 @@ export default function SignupPageV2() {
       : {};
 
   const requiredTagStyle: React.CSSProperties = {
-    fontSize: 12,
+    fontSize: "var(--pq-text-eyebrow)",
     letterSpacing: "0.18em",
     textTransform: "uppercase",
     color: "var(--pq-bronze, #B8956A)",
@@ -327,7 +327,7 @@ export default function SignupPageV2() {
           href="/"
           className="font-mono uppercase"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.20em",
             color: "rgba(245,240,232,0.65)",
             textTransform: "uppercase",
@@ -390,7 +390,7 @@ export default function SignupPageV2() {
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.24em",
                 color: "var(--pq-bronze, #B8956A)",
                 textTransform: "uppercase",
@@ -650,7 +650,7 @@ export default function SignupPageV2() {
             className="font-mono uppercase"
             style={{
               marginTop: 6,
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.20em",
               color: "rgba(245,240,232,0.55)",
               textAlign: "center",

@@ -472,7 +472,33 @@ jobs:
           # (13/17/19 px etc.) are 0-1 sites each and outside the W18
           # scope — deferred to a future wave once additional surfaces
           # need those tokens.
-          baseline=394
+          #
+          # W19 (`refactor/fontsize-longtail-w19`): bulk sweep of the 12px
+          # (234) and 14px (93) long-tail buckets across the top-30 highest-
+          # offender files (179 occurrences in 30 files). 12 → var(--pq-text-
+          # eyebrow), 14 → var(--pq-text-body) using already-defined tokens.
+          # Migrated surfaces (top 30): settings/v2/{signin-providers-card,
+          # marketing-consent-card, notifications-matrix, settings-hero-v2},
+          # companion/disclaimer-band, (dashboard)/profile/_v2/page-v2,
+          # reports/v2/latest-artifact-card, reports/templates/{sp500-
+          # backtest, earnings-prebrief}, portfolio/v2/{trade-modal-v2,
+          # watchlist-mini, recent-transactions-block, equity-curve-block,
+          # add-position-modal-v2, portfolio-hero-v2}, portfolio/sector-
+          # paper, signals/v2/{signal-card, top-movers-strip, signals-
+          # filter-bar}, profile/v2/{peer-benchmark-block-v2, six-
+          # dimensions-grid, profile-hero-v2}, market/calendar-news-paper,
+          # home/v2/portfolio-snapshot-card, risk/v2/{risk-gauge-grid,
+          # concentration-table}, terminal/{candlestick-chart, data-table},
+          # landing/deposition-teaser, (auth)/signup/_v2/page-v2.
+          # 394 → 216 inline literals (Δ -178). One 12px site re-added with
+          # an explanatory comment: terminal/candlestick-chart.tsx line 190
+          # (Lightweight Charts createChart layout.fontSize must be numeric —
+          # the chart rendering layer does not resolve CSS vars). Long-tail
+          # 12/14 sites in the remaining ~40 lower-frequency files are
+          # deferred to a future wave (PR size limit). Residual buckets
+          # (8/10/11/13/16/17/18/19/20/22/24/32/36/44/48/88 px) are mostly
+          # allowlisted or chart-internal and outside W19 scope.
+          baseline=216
           if [ "$count" -gt "$baseline" ]; then
             echo "::error::DS10 FAIL — inline fontSize literal count regressed ($count > baseline $baseline). New surfaces must use var(--pq-text-*) tokens (see globals.css §3.3)."
             grep -rEn 'fontSize:\s*"?[0-9]' frontend/src/components frontend/src/app \

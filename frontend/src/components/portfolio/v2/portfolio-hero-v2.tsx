@@ -277,7 +277,7 @@ export function PortfolioHeroV2({
             padding: "12px 22px",
             background: "var(--pq-bronze)",
             color: "var(--pq-ink, #050505)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
             border: "none",
@@ -303,7 +303,7 @@ export function PortfolioHeroV2({
             color: reconcileAvailable
               ? "var(--pq-bronze)"
               : "rgba(245,240,232,0.55)",
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             letterSpacing: "0.2em",
             textTransform: "uppercase",
             border: `1px solid ${reconcileAvailable ? "var(--pq-bronze)" : "rgba(245,240,232,0.20)"}`,
@@ -357,7 +357,7 @@ function HeroKpi({
       <div
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
           marginBottom: 6,
@@ -380,7 +380,7 @@ function HeroKpi({
         <div
           className="font-mono tabular-nums"
           style={{
-            fontSize: 12,
+            fontSize: "var(--pq-text-eyebrow)",
             color: "rgba(245,240,232,0.55)",
             marginTop: 2,
           }}

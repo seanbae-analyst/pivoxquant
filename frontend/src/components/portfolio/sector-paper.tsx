@@ -69,7 +69,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
           className="pq-paper-body"
           style={{
             color: "rgba(20,20,20,0.55)",
-            fontSize: 14,
+            fontSize: "var(--pq-text-body)",
           }}
         >
           No sector weighting observed yet.
@@ -91,7 +91,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                 >
                   <span
                     style={{
-                      fontSize: 14,
+                      fontSize: "var(--pq-text-body)",
                       color: "#1a1a1a",
                       letterSpacing: "-0.005em",
                       whiteSpace: "nowrap",
@@ -103,7 +103,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                   </span>
                   <span
                     style={{
-                      fontSize: 12,
+                      fontSize: "var(--pq-text-eyebrow)",
                       fontVariantNumeric: "tabular-nums",
                       color: "#B8956A",
                       fontWeight: 600,
@@ -134,7 +134,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
                 <div
                   style={{
                     marginTop: 4,
-                    fontSize: 12,
+                    fontSize: "var(--pq-text-eyebrow)",
                     color: "rgba(20,20,20,0.45)",
                     letterSpacing: "0.02em",
                     fontVariantNumeric: "tabular-nums",
@@ -154,7 +154,7 @@ export function SectorPaper({ rows, bookCurrency = "USD" }: Props) {
           position: "absolute",
           bottom: 18,
           right: 22,
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           color: "rgba(139,111,71,0.55)",
           letterSpacing: "0.06em",
         }}

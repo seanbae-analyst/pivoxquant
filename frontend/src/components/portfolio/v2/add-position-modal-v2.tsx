@@ -165,7 +165,7 @@ export function AddPositionModalV2({
           <div
             className="font-mono uppercase"
             style={{
-              fontSize: 12,
+              fontSize: "var(--pq-text-eyebrow)",
               letterSpacing: "0.22em",
               color: "var(--pq-bronze)",
               marginBottom: 14,
@@ -193,7 +193,7 @@ export function AddPositionModalV2({
           <p
             className="font-serif"
             style={{
-              fontSize: 14,
+              fontSize: "var(--pq-text-body)",
               lineHeight: 1.5,
               color: "rgba(245,240,232,0.65)",
               margin: 0,
@@ -274,7 +274,7 @@ export function AddPositionModalV2({
             <span
               className="font-mono uppercase"
               style={{
-                fontSize: 12,
+                fontSize: "var(--pq-text-eyebrow)",
                 letterSpacing: "0.22em",
                 color: "rgba(245,240,232,0.55)",
               }}
@@ -290,7 +290,7 @@ export function AddPositionModalV2({
                   background: "transparent",
                   border: "none",
                   color: "rgba(245,240,232,0.55)",
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   cursor: "pointer",
                   padding: 4,
@@ -313,7 +313,7 @@ export function AddPositionModalV2({
                   color: "var(--pq-ink, #050505)",
                   border: "none",
                   borderRadius: "var(--pq-radius-cta, 2px)",
-                  fontSize: 12,
+                  fontSize: "var(--pq-text-eyebrow)",
                   letterSpacing: "0.2em",
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
@@ -359,7 +359,7 @@ function FormField({
       <span
         className="font-mono uppercase"
         style={{
-          fontSize: 12,
+          fontSize: "var(--pq-text-eyebrow)",
           letterSpacing: "0.22em",
           color: "var(--pq-bronze)",
         }}
