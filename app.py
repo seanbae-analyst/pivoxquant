@@ -409,6 +409,12 @@ def _do_migrations():
     # 은 Alembic 미실행 박스(레거시 로컬 dev DB)를 위한 안전망이다.
     _add_column_if_missing("users", "cross_border_consent_at", "TIMESTAMP")
     _add_column_if_missing("users", "cross_border_consent_revoked_at", "TIMESTAMP")
+    # PIPA §22 ⑥ (만 14세 미만 법정대리인 동의) — server-side birthdate 검증.
+    # Alembic migration 031_user_birthdate (PR #283)로 추가했으나 prod 코드베이스는
+    # alembic 미사용 (db.create_all() + _add_column_if_missing 패턴). 누락으로
+    # 인해 prod에서 SELECT users.birthdate ProgrammingError 발생 (2026-05-12
+    # bug-hunter 발견, Railway logs). 본 fallback은 prod safety net.
+    _add_column_if_missing("users", "birthdate", "DATE")
 
     # Positions table — full coverage of Position model columns.
     # thesis_* columns were added in commit c6644c2 (Thesis Tracker) but
