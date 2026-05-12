@@ -3,6 +3,8 @@
 Entry point for Railway worker service: `python -m agent_worker.worker`.
 Runs independently of the Flask web process; shares only the Postgres DB.
 """
+from __future__ import annotations
+
 import logging
 import signal
 import sys

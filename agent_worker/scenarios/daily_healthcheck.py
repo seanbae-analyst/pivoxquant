@@ -4,6 +4,8 @@ Scheduled at 08:00 KST. Independent of Flask app context (uses its own
 SQLAlchemy engine bound to DATABASE_URL) so it survives the web process
 being down.
 """
+from __future__ import annotations
+
 import json
 import logging
 from datetime import datetime, timezone

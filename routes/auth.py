@@ -1,4 +1,6 @@
 """Auth routes: register, login, logout, me, Google OAuth, Kakao OAuth."""
+from __future__ import annotations
+
 import logging
 import os
 import secrets

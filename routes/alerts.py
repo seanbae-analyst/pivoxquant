@@ -18,6 +18,8 @@ The bare `GET /api/alerts` response is enriched: each element now carries
 `kind`, `title`, `body`, `link`, `read_at` alongside legacy fields so the
 new NotificationDropdown and legacy /alerts page can share it.
 """
+from __future__ import annotations
+
 import json
 import logging
 import os

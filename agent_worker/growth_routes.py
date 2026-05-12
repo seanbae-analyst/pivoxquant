@@ -10,6 +10,8 @@ SEC-005 (2026-05-02): Every query against ``growth_reflections`` and
 IDOR (any user could read/update another user's reflection by guessing
 ``reflection_id``). The fix lives in migration ``020_growth_user_id.py``.
 """
+from __future__ import annotations
+
 import json
 import logging
 from datetime import date, datetime, timedelta, timezone

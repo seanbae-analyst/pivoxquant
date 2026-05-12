@@ -13,6 +13,8 @@ All Layer 2 endpoints return HTTP 200 with a degraded-but-valid payload
 when the user has no trade history yet — the frontend SWR layer relies
 on that contract for first-load UX.
 """
+from __future__ import annotations
+
 import json
 import logging
 from datetime import datetime, timedelta, timezone

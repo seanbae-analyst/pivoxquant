@@ -7,6 +7,8 @@ Mount in app.py:
 Capital markets law (Iron Rule #7): no BUY/SELL/추천/조언 anywhere in UI.
 Labels are restricted to 승인/거절/상세/중지.
 """
+from __future__ import annotations
+
 import json
 import logging
 import os

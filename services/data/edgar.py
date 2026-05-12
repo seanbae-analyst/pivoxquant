@@ -5,6 +5,8 @@ SEC EDGAR requires:
   - Max 10 requests/second (we self-throttle)
   - No API key needed; commercial use allowed
 """
+from __future__ import annotations
+
 
 import json
 import logging
